@@ -98,10 +98,10 @@ def changed_files(base: str, head: str) -> list[str]:
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
-def inventory_fingerprint_only_change(
+def inventory_metadata_only_change(
     path: str, base: str, head: str
 ) -> bool:
-    """Prove that a known generated contract only refreshed its fingerprint."""
+    """Prove that only provenance and corpus counters changed."""
     if path not in JSON_EOC_INVENTORIES:
         return False
     documents = []
@@ -126,6 +126,54 @@ def inventory_fingerprint_only_change(
                 r"sha256:[0-9a-f]{64}", fingerprint
             ):
                 return False
+            summary = document.get("summary", {})
+            entries = document.get("entries", [])
+            if not isinstance(summary, dict) or not isinstance(entries, list):
+                return False
+            counters = [
+                (summary, "tracked_json_files"),
+                (summary, "top_level_objects"),
+            ]
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    return False
+                evidence = entry.get("instance_evidence", {})
+                if not isinstance(evidence, dict):
+                    return False
+                counters.append((evidence, "occurrences"))
+                if "documentation" not in entry:
+                    continue
+                documentation = entry["documentation"]
+                if not isinstance(documentation, dict):
+                    return False
+                references = documentation.get("evidence", [])
+                if not isinstance(references, list):
+                    return False
+                for reference in references:
+                    if not isinstance(reference, dict):
+                        return False
+                    if set(reference) != {"path", "line"}:
+                        return False
+                    reference_path = reference["path"]
+                    if not isinstance(reference_path, str) or not re.fullmatch(
+                        r"doc/JSON/(?:[\w.-]+/)*[\w.-]+\.md", reference_path
+                    ):
+                        return False
+                    if any(
+                        part in {".", ".."}
+                        for part in reference_path.split("/")
+                    ):
+                        return False
+                    line = reference["line"]
+                    if type(line) is not int or line < 1:
+                        return False
+                    reference.update(path="doc/JSON/reference.md", line=1)
+            for container, field in counters:
+                if field not in container:
+                    continue
+                if type(container[field]) is not int or container[field] < 0:
+                    return False
+                container[field] = 0
             documents.append(document)
     except (subprocess.CalledProcessError, json.JSONDecodeError):
         return False
@@ -294,7 +342,7 @@ def main() -> int:
     if args.base and args.head:
         metadata_only = [
             path for path in files
-            if inventory_fingerprint_only_change(path, args.base, args.head)
+            if inventory_metadata_only_change(path, args.base, args.head)
         ]
     result = impacts(
         [path for path in files if path not in metadata_only], load_rules()

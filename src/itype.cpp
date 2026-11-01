@@ -471,7 +471,8 @@ int armor_portion_data::max_coverage( bodypart_str_id bp ) const
     }
 
     // return the max of primary or hanging sublocations (this only matters for hanging items on chest)
-    return std::max( primary_max_coverage, secondary_max_coverage );
+    const int coverage = std::max( primary_max_coverage, secondary_max_coverage );
+    return covers_all ? std::min( 100, coverage ) : coverage;
 }
 
 bool armor_portion_data::should_consolidate( const armor_portion_data &l,
