@@ -122,12 +122,18 @@ Android, tools, and documentation:
   windows.  Split a large file only at a real responsibility boundary, not
   merely to make it easier for an agent to read. / 先用 `rg` 定位定义、调用、
   注册和测试，再读取及修改小窗口；只有存在真实职责边界时才拆分大文件。
-- **One coherent batch / 单一完整批次:** Finish one subsystem or domain batch
-  at a time, including its implementation, declarations/contracts, and test
-  source.  Inspect one authoritative lifecycle or registration point and one
-  representative caller/data shape before broad edits. / 每次完成一个完整子系统或
-  领域批次，并同步实现、声明/契约和测试源码；批量修改前只检查一个权威生命周期或
-  注册点及一个代表性调用或数据形状。
+- **One coherent batch / 单一完整批次:** This rule groups work; it does not
+  govern commits or how changes are staged.  One batch stays inside a single
+  subsystem or domain and carries its implementation, declarations, contracts,
+  and test source to completion there; unrelated work waits for another batch.
+  Each batch starts from one authoritative lifecycle or registration point plus
+  one representative caller or data shape.  Read it together with *Defer
+  non-evidence churn* below: synchronization and refreshes follow the closed
+  batch instead of interrupting it. / 本规则约束工作分组，与提交和暂存行为无关。
+  一批工作只在一个子系统或领域内，把实现、声明、契约与测试源码做完，无关工作
+  留到下一批；每批从唯一的权威生命周期或注册点，加一个代表性调用或数据形状
+  开始。应与下面「推迟无验证价值的工作」合起来理解：同步与刷新在本批结束后进行，
+  不打断本批。
 - **Checkpoint, do not reconstruct / 记录断点，不重建历史:** For unfinished
   multi-turn work, keep a compact local checkpoint containing the current
   batch, closed work, changed files, last checks, unresolved risk, and next
