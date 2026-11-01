@@ -906,9 +906,7 @@ void avatar_action::active_technique( avatar &you, map &m )
         const matec_id technique = available[i];
         const ret_val<void> status = you.active_technique_availability( technique );
         const std::string state = status.success() ? _( "Ready" ) : status.str();
-        const std::string description = technique->get_description() + "\n" +
-                                        string_format( _( "Base cooldown: %s" ), to_string( technique->cooldown ) ) +
-                                        "\n" + state;
+        const std::string description = technique->get_description() + "\n" + state;
         menu.addentry_desc( i, status.success(), MENU_AUTOASSIGN,
                             technique->name.translated() + "  [" + state + "]", description );
     }

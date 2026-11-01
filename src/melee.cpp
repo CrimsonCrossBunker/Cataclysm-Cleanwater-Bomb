@@ -1699,6 +1699,10 @@ std::vector<matec_id> Character::active_techniques( const bool include_unavailab
             continue;
         }
         if( id == tec_mounted_charge ) {
+            if( !include_unavailable && ( !is_mounted() || !mounted_creature ||
+                                          mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ) {
+                continue;
+            }
             // Mounted charge is an explicit weapon action; use the actual
             // wielded item even when the selected style suppresses weapon use.
             if( !wielded || !wielded->type->mounted_charge ||
@@ -1724,6 +1728,9 @@ ret_val<void> Character::active_technique_availability( const matec_id &techniqu
     const time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
     if( remaining > 0_turns ) {
         return ret_val<void>::make_failure( _( "Cooldown: %s" ), to_string( remaining ) );
+    }
+    if( technique == tec_mounted_charge && ( !is_mounted() || !mounted_creature ) ) {
+        return ret_val<void>::make_failure( _( "Requires an animal mount." ) );
     }
     if( !technique->is_valid_character( *this ) ) {
         return ret_val<void>::make_failure( _( "Technique requirements are not met." ) );

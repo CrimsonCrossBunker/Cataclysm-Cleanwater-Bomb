@@ -273,6 +273,9 @@ TEST_CASE( "mounted_charge_is_provided_by_the_weapon_technique_list",
     const std::vector<matec_id> unmounted_techniques = player.active_techniques();
     CHECK( std::find( unmounted_techniques.begin(), unmounted_techniques.end(), tec_mounted_charge ) ==
            unmounted_techniques.end() );
+    const std::vector<matec_id> visible = player.active_techniques( true );
+    CHECK( std::find( visible.begin(), visible.end(), tec_mounted_charge ) != visible.end() );
+    CHECK_FALSE( player.active_technique_availability( tec_mounted_charge ).success() );
 }
 
 TEST_CASE( "mounted_charge_stops_at_heavy_monster", "[mounted][charge][activity]" )
