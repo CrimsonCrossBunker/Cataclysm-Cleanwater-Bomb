@@ -30,6 +30,17 @@ ccb.runtime.handler(
     1
 )
 
+local function mounted_charge_damage(context)
+    local momentum = math.min(5, math.max(0, context.completed_steps))
+    local speed_factor = math.max(0, context.mount_speed) / 300
+    return math.min(
+        context.max_multiplier,
+        1 + context.multiplier_per_step * momentum * speed_factor
+    )
+end
+
+ccb.runtime.handler("ccb_mounted_charge_damage", mounted_charge_damage, 1)
+
 local mounted_charge = ccb.content.Technique {
     id = "MOUNTED_CHARGE",
     name = ccb.content.text("Mounted Charge"),
@@ -42,6 +53,7 @@ local mounted_charge = ccb.content.Technique {
     cooldown_seconds = 10,
     melee_allowed = true,
     active_when = "ccb_mounted_charge_available",
+    charge_damage = "ccb_mounted_charge_damage",
 }
 mounted_charge:attack_vector("vector_null")
 ccb.content.replace(mounted_charge)

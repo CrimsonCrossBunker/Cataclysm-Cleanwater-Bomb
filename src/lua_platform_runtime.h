@@ -25,6 +25,7 @@ class npc;
 class player_activity;
 class vehicle;
 struct dialogue;
+struct mounted_charge_profile;
 struct talk_topic;
 struct vehicle_part;
 struct w_point;
@@ -370,6 +371,20 @@ inline std::optional<double> invoke_technique_cooldown_handler(
 inline std::optional<bool> invoke_technique_condition_handler(
     std::string_view, std::string_view, std::string_view,
     const Character &, std::string_view )
+{
+    return std::nullopt;
+}
+#endif
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+std::optional<double> invoke_mounted_charge_damage_handler(
+    std::string_view technique_id, std::string_view mod_id,
+    std::string_view handler_id, const Character &character,
+    const mounted_charge_profile &profile, int completed_steps, double mount_speed );
+#else
+inline std::optional<double> invoke_mounted_charge_damage_handler(
+    std::string_view, std::string_view, std::string_view, const Character &,
+    const mounted_charge_profile &, int, double )
 {
     return std::nullopt;
 }

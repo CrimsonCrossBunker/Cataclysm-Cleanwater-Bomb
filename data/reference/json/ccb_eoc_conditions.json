@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:58edb5f81ec08353d01f65175576dd790368f15031318e0bfb287e15e75d8735",
+    "source_fingerprint": "sha256:01a02923443c79cf57f135dd3ab310cd126e3c39f4019d8b6908e1257942e1c7",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -117,7 +117,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5475,
+        "occurrences": 5474,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -3919,7 +3919,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6782,
+        "occurrences": 6781,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -14252,7 +14252,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 122,
+        "occurrences": 121,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -14346,7 +14346,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1771,
+        "occurrences": 1770,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -17264,7 +17264,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 184,
+        "occurrences": 182,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -21242,7 +21242,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 10,
+        "occurrences": 8,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",

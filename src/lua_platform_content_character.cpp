@@ -741,6 +741,7 @@ struct technique_definition_data {
     bool strictly_unarmed = false;
     std::vector<std::pair<std::string, std::int64_t>> min_skills;
     std::string condition_handler;
+    std::string charge_damage_handler;
     std::string apply_handler;
     bool registered = false;
 };
@@ -1828,6 +1829,15 @@ struct technique_definition_handle {
             throw std::runtime_error( "technique condition handler id cannot be empty" );
         }
         definition->condition_handler = handler_id;
+        return *this;
+    }
+
+    technique_definition_handle &charge_damage( const std::string &handler_id ) {
+        require_building_handle( token, *definition, "technique" );
+        if( handler_id.empty() ) {
+            throw std::runtime_error( "technique charge damage handler id cannot be empty" );
+        }
+        definition->charge_damage_handler = handler_id;
         return *this;
     }
 
@@ -3075,6 +3085,7 @@ void character_content_transaction::impl::install_technique( sol::table &content
         definition->condition_handler = options.get_or(
                                             "active_when",
                                             options.get_or( "condition_handler", std::string() ) );
+        definition->charge_damage_handler = options.get_or( "charge_damage", std::string() );
         definition->apply_handler = options.get_or(
                                         "on_apply",
                                         options.get_or( "apply_handler", std::string() ) );
@@ -3335,6 +3346,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "requires_skill", &technique_definition_handle::requires_skill,
         "active_when", &technique_definition_handle::active_when,
         "cooldown_duration", &technique_definition_handle::cooldown_duration,
+        "charge_damage", &technique_definition_handle::charge_damage,
         "on_apply", &technique_definition_handle::on_apply );
     ccb.new_usertype<martial_art_definition_handle>(
         "MartialArtDefinition", sol::no_constructor,
@@ -5073,6 +5085,12 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' references missing condition handler '" +
                                           definition.condition_handler + "'" );
             }
+            if( !definition.charge_damage_handler.empty() &&
+                owner_runtime.handlers.count( definition.charge_damage_handler ) == 0 ) {
+                throw std::runtime_error( "technique '" + definition.id +
+                                          "' references missing charge damage handler '" +
+                                          definition.charge_damage_handler + "'" );
+            }
             validate_operation( entry.operation, matec_id( definition.id ).is_valid(),
                                 definition.id, "technique" );
         }
@@ -6595,6 +6613,7 @@ void character_content_transaction::impl::apply_technique()
         }
         native.lua_platform_mod = this->owner;
         native.lua_platform_condition_handler = source.condition_handler;
+        native.lua_platform_charge_damage_handler = source.charge_damage_handler;
         native.lua_platform_apply_handler = source.apply_handler;
         native.was_loaded = true;
         if( entry.operation == definition_operation::replace ) {
@@ -6860,6 +6879,7 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, std::to_string( level ) );
                 }
                 hash_part( state, value.condition_handler );
+                hash_part( state, value.charge_damage_handler );
                 hash_part( state, value.apply_handler );
             }
             break;

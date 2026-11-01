@@ -190,6 +190,7 @@ static bool check_deconstruct( const tripoint_bub_ms
                                & ); // either terrain or furniture must be deconstructible
 static bool check_up_OK( const tripoint_bub_ms & ); // tile is below OVERMAP_HEIGHT
 static bool check_down_OK( const tripoint_bub_ms & ); // tile is above OVERMAP_DEPTH
+static bool check_dig_pit( const tripoint_bub_ms & );
 static bool check_no_trap( const tripoint_bub_ms & ); // tile doesn't contain any trap
 static bool check_ramp_high( const tripoint_bub_ms
                              & ); // one of the adjacent tiles on the z-level above has a completed down ramp
@@ -212,6 +213,7 @@ static void done_dig_grave_nospawn( const tripoint_bub_ms &p, Character & );
 static void done_channel_fill( const tripoint_bub_ms &, Character & );
 static void done_channel_close( const tripoint_bub_ms &, Character & );
 static void done_dig_stair( const tripoint_bub_ms &, Character & );
+static void done_dig_pit( const tripoint_bub_ms &, Character & );
 static void done_mine_downstair( const tripoint_bub_ms &, Character & );
 static void done_mine_upstair( const tripoint_bub_ms &, Character & );
 static void done_wood_stairs( const tripoint_bub_ms &, Character & );
@@ -427,7 +429,7 @@ static nc_color construction_color( const construction_group_str_id &group, bool
         col = c_white;
     } else {
         std::vector<const construction *> cons = player_can_build_valid_constructions( player_character,
-            player_character.crafting_inventory(), group );
+                player_character.crafting_inventory(), group );
         if( !cons.empty() ) {
             col = c_white;
             for( const auto &pr : cons.front()->required_skills ) {
@@ -466,8 +468,8 @@ static std::string furniture_qualities_string( const furn_id &fid )
 }
 
 static std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
-valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
-                                 const temp_crafting_inventory &total_inv, avatar &player_character );
+        valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
+                const temp_crafting_inventory &total_inv, avatar &player_character );
 
 static shared_ptr_fast<game::draw_callback_t> construction_preview_callback(
     const std::map<tripoint_bub_ms, const construction *> &valid,
@@ -611,7 +613,7 @@ construction_id construction_menu( const bool blueprint )
     g->invalidate_main_ui_adaptor();
 #endif
     std::unique_ptr<restore_on_out_of_scope<tripoint_rel_ms>> restore_view =
-        std::make_unique<restore_on_out_of_scope<tripoint_rel_ms>>( player_character.view_offset );
+                std::make_unique<restore_on_out_of_scope<tripoint_rel_ms>>( player_character.view_offset );
 
     const auto recalc_buffer = [&]() {
         //leave room for top and bottom UI text
@@ -762,7 +764,7 @@ construction_id construction_menu( const bool blueprint )
                     //TODO: per-requirement colorizing like has_pre_flags_colorize
                     nc_color pre_color = has_pre_terrain( *current_con ) ? c_green : c_red;
                     add_line( _( "Requires: " ) + colorize( enumerate_as_string( require_names,
-                            enumeration_conjunction::or_ ), pre_color ) );
+                                                            enumeration_conjunction::or_ ), pre_color ) );
                 }
                 if( !current_con->pre_flags.empty() ) {
                     add_line( string_format( _( "Required conditions: %s" ), has_pre_flags_colorize( *current_con ) ) );
@@ -776,10 +778,10 @@ construction_id construction_menu( const bool blueprint )
                 add_folded( current_con->get_folded_time_string( available_window_width ) );
 
                 add_folded( current_con->requirements->get_folded_tools_list( &player_character,
-                        available_window_width, color_stage, total_inv ) );
+                            available_window_width, color_stage, total_inv ) );
 
                 add_folded( current_con->requirements->get_folded_components_list( &player_character,
-                        available_window_width, color_stage, total_inv, is_crafting_component ) );
+                            available_window_width, color_stage, total_inv, is_crafting_component ) );
 
                 construct_buffers.push_back( current_buffer );
             }
@@ -794,7 +796,7 @@ construction_id construction_menu( const bool blueprint )
                 //handle text too large for one screen
                 if( construct_buffers[i].size() > static_cast<size_t>( available_buffer_height ) ) {
                     construct_buffer_breakpoints.push_back( static_cast<int>( current_buffer_location +
-                            static_cast<size_t>( available_buffer_height ) ) );
+                                                            static_cast<size_t>( available_buffer_height ) ) );
                 }
                 current_buffer_location += construct_buffers[i].size();
                 if( i < construct_buffers.size() - 1 ) {
@@ -976,7 +978,7 @@ construction_id construction_menu( const bool blueprint )
     const std::optional<tripoint_bub_ms> mouse_pos; // dummy
     bool blink = true;
     shared_ptr_fast<game::draw_callback_t> draw_preview = construction_preview_callback(
-            con_preview, mouse_pos, blink );
+                con_preview, mouse_pos, blink );
     g->add_draw_callback( draw_preview );
 
     do {
@@ -1108,7 +1110,7 @@ construction_id construction_menu( const bool blueprint )
             tabindex = inc_clamp_wrap( tabindex, action == "RIGHT" || action == "NEXT_TAB", tabcount );
         } else if( action == "SCROLL_STAGE_UP" || action == "SCROLL_STAGE_DOWN" ) {
             current_construct_breakpoint = inc_clamp( current_construct_breakpoint,
-                action == "SCROLL_STAGE_DOWN", total_project_breakpoints - 1 );
+                                           action == "SCROLL_STAGE_DOWN", total_project_breakpoints - 1 );
         } else if( action == "QUIT" ) {
             exit = true;
         } else if( action == "TOGGLE_UNAVAILABLE_CONSTRUCTIONS" ) {
@@ -1348,8 +1350,8 @@ bool can_construct( const construction &con )
 }
 
 std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
-valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
-                                 const temp_crafting_inventory &total_inv, avatar &player_character )
+        valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
+                const temp_crafting_inventory &total_inv, avatar &player_character )
 {
     std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>> ret;
     std::map<tripoint_bub_ms, const construction *> &valid = ret.first;
@@ -1376,7 +1378,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
     const temp_crafting_inventory &total_inv = player_character.crafting_inventory();
 
     std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
-    valid_pair = valid_constructions_near_player( groups, total_inv, player_character );
+            valid_pair = valid_constructions_near_player( groups, total_inv, player_character );
     std::map<tripoint_bub_ms, const construction *> &valid = valid_pair.first;
     std::vector<const construction *> &cons = valid_pair.second;
     map &here = get_map();
@@ -1394,13 +1396,13 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
 #endif
 
     shared_ptr_fast<game::draw_callback_t> draw_preview = construction_preview_callback(
-            valid, mouse_pos, blink );
+                valid, mouse_pos, blink );
     g->add_draw_callback( draw_preview );
 
     const tripoint_bub_ms &loc = player_character.pos_bub();
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent(
-            loc, _( "Construct where?" ),
-            /*allow_vertical=*/false, /*timeout=*/get_option<int>( "BLINK_SPEED" ),
+                loc, _( "Construct where?" ),
+                /*allow_vertical=*/false, /*timeout=*/get_option<int>( "BLINK_SPEED" ),
     [&]( const input_context & ctxt, const std::string & action ) {
         if( action == "TIMEOUT" ) {
             blink = !blink;
@@ -1409,7 +1411,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
         }
         if( action == "MOUSE_MOVE" ) {
             const std::optional<tripoint_bub_ms> mouse_pos_raw = ctxt.get_coordinates(
-                    g->w_terrain, g->ter_view_p.raw().xy(), true );
+                        g->w_terrain, g->ter_view_p.raw().xy(), true );
             if( mouse_pos_raw.has_value() && mouse_pos_raw->z() == loc.z()
                 && mouse_pos_raw->x() >= loc.x() - 1 && mouse_pos_raw->x() <= loc.x() + 1
                 && mouse_pos_raw->y() >= loc.y() - 1 && mouse_pos_raw->y() <= loc.y() + 1 ) {
@@ -1452,7 +1454,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
         // Use up the components
         for( const std::vector<item_comp> &it : con.requirements->get_components() ) {
             std::list<item> tmp = player_character.consume_items( it, 1, is_crafting_component,
-                return_false<itype_id>, true );
+                                  return_false<itype_id>, true );
             if( tmp.empty() ) {
                 return;
             }
@@ -1489,7 +1491,7 @@ void build_construction_activity_actor::complete_construction( player_activity &
     const auto award_xp = [&]( Character & practicer ) {
         for( const auto &pr : built.required_skills ) {
             practicer.practice( pr.first, static_cast<int>( ( 10 + 15 * pr.second ) *
-                ( 1 + built.time / 180000.0 ) ),
+                                ( 1 + built.time / 180000.0 ) ),
                                 static_cast<int>( pr.second * 1.25 ) );
         }
     };
@@ -1549,7 +1551,7 @@ void build_construction_activity_actor::complete_construction( player_activity &
     // Spawn byproducts
     if( built.byproduct_item_group ) {
         here.spawn_items( you.pos_bub(), item_group::items_from( *built.byproduct_item_group,
-                calendar::turn ) );
+                          calendar::turn ) );
     }
 
     add_msg( m_info, _( "%s finished construction: %s." ), you.disp_name( false, true ),
@@ -1743,6 +1745,47 @@ bool construct::check_down_OK( const tripoint_bub_ms & )
 {
     // You're not going below -OVERMAP_DEPTH.
     return ( get_map().get_abs_sub().z() > -OVERMAP_DEPTH );
+}
+
+static std::optional<ter_id> excavated_pit_floor( const tripoint_bub_ms &p )
+{
+    const map &here = get_map();
+    const tripoint_bub_ms below = p + tripoint::below;
+    if( !here.supports_zlevels() || p.z() <= -OVERMAP_DEPTH || !here.inbounds( below ) ) {
+        return std::nullopt;
+    }
+
+    const ter_id &terrain = here.ter( below );
+    // Opening into an existing room, shaft or liquid must preserve that space.
+    if( terrain->movecost > 0 ) {
+        return terrain;
+    }
+    if( !terrain->has_flag( ter_furn_flag::TFLAG_NATURAL_UNDERGROUND ) || !terrain->bash ) {
+        return std::nullopt;
+    }
+    const ter_str_id &floor = terrain->bash->ter_set_bashed_from_above;
+    if( !floor.is_valid() || floor.is_null() || floor->movecost <= 0 ) {
+        return std::nullopt;
+    }
+    return floor.id();
+}
+
+bool construct::check_dig_pit( const tripoint_bub_ms &p )
+{
+    return excavated_pit_floor( p ).has_value();
+}
+
+void construct::done_dig_pit( const tripoint_bub_ms &p, Character &who )
+{
+    map &here = get_map();
+    const std::optional<ter_id> floor = excavated_pit_floor( p );
+    if( !floor ) {
+        // The lower tile may have changed while an NPC was constructing.
+        here.ter_set( p, ter_t_pit );
+        who.add_msg_if_player( m_bad, _( "You cannot dig through the terrain below the pit." ) );
+        return;
+    }
+    here.ter_set( p + tripoint::below, *floor );
 }
 
 bool construct::check_no_trap( const tripoint_bub_ms &p )
@@ -1950,7 +1993,7 @@ void construct::done_deconstruct( const tripoint_bub_ms &p, Character &player_ch
             // Uses a modified version of the complete_construction formula using 20 minutes with halved yield before the multiplier
             player_character.practice( skill.id,
                                        static_cast<int>( skill.multiplier * ( 5.0 / 6.0 ) * ( 10 + 7.5 * ( skill.min +
-                                           skill.max ) ) ), skill.max );
+                                               skill.max ) ) ), skill.max );
         }
     };
 
@@ -2422,7 +2465,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
 
     if( jo.has_member( "byproducts" ) ) {
         byproduct_item_group = item_group::load_item_group( jo.get_member( "byproducts" ),
-            "collection", "byproducts of construction " + id.str() );
+                               "collection", "byproducts of construction " + id.str() );
     }
 
     static const std::map<std::string, bool( * )( const tripoint_bub_ms & )> pre_special_map = {{
@@ -2440,6 +2483,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "check_deconstruct", construct::check_deconstruct },
             { "check_up_OK", construct::check_up_OK },
             { "check_down_OK", construct::check_down_OK },
+            { "check_dig_pit", construct::check_dig_pit },
             { "check_no_trap", construct::check_no_trap },
             { "check_ramp_high", construct::check_ramp_high },
             { "check_no_wiring", construct::check_no_wiring },
@@ -2460,6 +2504,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "done_channel_fill", construct::done_channel_fill },
             { "done_channel_close", construct::done_channel_close },
             { "done_dig_stair", construct::done_dig_stair },
+            { "done_dig_pit", construct::done_dig_pit },
             { "done_mine_downstair", construct::done_mine_downstair },
             { "done_mine_upstair", construct::done_mine_upstair },
             { "done_wood_stairs", construct::done_wood_stairs },
@@ -2729,7 +2774,7 @@ std::vector<construction_id> find_build_sequence( const std::string &target_id,
 
     std::queue<std::string> terrain_queue;
     std::unordered_map<std::string, std::pair<const construction *, std::string>>
-    parent; // pre, cons , post
+            parent; // pre, cons , post
     std::unordered_set<std::string> visited;
 
     terrain_queue.push( target_id );

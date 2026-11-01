@@ -2670,8 +2670,9 @@ void options_manager::add_options_interface()
              1, 50, 5
            );
 
-        add( "SHOW_OVERMAP_MOD_SOURCE", page_id, to_translation( "Show mod source on the overmap" ),
-             to_translation( "Show which mods define the selected overmap terrain, including underground and above ground.  Does not require debug mode." ),
+        // Keep the original option ID so existing preferences are preserved.
+        add( "SHOW_OVERMAP_MOD_SOURCE", page_id, to_translation( "Show mod source" ),
+             to_translation( "Show which mods define items, creatures, terrain, furniture, vehicles, effects, professions and scenarios.  Includes overmap terrain at every elevation and does not require debug mode." ),
              true
            );
 

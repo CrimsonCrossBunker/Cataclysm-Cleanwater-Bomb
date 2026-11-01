@@ -37,6 +37,32 @@ then
     exit 1
 fi
 
+echo "> Extracting strings from Lua"
+lua_sources=()
+while IFS= read -r -d '' lua_source; do
+    lua_sources+=("$lua_source")
+done < <(git ls-files -z -- \
+    'data/lua/*.lua' 'data/mods/*.lua' \
+    ':!:data/lua/types/*' ':!:data/lua/reference/*' \
+    ':!:data/lua/templates/*' ':!:data/mods/TEST_DATA/*' \
+    ':!:data/mods/Standard_Combat_Tests/*')
+if [ -n "${lua_sources[*]-}" ]; then
+    lua_template=$(mktemp)
+    trap 'rm -f "$lua_template"' EXIT
+    if ! python3 tools/lua_api/extract_translations.py \
+        "${lua_sources[@]}" --output "$lua_template"; then
+        echo "Error in extracting strings from Lua. Aborting."
+        exit 1
+    fi
+    if ! msgcat --use-first --sort-by-file lang/po/base.pot \
+        "$lua_template" --output="$lua_template"; then
+        echo "Error in merging Lua translation strings. Aborting."
+        exit 1
+    fi
+    mv "$lua_template" lang/po/base.pot
+    trap - EXIT
+fi
+
 package="cataclysm-dda"
 version=$(grep '^VERSION *= *' Makefile | tr -d [:space:] | cut -f 2 -d '=')
 

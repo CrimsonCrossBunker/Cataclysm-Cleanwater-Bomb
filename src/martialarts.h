@@ -24,6 +24,7 @@ class item;
 class item_location;
 struct const_dialogue;
 struct itype;
+struct mounted_charge_profile;
 template <typename T> class generic_factory;
 enum class bp_type;
 
@@ -269,7 +270,11 @@ class ma_technique
         // Lua-first post-application callback owned by the defining mod.
         std::string lua_platform_mod;
         std::string lua_platform_condition_handler;
+        std::string lua_platform_charge_damage_handler;
         std::string lua_platform_apply_handler;
+
+        float charge_damage_multiplier( const Character &character,
+                                        const mounted_charge_profile &profile, int completed_steps ) const;
 
         float damage_bonus( const Character &u, const damage_type_id &type ) const;
         float damage_multiplier( const Character &u, const damage_type_id &type ) const;

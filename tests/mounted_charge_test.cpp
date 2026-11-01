@@ -45,6 +45,8 @@ static const efftype_id effect_pet( "pet" );
 static const itype_id itype_mc_cavalry_sabre( "mc_cavalry_sabre" );
 static const itype_id itype_mounted_lance( "mounted_lance" );
 static const itype_id itype_mounted_saber( "mounted_saber" );
+static const move_mode_id move_mode_run( "run" );
+static const move_mode_id move_mode_walk( "walk" );
 static const skill_id skill_cutting( "cutting" );
 static const skill_id skill_melee( "melee" );
 static const skill_id skill_stabbing( "stabbing" );
@@ -148,10 +150,15 @@ TEST_CASE( "mounted_charge_profile_has_bounded_momentum", "[mounted][charge]" )
     profile.max_steps = 15;
     CHECK( profile.valid() );
     CHECK( mounted_charge_stab_multiplier( profile, 0, 300 ) == 1.0f );
-    CHECK( mounted_charge_multiplier( profile, 1, 100 ) == Approx( 1.05f ) );
-    CHECK( mounted_charge_multiplier( profile, 1, 200 ) == Approx( 1.10f ) );
-    CHECK( mounted_charge_multiplier( profile, 4, 300 ) == Approx( 1.50f ) );
-    CHECK( mounted_charge_multiplier( profile, 4, 40 ) == Approx( 1.20f ) );
+    CHECK( mounted_charge_multiplier( profile, 1, 100 ) == Approx( 1.0f + 0.1f / 3 ) );
+    CHECK( mounted_charge_multiplier( profile, 1, 200 ) == Approx( 1.0f + 0.2f / 3 ) );
+    CHECK( mounted_charge_multiplier( profile, 4, 300 ) == Approx( 1.40f ) );
+    CHECK( mounted_charge_multiplier( profile, 4, 40 ) == Approx( 1.0f + 0.4f * 40 / 300 ) );
+    CHECK( mounted_charge_multiplier( profile, 15, 100 ) == Approx( 1.0f + 0.5f / 3 ) );
+    CHECK( mounted_charge_multiplier( profile, 15, 200 ) == Approx( 1.0f + 1.0f / 3 ) );
+    CHECK( mounted_charge_multiplier( profile, 15, 0 ) == 1.0f );
+    CHECK( mounted_charge_multiplier( profile, 15, -100 ) == 1.0f );
+    CHECK( mounted_charge_multiplier( profile, 15, 10000 ) == Approx( 1.50f ) );
 
     profile.max_multiplier = 2.1f;
     CHECK_FALSE( profile.valid() );
@@ -183,6 +190,39 @@ TEST_CASE( "mounted_lance_loads_an_explicit_charge_profile", "[mounted][charge][
     CHECK( lance.type->mounted_charge->max_multiplier == Approx( 1.50f ) );
     CHECK( !lance.has_flag( flag_REACH_ATTACK ) );
     CHECK( !lance.has_flag( flag_POLEARM ) );
+}
+
+TEST_CASE( "mounted_charge_damage_tracks_mount_speed_and_gait_after_full_runup",
+           "[mounted][charge][damage][lua]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    const mounted_charge_profile &profile = *player.get_wielded_item()->type->mounted_charge;
+    REQUIRE( tec_mounted_charge.is_valid() );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    CHECK( tec_mounted_charge->lua_platform_charge_damage_handler == "ccb_mounted_charge_damage" );
+#endif
+    player.set_movement_mode( move_mode_walk );
+    const float walking = tec_mounted_charge->charge_damage_multiplier( player, profile, 15 );
+    CHECK( walking == Approx( mounted_charge_multiplier( profile, 15, player.mount_speed() ) ) );
+
+    player.set_movement_mode( move_mode_run );
+    const float trotting = tec_mounted_charge->charge_damage_multiplier( player, profile, 15 );
+    CHECK( trotting > walking );
+    CHECK( trotting < profile.max_multiplier );
+    CHECK( trotting == Approx( mounted_charge_multiplier( profile, 15, player.mount_speed() ) ) );
+    CHECK( tec_mounted_charge->charge_damage_multiplier( player, profile, 0 ) == 1.0f );
+
+    horse.set_speed_base( horse.get_speed_base() / 2 );
+    CHECK( tec_mounted_charge->charge_damage_multiplier( player, profile, 15 ) < walking );
+    CHECK( tec_mounted_charge->charge_damage_multiplier( player, profile, 15 ) ==
+           Approx( mounted_charge_multiplier( profile, 15, player.mount_speed() ) ) );
+
+    ma_technique fallback_technique = *tec_mounted_charge;
+    fallback_technique.lua_platform_mod = "missing-charge-damage-owner";
+    fallback_technique.lua_platform_charge_damage_handler = "missing";
+    CHECK( fallback_technique.charge_damage_multiplier( player, profile, 15 ) ==
+           Approx( mounted_charge_multiplier( profile, 15, player.mount_speed() ) ) );
 }
 
 TEST_CASE( "mounted_saber_loads_a_short_cut_profile", "[mounted][charge][json]" )
@@ -245,7 +285,7 @@ TEST_CASE( "mounted_saber_charge_scales_cut_damage_only", "[mounted][charge][dam
     const damage_instance restored = roll();
 
     CHECK( charged.type_damage( damage_cut ) ==
-           Approx( ordinary.type_damage( damage_cut ) * 1.12f ) );
+           Approx( ordinary.type_damage( damage_cut ) * 1.08f ) );
     CHECK( charged.type_damage( damage_bash ) ==
            Approx( ordinary.type_damage( damage_bash ) ) );
     CHECK( charged.type_damage( damage_stab ) ==

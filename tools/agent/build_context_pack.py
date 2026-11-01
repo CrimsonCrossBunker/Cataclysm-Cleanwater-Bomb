@@ -85,7 +85,7 @@ def nearest_agents(files: list[str], project_entries: list[dict]) -> list[str]:
     for file_path in files:
         parent = Path(file_path).parent
         while str(parent) not in {"", "."}:
-            candidate = str(parent / "AGENTS.md")
+            candidate = (parent / "AGENTS.md").as_posix()
             if (ROOT / candidate).is_file():
                 candidates.add(candidate)
             parent = parent.parent
