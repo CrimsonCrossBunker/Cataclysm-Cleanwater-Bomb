@@ -1693,10 +1693,7 @@ avatar_talk_to_result avatar::talk_to( std::unique_ptr<talker> talk_with,
         return avatar_talk_to_result::rejected;
     }
     dialogue d( get_talker_for( *this ), std::move( talk_with ), {} );
-    cata::lua_platform::begin_dialogue_session( d );
     d.by_radio = radio_contact;
-    dialogue_by_radio = radio_contact;
-    dialogue_remote_name = remote_name;
     d.actor( true )->check_missions();
     for( mission *&mission : d.actor( true )->assigned_missions() ) {
         if( mission->get_assigned_player_id() == getID() ) {
@@ -1713,6 +1710,12 @@ avatar_talk_to_result avatar::talk_to( std::unique_ptr<talker> talk_with,
     } else {
         d.add_topic( debug_topic );
     }
+    if( d.topic_stack.empty() ) {
+        return avatar_talk_to_result::not_started;
+    }
+    cata::lua_platform::begin_dialogue_session( d );
+    dialogue_by_radio = radio_contact;
+    dialogue_remote_name = remote_name;
     const cata::lua_platform::native_hook_result start_hook =
         cata::lua_platform::dispatch_native_dialogue_hook(
             "on_dialogue_start", *d.actor( false ),
@@ -1752,7 +1755,8 @@ avatar_talk_to_result avatar::talk_to( std::unique_ptr<talker> talk_with,
             int cat = topic_category( d.topic_stack.back() );
             do {
                 d.topic_stack.pop_back();
-            } while( cat != -1 && topic_category( d.topic_stack.back() ) == cat );
+            } while( !d.topic_stack.empty() && cat != -1 &&
+                     topic_category( d.topic_stack.back() ) == cat );
         }
         if( next.id == "TALK_DONE" || d.topic_stack.empty() ) {
             d.actor( true )->say( bye_message( d.actor( true )->get_npc() ) );
