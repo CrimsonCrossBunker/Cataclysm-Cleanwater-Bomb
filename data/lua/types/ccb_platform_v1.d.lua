@@ -2767,6 +2767,18 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field strictly_unarmed? boolean Ignore force-unarmed styles.
 ---@field manual_activation? boolean Restrict activation to the active technique menu. All offensive non-counter techniques are selectable by default.
 ---@field active_when? string Named Lua handler that decides whether the technique is available.
+---@field charge_damage? string Named mounted-charge damage handler receiving CcbMountedChargeDamagePayload and returning one finite multiplier. Native code clamps it to 1..max_multiplier; unavailable or invalid callbacks use the native speed-based formula.
+
+---@class CcbMountedChargeDamagePayload
+---@field technique_id string Stable native technique id.
+---@field character GameHandle Exact rider handle; no borrowed native pointers.
+---@field weapon_id string Wielded weapon type id.
+---@field completed_steps integer Completed charge movement steps before contact.
+---@field mount_speed number Current mount speed including animal walk/trot modifiers, not terrain or movement-cost penalties.
+---@field running boolean Whether the rider selected the running movement mode.
+---@field damage_type string Weapon charge damage type; only this component is scaled.
+---@field multiplier_per_step number Weapon charge bonus per reference-speed step. The core policy caps run-up at five steps and scales its bonus by mount_speed / 300.
+---@field max_multiplier number Weapon charge damage multiplier ceiling.
 
 ---@class CcbTechniqueConditionPayload
 ---@field technique_id string Stable native technique id.
@@ -2808,6 +2820,9 @@ function TechniqueDefinition:requires_skill(skill_id, level) end
 ---@param handler_id string Named Lua handler that receives a CcbTechniqueConditionPayload and returns one boolean.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:active_when(handler_id) end
+---@param handler_id string Named handler receiving CcbMountedChargeDamagePayload and returning one finite number. Invoked before the native mounted-charge melee attack, only after movement with positive mount speed. Other attacks do not invoke it.
+---@return TechniqueDefinition self
+function TechniqueDefinition:charge_damage(handler_id) end
 ---@param handler_id string
 ---@return TechniqueDefinition self
 function TechniqueDefinition:on_apply(handler_id) end

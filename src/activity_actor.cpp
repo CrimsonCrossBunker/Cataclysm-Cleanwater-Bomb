@@ -16781,8 +16781,7 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
         }
 
         who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
-                mounted_charge_multiplier( profile, completed_steps,
-                                           who.mounted_creature->get_speed() ) );
+                tec_mounted_charge->charge_damage_multiplier( who, profile, completed_steps ) );
         who.melee_attack( *target, false );
         who.clear_mounted_charge_stab_multiplier();
         if( npc *const person = target->as_npc() ) {
