@@ -64,6 +64,17 @@ human** who:
 真实的 Responsible human，负责理解修改、审查最终差异、确认测试、许可证和
 外部来源，并回答审阅问题。
 
+Those duties belong to the named real person, not to the tool that produced
+the diff. An agent cannot bear the consequences of a wrong implementation, a
+bug that reaches players, or a conflict with the repository's core policy; the
+person who submits the pull request bears them. If you are not familiar with
+agent-assisted workflows, read or understand the full diff, then write the
+pull request yourself and decide whether to push once that review passes. /
+上述职责属于被指定的真实人类，不属于产生 diff 的工具。实现错误、进入游戏的缺陷、
+与仓库核心策略冲突等可能的情况，后果皆由提交 PR 的人承担，智能体无承担能力。
+若不熟悉智能体协作流程，请先阅读或理解完整 diff，审查通过后再自行撰写 PR 并决策
+推送。
+
 ## Prepare a development environment
 
 CCB supports several toolchains. Use the instructions matching your target:
@@ -229,7 +240,7 @@ workflow or narrow local check and record assets that were not exercised.
 
 CCB selectively ports from Cataclysm-DDA, Cataclysm: Bright Nights, and other
 compatible sources; it does not automatically adopt their policy or runtime
-semantics. A port must record:
+semantics. A port declares the following in its pull request description:
 
 - source repository, PR, and exact commit range;
 - original authors and license;
@@ -237,8 +248,11 @@ semantics. A port must record:
 - save, data-ID, mod, and platform compatibility impact;
 - tests run against current CCB `master`.
 
-Preserve source commits when practical. Do not silently replace a CCB-specific
-behaviour with upstream behaviour.
+Attribute ported code to its original authors on the commits that carry it,
+using the Git author parameter or a `Co-authored-by` trailer. Commit local
+compatibility work, fixes, and branch-specific extensions under your own
+identity. Preserve source commits when practical. Do not silently replace a
+CCB-specific behaviour with upstream behaviour.
 
 ## Testing and validation
 
