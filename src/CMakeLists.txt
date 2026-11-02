@@ -62,8 +62,10 @@ else()
 endif()
 
 if (MSVC)
+    set(LUA_PLATFORM_MSVC_SOURCES ${CATACLYSM_DDA_SOURCES})
+    list(FILTER LUA_PLATFORM_MSVC_SOURCES INCLUDE REGEX "/lua_platform_.*\\.cpp$")
     set_source_files_properties(
-        ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_content_worldgen.cpp
+        ${LUA_PLATFORM_MSVC_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/mapgen.cpp
         PROPERTIES COMPILE_OPTIONS "/bigobj"
     )
