@@ -29,6 +29,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -4020,9 +4021,22 @@ void game::reset_light_level()
 //Gets the next free ID, also used for player ID's.
 character_id game::assign_npc_id()
 {
+    if( next_npc_id.get_value() == std::numeric_limits<int>::max() ) {
+        throw std::overflow_error( "Character ID space exhausted" );
+    }
     character_id ret = next_npc_id;
     ++next_npc_id;
     return ret;
+}
+
+void game::observe_npc_id( character_id id )
+{
+    if( !id.is_valid() || id.get_value() == std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( "Invalid persisted character ID" );
+    }
+    if( !( id < next_npc_id ) ) {
+        next_npc_id = character_id( id.get_value() + 1 );
+    }
 }
 
 int64_t game::assign_item_uid()

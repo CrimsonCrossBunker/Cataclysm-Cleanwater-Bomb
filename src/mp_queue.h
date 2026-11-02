@@ -10,6 +10,8 @@
 #include <string>
 #include <utility>
 
+#include "mp_player_identity.h"
+
 namespace cata_mp
 {
 
@@ -20,9 +22,10 @@ struct mp_event {
         action       // player 2 sent an action command
     };
     type evt_type;
-    std::string session_id;
+    std::string display_name;
     std::string data;  // JSON action string for type::action
     uint64_t peer_id = 0; // Transport identity; display names are not unique IDs.
+    player_credentials player{}; // Connect only; never included in gameplay logs.
 };
 
 class event_queue
