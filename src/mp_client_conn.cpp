@@ -9,6 +9,7 @@
 #include <thread>
 
 #include "mp_protocol.h"
+#include "mp_player_identity.h"
 #include "mp_renet_transport.h"
 
 namespace cata_mp
@@ -26,6 +27,7 @@ bool joined = false;
 bool disconnected_reported = false;
 std::string pending_join;
 std::string connect_error;
+std::string identity_scope;
 std::deque<std::string> incoming;
 
 void close_client()
@@ -38,6 +40,7 @@ void close_client()
     disconnected_reported = false;
     incoming.clear();
     pending_join.clear();
+    identity_scope.clear();
 }
 
 std::string resolve_server( const std::string &host, uint16_t port )
@@ -58,7 +61,7 @@ std::string resolve_server( const std::string &host, uint16_t port )
 std::string handshake( const std::string &type, const std::string &name,
                        const std::string &password, const std::string &version )
 {
-    return "{\"type\":" + wire_quote( type ) + ",\"transport\":\"ccb-renet-1\",\"name\":" +
+    return "{\"type\":" + wire_quote( type ) + ",\"transport\":\"ccb-renet-2\",\"name\":" +
            wire_quote( name ) + ",\"password\":" + wire_quote( password ) +
            ",\"version\":" + wire_quote( version ) + "}";
 }
@@ -138,11 +141,12 @@ bool client_connect( const std::string &host, uint16_t port, const std::string &
                 close_client();
                 return false;
             }
-            if( fields["type"] == "welcome" && fields["transport"] == "ccb-renet-1" ) {
+            if( fields["type"] == "welcome" && fields["transport"] == "ccb-renet-2" ) {
                 mp_set_client_host_world_name( fields["world"] );
                 mp_set_client_host_player_name( fields["host_name"] );
                 mp_store_pending_welcome( message );
                 pending_join = handshake( "join", name, password, version );
+                identity_scope = address;
                 incoming.push_back( message );
                 mp_log( "[ccb-mp] Renet host accepted connection to " + address );
                 return true;
@@ -160,12 +164,24 @@ std::string client_connect_error()
     return connect_error;
 }
 
-void client_send_join()
+std::string client_identity_scope()
+{
+    return identity_scope;
+}
+
+void client_send_join( const player_credentials &player )
 {
     if( !active || joined || pending_join.empty() ) {
         return;
     }
-    joined = renet_transport_send( 0, renet_channel::reliable_ordered, pending_join );
+    if( !player.valid() ) {
+        connect_error = "Persistent player identity is required";
+        return;
+    }
+    const std::string join = pending_join.substr( 0, pending_join.size() - 1 ) +
+                             ",\"player_id\":" + wire_quote( player.id.str() ) +
+                             ",\"resume_secret\":" + wire_quote( player.resume_secret ) + "}";
+    joined = renet_transport_send( 0, renet_channel::reliable_ordered, join );
     if( joined ) {
         pending_join.clear();
     }

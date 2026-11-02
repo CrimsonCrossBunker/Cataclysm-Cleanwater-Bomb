@@ -8,6 +8,7 @@
 
 namespace cata_mp
 {
+struct player_credentials;
 
 bool is_client_mode();
 void set_client_mode( bool enabled );
@@ -20,10 +21,12 @@ bool client_connect( const std::string &host, uint16_t port,
                      const std::string &version = "" );
 // Error text from the last failed client_connect() call.
 std::string client_connect_error();
+// Canonical endpoint derived from the local connection request, not host data.
+std::string client_identity_scope();
 
 // Send the deferred join message. No-op if already sent or not connected.
 // Called by client_process_incoming() on the first game tick.
-void client_send_join();
+void client_send_join( const player_credentials &player );
 
 // Returns true after client_send_join() has fired (i.e. the save is loaded and
 // the join handshake has been queued for reliable delivery).

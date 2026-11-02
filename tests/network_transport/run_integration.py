@@ -81,16 +81,35 @@ def main():
             assert response.startswith('ERROR ') and reason in response, response
             bad.close()
             results.append(tag + '_rejection')
+        for tag, identity in [('old_name_based_protocol', {}), ('missing_identity', {}),
+                              ('invalid_identity', {'player_id': '../outside', 'resume_secret': 'a' * 64})]:
+            invalid = start(tag, 'raw', port)
+            assert invalid.read() == 'READY'
+            packet = {'type': 'join', 'transport': 'ccb-renet-2', 'password': '口令"\\',
+                      'version': 'abc', 'name': 'player', **identity}
+            if tag == 'old_name_based_protocol':
+                packet['transport'] = 'ccb-renet-1'
+            assert invalid.command('send ' + json.dumps(packet)) == 'OK'
+            reply = invalid.message()
+            expected = 'Incompatible multiplayer transport' if tag == 'old_name_based_protocol' else 'identity required'
+            assert reply['type'] == 'error' and expected in reply['message']
+            assert host.command('next') == 'EMPTY', 'invalid identity reached actor creation'
+            invalid.close()
+            results.append(tag + '_rejected_before_spawn')
         client = start('client', 'client', port, '玩家"\\', '口令"\\', 'abc-dirty.123+SDL3')
         assert client.read() == 'READY'
         welcome = client.message()
         assert welcome['world'] == '测试世界"\\\n' and welcome['seed'] == 12345
         assert welcome['spawn_omt'] == [1, 2, 0]
         assert host.command('next') == 'EMPTY', 'probe spawned a player'
+        assert client.command('join-invalid') == 'OK'
+        assert host.command('next') == 'EMPTY', 'invalid local profile sent a join'
         assert client.command('join') == 'OK'
         event = host.command('next')
         assert event.startswith('EVENT 0 ') and int(event.split()[2]) > 0, event
-        assert client.message()['type'] == 'welcome'
+        join_welcome = client.message()
+        assert join_welcome['type'] == 'welcome' and join_welcome['player_id'] == '1' * 32
+        assert 'resume_secret' not in join_welcome
         assert client.message()['type'] == 'player_joined'
         results.append('deferred_join_seed_unicode_and_peer_identity')
         raw = start('raw', 'raw', port)
@@ -156,6 +175,19 @@ def main():
         results.extend(['exclusive_owned_host', 'same_process_12_rehosts_and_queue_reset',
                         'destructor_with_retained_lease', 'bind_failure_recovery',
                         'worker_failure_recovery_with_real_client'])
+        rejected = start('owner-rejection', 'client', port, 'player', '口令"\\', 'abc')
+        assert rejected.read() == 'READY'
+        assert rejected.message()['type'] == 'welcome'
+        assert rejected.command('join') == 'OK'
+        rejected_peer = int(host.command('next').split()[2])
+        assert rejected.message()['type'] == 'welcome'
+        assert rejected.message()['type'] == 'player_joined'
+        assert host.command(f'reject {rejected_peer}') == 'OK'
+        assert rejected.message() == {'type': 'error', 'message': 'Owner rejected player identity'}
+        disconnect = host.command('next').split()
+        assert disconnect[0:2] == ['EVENT', '1'] and int(disconnect[2]) == rejected_peer
+        rejected.close()
+        results.append('owner_admission_rejection_closes_worker_peer')
         host.close()
         host2 = start('rehost', 'host', port)
         assert host2.read() == 'READY'

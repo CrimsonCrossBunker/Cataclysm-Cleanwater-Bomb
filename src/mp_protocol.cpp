@@ -24,7 +24,7 @@ bool read_handshake( const std::string &wire, std::map<std::string, std::string>
         std::istringstream input( wire );
         TextJsonIn reader( input );
         const std::set<std::string> string_fields = { "type", "name", "password", "version", "world",
-                                                      "host_name", "message", "transport"
+                                                      "host_name", "message", "transport", "player_id", "resume_secret"
                                                     };
         std::set<std::string> seen;
         reader.start_object();

@@ -7,6 +7,7 @@
 #include "character_id.h"
 #include "mp_apply_watchdog.h"
 #include "mp_server.h"
+#include "mp_player_store.h"
 
 namespace cata_mp
 {
@@ -19,6 +20,10 @@ struct world_session {
     character_id remote_actor_id;
     bool remote_connected = false;
     uint64_t remote_peer_id = 0;
+    player_credentials remote_player;
+    bool remote_detach_pending = false;
+    std::optional<player_credentials> local_player;
+    std::unique_ptr<player_store> players;
     character_id client_host_actor_id;
     bool client_host_spawned = false;
     bool stale_proxy_cleanup_done = false;
@@ -33,6 +38,10 @@ struct world_session {
         remote_actor_id = character_id();
         remote_connected = false;
         remote_peer_id = 0;
+        remote_player = {};
+        remote_detach_pending = false;
+        local_player.reset();
+        players.reset();
         client_host_actor_id = character_id();
         client_host_spawned = false;
         stale_proxy_cleanup_done = false;

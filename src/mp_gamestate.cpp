@@ -1,5 +1,7 @@
 #include "mp_gamestate.h"
 
+#include <stdexcept>
+
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "activity_type.h"
@@ -1595,125 +1597,44 @@ static void mp_save_npc_ids()
     }, "mp npc cleanup list" );
 }
 
-static void purge_npcs_by_name( const std::string &name );
+static player_store &world_players();
 
-// Remove stale MP NPCs saved from a previous session.
-// Called once per world load while the loading screen is still active.
+// Only explicit ownership tags authorize removal. A cleanup file or matching
+// name alone cannot distinguish an old proxy from an unrelated world NPC.
+static bool is_saved_proxy( const npc &candidate )
+{
+    const auto *tag = candidate.maybe_get_value( "mp_proxy" );
+    return tag && tag->is_str() && tag->str() == "1";
+}
+
 static void mp_cleanup_stale_npcs()
 {
     if( mp_session().stale_proxy_cleanup_done ) {
         return;
     }
     mp_session().stale_proxy_cleanup_done = true;
-
-    const cata_path path = mp_npc_cleanup_path();
-    bool found_any = false;
-    read_from_file_optional_json( path, [&]( const JsonValue & jv ) {
-        // Support both the old array format (ids only) and the new object format
-        // (ids + names).  The old format was written by earlier versions of the
-        // code and may still be present in existing saves.
-        if( jv.test_array() ) {
-            // Legacy: plain array of integer IDs
-            for( const JsonValue &v : jv.get_array() ) {
-                const character_id id( v.get_int() );
-                found_any = true;
-                npc *n = g->critter_by_id<npc>( id );
-                if( n ) {
-                    // Clean despawn — a stale proxy, not a death; no corpse/loot.
-                    g->remove_npc( id );
-                }
-                if( id.is_valid() ) {
-                    overmap_buffer.remove_npc( id );
-                }
-            }
-        } else {
-            JsonObject jo = jv.get_object();
-            for( const JsonValue &v : jo.get_array( "ids" ) ) {
-                const character_id id( v.get_int() );
-                found_any = true;
-                npc *n = g->critter_by_id<npc>( id );
-                if( n ) {
-                    // Clean despawn — a stale proxy, not a death; no corpse/loot.
-                    g->remove_npc( id );
-                }
-                if( id.is_valid() ) {
-                    overmap_buffer.remove_npc( id );
-                }
-            }
-            for( const JsonValue &v : jo.get_array( "names" ) ) {
-                const std::string nm = v.get_string();
-                found_any = true;
-                purge_npcs_by_name( nm );
-            }
-        }
-    } );
-    if( found_any ) {
-        g->cleanup_dead();
-        std::cout << "[cdda-mp] Cleaned up stale MP NPCs from previous session." << std::endl;
-    }
-    remove_file( path );
-
-    // Orphan sweep — catches proxies that survived because the cleanup file
-    // wasn't written (host saved while connected, then quit).  Any NPC tagged
-    // with mp_proxy=1 at spawn time is, by definition, a stale proxy now —
-    // the current session hasn't spawned any yet.  Active proxies will be
-    // re-created fresh when the partner reconnects.
-    //
-    // Also legacy-purge by the default proxy name "player2" — pre-tag saves
-    // have untagged ghosts that the value-based sweep can't see.  Safe to
-    // hardcode because "player2" is the client_connect default and no SP NPC
-    // ships with that name.
-    // In client mode the host creates a proxy NPC named after the client's own
-    // character.  If that NPC leaked into the shared save directory it appears
-    // as a walkable ghost of the client's own character on the next session.
-    // Purge any NPC whose name matches the local avatar — safe because no SP
-    // NPC is ever named after the currently-loaded player character.
-    const std::string own_name = get_avatar().name;
-
-    int orphans = 0;
-    std::vector<character_id> orphan_ids;
+    std::vector<character_id> active;
     for( npc &candidate : g->all_npcs() ) {
-        if( candidate.maybe_get_value( "mp_proxy" )
-            || candidate.name == "player2"
-            || ( !own_name.empty() && candidate.name == own_name ) ) {
-            orphan_ids.push_back( candidate.getID() );
+        if( is_saved_proxy( candidate ) ) {
+            active.push_back( candidate.getID() );
         }
     }
-    for( const character_id &id : orphan_ids ) {
-        if( g->critter_by_id<npc>( id ) ) {
-            // Silent removal — die() emits a "X dies!" message which is
-            // misleading when the NPC is a leftover proxy, not a combat death.
-            // NB: game::remove_npc() only erases the active (loaded) copy; the
-            // overmap copy is swept separately below.
-            g->remove_npc( id );
-            ++orphans;
+    for( character_id id : active ) {
+        g->remove_npc( id );
+    }
+    std::vector<character_id> stored;
+    for( const auto &candidate : overmap_buffer.get_npcs_near_player( 500 ) ) {
+        if( candidate && is_saved_proxy( *candidate ) ) {
+            stored.push_back( candidate->getID() );
         }
     }
-    // Overmap orphan sweep — the loaded sweep above only touches NPCs currently
-    // in the reality bubble; the overmap keeps its OWN copy, which
-    // g->load_npcs() re-hydrates every tick (the phantom partner that reappears
-    // next to the host with no client connected).  The old code tried to erase
-    // it inline but guarded on id.is_valid() (value > 0); proxies that lost
-    // their assigned id on save/reload land at id=-1, so the overmap copy was
-    // never removed.  Drive removal from the overmap list itself: every id is
-    // guaranteed present (no debugmsg) and the id sign is irrelevant.
-    int overmap_orphans = 0;
-    std::vector<character_id> om_orphan_ids;
-    for( const auto &ptr : overmap_buffer.get_npcs_near_player( 500 ) ) {
-        if( ptr && ( ptr->maybe_get_value( "mp_proxy" ) || ptr->name == "player2"
-                     || ( !own_name.empty() && ptr->name == own_name ) ) ) {
-            om_orphan_ids.push_back( ptr->getID() );
-        }
-    }
-    for( const character_id &id : om_orphan_ids ) {
+    for( character_id id : stored ) {
         overmap_buffer.remove_npc( id );
-        ++overmap_orphans;
     }
-    if( orphans > 0 || overmap_orphans > 0 ) {
+    if( !active.empty() || !stored.empty() ) {
         g->cleanup_dead();
-        mp_log( "[cdda-mp] ORPHAN-SWEEP removed " + std::to_string( orphans )
-                + " loaded + " + std::to_string( overmap_orphans ) + " overmap proxy NPCs" );
     }
+    remove_file( mp_npc_cleanup_path() );
 }
 
 void mp_cleanup_stale_npcs_after_load()
@@ -1731,6 +1652,9 @@ void mp_cleanup_stale_npcs_after_load()
         return;
     }
 
+    // Reserve disconnected players as well, before solo play can allocate a
+    // new NPC ID. Corrupt ownership data must be repaired, never overwritten.
+    world_players();
     mp_cleanup_stale_npcs();
 }
 
@@ -1793,72 +1717,94 @@ void mp_on_world_exit()
     g_mp_hud.reset();
 }
 
-static void purge_npcs_by_name( const std::string &name )
+static void release_remote_player();
+
+static player_store &world_players()
 {
-    if( name.empty() ) {
-        return;
-    }
-    int active_killed = 0;
-    int overmap_removed = 0;
-    // Active critters first
-    for( npc *n : g->get_npcs_if( [&]( const npc & np ) {
-    return np.name == name;
-} ) ) {
-        mp_log( "[cdda-mp] PURGE active: id=" + std::to_string( n->getID().get_value() )
-                + " name='" + n->name + "' pos=" + n->pos_abs().to_string() );
-        // Clean despawn — a stale proxy, not a death; no corpse/loot dropped.
-        g->remove_npc( n->getID() );
-        ++active_killed;
-    }
-    g->cleanup_dead();
-    // Overmap buffer — radius 500 sm covers the entire typical play area
-    for( const auto &ptr : overmap_buffer.get_npcs_near_player( 500 ) ) {
-        if( ptr && ptr->name == name && ptr->getID().is_valid() ) {
-            mp_log( "[cdda-mp] PURGE overmap: id=" + std::to_string( ptr->getID().get_value() )
-                    + " name='" + ptr->name + "'" );
-            ++overmap_removed;
-            overmap_buffer.remove_npc( ptr->getID() );
+    if( !mp_session().players ) {
+        auto players = std::make_unique<player_store>( PATH_INFO::world_base_save_path() );
+        for( character_id id : players->actor_ids() ) {
+            g->observe_npc_id( id );
         }
+        mp_session().players = std::move( players );
     }
-    mp_log( "[cdda-mp] PURGE summary name='" + name + "' active=" + std::to_string( active_killed )
-            + " overmap=" + std::to_string( overmap_removed ) );
+    return *mp_session().players;
 }
 
-static cata_path remote_player_save_path( const std::string_view name )
+static std::string serialize_player( const npc &remote )
 {
-    std::string safe;
-    for( char c : name ) {
-        safe += std::isalnum( static_cast<unsigned char>( c ) ) ? c : '_';
-    }
-    return PATH_INFO::world_base_save_path() / ( "mp_player_" + safe + ".json" );
+    std::ostringstream output;
+    JsonOut json( output );
+    remote.serialize( json );
+    return output.str();
 }
 
-static void save_remote_player()
+bool mp_save_remote_player()
 {
     if( !mp_session().remote_connected ) {
-        return;
+        return true;
     }
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    const npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
     if( !remote ) {
-        return;
+        return false;
     }
-    const cata_path path = remote_player_save_path( remote->name );
-    write_to_file( path, [&]( std::ostream & fout ) {
-        JsonOut json( fout );
-        remote->serialize( json );
-    }, "multiplayer character" );
-    std::cout << "[cdda-mp] Saved remote player '" << remote->name << "'" << std::endl;
+    try {
+        world_players().save( mp_session().remote_player, serialize_player( *remote ) );
+        if( mp_session().remote_detach_pending ) {
+            release_remote_player();
+        }
+        return true;
+    } catch( const std::exception & ) {
+        // A malformed record may contain private credentials in its parser
+        // excerpt. Keep the on-screen failure actionable without exposing it.
+        add_msg( m_bad,
+                 _( "Could not save the multiplayer character.  Keep the world open and check the save directory." ) );
+        return false;
+    }
 }
 
-static void spawn_remote_player( const std::string &name, uint64_t peer_id )
+static std::optional<std::string> restore_player( const player_credentials &player )
+{
+    auto &store = world_players();
+    auto saved = store.load( player );
+    const auto legacy = saved ? std::vector<cata_path>() : store.legacy_records();
+    if( !legacy.empty() ) {
+        uilist choice;
+        choice.title = _( "Associate an old multiplayer character" );
+        choice.text =
+            _( "This profile has no character in this world.  Only choose an old save if it belongs to this player.  Original files will be kept." );
+        choice.entries.emplace_back( 0, true, 'n', _( "Create a new character" ) );
+        for( size_t i = 0; i < legacy.size(); ++i ) {
+            choice.entries.emplace_back( i + 1, true, -1,
+                                         legacy[i].get_relative_path().filename().u8string() );
+        }
+        choice.query();
+        if( choice.ret < 0 ) {
+            throw std::runtime_error( "Host cancelled legacy association" );
+        }
+        if( choice.ret > 0 && static_cast<size_t>( choice.ret ) <= legacy.size() ) {
+            const auto &source = legacy[choice.ret - 1];
+            const auto legacy_json = json_loader::from_path( source ).get_object();
+            legacy_json.allow_omitted_members();
+            const character_id id( legacy_json.get_int( "id" ) );
+            if( id == get_avatar().getID() || g->critter_by_id<npc>( id ) ||
+                overmap_buffer.find_npc( id ) ) {
+                throw std::runtime_error( "Legacy actor ID is still occupied; association refused" );
+            }
+            store.import_legacy( player, source );
+            saved = store.load( player );
+        }
+    }
+    return saved;
+}
+
+static void spawn_remote_player( const std::string &name, uint64_t peer_id,
+                                 const player_credentials &player )
 {
     if( mp_session().remote_connected ) {
-        std::cout << "[cdda-mp] Remote player already exists, ignoring spawn." << std::endl;
-        return;
+        throw std::runtime_error( "A live or unsaved multiplayer actor already owns this slot" );
     }
-    // Purge any stale NPCs from previous sessions that share this name —
-    // covers artifacts that predate the ID-tracking cleanup file.
-    purge_npcs_by_name( name );
+    const auto saved = restore_player( player );
 
     avatar &u = get_avatar();
     map &m = get_map();
@@ -1891,14 +1837,14 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id )
 
     shared_ptr_fast<npc> remote = make_shared_fast<npc>();
 
-    const cata_path save_path = remote_player_save_path( name );
-    bool loaded = read_from_file_optional_json( save_path, [&]( const JsonValue & jv ) {
-        remote->deserialize( jv.get_object() );
-    } );
-
-    if( loaded ) {
-        remote->name = name;
-        std::cout << "[cdda-mp] Loaded saved character for '" << name << "'" << std::endl;
+    if( saved ) {
+        remote->deserialize( json_loader::from_string( *saved ).get_object() );
+        if( remote->is_dead_state() || !remote->getID().is_valid() || remote->getID() == u.getID() ||
+            overmap_buffer.find_npc( remote->getID() ) || g->critter_by_id<npc>( remote->getID() ) ) {
+            throw std::runtime_error( "Saved multiplayer actor ID is already in use" );
+        }
+        g->observe_npc_id( remote->getID() );
+        mp_log( "[ccb-mp] restored persistent actor=" + std::to_string( remote->getID().get_value() ) );
     } else {
         remote->normalize();
         remote->name = name;
@@ -1914,6 +1860,13 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id )
     if( !remote->getID().is_valid() ) {
         remote->setID( g->assign_npc_id() );
     }
+
+    // Commit the identity/actor binding before inserting the live proxy. An I/O
+    // failure rejects the join instead of creating an unpersisted character.
+    remote->set_value( "mp_player_id", player.id.str() );
+    remote->set_value( "mp_proxy", std::string( "1" ) );
+    world_players().save( player, serialize_player( *remote ) );
+    mp_session().remote_player = player;
 
     // Always respawn near the host player regardless of saved position
     remote->spawn_at_precise( m.get_abs( spawn_pos ) );
@@ -1978,14 +1931,11 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id )
     mp_templates_sync_on_join();
 }
 
-static void remove_remote_player()
+static void release_remote_player()
 {
     if( !mp_session().remote_connected ) {
         return;
     }
-
-    save_remote_player();
-
     npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
     if( remote ) {
         // Clean despawn — the partner quit/disconnected, they are NOT dead.
@@ -2007,6 +1957,8 @@ static void remove_remote_player()
 
     mp_session().remote_connected = false;
     mp_session().remote_peer_id = 0;
+    mp_session().remote_player = {};
+    mp_session().remote_detach_pending = false;
     mp_session().remote_actor_id = character_id();
     g_proxy_was_alive = false;
     g_separation_tier = 0;
@@ -2019,6 +1971,21 @@ static void remove_remote_player()
     mp_save_npc_ids();  // ID is now invalid — clears the cleanup file entry
     add_msg( m_bad, _( "The other player has disconnected." ) );
     std::cout << "[cdda-mp] Remote player removed from world." << std::endl;
+}
+
+static void remove_remote_player()
+{
+    if( !mp_session().remote_connected ) {
+        return;
+    }
+    if( !mp_save_remote_player() ) {
+        // Retain ownership and freeze NPC AI until an explicit world-save retry
+        // succeeds. The departed peer must no longer receive turns or actions.
+        mp_session().remote_peer_id = 0;
+        mp_session().remote_detach_pending = true;
+        return;
+    }
+    release_remote_player();
 }
 
 // After substituting an NPC name → "You", the verb is still third-person singular.
@@ -4716,7 +4683,7 @@ void grant_client_turn()
 
 void wait_for_client_action()
 {
-    if( !mp_session().remote_connected ) {
+    if( !mp_session().remote_connected || mp_session().remote_peer_id == 0 ) {
         return;
     }
 
@@ -5893,7 +5860,7 @@ bool mp_world_has_history( const std::string &worldname )
     }
     const std::vector<cata_path> players = get_files_from_path(
             "mp_player_", folder, false, false );
-    return !players.empty();
+    return !players.empty() || !get_files_from_path( "mp_actor_", folder, false, false ).empty();
 }
 
 std::string mp_world_marker_badge( const std::string &worldname )
@@ -6268,14 +6235,23 @@ void process_mp_events()
         switch( event.evt_type ) {
             case mp_event::type::connect:
                 if( event.peer_id != 0 ) {
-                    spawn_remote_player( event.session_id, event.peer_id );
+                    try {
+                        spawn_remote_player( event.display_name, event.peer_id, event.player );
+                    } catch( const std::exception & ) {
+                        if( const auto server = get_active_server() ) {
+                            server->post_reject( event.peer_id,
+                                                 "Could not restore player identity; host must check the saved character" );
+                        }
+                        add_msg( m_bad,
+                                 _( "Multiplayer join rejected: identity, saved character, or legacy association failed.  No saved character was replaced." ) );
+                    }
                 }
                 break;
             case mp_event::type::disconnect:
                 remove_remote_player();
                 break;
             case mp_event::type::action:
-                handle_remote_action( event.session_id, event.data );
+                handle_remote_action( event.display_name, event.data );
                 if( !is_state_sync( event.data ) ) {
                     turn_action_processed = true;
                 }
@@ -6410,9 +6386,6 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
     map &m = get_map();
 
     if( !mp_session().client_host_spawned ) {
-        // Purge any stale host-proxy NPCs with the same name from old sessions.
-        purge_npcs_by_name( name.empty() ? "host" : name );
-
         shared_ptr_fast<npc> host_npc = make_shared_fast<npc>();
         host_npc->normalize();
         host_npc->name = name.empty() ? "host" : name;
@@ -7692,11 +7665,22 @@ void client_process_incoming()
         return;
     }
 
-    mp_cull_local_npcs();   // drop client-local phantom NPCs (keep only host proxy)
-
     // Send the join message on the first tick — the save is loaded by now.
     const bool was_joined = client_join_is_sent();
-    client_send_join();
+    if( !was_joined ) {
+        try {
+            if( !mp_session().local_player ) {
+                mp_session().local_player = load_server_player_credentials(
+                                                PATH_INFO::config_dir_path(), client_identity_scope() );
+            }
+            client_send_join( *mp_session().local_player );
+        } catch( const std::exception & ) {
+            set_client_mode( false );
+            add_msg( m_bad,
+                     _( "Could not load or save your multiplayer identity.  Restore its configuration backup before reconnecting." ) );
+            return;
+        }
+    }
     if( !was_joined && client_join_is_sent() ) {
         // Just sent the join — clear any stale ack/seq state from a previous session
         // so the server's first move grant isn't silently ignored after reconnect.
@@ -7707,6 +7691,11 @@ void client_process_incoming()
         // Templates wire-sync: send local template list so the host can request
         // anything it's missing.  Host sends its own list independently.
         mp_templates_sync_on_join();
+    }
+    // A successful host snapshot creates its proxy. Before that admission,
+    // retain local NPCs: a missing profile or rejected join must not erase them.
+    if( mp_session().client_host_spawned ) {
+        mp_cull_local_npcs();
     }
     std::string msg;
     int recv_count = 0;

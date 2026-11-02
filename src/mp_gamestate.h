@@ -314,6 +314,8 @@ void mp_notify_session_ending();
 // the shared world (save_request -> save_done) so the two stores stay in step.
 // No-op outside MP modes.
 void mp_after_quicksave();
+// Part of the world's save gate; a failed actor write must not report success.
+bool mp_save_remote_player();
 
 // Templates wire-sync on join: enumerate the local ~/Library/.../templates/
 // dir, send the list to the partner, then exchange any templates the other

@@ -26,6 +26,8 @@ class server
         void post_send( uint64_t peer_id, const std::string &msg );
         void broadcast( const std::string &msg );
         void post_broadcast( const std::string &msg );
+        // Owner-side admission failed. Queue a reason and close on the worker.
+        void post_reject( uint64_t peer_id, const std::string &reason );
 
         uint16_t port() const {
             return port_;

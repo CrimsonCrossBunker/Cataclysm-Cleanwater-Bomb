@@ -7,6 +7,133 @@
 #include "mp_queue.h"
 #include "mp_world_session.h"
 #include "rng.h"
+#include "avatar.h"
+#include "cata_utility.h"
+#include "filesystem.h"
+#include "npc.h"
+#include "overmapbuffer.h"
+#include "path_info.h"
+#include "player_helpers.h"
+#include <filesystem>
+
+TEST_CASE( "mp_cleanup_never_claims_npcs_by_name_or_unverified_cleanup_ids",
+           "[multiplayer][world_session][player_identity][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    const auto cleanup_path = PATH_INFO::world_base_save_path() / "mp_npc_cleanup.json";
+    REQUIRE_FALSE( file_exist( cleanup_path ) );
+    const on_out_of_scope cleanup( [&]() {
+        clear_npcs();
+        remove_file( cleanup_path );
+        session.reset();
+    } );
+    npc &same_name = spawn_npc( { 60, 60 }, "test_talker" );
+    same_name.name = get_avatar().name;
+    const auto same_id = same_name.getID();
+    npc &default_name = spawn_npc( { 61, 60 }, "test_talker" );
+    default_name.name = "player2";
+    const auto default_id = default_name.getID();
+    npc &proxy = spawn_npc( { 62, 60 }, "test_talker" );
+    proxy.name = same_name.name;
+    proxy.set_value( "mp_proxy", std::string( "1" ) );
+    const auto proxy_id = proxy.getID();
+    write_to_file( cleanup_path, [&]( std::ostream & out ) {
+        // Old metadata is not sufficient evidence: IDs may have been reused.
+        out << "{\"ids\":[" << same_id.get_value() << "],\"names\":[\"player2\"]}";
+    } );
+    session.stale_proxy_cleanup_done = false;
+    cata_mp::mp_cleanup_stale_npcs_after_load();
+    CHECK( g->critter_by_id<npc>( same_id ) != nullptr );
+    CHECK( g->critter_by_id<npc>( default_id ) != nullptr );
+    CHECK( g->critter_by_id<npc>( proxy_id ) == nullptr );
+    CHECK_FALSE( overmap_buffer.find_npc( proxy_id ) );
+    CHECK( session.stale_proxy_cleanup_done );
+}
+
+TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
+           "[multiplayer][world_session][player_identity][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const cata_mp::player_credentials profile{ cata_mp::player_id( std::string( 32, '3' ) ),
+            std::string( 64, 'c' ) };
+    const auto record = PATH_INFO::world_base_save_path() / ( "mp_actor_" + profile.id.str() +
+        ".json" );
+    const auto backup = record + ".test-backup";
+    REQUIRE_FALSE( file_exist( record ) );
+    REQUIRE_FALSE( file_exist( backup ) );
+    const on_out_of_scope cleanup( [&]() {
+        clear_npcs();
+        session.reset();
+        std::filesystem::remove_all( record.get_unrelative_path() );
+        remove_file( backup );
+        remove_file( PATH_INFO::world_base_save_path() / "mp_npc_cleanup.json" );
+        cata_mp::get_mp_queue().clear();
+    } );
+    const auto connect = [&]( uint64_t peer, const cata_mp::player_credentials & identity ) {
+        cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect, "connection nickname", "", peer, identity } );
+        cata_mp::process_mp_events();
+    };
+    connect( 101, profile );
+    REQUIRE( session.remote_connected );
+    const auto original_id = session.remote_actor_id;
+    REQUIRE( original_id.is_valid() );
+    npc *actor = g->critter_by_id<npc>( original_id );
+    REQUIRE( actor );
+    actor->name = "Rosalee Blanco";
+    actor->set_value( "identity_regression", std::string( "retained" ) );
+    std::filesystem::rename( record.get_unrelative_path(), backup.get_unrelative_path() );
+    std::filesystem::create_directory( record.get_unrelative_path() );
+    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", 101 } );
+    cata_mp::process_mp_events();
+    CHECK( session.remote_detach_pending );
+    CHECK( session.remote_peer_id == 0 );
+    CHECK( g->critter_by_id<npc>( original_id ) == actor );
+    CHECK( cata_mp::is_remote_player( original_id ) );
+    cata_mp::wait_for_client_action(); // Must not wait for the disconnected peer.
+    std::filesystem::remove( record.get_unrelative_path() );
+    std::filesystem::rename( backup.get_unrelative_path(), record.get_unrelative_path() );
+    REQUIRE( cata_mp::mp_save_remote_player() );
+    CHECK_FALSE( session.remote_detach_pending );
+    REQUIRE_FALSE( session.remote_connected );
+    session.reset(); // Includes a fresh world-store index, not merely a socket reconnect.
+    connect( 202, profile );
+    REQUIRE( session.remote_connected );
+    CHECK( session.remote_actor_id == original_id );
+    actor = g->critter_by_id<npc>( original_id );
+    REQUIRE( actor );
+    CHECK( actor->name == "Rosalee Blanco" );
+    CHECK( actor->get_value( "identity_regression" ).str() == "retained" );
+    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", 101 } );
+    cata_mp::process_mp_events();
+    CHECK( session.remote_connected );
+    CHECK( session.remote_peer_id == 202 );
+    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", 202 } );
+    cata_mp::process_mp_events();
+    auto impostor = profile;
+    impostor.resume_secret = std::string( 64, 'd' );
+    connect( 303, impostor );
+    CHECK_FALSE( session.remote_connected );
+    connect( 404, profile );
+    REQUIRE( session.remote_connected );
+    CHECK( session.remote_actor_id == original_id );
+}
+
+TEST_CASE( "mp_restored_actor_ids_cannot_be_reallocated", "[multiplayer][player_identity]" )
+{
+    const character_id allocated = g->assign_npc_id();
+    const character_id restored( allocated.get_value() + 100 );
+    g->observe_npc_id( restored );
+    CHECK( g->assign_npc_id() == character_id( restored.get_value() + 1 ) );
+    g->observe_npc_id( allocated );
+    CHECK( g->assign_npc_id() == character_id( restored.get_value() + 2 ) );
+    CHECK_THROWS( g->observe_npc_id( character_id() ) );
+}
 
 TEST_CASE( "mp_proxy_bindings_belong_to_one_world", "[multiplayer][world_session]" )
 {
