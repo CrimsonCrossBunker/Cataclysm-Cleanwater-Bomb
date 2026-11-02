@@ -49,6 +49,7 @@
 #include "messages.h"
 #include "mod_manager.h"
 #include "monster.h"
+#include "mp_actor_binding.h"
 #include "mp_client_conn.h"
 #include "mp_mod_compat.h"
 #include "mp_queue.h"
@@ -1234,23 +1235,17 @@ static void mp_save_npc_ids()
 
 static player_store &world_players();
 
-// Only explicit ownership tags authorize removal. A cleanup file or matching
-// name alone cannot distinguish an old proxy from an unrelated world NPC.
-static bool is_saved_proxy( const npc &candidate )
-{
-    const auto *tag = candidate.maybe_get_value( "mp_proxy" );
-    return tag && tag->is_str() && tag->str() == "1";
-}
-
 static void mp_cleanup_stale_npcs()
 {
     if( mp_session().stale_proxy_cleanup_done ) {
         return;
     }
     mp_session().stale_proxy_cleanup_done = true;
+    // Only explicit ownership tags authorize removal, never names or IDs
+    // copied from a cleanup file.
     std::vector<character_id> active;
     for( npc &candidate : g->all_npcs() ) {
-        if( is_saved_proxy( candidate ) ) {
+        if( is_player_proxy( candidate ) ) {
             active.push_back( candidate.getID() );
         }
     }
@@ -1259,7 +1254,7 @@ static void mp_cleanup_stale_npcs()
     }
     std::vector<character_id> stored;
     for( const auto &candidate : overmap_buffer.get_npcs_near_player( 500 ) ) {
-        if( candidate && is_saved_proxy( *candidate ) ) {
+        if( candidate && is_player_proxy( *candidate ) ) {
             stored.push_back( candidate->getID() );
         }
     }

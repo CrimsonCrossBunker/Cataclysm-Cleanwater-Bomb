@@ -12,6 +12,10 @@ class npc;
 
 namespace cata_mp
 {
+// Explicit persisted proxy ownership, including disconnected actors and the
+// client's host view. Classification alone does not authorize a controller.
+bool is_player_proxy( const npc &actor );
+
 // A world-local control/view role retains the exact native object identity
 // across temporary unload. The active incarnation is refreshed only after
 // native on_load has registered that same object again. Reused IDs, copied
