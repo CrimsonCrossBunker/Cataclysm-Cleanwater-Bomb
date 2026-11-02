@@ -73,6 +73,7 @@ def main():
     try:
         host = start('host', 'host', port)
         assert host.read() == 'READY'
+        assert host.command('competing-owner') == 'OK'
         for tag, password, version, reason in [('password', 'wrong', 'abc', 'Wrong password'),
                                                ('version', '口令"\\', 'different', 'Version mismatch')]:
             bad = start(tag, 'client', port, 'player', password, version)
@@ -124,6 +125,37 @@ def main():
         assert host.command('next').startswith('EVENT 0 ')
         reconnect.close()
         assert host.command('next').startswith('EVENT 1 ')
+        queued = start('queued', 'client', port, 'pending actor', '口令"\\', 'abc')
+        assert queued.read() == 'READY'
+        queued.message()
+        assert queued.command('join') == 'OK'
+        assert host.command('await-queued') == 'QUEUED'
+        queued.close()
+        assert host.command('stop-session') == 'STOPPED'
+        for _ in range(12):
+            assert host.command('restart') == 'READY'
+            assert host.command('stop-session') == 'STOPPED'
+        assert host.command('restart') == 'READY'
+        assert host.command('next') == 'EMPTY', 'old event entered replacement session'
+        assert host.command('destructor-restart') == 'READY'
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as occupied:
+            occupied.bind(('127.0.0.1', 0))
+            blocked_port = occupied.getsockname()[1]
+            assert host.command(f'start-port {blocked_port}').startswith('ERROR ')
+            assert host.command('restart') == 'READY'
+        assert host.command('worker-failure') == 'READY'
+        recovered = start('recovered', 'client', port, 'new session', '口令"\\', 'abc')
+        assert recovered.read() == 'READY'
+        assert recovered.message()['type'] == 'welcome'
+        assert recovered.command('join') == 'OK'
+        assert host.command('next').startswith('EVENT 0 ')
+        assert recovered.message()['type'] == 'welcome'
+        assert recovered.message()['type'] == 'player_joined'
+        recovered.close()
+        assert host.command('next').startswith('EVENT 1 ')
+        results.extend(['exclusive_owned_host', 'same_process_12_rehosts_and_queue_reset',
+                        'destructor_with_retained_lease', 'bind_failure_recovery',
+                        'worker_failure_recovery_with_real_client'])
         host.close()
         host2 = start('rehost', 'host', port)
         assert host2.read() == 'READY'
