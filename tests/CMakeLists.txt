@@ -84,7 +84,7 @@ if (BUILD_TESTING)
         endif ()
     endif ()
 
-    if (CURSES)
+    if (CURSES OR HEADLESS)
         add_executable(cata_test ${CATACLYSM_DDA_TEST_SOURCES})
         if (LOCALIZE)
             add_dependencies(cata_test test_mo)
@@ -105,5 +105,14 @@ if (BUILD_TESTING)
                     COMMAND cata_test ${_test_filter} --rng-seed time --warn NoTests
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
         endif()
+    endif ()
+
+    if (HEADLESS)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        add_test(NAME cata.headless.cli
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/headless_cli_test.py
+                        --binary $<TARGET_FILE:cataclysm> --basepath ${CMAKE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        set_tests_properties(cata.headless.cli PROPERTIES TIMEOUT 420)
     endif ()
 endif ()

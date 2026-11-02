@@ -1374,6 +1374,15 @@ int main( int argc, const char *argv[] )
 
     cli_opts cli = parse_commandline( argc, const_cast<const char **>( argv ) );
 
+#if defined(HEADLESS)
+    // This backend has no interactive input device. Reject unsupported launches
+    // before opening a menu or creating an empty recording that cannot finish.
+    if( cli.replay_play.empty() && !cli.verifyexit && !cli.check_mods ) {
+        std::cerr << "HEADLESS requires --replay-play, --jsonverify or --check-mods\n";
+        return EXIT_FAILURE;
+    }
+#endif
+
     validate_directories();
     initialize_debugging();
     initialize_locale();
