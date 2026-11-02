@@ -28,6 +28,13 @@ void replace_substring( std::string &text, const std::string &pattern,
 
 namespace cata_mp
 {
+// This standalone application's owner is the local object in main().
+client_connection *harness_client = nullptr;
+client_connection *current_client_connection()
+{
+    return harness_client;
+}
+
 void mp_log( const std::string &msg )
 {
     std::cerr << msg << '\n';
@@ -94,6 +101,8 @@ static void protocol_tests()
 int main( int argc, char **argv )
 {
     try {
+        client_connection owned_client;
+        harness_client = &owned_client;
         if( argc == 2 && std::string( argv[1] ) == "unit" ) {
             protocol_tests();
             return 0;
@@ -109,6 +118,7 @@ int main( int argc, char **argv )
             }
         } else if( mode == "client" ) {
             require( argc == 6, "client port name password version required" );
+            set_client_mode( true );
             if( !client_connect( "localhost", port, argv[3], argv[4], argv[5] ) ) {
                 std::cout << "ERROR " << wire_quote( client_connect_error() ) << std::endl;
                 return 0;
@@ -181,6 +191,62 @@ int main( int argc, char **argv )
             } else if( command.compare( 0, 7, "reject " ) == 0 && mode == "host" ) {
                 get_active_server()->post_reject( std::stoull( command.substr( 7 ) ),
                                                   "Owner rejected player identity" );
+                std::cout << "OK" << std::endl;
+            } else if( command == "competing-client" ) {
+                const auto before = renet_transport_get_status();
+                const std::string scope = owned_client.identity_scope();
+                const std::string error = owned_client.error();
+                {
+                    client_connection other;
+                    other.set_enabled( true );
+                    require( !other.connect( "127.0.0.1", port, "other", "", "abc" ),
+                             "second connection cannot take another owner's transport" );
+                    require( other.error().find( "already owns" ) != std::string::npos,
+                             "ownership conflict reported" );
+                }
+                const auto after = renet_transport_get_status();
+                require( after.running && after.mode == before.mode, "original transport preserved" );
+                require( owned_client.identity_scope() == scope && owned_client.error() == error,
+                         "other connection state stays private" );
+                std::cout << "OK" << std::endl;
+            } else if( command == "pending-setup" && mode == "client" ) {
+                const std::string welcome = owned_client.welcome();
+                const std::string scope = owned_client.identity_scope();
+                require( owned_client.pending_admission(), "menu probe is pending admission" );
+                owned_client.prepare_for_world_load();
+                require( owned_client.pending_admission() && renet_transport_get_status().connected,
+                         "initial setup preserves the pending probe" );
+                require( owned_client.welcome() == welcome && owned_client.identity_scope() == scope,
+                         "pending metadata survives initial setup" );
+                std::cout << "OK" << std::endl;
+            } else if( command == "world-reset" && mode == "client" ) {
+                require( owned_client.join_is_sent(), "live client before world replacement" );
+                owned_client.prepare_for_world_load();
+                std::string message;
+                require( !is_client_mode() && !owned_client.join_is_sent() &&
+                         !owned_client.pending_admission() && !owned_client.recv_pop( message ),
+                         "world replacement retires joined state and queues" );
+                require( owned_client.identity_scope().empty() && owned_client.welcome().empty() &&
+                         owned_client.error().empty() && !renet_transport_get_status().running,
+                         "world replacement releases transport and private metadata" );
+                std::cout << "STOPPED" << std::endl;
+            } else if( command == "reconnect-client" && mode == "client" ) {
+                set_client_mode( true );
+                require( client_connect( "localhost", port, argv[3], argv[4], argv[5] ),
+                         "same process starts a fresh client attempt" );
+                require( !client_join_is_sent(), "new connection cannot inherit old join" );
+                std::cout << "READY" << std::endl;
+            } else if( command == "destructor-client" && mode == "client" ) {
+                require( !renet_transport_get_status().running, "no live owner before destructor case" );
+                {
+                    client_connection temporary;
+                    temporary.set_enabled( true );
+                    require( temporary.connect( "localhost", port, argv[3], argv[4], argv[5] ),
+                             "temporary client probes host" );
+                    require( temporary.pending_admission(), "temporary pending admission" );
+                }
+                require( !renet_transport_get_status().running && !owned_client.pending_admission(),
+                         "client destruction releases pending transport" );
                 std::cout << "OK" << std::endl;
             } else if( command == "join-invalid" ) {
                 client_send_join( {} );
