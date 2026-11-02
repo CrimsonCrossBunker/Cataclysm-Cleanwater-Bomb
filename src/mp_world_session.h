@@ -36,7 +36,7 @@ struct world_session {
         session_presentation presentation;
         actor_binding remote_actor;
         bool remote_connected = false;
-        uint64_t remote_peer_id = 0;
+        peer_admission remote_admission;
         player_credentials remote_player;
         bool remote_detach_pending = false;
         std::optional<player_credentials> local_player;
@@ -45,8 +45,8 @@ struct world_session {
         bool client_host_spawned = false;
         bool stale_proxy_cleanup_done = false;
 
-        bool accepts_remote_event( uint64_t peer_id ) const {
-            return remote_connected && peer_id != 0 && peer_id == remote_peer_id;
+        bool accepts_remote_event( const peer_admission &admission ) const {
+            return remote_connected && remote_admission.matches( admission );
         }
 
         void reset();

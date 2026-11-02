@@ -139,6 +139,8 @@ class renet_context
         bool start_host( const std::string &bind_addr );
         bool start_client( const std::string &server_addr, uint64_t client_id );
         void stop();
+        // Opaque per-connection host routes, not client-selected wire IDs.
+        // A reconnect receives a fresh route even with the same wire ID.
         std::vector<uint64_t> connected_peers();
         void disconnect_peer( uint64_t peer );
         void pump();

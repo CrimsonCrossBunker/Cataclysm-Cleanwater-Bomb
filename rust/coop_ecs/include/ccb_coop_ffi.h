@@ -139,7 +139,10 @@ typedef struct CcbCoopActivityDeltaFlags {
     uint8_t reserved;
 } CcbCoopActivityDeltaFlags;
 
-// CCB maintained ABI. Increment on incompatible layout or signature changes.
+// CCB maintained ABI. Increment on incompatible layout, signature or semantic changes.
+// ABI 2: host peer IDs are opaque per-connection routes, not client wire IDs.
+// IDs are not reused across host stop/start within a runtime; 0 snapshots a
+// broadcast recipient set at enqueue. Clients continue using peer ID 0.
 CCB_COOP_API uint32_t ccb_coop_abi_version(void);
 CCB_COOP_API CcbCoopTransportRuntime *ccb_coop_transport_create(void);
 CCB_COOP_API void ccb_coop_transport_destroy(CcbCoopTransportRuntime *runtime);

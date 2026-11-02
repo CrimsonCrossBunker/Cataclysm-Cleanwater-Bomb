@@ -866,8 +866,8 @@ struct renet_context::impl {
             if( !bind( abi_version_, "ccb_coop_abi_version" ) ) {
                 return false;
             }
-            if( abi_version_() != 1 ) {
-                last_error_cache_ = "incompatible CCB co-op ABI (expected 1)";
+            if( abi_version_() != 2 ) {
+                last_error_cache_ = "incompatible CCB co-op ABI (expected 2)";
                 return false;
             }
             if( !load_symbols_locked() ) {
