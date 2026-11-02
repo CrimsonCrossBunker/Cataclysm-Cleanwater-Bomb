@@ -42,6 +42,11 @@ class game;
 
 class render_backend;
 
+namespace cata_mp
+{
+struct world_session;
+}
+
 extern std::unique_ptr<game> g;
 
 extern const int savegame_version;
@@ -201,6 +206,10 @@ class game
     public:
         game();
         ~game();
+
+        cata_mp::world_session &multiplayer_session() {
+            return *multiplayer_session_ptr;
+        }
 
         /*
         * MAIN GAME LOOP
@@ -1242,6 +1251,7 @@ class game
         pimpl<spell_events> spell_events_ptr; // NOLINT(cata-serialize)
         pimpl<eoc_events> eoc_events_ptr; // NOLINT(cata-serialize)
         pimpl<power_network_manager> power_networks_ptr;
+        pimpl<cata_mp::world_session> multiplayer_session_ptr; // NOLINT(cata-serialize)
 
         map &m; // NOLINT(cata-serialize)
         // 'current_map' will be identical to 'm' as you can save only at the top of the main loop.
