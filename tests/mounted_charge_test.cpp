@@ -3,11 +3,14 @@
 #include <item_location.h>
 #include <item_uid.h>
 #include <monster_uid.h>
+#include <pimpl.h>
 #include <player_activity.h>
 #include <point.h>
+#include <ret_val.h>
 #include <algorithm>
 #include <cstdint>
 #include <initializer_list>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>

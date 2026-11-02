@@ -1,5 +1,7 @@
 #include "character_martial_arts.h"
 
+#include <calendar.h>
+#include <type_id.h>
 #include <algorithm>
 
 #include "action.h"

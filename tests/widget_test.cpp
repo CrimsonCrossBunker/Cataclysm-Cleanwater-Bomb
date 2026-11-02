@@ -1,3 +1,5 @@
+#include <martialarts.h>
+#include <output.h>
 #include <algorithm>
 #include <array>
 #include <clocale>
@@ -11,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "activity_tracker.h"
@@ -18,11 +21,11 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
-#include "character_martial_arts.h"
+#include "catacharset.h"
 #include "character_attire.h"
+#include "character_martial_arts.h"
 #include "color.h"
 #include "coordinates.h"
 #include "display.h"
