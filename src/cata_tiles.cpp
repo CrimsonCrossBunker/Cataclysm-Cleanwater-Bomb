@@ -3508,7 +3508,7 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
 
     //draw it!
     tile_render_params rp{ ll, nv_color_active, pos, m_draw_light, m_shown_anchor };
-    test_draw_id = test_draw_light_log ? &id : nullptr;
+    test_draw_id = test_draw_light_log ? sprite_id : nullptr;
     // Vehicle parts carry a per-instance paint color via pending_part_tint_
     // (set by draw_vpart). Only apply it to vehicle part sprites.
     if( category == TILE_CATEGORY::VEHICLE_PART ) {
@@ -3995,6 +3995,10 @@ bool cata_tiles::draw_layer_view( const tile_layer_view &view, int &height_3d )
 bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
                                const std::array<bool, 5> &invisible )
 {
+    restore_on_out_of_scope restore_light( m_draw_light );
+    if( terrain_override.find( p ) != terrain_override.end() ) {
+        m_draw_light = draw_light::fixed;
+    }
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
                                           fov_3d_z_range == 0 };
@@ -4005,6 +4009,10 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
 bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
                                  const std::array<bool, 5> &invisible )
 {
+    restore_on_out_of_scope restore_light( m_draw_light );
+    if( furniture_override.find( p ) != furniture_override.end() ) {
+        m_draw_light = draw_light::fixed;
+    }
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
                                           fov_3d_z_range == 0 };
@@ -4016,6 +4024,10 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
 bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
                             const std::array<bool, 5> &invisible )
 {
+    restore_on_out_of_scope restore_light( m_draw_light );
+    if( trap_override.find( p ) != trap_override.end() ) {
+        m_draw_light = draw_light::fixed;
+    }
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
                                           fov_3d_z_range == 0 };
@@ -4743,6 +4755,10 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
         return false;
     }
     const creature_render_view &view = *captured;
+    restore_on_out_of_scope restore_light( m_draw_light );
+    if( view.overridden ) {
+        m_draw_light = draw_light::fixed;
+    }
     if( view.special ) {
         return draw_from_id_string( view.body, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
                                     lit_level::LIT, false, height_3d );

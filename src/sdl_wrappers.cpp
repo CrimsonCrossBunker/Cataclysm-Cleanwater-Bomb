@@ -13,6 +13,7 @@
 #include "cata_shader.h"
 #include "debug.h"
 #include "point.h"
+#include "sdl_renderer_policy.h"
 
 #include <SDL3_image/SDL_image.h>
 
@@ -1258,7 +1259,7 @@ SDL_Renderer_Ptr CreateRenderer( const SDL_Window_Ptr &window, const char *drive
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_SPIRV_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_DXIL_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_MSL_BOOLEAN, true );
-    SDL_Renderer_Ptr result( SDL_CreateRendererWithProperties( props ) );
+    SDL_Renderer_Ptr result( create_compatible_renderer( props ) );
     SDL_DestroyProperties( props );
     printErrorIf( !result, "SDL_CreateRendererWithProperties failed" );
     return result;

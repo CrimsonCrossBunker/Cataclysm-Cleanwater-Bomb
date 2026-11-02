@@ -13,6 +13,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "cata_shader.h"
 #include "cata_tiles.h"
 #include "coordinates.h"
@@ -22,6 +23,7 @@
 #include "map.h"
 #include "map_helpers_tests.h"
 #include "options_helpers.h"
+#include "output.h"
 #include "path_info.h"
 #include "player_helpers.h"
 #include "point.h"
@@ -33,8 +35,12 @@
 
 static const mtype_id mon_zombie( "mon_zombie" );
 
+static const furn_str_id furn_f_chair( "f_chair" );
+
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_wall( "t_wall" );
+
+static const trap_str_id trap_tr_beartrap( "tr_beartrap" );
 
 namespace
 {
@@ -77,7 +83,8 @@ std::vector<tripoint_bub_ms> around( const tripoint_bub_ms &center )
 struct policy_fixture {
     explicit policy_fixture( const std::vector<std::pair<std::string, tile_type>> &tiles =
     plain_tiles( {
-        ter_t_grass.str(), ter_t_wall.str(), mon_zombie.str(), "lighting_hidden"
+        ter_t_grass.str(), ter_t_wall.str(), furn_f_chair.str(), trap_tr_beartrap.str(),
+        mon_zombie.str(), "lighting_hidden"
     } ) ) : available_( fx_.available() ) {
         if( !available_ ) {
             return;
@@ -88,7 +95,7 @@ struct policy_fixture {
         set_time_to_day();
         refresh_caches();
         const std::shared_ptr<const tileset> ts = renderer_recovery_test_support::install_tiles_bundle(
-                "policy_ts", "color_pixel_darken", 1, 1, atlas_bake_plan{}, true, tiles );
+                    "policy_ts", "color_pixel_darken", 1, 1, atlas_bake_plan{}, true, tiles );
         REQUIRE( ts );
         tiles_ = renderer_recovery_test_support::make_test_tiles( ts );
         renderer_recovery_test_support::log_draw_light( *tiles_, &log_ );
@@ -109,6 +116,10 @@ struct policy_fixture {
         here.update_visibility_cache( 0 );
     }
     void draw() {
+        restore_on_out_of_scope restore_x( POSX );
+        restore_on_out_of_scope restore_y( POSY );
+        POSX = view_tiles / 2;
+        POSY = view_tiles / 2;
         log_.clear();
         tiles_->set_draw_cache_dirty();
         renderer_recovery_test_support::draw_test_map( *tiles_, player_pos, view_tiles, view_tiles );
@@ -163,6 +174,28 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
             CHECK( fx.drew( mon_zombie.str(), draw_light::fixed ) );
         }
     }
+    WHEN( "tiles around avatar show furniture override" ) {
+        for( const tripoint_bub_ms &pos : around( player_pos ) ) {
+            fx.tiles_->init_draw_furniture_override( pos, furn_f_chair.id() );
+        }
+        fx.draw();
+        THEN( "the preview stays fixed while its terrain remains scene lit" ) {
+            CHECK( fx.drew( furn_f_chair.str(), draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
+            CHECK_FALSE( fx.drew( furn_f_chair.str(), draw_light::scene ) );
+        }
+    }
+    WHEN( "tiles around avatar show trap override" ) {
+        for( const tripoint_bub_ms &pos : around( player_pos ) ) {
+            fx.tiles_->init_draw_trap_override( pos, trap_tr_beartrap.id() );
+        }
+        fx.draw();
+        THEN( "the preview stays fixed while its terrain remains scene lit" ) {
+            CHECK( fx.drew( trap_tr_beartrap.str(), draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
+            CHECK_FALSE( fx.drew( trap_tr_beartrap.str(), draw_light::scene ) );
+        }
+    }
     WHEN( "night on unexplored ground hides the tiles round the avatar" ) {
         // no memory and out of sight, so the tile draws the hidden vision effect
         get_avatar().clear_map_memory();
@@ -185,7 +218,7 @@ TEST_CASE( "failed_shader_unbind_stops_the_minimap_before_it_paints",
         return;
     }
     REQUIRE( renderer_recovery_test_support::install_test_font( PATH_INFO::fontdir() + "unifont.ttf",
-            8, 16, 16, false ) );
+             8, 16, 16, false ) );
     const catacurses::window w = catacurses::newwin( 4, 8, point::zero );
     int paints = 0;
     WHEN( "minimap window is drawn" ) {
@@ -208,7 +241,7 @@ TEST_CASE( "failed_shader_unbind_stops_the_minimap_before_it_paints",
 
 // grass, and a wall drawn through subtiles that take `subtile_anchor`
 static std::vector<std::pair<std::string, tile_type>> wall_tiles(
-    const std::optional<smooth_lighting::light_anchor> &subtile_anchor )
+            const std::optional<smooth_lighting::light_anchor> &subtile_anchor )
 {
     std::vector<std::pair<std::string, tile_type>> tiles = plain_tiles( { ter_t_grass.str() } );
     tile_type wall = atlas_sprite_tile();
@@ -228,7 +261,7 @@ static std::vector<std::pair<std::string, tile_type>> wall_tiles(
 }
 
 static std::vector<std::optional<smooth_lighting::light_anchor>> wall_subtile_anchors(
-    const light_log &log )
+            const light_log &log )
 {
     std::vector<std::optional<smooth_lighting::light_anchor>> anchors;
     for( const drawn_sprite_record &e : log ) {
@@ -261,7 +294,7 @@ TEST_CASE( "connected_walls_keep_their_anchor_through_subtiles", "[smooth_lighti
         draw_walls( fx );
         THEN( "its subtiles take the base anchor of walls" ) {
             const std::vector<std::optional<smooth_lighting::light_anchor>> anchors =
-                wall_subtile_anchors( fx.log_ );
+                        wall_subtile_anchors( fx.log_ );
             REQUIRE_FALSE( anchors.empty() );
             for( const std::optional<smooth_lighting::light_anchor> &a : anchors ) {
                 CHECK( a == smooth_lighting::light_anchor::base );
@@ -277,7 +310,7 @@ TEST_CASE( "connected_walls_keep_their_anchor_through_subtiles", "[smooth_lighti
         draw_walls( fx );
         THEN( "tileset's anchor wins" ) {
             const std::vector<std::optional<smooth_lighting::light_anchor>> anchors =
-                wall_subtile_anchors( fx.log_ );
+                        wall_subtile_anchors( fx.log_ );
             REQUIRE_FALSE( anchors.empty() );
             for( const std::optional<smooth_lighting::light_anchor> &a : anchors ) {
                 CHECK( a == smooth_lighting::light_anchor::ground );
@@ -426,7 +459,7 @@ TEST_CASE( "lit_probe_cases_reach_each_visual_input", "[smooth_lighting]" )
         const probe_case &c = probe_case_named( all, "translucent sprite" );
         THEN( "it differs from the same sprite opaque" ) {
             CHECK_FALSE( matches( expected( c ), expected( probe_case_named( all,
-                    "colored sprite, half light" ) ) ) );
+                                  "colored sprite, half light" ) ) ) );
         }
     }
     GIVEN( "corner of a full size level between red levels" ) {
