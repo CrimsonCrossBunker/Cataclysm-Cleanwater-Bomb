@@ -39,6 +39,7 @@ class control_fixture
             local.setID( g->assign_npc_id(), true );
             local.name = "Local controller";
             local.set_save_id( "local-control-slot" );
+            local.ensure_player_id();
             local.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
         }
 
@@ -92,6 +93,7 @@ TEST_CASE( "local_takeover_keeps_the_save_slot_and_exchanges_character_roles", "
     control_fixture fixture;
     npc &follower = fixture.follower();
     const auto original = fixture.local.getID();
+    const auto player = fixture.local.get_player_id();
     const auto target = follower.getID();
     const auto target_position = follower.pos_abs();
     REQUIRE( original != target );
@@ -100,9 +102,11 @@ TEST_CASE( "local_takeover_keeps_the_save_slot_and_exchanges_character_roles", "
     CHECK( follower.getID() == original );
     CHECK( fixture.local.pos_abs() == target_position );
     CHECK( fixture.local.get_save_id() == "local-control-slot" );
+    CHECK( fixture.local.get_player_id() == player );
     // Returning control must preserve the same local save ownership.
     fixture.local.control_npc( follower );
     CHECK( fixture.local.getID() == original );
     CHECK( follower.getID() == target );
     CHECK( fixture.local.get_save_id() == "local-control-slot" );
+    CHECK( fixture.local.get_player_id() == player );
 }

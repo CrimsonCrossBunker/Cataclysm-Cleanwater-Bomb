@@ -50,6 +50,7 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "help.h"
+#include "input_replay.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
@@ -165,6 +166,19 @@ avatar::~avatar() = default;
 avatar::avatar( avatar && ) = default;
 // NOLINTNEXTLINE(performance-noexcept-move-constructor)
 avatar &avatar::operator=( avatar && ) = default;
+
+void avatar::assign_new_player_id()
+{
+    const auto replay_identity = input_replay::next_profile_identity( get_save_id() );
+    local_player_id = replay_identity ? player_id( *replay_identity ) : create_player_id();
+}
+
+void avatar::ensure_player_id()
+{
+    if( !local_player_id.valid() ) {
+        assign_new_player_id();
+    }
+}
 
 void avatar::control_npc( npc &np, const bool debug )
 {
