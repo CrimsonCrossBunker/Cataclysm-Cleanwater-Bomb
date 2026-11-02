@@ -142,15 +142,21 @@ void exercise_context_ownership( uint16_t first_port, uint16_t second_port )
     require( next_event( second_host ).data == second_action,
              "second action delivered only to second world" );
     auto retained = first_host.active_server();
-    retained->post_send( first_join.peer_id, "{\"type\":\"state\",\"owner\":\"first\"}" );
-    second_host.active_server()->post_send( second_join.peer_id,
+    require( first_join.admission.peer_id() == second_join.admission.peer_id(),
+             "independent servers reuse numeric routes" );
+    retained->post_send( second_join.admission, "{\"type\":\"state\",\"owner\":\"foreign\"}" );
+    retained->post_reject( second_join.admission, "foreign rejection" );
+    retained->post_send( first_join.admission, "{\"type\":\"state\",\"owner\":\"first\"}" );
+    second_host.active_server()->post_send( second_join.admission,
                                             "{\"type\":\"state\",\"owner\":\"second\"}" );
     receive_exact( first_client, "{\"type\":\"state\",\"owner\":\"first\"}" );
     receive_exact( second_client, "{\"type\":\"state\",\"owner\":\"second\"}" );
 
     first_client.reset();
-    require( next_event( first_host ).evt_type == mp_event::type::disconnect,
-             "first disconnect isolated" );
+    const auto first_disconnect = next_event( first_host );
+    require( first_disconnect.evt_type == mp_event::type::disconnect &&
+             first_disconnect.admission.matches( first_join.admission ) && !first_join.admission.active(),
+             "disconnect retires the exact admission" );
     const auto threads_before_stop = thread_count();
     first_host.stop();
     require( !first_host.active_server() && !retained->running(), "retained server lease is retired" );
@@ -165,7 +171,7 @@ void exercise_context_ownership( uint16_t first_port, uint16_t second_port )
     require( second_host.running() && second_client.connected(), "other world stays connected" );
     second_client.send( second_action );
     require( next_event( second_host ).data == second_action, "other world continues processing" );
-    second_host.active_server()->post_send( second_join.peer_id,
+    second_host.active_server()->post_send( second_join.admission,
                                             "{\"type\":\"state\",\"owner\":\"still second\"}" );
     receive_exact( second_client, "{\"type\":\"state\",\"owner\":\"still second\"}" );
 

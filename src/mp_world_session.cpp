@@ -54,7 +54,7 @@ void world_session::reset_state( bool preserve_pending_client )
     last_marked_world.clear();
     remote_actor.reset();
     remote_connected = false;
-    remote_peer_id = 0;
+    remote_admission = {};
     remote_player = {};
     remote_detach_pending = false;
     local_player.reset();

@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
 use std::str;
 use std::sync::{
@@ -14,8 +14,9 @@ use bevy_replicon_renet::{
         ClientAuthentication, NetcodeClientPlugin, NetcodeClientTransport, NetcodeServerPlugin,
         NetcodeServerTransport, ServerAuthentication, ServerConfig,
     },
-    renet::{ChannelConfig, ConnectionConfig, SendType},
-    RenetClient, RenetClientPlugin, RenetReceive, RenetSend, RenetServer, RenetServerPlugin,
+    renet::{ChannelConfig, ConnectionConfig, SendType, ServerEvent},
+    RenetClient, RenetClientPlugin, RenetReceive, RenetSend, RenetServer, RenetServerEvent,
+    RenetServerPlugin,
 };
 
 use crate::activity_state::{
@@ -129,9 +130,95 @@ struct TransportState {
     last_error: Option<String>,
 }
 
+// Host-facing IDs identify one transport connection, never a client-chosen
+// wire ID. Keep the allocator across stop/start so delayed work cannot alias a
+// later connection even when no caller observed the disconnected interval.
+#[derive(Resource, Default)]
+struct PeerRoutes {
+    next: u64,
+    by_wire: BTreeMap<u64, u64>,
+    by_route: BTreeMap<u64, u64>,
+}
+
+impl PeerRoutes {
+    fn connect(&mut self, wire: u64) -> Option<u64> {
+        self.disconnect(wire);
+        let route = self.next.checked_add(1)?;
+        self.next = route;
+        self.by_wire.insert(wire, route);
+        self.by_route.insert(route, wire);
+        Some(route)
+    }
+
+    fn disconnect(&mut self, wire: u64) -> Option<u64> {
+        let route = self.by_wire.remove(&wire)?;
+        self.by_route.remove(&route);
+        Some(route)
+    }
+
+    fn clear(&mut self) {
+        self.by_wire.clear();
+        self.by_route.clear();
+    }
+
+    fn recipients(&self, target: u64) -> Vec<u64> {
+        if target == 0 {
+            self.by_route.keys().copied().collect()
+        } else if self.by_route.contains_key(&target) {
+            vec![target]
+        } else {
+            Vec::new()
+        }
+    }
+}
+
+#[derive(Debug)]
+struct QueuedPacket {
+    // Snapshot at enqueue, including for broadcasts and mutation batches.
+    // A future peer must never inherit messages waiting behind backpressure.
+    recipients: Vec<u64>,
+    channel: u8,
+    payload: Vec<u8>,
+}
+
+impl QueuedPacket {
+    fn new(packet: CoopPacket, recipients: Vec<u64>) -> Self {
+        Self {
+            recipients,
+            channel: packet.channel,
+            payload: packet.payload,
+        }
+    }
+}
+
 #[derive(Resource, Default)]
 struct OutboundPackets {
-    queue: VecDeque<CoopPacket>,
+    queue: VecDeque<QueuedPacket>,
+}
+
+fn track_peer_connections(
+    event: On<RenetServerEvent>,
+    mut routes: ResMut<PeerRoutes>,
+    mut server: ResMut<RenetServer>,
+    mut state: ResMut<TransportState>,
+    mut mutations: ResMut<MutationPacketQueue>,
+) {
+    match **event {
+        ServerEvent::ClientConnected { client_id } => {
+            if let Some(&old) = routes.by_wire.get(&client_id) {
+                mutations.retire_route(old);
+            }
+            if routes.connect(client_id).is_none() {
+                state.last_error = Some("transport connection identity exhausted".into());
+                server.disconnect(client_id);
+            }
+        }
+        ServerEvent::ClientDisconnected { client_id, .. } => {
+            if let Some(old) = routes.disconnect(client_id) {
+                mutations.retire_route(old);
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -147,10 +234,11 @@ pub struct MutationQueueStatus {
 
 #[derive(Resource, Debug)]
 struct MutationPacketQueue {
-    pending: VecDeque<CoopPacket>,
+    pending: VecDeque<QueuedPacket>,
     pending_bytes: usize,
     pending_seq: u32,
     inflight_seq: u32,
+    inflight_recipients: BTreeSet<u64>,
     grant_seq: u32,
     max_chunk_bytes: usize,
     sent_chunks: u64,
@@ -164,6 +252,7 @@ impl Default for MutationPacketQueue {
             pending_bytes: 0,
             pending_seq: 0,
             inflight_seq: 0,
+            inflight_recipients: BTreeSet::new(),
             grant_seq: 0,
             max_chunk_bytes: 64 * 1024,
             sent_chunks: 0,
@@ -178,9 +267,25 @@ impl MutationPacketQueue {
         self.pending_bytes = 0;
         self.pending_seq = 0;
         self.inflight_seq = 0;
+        self.inflight_recipients.clear();
         self.grant_seq = 0;
         self.sent_chunks = 0;
         self.acked_chunks = 0;
+    }
+
+    fn retire_route(&mut self, route: u64) {
+        self.pending.retain_mut(|packet| {
+            packet.recipients.retain(|id| *id != route);
+            !packet.recipients.is_empty()
+        });
+        self.pending_bytes = self.pending.iter().map(|p| p.payload.len()).sum();
+        if self.pending.is_empty() {
+            self.pending_seq = 0;
+        }
+        self.inflight_recipients.remove(&route);
+        if self.inflight_recipients.is_empty() {
+            self.inflight_seq = 0;
+        }
     }
 
     fn status(&self) -> MutationQueueStatus {
@@ -199,7 +304,7 @@ impl MutationPacketQueue {
         &mut self,
         seq: u32,
         grant_seq: u32,
-        packets: Vec<CoopPacket>,
+        packets: Vec<QueuedPacket>,
     ) -> MutationQueueStatus {
         if seq == 0 || packets.is_empty() {
             return self.status();
@@ -218,6 +323,7 @@ impl MutationPacketQueue {
     fn ack(&mut self, seq: u32) -> MutationQueueStatus {
         if seq != 0 && self.inflight_seq == seq {
             self.inflight_seq = 0;
+            self.inflight_recipients.clear();
             self.acked_chunks = self.acked_chunks.saturating_add(1);
         }
         self.status()
@@ -1332,18 +1438,22 @@ fn handle_transport_command(core: &mut CoopTransportCore, command: TransportComm
             true
         }
         TransportCommand::ConnectedPeers { reply } => {
-            let peers = core
-                .app
-                .world()
-                .get_resource::<RenetServer>()
-                .map(|server| server.clients_id())
-                .unwrap_or_default();
+            let peers = core.app.world().resource::<PeerRoutes>().recipients(0);
             let _ = reply.send(peers);
             true
         }
         TransportCommand::DisconnectPeer { peer_id, reply } => {
-            if let Some(mut server) = core.app.world_mut().get_resource_mut::<RenetServer>() {
-                server.disconnect(peer_id);
+            let wire = core
+                .app
+                .world()
+                .resource::<PeerRoutes>()
+                .by_route
+                .get(&peer_id)
+                .copied();
+            if let Some(wire) = wire {
+                if let Some(mut server) = core.app.world_mut().get_resource_mut::<RenetServer>() {
+                    server.disconnect(wire);
+                }
             }
             let _ = reply.send(());
             true
@@ -1532,6 +1642,8 @@ impl Default for CoopTransportCore {
             NetcodeClientPlugin,
         ))
         .init_resource::<TransportState>()
+        .init_resource::<PeerRoutes>()
+        .add_observer(track_peer_connections)
         .init_resource::<OutboundPackets>()
         .init_resource::<MutationPacketQueue>()
         .init_resource::<InboundPackets>()
@@ -1654,6 +1766,7 @@ impl CoopTransportCore {
         world.remove_resource::<RenetClient>();
         world.remove_resource::<NetcodeServerTransport>();
         world.remove_resource::<NetcodeClientTransport>();
+        world.resource_mut::<PeerRoutes>().clear();
         world.resource_mut::<OutboundPackets>().queue.clear();
         world.resource_mut::<MutationPacketQueue>().clear();
         world.resource_mut::<InboundPackets>().clear();
@@ -1679,12 +1792,19 @@ impl CoopTransportCore {
         if self.app.world().resource::<TransportState>().mode == CoopNetMode::Offline {
             return Err("transport is offline".into());
         }
+        let recipients = self
+            .app
+            .world()
+            .resource::<PeerRoutes>()
+            .recipients(packet.peer_id);
         let mut outbound = self.app.world_mut().resource_mut::<OutboundPackets>();
         let queued_bytes: usize = outbound.queue.iter().map(|p| p.payload.len()).sum();
         if outbound.queue.len() >= 8192 || queued_bytes + packet.payload.len() > 64 * 1024 * 1024 {
             return Err("co-op outgoing queue is full".into());
         }
-        outbound.queue.push_back(packet);
+        outbound
+            .queue
+            .push_back(QueuedPacket::new(packet, recipients));
         Ok(())
     }
 
@@ -1698,6 +1818,14 @@ impl CoopTransportCore {
             packet.peer_id = 0;
             packet.channel = CHANNEL_RELIABLE_ORDERED;
         }
+        let recipients = self.app.world().resource::<PeerRoutes>().recipients(0);
+        if recipients.is_empty() {
+            return self.mutation_queue_status();
+        }
+        let packets = packets
+            .into_iter()
+            .map(|p| QueuedPacket::new(p, recipients.clone()))
+            .collect();
         self.app
             .world_mut()
             .resource_mut::<MutationPacketQueue>()
@@ -2320,17 +2448,21 @@ fn payload_label(payload: &[u8]) -> String {
 
 fn receive_server_packets(
     mut server: ResMut<RenetServer>,
+    routes: Res<PeerRoutes>,
     mut inbound: ResMut<InboundPackets>,
     budgets: Res<TransportBudgets>,
     mut metrics: ResMut<TransportMetrics>,
 ) {
     let mut received_this_pump = 0usize;
-    for peer_id in server.clients_id() {
+    for wire_id in server.clients_id() {
+        let Some(&peer_id) = routes.by_wire.get(&wire_id) else {
+            continue;
+        };
         for channel in ALL_CHANNELS {
             while received_this_pump < budgets.max_receive_packets_per_pump
                 && inbound.len() < budgets.max_inbound_queue_packets
             {
-                let Some(payload) = server.receive_message(peer_id, channel) else {
+                let Some(payload) = server.receive_message(wire_id, channel) else {
                     break;
                 };
                 let payload_len = payload.len();
@@ -2397,6 +2529,7 @@ fn receive_client_packets(
 
 fn send_server_packets(
     mut server: ResMut<RenetServer>,
+    routes: Res<PeerRoutes>,
     mut outbound: ResMut<OutboundPackets>,
     budgets: Res<TransportBudgets>,
     mut metrics: ResMut<TransportMetrics>,
@@ -2408,15 +2541,11 @@ fn send_server_packets(
         let Some(packet) = outbound.queue.pop_front() else {
             break;
         };
-        let peers = if packet.peer_id == 0 {
-            server.clients_id()
-        } else {
-            vec![packet.peer_id]
-        };
-        // Never retain messages for a dead session and deliver them to a reused ID.
-        let peers: Vec<_> = peers
-            .into_iter()
-            .filter(|id| server.is_connected(*id))
+        let peers: Vec<_> = packet
+            .recipients
+            .iter()
+            .filter_map(|route| routes.by_route.get(route).copied())
+            .filter(|wire| server.is_connected(*wire))
             .collect();
         if peers.is_empty() {
             continue;
@@ -2435,10 +2564,15 @@ fn send_server_packets(
         metrics.record_sent_state_fields(&packet.payload);
         metrics.record_sent(packet.channel, packet.payload.len());
         metrics.record_sent_label(&payload_label(&packet.payload), packet.payload.len());
-        if packet.peer_id == 0 {
-            server.broadcast_message(packet.channel, packet.payload);
-        } else {
-            server.send_message(packet.peer_id, packet.channel, packet.payload);
+        let count = peers.len();
+        let mut payload = packet.payload;
+        for (index, peer) in peers.into_iter().enumerate() {
+            let body = if index + 1 == count {
+                std::mem::take(&mut payload)
+            } else {
+                payload.clone()
+            };
+            server.send_message(peer, packet.channel, body);
         }
     }
     deferred.extend(outbound.queue.drain(..));
@@ -2460,6 +2594,7 @@ fn release_mutation_packets(
 
     let mut sent_bytes = 0usize;
     let mut sent_packets = 0usize;
+    let mut recipients = BTreeSet::new();
     while let Some(packet) = mutations.pending.front() {
         let would_exceed = sent_packets > 0
             && sent_bytes.saturating_add(packet.payload.len()) > mutations.max_chunk_bytes;
@@ -2472,6 +2607,7 @@ fn release_mutation_packets(
         mutations.pending_bytes = mutations.pending_bytes.saturating_sub(packet.payload.len());
         sent_bytes = sent_bytes.saturating_add(packet.payload.len());
         sent_packets += 1;
+        recipients.extend(packet.recipients.iter().copied());
         outbound.queue.push_back(packet);
     }
 
@@ -2480,12 +2616,13 @@ fn release_mutation_packets(
     }
 
     mutations.inflight_seq = seq;
+    mutations.inflight_recipients = recipients.clone();
     mutations.sent_chunks = mutations.sent_chunks.saturating_add(1);
     if mutations.pending.is_empty() {
         mutations.pending_seq = 0;
     }
-    outbound.queue.push_back(CoopPacket {
-        peer_id: 0,
+    outbound.queue.push_back(QueuedPacket {
+        recipients: recipients.into_iter().collect(),
         channel: CHANNEL_RELIABLE_ORDERED,
         payload: format!(
             "{{\"type\":\"world_delta_end\",\"seq\":{},\"grant_seq\":{}}}",
@@ -2781,13 +2918,14 @@ mod transport_tests {
         let mut clients: Vec<_> = (1..=3)
             .map(|id| {
                 let mut client = CoopTransportRuntime::default();
-                client.start_client(addr, id).unwrap();
+                client.start_client(addr, id + 100).unwrap();
                 client
             })
             .collect();
         until(|| host.connected_peers().len() == 3 && clients.iter().all(|c| c.status().connected));
         let payload: Vec<u8> = (0..96 * 1024).map(|n| (n % 251) as u8).collect();
-        for (index, client) in clients.iter_mut().enumerate() {
+        let mut routes = Vec::new();
+        for client in clients.iter_mut() {
             client
                 .send(CoopPacket {
                     peer_id: 0,
@@ -2800,7 +2938,9 @@ mod transport_tests {
                 if packets.is_empty() {
                     return false;
                 }
-                assert_eq!(packets[0].peer_id, (index + 1) as u64);
+                assert_ne!(packets[0].peer_id, 0);
+                assert!(!routes.contains(&packets[0].peer_id));
+                routes.push(packets[0].peer_id);
                 assert_eq!(packets[0].payload, vec![42; 128]);
                 host.send(CoopPacket {
                     peer_id: packets[0].peer_id,
@@ -2865,16 +3005,147 @@ mod transport_tests {
                 payload: vec![0]
             })
             .is_err());
-        host.disconnect_peer(2);
-        until(|| !host.connected_peers().contains(&2) && !clients[1].status().connected);
+        host.disconnect_peer(routes[1]);
+        until(|| !host.connected_peers().contains(&routes[1]) && !clients[1].status().connected);
         clients[0].stop();
-        until(|| host.connected_peers() == vec![3]);
+        until(|| host.connected_peers() == vec![routes[2]]);
         host.stop();
         until(|| !clients[2].status().connected);
         host.start_host(addr).unwrap();
-        clients[0].start_client(addr, 1).unwrap();
-        until(|| host.connected_peers() == vec![1] && clients[0].status().connected);
+        clients[0].start_client(addr, 101).unwrap();
+        until(|| host.connected_peers().len() == 1 && clients[0].status().connected);
+        assert!(!routes.contains(&host.connected_peers()[0]));
         host.stop();
+    }
+
+    #[test]
+    fn reconnect_between_polls_cannot_inherit_queued_packets() {
+        // Actual Renet local connections exercise its event queue and Bevy
+        // lifecycle observer without timing-dependent UDP sleeps.
+        let mut core = CoopTransportCore::default();
+        let mut server = RenetServer::new(connection_config());
+        let mut old_client = server.new_local_client(77);
+        core.app.world_mut().insert_resource(server);
+        core.app.world_mut().resource_mut::<TransportState>().mode = CoopNetMode::Host;
+        core.pump();
+        let old_route = core.app.world().resource::<PeerRoutes>().by_wire[&77];
+        old_client.send_message(CHANNEL_RELIABLE_ORDERED, b"old incoming".to_vec());
+        core.app
+            .world_mut()
+            .resource_mut::<RenetServer>()
+            .process_local_client(77, &mut old_client)
+            .unwrap();
+        core.pump();
+        // Keep incoming data undrained and outgoing data unsent over the reuse.
+        core.send(CoopPacket {
+            peer_id: 0,
+            channel: 2,
+            payload: b"old broadcast".to_vec(),
+        })
+        .unwrap();
+        core.send(CoopPacket {
+            peer_id: old_route,
+            channel: 2,
+            payload: b"old target".to_vec(),
+        })
+        .unwrap();
+        core.enqueue_mutation_packets(
+            1,
+            1,
+            vec![CoopPacket {
+                peer_id: 0,
+                channel: 2,
+                payload: b"old mutation".to_vec(),
+            }],
+        );
+        let mut new_client = {
+            let mut server = core.app.world_mut().resource_mut::<RenetServer>();
+            server.disconnect_local_client(77, &mut old_client);
+            server.new_local_client(77)
+        };
+        core.pump(); // Both disconnect and connect occur before any owner poll.
+        let new_route = core.app.world().resource::<PeerRoutes>().by_wire[&77];
+        assert_ne!(old_route, new_route);
+        assert!(!core
+            .app
+            .world()
+            .resource::<PeerRoutes>()
+            .by_route
+            .contains_key(&old_route));
+        let old = core.drain_received(10);
+        assert_eq!(old.len(), 1);
+        assert_eq!(old[0].peer_id, old_route);
+        assert_eq!(old[0].payload, b"old incoming");
+        assert!(!core.mutation_queue_status().blocked);
+        core.send(CoopPacket {
+            peer_id: old_route,
+            channel: 2,
+            payload: b"late old target".to_vec(),
+        })
+        .unwrap();
+        core.send(CoopPacket {
+            peer_id: new_route,
+            channel: 2,
+            payload: b"new target".to_vec(),
+        })
+        .unwrap();
+        core.pump();
+        core.app
+            .world_mut()
+            .resource_mut::<RenetServer>()
+            .process_local_client(77, &mut new_client)
+            .unwrap();
+        assert_eq!(
+            new_client.receive_message(2).unwrap().as_ref(),
+            b"new target"
+        );
+        assert!(new_client.receive_message(2).is_none());
+
+        core.enqueue_mutation_packets(
+            2,
+            2,
+            vec![CoopPacket {
+                peer_id: 0,
+                channel: 2,
+                payload: b"inflight mutation".to_vec(),
+            }],
+        );
+        core.pump();
+        assert_eq!(core.mutation_queue_status().inflight_seq, 2);
+        core.app
+            .world_mut()
+            .resource_mut::<RenetServer>()
+            .disconnect_local_client(77, &mut new_client);
+        core.pump();
+        assert!(!core.mutation_queue_status().blocked);
+        // No future connection may inherit a batch or ACK wait created with
+        // no recipients.
+        assert!(
+            !core
+                .enqueue_mutation_packets(
+                    3,
+                    3,
+                    vec![CoopPacket {
+                        peer_id: 0,
+                        channel: 2,
+                        payload: b"no recipients".to_vec(),
+                    }]
+                )
+                .blocked
+        );
+    }
+
+    #[test]
+    fn connection_allocator_survives_clear_and_exhaustion_fails_closed() {
+        let mut routes = PeerRoutes::default();
+        let old = routes.connect(42).unwrap();
+        routes.clear();
+        let current = routes.connect(42).unwrap();
+        assert_ne!(old, current);
+        assert!(routes.recipients(old).is_empty());
+        routes.next = u64::MAX;
+        assert!(routes.connect(42).is_none());
+        assert!(routes.by_route.is_empty() && routes.by_wire.is_empty());
     }
 
     #[test]
@@ -2892,18 +3163,18 @@ mod transport_tests {
         world.insert_resource(TransportBudgets::default());
         world.insert_resource(OutboundPackets {
             queue: VecDeque::from([
-                CoopPacket {
-                    peer_id: 0,
+                QueuedPacket {
+                    recipients: Vec::new(),
                     channel: 2,
                     payload: vec![1; 2],
                 },
-                CoopPacket {
-                    peer_id: 0,
+                QueuedPacket {
+                    recipients: Vec::new(),
                     channel: 2,
                     payload: vec![2; 1],
                 },
-                CoopPacket {
-                    peer_id: 0,
+                QueuedPacket {
+                    recipients: Vec::new(),
                     channel: 1,
                     payload: vec![3; 1],
                 },

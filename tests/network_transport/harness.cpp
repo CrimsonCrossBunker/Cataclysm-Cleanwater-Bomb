@@ -123,6 +123,7 @@ int main( int argc, char **argv )
             return 0;
         }
         host_session host;
+        std::map<uint64_t, peer_admission> admissions;
         harness_host = &host;
         renet_context raw;
         if( mode == "host" ) {
@@ -203,7 +204,7 @@ int main( int argc, char **argv )
                 require( host.start( port, "口令\"\\", "abc", welcome_data() ), "recover after worker exit" );
                 std::cout << "READY" << std::endl;
             } else if( command.compare( 0, 7, "reject " ) == 0 && mode == "host" ) {
-                get_active_server()->post_reject( std::stoull( command.substr( 7 ) ),
+                get_active_server()->post_reject( admissions.at( std::stoull( command.substr( 7 ) ) ),
                                                   "Owner rejected player identity" );
                 std::cout << "OK" << std::endl;
             } else if( command == "competing-client" ) {
@@ -285,7 +286,9 @@ int main( int argc, char **argv )
                         if( get_mp_queue().pop( event ) ) {
                             require( event.evt_type != mp_event::type::connect || event.player.valid(),
                                      "connect event owns validated credentials" );
-                            std::cout << "EVENT " << static_cast<int>( event.evt_type ) << ' ' << event.peer_id << ' ' <<
+                            admissions[event.admission.peer_id()] = event.admission;
+                            std::cout << "EVENT " << static_cast<int>( event.evt_type ) << ' ' << event.admission.peer_id() <<
+                            ' ' <<
                                       wire_quote( event.display_name ) << ' ' << wire_quote( event.data ) << std::endl;
                             found = true;
                         }

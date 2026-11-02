@@ -9,6 +9,8 @@
 #include <string>
 #include <thread>
 
+#include "mp_admission.h"
+
 namespace cata_mp
 {
 class event_queue;
@@ -37,18 +39,19 @@ class server
         bool running() const;
         void update_welcome( server_welcome welcome );
 
-        // Thread-safe delivery to authenticated peers only (zero means broadcast).
-        void post_send( uint64_t peer_id, const std::string &msg );
+        // Thread-safe delivery bound to the exact authenticated admission.
+        void post_send( const peer_admission &admission, const std::string &msg );
         void broadcast( const std::string &msg );
         void post_broadcast( const std::string &msg );
         // Owner-side admission failed. Queue a reason and close on the worker.
-        void post_reject( uint64_t peer_id, const std::string &reason );
+        void post_reject( const peer_admission &admission, const std::string &reason );
 
         uint16_t port() const {
             return port_;
         }
 
     private:
+        void post( const peer_admission *admission, const std::string &msg, bool close );
         void on_disconnected( uint64_t peer_id );
         void on_message( uint64_t peer_id, const std::string &msg );
 

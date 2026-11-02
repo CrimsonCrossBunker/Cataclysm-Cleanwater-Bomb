@@ -7,5 +7,6 @@
 #endif
 extern "C" TEST_EXPORT uint32_t ccb_coop_abi_version()
 {
-    return 2;
+    // ABI 1 lacks connection-incarnation routing and must be rejected.
+    return 1;
 }
