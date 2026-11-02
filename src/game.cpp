@@ -4,6 +4,7 @@
 #include "render_backend.h"
 #include "mp_world_session.h"
 #include "npc_lifetime.h"
+#include "player_control.h"
 
 #include <algorithm>
 #include <array>
@@ -515,6 +516,19 @@ game::game() :
     // The reason for this move is so that g is not uninitialized when it gets to installing the parts into vehicles.
 }
 
+void game::bind_local_player_control()
+{
+    if( u.is_dead_state() ) {
+        local_player_control_ptr->reset();
+        return;
+    }
+    if( local_player_control_ptr->get() == &u &&
+        local_player_control_ptr->player() == u.get_player_id() ) {
+        return;
+    }
+    *local_player_control_ptr = player_controls_ptr->claim( u.get_player_id(), u );
+}
+
 game::~game()
 {
 #if defined(__ANDROID__)
@@ -748,6 +762,8 @@ bool game::setup()
 void game::reset_game_state()
 {
     multiplayer_session_ptr->prepare_for_world_load();
+    player_controls_ptr->reset();
+    local_player_control_ptr->reset();
     npc_lifetimes_ptr->reset();
     new_game = true;
     dimension_checkpoint_pending = false;
@@ -1181,6 +1197,7 @@ bool game::start_game()
         }
     }
 
+    bind_local_player_control();
     if constexpr( cata::lua_platform::is_enabled() ) {
         cata::lua_platform::on_world_ready( true );
     }

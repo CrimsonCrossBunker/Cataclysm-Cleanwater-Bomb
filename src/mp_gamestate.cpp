@@ -1416,6 +1416,11 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     if( mp_session().remote_connected ) {
         throw std::runtime_error( "A live or unsaved multiplayer actor already owns this slot" );
     }
+    // Legacy association can write a record while restoring. Refuse a player
+    // already owned by this world before any such side effect or prompt.
+    if( g->player_controls().is_reserved( player.id ) ) {
+        throw std::runtime_error( "Player already has a controller in this world" );
+    }
     const auto saved = restore_player( player );
 
     avatar &u = get_avatar();
@@ -1475,6 +1480,9 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
 
     // Commit the identity/actor binding before inserting the live proxy. An I/O
     // failure rejects the join instead of creating an unpersisted character.
+    // Reserve control before publishing or saving the actor. A duplicate local
+    // or remote player cannot acquire a second character through admission.
+    auto control = g->player_controls().claim( player.id, *remote );
     remote->set_value( "mp_player_id", player.id.str() );
     remote->set_value( "mp_proxy", std::string( "1" ) );
     world_players().save( player, serialize_player( *remote ) );
@@ -1485,7 +1493,8 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     overmap_buffer.insert_npc( remote );
     g->load_npcs();
 
-    mp_session().remote_actor.bind_player( *remote, player.id, g->npc_lifetimes() );
+    mp_session().remote_actor.bind_player( *remote, player.id, g->npc_lifetimes(),
+                                           std::move( control ) );
     // Tag the proxy so a load-time sweep can find and remove orphans from
     // sessions where the cleanup file went missing (e.g. host saved while
     // connected, then quit — the proxy ends up in the world save).

@@ -511,6 +511,7 @@ bool game::load( const save_t &name )
                     // Old saves acquire an identity once; the normal player
                     // save persists it alongside its current Character.
                     u.ensure_player_id();
+                    bind_local_player_control();
 
                     // populate calendar caches now, after active world is set, but before we do
                     // anything else, to ensure they pick up the correct value from the save's

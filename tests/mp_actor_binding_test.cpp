@@ -26,9 +26,10 @@ TEST_CASE( "mp_actor_control_requires_exact_world_and_instance", "[multiplayer][
     prepare_actor( first, 12010 );
     prepare_actor( second, 12010 );
     npc_lifetime_registry world;
+    player_control_registry controls;
     npc_lifetime_registry other_world;
     cata_mp::actor_binding binding;
-    binding.bind_player( first, owner, world );
+    binding.bind_player( first, owner, world, controls.claim( owner, first ) );
     const auto old_lifetime = world.acquire( first );
     REQUIRE( binding.resolve_loaded( &first, world ) == &first );
     CHECK_FALSE( binding.resolve_loaded( &first, other_world ) );
@@ -61,10 +62,11 @@ TEST_CASE( "mp_actor_control_rejects_tampered_or_destroyed_identity",
            "[multiplayer][actor_binding]" )
 {
     npc_lifetime_registry world;
+    player_control_registry controls;
     cata_mp::actor_binding binding;
     auto actor = std::make_unique<npc>();
     prepare_actor( *actor, 12011 );
-    binding.bind_player( *actor, owner, world );
+    binding.bind_player( *actor, owner, world, controls.claim( owner, *actor ) );
     actor->set_value( "mp_player_id", std::string( 32, '5' ) );
     CHECK_FALSE( binding.resolve_loaded( actor.get(), world ) );
     CHECK_FALSE( binding.retained( world ) );
@@ -92,12 +94,42 @@ TEST_CASE( "mp_actor_admission_requires_valid_identity", "[multiplayer][actor_bi
     actor.set_value( "mp_proxy", std::string( "1" ) );
     CHECK_THROWS( binding.bind_view( actor, world ) );
     prepare_actor( actor, 12013 );
-    CHECK_THROWS( binding.bind_player( actor, cata_mp::player_id(), world ) );
-    CHECK_THROWS( binding.bind_player( actor, cata_mp::player_id( std::string( 32, '6' ) ), world ) );
+    CHECK_THROWS( binding.bind_player( actor, cata_mp::player_id(), world, player_control() ) );
+    CHECK_THROWS( binding.bind_player( actor, owner, world, player_control() ) );
+    player_control_registry controls;
+    CHECK_THROWS( binding.bind_player( actor, cata_mp::player_id( std::string( 32, '6' ) ), world,
+                                       controls.claim( owner, actor ) ) );
     CHECK_FALSE( binding.id().is_valid() );
     binding.bind_view( actor, world );
     REQUIRE( binding.resolve_loaded( &actor, world ) == &actor );
     binding.reset();
     CHECK_FALSE( binding.retained( world ) );
     CHECK_FALSE( binding.resolve_loaded( &actor, world ) );
+}
+
+TEST_CASE( "mp_actor_binding_releases_world_control_and_rejects_wrong_assignment",
+           "[multiplayer][actor_binding][player_control]" )
+{
+    npc first;
+    npc second;
+    prepare_actor( first, 12110 );
+    prepare_actor( second, 12111 );
+    npc_lifetime_registry world;
+    player_control_registry controls;
+    cata_mp::actor_binding binding;
+    CHECK_THROWS( binding.bind_player( second, owner, world, controls.claim( owner, first ) ) );
+    CHECK_FALSE( controls.is_claimed( first ) );
+    CHECK_FALSE( binding.id().is_valid() );
+    binding.bind_player( first, owner, world, controls.claim( owner, first ) );
+    const auto before = controls.find( owner );
+    CHECK_THROWS( controls.claim( owner, second ) );
+    CHECK( binding.resolve_loaded( &first, world ) == &first );
+    binding.reset();
+    CHECK_FALSE( before.resolve( controls ) );
+    binding.bind_player( second, owner, world, controls.claim( owner, second ) );
+    CHECK_FALSE( before.resolve( controls ) );
+    REQUIRE( binding.resolve_loaded( &second, world ) == &second );
+    controls.reset();
+    CHECK_FALSE( binding.retained( world ) );
+    CHECK_FALSE( binding.resolve_loaded( &second, world ) );
 }
