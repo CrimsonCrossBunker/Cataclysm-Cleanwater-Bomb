@@ -43,9 +43,14 @@ struct npc_lifetime_registry::impl {
 npc_lifetime_registry::npc_lifetime_registry() : impl_( std::make_unique<impl>() ) {}
 npc_lifetime_registry::~npc_lifetime_registry() = default;
 
+bool npc_lifetime::belongs_to( const npc_lifetime_registry &owner ) const
+{
+    return state_ && state_->owner.lock() == owner.impl_->owner;
+}
+
 npc *npc_lifetime::resolve( const npc_lifetime_registry &owner ) const
 {
-    if( !state_ || state_->owner.lock() != owner.impl_->owner ||
+    if( !belongs_to( owner ) ||
         !state_->active || state_->generation != generation_ || state_->id != id_ ) {
         return nullptr;
     }
@@ -80,6 +85,23 @@ npc_lifetime npc_lifetime_registry::acquire( npc &value )
     state->reference = value.get_safe_reference();
     state->id = value.getID();
     state->active = true;
+    result.state_ = state;
+    result.id_ = state->id;
+    result.generation_ = state->generation;
+    return result;
+}
+
+npc_lifetime npc_lifetime_registry::active_reference( npc &value ) const
+{
+    npc_lifetime result;
+    const auto found = impl_->states.find( value.getID().get_value() );
+    if( found == impl_->states.end() ) {
+        return result;
+    }
+    const auto state = found->second.lock();
+    if( !state || !state->active || state->reference.get() != &value || value.is_dead() ) {
+        return result;
+    }
     result.state_ = state;
     result.id_ = state->id;
     result.generation_ = state->generation;

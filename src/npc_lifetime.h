@@ -19,6 +19,7 @@ class npc_lifetime
     public:
         npc_lifetime() = default;
         npc *resolve( const npc_lifetime_registry &owner ) const;
+        bool belongs_to( const npc_lifetime_registry &owner ) const;
         std::size_t generation() const {
             return generation_;
         }
@@ -42,6 +43,9 @@ class npc_lifetime_registry
         npc_lifetime_registry &operator=( const npc_lifetime_registry & ) = delete;
 
         npc_lifetime acquire( npc &value );
+        // Observe an already registered active incarnation without activating
+        // an unloaded object or replacing the owner of a reused numeric ID.
+        npc_lifetime active_reference( npc &value ) const;
         void activate( npc &value );
         void retire( npc &value );
         void reset();

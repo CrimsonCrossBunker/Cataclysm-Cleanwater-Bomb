@@ -17,6 +17,30 @@
 #include "player_helpers.h"
 #include <filesystem>
 
+namespace
+{
+cata_mp::player_id test_player()
+{
+    return cata_mp::player_id( std::string( 32, '7' ) );
+}
+
+npc &bind_test_player( cata_mp::world_session &session )
+{
+    npc &actor = spawn_npc( { 60, 60 }, "test_talker" );
+    actor.set_value( "mp_proxy", std::string( "1" ) );
+    actor.set_value( "mp_player_id", test_player().str() );
+    session.remote_actor.bind_player( actor, test_player(), g->npc_lifetimes() );
+    return actor;
+}
+
+void bind_test_view( cata_mp::world_session &session )
+{
+    npc &actor = spawn_npc( { 61, 60 }, "test_talker" );
+    actor.set_value( "mp_proxy", std::string( "1" ) );
+    session.client_host_actor.bind_view( actor, g->npc_lifetimes() );
+}
+} // namespace
+
 TEST_CASE( "mp_cleanup_never_claims_npcs_by_name_or_unverified_cleanup_ids",
            "[multiplayer][world_session][player_identity][regression]" )
 {
@@ -82,10 +106,20 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     };
     connect( 101, profile );
     REQUIRE( session.remote_connected );
-    const auto original_id = session.remote_actor_id;
+    const auto original_id = session.remote_actor.id();
     REQUIRE( original_id.is_valid() );
     npc *actor = g->critter_by_id<npc>( original_id );
     REQUIRE( actor );
+    const auto before_unload = g->npc_lifetimes().acquire( *actor );
+    actor->on_unload();
+    g->remove_npc( actor->getID() );
+    CHECK_FALSE( before_unload.resolve( g->npc_lifetimes() ) );
+    CHECK_FALSE( session.remote_actor.resolve_loaded( actor, g->npc_lifetimes() ) );
+    CHECK( session.remote_actor.retained( g->npc_lifetimes() ) == actor );
+    REQUIRE( cata_mp::mp_save_remote_player() );
+    g->load_npcs();
+    CHECK( session.remote_actor.resolve_loaded( actor, g->npc_lifetimes() ) == actor );
+    CHECK_FALSE( before_unload.resolve( g->npc_lifetimes() ) );
     actor->name = "Rosalee Blanco";
     actor->set_value( "identity_regression", std::string( "retained" ) );
     std::filesystem::rename( record.get_unrelative_path(), backup.get_unrelative_path() );
@@ -105,7 +139,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     session.reset(); // Includes a fresh world-store index, not merely a socket reconnect.
     connect( 202, profile );
     REQUIRE( session.remote_connected );
-    CHECK( session.remote_actor_id == original_id );
+    CHECK( session.remote_actor.id() == original_id );
     actor = g->critter_by_id<npc>( original_id );
     REQUIRE( actor );
     CHECK( actor->name == "Rosalee Blanco" );
@@ -128,13 +162,87 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     session.host_turn.action_msgs_pending.push_back( "former peer's action" );
     connect( 404, profile );
     REQUIRE( session.remote_connected );
-    CHECK( session.remote_actor_id == original_id );
+    CHECK( session.remote_actor.id() == original_id );
     CHECK( session.replication.next_net_id == 77 );
     CHECK( session.host_turn.grant_seq == 88 );
     CHECK( session.replication.host.host_veh_cargo_baseline.empty() );
     CHECK( session.replication.host.last_vehicle_step_payload.empty() );
     CHECK_FALSE( session.host_turn.pending_wake_client );
     CHECK( session.host_turn.action_msgs_pending.empty() );
+}
+
+TEST_CASE( "mp_dispatch_never_controls_an_unloaded_or_replaced_actor",
+           "[multiplayer][world_session][actor_binding][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        cata_mp::get_mp_queue().clear();
+    } );
+    npc &actor = bind_test_player( session );
+    const auto retained = g->shared_from( actor );
+    REQUIRE( retained );
+    session.remote_connected = true;
+    session.remote_peer_id = 701;
+    const auto rename = [&]() {
+        cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                        R"({"action":"worn_sync","char_stats":{"name":"accepted owner"}})", 701 } );
+        cata_mp::process_mp_events();
+    };
+    rename();
+    REQUIRE( actor.name == "accepted owner" );
+    actor.name = "unchanged";
+
+    SECTION( "ordinary unload rejects actions and native reload restores the same role" ) {
+        const auto before = g->npc_lifetimes().acquire( actor );
+        session.host_turn.proxy_was_alive = true;
+        session.host_turn.granted_this_turn = true;
+        actor.on_unload();
+        g->remove_npc( actor.getID() );
+        cata_mp::grant_client_turn();
+        CHECK( session.remote_connected );
+        CHECK( session.host_turn.proxy_was_alive );
+        CHECK_FALSE( session.host_turn.granted_this_turn );
+        rename();
+        CHECK( actor.name == "unchanged" );
+        CHECK_FALSE( before.resolve( g->npc_lifetimes() ) );
+        g->load_npcs();
+        rename();
+        CHECK( actor.name == "accepted owner" );
+        CHECK_FALSE( before.resolve( g->npc_lifetimes() ) );
+    }
+    SECTION( "removal from the active tracker is sufficient to reject control" ) {
+        // remove_npc does not invoke on_unload: an active lifetime alone is
+        // insufficient without exact membership in the current native tracker.
+        g->remove_npc( actor.getID() );
+        rename();
+        CHECK( actor.name == "unchanged" );
+        g->load_npcs();
+        rename();
+        CHECK( actor.name == "accepted owner" );
+    }
+    SECTION( "copied ID and tags cannot transfer control to a replacement" ) {
+        g->remove_npc( actor.getID() );
+        auto replacement = make_shared_fast<npc>();
+        replacement->normalize();
+        replacement->setID( actor.getID() );
+        replacement->spawn_at_precise( actor.pos_abs() );
+        replacement->set_value( "mp_proxy", std::string( "1" ) );
+        replacement->set_value( "mp_player_id", test_player().str() );
+        replacement->name = "replacement";
+        overmap_buffer.insert_npc( replacement );
+        g->load_npcs();
+        REQUIRE( g->critter_by_id<npc>( actor.getID() ) == replacement.get() );
+        rename();
+        CHECK( replacement->name == "replacement" );
+        CHECK( actor.name == "unchanged" );
+        CHECK_FALSE( cata_mp::is_remote_player( replacement->getID() ) );
+    }
 }
 
 TEST_CASE( "mp_restored_actor_ids_cannot_be_reallocated", "[multiplayer][player_identity]" )
@@ -152,10 +260,22 @@ TEST_CASE( "mp_proxy_bindings_belong_to_one_world", "[multiplayer][world_session
 {
     cata_mp::world_session first;
     cata_mp::world_session second;
-    first.remote_actor_id = character_id( 12 );
+    npc first_actor;
+    first_actor.normalize();
+    first_actor.setID( character_id( 12 ), true );
+    first_actor.set_value( "mp_proxy", std::string( "1" ) );
+    first_actor.set_value( "mp_player_id", test_player().str() );
+    npc second_actor;
+    second_actor.normalize();
+    second_actor.setID( character_id( 12 ), true );
+    second_actor.set_value( "mp_proxy", std::string( "1" ) );
+    second_actor.set_value( "mp_player_id", test_player().str() );
+    npc_lifetime_registry first_world;
+    npc_lifetime_registry second_world;
+    first.remote_actor.bind_player( first_actor, test_player(), first_world );
     first.remote_connected = true;
     first.remote_peer_id = 101;
-    second.remote_actor_id = character_id( 12 );
+    second.remote_actor.bind_player( second_actor, test_player(), second_world );
     second.remote_connected = true;
     second.remote_peer_id = 202;
 
@@ -166,7 +286,7 @@ TEST_CASE( "mp_proxy_bindings_belong_to_one_world", "[multiplayer][world_session
     first.reset();
     CHECK_FALSE( first.accepts_remote_event( 101 ) );
     CHECK( second.accepts_remote_event( 202 ) );
-    CHECK( second.remote_actor_id == character_id( 12 ) );
+    CHECK( second.remote_actor.id() == character_id( 12 ) );
 }
 
 TEST_CASE( "mp_world_reset_clears_bindings_before_character_ids_are_reused",
@@ -176,23 +296,28 @@ TEST_CASE( "mp_world_reset_clears_bindings_before_character_ids_are_reused",
     auto &session = g->multiplayer_session();
     const on_out_of_scope restore_session( [&session]() {
         session.reset();
+        // reset_game_state clears the faction manager, while production setup
+        // also discards the old overmaps. Do not reload test NPCs retaining
+        // pointers to factions from that closed world in the next test.
+        clear_overmaps();
     } );
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    session.remote_actor_id = character_id( 1 );
+    clear_map_without_vision();
+    const auto actor_id = bind_test_player( session ).getID();
     session.remote_connected = true;
     session.remote_peer_id = 101;
-    session.client_host_actor_id = character_id( 2 );
+    bind_test_view( session );
     session.client_host_spawned = true;
     session.stale_proxy_cleanup_done = true;
 
     session.client_apply_watchdog.begin( "world reset" );
     REQUIRE( session.client_apply_watchdog.running() );
-    REQUIRE( cata_mp::is_remote_player( character_id( 1 ) ) );
+    REQUIRE( cata_mp::is_remote_player( actor_id ) );
     g->reset_game_state();
     CHECK_FALSE( session.client_apply_watchdog.running() );
-    CHECK_FALSE( cata_mp::is_remote_player( character_id( 1 ) ) );
+    CHECK_FALSE( cata_mp::is_remote_player( actor_id ) );
     CHECK_FALSE( session.remote_connected );
-    CHECK_FALSE( session.remote_actor_id.is_valid() );
+    CHECK_FALSE( session.remote_actor.id().is_valid() );
     CHECK( session.remote_peer_id == 0 );
     CHECK_FALSE( session.client_host_spawned );
     CHECK_FALSE( cata_mp::get_host_npc_character_id().is_valid() );
@@ -209,7 +334,8 @@ TEST_CASE( "mp_late_disconnect_cannot_remove_another_peers_actor",
     const on_out_of_scope restore_session( [&session]() {
         session.reset();
     } );
-    session.remote_actor_id = character_id( 123 );
+    clear_map_without_vision();
+    const auto actor_id = bind_test_player( session ).getID();
     session.remote_connected = true;
     session.remote_peer_id = 202;
     // Same display name, different transport peer. Exercise the real dispatch
@@ -220,12 +346,12 @@ TEST_CASE( "mp_late_disconnect_cannot_remove_another_peers_actor",
     CHECK( cata_mp::get_mp_queue().empty() );
     CHECK( session.remote_connected );
     CHECK( session.remote_peer_id == 202 );
-    CHECK( cata_mp::is_remote_player( character_id( 123 ) ) );
+    CHECK( cata_mp::is_remote_player( actor_id ) );
 
     cata_mp::mp_on_world_exit();
     CHECK_FALSE( session.remote_connected );
     CHECK_FALSE( session.accepts_remote_event( 202 ) );
-    CHECK_FALSE( session.remote_actor_id.is_valid() );
+    CHECK_FALSE( session.remote_actor.id().is_valid() );
 }
 
 TEST_CASE( "mp_return_to_menu_closes_modes_bindings_and_pending_events",
@@ -244,7 +370,8 @@ TEST_CASE( "mp_return_to_menu_closes_modes_bindings_and_pending_events",
         clear_overmaps();
     } );
     cata_mp::set_client_mode( true );
-    session.client_host_actor_id = character_id( 123 );
+    clear_map_without_vision();
+    bind_test_view( session );
     session.client_host_spawned = true;
     session.stale_proxy_cleanup_done = true;
     cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", 101} );
@@ -260,7 +387,7 @@ TEST_CASE( "mp_return_to_menu_closes_modes_bindings_and_pending_events",
     CHECK_FALSE( session.client_apply_watchdog.running() );
     CHECK_FALSE( cata_mp::is_session_active() );
     CHECK_FALSE( session.client_host_spawned );
-    CHECK_FALSE( session.client_host_actor_id.is_valid() );
+    CHECK_FALSE( session.client_host_actor.id().is_valid() );
     CHECK_FALSE( session.stale_proxy_cleanup_done );
     CHECK( cata_mp::get_mp_queue().empty() );
     CHECK( cata_mp::mp_get_host_world_name().empty() );
