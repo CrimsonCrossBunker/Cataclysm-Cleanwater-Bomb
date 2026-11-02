@@ -166,9 +166,11 @@ void parallel_for( int begin, int end, F &&f )
         return;
     }
 
-    // Short-circuit: single item — run directly with no dispatch overhead.
-    if( n == 1 ) {
-        f( begin );
+    // Nested dispatch must not wait for workers already occupied by its callers.
+    if( n == 1 || is_pool_worker_thread() ) {
+        for( int i = begin; i < end; ++i ) {
+            f( i );
+        }
         return;
     }
 
@@ -190,7 +192,8 @@ void parallel_for( int begin, int end, F &&f )
 
     int submitted = 0;
     try {
-        for( int c = 0; c < chunks; ++c ) {
+        for( ; submitted < chunks; ++submitted ) {
+            const int c = submitted;
             const int chunk_begin = begin + ( n * c / chunks );
             const int chunk_end   = begin + ( n * ( c + 1 ) / chunks );
             pool.submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
@@ -206,9 +209,9 @@ void parallel_for( int begin, int end, F &&f )
                 }
                 latch.count_down();
             } );
-            ++submitted;
         }
     } catch( ... ) {
+        // Accepted tasks still borrow this stack; drain them before unwinding.
         for( int c = submitted; c < chunks; ++c ) {
             latch.count_down();
         }
@@ -237,6 +240,12 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
     if( end <= begin || chunk_size <= 0 ) {
         return;
     }
+    if( is_pool_worker_thread() ) {
+        for( int i = begin; i < end; ++i ) {
+            f( i );
+        }
+        return;
+    }
 
     cata_thread_pool &pool = get_thread_pool();
     const int nw = static_cast<int>( pool.num_workers() );
@@ -257,7 +266,8 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
 
     int submitted = 0;
     try {
-        for( int c = 0; c < num_chunks; ++c ) {
+        for( ; submitted < num_chunks; ++submitted ) {
+            const int c = submitted;
             const int chunk_begin = begin + c * chunk_size;
             const int chunk_end   = std::min( chunk_begin + chunk_size, end );
             pool.submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
@@ -273,9 +283,9 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
                 }
                 latch.count_down();
             } );
-            ++submitted;
         }
     } catch( ... ) {
+        // Accepted tasks still borrow this stack; drain them before unwinding.
         for( int c = submitted; c < num_chunks; ++c ) {
             latch.count_down();
         }
