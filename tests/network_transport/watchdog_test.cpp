@@ -12,7 +12,7 @@
 
 namespace cata_mp
 {
-void mp_log( const std::string &message )
+void mp_log_client( const std::string &message )
 {
     std::cerr << message << '\n';
 }

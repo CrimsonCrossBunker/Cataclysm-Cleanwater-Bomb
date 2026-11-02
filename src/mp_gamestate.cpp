@@ -131,7 +131,9 @@ static const morale_type morale_high_five( "morale_high_five" );
 
 static const vproto_id vehicle_prototype_none( "none" );
 
-void mp_log( const std::string &msg )
+enum class log_role { none, host, client };
+
+static void mp_log_impl( const std::string &msg, log_role role )
 {
     // Both the transport worker and simulation thread write this stream.
     static std::mutex log_mutex;
@@ -190,9 +192,9 @@ void mp_log( const std::string &msg )
     }
 #endif
     std::string desired_path;
-    if( is_client_mode() ) {
+    if( role == log_role::client ) {
         desired_path = log_dir + "cdda-mp-client.log";
-    } else if( is_host_mode() || is_server_mode() ) {
+    } else if( role == log_role::host ) {
         desired_path = log_dir + "cdda-mp-server.log";
     }
     if( !desired_path.empty() && desired_path != current_path ) {
@@ -224,6 +226,23 @@ void mp_log( const std::string &msg )
         log_file << line << '\n';
         log_file.flush();
     }
+}
+
+// Owner-only routing; background producers use the explicit-role entry points.
+void mp_log( const std::string &msg )
+{
+    mp_log_impl( msg, is_client_mode() ? log_role::client :
+                 ( is_host_mode() || is_server_mode() ? log_role::host : log_role::none ) );
+}
+
+void mp_log_host( const std::string &msg )
+{
+    mp_log_impl( msg, log_role::host );
+}
+
+void mp_log_client( const std::string &msg )
+{
+    mp_log_impl( msg, log_role::client );
 }
 
 // ----------------------------------------------------------------------------
