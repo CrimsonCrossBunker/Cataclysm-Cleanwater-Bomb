@@ -16,6 +16,7 @@
 #include "character_turn.h"
 #include "color.h"
 #include "coordinates.h"
+#include "mp_entity_registry.h"
 #include "type_id.h"
 
 class monster;
@@ -188,10 +189,7 @@ struct client_replication_state {
 };
 
 struct world_replication_state {
-    // Server: monotonically increasing counter for assigning monster/vehicle network IDs.
-    uint32_t next_net_id = 0;
-    // Server: maps vehicle pointers to stable network IDs for vehicle position sync.
-    std::unordered_map<vehicle *, uint32_t> server_veh_ids{};
+    entity_registry entity_ids{};
     bool applying_remote_note = false;
     host_replication_baselines host;
     client_replication_state client;
