@@ -1,6 +1,6 @@
 schema_version: 2
 kind: markdown_inventory
-source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+source_commit: 61539b635d2060eae82f378577088417e2da1d57
 document_count: 204
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
@@ -16,7 +16,7 @@ classification_summary:
 documents:
 - original_path: AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -29,7 +29,7 @@ documents:
   stable_document_id: legacy.agents
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -49,7 +49,7 @@ documents:
   retained_body_until: null
 - original_path: CLAUDE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -62,7 +62,7 @@ documents:
   stable_document_id: legacy.claude
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -82,7 +82,7 @@ documents:
   retained_body_until: null
 - original_path: CODE_OF_CONDUCT.md
   target_path: CODE_OF_CONDUCT.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -95,7 +95,7 @@ documents:
   stable_document_id: legacy.code-of-conduct
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -114,7 +114,7 @@ documents:
   retained_body_until: null
 - original_path: CONTRIBUTING.md
   target_path: CONTRIBUTING.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -127,7 +127,7 @@ documents:
   stable_document_id: legacy.contributing
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -146,7 +146,7 @@ documents:
   retained_body_until: null
 - original_path: GEMINI.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -159,7 +159,7 @@ documents:
   stable_document_id: legacy.gemini
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -179,7 +179,7 @@ documents:
   retained_body_until: null
 - original_path: GOVERNANCE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -192,7 +192,7 @@ documents:
   stable_document_id: legacy.governance
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -212,7 +212,7 @@ documents:
   retained_body_until: null
 - original_path: ISSUES.md
   target_path: ISSUES.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -225,7 +225,7 @@ documents:
   stable_document_id: legacy.issues
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -244,7 +244,7 @@ documents:
   retained_body_until: null
 - original_path: LABELS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -257,7 +257,7 @@ documents:
   stable_document_id: legacy.labels
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -277,7 +277,7 @@ documents:
   retained_body_until: null
 - original_path: OWNERSHIP.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -290,7 +290,7 @@ documents:
   stable_document_id: legacy.ownership
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -310,7 +310,7 @@ documents:
   retained_body_until: null
 - original_path: README.md
   target_path: README.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -323,7 +323,7 @@ documents:
   stable_document_id: legacy.readme
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -342,7 +342,7 @@ documents:
   retained_body_until: null
 - original_path: REPOSITORY_SETTINGS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -355,7 +355,7 @@ documents:
   stable_document_id: legacy.repository-settings
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -375,7 +375,7 @@ documents:
   retained_body_until: null
 - original_path: SECURITY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -388,7 +388,7 @@ documents:
   stable_document_id: legacy.security
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -408,7 +408,7 @@ documents:
   retained_body_until: null
 - original_path: SUPPORT.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -421,7 +421,7 @@ documents:
   stable_document_id: legacy.support
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -441,7 +441,7 @@ documents:
   retained_body_until: null
 - original_path: SYNC_EXCLUDED_PRS.md
   target_path: SYNC_EXCLUDED_PRS.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -454,7 +454,7 @@ documents:
   stable_document_id: legacy.sync-excluded-prs
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -473,7 +473,7 @@ documents:
   retained_body_until: null
 - original_path: TRANSLATION_CREDITS.md
   target_path: TRANSLATION_CREDITS.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -486,7 +486,7 @@ documents:
   stable_document_id: legacy.translation-credits
   domain: governance
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -505,7 +505,7 @@ documents:
   retained_body_until: null
 - original_path: android/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -518,7 +518,7 @@ documents:
   stable_document_id: legacy.android-agents
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -538,7 +538,7 @@ documents:
   retained_body_until: null
 - original_path: build-scripts/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -551,7 +551,7 @@ documents:
   stable_document_id: legacy.build-scripts-agents
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -571,7 +571,7 @@ documents:
   retained_body_until: null
 - original_path: data/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -584,7 +584,7 @@ documents:
   stable_document_id: legacy.data-agents
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -604,7 +604,7 @@ documents:
   retained_body_until: null
 - original_path: data/json/LOADING_ORDER.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -617,7 +617,7 @@ documents:
   stable_document_id: legacy.data-json-loading-order
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -637,7 +637,7 @@ documents:
   retained_body_until: null
 - original_path: data/json/npcs/godco/NECC_INFO.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -650,7 +650,7 @@ documents:
   stable_document_id: legacy.data-json-npcs-godco-necc-info
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -670,7 +670,7 @@ documents:
   retained_body_until: null
 - original_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -683,7 +683,7 @@ documents:
   stable_document_id: legacy.data-json-npcs-refugee-center-free-merchants-info
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -703,7 +703,7 @@ documents:
   retained_body_until: null
 - original_path: data/lua/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -716,7 +716,7 @@ documents:
   stable_document_id: legacy.data-lua-agents
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -736,7 +736,7 @@ documents:
   retained_body_until: null
 - original_path: data/lua/LUA_FIRST_EOC_WORKFLOW.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -749,7 +749,7 @@ documents:
   stable_document_id: legacy.data-lua-lua-first-eoc-workflow
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -769,7 +769,7 @@ documents:
   retained_body_until: null
 - original_path: data/lua/LUA_FIRST_PLATFORM.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -782,7 +782,7 @@ documents:
   stable_document_id: legacy.data-lua-lua-first-platform
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -802,7 +802,7 @@ documents:
   retained_body_until: null
 - original_path: data/lua/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -815,7 +815,7 @@ documents:
   stable_document_id: legacy.data-lua-readme
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -835,7 +835,7 @@ documents:
   retained_body_until: null
 - original_path: data/lua/templates/complete/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -848,7 +848,7 @@ documents:
   stable_document_id: legacy.data-lua-templates-complete-readme
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -868,7 +868,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -881,7 +881,7 @@ documents:
   stable_document_id: legacy.data-mods-agents
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -901,7 +901,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Backrooms/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -914,7 +914,7 @@ documents:
   stable_document_id: legacy.data-mods-backrooms-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -934,7 +934,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/BombasticPerks/docs/contributing.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -947,7 +947,7 @@ documents:
   stable_document_id: legacy.data-mods-bombasticperks-docs-contributing
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -967,7 +967,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -980,7 +980,7 @@ documents:
   stable_document_id: legacy.data-mods-bombasticperks-docs-expanding-with-mods
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1000,7 +1000,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/DinoMod/DESIGN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1013,7 +1013,7 @@ documents:
   stable_document_id: legacy.data-mods-dinomod-design
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1033,7 +1033,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/DinoMod/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1046,7 +1046,7 @@ documents:
   stable_document_id: legacy.data-mods-dinomod-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1066,7 +1066,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Lua_First_Example/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1079,7 +1079,7 @@ documents:
   stable_document_id: legacy.data-mods-lua-first-example-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1099,7 +1099,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MA/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1112,7 +1112,7 @@ documents:
   stable_document_id: legacy.data-mods-ma-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1132,7 +1132,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Magiclysm/lore.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1145,7 +1145,7 @@ documents:
   stable_document_id: legacy.data-mods-magiclysm-lore
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1165,7 +1165,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Magiclysm/magic_balance.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1178,7 +1178,7 @@ documents:
   stable_document_id: legacy.data-mods-magiclysm-magic-balance
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1198,7 +1198,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Megafauna/readme.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1211,7 +1211,7 @@ documents:
   stable_document_id: legacy.data-mods-megafauna-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1231,7 +1231,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Migrated_Core/MIGRATION_REPORT.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1244,7 +1244,7 @@ documents:
   stable_document_id: legacy.data-mods-migrated-core-migration-report
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1264,7 +1264,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Migrated_Core/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1277,7 +1277,7 @@ documents:
   stable_document_id: legacy.data-mods-migrated-core-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1297,7 +1297,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1310,7 +1310,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatter-gainingpowerspoilers
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1330,7 +1330,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1343,7 +1343,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatter-netherattunementspoilers
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1363,7 +1363,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatter/NewPowerGuide.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1376,7 +1376,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatter-newpowerguide
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1396,7 +1396,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatter/PowerDescriptionSpoilers.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1409,7 +1409,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatter-powerdescriptionspoilers
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1429,7 +1429,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatter/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1442,7 +1442,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatter-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1462,7 +1462,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatter/lore_spoilers.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1475,7 +1475,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatter-lore-spoilers
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1495,7 +1495,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/MindOverMatterNoKnacks/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1508,7 +1508,7 @@ documents:
   stable_document_id: legacy.data-mods-mindovermatternoknacks-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1528,7 +1528,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Monkey_King/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1541,7 +1541,7 @@ documents:
   stable_document_id: legacy.data-mods-monkey-king-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1561,7 +1561,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/No_Hope/CONTRIBUTING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1574,7 +1574,7 @@ documents:
   stable_document_id: legacy.data-mods-no-hope-contributing
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1594,7 +1594,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1607,7 +1607,7 @@ documents:
   stable_document_id: legacy.data-mods-no-hope-difficulty-options
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1627,7 +1627,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Sky_Island/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1640,7 +1640,7 @@ documents:
   stable_document_id: legacy.data-mods-sky-island-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1660,7 +1660,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Sorcerer/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1673,7 +1673,7 @@ documents:
   stable_document_id: legacy.data-mods-sorcerer-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1693,7 +1693,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/TEST_DATA/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1706,7 +1706,7 @@ documents:
   stable_document_id: legacy.data-mods-test-data-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1726,7 +1726,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/XedraWood/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1739,7 +1739,7 @@ documents:
   stable_document_id: legacy.data-mods-xedrawood-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1759,7 +1759,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Xedra_Evolved/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1772,7 +1772,7 @@ documents:
   stable_document_id: legacy.data-mods-xedra-evolved-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1792,7 +1792,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1805,7 +1805,7 @@ documents:
   stable_document_id: legacy.data-mods-xedra-evolved-design-doc-spoilers
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1825,7 +1825,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/Xedra_Evolved/vampire_guide.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1838,7 +1838,7 @@ documents:
   stable_document_id: legacy.data-mods-xedra-evolved-vampire-guide
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1858,7 +1858,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/Hacking.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1871,7 +1871,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-hacking
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1891,7 +1891,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1904,7 +1904,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-crafting-system
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1924,7 +1924,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1937,7 +1937,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-cyberpunk-future
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1957,7 +1957,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -1970,7 +1970,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-factions
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -1990,7 +1990,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2003,7 +2003,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-organizations
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2023,7 +2023,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2036,7 +2036,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-points-of-interest
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2056,7 +2056,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2069,7 +2069,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-ranged-weapon-balance
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2089,7 +2089,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2102,7 +2102,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-salus-4
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2122,7 +2122,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2135,7 +2135,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-timeline
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2155,7 +2155,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2168,7 +2168,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-suit-operating-time
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2188,7 +2188,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2201,7 +2201,7 @@ documents:
   stable_document_id: legacy.data-mods-aftershock-exoplanet-items-armor-exosuit-exosuit-guide
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2221,7 +2221,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/alt_map_key/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2234,7 +2234,7 @@ documents:
   stable_document_id: legacy.data-mods-alt-map-key-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2254,7 +2254,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/classic_zombies/design-doc.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2267,7 +2267,7 @@ documents:
   stable_document_id: legacy.data-mods-classic-zombies-design-doc
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2287,7 +2287,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/classic_zombies/place_names.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2300,7 +2300,7 @@ documents:
   stable_document_id: legacy.data-mods-classic-zombies-place-names
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2320,7 +2320,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/hunvre/documentation/lore.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2333,7 +2333,7 @@ documents:
   stable_document_id: legacy.data-mods-hunvre-documentation-lore
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2353,7 +2353,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/hunvre/progress_tracker.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2366,7 +2366,7 @@ documents:
   stable_document_id: legacy.data-mods-hunvre-progress-tracker
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2386,7 +2386,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/immortal_path/GLOSSARY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2399,7 +2399,7 @@ documents:
   stable_document_id: legacy.data-mods-immortal-path-glossary
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2419,7 +2419,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2432,7 +2432,7 @@ documents:
   stable_document_id: legacy.data-mods-immortal-path-language-convention
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2452,7 +2452,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/immortal_path/doc/game-design.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2465,7 +2465,7 @@ documents:
   stable_document_id: legacy.data-mods-immortal-path-doc-game-design
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2485,7 +2485,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/immortal_path/doc/lore.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2498,7 +2498,7 @@ documents:
   stable_document_id: legacy.data-mods-immortal-path-doc-lore
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2518,7 +2518,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/immortal_path/doc/spell-design.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2531,7 +2531,7 @@ documents:
   stable_document_id: legacy.data-mods-immortal-path-doc-spell-design
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2551,7 +2551,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/innawood/readme.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2564,7 +2564,7 @@ documents:
   stable_document_id: legacy.data-mods-innawood-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2584,7 +2584,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/railroads/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2597,7 +2597,7 @@ documents:
   stable_document_id: legacy.data-mods-railroads-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2617,7 +2617,7 @@ documents:
   retained_body_until: null
 - original_path: data/mods/translate-dialogue/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2630,7 +2630,7 @@ documents:
   stable_document_id: legacy.data-mods-translate-dialogue-readme
   domain: mods
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2650,7 +2650,7 @@ documents:
   retained_body_until: null
 - original_path: doc/ASCII_ART.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2663,7 +2663,7 @@ documents:
   stable_document_id: legacy.doc-ascii-art
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2683,7 +2683,7 @@ documents:
   retained_body_until: null
 - original_path: doc/CHANGELOG_GUIDELINES.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2696,7 +2696,7 @@ documents:
   stable_document_id: legacy.doc-changelog-guidelines
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2716,7 +2716,7 @@ documents:
   retained_body_until: null
 - original_path: doc/DEVELOPER_FAQ.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2729,7 +2729,7 @@ documents:
   stable_document_id: legacy.doc-developer-faq
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2749,7 +2749,7 @@ documents:
   retained_body_until: null
 - original_path: doc/FREQUENTLY_MADE_SUGGESTIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2762,7 +2762,7 @@ documents:
   stable_document_id: legacy.doc-frequently-made-suggestions
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2782,7 +2782,7 @@ documents:
   retained_body_until: null
 - original_path: doc/GUN_NAMING_AND_INCLUSION.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2795,7 +2795,7 @@ documents:
   stable_document_id: legacy.doc-gun-naming-and-inclusion
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2815,7 +2815,7 @@ documents:
   retained_body_until: null
 - original_path: doc/HOWTO_MASSAGE_MA_GUN_DATA.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2828,7 +2828,7 @@ documents:
   stable_document_id: legacy.doc-howto-massage-ma-gun-data
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2848,7 +2848,7 @@ documents:
   retained_body_until: null
 - original_path: doc/HOW_YOU_CAN_HELP.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2861,7 +2861,7 @@ documents:
   stable_document_id: legacy.doc-how-you-can-help
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2881,7 +2881,7 @@ documents:
   retained_body_until: null
 - original_path: doc/IN_REPO_MODS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2894,7 +2894,7 @@ documents:
   stable_document_id: legacy.doc-in-repo-mods
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2914,7 +2914,7 @@ documents:
   retained_body_until: null
 - original_path: doc/ISSUE_TRIAGE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2927,7 +2927,7 @@ documents:
   stable_document_id: legacy.doc-issue-triage
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2947,7 +2947,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/ARTIFACTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2960,7 +2960,7 @@ documents:
   stable_document_id: legacy.doc-json-artifacts
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -2980,7 +2980,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/BASECAMP.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -2993,7 +2993,7 @@ documents:
   stable_document_id: legacy.doc-json-basecamp
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3013,7 +3013,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/CLIMBING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3026,7 +3026,7 @@ documents:
   stable_document_id: legacy.doc-json-climbing
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3046,7 +3046,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/DIMENSIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3059,7 +3059,7 @@ documents:
   stable_document_id: legacy.doc-json-dimensions
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3079,7 +3079,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/EFFECTS_JSON.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3092,7 +3092,7 @@ documents:
   stable_document_id: legacy.doc-json-effects-json
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3112,7 +3112,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/EFFECT_ON_CONDITION.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3125,7 +3125,7 @@ documents:
   stable_document_id: legacy.doc-json-effect-on-condition
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3145,7 +3145,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/EXAMINE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3158,7 +3158,7 @@ documents:
   stable_document_id: legacy.doc-json-examine
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3178,7 +3178,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/FACTIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3191,7 +3191,7 @@ documents:
   stable_document_id: legacy.doc-json-factions
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3211,7 +3211,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/FACTION_MISSIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3224,7 +3224,7 @@ documents:
   stable_document_id: legacy.doc-json-faction-missions
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3244,7 +3244,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/GUIDE_COMESTIBLES.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3257,7 +3257,7 @@ documents:
   stable_document_id: legacy.doc-json-guide-comestibles
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3277,7 +3277,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/HELP_MENU.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3290,7 +3290,7 @@ documents:
   stable_document_id: legacy.doc-json-help-menu
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3310,7 +3310,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/ITEM.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3323,7 +3323,7 @@ documents:
   stable_document_id: legacy.doc-json-item
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3343,7 +3343,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3356,7 +3356,7 @@ documents:
   stable_document_id: legacy.doc-json-item-craft-and-disassembly
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3376,7 +3376,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/ITEM_SPAWN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3389,7 +3389,7 @@ documents:
   stable_document_id: legacy.doc-json-item-spawn
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3409,7 +3409,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_FLAGS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3422,7 +3422,7 @@ documents:
   stable_document_id: legacy.doc-json-json-flags
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3442,7 +3442,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_INFO.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3455,7 +3455,7 @@ documents:
   stable_document_id: legacy.doc-json-json-info
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3475,7 +3475,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_INHERITANCE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3488,7 +3488,7 @@ documents:
   stable_document_id: legacy.doc-json-json-inheritance
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3508,7 +3508,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_LOADING_ORDER.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3521,7 +3521,7 @@ documents:
   stable_document_id: legacy.doc-json-json-loading-order
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3541,7 +3541,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3554,7 +3554,7 @@ documents:
   stable_document_id: legacy.doc-json-json-mapping-guides-guide-for-beginning-mapgen
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3574,7 +3574,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3587,7 +3587,7 @@ documents:
   stable_document_id: legacy.doc-json-json-mapping-guides-guide-for-intermediate-mapgen
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3607,7 +3607,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3620,7 +3620,7 @@ documents:
   stable_document_id: legacy.doc-json-json-mapping-guides-json-roof-mapgen
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3640,7 +3640,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_STYLE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3653,7 +3653,7 @@ documents:
   stable_document_id: legacy.doc-json-json-style
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3673,7 +3673,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/JSON_TOOLS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3686,7 +3686,7 @@ documents:
   stable_document_id: legacy.doc-json-json-tools
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3706,7 +3706,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MAGIC.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3719,7 +3719,7 @@ documents:
   stable_document_id: legacy.doc-json-magic
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3739,7 +3739,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MAPGEN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3752,7 +3752,7 @@ documents:
   stable_document_id: legacy.doc-json-mapgen
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3772,7 +3772,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MAP_SMASHING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3785,7 +3785,7 @@ documents:
   stable_document_id: legacy.doc-json-map-smashing
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3805,7 +3805,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MARTIALART_JSON.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3818,7 +3818,7 @@ documents:
   stable_document_id: legacy.doc-json-martialart-json
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3838,7 +3838,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MISSIONS_JSON.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3851,7 +3851,7 @@ documents:
   stable_document_id: legacy.doc-json-missions-json
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3871,7 +3871,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MONSTERS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3884,7 +3884,7 @@ documents:
   stable_document_id: legacy.doc-json-monsters
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3904,7 +3904,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MONSTER_SPECIAL_ATTACKS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3917,7 +3917,7 @@ documents:
   stable_document_id: legacy.doc-json-monster-special-attacks
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3937,7 +3937,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MOVE_MODE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3950,7 +3950,7 @@ documents:
   stable_document_id: legacy.doc-json-move-mode
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -3970,7 +3970,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/MUTATIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -3983,7 +3983,7 @@ documents:
   stable_document_id: legacy.doc-json-mutations
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4003,7 +4003,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/NPCs.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4016,7 +4016,7 @@ documents:
   stable_document_id: legacy.doc-json-npcs
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4036,7 +4036,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/OBSOLETION_AND_MIGRATION.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4049,7 +4049,7 @@ documents:
   stable_document_id: legacy.doc-json-obsoletion-and-migration
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4069,7 +4069,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/OPTIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4082,7 +4082,7 @@ documents:
   stable_document_id: legacy.doc-json-options
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4102,7 +4102,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/OVERMAP.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4115,7 +4115,7 @@ documents:
   stable_document_id: legacy.doc-json-overmap
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4135,7 +4135,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/PRACTICE_RECIPES.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4148,7 +4148,7 @@ documents:
   stable_document_id: legacy.doc-json-practice-recipes
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4168,7 +4168,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/PROFICIENCY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4181,7 +4181,7 @@ documents:
   stable_document_id: legacy.doc-json-proficiency
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4201,7 +4201,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/PROFICIENCY_LIST.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4214,7 +4214,7 @@ documents:
   stable_document_id: legacy.doc-json-proficiency-list
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4234,7 +4234,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/REGION_LAYOUT.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4247,7 +4247,7 @@ documents:
   stable_document_id: legacy.doc-json-region-layout
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4267,7 +4267,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/REGION_SETTINGS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4280,7 +4280,7 @@ documents:
   stable_document_id: legacy.doc-json-region-settings
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4300,7 +4300,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/TER_FURN_TRANSFORM.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4313,7 +4313,7 @@ documents:
   stable_document_id: legacy.doc-json-ter-furn-transform
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4333,7 +4333,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/VEHICLES_JSON.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4346,7 +4346,7 @@ documents:
   stable_document_id: legacy.doc-json-vehicles-json
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4366,7 +4366,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/VITAMIN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4379,7 +4379,7 @@ documents:
   stable_document_id: legacy.doc-json-vitamin
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4399,7 +4399,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/WEATHER_TYPE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4412,7 +4412,7 @@ documents:
   stable_document_id: legacy.doc-json-weather-type
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4432,7 +4432,7 @@ documents:
   retained_body_until: null
 - original_path: doc/JSON/WOUNDS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4445,7 +4445,7 @@ documents:
   stable_document_id: legacy.doc-json-wounds
   domain: json
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4465,7 +4465,7 @@ documents:
   retained_body_until: null
 - original_path: doc/MANUAL_OF_STYLE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4478,7 +4478,7 @@ documents:
   stable_document_id: legacy.doc-manual-of-style
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4498,7 +4498,7 @@ documents:
   retained_body_until: null
 - original_path: doc/MODDING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4511,7 +4511,7 @@ documents:
   stable_document_id: legacy.doc-modding
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4531,7 +4531,7 @@ documents:
   retained_body_until: null
 - original_path: doc/MOD_COMPATIBILITY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4544,7 +4544,7 @@ documents:
   stable_document_id: legacy.doc-mod-compatibility
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4564,7 +4564,7 @@ documents:
   retained_body_until: null
 - original_path: doc/PLAYER_ACTIVITY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4577,7 +4577,7 @@ documents:
   stable_document_id: legacy.doc-player-activity
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: cpp.activities
@@ -4597,7 +4597,7 @@ documents:
   retained_body_until: null
 - original_path: doc/RELEASE_DIFF.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4610,7 +4610,7 @@ documents:
   stable_document_id: legacy.doc-release-diff
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: maintenance.releases
@@ -4630,7 +4630,7 @@ documents:
   retained_body_until: null
 - original_path: doc/RELEASE_PROCESS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4643,7 +4643,7 @@ documents:
   stable_document_id: legacy.doc-release-process
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: maintenance.releases
@@ -4663,7 +4663,7 @@ documents:
   retained_body_until: null
 - original_path: doc/SOUNDPACKS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4676,7 +4676,7 @@ documents:
   stable_document_id: legacy.doc-soundpacks
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4696,7 +4696,7 @@ documents:
   retained_body_until: null
 - original_path: doc/TESTING_YOUR_CHANGES.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4709,7 +4709,7 @@ documents:
   stable_document_id: legacy.doc-testing-your-changes
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4729,7 +4729,7 @@ documents:
   retained_body_until: null
 - original_path: doc/TILESET.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4742,7 +4742,7 @@ documents:
   stable_document_id: legacy.doc-tileset
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4762,7 +4762,7 @@ documents:
   retained_body_until: null
 - original_path: doc/TRANSLATING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4775,7 +4775,7 @@ documents:
   stable_document_id: legacy.doc-translating
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4795,7 +4795,7 @@ documents:
   retained_body_until: null
 - original_path: doc/TRANSLATING_MOD.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4808,7 +4808,7 @@ documents:
   stable_document_id: legacy.doc-translating-mod
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4828,7 +4828,7 @@ documents:
   retained_body_until: null
 - original_path: doc/USER_INTERFACE_AND_ACCESSIBILITY.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4841,7 +4841,7 @@ documents:
   stable_document_id: legacy.doc-user-interface-and-accessibility
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4861,7 +4861,7 @@ documents:
   retained_body_until: null
 - original_path: doc/WIDGETS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4874,7 +4874,7 @@ documents:
   stable_document_id: legacy.doc-widgets
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4894,7 +4894,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/CODE_STYLE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4907,7 +4907,7 @@ documents:
   stable_document_id: legacy.doc-c-code-style
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4927,7 +4927,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILER_SUPPORT.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4940,7 +4940,7 @@ documents:
   stable_document_id: legacy.doc-c-compiler-support
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4960,7 +4960,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-CMAKE-VCPKG.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -4973,7 +4973,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-cmake-vcpkg
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -4993,7 +4993,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-CMAKE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5006,7 +5006,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-cmake
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5026,7 +5026,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-CYGWIN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5039,7 +5039,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-cygwin
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5059,7 +5059,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-DEVCONTAINER.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5072,7 +5072,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-devcontainer
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5092,7 +5092,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-FLATPAK.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5105,7 +5105,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-flatpak
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5125,7 +5125,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-MSYS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5138,7 +5138,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-msys
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5158,7 +5158,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING-VS-VCPKG.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5171,7 +5171,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling-vs-vcpkg
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5191,7 +5191,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/COMPILING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5204,7 +5204,7 @@ documents:
   stable_document_id: legacy.doc-c-compiling
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: build.overview
@@ -5224,7 +5224,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/DEVELOPER_TOOLING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5237,7 +5237,7 @@ documents:
   stable_document_id: legacy.doc-c-developer-tooling
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5257,7 +5257,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/JSON_INTERFACE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5270,7 +5270,7 @@ documents:
   stable_document_id: legacy.doc-c-json-interface
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5290,7 +5290,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/PERFORMANCE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5303,7 +5303,7 @@ documents:
   stable_document_id: legacy.doc-c-performance
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5323,7 +5323,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/POINTS_COORDINATES.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5336,7 +5336,7 @@ documents:
   stable_document_id: legacy.doc-c-points-coordinates
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5356,7 +5356,7 @@ documents:
   retained_body_until: null
 - original_path: doc/c++/TESTING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5369,7 +5369,7 @@ documents:
   stable_document_id: legacy.doc-c-testing
   domain: cpp
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5389,7 +5389,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5402,7 +5402,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-armor-balance-and-design
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5422,7 +5422,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/CONSTRUCTION_BALANCE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5435,7 +5435,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-construction-balance
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5455,7 +5455,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/GAME_BALANCE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5468,7 +5468,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-game-balance
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5488,7 +5488,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/LORE_FAQ.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5501,7 +5501,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-lore-faq
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5521,7 +5521,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5534,7 +5534,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-portal-storm-balance-and-design
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5554,7 +5554,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5567,7 +5567,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-postapoc-price-guide
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5587,7 +5587,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/STEEL_CRAFTING.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5600,7 +5600,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-steel-crafting
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5620,7 +5620,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/VARIANTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5633,7 +5633,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-variants
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5653,7 +5653,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/batteries_and_electricity.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5666,7 +5666,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-batteries-and-electricity
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5686,7 +5686,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/design-balance.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5699,7 +5699,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-design-balance
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5719,7 +5719,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/design-doc.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5732,7 +5732,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-design-doc
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5752,7 +5752,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/design-gameplay.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5765,7 +5765,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-design-gameplay
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5785,7 +5785,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/design-user-experience.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5798,7 +5798,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-design-user-experience
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5818,7 +5818,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/lore-background.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5831,7 +5831,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-lore-background
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5851,7 +5851,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/lore-factions.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5864,7 +5864,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-lore-factions
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5884,7 +5884,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/lore.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5897,7 +5897,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-lore
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5917,7 +5917,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5930,7 +5930,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-melee-weapons-melee-balance-spreadsheet
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5950,7 +5950,7 @@ documents:
   retained_body_until: null
 - original_path: doc/design-balance-lore/technology.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5963,7 +5963,7 @@ documents:
   stable_document_id: legacy.doc-design-balance-lore-technology
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -5983,7 +5983,7 @@ documents:
   retained_body_until: null
 - original_path: doc/development_process.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -5996,7 +5996,7 @@ documents:
   stable_document_id: legacy.doc-development-process
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6016,7 +6016,7 @@ documents:
   retained_body_until: null
 - original_path: doc/migration/classification-report.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6029,7 +6029,7 @@ documents:
   stable_document_id: legacy.doc-migration-classification-report
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6049,7 +6049,7 @@ documents:
   retained_body_until: null
 - original_path: doc/migration/history-assessment.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6062,7 +6062,7 @@ documents:
   stable_document_id: legacy.doc-migration-history-assessment
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6082,7 +6082,7 @@ documents:
   retained_body_until: null
 - original_path: doc/reviewing_PR_guide.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6095,7 +6095,7 @@ documents:
   stable_document_id: legacy.doc-reviewing-pr-guide
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6115,7 +6115,7 @@ documents:
   retained_body_until: null
 - original_path: doc/user-guides/COLOR.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6128,7 +6128,7 @@ documents:
   stable_document_id: legacy.doc-user-guides-color
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6148,7 +6148,7 @@ documents:
   retained_body_until: null
 - original_path: doc/user-guides/FONT_OPTIONS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6161,7 +6161,7 @@ documents:
   stable_document_id: legacy.doc-user-guides-font-options
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6181,7 +6181,7 @@ documents:
   retained_body_until: null
 - original_path: lang/notes/README_all_translators.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6194,7 +6194,7 @@ documents:
   stable_document_id: legacy.lang-notes-readme-all-translators
   domain: translation
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6214,7 +6214,7 @@ documents:
   retained_body_until: null
 - original_path: lang/notes/ru-notes.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6227,7 +6227,7 @@ documents:
   stable_document_id: legacy.lang-notes-ru-notes
   domain: translation
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6247,7 +6247,7 @@ documents:
   retained_body_until: null
 - original_path: src/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6260,7 +6260,7 @@ documents:
   stable_document_id: legacy.src-agents
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6280,7 +6280,7 @@ documents:
   retained_body_until: null
 - original_path: src/lua/LICENSE.md
   target_path: src/lua/LICENSE.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6293,7 +6293,7 @@ documents:
   stable_document_id: legacy.src-lua-license
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: third_party
   upstream_relation: vendored
   merge_target: null
@@ -6312,7 +6312,7 @@ documents:
   retained_body_until: null
 - original_path: src/lua/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6325,7 +6325,7 @@ documents:
   stable_document_id: legacy.src-lua-readme
   domain: lua
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6345,7 +6345,7 @@ documents:
   retained_body_until: null
 - original_path: src/third-party/snmalloc/README.md
   target_path: src/third-party/snmalloc/README.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6358,7 +6358,7 @@ documents:
   stable_document_id: legacy.src-third-party-snmalloc-readme
   domain: third-party
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: third_party
   upstream_relation: vendored
   merge_target: null
@@ -6377,7 +6377,7 @@ documents:
   retained_body_until: null
 - original_path: src/third-party/snmalloc/stl/README.md
   target_path: src/third-party/snmalloc/stl/README.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6390,7 +6390,7 @@ documents:
   stable_document_id: legacy.src-third-party-snmalloc-stl-readme
   domain: third-party
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: third_party
   upstream_relation: vendored
   merge_target: null
@@ -6409,7 +6409,7 @@ documents:
   retained_body_until: null
 - original_path: src/third-party/snmalloc/stl/cxx/README.md
   target_path: src/third-party/snmalloc/stl/cxx/README.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6422,7 +6422,7 @@ documents:
   stable_document_id: legacy.src-third-party-snmalloc-stl-cxx-readme
   domain: third-party
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: third_party
   upstream_relation: vendored
   merge_target: null
@@ -6441,7 +6441,7 @@ documents:
   retained_body_until: null
 - original_path: src/third-party/snmalloc/stl/gnu/README.md
   target_path: src/third-party/snmalloc/stl/gnu/README.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6454,7 +6454,7 @@ documents:
   stable_document_id: legacy.src-third-party-snmalloc-stl-gnu-readme
   domain: third-party
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: third_party
   upstream_relation: vendored
   merge_target: null
@@ -6473,7 +6473,7 @@ documents:
   retained_body_until: null
 - original_path: src/third-party/zstd/README.md
   target_path: src/third-party/zstd/README.md
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6486,7 +6486,7 @@ documents:
   stable_document_id: legacy.src-third-party-zstd-readme
   domain: third-party
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: third_party
   upstream_relation: vendored
   merge_target: null
@@ -6505,7 +6505,7 @@ documents:
   retained_body_until: null
 - original_path: tests/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6518,7 +6518,7 @@ documents:
   stable_document_id: legacy.tests-agents
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6538,7 +6538,7 @@ documents:
   retained_body_until: null
 - original_path: tests/standalone/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6551,7 +6551,7 @@ documents:
   stable_document_id: legacy.tests-standalone-readme
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6571,7 +6571,7 @@ documents:
   retained_body_until: null
 - original_path: tools/AGENTS.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6584,7 +6584,7 @@ documents:
   stable_document_id: legacy.tools-agents
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6604,7 +6604,7 @@ documents:
   retained_body_until: null
 - original_path: tools/json_api/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6617,7 +6617,7 @@ documents:
   stable_document_id: legacy.tools-json-api-readme
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6637,7 +6637,7 @@ documents:
   retained_body_until: null
 - original_path: tools/llama/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6650,7 +6650,7 @@ documents:
   stable_document_id: legacy.tools-llama-readme
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6670,7 +6670,7 @@ documents:
   retained_body_until: null
 - original_path: tools/lua_api/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6683,7 +6683,7 @@ documents:
   stable_document_id: legacy.tools-lua-api-readme
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
@@ -6703,7 +6703,7 @@ documents:
   retained_body_until: null
 - original_path: tools/lua_api/fixtures/native_probe/README.md
   target_path: null
-  source_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  source_commit: 61539b635d2060eae82f378577088417e2da1d57
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
@@ -6716,7 +6716,7 @@ documents:
   stable_document_id: legacy.tools-lua-api-fixtures-native-probe-readme
   domain: legacy
   priority: P3
-  last_applicable_commit: 09d1f8573771ce893a0b768672e5830ebf38b02a
+  last_applicable_commit: 61539b635d2060eae82f378577088417e2da1d57
   ccb_specificity: pending_review
   upstream_relation: pending_review
   merge_target: null
