@@ -69,7 +69,7 @@ TEST_CASE( "snapshot_astar_distinguishes_directional_obstacles", "[pathfinding][
     REQUIRE( result.path.size() >= 2 );
     CHECK( ( result.path.back() == snapshot.target ) );
     CHECK( ( result.path[result.path.size() - 2] == tripoint_bub_ms( 17, 15, 0 ) ) );
-    CHECK( result.checked_cost[snapshot.index( snapshot.target )] & 1 );
+    CHECK( result.checked_cost[snapshot.index( snapshot.target )] & 2 );
 
     target.entering_cost.fill( -1 );
     CHECK( search_route_snapshot( snapshot ).path.empty() );
