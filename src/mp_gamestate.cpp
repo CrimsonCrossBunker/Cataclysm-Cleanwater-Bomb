@@ -273,58 +273,16 @@ struct mp_apply_step {
     }
 };
 
-// Per-turn body update, called from do_turn.cpp. SP/host: one plain update.
-// Client: the host-driven calendar advances in JUMPS and do_turn spins while
-// locked, so the no-arg update_body() (always exactly one turn) starved stamina
-// regen + every per-turn effect on a multi-turn jump. Catch up the full elapsed
-// span (mirrors SP's fast-forward), gated on a calendar change so the locked
-// spin doesn't re-run it.
-void mp_do_turn_update_body( Character &u )
+// The session selects the compatibility clock and owns detach/reset. Actual
+// body/effect processing is shared native character code, independent of MP.
+character_turn_driver &client_character_turn_driver( Character &actor )
 {
     if( !is_client_mode() ) {
-        u.update_body();
-        return;
+        throw std::runtime_error( "Client character driver requested outside client mode" );
     }
-    if( calendar::turn == mp_session().client_turn.last_update_body ) {
-        return;
-    }
-    if( mp_session().client_turn.last_update_body != calendar::before_time_starts &&
-        calendar::turn > mp_session().client_turn.last_update_body ) {
-        u.update_body( mp_session().client_turn.last_update_body, calendar::turn );
-    } else {
-        u.update_body();  // first run / clock rewind — single turn
-    }
-    mp_session().client_turn.last_update_body = calendar::turn;
-}
-
-// Client per-turn processing (effects, needs, move regen), called from do_turn.cpp.
-// SP/host run their normal process_turn() in simulate_turn_suffix(). Client:
-// process_turn() ticks effects/needs exactly one turn per call with no catch-up,
-// so calling it on every locked-spin iteration over-applied them (confirmed:
-// bleed/pain climbing while locked) and a multi-turn jump under-applied them.
-// Tick once per ELAPSED game-turn (skip on locked spin, capped catch-up on
-// jumps); discard the move regen — the client's moves come from server grants.
-void mp_do_turn_process_turn( Character &u )
-{
-    const int pre_moves = u.get_moves();
-    if( !is_client_mode() ) {
-        return;
-    }
-    int dturns;
-    if( mp_session().client_turn.last_proc == calendar::before_time_starts ) {
-        dturns = 1;                                   // first call
-    } else if( calendar::turn > mp_session().client_turn.last_proc ) {
-        dturns = to_turns<int>( calendar::turn - mp_session().client_turn.last_proc );
-    } else {
-        dturns = 0;                                   // locked spin / clock rewind
-    }
-    mp_session().client_turn.last_proc = calendar::turn;
-    constexpr int MAX_CATCHUP = 100;
-    const int ticks = dturns < MAX_CATCHUP ? dturns : MAX_CATCHUP;
-    for( int i = 0; i < ticks; ++i ) {
-        u.process_turn();
-    }
-    u.set_moves( pre_moves );
+    auto &driver = mp_session().client_turn.character_turns;
+    driver.bind( actor, character_turn_policy::observed_clock );
+    return driver;
 }
 
 bool is_server_mode()
