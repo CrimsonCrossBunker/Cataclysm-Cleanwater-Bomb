@@ -1,443 +1,188 @@
-// Networking only — no CDDA game headers allowed here (asio conflicts with PCH).
-// Follow the same pattern as mp_server.cpp.
 #define ASIO_STANDALONE
-
 #include "mp_client_conn.h"
 
-#include <asio.hpp> // IWYU pragma: keep
-#include <asio/associated_cancellation_slot.hpp>
-#include <asio/async_result.hpp>
-#include <asio/buffer.hpp>
-#include <asio/completion_condition.hpp>
-#include <asio/connect.hpp>
-#include <asio/detail/bind_handler.hpp>
-#include <asio/detail/handler_invoke_helpers.hpp>
-#include <asio/detail/impl/epoll_reactor.hpp>
-#include <asio/detail/impl/reactive_socket_service_base.ipp>
-#include <asio/detail/impl/resolver_service_base.ipp>
-#include <asio/detail/impl/scheduler.ipp>
-#include <asio/detail/impl/service_registry.hpp>
-#include <asio/error_code.hpp>
-#include <asio/execution/context_as.hpp>
-#include <asio/execution/prefer_only.hpp>
-#include <asio/impl/any_io_executor.ipp>
-#include <asio/impl/connect.hpp>
-#include <asio/impl/handler_alloc_hook.ipp>
-#include <asio/impl/io_context.hpp>
-#include <asio/impl/io_context.ipp>
-#include <asio/impl/read_until.hpp>
-#include <asio/impl/write.hpp>
-#include <asio/io_context.hpp>
-#include <asio/ip/basic_resolver_iterator.hpp>
-#include <asio/ip/tcp.hpp>
-#include <asio/post.hpp>
-#include <asio/steady_timer.hpp>
-#include <asio/streambuf.hpp>
-#include <cstddef>
-#include <zstd/zstd.h>
+#include <asio.hpp>
 #include <chrono>
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <new>
-#include <queue>
-#include <string>
+#include <deque>
+#include <map>
 #include <thread>
-#include <utility>
 
-#include "catacharset.h"   // base64_decode — only pulls std headers, asio-safe
-
-using asio::ip::tcp;
+#include "mp_protocol.h"
+#include "mp_renet_transport.h"
 
 namespace cata_mp
 {
-
-// ---------------------------------------------------------------------------
-// Client mode flag
-// ---------------------------------------------------------------------------
-
-// Defined in mp_gamestate.cpp. Forward-declared (mp_client_conn.cpp doesn't
-// include the gamestate header) so we can trace connection lifecycle here.
 void mp_log( const std::string &msg ); // NOLINT(cata-static-declarations)
 void mp_set_client_host_world_name( const std::string &name ); // NOLINT(cata-static-declarations)
 void mp_set_client_host_player_name( const std::string &name ); // NOLINT(cata-static-declarations)
 void mp_store_pending_welcome( const std::string &msg ); // NOLINT(cata-static-declarations)
 
-static bool client_mode_ = false;
+namespace
+{
+bool client_mode = false;
+bool active = false;
+bool joined = false;
+bool disconnected_reported = false;
+std::string pending_join;
+std::string connect_error;
+std::deque<std::string> incoming;
+
+void close_client()
+{
+    if( active ) {
+        renet_transport_stop();
+    }
+    active = false;
+    joined = false;
+    disconnected_reported = false;
+    incoming.clear();
+    pending_join.clear();
+}
+
+std::string resolve_server( const std::string &host, uint16_t port )
+{
+    // Retain hostname support. The actual connection is UDP and is bounded by
+    // the handshake deadline; no unrelated TCP probe may gate it.
+    asio::io_context io;
+    asio::ip::udp::resolver resolver( io );
+    asio::error_code error;
+    const auto endpoints = resolver.resolve( asio::ip::udp::v4(), host, std::to_string( port ), error );
+    if( error || endpoints.empty() ) {
+        connect_error = "Could not resolve server address: " + error.message();
+        return {};
+    }
+    return endpoints.begin()->endpoint().address().to_string() + ":" + std::to_string( port );
+}
+
+std::string handshake( const std::string &type, const std::string &name,
+                       const std::string &password, const std::string &version )
+{
+    return "{\"type\":" + wire_quote( type ) + ",\"transport\":\"ccb-renet-1\",\"name\":" +
+           wire_quote( name ) + ",\"password\":" + wire_quote( password ) +
+           ",\"version\":" + wire_quote( version ) + "}";
+}
+}
 
 bool is_client_mode()
 {
-    return client_mode_;
+    return client_mode;
 }
 
 void set_client_mode( bool enabled )
 {
-    client_mode_ = enabled;
-    // Trace client_mode flips: a stale "true" left over from a failed prior
-    // join makes mp_menu_join_session() skip the IP prompt entirely.
-    mp_log( "[cdda-mp] set_client_mode -> " + std::string( enabled ? "true" : "false" ) );
+    if( !enabled ) {
+        close_client();
+    }
+    client_mode = enabled;
 }
 
-// ---------------------------------------------------------------------------
-// Thread-safe queue for incoming state strings (io thread → game thread)
-// ---------------------------------------------------------------------------
-
-class string_queue // NOLINT(misc-use-internal-linkage)
+bool client_recv_pop( std::string &out )
 {
-    public:
-        void push( std::string s ) {
-            std::scoped_lock lk( mtx_ );
-            q_.push( std::move( s ) );
-        }
-        bool pop( std::string &out ) {
-            std::scoped_lock lk( mtx_ );
-            if( q_.empty() ) {
-                return false;
-            }
-            out = std::move( q_.front() );
-            q_.pop();
+    if( !incoming.empty() ) {
+        out = std::move( incoming.front() );
+        incoming.pop_front();
+        return true;
+    }
+    if( !active ) {
+        return false;
+    }
+    for( const renet_packet &packet : renet_transport_drain( 1 ) ) {
+        if( decode_game_packet( packet.payload, out ) ) {
             return true;
         }
-    private:
-        std::queue<std::string> q_;
-        std::mutex mtx_;
-};
-
-static string_queue g_recv_queue;
-
-// Reverse of the host's mp_compress_frame (mp_server.cpp): a line of the form
-// {"z":"<base64 zstd>"} is a compressed state broadcast — base64-decode then
-// zstd-decompress back to the original JSON line.  Any other line is returned
-// unchanged (grants/acks/control messages stay plaintext).  Both ends are the
-// same build (version handshake), so the format is guaranteed to match.
-static std::string mp_decompress_frame( std::string line )
-{
-    static const std::string prefix = R"({"z":")";
-    if( line.size() <= prefix.size() + 2 ||
-        line.compare( 0, prefix.size(), prefix ) != 0 ||
-        line.compare( line.size() - 2, 2, "\"}" ) != 0 ) {
-        return line;
     }
-    const std::string b64 = line.substr( prefix.size(),
-                                         line.size() - prefix.size() - 2 );
-    const std::string comp = base64_decode( b64 );
-    const unsigned long long orig =
-        ZSTD_getFrameContentSize( comp.data(), comp.size() );
-    if( orig == ZSTD_CONTENTSIZE_UNKNOWN || orig == ZSTD_CONTENTSIZE_ERROR ) {
-        mp_log( "[cdda-mp] decompress: bad zstd frame; dropping" );
-        return std::string();
+    if( !renet_transport_get_status().connected && !disconnected_reported ) {
+        disconnected_reported = true;
+        out = "{\"type\":\"state\",\"connected\":false}";
+        return true;
     }
-    std::string out;
-    out.resize( static_cast<size_t>( orig ) );
-    const size_t n = ZSTD_decompress( &out[0], out.size(), comp.data(), comp.size() );
-    if( ZSTD_isError( n ) ) {
-        mp_log( std::string( "[cdda-mp] decompress error: " ) + ZSTD_getErrorName( n ) );
-        return std::string();
-    }
-    out.resize( n );
-    return out;
+    return false;
 }
 
-// ---------------------------------------------------------------------------
-// Connection impl
-// ---------------------------------------------------------------------------
-
-struct client_impl { // NOLINT(misc-use-internal-linkage)
-    asio::io_context io_ctx;
-    tcp::socket sock{ io_ctx };
-    asio::streambuf read_buf;
-    std::thread io_thread;
-
-    ~client_impl() {
-        io_ctx.stop();
-        if( io_thread.joinable() ) {
-            io_thread.join();
-        }
-    }
-
-    void start_read() {
-        asio::async_read_until( sock, read_buf, '\n',
-        [this]( const asio::error_code & ec, size_t /*n*/ ) {
-            if( ec ) {
-                std::cerr << "[cdda-mp] Server disconnected: " << ec.message() << std::endl;
-                mp_log( "[cdda-mp] DISCONNECT: server closed connection (" + ec.message() +
-                        "). If this fired during join, the host rejected the handshake "
-                        "(version mismatch / wrong password) or is on a different build — "
-                        "check the host's cdda-mp-server.log for a PROBE/JOIN REJECTED line." );
-                // Synthetic disconnect message — game thread will clean up the host NPC.
-                g_recv_queue.push( R"({"type":"state","connected":false})" );
-                return;
-            }
-            std::istream is( &read_buf );
-            std::string line;
-            std::getline( is, line );
-            if( !line.empty() ) {
-                std::string msg = mp_decompress_frame( std::move( line ) );
-                if( !msg.empty() ) {
-                    g_recv_queue.push( std::move( msg ) );
-                }
-            }
-            start_read();
-        } );
-    }
-};
-
-static std::unique_ptr<client_impl> g_client;
-
-// Join message / welcome storage.
-static std::string g_pending_join;
-static bool g_join_sent = false;
-static std::string g_connect_error;
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-bool tcp_probe( const std::string_view host, uint16_t port, int timeout_ms )
+bool client_connect( const std::string &host, uint16_t port, const std::string &name,
+                     const std::string &password, const std::string &version )
 {
-    try {
-        asio::io_context io;
-        tcp::resolver resolver( io );
-        asio::error_code resolve_ec;
-        tcp::resolver::results_type endpoints =
-            resolver.resolve( host, std::to_string( port ), resolve_ec );
-        if( resolve_ec ) {
-            return false;
-        }
-        tcp::socket sock( io );
-        bool connected = false;
-        bool finished = false;
-        asio::async_connect( sock, endpoints,
-        [&]( const asio::error_code & ec, const tcp::endpoint & ) {
-            finished = true;
-            connected = !ec;
-        } );
-        asio::steady_timer deadline( io );
-        deadline.expires_after( std::chrono::milliseconds( timeout_ms ) );
-        deadline.async_wait( [&]( const asio::error_code & ) {
-            if( !finished ) {
-                // Cancels the pending async_connect, which then fires its
-                // completion handler with operation_aborted.
-                asio::error_code ignore;
-                ignore = sock.close( ignore );
-            }
-        } );
-        io.run();
-        return connected;
-    } catch( const std::exception & ) {
+    close_client();
+    connect_error.clear();
+    if( !renet_transport_available() ) {
+        connect_error = renet_transport_last_error();
         return false;
     }
-}
-
-bool client_connect( const std::string &host, uint16_t port,
-                     const std::string &name, const std::string &password,
-                     const std::string &version )
-{
-    g_client = std::make_unique<client_impl>();
-
-    asio::error_code ec;
-    tcp::resolver resolver( g_client->io_ctx );
-    tcp::resolver::results_type endpoints =
-        resolver.resolve( host, std::to_string( port ), ec );
-    if( ec ) {
-        std::cerr << "[cdda-mp] Could not resolve '" << host << "': " << ec.message() << std::endl;
-        g_client.reset();
+    const std::string address = resolve_server( host, port );
+    if( address.empty() ) {
         return false;
     }
-
-    asio::connect( g_client->sock, endpoints, ec );
-    if( ec ) {
-        std::cerr << "[cdda-mp] Could not connect to " << host << ":" << port
-                  << " — " << ec.message() << std::endl;
-        g_client.reset();
+    if( !renet_transport_start_client( address, 0 ) ) {
+        connect_error = renet_transport_last_error();
         return false;
     }
-
-    // Disable Nagle's algorithm. The lockstep grant/wait/ack messages are tiny;
-    // Nagle batching plus the peer's delayed-ACK add hundreds of ms per
-    // round-trip on a high-latency link, wedging the turn cycle. Invisible on
-    // LAN, essential for internet play.
-    {
-        asio::error_code nd_ec;
-        nd_ec = g_client->sock.set_option( tcp::no_delay( true ), nd_ec );
-        mp_log( "[cdda-mp] client TCP_NODELAY ec=" + nd_ec.message() );
-    }
-
-    g_client->start_read();
-    g_client->io_thread = std::thread( []() {
-        g_client->io_ctx.run();
-    } );
-
-    // Send a lightweight version_probe — validates version + password without
-    // spawning the proxy NPC on the host.  The real join (which triggers proxy
-    // spawn) is deferred until client_send_join() fires after char creation.
-    std::string join_msg = R"({"type":"version_probe")";
-    if( !password.empty() ) {
-        join_msg += R"(,"password":")" + password + "\"";
-    }
-    if( !version.empty() ) {
-        join_msg += R"(,"version":")" + version + "\"";
-    }
-    join_msg += "}\n";
-
-    mp_log( "[cdda-mp] HANDSHAKE: sent version_probe to " + host + ":" +
-            std::to_string( port ) + " (our version='" +
-            ( version.empty() ? std::string( "(none)" ) : version ) + "'" +
-            ( password.empty() ? "" : ", password set" ) + ")" );
-    asio::error_code wec;
-    asio::write( g_client->sock, asio::buffer( join_msg ), wec );
-    if( wec ) {
-        std::cerr << "[cdda-mp] Failed to send join: " << wec.message() << std::endl;
-        mp_log( "[cdda-mp] HANDSHAKE: failed to send version_probe — " + wec.message() );
-        g_client.reset();
-        return false;
-    }
-
-    // Wait up to 5 s for welcome or error.
+    active = true;
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+    const std::string probe = handshake( "version_probe", name, password, version );
+    if( probe.size() > 16384 ||
+        !renet_transport_send( 0, renet_channel::reliable_ordered, probe ) ) {
+        connect_error = "Could not send multiplayer handshake";
+        close_client();
+        return false;
+    }
     while( std::chrono::steady_clock::now() < deadline ) {
-        std::string msg;
-        if( g_recv_queue.pop( msg ) ) {
-            if( msg.find( R"("type":"error")" ) != std::string::npos ) {
-                // Extract human-readable error for the caller.
-                g_connect_error = "Server rejected connection.";
-                const std::string::size_type mpos = msg.find( R"("message":")" );
-                if( mpos != std::string::npos ) {
-                    const size_t start = mpos + 11;
-                    const size_t end = msg.find( '"', start );
-                    if( end != std::string::npos ) {
-                        g_connect_error = msg.substr( start, end - start );
-                    }
-                }
-                std::string rejection_log = "[cdda-mp] HANDSHAKE REJECTED by host: ";
-                rejection_log += g_connect_error;
-                rejection_log += " (raw=";
-                rejection_log += msg;
-                rejection_log += ')';
-                mp_log( rejection_log );
-                g_join_sent = false;
-                g_client.reset();
+        for( const renet_packet &packet : renet_transport_drain( 32 ) ) {
+            std::string message;
+            std::map<std::string, std::string> fields;
+            if( !decode_game_packet( packet.payload, message ) || !read_handshake( message, fields ) ) {
+                continue;
+            }
+            if( fields["type"] == "error" ) {
+                connect_error = fields["message"];
+                close_client();
                 return false;
             }
-            if( msg.find( R"("type":"welcome")" ) != std::string::npos ) {
-                // Probe accepted — version + password OK.  Extract the world
-                // name immediately so the join dialog can show "Joining <World>"
-                // before the game loop gets to process the welcome packet.
-                const std::string::size_type wpos = msg.find( R"("world":")" );
-                if( wpos != std::string::npos ) {
-                    const size_t ws = wpos + 9;
-                    const size_t we = msg.find( '"', ws );
-                    if( we != std::string::npos ) {
-                        const std::string wn = msg.substr( ws, we - ws );
-                        if( !wn.empty() && wn != "default" ) {
-                            mp_set_client_host_world_name( wn );
-                        }
-                    }
-                }
-                // Host's character name — so the join dialog can show whose game
-                // it is ("Joining <World> — <Host>'s game") before char select.
-                const std::string::size_type hpos = msg.find( R"("host_name":")" );
-                if( hpos != std::string::npos ) {
-                    const size_t hs = hpos + 12;
-                    const size_t he = msg.find( '"', hs );
-                    if( he != std::string::npos ) {
-                        const std::string hn = msg.substr( hs, he - hs );
-                        if( !hn.empty() ) {
-                            mp_set_client_host_player_name( hn );
-                        }
-                    }
-                }
-                // Stash + pre-parse the welcome NOW (connect time, before char
-                // creation) so start_game() can adopt the host seed + spawn-omt
-                // before it builds the host-area overmap. The game-loop replay
-                // below still fires on the first do_turn (idempotent).
-                mp_store_pending_welcome( msg );
-                // Store the welcome so the game-loop handler can adopt the seed.
-                g_pending_join = R"({"type":"join","name":")" + name + "\"";
-                if( !password.empty() ) {
-                    g_pending_join += R"(,"password":")" + password + "\"";
-                }
-                if( !version.empty() ) {
-                    g_pending_join += R"(,"version":")" + version + "\"";
-                }
-                g_pending_join += "}\n";
-                g_join_sent = false;
-                // Replay the probe welcome so seed/world-name adoption fires
-                // from the normal incoming-packet path on first do_turn.
-                g_recv_queue.push( msg );
-                std::cout << "[cdda-mp] Connected to " << host << ":" << port
-                          << " as '" << name << "' — version accepted." << std::endl;
-                std::string accepted_log =
-                    "[cdda-mp] HANDSHAKE: host accepted our version — connected to ";
-                accepted_log += host;
-                accepted_log += ':';
-                accepted_log += std::to_string( port );
-                accepted_log += " as '";
-                accepted_log += name;
-                accepted_log += '\'';
-                mp_log( accepted_log );
+            if( fields["type"] == "welcome" && fields["transport"] == "ccb-renet-1" ) {
+                mp_set_client_host_world_name( fields["world"] );
+                mp_set_client_host_player_name( fields["host_name"] );
+                mp_store_pending_welcome( message );
+                pending_join = handshake( "join", name, password, version );
+                incoming.push_back( message );
+                mp_log( "[ccb-mp] Renet host accepted connection to " + address );
                 return true;
             }
-            // Any other packet (e.g. hello) — keep waiting.
         }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
-
-    g_connect_error = "Timed out waiting for server response.";
-    std::cerr << "[cdda-mp] Timed out waiting for welcome from server." << std::endl;
-    mp_log( "[cdda-mp] HANDSHAKE: TIMED OUT after 5s waiting for host welcome/error.  "
-            "The host accepted the TCP connection but never answered the version_probe — "
-            "host may be on an older build (no probe support) or not yet loaded into a world." );
-    g_client.reset();
+    connect_error = "Timed out waiting for UDP host response (5 seconds). Check address and UDP port.";
+    close_client();
     return false;
 }
 
 std::string client_connect_error()
 {
-    return g_connect_error;
+    return connect_error;
 }
 
 void client_send_join()
 {
-    if( g_join_sent || !g_client || g_pending_join.empty() ) {
+    if( !active || joined || pending_join.empty() ) {
         return;
     }
-    asio::error_code ec;
-    asio::write( g_client->sock, asio::buffer( g_pending_join ), ec );
-    if( ec ) {
-        std::cerr << "[cdda-mp] Failed to send join: " << ec.message() << std::endl;
-        return;
+    joined = renet_transport_send( 0, renet_channel::reliable_ordered, pending_join );
+    if( joined ) {
+        pending_join.clear();
     }
-    g_join_sent = true;
-    std::cout << "[cdda-mp] Join sent — now in-game." << std::endl;
 }
 
 bool client_join_is_sent()
 {
-    return g_join_sent;
-}
-
-bool client_recv_pop( std::string &out )
-{
-    return g_recv_queue.pop( out );
+    return joined;
 }
 
 void client_send( const std::string &json )
 {
-    if( !g_client ) {
-        return;
+    if( active ) {
+        const std::string packet = encode_game_packet( json );
+        if( packet.empty() || !renet_transport_send( 0, renet_channel_for_payload( json ), packet ) ) {
+            mp_log( "[ccb-mp] could not queue gameplay message; closing connection" );
+            renet_transport_stop();
+        }
     }
-    const std::string msg = json + "\n";
-    asio::post( g_client->io_ctx, [msg]() {
-        if( !g_client ) {
-            return;
-        }
-        asio::error_code ec;
-        asio::write( g_client->sock, asio::buffer( msg ), ec );
-        if( ec ) {
-            std::cerr << "[cdda-mp] Send error: " << ec.message() << std::endl;
-        }
-    } );
 }
-
 } // namespace cata_mp

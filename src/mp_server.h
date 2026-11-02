@@ -4,14 +4,10 @@
 
 #include <stdint.h>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <vector>
 
 namespace cata_mp
 {
-
-struct client_session;
 
 class server
 {
@@ -25,12 +21,9 @@ class server
         // Signal the server to stop accepting connections and shut down.
         void stop();
 
-        // Broadcast a message to all connected clients.
-        // Must be called from the Asio io_context thread (e.g. inside a callback).
+        // Thread-safe delivery to authenticated peers only (zero means broadcast).
+        void post_send( uint64_t peer_id, const std::string &msg );
         void broadcast( const std::string &msg );
-
-        // Thread-safe broadcast: posts the send onto the io_context thread.
-        // Use this when calling from the game loop thread.
         void post_broadcast( const std::string &msg );
 
         uint16_t port() const {
@@ -38,10 +31,8 @@ class server
         }
 
     private:
-        void do_accept();
-        void on_client_connected( const std::shared_ptr<client_session> &session );
-        void on_client_disconnected( const std::shared_ptr<client_session> &session );
-        void on_message( const std::shared_ptr<client_session> &session, const std::string &msg );
+        void on_disconnected( uint64_t peer_id );
+        void on_message( uint64_t peer_id, const std::string &msg );
 
         uint16_t port_;
         std::string password_;
@@ -51,8 +42,6 @@ class server
 
         std::unique_ptr<impl> impl_;
 
-        std::vector<std::shared_ptr<client_session>> clients_;
-        std::mutex clients_mutex_;
 };
 
 // Start the server on the given port. Called from main() when --server flag is set.
@@ -61,8 +50,8 @@ void run_server( uint16_t port, const std::string &password,
                  const std::string &version = "" );
 
 // Returns the active server instance, or nullptr if not running.
-// Thread-safe: broadcast() on the returned pointer is mutex-protected.
-server *get_active_server();
+// Shared ownership keeps concurrent game-loop calls valid during shutdown.
+std::shared_ptr<server> get_active_server();
 
 // True from the moment the (detached) listen thread enters run_server() until
 // it fully returns — i.e. until the server object has destructed and its

@@ -1,0 +1,48 @@
+[
+  {
+    "id": "fcl_geomagnetic_hover_wheel",
+    "type": "vehicle_part",
+    "item": "fcl_geomagnetic_hover_wheel",
+    "description": "A stress wheel, purported to exploit geomagnetic induction effects, enables a vehicle to hover in near-ground suspension at a height slightly above the ground.  As one of this century's latest commercialized levitation applications, it clearly cannot rival the rumored secret military project capable of levitating flight.",
+    "location": "under",
+    "looks_like": "wheel",
+    "categories": [ "movement" ],
+    "color": "light_gray",
+    "durability": 800,
+    "damage_modifier": 50,
+    "breaks_into": [
+      { "item": "mc_steel_chunk", "count": [ 3, 6 ] },
+      { "item": "scrap", "count": [ 2, 3 ] },
+      { "item": "e_scrap", "count": [ 15, 30 ] },
+      { "item": "alloy_sheet", "count": [ 0, 2 ] }
+    ],
+    "rolling_resistance": 0.6,
+    "wheel_terrain_modifiers": { "FLAT": [ 0, 4 ], "ROAD": [ 0, 2 ] },
+    "contact_area": 640,
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_standard", 100 ], [ "vehicle_wrench_2", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "15 m",
+        "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
+      },
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "30 m",
+        "using": [
+          [ "welding_standard", 20 ],
+          [ "soldering_standard", 10 ],
+          [ "repair_welding_superalloy", 1 ],
+          [ "vehicle_repair_electronics", 2 ]
+        ]
+      }
+    },
+    "flags": [ "WHEEL", "STABLE", "SELF_JACK", "VARIABLE_SIZE", "TRACKED", "TRAP_PROOF" ],
+    "damage_reduction": { "all": 8, "cut": 10, "stab": 5 },
+    "variants": [ { "symbols": "0", "symbols_broken": "x" } ]
+  }
+]

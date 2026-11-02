@@ -1,3 +1,4 @@
+include(${CMAKE_SOURCE_DIR}/CMakeModules/CoopRuntime.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party)
 if (CATA_ENABLE_LUA_PLATFORM)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lua)
@@ -172,6 +173,7 @@ if (TILES)
     add_dependencies(cataclysm-tiles-common get_version)
 
     target_link_libraries(cataclysm-tiles PRIVATE cataclysm-tiles-common)
+    configure_coop_runtime(cataclysm-tiles cataclysm-tiles-common)
     target_compile_definitions(cataclysm-tiles-common PUBLIC TILES )
     if(NOT "${CMAKE_EXPORT_COMPILE_COMMANDS}")
         target_precompile_headers(cataclysm-tiles-common PUBLIC
@@ -383,6 +385,7 @@ if (CURSES)
 
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
+    configure_coop_runtime(cataclysm cataclysm-common)
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC
@@ -463,6 +466,7 @@ if (HEADLESS)
 
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
+    configure_coop_runtime(cataclysm cataclysm-common)
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC

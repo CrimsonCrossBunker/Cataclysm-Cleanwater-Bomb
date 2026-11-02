@@ -1256,6 +1256,8 @@ LDFLAGS += -lz
 all: version prefix $(CHECKS) $(TARGET) $(L10N) $(TESTSTARGET) $(ZZIP_BIN) $(SHADERS_STAMP)
 	@
 
+include build-scripts/coop.mk
+
 ifeq ($(TILES), 1)
 $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
 	python3 tools/build_shaders.py --shader-dir $(SHADERS_DIR) --formats $(BUILD_SHADER_FORMATS) --stamp $@
@@ -1423,6 +1425,9 @@ install: version $(TARGET) $(ZZIP_BIN)
 	mkdir -p $(DATA_PREFIX)
 	mkdir -p $(BIN_PREFIX)
 	install --mode=755 $(TARGET) $(BIN_PREFIX)
+ifeq ($(RUST_COOP),1)
+	install --mode=755 $(COOP_LIBRARY) $(BIN_PREFIX)
+endif
 	install --mode=755 $(ZZIP_BIN) $(BIN_PREFIX)
 	cp -R --no-preserve=ownership data/core $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/font $(DATA_PREFIX)
@@ -1464,6 +1469,9 @@ install: version $(TARGET)
 	mkdir -p $(DATA_PREFIX)
 	mkdir -p $(BIN_PREFIX)
 	install --mode=755 $(TARGET) $(BIN_PREFIX)
+ifeq ($(RUST_COOP),1)
+	install --mode=755 $(COOP_LIBRARY) $(BIN_PREFIX)
+endif
 	cp -R --no-preserve=ownership data/core $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/font $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/json $(DATA_PREFIX)
@@ -1518,6 +1526,9 @@ endif
 	cp build-data/osx/Cataclysm.sh $(APPTARGETDIR)/Contents/MacOS/
 	mkdir -p $(APPRESOURCESDIR)
 	cp $(APPTARGET) $(APPRESOURCESDIR)/
+ifeq ($(RUST_COOP),1)
+	cp $(COOP_LIBRARY) $(APPRESOURCESDIR)/
+endif
 	cp $(ZZIP_BIN) $(APPRESOURCESDIR)/
 	cp build-data/osx/AppIcon.icns $(APPRESOURCESDIR)/
 	mkdir -p $(APPDATADIR)
