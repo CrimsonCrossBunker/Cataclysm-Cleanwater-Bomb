@@ -1187,12 +1187,14 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
                 dam = std::max( 0, dam - armor );
                 critter->apply_damage( driver, bodypart_id( "torso" ), dam );
                 if( !critter->has_flag( json_flag_CANNOT_TAKE_DAMAGE ) ) {
+                    const effect_source source = driver != nullptr ? effect_source( driver ) :
+                                                 effect_source::empty();
                     if( vpi.has_flag( "SHARP" ) ) {
-                        critter->add_effect( effect_source( driver ), effect_bleed, 1_minutes * rng( 1, dam ),
+                        critter->add_effect( source, effect_bleed, 1_minutes * rng( 1, dam ),
                                              critter->get_random_body_part_of_type( bp_type::torso ) );
                     } else if( dam > 18 && rng( 1, 20 ) > 15 ) {
                         //low chance of lighter bleed even with non sharp objects.
-                        critter->add_effect( effect_source( driver ), effect_bleed, 1_minutes,
+                        critter->add_effect( source, effect_bleed, 1_minutes,
                                              critter->get_random_body_part_of_type( bp_type::torso ) );
                     }
                 }
@@ -1421,6 +1423,9 @@ void vehicle::damage_wheel_on_item( vehicle_part *vp_wheel, const item &it,
     if( !it.has_flag( json_flag_PUNCTURE_VEHICLE_WHEELS ) ) {
         return;
     }
+    if( part_with_feature( index_of_part( vp_wheel ), VPFLAG_TRAP_PROOF, true ) >= 0 ) {
+        return;
+    }
 
     const double chance_to_damage = wheel_damage_chance_vs_item( it, *vp_wheel );
 
@@ -1435,6 +1440,9 @@ void vehicle::handle_trap( map *here, const tripoint_bub_ms &p, vehicle_part &vp
 {
     if( !vp_wheel.info().has_flag( VPFLAG_WHEEL ) ) {
         debugmsg( "vehicle::handle_trap called on non-WHEEL part" );
+        return;
+    }
+    if( part_with_feature( index_of_part( &vp_wheel ), VPFLAG_TRAP_PROOF, true ) >= 0 ) {
         return;
     }
     const trap &tr = here->tr_at( p );
@@ -1538,7 +1546,7 @@ void vehicle::selfdrive( map &here, const int trn, const int acceleration )
             const int thr_amount = std::abs( velocity ) < 2000 ? 400 : 500;
             cruise_thrust( here, -acceleration * thr_amount );
         } else {
-            thrust( here,  -acceleration );
+            thrust( here, -acceleration );
         }
     }
     // TODO: Actually check if we're on land on water (or disable water-skidding)
@@ -2575,7 +2583,7 @@ units::angle map::shake_vehicle( vehicle &veh, const int velocity_before,
                                                "the power of the impact!" ),
                                             _( "<npcname> is hurled from the %s's seat by "
                                                "the power of the impact!" ), veh.name );
-                unboard_vehicle( part_pos );
+                unboard_vehicle( vpart_reference( veh, ps ), psg );
             } else {
                 add_msg_if_player_sees( part_pos, m_bad,
                                         _( "The %s is hurled from %s's by the power of the impact!" ),

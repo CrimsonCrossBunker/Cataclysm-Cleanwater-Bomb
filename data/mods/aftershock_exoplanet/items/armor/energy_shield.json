@@ -31,13 +31,7 @@
       "type": "effect_on_conditions",
       "effect_on_conditions": [ { "id": "_afs_energy_shield", "effect": { "run_eocs": "EOC_afs_do_shield" } } ]
     },
-    "armor": [
-      {
-        "encumbrance": 0,
-        "coverage": 100,
-        "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
-      }
-    ]
+    "armor": [ { "encumbrance": 0, "coverage": 100, "covers_all": true } ]
   },
   {
     "id": "afs_backpack_shieldgen",

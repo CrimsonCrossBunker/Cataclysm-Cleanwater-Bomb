@@ -137,6 +137,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "BALLOON", VPFLAG_BALLOON },
     { "PROPELLER", VPFLAG_PROPELLER },
     { "LADDER", VPFLAG_LADDER },
+    { "TRAP_PROOF", VPFLAG_TRAP_PROOF },
     { "FLOATS", VPFLAG_FLOATS },
 
     { "NO_LEAK", VPFLAG_NO_LEAK },
@@ -1882,7 +1883,7 @@ void vpart_migration::load( const JsonObject &jo )
     mandatory( jo, false, "to", migration.part_id_new );
     optional( jo, false, "variant", migration.variant );
     optional( jo, false, "add_veh_tools", migration.add_veh_tools );
-    vpart_migrations.emplace( migration.part_id_old, migration );
+    vpart_migrations[ migration.part_id_old ] = migration;
 }
 
 void cata::lua_platform::detail::insert_platform_vpart_migration(
@@ -1891,7 +1892,7 @@ void cata::lua_platform::detail::insert_platform_vpart_migration(
     vpart_migration migration;
     migration.part_id_old = vpart_id( value.from_id );
     migration.part_id_new = vpart_id( value.to_id );
-    vpart_migrations.emplace( migration.part_id_old, migration );
+    vpart_migrations[ migration.part_id_old ] = migration;
 }
 
 void cata::lua_platform::detail::erase_platform_vpart_migration(
@@ -1901,7 +1902,7 @@ void cata::lua_platform::detail::erase_platform_vpart_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::vehicle_part_migration_snapshot()
+        cata::lua_platform::detail::vehicle_part_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( vpart_migrations.size() );

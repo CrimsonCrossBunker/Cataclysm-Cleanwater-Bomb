@@ -31,6 +31,9 @@
     - [Coverage](#coverage)
     - [Covers](#covers)
     - [Specifically Covers](#specifically-covers)
+    - [Covers All](#covers-all)
+    - [Covers Except](#covers-except)
+    - [Specifically Covers Except](#specifically-covers-except)
     - [Part Materials](#part-materials)
   - [Guidelines for thickness:](#guidelines-for-thickness)
   - [Armor inheritance](#armor-inheritance)
@@ -466,6 +469,20 @@ What sub body parts this section of the armor covers. See the sub_bodypart_ids d
 These are used for wearing multiple armor pieces on a single layer without gaining encumbrance penalties. They are not mandatory
 if you don't specify them it is assumed that the section covers all the body parts it covers entirely.
 strapped layer items, and outer layer armor should always have these specified otherwise it will conflict with other pieces.
+
+##### Covers All
+(boolean, default `false`)
+When `true`, this armor portion covers every registered body part without listing them explicitly. It is mutually exclusive with `covers` and `specifically_covers`; providing any of those alongside `covers_all` makes the item fail to load. With `covers_all` set, `get_covered_body_parts()` reports all registered body parts minus the `covers_except` list. This is meant for items that should cover any anatomy, including body parts added by mods.
+
+##### Covers Except
+(array of strings)
+Body parts to keep uncovered when `covers_all` is `true`. See the bodypart_ids defined in body_parts.json for valid values. Only valid when `covers_all` is `true`; providing it otherwise makes the item fail to load.
+
+##### Specifically Covers Except
+(array of strings)
+Sub body parts to keep uncovered. See the sub_bodypart_ids defined in body_parts.json for valid values.
+- When `covers_all` is `true`, it is excluded from the full sub coverage together with `covers_except`.
+- When `covers_all` is `false` (armor uses explicit `covers`), for each main body part listed in `covers`, all of its sub body parts are covered except those listed here. Sub body parts whose main body part is not in `covers` have no effect.
 
 ##### Part Materials
 (array of objects)

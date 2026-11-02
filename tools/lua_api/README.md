@@ -228,6 +228,12 @@ explicit plain string replaces it. Changes to text context, plural forms or
 translation status require static content reload. Native/locale acceptance remains
 pending; the extractor's passing checks alone do not prove game integration.
 
+The repository's `lang/update_pot.sh` includes tracked Lua sources under
+`data/lua` and `data/mods` in the main translation template, without executing
+them. Declarations, generated references, authoring templates, and the
+`TEST_DATA` and `Standard_Combat_Tests` mods are excluded. Lua-only PRs also run
+the text-changes analyzer using the same extractor for base and merge data.
+
 Use GNU `xgettext` to extract explicitly named source files without executing
 Lua. Run from the Mod root for stable relative references:
 

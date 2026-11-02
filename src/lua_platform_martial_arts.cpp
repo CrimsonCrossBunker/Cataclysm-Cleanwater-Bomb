@@ -119,6 +119,9 @@ sol::table snapshot_technique_definition(
     result["dummy"] = definition.dummy;
     result["critical_only"] = definition.crit_tec;
     result["critical_compatible"] = definition.crit_ok;
+    result["manual_activation"] = definition.can_activate();
+    result["conditional_activation"] =
+        !definition.lua_platform_condition_handler.empty();
     result["reach_only"] = definition.reach_tec;
     result["reach_compatible"] = definition.reach_ok;
     result["dodge_counter"] = definition.dodge_counter;

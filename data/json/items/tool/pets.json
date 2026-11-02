@@ -117,7 +117,7 @@
     "type": "ITEM",
     "subtypes": [ "TOOL", "PET_EQUIPMENT" ],
     "name": { "str": "horse tack" },
-    "description": "A saddle, bridle, and associated tack that can be placed on a tamed animal that is capable of being ridden.",
+    "description": "A saddle and associated tack that helps a rider mount a tamed animal capable of being ridden.",
     "weight": "2 kg",
     "volume": "7 L",
     "price": "0 cent",
@@ -127,14 +127,31 @@
     "color": "yellow",
     "flags": [ "TACK" ],
     "pet_slots": [ "saddle" ],
-    "pet_passive_effects": [ "monster_saddled" ]
+    "pet_passive_effects": [ "monster_saddled" ],
+    "pet_mount_threshold_delta": -1
+  },
+  {
+    "id": "horse_bridle",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "PET_EQUIPMENT" ],
+    "name": { "str": "horse bridle" },
+    "description": "A leather headstall, bit, and reins fitted separately from the saddle to help keep a horse calm around threats.",
+    "weight": "700 g",
+    "volume": "2 L",
+    "price": "60 USD",
+    "price_postapoc": "8 USD",
+    "material": [ "leather", "steel" ],
+    "symbol": "M",
+    "color": "brown",
+    "pet_slots": [ "bridle" ],
+    "pet_fear_multiplier": 0.75
   },
   {
     "id": "horse_stirrups",
     "type": "ITEM",
     "subtypes": [ "TOOL", "PET_EQUIPMENT" ],
     "name": { "str_sp": "horse stirrups (pair)" },
-    "description": "A matched pair of metal stirrups with leather straps.  Attached to a saddle, they give a rider a more stable seat and better control in combat.",
+    "description": "A matched pair of metal stirrups with leather straps.  Attached to a saddle, they improve a rider's aim in mounted melee combat.",
     "weight": "1500 g",
     "volume": "2 L",
     "price": "80 USD",
@@ -144,9 +161,7 @@
     "color": "light_gray",
     "flags": [ "STIRRUP" ],
     "pet_slots": [ "stirrup" ],
-    "pet_mount_threshold_delta": -2,
-    "pet_melee_hit_multiplier": 1.1,
-    "pet_fear_multiplier": 0.75
+    "pet_melee_hit_multiplier": 1.1
   },
   {
     "//": "https://primeusascales.com/product/sls-single-animal-livestock-scales/",

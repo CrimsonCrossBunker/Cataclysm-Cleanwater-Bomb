@@ -298,6 +298,18 @@
     "tools": [ [ [ "swage", -1 ] ] ]
   },
   {
+    "result": "fitted_horseshoes",
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "category": "CC_ANIMALS",
+    "subcategory": "CSC_ANIMALS_EQUINE STORAGE",
+    "skill_used": "fabrication",
+    "difficulty": 1,
+    "time": "30 m",
+    "autolearn": true,
+    "components": [ [ [ "horseshoe", 4 ] ], [ [ "nails", 16, "LIST" ] ] ]
+  },
+  {
     "result": "saddlebag",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -307,6 +319,7 @@
     "difficulty": 4,
     "time": "6 h",
     "autolearn": true,
+    "book_learn": [ [ "book_horse_tack", 4 ] ],
     "using": [ [ "tailoring_leather_patchwork", 4 ], [ "clasps", 2 ] ],
     "proficiencies": [
       { "proficiency": "prof_leatherworking_basic" },

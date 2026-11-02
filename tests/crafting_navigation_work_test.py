@@ -74,7 +74,7 @@ struct Character {
         return 100 * batch;
     }
 };
-struct inventory {
+struct temp_crafting_inventory {
     int charges_of(int type, int, int) const {
         ++quantity_queries;
         return type % 3;
@@ -89,15 +89,18 @@ struct item {
 };
 struct item_comp {
     int type;
-    bool has(const Character *, const inventory &, int, int batch) const {
+    bool has(const Character *, const temp_crafting_inventory &,
+             int, int batch) const {
         return type % 3 >= batch;
     }
-    int get_color(const Character *, bool, const inventory &, int,
+    int get_color(const Character *, bool,
+                  const temp_crafting_inventory &, int,
                   int batch) const { return 10 + type % 3 + batch; }
 };
 struct requirement_data {
     std::vector<std::vector<item_comp>> components;
-    void can_make_with_inventory(const Character *, const inventory &,
+    void can_make_with_inventory(const Character *,
+                                  const temp_crafting_inventory &,
                                   int, int) const { ++requirement_queries; }
     const auto &get_components() const { return components; }
 };
@@ -116,12 +119,13 @@ struct crafting_ui_impl {
         component_cache;
     std::map<std::pair<const recipe *, int>, int64_t> expected_time_cache;
     // TIMER
-    void draw_components(const recipe &, const inventory &, int, bool);
+    void draw_components(const recipe &, const temp_crafting_inventory &,
+                         int, bool);
 };
 // DRAW
 int main() {
     Character actor;
-    inventory inv;
+    temp_crafting_inventory inv;
     recipe rec;
     rec.req.components.emplace_back();
     for (int i = 0; i < 300; ++i) {

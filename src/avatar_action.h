@@ -32,6 +32,10 @@ bool move( avatar &you, map &m, const tripoint_rel_ms &d );
 void swim( map &m, avatar &you, const tripoint_bub_ms &p );
 
 void autoattack( avatar &you, map &m );
+void active_technique( avatar &you, map &m );
+/** Whether the currently wielded weapon offers a usable mounted charge. */
+bool mounted_charge_available( const avatar &you );
+void mounted_charge( avatar &you );
 
 void mend( avatar &you, item_location loc );
 

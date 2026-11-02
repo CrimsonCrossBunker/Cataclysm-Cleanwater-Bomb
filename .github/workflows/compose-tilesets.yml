@@ -142,10 +142,21 @@ jobs:
           test -x tools/format/json_formatter.cgi
 
       - name: Install dependencies
-        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1
-        with:
-          packages: python3 python3-pip libvips42
-      - run: pip install pyvips
+        if: matrix.precomposed != true
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          # Runner package indexes can reference superseded mirror packages.
+          # Install directly so apt errors cannot be hidden in a saved cache.
+          apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                       -o Acquire::https::Timeout=30)
+          sudo apt-get "${apt_options[@]}" update --error-on=any
+          sudo apt-get "${apt_options[@]}" install -y python3 python3-pip libvips42
+      - name: Install and verify pyvips
+        if: matrix.precomposed != true
+        run: |
+          python3 -m pip install pyvips
+          python3 -c 'import pyvips; print(pyvips.version(0))'
 
       - name: Clone tileset repo
         if: matrix.precomposed != true

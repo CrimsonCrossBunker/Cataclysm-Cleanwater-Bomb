@@ -64,6 +64,8 @@ class pet_slot
         double melee_hit_multiplier = 1.0;
         double melee_damage_multiplier = 1.0;
         double fear_multiplier = 1.0;
+        double spook_multiplier = 1.0;
+        double mounted_move_cost_multiplier = 1.0;
 
         /** Child slots become available only while this slot is occupied. */
         std::vector<pet_slot_id> sub_slots;

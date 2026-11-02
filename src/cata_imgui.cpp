@@ -194,14 +194,10 @@ void cataimgui::client::set_alloced_pair_count( short count )
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
-void cataimgui::client::process_input( void *input, int display_buffer_w, int display_buffer_h,
-                                       int scaling_factor )
+void cataimgui::client::process_input( void *input )
 {
     // TUI input is in cell coordinates from ncurses; no display-buffer
     // pixel scaling.
-    ( void )display_buffer_w;
-    ( void )display_buffer_h;
-    ( void )scaling_factor;
     if( !any_window_shown() ) {
         return;
     }
@@ -598,7 +594,7 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
             GetRendererOutputSize( sdl_renderer, &output_w, &output_h );
         }
         const point sz = imgui_frame_display_size( display_buffer_w, display_buffer_h,
-            output_w, output_h );
+                         output_w, output_h );
         if( sz.x > 0 && sz.y > 0 ) {
             io.DisplaySize = ImVec2( static_cast<float>( sz.x ), static_cast<float>( sz.y ) );
             io.DisplayFramebufferScale = ImVec2( 1.0f, 1.0f );
@@ -648,8 +644,7 @@ void cataimgui::request_clear()
     clear_screen = true;
 }
 
-void cataimgui::client::process_input( void *input, int display_buffer_w, int display_buffer_h,
-                                       int scaling_factor )
+void cataimgui::client::process_input( void *input )
 {
     if( any_window_shown() ) {
         const SDL_Event *evt = static_cast<const SDL_Event *>( input );
@@ -666,21 +661,7 @@ void cataimgui::client::process_input( void *input, int display_buffer_w, int di
                     return;
             }
         }
-        ( void )display_buffer_w;
-        ( void )display_buffer_h;
         SDL_Event imgui_ev = *evt;
-        if( scaling_factor > 1 ) {
-            if( imgui_ev.type == CATA_MOUSEMOTION ) {
-                imgui_ev.motion.x /= scaling_factor;
-                imgui_ev.motion.y /= scaling_factor;
-            } else if( imgui_ev.type == CATA_MOUSEBUTTONDOWN || imgui_ev.type == CATA_MOUSEBUTTONUP ) {
-                imgui_ev.button.x /= scaling_factor;
-                imgui_ev.button.y /= scaling_factor;
-            } else if( imgui_ev.type == CATA_MOUSEWHEEL ) {
-                imgui_ev.wheel.mouse_x /= scaling_factor;
-                imgui_ev.wheel.mouse_y /= scaling_factor;
-            }
-        }
         ImGui_ImplSDL3_ProcessEvent( &imgui_ev );
 #if defined(__ANDROID__)
         // Android keyboards may report editing controls with SDLK_UNKNOWN while

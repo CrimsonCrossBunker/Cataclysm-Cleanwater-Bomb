@@ -171,7 +171,7 @@ class oracle_canvas
         Uint32 rgb_at( const point &p ) {
             REQUIRE( LockSurface( canvas_ ) == 0 );
             const Uint32 v = static_cast<const Uint32 *>( canvas_->pixels )[
-                                 p.y * ( canvas_->pitch / 4 ) + p.x];
+                      p.y * ( canvas_->pitch / 4 ) + p.x];
             UnlockSurface( canvas_ );
             return v & 0x00FFFFFF;
         }
@@ -276,6 +276,48 @@ void clear_to_sentinel()
 
 } // namespace
 
+TEST_CASE( "hidpi_terminal_draws_past_logical_window_bounds", "[tiles][sdl_font][sdl3]" )
+{
+    software_render_fixture fx;
+    REQUIRE( fx.available() );
+    restore_on_out_of_scope<palette_t> restore_palette( windowsPalette );
+    windowsPalette = test_palette();
+    REQUIRE( renderer_recovery_test_support::install_test_font(
+                 PATH_INFO::fontdir() + typeface_unifont, cell_w, cell_h, font_size, false ) );
+    renderer_recovery_test_support::set_scaling_and_resize_window( 1, 640, 384 );
+    renderer_recovery_test_support::override_drawable_pixels( 1280, 768 );
+    renderer_coordinator.drain_pending();
+    REQUIRE( renderer_coordinator.is_render_allowed() );
+
+    point buffer;
+    renderer_recovery_test_support::current_display_buffer_dims( buffer.x, buffer.y );
+    REQUIRE( buffer == point( 1280, 768 ) );
+    display_buffer_draw_scope draw_scope;
+    REQUIRE( draw_scope.should_draw() );
+    clear_to_sentinel();
+
+    // The control cell is inside the logical window. The other cells cover
+    // its right edge, bottom edge and the display buffer's final cell.
+    const std::array<point, 4> cells = {
+        point( 10, 10 ), point( 100, 10 ), point( 10, 30 ), point( 159, 47 )
+    };
+    for( const point &at : cells ) {
+        const catacurses::window w = catacurses::newwin( 1, 1, at );
+        cata_cursesport::WINDOW *win = w.get<cata_cursesport::WINDOW>();
+        win->line[0].chars[0].ch = " ";
+        win->line[0].chars[0].BG = catacurses::red;
+        win->line[0].touched = true;
+        REQUIRE( renderer_recovery_test_support::draw_test_window( w ) );
+    }
+    const std::vector<Uint32> pixels = read_canvas( buffer.x, buffer.y );
+    for( const point &at : cells ) {
+        const point center( at.x * cell_w + cell_w / 2, at.y * cell_h + cell_h / 2 );
+        CAPTURE( at );
+        CHECK( pixels[static_cast<size_t>( center.y ) * buffer.x + center.x] ==
+               rgb_of( windowsPalette[catacurses::red] ) );
+    }
+}
+
 TEST_CASE( "draw_window_matches_ttf_glyph_oracle", "[tiles][sdl_font]" )
 {
     const std::string face = GENERATE( typeface_unifont, typeface_roboto );
@@ -301,7 +343,7 @@ TEST_CASE( "draw_window_matches_ttf_glyph_oracle", "[tiles][sdl_font]" )
 
     GIVEN( "8x4 window of colored cells, spaces, wide glyphs, box lines and a wrapped wide glyph" ) {
         REQUIRE( renderer_recovery_test_support::install_test_font( typeface, cell_w, cell_h,
-                font_size, blending ) );
+                 font_size, blending ) );
         const catacurses::window w = catacurses::newwin( win_rows, win_cols, point::zero );
         for( const cell_spec &c : test_cells() ) {
             put_cell( w, c );

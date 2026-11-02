@@ -1781,7 +1781,8 @@ The list of possible faults, their weight and actual chances can be checked in i
 | `breathability`        | What breathability the clothes, made out of this material, would have; can be `IMPERMEABLE` (0%), `POOR` (30%), `AVERAGE` (50%), `GOOD` (80%), `MOISTURE_WICKING` (110%), `SECOND_SKIN` (140%)
 | `burn_products`        | Burning this material drop this items; array, first in array is the id of an item, and another is the number, respond for effeciency of burning - the bigger the burnable item is (by weight), and the more items there is, the bigger output; Multiple items could be returned simultaneously, like `[ [ "corpse_ash", 0.035 ], [ "glass_shard", 0.5 ] ]`,
 | `repair_difficulty`    | Skill level that would be used to repair this item by default; if item has multiple materials, the most difficult would be used
-| `repaired_with`        | Material, that would be used to repair item, made out of this material
+| `repaired_with`        | Item, or list of items, that would be used to repair an item made out of this material. When a list is given the repair accepts any one of them. Either a single id like `"scrap_steel"` or an array like `["steel_chunk", "lc_steel_chunk"]`.
+| `repaired_with_name`   | Optional translated display name that overrides the automatic enumeration of the `repaired_with` items. Without it the repair screen lists every accepted item (e.g. "steel_chunk, lc_steel_chunk or mc_steel_chunk"); with it a single phrase is shown instead (e.g. "any steel chunk").
 | `salvaged_into`        | Item, into which this material could be salvaged
 | `sheet_thickness`      | Clothes, made out of this material, has this thickness, meaning clothes thickness should be multiple of this value; layered kevlar has `"sheet_thickness": 4.4,`, meaning all clothes that uses layered kevlar should be either 4.4, 8.8, 13.2 etc milimeters thick; unless `"ignore_sheet_thickness": true` is used for this clothes
 | `uncomfortable`        | Clothes made out of this material is always uncomfortable, no matter of it's properties
@@ -1817,6 +1818,23 @@ There are seven -resist parameters: acid, bash, chip, cut, elec, fire, and bulle
 
 Note that the above example gives floats, not integers, for the vitamins values.  This is likely incorrect; they should be replaced with integers.
 
+A material can accept any of several items for repair.  The list is shown as an "or" enumeration unless a `repaired_with_name` phrase is provided:
+
+```jsonc
+{
+    "type": "material",
+    "id": "steel",
+    "repaired_with": [
+      "steel_chunk",
+      "lc_steel_chunk",
+      "mc_steel_chunk",
+      "hc_steel_chunk",
+      "ch_steel_chunk",
+      "qt_steel_chunk"
+    ],
+    "repaired_with_name": { "str": "any steel chunk" }
+}
+```
 
 #### Fuel data
 
@@ -2193,6 +2211,7 @@ The array of hobbies (listed as professions) is whitelisted to all characters.  
 | `check_deconstruction` | The furniture (or tile, if no furniture) in the target tile must have a "deconstruct" entry
 | `check_up_OK`          | Tile is below the maximum possible elevation (can build up here)
 | `check_down_OK`        | Tile is above the lowest possible elevation (can dig down here)
+| `check_dig_pit`        | The level below exists and is either open terrain or natural underground terrain with a passable excavation result
 | `check_no_trap`        | There is no trap object in this tile
 | `check_ramp_low`       | Both this and the next level above can be built up one additional Z level
 | `check_ramp_high`      | There is a complete downramp on the next higher level, and both this and next level above can be built up one additional Z level
@@ -2210,6 +2229,7 @@ The array of hobbies (listed as professions) is whitelisted to all characters.  
 | `done_dig_grave`       | Finish digging up a grave and find what's inside of it
 | `done_dig_grave_nospawn`| Finish digging up a grave and retrieve a coffin (which is not an option above)
 | `done_dig_stair`       | Finish diggins stairs downwards (with handling of what's beneath and how to get up)
+| `done_dig_pit`         | Excavate the natural terrain below an opened pit, preserving existing rooms, shafts and liquids; restore the pit if the lower terrain can no longer be excavated
 | `done_mine_downstair`  | Same as the previous one, but mining rather than digging
 | `done_mine_upstair`    | Finish mining stairs from below
 | `done_wood_stairs`     | Finish building stairs from below

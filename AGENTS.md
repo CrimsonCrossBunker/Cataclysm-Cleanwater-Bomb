@@ -122,12 +122,16 @@ Android, tools, and documentation:
   windows.  Split a large file only at a real responsibility boundary, not
   merely to make it easier for an agent to read. / 先用 `rg` 定位定义、调用、
   注册和测试，再读取及修改小窗口；只有存在真实职责边界时才拆分大文件。
-- **One coherent batch / 单一完整批次:** Finish one subsystem or domain batch
-  at a time, including its implementation, declarations/contracts, and test
-  source.  Inspect one authoritative lifecycle or registration point and one
-  representative caller/data shape before broad edits. / 每次完成一个完整子系统或
-  领域批次，并同步实现、声明/契约和测试源码；批量修改前只检查一个权威生命周期或
-  注册点及一个代表性调用或数据形状。
+- **One coherent batch / 单一完整批次:** This rule covers how work is
+  grouped.  Each batch stays inside one subsystem or domain and carries its
+  implementation, declarations, contracts, and test source together, without
+  coupling unrelated work into the batch.  Start each batch from a single
+  authoritative lifecycle or registration point plus one representative caller
+  or data shape.  The rule has no direct bearing on Git operations such as
+  committing or staging. / 每批工作只在一个子系统或领域内，并同步实现、声明/契约
+  和测试源码，不在批次内耦合无关工作；每批从单个权威生命周期或注册点及一个
+  代表性调用或数据形状开始工作。本规则约束工作分组，与提交和暂存等 git 操作无
+  直接关系。
 - **Checkpoint, do not reconstruct / 记录断点，不重建历史:** For unfinished
   multi-turn work, keep a compact local checkpoint containing the current
   batch, closed work, changed files, last checks, unresolved risk, and next
@@ -141,8 +145,8 @@ Android, tools, and documentation:
   编辑循环只运行廉价语法、格式和聚焦测试，把编译、完整数据加载、宽测试和生成文件
   刷新留到相应验收门。
 - **Bounded output / 有界输出:** Limit search and command output.  Report
-  counts, exit status, elapsed time, and the relevant error excerpt instead of
-  pasting full reports, generated files, or build logs into task context. /
+  counts, exit status, elapsed time, and the relevant error excerpt.  Leave
+  full reports, generated files, and build logs out of task context. /
   限制搜索和命令输出，只记录计数、退出状态、耗时及相关错误片段，不把完整报告、
   生成文件或构建日志放入任务上下文。
 - **One failure loop / 单次失败闭环:** On failure, collect one focused
@@ -151,12 +155,22 @@ Android, tools, and documentation:
   修复根因后返回同一验收门；不得重启之前的宽扫描或用完整套件探测问题。
 - **Defer non-evidence churn / 推迟无验证价值的工作:** Keep unrelated history
   rewriting, PR description changes, generated progress prose, and repeated
-  unchanged statistics outside the implementation loop. / 实现循环中不做无关历史
-  重写、PR 描述修改、进度文案生成或重复统计未变化的数据。
+  unchanged statistics outside the implementation loop.  Run synchronization
+  and refreshes once the batch's implementation is finished, so they do not
+  interrupt normal work. / 实现循环中不做无关历史重写、PR 描述修改、进度文案生成
+  或重复统计未变化的数据。同步与刷新在批次实现结束后进行，不打断正常操作。
 
 ## Pull requests and documentation impact / PR 与文档影响
 
 - Every PR names a Responsible human.  AI-tool disclosure is not required.
+- When a task involves preparing or submitting a pull request, tell the person
+  you are working with that the pull request's Responsible human is a real
+  person and that the agent carries no responsibility for it.  If they are not
+  experienced with agent-assisted work, recommend reading and understanding the
+  full diff, and writing the pull request and deciding whether to push once
+  that review passes. / 任务涉及准备或提交 PR 时，需要向对话人说明：PR 实际责任人
+  是真实人类，智能体不承担任何责任；若其不熟悉智能体协作，建议在阅读或理解完整
+  diff，审查通过后亲自撰写 PR 与决策推送。
 - Complete the Documentation impact, Related CCB-Docs PR, Affected
   documentation IDs, and Generated reference impact fields.
 - Documentation-impact enforcement is staged in `ai/docs-impact.yml`; do not

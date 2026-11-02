@@ -136,6 +136,10 @@ void pet_slot::load( const JsonObject &jo, std::string_view )
     optional( jo, was_loaded, "melee_hit_multiplier", melee_hit_multiplier, 1.0 );
     optional( jo, was_loaded, "melee_damage_multiplier", melee_damage_multiplier, 1.0 );
     optional( jo, was_loaded, "fear_multiplier", fear_multiplier, 1.0 );
+    optional( jo, was_loaded, "spook_multiplier", spook_multiplier,
+              numeric_bound_reader<double> { 0.1, 2.0 }, 1.0 );
+    optional( jo, was_loaded, "mounted_move_cost_multiplier", mounted_move_cost_multiplier,
+              numeric_bound_reader<double> { 0.5, 2.0 }, 1.0 );
     optional( jo, was_loaded, "sub_slots", sub_slots );
 
     if( jo.has_member( "creature_size_range" ) ) {
@@ -171,11 +175,17 @@ bool pet_slot::accepts( const item &candidate, const monster &pet,
         if( std::find( item_slots.begin(), item_slots.end(), id.str() ) == item_slots.end() ) {
             return reject( "item does not declare compatibility with this equipment slot" );
         }
-    } else if( !required_flags.empty() && std::none_of( required_flags.begin(), required_flags.end(),
-    [&candidate]( const flag_id & flag ) {
-    return candidate.has_flag( flag );
-    } ) ) {
-        return reject( "item lacks a required equipment flag" );
+    } else {
+        if( required_flags.empty() && !pet_armor && min_storage <= 0_ml ) {
+            return reject( "item does not declare compatibility with this equipment slot" );
+        }
+        if( !required_flags.empty() &&
+            std::none_of( required_flags.begin(), required_flags.end(),
+        [&candidate]( const flag_id & flag ) {
+        return candidate.has_flag( flag );
+        } ) ) {
+            return reject( "item lacks a required equipment flag" );
+        }
     }
     if( std::any_of( forbidden_flags.begin(), forbidden_flags.end(),
     [&candidate]( const flag_id & flag ) {
@@ -211,7 +221,9 @@ void pet_slot::check_consistency()
             debugmsg( "pet slot %s has an inverted creature-volume range", slot.id.c_str() );
         }
         if( slot.melee_hit_multiplier < 0.0 || slot.melee_damage_multiplier < 0.0 ||
-            slot.fear_multiplier < 0.0 ) {
+            slot.fear_multiplier < 0.0 || slot.spook_multiplier < 0.1 ||
+            slot.spook_multiplier > 2.0 || slot.mounted_move_cost_multiplier < 0.5 ||
+            slot.mounted_move_cost_multiplier > 2.0 ) {
             debugmsg( "pet slot %s has a negative riding multiplier", slot.id.c_str() );
         }
         for( const pet_slot_id &sub : slot.sub_slots ) {

@@ -86,6 +86,18 @@
     "components": [ [ [ "leather", 1 ], [ "hc_wire", 2 ] ] ]
   },
   {
+    "result": "mounted_saber",
+    "type": "recipe",
+    "copy-from": "mc_cavalry_sabre",
+    "category": "CC_*",
+    "subcategory": "CSC_*_NESTED",
+    "skill_used": "fabrication",
+    "difficulty": 8,
+    "book_learn": [ [ "textbook_weapwest", 7 ] ],
+    "using": [ [ "blacksmithing_standard", 8 ], [ "mc_steel_standard", 2 ] ],
+    "components": [ [ [ "leather", 1 ], [ "mc_wire", 2 ] ] ]
+  },
+  {
     "result": "ch_cavalry_sabre",
     "type": "recipe",
     "category": "CC_*",

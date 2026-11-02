@@ -4,11 +4,6 @@
     "category": "many_years_old_news",
     "text": [
       {
-        "id": "many_years_old_news_1",
-        "name": "ATOMIC DEREGULATION",
-        "text": "ATOMIC DEREGULATION!  President Toffer announced to a mixed crowd today that he had signed an executive order to deregulate public use of radioactive compounds, allowing more widespread use of low-grade radioactive compounds in home appliances.  \"Plutonium is the greenest energy we have,\" he told an assembled press.  \"It's time we got over our fear and moved into the light.\""
-      },
-      {
         "id": "many_years_old_news_2",
         "name": "CELEBRATED PHYSICIST GOES MISSING",
         "text": "CELEBRATED PHYSICIST GOES MISSING.  Dr. Amy Takatoshi, a celebrated quantum physicist at MIT dubbed by some as \"the next Hawking\" has gone missing shortly before a press conference that was expected to be the announcement of her newest research results, rumored to be in the field of teleportation."
@@ -39,11 +34,6 @@
         "text": "EDITORIAL: MORE HOMES NEED GUNS.  While visiting a friend recently, our conversation turned to gun control, and I was shocked to learn that my close friend didn't own a firearm.  In this day and age, not having a deadly weapon in your home shows an appalling lack of personal safety, and I told him so.  Weapons that can kill a man, or several men, in an instant - sometimes even accidentally - are our only hope against other people armed similarly.  I see a utopia of honest citizens keeping each other honest by being armed to the teeth."
       },
       {
-        "id": "many_years_old_news_9",
-        "name": "EDITORIAL: LET ME BUY MY DANG PLUTONIUM",
-        "text": "EDITORIAL: LET ME BUY MY DANG PLUTONIUM.  President Toffer made a bold and unpopular move last month with nuclear regulation changes.  I, for one, couldn't be more excited.  By now, we know very well what the risks of radioactive materials are, and can take the measures to protect ourselves.  Our citizens deserve the right to make the informed choice to purchase atomic powered tools should they wish, and in this era of fossil fuel and global warming concerns, what could be more appropriate than powering a home with a radioisotope thermal generator?"
-      },
-      {
         "id": "many_years_old_news_10",
         "name": "EDITORIAL: ALIENS ARE BACK IN A BIG WAY",
         "text": "EDITORIAL: ALIENS ARE BACK IN A BIG WAY.  We've all seen that autopsy video that's making the rounds.  I'm not going to say if I believe it's real or not (I will say \"I want to believe\" though!) but regardless of the truth, one thing is clear: the public mind is completely addicted to aliens in the biggest way I've seen since ET was popular.  What's brought little green men back into the public eye?  It's anyone's guess, but personally I think it's a concerning sign that we're culturally digging in to a second Cold War."
@@ -72,11 +62,6 @@
         "id": "many_years_old_news_15",
         "name": "TANK SUIT",
         "text": "TANK SUIT!  In a press conference on Tuesday, General Ariel Dabrowski was proud to unveil the new military \"tank suit\", a powered exoskeleton capable of resisting small arms fire and most heavy weapons.  \"Tank suits have been used in limited deployment in Afghanistan for several months now,\" General Dabrowski informed the gathered press.  \"We're proud to be at a point where we can formally introduce them to the public.  These suits are just the first stage in a new generation of mechanized infantry.\""
-      },
-      {
-        "id": "many_years_old_news_16",
-        "name": "EDISON AUTOMOTIVES UNVEILS NEW SOLAR CAR",
-        "text": "EDISON AUTOMOTIVES UNVEILS NEW SOLAR CAR.  \"These miracles of technology wouldn't be possible without the deregulations pioneered by President Toffer,\" said billionaire tech mogul Elton Moosek about his company's newest innovation.  \"Access to radioactive compounds and military-grade fuel cells has made this possible.  At this rate, we'll be flying solar sail spacecraft within my lifetime.\""
       },
       {
         "id": "many_years_old_news_17",
@@ -612,11 +597,6 @@
         "id": "newest_news_15",
         "name": "ZOMBIES!",
         "text": "ZOMBIES!  Whether they're all the rioters, or just a few, it is now undeniable: the dead walk among the living, adding to the ranks of the psychos ripping our country apart from the inside.  Full photo evidence inside."
-      },
-      {
-        "id": "newest_news_16",
-        "name": "CHINESE VICTORY AT HAND",
-        "text": "CHINESE VICTORY AT HAND.  Emperor Tsang Gu Yen of Grand China arrived in full state in Burlington, Vermont today to issue his proclamation that America, like all countries of Earth, now belongs to the New Grand Chinese Empire.  Freedom has fallen.  Rebel against his forces while you still can!"
       },
       {
         "id": "newest_news_17",

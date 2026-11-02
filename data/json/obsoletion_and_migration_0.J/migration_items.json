@@ -892,40 +892,5 @@
     "type": "MIGRATION",
     "id": "staff_sling_grenade_cradle",
     "replace": "sling"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag20ranger_beowulf",
-    "replace": "stanag20_beowulf"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag30ranger_beowulf",
-    "replace": "stanag30_beowulf"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag10ranger",
-    "replace": "stanag10"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag5ranger",
-    "replace": "stanag5"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag20ranger",
-    "replace": "stanag20"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag30ranger",
-    "replace": "stanag30"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "stanag40ranger",
-    "replace": "stanag40"
   }
 ]

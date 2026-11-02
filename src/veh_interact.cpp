@@ -131,7 +131,7 @@ static constexpr units::mass JACK_LIMIT = 8500_kilogram; // 8500kg ( 8.5 metric 
 static double jack_quality( map &here, const vehicle &veh )
 {
     const units::quantity<double, units::mass::unit_type> mass = std::min( veh.total_mass( here ),
-        JACK_LIMIT );
+            JACK_LIMIT );
     return std::ceil( mass / lifting_quality_to_mass( 1 ) );
 }
 
@@ -282,7 +282,7 @@ std::optional<vpart_reference> veh_interact::select_part( map &here, const vehic
         res = vpart_reference( const_cast<vehicle &>( veh ), veh.index_of_part( &pt ) );
     };
     std::function<bool( const vpart_reference & )> sel_wrapper = [sel,
-        &here]( const vpart_reference & vpr ) {
+    &here]( const vpart_reference & vpr ) {
         return sel( here, vpr.part() );
     };
 
@@ -579,7 +579,7 @@ void veh_interact::allocate_windows()
     w_stats_1 = catacurses::newwin( stats_h, disp_w - 2, point( grid.x + 1, stats_y ) );
     w_stats_2 = catacurses::newwin( stats_h, pane_w - 2, point( grid.x + disp_w + 2, stats_y ) );
     w_stats_3 = catacurses::newwin( stats_h, pane_w - 2, point( grid.x + disp_w + pane_w + 3,
-        stats_y ) );
+                                    stats_y ) );
 
 }
 
@@ -611,7 +611,7 @@ bool veh_interact::format_reqs( std::string &msg, const requirement_data &reqs,
     }
 
     auto comps = reqs.get_folded_components_list( &player_character, getmaxx( w_msg ) - 2, c_white, inv,
-        is_crafting_component );
+                 is_crafting_component );
     for( const std::string &line : comps ) {
         msg += line + "\n";
     }
@@ -962,12 +962,12 @@ std::optional<veh_interact::service_selection> veh_interact::do_service_batch_in
             result.action = service_action::install_batch;
             result.part_id = sel_vpart_info->id;
             result.mounts = service_installation_mounts( here, *veh, *service_area_start,
-                *service_area_end, *sel_vpart_info );
+                            *service_area_end, *sel_vpart_info );
             if( result.mounts.empty() ) {
                 return std::nullopt;
             }
             const int skipped = service_installation_area_size( *service_area_start,
-                *service_area_end ) - static_cast<int>( result.mounts.size() );
+                                *service_area_end ) - static_cast<int>( result.mounts.size() );
             if( skipped > 0 ) {
                 uilist menu;
                 menu.text = string_format( _( "%1$d tiles in the selected rectangle cannot accept %2$s.  "
@@ -1063,7 +1063,7 @@ void veh_interact::cache_tool_availability()
     Character &player_character = get_player_character();
     crafting_inv = &player_character.crafting_inventory();
     install_requirements_available = installation_requirement_availability( player_character,
-        *crafting_inv );
+                                     *crafting_inv );
     install_candidates_by_name.clear();
     for( const vpart_info &vpi : vehicles::parts::get_all() ) {
         if( !vpi.has_flag( "NO_INSTALL_HIDDEN" ) && !vpi.has_flag( VPFLAG_APPLIANCE ) ) {
@@ -1259,7 +1259,7 @@ bool veh_interact::update_part_requirements( map &here )
         if( service_area_end ) {
             const int total = service_installation_area_size( *service_area_start, *service_area_end );
             const int eligible = static_cast<int>( service_installation_mounts( here, *veh,
-                *service_area_start, *service_area_end, *sel_vpart_info ).size() );
+                                                   *service_area_start, *service_area_end, *sel_vpart_info ).size() );
             nmsg += string_format( _( "Install one identical part at each of %1$d eligible tiles.\n"
                                       "%2$d tiles in the selected rectangle cannot accept this part.\n" ),
                                    eligible, total - eligible );
@@ -1268,7 +1268,7 @@ bool veh_interact::update_part_requirements( map &here )
             return eligible > 0;
         }
         const std::optional<std::string> denial = service_installation_denial(
-                *veh, -cursor_vp_mount, *sel_vpart_info );
+                    *veh, -cursor_vp_mount, *sel_vpart_info );
         if( denial ) {
             nmsg += _( "<color_white>Cannot install due to:</color>\n> " );
             nmsg += colorize( *denial, c_red ) + "\n";
@@ -1942,9 +1942,11 @@ void veh_interact::calc_overview( map &here )
                 }
             };
             auto no_tank_details = []( const vehicle_part & pt, const catacurses::window & w, int y ) {
-                if( !pt.ammo_current().is_null() ) {
+                // An empty fuel store can still report its default ammo type.
+                // Solid fuel is in a magazine pocket, not a container pocket.
+                if( pt.ammo_remaining() > 0 && !pt.ammo_current().is_null() ) {
                     const itype *pt_ammo_cur = item::find_type( pt.ammo_current() );
-                    const double vol_L = to_liter( pt.base.legacy_front().volume() );
+                    const double vol_L = to_liter( pt.base.first_ammo().volume() );
                     int offset = 1;
                     std::string fmtstring = "%s  %5.1fL";
                     if( pt.is_leaking() ) {
@@ -1963,7 +1965,7 @@ void veh_interact::calc_overview( map &here )
                                                 hotkey ) : input_event(),
                                             tank_details );
             } else if( vpr.part().is_fuel_store() && !( vpr.part().is_turret() ||
-                    vpr.part().is_battery() || vpr.part().is_reactor() ) ) {
+                       vpr.part().is_battery() || vpr.part().is_reactor() ) ) {
                 overview_opts.emplace_back( "2_TANK", &vpr.part(), selectable, selectable ? next_hotkey(
                                                 hotkey ) : input_event(),
                                             no_tank_details );
@@ -2239,8 +2241,8 @@ vehicle_part *veh_interact::get_most_damaged_part() const
     };
     const vehicle_part_range vpr = veh->get_all_parts();
     auto high_damage_iterator = std::max_element( vpr.begin(),
-        vpr.end(),
-        part_damage_comparison );
+                                vpr.end(),
+                                part_damage_comparison );
     if( high_damage_iterator == vpr.end() ||
         high_damage_iterator->part().removed ) {
         return nullptr;
@@ -2879,9 +2881,9 @@ void veh_interact::display_veh( map &here )
         const point_rel_ms pivot_s = ( pivot + cursor_vp_mount ).rotate( 3 ) + h_size;
 
         mvwhline( w_disp, point( 0, com_s.y() ), c_green, LINE_OXOX, std::min( getmaxx( w_disp ),
-                com_s.x() + 1 ) );
+                  com_s.x() + 1 ) );
         mvwvline( w_disp, point( com_s.x(), 0 ), c_green, LINE_XOXO, std::min( getmaxy( w_disp ),
-                com_s.y() + 1 ) );
+                  com_s.y() + 1 ) );
 
         mvwhline( w_disp, point( std::max( 0, pivot_s.x() ), pivot_s.y() ), c_red, LINE_OXOX,
                   getmaxx( w_disp ) - std::max( 0, pivot_s.x() ) + 1 );
@@ -3198,7 +3200,7 @@ void veh_interact::display_stats( map &here ) const
     fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
                     _( "Offroad:        <color_light_blue>%4d</color>%%" ),
                     static_cast<int>( veh->k_traction( here, veh->wheel_area() *
-                            veh->average_offroad_rating() ) * 100 ) );
+                                      veh->average_offroad_rating() ) * 100 ) );
     i += 1;
 
     if( is_boat ) {
@@ -3240,13 +3242,13 @@ static std::string veh_act_desc( const input_context &ctxt, const std::string &i
                                  const std::string &desc, const task_reason reason )
 {
     static const translation inline_fmt_enabled = to_translation(
-            "keybinding", "<color_light_gray>%1$s<color_light_green>%2$s</color>%3$s</color>" );
+                "keybinding", "<color_light_gray>%1$s<color_light_green>%2$s</color>%3$s</color>" );
     static const translation inline_fmt_disabled = to_translation(
-            "keybinding", "<color_dark_gray>%1$s<color_green>%2$s</color>%3$s</color>" );
+                "keybinding", "<color_dark_gray>%1$s<color_green>%2$s</color>%3$s</color>" );
     static const translation separate_fmt_enabled = to_translation(
-            "keybinding", "<color_light_gray><color_light_green>%1$s</color>-%2$s</color>" );
+                "keybinding", "<color_light_gray><color_light_green>%1$s</color>-%2$s</color>" );
     static const translation separate_fmt_disabled = to_translation(
-            "keybinding", "<color_dark_gray><color_green>%1$s</color>-%2$s</color>" );
+                "keybinding", "<color_dark_gray><color_green>%1$s</color>-%2$s</color>" );
     if( reason == task_reason::CAN_DO ) {
         return ctxt.get_desc( id, desc, input_context::allow_all_keys,
                               inline_fmt_enabled, separate_fmt_enabled );
@@ -3604,7 +3606,7 @@ void act_vehicle_siphon( map &here, vehicle *veh )
         return pt.contains_liquid();
     };
     if( const std::optional<vpart_reference> tank = veh_interact::select_part( here, *veh, sel,
-        title ) ) {
+            title ) ) {
         item liquid( tank->part().get_base().only_item() );
         const int liq_charges = liquid.charges;
         liquid_dest_opt liquid_target;

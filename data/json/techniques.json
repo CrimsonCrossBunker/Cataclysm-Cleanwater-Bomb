@@ -209,6 +209,7 @@
     "type": "technique",
     "id": "RAPID",
     "name": "Rapid Strike",
+    "manual_activation": true,
     "melee_allowed": true,
     "skill_requirements": [ { "name": "melee", "level": 2 } ],
     "mult_bonuses": [
@@ -219,6 +220,16 @@
     ],
     "messages": [ "You quickly strike %s", "<npcname> quickly strikes %s" ],
     "description": "50% moves, 66% damage, min 2 melee",
+    "attack_vectors": [ "vector_null" ]
+  },
+  {
+    "type": "technique",
+    "id": "MOUNTED_CHARGE",
+    "name": "Mounted Charge",
+    "description": "Charge forward while mounted and strike the first creature in your path.",
+    "manual_activation": true,
+    "melee_allowed": true,
+    "messages": [ "You charge into %s", "<npcname> charges into %s" ],
     "attack_vectors": [ "vector_null" ]
   },
   {

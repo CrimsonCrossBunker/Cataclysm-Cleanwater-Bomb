@@ -1,0 +1,27 @@
+[
+  {
+    "id": "book_horse_tack",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "category": "manuals",
+    "name": { "str": "The Practical Saddler", "str_pl": "copies of The Practical Saddler" },
+    "description": "An illustrated guide to measuring a horse, cutting leather, and sewing bridles, saddles, and bags that fit.  Its full-sized patterns make practical tack much easier to produce.",
+    "weight": "950 g",
+    "volume": "1250 ml",
+    "price": "35 USD",
+    "price_postapoc": "12 USD",
+    "material": [ "paper", "cardboard" ],
+    "symbol": "?",
+    "looks_like": "manual_tailor",
+    "color": "brown",
+    "max_level": 5,
+    "intelligence": 6,
+    "time": "35 m",
+    "read_skill": "tailor",
+    "proficiencies": [
+      { "proficiency": "prof_closures", "time_factor": 0.2, "fail_factor": 0.2 },
+      { "proficiency": "prof_leatherworking_basic", "time_factor": 0.2, "fail_factor": 0.2 },
+      { "proficiency": "prof_leatherworking", "time_factor": 0.2, "fail_factor": 0.2 }
+    ]
+  }
+]

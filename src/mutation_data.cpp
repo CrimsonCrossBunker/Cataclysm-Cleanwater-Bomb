@@ -1064,7 +1064,7 @@ void mutation_branch::load_trait_migration( const JsonObject &jo )
                         ", but did not specify how to migrate!" );
     }
 
-    trait_migrations.emplace( target, replacement );
+    trait_migrations[ target ] = replacement;
 }
 
 const trait_replacement &mutation_branch::trait_migration( const trait_id &tid )
@@ -1272,8 +1272,8 @@ void mutation_branch::add_entry( Trait_group &tg, const JsonObject &obj )
         ptr = std::make_unique<Single_trait_creator>( id, var, probability );
     } else if( obj.has_member( "group" ) ) {
         ptr = std::make_unique<Trait_group_creator>( trait_group::Trait_group_tag(
-                obj.get_string( "group" ) ),
-            probability );
+                    obj.get_string( "group" ) ),
+                probability );
     }
 
     if( !ptr ) {

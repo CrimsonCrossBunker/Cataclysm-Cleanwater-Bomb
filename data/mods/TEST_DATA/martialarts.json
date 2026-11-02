@@ -44,6 +44,16 @@
   },
   {
     "type": "technique",
+    "id": "test_active_strike",
+    "name": "Test Active Strike",
+    "description": "A technique selected directly by the player.",
+    "manual_activation": true,
+    "melee_allowed": true,
+    "messages": [ "You actively strike %s", "<npcname> actively strikes %s" ],
+    "attack_vectors": [ "vector_foot_sole" ]
+  },
+  {
+    "type": "technique",
     "id": "test_tech_condition_sweep",
     "name": "Test Sweep",
     "unarmed_allowed": true,
@@ -156,6 +166,7 @@
     ],
     "techniques": [
       "test_technique",
+      "test_active_strike",
       "test_tech_condition_sweep",
       "test_tech_condition_stun",
       "test_tech_condition_knockback",

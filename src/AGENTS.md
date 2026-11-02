@@ -6,7 +6,8 @@ bindings.  Runtime behaviour is authoritative here together with tests.
 - Follow `doc/c++/CODE_STYLE.md` and existing ownership/lifetime patterns.
 - Trace JSON loaders, event registrations, and Lua registrations before
   changing public names or semantics.
-- Add or update focused tests in `tests/`; do not rely only on compilation.
+- When the change is complex, add or update focused tests in `tests/`; do not
+  rely only on compilation.
 - Do not expose borrowed native pointers to Lua.  Preserve the bounded
   snapshot, typed-handle, and capability-checked API model.
 - Check `ai/generated-files.yml` before editing generated headers or sources.

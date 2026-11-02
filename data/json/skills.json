@@ -160,22 +160,22 @@
     "type": "skill",
     "id": "swimming",
     "name": { "str": "athletics" },
-    "description": "Your athletic ability, including swimming endurance and ability to swim with weight.  Athletic skill also improves your overall cardio fitness and stamina.",
+    "description": "Your athletic ability, including swimming, endurance, and controlling living mounts.  Higher levels improve cardio fitness, stamina, mounting, balance, and riding speed.",
     "display_category": "display_interaction",
     "sort_rank": 21000,
     "level_descriptions_theory": [
       { "level": 0, "description": "You don't even let people tell you that you should be more active." },
       { "level": 1, "description": "You're at least aware exercise is good and that you should do it more." },
-      { "level": 3, "description": "You know how to exercise." },
-      { "level": 5, "description": "You know proper form and stretches." },
+      { "level": 3, "description": "You know how to exercise and how to keep your balance on a mount." },
+      { "level": 5, "description": "You know proper form, stretches, and the basics of controlling a moving mount." },
       { "level": 9, "description": "You could be a personal trainer." }
     ],
     "level_descriptions_practice": [
       { "level": 0, "description": "You're a couch potato." },
       { "level": 1, "description": "You might be able to doggy paddle." },
-      { "level": 3, "description": "You're reasonably active and a decent swimmer." },
-      { "level": 5, "description": "You're active and a good swimmer." },
-      { "level": 7, "description": "You're very active and a great swimmer." },
+      { "level": 3, "description": "You're reasonably active, a decent swimmer, and can handle a calm mount." },
+      { "level": 5, "description": "You're active, a good swimmer, and steady in the saddle." },
+      { "level": 7, "description": "You're very active, a great swimmer, and can control a mount under pressure." },
       { "level": 9, "description": "You could swim across the English Channel." }
     ],
     "companion_skill_practice": [ { "skill": "", "weight": 5 }, { "skill": "gathering", "weight": 5 }, { "skill": "trapping", "weight": 5 } ]

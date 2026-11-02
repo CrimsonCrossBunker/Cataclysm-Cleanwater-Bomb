@@ -196,6 +196,15 @@
     "info": "Your vehicle needs at least one set of steerable wheels to turn."
   },
   {
+    "id": "TRACKED",
+    "type": "json_flag"
+  },
+  {
+    "id": "TRAP_PROOF",
+    "type": "json_flag",
+    "info": "This wheel hovers and will not set off traps such as deep pits or landmines."
+  },
+  {
     "id": "TURRET",
     "type": "json_flag",
     "info": "This weapon is mounted in a turret.  It can be fired from the vehicle controls.",
@@ -654,7 +663,8 @@
   },
   {
     "id": "USE_TANKS",
-    "type": "json_flag"
+    "type": "json_flag",
+    "//": "Turrets draw liquid ammunition from vehicle tanks. Reactors may use compatible liquid from tanks on the same vehicle after their internal fuel runs out."
   },
   {
     "id": "VARIABLE_SIZE",

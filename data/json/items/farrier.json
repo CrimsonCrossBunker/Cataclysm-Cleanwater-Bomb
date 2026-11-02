@@ -177,6 +177,23 @@
     "flags": [ "BELT_CLIP" ]
   },
   {
+    "id": "fitted_horseshoes",
+    "type": "ITEM",
+    "subtypes": [ "TOOL", "PET_EQUIPMENT" ],
+    "name": { "str": "set of fitted horseshoes", "str_pl": "sets of fitted horseshoes" },
+    "description": "Four fitted iron shoes that protect a horse's hooves and reduce the movement cost of riding it.  Fitting them requires hammering and nail-pulling tools.",
+    "weight": "3752 g",
+    "volume": "4 L",
+    "price": "160 USD",
+    "price_postapoc": "4 USD",
+    "material": [ "mc_steel" ],
+    "symbol": "u",
+    "color": "light_gray",
+    "pet_slots": [ "horseshoes" ],
+    "pet_install_qualities": [ [ "HAMMER", 1 ], [ "PRYING_NAIL", 1 ] ],
+    "pet_mounted_move_cost_multiplier": 0.9
+  },
+  {
     "id": "horseshoe",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

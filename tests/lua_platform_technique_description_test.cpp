@@ -18,6 +18,7 @@
 #include "translation.h"
 #include "type_id.h"
 
+static const matec_id RAPID( "RAPID" );
 static const matec_id tech_base_headbutt( "tech_base_headbutt" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
@@ -52,6 +53,24 @@ TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutat
     CHECK( snapshot["flavor_description"].get<std::string>() == expected );
     CHECK( snapshot["description"].get<std::string>() == tech_base_headbutt->get_description() );
     CHECK( snapshot["name"].get<std::string>() == tech_base_headbutt->name.translated() );
+    CHECK( snapshot["manual_activation"].get<bool>() );
+
+    REQUIRE( RAPID.is_valid() );
+    call = get( cata::lua_platform::script_game_id( "martial_art_technique", RAPID.str() ) );
+    REQUIRE( call.valid() );
+    snapshot = call;
+    CHECK( snapshot["manual_activation"].get<bool>() );
+
+    call = get( cata::lua_platform::script_game_id( "martial_art_technique",
+                "tec_bojutsu_frontstrike" ) );
+    REQUIRE( call.valid() );
+    snapshot = call;
+    CHECK_FALSE( snapshot["manual_activation"].get<bool>() );
+
+    call = get( cata::lua_platform::script_game_id( "martial_art_technique", "PENETRATE" ) );
+    REQUIRE( call.valid() );
+    snapshot = call;
+    CHECK( snapshot["manual_activation"].get<bool>() );
 }
 
 #endif

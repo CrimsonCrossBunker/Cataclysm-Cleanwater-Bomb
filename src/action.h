@@ -366,6 +366,8 @@ enum action_id : int {
     ACTION_PASS_ITEM,
     ACTION_HIGH_FIVE,
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,
+    /** Select and use an explicitly activatable melee technique */
+    ACTION_ACTIVE_TECHNIQUE,
     /** Not an action, serves as count of enumerated actions */
     NUM_ACTIONS
     /**@}*/

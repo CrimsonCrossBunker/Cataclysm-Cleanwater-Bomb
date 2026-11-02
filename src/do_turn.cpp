@@ -99,6 +99,7 @@ class Creature;
 static const activity_id ACT_AUTODRIVE( "ACT_AUTODRIVE" );
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
 static const activity_id ACT_MIGRATION_CANCEL( "ACT_MIGRATION_CANCEL" );
+static const activity_id ACT_MOUNTED_CHARGE( "ACT_MOUNTED_CHARGE" );
 static const activity_id ACT_OPERATION( "ACT_OPERATION" );
 
 static const bionic_id bio_alarm( "bio_alarm" );
@@ -175,7 +176,7 @@ bool cleanup_at_end()
         std::vector<std::string> characters = g->list_active_saves();
         // remove current player from the active characters list, as they are dead
         std::vector<std::string>::iterator curchar = std::find( characters.begin(),
-            characters.end(), u.get_save_id() );
+                characters.end(), u.get_save_id() );
         if( curchar != characters.end() ) {
             characters.erase( curchar );
         }
@@ -334,7 +335,10 @@ void process_avatar_activity( avatar &u )
     static std::chrono::steady_clock::time_point last_poll = std::chrono::steady_clock::now();
     while( u.get_moves() > 0 && u.activity ) {
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if( now - last_poll >= std::chrono::milliseconds( 100 ) ) {
+        // A charge advances one tile per actor call.  Poll at every tile so a
+        // fast mount cannot consume all four steps before cancellation input.
+        if( u.activity.id() == ACT_MOUNTED_CHARGE ||
+            now - last_poll >= std::chrono::milliseconds( 100 ) ) {
             last_poll = now;
             handle_key_blocking_activity( 0 );
             if( !u.activity || u.get_moves() <= 0 ) {
@@ -596,7 +600,7 @@ void overmap_npc_move()
             }
             if( elem->omt_path.empty() ) {
                 elem->omt_path = overmap_buffer.get_travel_path( elem->pos_abs_omt(), elem->goal,
-                    overmap_path_params::for_npc() ).points;
+                                 overmap_path_params::for_npc() ).points;
                 if( elem->omt_path.empty() ) { // goal is unreachable, or already reached goal, reset it
                     elem->goal = npc::no_goal_point;
                 }
@@ -669,11 +673,11 @@ void game::handle_progress_ui()
         const bool ff_active = cata_mp::should_fast_forward();
         const bool ff_redraw_due = [&] {
             if( !ff_active )
-        {
-            return false;
-        }
-        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if( first_redraw_since_waiting_started ||
+            {
+                return false;
+            }
+            const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            if( first_redraw_since_waiting_started ||
                 std::chrono::duration_cast<std::chrono::milliseconds>( now - s_last_ff_redraw ).count() >= 100 )
             {
                 s_last_ff_redraw = now;

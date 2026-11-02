@@ -25,7 +25,7 @@ class riding_config
         int melee_practice = 1;
         int ranged_practice = 1;
 
-        double spook_skill_reduction = 0.75;
+        double spook_skill_reduction = 0.1;
         double balance_skill_reduction = 0.08;
         double melee_fall_base_chance = 10.0;
         double melee_fall_damage_scale = 1.0;
@@ -50,6 +50,14 @@ class riding_config
         proficiency_id mounted_bashing_proficiency = proficiency_id( "prof_mounted_bashing" );
         proficiency_id mounted_cutting_proficiency = proficiency_id( "prof_mounted_cutting" );
         proficiency_id mounted_piercing_proficiency = proficiency_id( "prof_mounted_piercing" );
+
+        // Keep newly added fields after the established layout so stale objects
+        // retain compatible offsets during an incremental build.
+        int mount_refusal_distance = 15;
+        double mount_refusal_base_chance = 20.0;
+        double tamed_mount_fear_multiplier = 0.5;
+        double animal_walk_speed_multiplier = 2.0 / 3.0;
+        double animal_trot_speed_multiplier = 5.0 / 6.0;
 };
 
 void load_riding_config( const JsonObject &jo, const std::string &src );

@@ -147,6 +147,8 @@
       "place_loot": [
         { "item": "television", "x": 17, "y": 88, "chance": 100 },
         { "item": "stepladder", "x": 67, "y": 43, "chance": 100 },
+        { "group": "horse_stable_riding_gear", "x": [ 66, 67 ], "y": 44, "chance": 80, "repeat": [ 2, 4 ] },
+        { "group": "farrier_tools", "x": 66, "y": 45, "chance": 100 },
         { "item": "straw_pile", "x": [ 40, 44 ], "y": [ 48, 52 ], "chance": 30, "repeat": [ 2, 4 ] },
         { "item": "straw_pile", "x": [ 52, 54 ], "y": [ 31, 33 ], "chance": 30, "repeat": [ 2, 4 ] },
         { "item": "straw_pile", "x": [ 52, 54 ], "y": [ 35, 37 ], "chance": 30, "repeat": [ 2, 4 ] },

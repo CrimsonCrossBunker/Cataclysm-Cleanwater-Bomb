@@ -1197,8 +1197,15 @@ class Character : public Creature, public visitable
         const;
         // Filter techniques per tech, return a tech/vector/sublimb set
         std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
-        evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
-                            bool crit = false, bool dodge_counter = false, bool block_counter = false ) const;
+                evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
+                                    bool crit = false, bool dodge_counter = false, bool block_counter = false,
+                                    bool manual_activation = false ) const;
+        /** Lists offensive non-counter techniques granted by the current weapon, style, and body. */
+        std::vector<matec_id> active_techniques() const;
+        /** Maximum target distance for a selected technique with the current weapon. */
+        int active_technique_range( const matec_id &technique ) const;
+        /** Executes one selected technique after checking its current target requirements. */
+        bool use_active_technique( Creature &target, const matec_id &technique );
         void perform_technique( const ma_technique &technique, Creature &t, damage_instance &di,
                                 int &move_cost, item_location &cur_weapon );
 
@@ -1211,9 +1218,13 @@ class Character : public Creature, public visitable
          * @param allow_unarmed always uses the wielded weapon regardless of martialarts style
          */
         bool melee_attack( Creature &t, bool allow_special, const matec_id &force_technique,
-                           bool allow_unarmed = true, int forced_movecost = -1 );
+                           bool allow_unarmed = true, int forced_movecost = -1,
+                           const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
+                           &validated_technique = std::nullopt );
         bool melee_attack_abstract( Creature &t, bool allow_special, const matec_id &force_technique,
-                                    bool allow_unarmed = true, int forced_movecost = -1 );
+                                    bool allow_unarmed = true, int forced_movecost = -1,
+                                    const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
+                                    &validated_technique = std::nullopt );
         void reduce_moves_from_attack( int forced_movecost, int move_cost );
         /** Handles reach melee attacks */
         bool can_reach_attack( const Creature &target ) const;
@@ -1269,6 +1280,12 @@ class Character : public Creature, public visitable
         void roll_all_damage( bool crit, damage_instance &di, bool average, const item &weap,
                               const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact,
                               const Creature *target, const bodypart_id &bp ) const;
+
+        /** Temporarily scales the configured damage type for a focused mounted charge. */
+        void set_mounted_charge_damage_multiplier( const damage_type_id &damage_type,
+                float multiplier );
+        void set_mounted_charge_stab_multiplier( float multiplier );
+        void clear_mounted_charge_stab_multiplier();
         void roll_damage( const damage_type_id &dt, bool crit, damage_instance &di, bool average,
                           const item &weap, const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact,
                           float crit_mod, float target_cut_armor ) const;
@@ -1559,11 +1576,17 @@ class Character : public Creature, public visitable
 
         bool can_mount( const monster &critter ) const;
         void mount_creature( monster &z );
-        /** Attempts an animal mount using riding skill and equipment modifiers. */
+        /** Attempts an animal mount using athletics and equipment modifiers. */
         bool try_mount_creature( monster &z );
         bool cant_do_mounted( bool msg = true ) const;
         bool is_mounted() const;
+        /** Mount movement speed in moves per second for the selected gait. */
+        double mount_speed() const;
         bool check_mount_will_move( const tripoint_bub_ms &dest_loc );
+        /** Returns the percent chance that this threat makes the mount refuse an approach. */
+        double mount_move_refusal_chance( const monster &critter ) const;
+        /** Returns the percent chance that this nearby threat spooks the current mount. */
+        double mount_spook_chance( const monster &critter ) const;
         bool check_mount_is_spooked();
         /** Tests whether a mounted character keeps their seat after a melee impact. */
         void check_mounted_balance( int damage );
@@ -2960,6 +2983,8 @@ class Character : public Creature, public visitable
         itype_id last_item;
     private:
         item weapon;
+        float mounted_charge_stab_multiplier_ = 1.0f;
+        damage_type_id mounted_charge_damage_type_ = damage_type_id::NULL_ID();
     public:
         item_location get_wielded_item() const;
         item_location get_wielded_item();

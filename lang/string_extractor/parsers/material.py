@@ -19,3 +19,8 @@ def parse_material(json, origin):
                    comment=[
                        "Damage adjective of material",
                        "ex. 'dented cuirass'"])
+
+    write_text(json.get("repaired_with_name"), origin,
+               comment=[
+                   "Display name of the item(s) used to repair this material",
+                   "ex. 'any steel chunk'"])

@@ -172,6 +172,8 @@ runs:
       env:
         SDL3_PREFIX: ${{ inputs.prefix }}
       run: |
+        # SDL3 binaries use their linked rpath. A job-wide DYLD_LIBRARY_PATH
+        # makes Homebrew tools load incompatible MacPorts libraries (git's
+        # libiconv in particular), breaking release uploads and checkout cleanup.
         echo "PKG_CONFIG_PATH=$SDL3_PREFIX/lib/pkgconfig:/opt/local/lib/pkgconfig" >> "$GITHUB_ENV"
-        echo "DYLD_LIBRARY_PATH=$SDL3_PREFIX/lib:/opt/local/lib" >> "$GITHUB_ENV"
         echo "DYLIBBUNDLER_SEARCH_PATHS=$SDL3_PREFIX/lib /opt/local/lib" >> "$GITHUB_ENV"

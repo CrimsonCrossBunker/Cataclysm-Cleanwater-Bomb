@@ -62,14 +62,15 @@ static const ammo_effect_str_id ammo_effect_JET( "JET" );
 static const ammo_effect_str_id ammo_effect_LASER( "LASER" );
 static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
 static const ammo_effect_str_id ammo_effect_MAGIC( "MAGIC" );
-static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 static const ammo_effect_str_id ammo_effect_MUZZLE_SMOKE( "MUZZLE_SMOKE" );
 static const ammo_effect_str_id ammo_effect_NO_EMBED( "NO_EMBED" );
 static const ammo_effect_str_id ammo_effect_NO_ITEM_DAMAGE( "NO_ITEM_DAMAGE" );
 static const ammo_effect_str_id ammo_effect_NO_OVERSHOOT( "NO_OVERSHOOT" );
 static const ammo_effect_str_id ammo_effect_NO_PENETRATE_OBSTACLES( "NO_PENETRATE_OBSTACLES" );
 static const ammo_effect_str_id ammo_effect_NULL_SOURCE( "NULL_SOURCE" );
+static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 static const ammo_effect_str_id ammo_effect_SHATTER_SELF( "SHATTER_SELF" );
+static const ammo_effect_str_id ammo_effect_STOP_ON_CONTACT( "STOP_ON_CONTACT" );
 static const ammo_effect_str_id ammo_effect_STREAM( "STREAM" );
 static const ammo_effect_str_id ammo_effect_STREAM_BIG( "STREAM_BIG" );
 static const ammo_effect_str_id ammo_effect_STREAM_TINY( "STREAM_TINY" );
@@ -525,7 +526,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         // Continue line is very "stiff" when the original range is short
         // TODO: Make it use a more distant point for more realistic extended lines
         std::vector<tripoint_bub_ms> trajectory_extension = continue_line( trajectory,
-            extend_to_range - range );
+                extend_to_range - range );
         trajectory.reserve( trajectory.size() + trajectory_extension.size() );
         trajectory.insert( trajectory.end(), trajectory_extension.begin(), trajectory_extension.end() );
     }
@@ -569,7 +570,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 t_copy.insert( t_copy.begin(), source );
                 if( !no_overshoot && range < extend_to_range ) {
                     std::vector<tripoint_bub_ms> extension = continue_line( t_copy,
-                        extend_to_range - range );
+                            extend_to_range - range );
                     t_copy.reserve( t_copy.size() + extension.size() );
                     t_copy.insert( t_copy.end(), extension.begin(), extension.end() );
                 }
@@ -658,6 +659,8 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 }
             }
 
+            const bool contact_obstacle = proj_effects.count( ammo_effect_STOP_ON_CONTACT ) &&
+                                          here->impassable( tp );
             Creature *critter = creatures.creature_at( tp );
             if( origin == critter ) {
                 // No hitting self with "weird" attacks.
@@ -736,7 +739,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 if( critter->is_npc() ) {
                     // A hit on the originally targeted tile is treated as deliberate;
                     // hitting a different tile along the trajectory is a stray shot.
-                    const bool intentional = ( tp == target_arg );
+                    const bool intentional = tp == target_arg;
                     critter->as_npc()->on_attacked( *origin, intentional );
                 }
 
@@ -797,6 +800,14 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                     stop_idx = i;
                 }
             }
+            // A heavy sling round falls at the first occupied tile even when the
+            // creature avoids impact damage. It must never fly through the front rank.
+            if( proj_effects.count( ammo_effect_STOP_ON_CONTACT ) &&
+                ( contact_obstacle || ( critter && !critter->is_underwater() ) ) ) {
+                has_momentum = false;
+                stop_idx = i;
+            }
+
             if( ( !has_momentum || traj_len == size_t( 2 ) ) && proj.count > 1 && distance <= 1 ) {
                 // Track that we hit an obstacle while wadded up,
                 // to cancel out of applying the other projectiles.
