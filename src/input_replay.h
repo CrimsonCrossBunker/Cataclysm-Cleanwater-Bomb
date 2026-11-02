@@ -3,6 +3,7 @@
 #define CATA_SRC_INPUT_REPLAY_H
 
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -14,7 +15,7 @@
 //
 // Goal: capture the stream of input_events from an interactive session, then
 // feed the exact same stream back during a headless re-run so that, given the
-// same RNG seed, the resulting world state is byte-for-byte identical. This is
+// same initial save and recorded seeds, the world state is byte-for-byte identical. This is
 // the safety net that lets later refactors prove "behaviour unchanged" by
 // replaying a recording and diffing the serialized world.
 //
@@ -84,6 +85,12 @@ unsigned int recorded_seed();
 // Seed written into the header by begin_record(). The recorder is responsible
 // for having pinned the engine to this seed (see rng.cpp).
 void set_record_seed( unsigned int seed );
+
+// Reproducible, non-secret local profile IDs while recording/replaying. The
+// legacy save slot only disambiguates old v1 recordings, which have no identity
+// seed. Never use this stream for authentication or resume capabilities.
+// Returns nullopt outside a recording/replay; gameplay RNG is never consumed.
+std::optional<std::string> next_profile_identity( const std::string &legacy_save_slot );
 
 } // namespace input_replay
 

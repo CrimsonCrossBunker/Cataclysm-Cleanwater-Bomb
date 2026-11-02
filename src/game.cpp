@@ -914,6 +914,9 @@ bool game::start_game()
 
     load_master();
     u.setID( assign_npc_id() ); // should be as soon as possible, but *after* load_master
+    // A template can carry a previous world's profile. Starting a new game
+    // creates a new local player even when its character was imported.
+    u.assign_new_player_id();
 
     // Make sure the items are added after the calendar is started
     u.add_profession_items();
