@@ -455,6 +455,10 @@ if (HEADLESS)
     target_link_libraries(cataclysm-common PUBLIC third-party)
     configure_lua_platform(cataclysm-common)
     target_compile_definitions(cataclysm-common PUBLIC HEADLESS)
+    if(NOT "${CMAKE_EXPORT_COMPILE_COMMANDS}")
+        target_precompile_headers(cataclysm-common PUBLIC
+            "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/pch/main-pch.hpp>")
+    endif ()
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-common PUBLIC cata_tracy)
