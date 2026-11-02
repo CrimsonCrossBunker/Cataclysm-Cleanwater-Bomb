@@ -10,7 +10,7 @@ unsigned cpu_task_policy::choose( std::size_t count, unsigned available, std::si
         return 0;
     }
     const unsigned limit = static_cast<unsigned>( std::min<std::size_t>(
-                               std::min( available, 64U ), count / grain - 1 ) );
+                               std::min( available, cpu_worker_limit ), count / grain - 1 ) );
     // Learn a serial baseline first, and do not dispatch sub-250us batches.
     const double serial_cost = samples_[0].ns_per_item;
     if( samples_[0].observations < 3 || serial_cost * count < 250000.0 ) {

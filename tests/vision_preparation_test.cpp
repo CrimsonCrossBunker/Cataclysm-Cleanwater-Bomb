@@ -102,6 +102,24 @@ TEST_CASE( "vision_preparation_matches_serial_full_volume", "[vision][preparatio
     equal( *expected, *actual );
 }
 
+TEST_CASE( "vision_preparation_high_quota_reuses_different_segment_counts",
+           "[vision][preparation]" )
+{
+    auto data = fixture( 20261102 );
+    vision_preparation::frame frame( 128 );
+    for( const auto direction : { vertical_direction::BOTH, vertical_direction::UP } ) {
+        data->direction = direction;
+        auto expected = std::make_unique<output>();
+        auto actual = std::make_unique<output>();
+        baseline( *expected, *data );
+        auto lease = frame.try_acquire( MAX_VIEW_DISTANCE );
+        REQUIRE( lease );
+        frame.capture() = *data;
+        finish( frame, *actual, frame.capture(), lease );
+        equal( *expected, *actual );
+    }
+}
+
 TEST_CASE( "vision_preparation_owns_input_and_distance_policy", "[vision][preparation]" )
 {
     auto original = fixture( 193 );
@@ -164,7 +182,7 @@ TEST_CASE( "vision_preparation_uses_bounded_workers_and_small_serial_fallback",
     vision_preparation::frame disabled( 0 );
     CHECK_FALSE( disabled.try_acquire( MAX_VIEW_DISTANCE ) );
     vision_preparation::frame bounded( 19 );
-    CHECK( bounded.worker_count() <= 4 );
+    CHECK( bounded.worker_count() == std::min( 19U, get_thread_pool().num_workers() ) );
     CHECK_FALSE( bounded.try_acquire( 31 ) );
     cata_thread_pool pool( 1 );
     auto result = pool.submit_returning( []() {

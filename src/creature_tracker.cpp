@@ -39,6 +39,7 @@
 #include "string_formatter.h"
 #include "submap.h"  // IWYU pragma: keep
 #include "thread_pool.h"
+#include "cpu_scheduler.h"
 #include "type_id.h"
 
 class Character;
@@ -459,7 +460,8 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
     }
     try {
         if( !reachability_preparation_ ) {
-            reachability_preparation_ = std::make_unique<ai_reachability::frame>( workers == 1 ? 0 : workers );
+            reachability_preparation_ = std::make_unique<ai_reachability::frame>(
+                                           workers == 1 ? 0 : cpu_worker_quota( workers ) );
         }
         ai_reachability::frame::lease request = reachability_preparation_->try_acquire();
         if( !request ) {

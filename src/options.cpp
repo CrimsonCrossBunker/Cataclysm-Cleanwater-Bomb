@@ -18,6 +18,7 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
+#include "cpu_scheduler.h"
 #include "cursesdef.h"
 #include "cursesport.h" // IWYU pragma: keep
 #include "debug.h"
@@ -3459,32 +3460,27 @@ void options_manager::add_options_performance()
     add( "RENDER_PREPARATION_WORKERS", "performance",
          to_translation( "Render preparation workers" ),
          to_translation( "Prepare tile layers and lighting on shared adaptive workers.  "
-                         "0 keeps serial preparation.  Requires a restart." ),
-         0, 4, 0
+                         "-1 = auto, 0 = serial, positive values cap shared workers.  "
+                         "Requires a restart." ),
+         -1, static_cast<int>( cpu_worker_limit ), -1
        );
 #endif
 
-    // Only the measured Linux SDL3 path has completed parallel acceptance.
-    int vision_workers_default = 0;
-#if defined(TILES) && defined(USE_SDL3) && defined(__linux__) && !defined(__ANDROID__)
-    if( std::thread::hardware_concurrency() >= 4 ) {
-        vision_workers_default = 4;
-    }
-#endif
     add( "VISION_PREPARATION_WORKERS", "performance",
          to_translation( "Visibility calculation workers" ),
          to_translation( "Use workers for expensive visibility updates.  "
                          "Small updates and multiplayer stay serial.  "
-                         "0 disables workers.  Requires a restart." ),
-         0, 4, vision_workers_default );
+                         "-1 = auto, 0 = disabled, positive values cap shared workers.  "
+                         "Requires a restart." ),
+         -1, static_cast<int>( cpu_worker_limit ), -1 );
 
     add( "AI_REACHABILITY_WORKERS", "performance",
          to_translation( "Monster reachability preparation workers" ),
          to_translation( "Prepare expensive monster reachability geometry from captured values.  "
-                         "0 keeps the original path; 1 prepares on the main thread; "
-                         "2 to 4 allow shared adaptive workers.  Multiplayer stays on the original path.  "
+                         "-1 = auto; 0 keeps the original path; 1 prepares on the main thread; "
+                         "2 or more cap shared adaptive workers.  Multiplayer stays on the original path.  "
                          "Requires a restart." ),
-         0, 4, 4 );
+         -1, static_cast<int>( cpu_worker_limit ), -1 );
 
     add( "MULTITHREADING_ENABLED", "performance",
          to_translation( "Enable adaptive CPU multithreading" ),
@@ -3498,12 +3494,12 @@ void options_manager::add_options_performance()
     add( "THREAD_POOL_WORKERS", "performance",
          to_translation( "Thread pool workers" ),
          to_translation( "Number of worker threads in the pool when multithreading is enabled.  "
-                         "0 = auto (up to hardware_concurrency - 1, reserving a logical processor "
+                         "0 = auto (up to 128 workers and hardware_concurrency - 1, reserving a logical processor "
                          "for the main / SDL thread).  This is a ceiling, not an active thread count.  "
                          "Lower this if the game stutters from worker contention "
                          "or you want to reserve cores for other programs.  Requires a restart "
                          "after changing." ),
-         0, 64, 0
+         0, static_cast<int>( cpu_worker_limit ), 0
        );
 }
 

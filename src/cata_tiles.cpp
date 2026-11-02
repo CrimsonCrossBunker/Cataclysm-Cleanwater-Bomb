@@ -1,5 +1,6 @@
 #if defined(TILES)
 #include "cata_tiles.h"
+#include "cpu_scheduler.h"
 #include "sprite_submission.h"
 #include "sprite_command_frame.h"
 #include "draw_cache_rebuild_guard.h"
@@ -1466,7 +1467,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         };
         if( !preparation_ ) {
             preparation_ = std::make_unique<tile_preparation::frame>(
-                               static_cast<unsigned>( get_option<int>( "RENDER_PREPARATION_WORKERS" ) ) );
+                               cpu_worker_quota( get_option<int>( "RENDER_PREPARATION_WORKERS" ) ) );
         }
         std::size_t preparation_tiles = 0;
         if( preparation_->worker_count() != 0 ) {

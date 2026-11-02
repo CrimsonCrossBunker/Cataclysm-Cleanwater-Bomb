@@ -95,7 +95,8 @@ class frame
         std::uint64_t generation_ = 0;
         std::uint64_t ready_generation_ = 0;
         // One distinct scalar per chunk, read by the owner only after joining.
-        std::array<double, 4> horizontal_costs_ms_{};
+        std::array<double, 16> horizontal_costs_ms_{};
+        unsigned prepared_chunks_ = 0;
         bool leased_ = false;
         bool used_workers_ = false;
         // Non-owning process-lifetime pool; prepare joins before returning.

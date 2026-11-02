@@ -45,7 +45,7 @@ frame::frame( unsigned workers ) : owner_thread_( std::this_thread::get_id() )
     }
     try {
         pool_ = &get_thread_pool();
-        worker_limit_ = std::min( { workers, 4U, pool_->num_workers() } );
+        worker_limit_ = std::min( { workers, cpu_worker_limit, pool_->num_workers() } );
     } catch( const std::system_error & ) {
         // cata_thread_pool joins partially started workers before throwing.
     } catch( const std::bad_alloc & ) {
@@ -84,6 +84,7 @@ bool frame::prepare()
     ready_generation_ = 0;
     used_workers_ = false;
     horizontal_costs_ms_.fill( 0.0 );
+    prepared_chunks_ = 0;
     if( cancelled_.load( std::memory_order_relaxed ) || worker_count() == 0 ) {
         return false;
     }
@@ -132,6 +133,7 @@ bool frame::prepare()
     if( cancelled_.load( std::memory_order_relaxed ) ) {
         return false;
     }
+    prepared_chunks_ = chunks;
     ready_generation_ = generation_;
     return true;
 }
@@ -145,7 +147,7 @@ bool frame::apply( const array_of_grids_of<float> &out, const lease &request )
     CATA_PROFILE_SCOPE_NAMED( "vision.merge" );
     // Fixed block order retains max's left-operand treatment of ties/NaN and
     // cumulative origin/camera visibility already stored by the owner.
-    for( unsigned chunk = 0; chunk < worker_count(); ++chunk ) {
+    for( unsigned chunk = 0; chunk < prepared_chunks_; ++chunk ) {
         for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
             const light_grid &source = ( *outputs_[chunk] )[z];
             for( int x = 0; x < MAPSIZE_X; ++x ) {

@@ -75,7 +75,7 @@ frame::frame( unsigned workers ) : owner_thread_( std::this_thread::get_id() )
     }
     try {
         pool_ = &get_thread_pool();
-        worker_limit_ = std::min( { workers, 4U, pool_->num_workers() } );
+        worker_limit_ = std::min( { workers, cpu_worker_limit, pool_->num_workers() } );
     } catch( const std::system_error & ) {
     } catch( const std::bad_alloc & ) {
     }

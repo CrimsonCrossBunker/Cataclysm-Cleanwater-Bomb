@@ -95,7 +95,7 @@ frame::frame( unsigned workers )
     if( workers != 0 ) {
         try {
             pool_ = &get_thread_pool();
-            worker_limit_ = std::min( { workers, 4U, pool_->num_workers() } );
+            worker_limit_ = std::min( { workers, cpu_worker_limit, pool_->num_workers() } );
         } catch( const std::system_error & ) {
             // Thread resources unavailable: preserve the serial renderer.
         }

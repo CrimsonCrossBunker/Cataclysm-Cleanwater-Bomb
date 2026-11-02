@@ -1347,6 +1347,13 @@ $(ODIR)/third-party/%.o: $(SRC_DIR)/third-party/%.c
 $(ODIR)/lua/%.o: $(SRC_DIR)/lua/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) $(LUA_NATIVE_CFLAGS) -w -MMD -MP $<
 
+# Keep scheduler task IDs and policy layout consistent even with stale .d files.
+CPU_SCHEDULER_OBJS := $(addprefix $(ODIR)/,ai_reachability.o cata_tiles.o \
+  cpu_task_policy.o cpu_scheduler.o creature_tracker.o do_turn.o item_degrade.o \
+  item_rot_batch.o item_temperature_batch.o lightmap.o map.o monster_path_batch.o \
+  monmove.o options.o thread_pool.o tile_preparation.o vision_preparation.o weather_gen.o)
+$(CPU_SCHEDULER_OBJS): $(SRC_DIR)/cpu_scheduler.h
+
 $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $(PCHFLAGS) -MMD -MP $<
 

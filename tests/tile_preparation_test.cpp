@@ -160,7 +160,7 @@ TEST_CASE( "tile_preparation_frame_owns_results_and_drains_on_teardown",
     CHECK( first_result.second );
     CHECK( second_result.second );
     tile_preparation::frame bounded( 64 );
-    CHECK( bounded.worker_count() == std::min( 4U, get_thread_pool().num_workers() ) );
+    CHECK( bounded.worker_count() == std::min( 64U, get_thread_pool().num_workers() ) );
 }
 
 TEST_CASE( "tile_preparation_lease_preserves_parent_and_releases_after_exception",

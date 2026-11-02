@@ -1,4 +1,5 @@
 #include "thread_pool.h"
+#include "cpu_scheduler.h"
 
 #include <chrono>
 #include <functional>
@@ -125,10 +126,10 @@ cata_thread_pool &get_thread_pool()
             const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
                                     get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
             if( workers_opt > 0 ) {
-                return std::min( static_cast<unsigned int>( workers_opt ), 64U );
+                return std::min( static_cast<unsigned int>( workers_opt ), cpu_worker_limit );
             }
             const unsigned int hc = std::thread::hardware_concurrency();
-            return hc > 1u ? std::min( hc - 1u, 64U ) : 0u;
+            return hc > 1u ? std::min( hc - 1u, cpu_worker_limit ) : 0u;
         }();
         try {
             return std::make_unique<cata_thread_pool>( count );
