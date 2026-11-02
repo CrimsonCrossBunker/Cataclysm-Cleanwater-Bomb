@@ -55,6 +55,10 @@ struct world_session {
         // established connections must end before world objects are replaced.
         void prepare_for_world_load();
 
+        // New admission resets peer baselines and queued turn effects. World
+        // entity IDs and the monotonic grant sequence survive a reconnect.
+        void begin_remote_peer();
+
     private:
         void reset_state( bool preserve_pending_client );
 };

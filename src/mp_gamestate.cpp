@@ -1512,19 +1512,11 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id,
         rn->op_of_u.value = 10;
         g->add_npc_follower( rn->getID() );
     }
+    mp_session().begin_remote_peer();
     mp_session().remote_peer_id = peer_id;
     mp_session().remote_connected = true;
     mp_session().host_turn.remote_moves = rn ? rn->get_speed() : 100;  // grant first turn immediately
     mp_session().host_turn.client_acted_this_turn = false;
-    mp_session().replication.host.tile_baseline.clear();
-    mp_session().replication.host.om_sync_done = false;
-    mp_session().replication.host.om_sync_last_center = tripoint_abs_omt{ INT_MIN, INT_MIN, 0 };
-    mp_session().replication.host.om_sync_last_client_z = INT_MIN;
-    mp_session().replication.host.map_sync_sent.clear();
-    mp_session().replication.host.client_known_veh_nids.clear();
-    mp_session().replication.host.server_veh_parts_count.clear();
-    mp_session().replication.host.server_veh_live_nids.clear();
-    mp_session().replication.host.server_mon_last_sent.clear();
     mp_session().presentation.separation_tier = 0;
     mp_session().presentation.separation_settled = false;
     mp_session().host_turn.last_forwarded_msg_count =

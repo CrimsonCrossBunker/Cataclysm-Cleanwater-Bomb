@@ -19,6 +19,15 @@ void world_session::prepare_for_world_load()
     reset_state( true );
 }
 
+void world_session::begin_remote_peer()
+{
+    replication.host = {};
+    const uint32_t sequence = host_turn.grant_seq;
+    host_turn = {};
+    host_turn.grant_seq = sequence;
+    peer = {};
+}
+
 void world_session::reset_state( bool preserve_pending_client )
 {
     const bool keep_admission = preserve_pending_client && client.pending_admission();

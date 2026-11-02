@@ -120,10 +120,21 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     impostor.resume_secret = std::string( 64, 'd' );
     connect( 303, impostor );
     CHECK_FALSE( session.remote_connected );
+    session.replication.next_net_id = 77;
+    session.replication.host.host_veh_cargo_baseline[tripoint_abs_ms( 1, 2, 0 )] = "old cargo";
+    session.replication.host.last_vehicle_step_payload = "old stationary vehicles";
+    session.host_turn.grant_seq = 88;
+    session.host_turn.pending_wake_client = true;
+    session.host_turn.action_msgs_pending.push_back( "former peer's action" );
     connect( 404, profile );
     REQUIRE( session.remote_connected );
     CHECK( session.remote_actor_id == original_id );
-
+    CHECK( session.replication.next_net_id == 77 );
+    CHECK( session.host_turn.grant_seq == 88 );
+    CHECK( session.replication.host.host_veh_cargo_baseline.empty() );
+    CHECK( session.replication.host.last_vehicle_step_payload.empty() );
+    CHECK_FALSE( session.host_turn.pending_wake_client );
+    CHECK( session.host_turn.action_msgs_pending.empty() );
 }
 
 TEST_CASE( "mp_restored_actor_ids_cannot_be_reallocated", "[multiplayer][player_identity]" )
