@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "character.h"
+#include "character_turn.h"
 #include "character_id.h"
 #include "creature.h"
 #include "safe_reference.h"
@@ -17,6 +18,7 @@ struct player_control_state {
     character_id actor_id;
     safe_reference<Creature> actor;
     bool active = true;
+    character_turn_driver turns;
 
     Character *get() const {
         Creature *value = actor.get();
@@ -58,6 +60,22 @@ player_id player_control::player() const
     return state_ ? state_->player : player_id();
 }
 
+void player_control::update_body()
+{
+    if( !get() ) {
+        throw std::runtime_error( "Cannot advance an inactive player control" );
+    }
+    state_->turns.update_body();
+}
+
+void player_control::process_turn()
+{
+    if( !get() ) {
+        throw std::runtime_error( "Cannot advance an inactive player control" );
+    }
+    state_->turns.process_turn();
+}
+
 void player_control::reset()
 {
     state_.reset();
@@ -84,6 +102,7 @@ player_control player_control_registry::claim( const player_id &player, Characte
     state->player = player;
     state->actor_id = actor.getID();
     state->actor = actor.get_safe_reference();
+    state->turns.bind( actor, character_turn_policy::native_step );
     impl_->players.emplace( player, state );
     player_control result;
     result.state_ = std::move( state );
