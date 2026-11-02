@@ -18,7 +18,9 @@
 #include "avatar_action.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "damage.h"
+#include "faction.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "item.h"
@@ -26,14 +28,17 @@
 #include "json.h"
 #include "json_loader.h"
 #include "lua_platform_loader.h"
+#include "lua_platform_runtime_internal.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "martialarts.h"
+#include "mod_manager.h"
 #include "monster.h"
 #include "mounted_charge.h"
 #include "npc.h"
 #include "player_helpers.h"
+#include "rng.h"
 #include "type_id.h"
 
 static const damage_type_id damage_bash( "bash" );
@@ -57,11 +62,23 @@ namespace
 monster &setup_mounted_weapon( avatar &player, const itype_id &weapon_type )
 {
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    static bool platform_world_ready = false;
-    if( !platform_world_ready ) {
-        cata::lua_platform::on_world_ready( true );
-        platform_world_ready = true;
+    const std::string runtime_mod = tec_mounted_charge->lua_platform_mod;
+    if( !cata::lua_platform::detail::find_active_runtime( runtime_mod ) ) {
+        const mod_id core( runtime_mod );
+        REQUIRE( core.is_valid() );
+        const MOD_INFORMATION &mod = *core;
+        const cata::lua_platform::mod_source source = {
+            mod.ident.str(), mod.mod_root_path.get_unrelative_path(),
+            mod.lua_platform_entry.get_unrelative_path()
+        };
+        std::string error;
+        INFO( error );
+        REQUIRE( cata::lua_platform::prepare_mods( { source }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+        cata::lua_platform::commit_prepared_mods();
     }
+    cata::lua_platform::on_world_ready( true );
 #endif
     clear_avatar();
     clear_map_without_vision();
@@ -295,6 +312,8 @@ TEST_CASE( "mounted_charge_stops_at_heavy_monster", "[mounted][charge][activity]
 TEST_CASE( "mounted_charge_knocks_light_survivor_aside_and_continues",
            "[mounted][charge][activity]" )
 {
+    restore_on_out_of_scope restore_random_engine( rng_get_engine() );
+    rng_set_engine_seed( 20261102 );
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     player.set_dex_base( 30 );
@@ -473,12 +492,19 @@ TEST_CASE( "mounted_charge_attacks_friendly_creature", "[mounted][charge][activi
 
 TEST_CASE( "mounted_charge_attacks_non_hostile_npc", "[mounted][charge][activity]" )
 {
+    restore_on_out_of_scope restore_random_engine( rng_get_engine() );
+    rng_set_engine_seed( 20261102 );
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
+    player.set_dex_base( 30 );
     player.set_skill_level( skill_melee, 10 );
     player.set_skill_level( skill_stabbing, 10 );
     const tripoint_bub_ms start = player.pos_bub();
     npc &target = spawn_npc( ( start + tripoint::east ).xy(), "test_talker" );
+    faction &target_faction = *target.get_faction();
+    restore_on_out_of_scope restore_faction_likes( target_faction.likes_u );
+    restore_on_out_of_scope restore_faction_respect( target_faction.respects_u );
+    restore_on_out_of_scope restore_faction_trust( target_faction.trusts_u );
     REQUIRE_FALSE( target.is_enemy() );
     const int hp_before = target.get_hp();
 

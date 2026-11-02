@@ -241,12 +241,6 @@ void item::inherit_rot_from_components( item &it )
     rot_inherit_mode mode = rot_inherit_mode::MAX;
     if( it.is_craft() && it.craft_data_ && it.craft_data_->making ) {
         mode = it.craft_data_->making->get_rot_inherit();
-        if( mode == rot_inherit_mode::DEFAULT && !it.craft_data_->disassembly ) {
-            const recipe &making = *it.craft_data_->making;
-            if( making.hot_result() || making.removes_raw() ) {
-                mode = rot_inherit_mode::PRESERVE_BLEND;
-            }
-        }
     }
     if( mode == rot_inherit_mode::FRESH ) {
         return;
@@ -267,6 +261,14 @@ void item::inherit_rot_from_components( item &it )
             return;
         }
         // Fallthrough: shortest_lifespan <= 0_turns (all components are rotten)
+    }
+
+    if( mode == rot_inherit_mode::DEFAULT && it.is_craft() && it.craft_data_ &&
+        it.craft_data_->making && !it.craft_data_->disassembly ) {
+        const recipe &making = *it.craft_data_->making;
+        if( making.hot_result() || making.removes_raw() ) {
+            mode = rot_inherit_mode::PRESERVE_BLEND;
+        }
     }
 
     const item *most_rotten = get_most_rotten_component( it );

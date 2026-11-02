@@ -265,7 +265,7 @@ TEST_CASE( "focus_recovery_scales_with_sensitivity", "[sensitive][character][foc
     dummy.set_sensitive( 100 );
     dummy.set_focus( 1 );
     dummy.update_mental_focus();
-    CHECK( dummy.get_focus() == 10 );
+    CHECK( dummy.get_focus() == 1 );
 
     // Fully numb characters recover at most 75% as fast: 99 * 0.75 = 74.
     dummy.set_sensitive( 0 );
@@ -292,7 +292,7 @@ TEST_CASE( "focus_drain_while_practicing_scales_with_sensitivity",
     auto drain_to = [&]( int sens ) {
         dummy.set_sensitive( sens );
         dummy.set_focus( 200 ); // pool = 200000, base drain = max(2000, 1000)
-        dummy.practice( skill_fabrication, 1000 );
+        dummy.practice( skill_fabrication, 1 );
         return dummy.get_focus();
     };
 

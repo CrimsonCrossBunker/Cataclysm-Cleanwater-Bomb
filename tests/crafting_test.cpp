@@ -196,8 +196,9 @@ static const recipe_id recipe_magazine_battery_light_mod( "magazine_battery_ligh
 static const recipe_id recipe_makeshift_funnel( "makeshift_funnel" );
 static const recipe_id recipe_sushi_rice( "sushi_rice" );
 static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
-static const recipe_id recipe_test_rot_result_rot_auto_gate( "test_rot_result_rot_auto_gate" );
-static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_rot_auto_raw" );
+static const recipe_id
+recipe_test_rot_result_rot_auto_gate( "test_rot_result_short_rot_auto_gate" );
+static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_raw_rot_auto_raw" );
 static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
 static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
 static const recipe_id
@@ -568,7 +569,7 @@ static void prep_craft( const recipe_id &rid, const std::vector<item> &tools,
     REQUIRE( can_craft_with_crafting_inv == expect_craftable );
     bool can_craft_with_temp_inv = r.deduped_requirements()
                                    .can_make_with_inventory( &player_character, temp_crafting_inventory( crafting_inv ),
-                                       r.get_component_filter() );
+                                           r.get_component_filter() );
     REQUIRE( can_craft_with_temp_inv == expect_craftable );
 }
 
@@ -600,10 +601,13 @@ static void setup_test_craft( const recipe_id &rid )
 // This tries to actually run the whole craft activity, which is more thorough,
 // but slow
 static int actually_test_craft( const recipe_id &rid, int interrupt_after_turns,
-                                int skill_level = -1 )
+                                int skill_level = -1, const std::function<void( item & )> &after_start = {} )
 {
     setup_test_craft( rid );
     avatar &player_character = get_avatar();
+    if( after_start ) {
+        after_start( *player_character.get_wielded_item() );
+    }
 
     int turns = 0;
     while( player_character.activity.id() == ACT_CRAFT ) {
@@ -1335,7 +1339,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         u.i_add( tool_with_ammo( itype_soldering_iron_portable, 50 ) );
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-            select_step_tool_allocs( u, r, 1, map_inv, cancelled, -1 );
+                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, -1 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK_FALSE( allocs[1].empty() );
@@ -1345,7 +1349,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         u.i_add( tool_with_ammo( itype_soldering_iron_portable, 50 ) );
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-            select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
+                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK( allocs[1].empty() );
@@ -1356,7 +1360,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         // missing tool.
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-            select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
+                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK( allocs[1].empty() );
@@ -1707,7 +1711,7 @@ static int resume_craft()
     item *craft = crafts.front();
     set_time( midday ); // Ensure light for crafting
     REQUIRE( player_character.crafting_speed_multiplier( *craft,
-            std::optional<tripoint_bub_ms>( std::nullopt ) ) == 1.0 );
+             std::optional<tripoint_bub_ms>( std::nullopt ) ) == 1.0 );
     REQUIRE( !player_character.activity );
     player_character.use( player_character.get_item_position( craft ) );
     REQUIRE( player_character.activity );
@@ -3142,7 +3146,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
 
         THEN( "the floor stays below the weighted blend once the batch is mostly rotten" ) {
             const double expected = ( 10 * 0.91 * mg_per_b + 10 * 2.0 * mg_per_a ) /
-                                    ( seed_mult * ( 10 * mg_per_b + 10 * mg_per_a ) );
+                                    ( 10 * mg_per_b + 10 * mg_per_a );
             CHECK( craft.get_relative_rot() == approx_rot( expected ) );
         }
     }
@@ -3236,16 +3240,27 @@ TEST_CASE( "craft_rot_inherit_end_to_end", "[crafting][rot]" )
         }
     }
 
-    GIVEN( "a fresh mode recipe with a rotten component" ) {
+    GIVEN( "a fresh mode recipe whose component rots while crafting" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_relative_rot( 1.5 );
         tools.insert( tools.end(), 1, comp_a );
         tools.insert( tools.end(), 1, comp_b );
 
         WHEN( "crafting the test recipe" ) {
             prep_craft( recipe_test_rot_result_rot_fresh, tools, true );
-            actually_test_craft( recipe_test_rot_result_rot_fresh, INT_MAX, 10 );
+            actually_test_craft( recipe_test_rot_result_rot_fresh, INT_MAX, 10, []( item & craft ) {
+                bool component_rotted = false;
+                for( auto &component_group : craft.components ) {
+                    if( component_group.first == itype_test_rot_a ) {
+                        for( item &component : component_group.second ) {
+                            component.set_relative_rot( 1.5 );
+                            REQUIRE( component.rotten() );
+                            component_rotted = true;
+                        }
+                    }
+                }
+                REQUIRE( component_rotted );
+            } );
 
             THEN( "the result stays fresh" ) {
                 item_location result = player_character.get_wielded_item();

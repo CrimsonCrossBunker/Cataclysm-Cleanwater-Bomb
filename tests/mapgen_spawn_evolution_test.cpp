@@ -6,16 +6,20 @@
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "character_id.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_scale_constants.h"
+#include "mission.h"
 #include "monster.h"
 #include "mtype.h"
 #include "point.h"
 #include "rng.h"
+#include "submap.h"
 #include "type_id.h"
 
-static const mongroup_id GROUP_ZOMBIE( "GROUP_ZOMBIE" );
+static const mtype_id mon_test_zombie( "mon_test_zombie" );
 
 namespace
 {
@@ -57,66 +61,48 @@ TEST_CASE( "mapgen_spawns_catch_up_with_world_time", "[monster][mapgen][spawn]" 
     calendar::start_of_cataclysm = calendar::turn_zero;
     calendar::start_of_game = calendar::turn_zero;
 
-    const point_bub_ms first_corner( 0, 0 );
-    const point_bub_ms last_corner( SEEX - 1, SEEY - 1 );
     const tripoint_bub_ms queued_at( SEEX / 2, SEEY / 2, 0 );
     // Ten years after the Cataclysm every half-life upgrade chain is long overdue.
     const time_point long_after_cataclysm = calendar::start_of_cataclysm + 3650_days;
 
     // A queued mapgen spawn that is already due must be upgraded when it is placed.
     SECTION( "queued spawns are upgraded when placed" ) {
+        clear_map_without_vision();
+        calendar::turn = long_after_cataclysm;
+        map &here = get_map();
+        map_meddler::get_submap_at_grid( here, tripoint_rel_sm::zero )->spawns.emplace_back(
+            mon_test_zombie, 1, point_sm_ms( SEEX / 2, SEEY / 2 ) );
+        here.spawn_monsters( true );
         int checked = 0;
-        for( int attempt = 0; attempt < 20 && checked == 0; ++attempt ) {
-            clear_map_without_vision();
-            calendar::turn = long_after_cataclysm;
-            map &here = get_map();
-            here.place_spawns( GROUP_ZOMBIE, 1, first_corner, last_corner, 0, 1.0f, true );
-            here.spawn_monsters( true );
-            for( const Creature *crt : here.get_creatures_in_radius( queued_at, SEEX ) ) {
-                if( !crt->is_monster() ) {
-                    continue;
-                }
-                const monster &spawned = *crt->as_monster();
-                if( !spawned.can_upgrade() ) {
-                    // Either terminal already or evolution does not apply at all.
-                    continue;
-                }
+        for( const Creature *creature : here.get_creatures_in_radius( queued_at, SEEX ) ) {
+            if( const monster *spawned = creature->as_monster() ) {
                 ++checked;
-                CAPTURE( spawned.type->id.str() );
-                // A monster placed without the catch-up never even computes its
-                // upgrade time, so it stays at -1 until it is reloaded.
-                CHECK( spawned.get_upgrade_time() >= 0 );
+                CHECK( ( spawned->type->id != mon_test_zombie || spawned->get_upgrade_time() >= 0 ) );
             }
         }
-        // The spawn draw is random, so require the loop to have seen at least one
-        // monster that is still able to upgrade.
-        CHECK( checked > 0 );
+        CHECK( checked == 1 );
     }
 
     // Mission targets must keep their original form, otherwise MGOAL_KILL_MONSTERS
     // asks the player to kill a type that the mission never placed.
     SECTION( "mission spawns keep their original form" ) {
+        clear_map_without_vision();
+        calendar::turn = long_after_cataclysm;
+        map &here = get_map();
+        mission *target_mission = mission::reserve_new(
+                                      mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ), character_id() );
+        REQUIRE( target_mission != nullptr );
+        map_meddler::get_submap_at_grid( here, tripoint_rel_sm::zero )->spawns.emplace_back(
+            mon_test_zombie, 1, point_sm_ms( SEEX / 2, SEEY / 2 ), -1, target_mission->get_id() );
+        here.spawn_monsters( true );
         int checked = 0;
-        for( int attempt = 0; attempt < 20 && checked == 0; ++attempt ) {
-            clear_map_without_vision();
-            calendar::turn = long_after_cataclysm;
-            map &here = get_map();
-            here.place_spawns( GROUP_ZOMBIE, 1, first_corner, last_corner, 0, 1.0f, true, false,
-                               std::nullopt, 1 );
-            here.spawn_monsters( true );
-            for( const Creature *crt : here.get_creatures_in_radius( queued_at, SEEX ) ) {
-                if( !crt->is_monster() ) {
-                    continue;
-                }
-                const monster &spawned = *crt->as_monster();
-                if( !spawned.can_upgrade() ) {
-                    continue;
-                }
+        for( const Creature *creature : here.get_creatures_in_radius( queued_at, SEEX ) ) {
+            if( const monster *spawned = creature->as_monster() ) {
                 ++checked;
-                CAPTURE( spawned.type->id.str() );
-                CHECK( spawned.get_upgrade_time() == -1 );
+                CHECK( spawned->type->id == mon_test_zombie );
+                CHECK( spawned->get_upgrade_time() == -1 );
             }
         }
-        CHECK( checked > 0 );
+        CHECK( checked == 1 );
     }
 }

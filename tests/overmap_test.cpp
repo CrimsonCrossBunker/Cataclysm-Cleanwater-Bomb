@@ -195,7 +195,7 @@ TEST_CASE( "default_overmap_generation_always_succeeds", "[overmap][slow]" )
             continue;
         }
         overmap_special_batch test_specials = overmap_specials::get_default_batch( candidate_addr,
-            city_size );
+                                              city_size );
         overmap_buffer.create_custom_overmap( candidate_addr, test_specials );
         for( const overmap_special_placement &special_placement : test_specials ) {
             const overmap_special *special = special_placement.special_details;
@@ -980,7 +980,13 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
     // Find a clean block with no on-disk saves.
     point_abs_om cluster_origin;
     bool found_cluster = false;
-    for( const point_abs_om &candidate : closest_points_first( point_abs_om(), 50 ) ) {
+    highway_intersection_grid &highway_grid = overmap_buffer.global_state.highway_intersections;
+    highway_grid.set_options();
+    highway_grid.set_grid_origin( point_abs_om::zero );
+    for( const point_abs_om &probe : closest_points_first( point_abs_om(), 50 ) ) {
+        const std::vector<point_abs_om> bounds = highway_grid.find_feature_point_bounds( probe );
+        REQUIRE_FALSE( bounds.empty() );
+        const point_abs_om candidate = highway_grid.get_feature_point( bounds.front() ).get_offset_pos();
         bool block_clean = true;
         for( const point_abs_om &p : closest_points_first( candidate, 0, 4 ) ) {
             if( overmap_buffer.has( p ) ) {
@@ -994,7 +1000,6 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
             break;
         }
     }
-    overmap_buffer.clear();
     REQUIRE( found_cluster );
 
     // Generate a radius-2 cluster, leaving an ungenerated ring around it.
@@ -1160,8 +1165,8 @@ TEST_CASE( "railroad_stations_join_the_network", "[.][overmap][railroads]" )
 {
     const overmap_special_id id( GENERATE( "Railway Station", "railroad_station_city" ) );
     const om_direction::type direction = GENERATE( om_direction::type::north,
-        om_direction::type::east, om_direction::type::south,
-        om_direction::type::west );
+                                         om_direction::type::east, om_direction::type::south,
+                                         om_direction::type::west );
     CAPTURE( id.str(), direction );
     REQUIRE( id.is_valid() );
     REQUIRE( overmap_connection_local_railroad.is_valid() );

@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <string>
 #include <type_traits>
@@ -20,9 +21,15 @@
 #include <zstd/common/mem.h>
 
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
+#include "cata_utility.h"
+#include "filesystem.h"
 #include "mmap_file.h"
+#include "native_file_path.h"
+#include "path_info.h"
 #include "std_hash_fs_path.h"
 #include "zzip.h"
+#include "zzip_stack.h"
 
 namespace
 {
@@ -44,6 +51,71 @@ std::vector<std::byte> make_bytes( size_t count )
 }
 
 } // namespace
+
+TEST_CASE( "zzip_empty_and_cleared_archives_preserve_metadata", "[zzip][save][regression]" )
+{
+    const size_t capacity = GENERATE( size_t{ 0 }, size_t{ 4096 } );
+    std::shared_ptr<mmap_file> memory = mmap_file::map_writeable_memory( capacity );
+    std::optional<zzip> archive = zzip::load( memory );
+    REQUIRE( archive.has_value() );
+    const size_t initial_content = archive->get_content_size();
+    REQUIRE( initial_content <= archive->get_zzip_size() );
+    REQUIRE( archive->get_entries().empty() );
+    REQUIRE( archive->add_file( std::filesystem::u8path( "memory.json" ), "remembered terrain" ) );
+    REQUIRE( archive->get_content_size() > initial_content );
+    REQUIRE( archive->clear() );
+    REQUIRE( archive->get_entries().empty() );
+    REQUIRE( archive->get_content_size() == initial_content );
+    archive.reset();
+    archive = zzip::load( memory );
+    REQUIRE( archive.has_value() );
+    REQUIRE( archive->get_content_size() == initial_content );
+}
+
+TEST_CASE( "zzip_long_paths_preserve_compressed_save_contents", "[zzip][save][regression]" )
+{
+    const bool relative_path = GENERATE( false, true );
+    const std::filesystem::path root = std::filesystem::absolute(
+                                           std::filesystem::u8path( PATH_INFO::user_dir() ) /
+                                           ( "zzip-long-" + std::string( 240, 'x' ) ) );
+    REQUIRE_FALSE( std::filesystem::exists( native_file_path( root ) ) );
+    on_out_of_scope cleanup( [&]() {
+        std::error_code error;
+        std::filesystem::remove_all( native_file_path( root, true ), error );
+    } );
+    std::filesystem::path directory = root / "regions";
+    while( directory.native().size() < 300 ) {
+        directory /= "remembered-terrain-archive-directory";
+    }
+    REQUIRE( std::filesystem::create_directories( native_file_path( directory ) ) );
+    const std::filesystem::path plain_path = directory / "plain-memory.json";
+    write_to_file( plain_path.generic_u8string(), []( std::ostream & output ) {
+        output << "uncompressed remembered terrain";
+    } );
+    CHECK( read_entire_file( plain_path ) == "uncompressed remembered terrain" );
+    std::filesystem::path archive_path = directory / "terrain.zzip";
+    if( relative_path ) {
+        archive_path = std::filesystem::relative( archive_path );
+    }
+    std::optional<zzip> archive = zzip::load( archive_path );
+    REQUIRE( archive.has_value() );
+    const std::filesystem::path entry = std::filesystem::u8path( "region.json" );
+    REQUIRE( archive->add_file( entry, "remembered terrain" ) );
+    archive.reset();
+    archive = zzip::load( archive_path );
+    REQUIRE( archive.has_value() );
+    CHECK( _view( archive->get_file( entry ) ) == "remembered terrain" );
+    REQUIRE( archive->clear() );
+    CHECK( archive->get_entries().empty() );
+    archive.reset();
+
+    std::filesystem::path blocked_archive = directory.filename();
+    blocked_archive += ".hot.zzip";
+    REQUIRE( std::filesystem::create_directory( native_file_path( directory / blocked_archive ) ) );
+    std::shared_ptr<zzip_stack> stack = zzip_stack::load( directory );
+    REQUIRE( stack );
+    REQUIRE_THROWS_AS( stack->add_file( entry, "unwritable" ), std::runtime_error );
+}
 
 TEST_CASE( "zzip_basic_functionality", "[.][zzip]" )
 {

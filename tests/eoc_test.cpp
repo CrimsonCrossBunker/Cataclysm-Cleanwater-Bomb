@@ -264,7 +264,7 @@ static const trait_id trait_purifiability_second( "purifiability_second" );
 
 namespace
 {
-void complete_activity( Character & u )
+void complete_activity( Character &u )
 {
     while( !u.activity.is_null() ) {
         u.set_moves( u.get_speed() );
@@ -272,7 +272,7 @@ void complete_activity( Character & u )
     }
 }
 
-void check_ter_in_radius( tripoint_abs_ms const & center, int range, ter_id const & ter )
+void check_ter_in_radius( tripoint_abs_ms const &center, int range, ter_id const &ter )
 {
     map tm;
     tm.load( project_to<coords::sm>( center - point{ range, range } ), false, false );
@@ -284,8 +284,8 @@ void check_ter_in_radius( tripoint_abs_ms const & center, int range, ter_id cons
     }
 }
 
-void check_ter_in_line( tripoint_abs_ms const & first, tripoint_abs_ms const & second,
-                        ter_id const & ter )
+void check_ter_in_line( tripoint_abs_ms const &first, tripoint_abs_ms const &second,
+                        ter_id const &ter )
 {
     map tm;
     tripoint_abs_ms const orig = coord_min( first, second );
@@ -295,9 +295,9 @@ void check_ter_in_line( tripoint_abs_ms const & first, tripoint_abs_ms const & s
     }
 }
 
-void set_marloss_context( dialogue & d, const std::string & color, const std::string & addiction,
-                          const std::string & other_addiction_1,
-                          const std::string & other_addiction_2 )
+void set_marloss_context( dialogue &d, const std::string &color, const std::string &addiction,
+                          const std::string &other_addiction_1,
+                          const std::string &other_addiction_2 )
 {
     d.set_value( "marloss_color", color );
     d.set_value( "marloss_addiction", addiction );
@@ -1157,7 +1157,7 @@ TEST_CASE( "EOC_meta_test", "[eoc]" )
 
     CHECK( effect_on_condition_EOC_meta_test_message->activate( d_empty ) );
 
-    std::vector<std::pair<std::string, std::string>> messages = Messages::recent_messages( 0 );
+    std::vector<std::pair<std::string, std::string>> messages = Messages::recent_messages( 1 );
 
     REQUIRE( !messages.empty() );
     CHECK( messages.back().second == "message ok." );
@@ -1548,7 +1548,7 @@ TEST_CASE( "EOC_event_test", "[eoc]" )
 
     // character_wears_item
     std::list<item>::iterator armor = *get_avatar().worn.wear_item( get_avatar(),
-        item( itype_backpack ), false, true, true );
+                                      item( itype_backpack ), false, true, true );
 
     CHECK( get_avatar().get_value( "test_event_last_event" ) == "character_wears_item" );
     CHECK( armor->get_var( "test_event_last_event" ) == "character_wears_item" );
@@ -1581,7 +1581,7 @@ TEST_CASE( "EOC_combat_event_test", "[eoc]" )
     // character_melee_attacks_monster
     clear_map_without_vision();
     monster &mon_dst_melee = spawn_test_monster( "mon_zombie",
-        get_avatar().pos_bub() + tripoint::east );
+                             get_avatar().pos_bub() + tripoint::east );
     get_avatar().melee_attack( mon_dst_melee, false );
 
     CHECK( get_avatar().get_value( "test_event_last_event" ) ==

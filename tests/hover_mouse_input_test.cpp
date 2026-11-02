@@ -2,7 +2,7 @@
 
 #include "hover_mouse_input.h"
 
-TEST_CASE( "hover mouse input follows the active pointer source", "[input][mouse]" )
+TEST_CASE( "hover_mouse_input_follows_the_active_pointer_source", "[input][mouse]" )
 {
     hover_mouse_input_state state;
 

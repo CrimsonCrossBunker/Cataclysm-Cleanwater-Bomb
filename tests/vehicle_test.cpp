@@ -25,10 +25,12 @@
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
+#include "output.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "ret_val.h"
+#include "string_formatter.h"
 #include "type_id.h"
 #include "units.h"
 #include "veh_appliance.h"
@@ -712,6 +714,13 @@ static void rack_check( const rack_preset &preset )
         } );
         REQUIRE( this_rackable != rackables.end() );
 
+        const std::string expected_error = string_format(
+                                               "vehicle named %s is already racked on this vehicle"
+                                               "racking actor failed: failed racking %s on %s, racks: [%s].",
+                                               racked_veh.name, racked_veh.name, racking_veh.name,
+        enumerate_as_string( this_rackable->racks, []( const int &rack ) {
+            return std::to_string( rack );
+        } ) );
         std::string error = capture_debugmsg_during( [&u, &racking_veh, &this_rackable]() {
             bikerack_racking_activity_actor racking_actor( racking_veh,
                     *this_rackable->veh, this_rackable->racks );
@@ -723,10 +732,7 @@ static void rack_check( const rack_preset &preset )
             CAPTURE( error );
             REQUIRE( error.empty() );
         } else {
-            REQUIRE( error ==
-                     "vehicle named Foldable wheelchair is already racked on this vehicle"
-                     "racking actor failed: failed racking Foldable wheelchair on Station Wagon, "
-                     "racks: [82, 81, and 79]." );
+            REQUIRE( error == expected_error );
         }
 
         const optional_vpart_position ovp_racked = m.veh_at(

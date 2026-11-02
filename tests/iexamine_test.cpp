@@ -140,6 +140,8 @@ TEST_CASE( "empty_compost_tank_recovers_after_liquid_removal", "[iexamine][compo
 
 TEST_CASE( "compost_fermentation_preserves_biomass_age", "[iexamine][compost]" )
 {
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero + 20_days;
     clear_map_without_vision();
     map &here = get_map();
     const tripoint_bub_ms pos = tripoint_bub_ms::zero;
@@ -147,6 +149,7 @@ TEST_CASE( "compost_fermentation_preserves_biomass_age", "[iexamine][compost]" )
     item biomass( itype_id( "fermentable_liquid_mixture" ), calendar::turn );
     biomass.charges = 10;
     biomass.set_age( 10_days );
+    REQUIRE( biomass.age() == 10_days );
     here.add_item( pos, biomass );
     REQUIRE( here.i_at( pos ).size() == 1 );
     const std::string debug_message = capture_debugmsg_during( [&] {

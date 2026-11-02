@@ -346,7 +346,24 @@ TEST_CASE( "lua_platform_location_revert_matches_native_queue_and_range",
     // Generate new submaps inside the existing overmap, outside the reality bubble.
     const point_abs_omt om_origin = project_to<coords::omt>(
                                         project_to<coords::om>( fixture.source_omt.xy() ) );
-    const tripoint_abs_omt source( om_origin + point( 30, 30 ), fixture.source_omt.z() );
+    std::optional<tripoint_abs_omt> unused_source;
+    for( int offset = 30; offset < OMAPX; ++offset ) {
+        const tripoint_abs_omt candidate( om_origin + point( offset, offset ), fixture.source_omt.z() );
+        const tripoint_abs_sm candidate_base = project_to<coords::sm>( candidate );
+        bool unloaded = true;
+        for( int horizontal = 0; horizontal < 2; ++horizontal ) {
+            for( int vertical = 0; vertical < 2; ++vertical ) {
+                unloaded = unloaded && !MAPBUFFER.submap_exists(
+                               candidate_base + point( horizontal, vertical ) );
+            }
+        }
+        if( unloaded ) {
+            unused_source = candidate;
+            break;
+        }
+    }
+    REQUIRE( unused_source.has_value() );
+    const tripoint_abs_omt source = *unused_source;
     const tripoint_abs_sm base = project_to<coords::sm>( source );
     REQUIRE_FALSE( MAPBUFFER.submap_exists( base ) );
     on_out_of_scope clear_revert_maps( []() {

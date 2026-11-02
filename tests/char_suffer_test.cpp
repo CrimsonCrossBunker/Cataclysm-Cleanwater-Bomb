@@ -493,8 +493,10 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             dummy.oxygen = 0;
 
             THEN( "they recover oxygen instead of suffocating" ) {
+                const float breathing = dummy.get_limb_score( limb_score_id( "breathing" ) );
+                REQUIRE( breathing > 0.0f );
                 test_suffer( dummy, 3_turns, true );
-                CHECK( dummy.oxygen == 15 );
+                CHECK( dummy.oxygen == 3 * std::max( 1, static_cast<int>( 5 * breathing ) ) );
                 CHECK_FALSE( dummy.has_effect( effect_crowd_crushed ) );
             }
         }

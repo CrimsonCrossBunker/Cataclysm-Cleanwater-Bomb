@@ -14,7 +14,7 @@
 TEST_CASE( "rejected_monster_melee_is_not_a_debug_error", "[monster][regression]" )
 {
     clear_map();
-    const tripoint_bub_ms origin( 60, 60, 0 );
+    const tripoint_bub_ms origin( 50, 50, 0 );
     monster &attacker = spawn_test_monster( "mon_zombie", origin );
     monster &target = spawn_test_monster( "mon_zombie", origin + tripoint::east );
     target.add_effect( efftype_id( "invisibility" ), 1_hours );

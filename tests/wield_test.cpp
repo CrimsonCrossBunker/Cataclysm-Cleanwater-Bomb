@@ -37,7 +37,7 @@ static const itype_id itype_knife_hunting( "knife_hunting" );
 static const itype_id itype_metal_tank( "metal_tank" );
 static const itype_id itype_pants_cargo( "pants_cargo" );
 static const itype_id itype_sheath( "sheath" );
-static const itype_id itype_sledgehammer( "sledgehammer" );
+static const itype_id itype_sledgehammer( "hammer_sledge" );
 static const itype_id itype_test_9mm_ammo( "test_9mm_ammo" );
 
 static constexpr point_bub_ms player_pos{ 50, 50 };
@@ -100,6 +100,7 @@ TEST_CASE( "wool_gloves_preserve_two_handed_wielding", "[wield]" )
 
 TEST_CASE( "Wield_test", "[wield]" )
 {
+    clear_avatar();
     clear_map_without_vision();
     item knife_hunting( itype_knife_hunting );
     item knife_combat( itype_knife_combat );
@@ -242,6 +243,7 @@ TEST_CASE( "Wield_test", "[wield]" )
         GIVEN( "item with charges wielded and on the ground" ) {
             int charges = 100;
             ammo_9mm.charges = charges;
+            ammo_9mm.set_owner( player );
             item &spawned_item = here.add_item_or_charges( pos, ammo_9mm );
             item_location item_loc( map_cursor( pos ), &spawned_item );
             REQUIRE( item_loc );

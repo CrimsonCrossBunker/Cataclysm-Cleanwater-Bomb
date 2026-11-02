@@ -201,7 +201,7 @@ static void fields_test_cleanup()
     clear_map_without_vision();
 }
 
-TEST_CASE( "field fire reaction", "[field]" )
+TEST_CASE( "field_fire_reaction", "[field]" )
 {
     fields_test_setup();
 

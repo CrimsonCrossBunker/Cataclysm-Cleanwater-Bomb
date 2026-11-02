@@ -2746,9 +2746,17 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
     clear_map_without_vision();
     fill_overmap_area( ava, oter_id( "field" ) );
 
-    widget place = widget_ll_place_layout.obj();
+    const bool nested_columns = GENERATE( false, true );
+    widget place = nested_columns ? widget_ll_place_layout.obj() :
+                   widget_id( "all_location_info_rows_layout" ).obj();
+    widget_hud_layout layout;
+    layout.mode = widget_hud_layout_mode::custom;
+    layout.columns = 80;
+    layout.node_overrides["ll_place_layout@0/ll_place_info@0"].label_columns = 10;
+    layout.node_overrides["ll_place_layout@0/ll_place_info@0"].width_columns = 40;
     const std::vector<std::string> lines = string_split(
-            remove_color_tags( place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
+            remove_color_tags( nested_columns ? place.layout_for_hud( ava, layout ) :
+                               place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
 
     REQUIRE( lines.size() == 8 );
     for( const std::string &line : lines ) {
@@ -2801,6 +2809,16 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
     for( const bool derive_hud_width : {
              false, true
          } ) {
+        int shared_label_width = 4;
+        if( derive_hud_width ) {
+            shared_label_width = 0;
+            for( const auto &row : fields ) {
+                for( const widget_id &field : row ) {
+                    shared_label_width = std::max( shared_label_width,
+                                                   utf8_width( field->_label.translated(), true ) );
+                }
+            }
+        }
         const std::string formatted = derive_hud_width ?
                                       movement.layout_for_hud( ava, 42 ) :
                                       movement.layout_with_label_width( ava, 42, 4 );
@@ -2834,7 +2852,7 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
                 // Both paths reserve one shared separator slot as well as the
                 // label slot, so a one-cell separator cannot shift a value
                 // left of a sibling using the normal ": " separator.
-                CHECK( value_column == starts[column] + 6 );
+                CHECK( value_column == starts[column] + shared_label_width + 2 );
                 if( row == 0 ) {
                     first_row_values[column] = value_column;
                 } else {
@@ -3089,7 +3107,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
         ava.wear_item( item( itype_ear_plugs ), false );
     }
     SECTION( "temporary_deafness" ) {
-        ava.add_effect( efftype_id( "deaf" ), 1_minutes, false, 3 );
+        ava.add_effect( efftype_id( "deaf" ), 5_minutes, false, 3 );
     }
 
     REQUIRE( ava.is_deaf() );

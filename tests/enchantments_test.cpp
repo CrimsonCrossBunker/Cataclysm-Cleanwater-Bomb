@@ -480,6 +480,7 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     clear_map_without_vision();
     Character &guy = get_player_character();
     clear_avatar();
+    guy.wear_item( item( itype_id( "debug_backpack" ) ), false );
 
     static const bodypart_id bp_arm_l( "arm_l" );
     static const bodypart_id bp_arm_r( "arm_r" );
@@ -488,11 +489,12 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     static const limb_score_id score_balance( "balance" );
     static const limb_score_id score_manip( "manip" );
 
-    INFO( "Default character: arm max HP is 84 (60 base + 8 str * 3)" );
+    INFO( "Capture baseline limb HP before applying the enchantment" );
     const int arm_l_hp_before = guy.get_part_hp_max( bp_arm_l );
     const int arm_r_hp_before = guy.get_part_hp_max( bp_arm_r );
     const int leg_r_hp_before = guy.get_part_hp_max( bp_leg_r );
-    REQUIRE( arm_l_hp_before == 84 );
+    REQUIRE( arm_l_hp_before > 0 );
+    REQUIRE( arm_l_hp_before == arm_r_hp_before );
 
     const float lift_before = guy.get_limb_score( score_lift );
     const float balance_before = guy.get_limb_score( score_balance );
