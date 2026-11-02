@@ -382,6 +382,11 @@ static world_session &mp_session()
     return g->multiplayer_session();
 }
 
+client_connection *current_client_connection()
+{
+    return g ? &mp_session().client : nullptr;
+}
+
 // Server: monotonically increasing counter for assigning monster/vehicle network IDs.
 static uint32_t g_next_net_id = 0;
 

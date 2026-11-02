@@ -274,3 +274,26 @@ TEST_CASE( "mp_deferred_host_intent_survives_setup_but_not_world_exit",
     CHECK_FALSE( cata_mp::is_hosting() );
     CHECK( cata_mp::mp_menu_coop_status_text().empty() );
 }
+
+TEST_CASE( "mp_client_mode_and_teardown_belong_to_the_owning_world",
+           "[multiplayer][world_session][lifecycle][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    const on_out_of_scope cleanup( []() {
+        cata_mp::mp_on_world_exit();
+    } );
+    cata_mp::world_session other_world;
+    cata_mp::set_client_mode( true );
+    CHECK( g->multiplayer_session().client.enabled() );
+    CHECK_FALSE( other_world.client.enabled() );
+    other_world.reset();
+    CHECK( cata_mp::is_client_mode() );
+
+    other_world.client.set_enabled( true );
+    g->multiplayer_session().reset();
+    CHECK_FALSE( cata_mp::is_client_mode() );
+    CHECK( other_world.client.enabled() );
+    // Enabling client UI without a successful probe is not pending admission.
+    other_world.prepare_for_world_load();
+    CHECK_FALSE( other_world.client.enabled() );
+}

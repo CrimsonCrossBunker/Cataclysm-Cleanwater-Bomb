@@ -101,6 +101,11 @@ def main():
         welcome = client.message()
         assert welcome['world'] == '测试世界"\\\n' and welcome['seed'] == 12345
         assert welcome['spawn_omt'] == [1, 2, 0]
+        assert client.command('pending-setup') == 'OK'
+        assert client.command('competing-client') == 'OK'
+        assert host.command('competing-client') == 'OK'
+        results.extend(['pending_client_survives_initial_setup',
+                        'client_cannot_steal_live_client_or_host_transport'])
         assert host.command('next') == 'EMPTY', 'probe spawned a player'
         assert client.command('join-invalid') == 'OK'
         assert host.command('next') == 'EMPTY', 'invalid local profile sent a join'
@@ -142,8 +147,25 @@ def main():
         reconnect.message()
         reconnect.command('join')
         assert host.command('next').startswith('EVENT 0 ')
-        reconnect.close()
+        assert reconnect.message()['type'] == 'welcome'
+        assert reconnect.message()['type'] == 'player_joined'
+        for _ in range(6):
+            assert reconnect.command('world-reset') == 'STOPPED'
+            assert host.command('next').startswith('EVENT 1 ')
+            assert reconnect.command('reconnect-client') == 'READY'
+            assert reconnect.message()['type'] == 'welcome'
+            assert reconnect.command('pending-setup') == 'OK'
+            assert reconnect.command('join') == 'OK'
+            assert host.command('next').startswith('EVENT 0 ')
+            assert reconnect.message()['type'] == 'welcome'
+            assert reconnect.message()['type'] == 'player_joined'
+        assert reconnect.command('world-reset') == 'STOPPED'
         assert host.command('next').startswith('EVENT 1 ')
+        assert reconnect.command('destructor-client') == 'OK'
+        assert host.command('next') == 'EMPTY', 'destroyed pending probe spawned an actor'
+        reconnect.close()
+        results.extend(['same_process_six_client_world_replacements',
+                        'pending_client_destructor_closes_transport'])
         queued = start('queued', 'client', port, 'pending actor', '口令"\\', 'abc')
         assert queued.read() == 'READY'
         queued.message()

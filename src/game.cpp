@@ -746,7 +746,7 @@ bool game::setup()
 // (quickload / snapshot restore) which deliberately skip JSON/mod reloading.
 void game::reset_game_state()
 {
-    multiplayer_session_ptr->reset();
+    multiplayer_session_ptr->prepare_for_world_load();
     new_game = true;
     dimension_checkpoint_pending = false;
 
