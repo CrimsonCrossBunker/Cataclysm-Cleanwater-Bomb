@@ -7,10 +7,16 @@
 
 namespace cata_mp
 {
+bool is_player_proxy( const npc &actor )
+{
+    const auto *tag = actor.maybe_get_value( "mp_proxy" );
+    return tag && tag->is_str() && tag->str() == "1";
+}
+
 void actor_binding::bind( npc &actor, const player_id &player, npc_lifetime_registry &world )
 {
     if( !actor.getID().is_valid() || actor.is_dead_state() ||
-        actor.get_value( "mp_proxy" ).str() != "1" ||
+        !is_player_proxy( actor ) ||
         ( player.valid() && actor.get_value( "mp_player_id" ).str() != player.str() ) ) {
         throw std::runtime_error( "Invalid multiplayer actor ownership" );
     }
@@ -44,7 +50,7 @@ void actor_binding::reset()
 bool actor_binding::owns_instance( const npc *actor, const npc_lifetime_registry &world ) const
 {
     return actor && active_.belongs_to( world ) && instance_.get() == actor &&
-           id_.is_valid() && actor->getID() == id_ && actor->get_value( "mp_proxy" ).str() == "1" &&
+           id_.is_valid() && actor->getID() == id_ && is_player_proxy( *actor ) &&
            ( !player_.valid() || actor->get_value( "mp_player_id" ).str() == player_.str() );
 }
 
