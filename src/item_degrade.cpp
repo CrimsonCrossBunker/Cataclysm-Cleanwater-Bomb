@@ -725,6 +725,23 @@ float item::calc_hourly_rotpoints_at_temp( const units::temperature &temp ) cons
     return hourly_item_rotpoints( temp, has_flag( flag_CRYOGENIC_ROT ) );
 }
 
+void item::prepare_rot( item_rot_batch &batch, const tripoint_bub_ms &pos,
+                        const temperature_flag flag, float spoil_modifier ) const
+{
+    const time_duration elapsed = calendar::turn - last_temp_check;
+    if( batch.full() || is_tool() || !goes_bad() || spoil_modifier == 0 ||
+        !std::isfinite( spoil_modifier ) || elapsed <= 10_minutes || elapsed > 1_hours ) {
+        return;
+    }
+    units::temperature temp = get_weather().get_temperature( pos );
+    if( flag == temperature_flag::ROOT_CELLAR ) {
+        temp = units::from_celsius( get_weather().get_cur_weather_gen().base_temperature );
+    }
+    batch.add( this, { temp, spoil_modifier, elapsed,
+                      is_corpse() && has_flag( flag_FIELD_DRESS ),
+                      has_own_flag( flag_IRRADIATED ), has_flag( flag_CRYOGENIC_ROT ) } );
+}
+
 void item::calc_rot( units::temperature temp, const float spoil_modifier,
                      const time_duration &time_delta, const item_rot_rates *rates )
 {
@@ -738,6 +755,18 @@ void item::calc_rot( units::temperature temp, const float spoil_modifier,
 
     if( has_own_flag( flag_FROZEN ) ) {
         return;
+    }
+
+    if( !rates ) {
+        const item_rot_input input{ temp, spoil_modifier, time_delta,
+                                    is_corpse() && has_flag( flag_FIELD_DRESS ),
+                                    has_own_flag( flag_IRRADIATED ), has_flag( flag_CRYOGENIC_ROT ) };
+        const auto prepared = item_rot_batch::find( this, input,
+                              has_own_flag( flag_COLD ), has_own_flag( flag_MUSHY ) );
+        if( prepared ) {
+            rot += *prepared;
+            return;
+        }
     }
 
     // rot modifier

@@ -63,6 +63,8 @@
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
+#include "monster_path_batch.h"
+#include "cpu_scheduler.h"
 #include "mtype.h"
 #include "music.h"
 #include "npc.h"
@@ -364,6 +366,13 @@ void monmove()
         cata::lua_platform::has_native_hook( "on_monster_do_turn" );
     const bool has_npc_do_turn =
         cata::lua_platform::has_native_hook( "on_npc_do_turn" );
+    monster_path_batch paths;
+    if( cpu_parallel_enabled() ) {
+        for( const monster &critter : g->all_monsters() ) {
+            critter.prepare_path_search( paths, m );
+        }
+        paths.prepare( m );
+    }
     for( monster &critter : g->all_monsters() ) {
         if( !m.inbounds( critter.pos_abs() ) ) {
             continue;

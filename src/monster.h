@@ -39,6 +39,7 @@ class JsonOut;
 class effect_source;
 class item;
 class map;
+class monster_path_batch;
 enum class mon_trigger : int;
 enum class phase_id : int;
 struct monster_plan;
@@ -252,6 +253,7 @@ class monster : public Creature
         bool has_dest() const;
         // Returns point at the end of the monster's current plans
         tripoint_abs_ms get_dest() const;
+        void prepare_path_search( monster_path_batch &batch, const map &here ) const;
         // Returns the creature at the end of plans (if hostile)
         Creature *attack_target();
         // Go towards p using the monster's pathfinding settings.

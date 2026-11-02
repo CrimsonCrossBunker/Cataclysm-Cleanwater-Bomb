@@ -7,6 +7,7 @@
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "item.h"
+#include "item_rot.h"
 #include "item_temperature.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -15,6 +16,43 @@
 #include "type_id.h"
 
 static const itype_id itype_firecracker_act( "firecracker_act" );
+
+TEST_CASE( "daily_rot_batch_validates_inputs_and_restores_scope", "[item][rot][threading]" )
+{
+    std::array<item, 32> owners;
+    const item_rot_input input{ units::from_fahrenheit( 65 ), 0.7f, 937_seconds,
+                                false, false, false };
+    const auto expected = calculate_item_rot_increments( input );
+    REQUIRE_FALSE( item_rot_batch::find( &owners.front(), input, false, false ) );
+    {
+        item_rot_batch outer;
+        for( const item &owner : owners ) {
+            outer.add( &owner, input );
+        }
+        outer.prepare();
+        for( unsigned mushy = 0; mushy < 2; ++mushy ) {
+            for( unsigned cold = 0; cold < 2; ++cold ) {
+                const auto value = item_rot_batch::find( &owners.front(), input, cold, mushy );
+                REQUIRE( value );
+                CHECK( to_turns<int>( *value ) == to_turns<int>( expected[mushy * 2 + cold] ) );
+            }
+        }
+        auto changed = input;
+        changed.elapsed += 1_seconds;
+        CHECK_FALSE( item_rot_batch::find( &owners.front(), changed, false, false ) );
+        {
+            item_rot_batch inner;
+            for( const item &owner : owners ) {
+                inner.add( &owner, changed );
+            }
+            inner.prepare();
+            CHECK_FALSE( item_rot_batch::find( &owners.front(), input, false, false ) );
+            REQUIRE( item_rot_batch::find( &owners.front(), changed, false, false ) );
+        }
+        REQUIRE( item_rot_batch::find( &owners.front(), input, false, false ) );
+    }
+    CHECK_FALSE( item_rot_batch::find( &owners.front(), input, false, false ) );
+}
 
 TEST_CASE( "item_thermal_batch_validates_inputs_and_restores_outer_scope", "[item][temperature][threading]" )
 {

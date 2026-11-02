@@ -2,8 +2,42 @@
 
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 
 #include "game_constants.h"
+
+bool item_rot_input::operator==( const item_rot_input &other ) const
+{
+    return std::tie( temperature, spoil_modifier, elapsed, field_dressed, irradiated, cryogenic ) ==
+           std::tie( other.temperature, other.spoil_modifier, other.elapsed,
+                     other.field_dressed, other.irradiated, other.cryogenic );
+}
+
+item_rot_increments calculate_item_rot_increments( const item_rot_input &input )
+{
+    const std::array<float, 2> rates = {
+        hourly_item_rotpoints( input.temperature, input.cryogenic ),
+        hourly_item_rotpoints( std::min( temperatures::fridge, input.temperature ), input.cryogenic )
+    };
+    item_rot_increments result;
+    for( std::size_t mushy = 0; mushy < 2; ++mushy ) {
+        float factor = input.spoil_modifier;
+        if( input.field_dressed ) {
+            factor *= 0.75;
+        }
+        if( mushy ) {
+            factor *= 3.0;
+        }
+        if( input.irradiated ) {
+            factor *= 0.25;
+        }
+        for( std::size_t cold = 0; cold < 2; ++cold ) {
+            result[mushy * 2 + cold] = factor * input.elapsed / 1_seconds * rates[cold] * 1_turns /
+                                      ( 1_hours / 1_seconds );
+        }
+    }
+    return result;
+}
 
 float hourly_item_rotpoints( const units::temperature &temp, bool cryogenic )
 {

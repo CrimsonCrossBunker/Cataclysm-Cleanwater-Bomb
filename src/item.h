@@ -55,6 +55,7 @@ struct desired_wakeup;
 struct item_rot_rates;
 struct item_temperature_input;
 class item_temperature_batch;
+class item_rot_batch;
 enum class item_wakeup_kind : uint8_t;
 class book_proficiency_bonuses;
 class enchant_cache;
@@ -1185,6 +1186,8 @@ class item : public visitable
          */
         void calc_rot( units::temperature temp, float spoil_modifier, const time_duration &time_delta,
                        const item_rot_rates *rates = nullptr );
+        void prepare_rot( item_rot_batch &batch, const tripoint_bub_ms &pos,
+                          temperature_flag flag, float spoil_modifier ) const;
 
         /** Return relative rot after a hypothetical, non-mutating rot period. */
         double get_relative_rot_after( units::temperature temp, float spoil_modifier,

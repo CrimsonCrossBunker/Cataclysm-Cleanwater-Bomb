@@ -9,8 +9,10 @@
 enum class cpu_task_kind : std::size_t {
     monster_geometry,
     monster_targets,
+    monster_paths,
     item_history,
     item_rot,
+    item_daily_rot,
     item_temperature,
     vision,
     render,

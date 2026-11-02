@@ -54,6 +54,7 @@
 #include "npc.h"
 #include "options.h"
 #include "pathfinding.h"
+#include "monster_path_batch.h"
 #include "pimpl.h"
 #include "point.h"
 #include "profiling.h"
@@ -961,6 +962,20 @@ bool monster::die_if_drowning( const tripoint_bub_ms &at_pos, const int chance )
         return true;
     }
     return false;
+}
+
+void monster::prepare_path_search( monster_path_batch &batch, const map &here ) const
+{
+    if( is_dead() || is_wandering() || !can_pathfind() || !here.inbounds( pos_abs() ) ) {
+        return;
+    }
+    const tripoint_bub_ms destination = here.get_bub( get_dest() );
+    const pathfinding_settings &settings = get_pathfinding_settings();
+    if( settings.max_dist < rl_dist( pos_abs(), get_dest() ) ||
+        ( !path.empty() && rl_dist( pos_bub(), path.front() ) < 2 && path.back() == destination ) ) {
+        return;
+    }
+    batch.add( *this, destination );
 }
 
 // General movement.
