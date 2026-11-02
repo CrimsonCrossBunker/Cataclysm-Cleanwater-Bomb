@@ -49,6 +49,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
+#include "npc_lifetime.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_connection.h"
@@ -1816,9 +1817,7 @@ void overmapbuffer::insert_npc( const shared_ptr_fast<npc> &who )
                 foreach_loaded_camp( [&existing]( basecamp & camp ) {
                     camp.platform_retire_tasks_for_worker( *existing );
                 } );
-#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-                cata::lua_platform::retire_npc_handle_identity( *existing );
-#endif
+                retire_npc_lifetime( *existing );
             }
         }
     }

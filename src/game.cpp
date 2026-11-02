@@ -3,6 +3,7 @@
 #include "map_memory.h"
 #include "render_backend.h"
 #include "mp_world_session.h"
+#include "npc_lifetime.h"
 
 #include <algorithm>
 #include <array>
@@ -747,6 +748,7 @@ bool game::setup()
 void game::reset_game_state()
 {
     multiplayer_session_ptr->prepare_for_world_load();
+    npc_lifetimes_ptr->reset();
     new_game = true;
     dimension_checkpoint_pending = false;
 

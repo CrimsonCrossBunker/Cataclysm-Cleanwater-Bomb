@@ -1,4 +1,5 @@
 #include "npc.h"
+#include "npc_lifetime.h"
 
 #include <calendar.h>
 #include <color.h>
@@ -3389,7 +3390,7 @@ void npc::die( map *here, Creature *nkiller )
         camp.platform_retire_tasks_for_worker( *this );
     } );
     overmap_buffer.platform_unregister_npc( *this );
-    cata::lua_platform::retire_npc_handle_identity( *this );
+    retire_npc_lifetime( *this );
     Character::die( here, nkiller );
 
     if( !quiet_death ) {
@@ -3574,7 +3575,7 @@ void npc::on_unload()
         camp.platform_release_worker_reservation( *this );
     } );
     overmap_buffer.platform_unregister_npc( *this );
-    cata::lua_platform::retire_npc_handle_identity( *this );
+    retire_npc_lifetime( *this );
 }
 
 void npc::update_bodytemp_and_wetness()
@@ -3736,7 +3737,7 @@ void npc::on_load( map *here )
     if( !getID().is_valid() || is_dead() ) {
         return;
     }
-    cata::lua_platform::register_npc_handle_identity( *this );
+    activate_npc_lifetime( *this );
     overmap_buffer.platform_register_npc( *this );
     overmap_buffer.reconcile_platform_camp_tasks();
 
