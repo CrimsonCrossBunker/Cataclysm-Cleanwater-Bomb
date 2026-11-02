@@ -15,6 +15,11 @@ target_include_directories(network_harness SYSTEM PRIVATE ${CCB_ROOT}/src/third-
 target_link_libraries(network_harness PRIVATE Threads::Threads ${CMAKE_DL_LIBS} ${ZSTD_LIBRARY})
 enable_testing()
 add_test(NAME protocol COMMAND network_harness unit)
+add_executable(watchdog_test watchdog_test.cpp ${CCB_ROOT}/src/mp_apply_watchdog.cpp)
+target_include_directories(watchdog_test PRIVATE ${CCB_ROOT}/src)
+target_link_libraries(watchdog_test PRIVATE Threads::Threads)
+add_test(NAME watchdog COMMAND watchdog_test)
+set_tests_properties(watchdog PROPERTIES TIMEOUT 30)
 add_library(incompatible_runtime SHARED incompatible_runtime.cpp)
 set_target_properties(incompatible_runtime PROPERTIES OUTPUT_NAME ccb_bevy_ecs_coop
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bad-abi"
