@@ -1,7 +1,10 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "creature_tracker.h"
 #include "game.h"
+#include "json_loader.h"
 #include "map_helpers.h"
+#include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_queue.h"
@@ -17,6 +20,7 @@
 #include "player_helpers.h"
 #include <filesystem>
 #include <map>
+#include <set>
 
 namespace
 {
@@ -77,6 +81,99 @@ TEST_CASE( "mp_cleanup_never_claims_npcs_by_name_or_unverified_cleanup_ids",
     CHECK( g->critter_by_id<npc>( proxy_id ) == nullptr );
     CHECK_FALSE( overmap_buffer.find_npc( proxy_id ) );
     CHECK( session.stale_proxy_cleanup_done );
+}
+
+TEST_CASE( "mp_native_export_reassigns_retained_monsters_after_session_reset",
+           "[multiplayer][world_session][entity_identity][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        get_creature_tracker().clear();
+    } );
+    npc &remote = bind_test_player( session );
+    session.remote_connected = true;
+    auto first = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                                            tripoint_bub_ms( 62, 60, 0 ) );
+    auto second = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                  tripoint_bub_ms( 63, 60, 0 ) );
+    REQUIRE( get_creature_tracker().add( first ) );
+    REQUIRE( get_creature_tracker().add( second ) );
+    const auto exported_ids = [&]() {
+        JsonValue value = json_loader::from_string( cata_mp::serialize_remote_player_state() );
+        JsonObject state = value.get_object();
+        state.allow_omitted_members();
+        std::vector<int> result;
+        for( JsonObject mon : state.get_array( "monsters" ) ) {
+            mon.allow_omitted_members();
+            result.push_back( mon.get_int( "nid" ) );
+        }
+        return result;
+    };
+    REQUIRE( exported_ids().size() == 2 );
+    REQUIRE( first->mp_net_id != 0 );
+    REQUIRE( second->mp_net_id != 0 );
+    // Closing/reopening a room retains native monsters and their legacy fields.
+    // Resetting just the allocator formerly let the new arrival reuse ID 1.
+    session.reset();
+    session.remote_actor.bind_player( remote, test_player(), g->npc_lifetimes(),
+                                      g->player_controls().claim( test_player(), remote ) );
+    session.remote_connected = true;
+    auto arrival = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                   tripoint_bub_ms( 64, 60, 0 ) );
+    REQUIRE( get_creature_tracker().add( arrival ) );
+    const auto ids = exported_ids();
+    REQUIRE( ids.size() == 3 );
+    CHECK( std::set<int>( ids.begin(), ids.end() ).size() == 3 );
+    CHECK( first->mp_net_id != arrival->mp_net_id );
+    CHECK( second->mp_net_id != arrival->mp_net_id );
+}
+
+TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
+           "[multiplayer][world_session][entity_identity][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        get_creature_tracker().clear();
+        cata_mp::get_mp_queue().clear();
+    } );
+    bind_test_player( session );
+    session.remote_connected = true;
+    session.remote_admission = cata_mp::peer_admission::create( 701 );
+    auto original = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                    tripoint_bub_ms( 62, 60, 0 ) );
+    REQUIRE( get_creature_tracker().add( original ) );
+    cata_mp::serialize_remote_player_state();
+    const auto old_id = original->mp_net_id;
+    REQUIRE( old_id != 0 );
+    get_creature_tracker().remove( *original );
+    auto copied = make_shared_fast<monster>( *original );
+    REQUIRE( copied->mp_net_id == old_id );
+    REQUIRE( get_creature_tracker().add( copied ) );
+    const auto hit = [&]( uint32_t id ) {
+        cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                        R"({"action":"wait","client_monster_hits":[{"nid":)" +
+                                        std::to_string( id ) + R"(,"hp":1}]})", session.remote_admission } );
+        cata_mp::process_mp_events();
+    };
+    const int initial_hp = copied->get_hp();
+    REQUIRE( initial_hp > 1 );
+    hit( old_id );
+    CHECK( copied->get_hp() == initial_hp );
+    CHECK( original->get_hp() == initial_hp );
+    cata_mp::serialize_remote_player_state();
+    REQUIRE( copied->mp_net_id != old_id );
+    hit( copied->mp_net_id );
+    CHECK( copied->get_hp() == 1 );
 }
 
 TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
@@ -168,7 +265,8 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     impostor.resume_secret = std::string( 64, 'd' );
     connect( 303, impostor );
     CHECK_FALSE( session.remote_connected );
-    session.replication.next_net_id = 77;
+    monster retained_monster( mtype_id( "mon_test_zombie" ) );
+    const auto retained_nid = session.replication.entity_ids.assign( retained_monster );
     session.replication.host.host_veh_cargo_baseline[tripoint_abs_ms( 1, 2, 0 )] = "old cargo";
     session.replication.host.last_vehicle_step_payload = "old stationary vehicles";
     session.host_turn.grant_seq = 88;
@@ -177,7 +275,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     connect( 404, profile );
     REQUIRE( session.remote_connected );
     CHECK( session.remote_actor.id() == original_id );
-    CHECK( session.replication.next_net_id == 77 );
+    CHECK( session.replication.entity_ids.known_id( retained_monster ) == retained_nid );
     CHECK( session.host_turn.grant_seq == 88 );
     CHECK( session.replication.host.host_veh_cargo_baseline.empty() );
     CHECK( session.replication.host.last_vehicle_step_payload.empty() );
