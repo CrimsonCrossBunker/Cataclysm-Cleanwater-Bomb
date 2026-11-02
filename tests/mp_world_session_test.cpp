@@ -115,10 +115,10 @@ TEST_CASE( "mp_native_export_reassigns_retained_monsters_after_session_reset",
         return result;
     };
     REQUIRE( exported_ids().size() == 2 );
-    REQUIRE( first->mp_net_id != 0 );
-    REQUIRE( second->mp_net_id != 0 );
-    // Closing/reopening a room retains native monsters and their legacy fields.
-    // Resetting just the allocator formerly let the new arrival reuse ID 1.
+    REQUIRE( session.replication.entity_ids.known_id( *first ) != 0 );
+    REQUIRE( session.replication.entity_ids.known_id( *second ) != 0 );
+    // Closing/reopening retains native monsters. The former object-owned wire
+    // fields survived allocator reset and let a new arrival reuse ID 1.
     session.reset();
     session.remote_actor.bind_player( remote, test_player(), g->npc_lifetimes(),
                                       g->player_controls().claim( test_player(), remote ) );
@@ -129,8 +129,10 @@ TEST_CASE( "mp_native_export_reassigns_retained_monsters_after_session_reset",
     const auto ids = exported_ids();
     REQUIRE( ids.size() == 3 );
     CHECK( std::set<int>( ids.begin(), ids.end() ).size() == 3 );
-    CHECK( first->mp_net_id != arrival->mp_net_id );
-    CHECK( second->mp_net_id != arrival->mp_net_id );
+    CHECK( session.replication.entity_ids.known_id( *first ) !=
+           session.replication.entity_ids.known_id( *arrival ) );
+    CHECK( session.replication.entity_ids.known_id( *second ) !=
+           session.replication.entity_ids.known_id( *arrival ) );
 }
 
 TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
@@ -153,11 +155,11 @@ TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
                     tripoint_bub_ms( 62, 60, 0 ) );
     REQUIRE( get_creature_tracker().add( original ) );
     cata_mp::serialize_remote_player_state();
-    const auto old_id = original->mp_net_id;
+    const auto old_id = session.replication.entity_ids.known_id( *original );
     REQUIRE( old_id != 0 );
     get_creature_tracker().remove( *original );
     auto copied = make_shared_fast<monster>( *original );
-    REQUIRE( copied->mp_net_id == old_id );
+    REQUIRE( session.replication.entity_ids.known_id( *copied ) == 0 );
     REQUIRE( get_creature_tracker().add( copied ) );
     const auto hit = [&]( uint32_t id ) {
         cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
@@ -171,8 +173,9 @@ TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
     CHECK( copied->get_hp() == initial_hp );
     CHECK( original->get_hp() == initial_hp );
     cata_mp::serialize_remote_player_state();
-    REQUIRE( copied->mp_net_id != old_id );
-    hit( copied->mp_net_id );
+    const auto copied_id = session.replication.entity_ids.known_id( *copied );
+    REQUIRE( copied_id != old_id );
+    hit( copied_id );
     CHECK( copied->get_hp() == 1 );
 }
 

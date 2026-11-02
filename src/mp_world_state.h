@@ -137,9 +137,7 @@ struct client_replication_state {
     // Client: maps server vehicle network IDs to the last-known absolute tile position.
     // Used to look up the vehicle object before moving it to the server-authoritative position.
     std::unordered_map<uint32_t, tripoint_abs_ms> client_veh_pos{};
-    // Client: maps server-assigned network IDs to local monster pointers.
-    // Rebuilt each sync tick from creature_tracker before applying updates.
-    std::unordered_map<uint32_t, monster *> net_id_map{};
+    monster_mirrors monsters{};
     // Client: true after the first successful long-range teleport to the host area.
     // The heavy place_player_overmap() is only needed once per session.
     bool initial_teleport_done = false;

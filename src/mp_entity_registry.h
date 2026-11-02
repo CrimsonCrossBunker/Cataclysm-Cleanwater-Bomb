@@ -41,6 +41,30 @@ class entity_registry
         struct impl;
         std::unique_ptr<impl> impl_;
 };
+
+// Client-only association of a host's wire IDs with local native incarnations.
+// A fresh client replication state starts empty, even if native monsters remain.
+// begin_sync retires unloaded objects before applying a packet; dead objects
+// still in the tracker remain addressable for the existing death-report policy.
+class monster_mirrors
+{
+    public:
+        monster_mirrors();
+        ~monster_mirrors();
+        monster_mirrors( monster_mirrors && ) noexcept;
+        monster_mirrors &operator=( monster_mirrors && ) noexcept;
+        monster_mirrors( const monster_mirrors & ) = delete;
+        monster_mirrors &operator=( const monster_mirrors & ) = delete;
+
+        void begin_sync( const creature_tracker &tracker );
+        bool bind( uint32_t id, monster &value );
+        uint32_t known_id( const monster &value ) const;
+        monster *find( uint32_t id ) const;
+
+    private:
+        struct impl;
+        std::unique_ptr<impl> impl_;
+};
 } // namespace cata_mp
 
 #endif // CATA_SRC_MP_ENTITY_REGISTRY_H

@@ -139,6 +139,11 @@ bool partner_in_interactive_activity();
 // Called once per game turn from do_turn() when in client mode.
 void client_process_incoming();
 
+// Simulation-owner entry for a message decoded by the current client transport.
+// The connection owns admission/queue isolation; this never accepts messages
+// while client mode is disabled. UI-capable messages require the normal UI context.
+bool client_apply_message( const std::string &msg );
+
 // Run blocking UI that was deferred out of the network-recv path (e.g. the smash
 // "Keep smashing?" prompt).  Call from do_turn() right after
 // client_process_incoming(), where a top-level UI context is valid.

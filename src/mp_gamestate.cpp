@@ -1092,6 +1092,9 @@ static void parse_welcome_fields( const std::string &msg, bool apply_seed_now )
 // mp_client_prepare_spawn(), called from start_game right after that reset.
 void mp_store_pending_welcome( const std::string &msg )
 {
+    // Called once after a successful connection probe, not for each queued
+    // welcome. Never import a previous host's wire IDs or delta baselines.
+    mp_session().replication.client = {};
     mp_session().admission.pending_welcome = msg;
     parse_welcome_fields( msg, /*apply_seed_now=*/false );
 }
@@ -4657,7 +4660,9 @@ void mp_log_safemode_check( int newseen, int mostseen, int safe_mode )
         const int d = std::max( std::abs( mp.x() - apos.x() ), std::abs( mp.y() - apos.y() ) );
         if( d < nearest ) {
             nearest = d;
-            nearest_synced = mon->mp_net_id != 0;
+            nearest_synced = ( is_client_mode() ?
+                               mp_session().replication.client.monsters.known_id( *mon ) :
+                               mp_session().replication.entity_ids.known_id( *mon ) ) != 0;
             nearest_id = mon->type->id.str();
         }
     }
@@ -5850,7 +5855,8 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
         // source of MON-RESPAWN-DROPPED). Logs only when the count drops.
         int mons_before = 0;
         for( const auto &p : get_creature_tracker().get_monsters_list() ) {
-            if( p && p->mp_net_id != 0 && !p->is_dead() ) {
+            if( p && mp_session().replication.client.monsters.known_id( *p ) != 0 &&
+                !p->is_dead() ) {
                 ++mons_before;
             }
         }
@@ -5871,7 +5877,8 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
         g->update_map( u );
         int mons_after = 0;
         for( const auto &p : get_creature_tracker().get_monsters_list() ) {
-            if( p && p->mp_net_id != 0 && !p->is_dead() ) {
+            if( p && mp_session().replication.client.monsters.known_id( *p ) != 0 &&
+                !p->is_dead() ) {
                 ++mons_after;
             }
         }
@@ -6013,8 +6020,11 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
 }
 
 // NOLINTNEXTLINE(readability-function-size)
-static bool apply_one_state_message( const std::string &msg )
+bool client_apply_message( const std::string &msg )
 {
+    if( !is_client_mode() ) {
+        return false;
+    }
     // Log a preview of every received packet so we can confirm moves=90 packets arrive.
     {
         const size_t preview_len = std::min( msg.size(), static_cast<size_t>( 120 ) );
@@ -7173,7 +7183,7 @@ static bool apply_one_state_message( const std::string &msg )
 
 void client_resolve_pending_ui()
 {
-    // Drains blocking UI deferred out of the network-recv path (apply_one_state_
+    // Drains blocking UI deferred out of the network-recv path (client_apply_
     // message).  MUST be called from the main do_turn loop, where a top-level UI
     // context is valid — never from inside packet processing.
     if( mp_session().client_turn.client_smash_query_pending ) {
@@ -7238,7 +7248,7 @@ void client_process_incoming()
         const int pre_apply_moves = get_avatar().get_moves();
         mp_log( "[cdda-mp] CLI-RECV#" + std::to_string( recv_count ) + ": " + moves_str +
                 " pre_apply_moves=" + std::to_string( pre_apply_moves ) );
-        apply_one_state_message( msg );
+        client_apply_message( msg );
         const int post_apply_moves = get_avatar().get_moves();
         if( post_apply_moves != pre_apply_moves ) {
             mp_log( "[cdda-mp] CLI-RECV#" + std::to_string( recv_count ) +
@@ -7572,18 +7582,19 @@ static std::string build_client_monster_hits()
     bool first = true;
     for( const auto &ptr : get_creature_tracker().get_monsters_list() ) {
         monster *mon = ptr.get();
-        if( !mon || mon->mp_net_id == 0 ) {
+        const uint32_t nid = mon ? mp_session().replication.client.monsters.known_id( *mon ) : 0;
+        if( nid == 0 ) {
             // Diagnostic for the "killed a zed, it rose again" report: a monster
             // the client killed in its own local world that the host never
             // assigned a net id to is never reported — the host keeps it alive
             // and re-broadcasts it, resurrecting the client's corpse.
-            if( mon && mon->is_dead() && mon->mp_net_id == 0 ) {
+            if( mon && mon->is_dead() ) {
                 mp_log( "[cdda-mp] CLIENT-KILL-UNSYNCED: '" + mon->name() +
-                        "' died locally with mp_net_id==0 — not reported to host" );
+                        "' died locally without a host ID — not reported to host" );
             }
             continue;
         }
-        const auto it = mp_session().replication.client.last_monster_hp.find( mon->mp_net_id );
+        const auto it = mp_session().replication.client.last_monster_hp.find( nid );
         if( it == mp_session().replication.client.last_monster_hp.end() ) {
             continue;
         }
@@ -7595,13 +7606,13 @@ static std::string build_client_monster_hits()
             // Client killed this synced monster locally. Mark it so the next few
             // host broadcasts (still showing it alive, kill not yet processed)
             // don't respawn it — see apply_monster_sync's spawn guard (GH#1).
-            mp_session().replication.client.client_pending_kill[mon->mp_net_id] = CLIENT_PENDING_KILL_SYNCS;
+            mp_session().replication.client.client_pending_kill[nid] = CLIENT_PENDING_KILL_SYNCS;
         }
         if( !first ) {
             hits += ',';
         }
         first = false;
-        hits += "{\"nid\":" + std::to_string( mon->mp_net_id )
+        hits += "{\"nid\":" + std::to_string( nid )
                 + ",\"hp\":" + std::to_string( client_hp ) + "}";
     }
     return first ? std::string() : ( "[" + hits + "]" );
@@ -8472,7 +8483,6 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
         // Done for EVERY in-radius monster (even ones we delta-omit below) so the
         // removed_monsters diff (g_server_mon_known_nids) stays accurate.
         const uint32_t nid = mp_session().replication.entity_ids.assign( *mon_ptr );
-        mon_ptr->mp_net_id = nid;
         seen_nids.insert( nid );
         const int mon_facing = ( mon_ptr->facing == FacingDirection::LEFT ) ? 0 : 1;
         std::string rec = "{\"nid\":" + std::to_string( nid )
@@ -9208,13 +9218,8 @@ static void apply_monster_sync( JsonObject &jo )
     // resurrection flicker. Distinct from legit re-entry (host removed it first, so
     // the nid was erased and a re-spawn is expected, not flagged).
 
-    // Rebuild net_id → monster* map from current creature_tracker state.
-    mp_session().replication.client.net_id_map.clear();
-    for( const auto &ptr : mons ) {
-        if( ptr && ptr->mp_net_id != 0 ) {
-            mp_session().replication.client.net_id_map[ptr->mp_net_id] = ptr.get();
-        }
-    }
+    auto &mirrors = mp_session().replication.client.monsters;
+    mirrors.begin_sync( ct );
 
     constexpr int SYNC_RADIUS = 84;   // match build_monster_list's broadcast radius
     const tripoint_abs_ms region_center = mp_session().peer.mp_remote_pos;
@@ -9235,6 +9240,7 @@ static void apply_monster_sync( JsonObject &jo )
     }
 
     std::unordered_set<monster *> matched;
+    std::unordered_set<uint32_t> received_ids;
     int n_recv = 0;
     int n_spawned = 0;
     int n_culled = 0;
@@ -9245,7 +9251,11 @@ static void apply_monster_sync( JsonObject &jo )
         mo.allow_omitted_members();
         ++n_recv;
 
-        const uint32_t nid = static_cast<uint32_t>( mo.get_int( "nid", 0 ) );
+        const int wire_id = mo.get_int( "nid", 0 );
+        if( wire_id <= 0 || !received_ids.insert( static_cast<uint32_t>( wire_id ) ).second ) {
+            continue;
+        }
+        const uint32_t nid = static_cast<uint32_t>( wire_id );
         const int  server_hp = mo.get_int( "hp", -1 );
         const tripoint_abs_ms target{
             mo.get_int( "x" ), mo.get_int( "y" ), mo.get_int( "z" )
@@ -9258,18 +9268,11 @@ static void apply_monster_sync( JsonObject &jo )
             mp_session().replication.client.client_pending_kill.erase( nid );
         }
 
-        monster *best = nullptr;
-
         // --- Primary lookup: stable network ID ---
-        if( nid != 0 ) {
-            auto it = mp_session().replication.client.net_id_map.find( nid );
-            if( it != mp_session().replication.client.net_id_map.end() && !matched.count( it->second ) ) {
-                best = it->second;
-            }
-        }
+        monster *best = mirrors.find( nid );
 
         // --- Fallback: proximity + type for monsters not yet assigned an ID ---
-        // Covers the initial connect where the client's local monsters have mp_net_id == 0.
+        // Covers a new admission: native monsters do not carry another host's IDs.
         if( best == nullptr ) {
             std::string id_str;
             mo.read( "id", id_str );
@@ -9281,7 +9284,8 @@ static void apply_monster_sync( JsonObject &jo )
                     if( !mon || mon->type->id != mid || matched.count( mon ) ) {
                         continue;
                     }
-                    if( mon->mp_net_id != 0 && mon->mp_net_id != nid ) {
+                    const uint32_t existing = mirrors.known_id( *mon );
+                    if( existing != 0 && existing != nid ) {
                         continue;  // Already tracked under a different server ID
                     }
                     const tripoint_abs_ms mp = mon->pos_abs();
@@ -9293,9 +9297,8 @@ static void apply_monster_sync( JsonObject &jo )
                     }
                 }
                 // Assign the server's ID so future lookups are O(1).
-                if( best != nullptr && nid != 0 && best->mp_net_id == 0 ) {
-                    best->mp_net_id = nid;
-                    mp_session().replication.client.net_id_map[nid] = best;
+                if( best != nullptr && !mirrors.bind( nid, *best ) ) {
+                    continue;
                 }
             }
         }
@@ -9329,11 +9332,11 @@ static void apply_monster_sync( JsonObject &jo )
                 const mtype_id mid( id_str );
                 const tripoint_bub_ms bub = m.get_bub( target );
                 auto new_mon = make_shared_fast<monster>( mid, bub );
-                new_mon->mp_net_id = nid;
                 new_mon->set_hp( server_hp );
                 best = g->place_critter_at( new_mon, bub );
-                if( best != nullptr && nid != 0 ) {
-                    mp_session().replication.client.net_id_map[nid] = best;
+                if( best != nullptr && !mirrors.bind( nid, *best ) ) {
+                    g->remove_zombie( *best );
+                    best = nullptr;
                 }
                 if( best != nullptr ) {
                     ++n_spawned;
@@ -9404,7 +9407,7 @@ static void apply_monster_sync( JsonObject &jo )
     // region with NO network id that the host didn't report this turn comes from
     // the client's own divergent local mapgen (a client-local map feature the
     // host's world doesn't have — e.g. a refugee center with turkeys/NPCs).  Host
-    // monsters always receive a net id on match/spawn, so mp_net_id==0 reliably
+    // monsters always receive a net id on match/spawn, so no current binding reliably
     // means "never corresponded to a host monster," and the host's authoritative
     // list covers this whole region — so the absence is real.  This is NOT the
     // old cull-by-absence (which killed *synced* monsters, net_id!=0, on a missed
@@ -9418,7 +9421,7 @@ static void apply_monster_sync( JsonObject &jo )
             return lhs->pos_abs() < rhs->pos_abs();
         } );
         for( monster *mon : ordered_in_region ) {
-            if( mon && mon->mp_net_id == 0 && !matched.count( mon ) && !mon->is_dead() ) {
+            if( mon && mirrors.known_id( *mon ) == 0 && !matched.count( mon ) && !mon->is_dead() ) {
                 local_cull.push_back( mon );
             }
         }
@@ -9429,7 +9432,7 @@ static void apply_monster_sync( JsonObject &jo )
         }
     }
 
-    // Client-local monsters (mp_net_id==0, unmatched, alive) OUTSIDE the host's
+    // Client-local monsters (unbound, unmatched, alive) OUTSIDE the host's
     // broadcast/cull region (>84 of region_center). These were never broadcast by
     // the host — a host monster gets a net_id the first time it enters sync range
     // (build_monster_list), so net_id==0 here means the host has NO synced copy.
@@ -9453,7 +9456,7 @@ static void apply_monster_sync( JsonObject &jo )
         const tripoint_abs_ms av = get_avatar().pos_abs();
         for( const auto &ptr : mons ) {
             monster *mon = ptr.get();
-            if( !mon || mon->mp_net_id != 0 || matched.count( mon ) || mon->is_dead() ) {
+            if( !mon || mirrors.known_id( *mon ) != 0 || matched.count( mon ) || mon->is_dead() ) {
                 continue;
             }
             if( in_region.count( mon ) ) {
@@ -9512,13 +9515,12 @@ static void apply_monster_sync( JsonObject &jo )
             mp_session().replication.client.client_pending_kill.erase( rnid );  // host confirmed gone (GH#1)
             mp_session().replication.client.ever_seen_nids.erase(
                 rnid );        // host-confirmed removal → not a silent drop
-            auto it = mp_session().replication.client.net_id_map.find( rnid );
-            if( it != mp_session().replication.client.net_id_map.end() && it->second &&
-                !it->second->is_dead() ) {
-                culled_log += it->second->type->id.str() + "(nid=" +
+            monster *removed = mirrors.find( rnid );
+            if( removed && !removed->is_dead() ) {
+                culled_log += removed->type->id.str() + "(nid=" +
                               std::to_string( rnid ) + ") ";
                 ++n_culled;
-                it->second->die( &m, nullptr );
+                removed->die( &m, nullptr );
             }
         }
     }
