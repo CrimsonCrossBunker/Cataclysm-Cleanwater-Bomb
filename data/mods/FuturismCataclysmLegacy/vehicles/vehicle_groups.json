@@ -35,22 +35,22 @@
     "type": "vehicle_group",
     "id": "oa_vg_cs_vehicles",
     "//": "For cs_car_showroom",
-    "vehicles": [ [ "bubble_car", 60 ], [ "rara_x", 40 ], [ "rara_x_v3", 10 ] ]
+    "vehicles": [ [ "bubble_car", 60 ], [ "rara_x", 40 ], [ "rara_x_v3", 10 ], [ "fcl_suv_geomagnetic_hover", 20 ] ]
   },
   {
     "id": "city_vehicles",
     "type": "vehicle_group",
-    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 500 ] ]
+    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 500 ], [ "fcl_suv_geomagnetic_hover", 50 ] ]
   },
   {
     "id": "city_pileup",
     "type": "vehicle_group",
-    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 300 ] ]
+    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 300 ], [ "fcl_suv_geomagnetic_hover", 50 ] ]
   },
   {
     "id": "highway",
     "type": "vehicle_group",
-    "vehicles": [ [ "car_atomic", 1500 ], [ "suv_atomic", 1500 ], [ "compact_atomic", 300 ], [ "rara_x", 800 ], [ "rara_x_v3", 200 ] ]
+    "vehicles": [ [ "car_atomic", 1500 ], [ "suv_atomic", 1500 ], [ "compact_atomic", 300 ], [ "rara_x", 800 ], [ "rara_x_v3", 200 ], [ "fcl_suv_geomagnetic_hover", 50 ] ]
   },
   {
     "type": "vehicle_group",
