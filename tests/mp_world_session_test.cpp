@@ -297,3 +297,46 @@ TEST_CASE( "mp_client_mode_and_teardown_belong_to_the_owning_world",
     other_world.prepare_for_world_load();
     CHECK_FALSE( other_world.client.enabled() );
 }
+
+TEST_CASE( "mp_host_metadata_and_events_belong_to_the_owning_world",
+           "[multiplayer][world_session][lifecycle][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    auto &current = g->multiplayer_session();
+    const on_out_of_scope cleanup( [&]() {
+        current.reset();
+    } );
+    cata_mp::world_session other;
+    cata_mp::mp_set_host_world_name( "current world" );
+    cata_mp::mp_set_host_player_name( "current host" );
+    cata_mp::mp_capture_host_omt( tripoint_abs_omt( 1, 2, 3 ) );
+    current.host_info.seed = 11;
+    other.host_info = { "other world", "other host", 22, std::array<int, 3>{ 4, 5, 6 } };
+    cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::action, "", "current", 1} );
+    CHECK( other.hosting.events().empty() );
+    other.hosting.events().push( {cata_mp::mp_event::type::action, "", "other", 2} );
+
+    other.reset();
+    CHECK( other.hosting.events().empty() );
+    CHECK( other.host_info.world_name.empty() );
+    CHECK_FALSE( other.host_info.host_omt );
+    CHECK( cata_mp::mp_get_host_world_name() == "current world" );
+    CHECK( cata_mp::mp_get_host_player_name() == "current host" );
+    CHECK( cata_mp::mp_host_world_seed() == 11 );
+    CHECK( cata_mp::mp_host_omt() == tripoint_abs_omt( 1, 2, 3 ) );
+    cata_mp::mp_event event;
+    REQUIRE( cata_mp::get_mp_queue().pop( event ) );
+    CHECK( event.data == "current" );
+    CHECK( cata_mp::get_mp_queue().empty() );
+
+    other.hosting.events().push( {cata_mp::mp_event::type::action, "", "survivor", 2} );
+    current.hosting.events().push( {cata_mp::mp_event::type::action, "", "retired", 1} );
+    current.reset();
+    CHECK( cata_mp::get_mp_queue().empty() );
+    CHECK( cata_mp::mp_get_host_world_name().empty() );
+    CHECK( cata_mp::mp_get_host_player_name().empty() );
+    CHECK( cata_mp::mp_host_world_seed() == 0 );
+    CHECK_FALSE( cata_mp::mp_host_omt_valid() );
+    REQUIRE( other.hosting.events().pop( event ) );
+    CHECK( event.data == "survivor" );
+}

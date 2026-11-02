@@ -21,6 +21,7 @@ struct world_session {
         }
 
         host_session hosting;
+        server_welcome host_info;
         apply_watchdog client_apply_watchdog;
         client_connection client;
         character_id remote_actor_id;
@@ -52,6 +53,7 @@ struct world_session {
         void reset_state( bool preserve_pending_client ) {
             client_apply_watchdog.stop();
             hosting.stop();
+            host_info = {};
             if( preserve_pending_client ) {
                 client.prepare_for_world_load();
             } else {
