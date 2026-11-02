@@ -90,7 +90,8 @@ class frame
         bool can_parallelize( std::size_t count ) const;
 
     private:
-        std::unique_ptr<cata_thread_pool> pool_;
+        cata_thread_pool *pool_ = nullptr;
+        unsigned worker_limit_ = 0;
         std::vector<input> inputs_;
         std::vector<result> results_;
         bool used_workers_ = false;

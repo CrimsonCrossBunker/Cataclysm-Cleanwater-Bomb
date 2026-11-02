@@ -23,6 +23,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "creature_tracker.h"
+#include "cpu_scheduler.h"
 #include "damage.h"
 #include "debug.h"
 #include "effect.h"
@@ -379,11 +380,13 @@ bool monster::can_move_to( const tripoint_bub_ms &p ) const
     return can_reach_to( p ) && will_move_to( p );
 }
 
-float monster::rate_target( Creature &c, float best, bool smart ) const
+float monster::rate_target( Creature &c, float best, bool smart,
+                            const FastDistanceApproximation *distance ) const
 {
     const map &here = get_map();
 
-    const FastDistanceApproximation d = rl_dist_fast( pos_bub( here ), c.pos_bub( here ) );
+    const FastDistanceApproximation d = distance ? *distance :
+                                        rl_dist_fast( pos_bub( here ), c.pos_bub( here ) );
     if( d <= 0 ) {
         return FLT_MAX;
     }
@@ -701,21 +704,52 @@ void monster::plan()
         turns_since_target );
     int turns_to_skip = max_turns_to_skip * rate_limiting_factor;
     creature_tracker &tracker = get_creature_tracker();
+    const auto visit_candidates = [&]( const auto &faction_filter, const auto &visit ) {
+        struct candidate {
+            monster *actor;
+            tripoint_bub_ms position;
+            FastDistanceApproximation distance{ 0 };
+        };
+        const auto eligible = [&]( Creature *other ) -> monster * {
+            return seen_levels.test( other->posz() + OVERMAP_DEPTH ) ?
+                   dynamic_cast<monster *>( other ) : nullptr;
+        };
+        if( tracker.size() < 256 || !cpu_parallel_enabled() ) {
+            tracker.for_each_reachable( *this, faction_filter, [&]( Creature *other ) {
+                if( monster *mon = eligible( other ) ) {
+                    visit( *mon, nullptr );
+                }
+            } );
+            return;
+        }
+        std::vector<candidate> candidates;
+        tracker.for_each_reachable( *this, faction_filter, [&]( Creature *other ) {
+            if( monster *mon = eligible( other ) ) {
+                candidates.push_back( { mon, mon->pos_bub( here ), FastDistanceApproximation( 0 ) } );
+            }
+        } );
+        const tripoint_bub_ms origin = pos_bub( here );
+        const bool euclidean = trigdist;
+        cpu_parallel_for( cpu_task_kind::monster_targets, candidates.size(), 128,
+        [&]( std::size_t begin, std::size_t end ) {
+            for( std::size_t i = begin; i < end; ++i ) {
+                candidate &entry = candidates[i];
+                entry.distance = euclidean ? trig_dist_fast( origin, entry.position ) :
+                                 square_dist_fast( origin, entry.position );
+            }
+        } );
+        // Visibility, attitudes, tie RNG and destination changes keep their original order.
+        for( const candidate &entry : candidates ) {
+            visit( *entry.actor, &entry.distance );
+        }
+    };
     if( friendly == 0 && ( turns_to_skip == 0 || turns_since_target % turns_to_skip == 0 ) ) {
-        tracker.for_each_reachable( *this, [this]( const mfaction_id & other ) {
+        visit_candidates( [this]( const mfaction_id & other ) {
             const mf_attitude faction_att = faction->attitude( other );
             return !( faction_att == MFA_NEUTRAL || faction_att == MFA_FRIENDLY );
         },
-        [this, &seen_levels, &mon_plan, &valid_targets]( Creature * other ) {
-            if( !seen_levels.test( other->posz() + OVERMAP_DEPTH ) ) {
-                return;
-            }
-            monster *mon_ptr = dynamic_cast<monster *>( other );
-            if( mon_ptr == nullptr ) {
-                return;
-            }
-            monster &mon = *mon_ptr;
-            float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning );
+        [this, &mon_plan, &valid_targets]( monster &mon, const FastDistanceApproximation *distance ) {
+            float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning, distance );
             monster_target_selection selection( { mon_plan.dist, valid_targets, mon_plan.fleeing },
                                                 monster_target_kind::reachable_monster, rating );
             if( selection.request() == monster_target_request::tie_draw ) {
@@ -776,19 +810,11 @@ void monster::plan()
     const mfaction_id actual_faction = friendly == 0 ? faction : monfaction_player;
     mon_plan.swarms = mon_plan.swarms && mon_plan.target == nullptr; // Only swarm if we have no target
     if( mon_plan.group_morale || mon_plan.swarms ) {
-        tracker.for_each_reachable( *this, [actual_faction]( const mfaction_id & other ) {
+        visit_candidates( [actual_faction]( const mfaction_id & other ) {
             return actual_faction == other;
         },
-        [this, &seen_levels, &mon_plan]( Creature * other ) {
-            if( !seen_levels.test( other->posz() + OVERMAP_DEPTH ) ) {
-                return;
-            }
-            monster *mon_ptr = dynamic_cast<monster *>( other );
-            if( mon_ptr == nullptr ) {
-                return;
-            }
-            monster &mon = *mon_ptr;
-            float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning );
+        [this, &mon_plan]( monster &mon, const FastDistanceApproximation *distance ) {
+            float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning, distance );
             morale = morale_after_group_observation( morale, rating, mon_plan.group_morale );
             const monster_swarm_action swarm_action = choose_monster_swarm_action( rating,
                 mon_plan.dist, wandf, mon_plan.swarms );

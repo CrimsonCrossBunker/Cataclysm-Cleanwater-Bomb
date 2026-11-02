@@ -51,7 +51,7 @@ void cast_vertical( const array_of_grids_of<float> &out,
 bool should_prepare( int radius, double horizontal_cost_ms, unsigned workers = 4,
                      bool owner_allows_workers = true );
 
-// One map owns the executor and reusable buffers. No asynchronous result escapes:
+// One map owns reusable buffers and borrows the CPU pool. No asynchronous result escapes:
 // prepare joins every submitted task on success AND failure before returning.
 class frame
 {
@@ -98,8 +98,9 @@ class frame
         std::array<double, 4> horizontal_costs_ms_{};
         bool leased_ = false;
         bool used_workers_ = false;
-        // Declared last: shutdown/join precedes destruction of all buffers.
-        std::unique_ptr<cata_thread_pool> pool_;
+        // Non-owning process-lifetime pool; prepare joins before returning.
+        cata_thread_pool *pool_ = nullptr;
+        unsigned worker_limit_ = 0;
 };
 } // namespace vision_preparation
 #endif // CATA_SRC_VISION_PREPARATION_H

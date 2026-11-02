@@ -484,3 +484,27 @@ TEST_CASE( "local_wind_chill_calculation", "[weather][wind_chill]" )
     }
 }
 
+TEST_CASE( "hourly_temperature_snapshots_equal_scalar_weather", "[weather][threading]" )
+{
+    weather_generator generator;
+    generator.base_temperature = 8.5;
+    generator.spring_temp_manual_mod = -2;
+    generator.summer_temp_manual_mod = 7;
+    generator.autumn_temp_manual_mod = 1;
+    generator.winter_temp_manual_mod = -9;
+    const tripoint_abs_ms location( 10001, -2051, 0 );
+    for( int offset : { 0, 80, 180, 360 } ) {
+        const time_point first = calendar::turn_zero + offset * 1_days + 57_minutes;
+        for( unsigned seed : { 0U, 12345U } ) {
+            const auto batch = generator.get_hourly_temperatures( location, first, seed, 128 );
+            REQUIRE( batch.size() == 128 );
+            for( int hour = 0; hour < 128; ++hour ) {
+                CAPTURE( offset, seed, hour );
+                CHECK( units::to_kelvin( batch[hour] ) == units::to_kelvin(
+                           generator.get_weather_temperature( location, first + hour * 1_hours, seed ) ) );
+            }
+        }
+    }
+    CHECK( generator.get_hourly_temperatures( location, calendar::turn_zero, 0, 0 ).empty() );
+}
+

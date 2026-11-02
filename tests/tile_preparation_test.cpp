@@ -7,6 +7,7 @@
 #include "cata_catch.h"
 #include "rng.h"
 #include "tile_preparation.h"
+#include "thread_pool.h"
 
 namespace
 {
@@ -107,7 +108,7 @@ TEST_CASE( "tile_preparation_workers_match_serial_in_original_order",
              1u, 2u, 4u
          } ) {
         tile_preparation::frame parallel( workers );
-        REQUIRE( parallel.worker_count() == workers );
+        REQUIRE( parallel.worker_count() == std::min( workers, get_thread_pool().num_workers() ) );
         for( std::size_t size : {
                  0u, 1u, 63u, 4095u, 16383u, 16384u, 16385u, 32803u
              } ) {
@@ -119,9 +120,12 @@ TEST_CASE( "tile_preparation_workers_match_serial_in_original_order",
             REQUIRE( serial.results().size() == size );
             REQUIRE( parallel.results().size() == size );
             CHECK_FALSE( serial.can_parallelize( size ) );
-            CHECK( parallel.can_parallelize( size ) == ( size >= 16384 ) );
+            CHECK( parallel.can_parallelize( size ) ==
+                   ( size >= 16384 && parallel.worker_count() != 0 ) );
             CHECK_FALSE( serial.used_workers() );
-            CHECK( parallel.used_workers() == ( size >= 16384 ) );
+            if( !parallel.can_parallelize( size ) ) {
+                CHECK_FALSE( parallel.used_workers() );
+            }
             for( std::size_t i = 0; i < size; ++i ) {
                 REQUIRE( parallel.results()[i].layers == serial.results()[i].layers );
                 REQUIRE( parallel.results()[i].tint == serial.results()[i].tint );
@@ -156,7 +160,7 @@ TEST_CASE( "tile_preparation_frame_owns_results_and_drains_on_teardown",
     CHECK( first_result.second );
     CHECK( second_result.second );
     tile_preparation::frame bounded( 64 );
-    CHECK( bounded.worker_count() == 4 );
+    CHECK( bounded.worker_count() == std::min( 4U, get_thread_pool().num_workers() ) );
 }
 
 TEST_CASE( "tile_preparation_lease_preserves_parent_and_releases_after_exception",

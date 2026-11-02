@@ -3458,7 +3458,7 @@ void options_manager::add_options_performance()
 #if defined(TILES)
     add( "RENDER_PREPARATION_WORKERS", "performance",
          to_translation( "Render preparation workers" ),
-         to_translation( "Prepare tile layers and lighting on dedicated workers.  "
+         to_translation( "Prepare tile layers and lighting on shared adaptive workers.  "
                          "0 keeps serial preparation.  Requires a restart." ),
          0, 4, 0
        );
@@ -3482,25 +3482,25 @@ void options_manager::add_options_performance()
          to_translation( "Monster reachability preparation workers" ),
          to_translation( "Prepare expensive monster reachability geometry from captured values.  "
                          "0 keeps the original path; 1 prepares on the main thread; "
-                         "2 to 4 use dedicated workers.  Multiplayer stays on the original path.  "
+                         "2 to 4 allow shared adaptive workers.  Multiplayer stays on the original path.  "
                          "Requires a restart." ),
-         0, 4, 0 );
+         0, 4, 4 );
 
     add( "MULTITHREADING_ENABLED", "performance",
-         to_translation( "Enable multithreading (highly unstable)" ),
-         to_translation( "Enable the persistent worker thread pool for parallelizing "
-                         "game-logic work (cache rebuilds, monster AI, etc.).  "
-                         "Highly unstable: most subsystems are not yet wired to the pool, "
-                         "and multiplayer mode may cause data races.  "
+         to_translation( "Enable adaptive CPU multithreading" ),
+         to_translation( "Share CPU workers between captured-value calculations.  "
+                         "Concurrency adapts to measured costs; small jobs stay serial.  "
+                         "World changes, scripts and rendering remain on the main thread.  "
                          "Requires a restart after changing." ),
-         false
+         true
        );
 
     add( "THREAD_POOL_WORKERS", "performance",
          to_translation( "Thread pool workers" ),
          to_translation( "Number of worker threads in the pool when multithreading is enabled.  "
-                         "0 = auto (hardware_concurrency - 1, leaving one core for the main / "
-                         "SDL thread).  Lower this if the game stutters from worker contention "
+                         "0 = auto (up to hardware_concurrency - 1, reserving a logical processor "
+                         "for the main / SDL thread).  This is a ceiling, not an active thread count.  "
+                         "Lower this if the game stutters from worker contention "
                          "or you want to reserve cores for other programs.  Requires a restart "
                          "after changing." ),
          0, 64, 0

@@ -52,6 +52,7 @@ class Creature;
 class JsonObject;
 class JsonOut;
 struct desired_wakeup;
+struct item_rot_rates;
 enum class item_wakeup_kind : uint8_t;
 class book_proficiency_bonuses;
 class enchant_cache;
@@ -1180,7 +1181,8 @@ class item : public visitable
          * @param time Time point to which rot is calculated
          * @param temp Temperature at which the rot is calculated
          */
-        void calc_rot( units::temperature temp, float spoil_modifier, const time_duration &time_delta );
+        void calc_rot( units::temperature temp, float spoil_modifier, const time_duration &time_delta,
+                       const item_rot_rates *rates = nullptr );
 
         /** Return relative rot after a hypothetical, non-mutating rot period. */
         double get_relative_rot_after( units::temperature temp, float spoil_modifier,

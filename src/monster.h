@@ -33,6 +33,7 @@
 #include "weakpoint.h"
 
 class Character;
+struct FastDistanceApproximation;
 class JsonObject;
 class JsonOut;
 class effect_source;
@@ -273,7 +274,8 @@ class monster : public Creature
         void wander_to( const tripoint_abs_ms &p, int f );
 
         // How good of a target is given creature (checks for visibility)
-        float rate_target( Creature &c, float best, bool smart = false ) const;
+        float rate_target( Creature &c, float best, bool smart = false,
+                           const FastDistanceApproximation *distance = nullptr ) const;
         // is it mating season?
         bool mating_angry() const;
         void plan();

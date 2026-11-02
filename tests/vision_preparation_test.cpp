@@ -57,7 +57,7 @@ void finish( vision_preparation::frame &frame, output &out,
 {
     views v( out, s );
     REQUIRE( frame.prepare() );
-    REQUIRE( frame.used_workers() );
+    // Publication and equality must also hold for adaptive serial batches.
     CHECK( frame.horizontal_cost_ms() >= 0.0 );
     REQUIRE( frame.apply( v.out, lease ) );
     vision_preparation::cast_vertical( v.out, v.in, v.floors, s.origin, s.offset_distance,

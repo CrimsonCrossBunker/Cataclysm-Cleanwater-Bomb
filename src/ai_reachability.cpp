@@ -8,6 +8,7 @@
 #include "cata_assert.h"
 #include "profiling.h"
 #include "thread_pool.h"
+#include "cpu_scheduler.h"
 
 namespace ai_reachability
 {
@@ -73,7 +74,8 @@ frame::frame( unsigned workers ) : owner_thread_( std::this_thread::get_id() )
         return;
     }
     try {
-        pool_ = std::make_unique<cata_thread_pool>( std::min( workers, 4U ) );
+        pool_ = &get_thread_pool();
+        worker_limit_ = std::min( { workers, 4U, pool_->num_workers() } );
     } catch( const std::system_error & ) {
     } catch( const std::bad_alloc & ) {
     }
@@ -114,55 +116,23 @@ bool frame::prepare( const lease &request )
         cancelled_.load( std::memory_order_relaxed ) ) {
         return false;
     }
-    std::atomic<bool> failed{ false };
-    unsigned submitted = 0;
-    const unsigned chunks = worker_count();
-    simple_latch complete( chunks );
     try {
         if( !output_ ) {
             output_ = std::make_unique<output>();
         }
-        if( chunks == 0 ) {
-            CATA_PROFILE_SCOPE_NAMED( "ai.reachability.prepare_serial" );
-            prepare_columns( *snapshot_, *output_, 0, MAPSIZE_X );
-        } else {
-            CATA_PROFILE_SCOPE_NAMED( "ai.reachability.queue" );
-            for( unsigned chunk = 0; chunk < chunks; ++chunk ) {
-                const int begin = MAPSIZE_X * chunk / chunks;
-                const int end = MAPSIZE_X * ( chunk + 1 ) / chunks;
-                pool_->submit( [this, begin, end, &complete, &failed]() {
-                    try {
-                        CATA_PROFILE_SCOPE_NAMED( "ai.reachability.worker" );
-                        if( !cancelled_.load( std::memory_order_relaxed ) ) {
-                            prepare_columns( *snapshot_, *output_, begin, end );
-                        }
-                    } catch( ... ) {
-                        failed.store( true, std::memory_order_relaxed );
-                        cancelled_.store( true, std::memory_order_relaxed );
-                    }
-                    complete.count_down();
-                } );
-                ++submitted;
+        used_workers_ = cpu_parallel_for( cpu_task_kind::monster_geometry, MAPSIZE_X, 4,
+        [this]( std::size_t begin, std::size_t end ) {
+            if( !cancelled_.load( std::memory_order_relaxed ) ) {
+                prepare_columns( *snapshot_, *output_, static_cast<int>( begin ), static_cast<int>( end ) );
             }
-        }
+        }, worker_limit_ ) != 0;
     } catch( ... ) {
-        failed.store( true, std::memory_order_relaxed );
         cancelled_.store( true, std::memory_order_relaxed );
-    }
-    {
-        CATA_PROFILE_SCOPE_NAMED( "ai.reachability.wait" );
-        // Remove only slots that were never accepted by the queue. Every
-        // accepted callable reports completion, including its exception path.
-        for( unsigned i = submitted; i < chunks; ++i ) {
-            complete.count_down();
-        }
-        complete.wait();
-    }
-    if( failed.load( std::memory_order_relaxed ) || request.generation_ != generation_ ||
-        cancelled_.load( std::memory_order_relaxed ) ) {
         return false;
     }
-    used_workers_ = submitted > 0;
+    if( request.generation_ != generation_ || cancelled_.load( std::memory_order_relaxed ) ) {
+        return false;
+    }
     ready_generation_ = generation_;
     return true;
 }
@@ -189,7 +159,7 @@ void frame::cancel() noexcept
 }
 unsigned frame::worker_count() const
 {
-    return pool_ ? pool_->num_workers() : 0;
+    return worker_limit_;
 }
 bool frame::used_workers() const
 {

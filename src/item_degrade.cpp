@@ -26,6 +26,7 @@
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
+#include "cpu_scheduler.h"
 #include "damage.h"
 #include "debug.h"
 #include "enums.h"
@@ -42,6 +43,7 @@
 #include "item_contents.h"
 #include "item_factory.h"
 #include "item_pocket.h"
+#include "item_rot.h"
 #include "item_transformation.h"
 #include "itype.h"
 #include "map.h"
@@ -720,36 +722,11 @@ int item::spoilage_sort_order( const float base_spoil_multiplier ) const
  */
 float item::calc_hourly_rotpoints_at_temp( const units::temperature &temp ) const
 {
-    const units::temperature dropoff = units::from_fahrenheit( 38 ); // F, ~3 C
-    const float max_rot_temp = 105; // F, ~41 C, Maximum rotting rate is at this temperature
-    const float safe_temp = 145; // F, ~63 C, threshold above which rot is severely slowed
-
-    // Cryogenic rot is much simpler, rot simply idicates how many turns the item might survive outside of cryogenic storage, so they rot as if temperature was 65F.
-    if( has_flag( flag_CRYOGENIC_ROT ) && temp > units::from_fahrenheit( -320 ) ) {
-        return 3600.f;
-    }
-    if( temp <= temperatures::freezing ) {
-        return 0.f;
-    } else if( temp < dropoff ) {
-        // ditch our fancy equation and do a linear approach to 0 rot from 38 F (3 C) -> 32 F (0 C)
-        return 600.f * std::exp2( -27.f / 16.f ) * ( units::to_fahrenheit( temp ) - units::to_fahrenheit(
-                    temperatures::freezing ) );
-    } else if( temp < units::from_fahrenheit( max_rot_temp ) ) {
-        // Exponential progress from 38 F (3 C) to 105 F (41 C)
-        // Max rot from 105 F (41 C) is approximately 20364.67 rot/hour
-        return 3600.f * std::exp2( ( units::to_fahrenheit( temp ) - 65.f ) / 16.f );
-    } else {
-        // Exponential decay from 105 F to 145 F
-        // Rate halves every 8 F (~4.44 C) above 105 F, min approach 636 rot/hour
-        // Constant very slowly rot from 145 F (63 C) upwards.
-        const float capped_temp = std::min( units::to_fahrenheit( temp ), safe_temp );
-        return 3600.f * std::exp2( ( max_rot_temp - 65.f ) / 16.f
-                                   - ( capped_temp - max_rot_temp ) / 8.f );
-    }
+    return hourly_item_rotpoints( temp, has_flag( flag_CRYOGENIC_ROT ) );
 }
 
 void item::calc_rot( units::temperature temp, const float spoil_modifier,
-                     const time_duration &time_delta )
+                     const time_duration &time_delta, const item_rot_rates *rates )
 {
     // Avoid needlessly calculating already rotten things.  Corpses should
     // always rot away and food rots away at twice the shelf life.  If the food
@@ -785,7 +762,10 @@ void item::calc_rot( units::temperature temp, const float spoil_modifier,
         temp = std::min( temperatures::fridge, temp );
     }
 
-    rot += factor * time_delta / 1_seconds * calc_hourly_rotpoints_at_temp( temp ) * 1_turns /
+    const float hourly_rate = rates && rates->cryogenic == has_flag( flag_CRYOGENIC_ROT ) ?
+                              ( has_own_flag( flag_COLD ) ? rates->cold : rates->normal ) :
+                              calc_hourly_rotpoints_at_temp( temp );
+    rot += factor * time_delta / 1_seconds * hourly_rate * 1_turns /
            ( 1_hours / 1_seconds );
 }
 
@@ -1555,38 +1535,54 @@ bool item::process_temperature_rot( float insulation, const tripoint_bub_ms &pos
         // Process the past of this item in 1h chunks until there is less than 1h left.
         time_duration time_delta = 1_hours;
 
+        // Bounded look-ahead; mutations, decay RNG and early destruction retain their order.
+        std::vector<units::temperature> history;
+        std::vector<item_rot_rates> rot_rates;
+        std::size_t history_index = 0;
+
         while( now - time > 1_hours ) {
+            if( history_index == history.size() ) {
+                const int remaining = to_hours<int>( now - time - 1_turns );
+                const std::size_t count = static_cast<std::size_t>( std::min( remaining, 128 ) );
+                const units::temperature base = units::from_celsius( wgen.base_temperature );
+                history = pos.z() >= 0 && flag != temperature_flag::ROOT_CELLAR ?
+                          wgen.get_hourly_temperatures( here.get_abs( pos ), time + 1_hours, seed, count ) :
+                          std::vector<units::temperature>( count, base );
+                const bool cryogenic = has_flag( flag_CRYOGENIC_ROT );
+                rot_rates.resize( count );
+                cpu_parallel_for( cpu_task_kind::item_rot, count, 16,
+                [&]( std::size_t begin, std::size_t end ) {
+                    for( std::size_t i = begin; i < end; ++i ) {
+                        units::temperature &env = history[i];
+                        env += temp_mod;
+                        switch( flag ) {
+                            case temperature_flag::FRIDGE:
+                                env = std::min( env, temperatures::fridge );
+                                break;
+                            case temperature_flag::FREEZER:
+                                env = std::min( env, temperatures::freezer );
+                                break;
+                            case temperature_flag::HEATER:
+                                env = std::max( env, temperatures::normal );
+                                break;
+                            case temperature_flag::ROOT_CELLAR:
+                                env = base;
+                                break;
+                            default:
+                                break;
+                        }
+                        if( process_rot ) {
+                            rot_rates[i] = { cryogenic, hourly_item_rotpoints( env, cryogenic ),
+                                             hourly_item_rotpoints( std::min( env, temperatures::fridge ), cryogenic ) };
+                        }
+                    }
+                } );
+                history_index = 0;
+            }
             time += time_delta;
 
-            // Get the environment temperature
-            // Use weather if above ground, use map temp if below
-            units::temperature env_temperature;
-            if( pos.z() >= 0 && flag != temperature_flag::ROOT_CELLAR ) {
-                env_temperature = wgen.get_weather_temperature( get_map().get_abs( pos ), time, seed );
-            } else {
-                env_temperature = units::from_celsius( get_weather().get_cur_weather_gen().base_temperature );
-            }
-            env_temperature += temp_mod;
-
-            switch( flag ) {
-                case temperature_flag::NORMAL:
-                    // Just use the temperature normally
-                    break;
-                case temperature_flag::FRIDGE:
-                    env_temperature = std::min( env_temperature, temperatures::fridge );
-                    break;
-                case temperature_flag::FREEZER:
-                    env_temperature = std::min( env_temperature, temperatures::freezer );
-                    break;
-                case temperature_flag::HEATER:
-                    env_temperature = std::max( env_temperature, temperatures::normal );
-                    break;
-                case temperature_flag::ROOT_CELLAR:
-                    env_temperature =  units::from_celsius( get_weather().get_cur_weather_gen().base_temperature );
-                    break;
-                default:
-                    debugmsg( "Temperature flag enum not valid.  Using normal temperature." );
-            }
+            const units::temperature env_temperature = history[history_index];
+            const item_rot_rates &rates = rot_rates[history_index++];
 
             // Calculate item temperature from environment temperature
             // If the time was more than 2 d ago we do not care about item temperature.
@@ -1602,7 +1598,7 @@ bool item::process_temperature_rot( float insulation, const tripoint_bub_ms &pos
 
             // Calculate item rot
             if( process_rot ) {
-                calc_rot( env_temperature, spoil_modifier, time_delta );
+                calc_rot( env_temperature, spoil_modifier, time_delta, &rates );
 
                 if( has_rotten_away() && carrier == nullptr ) {
                     // No need to track item that will be gone
