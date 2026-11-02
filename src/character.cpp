@@ -560,6 +560,10 @@ Character::Character() :
     int_max = 8;
     per_max = 8;
     set_dodges_left(1);
+    set_free_dodges_left(0);
+    // NPC/proxy construction and old saves need a defined resting baseline.
+    // Character creation can still randomize it without changing constructor RNG.
+    avg_nat_bpm = 80;
     blocks_left = 1;
     str_bonus = 0;
     dex_bonus = 0;
