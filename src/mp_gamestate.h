@@ -213,11 +213,9 @@ void set_host_mode( bool enabled );
 // whether it is also a headless dedicated server.
 bool is_hosting();
 
-// Called when a world is unloaded (quit-to-menu). Resets per-world MP state —
-// currently the stale-NPC sweep guard — so re-entering any
-// world in the same process re-runs the orphan-proxy cleanup instead of
-// skipping it (the one-shot guard otherwise leaves phantom proxies from a prior
-// load-in; reproduced 2026-06-03).
+// Called before unloading or replacing a world. Joins the host worker, closes
+// the client, and clears modes, proxy bindings, pending events and handshake
+// metadata. Safe to call again after normal save/quit has stopped the host.
 void mp_on_world_exit();
 
 // Load-time migration for worlds with co-op history.  Removes proxy NPCs left
@@ -331,6 +329,10 @@ void mp_templates_sync_on_join();
 // Silent on success (caller drives the next UI step); pops only on error.
 // Returns true if host mode is armed (including the no-op "already armed").
 bool mp_menu_start_host_session();
+
+// CLI and menu share the same deferred start, after the world is loaded.
+bool mp_request_host_session( uint16_t port, const std::string &password,
+                              const std::string &version );
 
 // Main-menu integration: prompts for a host address (with optional :port),
 // probes, connects, sets client mode.  Silent on success; pops an error

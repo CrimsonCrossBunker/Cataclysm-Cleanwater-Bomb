@@ -249,6 +249,8 @@ bool cleanup_at_end()
 
     zone_manager::get_manager().clear();
 
+    // Stop/join producers and invalidate session state before releasing maps.
+    cata_mp::mp_on_world_exit();
     MAPBUFFER.clear();
     overmap_buffer.clear();
 

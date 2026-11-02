@@ -28,7 +28,9 @@ using clock = std::chrono::steady_clock;
 // Lift only after the engine's per-player simulation state is migrated.
 constexpr size_t max_game_peers = 1;
 std::shared_ptr<server> active_server;
-std::atomic<bool> server_thread_running{ false };
+// The process has one native transport. Keep its ownership until the previous
+// worker has been joined, even if that worker exited after an error.
+std::atomic<bool> server_owned{ false };
 }
 
 struct server::impl {
@@ -249,25 +251,74 @@ std::shared_ptr<server> get_active_server()
     return std::atomic_load( &active_server );
 }
 
-bool is_server_thread_running()
+host_session::~host_session()
 {
-    return server_thread_running.load();
+    stop();
 }
 
-void run_server( uint16_t port, const std::string &password, const std::string &version )
+bool host_session::running() const
 {
-    bool expected = false;
-    if( !server_thread_running.compare_exchange_strong( expected, true ) ) {
+    return instance_ && get_active_server() == instance_;
+}
+
+void host_session::stop()
+{
+    if( !owns_transport_ ) {
         return;
     }
-    try {
-        auto instance = std::make_shared<server>( port, password, version );
-        std::atomic_store( &active_server, instance );
-        instance->run();
-    } catch( const std::exception &error ) {
-        mp_log( std::string( "[ccb-mp] SERVER-ERROR: " ) + error.what() );
+    if( instance_ ) {
+        instance_->stop();
     }
-    std::atomic_store( &active_server, std::shared_ptr<server>() );
-    server_thread_running = false;
+    if( worker_.joinable() ) {
+        worker_.join();
+    }
+    // Also covers failure between transport creation and worker startup.
+    renet_transport_stop();
+    auto expected = instance_;
+    std::atomic_compare_exchange_strong( &active_server, &expected, std::shared_ptr<server>() );
+    instance_.reset();
+    get_mp_queue().clear();
+    owns_transport_ = false;
+    server_owned = false;
+}
+
+bool host_session::start( uint16_t port, const std::string &password, const std::string &version )
+{
+    stop();
+    error_.clear();
+    bool expected = false;
+    if( !server_owned.compare_exchange_strong( expected, true ) ) {
+        error_ = "Another host session still owns the transport";
+        return false;
+    }
+    try {
+        if( renet_transport_get_status().running ) {
+            server_owned = false;
+            error_ = "Stop the active transport before hosting";
+            return false;
+        }
+        owns_transport_ = true;
+        instance_ = std::make_shared<server>( port, password, version );
+        get_mp_queue().clear();
+        std::atomic_store( &active_server, instance_ );
+        worker_ = std::thread( [instance = instance_]() {
+            try {
+                instance->run();
+            } catch( const std::exception &error ) {
+                mp_log( std::string( "[ccb-mp] SERVER-ERROR: " ) + error.what() );
+            } catch( ... ) {
+                mp_log( "[ccb-mp] SERVER-ERROR: unknown worker failure" );
+            }
+            auto expected_instance = instance;
+            std::atomic_compare_exchange_strong( &active_server, &expected_instance,
+                                                 std::shared_ptr<server>() );
+        } );
+        return true;
+    } catch( const std::exception &error ) {
+        error_ = error.what();
+        stop();
+        server_owned = false;
+        return false;
+    }
 }
 } // namespace cata_mp
