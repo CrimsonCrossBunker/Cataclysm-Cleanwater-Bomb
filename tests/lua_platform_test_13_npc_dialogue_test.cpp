@@ -273,7 +273,9 @@ TEST_CASE( "lua_platform_npc_unload_reload_and_death_fail_closed",
         cata::lua_platform::game_handle::from_creature(
             value, { "npc", 1204, 0, 0, 0, {} }, runtime, 8 );
 
-    cata::lua_platform::retire_npc_handle_identity( value );
+    const auto native_before = g->npc_lifetimes().acquire( value );
+    value.on_unload();
+    CHECK_FALSE( native_before.resolve( g->npc_lifetimes() ) );
     std::optional<cata::lua_platform::game_handle_error> error;
     CHECK( cata::lua_platform::resolve_exact_npc(
                before_unload, runtime, 8, error ) == nullptr );
@@ -295,6 +297,39 @@ TEST_CASE( "lua_platform_npc_unload_reload_and_death_fail_closed",
     REQUIRE( error );
     CHECK( error->code == "dead" );
     cata::lua_platform::retire_npc_handle_identity( value );
+}
+
+TEST_CASE( "lua_platform_npc_handles_share_the_native_world_lifetime",
+           "[lua][platform][npc][npc_lifetime]" )
+{
+    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 51 );
+    npc value;
+    value.normalize();
+    value.setID( character_id( 12100 ), true );
+    auto &world = g->npc_lifetimes();
+    const auto native_before = world.acquire( value );
+    const auto lua_before = cata::lua_platform::game_handle::from_creature(
+                                value, { "npc", 12100, 0, 0, 0, {} }, runtime, 9 );
+    REQUIRE( native_before.resolve( world ) == &value );
+    std::optional<cata::lua_platform::game_handle_error> error;
+    REQUIRE( cata::lua_platform::resolve_exact_npc( lua_before, runtime, 9, error ) == &value );
+
+    // Keep the Lua runtime and native object alive, as with an in-place load.
+    // World ownership alone must invalidate the earlier incarnation.
+    world.reset();
+    const auto native_after = world.acquire( value );
+    const auto lua_after = cata::lua_platform::game_handle::from_creature(
+                               value, { "npc", 12100, 0, 0, 0, {} }, runtime, 9 );
+    CHECK_FALSE( native_before.resolve( world ) );
+    CHECK_FALSE( cata::lua_platform::resolve_exact_npc( lua_before, runtime, 9, error ) );
+    REQUIRE( error );
+    CHECK( error->code == "stale_identity" );
+    CHECK( native_after.resolve( world ) == &value );
+    CHECK( cata::lua_platform::resolve_exact_npc( lua_after, runtime, 9, error ) == &value );
+    CHECK_FALSE( error );
+    cata::lua_platform::retire_npc_handle_identity( value );
+    CHECK_FALSE( native_after.resolve( world ) );
 }
 
 TEST_CASE( "lua_platform_npc_handles_reject_stale_owner_world_and_runtime",

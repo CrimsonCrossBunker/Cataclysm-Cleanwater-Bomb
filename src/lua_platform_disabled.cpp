@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "dialogue.h"
+#include "npc_lifetime.h"
 
 namespace cata::lua_platform
 {
@@ -200,12 +201,14 @@ bool dispatch_npc_fatal( Character &, const Creature * )
     return true;
 }
 
-void register_npc_handle_identity( npc & )
+void register_npc_handle_identity( npc &value )
 {
+    activate_npc_lifetime( value );
 }
 
-void retire_npc_handle_identity( npc & )
+void retire_npc_handle_identity( npc &value )
 {
+    retire_npc_lifetime( value );
 }
 
 void register_camp_handle_identity( basecamp & )

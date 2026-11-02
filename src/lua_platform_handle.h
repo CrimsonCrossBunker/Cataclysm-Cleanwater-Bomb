@@ -14,6 +14,7 @@
 
 #include "lua_platform_sol.h"
 #include "safe_reference.h"
+#include "npc_lifetime.h"
 
 class Creature;
 class Character;
@@ -30,7 +31,6 @@ namespace cata::lua_platform
 
 struct item_handle_identity_state;
 struct camp_handle_identity_state;
-struct npc_handle_identity_state;
 struct vehicle_handle_identity_state;
 
 enum class game_handle_kind : int {
@@ -196,8 +196,7 @@ class game_handle
         // native safe reference.  The generation is retired when an NPC is
         // unloaded, dies, or is replaced, so a later object with the same id
         // cannot inherit an older handle.
-        std::shared_ptr<npc_handle_identity_state> npc_identity_;
-        std::size_t npc_identity_generation_ = 0;
+        npc_lifetime npc_identity_;
         std::optional<std::int64_t> npc_stable_id_;
         std::optional<std::int64_t> avatar_stable_id_;
         safe_reference<basecamp> camp_;

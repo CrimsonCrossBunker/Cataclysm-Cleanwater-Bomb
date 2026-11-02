@@ -32629,7 +32629,7 @@
         "lua_name": "GameHandle",
         "registration": {
           "installer": "shared.install_game_handle_api",
-          "line": 1138,
+          "line": 1048,
           "namespace": "global",
           "path": "src/lua_platform_handle.cpp"
         },
