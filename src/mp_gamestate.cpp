@@ -1271,7 +1271,7 @@ void mp_open_chat()
                            R"(","text":")" + json_escape_str( text ) +
                            R"(","host":)" + ( host ? "true" : "false" ) + "}";
     if( host ) {
-        if( server *srv = get_active_server() ) {
+        if( auto srv = get_active_server() ) {
             srv->post_broadcast( js + "\n" );
         }
     } else {
@@ -2021,7 +2021,7 @@ static void spawn_remote_player( const std::string &name )
 
     // Send initial state to player 2, then ask it to resend worn/hair so the
     // fresh NPC gets the correct appearance even after a respawn.
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( srv ) {
         srv->post_broadcast( serialize_remote_player_state() + "\n" );
         srv->post_broadcast( "{\"type\":\"resync_request\"}\n" );
@@ -2328,7 +2328,7 @@ void host_broadcast_vehicle_step()
     if( !is_hosting() || !remote_player_connected ) {
         return;
     }
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( !srv ) {
         return;
     }
@@ -2438,7 +2438,7 @@ void host_broadcast_post_action()
     if( !is_hosting() || !remote_player_connected ) {
         return;
     }
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( !srv ) {
         return;
     }
@@ -2467,7 +2467,7 @@ static void srv_emit_ack( const char *action_name )
     g_remote_moves = 0;
     mp_log( std::string( "[cdda-mp] SRV-ACK: moves=0 (" ) + action_name
             + ") grant_seq=" + std::to_string( g_grant_seq ) );
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( srv ) {
         srv->post_broadcast( serialize_remote_player_state() + "\n" );
     }
@@ -2656,7 +2656,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         mp_log( "[cdda-mp] SAVE-REQ RECV: partner asked host to save the shared world" );
         g->quicksave();
         add_msg( m_info, _( "Your partner saved — the shared world was saved too." ) );
-        if( server *srv = get_active_server() ) {
+        if( auto srv = get_active_server() ) {
             srv->post_broadcast( "{\"type\":\"save_done\"}\n" );
         }
         return;
@@ -3510,7 +3510,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         mp_log( "[cdda-mp] SRV-ACK: moves=0 (smash) grant_seq=" +
                 std::to_string( g_grant_seq ) );
         flush_action_msgs( pre_action_msg, remote->name );
-        server *srv = get_active_server();
+        auto srv = get_active_server();
         if( srv ) {
             std::string state = serialize_remote_player_state();
             state = state.substr( 0, state.size() - 1 )
@@ -3712,7 +3712,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     std::to_string( g_grant_seq ) );
         }
         flush_action_msgs( pre_action_msg, remote->name );
-        server *srv = get_active_server();
+        auto srv = get_active_server();
         if( srv ) {
             std::string state = serialize_remote_player_state();
             if( !turn_ended ) {
@@ -3744,7 +3744,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     + " cruise_vel=" + std::to_string( veh.cruise_velocity ) );
         }
         // Free action: do NOT deduct g_remote_moves.  Broadcast updated state.
-        server *srv = get_active_server();
+        auto srv = get_active_server();
         if( srv ) {
             srv->post_broadcast( serialize_remote_player_state() + "\n" );
         }
@@ -4199,7 +4199,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
 
     // Broadcast updated state.  Wall bumps and other no-ops include "free":true
     // so the client knows to restore its moves without waiting for the next turn grant.
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( srv ) {
         // Ramp crossing: proxy moved to a new z-level.  Flush the target z's
         // submap data to the client BEFORE the position update so the client's
@@ -4700,7 +4700,7 @@ void grant_client_turn()
         // when something else times out.  Then tear down the host-side state.
         if( g_proxy_was_alive ) {
             mp_log( "[cdda-mp] PROXY-DIED: notifying client and disconnecting" );
-            if( server *srv = get_active_server() ) {
+            if( auto srv = get_active_server() ) {
                 srv->post_broadcast( "{\"type\":\"you_died\"}\n" );
                 // Brief flush window so the packet leaves before the socket
                 // is torn down — same pattern as notify_client_host_died.
@@ -4737,7 +4737,7 @@ void grant_client_turn()
     // update_body() path that the real avatar gets each game turn.
     remote->update_stamina( 1 );
     check_separation_warning( get_avatar().pos_abs(), remote->pos_abs() );
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( srv ) {
         // NOTE: do NOT throttle this broadcast during fast-forward. The grant
         // itself (g_remote_moves / g_grant_seq) is delivered to the client INSIDE
@@ -4912,7 +4912,7 @@ void wait_for_client_action()
             mp_log( std::string( "[cdda-mp] SRV-WAIT: host activity transition " ) +
                     prev_wait_host_act + " -> " + cur_host_act +
                     ", broadcasting state" );
-            if( server *srv = get_active_server() ) {
+            if( auto srv = get_active_server() ) {
                 srv->post_broadcast( serialize_remote_player_state() + "\n" );
             }
             prev_wait_host_act = cur_host_act;
@@ -5515,7 +5515,7 @@ bool client_suppress_self_gravity( const Character &who )
 
 void notify_client_host_died()
 {
-    server *srv = get_active_server();
+    auto srv = get_active_server();
     if( !srv ) {
         return;
     }
@@ -5544,7 +5544,7 @@ void mp_after_quicksave()
 void mp_notify_session_ending()
 {
     if( is_host_mode() ) {
-        server *srv = get_active_server();
+        auto srv = get_active_server();
         if( srv ) {
             srv->post_broadcast( "{\"type\":\"session_ending\",\"from\":\"host\"}\n" );
             mp_log( "[cdda-mp] SESSION-END: host notified client" );
@@ -5567,7 +5567,7 @@ void mp_notify_session_ending()
     // active_server_ = nullptr. The post-stop pause lets that unwind before any
     // re-host checks is_hosting().
     if( is_host_mode() ) {
-        if( server *srv = get_active_server() ) {
+        if( auto srv = get_active_server() ) {
             srv->stop();
             mp_log( "[cdda-mp] SESSION-END: host server stop() called" );
         }
@@ -5613,7 +5613,7 @@ static std::vector<std::string> mp_local_template_names()
 static void mp_send_payload( const std::string &payload )
 {
     if( is_host_mode() ) {
-        server *srv = get_active_server();
+        auto srv = get_active_server();
         if( srv ) {
             srv->post_broadcast( payload + "\n" );
         }
@@ -6229,14 +6229,7 @@ bool mp_menu_join_session()
     if( !mp_parse_address( entered, host, port ) ) {
         return false;
     }
-    // Pre-flight TCP probe so a typo'd IP returns in ~3 s instead of hanging
-    // on macOS's 75 s default SYN retry.  Only on success do we commit to
-    // setting client_mode and running the real connect handshake.
-    if( !tcp_probe( host, port, 3000 ) ) {
-        popup( _( "Could not reach %s:%d.\n\nCheck the address, the host is running, and the port (default 8080) isn't blocked." ),
-               host.c_str(), static_cast<int>( port ) );
-        return false;
-    }
+    // The Renet handshake below includes the bounded UDP connection attempt.
     set_client_mode( true );
     if( !client_connect( host, port, "player2", std::string(), getVersionString() ) ) {
         const std::string err = client_connect_error();
@@ -10233,7 +10226,7 @@ void mp_post_trade( npc &np, const std::list<item> &items_given,
             + " take=" + std::to_string( items_taken.size() ) );
 
     if( host_side ) {
-        server *s = get_active_server();
+        auto s = get_active_server();
         if( s ) {
             s->post_broadcast( payload + "\n" );
         }
@@ -10360,7 +10353,7 @@ void mp_high_five()
     const std::string payload = R"({"type":"high_five","name":")" +
                                 av.get_name() + "\"}";
     if( is_hosting() || is_server_mode() ) {
-        if( server *s = get_active_server() ) {
+        if( auto s = get_active_server() ) {
             s->post_broadcast( payload + "\n" );
         }
     } else if( is_client_mode() ) {
@@ -10449,7 +10442,7 @@ static bool g_applying_remote_note = false;
 static void mp_send_note_msg( const std::string &payload )
 {
     if( is_server_mode() || is_hosting() ) {
-        server *s = get_active_server();
+        auto s = get_active_server();
         if( s ) {
             s->post_broadcast( payload + "\n" );
         }

@@ -3,6 +3,7 @@
 #define CATA_SRC_MP_QUEUE_H
 
 #include <chrono>
+#include <cstdint>
 #include <condition_variable>
 #include <mutex>
 #include <queue>
@@ -21,6 +22,7 @@ struct mp_event {
     type evt_type;
     std::string session_id;
     std::string data;  // JSON action string for type::action
+    uint64_t peer_id = 0; // Transport identity; display names are not unique IDs.
 };
 
 class event_queue
@@ -62,7 +64,7 @@ class event_queue
         std::condition_variable cv_;
 };
 
-// Global queue — Asio thread writes, game thread reads
+// Global queue — Transport thread writes, game thread reads
 event_queue &get_mp_queue();
 
 } // namespace cata_mp

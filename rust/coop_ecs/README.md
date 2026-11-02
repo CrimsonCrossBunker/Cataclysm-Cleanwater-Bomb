@@ -14,6 +14,16 @@ realtime world ticks, independent reality regions, region reset/handoff and thei
 Lua lifecycle acceptance are subsequent batches, not implemented parity claims.
 The imported ECS baseline APIs are available but not yet wired into gameplay.
 
+The 2026-11-02 CCB integration was built as Linux SDL3 Release with Lua Platform
+v1 and a Rust release runtime. Its fixed carrier, exploration and room comparison
+covered 24 actual single-player runs / 976 simulation calls without a detected
+regression at the declared gates. A separate controlled-schedule comparison ran
+the old TCP and new UDP builds as real host/client pairs: 32 remote wait actions
+per pair, exact grant/ACK sequence, and matching gameplay/save state. Only checked
+build-labelled load/start events and multiplayer wall-clock markers were allowed
+to differ. This does not establish unrestricted scheduling, reconnect/save parity,
+additional remote players, other gameplay actions, or a performance improvement.
+
 ## Build
 
 Desktop native Make builds enable `RUST_COOP=1` by default. Cargo uses the checked-in
