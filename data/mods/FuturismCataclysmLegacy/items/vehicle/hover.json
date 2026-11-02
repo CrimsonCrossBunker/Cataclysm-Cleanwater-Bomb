@@ -1,0 +1,22 @@
+[
+  {
+    "id": "fcl_geomagnetic_hover_wheel",
+    "category": "veh_parts",
+    "type": "ITEM",
+    "subtypes": [ "WHEEL" ],
+    "name": { "str": "geomagnetic-sensing hover wheel" },
+    "description": "A stress wheel, purported to exploit geomagnetic induction effects, enables a vehicle to hover in near-ground suspension at a height slightly above the ground.  As one of this century's latest commercialized levitation applications, it clearly cannot rival the rumored secret military project capable of levitating flight.",
+    "weight": "38250 g",
+    "volume": "27500 ml",
+    "longest_side": "803 mm",
+    "price": "240 USD",
+    "price_postapoc": "2 kUSD 500 USD",
+    "to_hit": { "grip": "bad", "length": "short", "surface": "any", "balance": "clumsy" },
+    "material": [ "superalloy", "mc_steel" ],
+    "symbol": "0",
+    "color": "light_gray",
+    "diameter": 30,
+    "width": 12,
+    "melee_damage": { "bash": 8 }
+  }
+]
