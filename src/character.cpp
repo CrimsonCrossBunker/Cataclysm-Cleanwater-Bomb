@@ -5942,6 +5942,9 @@ void Character::fall_asleep()
         a mutation like Sleepy. We will automatically wake up when we're no longer tired,
         so shorter naps are already handled. */
         time_duration sleep_duration = 12_hours;
+        if( has_effect( effect_melatonin ) ) {
+            sleep_duration = 13_hours;  // Artificial sleep hormone boost allows you to sleep longer
+        }
         fall_asleep( sleep_duration );
     }
 }
