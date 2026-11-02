@@ -290,10 +290,11 @@ static renet_activity_delta_flags to_activity_flags( const CcbCoopActivityDeltaF
     };
 }
 
-class renet_library
-{
+} // namespace
+
+struct renet_context::impl {
     public:
-        ~renet_library() {
+        ~impl() {
             if( runtime_ != nullptr && destroy_ != nullptr ) {
                 destroy_( runtime_ );
             }
@@ -306,6 +307,15 @@ class renet_library
                 dlclose( library_ );
             }
 #endif
+        }
+
+        void reset() {
+            std::lock_guard<std::mutex> lock( mutex_ );
+            if( runtime_ != nullptr && destroy_ != nullptr ) {
+                destroy_( runtime_ );
+                runtime_ = nullptr;
+            }
+            last_error_cache_.clear();
         }
 
         bool available() {
@@ -1072,240 +1082,245 @@ class renet_library
         activity_count_fn activity_count_ = nullptr;
 };
 
-renet_library &library()
+renet_context::renet_context() : impl_( std::make_unique<impl>() ) {}
+renet_context::~renet_context() = default;
+
+renet_context::impl &renet_context::state()
 {
-    static renet_library instance;
-    return instance;
+    return *impl_;
 }
 
-} // namespace
-
-bool renet_transport_available()
+void renet_context::reset()
 {
-    return library().available();
+    impl_->reset();
 }
 
-std::vector<uint64_t> renet_transport_connected_peers()
+bool renet_context::available()
 {
-    return library().connected_peers();
+    return state().available();
 }
 
-void renet_transport_disconnect_peer( uint64_t peer )
+std::vector<uint64_t> renet_context::connected_peers()
 {
-    library().disconnect_peer( peer );
+    return state().connected_peers();
 }
 
-bool renet_transport_start_host( const std::string &bind_addr )
+void renet_context::disconnect_peer( uint64_t peer )
 {
-    return library().start_host( bind_addr );
+    state().disconnect_peer( peer );
 }
 
-bool renet_transport_start_client( const std::string &server_addr, uint64_t client_id )
+bool renet_context::start_host( const std::string &bind_addr )
 {
-    return library().start_client( server_addr, client_id );
+    return state().start_host( bind_addr );
 }
 
-void renet_transport_stop()
+bool renet_context::start_client( const std::string &server_addr, uint64_t client_id )
 {
-    library().stop();
+    return state().start_client( server_addr, client_id );
 }
 
-void renet_transport_pump()
+void renet_context::stop()
 {
-    library().pump();
+    state().stop();
 }
 
-renet_status renet_transport_get_status()
+void renet_context::pump()
 {
-    return library().status();
+    state().pump();
 }
 
-bool renet_transport_send( uint64_t peer_id, renet_channel channel, const std::string &payload )
+renet_status renet_context::status()
 {
-    return library().send( peer_id, channel, payload );
+    return state().status();
 }
 
-renet_mutation_queue_status renet_mutation_enqueue_batch( uint32_t seq, uint32_t grant_seq,
+bool renet_context::send( uint64_t peer_id, renet_channel channel, const std::string &payload )
+{
+    return state().send( peer_id, channel, payload );
+}
+
+renet_mutation_queue_status renet_context::mutation_enqueue_batch( uint32_t seq, uint32_t grant_seq,
         const std::vector<std::string> &packets )
 {
-    return library().mutation_enqueue_batch( seq, grant_seq, packets );
+    return state().mutation_enqueue_batch( seq, grant_seq, packets );
 }
 
-renet_mutation_queue_status renet_mutation_ack( uint32_t seq )
+renet_mutation_queue_status renet_context::mutation_ack( uint32_t seq )
 {
-    return library().mutation_ack( seq );
+    return state().mutation_ack( seq );
 }
 
-renet_mutation_queue_status renet_mutation_status()
+renet_mutation_queue_status renet_context::mutation_status()
 {
-    return library().mutation_status();
+    return state().mutation_status();
 }
 
-std::vector<renet_packet> renet_transport_drain( uint32_t max_packets )
+std::vector<renet_packet> renet_context::drain( uint32_t max_packets )
 {
-    return library().drain( max_packets );
+    return state().drain( max_packets );
 }
 
-std::string renet_transport_last_error()
+std::string renet_context::last_error()
 {
-    return library().last_error();
+    return state().last_error();
 }
 
-std::string renet_transport_stats_json()
+std::string renet_context::stats_json()
 {
-    return library().stats_json();
+    return state().stats_json();
 }
 
-std::vector<std::string> renet_delta_packetize_object_array( const std::string &type,
+std::vector<std::string> renet_context::delta_packetize_object_array( const std::string &type,
         const std::string &array_member, const std::string &array_json,
         const std::string &common_fields, const std::string &extra_fields,
         uint32_t max_packet_bytes )
 {
-    return library().delta_packetize_object_array( type, array_member, array_json,
+    return state().delta_packetize_object_array( type, array_member, array_json,
             common_fields, extra_fields, max_packet_bytes );
 }
 
-void renet_state_reset()
+void renet_context::state_reset()
 {
-    library().state_reset();
+    state().state_reset();
 }
 
-renet_tile_delta_flags renet_tile_submit( int32_t x, int32_t y, int32_t z,
+renet_tile_delta_flags renet_context::tile_submit( int32_t x, int32_t y, int32_t z,
         const std::string &terrain, const std::string &furniture,
         const std::string &items_sig, const std::string &fields_sig,
         const std::string &trap_sig, const std::string &graffiti_sig )
 {
-    return library().tile_submit( x, y, z, terrain, furniture, items_sig, fields_sig,
-                                  trap_sig, graffiti_sig );
+    return state().tile_submit( x, y, z, terrain, furniture, items_sig, fields_sig,
+                                trap_sig, graffiti_sig );
 }
 
-std::vector<renet_tile_delta_flags> renet_tile_submit_batch(
+std::vector<renet_tile_delta_flags> renet_context::tile_submit_batch(
     const std::vector<renet_tile_snapshot> &tiles )
 {
-    return library().tile_submit_batch( tiles );
+    return state().tile_submit_batch( tiles );
 }
 
-uint32_t renet_tile_count()
+uint32_t renet_context::tile_count()
 {
-    return library().tile_count();
+    return state().tile_count();
 }
 
-renet_vehicle_delta_flags renet_vehicle_submit_wire_summary( uint32_t nid,
+renet_vehicle_delta_flags renet_context::vehicle_submit_wire_summary( uint32_t nid,
         int32_t x, int32_t y, int32_t z, int16_t face_deg, int16_t turn_dir_deg,
         int32_t velocity, int32_t cruise_velocity, const std::string &name,
         uint32_t parts_count, uint32_t snapshot_generation,
         const std::string &parts_sig, const std::string &cargo_sig,
         const std::string &snapshot_sig, uint32_t snapshot_bytes )
 {
-    return library().vehicle_submit_wire_summary( nid, x, y, z, face_deg, turn_dir_deg,
+    return state().vehicle_submit_wire_summary( nid, x, y, z, face_deg, turn_dir_deg,
             velocity, cruise_velocity, name, parts_count, snapshot_generation,
             parts_sig, cargo_sig, snapshot_sig, snapshot_bytes );
 }
 
-renet_vehicle_delta_flags renet_vehicle_submit_motion( uint32_t nid,
+renet_vehicle_delta_flags renet_context::vehicle_submit_motion( uint32_t nid,
         int32_t x, int32_t y, int32_t z, int16_t face_deg, int16_t turn_dir_deg,
         int32_t velocity, int32_t cruise_velocity )
 {
-    return library().vehicle_submit_motion( nid, x, y, z, face_deg, turn_dir_deg,
-                                            velocity, cruise_velocity );
+    return state().vehicle_submit_motion( nid, x, y, z, face_deg, turn_dir_deg,
+                                          velocity, cruise_velocity );
 }
 
-std::vector<bool> renet_vehicle_submit_part_entries( uint32_t nid,
+std::vector<bool> renet_context::vehicle_submit_part_entries( uint32_t nid,
         const std::vector<std::string> &part_entries, bool force_full )
 {
-    return library().vehicle_submit_part_entries( nid, part_entries, force_full );
+    return state().vehicle_submit_part_entries( nid, part_entries, force_full );
 }
 
-bool renet_vehicle_needs_snapshot( uint32_t nid, const std::string &snapshot_sig,
-                                   bool *available )
+bool renet_context::vehicle_needs_snapshot( uint32_t nid, const std::string &snapshot_sig,
+        bool *available )
 {
-    return library().vehicle_needs_snapshot( nid, snapshot_sig, available );
+    return state().vehicle_needs_snapshot( nid, snapshot_sig, available );
 }
 
-uint32_t renet_vehicle_count()
+uint32_t renet_context::vehicle_count()
 {
-    return library().vehicle_count();
+    return state().vehicle_count();
 }
 
-std::string renet_vehicle_query_json( uint32_t nid )
+std::string renet_context::vehicle_query_json( uint32_t nid )
 {
-    return library().vehicle_query_json( nid );
+    return state().vehicle_query_json( nid );
 }
 
-renet_actor_delta_flags renet_actor_submit_basic( uint64_t nid,
+renet_actor_delta_flags renet_context::actor_submit_basic( uint64_t nid,
         const std::string &name, bool is_host, int32_t x, int32_t y, int32_t z,
         int8_t facing, uint8_t move_mode, bool in_vehicle, bool controlling_vehicle,
         int32_t moves, const std::string &activity, int32_t activity_pct,
         int32_t activity_moves_total, int32_t light_milli,
         const std::string &bodyparts_json, const std::string &effects_json )
 {
-    return library().actor_submit_basic( nid, name, is_host, x, y, z, facing, move_mode,
-                                         in_vehicle, controlling_vehicle, moves, activity,
-                                         activity_pct, activity_moves_total, light_milli,
-                                         bodyparts_json, effects_json );
+    return state().actor_submit_basic( nid, name, is_host, x, y, z, facing, move_mode,
+                                       in_vehicle, controlling_vehicle, moves, activity,
+                                       activity_pct, activity_moves_total, light_milli,
+                                       bodyparts_json, effects_json );
 }
 
-uint32_t renet_actor_count()
+uint32_t renet_context::actor_count()
 {
-    return library().actor_count();
+    return state().actor_count();
 }
 
-std::string renet_actor_query_json( uint64_t nid )
+std::string renet_context::actor_query_json( uint64_t nid )
 {
-    return library().actor_query_json( nid );
+    return state().actor_query_json( nid );
 }
 
-renet_item_delta_flags renet_item_submit_location( uint8_t location_kind,
+renet_item_delta_flags renet_context::item_submit_location( uint8_t location_kind,
         int32_t x, int32_t y, int32_t z, const std::string &slot,
         uint32_t item_count, uint32_t encoded_bytes, const std::string &items_sig,
         const std::string &rot_sig )
 {
-    return library().item_submit_location( location_kind, x, y, z, slot, item_count,
-                                           encoded_bytes, items_sig, rot_sig );
+    return state().item_submit_location( location_kind, x, y, z, slot, item_count,
+                                         encoded_bytes, items_sig, rot_sig );
 }
 
-std::vector<bool> renet_item_submit_slot_entries( uint8_t location_kind,
+std::vector<bool> renet_context::item_submit_slot_entries( uint8_t location_kind,
         int32_t x, int32_t y, int32_t z, const std::string &slot,
         const std::vector<std::string> &entries, bool force_full )
 {
-    return library().item_submit_slot_entries( location_kind, x, y, z, slot, entries,
+    return state().item_submit_slot_entries( location_kind, x, y, z, slot, entries,
             force_full );
 }
 
-uint32_t renet_item_count()
+uint32_t renet_context::item_count()
 {
-    return library().item_count();
+    return state().item_count();
 }
 
-renet_monster_delta_flags renet_monster_submit_basic( uint32_t nid,
+renet_monster_delta_flags renet_context::monster_submit_basic( uint32_t nid,
         const std::string &species, int32_t x, int32_t y, int32_t z, int8_t facing,
         int32_t hp, int32_t speed, int8_t attitude, const std::string &effects_sig )
 {
-    return library().monster_submit_basic( nid, species, x, y, z, facing, hp, speed,
-                                           attitude, effects_sig );
+    return state().monster_submit_basic( nid, species, x, y, z, facing, hp, speed,
+                                         attitude, effects_sig );
 }
 
-renet_monster_delta_flags renet_monster_remove( uint32_t nid )
+renet_monster_delta_flags renet_context::monster_remove( uint32_t nid )
 {
-    return library().monster_remove( nid );
+    return state().monster_remove( nid );
 }
 
-uint32_t renet_monster_count()
+uint32_t renet_context::monster_count()
 {
-    return library().monster_count();
+    return state().monster_count();
 }
 
-renet_activity_delta_flags renet_activity_submit( uint64_t actor_id,
+renet_activity_delta_flags renet_context::activity_submit( uint64_t actor_id,
         const std::string &activity, int32_t pct, int32_t moves_left,
         int32_t moves_total, int32_t calendar_turn )
 {
-    return library().activity_submit( actor_id, activity, pct, moves_left, moves_total,
-                                      calendar_turn );
+    return state().activity_submit( actor_id, activity, pct, moves_left, moves_total,
+                                    calendar_turn );
 }
 
-uint32_t renet_activity_count()
+uint32_t renet_context::activity_count()
 {
-    return library().activity_count();
+    return state().activity_count();
 }
 
 renet_channel renet_channel_for_payload( const std::string &payload )

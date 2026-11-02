@@ -11,6 +11,7 @@
 #include "mp_protocol.h"
 #include "mp_player_identity.h"
 #include "mp_renet_transport.h"
+#include "mp_server.h"
 
 namespace cata_mp
 {
@@ -20,6 +21,7 @@ void mp_set_client_host_player_name( const std::string &name ); // NOLINT(cata-s
 void mp_store_pending_welcome( const std::string &msg ); // NOLINT(cata-static-declarations)
 
 struct client_connection::impl {
+    renet_context transport;
     bool active = false;
     bool joined = false;
     bool disconnected_reported = false;
@@ -30,9 +32,7 @@ struct client_connection::impl {
     std::deque<std::string> incoming;
 
     void close_client() {
-        if( active ) {
-            renet_transport_stop();
-        }
+        transport.reset();
         active = false;
         joined = false;
         disconnected_reported = false;
@@ -71,12 +71,12 @@ struct client_connection::impl {
         if( !active ) {
             return false;
         }
-        for( const renet_packet &packet : renet_transport_drain( 1 ) ) {
+        for( const renet_packet &packet : transport.drain( 1 ) ) {
             if( decode_game_packet( packet.payload, out ) ) {
                 return true;
             }
         }
-        if( !renet_transport_get_status().connected && !disconnected_reported ) {
+        if( !transport.status().connected && !disconnected_reported ) {
             disconnected_reported = true;
             out = "{\"type\":\"state\",\"connected\":false}";
             return true;
@@ -88,33 +88,32 @@ struct client_connection::impl {
                          const std::string &password, const std::string &version ) {
         close_client();
         connect_error.clear();
-        if( !renet_transport_available() ) {
-            connect_error = renet_transport_last_error();
-            return false;
-        }
-        if( renet_transport_get_status().running ) {
-            connect_error = "Another multiplayer transport already owns the runtime";
+        if( !transport.available() ) {
+            connect_error = transport.last_error();
+            close_client();
             return false;
         }
         const std::string address = resolve_server( host, port );
         if( address.empty() ) {
+            close_client();
             return false;
         }
-        if( !renet_transport_start_client( address, 0 ) ) {
-            connect_error = renet_transport_last_error();
+        if( !transport.start_client( address, 0 ) ) {
+            connect_error = transport.last_error();
+            close_client();
             return false;
         }
         active = true;
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
         const std::string probe = handshake( "version_probe", name, password, version );
         if( probe.size() > 16384 ||
-            !renet_transport_send( 0, renet_channel::reliable_ordered, probe ) ) {
+            !transport.send( 0, renet_channel::reliable_ordered, probe ) ) {
             connect_error = "Could not send multiplayer handshake";
             close_client();
             return false;
         }
         while( std::chrono::steady_clock::now() < deadline ) {
-            for( const renet_packet &packet : renet_transport_drain( 32 ) ) {
+            for( const renet_packet &packet : transport.drain( 32 ) ) {
                 std::string message;
                 std::map<std::string, std::string> fields;
                 if( !decode_game_packet( packet.payload, message ) || !read_handshake( message, fields ) ) {
@@ -152,7 +151,7 @@ struct client_connection::impl {
         const std::string join = pending_join.substr( 0, pending_join.size() - 1 ) +
                                  ",\"player_id\":" + wire_quote( player.id.str() ) +
                                  ",\"resume_secret\":" + wire_quote( player.resume_secret ) + "}";
-        joined = renet_transport_send( 0, renet_channel::reliable_ordered, join );
+        joined = transport.send( 0, renet_channel::reliable_ordered, join );
         if( joined ) {
             pending_join.clear();
         }
@@ -161,9 +160,9 @@ struct client_connection::impl {
     void client_send( const std::string &json ) {
         if( active ) {
             const std::string packet = encode_game_packet( json );
-            if( packet.empty() || !renet_transport_send( 0, renet_channel_for_payload( json ), packet ) ) {
+            if( packet.empty() || !transport.send( 0, renet_channel_for_payload( json ), packet ) ) {
                 mp_log( "[ccb-mp] could not queue gameplay message; closing connection" );
-                renet_transport_stop();
+                transport.reset();
             }
         }
     }
@@ -207,6 +206,16 @@ bool client_connection::pending_admission() const
 {
     return enabled() && impl_ && impl_->active && !impl_->joined &&
            !impl_->pending_join.empty();
+}
+
+bool client_connection::transport_running() const
+{
+    return impl_ && impl_->transport.status().running;
+}
+
+bool client_connection::connected() const
+{
+    return impl_ && impl_->transport.status().connected;
 }
 
 void client_connection::prepare_for_world_load()
@@ -284,7 +293,7 @@ bool client_connect( const std::string &host, uint16_t port, const std::string &
                      const std::string &password, const std::string &version )
 {
     auto *client = current_client_connection();
-    if( !client || !client->connect( host, port, name, password, version ) ) {
+    if( !client || get_active_server() || !client->connect( host, port, name, password, version ) ) {
         return false;
     }
     // Metadata is published only by the current owner adapter. A reusable
@@ -301,6 +310,9 @@ bool client_connect( const std::string &host, uint16_t port, const std::string &
 std::string client_connect_error()
 {
     const auto *client = current_client_connection();
+    if( get_active_server() ) {
+        return "Stop hosting before joining another world";
+    }
     return client ? client->error() : "No active application session";
 }
 

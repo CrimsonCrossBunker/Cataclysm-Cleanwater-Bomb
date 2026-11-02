@@ -16,24 +16,23 @@
 
 namespace cata_mp
 {
-void mp_log( const std::string &msg ); // NOLINT(cata-static-declarations)
-unsigned int mp_host_world_seed(); // NOLINT(cata-static-declarations)
-std::string mp_get_host_world_name(); // NOLINT(cata-static-declarations)
-std::string mp_get_host_player_name(); // NOLINT(cata-static-declarations)
-std::string mp_host_omt_welcome_field(); // NOLINT(cata-static-declarations)
+void mp_log_host( const std::string &msg ); // NOLINT(cata-static-declarations)
 
 namespace
 {
 using clock = std::chrono::steady_clock;
 // Lift only after the engine's per-player simulation state is migrated.
 constexpr size_t max_game_peers = 1;
-std::shared_ptr<server> active_server;
-// The process has one native transport. Keep its ownership until the previous
-// worker has been joined, even if that worker exited after an error.
-std::atomic<bool> server_owned{ false };
+
 }
 
 struct server::impl {
+    renet_context transport;
+    std::shared_ptr<event_queue> events;
+    server_welcome welcome;
+    explicit impl( std::shared_ptr<event_queue> queue, server_welcome metadata ) :
+        events( std::move( queue ) ), welcome( std::move( metadata ) ) {}
+
     struct peer {
         std::string name;
         bool authenticated = false;
@@ -49,12 +48,13 @@ struct server::impl {
     size_t outgoing_bytes = 0;
 };
 
-server::server( uint16_t port, std::string password, std::string version )
+server::server( uint16_t port, std::string password, std::string version,
+                std::shared_ptr<event_queue> events, server_welcome welcome )
     : port_( port ), password_( std::move( password ) ), version_( std::move( version ) ),
-      impl_( std::make_unique<impl>() )
+      impl_( std::make_unique<impl>( std::move( events ), std::move( welcome ) ) )
 {
-    if( !renet_transport_start_host( "0.0.0.0:" + std::to_string( port ) ) ) {
-        throw std::runtime_error( renet_transport_last_error() );
+    if( !impl_->transport.start_host( "0.0.0.0:" + std::to_string( port ) ) ) {
+        throw std::runtime_error( impl_->transport.last_error() );
     }
 }
 
@@ -73,7 +73,7 @@ void server::post_send( uint64_t peer_id, const std::string &msg )
     }
     if( impl_->outgoing_bytes + msg.size() > 64 * 1024 * 1024 ) {
         // Reliable gameplay messages must never be silently dropped.
-        mp_log( "[ccb-mp] host outgoing queue exhausted; ending session" );
+        mp_log_host( "[ccb-mp] host outgoing queue exhausted; ending session" );
         impl_->stopping = true;
         return;
     }
@@ -112,7 +112,7 @@ void server::on_disconnected( uint64_t id )
     const impl::peer peer = found->second;
     impl_->peers.erase( found );
     if( peer.authenticated ) {
-        get_mp_queue().push( { mp_event::type::disconnect, peer.name, "", id } );
+        impl_->events->push( { mp_event::type::disconnect, peer.name, "", id } );
         post_broadcast( "{\"type\":\"player_left\",\"name\":" + wire_quote( peer.name ) + "}" );
     }
 }
@@ -124,8 +124,8 @@ void server::on_message( uint64_t id, const std::string &msg )
         return;
     }
     impl::peer &peer = found->second;
-    const auto send = [id]( const std::string & reply ) {
-        return renet_transport_send( id, renet_channel::reliable_ordered, encode_game_packet( reply ) );
+    const auto send = [this, id]( const std::string & reply ) {
+        return impl_->transport.send( id, renet_channel::reliable_ordered, encode_game_packet( reply ) );
     };
     const auto reject = [&]( const std::string & reason ) {
         send( "{\"type\":\"error\",\"message\":" + wire_quote( reason ) + "}" );
@@ -136,7 +136,7 @@ void server::on_message( uint64_t id, const std::string &msg )
     if( !read_handshake( msg, fields ) ) {
         if( peer.authenticated ) {
             // Large gameplay packets are parsed by the game thread.
-            get_mp_queue().push( { mp_event::type::action, peer.name, msg, id } );
+            impl_->events->push( { mp_event::type::action, peer.name, msg, id } );
         } else {
             reject( "Invalid handshake" );
         }
@@ -186,25 +186,34 @@ void server::on_message( uint64_t id, const std::string &msg )
                 return;
             }
         }
+        server_welcome welcome;
+        {
+            std::lock_guard<std::mutex> lock( impl_->mutex );
+            welcome = impl_->welcome;
+        }
+        const std::string position = welcome.host_omt ?
+                                     ",\"host_omt\":[" + std::to_string( ( *welcome.host_omt )[0] ) + "," +
+                                     std::to_string( ( *welcome.host_omt )[1] ) + "," +
+                                     std::to_string( ( *welcome.host_omt )[2] ) + "]" : "";
         send( "{\"type\":\"welcome\",\"transport\":\"ccb-renet-2\",\"player_id\":" +
               wire_quote( type == "join" ? credentials.id.str() : "probe" ) +
               ",\"peer_id\":" + std::to_string( id ) +
-              ",\"world\":" + wire_quote( mp_get_host_world_name() ) +
-              ",\"host_name\":" + wire_quote( mp_get_host_player_name() ) +
-              ",\"current_turn\":0,\"seed\":" + std::to_string( mp_host_world_seed() ) +
-              mp_host_omt_welcome_field() + "}" );
+              ",\"world\":" + wire_quote( welcome.world_name ) +
+              ",\"host_name\":" + wire_quote( welcome.player_name ) +
+              ",\"current_turn\":0,\"seed\":" + std::to_string( welcome.seed ) +
+              position + "}" );
         if( type == "join" ) {
             peer.name = name;
             peer.authenticated = true;
-            get_mp_queue().push( { mp_event::type::connect, name, "", id, credentials } );
+            impl_->events->push( { mp_event::type::connect, name, "", id, credentials } );
             post_broadcast( "{\"type\":\"player_joined\",\"name\":" + wire_quote( name ) + "}" );
-            mp_log( "[ccb-mp] peer joined: " + std::to_string( id ) );
+            mp_log_host( "[ccb-mp] peer joined: " + std::to_string( id ) );
         }
     } else if( type == "quit" ) {
         send( "{\"type\":\"goodbye\"}" );
         peer.closing = clock::now() + std::chrono::milliseconds( 100 );
     } else if( peer.authenticated ) {
-        get_mp_queue().push( { mp_event::type::action, peer.name, msg, id } );
+        impl_->events->push( { mp_event::type::action, peer.name, msg, id } );
     } else {
         reject( "Join required before gameplay messages" );
     }
@@ -212,10 +221,10 @@ void server::on_message( uint64_t id, const std::string &msg )
 
 void server::run()
 {
-    mp_log( "[ccb-mp] Renet UDP host listening on " + std::to_string( port_ ) );
+    mp_log_host( "[ccb-mp] Renet UDP host listening on " + std::to_string( port_ ) );
     try {
         while( !impl_->stopping ) {
-            const auto connected = renet_transport_connected_peers();
+            const auto connected = impl_->transport.connected_peers();
             for( uint64_t id : connected ) {
                 impl_->peers.try_emplace( id );
             }
@@ -226,14 +235,14 @@ void server::run()
                     removed.push_back( entry.first );
                 } else if( clock::now() >= peer.closing ||
                            ( !peer.probed && clock::now() - peer.created > std::chrono::seconds( 10 ) ) ) {
-                    renet_transport_disconnect_peer( entry.first );
+                    impl_->transport.disconnect_peer( entry.first );
                     removed.push_back( entry.first );
                 }
             }
             for( uint64_t id : removed ) {
                 on_disconnected( id );
             }
-            for( const renet_packet &packet : renet_transport_drain( 128 ) ) {
+            for( const renet_packet &packet : impl_->transport.drain( 128 ) ) {
                 std::string msg;
                 if( decode_game_packet( packet.payload, msg ) ) {
                     on_message( packet.peer_id, msg );
@@ -250,15 +259,15 @@ void server::run()
             for( const auto &message : outgoing ) {
                 const std::string packet = encode_game_packet( message.second );
                 if( packet.empty() ) {
-                    mp_log( "[ccb-mp] invalid or oversized outgoing packet; ending session" );
+                    mp_log_host( "[ccb-mp] invalid or oversized outgoing packet; ending session" );
                     stop();
                     break;
                 }
                 for( const auto &entry : impl_->peers ) {
                     if( entry.second.authenticated && entry.second.closing == clock::time_point::max() &&
                         ( message.first == 0 || message.first == entry.first ) ) {
-                        if( !renet_transport_send( entry.first, renet_channel_for_payload( message.second ), packet ) ) {
-                            mp_log( "[ccb-mp] failed to queue reliable gameplay packet; ending session" );
+                        if( !impl_->transport.send( entry.first, renet_channel_for_payload( message.second ), packet ) ) {
+                            mp_log_host( "[ccb-mp] failed to queue reliable gameplay packet; ending session" );
                             stop();
                         }
                     }
@@ -273,15 +282,25 @@ void server::run()
             std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
         }
     } catch( ... ) {
-        renet_transport_stop();
+        stop();
+        impl_->transport.reset();
         throw;
     }
-    renet_transport_stop();
+    stop();
+    impl_->transport.reset();
 }
 
-std::shared_ptr<server> get_active_server()
+bool server::running() const
 {
-    return std::atomic_load( &active_server );
+    return !impl_->stopping;
+}
+
+void server::update_welcome( server_welcome welcome )
+{
+    std::lock_guard<std::mutex> lock( impl_->mutex );
+    if( !impl_->stopping ) {
+        impl_->welcome = std::move( welcome );
+    }
 }
 
 host_session::~host_session()
@@ -291,66 +310,64 @@ host_session::~host_session()
 
 bool host_session::running() const
 {
-    return instance_ && get_active_server() == instance_;
+    return instance_ && instance_->running();
+}
+
+std::shared_ptr<server> host_session::active_server() const
+{
+    return running() ? instance_ : nullptr;
+}
+
+event_queue &host_session::events()
+{
+    if( !events_ ) {
+        events_ = std::make_shared<event_queue>();
+    }
+    return *events_;
+}
+
+void host_session::update_welcome( server_welcome welcome )
+{
+    if( instance_ ) {
+        instance_->update_welcome( std::move( welcome ) );
+    }
 }
 
 void host_session::stop()
 {
-    if( !owns_transport_ ) {
-        return;
-    }
     if( instance_ ) {
         instance_->stop();
     }
     if( worker_.joinable() ) {
         worker_.join();
     }
-    // Also covers failure between transport creation and worker startup.
-    renet_transport_stop();
-    auto expected = instance_;
-    std::atomic_compare_exchange_strong( &active_server, &expected, std::shared_ptr<server>() );
     instance_.reset();
-    get_mp_queue().clear();
-    owns_transport_ = false;
-    server_owned = false;
+    if( events_ ) {
+        events_->clear();
+    }
 }
 
-bool host_session::start( uint16_t port, const std::string &password, const std::string &version )
+bool host_session::start( uint16_t port, const std::string &password,
+                          const std::string &version, server_welcome welcome )
 {
     stop();
     error_.clear();
-    bool expected = false;
-    if( !server_owned.compare_exchange_strong( expected, true ) ) {
-        error_ = "Another host session still owns the transport";
-        return false;
-    }
     try {
-        if( renet_transport_get_status().running ) {
-            server_owned = false;
-            error_ = "Stop the active transport before hosting";
-            return false;
-        }
-        owns_transport_ = true;
-        instance_ = std::make_shared<server>( port, password, version );
-        get_mp_queue().clear();
-        std::atomic_store( &active_server, instance_ );
+        events();
+        instance_ = std::make_shared<server>( port, password, version, events_, std::move( welcome ) );
         worker_ = std::thread( [instance = instance_]() {
             try {
                 instance->run();
             } catch( const std::exception &error ) {
-                mp_log( std::string( "[ccb-mp] SERVER-ERROR: " ) + error.what() );
+                mp_log_host( std::string( "[ccb-mp] SERVER-ERROR: " ) + error.what() );
             } catch( ... ) {
-                mp_log( "[ccb-mp] SERVER-ERROR: unknown worker failure" );
+                mp_log_host( "[ccb-mp] SERVER-ERROR: unknown worker failure" );
             }
-            auto expected_instance = instance;
-            std::atomic_compare_exchange_strong( &active_server, &expected_instance,
-                                                 std::shared_ptr<server>() );
         } );
         return true;
     } catch( const std::exception &error ) {
         error_ = error.what();
         stop();
-        server_owned = false;
         return false;
     }
 }

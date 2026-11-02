@@ -71,6 +71,19 @@ def main():
         return peer
 
     try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as first, \
+                socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as second:
+            first.bind(('127.0.0.1', 0))
+            second.bind(('127.0.0.1', 0))
+            context_ports = [str(first.getsockname()[1]), str(second.getsockname()[1])]
+        with open(args.logs / 'contexts.log', 'w', encoding='utf-8') as log:
+            contexts = subprocess.run([str(binary), 'contexts', *context_ports],
+                                      stdout=log, stderr=log, timeout=30)
+        assert contexts.returncode == 0, 'session isolation failed; see contexts.log'
+        results.extend(['independent_replication_baselines', 'reset_joins_owned_rust_worker',
+                        'two_host_client_pairs_in_one_process', 'session_local_event_queues',
+                        'retained_server_lease_does_not_retain_workers',
+                        'other_session_survives_stop_and_reconnect', 'owned_welcome_updates'])
         host = start('host', 'host', port)
         assert host.read() == 'READY'
         assert host.command('competing-owner') == 'OK'
@@ -100,12 +113,12 @@ def main():
         assert client.read() == 'READY'
         welcome = client.message()
         assert welcome['world'] == '测试世界"\\\n' and welcome['seed'] == 12345
-        assert welcome['spawn_omt'] == [1, 2, 0]
+        assert welcome['host_omt'] == [1, 2, 0]
         assert client.command('pending-setup') == 'OK'
         assert client.command('competing-client') == 'OK'
         assert host.command('competing-client') == 'OK'
         results.extend(['pending_client_survives_initial_setup',
-                        'client_cannot_steal_live_client_or_host_transport'])
+                        'independent_client_preserves_live_client_and_host'])
         assert host.command('next') == 'EMPTY', 'probe spawned a player'
         assert client.command('join-invalid') == 'OK'
         assert host.command('next') == 'EMPTY', 'invalid local profile sent a join'
@@ -194,7 +207,7 @@ def main():
         assert recovered.message()['type'] == 'player_joined'
         recovered.close()
         assert host.command('next').startswith('EVENT 1 ')
-        results.extend(['exclusive_owned_host', 'same_process_12_rehosts_and_queue_reset',
+        results.extend(['independent_owned_hosts', 'same_process_12_rehosts_and_queue_reset',
                         'destructor_with_retained_lease', 'bind_failure_recovery',
                         'worker_failure_recovery_with_real_client'])
         rejected = start('owner-rejection', 'client', port, 'player', '口令"\\', 'abc')

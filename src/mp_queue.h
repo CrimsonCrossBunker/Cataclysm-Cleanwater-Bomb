@@ -74,7 +74,7 @@ class event_queue
         std::condition_variable cv_;
 };
 
-// Global queue — Transport thread writes, game thread reads
+// Current-world owner-thread adapter. Producers retain their session's queue.
 event_queue &get_mp_queue();
 
 } // namespace cata_mp
