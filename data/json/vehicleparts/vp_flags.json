@@ -202,7 +202,7 @@
   {
     "id": "TRAP_PROOF",
     "type": "json_flag",
-    "info": "This wheel <info>hovers</info> and will <good>not set off traps</good> such as deep pits or landmines."
+    "info": "This wheel hovers and will not set off traps such as deep pits or landmines."
   },
   {
     "id": "TURRET",
