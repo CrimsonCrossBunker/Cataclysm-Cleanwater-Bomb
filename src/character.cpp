@@ -5938,9 +5938,12 @@ void Character::fall_asleep()
         // In practice, the sleepiness from filling the tank from (no msg) to Time For Bed
         // will last about 8 days.
     } else {
-        time_duration sleep_duration = 10_hours;  // default max sleep time
+        /* Fall asleep for a max of 12 hours by default. This time can be longer if we have
+        a mutation like Sleepy. We will automatically wake up when we're no longer tired,
+        so shorter naps are already handled. */
+        time_duration sleep_duration = 12_hours;
         if( has_effect( effect_melatonin ) ) {
-            sleep_duration = 12_hours;  // Artificial sleep hormone boost allows you to sleep longer
+            sleep_duration = 13_hours;  // Artificial sleep hormone boost allows you to sleep longer
         }
         fall_asleep( sleep_duration );
     }
