@@ -61,5 +61,11 @@
     "type": "requirement",
     "//": "Used for parts that can't be cut with hand tools",
     "qualities": [ { "id": "SAW_M", "level": 3 } ]
+  },
+  {
+    "id": "vehicle_repair_electronics",
+    "type": "requirement",
+    "//": "Materials used for repairing alternators and general electronics",
+    "components": [ [ [ "scrap", 1 ] ], [ [ "cable", 3 ] ] ]
   }
 ]
