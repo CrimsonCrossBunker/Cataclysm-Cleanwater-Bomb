@@ -9,21 +9,31 @@
 #include "mp_client_conn.h"
 #include "mp_server.h"
 #include "mp_player_store.h"
+#include "mp_world_state.h"
 
 namespace cata_mp
 {
 // Owned by one game/world lifecycle and accessed only by its simulation thread.
-// These are runtime proxy bindings, not persistent player identities. Transport
-// workers publish value events and never hold a pointer to this state.
+// Persistent identities, transient simulation state and presentation each have
+// an explicit lifetime. Workers publish values, never pointers into this state.
 struct world_session {
-        ~world_session() {
-            reset();
-        }
+        world_session();
+        ~world_session();
 
         host_session hosting;
         server_welcome host_info;
         apply_watchdog client_apply_watchdog;
         client_connection client;
+        // Setup preserves launch intent, while a full exit clears it.
+        bool server_mode = false;
+        bool host_mode = false;
+        std::string last_marked_world;
+        world_replication_state replication;
+        host_turn_state host_turn;
+        client_turn_state client_turn;
+        peer_observation peer;
+        client_admission_state admission;
+        session_presentation presentation;
         character_id remote_actor_id;
         bool remote_connected = false;
         uint64_t remote_peer_id = 0;
@@ -39,37 +49,14 @@ struct world_session {
             return remote_connected && peer_id != 0 && peer_id == remote_peer_id;
         }
 
-        void reset() {
-            reset_state( false );
-        }
+        void reset();
 
         // Menu/CLI probes precede setup(). Preserve only an unadopted attempt;
         // established connections must end before world objects are replaced.
-        void prepare_for_world_load() {
-            reset_state( true );
-        }
+        void prepare_for_world_load();
 
     private:
-        void reset_state( bool preserve_pending_client ) {
-            client_apply_watchdog.stop();
-            hosting.stop();
-            host_info = {};
-            if( preserve_pending_client ) {
-                client.prepare_for_world_load();
-            } else {
-                client.reset();
-            }
-            remote_actor_id = character_id();
-            remote_connected = false;
-            remote_peer_id = 0;
-            remote_player = {};
-            remote_detach_pending = false;
-            local_player.reset();
-            players.reset();
-            client_host_actor_id = character_id();
-            client_host_spawned = false;
-            stale_proxy_cleanup_done = false;
-        }
+        void reset_state( bool preserve_pending_client );
 };
 } // namespace cata_mp
 

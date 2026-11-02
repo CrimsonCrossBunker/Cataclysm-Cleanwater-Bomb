@@ -8,6 +8,7 @@
 #include "mp_world_session.h"
 #include "rng.h"
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_utility.h"
 #include "filesystem.h"
 #include "npc.h"
@@ -122,6 +123,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     connect( 404, profile );
     REQUIRE( session.remote_connected );
     CHECK( session.remote_actor_id == original_id );
+
 }
 
 TEST_CASE( "mp_restored_actor_ids_cannot_be_reallocated", "[multiplayer][player_identity]" )
@@ -339,4 +341,107 @@ TEST_CASE( "mp_host_metadata_and_events_belong_to_the_owning_world",
     CHECK_FALSE( cata_mp::mp_host_omt_valid() );
     REQUIRE( other.hosting.events().pop( event ) );
     CHECK( event.data == "survivor" );
+}
+
+TEST_CASE( "mp_world_state_does_not_cross_owner_or_reload_boundaries",
+           "[multiplayer][world_session][lifecycle][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    auto &current = g->multiplayer_session();
+    const on_out_of_scope cleanup( [&]() {
+        current.reset();
+    } );
+    current.reset();
+    cata_mp::world_session other;
+    const tripoint_abs_ms location( 4, 5, 0 );
+    cata_mp::set_host_mode( true );
+    current.replication.host.tile_baseline[location].ter = "t_wall";
+    other.replication.host.tile_baseline[location].ter = "t_floor";
+    current.replication.client.phantom_strikes["zombie@4,5,0"] = 2;
+    current.replication.client.pending_omsync.emplace_back();
+    current.client_turn.client_waiting_for_ack = true;
+    current.client_turn.client_last_grant_seq = 41;
+    current.peer.partner_activity = "ACT_CRAFT";
+    current.peer.partner_activity_moves_total = 20000;
+    current.peer.partner_activity_pct = 75;
+    CHECK( cata_mp::partner_activity_accepts_help() );
+    CHECK( cata_mp::partner_activity_pct() == 75 );
+    CHECK_FALSE( other.host_mode );
+    other.reset();
+    CHECK( cata_mp::is_host_mode() );
+    CHECK( current.replication.host.tile_baseline.at( location ).ter == "t_wall" );
+    CHECK( current.replication.client.phantom_strikes.at( "zombie@4,5,0" ) == 2 );
+
+    other.replication.host.tile_baseline[location].ter = "t_door_c";
+    other.host_turn.grant_seq = 99;
+    current.prepare_for_world_load();
+    CHECK( cata_mp::is_host_mode() ); // Launch intent survives setup.
+    CHECK( current.replication.host.tile_baseline.empty() );
+    CHECK( current.replication.client.phantom_strikes.empty() );
+    CHECK( current.replication.client.pending_omsync.empty() );
+    CHECK_FALSE( current.client_turn.client_waiting_for_ack );
+    CHECK( current.client_turn.client_last_grant_seq == 0 );
+    CHECK( cata_mp::partner_activity_moves_total() == 0 );
+    CHECK( cata_mp::partner_activity_pct() == 0 );
+    CHECK( other.replication.host.tile_baseline.at( location ).ter == "t_door_c" );
+    CHECK( other.host_turn.grant_seq == 99 );
+    current.reset();
+    CHECK_FALSE( cata_mp::is_host_mode() );
+}
+
+TEST_CASE( "mp_failed_admission_metadata_cannot_leak_into_another_world",
+           "[multiplayer][world_session][lifecycle][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    auto &current = g->multiplayer_session();
+    const on_out_of_scope cleanup( [&]() {
+        current.reset();
+    } );
+    cata_mp::set_client_mode( true );
+    cata_mp::mp_store_pending_welcome(
+        R"({"type":"welcome","world":"old world","host_name":"old host","seed":42,"host_omt":[3,4,0]})" );
+    REQUIRE( cata_mp::mp_client_spawn_omt() == tripoint_abs_omt( 3, 4, 0 ) );
+    // UI intent and a welcome string are insufficient: only a successful live
+    // unjoined probe may retain its spawn metadata across production setup.
+    REQUIRE_FALSE( current.client.pending_admission() );
+    current.prepare_for_world_load();
+    CHECK_FALSE( cata_mp::is_client_mode() );
+    CHECK( cata_mp::mp_client_host_world_name().empty() );
+    CHECK( cata_mp::mp_client_host_player_name().empty() );
+    CHECK( cata_mp::mp_client_spawn_omt() == tripoint_abs_omt::invalid );
+    CHECK( current.admission.pending_welcome.empty() );
+}
+
+TEST_CASE( "mp_client_body_updates_restart_in_a_new_world_at_the_same_time",
+           "[multiplayer][world_session][lifecycle][regression]" )
+{
+    REQUIRE_FALSE( cata_mp::is_session_active() );
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    auto &session = g->multiplayer_session();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_avatar();
+    } );
+    clear_map_without_vision();
+    const auto start_world = [&]() {
+        session.reset();
+        calendar::turn = calendar::turn_zero + 11_hours;
+        clear_avatar();
+        cata_mp::set_client_mode( true );
+        avatar &player = get_avatar();
+        player.set_stamina( player.get_stamina_max() / 2 );
+        calendar::turn += 1_turns;
+        return player.get_stamina();
+    };
+    const int first_initial = start_world();
+    cata_mp::mp_do_turn_update_body( get_avatar() );
+    const int first_updated = get_avatar().get_stamina();
+    REQUIRE( first_updated > first_initial );
+    cata_mp::mp_do_turn_update_body( get_avatar() );
+    CHECK( get_avatar().get_stamina() == first_updated );
+
+    const int second_initial = start_world();
+    cata_mp::mp_do_turn_update_body( get_avatar() );
+    CHECK( get_avatar().get_stamina() > second_initial );
 }
