@@ -74,3 +74,29 @@ TEST_CASE( "snapshot_astar_distinguishes_directional_obstacles", "[pathfinding][
     target.entering_cost.fill( -1 );
     CHECK( search_route_snapshot( snapshot ).path.empty() );
 }
+
+TEST_CASE( "snapshot_astar_sparse_checks_cover_exactly_the_read_cells", "[pathfinding][threading]" )
+{
+    auto snapshot = open_snapshot();
+    SECTION( "open terrain" ) {}
+    SECTION( "avoided alternative" ) {
+        snapshot.cells[snapshot.index( tripoint_bub_ms( 14, 14, 0 ) )].avoid = true;
+    }
+    SECTION( "unreachable target" ) {
+        snapshot.cells[snapshot.index( snapshot.target )].entering_cost.fill( -1 );
+    }
+    SECTION( "length limit" ) {
+        snapshot.max_length = 3;
+    }
+    const auto result = search_route_snapshot( snapshot );
+    std::vector<unsigned> visits( snapshot.cells.size() );
+    for( const std::size_t index : result.checked_cells ) {
+        REQUIRE( index < visits.size() );
+        ++visits[index];
+    }
+    for( std::size_t index = 0; index < visits.size(); ++index ) {
+        const bool checked = result.checked_avoid[index] || result.checked_cost[index] != 0;
+        CHECK( visits[index] == ( checked ? 1u : 0u ) );
+    }
+    CHECK( result.checked_cells.size() < snapshot.cells.size() );
+}

@@ -35,6 +35,8 @@ struct route_snapshot_result {
     // Record every decision used by A*, including rejected alternatives.
     std::vector<uint8_t> checked_avoid;
     std::vector<uint8_t> checked_cost;
+    // Sparse union of the two masks, so the owner only rechecks visited cells.
+    std::vector<std::size_t> checked_cells;
 };
 
 route_snapshot_result search_route_snapshot( const route_snapshot &snapshot );

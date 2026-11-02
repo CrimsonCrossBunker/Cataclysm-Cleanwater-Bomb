@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MONSTER_PATH_BATCH_H
 #define CATA_SRC_MONSTER_PATH_BATCH_H
 
+#include <array>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -22,6 +23,12 @@ class monster_path_batch
 
         void add( const Creature &who, const tripoint_bub_ms &target );
         void prepare( const map &here );
+        std::size_t prepared_count() const {
+            return published_ ? entries_.size() : 0;
+        }
+        std::size_t used_count() const {
+            return used_count_;
+        }
         static std::optional<std::vector<tripoint_bub_ms>> take(
             const map &here, const Creature &who, const pathfinding_target &target );
 
@@ -37,10 +44,15 @@ class monster_path_batch
             route_snapshot_result result;
             bool used = false;
         };
+        struct cost_group {
+            pathfinding_settings settings;
+            std::unordered_map<tripoint_bub_ms, std::array<int, 8>> cells;
+        };
         static bool simple_route( const map &here, const Creature &who,
                                   const tripoint_bub_ms &target );
         static std::optional<route_snapshot> capture( const map &here, const Creature &who,
-                const tripoint_bub_ms &target );
+                const tripoint_bub_ms &target, std::vector<cost_group> &costs,
+                std::size_t &cached_cells, std::size_t remaining_cells );
         std::vector<candidate> candidates_;
         std::vector<entry> entries_;
         std::unordered_map<const Creature *, std::size_t> indices_;
@@ -48,6 +60,7 @@ class monster_path_batch
         const map *map_ = nullptr;
         monster_path_batch *previous_ = nullptr;
         bool published_ = false;
+        std::size_t used_count_ = 0;
 };
 
 #endif // CATA_SRC_MONSTER_PATH_BATCH_H

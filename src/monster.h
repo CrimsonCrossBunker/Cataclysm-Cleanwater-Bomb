@@ -26,6 +26,7 @@
 #include "creature.h"
 #include "monster_uid.h"
 #include "monster_goal_policy.h"
+#include "monster_friendliness.h"
 #include "pet_slot.h"
 #include "type_id.h"
 #include "units_fwd.h"
@@ -605,7 +606,7 @@ class monster : public Creature
         void move_special_item_to_inv( cata::value_ptr<item> &it );
 
         // DEFINING VALUES
-        int friendly = 0;
+        monster_friendliness friendly = 0;
         int anger = 0;
         int morale = 2;
         uint32_t mp_net_id = 0; // MP: network ID for multiplayer monster tracking

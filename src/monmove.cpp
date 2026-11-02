@@ -46,15 +46,19 @@
 #include "mongroup.h"
 #include "monster_destination_plan.h"
 #include "monster_movement_plan.h"
+#include "monster_move_profile.h"
 #include "monster_oracle.h"
 #include "monster_planning_reaction.h"
 #include "monster_step_selection.h"
 #include "monster_target_selection.h"
+#include "monster_target_batch.h"
+#include "monster_target_frame.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
 #include "pathfinding.h"
 #include "monster_path_batch.h"
+#include "monster_scent_batch.h"
 #include "pimpl.h"
 #include "point.h"
 #include "profiling.h"
@@ -568,6 +572,7 @@ bool monster::mating_angry() const
 void monster::plan()
 {
     CATA_PROFILE_SCOPE();
+    monster_move_scope plan_timing( monster_move_stage::plan_other );
     monster_plan mon_plan( *this );
 
     map &here = get_map();
@@ -612,10 +617,31 @@ void monster::plan()
         }
         anger_cub_threatened( mon_plan );
     } else if( friendly != 0 && !mon_plan.docile ) {
-        for( monster &tmp : g->all_monsters() ) {
-            if( tmp.friendly == 0 && tmp.attitude_to( *this ) == Attitude::HOSTILE &&
-                seen_levels.test( tmp.posz() + OVERMAP_DEPTH ) ) {
-                float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning );
+        monster_move_scope target_timing( monster_move_stage::friendly_targets );
+        std::vector<shared_ptr_fast<monster>> targets;
+        std::vector<monster_target_geometry> geometry;
+        if( !monster_target_frame::collect( *this, targets ) ) {
+            // Standalone planning outside the simulation pass retains full discovery.
+            for( const auto &entry : get_creature_tracker().get_monsters_list() ) {
+                if( hostile_to_player_ally( entry->friendly, entry->morale, entry->anger ) &&
+                    !entry->is_dead() ) {
+                    targets.push_back( entry );
+                }
+            }
+        }
+        targets.erase( std::remove_if( targets.begin(), targets.end(), [&]( const auto &entry ) {
+            return !seen_levels.test( entry->posz() + OVERMAP_DEPTH );
+        } ), targets.end() );
+        geometry.reserve( targets.size() );
+        for( const auto &entry : targets ) {
+            geometry.push_back( { entry->pos_bub( here ), FastDistanceApproximation( 0 ) } );
+        }
+        if( !targets.empty() ) {
+            prepare_monster_target_geometry( pos_bub( here ), trigdist, geometry );
+            for( std::size_t i = 0; i < targets.size(); ++i ) {
+                monster &tmp = *targets[i];
+                const float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning,
+                                                  &geometry[i].distance );
                 const monster_target_selection selection( { mon_plan.dist, 0, mon_plan.fleeing },
                         monster_target_kind::friendly_monster, rating );
                 const monster_target_choice choice = selection.result();
@@ -706,11 +732,7 @@ void monster::plan()
     int turns_to_skip = max_turns_to_skip * rate_limiting_factor;
     creature_tracker &tracker = get_creature_tracker();
     const auto visit_candidates = [&]( const auto &faction_filter, const auto &visit ) {
-        struct candidate {
-            monster *actor;
-            tripoint_bub_ms position;
-            FastDistanceApproximation distance{ 0 };
-        };
+        monster_move_scope target_timing( monster_move_stage::reachable_targets );
         const auto eligible = [&]( Creature *other ) -> monster * {
             return seen_levels.test( other->posz() + OVERMAP_DEPTH ) ?
                    dynamic_cast<monster *>( other ) : nullptr;
@@ -723,25 +745,18 @@ void monster::plan()
             } );
             return;
         }
-        std::vector<candidate> candidates;
+        std::vector<monster *> candidates;
+        std::vector<monster_target_geometry> geometry;
         tracker.for_each_reachable( *this, faction_filter, [&]( Creature *other ) {
             if( monster *mon = eligible( other ) ) {
-                candidates.push_back( { mon, mon->pos_bub( here ), FastDistanceApproximation( 0 ) } );
+                candidates.push_back( mon );
+                geometry.push_back( { mon->pos_bub( here ), FastDistanceApproximation( 0 ) } );
             }
         } );
-        const tripoint_bub_ms origin = pos_bub( here );
-        const bool euclidean = trigdist;
-        cpu_parallel_for( cpu_task_kind::monster_targets, candidates.size(), 128,
-        [&]( std::size_t begin, std::size_t end ) {
-            for( std::size_t i = begin; i < end; ++i ) {
-                candidate &entry = candidates[i];
-                entry.distance = euclidean ? trig_dist_fast( origin, entry.position ) :
-                                 square_dist_fast( origin, entry.position );
-            }
-        } );
+        prepare_monster_target_geometry( pos_bub( here ), trigdist, geometry );
         // Visibility, attitudes, tie RNG and destination changes keep their original order.
-        for( const candidate &entry : candidates ) {
-            visit( *entry.actor, &entry.distance );
+        for( std::size_t i = 0; i < candidates.size(); ++i ) {
+            visit( *candidates[i], &geometry[i].distance );
         }
     };
     if( friendly == 0 && ( turns_to_skip == 0 || turns_since_target % turns_to_skip == 0 ) ) {
@@ -986,6 +1001,7 @@ void monster::prepare_path_search( monster_path_batch &batch, const map &here ) 
 // 4) Sound-based tracking
 void monster::move()
 {
+    monster_move_scope timing( monster_move_stage::other );
     map &here = get_map();
 
     add_msg_debug( debugmode::DF_MONMOVE, "Monster %s starting monmove::move, remaining moves %d",
@@ -1003,6 +1019,7 @@ void monster::move()
     }
     Character &player_character = get_player_character();
 
+    timing.set( monster_move_stage::behavior );
     behavior::monster_oracle_t oracle( this );
     behavior::tree goals;
     goals.add( type->get_goals() );
@@ -1011,6 +1028,7 @@ void monster::move()
     //If there are. Consume them.
     // TODO: Stick this in a map and dispatch to it via the action string.
     // TODO: Create a special attacks whitelist unordered map instead of an if chain.
+    timing.set( monster_move_stage::special_attacks );
     std::map<std::string, mtype_special_attack>::const_iterator attack =
         type->special_attacks.find( action );
     if( attack != type->special_attacks.end() && attack->second->call( *this ) ) {
@@ -1061,6 +1079,7 @@ void monster::move()
         }
     }
 
+    timing.set( monster_move_stage::effects );
     // Check if they're dragging a foe and find their hapless victim
     Character *dragged_foe = find_dragged_foe();
 
@@ -1122,6 +1141,7 @@ void monster::move()
             return; // don't move if friendly and passenger in a moving vehicle
         }
     }
+    timing.set( monster_move_stage::attitude );
     // Set attitude to attitude to our current target
     monster_attitude current_attitude = attitude( nullptr );
     if( !is_wandering() ) {
@@ -1161,6 +1181,7 @@ void monster::move()
     bool try_to_move = false;
     creature_tracker &creatures = get_creature_tracker();
 
+    timing.set( monster_move_stage::neighbors );
     // Check z-level neighbors too so creatures on stairs aren't falsely stuck
     for( const tripoint_bub_ms &dest : here.points_in_radius( pos_bub(), 1, 1 ) ) {
         if( dest != pos_bub() ) {
@@ -1172,6 +1193,7 @@ void monster::move()
         }
     }
 
+    timing.set( monster_move_stage::tracking );
     // If true, don't try to greedily avoid locally bad paths
     bool pathed = false;
     tripoint_bub_ms local_dest = here.get_bub( get_dest() );
@@ -1206,6 +1228,7 @@ void monster::move()
             const pathfinding_settings &pf_settings = get_pathfinding_settings();
             if( pf_settings.max_dist >= rl_dist( pos_abs(), get_dest() ) &&
                 ( path.empty() || rl_dist( pos_bub(), path.front() ) >= 2 || path.back() != local_dest ) ) {
+                monster_move_scope path_timing( monster_move_stage::path );
                 // We need a new path
                 if( can_pathfind() ) {
                     path = here.route( *this, pathfinding_target::point( local_dest ) );
@@ -1275,6 +1298,7 @@ void monster::move()
         }
     }
 
+    timing.set( monster_move_stage::selection );
     tripoint_abs_ms next_step;
     const bool can_open_doors = has_flag( mon_flag_CAN_OPEN_DOORS ) && !is_hallucination();
     const bool staggers = has_flag( mon_flag_STUMBLES );
@@ -1442,6 +1466,7 @@ void monster::move()
     }
     // Finished logic section.  By this point, we should have chosen a square to
     //  move to (moved = true).
+    timing.set( monster_move_stage::commit );
     if( moved ) { // Actual effects of moving to the square we've chosen
         monster_movement_plan movement_plan( *this, here,
         { next_step, destination, pacified, can_open_doors } );
@@ -1618,6 +1643,7 @@ void monster::footsteps( const tripoint_bub_ms &p )
 
 tripoint_bub_ms monster::scent_move()
 {
+    monster_move_scope timing( monster_move_stage::scent );
     map &here = get_map();
     // TODO: Remove when scentmap is 3D
     if( std::abs( posz() - here.get_abs_sub().z() ) > SCENT_MAP_Z_REACH ) {
@@ -1684,8 +1710,23 @@ tripoint_bub_ms monster::scent_move()
     if( !fleeing && scent_here > smell_threshold ) {
         // Smell too strong to track, wander around
         sdirection.push_back( pos_bub() );
+    } else if( !fleeing ) {
+        if( auto prepared = monster_scent_batch::directions( here, scents, pos_bub(), bestsmell ) ) {
+            sdirection = std::move( *prepared );
+        } else {
+            for( const tripoint_bub_ms &dest : here.points_in_radius( pos_bub(), 1, SCENT_MAP_Z_REACH ) ) {
+                const int smell = scents.get( dest );
+                if( smell > bestsmell ) {
+                    sdirection.clear();
+                    bestsmell = smell;
+                }
+                if( smell == bestsmell ) {
+                    sdirection.push_back( dest );
+                }
+            }
+        }
     } else {
-        // Get direction of scent
+        // Fleeing uses the original minimum-strength search.
         for( const tripoint_bub_ms &dest : here.points_in_radius( pos_bub(), 1, SCENT_MAP_Z_REACH ) ) {
             int smell = scents.get( dest );
 
@@ -1702,12 +1743,22 @@ tripoint_bub_ms monster::scent_move()
         }
     }
 
+    // Overlapping direction neighborhoods revisit the same tile. No world
+    // mutation occurs during this scan; keep duplicate entries as RNG weights.
+    std::array<unsigned char, 75> passability{};
+    const tripoint_bub_ms source = pos_bub();
     for( const tripoint_bub_ms &direction : sdirection ) {
         // Add some randomness to make creatures zigzag towards the source
         for( const tripoint_bub_ms &dest : here.points_in_radius( direction, 1 ) ) {
-            if( here.valid_move( pos_bub(), dest, can_bash, true ) &&
-                ( can_move_to( dest ) || ( dest == player_character.pos_bub() ) ||
-                  ( can_bash && here.bash_rating( bash_estimate(), dest ) > 0 ) ) ) {
+            const std::size_t index = ( ( dest.z() - source.z() + 1 ) * 5 +
+                                       dest.y() - source.y() + 2 ) * 5 + dest.x() - source.x() + 2;
+            auto &cached = passability[index];
+            if( cached == 0 ) {
+                cached = here.valid_move( source, dest, can_bash, true ) &&
+                         ( can_move_to( dest ) || dest == player_character.pos_bub() ||
+                           ( can_bash && here.bash_rating( bash_estimate(), dest ) > 0 ) ) ? 2 : 1;
+            }
+            if( cached == 2 ) {
                 smoves.push_back( dest );
             }
         }
@@ -2560,6 +2611,7 @@ void monster::stumble_involuntary()
  */
 void monster::stumble_base( const bool is_voluntary )
 {
+    monster_move_scope timing( monster_move_stage::stumble );
     // Only move every 10 turns.
     if( !one_in( 10 ) ) {
         return;

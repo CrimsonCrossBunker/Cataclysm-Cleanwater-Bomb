@@ -3425,7 +3425,9 @@ bool mattack::parrot_at_danger( monster *parrot )
 {
     const map &here = get_map();
 
-    Creature *other = get_creature_tracker().find_reachable( *parrot, [parrot,
+    // Impossible candidates no longer consume RNG; eligible threats retain
+    // their one-in-20 trial and owner-thread visibility check in traversal order.
+    Creature *other = get_creature_tracker().find_reachable_danger( *parrot, [parrot,
     &here]( Creature * creature ) {
         if( !creature->is_hallucination() && one_in( 20 ) ) {
             if( creature->is_avatar() || creature->is_npc() ) {

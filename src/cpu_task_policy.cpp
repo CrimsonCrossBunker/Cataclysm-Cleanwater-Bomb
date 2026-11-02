@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
-unsigned cpu_task_policy::choose( std::size_t count, unsigned available, std::size_t grain ) const
+unsigned cpu_task_policy::choose( std::size_t count, unsigned available, std::size_t grain,
+                                  bool latency_sensitive ) const
 {
     grain = std::max<std::size_t>( grain, 1 );
     if( count / grain < 2 || available == 0 ) {
@@ -11,9 +12,19 @@ unsigned cpu_task_policy::choose( std::size_t count, unsigned available, std::si
     }
     const unsigned limit = static_cast<unsigned>( std::min<std::size_t>(
                                std::min( available, cpu_worker_limit ), count / grain - 1 ) );
-    // Learn a serial baseline first, and do not dispatch sub-250us batches.
-    const double serial_cost = samples_[0].ns_per_item;
-    if( samples_[0].observations < 3 || serial_cost * count < 250000.0 ) {
+    // Large path batches must not freeze the owner just to learn three serial
+    // baselines. Start with useful parallelism, then compare measured quotas.
+    double serial_cost = samples_[0].ns_per_item;
+    if( latency_sensitive && samples_[0].observations == 0 && count / grain >= 32 ) {
+        if( statistics_.batches == 0 ) {
+            return std::min( limit, static_cast<unsigned>(
+                                 std::min<std::size_t>( cpu_worker_limit, count / grain / 4 ) ) );
+        }
+        serial_cost = samples_[statistics_.last_workers].ns_per_item *
+                      ( statistics_.last_workers + 1 );
+    }
+    const double estimated_serial = serial_cost * count;
+    if( ( !latency_sensitive && samples_[0].observations < 3 ) || estimated_serial < 250000.0 ) {
         return 0;
     }
     unsigned best = 0;
@@ -24,10 +35,26 @@ unsigned cpu_task_policy::choose( std::size_t count, unsigned available, std::si
             cost = samples_[i].ns_per_item;
         }
     }
-    // Periodic serial samples detect changed workloads. Probe one larger quota
-    // at a time, never jump from one worker to the whole CPU on a single sample.
-    if( statistics_.batches % 32 == 0 ) {
+    // Do not periodically reintroduce a multi-second serial stall. A small
+    // observed batch can safely refresh the baseline when the workload shrinks.
+    const double projected_serial = samples_[statistics_.last_workers].ns_per_item * count *
+                                    ( statistics_.last_workers + 1 );
+    constexpr double serial_probe_budget = 8000000.0;
+    const bool safe_serial_probe = !latency_sensitive || estimated_serial <= serial_probe_budget ||
+                                   projected_serial <= serial_probe_budget;
+    if( statistics_.batches % 32 == 0 && safe_serial_probe ) {
         return 0;
+    }
+    if( latency_sensitive && estimated_serial >= serial_probe_budget ) {
+        const unsigned next = static_cast<unsigned>( std::min<double>( limit,
+                              std::max( 1.0, std::ceil( estimated_serial / 2000000.0 ) - 1 ) ) );
+        if( next > best && ( samples_[next].observations == 0 || statistics_.batches % 16 == 0 ) ) {
+            return next;
+        }
+        // Also test lower quotas: more workers need not be faster on hybrid CPUs.
+        if( best > 1 && statistics_.batches % 16 == 0 ) {
+            return best / 2;
+        }
     }
     if( best != 0 && samples_[best].observations < 3 ) {
         return best;

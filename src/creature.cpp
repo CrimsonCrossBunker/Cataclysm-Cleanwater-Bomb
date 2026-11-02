@@ -69,6 +69,7 @@
 #include "mdarray.h"
 #include "messages.h"
 #include "monster.h"
+#include "monster_target_frame.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -338,12 +339,13 @@ void Creature::move_to( const tripoint_abs_ms &loc )
 
 void Creature::set_pos_bub_only( const map &here, const tripoint_bub_ms &p )
 {
-    location = here.get_abs( p );
+    set_pos_abs_only( here.get_abs( p ) );
 }
 
 void Creature::set_pos_abs_only( const tripoint_abs_ms &loc )
 {
     location = loc;
+    monster_target_frame::moved( this, loc );
 }
 
 void Creature::on_move( const tripoint_abs_ms &old_pos )

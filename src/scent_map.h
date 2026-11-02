@@ -3,6 +3,7 @@
 #define CATA_SRC_SCENT_MAP_H
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <set>
 #include <string>
@@ -56,9 +57,13 @@ class scent_map
         time_point player_last_moved = calendar::before_time_starts; // NOLINT(cata-serialize)
 
         const game &gm; // NOLINT(cata-serialize)
+        std::uint64_t revision_ = 0; // NOLINT(cata-serialize)
 
     public:
         explicit scent_map( const game &g ) : gm( g ) { }
+
+        std::uint64_t revision() const { return revision_; }
+        std::vector<int> snapshot_values() const;
 
         void deserialize( const std::string &data, bool is_type = false );
         std::string serialize( bool is_type = false ) const;

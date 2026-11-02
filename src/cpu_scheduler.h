@@ -26,6 +26,9 @@ enum class cpu_task_kind : std::size_t {
     item_temperature,
     vision,
     render,
+    monster_scent,
+    monster_danger,
+    monster_target_index,
     count
 };
 
@@ -41,7 +44,8 @@ struct cpu_task_statistics {
 class cpu_task_policy
 {
     public:
-        unsigned choose( std::size_t count, unsigned available, std::size_t grain ) const;
+        unsigned choose( std::size_t count, unsigned available, std::size_t grain,
+                         bool latency_sensitive = false ) const;
         void observe( std::size_t count, unsigned workers, double elapsed_ns );
         cpu_task_statistics statistics() const;
     private:

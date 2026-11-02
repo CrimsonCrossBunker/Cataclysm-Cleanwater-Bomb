@@ -61,7 +61,8 @@ unsigned cpu_parallel_for( cpu_task_kind kind, std::size_t count, std::size_t gr
     {
         std::scoped_lock lock( statistics_mutex );
         workers = policies.at( static_cast<std::size_t>( kind ) ).choose(
-                      count, pool ? std::min( pool->num_workers(), max_workers ) : 0, grain );
+                      count, pool ? std::min( pool->num_workers(), max_workers ) : 0, grain,
+                      kind == cpu_task_kind::monster_paths || kind == cpu_task_kind::monster_scent );
     }
     const auto start = std::chrono::steady_clock::now();
     if( workers == 0 ) {

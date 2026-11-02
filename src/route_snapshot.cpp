@@ -82,6 +82,9 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
             }
             const std::size_t next = snapshot.index( p );
             if( p != snapshot.target ) {
+                if( !result.checked_avoid[next] && result.checked_cost[next] == 0 ) {
+                    result.checked_cells.push_back( next );
+                }
                 result.checked_avoid[next] = true;
                 if( snapshot.cells[next].avoid ) {
                     closed[next] = true;
@@ -90,6 +93,9 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
             }
             if( closed[next] ) {
                 continue;
+            }
+            if( !result.checked_avoid[next] && result.checked_cost[next] == 0 ) {
+                result.checked_cells.push_back( next );
             }
             result.checked_cost[next] |= uint8_t{ 1 } << direction;
             const int cost = snapshot.cells[next].entering_cost[direction];

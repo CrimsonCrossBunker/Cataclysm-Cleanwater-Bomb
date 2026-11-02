@@ -1,4 +1,5 @@
 #include <array>
+#include <vector>
 
 #include "cata_catch.h"
 #include "map.h"
@@ -54,5 +55,27 @@ TEST_CASE( "monster_path_batch_matches_live_search_and_rejects_stale_map", "[mon
     SECTION( "movement invalidates the old start position" ) {
         owners.front().setpos( here, tripoint_bub_ms( 59, 60, 0 ), false );
         CHECK_FALSE( monster_path_batch::take( here, owners.front(), target ) );
+    }
+    SECTION( "one batch serves creatures beyond both old count limits" ) {
+        std::vector<monster> crowd;
+        crowd.reserve( 96 );
+        for( int i = 0; i < 96; ++i ) {
+            crowd.emplace_back( mtype_id( "mon_feral_human_pipe" ),
+                                tripoint_bub_ms( 60, 60 + i % 4, 0 ) );
+        }
+        monster_path_batch larger_batch;
+        for( const monster &owner : crowd ) {
+            larger_batch.add( owner, target.center );
+        }
+        larger_batch.prepare( here );
+        REQUIRE( larger_batch.prepared_count() == crowd.size() );
+        CHECK( larger_batch.used_count() == 0 );
+        for( const monster &owner : crowd ) {
+            const auto prepared = monster_path_batch::take( here, owner, target );
+            REQUIRE( prepared );
+            CHECK( ( *prepared == here.route( owner.pos_bub(), target,
+                                             owner.get_pathfinding_settings(), owner.get_path_avoid() ) ) );
+        }
+        CHECK( larger_batch.used_count() == crowd.size() );
     }
 }
