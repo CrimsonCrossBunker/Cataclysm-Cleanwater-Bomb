@@ -1,3 +1,5 @@
+#include <martialarts.h>
+#include <output.h>
 #include <algorithm>
 #include <array>
 #include <clocale>
@@ -11,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "activity_tracker.h"
@@ -18,10 +21,11 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "catacharset.h"
 #include "character_attire.h"
+#include "character_martial_arts.h"
 #include "color.h"
 #include "coordinates.h"
 #include "display.h"
@@ -62,6 +66,7 @@
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_deaf( "deaf" );
 static const efftype_id effect_disinfected( "disinfected" );
 static const efftype_id effect_hunger_blank( "hunger_blank" );
 static const efftype_id effect_hunger_engorged( "hunger_engorged" );
@@ -85,7 +90,11 @@ static const itype_id itype_sneakers( "sneakers" );
 static const itype_id itype_swim_fins( "swim_fins" );
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_socks( "test_socks" );
+static const itype_id itype_test_weapon1( "test_weapon1" );
 static const itype_id itype_test_zentai( "test_zentai" );
+
+static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
+static const matype_id test_style_cooldown( "test_style_cooldown" );
 
 static const morale_type morale_food_good( "morale_food_good" );
 static const morale_type morale_killed_innocent( "morale_killed_innocent" );
@@ -110,6 +119,18 @@ static const weather_type_id weather_snowing( "snowing" );
 static const weather_type_id weather_sunny( "sunny" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
+static const widget_id widget_focus_num( "focus_num" );
+static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
+static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
+static const widget_id widget_ll_place_info( "ll_place_info" );
+static const widget_id widget_ll_place_layout( "ll_place_layout" );
+static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
+static const widget_id widget_mood_desc_label( "mood_desc_label" );
+static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
+static const widget_id widget_sound_num( "sound_num" );
+static const widget_id widget_speed_num( "speed_num" );
+static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
+static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
 static const widget_id widget_test_3_column_layout( "test_3_column_layout" );
 static const widget_id widget_test_4_column_layout( "test_4_column_layout" );
@@ -182,17 +203,6 @@ static const widget_id widget_test_weather_text( "test_weather_text" );
 static const widget_id widget_test_weather_text_height5( "test_weather_text_height5" );
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
-static const widget_id widget_focus_num( "focus_num" );
-static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
-static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
-static const widget_id widget_ll_place_info( "ll_place_info" );
-static const widget_id widget_ll_place_layout( "ll_place_layout" );
-static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
-static const widget_id widget_mood_desc_label( "mood_desc_label" );
-static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
-static const widget_id widget_sound_num( "sound_num" );
-static const widget_id widget_speed_num( "speed_num" );
-static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
@@ -227,6 +237,25 @@ static std::vector<std::string> scrape_win_at(
     return lines;
 }
 #endif
+
+TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
+           "[widget][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.martial_arts_data->add_martialart( test_style_cooldown );
+    player.martial_arts_data->set_style( test_style_cooldown );
+    player.set_wielded_item( item( itype_test_weapon1 ) );
+    widget cooldowns = widget_technique_cooldowns.obj();
+    CHECK( player.active_technique_cooldowns_text().empty() );
+    player.martial_arts_data->start_technique_cooldown( test_active_cooldown_strike, 8_seconds );
+    CHECK( cooldowns.layout( player ).find( test_active_cooldown_strike->name.translated() ) !=
+           std::string::npos );
+    CHECK( cooldowns.layout( player ).find( to_string( 8_seconds ) ) != std::string::npos );
+    calendar::turn += 8_seconds;
+    CHECK( player.active_technique_cooldowns_text().empty() );
+}
 
 TEST_CASE( "widget_value_strings", "[widget][value][string]" )
 {
@@ -3079,7 +3108,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
 {
     clear_avatar();
     avatar &ava = get_avatar();
-    widget sound = widget_id( "sound_num" ).obj();
+    widget sound = widget_sound_num.obj();
     ava.volume = 6;
     REQUIRE_FALSE( ava.is_deaf() );
     const std::string hearing = sound.show( ava, 20 );
@@ -3089,7 +3118,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
         ava.wear_item( item( itype_ear_plugs ), false );
     }
     SECTION( "temporary_deafness" ) {
-        ava.add_effect( efftype_id( "deaf" ), 1_minutes, false, 3 );
+        ava.add_effect( effect_deaf, 1_minutes, false, 3 );
     }
 
     REQUIRE( ava.is_deaf() );
