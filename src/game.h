@@ -93,6 +93,8 @@ class npc;
 class npc_lifetime_registry;
 class npc_template;
 class overmap;
+class player_control;
+class player_control_registry;
 class power_network_manager;
 class save_t;
 class scenario;
@@ -215,6 +217,12 @@ class game
         npc_lifetime_registry &npc_lifetimes() {
             return *npc_lifetimes_ptr;
         }
+
+        player_control_registry &player_controls() {
+            return *player_controls_ptr;
+        }
+        // Called after a local profile is loaded/created or changes character.
+        void bind_local_player_control();
 
         /*
         * MAIN GAME LOOP
@@ -1260,6 +1268,8 @@ class game
         pimpl<power_network_manager> power_networks_ptr;
         pimpl<cata_mp::world_session> multiplayer_session_ptr; // NOLINT(cata-serialize)
         pimpl<npc_lifetime_registry> npc_lifetimes_ptr; // NOLINT(cata-serialize)
+        pimpl<player_control_registry> player_controls_ptr; // NOLINT(cata-serialize)
+        pimpl<player_control> local_player_control_ptr; // NOLINT(cata-serialize)
 
         map &m; // NOLINT(cata-serialize)
         // 'current_map' will be identical to 'm' as you can save only at the top of the main loop.

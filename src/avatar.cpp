@@ -68,6 +68,7 @@
 #include "mission.h"
 #include "move_mode.h"
 #include "mp_actor_binding.h"
+#include "player_control.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "output.h"
@@ -193,6 +194,10 @@ void avatar::control_npc( npc &np, const bool debug )
         debugmsg( "control_npc() called on non-allied npc %s", np.name );
         return;
     }
+    if( g->player_controls().is_claimed( np ) ) {
+        debugmsg( "control_npc() called on a controlled actor %s", np.name );
+        return;
+    }
     const character_id new_character = np.getID();
     const character_id previous_character = getID();
     const std::function<void( npc & )> update_npc =
@@ -207,6 +212,7 @@ void avatar::control_npc( npc &np, const bool debug )
     std::swap( get_shadow_npc(), np );
     // move shadow npc character data into avatar
     swap_character( get_shadow_npc() );
+    g->bind_local_player_control();
     // the avatar character is no longer a follower NPC
     follower_ids.erase( getID() );
     // the previous avatar character is now a follower
@@ -240,7 +246,8 @@ void avatar::control_npc_menu( const bool debug )
     int charnum = 0;
     for( const character_id &elem : g->get_follower_list() ) {
         shared_ptr_fast<npc> follower = overmap_buffer.find_npc( elem );
-        if( follower && !cata_mp::is_player_proxy( *follower ) ) {
+        if( follower && !cata_mp::is_player_proxy( *follower ) &&
+            !g->player_controls().is_claimed( *follower ) ) {
             followers.emplace_back( follower );
             charmenu.addentry( charnum++, true, MENU_AUTOASSIGN, follower->get_name() );
         }
