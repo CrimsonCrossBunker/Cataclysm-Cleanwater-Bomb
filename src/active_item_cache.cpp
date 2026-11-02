@@ -143,6 +143,31 @@ std::vector<item_reference> active_item_cache::get_for_processing()
     return items_to_process;
 }
 
+std::vector<item_reference> active_item_cache::peek_for_processing( std::size_t limit ) const
+{
+    std::vector<item_reference> result;
+    if( limit == 0 ) {
+        return result;
+    }
+    for( const auto &kv : active_items ) {
+        // Match get_for_processing without rotating queues or expiring references.
+        int remaining = kv.second.size() / kv.first;
+        for( const item_reference &ref : kv.second ) {
+            if( remaining < 0 ) {
+                break;
+            }
+            if( ref.item_ref ) {
+                result.push_back( ref );
+                if( result.size() == limit ) {
+                    return result;
+                }
+                --remaining;
+            }
+        }
+    }
+    return result;
+}
+
 std::vector<item_reference> active_item_cache::get_special( special_item_type type )
 {
     std::vector<item_reference> matching_items;

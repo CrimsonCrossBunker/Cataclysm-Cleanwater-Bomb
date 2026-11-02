@@ -102,6 +102,7 @@
 #include "vitamin.h"
 #include "vpart_position.h"
 #include "weather.h"
+#include "item_temperature.h"
 #include "weather_gen.h"
 #include "weather_type.h"
 #include "weighted_list.h"
@@ -4342,157 +4343,70 @@ int item::processing_speed() const
     return item::NO_PROCESSING;
 }
 
+item_temperature_input item::capture_temperature_input( const units::temperature &temp,
+        const float insulation, const time_duration &time_delta ) const
+{
+    const int count = is_stackable() ? charges : 1;
+    return { units::to_kelvin( temp ), units::to_kelvin( temperature ),
+             units::to_joule_per_gram( specific_energy ),
+             static_cast<float>( to_gram( weight() ) ) / count,
+             to_milliliter( volume() ) / count, insulation,
+             get_specific_heat_liquid(), get_specific_heat_solid(), get_latent_heat(),
+             units::to_kelvin( get_freeze_point() ), to_turns<int>( time_delta ) };
+}
+
+void item::prepare_temperature( item_temperature_batch &batch, const tripoint_bub_ms &pos,
+                                const float insulation, const temperature_flag flag ) const
+{
+    const time_duration elapsed = calendar::turn - last_temp_check;
+    // Historical catch-up remains a sequential chain of phase changes. Only
+    // prepare independent, initialized items due for their ordinary thermal tick.
+    if( batch.full() || !has_temperature() || is_tool() || elapsed <= 10_minutes ||
+        elapsed > 1_hours || units::to_joule_per_gram( specific_energy ) <= 0 ||
+        ( is_stackable() && charges <= 0 ) ) {
+        return;
+    }
+    units::temperature env = get_weather().get_temperature( pos );
+    if( flag == temperature_flag::ROOT_CELLAR ) {
+        env = units::from_celsius( get_weather().get_cur_weather_gen().base_temperature );
+    }
+    if( std::abs( units::to_kelvin( env ) - units::to_kelvin( temperature ) ) >= 0.4 ) {
+        const item_temperature_input input = capture_temperature_input( env, insulation, elapsed );
+        if( input.mass > 0 && input.volume > 0 && input.insulation > 0 &&
+            input.solid_heat > 0 && input.liquid_heat > 0 &&
+            std::isfinite( input.environment ) && std::isfinite( input.temperature ) &&
+            std::isfinite( input.energy ) && std::isfinite( input.mass ) &&
+            std::isfinite( input.insulation ) && std::isfinite( input.solid_heat ) &&
+            std::isfinite( input.liquid_heat ) && std::isfinite( input.latent_heat ) &&
+            std::isfinite( input.freezing ) ) {
+            batch.add( this, input );
+        }
+    }
+}
+
 void item::calc_temp( const units::temperature &temp, const float insulation,
                       const time_duration &time_delta )
 {
-    const float env_temperature = units::to_kelvin( temp ); // K
-    const float old_temperature = units::to_kelvin( temperature ); // K
-    const float temperature_difference = env_temperature - old_temperature;
-
-    // If no or only small temperature difference then no need to do math.
-    if( std::abs( temperature_difference ) < 0.4 ) {
+    const float old_temperature = units::to_kelvin( temperature );
+    if( std::abs( units::to_kelvin( temp ) - old_temperature ) < 0.4 ) {
         return;
     }
-    const float mass = static_cast<float>( to_gram( weight() ) ) /
-                       ( is_stackable() ? charges : 1 ); // g
-
-    // If item has negative energy set to environment temperature (it not been processed ever)
     if( units::to_joule_per_gram( specific_energy ) < 0 ) {
         set_item_temperature( temp );
         return;
     }
-
-    // specific_energy = item thermal energy (J/g). Stored in the item
-    // temperature = item temperature (K). Stored in the item
-    const float conductivity_term = 0.0076 * std::pow( to_milliliter( volume() ) /
-                                    ( is_stackable() ? charges : 1 ),
-                                    2.0 / 3.0 ) / insulation;
-    const float specific_heat_liquid = get_specific_heat_liquid();
-    const float specific_heat_solid = get_specific_heat_solid();
-    const float latent_heat = get_latent_heat();
-    const float freezing_temperature = units::to_kelvin( get_freeze_point() );
-    // Energy that the item would have if it was completely solid at freezing temperature
-    const units::specific_energy completely_frozen_specific_energy = units::from_joule_per_gram(
-                specific_heat_solid * freezing_temperature );
-    // Energy that the item would have if it was completely liquid at freezing temperature
-    const units::specific_energy completely_liquid_specific_energy = completely_frozen_specific_energy +
-            units::from_joule_per_gram( latent_heat );
-
-    float new_specific_energy;
-    float new_item_temperature;
-    float freeze_percentage = 0.0f;
-    int extra_time;
-
-    // Temperature calculations based on Newton's law of cooling.
-    // Calculations are done assuming that the item stays in its phase.
-    // This assumption can cause over heating when transitioning from melting to liquid.
-    // In other transitions the item may cool/heat too little but that won't be a problem.
-    if( specific_energy < completely_frozen_specific_energy ) {
-        // Was solid.
-        new_item_temperature = ( - temperature_difference
-                                 * std::exp( - to_turns<int>( time_delta ) * conductivity_term / ( mass * specific_heat_solid ) )
-                                 + env_temperature );
-        new_specific_energy = new_item_temperature * specific_heat_solid;
-        if( new_item_temperature > freezing_temperature + 0.5 ) {
-            // Started melting before temp was calculated.
-            // 0.5 is here because we don't care if it heats up a bit too high
-            // Calculate how long the item was solid
-            // and apply rest of the time as melting
-            extra_time = to_turns<int>( time_delta )
-                         - std::log( - temperature_difference / ( freezing_temperature - env_temperature ) )
-                         * ( mass * specific_heat_solid / conductivity_term );
-            new_specific_energy = units::to_joule_per_gram( completely_frozen_specific_energy )
-                                  + conductivity_term
-                                  * ( env_temperature - freezing_temperature ) * extra_time / mass;
-            new_item_temperature = freezing_temperature;
-            if( units::from_joule_per_gram( new_specific_energy ) > completely_liquid_specific_energy ) {
-                // The item then also finished melting.
-                // This may happen rarely with very small items
-                // Just set the item to environment temperature
-                set_item_temperature( units::from_kelvin( env_temperature ) );
-                return;
-            }
-        }
-    } else if( specific_energy > completely_liquid_specific_energy ) {
-        // Was liquid.
-        new_item_temperature = ( - temperature_difference
-                                 * std::exp( - to_turns<int>( time_delta ) * conductivity_term / ( mass *
-                                             specific_heat_liquid ) )
-                                 + env_temperature );
-        new_specific_energy = ( new_item_temperature - freezing_temperature ) * specific_heat_liquid +
-                              units::to_joule_per_gram( completely_liquid_specific_energy );
-        if( new_item_temperature < freezing_temperature - 0.5 ) {
-            // Started freezing before temp was calculated.
-            // 0.5 is here because we don't care if it cools down a bit too low
-            // Calculate how long the item was liquid
-            // and apply rest of the time as freezing
-            extra_time = to_turns<int>( time_delta )
-                         - std::log( - temperature_difference / ( freezing_temperature - env_temperature ) )
-                         * ( mass * specific_heat_liquid / conductivity_term );
-            new_specific_energy = units::to_joule_per_gram( completely_liquid_specific_energy )
-                                  + conductivity_term
-                                  * ( env_temperature - freezing_temperature ) * extra_time / mass;
-            new_item_temperature = freezing_temperature;
-            if( units::from_joule_per_gram( new_specific_energy ) < completely_frozen_specific_energy ) {
-                // The item then also finished freezing.
-                // This may happen rarely with very small itemsconductivity_term
-                // Just set the item to environment temperature
-                set_item_temperature( units::from_kelvin( env_temperature ) );
-                return;
-            }
-        }
-    } else {
-        // Was melting or freezing
-        new_specific_energy = units::to_joule_per_gram( specific_energy ) + conductivity_term *
-                              temperature_difference * to_turns<int>( time_delta ) / mass;
-        new_item_temperature = freezing_temperature;
-        if( units::from_joule_per_gram( new_specific_energy ) > completely_liquid_specific_energy ) {
-            // Item melted before temp was calculated
-            // Calculate how long the item was melting
-            // and apply rest of the time as liquid
-            extra_time = to_turns<int>( time_delta ) - ( mass / ( conductivity_term * temperature_difference ) )
-                         *
-                         units::to_joule_per_gram( completely_liquid_specific_energy - specific_energy );
-            new_item_temperature = ( ( freezing_temperature - env_temperature )
-                                     * std::exp( - extra_time * conductivity_term / ( mass *
-                                                 specific_heat_liquid ) )
-                                     + env_temperature );
-            new_specific_energy = ( new_item_temperature - freezing_temperature ) * specific_heat_liquid +
-                                  units::to_joule_per_gram( completely_liquid_specific_energy );
-        } else if( units::from_joule_per_gram( new_specific_energy ) < completely_frozen_specific_energy ) {
-            // Item froze before temp was calculated
-            // Calculate how long the item was freezing
-            // and apply rest of the time as solid
-            extra_time = to_turns<int>( time_delta ) - ( mass / ( conductivity_term * temperature_difference ) )
-                         *
-                         units::to_joule_per_gram( completely_frozen_specific_energy - specific_energy );
-            new_item_temperature = ( ( freezing_temperature - env_temperature )
-                                     * std::exp( - extra_time * conductivity_term / ( mass *
-                                                 specific_heat_solid ) )
-                                     + env_temperature );
-            new_specific_energy = new_item_temperature * specific_heat_solid;
-        }
+    const item_temperature_input input = capture_temperature_input( temp, insulation, time_delta );
+    const std::optional<item_temperature_result> prepared = item_temperature_batch::find( this, input );
+    const item_temperature_result result = prepared ? *prepared : calculate_item_temperature( input );
+    if( result.equilibrium ) {
+        set_item_temperature( units::from_kelvin( input.environment ) );
+        return;
     }
-    // Check freeze status now based on energies.
-    if( units::from_joule_per_gram( new_specific_energy ) > completely_liquid_specific_energy ) {
-        freeze_percentage = 0;
-    } else if( units::from_joule_per_gram( new_specific_energy ) < completely_frozen_specific_energy ) {
-        // Item is solid
-        freeze_percentage = 1;
-    } else {
-        // Item is partially solid
-        freeze_percentage = ( units::to_joule_per_gram( completely_liquid_specific_energy ) -
-                              new_specific_energy ) /
-                            units::to_joule_per_gram( completely_liquid_specific_energy - completely_frozen_specific_energy );
-    }
-    //Debug mode message for reporting insulation in objects
     add_msg_debug( debugmode::DF_FOOD, "Insulation for %s: %.2f  New temp: %.2f Old temp: %.2f",
-                   tname(),
-                   insulation, new_item_temperature, old_temperature );
-
-    temperature = units::from_kelvin( new_item_temperature );
-    specific_energy = units::from_joule_per_gram( new_specific_energy );
-    set_temp_flags( temperature, freeze_percentage );
+                   tname(), insulation, result.temperature, old_temperature );
+    temperature = units::from_kelvin( result.temperature );
+    specific_energy = units::from_joule_per_gram( result.energy );
+    set_temp_flags( temperature, result.frozen );
 }
 
 void item::set_temp_flags( units::temperature new_temperature, float freeze_percentage )

@@ -1,9 +1,13 @@
+#include <array>
+#include <list>
 #include <set>
 
+#include "active_item_cache.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "item.h"
+#include "item_temperature.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_scale_constants.h"
@@ -11,6 +15,66 @@
 #include "type_id.h"
 
 static const itype_id itype_firecracker_act( "firecracker_act" );
+
+TEST_CASE( "item_thermal_batch_validates_inputs_and_restores_outer_scope", "[item][temperature][threading]" )
+{
+    std::array<item, 32> owners;
+    const item_temperature_input input{ 293.15f, 263.15f, 526.3f, 1000.0f, 1000, 1.0f,
+                                       4.0f, 2.0f, 334.0f, 273.15f, 601 };
+    const auto expected = calculate_item_temperature( input );
+    REQUIRE_FALSE( item_temperature_batch::find( &owners.front(), input ) );
+    {
+        item_temperature_batch outer;
+        for( const item &owner : owners ) {
+            outer.add( &owner, input );
+        }
+        outer.prepare();
+        const auto prepared = item_temperature_batch::find( &owners.front(), input );
+        REQUIRE( prepared );
+        CHECK( prepared->temperature == expected.temperature );
+        CHECK( prepared->energy == expected.energy );
+        CHECK( prepared->frozen == expected.frozen );
+        auto changed = input;
+        ++changed.turns;
+        CHECK_FALSE( item_temperature_batch::find( &owners.front(), changed ) );
+        {
+            item_temperature_batch inner;
+            for( const item &owner : owners ) {
+                inner.add( &owner, changed );
+            }
+            inner.prepare();
+            CHECK_FALSE( item_temperature_batch::find( &owners.front(), input ) );
+            REQUIRE( item_temperature_batch::find( &owners.front(), changed ) );
+        }
+        REQUIRE( item_temperature_batch::find( &owners.front(), input ) );
+    }
+    CHECK_FALSE( item_temperature_batch::find( &owners.front(), input ) );
+}
+
+TEST_CASE( "active_item_processing_preview_does_not_rotate", "[item][threading]" )
+{
+    active_item_cache cache;
+    std::list<item> items;
+    for( int i = 0; i < 4; ++i ) {
+        items.emplace_back( itype_id( "apple" ), calendar::turn_zero );
+        REQUIRE( cache.add( items.back(), point_rel_ms( i, 0 ) ) );
+    }
+    // Expired references must not consume the processing quota.
+    items.pop_front();
+    REQUIRE( cache.peek_for_processing( 0 ).empty() );
+    const auto first = cache.peek_for_processing( 32 );
+    REQUIRE( first.size() == 1 );
+    CHECK( first.front().item_ref.get() == &items.front() );
+    const auto repeated = cache.peek_for_processing( 32 );
+    REQUIRE( repeated.size() == first.size() );
+    CHECK( repeated.front().item_ref == first.front().item_ref );
+    const auto actual = cache.get_for_processing();
+    REQUIRE( actual.size() == first.size() );
+    CHECK( actual.front().item_ref == first.front().item_ref );
+    const auto next = cache.peek_for_processing( 1 );
+    REQUIRE( next.size() == 1 );
+    CHECK_FALSE( next.front().item_ref == first.front().item_ref );
+}
 
 TEST_CASE( "place_active_item_at_various_coordinates", "[item]" )
 {
