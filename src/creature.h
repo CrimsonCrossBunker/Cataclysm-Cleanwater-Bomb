@@ -674,6 +674,8 @@ class Creature : public viewer
         void schedule_effect_removal( const efftype_id &eff_id );
         /** Remove all effects. */
         void clear_effects();
+        // Restore observed state without gain/loss hooks or first-application gameplay.
+        void restore_effects_snapshot( const std::vector<effect> &snapshot );
         /** Check if creature has the matching effect. If the bodypart is not specified check if the Creature has any effect
          *  of the matching type, targeted or untargeted. */
         bool has_effect( const efftype_id &eff_id, const bodypart_id &bp ) const;

@@ -2248,6 +2248,70 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         return;
     }
+    if( action == "melee" ) {
+        const int budget = recipient.turn.remote_moves;
+        remote->set_moves( budget );
+        const auto messages = Messages::size();
+        try {
+            melee_intent intent;
+            jo.read( "origin", intent.origin, true );
+            jo.read( "target", intent.target, true );
+            const std::string mode = jo.get_string( "mode" );
+            if( mode != "strike" && mode != "reach" && mode != "technique" ) {
+                jo.throw_error_at( "mode", "Unknown melee action" );
+            }
+            intent.action = mode == "reach" ? melee_action::reach :
+                            mode == "technique" ? melee_action::technique : melee_action::strike;
+            intent.technique = matec_id( jo.get_string( "technique", "" ) );
+            intent.allow_collateral = jo.get_bool( "allow_collateral", false );
+            map &here = get_map();
+            Creature *target = here.inbounds( intent.target ) ?
+                               get_creature_tracker().creature_at( here.get_bub( intent.target ), true ) : nullptr;
+            const std::string player = jo.get_string( "target_player", "" );
+            const int64_t monster_id = jo.has_int( "target_monster" ) ?
+                                       jo.get_int64( "target_monster" ) : 0;
+            const int npc_id = jo.get_int( "target_npc", -1 );
+            bool identity_matches = false;
+            if( jo.has_member( "target_monster" ) ) {
+                identity_matches = monster_id > 0 && monster_id <= std::numeric_limits<uint32_t>::max() &&
+                                   target && target == mp_session().replication.entity_ids.find_monster(
+                                       static_cast<uint32_t>( monster_id ), get_creature_tracker() );
+            } else if( !player.empty() ) {
+                identity_matches = target && target->as_character() &&
+                                   partner_identity( target->as_character()->getID() ).str() == player;
+            } else if( npc_id >= 0 ) {
+                identity_matches = target && target->as_npc() &&
+                                   target->as_npc()->getID().get_value() == npc_id;
+            } else {
+                identity_matches = intent.action == melee_action::reach;
+            }
+            if( identity_matches && pickup_inventory_revision_matches( jo, recipient.pickup ) ) {
+                execute_melee_intent( *remote, here, intent );
+            }
+        } catch( const JsonError &error ) {
+            mp_log( std::string( "[ccb-mp] rejected melee intent: " ) + error.what() );
+        }
+        recipient.observation.partner_activity.clear();
+        recipient.observation.partner_sleeping = false;
+        const bool spent = remote->get_moves() < budget;
+        recipient.turn.remote_moves = spent ? remote->get_moves() : budget;
+        const bool turn_ended = recipient.turn.remote_moves <= 0;
+        recipient.turn.client_acted_this_turn = turn_ended;
+        flush_action_msgs( recipient, messages, remote->name );
+        const std::string result = make_melee_result( *remote, recipient.pickup );
+        // Cleanup may delete an attacker killed by retaliation; do not use it afterward.
+        g->cleanup_dead();
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, result + "\n" );
+            std::string state = serialize_remote_player_state( recipient );
+            if( !turn_ended && !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
+        }
+        g->invalidate_main_ui_adaptor();
+        return;
+    }
     if( action == "open" || action == "close" ) {
         // Door messages are intents. Do not first trust attached client terrain,
         // inventory, position or character changes, even for a rejected target.
@@ -2730,6 +2794,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                         + " applied " + std::to_string( applied ) );
             }
             std::string ma_style_str;
+            jo.read( "keep_hands_free", remote->martial_arts_data->keep_hands_free );
             jo.read( "ma_style", ma_style_str );
             if( !ma_style_str.empty() ) {
                 const matype_id mid( ma_style_str );
@@ -4307,6 +4372,28 @@ static std::string build_map_sync( remote_player_session &recipient )
 // Public API
 // ---------------------------------------------------------------------------
 
+bool prepare_remote_character_turn( npc &actor )
+{
+    if( is_client_mode() ) {
+        return false;
+    }
+    auto *peer = mp_session().find_remote( actor.getID() );
+    if( !peer || mp_remote_actor( *peer ) != &actor ) {
+        return false;
+    }
+    actor.set_moves( peer->turn.remote_moves );
+    return true;
+}
+
+void finish_remote_character_turn( npc &actor )
+{
+    if( auto *peer = mp_session().find_remote( actor.getID() ) ) {
+        if( peer->actor.owns_instance( &actor, g->npc_lifetimes() ) ) {
+            peer->turn.remote_moves = actor.get_moves();
+        }
+    }
+}
+
 static void grant_remote_turn( remote_player_session &recipient )
 {
     if( !recipient.connected || recipient.detach_pending ) {
@@ -4345,13 +4432,8 @@ static void grant_remote_turn( remote_player_session &recipient )
         return; // An outstanding grant must be consumed before another is issued.
     }
     recipient.turn.client_acted_this_turn = false;
-    // FIX #2/#3: accumulate this turn's speed onto any carried AP debt instead of
-    // resetting to full speed.  Only issue a real grant (advance grant_seq, unlock
-    // the client) when the budget comes out positive; while still negative this is
-    // a "deficit turn" — no grant — and wait_for_client_action() advances the
-    // host's monmove() solo so the world keeps moving while the client pays off the
-    // expensive move (SP-faithful: a costly step burns several turns).
-    recipient.turn.remote_moves += remote->get_speed();
+    // The native character phase already replenished AP and applied effect
+    // penalties. Grant that resulting budget, including carried action debt.
     recipient.turn.granted_this_turn = ( recipient.turn.remote_moves > 0 );
     if( recipient.turn.granted_this_turn ) {
         recipient.turn.grant_seq = ++mp_session().grant_sequence;
@@ -4366,9 +4448,8 @@ static void grant_remote_turn( remote_player_session &recipient )
             " seq=" + std::to_string( recipient.turn.grant_seq ) +
             " turn=" + std::to_string( to_turn<int>( calendar::turn ) ) +
             " host_act=" + ( ha ? ha.id().str() : "none" ) );
-    // Proxy skips npcmove so never auto-regenerates stamina. Replicate the
-    // update_body() path that the real avatar gets each game turn.
-    remote->update_stamina( 1 );
+    // The owned-character world phase regenerates stamina once, independently
+    // of grant delivery or AP debt; do not regenerate it again here.
     check_separation_warning( get_avatar().pos_abs(), remote->pos_abs() );
     auto srv = get_active_server();
     if( srv ) {
@@ -6086,6 +6167,21 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    if( msg.find( "melee_result" ) != std::string::npos ) {
+        try {
+            JsonValue value = json_loader::from_string( msg );
+            JsonObject message = value.get_object();
+            message.allow_omitted_members();
+            if( message.get_string( "type", "" ) == "melee_result" ) {
+                apply_melee_result( get_avatar(), message, mp_session().client_pickup );
+                return true;
+            }
+        } catch( const JsonError & ) {
+            set_client_mode( false );
+            add_msg( m_bad, _( "Invalid combat response.  Reconnect to synchronize your character." ) );
+            return true;
+        }
+    }
     if( msg.find( "pickup_result" ) != std::string::npos ||
         msg.find( "inventory_update" ) != std::string::npos ) {
         try {
@@ -7920,6 +8016,66 @@ std::vector<player_light> player_lights()
     }
     return result;
 }
+void client_request_melee( const tripoint_bub_ms &target, melee_action action,
+                           const matec_id &technique )
+{
+    avatar &who = get_avatar();
+    if( !is_client_mode() || who.get_moves() <= 0 || is_client_waiting_for_ack() ) {
+        return;
+    }
+    bool collateral = false;
+    if( action == melee_action::reach ) {
+        auto path = line_to( who.pos_bub(), target );
+        if( !path.empty() ) {
+            path.pop_back();
+        }
+        for( const tripoint_bub_ms &point : path ) {
+            const Creature *other = get_creature_tracker().creature_at( point, true );
+            if( other && ( other->has_effect( efftype_id( "pet" ) ) ||
+                           ( other->as_npc() && other->as_npc()->is_friendly( who ) ) ) ) {
+                collateral = query_yn( _( "Your attack may cause accidental injury, continue?" ) );
+                if( !collateral ) {
+                    return;
+                }
+                break;
+            }
+        }
+    }
+    std::ostringstream text;
+    JsonOut out( text );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", "melee" );
+    out.member( "mode", action == melee_action::reach ? "reach" :
+                action == melee_action::technique ? "technique" : "strike" );
+    out.member( "origin", who.pos_abs() );
+    out.member( "target", get_map().get_abs( target ) );
+    out.member( "technique", technique.str() );
+    out.member( "allow_collateral", collateral );
+    out.member( "grant_seq", mp_session().client_turn.client_last_grant_seq );
+    out.member( "inventory_revision", mp_session().client_pickup.revision );
+    if( Creature *victim = get_creature_tracker().creature_at( target, true ) ) {
+        if( monster *mon = victim->as_monster() ) {
+            const auto id = mp_session().replication.client.monsters.known_id( *mon );
+            if( id == 0 ) {
+                return; // Wait for an identified host snapshot before targeting it.
+            }
+            out.member( "target_monster", id );
+        } else if( Character *person = victim->as_character() ) {
+            const player_id id = partner_identity( person->getID() );
+            if( id.valid() ) {
+                out.member( "target_player", id.str() );
+            } else {
+                out.member( "target_npc", person->getID().get_value() );
+            }
+        }
+    }
+    out.end_object();
+    client_send( text.str() );
+    who.set_moves( 0 );
+    client_mark_action_sent();
+}
+
 void client_request_pickup( const Pickup::selection &selection )
 {
     avatar &who = get_avatar();
@@ -7978,6 +8134,7 @@ void client_resync_worn()
         client_send( std::string( R"({"action":"worn_sync","male":)" ) +
                      ( av.male ? "true" : "false" ) + ",\"appearance\":" + appearance_json +
                      ",\"ma_style\":" + wire_quote( av.martial_arts_data->selected_style().str() ) +
+                     ",\"keep_hands_free\":" + ( av.martial_arts_data->keep_hands_free ? "true" : "false" ) +
                      ",\"inventory_revision\":" + std::to_string( mp_session().client_pickup.revision ) +
                      ",\"carried\":" + carried.str() + "}" );
         return;
@@ -8032,7 +8189,8 @@ void client_resync_worn()
                  + R"(,"wielded":")" + wielded_type + "\""
                  + ",\"wielded_obj\":" + wielded_obj_json
                  + ",\"client_inv\":" + inv_json
-                 + R"(,"ma_style":")" + ma_style_str + "\"}";
+                 + R"(,"ma_style":")" + ma_style_str + "\""
+                 + ",\"keep_hands_free\":" + ( av.martial_arts_data->keep_hands_free ? "true" : "false" ) + "}";
     mp_log( "[cdda-mp] worn_sync send: inv_items=" + std::to_string( av.inv->size() )
             + " inv_bytes=" + std::to_string( inv_json.size() ) );
     client_send( worn_json );
@@ -8054,7 +8212,10 @@ bool is_client_waiting_for_ack()
 
 void mp_client_post_action( int pre_moves )
 {
-    if( !is_client_mode() ) {
+    if( !is_client_mode() || is_client_waiting_for_ack() ) {
+        // Intent-based actions already sent their request. In particular the
+        // fire UI also handles reach attacks; do not follow them with a legacy
+        // inventory snapshot and wait action that can overwrite the result.
         return;
     }
     if( get_avatar().get_moves() >= pre_moves ) {

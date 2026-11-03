@@ -1,4 +1,6 @@
 #include "avatar_action.h"
+#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 
 #include <coordinates.h>
 #include <input_enums.h>
@@ -200,7 +202,7 @@ static bool check_water_affect_items( avatar &you )
     return true;
 }
 
-static bool confirm_non_hostile_melee_attack( avatar &you, const monster &critter )
+bool avatar_action::confirm_non_hostile_melee_attack( avatar &you, const monster &critter )
 {
     if( !uistate.distraction_non_hostile_melee ||
         critter.attitude_to( you ) == Creature::Attitude::HOSTILE ) {
@@ -490,6 +492,12 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
                 you.abort_automove();
                 return false;
             }
+            if( cata_mp::is_client_mode() ) {
+                if( confirm_non_hostile_melee_attack( you, critter ) ) {
+                    cata_mp::client_request_melee( dest_loc, cata_mp::melee_action::strike );
+                }
+                return false;
+            }
             if( !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
                                           _( "You're too pacified to strike anything…" ) ) ) {
                 return false;
@@ -527,6 +535,10 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
             return false;
         }
 
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_request_melee( dest_loc, cata_mp::melee_action::strike );
+            return false;
+        }
         you.melee_attack( np, true );
         np.make_angry();
         return false;
@@ -870,6 +882,13 @@ void avatar_action::autoattack( avatar &you, map &m )
     } );
 
     const tripoint_rel_ms diff = best.pos_bub() - you.pos_bub();
+    if( cata_mp::is_client_mode() ) {
+        const bool adjacent = std::abs( diff.x() ) <= 1 && std::abs( diff.y() ) <= 1 && diff.z() == 0;
+        cata_mp::client_request_melee( best.pos_bub(), adjacent ? cata_mp::melee_action::strike :
+                                       cata_mp::melee_action::reach );
+        return;
+    }
+
     if( std::abs( diff.x() ) <= 1 && std::abs( diff.y() ) <= 1 && diff.z() == 0 ) {
         move( you, m, tripoint_rel_ms( diff.xy(), 0 ) );
         return;
@@ -903,7 +922,8 @@ void avatar_action::active_technique( avatar &you, map &m )
     menu.desc_enabled = true;
     menu.hilight_disabled = true;
     for( size_t i = 0; i < available.size(); ++i ) {
-        const bool enabled = available[i] != tec_mounted_charge || mounted_charge_available( you );
+        const bool enabled = available[i] != tec_mounted_charge ||
+                             ( !cata_mp::is_client_mode() && mounted_charge_available( you ) );
         menu.addentry_desc( i, enabled, MENU_AUTOASSIGN, available[i]->name.translated(),
                             available[i]->get_description() );
     }
@@ -959,6 +979,10 @@ void avatar_action::active_technique( avatar &you, map &m )
 
     Creature *const target = get_creature_tracker().creature_at( *target_pos, true );
     if( !target ) {
+        return;
+    }
+    if( cata_mp::is_client_mode() ) {
+        cata_mp::client_request_melee( *target_pos, cata_mp::melee_action::technique, technique );
         return;
     }
     if( !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
