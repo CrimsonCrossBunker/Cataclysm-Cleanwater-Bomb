@@ -48,6 +48,7 @@
 #include "material.h"
 #include "math_defines.h"
 #include "messages.h"
+#include "options.h"
 #include "output.h"
 #include "path_info.h"
 #include "string_formatter.h"
@@ -2696,7 +2697,7 @@ bool item_pocket::favorite_settings::is_null() const
 {
     return item_whitelist.empty() && item_blacklist.empty() &&
            category_whitelist.empty() && category_blacklist.empty() &&
-           priority() == 0 && !collapsed && !disabled && unload;
+           priority() == 0 && !collapsed && !disabled.has_value() && unload;
 }
 
 void item_pocket::favorite_settings::whitelist_item( const itype_id &id )
@@ -2810,7 +2811,7 @@ void item_pocket::favorite_settings::clear_category( const item_category_id &id 
 bool item_pocket::favorite_settings::accepts_item( const item &it ) const
 {
     // if this pocket is disabled it accepts nothing
-    if( disabled ) {
+    if( is_disabled() ) {
         return false;
     }
     const itype_id &id = it.typeId();
@@ -2867,7 +2868,7 @@ void item_pocket::favorite_settings::set_collapse( bool flag )
 
 bool item_pocket::favorite_settings::is_disabled() const
 {
-    return disabled;
+    return disabled.has_value() ? *disabled : get_option<bool>( "AUTO_INSERT_POCKETS_DISABLED" );
 }
 
 void item_pocket::favorite_settings::set_disabled( bool flag )
@@ -2917,7 +2918,7 @@ static std::string enumerate( const cata::flat_set<T> &container )
 
 void item_pocket::favorite_settings::info( std::vector<iteminfo> &info ) const
 {
-    if( disabled ) {
+    if( is_disabled() ) {
         info.emplace_back( "BASE", string_format(
                                _( "Items <bad>won't be inserted</bad> into this pocket unless you manually insert them." ) ) );
     }

@@ -84,12 +84,12 @@ reaction_run proposed_reactions( monster_planning_values values, reaction_flags 
         }
     }
     if( nearby ) {
-        const auto near = react_to_near_hostile( run.values, flags.anger_near, flags.fear_near );
-        run.values.anger = near.values.anger;
-        if( kind != 2 && near.draw_aggro ) {
-            run.draw( near.denominator );
+        const auto nearby_reaction = react_to_near_hostile( run.values, flags.anger_near, flags.fear_near );
+        run.values.anger = nearby_reaction.values.anger;
+        if( kind != 2 && nearby_reaction.draw_aggro ) {
+            run.draw( nearby_reaction.denominator );
         }
-        run.values.morale = near.values.morale;
+        run.values.morale = nearby_reaction.values.morale;
         if( kind != 2 && flags.mating > 0 && run.values.anger <= 30 && season ) {
             const auto mating = react_to_mating_season( run.values, flags.mating, true );
             run.values.anger = mating.values.anger;
