@@ -42,6 +42,7 @@
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_contents.h"
+#include "item_insert.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
@@ -2112,7 +2113,7 @@ void game_menus::inv::insert_items( item_location &holster )
     drop_locations holstered_list = game_menus::inv::holster( holster );
 
     if( !holstered_list.empty() ) {
-        you.assign_activity( insert_item_activity_actor( holster, holstered_list ) );
+        start_item_insert( you, holster, holstered_list );
     }
 }
 

@@ -10,6 +10,7 @@ namespace cata_mp
 struct unload_intent {
     item_source root;
     item_source target;
+    item_source destination;
     std::vector<int64_t> sources;
     std::vector<unload_liquid_choice> liquids;
     void serialize( JsonOut &out ) const;
