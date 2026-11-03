@@ -519,6 +519,10 @@ void monmove()
             }
         }
         const std::chrono::steady_clock::time_point npc_t0 = std::chrono::steady_clock::now();
+        // Ownership, not transport membership, decides who supplies actions.
+        // Keep physical phases in the existing NPC order; a local controller
+        // must not also have its move budget consumed by autonomous NPC AI.
+        const bool player_controlled = g->player_controls().is_claimed( guy );
         int turns = 0;
         int real_count = 0;
         const int count_limit = std::max( 10, guy.get_moves() / 64 );
@@ -526,11 +530,13 @@ void monmove()
             guy.check_mount_is_spooked();
         }
         m.creature_in_field( guy );
-        if( !guy.has_effect( effect_npc_suspend ) ) {
+        if( player_controlled ) {
+            g->player_controls().process_turn( guy );
+        } else if( !guy.has_effect( effect_npc_suspend ) ) {
             guy.process_turn();
         }
-        while( !guy.is_dead() && ( !guy.in_sleep_state() ||
-                                   guy.activity.id() == ACT_OPERATION || guy.activity.id() == ACT_MIGRATION_CANCEL ) &&
+        while( !player_controlled && !guy.is_dead() && ( !guy.in_sleep_state() ||
+                guy.activity.id() == ACT_OPERATION || guy.activity.id() == ACT_MIGRATION_CANCEL ) &&
                guy.get_moves() > 0 && turns < 10 ) {
             const int moves = guy.get_moves();
             const bool has_destination = guy.has_destination_activity();
@@ -559,7 +565,16 @@ void monmove()
         }
 
         if( !guy.is_dead() ) {
-            guy.npc_update_body();
+            if( player_controlled ) {
+                if( g->player_controls().update_body( guy ) ) {
+                    // Updates last_updated as well, so release/unload cannot
+                    // replay this interval through NPC catch-up. AI schedules
+                    // must not wake or redirect a player-controlled character.
+                    guy.update_bodytemp_and_wetness();
+                }
+            } else {
+                guy.npc_update_body();
+            }
         }
 
         if( cata_mp::is_hosting() ) {
@@ -586,6 +601,11 @@ void overmap_npc_move()
             continue;
         }
         npc *npc_to_add = elem.get();
+        // A native player supplies travel decisions even outside the local
+        // action radius. Preserve the legacy network proxy path until migrated.
+        if( npc_to_add->has_native_player_control() ) {
+            continue;
+        }
         if( ( !npc_to_add->is_active() || rl_dist( u.pos_bub(), npc_to_add->pos_bub() ) > SEEX * 2 ) &&
             npc_to_add->mission == NPC_MISSION_TRAVELLING ) {
             travelling_npcs.push_back( npc_to_add );

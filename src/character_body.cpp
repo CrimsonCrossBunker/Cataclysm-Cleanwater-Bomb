@@ -242,7 +242,7 @@ void Character::update_body( const time_point &from, const time_point &to )
         last_updated = to;
         return;
     }
-    if( !is_npc() ) {
+    if( !is_npc() || has_native_player_control() ) {
         update_stamina( to_turns<int>( to - from ) );
     }
     if( can_recover_oxygen() && oxygen < get_oxygen_max() ) {

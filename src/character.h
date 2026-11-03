@@ -11,6 +11,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <queue>
 #include <set>
@@ -119,6 +120,7 @@ struct mutation_branch;
 struct mutation_category_trait;
 struct mutation_variant;
 struct pathfinding_settings;
+struct player_control_state;
 struct projectile;
 struct requirement_data;
 struct tool_comp;
@@ -977,6 +979,12 @@ class Character : public Creature, public visitable
          */
         bool takeoff( item_location loc, std::list<item> *res = nullptr );
         bool takeoff( int pos );
+
+        // Assignment observations are tied to this exact incarnation and its
+        // world. Moves, released controllers and destroyed worlds cannot keep
+        // control by retaining a character ID or a transferred weak reference.
+        bool is_player_controlled() const;
+        bool has_native_player_control() const;
 
         /** Handles health fluctuations over time */
         virtual void update_health();
@@ -4418,6 +4426,10 @@ class Character : public Creature, public visitable
         void burn_fuel( bionic &bio );
 
         player_activity destination_activity;
+        friend class player_control_registry;
+        // Observes authority without owning the controller, actor or world.
+        std::weak_ptr<player_control_state> player_control_; // NOLINT(cata-serialize)
+
         /// A unique ID number, assigned by the game class. Values should never be reused.
         character_id id;
 

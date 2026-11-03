@@ -5,6 +5,8 @@
 #include <utility>
 
 #include "avatar.h"
+#include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "debug.h"
 #include "game.h"
 #include "json.h"
@@ -12,6 +14,7 @@
 #include "map_helpers.h"
 #include "mp_actor_binding.h"
 #include "npc.h"
+#include "options_helpers.h"
 #include "player_helpers.h"
 #include "player_control.h"
 #include "rng.h"
@@ -168,4 +171,135 @@ TEST_CASE( "world_reset_revokes_local_control_even_if_the_avatar_survives",
     g->bind_local_player_control();
     CHECK_FALSE( previous.resolve( g->player_controls() ) );
     CHECK( g->player_controls().find( player ).resolve( g->player_controls() ) == &fixture.local );
+}
+
+TEST_CASE( "native_world_turn_advances_controlled_npc_without_running_its_ai",
+           "[avatar][control][character_turn][dispatch]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const override_option npc_food( "NO_NPC_FOOD", "false" );
+    calendar::turn = calendar::turn_zero + 11_hours;
+    control_fixture fixture;
+    npc &second = fixture.follower();
+    clear_character( second, true );
+    second.set_attitude( NPCATT_FOLLOW );
+    const player_id owner( std::string( 32, '7' ) );
+    auto control = g->player_controls().claim( owner, second );
+    REQUIRE_FALSE( cata_mp::is_player_proxy( second ) );
+    const efftype_id blind( "blind" );
+    fixture.local.add_effect( blind, 500_turns );
+    second.add_effect( blind, 500_turns );
+    second.set_moves( -37 );
+    second.set_stamina( second.get_stamina_max() / 2 );
+    const int initial_stamina = second.get_stamina();
+    REQUIRE( initial_stamina < second.get_stamina_max() );
+    const auto position = second.pos_abs();
+
+    // Not a ten-second NPC body boundary: an owned actor must still advance.
+    calendar::turn += 1_turns;
+    g->simulate_turn_suffix();
+    CHECK( second.pos_abs() == position );
+    CHECK( second.get_moves() == -37 + second.get_speed() );
+    CHECK( second.get_effect_dur( blind ) == 499_turns );
+    CHECK( fixture.local.get_effect_dur( blind ) == 499_turns );
+    CHECK( second.get_stamina() > initial_stamina );
+    CHECK( second.get_stamina() < second.get_stamina_max() );
+
+    // Releasing the assignment returns actions to NPC AI on the next step.
+    control.reset();
+    second.set_moves( 100 );
+    calendar::turn += 1_turns;
+    g->simulate_turn_suffix();
+    CHECK( second.get_moves() <= 0 );
+    CHECK( second.get_effect_dur( blind ) == 498_turns );
+    CHECK( fixture.local.get_effect_dur( blind ) == 498_turns );
+
+    // Reclaiming the same live actor must restore the same dispatch boundary.
+    control = g->player_controls().claim( owner, second );
+    second.set_moves( -37 );
+    calendar::turn += 1_turns;
+    g->simulate_turn_suffix();
+    CHECK( second.get_moves() == -37 + second.get_speed() );
+    CHECK( second.get_effect_dur( blind ) == 497_turns );
+    CHECK( fixture.local.get_effect_dur( blind ) == 497_turns );
+}
+
+TEST_CASE( "controlled_native_npc_does_not_receive_ai_stamina_reset",
+           "[avatar][control][character_turn][dispatch]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    calendar::turn = calendar::turn_zero + 11_hours;
+    control_fixture fixture;
+    npc &second = fixture.follower();
+    clear_character( second, true );
+    auto control = g->player_controls().claim( player_id( std::string( 32, '8' ) ), second );
+    second.set_stamina( second.get_stamina_max() / 2 );
+    const int stamina = second.get_stamina();
+    REQUIRE( stamina < second.get_stamina_max() );
+    control.process_turn();
+    CHECK( second.get_stamina() == stamina );
+    control.reset();
+    second.process_turn();
+    CHECK( second.get_stamina() == second.get_stamina_max() );
+}
+
+TEST_CASE( "npc_work_schedule_cannot_wake_a_controlled_character",
+           "[avatar][control][npc][schedule]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    calendar::turn = calendar::turn_zero + 12_hours;
+    control_fixture fixture;
+    npc &second = fixture.follower();
+    second.myclass = npc_class_id( "NC_ROBOFAC_INTERCOM_DAY" );
+    const efftype_id sleep( "sleep" );
+    second.add_effect( sleep, 1_hours );
+    REQUIRE( second.in_sleep_state() );
+    auto control = g->player_controls().claim( player_id( std::string( 32, '9' ) ), second );
+    second.reconcile_schedule();
+    second.reconcile_schedule_on_load();
+    CHECK( second.in_sleep_state() );
+    control.reset();
+    second.reconcile_schedule();
+    CHECK_FALSE( second.in_sleep_state() );
+}
+
+TEST_CASE( "native_control_excludes_automatic_overmap_travel",
+           "[avatar][control][dispatch][overmap]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    calendar::turn = calendar::turn_zero + 11_hours;
+    control_fixture fixture;
+    npc &second = fixture.follower();
+    second.setpos( get_map(), tripoint_bub_ms( 87, 60, 0 ) );
+    second.set_mission( NPC_MISSION_TRAVELLING );
+    const tripoint_abs_omt origin = second.pos_abs_omt();
+    const tripoint_abs_omt destination( origin.x() + 2, origin.y(), origin.z() );
+    const tripoint_abs_omt next( origin.x() + 1, origin.y(), origin.z() );
+    second.goal = destination;
+    second.omt_path = { next };
+    auto control = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), second );
+    const auto position = second.pos_abs();
+    const auto route = second.omt_path;
+    second.set_moves( -37 );
+
+    // This production boundary also runs automatic overmap travel for NPCs
+    // farther than 24 tiles away, even when they are still in the active map.
+    calendar::turn += 5_minutes;
+    g->simulate_turn_suffix();
+    CHECK( second.pos_abs() == position );
+    CHECK( second.goal == destination );
+    CHECK( second.omt_path == route );
+    CHECK( second.get_moves() == -37 + second.get_speed() );
+
+    // Release control, suppress local AI movement with a negative move budget,
+    // and prove that normal overmap travel remains available to the same NPC.
+    control.reset();
+    second.set_moves( -10000 );
+    calendar::turn += 5_minutes;
+    g->simulate_turn_suffix();
+    CHECK( second.pos_abs_omt() == next );
+    CHECK( second.pos_abs() != position );
 }
