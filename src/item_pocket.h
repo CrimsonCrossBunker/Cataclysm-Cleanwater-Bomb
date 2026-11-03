@@ -122,7 +122,7 @@ class item_pocket
                 cata::flat_set<item_category_id> category_whitelist;
                 cata::flat_set<item_category_id> category_blacklist;
                 bool collapsed = false;
-                bool disabled = false;
+                std::optional<bool> disabled;
                 bool unload = true;
                 bool player_edited = false;
         };

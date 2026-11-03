@@ -15,6 +15,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
 #include "coordinates.h"
@@ -22,6 +23,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "flat_set.h"
+#include "flexbuffer_json.h"
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_category.h"
@@ -38,6 +40,7 @@
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "mapgen_helpers.h"
+#include "options_helpers.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -1650,6 +1653,116 @@ TEST_CASE( "best_pocket_in_item_contents", "[pocket][item][best]" )
 // item_pocket::favorite_settings::get_item_whitelist
 // item_pocket::favorite_settings::get_item_blacklist
 //
+TEST_CASE( "pocket_automatic_insertion_defaults", "[pocket][favorite][item]" )
+{
+    const bool disabled_by_default = GENERATE( false, true );
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED",
+            disabled_by_default ? "true" : "false" );
+    item_pocket::favorite_settings settings;
+    const item rock( itype_test_rock );
+
+    SECTION( "unconfigured pockets follow the current global default" ) {
+        CHECK( settings.is_null() );
+        CHECK( settings.is_disabled() == disabled_by_default );
+        CHECK( settings.accepts_item( rock ) == !disabled_by_default );
+
+        const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
+                                              disabled_by_default ? "false" : "true" );
+        CHECK( settings.is_disabled() == !disabled_by_default );
+        CHECK( settings.accepts_item( rock ) == disabled_by_default );
+    }
+
+    SECTION( "individual pockets can override either default" ) {
+        const bool disabled = GENERATE( false, true );
+        settings.set_disabled( disabled );
+        CHECK_FALSE( settings.is_null() );
+        CHECK( settings.is_disabled() == disabled );
+        CHECK( settings.accepts_item( rock ) == !disabled );
+
+        const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
+                                              disabled_by_default ? "false" : "true" );
+        CHECK( settings.is_disabled() == disabled );
+        CHECK( settings.accepts_item( rock ) == !disabled );
+    }
+
+    SECTION( "explicitly enabled pockets still respect item filters" ) {
+        settings.set_disabled( false );
+        settings.blacklist_item( rock.typeId() );
+        CHECK_FALSE( settings.is_disabled() );
+        CHECK_FALSE( settings.accepts_item( rock ) );
+    }
+}
+
+TEST_CASE( "pocket_automatic_insertion_settings_round_trip", "[pocket][favorite][item][save]" )
+{
+    const bool disabled_by_default = GENERATE( false, true );
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED",
+            disabled_by_default ? "true" : "false" );
+    item_pocket::favorite_settings settings;
+    const std::optional<bool> disabled = GENERATE( std::optional<bool>(),
+                                         std::optional<bool>( false ), std::optional<bool>( true ) );
+    if( disabled.has_value() ) {
+        settings.set_disabled( *disabled );
+    }
+    settings.set_priority( 5 );
+    item_pocket::favorite_settings restored;
+    deserialize_from_string( restored, serialize( settings ) );
+    CHECK( restored.priority() == 5 );
+    CHECK( restored.is_disabled() == disabled.value_or( disabled_by_default ) );
+
+    const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
+                                          disabled_by_default ? "false" : "true" );
+    CHECK( restored.is_disabled() == disabled.value_or( !disabled_by_default ) );
+}
+
+TEST_CASE( "pocket_automatic_insertion_legacy_settings", "[pocket][favorite][item][save]" )
+{
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    item_pocket::favorite_settings settings;
+
+    SECTION( "missing setting follows the default" ) {
+        deserialize_from_string( settings, "{}" );
+        CHECK( settings.is_disabled() );
+    }
+
+    SECTION( "saved enabled setting overrides the default" ) {
+        deserialize_from_string( settings, R"({"disabled":false})" );
+        CHECK_FALSE( settings.is_disabled() );
+        CHECK_FALSE( settings.is_null() );
+    }
+
+    SECTION( "saved disabled setting remains disabled" ) {
+        deserialize_from_string( settings, R"({"disabled":true})" );
+        CHECK( settings.is_disabled() );
+    }
+}
+
+TEST_CASE( "pocket_automatic_insertion_container_round_trip", "[pocket][favorite][item][save]" )
+{
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    item backpack( itype_test_backpack );
+    item other_backpack( itype_test_backpack );
+    const item rock( itype_test_rock );
+    item_pocket *pocket = backpack.get_contents().get_standard_pockets().front();
+    REQUIRE( pocket->settings.is_disabled() );
+    REQUIRE( other_backpack.get_contents().get_standard_pockets().front()->settings.is_disabled() );
+    CHECK_FALSE( has_best_pocket( backpack, rock ) );
+    CHECK_FALSE( has_best_pocket( other_backpack, rock ) );
+
+    pocket->settings.set_disabled( false );
+    CHECK_FALSE( pocket->settings.is_disabled() );
+    CHECK( has_best_pocket( backpack, rock ) );
+    CHECK( other_backpack.get_contents().get_standard_pockets().front()->settings.is_disabled() );
+
+    item restored;
+    deserialize_from_string( restored, serialize( backpack ) );
+    CHECK_FALSE( restored.get_contents().get_standard_pockets().front()->settings.is_disabled() );
+    CHECK( has_best_pocket( restored, rock ) );
+
+    REQUIRE( other_backpack.put_in( rock, pocket_type::CONTAINER ).success() );
+    CHECK_FALSE( other_backpack.is_container_empty() );
+}
+
 TEST_CASE( "pocket_favorites_allow_or_restrict_items", "[pocket][favorite][item]" )
 {
     item_location loc;
