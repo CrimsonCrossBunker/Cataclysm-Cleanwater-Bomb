@@ -3733,7 +3733,8 @@ class item : public visitable
         bool ethereal = false;
         int wetness = 0;           // Turns until this item is completely dry.
 
-        int seed = rng( 0, INT_MAX );  // A random seed for layering and other options
+        // Renderer layering is local presentation, including reconstructed items.
+        int seed = rng_visual( 0, INT_MAX );
 
         harvest_drop_type_id dropped_from =
             harvest_drop_type_id::NULL_ID(); // The drop type this item spawned from

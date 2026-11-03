@@ -7131,9 +7131,10 @@ item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
         set_lightmap_cache_dirty( p.z() );
     }
 
-    const map_stack::iterator new_pos = current_submap->get_items( l ).insert( new_item );
+    // Transfer the original identity into the map; only additional copies are new items.
+    const map_stack::iterator new_pos = current_submap->get_items( l ).insert( std::move( new_item ) );
     while( --copies > 0 ) {
-        current_submap->get_items( l ).insert( new_item );
+        current_submap->get_items( l ).insert( *new_pos );
     }
 
     if( current_submap->active_items.add( *new_pos, l ) ) {

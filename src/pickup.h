@@ -16,6 +16,20 @@ class item;
 
 namespace Pickup
 {
+// Simulation callers must not open a menu on somebody else's frontend.
+enum class interaction {
+    interactive,
+    unattended
+};
+
+// Selection is owned by the simulation/UI thread. Network adapters must turn
+// these locations into value identities before publishing a request.
+struct selection {
+    std::vector<item_location> targets;
+    std::vector<int> quantities;
+    bool autopickup = false;
+};
+
 /** Pick up information */
 struct pick_info {
     explicit pick_info( int extra_moves_per_distance = 0, units::volume max_volume = -1_ml,
@@ -49,6 +63,9 @@ struct pick_info {
  */
 bool do_pickup( std::vector<item_location> &targets, std::vector<int> &quantities,
                 bool autopickup, bool &stash_successful, Pickup::pick_info &info );
+bool do_pickup( Character &who, std::vector<item_location> &targets,
+                std::vector<int> &quantities, bool autopickup, bool &stash_successful,
+                Pickup::pick_info &info, interaction prompts );
 bool query_thief( const item &it );
 
 enum from_where : int {

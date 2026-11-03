@@ -6318,6 +6318,22 @@ bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
     }
 }
 
+static void apply_pickup_selection( avatar &who, const drop_locations &items )
+{
+#ifdef MP_ENABLED
+    if( cata_mp::is_client_mode() ) {
+        Pickup::selection selection;
+        for( const drop_location &entry : items ) {
+            selection.targets.push_back( entry.first );
+            selection.quantities.push_back( entry.second );
+        }
+        cata_mp::client_request_pickup( selection );
+        return;
+    }
+#endif
+    who.pick_up( items );
+}
+
 void game::pickup()
 {
     map &here = get_map();
@@ -6331,13 +6347,13 @@ void game::pickup()
         return;
     }
     // Pick up items only from the selected tile
-    u.pick_up( game_menus::inv::pickup( {where_.value()} ) );
+    apply_pickup_selection( u, game_menus::inv::pickup( {where_.value()} ) );
 }
 
 void game::pickup_all()
 {
     // Pick up items from current and all adjacent tiles
-    u.pick_up( game_menus::inv::pickup() );
+    apply_pickup_selection( u, game_menus::inv::pickup() );
 }
 
 void game::pickup( const tripoint_bub_ms &p )
@@ -6351,7 +6367,7 @@ void game::pickup( const tripoint_bub_ms &p )
     add_draw_callback( hilite_cb );
 
     // Pick up items only from the selected tile
-    u.pick_up( game_menus::inv::pickup( {p} ) );
+    apply_pickup_selection( u, game_menus::inv::pickup( {p} ) );
 }
 
 //Shift player by one tile, look_around(), then restore previous position.

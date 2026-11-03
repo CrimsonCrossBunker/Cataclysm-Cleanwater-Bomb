@@ -499,10 +499,9 @@ std::string PATH_INFO::motd()
 
 std::string PATH_INFO::title( const holiday current_holiday )
 {
-    // Keep the main menu's existing RNG ordering. Loading screens make their
-    // own presentation-only choice and use the deterministic overload below.
+    // Menu redraws and loading screens must not perturb simulation choices.
     const bool alternate = get_option<bool>( "ENABLE_ASCII_TITLE" ) &&
-                           x_in_y( get_option<int>( "ALT_TITLE" ), 100 );
+                           rng_visual( 0, 99 ) < get_option<int>( "ALT_TITLE" );
     return title( current_holiday, alternate );
 }
 

@@ -21,6 +21,7 @@ void world_session::prepare_for_world_load()
 
 void world_session::begin_remote_peer()
 {
+    host_pickup = {};
     replication.host = {};
     const uint32_t sequence = host_turn.grant_seq;
     host_turn = {};
@@ -49,6 +50,8 @@ void world_session::reset_state( bool preserve_pending_client )
     replication = {};
     host_turn = {};
     client_turn = {};
+    host_pickup = {};
+    client_pickup = {};
     peer = {};
     presentation = session_presentation();
     last_marked_world.clear();
