@@ -32,6 +32,7 @@
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "gates.h"
 #include "game_inventory.h"
 #include "get_version.h"
 #include "input.h"
@@ -2023,6 +2024,28 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         }
         return;
     }
+    if( action == "open" || action == "close" ) {
+        // Door messages are intents. Do not first trust attached client terrain,
+        // inventory, position or character changes, even for a rejected target.
+        try {
+            const tripoint_abs_ms target{ jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" ) };
+            map &here = get_map();
+            const tripoint_abs_ms position = remote->pos_abs();
+            remote->set_moves( mp_session().host_turn.remote_moves );
+            if( here.inbounds( position ) && here.inbounds( target ) &&
+                target.z() == position.z() && square_dist( target.xy(), position.xy() ) <= 1 ) {
+                if( action == "open" ) {
+                    doors::open_immediately( here, *remote, here.get_bub( target ) );
+                } else {
+                    close_tile_activity_actor::close_immediately( *remote, here.get_bub( target ) );
+                }
+            }
+        } catch( const JsonError &e ) {
+            mp_log( std::string( "[cdda-mp] door parse error: " ) + e.what() );
+        }
+        srv_emit_ack( action.c_str() );
+        return;
+    }
     if( action == "worn_sync" &&
         ( !pickup_inventory_revision_matches( jo, mp_session().host_pickup ) ||
           ( mp_session().host_pickup.revision > 0 && !jo.has_object( "carried" ) ) ) ) {
@@ -2907,34 +2930,6 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             mp_log( "[cdda-mp] drop parse error: " + std::string( e.what() ) );
         }
         srv_emit_ack( "drop" );
-        return;
-    }
-
-    // Door open/close.
-    const bool is_open  = msg.find( R"("action":"open")" ) != std::string::npos;
-    const bool is_close = msg.find( R"("action":"close")" ) != std::string::npos;
-    if( is_open || is_close ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            const tripoint_abs_ms abs_target{
-                jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" )
-            };
-            if( m.inbounds( abs_target ) ) {
-                const tripoint_bub_ms bub = m.get_bub( abs_target );
-                if( is_open ) {
-                    m.open_door( *remote, bub, true, false );
-                } else {
-                    // Reuse the checked actor for terrain and vehicle doors while
-                    // applying the network result before acknowledging it.
-                    close_tile_activity_actor::close_immediately( *remote, bub );
-                }
-            }
-        } catch( const JsonError &e ) {
-            std::cout << "[cdda-mp] door parse error: " << e.what() << std::endl;
-        }
-        srv_emit_ack( is_open ? "open" : "close" );
         return;
     }
 

@@ -2927,7 +2927,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            get_map().open_door( player_character, *doorpos, true, false );
+            // Submit the target; only the server mutates the door and charges
+            // the action. Prediction must not duplicate sounds or gameplay RNG.
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"open","x":)" + std::to_string( abs_target.x() ) +
@@ -2942,7 +2943,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            close_tile_activity_actor::close_immediately( player_character, *doorpos );
+            // Closing, like opening, is settled by the server only.
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"close","x":)" + std::to_string( abs_target.x() ) +
