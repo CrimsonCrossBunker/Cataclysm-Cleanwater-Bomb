@@ -94,7 +94,11 @@ TEST_CASE( "ai_reachability_geometry_retains_vertical_predicate_and_partition_ed
     CHECK( frame.result()->passable == expected->passable );
     CHECK( frame.result()->up == expected->up );
     CHECK( frame.result()->down == expected->down );
-    CHECK( frame.used_workers() == ( workers > 0 ) );
+    // Adaptive scheduling may keep this frame serial after measuring its cost.
+    CHECK( frame.worker_count() <= workers );
+    if( workers == 0 ) {
+        CHECK_FALSE( frame.used_workers() );
+    }
     CHECK( rng_get_engine() == rng_before );
 }
 

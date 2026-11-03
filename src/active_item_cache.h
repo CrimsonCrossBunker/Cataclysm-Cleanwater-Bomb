@@ -89,6 +89,9 @@ class active_item_cache
          */
         std::vector<item_reference> get_for_processing();
 
+        // Read-only look-ahead; does not rotate queues or remove expired entries.
+        std::vector<item_reference> peek_for_processing( std::size_t limit ) const;
+
         /**
          * Returns the currently tracked list of special active items.
          */

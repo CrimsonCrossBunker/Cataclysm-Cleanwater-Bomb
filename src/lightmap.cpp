@@ -1,4 +1,5 @@
 #include "lightmap.h"
+#include "cpu_scheduler.h"
 #include "vision_preparation.h"
 #include <system_error> // IWYU pragma: associated
 #include "shadowcasting.h" // IWYU pragma: associated
@@ -1426,7 +1427,7 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
     {
         CATA_PROFILE_SCOPE_NAMED( "vision.total" );
         bool prepared = false;
-        const int workers = get_option<int>( "VISION_PREPARATION_WORKERS" );
+        const unsigned workers = cpu_worker_quota( get_option<int>( "VISION_PREPARATION_WORKERS" ) );
         if( workers > 0 && vision_preparation::should_prepare(
                 MAX_VIEW_DISTANCE - penalty, vision_horizontal_cost_ms_, static_cast<unsigned>( workers ),
                 !cata_mp::is_session_active() ) ) {

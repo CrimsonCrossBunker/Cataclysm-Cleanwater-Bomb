@@ -6,6 +6,7 @@
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -72,6 +73,11 @@ class creature_tracker
         template <typename FactionPredicateFn, typename CreaturePredicateFn>
         Creature *find_reachable( const Creature &origin, FactionPredicateFn &&faction_fn,
                                   CreaturePredicateFn &&creature_fn );
+
+        // PARROT_AT_DANGER semantics, not general AI hostility. Snapshot/filter
+        // joins before predicate runs, so no result survives another action.
+        Creature *find_reachable_danger( const monster &origin,
+                                        const std::function<bool( Creature * )> &predicate );
         /**
          * Visits all reachable creatures using the given functor.
          *  - VisitFn: void(Creature*)
@@ -195,7 +201,12 @@ class creature_tracker
         bool dirty_ = true;  // NOLINT(cata-serialize)
         int zone_tick_ = 1;  // NOLINT(cata-serialize)
         int zone_number_ = 0;  // NOLINT(cata-serialize)
-        std::unordered_map<int, std::unordered_map<mfaction_id, std::vector<shared_ptr_fast<Creature>>>>
+        struct reachable_faction {
+            std::vector<shared_ptr_fast<Creature>> creatures;
+            // Conservative: a departed character may leave this set until rebuild.
+            bool contains_character = false;
+        };
+        std::unordered_map<int, std::unordered_map<mfaction_id, reachable_faction>>
         creatures_by_zone_and_faction_;  // NOLINT(cata-serialize)
 
         // Pre-computed passability bitmap for flood_fill_zone.  Each bit is
@@ -234,10 +245,11 @@ Creature *creature_tracker::find_reachable( const Creature &origin, FactionPredi
 
     const auto map_iter = creatures_by_zone_and_faction_.find( origin.get_reachable_zone() );
     if( map_iter != creatures_by_zone_and_faction_.end() ) {
-        for( auto& [faction, creatures] : map_iter->second ) {
+        for( auto& [faction, group] : map_iter->second ) {
             if( !faction_fn( faction ) ) {
                 continue;
             }
+            auto &creatures = group.creatures;
             for( std::size_t i = 0; i < creatures.size(); ) {
                 if( Creature *other = creatures[i].get(); is_present( other ) ) {
                     if( creature_fn( other ) ) {

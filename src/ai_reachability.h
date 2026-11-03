@@ -57,7 +57,7 @@ void prepare_columns( const snapshot &values, output &result, int begin_x, int e
 bool should_prepare( std::size_t population, double preceding_flood_ms,
                      bool owner_allows_workers );
 
-// One tracker owns its executor, snapshot and reusable result. prepare joins
+// One tracker owns its snapshot and reusable result, sharing the CPU pool. prepare joins
 // every accepted task on all exits; mutations invalidate the cached result.
 class frame
 {
@@ -100,8 +100,9 @@ class frame
         std::uint64_t ready_generation_ = 0;
         bool leased_ = false;
         bool used_workers_ = false;
-        // Join workers before any of their inputs or outputs are destroyed.
-        std::unique_ptr<cata_thread_pool> pool_;
+        // Non-owning process-lifetime pool; prepare joins before returning.
+        cata_thread_pool *pool_ = nullptr;
+        unsigned worker_limit_ = 0;
 };
 } // namespace ai_reachability
 #endif // CATA_SRC_AI_REACHABILITY_H

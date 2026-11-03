@@ -1,8 +1,12 @@
 #include "thread_pool.h"
+#include "cpu_scheduler.h"
 
 #include <chrono>
 #include <functional>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <system_error>
 #include <thread>
 
 #include "crash.h"
@@ -14,6 +18,11 @@ static thread_local bool tl_is_worker_thread = false;
 bool is_pool_worker_thread()
 {
     return tl_is_worker_thread;
+}
+
+bool cata_thread_pool::is_worker()
+{
+    return is_pool_worker_thread();
 }
 
 cata_thread_pool::cata_thread_pool( unsigned int num_workers )
@@ -89,8 +98,15 @@ void cata_thread_pool::worker_loop()
 
 void cata_thread_pool::submit( std::function<void()> task )
 {
+    if( workers_.empty() ) {
+        task();
+        return;
+    }
     {
         std::scoped_lock lock( mutex_ );
+        if( stop_ ) {
+            throw std::runtime_error( "Submitting work to a stopped CPU pool" );
+        }
         queue_.push_back( std::move( task ) );
     }
     cv_.notify_one();
@@ -101,24 +117,25 @@ cata_thread_pool &get_thread_pool()
     // Worker count is read once at first call (the static pool is constructed
     // only once).  Changes to THREAD_POOL_WORKERS or MULTITHREADING_ENABLED
     // require a restart.
-    static cata_thread_pool pool( []() -> unsigned int {
-        // Respect the "disable multi-threading" setting.  This is read via
-        // get_option<bool>() directly (not the cached parallel_enabled global)
-        // because cache_to_globals() has not yet run at pool-init time.
-        if( !has_option( "MULTITHREADING_ENABLED" ) ||
-        !get_option<bool>( "MULTITHREADING_ENABLED" ) )
-    {
-        return 0u;
-    }
-    const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
-    get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
-    if( workers_opt > 0 )
-    {
-        return static_cast<unsigned int>( workers_opt );
+    static std::unique_ptr<cata_thread_pool> pool = []() {
+        const auto count = []() -> unsigned int {
+            if( !has_option( "MULTITHREADING_ENABLED" ) ||
+                !get_option<bool>( "MULTITHREADING_ENABLED" ) ) {
+                return 0u;
+            }
+            const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
+                                    get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
+            if( workers_opt > 0 ) {
+                return std::min( static_cast<unsigned int>( workers_opt ), cpu_worker_limit );
+            }
+            const unsigned int hc = std::thread::hardware_concurrency();
+            return hc > 1u ? std::min( hc - 1u, cpu_worker_limit ) : 0u;
+        }();
+        try {
+            return std::make_unique<cata_thread_pool>( count );
+        } catch( const std::system_error & ) {
+            return std::make_unique<cata_thread_pool>( 0 );
         }
-        // 0 = auto: hardware_concurrency()-1, leaving one core for the main/SDL thread.
-        const unsigned int hc = std::thread::hardware_concurrency();
-        return hc > 1u ? hc - 1u : 0u;
-    }() );
-    return pool;
+    }();
+    return *pool;
 }

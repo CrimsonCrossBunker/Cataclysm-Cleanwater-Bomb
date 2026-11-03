@@ -16,6 +16,7 @@
 
 #include "avatar.h"
 #include "cata_utility.h"
+#include "cpu_scheduler.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
@@ -134,8 +135,19 @@ static weather_gen_common get_common_data( const tripoint_abs_ms &location,
     return result;
 }
 
-static units::temperature weather_temperature_from_common_data( const weather_generator &wg,
-        const weather_gen_common &common, const season_effective_time &t )
+struct weather_temperature_parameters {
+    double base_temperature;
+    std::array<int, 4> seasonal_temp_mod;
+};
+
+static weather_temperature_parameters temperature_parameters( const weather_generator &wg )
+{
+    return { wg.base_temperature, { wg.spring_temp_manual_mod, wg.summer_temp_manual_mod,
+             wg.autumn_temp_manual_mod, wg.winter_temp_manual_mod } };
+}
+
+static units::temperature weather_temperature_from_snapshot( const weather_temperature_parameters &wg,
+        const weather_gen_common &common, double dayFraction )
 {
     const double x( common.x );
     const double y( common.y );
@@ -145,18 +157,13 @@ static units::temperature weather_temperature_from_common_data( const weather_ge
     const double seasonality = -common.cyf;
     // -1 in midwinter, +1 in midsummer
     const season_type season = common.season;
-    const double dayFraction = time_past_midnight( t.t ) / 1_days;
     const double dayv = std::cos( tau * ( dayFraction + .5 - coldest_hour / 24 ) );
     // -1 at coldest_hour, +1 twelve hours later
 
     // manually specified seasonal temp variation from region_settings.json
-    const std::array<int, 4> seasonal_temp_mod = {
-        wg.spring_temp_manual_mod, wg.summer_temp_manual_mod, wg.autumn_temp_manual_mod,
-        wg.winter_temp_manual_mod
-    };
     const double baseline(
         wg.base_temperature +
-        seasonal_temp_mod[season] +
+        wg.seasonal_temp_mod[season] +
         dayv * ( daily_magnitude_K + daily_seasonal_range_K * ( -seasonality + 1 ) / 2 ) +
         seasonality * seasonality_magnitude_K );
 
@@ -164,6 +171,39 @@ static units::temperature weather_temperature_from_common_data( const weather_ge
                      ( 1 + ( 1 + -seasonality ) * seasonal_noise_magnitude / 2 ) * noise_magnitude_K;
 
     return units::from_celsius( T );
+}
+
+static units::temperature weather_temperature_from_common_data( const weather_generator &wg,
+        const weather_gen_common &common, const season_effective_time &t )
+{
+    return weather_temperature_from_snapshot( temperature_parameters( wg ), common,
+            time_past_midnight( t.t ) / 1_days );
+}
+
+std::vector<units::temperature> weather_generator::get_hourly_temperatures(
+    const tripoint_abs_ms &location, const time_point &first, unsigned seed, std::size_t count ) const
+{
+    struct observation {
+        weather_gen_common common;
+        double day_fraction;
+    };
+    std::vector<observation> inputs;
+    inputs.reserve( count );
+    for( std::size_t i = 0; i < count; ++i ) {
+        const time_point t = first + static_cast<int>( i ) * 1_hours;
+        inputs.push_back( { get_common_data( location, t, seed ),
+                           time_past_midnight( season_effective_time( t ).t ) / 1_days } );
+    }
+    const weather_temperature_parameters parameters = temperature_parameters( *this );
+    std::vector<units::temperature> output( count );
+    cpu_parallel_for( cpu_task_kind::item_history, count, 16,
+    [&]( std::size_t begin, std::size_t end ) {
+        for( std::size_t i = begin; i < end; ++i ) {
+            output[i] = weather_temperature_from_snapshot( parameters, inputs[i].common,
+                        inputs[i].day_fraction );
+        }
+    } );
+    return output;
 }
 
 units::temperature weather_generator::get_weather_temperature(

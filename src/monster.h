@@ -26,6 +26,7 @@
 #include "creature.h"
 #include "monster_uid.h"
 #include "monster_goal_policy.h"
+#include "monster_friendliness.h"
 #include "pet_slot.h"
 #include "type_id.h"
 #include "units_fwd.h"
@@ -33,11 +34,13 @@
 #include "weakpoint.h"
 
 class Character;
+struct FastDistanceApproximation;
 class JsonObject;
 class JsonOut;
 class effect_source;
 class item;
 class map;
+class monster_path_batch;
 enum class mon_trigger : int;
 enum class phase_id : int;
 struct monster_plan;
@@ -251,6 +254,7 @@ class monster : public Creature
         bool has_dest() const;
         // Returns point at the end of the monster's current plans
         tripoint_abs_ms get_dest() const;
+        void prepare_path_search( monster_path_batch &batch, const map &here ) const;
         // Returns the creature at the end of plans (if hostile)
         Creature *attack_target();
         // Go towards p using the monster's pathfinding settings.
@@ -273,7 +277,8 @@ class monster : public Creature
         void wander_to( const tripoint_abs_ms &p, int f );
 
         // How good of a target is given creature (checks for visibility)
-        float rate_target( Creature &c, float best, bool smart = false ) const;
+        float rate_target( Creature &c, float best, bool smart = false,
+                           const FastDistanceApproximation *distance = nullptr ) const;
         // is it mating season?
         bool mating_angry() const;
         void plan();
@@ -601,7 +606,7 @@ class monster : public Creature
         void move_special_item_to_inv( cata::value_ptr<item> &it );
 
         // DEFINING VALUES
-        int friendly = 0;
+        monster_friendliness friendly = 0;
         int anger = 0;
         int morale = 2;
         uint32_t mp_net_id = 0; // MP: network ID for multiplayer monster tracking

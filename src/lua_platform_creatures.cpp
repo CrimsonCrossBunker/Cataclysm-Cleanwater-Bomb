@@ -320,7 +320,7 @@ sol::table snapshot_creature(
     if( const monster *mon = creature.as_monster() ) {
         result["type_id"] = mon->type->id.str();
         result["friendly"] = mon->friendly != 0;
-        result["friendly_value"] = mon->friendly;
+        result["friendly_value"] = static_cast<int>( mon->friendly );
         result["anger"] = mon->anger;
         result["morale"] = mon->morale;
         result["difficulty"] =
@@ -4000,7 +4000,7 @@ sol::table monster_disposition_state(
     sol::table result = lua.create_table();
     result["anger"] = entry.anger;
     result["morale"] = entry.morale;
-    result["friendly"] = entry.friendly;
+    result["friendly"] = static_cast<int>( entry.friendly );
     result["friendly_active"] = entry.friendly != 0;
     return result;
 }

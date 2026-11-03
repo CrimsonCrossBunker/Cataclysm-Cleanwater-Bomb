@@ -334,6 +334,7 @@ void game::unserialize_impl( const JsonObject &data )
 
 void scent_map::deserialize( const std::string &data, bool is_type )
 {
+    ++revision_;
     std::istringstream buffer( data );
     buffer.imbue( std::locale::classic() );
     if( is_type ) {
@@ -2115,8 +2116,7 @@ void faction_manager::deserialize( const JsonValue &jv )
 
 void creature_tracker::deserialize( const JsonArray &ja )
 {
-    monsters_list.clear();
-    monsters_by_location.clear();
+    clear();
     for( JsonValue jv : ja ) {
         // TODO: would be nice if monster had a constructor using JsonIn or similar, so this could be one statement.
         shared_ptr_fast<monster> mptr = make_shared_fast<monster>();

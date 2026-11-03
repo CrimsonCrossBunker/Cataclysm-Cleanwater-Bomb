@@ -63,6 +63,11 @@
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
+#include "monster_path_batch.h"
+#include "cpu_scheduler.h"
+#include "monster_scent_batch.h"
+#include "monster_move_profile.h"
+#include "monster_target_frame.h"
 #include "mtype.h"
 #include "music.h"
 #include "npc.h"
@@ -353,6 +358,7 @@ void monmove()
 {
     CATA_PROFILE_SCOPE();
     g->cleanup_dead();
+    monster_target_frame target_frame( get_creature_tracker() );
     map &m = get_map();
     avatar &u = get_avatar();
 
@@ -364,6 +370,52 @@ void monmove()
         cata::lua_platform::has_native_hook( "on_monster_do_turn" );
     const bool has_npc_do_turn =
         cata::lua_platform::has_native_hook( "on_npc_do_turn" );
+    const bool profile_horde = get_creature_tracker().size() >= 128;
+    monster_move_profile movement_profile( profile_horde );
+    const auto targets_before = profile_horde ? cpu_task_stats( cpu_task_kind::monster_targets ) :
+                                cpu_task_statistics{};
+    const auto index_before = profile_horde ? cpu_task_stats( cpu_task_kind::monster_target_index ) :
+                              cpu_task_statistics{};
+    const auto horde_start = std::chrono::steady_clock::now();
+    double turn_ms = 0;
+    double hook_ms = 0;
+    double plan_ms = 0;
+    double move_ms = 0;
+    const auto timed = [&]( double &elapsed, const auto &work ) {
+        if( !profile_horde ) {
+            work();
+            return;
+        }
+        const auto start = std::chrono::steady_clock::now();
+        work();
+        elapsed += std::chrono::duration<double, std::milli>(
+                       std::chrono::steady_clock::now() - start ).count();
+    };
+    const auto paths_before = profile_horde ? cpu_task_stats( cpu_task_kind::monster_paths ) :
+                              cpu_task_statistics{};
+    monster_scent_batch scent_paths;
+    if( cpu_parallel_enabled() ) {
+        const scent_map &scents = get_scent();
+        for( const monster &critter : g->all_monsters() ) {
+            if( critter.has_flag( mon_flag_SMELLS ) && !critter.is_dead() &&
+                m.inbounds( critter.pos_abs() ) && scents.inbounds( critter.pos_bub( m ) ) &&
+                scents.get_unsafe( critter.pos_bub( m ) ) > 0 ) {
+                scent_paths.add( critter.pos_bub( m ) );
+            }
+        }
+        scent_paths.prepare( m, scents );
+    }
+    monster_path_batch paths;
+    if( cpu_parallel_enabled() ) {
+        for( const monster &critter : g->all_monsters() ) {
+            critter.prepare_path_search( paths, m );
+        }
+        paths.prepare( m );
+    }
+    const double prepare_ms = profile_horde ? std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() - horde_start ).count() : 0;
+    const auto paths_after = profile_horde ? cpu_task_stats( cpu_task_kind::monster_paths ) :
+                             cpu_task_statistics{};
     for( monster &critter : g->all_monsters() ) {
         if( !m.inbounds( critter.pos_abs() ) ) {
             continue;
@@ -399,6 +451,7 @@ void monmove()
 
         if( !critter.is_dead() ) {
             if( has_creature_do_turn || has_monster_do_turn ) {
+                const auto hook_start = std::chrono::steady_clock::now();
                 cata::lua_platform::native_callback_arguments payload = {
                     {
                         "creature",
@@ -414,9 +467,13 @@ void monmove()
                     cata::lua_platform::dispatch_native_hook(
                         "on_monster_do_turn", payload );
                 }
+                if( profile_horde ) {
+                    hook_ms += std::chrono::duration<double, std::milli>(
+                                   std::chrono::steady_clock::now() - hook_start ).count();
+                }
             }
             if( !critter.is_dead() ) {
-                critter.process_turn();
+                timed( turn_ms, [&]() { critter.process_turn(); } );
             }
         }
 
@@ -434,7 +491,7 @@ void monmove()
             // Controlled critters don't make their own plans
             if( !critter.has_effect( effect_controlled ) ) {
                 // Formulate a path to follow
-                critter.plan();
+                timed( plan_ms, [&]() { critter.plan(); } );
             } else {
                 critter.set_moves( 0 );
                 break;
@@ -442,7 +499,7 @@ void monmove()
             if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
                 break;
             }
-            critter.move(); // Move one square, possibly hit u
+            timed( move_ms, [&]() { critter.move(); } ); // May hit the player.
             if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
                 break;
             }
@@ -478,6 +535,39 @@ void monmove()
         }
     }
 
+    if( profile_horde ) {
+        const auto now = std::chrono::steady_clock::now();
+        const double total_ms = std::chrono::duration<double, std::milli>( now - horde_start ).count();
+        static std::chrono::steady_clock::time_point last_report;
+        if( total_ms >= 250 && now - last_report >= std::chrono::seconds( 5 ) ) {
+            last_report = now;
+            const bool searched = paths_after.batches != paths_before.batches;
+            const double search_ms = searched ? paths_after.last_ms : 0;
+            const auto targets_after = cpu_task_stats( cpu_task_kind::monster_targets );
+            const auto index_after = cpu_task_stats( cpu_task_kind::monster_target_index );
+            const bool rated_targets = targets_after.batches != targets_before.batches;
+            DebugLog( D_WARNING, D_MAIN ) << "monster CPU: count=" << mon_count
+                                        << " total_ms=" << total_ms
+                                        << " snapshot_ms=" << std::max( 0.0, prepare_ms - search_ms )
+                                        << " search_ms=" << search_ms
+                                        << " search_workers=" << ( searched ? paths_after.last_workers : 0 )
+                                        << " paths_prepared=" << paths.prepared_count()
+                                        << " paths_used=" << paths.used_count()
+                                        << " target_batches=" << targets_after.batches - targets_before.batches
+                                        << " target_parallel_batches=" << targets_after.parallel_batches -
+                                        targets_before.parallel_batches
+                                        << " target_last_workers=" << ( rated_targets ? targets_after.last_workers : 0 )
+                                        << " target_index_batches=" << index_after.batches - index_before.batches
+                                        << " target_index_parallel_batches=" << index_after.parallel_batches -
+                                        index_before.parallel_batches
+                                        << " target_index_last_workers=" << ( index_after.batches != index_before.batches ?
+                                                index_after.last_workers : 0 )
+                                        << " process_ms=" << turn_ms << " hooks_ms=" << hook_ms
+                                        << " plan_ms=" << plan_ms << " move_ms=" << move_ms
+                                        << " other_ms=" << std::max( 0.0, total_ms - prepare_ms - turn_ms - hook_ms - plan_ms - move_ms );
+            movement_profile.write( DebugLog( D_WARNING, D_MAIN ) << "monster move CPU:" );
+        }
+    }
     if( cata_mp::is_hosting() && !mon_slow_log.empty() ) {
         cata_mp::mp_log( "[cdda-mp] monmove slow monsters (count=" +
                          std::to_string( mon_count ) + "):" + mon_slow_log );

@@ -8,6 +8,11 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <mutex>
+#include <thread>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 /** Simple C++17-compatible latch (replaces std::latch from C++20). */
 class simple_latch
@@ -32,11 +37,6 @@ class simple_latch
         std::condition_variable cv_;
         int count_ = 0;
 };
-#include <mutex>
-#include <thread>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 /**
  * Persistent thread pool for parallelizing game work.
@@ -112,7 +112,7 @@ class cata_thread_pool
                             std::bind( std::forward<F>( f ), std::forward<Args>( args )... )
                         );
             std::future<R> fut = task->get_future();
-            if( num_workers() == 0 ) {
+            if( num_workers() == 0 || is_worker() ) {
                 // Single-core fallback: execute synchronously on the calling thread
                 // to avoid enqueuing work that would never be processed by a worker.
                 ( *task )();
@@ -125,6 +125,7 @@ class cata_thread_pool
         }
 
     private:
+        static bool is_worker();
         void worker_loop();
 
         std::vector<std::thread> workers_;
@@ -177,7 +178,7 @@ void parallel_for( int begin, int end, F &&f )
     const int nw = static_cast<int>( pool.num_workers() );
 
     // Serial fallback on single-core machines.
-    if( nw == 0 ) {
+    if( nw == 0 || is_pool_worker_thread() ) {
         for( int i = begin; i < end; ++i ) {
             f( i );
         }
@@ -252,7 +253,7 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
     const int n = end - begin;
     const int num_chunks = ( n + chunk_size - 1 ) / chunk_size;
 
-    if( nw == 0 || num_chunks <= 1 ) {
+    if( nw == 0 || num_chunks <= 1 || is_pool_worker_thread() ) {
         for( int i = begin; i < end; ++i ) {
             f( i );
         }

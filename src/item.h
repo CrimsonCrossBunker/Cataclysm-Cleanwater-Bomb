@@ -52,6 +52,10 @@ class Creature;
 class JsonObject;
 class JsonOut;
 struct desired_wakeup;
+struct item_rot_rates;
+struct item_temperature_input;
+class item_temperature_batch;
+class item_rot_batch;
 enum class item_wakeup_kind : uint8_t;
 class book_proficiency_bonuses;
 class enchant_cache;
@@ -1180,7 +1184,10 @@ class item : public visitable
          * @param time Time point to which rot is calculated
          * @param temp Temperature at which the rot is calculated
          */
-        void calc_rot( units::temperature temp, float spoil_modifier, const time_duration &time_delta );
+        void calc_rot( units::temperature temp, float spoil_modifier, const time_duration &time_delta,
+                       const item_rot_rates *rates = nullptr );
+        void prepare_rot( item_rot_batch &batch, const tripoint_bub_ms &pos,
+                          temperature_flag flag, float spoil_modifier ) const;
 
         /** Return relative rot after a hypothetical, non-mutating rot period. */
         double get_relative_rot_after( units::temperature temp, float spoil_modifier,
@@ -1835,6 +1842,9 @@ class item : public visitable
         bool is_broken_on_active() const;
 
         bool has_temperature() const;
+        void prepare_temperature( item_temperature_batch &batch,
+                                  const tripoint_bub_ms &pos, float insulation,
+                                  temperature_flag flag ) const;
 
         /** Returns true if the item is SOLID and of type LIQUID. */
         bool is_frozen_liquid() const;
@@ -3507,6 +3517,8 @@ class item : public visitable
          * @param time_delta time duration from previous temperature calculation
          */
         void calc_temp( const units::temperature &temp, float insulation, const time_duration &time_delta );
+        item_temperature_input capture_temperature_input( const units::temperature &temp,
+                float insulation, const time_duration &time_delta ) const;
 
         /** Calculate item specific energy (J/g) from temperature. */
         units::specific_energy get_specific_energy_from_temperature( const units::temperature

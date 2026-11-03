@@ -1262,10 +1262,10 @@ $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
 endif
 
 $(TARGET): $(OBJS) $(SHADERS_STAMP) $(LUA_PLATFORM_LINK_MODE_STAMP)
+	# Write long Windows link arguments in make, without a shell command line.
 ifeq ($(TARGETSYSTEM),WINDOWS)
-	# Keep the object list out of the Windows process command line.
-	$(file >$(ODIR)/link-objects.rsp,$(OBJS))
-	+$(LD) $(W32FLAGS) -o $(TARGET) @$(ODIR)/link-objects.rsp $(LDFLAGS)
+	$(file >$(ODIR)/$(notdir $(TARGET)).link.rsp,$(W32FLAGS) -o "$(TARGET)" $(foreach obj,$(OBJS),"$(obj)") $(LDFLAGS))
+	+$(LD) @"$(ODIR)/$(notdir $(TARGET)).link.rsp"
 else
 	+$(LD) $(W32FLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 endif
@@ -1346,6 +1346,37 @@ $(ODIR)/third-party/%.o: $(SRC_DIR)/third-party/%.c
 
 $(ODIR)/lua/%.o: $(SRC_DIR)/lua/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) $(LUA_NATIVE_CFLAGS) -w -MMD -MP $<
+
+# Keep scheduler task IDs and policy layout consistent even with stale .d files.
+CPU_SCHEDULER_OBJS := $(addprefix $(ODIR)/,ai_reachability.o cata_tiles.o \
+  cpu_task_policy.o cpu_scheduler.o creature_tracker.o do_turn.o item_degrade.o \
+  item_rot_batch.o item_temperature_batch.o lightmap.o map.o monster_path_batch.o \
+  monmove.o monster_scent_batch.o options.o thread_pool.o tile_preparation.o vision_preparation.o weather_gen.o)
+$(CPU_SCHEDULER_OBJS): $(SRC_DIR)/cpu_scheduler.h
+
+# These snapshots cross translation units; stale layouts are not ABI compatible.
+MONSTER_PATH_OBJS := $(addprefix $(ODIR)/,do_turn.o monmove.o pathfinding.o \
+  monster_path_batch.o route_snapshot.o)
+$(MONSTER_PATH_OBJS): $(SRC_DIR)/monster_path_batch.h $(SRC_DIR)/route_snapshot.h
+
+MONSTER_SCENT_OBJS := $(addprefix $(ODIR)/,do_turn.o monmove.o monster_scent_batch.o monster_scent_search.o)
+$(MONSTER_SCENT_OBJS): $(SRC_DIR)/monster_scent_batch.h $(SRC_DIR)/monster_scent_search.h
+
+$(addprefix $(ODIR)/,do_turn.o monmove.o monster_movement_plan.o creature_tracker.o): $(SRC_DIR)/monster_move_profile.h
+
+$(ODIR)/creature_tracker.o: $(SRC_DIR)/monster_danger_search.h
+
+$(ODIR)/monmove.o: $(SRC_DIR)/monster_target_batch.h $(SRC_DIR)/monster_target_selection.h
+
+$(addprefix $(ODIR)/,creature.o creature_tracker.o do_turn.o monmove.o monster_target_frame.o): $(SRC_DIR)/monster_target_frame.h
+$(ODIR)/monster_target_frame.o: $(SRC_DIR)/monster_target_index.h $(SRC_DIR)/monster_friendliness.h $(SRC_DIR)/cpu_scheduler.h
+$(OBJS) $(PCH_P): $(SRC_DIR)/monster.h $(SRC_DIR)/monster_friendliness.h $(SRC_DIR)/cpu_scheduler.h
+
+# Reachable faction buckets are shared by tracker template consumers and PCH.
+$(OBJS) $(PCH_P): $(SRC_DIR)/creature_tracker.h
+
+# scent_map is embedded in game; rebuild PCH consumers when its layout changes.
+$(OBJS) $(PCH_P): $(SRC_DIR)/scent_map.h
 
 $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $(PCHFLAGS) -MMD -MP $<

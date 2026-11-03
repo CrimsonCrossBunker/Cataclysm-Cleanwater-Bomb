@@ -4,6 +4,13 @@
 
 #include <cfloat>
 
+// Exact mixed-friendliness branch of monster::attitude_to: the candidate is
+// unfriendly and the observer is a player ally, so faction does not decide it.
+inline bool hostile_to_player_ally( int friendliness, int morale, int anger )
+{
+    return friendliness == 0 && morale >= 0 && anger >= 10;
+}
+
 inline float observed_monster_target_power( float power, bool hostile_to_source )
 {
     return hostile_to_source ? power + 2 : power;

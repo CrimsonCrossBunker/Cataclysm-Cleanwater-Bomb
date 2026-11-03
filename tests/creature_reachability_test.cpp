@@ -16,13 +16,67 @@
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
+#include "monster_danger_search.h"
+#include "monster_target_selection.h"
+#include "monster_target_frame.h"
+#include "monster_target_index.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "rng.h"
 #include "type_id.h"
 
+TEST_CASE( "friendly_target_filter_matches_live_monster_attitudes", "[monster][targeting]" )
+{
+    monster observer( mtype_id( "mon_zombie" ), tripoint_bub_ms::zero );
+    monster candidate( mtype_id( "mon_zombie" ), tripoint_bub_ms{ 1, 0, 0 } );
+    observer.friendly = -1;
+    for( int friendliness : { -1, 0, 1 } ) {
+        for( int morale : { -1, 0, 1 } ) {
+            for( int anger : { 0, 9, 10, 100 } ) {
+                candidate.friendly = friendliness;
+                candidate.morale = morale;
+                candidate.anger = anger;
+                CHECK( hostile_to_player_ally( candidate.friendly, candidate.morale, candidate.anger ) ==
+                       ( candidate.friendly == 0 && candidate.attitude_to( observer ) == Creature::Attitude::HOSTILE ) );
+            }
+        }
+    }
+}
+
 namespace
 {
+std::vector<Creature *> danger_candidates( const monster &origin, bool indexed )
+{
+    std::vector<Creature *> found;
+    auto collect = [&]( Creature *other ) {
+        found.push_back( other );
+        return false;
+    };
+    creature_tracker &tracker = get_creature_tracker();
+    if( indexed ) {
+        tracker.find_reachable_danger( origin, collect );
+    } else {
+        tracker.for_each_reachable( origin, [&]( Creature *other ) {
+            monster_danger_candidate candidate;
+            candidate.position = other->pos_abs().raw();
+            candidate.hallucination = other->is_hallucination();
+            candidate.character = other->is_avatar() || other->is_npc();
+            if( candidate.character ) {
+                candidate.character_hostile = other->as_character()->attitude_to( origin ) ==
+                                             Creature::Attitude::HOSTILE;
+            } else {
+                const monster *mon = other->as_monster();
+                candidate.attitude = mon->faction->attitude( origin.faction );
+                candidate.angry = mon->anger > 0;
+            }
+            if( monster_danger_possible( origin.pos_abs().raw(), candidate, trigdist ) ) {
+                collect( other );
+            }
+        } );
+    }
+    return found;
+}
+
 void prepare_reachability_rooms()
 {
     clear_map_without_vision();
@@ -65,6 +119,99 @@ void check_members( const std::vector<Creature *> &found,
     CHECK( std::set<Creature *>( found.begin(), found.end() ) == expected );
 }
 } // namespace
+
+TEST_CASE( "shared_target_frame_handles_live_membership_and_position_changes",
+           "[monster][target_index]" )
+{
+    prepare_reachability_rooms();
+    auto &tracker = get_creature_tracker();
+    monster &origin = spawn_test_monster( "mon_zombie", { 50, 50, 0 } );
+    origin.friendly = -1;
+    monster &target = spawn_test_monster( "mon_zombie", { 51, 50, 0 } );
+    target.friendly = -1;
+    target.anger = 100;
+    target.morale = 100;
+    monster_target_frame frame( tracker );
+    const auto check = [&]() {
+        std::vector<shared_ptr_fast<monster>> actual;
+        const auto rng_before = rng_get_engine();
+        REQUIRE( monster_target_frame::collect( origin, actual ) );
+        std::vector<shared_ptr_fast<monster>> expected;
+        for( const auto &entry : tracker.get_monsters_list() ) {
+            if( hostile_to_player_ally( entry->friendly, entry->morale, entry->anger ) &&
+                !entry->is_dead() && monster_target_index::overlaps(
+                    monster_target_index::cell( origin.pos_abs().raw() ),
+                    monster_target_index::cell( entry->pos_abs().raw() ) ) ) {
+                expected.push_back( entry );
+            }
+        }
+        CHECK( actual == expected );
+        CHECK( rng_get_engine() == rng_before );
+        return actual.size();
+    };
+    CHECK( check() == 0 );
+    target.friendly = 0;
+    CHECK( check() == 1 );
+    target.anger = 0;
+    CHECK( check() == 0 );
+    target.anger = 100;
+    target.morale = -1;
+    CHECK( check() == 0 );
+    target.morale = 0;
+    CHECK( check() == 1 );
+    const auto old_position = target.pos_abs();
+    target.spawn( origin.pos_abs() + tripoint{ 1000, 1000, 0 } );
+    CHECK( check() == 0 );
+    target.spawn( old_position );
+    CHECK( check() == 1 );
+    target.set_hp( 0 );
+    CHECK( check() == 0 );
+    target.set_hp( 100 );
+    CHECK( check() == 1 );
+    monster &added = spawn_test_monster( "mon_zombie", { 52, 50, 0 } );
+    added.anger = 100;
+    added.morale = 100;
+    CHECK( check() == 2 );
+    tracker.swap_positions( target, added );
+    CHECK( check() == 2 );
+    tracker.remove( added );
+    CHECK( check() == 1 );
+    target.poly( mtype_id( "mon_dog" ) );
+    check();
+    target.friendly = -1;
+    CHECK( check() == 0 );
+}
+
+TEST_CASE( "danger_index_matches_full_scan_after_live_changes", "[monster][reachability][danger_search]" )
+{
+    prepare_reachability_rooms();
+    monster &origin = spawn_test_monster( "mon_zombie", { 50, 50, 0 } );
+    monster &changing = spawn_test_monster( "mon_dog", { 51, 50, 0 } );
+    changing.anger = 100;
+    spawn_npc( { 52, 50 }, "test_talker" );
+    reachable_from( origin );
+    auto check = [&]() {
+        const auto before = rng_get_engine();
+        const auto expected = danger_candidates( origin, false );
+        CHECK( danger_candidates( origin, true ) == expected );
+        CHECK( rng_get_engine() == before );
+    };
+    check();
+    // Several rebuilds in one turn must not revive signed zone IDs.
+    changing.make_ally( origin );
+    check();
+    monster &spawned = spawn_test_monster( "mon_dog", { 54, 50, 0 } );
+    spawned.anger = 100;
+    check();
+    spawned.setpos( get_map(), { 54, 51, 0 } );
+    check();
+    spawned.poly( mtype_id( "mon_zombie" ) );
+    check();
+    changing.set_hp( 0 );
+    check();
+    get_creature_tracker().remove( spawned );
+    check();
+}
 
 TEST_CASE( "creature_reachability_preserves_owner_lookup_and_lifecycle",
            "[monster][reachability]" )

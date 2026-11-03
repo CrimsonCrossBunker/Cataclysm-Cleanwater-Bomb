@@ -58,6 +58,7 @@
 /mods/
 /obj/
 /objwin/
+/objwin-lua/
 /obj-lua/
 /save/
 /src/version.h

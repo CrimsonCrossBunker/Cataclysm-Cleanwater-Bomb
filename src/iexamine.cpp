@@ -5076,13 +5076,30 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         item drink( drink_type, drink_bday[ drink_index ] );
         drink.set_relative_rot( drink_rot[ drink_index ] );
         drink.charges = 0;
-        bool keg_full = false;
         Character &player_character = get_player_character();
-        for( int i = 0; i < charges_held && !keg_full; i++ ) {
-            player_character.use_charges( drink.typeId(), 1 );
-            drink.charges++;
-            keg_full = drink.volume() >= keg_cap;
+        int charges_to_transfer = charges_held;
+        item probe( drink );
+        probe.charges = charges_to_transfer;
+        if( probe.volume() >= keg_cap ) {
+            int low = 1;
+            int high = charges_to_transfer;
+            while( low < high ) {
+                const int mid = low + ( high - low ) / 2;
+                probe.charges = mid;
+                if( probe.volume() >= keg_cap ) {
+                    high = mid;
+                } else {
+                    low = mid + 1;
+                }
+            }
+            charges_to_transfer = low;
         }
+        const std::list<item> used = player_character.use_charges( drink.typeId(),
+                                         charges_to_transfer );
+        for( const item &used_item : used ) {
+            drink.charges += used_item.charges;
+        }
+        const bool keg_full = drink.volume() >= keg_cap;
         if( keg_full ) {
             add_msg( _( "You completely fill the %1$s with %2$s." ),
                      keg_name, item::nname( drink_type ) );
@@ -5196,10 +5213,25 @@ bool iexamine::pour_into_keg( const tripoint_bub_ms &pos, item &liquid, bool sil
     if( !silent ) {
         add_msg( _( "You pour %1$s into the %2$s." ), liquid.tname(), keg_name );
     }
-    while( liquid.charges > 0 && drink.volume() < keg_cap ) {
-        drink.charges++;
-        liquid.charges--;
+    int charges_to_transfer = liquid.charges;
+    item probe( drink );
+    probe.charges += charges_to_transfer;
+    if( probe.volume() >= keg_cap ) {
+        int low = 1;
+        int high = charges_to_transfer;
+        while( low < high ) {
+            const int mid = low + ( high - low ) / 2;
+            probe.charges = drink.charges + mid;
+            if( probe.volume() >= keg_cap ) {
+                high = mid;
+            } else {
+                low = mid + 1;
+            }
+        }
+        charges_to_transfer = low;
     }
+    drink.charges += charges_to_transfer;
+    liquid.charges -= charges_to_transfer;
     return true;
 }
 

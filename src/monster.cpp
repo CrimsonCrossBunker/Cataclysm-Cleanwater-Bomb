@@ -419,6 +419,9 @@ void monster::on_effect_int_change( const efftype_id &/*eid*/, int /*intensity*/
 
 void monster::poly( const mtype_id &id )
 {
+    if( g && faction != id->default_faction ) {
+        get_creature_tracker().invalidate_reachability_cache();
+    }
     double hp_percentage = static_cast<double>( hp ) / static_cast<double>( type->hp );
     if( !no_extra_death_drops ) {
         generate_inventory();
@@ -1294,7 +1297,7 @@ std::vector<std::string> monster::extended_description() const
 
         tmp.emplace_back( string_format( _( "Current Speed: %1$d" ), get_speed() ) );
         tmp.emplace_back( string_format( _( "Anger: %1$d" ), anger ) );
-        tmp.emplace_back( string_format( _( "Friendly: %1$d" ), friendly ) );
+        tmp.emplace_back( string_format( _( "Friendly: %1$d" ), static_cast<int>( friendly ) ) );
         tmp.emplace_back( string_format( _( "Morale: %1$d" ), morale ) );
         if( aggro_character ) {
             tmp.emplace_back( string_format( _( "<color_red>Aggressive towards characters</color>" ) ) );
@@ -4255,6 +4258,9 @@ void monster::make_friendly()
 
 void monster::make_ally( const monster &z )
 {
+    if( g && faction != z.faction ) {
+        get_creature_tracker().invalidate_reachability_cache();
+    }
     friendly = z.friendly;
     faction = z.faction;
 }

@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "profiling.h"
+#include "cpu_scheduler.h"
 #include "thread_pool.h"
 
 namespace tile_preparation
@@ -93,7 +94,8 @@ frame::frame( unsigned workers )
 {
     if( workers != 0 ) {
         try {
-            pool_ = std::make_unique<cata_thread_pool>( std::min( workers, 4u ) );
+            pool_ = &get_thread_pool();
+            worker_limit_ = std::min( { workers, cpu_worker_limit, pool_->num_workers() } );
         } catch( const std::system_error & ) {
             // Thread resources unavailable: preserve the serial renderer.
         }
@@ -123,33 +125,8 @@ void frame::prepare()
         compute( 0, inputs_.size() );
         return;
     }
-    const std::size_t batches = pool_->num_workers() + 1;
-    const std::size_t stride = ( inputs_.size() + batches - 1 ) / batches;
-    std::vector<std::future<void>> pending;
-    pending.reserve( batches - 1 );
-    try {
-        for( std::size_t i = 1; i < batches; ++i ) {
-            const std::size_t begin = i * stride;
-            const std::size_t end = std::min( begin + stride, inputs_.size() );
-            pending.push_back( pool_->submit_returning( [compute, begin, end]() noexcept {
-                compute( begin, end );
-            } ) );
-        }
-        used_workers_ = true;
-        compute( 0, stride );
-        for( std::future<void> &task : pending ) {
-            task.get();
-        }
-    } catch( ... ) {
-        // Queue allocation can fail after earlier tasks started. They must not
-        // retain these buffers after stack unwinding or renderer destruction.
-        for( std::future<void> &task : pending ) {
-            if( task.valid() ) {
-                task.wait();
-            }
-        }
-        throw;
-    }
+    used_workers_ = cpu_parallel_for( cpu_task_kind::render, inputs_.size(), 1024,
+                                     compute, worker_limit_ ) != 0;
 }
 
 const std::vector<result> &frame::results() const
@@ -159,14 +136,14 @@ const std::vector<result> &frame::results() const
 
 unsigned frame::worker_count() const
 {
-    return pool_ ? pool_->num_workers() : 0;
+    return worker_limit_;
 }
 
 bool frame::can_parallelize( std::size_t count ) const
 {
     // Fixed value/copy/queue measurements show a loss at 4096 mixed tiles.
     constexpr std::size_t minimum_parallel_tiles = 16384;
-    return pool_ && count >= minimum_parallel_tiles;
+    return worker_limit_ != 0 && cpu_parallel_enabled() && count >= minimum_parallel_tiles;
 }
 
 bool frame::used_workers() const

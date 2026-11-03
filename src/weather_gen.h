@@ -3,6 +3,7 @@
 #define CATA_SRC_WEATHER_GEN_H
 
 #include <string>
+#include <cstddef>
 #include <string_view>
 #include <vector>
 
@@ -75,6 +76,10 @@ class weather_generator
         void sort_weather();
         units::temperature get_weather_temperature( const tripoint_abs_ms &, const time_point &,
                 unsigned ) const;
+
+        // Calendar observations are captured by the caller thread before numerical work.
+        std::vector<units::temperature> get_hourly_temperatures( const tripoint_abs_ms &location,
+                const time_point &first, unsigned seed, std::size_t count ) const;
 
         bool was_loaded = false;
         void load( const JsonObject &jo, std::string_view );

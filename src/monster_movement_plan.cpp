@@ -10,6 +10,7 @@
 #include "line.h"
 #include "map.h"
 #include "monster.h"
+#include "monster_move_profile.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 
@@ -60,6 +61,7 @@ monster_movement_plan::monster_movement_plan( monster &source, map &here,
 monster_movement_result monster_movement_plan::commit( const monster_movement_proposal &proposal,
         map &here )
 {
+    monster_move_scope timing( monster_move_stage::commit );
     if( consumed_ ) {
         return monster_movement_result::stale;
     }
@@ -110,32 +112,41 @@ monster_movement_result monster_movement_plan::commit( const monster_movement_pr
     // Keep the old lazy order, including inside/outside and stagger queries.
     // Successful actions stop immediately; failed actions may have effects.
     if( !proposal.pacified ) {
+        timing.set( monster_move_stage::attack );
         if( source->attack_at( step ) ) {
             return monster_movement_result::acted;
         }
+        timing.set( monster_move_stage::commit );
         if( !still_active() ) {
             return monster_movement_result::cancelled;
         }
+        timing.set( monster_move_stage::doors );
         if( proposal.can_open_doors &&
             here.open_door( *source, step, !here.is_outside( source->pos_bub() ) ) ) {
             return monster_movement_result::acted;
         }
+        timing.set( monster_move_stage::commit );
         if( !still_active() ) {
             return monster_movement_result::cancelled;
         }
+        timing.set( monster_move_stage::bash );
         if( source->bash_at( step ) ) {
             return monster_movement_result::acted;
         }
+        timing.set( monster_move_stage::commit );
         if( !still_active() ) {
             return monster_movement_result::cancelled;
         }
+        timing.set( monster_move_stage::push );
         if( source->push_to( step, 0, 0 ) ) {
             return monster_movement_result::acted;
         }
+        timing.set( monster_move_stage::commit );
         if( !still_active() ) {
             return monster_movement_result::cancelled;
         }
     }
+    timing.set( monster_move_stage::relocate );
     const float adjustment = monster_stagger_adjustment( source->pos_bub(), proposal.goal, step,
         trigdist );
     if( source->move_to( step, false, false, adjustment ) ) {

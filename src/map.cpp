@@ -58,6 +58,9 @@
 #include "iexamine.h"
 #include "input.h"
 #include "item.h"
+#include "item_temperature.h"
+#include "item_rot.h"
+#include "cpu_scheduler.h"
 #include "item_category.h"
 #include "item_factory.h"
 #include "item_group.h"
@@ -7606,6 +7609,44 @@ void map::process_items()
         }
     }
     update_submaps_with_active_items();
+    item_temperature_batch temperatures;
+    item_rot_batch daily_rot;
+    if( cpu_parallel_enabled() ) {
+        for( const tripoint_abs_sm &abs_pos : submaps_with_active_items ) {
+            if( !inbounds( project_to<coords::ms>( abs_pos ) ) ) {
+                continue;
+            }
+            const tripoint_rel_sm local_pos = abs_pos - abs_sub.xy();
+            const submap *current = get_submap_at_grid( local_pos );
+            if( current == nullptr ) {
+                continue;
+            }
+            const point_bub_ms offset( local_pos.x() * SEEX, local_pos.y() * SEEY );
+            for( const item_reference &ref : current->active_items.peek_for_processing( 8192 ) ) {
+                if( !ref.item_ref ) {
+                    continue;
+                }
+                const tripoint_bub_ms pos( offset + ref.location, local_pos.z() );
+                if( furn( pos ).obj().has_flag( ter_furn_flag::TFLAG_DONT_REMOVE_ROTTEN ) ) {
+                    continue;
+                }
+                const temperature_flag flag = ter( pos ) == ter_t_rootcellar ?
+                                              temperature_flag::ROOT_CELLAR : temperature_flag::NORMAL;
+                ref.item_ref->prepare_temperature( temperatures, pos, ref.insulation(), flag );
+                const float spoil_modifier = has_flag( ter_furn_flag::TFLAG_NO_SPOIL, pos ) ?
+                                             0.0f : ref.spoil_multiplier();
+                ref.item_ref->prepare_rot( daily_rot, pos, flag, spoil_modifier );
+                if( temperatures.full() && daily_rot.full() ) {
+                    break;
+                }
+            }
+            if( temperatures.full() && daily_rot.full() ) {
+                break;
+            }
+        }
+        temperatures.prepare();
+        daily_rot.prepare();
+    }
     for( auto iter = submaps_with_active_items.begin(); iter != submaps_with_active_items.end(); ) {
         tripoint_abs_sm const abs_pos = *iter;
         if( !inbounds( project_to<coords::ms>( abs_pos ) ) ) {

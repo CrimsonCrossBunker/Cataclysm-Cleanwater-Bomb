@@ -30,6 +30,9 @@
 #include "maptile_fwd.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "monster_danger_search.h"
+#include "monster_move_profile.h"
+#include "monster_target_frame.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
@@ -39,6 +42,7 @@
 #include "string_formatter.h"
 #include "submap.h"  // IWYU pragma: keep
 #include "thread_pool.h"
+#include "cpu_scheduler.h"
 #include "type_id.h"
 
 class Character;
@@ -144,7 +148,10 @@ bool creature_tracker::add( const shared_ptr_fast<monster> &critter_ptr )
     }
 
     monsters_list.emplace_back( critter_ptr );
+    monster_target_frame::population_changed( *this );
     cache_location( critter.pos_abs(), critter_ptr );
+    // A flood already built this turn must not hide a newly spawned threat.
+    invalidate_reachability_cache();
     return true;
 }
 
@@ -257,10 +264,12 @@ void creature_tracker::remove( const monster &critter )
     remove_from_location_map( critter );
     removed_this_turn_.emplace( *iter );
     monsters_list.erase( iter );
+    monster_target_frame::population_changed( *this );
 }
 
 void creature_tracker::clear()
 {
+    monster_target_frame::population_changed( *this );
     monsters_list.clear();
     monsters_by_location.clear();
     location_filter_.reset();
@@ -380,6 +389,7 @@ void creature_tracker::remove_dead()
         if( critter->is_dead() ) {
             remove_from_location_map( *critter );
             iter = monsters_list.erase( iter );
+            monster_target_frame::population_changed( *this );
         } else {
             ++iter;
         }
@@ -436,6 +446,19 @@ void creature_tracker::invalidate_reachability_preparation()
 }
 void creature_tracker::invalidate_reachability_cache()
 {
+    if( !dirty_ ) {
+        // More than one rebuild can occur in a turn (spawn or faction change).
+        // Merely flipping the sign twice would revive old zone IDs.
+        for( const auto &critter : monsters_list ) {
+            critter->set_reachable_zone( 0 );
+        }
+        for( const auto &person : active_npc ) {
+            person->set_reachable_zone( 0 );
+        }
+        if( g ) {
+            get_avatar().set_reachable_zone( 0 );
+        }
+    }
     dirty_ = true;
     invalidate_reachability_preparation();
 }
@@ -459,7 +482,8 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
     }
     try {
         if( !reachability_preparation_ ) {
-            reachability_preparation_ = std::make_unique<ai_reachability::frame>( workers == 1 ? 0 : workers );
+            reachability_preparation_ = std::make_unique<ai_reachability::frame>(
+                                           workers == 1 ? 0 : cpu_worker_quota( workers ) );
         }
         ai_reachability::frame::lease request = reachability_preparation_->try_acquire();
         if( !request ) {
@@ -611,7 +635,9 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
         if( Creature *creature = this->creature_at<Creature>( loc, true ) ) {
             if( shared_ptr_fast<Creature> ptr = g->shared_from( *creature ) ) {
                 const int n = zone_number_ * zone_tick_;
-                creatures_by_zone_and_faction_[n][creature->get_monster_faction()].emplace_back( std::move( ptr ) );
+                auto &group = creatures_by_zone_and_faction_[n][creature->get_monster_faction()];
+                group.contains_character |= creature->is_avatar() || creature->is_npc();
+                group.creatures.emplace_back( std::move( ptr ) );
                 creature->set_reachable_zone( n );
             }
         }
@@ -629,6 +655,73 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
     } else {
         zone_number_++;
     }
+}
+
+Creature *creature_tracker::find_reachable_danger( const monster &origin,
+        const std::function<bool( Creature * )> &predicate )
+{
+    monster_move_scope profile( monster_move_stage::danger_search );
+    flood_fill_zone( origin );
+    const auto zone = creatures_by_zone_and_faction_.find( origin.get_reachable_zone() );
+    if( zone == creatures_by_zone_and_faction_.end() ) {
+        return nullptr;
+    }
+
+    std::vector<shared_ptr_fast<Creature>> candidates;
+    std::vector<monster_danger_candidate> snapshots;
+    for( auto &[faction, group] : zone->second ) {
+        // This is candidate -> observer, not observer -> candidate. Resolve the
+        // lazy faction cache here, never in a worker. NPCs use their own attitude.
+        const mf_attitude attitude = faction->attitude( origin.faction );
+        if( !monster_danger_group_possible( attitude, group.contains_character ) ) {
+            continue;
+        }
+        auto &creatures = group.creatures;
+        for( std::size_t i = 0; i < creatures.size(); ) {
+            Creature *other = creatures[i].get();
+            if( !is_present( other ) ) {
+                std::swap( creatures[i], creatures.back() );
+                creatures.pop_back();
+                continue;
+            }
+            monster_danger_candidate snapshot;
+            snapshot.position = other->pos_abs().raw();
+            snapshot.hallucination = other->is_hallucination();
+            snapshot.character = other->is_avatar() || other->is_npc();
+            if( snapshot.character ) {
+                snapshot.character_hostile = other->as_character()->attitude_to( origin ) ==
+                                             Creature::Attitude::HOSTILE;
+            } else if( const monster *candidate = other->as_monster() ) {
+                snapshot.attitude = candidate->faction->attitude( origin.faction );
+                snapshot.angry = candidate->anger > 0;
+            }
+            candidates.push_back( creatures[i] );
+            snapshots.push_back( snapshot );
+            ++i;
+        }
+    }
+
+    // The owner waits for this value-only batch. No creature action, spawn,
+    // faction change or map update can occur between capture and consumption.
+    std::vector<unsigned char> possible( snapshots.size() );
+    const tripoint position = origin.pos_abs().raw();
+    const bool circular_distance = trigdist;
+    cpu_parallel_for( cpu_task_kind::monster_danger, snapshots.size(), 256,
+    [&]( std::size_t begin, std::size_t end ) {
+        for( std::size_t i = begin; i < end; ++i ) {
+            possible[i] = monster_danger_possible( position, snapshots[i], circular_distance );
+        }
+    } );
+
+    // Preserve candidate traversal order. RNG, senses and all effects stay on
+    // the owner; references keep removed objects alive until this query ends.
+    for( std::size_t i = 0; i < candidates.size(); ++i ) {
+        Creature *other = candidates[i].get();
+        if( possible[i] && is_present( other ) && predicate( other ) ) {
+            return other;
+        }
+    }
+    return nullptr;
 }
 
 void creature_tracker::precompute_all_zones()
