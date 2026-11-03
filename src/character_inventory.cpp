@@ -2998,7 +2998,7 @@ bool Character::unload( item_location &loc, bool bypass_activity,
 
         target->ammo_set( target->ammo_current(), target->ammo_remaining( ) - qty );
     } else if( target->has_flag( flag_BRASS_CATCHER ) ) {
-        target->spill_contents( get_player_character() );
+        target->spill_contents( *this );
     }
 
     // Turn off any active tools
@@ -3012,7 +3012,7 @@ bool Character::unload( item_location &loc, bool bypass_activity,
         loc.remove_item();
     }
 
-    get_player_character().recoil = MAX_RECOIL;
+    recoil = MAX_RECOIL;
 
     return true;
 }
