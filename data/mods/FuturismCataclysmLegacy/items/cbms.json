@@ -107,5 +107,15 @@
     "price": "10 kUSD",
     "price_postapoc": "1 kUSD",
     "difficulty": 10
+  },
+  {
+    "id": "fcl_bio_blood_brain",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Blood Neurology CBM" },
+    "description": "A radical nanite treatment that allows its host's circulatory system to function as a secondary nervous system, greatly increasing their mental acuity and allowing them to survive trauma that would otherwise be fatal.  A cybernetic enhancement of this category is a rare find and could be easily traded for significant favors and resources.",
+    "price_postapoc": "475 kUSD",
+    "difficulty": 5
   }
 ]

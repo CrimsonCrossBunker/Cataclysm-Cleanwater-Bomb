@@ -108,5 +108,23 @@
     "act_cost": "12 kJ",
     "react_cost": "12 kJ",
     "time": "1 s"
+  },
+  {
+    "id": "fcl_bio_blood_brain",
+    "type": "bionic",
+    "name": { "str": "Blood Neurology" },
+    "description": "Your blood is laced with neuron-analogue nanites, allowing your entire circulatory system to function as a secondary brain.  This radical modification increases your intelligence, reflexes and perception by 4, increases your pain tolerance and allows you to survive brain damage that would otherwise prove fatal.",
+    "occupied_bodyparts": [ [ "leg_l", 2 ], [ "leg_r", 2 ] ],
+    "enchantments": [
+      {
+        "values": [
+          { "value": "INTELLIGENCE", "add": 4 },
+          { "value": "PERCEPTION", "add": 4 },
+          { "value": "DEXTERITY", "add": 4 },
+          { "value": "PAIN", "multiply": -0.33 },
+          { "value": "PAIN_PENALTY_MOD_INT", "add": -4 }
+        ]
+      }
+    ]
   }
 ]
