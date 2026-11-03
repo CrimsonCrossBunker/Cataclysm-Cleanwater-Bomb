@@ -272,18 +272,14 @@ std::string mp_get_host_player_name();
 std::string mp_client_host_player_name();
 void mp_set_client_host_player_name( const std::string &name );
 
-// True when hosting and the host avatar has an active wait activity (ACT_WAIT,
-// ACT_WAIT_STAMINA, etc.).  Used by do_turn to skip monmove() so monsters
-// freeze while the host fast-forwards, giving the client time to act freely.
+// True when hosting and the host avatar has an active wait activity.
+// This is observational only: waiting never skips world simulation.
 bool host_is_in_wait_activity();
 
-// True when do_turn() should run `calendar::turn += 1_turns;` this iteration.
-// In SP and host mode, always true.  In client mode, true only when moves > 0
-// (i.e. the host just granted a turn) — otherwise the calendar races forward
-// at ~10 turns/sec while the client sits in its locked input poll.  Named
-// callout so the SP file in do_turn.cpp holds a single boolean check instead
-// of an inline MP block — keeps merge-conflict surface minimal.
+// Single-player and host own world time; clients only observe host timestamps.
 bool should_advance_calendar();
+// Called by the client main loop, never by packet parsing or a modal UI.
+bool client_begin_simulation_turn();
 
 // True when the given activity id (e.g. "ACT_CRAFT", "ACT_READ") is one where
 // the avatar is committed to ticking turns without per-turn user input — i.e.

@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "avatar.h"
+#include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
 #include "game.h"
@@ -14,6 +15,7 @@
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_world_session.h"
+#include "player_activity.h"
 #include "mtype.h"
 #include "player_helpers.h"
 #include "worldfactory.h"
@@ -201,4 +203,58 @@ TEST_CASE( "mp_client_duplicate_wire_ids_do_not_rebind_another_monster",
     CHECK( original->get_hp() == 50 );
     CHECK( get_creature_tracker().size() == 1 );
     CHECK( session.replication.client.monsters.find( 17 ) == original.get() );
+}
+
+TEST_CASE( "client_turn_packets_do_not_execute_activities_or_replay_a_grant",
+           "[multiplayer][turn_coordination][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_avatar();
+    } );
+    cata_mp::set_client_mode( true );
+    avatar &actor = get_avatar();
+    actor.assign_activity( wait_activity_actor( 100_seconds ) );
+    const auto packet = []( int turn, int sequence, int moves, bool partial = false ) {
+        std::ostringstream text;
+        JsonOut out( text );
+        out.start_object();
+        out.member( "type", "state" );
+        out.member( "calendar_turn", turn );
+        out.member( "grant_seq", sequence );
+        out.member( "moves", moves );
+        out.member( "free", partial );
+        out.end_object();
+        return text.str();
+    };
+    REQUIRE( cata_mp::client_apply_message( packet( 1000, 41, 100 ) ) );
+    CHECK( actor.activity.moves_left == 10000 );
+    CHECK( actor.get_moves() == 100 );
+    CHECK_FALSE( cata_mp::should_advance_calendar() );
+    CHECK( cata_mp::client_begin_simulation_turn() );
+    CHECK_FALSE( cata_mp::client_begin_simulation_turn() );
+    actor.set_moves( 0 );
+    cata_mp::client_mark_action_sent();
+    REQUIRE( cata_mp::client_apply_message( packet( 1000, 41, 100 ) ) );
+    CHECK( actor.get_moves() == 0 );
+    CHECK( cata_mp::is_client_waiting_for_ack() );
+    REQUIRE( cata_mp::client_apply_message( packet( 1000, 41, 0 ) ) );
+    CHECK_FALSE( cata_mp::is_client_waiting_for_ack() );
+    REQUIRE( cata_mp::client_apply_message( packet( 1001, 42, 100 ) ) );
+    REQUIRE( cata_mp::client_apply_message( packet( 1000, 41, 0 ) ) );
+    CHECK( calendar::turn == time_point( 1001 ) );
+    CHECK( actor.get_moves() == 100 );
+    CHECK( cata_mp::client_begin_simulation_turn() );
+    REQUIRE( cata_mp::client_apply_message( packet( 1001, 42, 30, true ) ) );
+    CHECK( actor.get_moves() == 30 );
+    CHECK_FALSE( cata_mp::client_begin_simulation_turn() );
+    REQUIRE( cata_mp::client_apply_message( packet( 1002, 42, -50 ) ) );
+    CHECK( cata_mp::client_begin_simulation_turn() );
+    CHECK( actor.get_moves() == -50 );
+    CHECK( actor.activity.moves_left == 10000 );
 }

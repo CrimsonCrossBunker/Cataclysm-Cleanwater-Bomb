@@ -16,6 +16,7 @@
 #include "mp_test_helpers.h"
 #include "rng.h"
 #include "avatar.h"
+#include "activity_actor_definitions.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "filesystem.h"
@@ -27,6 +28,8 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <thread>
+#include "player_activity.h"
 
 namespace
 {
@@ -195,8 +198,10 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
     CHECK( first_actor->pos_abs() != second_actor->pos_abs() );
     CHECK( second_actor->pos_abs() != third_actor->pos_abs() );
     const auto send = [&]( const cata_mp::peer_admission & admission, const std::string & message ) {
+        const auto *peer = session.find_remote( admission );
+        const auto packet = peer ? test_granted_action( message, peer->turn.grant_seq ) : message;
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action,
-                                               "same display name", message, admission } ) );
+                                               "same display name", packet, admission } ) );
     };
     send( admissions[0], R"({"action":"worn_sync","char_stats":{"name":"first owner"}})" );
     send( admissions[1], R"({"action":"worn_sync","char_stats":{"name":"second owner"}})" );
@@ -218,7 +223,7 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
     second_actor->setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
     third_actor->setpos( get_map(), tripoint_bub_ms( 63, 60, 0 ) );
     const auto third_position = third_actor->pos_abs();
-    first->turn.remote_moves = 100;
+    next_test_remote_turn( *first );
     send( admissions[0], "{\"action\":\"swap_with_partner\",\"target_player\":\"" +
           profiles[1].id.str() + "\",\"char_stats\":{\"name\":\"forged\"}}" );
     cata_mp::process_mp_events();
@@ -347,6 +352,9 @@ TEST_CASE( "mp_bookkeeping_classification_uses_only_the_message_envelope",
 {
     for( const char *message : {
              R"({"action":"worn_sync"})",
+             R"({"action":"activity_start","activity_id":"ACT_WAIT"})",
+             R"({"action":"activity_end","activity_id":"ACT_WAIT"})",
+             R"({"action":"save_request"})",
              R"({ "type" : "action", "action" : "worn_sync", "char_stats":{} })",
              R"({"type":"note_sync"})", R"({"type":"chat"})",
              R"({"type":"templates_list"})", R"({"type":"resync_request"})"
@@ -388,8 +396,10 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
     const std::string attached_delta = GENERATE( false, true ) ?
                                        R"(,"client_tile_changes":[])" : "";
     auto &queue = cata_mp::get_mp_queue();
-    const auto push = [&]( const std::string & data, const cata_mp::peer_admission & admission ) {
-        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname", data, admission } ) );
+    const auto push = [&]( const std::string & data, const cata_mp::peer_admission & admission,
+    uint32_t sequence = 1 ) {
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname",
+                               test_granted_action( data, sequence ), admission } ) );
     };
     push( R"({"action":"wait","client_stamina":100)" + attached_delta + "}",
           only_test_remote( session ).admission );
@@ -399,7 +409,7 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
     push( R"({"action":"wait","client_stamina":300})",
           cata_mp::peer_admission::create( 702 ) );
     push( R"({"action":"wait","client_stamina":200)" + attached_delta + "}",
-          only_test_remote( session ).admission );
+          only_test_remote( session ).admission, 2 );
     push( R"({"action":"worn_sync","char_stats":{"name":"after second"}})",
           only_test_remote( session ).admission );
 
@@ -408,6 +418,7 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
     CHECK( remote.name == "after first" );
     REQUIRE_FALSE( queue.empty() );
 
+    next_test_remote_turn( only_test_remote( session ) );
     cata_mp::process_mp_events();
     CHECK( remote.get_stamina() == 200 );
     CHECK( remote.name == "after second" );
@@ -485,6 +496,46 @@ TEST_CASE( "mp_bookkeeping_backlog_yields_without_losing_order_or_large_messages
     }
 }
 
+TEST_CASE( "mp_turn_grants_reject_repeats_future_actions_and_stale_payloads",
+           "[multiplayer][turn_coordination][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+    } );
+    npc &actor = bind_test_player( session );
+    auto &peer = only_test_remote( session );
+    peer.connected = true;
+    peer.turn.grant_seq = 41;
+    const auto send = [&]( uint32_t grant, int stamina ) {
+        const auto packet = test_granted_action( R"({"action":"wait","client_stamina":)" +
+                            std::to_string( stamina ) + "}", grant );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action,
+                                               "player", packet, peer.admission } ) );
+        cata_mp::process_mp_events();
+    };
+    actor.set_stamina( 500 );
+    send( 40, 100 );
+    send( 42, 200 );
+    CHECK( actor.get_stamina() == 500 );
+    CHECK_FALSE( peer.turn.client_acted_this_turn );
+    send( 41, 300 );
+    CHECK( actor.get_stamina() == 300 );
+    REQUIRE( peer.turn.client_acted_this_turn );
+    send( 41, 400 );
+    CHECK( actor.get_stamina() == 300 );
+    next_test_remote_turn( peer );
+    send( 41, 100 );
+    CHECK_FALSE( peer.turn.client_acted_this_turn );
+    send( 42, 450 );
+    CHECK( peer.turn.client_acted_this_turn );
+    CHECK( actor.get_stamina() == 450 );
+}
+
 TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
            "[multiplayer][world_session][entity_identity][regression]" )
 {
@@ -512,9 +563,12 @@ TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
     REQUIRE( session.replication.entity_ids.known_id( *copied ) == 0 );
     REQUIRE( get_creature_tracker().add( copied ) );
     const auto hit = [&]( uint32_t id ) {
+        auto &peer = only_test_remote( session );
+        next_test_remote_turn( peer );
+        const auto packet = test_granted_action( R"({"action":"wait","client_monster_hits":[{"nid":)" +
+                            std::to_string( id ) + R"(,"hp":1}]})", peer.turn.grant_seq );
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
-                                               R"({"action":"wait","client_monster_hits":[{"nid":)" +
-                                               std::to_string( id ) + R"(,"hp":1}]})", only_test_remote( session ).admission } ) );
+                                               packet, peer.admission } ) );
         cata_mp::process_mp_events();
     };
     const int initial_hp = copied->get_hp();
@@ -1074,4 +1128,75 @@ TEST_CASE( "mp_client_body_updates_restart_in_a_new_world_at_the_same_time",
     const int second_initial = start_world();
     cata_mp::client_character_turn_driver( get_avatar() ).update_body();
     CHECK( get_avatar().get_stamina() > second_initial );
+}
+
+// Requires the co-op runtime adjacent to the test executable, as for the game.
+TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
+           "[.multiplayer_runtime][turn_coordination][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        clear_avatar();
+    } );
+    const bool started = session.hosting.start( 0, "", "turn-regression" );
+    INFO( session.hosting.error() );
+    REQUIRE( started );
+    auto &queue = cata_mp::get_mp_queue();
+    avatar &local = get_avatar();
+    local.assign_activity( wait_activity_actor( 100_seconds ) );
+    for( int i = 0; i < 3; ++i ) {
+        auto &peer = make_test_remote( session, 801 + i );
+        const cata_mp::player_id owner( std::string( 32, '1' + i ) );
+        npc &actor = spawn_npc( { 61 + i, 60 }, "test_talker" );
+        actor.set_value( "mp_proxy", std::string( "1" ) );
+        actor.set_value( "mp_player_id", owner.str() );
+        peer.actor.bind_player( actor, owner, g->npc_lifetimes(),
+                                g->player_controls().claim( owner, actor ) );
+        peer.connected = true;
+        peer.observation.partner_activity = "ACT_WAIT";
+    }
+    REQUIRE( cata_mp::should_fast_forward() );
+    auto &last = *session.remote_players.at( 803 );
+    last.observation.partner_activity.clear();
+    CHECK_FALSE( cata_mp::should_fast_forward() );
+    last.observation.partner_sleeping = true;
+    CHECK( cata_mp::should_fast_forward() );
+    local.activity.set_to_null();
+    const efftype_id sleep( "sleep" );
+    local.add_effect( sleep, 10_hours );
+    CHECK( cata_mp::should_fast_forward() );
+
+    // Another session poll must not replenish an outstanding budget.
+    cata_mp::grant_client_turn();
+    for( const auto &entry : session.remote_players ) {
+        const auto &peer = *entry.second;
+        CHECK( peer.turn.grant_seq == 1 );
+        CHECK( peer.turn.remote_moves == 100 );
+    }
+    const auto packet = test_granted_action( R"({"action":"wait","client_activity":"ACT_WAIT"})", 1 );
+    for( int i = 0; i < 2; ++i ) {
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "player", packet,
+                               session.remote_players.at( 801 + i )->admission } ) );
+    }
+    cata_mp::process_mp_events();
+    REQUIRE_FALSE( cata_mp::client_acted_this_turn() );
+    const auto admission = last.admission;
+    // The queue is the only shared object; all world/actor access stays here.
+    std::thread reply( [&queue, packet, admission]() {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+        static_cast<void>( queue.push( { cata_mp::mp_event::type::action, "player", packet,
+                                         admission } ) );
+    } );
+    const on_out_of_scope join( [&]() {
+        reply.join();
+    } );
+    cata_mp::wait_for_client_action();
+    CHECK( last.turn.client_acted_this_turn );
+    CHECK( cata_mp::client_acted_this_turn() );
+    CHECK_FALSE( session.host_waiting_for_clients );
 }

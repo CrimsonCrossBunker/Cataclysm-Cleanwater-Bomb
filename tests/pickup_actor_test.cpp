@@ -631,7 +631,8 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     const auto name = remote.name;
     const auto dispatch = [&]( const std::string & packet ) {
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                               packet, only_test_remote( session ).admission } ) );
+                                               test_granted_action( packet, only_test_remote( session ).turn.grant_seq ),
+                                               only_test_remote( session ).admission } ) );
         cata_mp::process_mp_events();
     };
     dispatch( attack );
