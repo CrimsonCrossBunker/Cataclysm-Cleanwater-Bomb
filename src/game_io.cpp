@@ -80,6 +80,7 @@
 #include "safemode_ui.h"
 #include "save_snapshot.h"
 #if defined(TILES)
+    #include "cata_tiles.h"
     #include "sdltiles.h"
 #endif
 #include "stats_tracker.h"
