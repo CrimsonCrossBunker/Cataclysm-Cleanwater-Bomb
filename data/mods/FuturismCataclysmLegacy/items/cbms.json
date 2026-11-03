@@ -65,5 +65,15 @@
     "description": "An implanted miniaturized computer isolated from the rest of your systems by military-grade firewalls.  An accompanying jack allows you to interface with external computer systems with minimal risk.  Skill in computers is important, and a failed use may damage your circuits.",
     "price_postapoc": "10 kUSD",
     "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_missiles",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Deployable Grenade Launcher CBM" },
+    "description": "A small, folding tube that attaches to your right arm.  Once implanted, it can serve as a portable, integrated tool for firing 40mm grenades and canisters.",
+    "price": "1 kUSD",
+    "difficulty": 5
   }
 ]

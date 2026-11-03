@@ -63,5 +63,16 @@
     "description": "An implanted miniaturized computer isolated from the rest of your systems by military-grade firewalls.  An accompanying jack allows you to interface with external computer systems with minimal risk.  Skill in computers is important, and a failed use may damage your circuits.",
     "occupied_bodyparts": [ [ "arm_l", 1 ], [ "arm_r", 1 ] ],
     "passive_pseudo_items": [ "fcl_bio_deck_jack" ]
+  },
+  {
+    "id": "fcl_bio_missiles",
+    "type": "bionic",
+    "//": "Watch those wrist rockets!",
+    "name": { "str": "Deployable Grenade Launcher" },
+    "description": "Your right hand can fold inward to reveal a mechanism capable of igniting and firing 40mm grenades across medium distances.",
+    "occupied_bodyparts": [ [ "hand_r", 3 ] ],
+    "fake_weapon": "fcl_bionic_rocket",
+    "flags": [ "BIONIC_TOGGLED", "BIONIC_WEAPON", "NO_UNWIELD" ],
+    "act_cost": "35 J"
   }
 ]
