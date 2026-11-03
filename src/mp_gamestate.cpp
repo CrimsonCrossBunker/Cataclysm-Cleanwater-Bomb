@@ -52,6 +52,7 @@
 #include "mp_actor_binding.h"
 #include "mp_client_conn.h"
 #include "mp_mod_compat.h"
+#include "mp_protocol.h"
 #include "mp_queue.h"
 #include "mp_server.h"
 #include "mp_world_session.h"
@@ -5746,24 +5747,24 @@ void process_mp_events()
     // Draining the whole queue in a loop caused unexpected back-to-back move
     // execution when network timing let two packets arrive before
     // process_mp_events() ran.
-    // State-sync messages (worn_sync, note_sync, trade_delta, templates_list,
-    // resync_request, tile_changes) are protocol bookkeeping, not game turns —
-    // they always drain regardless of depth. Only actions that advance the
-    // lockstep turn count toward the depth-1 limit.
+    // Bookkeeping can drain after an action, but cannot overtake the next
+    // queued action. Attached tile deltas never exempt a gameplay action from
+    // this budget. Keep a deferred action queued instead of dropping it.
     // TODO(roadmap): real multi-depth queue for lockstep relaxation / input
     // buffering — see ROADMAP.md "Action queue depth"
-    auto is_state_sync = []( const std::string_view data ) {
-        return data.find( R"("action":"worn_sync")" ) != std::string::npos
-               || data.find( R"("type":"trade_delta")" ) != std::string::npos
-               || data.find( R"("type":"note_sync")" ) != std::string::npos
-               || data.find( R"("type":"chat")" ) != std::string::npos
-               || data.find( R"("type":"templates_list")" ) != std::string::npos
-               || data.find( R"("type":"resync_request")" ) != std::string::npos
-               || data.find( "\"client_tile_changes\":" ) != std::string::npos;
-    };
     mp_event event;
     bool turn_action_processed = false;
-    while( get_mp_queue().pop( event ) ) {
+    bool state_sync = false;
+    const auto can_drain = [&]( const mp_event & queued ) {
+        state_sync = false;
+        if( queued.evt_type != mp_event::type::action ||
+            !mp_session().accepts_remote_event( queued.admission ) ) {
+            return true;
+        }
+        state_sync = is_state_sync_message( queued.data );
+        return !turn_action_processed || state_sync;
+    };
+    while( get_mp_queue().pop_if( event, can_drain ) ) {
         // A late disconnect/action from a former transport peer must not act on
         // the currently bound character. Display names are not connection IDs.
         if( event.evt_type != mp_event::type::connect &&
@@ -5774,12 +5775,6 @@ void process_mp_events()
             // Already admitted actions precede the disconnect in this queue.
             // Preserve that order even after transport retirement; exact
             // admission matching rejects them after detach or replacement.
-            const bool sync = is_state_sync( event.data );
-            if( !sync && turn_action_processed ) {
-                mp_log( "[cdda-mp] process_mp_events: unexpected queued turn-action dropped: " +
-                        event.data.substr( 0, 60 ) );
-                continue;
-            }
             mp_log( "[cdda-mp] process_mp_events: " + event.data.substr( 0, 60 ) );
         }
         switch( event.evt_type ) {
@@ -5802,7 +5797,7 @@ void process_mp_events()
                 break;
             case mp_event::type::action:
                 handle_remote_action( event.display_name, event.data );
-                if( !is_state_sync( event.data ) ) {
+                if( !state_sync ) {
                     turn_action_processed = true;
                 }
                 break;

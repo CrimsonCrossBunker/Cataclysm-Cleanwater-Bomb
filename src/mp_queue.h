@@ -41,8 +41,17 @@ class event_queue
         }
 
         bool pop( mp_event &out ) {
+            return pop_if( out, []( const mp_event & ) {
+                return true;
+            } );
+        }
+
+        // A rejected front stays ahead of later actions and disconnects.
+        // The predicate runs under the queue lock and must not call the queue.
+        template<typename Predicate>
+        bool pop_if( mp_event &out, Predicate &&accept ) {
             std::scoped_lock lock( mutex_ );
-            if( queue_.empty() ) {
+            if( queue_.empty() || !accept( queue_.front() ) ) {
                 return false;
             }
             out = std::move( queue_.front() );

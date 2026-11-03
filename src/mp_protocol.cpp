@@ -47,6 +47,45 @@ bool read_handshake( const std::string &wire, std::map<std::string, std::string>
     }
 }
 
+bool is_state_sync_message( const std::string &wire )
+{
+    if( wire.size() > max_packet_bytes ) {
+        return false;
+    }
+    try {
+        std::istringstream input( wire );
+        TextJsonIn reader( input );
+        std::string type;
+        std::string action;
+        std::set<std::string> seen;
+        reader.start_object();
+        while( !reader.end_object() ) {
+            const std::string name = reader.get_member_name();
+            if( !seen.insert( name ).second ) {
+                return false;
+            }
+            if( name == "type" ) {
+                type = reader.get_string();
+            } else if( name == "action" ) {
+                action = reader.get_string();
+            } else {
+                reader.skip_value();
+            }
+        }
+        input >> std::ws;
+        if( !input.eof() ) {
+            return false;
+        }
+        if( !action.empty() ) {
+            return ( type.empty() || type == "action" ) && action == "worn_sync";
+        }
+        return type == "trade_delta" || type == "note_sync" || type == "chat" ||
+               type == "templates_list" || type == "resync_request";
+    } catch( const JsonError & ) {
+        return false;
+    }
+}
+
 std::string wire_quote( const std::string &text )
 {
     std::ostringstream output;

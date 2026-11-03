@@ -7,6 +7,7 @@
 #include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_protocol.h"
 #include "mp_queue.h"
 #include "mp_world_session.h"
 #include "rng.h"
@@ -133,6 +134,78 @@ TEST_CASE( "mp_native_export_reassigns_retained_monsters_after_session_reset",
            session.replication.entity_ids.known_id( *arrival ) );
     CHECK( session.replication.entity_ids.known_id( *second ) !=
            session.replication.entity_ids.known_id( *arrival ) );
+}
+
+TEST_CASE( "mp_bookkeeping_classification_uses_only_the_message_envelope",
+           "[multiplayer][world_session][action_budget]" )
+{
+    for( const char *message : {
+             R"({"action":"worn_sync"})",
+             R"({ "type" : "action", "action" : "worn_sync", "char_stats":{} })",
+             R"({"type":"trade_delta","give":[]})",
+             R"({"type":"note_sync"})", R"({"type":"chat"})",
+             R"({"type":"templates_list"})", R"({"type":"resync_request"})"
+         } ) {
+        CAPTURE( message );
+        CHECK( cata_mp::is_state_sync_message( message ) );
+    }
+    for( const char *message : {
+             R"({"action":"wait","client_tile_changes":[]})",
+             R"({"type":"action","action":"move","item":{"action":"worn_sync"}})",
+             R"({"action":"wait","item":{"type":"trade_delta"}})",
+             R"({"type":"chat","action":"wait"})",
+             R"({"action":"worn_sync","action":"wait"})",
+             R"({"type":"chat","type":"action"})",
+             R"({"type":"chat"} {})", R"({"action":42})",
+             R"({"client_tile_changes":[]})", R"({})", R"([])", R"({)"
+         } ) {
+        CAPTURE( message );
+        CHECK_FALSE( cata_mp::is_state_sync_message( message ) );
+    }
+}
+
+TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
+           "[multiplayer][world_session][action_budget][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        cata_mp::get_mp_queue().clear();
+    } );
+    npc &remote = bind_test_player( session );
+    session.remote_connected = true;
+    session.remote_admission = cata_mp::peer_admission::create( 701 );
+    const std::string attached_delta = GENERATE( false, true ) ?
+                                       R"(,"client_tile_changes":[])" : "";
+    auto &queue = cata_mp::get_mp_queue();
+    const auto push = [&]( const std::string & data, const cata_mp::peer_admission & admission ) {
+        queue.push( { cata_mp::mp_event::type::action, "nickname", data, admission } );
+    };
+    push( R"({"action":"wait","client_stamina":100)" + attached_delta + "}",
+          session.remote_admission );
+    push( R"({"action":"worn_sync","char_stats":{"name":"after first"}})",
+          session.remote_admission );
+    // Stale events do not consume the current peer's budget or block its queue.
+    push( R"({"action":"wait","client_stamina":300})",
+          cata_mp::peer_admission::create( 702 ) );
+    push( R"({"action":"wait","client_stamina":200)" + attached_delta + "}",
+          session.remote_admission );
+    push( R"({"action":"worn_sync","char_stats":{"name":"after second"}})",
+          session.remote_admission );
+
+    cata_mp::process_mp_events();
+    CHECK( remote.get_stamina() == 100 );
+    CHECK( remote.name == "after first" );
+    REQUIRE_FALSE( queue.empty() );
+
+    cata_mp::process_mp_events();
+    CHECK( remote.get_stamina() == 200 );
+    CHECK( remote.name == "after second" );
+    CHECK( queue.empty() );
 }
 
 TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
