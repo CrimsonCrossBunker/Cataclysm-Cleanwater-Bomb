@@ -33,5 +33,16 @@
     "price_postapoc": "950 USD",
     "weight": "1000 g",
     "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_linguistic_coprocessor",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Linguistic Coprocessor CBM" },
+    "description": "A microcomputer installed into the left hemisphere of your brain to increase the speed that it processes language.  When installed, it provides a passive boost to reading speed.",
+    "price": "1 kUSD",
+    "price_postapoc": "500 USD",
+    "difficulty": 5
   }
 ]
