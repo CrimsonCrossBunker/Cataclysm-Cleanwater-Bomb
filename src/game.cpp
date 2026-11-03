@@ -141,6 +141,7 @@
 #include "item_category.h"
 #include "item_contents.h"
 #include "item_location.h"
+#include "item_reload.h"
 #include "item_pocket.h"
 #include "item_search.h"
 #include "item_stack.h"
@@ -179,6 +180,7 @@
 #include "mp_client_conn.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
+    #include "mp_reload.h"
 #endif
 #include "mtype.h"
 #include "npc.h"
@@ -7722,11 +7724,15 @@ void game::reload( item_location &loc, bool prompt, bool empty )
             break;
     }
 
-    if( !u.has_item( *loc ) && !loc->has_flag( flag_ALLOWS_REMOTE_USE ) ) {
+    const item_location selected = loc;
+    const bool external = !u.has_item( *loc ) && !loc->has_flag( flag_ALLOWS_REMOTE_USE );
+    if( external ) {
         if( !avatar_action::check_stealing( get_player_character(), *loc.get_item() ) ) {
             return;
         }
-        loc = loc.obtain( u );
+        if( !cata_mp::is_client_mode() ) {
+            loc = loc.obtain( u );
+        }
         if( !loc ) {
             add_msg( _( "Never mind." ) );
             return;
@@ -7739,6 +7745,14 @@ void game::reload( item_location &loc, bool prompt, bool empty )
     }
 
     item::reload_option opt = favorite_ammo_or_select( u, loc, empty, prompt );
+
+    if( cata_mp::is_client_mode() ) {
+        if( opt && ( !opt.ammo->is_frozen_liquid() || query_crush_frozen_liquid( u, opt.ammo ) ) ) {
+            cata_mp::client_start_reload( selected, opt.target, opt.ammo, opt.qty(),
+                                          opt.pocket_index, external, true );
+        }
+        return;
+    }
 
     if( opt.ammo.get_item() == nullptr || ( opt.ammo.get_item()->is_frozen_liquid() &&
                                             !u.crush_frozen_liquid( opt.ammo ) ) ) {

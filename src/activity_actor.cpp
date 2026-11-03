@@ -85,6 +85,7 @@
 #include "item_factory.h"
 #include "item_group.h"
 #include "item_location.h"
+#include "item_reload.h"
 #include "item_pocket.h"
 #include "item_uid.h"
 #include "item_wakeup.h"
@@ -108,6 +109,7 @@
 #include "messages.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_reload.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
@@ -8593,7 +8595,8 @@ std::unique_ptr<activity_actor> insert_item_activity_actor::deserialize( JsonVal
     return actor.clone();
 }
 
-reload_activity_actor::reload_activity_actor( item::reload_option &&opt, int extra_moves )
+reload_activity_actor::reload_activity_actor( item::reload_option &&opt, int extra_moves,
+        bool owned ) : server_owned( owned )
 {
     moves_total = opt.moves() + extra_moves;
     quantity = opt.qty();
@@ -8602,6 +8605,84 @@ reload_activity_actor::reload_activity_actor( item::reload_option &&opt, int ext
     ammo_loc = std::move( opt.ammo );
     seconds_per_round = opt.qty() ? std::min( 1, moves_total / quantity ) : 0;
     ammo_id = ammo_loc->type->id;
+}
+
+reload_activity_actor reload_activity_actor::client_view()
+{
+    reload_activity_actor result;
+    result.view_only = true;
+    return result;
+}
+
+std::optional<item> reload_activity_actor::preview_remaining() const
+{
+    return target_loc && ammo_loc && quantity > already_loaded ?
+           preview_reload( *target_loc, ammo_loc, quantity - already_loaded, pocket_index ) :
+           std::nullopt;
+}
+
+bool reload_activity_actor::prepare_owned_turn( Character &who )
+{
+    if( quantity == already_loaded ) {
+        return true;
+    }
+    if( !target_loc || !ammo_loc ) {
+        return false;
+    }
+    if( reload_would_fit( target_loc, ammo_loc, quantity - already_loaded, pocket_index ) ) {
+        return true;
+    }
+    const auto loaded = preview_remaining();
+    if( !loaded ) {
+        return false;
+    }
+    // Move the original item only after finding a pocket that fits its loaded
+    // form. Ammunition remains untouched until the native activity advances.
+    auto destination = who.best_pocket( *loaded, target_loc.get_item(), false );
+    if( !destination.second ) {
+        return false;
+    }
+    const auto inserted = destination.second->insert_item( *target_loc );
+    if( !inserted.success() ) {
+        return false;
+    }
+    item_location relocated( destination.first, inserted.value() );
+    const auto ammo_path = reload_item_path( *target_loc, *ammo_loc );
+    target_loc.remove_item();
+    target_loc = relocated;
+    if( ammo_path ) {
+        ammo_loc = reload_item_at( target_loc, *ammo_path );
+    }
+    destination.first.on_contents_changed();
+    destination.second->on_contents_changed();
+    who.invalidate_inventory_validity_cache();
+    return true;
+}
+
+bool reload_activity_actor::place_target( Character &who, bool wield )
+{
+    if( !target_loc || !preview_remaining() ) {
+        return false;
+    }
+    const auto ammo_path = reload_item_path( *target_loc, *ammo_loc );
+    if( wield ) {
+        const auto loaded = preview_remaining();
+        if( !who.can_wield( *loaded ).success() || who.has_wield_conflicts( *loaded ) ) {
+            return false;
+        }
+        if( !who.Character::wield( target_loc ) ) {
+            return false;
+        }
+        target_loc = who.get_wielded_item();
+    } else {
+        item_location old = target_loc;
+        target_loc = get_map().add_item_or_charges_ret_loc( old.pos_bub( get_map() ), *old );
+        old.remove_item();
+    }
+    if( target_loc && ammo_path ) {
+        ammo_loc = reload_item_at( target_loc, *ammo_path );
+    }
+    return static_cast<bool>( target_loc );
 }
 
 bool reload_activity_actor::can_reload() const
@@ -8725,7 +8806,14 @@ void reload_activity_actor::reload( player_activity &act, Character &who, int lo
         reload_query.addentry( 1, wield_check, 'w', _( "Wield %s" ), reloadable_name );
     }
     reload_query.addentry( 2, true, 'd', _( "Drop %s" ), reloadable_name );
-    reload_query.query();
+    if( server_owned ) {
+        // Capacity was checked before this turn. A gameplay callback may have
+        // changed the pockets since then; retain the item safely without a
+        // remote operation opening a menu on the host.
+        reload_query.ret = 2;
+    } else {
+        reload_query.query();
+    }
 
     switch( reload_query.ret ) {
         case 1:
@@ -8753,6 +8841,10 @@ void reload_activity_actor::reload( player_activity &act, Character &who, int lo
 
 void reload_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    if( view_only ) {
+        cata_mp::client_step_reload();
+        return;
+    }
     if( seconds_per_round != 0
         && already_loaded < quantity
         && ( act.moves_left / 100 ) % seconds_per_round == 0 ) {
@@ -8773,6 +8865,9 @@ void reload_activity_actor::make_reload_sound( Character &who, item &reloadable 
 
 void reload_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( view_only ) {
+        return;
+    }
     reload( act, who, quantity - already_loaded );
     already_loaded += quantity - already_loaded;
     reload_msg( who, true );
@@ -8819,11 +8914,15 @@ void reload_activity_actor::finish( player_activity &act, Character &who )
     }
     const int extra_moves = target_loc->get_var( "dirt", 0 ) > 7800 ? 2500 : 0;
     item::reload_option chain_opt( &who, target_loc, chain_ammo, chain_pocket );
-    who.assign_activity( reload_activity_actor( std::move( chain_opt ), extra_moves ) );
+    who.assign_activity( reload_activity_actor( std::move( chain_opt ), extra_moves, server_owned ) );
 }
 
 void reload_activity_actor::canceled( player_activity &act, Character &who )
 {
+    if( view_only ) {
+        cata_mp::client_cancel_reload();
+        return;
+    }
     who.recoil = MAX_RECOIL;
     act.moves_total = 0;
     act.moves_left = 0;
@@ -8834,11 +8933,14 @@ void reload_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
 
+    jsout.member( "server_owned", server_owned );
+    jsout.member( "view_only", view_only );
     jsout.member( "moves_total", moves_total );
     jsout.member( "qty", quantity );
     jsout.member( "pocket_index", pocket_index );
     jsout.member( "target_loc", target_loc );
     jsout.member( "ammo_loc", ammo_loc );
+    jsout.member( "ammo_id", ammo_id );
     jsout.member( "seconds_per_round", seconds_per_round );
     jsout.member( "already_loaded", already_loaded );
 
@@ -8851,6 +8953,8 @@ std::unique_ptr<activity_actor> reload_activity_actor::deserialize( JsonValue &j
 
     JsonObject data = jsin.get_object();
 
+    data.read( "server_owned", actor.server_owned );
+    data.read( "view_only", actor.view_only );
     data.read( "moves_total", actor.moves_total );
     data.read( "qty", actor.quantity );
     // Saves missing the key route through the first-compatible-well path.
@@ -8861,8 +8965,14 @@ std::unique_ptr<activity_actor> reload_activity_actor::deserialize( JsonValue &j
     data.read( "ammo_loc", actor.ammo_loc );
     data.read( "seconds_per_round", actor.seconds_per_round );
     data.read( "already_loaded", actor.already_loaded );
-    if( actor.ammo_loc ) {
-        actor.ammo_id = actor.ammo_loc->type->id;
+    if( !data.read( "ammo_id", actor.ammo_id ) ) {
+        if( actor.ammo_loc ) {
+            actor.ammo_id = actor.ammo_loc->type->id;
+        } else if( actor.target_loc ) {
+            // Older saves may have consumed the source before their activity
+            // time elapsed. Recover the loaded ammo name where possible.
+            actor.ammo_id = actor.target_loc->ammo_current();
+        }
     }
 
     return actor.clone();
