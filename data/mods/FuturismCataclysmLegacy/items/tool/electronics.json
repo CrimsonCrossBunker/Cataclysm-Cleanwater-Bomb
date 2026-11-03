@@ -82,22 +82,5 @@
     ],
     "light": 25,
     "extend": { "flags": [ "TRADER_AVOID", "SPAWN_ACTIVE" ] }
-  },
-  {
-    "id": "fcl_bio_deck_jack",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "Infolink jack" },
-    "description": "The interface jack of an implanted Infolink, coiled within your forearm and accessible through a small port in your wrist.  It can be used to interface and hack into electronic devices.",
-    "weight": "20 g",
-    "volume": "2 ml",
-    "price": "1 USD",
-    "symbol": ",",
-    "color": "green",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "PERSONAL", "WATER_FRIENDLY", "SOFT", "NO_REPAIR", "ALLOWS_NATURAL_ATTACKS", "TRADER_AVOID", "USES_BIONIC_POWER" ],
-    "charges_per_use": 1,
-    "qualities": [ [ "HACK", 4 ] ],
-    "tool_ammo": [ "battery" ]
   }
 ]
