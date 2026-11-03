@@ -1,0 +1,216 @@
+#include "cata_catch.h"
+
+#include "avatar.h"
+#include "calendar.h"
+#include "cata_scope_helpers.h"
+#include "character.h"
+#include "game.h"
+#include "game_constants.h"
+#include "handle_liquid.h"
+#include "iexamine.h"
+#include "item.h"
+#include "item_location.h"
+#include "item_stack.h"
+#include "liquid_transfer.h"
+#include "map.h"
+#include "map_helpers.h"
+#include "map_selector.h"
+#include "npc.h"
+#include "player_helpers.h"
+#include "rng.h"
+#include "type_id.h"
+#include "units.h"
+#include "vehicle.h"
+
+namespace
+{
+class liquid_owner_fixture
+{
+    public:
+        restore_on_out_of_scope<time_point> time{ calendar::turn };
+        restore_on_out_of_scope<cata_default_random_engine> rng{ rng_get_engine() };
+        liquid_owner_fixture() {
+            clear_avatar();
+            clear_map_without_vision();
+            get_avatar().setpos( get_map(), tripoint_bub_ms( 90, 90, 0 ) );
+            get_avatar().set_moves( 517 );
+        }
+        ~liquid_owner_fixture() {
+            clear_npcs();
+            clear_avatar();
+        }
+        npc &actor() {
+            npc &who = spawn_npc( { 60, 60 }, "test_talker" );
+            clear_character( who, true );
+            who.set_moves( 1500 );
+            return who;
+        }
+};
+} // namespace
+
+TEST_CASE( "liquid_transfer_charges_its_actor_and_refreshes_its_carried_weight",
+           "[liquid][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    liquid_dest_opt target;
+    target.dest_opt = LD_ITEM;
+    target.item_loc = who.get_wielded_item();
+    item water( itype_id( "water_clean" ), calendar::turn, 20 );
+    water.set_owner( faction_id( "your_followers" ) );
+    water.set_old_owner( faction_id( "free_merchants" ) );
+    const int capacity = target.item_loc->get_remaining_capacity_for_liquid( water, true );
+    REQUIRE( capacity > 0 );
+    water.charges = capacity + 1;
+    const units::mass before = who.weight_carried();
+    REQUIRE( liquid_handler::transfer_liquid( who, water, target ) );
+    CHECK( water.charges == 1 );
+    CHECK( target.item_loc->legacy_front().charges == capacity );
+    CHECK( target.item_loc->legacy_front().get_owner() == water.get_owner() );
+    CHECK( target.item_loc->legacy_front().get_old_owner() == water.get_old_owner() );
+    CHECK( who.weight_carried() > before );
+    CHECK( who.weight_carried() == target.item_loc->weight() );
+    CHECK( who.get_moves() == 1400 );
+    CHECK( get_avatar().get_moves() == 517 );
+    CHECK_FALSE( who.activity );
+    CHECK_FALSE( get_avatar().activity );
+    CHECK_FALSE( liquid_handler::transfer_liquid( who, water, target ) );
+    CHECK( water.charges == 1 );
+    CHECK( who.get_moves() == 1400 );
+}
+
+TEST_CASE( "liquid_transfer_rejects_missing_self_and_non_transfer_destinations",
+           "[liquid][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    item water( itype_id( "water_clean" ), calendar::turn, 2 );
+    liquid_dest_opt target;
+    SECTION( "missing_container" ) {
+        target.dest_opt = LD_ITEM;
+    }
+    SECTION( "consume_belongs_to_consumption" ) {
+        target.dest_opt = LD_CONSUME;
+    }
+    SECTION( "cancel" ) {
+        target.dest_opt = LD_NULL;
+    }
+    SECTION( "self" ) {
+        who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+        target.dest_opt = LD_ITEM;
+        target.item_loc = who.get_wielded_item();
+        REQUIRE( target.item_loc->fill_with( water, 1 ) == 1 );
+        item &inside = target.item_loc->legacy_front();
+        CHECK_FALSE( liquid_handler::transfer_liquid( who, inside, target ) );
+        CHECK( inside.charges == 1 );
+        return;
+    }
+    CHECK_FALSE( liquid_handler::transfer_liquid( who, water, target ) );
+    CHECK( water.charges == 2 );
+    CHECK( who.get_moves() == 1500 );
+    CHECK( get_avatar().get_moves() == 517 );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "liquid_transfer_uses_only_the_selected_vehicle_tank", "[liquid][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    map &here = get_map();
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), who.pos_bub() + tripoint::east,
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int first = veh->install_part( here, point_rel_ms::zero, vpart_id( "tank_test" ) );
+    REQUIRE( first >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "frame" ) ) >= 0 );
+    const int second = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "tank_test" ) );
+    REQUIRE( second >= 0 );
+    veh->refresh();
+    liquid_dest_opt target;
+    target.dest_opt = LD_VEH;
+    target.veh = veh;
+    item water( itype_id( "water_clean" ), calendar::turn, 3 );
+    SECTION( "selected" ) {
+        REQUIRE( liquid_handler::transfer_liquid( who, water, target, second ) );
+        CHECK( water.charges == 0 );
+        CHECK( veh->part( first ).ammo_remaining() == 0 );
+        CHECK( veh->part( second ).ammo_remaining() == 3 );
+        CHECK( who.get_moves() == 500 );
+    }
+    SECTION( "missing_choice_does_not_open_menu" ) {
+        CHECK_FALSE( liquid_handler::transfer_liquid( who, water, target ) );
+        CHECK( water.charges == 3 );
+        CHECK( who.get_moves() == 1500 );
+    }
+    SECTION( "stale_index" ) {
+        CHECK_FALSE( liquid_handler::transfer_liquid( who, water, target, 100000 ) );
+        CHECK( water.charges == 3 );
+        CHECK( who.get_moves() == 1500 );
+    }
+    SECTION( "incompatible_tank_does_not_fall_back_to_empty_tank" ) {
+        REQUIRE( veh->part( second ).ammo_set( itype_id( "gasoline" ), 3 ) == 3 );
+        CHECK_FALSE( liquid_handler::transfer_liquid( who, water, target, second ) );
+        CHECK( water.charges == 3 );
+        CHECK( veh->part( first ).ammo_remaining() == 0 );
+        CHECK( veh->part( second ).ammo_remaining() == 3 );
+        CHECK( who.get_moves() == 1500 );
+    }
+    CHECK( get_avatar().get_moves() == 517 );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "liquid_transfer_ground_and_keg_keep_quantity_on_invalid_targets",
+           "[liquid][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    map &here = get_map();
+    liquid_dest_opt target;
+    target.pos = who.pos_bub() + tripoint::east;
+    target.dest_opt = LD_GROUND;
+    bool valid = true;
+    SECTION( "ground" ) {}
+    SECTION( "keg" ) {
+        target.dest_opt = LD_KEG;
+        here.furn_set( target.pos, furn_id( "f_wood_keg" ) );
+        REQUIRE( iexamine::has_keg( target.pos ) );
+    }
+    SECTION( "missing_keg" ) {
+        target.dest_opt = LD_KEG;
+        valid = false;
+    }
+    SECTION( "blocked_ground" ) {
+        here.furn_set( target.pos, furn_id( "f_no_item" ) );
+        REQUIRE_FALSE( here.can_put_items_ter_furn( target.pos ) );
+        valid = false;
+    }
+    item water( itype_id( "water_clean" ), calendar::turn, 4 );
+    CHECK( liquid_handler::transfer_liquid( who, water, target ) == valid );
+    CHECK( water.charges == ( valid ? 0 : 4 ) );
+    CHECK( who.get_moves() == ( valid ? 1400 : 1500 ) );
+    CHECK( get_avatar().get_moves() == 517 );
+    if( valid ) {
+        const map_stack items = here.i_at( target.pos );
+        REQUIRE( items.size() == 1 );
+        CHECK( items.begin()->charges == 4 );
+    }
+}
+
+TEST_CASE( "native_unload_updates_the_operating_characters_recoil", "[unload][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    item revolver( itype_id( "sw629" ) );
+    revolver.ammo_set( revolver.ammo_default(), 1 );
+    who.set_wielded_item( revolver );
+    item_location source = who.get_wielded_item();
+    who.recoil = 11;
+    get_avatar().recoil = 29;
+    REQUIRE( who.Character::unload( source, true ) );
+    CHECK( who.get_wielded_item()->ammo_remaining() == 0 );
+    CHECK( who.recoil == MAX_RECOIL );
+    CHECK( get_avatar().recoil == 29 );
+    CHECK( get_avatar().get_moves() == 517 );
+}
