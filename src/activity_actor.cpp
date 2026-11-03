@@ -109,7 +109,7 @@
 #include "messages.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
-#include "mp_reload.h"
+#include "mp_inventory_activity.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
@@ -8842,7 +8842,7 @@ void reload_activity_actor::reload( player_activity &act, Character &who, int lo
 void reload_activity_actor::do_turn( player_activity &act, Character &who )
 {
     if( view_only ) {
-        cata_mp::client_step_reload();
+        cata_mp::client_step_inventory_activity();
         return;
     }
     if( seconds_per_round != 0
@@ -8920,7 +8920,7 @@ void reload_activity_actor::finish( player_activity &act, Character &who )
 void reload_activity_actor::canceled( player_activity &act, Character &who )
 {
     if( view_only ) {
-        cata_mp::client_cancel_reload();
+        cata_mp::client_cancel_inventory_activity();
         return;
     }
     who.recoil = MAX_RECOIL;

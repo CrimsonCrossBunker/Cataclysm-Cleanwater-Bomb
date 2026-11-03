@@ -180,7 +180,7 @@
 #include "mp_client_conn.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
-    #include "mp_reload.h"
+    #include "mp_inventory_activity.h"
     #include "mp_equipment.h"
 #endif
 #include "mtype.h"

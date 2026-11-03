@@ -28,7 +28,7 @@
 #include "mp_item_source.h"
 #include "mp_pickup.h"
 #include "mp_queue.h"
-#include "mp_reload.h"
+#include "mp_inventory_activity.h"
 #include "mp_world_session.h"
 #include "npc.h"
 #include "player_helpers.h"
@@ -39,7 +39,7 @@
 namespace
 {
 struct reload_fixture {
-    cata_mp::reload_host_state reload;
+    cata_mp::inventory_activity_host_state reload;
     cata_mp::pickup_host_state inventory;
     int64_t sequence = 0;
     restore_on_out_of_scope<cata_default_random_engine> rng{ rng_get_engine() };
@@ -84,7 +84,7 @@ struct reload_fixture {
         JsonValue value = json_loader::from_string( wire );
         JsonObject input = value.get_object();
         input.allow_omitted_members();
-        return cata_mp::execute_reload_request( who, get_map(), input, reload, inventory, authorized );
+        return cata_mp::execute_inventory_activity_request( who, get_map(), input, reload, inventory, authorized );
     }
     std::string start( Character &who, const item_location &target, const item_location &ammo,
                        int quantity ) {
@@ -132,7 +132,7 @@ void save_reload_activity( Character &who )
     player_activity restored;
     restored.deserialize( value.get_object() );
     who.activity = std::move( restored );
-    REQUIRE( cata_mp::owns_reload_activity( who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
 }
 
 item_location loose_ammo( Character &who, int quantity )
@@ -152,7 +152,7 @@ TEST_CASE( "owned_reload_preserves_native_progress_partial_ammo_and_cancel",
     const item_location ammo = loose_ammo( who, 30 );
     reload_events events;
     const std::string start_result = fixture.start( who, target, ammo, 30 );
-    REQUIRE( cata_mp::owns_reload_activity( who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
     REQUIRE( who.activity.moves_left > 100 );
     CHECK( target->ammo_remaining() == 0 );
     CHECK( ammo->charges == 30 );
@@ -196,7 +196,7 @@ TEST_CASE( "owned_reload_obtains_external_target_and_finishes_once", "[multiplay
     const item_location ammo = loose_ammo( who, 3 );
     reload_events events;
     fixture.start( who, target, ammo, 3 );
-    REQUIRE( cata_mp::owns_reload_activity( who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
     auto *actor = dynamic_cast<reload_activity_actor *>( who.activity.actor.get() );
     REQUIRE( actor );
     target = actor->target();
@@ -219,7 +219,7 @@ TEST_CASE( "owned_reload_rejects_ungranted_step_and_stale_activity", "[multiplay
     const item_location target = who.get_wielded_item();
     const item_location ammo = loose_ammo( who, 10 );
     fixture.start( who, target, ammo, 10 );
-    REQUIRE( cata_mp::owns_reload_activity( who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
     const int before = who.activity.moves_left;
     fixture.run( who, fixture.request( who, "step" ), false );
     CHECK( who.activity.moves_left == before );
@@ -227,9 +227,9 @@ TEST_CASE( "owned_reload_rejects_ungranted_step_and_stale_activity", "[multiplay
     const std::string old_activity = std::to_string( who.activity.identity_generation() );
     who.cancel_activity();
     fixture.start( who, target, ammo, 10 );
-    REQUIRE( cata_mp::owns_reload_activity( who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
     fixture.run( who, fixture.request( who, "cancel", {}, old_activity ) );
-    CHECK( cata_mp::owns_reload_activity( who ) );
+    CHECK( cata_mp::owns_inventory_activity( who ) );
     // Moving away from the map source cannot keep remotely loading it.
     who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 5, 0, 0 ) );
     fixture.run( who, fixture.request( who, "step" ) );
@@ -324,7 +324,7 @@ TEST_CASE( "owned_reload_overflow_waits_before_ammo_and_supports_drop_or_cancel"
     CHECK( ammo->charges == 500 );
 }
 
-TEST_CASE( "client_reload_view_does_not_advance_native_or_emit_lifecycle",
+TEST_CASE( "client_inventory_activity_view_does_not_advance_native_or_emit_lifecycle",
            "[multiplayer][reload_owned]" )
 {
     reload_fixture fixture;
@@ -334,7 +334,7 @@ TEST_CASE( "client_reload_view_does_not_advance_native_or_emit_lifecycle",
     who.set_moves( 100 );
     who.assign_activity( reload_activity_actor::client_view() );
     who.activity.moves_left = 500;
-    auto &view = g->multiplayer_session().client_reload;
+    auto &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     const auto before = rng_get_engine();
@@ -370,7 +370,7 @@ TEST_CASE( "reload_wire_updates_client_progress_inventory_and_completion_once",
 
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
-    auto &view = g->multiplayer_session().client_reload;
+    auto &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     view.next_request = 1;
@@ -378,7 +378,7 @@ TEST_CASE( "reload_wire_updates_client_progress_inventory_and_completion_once",
     local.assign_activity( reload_activity_actor::client_view() );
     const auto before_rng = rng_get_engine();
     REQUIRE( cata_mp::client_apply_message( started ) );
-    CHECK( cata_mp::reload_activity_view( local.activity ) );
+    CHECK( cata_mp::inventory_activity_view( local.activity ) );
     CHECK( local.get_wielded_item()->ammo_remaining() == 0 );
     view.pending_request = 2;
     REQUIRE( cata_mp::client_apply_message( progressed ) );
@@ -387,7 +387,7 @@ TEST_CASE( "reload_wire_updates_client_progress_inventory_and_completion_once",
     view.pending_request = 3;
     REQUIRE( cata_mp::client_apply_message( finished ) );
     CHECK( local.get_wielded_item()->ammo_remaining() == 3 );
-    cata_mp::client_update_reload_view();
+    cata_mp::client_update_inventory_activity_view();
     CHECK_FALSE( local.activity );
     REQUIRE( cata_mp::client_apply_message( finished ) );
     CHECK( local.get_wielded_item()->ammo_remaining() == 3 );

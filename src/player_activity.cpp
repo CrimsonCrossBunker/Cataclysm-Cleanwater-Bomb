@@ -35,7 +35,7 @@
 #include "messages.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
-#include "mp_reload.h"
+#include "mp_inventory_activity.h"
 #include "rng.h"
 #include "skill.h"
 #include "sounds.h"
@@ -74,7 +74,7 @@ static const efftype_id effect_nausea( "nausea" );
 
 static bool client_firearm_view( const Character &who, const activity_id &type )
 {
-    return cata_mp::reload_activity_view( who.activity ) ||
+    return cata_mp::inventory_activity_view( who.activity ) ||
            ( who.is_avatar() && type == ACT_AIM && cata_mp::is_client_mode() &&
              cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive );
 }
@@ -238,7 +238,7 @@ void player_activity::start_or_resume( Character &who, bool resuming )
 
 void player_activity::do_turn( Character &you )
 {
-    if( cata_mp::reload_activity_view( *this ) ) {
+    if( cata_mp::inventory_activity_view( *this ) ) {
         // Progress and all gameplay/Lua lifecycle hooks belong to the server.
         actor->do_turn( *this, you );
         return;
