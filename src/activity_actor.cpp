@@ -109,7 +109,7 @@
 #include "messages.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
-#include "mp_reload.h"
+#include "mp_inventory_activity.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
@@ -6615,23 +6615,59 @@ std::unique_ptr<activity_actor> safecracking_activity_actor::deserialize( JsonVa
     return actor.clone();
 }
 
-void unload_activity_actor::start( player_activity &act, Character & )
+unload_activity_actor unload_activity_actor::client_view()
+{
+    unload_activity_actor actor( 1, item_location::nowhere );
+    actor.view_only = true;
+    return actor;
+}
+
+void unload_activity_actor::do_turn( player_activity &, Character & )
+{
+    if( view_only ) {
+        cata_mp::client_step_inventory_activity();
+    }
+}
+
+void unload_activity_actor::canceled( player_activity &, Character & )
+{
+    if( view_only ) {
+        cata_mp::client_cancel_inventory_activity();
+    }
+}
+
+item_location unload_activity_actor::unload_target( Character &who ) const
+{
+    return is_server_owned() ? resolve_item_source( who, get_map(), owned_source ) : target;
+}
+
+void unload_activity_actor::start( player_activity &act, Character &who )
 {
     act.moves_left = moves_total;
     act.moves_total = moves_total;
+    if( is_server_owned() ) {
+        owned_source = capture_item_source( who, target );
+    }
 }
 
 void unload_activity_actor::finish( player_activity &act, Character &who )
 {
     // Need to copy `target` here because `::unload` is static and `this` might be invalidated
     // after `act.set_to_null()` has been called (so `this.target` might also be invalidated)
-    item_location target_copy = target;
+    item_location target_copy = unload_target( who );
+    const unload_liquid_choices choices_copy = liquid_choices;
     act.set_to_null();
-    unload( who, target_copy );
+    if( target_copy ) {
+        unload( who, target_copy, choices_copy );
+    }
 }
 
-void unload_activity_actor::unload( Character &who, item_location &target )
+void unload_activity_actor::unload( Character &who, item_location &target,
+                                    const unload_liquid_choices &choices )
 {
+    if( !target ) {
+        return;
+    }
     int qty = 0;
     item &it = *target.get_item();
     bool actually_unloaded = false;
@@ -6651,7 +6687,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
             for( item *contained : it.all_items_top( ptype, true ) ) {
                 int old_charges = contained->charges;
                 contained->normalize_plutonium_fuel( can_hold_legacy_plutonium );
-                const bool consumed = who.add_or_drop_with_msg( *contained, true, &it, contained );
+                const bool consumed = receive_unloaded_item( who, *contained, it, contained, choices );
                 if( consumed || contained->charges != old_charges ) {
                     changed = true;
                     handler.unseal_pocket_containing( item_location( target, contained ) );
@@ -6680,16 +6716,24 @@ void unload_activity_actor::unload( Character &who, item_location &target )
     std::vector<item *> remove_contained;
     for( item *contained : it.all_items_top() ) {
         contained->normalize_plutonium_fuel( can_hold_legacy_plutonium );
-        if( who.add_or_drop_with_msg( *contained, true, &it, contained ) ) {
-            qty += contained->charges;
-            remove_contained.push_back( contained );
+        const int before = contained->charges;
+        const bool consumed = receive_unloaded_item( who, *contained, it, contained, choices );
+        if( consumed || contained->charges != before ) {
+            qty += consumed ? before : before - contained->charges;
             actually_unloaded = true;
+        }
+        if( consumed ) {
+            remove_contained.push_back( contained );
         }
     }
     // remove the ammo leads in the belt
     for( item *remove : remove_contained ) {
         it.remove_item( *remove );
         actually_unloaded = true;
+    }
+    if( actually_unloaded ) {
+        it.on_contents_changed();
+        who.invalidate_weight_carried_cache();
     }
 
     // remove the belt linkage
@@ -6719,7 +6763,13 @@ void unload_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
 
     jsout.member( "moves_total", moves_total );
-    jsout.member( "target", target );
+    if( is_server_owned() ) {
+        jsout.member( "owned_source", owned_source );
+    } else {
+        jsout.member( "target", target );
+    }
+    jsout.member( "liquid_choices", liquid_choices );
+    jsout.member( "view_only", view_only );
 
     jsout.end_object();
 }
@@ -6732,6 +6782,9 @@ std::unique_ptr<activity_actor> unload_activity_actor::deserialize( JsonValue &j
 
     data.read( "moves_total", actor.moves_total );
     data.read( "target", actor.target );
+    data.read( "liquid_choices", actor.liquid_choices );
+    data.read( "owned_source", actor.owned_source );
+    data.read( "view_only", actor.view_only );
 
     return actor.clone();
 }
@@ -8842,7 +8895,7 @@ void reload_activity_actor::reload( player_activity &act, Character &who, int lo
 void reload_activity_actor::do_turn( player_activity &act, Character &who )
 {
     if( view_only ) {
-        cata_mp::client_step_reload();
+        cata_mp::client_step_inventory_activity();
         return;
     }
     if( seconds_per_round != 0
@@ -8920,7 +8973,7 @@ void reload_activity_actor::finish( player_activity &act, Character &who )
 void reload_activity_actor::canceled( player_activity &act, Character &who )
 {
     if( view_only ) {
-        cata_mp::client_cancel_reload();
+        cata_mp::client_cancel_inventory_activity();
         return;
     }
     who.recoil = MAX_RECOIL;

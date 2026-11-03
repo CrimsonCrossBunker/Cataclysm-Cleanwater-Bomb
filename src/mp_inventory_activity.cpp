@@ -1,4 +1,4 @@
-#include "mp_reload.h"
+#include "mp_inventory_activity.h"
 
 #include <algorithm>
 #include <functional>
@@ -24,6 +24,7 @@
 #include "mp_gamestate.h"
 #include "mp_item_source.h"
 #include "mp_pickup.h"
+#include "mp_unload.h"
 #include "mp_world_session.h"
 #include "player_activity.h"
 #include "ret_val.h"
@@ -38,6 +39,12 @@ namespace
 reload_activity_actor *native_reload( Character &who )
 {
     auto *actor = dynamic_cast<reload_activity_actor *>( who.activity.actor.get() );
+    return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+unload_activity_actor *native_unload( Character &who )
+{
+    auto *actor = dynamic_cast<unload_activity_actor *>( who.activity.actor.get() );
     return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
 }
 
@@ -137,13 +144,14 @@ bool start_reload( Character &who, map &here, const JsonObject &request )
     }
     const int extra_moves = target->get_var( "dirt", 0 ) > 7800 ? 2500 : 0;
     who.assign_activity( reload_activity_actor( std::move( chosen ), extra_moves, true ) );
-    return actor && owns_reload_activity( who );
+    return actor && owns_inventory_activity( who );
 }
 
-void send_reload( const std::string &operation, const std::function<void( JsonOut & )> &fields = {} )
+void send_inventory_activity( const std::string &operation,
+                              const std::function<void( JsonOut & )> &fields = {} )
 {
     world_session &session = g->multiplayer_session();
-    auto &view = session.client_reload;
+    auto &view = session.client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
         view.next_request == std::numeric_limits<int64_t>::max() ) {
         return;
@@ -155,7 +163,7 @@ void send_reload( const std::string &operation, const std::function<void( JsonOu
     JsonOut out( stream );
     out.start_object();
     out.member( "type", "action" );
-    out.member( "action", operation == "cancel" ? "reload_cancel" : "reload" );
+    out.member( "action", operation == "cancel" ? "inventory_activity_cancel" : "inventory_activity" );
     out.member( "operation", operation );
     out.member( "request", ++view.next_request );
     out.member( "activity", view.activity );
@@ -172,20 +180,24 @@ void send_reload( const std::string &operation, const std::function<void( JsonOu
 }
 } // namespace
 
-bool owns_reload_activity( const Character &who )
+bool owns_inventory_activity( const Character &who )
 {
     const auto *actor = dynamic_cast<const reload_activity_actor *>( who.activity.actor.get() );
-    return actor && actor->is_server_owned() && !actor->is_client_view();
+    const auto *unload = dynamic_cast<const unload_activity_actor *>( who.activity.actor.get() );
+    return ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
+           ( unload && unload->is_server_owned() && !unload->is_client_view() );
 }
 
-bool reload_activity_view( const player_activity &activity )
+bool inventory_activity_view( const player_activity &activity )
 {
     const auto *actor = dynamic_cast<const reload_activity_actor *>( activity.actor.get() );
-    return actor && actor->is_client_view();
+    const auto *unload = dynamic_cast<const unload_activity_actor *>( activity.actor.get() );
+    return ( actor && actor->is_client_view() ) || ( unload && unload->is_client_view() );
 }
 
-std::string execute_reload_request( Character &who, map &here, const JsonObject &request,
-                                    reload_host_state &state, pickup_host_state &inventory, bool authorized )
+std::string execute_inventory_activity_request( Character &who, map &here,
+        const JsonObject &request,
+        inventory_activity_host_state &state, pickup_host_state &inventory, bool authorized )
 {
     const int64_t sequence = request.get_int64( "request" );
     const std::string operation = request.get_string( "operation" );
@@ -195,14 +207,27 @@ std::string execute_reload_request( Character &who, map &here, const JsonObject 
         state.last_request = sequence;
         if( operation == "start" ) {
             state.needs_placement = false;
-            start_reload( who, here, request );
-        } else if( native_reload( who ) && request.get_string( "activity" ) ==
+            const std::string kind = request.get_string( "kind", "reload" );
+            if( kind == "reload" ) {
+                start_reload( who, here, request );
+            } else if( kind == "unload" ) {
+                start_owned_unload( who, here, request );
+            }
+        } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
             if( operation == "cancel" ) {
                 // This must work with exhausted AP, and a replay cannot cancel
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( unload_activity_actor *unload = native_unload( who ) ) {
+                const item_location target = unload->unload_target( who );
+                if( !target || resolve_item_source( who, here,
+                                                    capture_item_source( who, target ) ) != target ) {
+                    who.cancel_activity();
+                } else if( who.get_moves() > 0 && operation == "step" ) {
+                    who.activity.do_turn( who );
+                }
             } else if( !reload_locations_accessible( who, here, *native_reload( who ) ) ) {
                 who.cancel_activity();
                 state.needs_placement = false;
@@ -254,11 +279,12 @@ std::string execute_reload_request( Character &who, map &here, const JsonObject 
     std::ostringstream stream;
     JsonOut out( stream );
     out.start_object();
-    out.member( "type", "reload_result" );
+    out.member( "type", "inventory_activity_result" );
     out.member( "request", sequence );
-    out.member( "activity", actor ? std::to_string( who.activity.identity_generation() ) : "" );
-    out.member( "moves_total", actor ? who.activity.moves_total : 0 );
-    out.member( "moves_left", actor ? who.activity.moves_left : 0 );
+    const bool active = owns_inventory_activity( who );
+    out.member( "activity", active ? std::to_string( who.activity.identity_generation() ) : "" );
+    out.member( "moves_total", active ? who.activity.moves_total : 0 );
+    out.member( "moves_left", active ? who.activity.moves_left : 0 );
     out.member( "needs_placement", state.needs_placement );
     if( actor && state.needs_placement ) {
         const auto preview = actor->preview_remaining();
@@ -274,13 +300,13 @@ std::string execute_reload_request( Character &who, map &here, const JsonObject 
     return stream.str();
 }
 
-bool apply_reload_result( const JsonObject &response )
+bool apply_inventory_activity_result( const JsonObject &response )
 {
-    if( response.get_string( "type", "" ) != "reload_result" ) {
+    if( response.get_string( "type", "" ) != "inventory_activity_result" ) {
         return false;
     }
     auto &session = g->multiplayer_session();
-    auto &view = session.client_reload;
+    auto &view = session.client_inventory_activity;
     JsonObject combat = response.get_object( "combat" );
     combat.allow_omitted_members();
     if( !apply_combat_result( get_avatar(), combat, session.client_pickup ) ) {
@@ -297,7 +323,7 @@ bool apply_reload_result( const JsonObject &response )
             view.preview = std::make_shared<item>();
             response.read( "preview", *view.preview, true );
         }
-        if( reload_activity_view( get_avatar().activity ) ) {
+        if( inventory_activity_view( get_avatar().activity ) ) {
             get_avatar().activity.moves_total = response.get_int( "moves_total" );
             get_avatar().activity.moves_left = response.get_int( "moves_left" );
         }
@@ -309,7 +335,7 @@ void client_start_reload( const item_location &selected, const item_location &ta
                           const item_location &ammo, int quantity, int pocket,
                           bool allow_theft, bool allow_hammer )
 {
-    auto &view = g->multiplayer_session().client_reload;
+    auto &view = g->multiplayer_session().client_inventory_activity;
     if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
         get_avatar().get_moves() <= 0 ) {
         return;
@@ -320,7 +346,8 @@ void client_start_reload( const item_location &selected, const item_location &ta
     view.needs_placement = false;
     view.activity.clear();
     get_avatar().assign_activity( reload_activity_actor::client_view() );
-    send_reload( "start", [&]( JsonOut & out ) {
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "reload" );
         out.member( "selected", capture_item_source( get_avatar(), selected ) );
         out.member( "target", capture_item_source( get_avatar(), target ) );
         out.member( "ammo", capture_item_source( get_avatar(), ammo ) );
@@ -331,36 +358,55 @@ void client_start_reload( const item_location &selected, const item_location &ta
     } );
 }
 
-void client_step_reload()
+void client_start_unload( const unload_intent &intent )
 {
-    const auto &view = g->multiplayer_session().client_reload;
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
+        get_avatar().get_moves() <= 0 ) {
+        return;
+    }
+    view.active = true;
+    view.finished = false;
+    view.cancel_requested = false;
+    view.needs_placement = false;
+    view.activity.clear();
+    get_avatar().assign_activity( unload_activity_actor::client_view() );
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "unload" );
+        out.member( "unload", intent );
+    } );
+}
+
+void client_step_inventory_activity()
+{
+    const auto &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active ) {
         get_avatar().activity.set_to_null();
         return;
     }
     if( view.cancel_requested || view.needs_placement || view.finished ) {
-        client_update_reload_view();
+        client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
-        send_reload( "step" );
+        send_inventory_activity( "step" );
     }
-    if( g->multiplayer_session().client_reload.pending_request != 0 ) {
+    if( g->multiplayer_session().client_inventory_activity.pending_request != 0 ) {
         get_avatar().set_moves( 0 );
     }
 }
 
-void client_cancel_reload()
+void client_cancel_inventory_activity()
 {
-    g->multiplayer_session().client_reload.cancel_requested = true;
+    g->multiplayer_session().client_inventory_activity.cancel_requested = true;
 }
 
-void client_update_reload_view()
+void client_update_inventory_activity_view()
 {
-    auto &view = g->multiplayer_session().client_reload;
+    auto &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ) {
         return;
     }
     if( view.finished ) {
-        if( reload_activity_view( get_avatar().activity ) ) {
+        if( inventory_activity_view( get_avatar().activity ) ) {
             get_avatar().activity.set_to_null();
         }
         const int64_t sequence = view.next_request;
@@ -368,7 +414,7 @@ void client_update_reload_view()
         view.next_request = sequence;
         set_client_turn_activity( "" );
     } else if( view.cancel_requested ) {
-        send_reload( "cancel" );
+        send_inventory_activity( "cancel" );
     } else if( view.needs_placement && view.preview && !is_client_waiting_for_ack() &&
                get_avatar().get_moves() > 0 ) {
         uilist choice;
@@ -379,7 +425,7 @@ void client_update_reload_view()
         choice.query();
         if( choice.ret != 1 && choice.ret != 2 ) {
             view.cancel_requested = true;
-            send_reload( "cancel" );
+            send_inventory_activity( "cancel" );
             return;
         }
         std::optional<item_disposition> disposition;
@@ -389,7 +435,7 @@ void client_update_reload_view()
                 return;
             }
         }
-        send_reload( "place", [&]( JsonOut & out ) {
+        send_inventory_activity( "place", [&]( JsonOut & out ) {
             out.member( "placement", choice.ret == 1 ? "wield" : "drop" );
             if( disposition ) {
                 out.member( "disposition" );

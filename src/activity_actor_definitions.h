@@ -26,6 +26,7 @@
 #include "item.h"
 #include "itype.h"
 #include "item_location.h"
+#include "item_unload.h"
 #include "memory_fast.h"
 #include "npctalk.h"
 #include "pickup.h"
@@ -2070,9 +2071,21 @@ class unload_activity_actor : public activity_actor
     private:
         int moves_total;
         item_location target;
+        unload_liquid_choices liquid_choices;
+        item_source owned_source;
+        bool view_only = false;
     public:
-        unload_activity_actor( int moves_total, const item_location &target ) :
-            moves_total( moves_total ), target( target ) {}
+        unload_activity_actor( int moves_total, const item_location &target,
+                               const unload_liquid_choices &choices = std::nullopt ) :
+            moves_total( moves_total ), target( target ), liquid_choices( choices ) {}
+        static unload_activity_actor client_view();
+        bool is_client_view() const {
+            return view_only;
+        }
+        bool is_server_owned() const {
+            return liquid_choices.has_value();
+        }
+        item_location unload_target( Character &who ) const;
         const activity_id &get_type() const override {
             static const activity_id ACT_UNLOAD( "ACT_UNLOAD" );
             return ACT_UNLOAD;
@@ -2080,15 +2093,18 @@ class unload_activity_actor : public activity_actor
 
         bool can_resume_with_internal( const activity_actor &other, const Character & ) const override {
             const unload_activity_actor &act = static_cast<const unload_activity_actor &>( other );
-            return target == act.target;
+            return target == act.target && !is_server_owned() && !act.is_server_owned() &&
+                   !view_only && !act.view_only;
         }
 
         void start( player_activity &act, Character & ) override;
-        void do_turn( player_activity &, Character & ) override {}
+        void do_turn( player_activity &, Character & ) override;
+        void canceled( player_activity &, Character & ) override;
         void finish( player_activity &act, Character &who ) override;
 
         /** Unloads the magazine instantly. Can be called without an activity. May destroy the item. */
-        static void unload( Character &who, item_location &target );
+        static void unload( Character &who, item_location &target,
+                            const unload_liquid_choices &choices = std::nullopt );
 
         std::unique_ptr<activity_actor> clone() const override {
             return std::make_unique<unload_activity_actor>( *this );
