@@ -31,6 +31,7 @@
 #include "ret_val.h"
 #include "rng.h"
 #include "skill.h"
+#include "sling.h"
 
 namespace
 {
@@ -83,12 +84,12 @@ class throw_fixture
         }
 };
 
-item_location add_projectile_to_backpack( Character &who )
+item_location add_projectile_to_backpack( Character &who, const itype_id &ammo = projectile_id )
 {
     const auto worn = who.wear_item( item( itype_id( "backpack" ) ), false );
     REQUIRE( worn );
     item_location backpack( who, & **worn );
-    const auto inserted = backpack->put_in( item( projectile_id, calendar::turn, 5 ),
+    const auto inserted = backpack->put_in( item( ammo, calendar::turn, 5 ),
                                             pocket_type::CONTAINER );
     REQUIRE( inserted.success() );
     REQUIRE( backpack->all_items_top().size() == 1 );
@@ -234,12 +235,19 @@ TEST_CASE( "item_disposition_resolves_identity_and_rejects_missing_destinations"
 }
 
 TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mutations",
-           "[multiplayer][throw]" )
+           "[multiplayer][throw][sling]" )
 {
     throw_fixture fixture;
     npc &who = fixture.remote();
+    const bool sling = GENERATE( false, true );
+    item_location ammo = who.get_wielded_item();
+    if( sling ) {
+        who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+        ammo = add_projectile_to_backpack( who, itype_id( "sling-ready_grenade" ) );
+    }
+    const int count = ammo->charges;
     auto &peer = only_test_remote( g->multiplayer_session() );
-    auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    auto intent = cata_mp::make_throw_intent( who, ammo );
     const tripoint_abs_ms target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     const auto packet = [&]( int64_t uid ) {
         std::ostringstream text;
@@ -247,12 +255,15 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
         out.start_object();
         out.member( "type", "action" );
         out.member( "action", "throw" );
+        out.member( "method", sling ? "sling" : "hand" );
         out.member( "origin", intent.origin );
         out.member( "target", target );
         out.member( "blind_from", std::optional<tripoint_abs_ms>() );
         out.member( "source", "carried" );
         out.member( "source_position", intent.source_position );
-        out.member( "path", std::vector<int64_t> { uid } );
+        auto path = intent.path;
+        path.back() = uid;
+        out.member( "path", path );
         out.member( "wielded", intent.wielded );
         out.member( "inventory_revision", peer.pickup.revision );
         out.member( "grant_seq", peer.turn.grant_seq );
@@ -268,36 +279,164 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
         cata_mp::process_mp_events();
     };
     const auto before = rng_get_engine();
-    send( packet( intent.path.front() + 100 ) );
-    CHECK( who.get_wielded_item()->charges == 10 );
+    send( packet( intent.path.back() + 100 ) );
+    CHECK( ammo->charges == count );
     CHECK( rng_get_engine() == before );
-    const std::string wire = packet( intent.path.front() );
+    const std::string wire = packet( intent.path.back() );
     send( wire );
-    REQUIRE( who.get_wielded_item()->charges == 9 );
+    REQUIRE( ammo->charges == count - 1 );
     CHECK( who.get_str_base() == 8 );
     const int moves = peer.turn.remote_moves;
     const auto after = rng_get_engine();
     send( wire );
-    CHECK( who.get_wielded_item()->charges == 9 );
+    CHECK( ammo->charges == count - 1 );
     CHECK( peer.turn.remote_moves == moves );
     CHECK( rng_get_engine() == after );
 }
 
 TEST_CASE( "client_throw_request_keeps_inventory_and_gameplay_rng_untouched",
-           "[multiplayer][throw]" )
+           "[multiplayer][throw][sling]" )
 {
     throw_fixture fixture;
     avatar &who = get_avatar();
     prepare_thrower( who, tripoint_bub_ms( 60, 60, 0 ) );
-    auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    const bool sling = GENERATE( false, true );
+    item_location ammo = who.get_wielded_item();
+    if( sling ) {
+        who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+        ammo = add_projectile_to_backpack( who, itype_id( "sling-ready_grenade" ) );
+    }
+    const int count = ammo->charges;
+    auto intent = cata_mp::make_throw_intent( who, ammo );
+    intent.method = sling ? cata_mp::throw_method::sling : cata_mp::throw_method::hand;
     intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     const auto uid = who.get_wielded_item()->uid().get_value();
     const auto before = rng_get_engine();
     cata_mp::set_client_mode( true );
+    if( sling ) {
+        REQUIRE( can_launch_sling( who, ammo ).success() );
+        CHECK( rng_get_engine() == before );
+    }
     cata_mp::client_request_throw( intent );
     CHECK( who.get_wielded_item()->uid().get_value() == uid );
-    CHECK( who.get_wielded_item()->charges == 10 );
+    CHECK( ammo->charges == count );
+    CHECK_FALSE( ammo->active );
     CHECK( who.get_moves() == 0 );
     CHECK( rng_get_engine() == before );
     CHECK( cata_mp::is_client_waiting_for_ack() );
+}
+
+TEST_CASE( "authoritative_sling_matches_native_ignition_damage_cost_and_rng",
+           "[multiplayer][sling]" )
+{
+    throw_fixture fixture;
+    npc &who = fixture.remote();
+    avatar &reference = get_avatar();
+    prepare_thrower( reference, tripoint_bub_ms( 60, 80, 0 ) );
+    const itype_id ammo_id( GENERATE( "sling-ready_grenade", "sling-ready_homemade_grenade" ) );
+    who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+    reference.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+    item_location ammo = add_projectile_to_backpack( who, ammo_id );
+    item_location reference_ammo = add_projectile_to_backpack( reference, ammo_id );
+    item_location lighter = who.i_add( tool_with_ammo( itype_id( "lighter" ), 100 ) );
+    item_location reference_lighter = reference.i_add( tool_with_ammo( itype_id( "lighter" ), 100 ) );
+    REQUIRE( can_launch_sling( who, ammo ).success() );
+    REQUIRE( can_launch_sling( reference, reference_ammo ).success() );
+    who.set_moves( 1000 );
+    reference.set_moves( 1000 );
+    auto victim = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                  tripoint_bub_ms( 65, 60, 0 ) );
+    victim->set_hp( 1000 );
+    auto expected_victim = make_shared_fast<monster>( *victim );
+    expected_victim->spawn( tripoint_bub_ms( 65, 80, 0 ) );
+    REQUIRE( get_creature_tracker().add( victim ) );
+    REQUIRE( get_creature_tracker().add( expected_victim ) );
+    get_map().build_map_cache( 0 );
+    auto intent = cata_mp::make_throw_intent( who, ammo );
+    intent.method = cata_mp::throw_method::sling;
+    intent.target = victim->pos_abs();
+    const auto weapon_uid = who.get_wielded_item()->uid().get_value();
+    const auto before = rng_get_engine();
+    reference.last_target = expected_victim;
+    reference.last_target_pos = expected_victim->pos_abs();
+    mark_ranged_target( reference, true );
+    const auto expected = launch_sling( reference, reference_ammo, expected_victim->pos_bub() );
+    REQUIRE( expected );
+    const auto expected_rng = rng_get_engine();
+    rng_get_engine() = before;
+    REQUIRE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
+    REQUIRE( ammo );
+    CHECK( ammo->charges == 4 );
+    CHECK_FALSE( ammo->active );
+    CHECK( who.get_wielded_item()->uid().get_value() == weapon_uid );
+    CHECK( lighter->ammo_remaining() == reference_lighter->ammo_remaining() );
+    CHECK( who.get_moves() == reference.get_moves() );
+    CHECK( who.get_stamina() == reference.get_stamina() );
+    CHECK( who.recoil == reference.recoil );
+    CHECK( who.get_skill_level_object( skill_id( "throw" ) ).exercise( true ) ==
+           reference.get_skill_level_object( skill_id( "throw" ) ).exercise( true ) );
+    CHECK( victim->get_hp() == expected_victim->get_hp() );
+    CHECK( rng_get_engine() == expected_rng );
+    const item &expected_drop = expected->proj.get_drop();
+    const tripoint_bub_ms end = who.pos_bub() + ( expected->end_point - reference.pos_bub() );
+    map_stack landed = get_map().i_at( end );
+    REQUIRE( landed.size() == 1 );
+    CHECK( landed.begin()->typeId() == expected_drop.typeId() );
+    CHECK( landed.begin()->active );
+    CHECK( landed.begin()->countdown_point == expected_drop.countdown_point );
+}
+
+TEST_CASE( "authoritative_sling_rejections_do_not_light_or_consume_ammo",
+           "[multiplayer][sling]" )
+{
+    throw_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+    item_location ammo = add_projectile_to_backpack( who, itype_id( "sling-ready_homemade_grenade" ) );
+    item_location lighter = who.i_add( tool_with_ammo( itype_id( "lighter" ), 100 ) );
+    REQUIRE( can_launch_sling( who, ammo ).success() );
+    auto intent = cata_mp::make_throw_intent( who, ammo );
+    intent.method = cata_mp::throw_method::sling;
+    intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
+    SECTION( "cancel" ) {
+        intent.target.reset();
+    }
+    SECTION( "self" ) {
+        intent.target = intent.origin;
+    }
+    SECTION( "out_of_range" ) {
+        intent.target = get_map().get_abs( tripoint_bub_ms( 120, 60, 0 ) );
+    }
+    SECTION( "stale_launcher" ) {
+        ++intent.wielded;
+    }
+    SECTION( "blind_launch_not_supported" ) {
+        intent.blind_from = intent.origin;
+    }
+    SECTION( "missing_ignition_resource" ) {
+        lighter.remove_item();
+        CHECK_FALSE( can_launch_sling( who, ammo ).success() );
+    }
+    SECTION( "underwater" ) {
+        who.set_underwater( true );
+    }
+    SECTION( "ground_ammunition" ) {
+        item_location ground = get_map().add_item_or_charges_ret_loc( who.pos_bub(), *ammo );
+        intent = cata_mp::make_throw_intent( who, ground );
+        intent.method = cata_mp::throw_method::sling;
+        intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
+    }
+    const int moves = who.get_moves();
+    const int stamina = who.get_stamina();
+    const int fuel = lighter ? lighter->ammo_remaining() : 0;
+    const auto before = rng_get_engine();
+    CHECK_FALSE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
+    CHECK( ammo->charges == 5 );
+    CHECK_FALSE( ammo->active );
+    CHECK( who.get_moves() == moves );
+    CHECK( who.get_stamina() == stamina );
+    CHECK( rng_get_engine() == before );
+    if( lighter ) {
+        CHECK( lighter->ammo_remaining() == fuel );
+    }
 }

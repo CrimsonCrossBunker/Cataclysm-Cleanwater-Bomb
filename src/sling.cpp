@@ -31,6 +31,9 @@
 #include "map.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "mp_throw.h"
 #include "mtype.h"
 #include "pocket_type.h"
 #include "projectile.h"
@@ -127,7 +130,7 @@ int sling_launch_moves( const Character &who, const item_location &ammo )
            ( activation ? activation->moves : 0 );
 }
 
-std::optional<dealt_projectile_attack> launch_sling( avatar &who, item_location ammo,
+std::optional<dealt_projectile_attack> launch_sling( Character &who, item_location ammo,
         const std::optional<tripoint_bub_ms> &target )
 {
     if( !target ) {
@@ -268,10 +271,19 @@ void aim_sling( avatar &who )
         return;
     }
     item round = single_round( *ammo );
+    auto intent = cata_mp::make_throw_intent( who, ammo );
+    intent.method = cata_mp::throw_method::sling;
     g->temp_exit_fullscreen();
     const target_handler::trajectory trajectory = target_handler::mode_sling( who, round,
             sling_launch_moves( who, ammo ) );
-    launch_sling( who, ammo, trajectory.empty() ? std::nullopt :
-                  std::make_optional( trajectory.back() ) );
+    if( cata_mp::is_client_mode() ) {
+        if( !trajectory.empty() ) {
+            intent.target = get_map().get_abs( trajectory.back() );
+            cata_mp::client_request_throw( intent );
+        }
+    } else {
+        launch_sling( who, ammo, trajectory.empty() ? std::nullopt :
+                      std::make_optional( trajectory.back() ) );
+    }
     g->reenter_fullscreen();
 }

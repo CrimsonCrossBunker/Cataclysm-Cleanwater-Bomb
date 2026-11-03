@@ -2561,8 +2561,8 @@ bool Character::has_fire( const int quantity ) const
     if( !find_firestarter_with_charges( quantity ).is_null() ) {
         return true;
     }
-    if( is_npc() ) {
-        // HACK: A hack to make NPCs use their Molotovs
+    if( is_npc() && !has_native_player_control() ) {
+        // HACK: Allow AI NPCs to use their Molotovs; players need a real fire source.
         return true;
     }
 
