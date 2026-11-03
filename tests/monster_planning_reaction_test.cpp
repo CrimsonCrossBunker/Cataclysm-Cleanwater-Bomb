@@ -1,4 +1,6 @@
 #include <cfloat>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include "cata_catch.h"
@@ -7,6 +9,13 @@
 
 namespace
 {
+std::string random_engine_state()
+{
+    std::ostringstream state;
+    state << rng_get_engine();
+    return state.str();
+}
+
 struct reaction_flags {
     int anger_seen;
     int fear_seen;
@@ -78,20 +87,23 @@ reaction_run proposed_reactions( monster_planning_values values, reaction_flags 
     reaction_run run{ values, false, {} };
     if( kind == 0 ) {
         run.values.anger = react_to_seen_hostile( run.values, flags.anger_seen, 0, fleeing, true ).anger;
-        const auto seen = react_to_hostile_sighting( run.values, flags.anger_seen, fleeing );
+        const monster_planning_reaction seen = react_to_hostile_sighting( run.values, flags.anger_seen,
+                                               fleeing );
         if( seen.draw_aggro ) {
             run.draw( seen.denominator );
         }
     }
     if( nearby ) {
-        const auto nearby_reaction = react_to_near_hostile( run.values, flags.anger_near, flags.fear_near );
+        const monster_planning_reaction nearby_reaction = react_to_near_hostile( run.values,
+                flags.anger_near,
+                flags.fear_near );
         run.values.anger = nearby_reaction.values.anger;
         if( kind != 2 && nearby_reaction.draw_aggro ) {
             run.draw( nearby_reaction.denominator );
         }
         run.values.morale = nearby_reaction.values.morale;
         if( kind != 2 && flags.mating > 0 && run.values.anger <= 30 && season ) {
-            const auto mating = react_to_mating_season( run.values, flags.mating, true );
+            const monster_planning_reaction mating = react_to_mating_season( run.values, flags.mating, true );
             run.values.anger = mating.values.anger;
             if( mating.draw_aggro ) {
                 run.draw( mating.denominator );
@@ -99,13 +111,14 @@ reaction_run proposed_reactions( monster_planning_values values, reaction_flags 
         }
     }
     if( kind != 0 ) {
-        const auto seen = react_to_seen_hostile( run.values, flags.anger_seen, flags.fear_seen,
-                          fleeing, has_target );
+        const monster_planning_values seen = react_to_seen_hostile( run.values, flags.anger_seen,
+                                             flags.fear_seen, fleeing, has_target );
         run.values.anger = seen.anger;
         if( !fleeing && has_target ) {
             run.values.morale = seen.morale;
             if( kind == 1 ) {
-                const auto sighting = react_to_hostile_sighting( run.values, flags.anger_seen, fleeing );
+                const monster_planning_reaction sighting = react_to_hostile_sighting( run.values, flags.anger_seen,
+                        fleeing );
                 if( sighting.draw_aggro ) {
                     run.draw( sighting.denominator );
                 }
@@ -150,17 +163,17 @@ TEST_CASE( "monster_planning_reactions_preserve_effect_and_rng_sequence",
                                          } ) {
                                         CAPTURE( seed, anger, morale, kind, fleeing, has_target, nearby, season );
                                         rng_set_engine_seed( seed );
-                                        const auto expected = original_reactions( { anger, morale }, flags, kind,
-                                                              fleeing, has_target, nearby, season );
-                                        const auto engine = rng_get_engine();
+                                        const reaction_run expected = original_reactions( { anger, morale }, flags, kind,
+                                                                      fleeing, has_target, nearby, season );
+                                        const std::string engine = random_engine_state();
                                         rng_set_engine_seed( seed );
-                                        const auto actual = proposed_reactions( { anger, morale }, flags, kind,
-                                                                                fleeing, has_target, nearby, season );
+                                        const reaction_run actual = proposed_reactions( { anger, morale }, flags, kind,
+                                                                    fleeing, has_target, nearby, season );
                                         CHECK( actual.values.anger == expected.values.anger );
                                         CHECK( actual.values.morale == expected.values.morale );
                                         CHECK( actual.aggro == expected.aggro );
                                         CHECK( actual.draws == expected.draws );
-                                        CHECK( rng_get_engine() == engine );
+                                        CHECK( random_engine_state() == engine );
                                     }
                                 }
                             }
@@ -206,7 +219,8 @@ TEST_CASE( "monster_weak_target_reaction_preserves_priority_and_thresholds",
                                     expected.anger -= 10 - static_cast<int>( hp / 10 );
                                 }
                             }
-                            const auto actual = react_to_weak_target( { anger, morale }, hp, angry, fear, placate );
+                            const monster_planning_reaction actual = react_to_weak_target( { anger, morale }, hp, angry, fear,
+                                    placate );
                             CHECK( actual.values.anger == expected.anger );
                             CHECK( actual.values.morale == expected.morale );
                             CHECK( actual.draw_aggro == draw );
@@ -223,7 +237,7 @@ TEST_CASE( "monster_group_morale_and_swarm_preserve_float_and_branch_semantics",
            "[monster][planning_reaction]" )
 {
     CHECK( morale_after_group_observation( -10, 0.5f, true ) == 0 );
-    const auto engine = rng_get_engine();
+    const std::string engine = random_engine_state();
     for( int morale : {
              -100, -10, -1, 0, 10, 99
              } ) {
@@ -261,9 +275,9 @@ TEST_CASE( "monster_group_morale_and_swarm_preserve_float_and_branch_semantics",
     for( int cub : {
              0, 1, 8
          } ) {
-        const auto result = react_to_threatened_cub( { 10, -5 }, cub );
+        const monster_planning_values result = react_to_threatened_cub( { 10, -5 }, cub );
         CHECK( result.anger == 10 + cub );
         CHECK( result.morale == -5 + cub / 2 );
     }
-    CHECK( rng_get_engine() == engine );
+    CHECK( random_engine_state() == engine );
 }

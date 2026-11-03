@@ -408,8 +408,9 @@ TEST_CASE( "AIM_basic_move_items", "[items][advanced_inv]" )
             GIVEN( "items are not charges" ) {
                 const int limit = INT_MAX;
                 int remaining_map = INT_MAX;
-                const int expected_map_count = std::min( here.i_at( pos ).count_limit(),
-                                               here.i_at( pos ).amount_can_fit( knife_combat ) );
+                const int map_count_limit = here.i_at( pos ).count_limit();
+                const int map_volume_limit = here.i_at( pos ).amount_can_fit( knife_combat );
+                const int expected_map_count = std::min( map_count_limit, map_volume_limit );
                 item &knife_combat_map = here.add_item_or_charges( pos, knife_combat,
                                          remaining_map,
                                          false );
