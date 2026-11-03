@@ -2999,6 +2999,12 @@ class Character : public Creature, public visitable
         // This invalidates the item_location returned by get_wielded_item
         void set_wielded_item( const item &to_wield );
 
+        // Full carried-item persistence/replication, not a gameplay action.
+        // Loading preserves item identities and does not replay pickup/wear
+        // hooks. Parse all roots before replacing the current owned items.
+        void store_carried_items( JsonOut &json ) const;
+        void load_carried_items( const JsonObject &data );
+
         int scent = 0;
         pimpl<bionic_collection> my_bionics;
         pimpl<character_martial_arts> martial_arts_data;

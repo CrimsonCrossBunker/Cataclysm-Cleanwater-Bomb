@@ -3360,22 +3360,21 @@ void pickup_activity_actor::do_turn( player_activity &, Character &who )
         return;
     }
 
-    // Pickup::do_pickup() actively assumes the player. Calling it with anyone else is a mistake.
-    cata_assert( &who == &get_player_character() );
     // False indicates that the player canceled pickup when met with some prompt
-    const bool keep_going = Pickup::do_pickup( target_items, quantities, autopickup,
-                            stash_successful, info );
+    const bool keep_going = Pickup::do_pickup( who, target_items, quantities, autopickup,
+                            stash_successful, info, who.is_avatar() ? Pickup::interaction::interactive :
+                            Pickup::interaction::unattended );
 
     // If there are items left we ran out of moves, so continue the activity
     // Otherwise, we are done.
     if( !keep_going || target_items.empty() ) {
         if( !stash_successful && !autopickup ) {
-            add_msg( m_bad, _( "Some items were not picked up!" ) );
+            who.add_msg_if_player( m_bad, _( "Some items were not picked up!" ) );
         }
 
         cancel_pickup( who );
 
-        if( !keep_going ) {
+        if( !keep_going && who.is_avatar() ) {
             // The user canceled the activity, so we're done
             // AIM might have more pickup activities pending, also cancel them.
             // TODO: Move this to advanced inventory instead of hacking it in here

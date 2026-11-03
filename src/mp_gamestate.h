@@ -20,6 +20,11 @@ class npc;
 enum class object_type : int;
 struct WORLD;
 
+namespace Pickup
+{
+struct selection;
+}
+
 namespace cata_mp
 {
 
@@ -179,6 +184,9 @@ void mp_client_dispatch_hauling_if_changed( bool pre_hauling );
 // Enrich a client action JSON with the current client_light and client_bleed fields.
 // Call before any direct client_send() to ensure the server always receives light/bleed state.
 std::string client_enrich_action( const std::string &json );
+// UI selection only: publish a value request, leaving carried items and the
+// map unchanged until the authoritative response arrives.
+void client_request_pickup( const Pickup::selection &selection );
 
 // Client only: call immediately after client_send() to suppress stale moves>0
 // state packets until the server sends moves=0 (its action acknowledgement).

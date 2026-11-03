@@ -86,10 +86,9 @@ enum pickup_answer : int {
 };
 } // namespace
 
-static pickup_answer handle_problematic_pickup( const item &it, const std::string &explain )
+static pickup_answer handle_problematic_pickup( Character &u, const item &it,
+        const std::string &explain )
 {
-    Character &u = get_player_character();
-
     uilist amenu;
 
     amenu.text = explain;
@@ -192,11 +191,11 @@ static bool is_bulk_load( const Pickup::pick_info &lhs, const Pickup::pick_info 
 }
 
 // Returns false if pickup caused a prompt and the player selected to cancel pickup
-static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool &got_gas,
+static bool pick_one_up( Character &player_character, item_location &loc, int quantity,
+                         bool &got_water, bool &got_gas,
                          PickupMap &mapPickup, bool autopickup, bool &stash_successful, bool &got_frozen_liquid,
-                         Pickup::pick_info &info )
+                         Pickup::pick_info &info, Pickup::interaction prompts )
 {
-    Character &player_character = get_player_character();
     const map &here = get_map();
     bool picked_up = false;
     bool crushed = false;
@@ -228,6 +227,9 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
                     return true; // NEVER
                 }
                 // ALWAYS
+            } else if( prompts == Pickup::interaction::unattended ) {
+                stash_successful = false;
+                return true;
             } else if( !Pickup::query_thief( newit ) ) {
                 return true;
             }
@@ -257,6 +259,11 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
     if( newit.is_frozen_liquid() ) {
         if( newit.has_flag( json_flag_SHREDDED ) ) {
             option = STASH;
+        } else if( prompts == Pickup::interaction::unattended ) {
+            // Crushing can require player input; a simulation worker may not
+            // borrow the host's tools, decisions, or UI to resolve it.
+            stash_successful = false;
+            got_frozen_liquid = true;
         } else {
             crushed = player_character.crush_frozen_liquid( newloc );
             if( crushed ) {
@@ -271,10 +278,10 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
     } else if( newit.made_of_from_type( phase_id::GAS ) ) {
         got_gas = true;
     } else if( newit.is_bucket_nonempty() ) {
-        if( !autopickup ) {
+        if( !autopickup && prompts == Pickup::interaction::interactive ) {
             const std::string &explain = string_format( _( "Can't stash %s while it's not empty" ),
-                newit.display_name() );
-            option = handle_problematic_pickup( newit, explain );
+                                         newit.display_name() );
+            option = handle_problematic_pickup( player_character, newit, explain );
             did_prompt = true;
         } else {
             option = CANCEL;
@@ -392,10 +399,24 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
                         bool autopickup,
                         bool &stash_successful, Pickup::pick_info &info )
 {
+    return do_pickup( get_player_character(), targets, quantities, autopickup,
+                      stash_successful, info, interaction::interactive );
+}
+
+bool Pickup::do_pickup( Character &player_character, std::vector<item_location> &targets,
+                        std::vector<int> &quantities, bool autopickup, bool &stash_successful,
+                        Pickup::pick_info &info, interaction prompts )
+{
+    if( targets.size() != quantities.size() ||
+    std::any_of( quantities.begin(), quantities.end(), []( int quantity ) {
+    return quantity < 0;
+} ) ) {
+        stash_successful = false;
+        return false;
+    }
     bool got_water = false;
     bool got_gas = false;
     bool got_frozen_liquid = false;
-    Character &player_character = get_player_character();
     bool weight_is_okay = ( player_character.weight_carried() <= player_character.weight_capacity() );
 
     // Map of items picked up so we can output them all at the end and
@@ -416,27 +437,28 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
             add_msg_debug( debugmode::DF_ACTIVITY, "lost target item of ACT_PICKUP" );
             continue;
         }
-        problem = !pick_one_up( target, quantity, got_water, got_gas, mapPickup, autopickup,
-                                stash_successful, got_frozen_liquid, info );
+        problem = !pick_one_up( player_character, target, quantity, got_water, got_gas, mapPickup,
+                                autopickup, stash_successful, got_frozen_liquid, info, prompts );
         if( info.total_bulk_volume > 200_ml ) {
             // Bulk loading is not allowed beyond a certain volume
             info = Pickup::pick_info();
         }
     }
 
-    if( !mapPickup.empty() ) {
+    if( prompts == interaction::interactive && !mapPickup.empty() ) {
         show_pickup_message( mapPickup );
     }
-    if( got_frozen_liquid ) {
+    if( prompts == interaction::interactive && got_frozen_liquid ) {
         add_msg( m_info, _( "Chunks of frozen liquid cannot be picked up without the correct tools." ) );
     }
-    if( got_water ) {
+    if( prompts == interaction::interactive && got_water ) {
         add_msg( m_info, _( "Spilt liquid cannot be picked back up.  Try mopping it instead." ) );
     }
-    if( got_gas ) {
+    if( prompts == interaction::interactive && got_gas ) {
         add_msg( m_info, _( "Spilt gasses cannot be picked up.  They will disappear over time." ) );
     }
-    if( weight_is_okay && player_character.weight_carried() > player_character.weight_capacity() ) {
+    if( prompts == interaction::interactive && weight_is_okay &&
+        player_character.weight_carried() > player_character.weight_capacity() ) {
         add_msg( m_bad, _( "You're overburdened!" ) );
     }
 
