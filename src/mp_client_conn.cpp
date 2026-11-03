@@ -6,6 +6,7 @@
 #include <chrono>
 #include <deque>
 #include <map>
+#include <stdexcept>
 #include <thread>
 
 #include "mp_protocol.h"
@@ -125,8 +126,18 @@ struct client_connection::impl {
                     return false;
                 }
                 if( fields["type"] == "welcome" && fields["transport"] == "ccb-renet-2" ) {
+                    world_id world;
+                    try {
+                        world = world_id( fields["world_id"] );
+                    } catch( const std::invalid_argument & ) {
+                        connect_error = "Host supplied no valid persistent world identity";
+                        close_client();
+                        return false;
+                    }
                     welcome_message = message;
                     pending_join = handshake( "join", name, password, version );
+                    pending_join.pop_back();
+                    pending_join += ",\"world_id\":" + wire_quote( world.str() ) + "}";
                     identity_scope = address;
                     incoming.push_back( message );
                     mp_log( "[ccb-mp] Renet host accepted connection to " + address );

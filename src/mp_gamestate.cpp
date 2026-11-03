@@ -1092,9 +1092,16 @@ static void parse_welcome_fields( const std::string &msg, bool apply_seed_now )
 // mp_client_prepare_spawn(), called from start_game right after that reset.
 void mp_store_pending_welcome( const std::string &msg )
 {
+    // Validate before replacing a previous admission or replication state.
+    JsonValue value = json_loader::from_string( msg );
+    JsonObject welcome = value.get_object();
+    welcome.allow_omitted_members();
+    const world_id host_world( welcome.get_string( "world_id" ) );
     // Called once after a successful connection probe, not for each queued
     // welcome. Never import a previous host's wire IDs or delta baselines.
     mp_session().replication.client = {};
+    mp_session().admission = {};
+    mp_session().admission.host_world = host_world;
     mp_session().admission.pending_welcome = msg;
     parse_welcome_fields( msg, /*apply_seed_now=*/false );
 }
@@ -4124,6 +4131,7 @@ void grant_client_turn()
     mp_capture_host_omt( get_avatar().pos_abs_omt() );
     if( world_generator && world_generator->active_world ) {
         mp_set_host_world_name( world_generator->active_world->world_name );
+        mp_session().host_info.world = world_generator->active_world->identity();
     }
     // Cache the host's character name for the join 'welcome' so the client's
     // join dialog can show whose game it is. Runs before the connected-check so
@@ -5164,6 +5172,16 @@ static void mp_start_pending_host()
     }
     const host_request request = std::move( *g_pending_host_start );
     g_pending_host_start.reset();
+    try {
+        if( !world_generator || !world_generator->active_world ) {
+            throw std::runtime_error( "No active world" );
+        }
+        mp_session().host_info.world = world_generator->active_world->identity();
+    } catch( const std::exception &error ) {
+        add_msg( m_bad, _( "Unable to start multiplayer host: %s" ), error.what() );
+        set_host_mode( false );
+        return;
+    }
     if( !mp_session().hosting.start( request.port, request.password, request.version,
                                      mp_session().host_info ) ) {
         mp_log( "[ccb-mp] HOST-START failed: " + mp_session().hosting.error() );
@@ -6052,6 +6070,17 @@ bool client_apply_message( const std::string &msg )
     // seed in start_game() and renders a different map outside the tile-synced
     // bubble (the "different map until I got close" report, 2026-06-02).
     if( msg.find( R"("type":"welcome")" ) != std::string::npos ) {
+        try {
+            JsonValue value = json_loader::from_string( msg );
+            JsonObject welcome = value.get_object();
+            welcome.allow_omitted_members();
+            const world_id received( welcome.get_string( "world_id" ) );
+            if( received != mp_session().admission.host_world ) {
+                return false;
+            }
+        } catch( const std::exception & ) {
+            return false;
+        }
         // Game-loop replay path (first do_turn): the engine seed is already
         // finalized, so adopt the host seed now. The connect-time path stashes
         // the same welcome earlier via mp_store_pending_welcome() so start_game

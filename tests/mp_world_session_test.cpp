@@ -584,7 +584,9 @@ TEST_CASE( "mp_host_metadata_and_events_belong_to_the_owning_world",
     cata_mp::mp_set_host_player_name( "current host" );
     cata_mp::mp_capture_host_omt( tripoint_abs_omt( 1, 2, 3 ) );
     current.host_info.seed = 11;
-    other.host_info = { "other world", "other host", 22, std::array<int, 3>{ 4, 5, 6 } };
+    other.host_info = { "other world", "other host", 22, std::array<int, 3>{ 4, 5, 6 },
+                        world_id( std::string( 32, '2' ) )
+                      };
     cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::action, "", "current", cata_mp::peer_admission::create( 1 )} );
     CHECK( other.hosting.events().empty() );
     other.hosting.events().push( {cata_mp::mp_event::type::action, "", "other", cata_mp::peer_admission::create( 2 )} );
@@ -592,6 +594,7 @@ TEST_CASE( "mp_host_metadata_and_events_belong_to_the_owning_world",
     other.reset();
     CHECK( other.hosting.events().empty() );
     CHECK( other.host_info.world_name.empty() );
+    CHECK_FALSE( other.host_info.world.valid() );
     CHECK_FALSE( other.host_info.host_omt );
     CHECK( cata_mp::mp_get_host_world_name() == "current world" );
     CHECK( cata_mp::mp_get_host_player_name() == "current host" );
@@ -670,7 +673,7 @@ TEST_CASE( "mp_failed_admission_metadata_cannot_leak_into_another_world",
     } );
     cata_mp::set_client_mode( true );
     cata_mp::mp_store_pending_welcome(
-        R"({"type":"welcome","world":"old world","host_name":"old host","seed":42,"host_omt":[3,4,0]})" );
+        R"({"type":"welcome","world_id":"11111111111111111111111111111111","world":"old world","host_name":"old host","seed":42,"host_omt":[3,4,0]})" );
     REQUIRE( cata_mp::mp_client_spawn_omt() == tripoint_abs_omt( 3, 4, 0 ) );
     // UI intent and a welcome string are insufficient: only a successful live
     // unjoined probe may retain its spawn metadata across production setup.

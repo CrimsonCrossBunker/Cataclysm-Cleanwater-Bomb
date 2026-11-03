@@ -101,8 +101,8 @@ void exercise_context_ownership( uint16_t first_port, uint16_t second_port )
 
     host_session first_host;
     host_session second_host;
-    const server_welcome first_info{ "first world", "first host", 11, std::array<int, 3>{ 1, 2, 3 } };
-    server_welcome second_info{ "second world", "second host", 22, std::array<int, 3>{ 4, 5, 6 } };
+    const server_welcome first_info{ "first world", "first host", 11, std::array<int, 3>{ 1, 2, 3 }, world_id( std::string( 32, '1' ) ) };
+    server_welcome second_info{ "second world", "second host", 22, std::array<int, 3>{ 4, 5, 6 }, world_id( std::string( 32, '2' ) ) };
     require( first_host.start( first_port, "first password", "abc", first_info ), "first host start" );
     require( second_host.start( second_port, "second password", "abc", second_info ),
              "second host start" );
@@ -184,6 +184,24 @@ void exercise_context_ownership( uint16_t first_port, uint16_t second_port )
              "same owner reconnects after clearing its runtime" );
     require( read_handshake( second_client.welcome(), fields ) && fields["world"] == "second moved",
              "updated welcome published by the correct owner" );
+    require( fields["world_id"] == second_info.world.str(), "renaming preserves authority identity" );
+    // Even with the same display name and UDP endpoint, a new world cannot
+    // accept a join constructed from the previous world's probe.
+    second_info.world = world_id( std::string( 32, '3' ) );
+    second_host.update_welcome( second_info );
+    second_client.send_join( second_player );
+    receive_exact( second_client,
+                   R"({"type":"error","message":"Host world changed; reconnect before joining"})" );
+    require( second_host.events().empty(), "stale-world join produced no owner event" );
+    second_client.reset();
+    require( second_client.connect( "127.0.0.1", second_port, "same name", "second password", "abc" ),
+             "new probe sees the replacement world" );
+    require( read_handshake( second_client.welcome(), fields ) &&
+             fields["world_id"] == second_info.world.str(),
+             "replacement world has its own identity" );
+    second_client.send_join( second_player );
+    require( next_event( second_host ).evt_type == mp_event::type::connect,
+             "fresh-world join positive control" );
     second_client.reset();
     second_host.stop();
 }
