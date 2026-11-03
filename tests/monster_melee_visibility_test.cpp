@@ -1,8 +1,10 @@
+#include <functional>
+#include <string>
+
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "debug.h"
-#include "game.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"

@@ -2,6 +2,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -14,10 +15,12 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "effect.h"
+#include "enums.h"
 #include "game.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "map_iterator.h"
 #include "mattack_common.h"
 #include "messages.h"
 #include "monster.h"
@@ -29,8 +32,8 @@
 #include "test_statistics.h"
 #include "type_id.h"
 #include "units.h"
-#include "veh_type.h"
 #include "vehicle.h"
+#include "vpart_position.h"
 #include "weather.h"
 #include "weather_type.h"
 

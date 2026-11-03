@@ -4,12 +4,14 @@
 #include <array>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "filesystem.h"
+#include "std_hash_fs_path.h"
 #include "zzip.h"
 
 static constexpr std::string_view kColdSuffix = ".cold.zzip";

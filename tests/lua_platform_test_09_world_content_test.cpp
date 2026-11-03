@@ -50,6 +50,7 @@
 #include "global_vars.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
+#include "map_scale_constants.h"
 
 using cata::lua_platform::test::platform_overmap_travel_fixture;
 #include "lua_platform_test_support.h"

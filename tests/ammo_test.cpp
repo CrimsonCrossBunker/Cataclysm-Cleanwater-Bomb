@@ -1,4 +1,3 @@
-#include <list>
 #include <set>
 #include <string>
 
@@ -13,7 +12,6 @@
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "talker_avatar.h"
-#include "talker_character.h"
 #include "type_id.h"
 #include "units.h"
 

@@ -11,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "activity_tracker.h"
@@ -18,9 +19,9 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "catacharset.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
@@ -36,6 +37,7 @@
 #include "mission.h"
 #include "monster.h"
 #include "options_helpers.h"
+#include "output.h"
 #include "overmap.h"
 #include "overmap_ui.h"
 #include "overmapbuffer.h"

@@ -5,12 +5,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
-#include <string_view>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>

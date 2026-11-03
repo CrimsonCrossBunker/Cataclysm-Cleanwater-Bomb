@@ -1,7 +1,9 @@
+#include <functional>
 #include <string>
 
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "coordinates.h"
 #include "debug.h"

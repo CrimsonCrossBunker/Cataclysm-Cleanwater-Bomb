@@ -1,18 +1,19 @@
 #include <climits>
-#include <string>
 
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
+#include "coordinates.h"
 #include "effect.h"
 #include "itype.h"
-#include "map_helpers.h"
+#include "map_scale_constants.h"
 #include "player_helpers.h"
-#include "skill.h"
-#include "trap.h"
+#include "point.h"
 #include "type_id.h"
+
+struct trap;
 
 static const efftype_id effect_dulled_senses( "dulled_senses" );
 static const efftype_id effect_heightened_senses( "heightened_senses" );

@@ -1,3 +1,5 @@
+#include <string>
+
 #include "catch/catch.hpp"
 
 #include "hover_mouse_input.h"

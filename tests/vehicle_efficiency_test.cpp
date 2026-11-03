@@ -38,6 +38,8 @@ static const efftype_id effect_blind( "blind" );
 
 static const itype_id itype_battery( "battery" );
 
+static const vpart_location_id vpart_location_on_door( "on_door" );
+
 static void clear_game( const ter_id &terrain )
 {
     map &here = get_map();
@@ -422,6 +424,43 @@ TEST_CASE( "make_vehicle_efficiency_case", "[.]" )
 // Amount of fuel needed to reach safe speed.
 // Amount of cruising range for a fixed amount of fuel.
 // Fix test for electric vehicles
+TEST_CASE( "vehicle_efficiency_mass_change_is_door_window_mass", "[vehicle][engine]" )
+{
+    const std::map<vproto_id, int> mass_before_door_windows = {
+        { vproto_id( "road_roller" ), 33096593 },
+        { vproto_id( "car" ), 1016912 },
+        { vproto_id( "suv" ), 1255580 },
+        { vproto_id( "fire_engine" ), 2100450 },
+        { vproto_id( "car_sports" ), 1006190 },
+        { vproto_id( "ambulance" ), 1718621 },
+        { vproto_id( "electric_car" ), 666429 },
+        { vproto_id( "truck_swat" ), 6053351 },
+        { vproto_id( "fire_truck" ), 6188743 },
+        { vproto_id( "humvee" ), 5524216 }
+    };
+
+    for( const auto &legacy : mass_before_door_windows ) {
+        CAPTURE( legacy.first );
+        clear_game( ter_id( "t_pavement" ) );
+        map &here = get_map();
+        vehicle *veh = here.add_vehicle( legacy.first, tripoint_bub_ms( 60, 60, 0 ),
+                                         -90_degrees, 0, veh_spawn_status::UNDAMAGED );
+        REQUIRE( veh != nullptr );
+        units::mass window_mass;
+        for( const vpart_reference &part : veh->get_all_parts() ) {
+            veh->get_items( part.part() ).clear();
+            part.part().ammo_consume( part.part().ammo_remaining(), &here, part.pos_bub( here ) );
+            if( part.info().location == vpart_location_on_door ) {
+                window_mass += part.part().get_base().weight();
+            }
+        }
+        REQUIRE( window_mass > 0_gram );
+        CHECK( to_gram( veh->total_mass( here ) - window_mass ) == legacy.second );
+        REQUIRE( test_data::eff_data.count( legacy.first ) == 1 );
+        CHECK( to_gram( veh->total_mass( here ) ) == test_data::eff_data.at( legacy.first ).forward[0] );
+    }
+}
+
 TEST_CASE( "vehicle_efficiency", "[vehicle] [engine]" )
 {
     REQUIRE_FALSE( test_data::eff_data.empty() );

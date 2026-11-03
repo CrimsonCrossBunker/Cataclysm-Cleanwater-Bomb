@@ -1,6 +1,6 @@
 #include <list>
-#include <optional>
 #include <string>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
