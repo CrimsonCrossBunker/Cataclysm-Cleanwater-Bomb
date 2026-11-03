@@ -44,5 +44,16 @@
     "price": "1 kUSD",
     "price_postapoc": "500 USD",
     "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_dopamine_stimulators",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Dopamine Stimulators CBM" },
+    "description": "A set of tiny bionic nerve stimulators that install into the reward center of your brain.  When run with bionic power, it periodically releases a hit of dopamine and other reward chemicals, inducing a state of euphoria and suppressing fear.",
+    "price": "10 kUSD",
+    "price_postapoc": "1 kUSD",
+    "difficulty": 8
   }
 ]

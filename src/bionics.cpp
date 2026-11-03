@@ -99,6 +99,7 @@ static const ammo_effect_str_id ammo_effect_NO_DAMAGE_SCALING( "NO_DAMAGE_SCALIN
 static const ammo_effect_str_id ammo_effect_NO_ITEM_DAMAGE( "NO_ITEM_DAMAGE" );
 
 static const bionic_id afs_bio_dopamine_stimulators( "afs_bio_dopamine_stimulators" );
+static const bionic_id fcl_bio_dopamine_stimulators( "fcl_bio_dopamine_stimulators" );
 static const bionic_id bio_blood_anal( "bio_blood_anal" );
 static const bionic_id bio_cqb( "bio_cqb" );
 static const bionic_id bio_emp( "bio_emp" );
@@ -2091,8 +2092,9 @@ void Character::process_bionic( bionic &initial_bio )
             deactivate_processed_bionic();
             return;
         }
-    } else if( bio.id == afs_bio_dopamine_stimulators ) {
-        // Aftershock
+    } else if( bio.id == afs_bio_dopamine_stimulators ||
+               bio.id == fcl_bio_dopamine_stimulators ) {
+        // Aftershock / Futurism Cataclysm Legacy
         add_morale( morale_feeling_good, 20, 20, 30_minutes, 20_minutes, true );
     }
 }
