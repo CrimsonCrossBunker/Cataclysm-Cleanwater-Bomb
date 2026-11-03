@@ -28,6 +28,7 @@
 #include "all_enum_values.h"
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -185,11 +186,9 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
 {
     dbg( D_INFO ) << "map::generate( g[" << g.get() << "], p[" << p << "], "
                   "when[" << to_string( when ) << "] )";
-    // Insure we reset mapgen_in_progress no matter how this method terminates.
-    // TODO: replace with a generic scope_guard class.
-    std::unique_ptr<int, std::function<void( int * )>> scope_guard( nullptr, [this]( int * ) {
-        this->mapgen_in_progress = false;
-    } );
+    // Restore the caller's mode on success and failure, including nested use.
+    // A unique_ptr with a null pointer never invokes its deleter on scope exit.
+    restore_on_out_of_scope generation_mode( mapgen_in_progress );
     mapgen_in_progress = true;
 
     const tripoint_abs_sm p_sm_base = project_to<coords::sm>( p );
