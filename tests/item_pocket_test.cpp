@@ -23,6 +23,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "flat_set.h"
+#include "flexbuffer_json.h"
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_category.h"
