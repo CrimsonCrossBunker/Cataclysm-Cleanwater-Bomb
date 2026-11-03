@@ -3,6 +3,7 @@
 
 #define MP_ENABLED
 #include <algorithm>
+#include <limits>
 #include <array>
 #include <climits>
 #include <cmath>
@@ -457,11 +458,11 @@ void map::set_seen_cache_dirty( const int zlevel )
 
 void map::set_draw_points_cache_dirty()
 {
-#if defined(TILES)
-    if( !test_mode && g != nullptr && this == &reality_bubble() ) {
-        draw_points_cache_dirty = true;
+    // Saturation keeps all observers dirty instead of wrapping to a version
+    // they may have already acknowledged.
+    if( draw_cache_revision_ != std::numeric_limits<uint64_t>::max() ) {
+        ++draw_cache_revision_;
     }
-#endif
 }
 
 void map::set_outside_cache_dirty( const int zlev )
@@ -8890,12 +8891,7 @@ void map::update_visibility_cache( const int zlev )
         visibility_variables_cache.cached_levels.set( zlev + OVERMAP_DEPTH );
     }
 
-#if defined(TILES)
-    if( !test_mode ) {
-        // Mark cata_tiles draw caches as dirty
-        tilecontext->set_draw_cache_dirty();
-    }
-#endif
+    set_draw_points_cache_dirty();
 
     visibility_variables_cache.last_pos = pos;
     visibility_variables_cache.last_zlev = zlev;
@@ -12251,12 +12247,7 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
         }
         previous_visibility_observer = observer;
         camera_cache_dirty = true;
-#if defined(TILES)
-        if( !test_mode ) {
-            // Mark cata_tiles draw caches as dirty
-            tilecontext->set_draw_cache_dirty();
-        }
-#endif
+        set_draw_points_cache_dirty();
     }
     if( camera_cache_dirty ) {
         u.moncam_cache = mcache;
