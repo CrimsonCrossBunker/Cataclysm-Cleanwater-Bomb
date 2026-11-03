@@ -1,0 +1,15 @@
+[
+  {
+    "type": "enchantment",
+    "id": "fcl_melee_counteraction",
+    "condition": "ACTIVE",
+    "hit_me_effect": [
+      {
+        "id": "fcl_generic_free_turn",
+        "hit_self": true,
+        "message": "You react with machine-like precision.",
+        "npc_message": "%1$s's reacts with robotic precision."
+      }
+    ]
+  }
+]

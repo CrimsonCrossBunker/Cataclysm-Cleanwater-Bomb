@@ -1,0 +1,15 @@
+[
+  {
+    "id": "fcl_generic_free_turn",
+    "type": "SPELL",
+    "name": { "str": "Futurism Extra Turn", "//~": "NO_I18N" },
+    "description": { "str": "Grants you an extra turn.", "//~": "NO_I18N" },
+    "message": "",
+    "valid_targets": [ "self" ],
+    "effect": "mod_moves",
+    "shape": "blast",
+    "min_damage": 100,
+    "max_damage": 100,
+    "base_casting_time": 1
+  }
+]

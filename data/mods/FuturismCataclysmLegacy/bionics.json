@@ -84,5 +84,17 @@
     "act_cost": "50 J",
     "fake_weapon": "fcl_bio_whip_weapon",
     "flags": [ "BIONIC_TOGGLED", "BIONIC_WEAPON", "BIONIC_NPC_USABLE" ]
+  },
+  {
+    "id": "fcl_bio_melee_counteraction",
+    "type": "bionic",
+    "name": { "str": "Counteractive Reflexes" },
+    "description": "Cybernetic stimulators installed across your nervous system boost your reflexes whenever you are hit in melee, granting you an extra action.  This bionic must be active to function.",
+    "occupied_bodyparts": [ [ "head", 4 ], [ "arm_l", 5 ], [ "arm_r", 5 ], [ "leg_l", 6 ], [ "leg_r", 6 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "enchantments": [ "fcl_melee_counteraction" ],
+    "act_cost": "12 kJ",
+    "react_cost": "12 kJ",
+    "time": "1 s"
   }
 ]
