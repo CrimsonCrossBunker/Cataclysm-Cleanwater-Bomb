@@ -55,5 +55,15 @@
     "price": "10 kUSD",
     "price_postapoc": "1 kUSD",
     "difficulty": 8
+  },
+  {
+    "id": "fcl_bio_deck",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Military Infolink CBM" },
+    "description": "An implanted miniaturized computer isolated from the rest of your systems by military-grade firewalls.  An accompanying jack allows you to interface with external computer systems with minimal risk.  Skill in computers is important, and a failed use may damage your circuits.",
+    "price_postapoc": "10 kUSD",
+    "difficulty": 5
   }
 ]

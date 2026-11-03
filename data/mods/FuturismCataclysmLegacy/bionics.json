@@ -55,5 +55,13 @@
     "act_cost": "5 J",
     "react_cost": "5 J",
     "time": "200 s"
+  },
+  {
+    "id": "fcl_bio_deck",
+    "type": "bionic",
+    "name": { "str": "Military Infolink" },
+    "description": "An implanted miniaturized computer isolated from the rest of your systems by military-grade firewalls.  An accompanying jack allows you to interface with external computer systems with minimal risk.  Skill in computers is important, and a failed use may damage your circuits.",
+    "occupied_bodyparts": [ [ "arm_l", 1 ], [ "arm_r", 1 ] ],
+    "passive_pseudo_items": [ "fcl_bio_deck_jack" ]
   }
 ]
