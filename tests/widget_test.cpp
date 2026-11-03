@@ -64,6 +64,7 @@
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_deaf( "deaf" );
 static const efftype_id effect_disinfected( "disinfected" );
 static const efftype_id effect_hunger_blank( "hunger_blank" );
 static const efftype_id effect_hunger_engorged( "hunger_engorged" );
@@ -110,6 +111,8 @@ static const weather_type_id weather_lightning( "lightning" );
 static const weather_type_id weather_portal_storm( "portal_storm" );
 static const weather_type_id weather_snowing( "snowing" );
 static const weather_type_id weather_sunny( "sunny" );
+
+static const widget_id widget_all_location_info_rows_layout( "all_location_info_rows_layout" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
@@ -2750,7 +2753,7 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
 
     const bool nested_columns = GENERATE( false, true );
     widget place = nested_columns ? widget_ll_place_layout.obj() :
-                   widget_id( "all_location_info_rows_layout" ).obj();
+                   widget_all_location_info_rows_layout.obj();
     widget_hud_layout layout;
     layout.mode = widget_hud_layout_mode::custom;
     layout.columns = 80;
@@ -3109,7 +3112,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
         ava.wear_item( item( itype_ear_plugs ), false );
     }
     SECTION( "temporary_deafness" ) {
-        ava.add_effect( efftype_id( "deaf" ), 5_minutes, false, 3 );
+        ava.add_effect( effect_deaf, 5_minutes, false, 3 );
     }
 
     REQUIRE( ava.is_deaf() );

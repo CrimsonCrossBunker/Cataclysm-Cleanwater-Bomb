@@ -18,6 +18,8 @@
 #include "sdltiles.h"
 #include "type_id.h"
 
+static const ter_str_id ter_t_grass( "t_grass" );
+
 TEST_CASE( "pixel_minimap_renders_fresh_maps_after_gpu_direct3d12_fallback",
            "[.][tiles][pixel_minimap][renderer_backend]" )
 {
@@ -50,7 +52,7 @@ TEST_CASE( "pixel_minimap_renders_fresh_maps_after_gpu_direct3d12_fallback",
 
     clear_avatar();
     g->place_player( tripoint_bub_ms( 65, 65, 0 ) );
-    build_test_map( ter_id( "t_grass" ) );
+    build_test_map( ter_t_grass.id() );
     set_time_to_day();
     map &here = get_map();
     here.invalidate_map_cache( 0 );

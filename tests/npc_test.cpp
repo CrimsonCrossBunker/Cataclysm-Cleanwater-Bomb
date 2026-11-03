@@ -4552,6 +4552,7 @@ TEST_CASE( "camp_resident_guard_transitions", "[npc][camp]" )
     guy.set_fac( faction_your_followers );
     guy.set_mission( NPC_MISSION_CAMP_RESIDENT );
     const tripoint_abs_omt camp_pos = project_to<coords::omt>( guy.pos_abs() );
+    overmap_buffer.clear_camps( camp_pos.xy() );
     guy.assigned_camp = camp_pos;
     guy.guard_pos = std::nullopt;
     guy.clear_ai_guard_pos();
@@ -4572,7 +4573,7 @@ TEST_CASE( "camp_resident_guard_transitions", "[npc][camp]" )
         CHECK( guy.omt_path.empty() );
     }
     SECTION( "return_to_camp_duties away from camp: sets goal" ) {
-        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 2, 50, 0 ) );
+        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 4, 50, 0 ) );
         REQUIRE( guy.pos_abs_omt() != camp_pos );
         talk_function::assign_guard( guy );
         talk_function::return_to_camp_duties( guy );

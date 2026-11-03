@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <string>
@@ -24,6 +25,9 @@
 #include "test_data.h"
 #include "type_id.h"
 
+static const damage_type_id damage_cut( "cut" );
+
+static const itype_id itype_katana( "katana" );
 static const itype_id itype_test_balanced_sword( "test_balanced_sword" );
 static const itype_id itype_test_clumsy_sword( "test_clumsy_sword" );
 static const itype_id itype_test_normal_sword( "test_normal_sword" );
@@ -306,9 +310,8 @@ TEST_CASE( "cutting_critical_bonus_respects_armor_and_stat_boundaries", "[melee]
 {
     avatar &attacker = get_avatar();
     make_experienced_tester( attacker );
-    const item weapon( itype_id( "katana" ) );
-    const damage_type_id cut( "cut" );
-    const float raw_damage = weapon.damage_melee( cut );
+    const item weapon( itype_katana );
+    const float raw_damage = weapon.damage_melee( damage_cut );
     REQUIRE( raw_damage > 0 );
 
     for( const std::pair<int, int> &stats : std::vector<std::pair<int, int>> {
@@ -322,9 +325,9 @@ TEST_CASE( "cutting_critical_bonus_respects_armor_and_stat_boundaries", "[melee]
              } ) {
             const auto damage_at_armor = [&]( const float armor ) {
                 damage_instance damage;
-                attacker.roll_damage( cut, critical, damage, true, weapon,
+                attacker.roll_damage( damage_cut, critical, damage, true, weapon,
                                       attack_vector_id::NULL_ID(), sub_bodypart_str_id::NULL_ID(), 1.0f, armor );
-                return damage.type_damage( cut );
+                return damage.type_damage( damage_cut );
             };
             const float threshold = raw_damage / 2.5f;
             const float unboosted = damage_at_armor( threshold + 1.0f );

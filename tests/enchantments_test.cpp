@@ -480,7 +480,7 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     clear_map_without_vision();
     Character &guy = get_player_character();
     clear_avatar();
-    guy.wear_item( item( itype_id( "debug_backpack" ) ), false );
+    guy.wear_item( item( itype_debug_backpack ), false );
 
     static const bodypart_id bp_arm_l( "arm_l" );
     static const bodypart_id bp_arm_r( "arm_r" );

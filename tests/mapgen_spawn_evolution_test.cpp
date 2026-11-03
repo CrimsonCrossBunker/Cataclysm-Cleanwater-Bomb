@@ -19,6 +19,8 @@
 #include "submap.h"
 #include "type_id.h"
 
+static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
+
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
 
 namespace
@@ -90,7 +92,7 @@ TEST_CASE( "mapgen_spawns_catch_up_with_world_time", "[monster][mapgen][spawn]" 
         calendar::turn = long_after_cataclysm;
         map &here = get_map();
         mission *target_mission = mission::reserve_new(
-                                      mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ), character_id() );
+                                      mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
         REQUIRE( target_mission != nullptr );
         map_meddler::get_submap_at_grid( here, tripoint_rel_sm::zero )->spawns.emplace_back(
             mon_test_zombie, 1, point_sm_ms( SEEX / 2, SEEY / 2 ), -1, target_mission->get_id() );

@@ -74,6 +74,7 @@ static const itype_id itype_butter( "butter" );
 static const itype_id itype_cash_card( "cash_card" );
 static const itype_id itype_chem_black_powder( "chem_black_powder" );
 static const itype_id itype_chem_muriatic_acid( "chem_muriatic_acid" );
+static const itype_id itype_down_mattress( "down_mattress" );
 static const itype_id itype_duffelbag( "duffelbag" );
 static const itype_id itype_efile_photos( "efile_photos" );
 static const itype_id itype_efile_recipes( "efile_recipes" );
@@ -102,6 +103,7 @@ static const itype_id itype_test_one_per_layer_ring_c( "test_one_per_layer_ring_
 static const itype_id itype_test_rock( "test_rock" );
 static const itype_id itype_test_smart_phone( "test_smart_phone" );
 static const itype_id itype_test_waterproof_bag( "test_waterproof_bag" );
+static const itype_id itype_tire_repair_kit( "tire_repair_kit" );
 static const itype_id itype_towel( "towel" );
 static const itype_id itype_usb_drive( "usb_drive" );
 static const itype_id itype_walnut( "walnut" );
@@ -1425,7 +1427,7 @@ TEST_CASE( "uncraft_sanity_check", "[item]" )
 TEST_CASE( "repaired_uncraft_recipes_conserve_mass", "[item][recipe]" )
 {
     for( const itype_id &type : {
-             itype_id( "tire_repair_kit" ), itype_id( "down_mattress" )
+             itype_tire_repair_kit, itype_down_mattress
          } ) {
         CAPTURE( type );
         REQUIRE( type.is_valid() );

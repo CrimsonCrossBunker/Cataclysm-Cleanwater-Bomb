@@ -38,7 +38,20 @@ static const efftype_id effect_blind( "blind" );
 
 static const itype_id itype_battery( "battery" );
 
+static const ter_str_id ter_t_pavement( "t_pavement" );
+
 static const vpart_location_id vpart_location_on_door( "on_door" );
+
+static const vproto_id vproto_ambulance( "ambulance" );
+static const vproto_id vproto_car( "car" );
+static const vproto_id vproto_car_sports( "car_sports" );
+static const vproto_id vproto_electric_car( "electric_car" );
+static const vproto_id vproto_fire_engine( "fire_engine" );
+static const vproto_id vproto_fire_truck( "fire_truck" );
+static const vproto_id vproto_humvee( "humvee" );
+static const vproto_id vproto_road_roller( "road_roller" );
+static const vproto_id vproto_suv( "suv" );
+static const vproto_id vproto_truck_swat( "truck_swat" );
 
 static void clear_game( const ter_id &terrain )
 {
@@ -427,21 +440,21 @@ TEST_CASE( "make_vehicle_efficiency_case", "[.]" )
 TEST_CASE( "vehicle_efficiency_mass_change_is_door_window_mass", "[vehicle][engine]" )
 {
     const std::map<vproto_id, int> mass_before_door_windows = {
-        { vproto_id( "road_roller" ), 33096593 },
-        { vproto_id( "car" ), 1016912 },
-        { vproto_id( "suv" ), 1255580 },
-        { vproto_id( "fire_engine" ), 2100450 },
-        { vproto_id( "car_sports" ), 1006190 },
-        { vproto_id( "ambulance" ), 1718621 },
-        { vproto_id( "electric_car" ), 666429 },
-        { vproto_id( "truck_swat" ), 6053351 },
-        { vproto_id( "fire_truck" ), 6188743 },
-        { vproto_id( "humvee" ), 5524216 }
+        { vproto_road_roller, 33096593 },
+        { vproto_car, 1016912 },
+        { vproto_suv, 1255580 },
+        { vproto_fire_engine, 2100450 },
+        { vproto_car_sports, 1006190 },
+        { vproto_ambulance, 1718621 },
+        { vproto_electric_car, 666429 },
+        { vproto_truck_swat, 6053351 },
+        { vproto_fire_truck, 6188743 },
+        { vproto_humvee, 5524216 }
     };
 
     for( const auto &legacy : mass_before_door_windows ) {
         CAPTURE( legacy.first );
-        clear_game( ter_id( "t_pavement" ) );
+        clear_game( ter_t_pavement.id() );
         map &here = get_map();
         vehicle *veh = here.add_vehicle( legacy.first, tripoint_bub_ms( 60, 60, 0 ),
                                          -90_degrees, 0, veh_spawn_status::UNDAMAGED );
