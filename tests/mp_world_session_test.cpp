@@ -12,6 +12,7 @@
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_melee.h"
+#include "mp_combat_result.h"
 #include "skill.h"
 #include "item_uid.h"
 #include "mp_protocol.h"
@@ -1398,13 +1399,13 @@ TEST_CASE( "melee_result_preserves_weapon_identity_and_skill_progress_without_st
     actor.add_effect( efftype_id( "stunned" ), 3_turns );
     cata_mp::pickup_host_state host;
     cata_mp::pickup_client_state client;
-    const std::string wire = cata_mp::make_melee_result( actor, host );
+    const std::string wire = cata_mp::make_combat_result( actor, host );
     JsonValue value = json_loader::from_string( wire );
     JsonObject message = value.get_object();
     message.allow_omitted_members();
     avatar &observer = get_avatar();
     const auto before_rng = rng_get_engine();
-    REQUIRE( cata_mp::apply_melee_result( observer, message, client ) );
+    REQUIRE( cata_mp::apply_combat_result( observer, message, client ) );
     CHECK( rng_get_engine() == before_rng );
     REQUIRE( observer.get_wielded_item() );
     CHECK( observer.get_wielded_item()->uid() == actor.get_wielded_item()->uid() );
@@ -1413,6 +1414,6 @@ TEST_CASE( "melee_result_preserves_weapon_identity_and_skill_progress_without_st
     CHECK( observer.get_skill_level_object( skill_id( "melee" ) ).exercise( true ) == 4321 );
     CHECK( observer.get_effect_dur( efftype_id( "stunned" ) ) == 3_turns );
     observer.set_stamina( 500 );
-    CHECK_FALSE( cata_mp::apply_melee_result( observer, message, client ) );
+    CHECK_FALSE( cata_mp::apply_combat_result( observer, message, client ) );
     CHECK( observer.get_stamina() == 500 );
 }

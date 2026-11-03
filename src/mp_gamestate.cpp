@@ -1,4 +1,5 @@
 #include "mp_gamestate.h"
+#include "mp_combat_result.h"
 
 #include <stdexcept>
 #include <limits>
@@ -2298,7 +2299,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         const bool turn_ended = recipient.turn.remote_moves <= 0;
         recipient.turn.client_acted_this_turn = turn_ended;
         flush_action_msgs( recipient, messages, remote->name );
-        const std::string result = make_melee_result( *remote, recipient.pickup );
+        const std::string result = make_combat_result( *remote, recipient.pickup );
         // Cleanup may delete an attacker killed by retaliation; do not use it afterward.
         g->cleanup_dead();
         if( const auto server = get_active_server() ) {
@@ -6167,13 +6168,13 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    if( msg.find( "melee_result" ) != std::string::npos ) {
+    if( msg.find( "combat_result" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
             JsonObject message = value.get_object();
             message.allow_omitted_members();
-            if( message.get_string( "type", "" ) == "melee_result" ) {
-                apply_melee_result( get_avatar(), message, mp_session().client_pickup );
+            if( message.get_string( "type", "" ) == "combat_result" ) {
+                apply_combat_result( get_avatar(), message, mp_session().client_pickup );
                 return true;
             }
         } catch( const JsonError & ) {
