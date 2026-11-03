@@ -2106,9 +2106,9 @@ static tripoint_abs_omt display()
     ictxt.set_hud_scene( "map.overmap", _( "Overmap" ) );
 #endif
 
-    background_pane bg_pane;
-
-    data.ui = std::make_shared<ui_adaptor>();
+    // The overmap owns the full screen, including frames where its map is unchanged.
+    // Suspend continuously redrawn gameplay/HUD layers until the overmap closes.
+    data.ui = std::make_shared<ui_adaptor>( ui_adaptor::disable_uis_below {} );
     std::shared_ptr<ui_adaptor> ui = data.ui;
 
     overmap_sidebar om_sidebar( data, ictxt );
@@ -2202,6 +2202,8 @@ static tripoint_abs_omt display()
 
     ui->on_redraw( [&]( ui_adaptor & ui ) {
         ( void )ui;
+        catacurses::erase();
+        wnoutrefresh( catacurses::stdscr );
         draw( g->overmap_data );
     } );
 

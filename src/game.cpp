@@ -1,5 +1,6 @@
 #define MP_ENABLED
 #include "game.h"
+#include "guyuan_hud.h"
 #include "map_memory.h"
 #include "render_backend.h"
 
@@ -3461,8 +3462,10 @@ shared_ptr_fast<ui_adaptor> game::create_or_get_main_ui_adaptor()
         ui->on_screen_resize( [this]( ui_adaptor & ui ) {
             // remove some space for the sidebar, this is the maximal space
             // (using standard font) that the terrain window can have
-            const int sidebar_left = panel_manager::get_manager().get_width_left();
-            const int sidebar_right = panel_manager::get_manager().get_width_right();
+            const bool graphical_hud = guyuan_hud::enabled();
+            ui.is_imgui = graphical_hud;
+            const int sidebar_left = graphical_hud ? 0 : panel_manager::get_manager().get_width_left();
+            const int sidebar_right = graphical_hud ? 0 : panel_manager::get_manager().get_width_right();
 
             TERRAIN_WINDOW_HEIGHT = TERMY;
             TERRAIN_WINDOW_WIDTH = TERMX - ( sidebar_left + sidebar_right );
@@ -3720,6 +3723,19 @@ void game::draw_panels( bool force_draw )
     static int previous_turn = -1;
     const int current_turn = to_turns<int>( calendar::turn - calendar::turn_zero );
     const bool draw_this_turn = current_turn > previous_turn || force_draw;
+    const bool use_guyuan_hud = guyuan_hud::enabled();
+    const shared_ptr_fast<ui_adaptor> ui = main_ui_adaptor.lock();
+    if( ui && ui->is_imgui != use_guyuan_hud ) {
+        ui->is_imgui = use_guyuan_hud;
+        ui->mark_resize();
+    }
+    if( use_guyuan_hud ) {
+        if( ui && ui->is_on_top ) {
+            guyuan_hud::draw( u );
+        }
+        previous_turn = current_turn;
+        return;
+    }
     panel_manager &mgr = panel_manager::get_manager();
     int y = 0;
     const bool sidebar_right = get_option<std::string>( "SIDEBAR_POSITION" ) == "right";

@@ -3454,8 +3454,15 @@ void options_manager::add_options_performance()
                          "higher values mainly cost background I/O, not main-thread time." ),
          0, 6, 2
        );
-
 #if defined(TILES)
+    add( "HUD_STYLE", "performance",
+         to_translation( "菜单样式" ),
+         to_translation( "Choose the gameplay HUD layout.  Classic keeps the original sidebar; "
+                         "Gu Yuan Yongning HUD displays a compact, tabbed character panel over the map." ),
+         { { "classic", to_translation( "经典" ) },
+             { "guyuan_hud", to_translation( "古缘永宁 HUD" ) }
+         }, "classic" );
+
     add( "RENDER_PREPARATION_WORKERS", "performance",
          to_translation( "Render preparation workers" ),
          to_translation( "Prepare tile layers and lighting on dedicated workers.  "
