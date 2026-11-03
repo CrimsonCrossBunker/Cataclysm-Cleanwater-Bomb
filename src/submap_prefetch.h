@@ -151,8 +151,6 @@ class submap_prefetcher
         bool worker_parked_ = false;
 };
 
-extern submap_prefetcher g_submap_prefetcher;
-
 // Scoped pause: blocks the prefetch worker (and forces it to release its cached
 // archive handles) for the lifetime of this object. Use around main-thread writes
 // to the map archives so the worker is never reading an archive the save path is
@@ -160,14 +158,16 @@ extern submap_prefetcher g_submap_prefetcher;
 class scoped_prefetch_pause
 {
     public:
-        scoped_prefetch_pause() {
-            g_submap_prefetcher.pause();
+        explicit scoped_prefetch_pause( submap_prefetcher &owner ) : owner_( owner ) {
+            owner_.pause();
         }
         ~scoped_prefetch_pause() {
-            g_submap_prefetcher.resume();
+            owner_.resume();
         }
         scoped_prefetch_pause( const scoped_prefetch_pause & ) = delete;
         scoped_prefetch_pause &operator=( const scoped_prefetch_pause & ) = delete;
+    private:
+        submap_prefetcher &owner_;
 };
 
 #endif // CATA_SRC_SUBMAP_PREFETCH_H
