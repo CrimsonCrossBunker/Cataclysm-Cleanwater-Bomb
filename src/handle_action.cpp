@@ -123,6 +123,7 @@
 #include "line.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_equipment.h"
 #include "npc.h"
 
 #if defined(TILES)
@@ -1873,6 +1874,12 @@ static void wear()
     item_location loc = game_menus::inv::wear( player_character );
 
     if( loc ) {
+#ifdef MP_ENABLED
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_select_equipment( "wear", loc );
+            return;
+        }
+#endif
         player_character.wear( loc );
     } else {
         add_msg( _( "Never mind." ) );
@@ -1885,6 +1892,12 @@ static void takeoff()
     item_location loc = game_menus::inv::take_off();
 
     if( loc ) {
+#ifdef MP_ENABLED
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_select_equipment( "takeoff", loc );
+            return;
+        }
+#endif
         player_character.takeoff( loc.obtain( player_character ) );
     } else {
         add_msg( _( "Never mind." ) );
@@ -3704,15 +3717,21 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_WIELD: {
-                item_location loc = game_menus::inv::wield();
-                if( loc ) {
-                    player_character.wield( loc );
+            item_location loc = game_menus::inv::wield();
+            if( loc ) {
 #ifdef MP_ENABLED
-                    cata_mp::mp_client_post_action();
-#endif
+                if( cata_mp::is_client_mode() ) {
+                    cata_mp::client_select_equipment( "wield", loc );
+                    break;
                 }
-                break;
+#endif
+                player_character.wield( loc );
+#ifdef MP_ENABLED
+                cata_mp::mp_client_post_action();
+#endif
             }
+            break;
+        }
 
 #ifdef MP_ENABLED
         case ACTION_PASS_ITEM:

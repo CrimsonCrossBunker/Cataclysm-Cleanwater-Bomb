@@ -1968,9 +1968,11 @@ class Character : public Creature, public visitable
         /** Wear item; returns false on fail. If interactive is false, don't alert the player or drain moves on completion.
         * @param item_wear item_location of item to be worn.
         * @param interactive Alert player and drain moves if true.
+        * @param theft_consent Explicit ownership decision, or nullopt to ask locally.
         */
         std::optional<std::list<item>::iterator>
-        wear( item_location item_wear, bool interactive = true );
+        wear( item_location item_wear, bool interactive = true,
+              std::optional<bool> theft_consent = std::nullopt );
 
         /** Used for eating object at a location. Removes item if all of it was consumed.
         *   @returns trinary enum NONE, SOME or ALL amount consumed.

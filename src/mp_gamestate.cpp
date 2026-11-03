@@ -1,6 +1,7 @@
 #include "mp_gamestate.h"
 #include "mp_combat_result.h"
 #include "mp_throw.h"
+#include "mp_equipment.h"
 #include "sling.h"
 
 #include <stdexcept>
@@ -2331,6 +2332,38 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                 server->post_reject( recipient.admission, "Invalid inventory request; reconnect to synchronize." );
             }
         }
+        return;
+    }
+    if( action == "equipment" ) {
+        remote->set_moves( recipient.turn.remote_moves );
+        const auto messages = Messages::size();
+        try {
+            equipment_intent intent;
+            jo.read( "equipment", intent, true );
+            if( recipient.firearm.weapon == 0 &&
+                pickup_inventory_revision_matches( jo, recipient.pickup ) ) {
+                execute_equipment_intent( *remote, get_map(), intent );
+            }
+        } catch( const JsonError &error ) {
+            mp_log( std::string( "[ccb-mp] rejected equipment intent: " ) + error.what() );
+        }
+        remote = mp_remote_actor( recipient );
+        if( !remote ) {
+            return;
+        }
+        recipient.turn.remote_moves = remote->get_moves();
+        recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
+        flush_action_msgs( recipient, messages, remote->name );
+        const std::string result = make_combat_result( *remote, recipient.pickup );
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, result + "\n" );
+            std::string state = serialize_remote_player_state( recipient );
+            if( !recipient.turn.client_acted_this_turn && !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
+        }
+        g->invalidate_main_ui_adaptor();
         return;
     }
     if( action == "throw" ) {

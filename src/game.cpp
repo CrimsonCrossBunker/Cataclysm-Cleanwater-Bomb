@@ -181,6 +181,7 @@
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
     #include "mp_reload.h"
+    #include "mp_equipment.h"
 #endif
 #include "mtype.h"
 #include "npc.h"
@@ -2474,6 +2475,12 @@ int game::inventory_item_menu( item_location locThisItem,
                     }
                     break;
                 case 'W': {
+#ifdef MP_ENABLED
+                    if( cata_mp::is_client_mode() ) {
+                        cata_mp::client_select_equipment( "wear", locThisItem, true );
+                        break;
+                    }
+#endif
                     contents_change_handler handler;
                     handler.unseal_pocket_containing( locThisItem );
                     u.wear( locThisItem );
@@ -2481,6 +2488,12 @@ int game::inventory_item_menu( item_location locThisItem,
                     break;
                 }
                 case 'w':
+#ifdef MP_ENABLED
+                    if( cata_mp::is_client_mode() ) {
+                        cata_mp::client_select_equipment( "wield", locThisItem, true );
+                        break;
+                    }
+#endif
                     if( u.can_wield( *locThisItem ).success() ) {
                         contents_change_handler handler;
                         handler.unseal_pocket_containing( locThisItem );
@@ -2502,6 +2515,12 @@ int game::inventory_item_menu( item_location locThisItem,
                     u.change_side( locThisItem );
                     break;
                 case 'T':
+#ifdef MP_ENABLED
+                    if( cata_mp::is_client_mode() ) {
+                        cata_mp::client_select_equipment( "takeoff", locThisItem );
+                        break;
+                    }
+#endif
                     u.takeoff( locThisItem.obtain( u ) );
                     break;
                 case 'd':
