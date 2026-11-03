@@ -81,6 +81,7 @@
 #include "input_enums.h"
 #include "inventory.h"
 #include "item_location.h"
+#include "item_reload.h"
 #include "item_pocket.h"
 #include "item_repair.h"
 #include "item_stack.h"
@@ -6505,53 +6506,57 @@ ret_val<crush_tool_type> Character::can_crush_frozen_liquid( item_location const
     }
 }
 
+bool query_crush_frozen_liquid( Character &who, item_location loc )
+{
+    if( !loc ) {
+        return false;
+    }
+    const auto tool = who.can_crush_frozen_liquid( loc );
+    if( !tool.success() ) {
+        std::string need = _( "somethings" );
+        if( tool.value() == CRUSH_HAMMER ) {
+            need = _( "a hammering tool" );
+        } else if( tool.value() == CRUSH_DRILL_OR_HAMMER_AND_SCREW ) {
+            need = _( "a drill or both hammering tool and screwdriver" );
+        }
+        who.add_msg_if_player( string_format(
+                                   _( "You need %s to crush up frozen liquids in rigid container!" ), need ) );
+        return false;
+    }
+    return tool.value() != CRUSH_HAMMER || query_yn(
+               _( "Do you want to crush up %1$s with your %2$s?\n"
+                  "<color_red>Be wary of fragile items nearby!</color>" ),
+               loc->display_name(), who.best_item_with_quality( qual_HAMMER ).tname() );
+}
+
+bool execute_crush_frozen_liquid( Character &who, item_location loc, bool allow_hammer )
+{
+    if( !loc ) {
+        return false;
+    }
+    const auto tool = who.can_crush_frozen_liquid( loc );
+    if( !tool.success() || ( tool.value() == CRUSH_HAMMER && !allow_hammer ) ) {
+        return false;
+    }
+    const std::string name = loc->display_name();
+    if( tool.value() == CRUSH_HAMMER && one_in( 1 + who.get_dex() / 4 ) ) {
+        const item &hammer = who.best_item_with_quality( qual_HAMMER );
+        who.add_msg_if_player( colorize( _( "You swing your %s wildly!" ), c_red ), hammer.tname() );
+        const int smashskill = who.get_arm_str() + hammer.damage_melee( damage_bash );
+        get_map().bash( loc.pos_bub( get_map() ), smashskill );
+    }
+    // Bashing may destroy the source or its container.
+    if( !loc ) {
+        return false;
+    }
+    who.add_msg_if_player( _( "You crush up %s." ), name );
+    return true;
+}
+
 bool Character::crush_frozen_liquid( item_location loc )
 {
-    map &here = get_map();
-
-    ret_val<crush_tool_type> can_crush = can_crush_frozen_liquid( loc );
-    bool done_crush = false;
-    if( can_crush.success() ) {
-        done_crush = true;
-        if( can_crush.value() == CRUSH_HAMMER ) {
-            item &hammering_item = best_item_with_quality( qual_HAMMER );
-            //~ %1$s: item to be crushed, %2$s: hammer name
-            if( query_yn( _( "Do you want to crush up %1$s with your %2$s?\n"
-                             "<color_red>Be wary of fragile items nearby!</color>" ),
-                          loc.get_item()->display_name(), hammering_item.tname() ) ) {
-
-                //Risk smashing tile with hammering tool, risk is lower with higher dex, damage lower with lower strength
-                if( one_in( 1 + get_dex() / 4 ) ) {
-                    add_msg_if_player( colorize( _( "You swing your %s wildly!" ), c_red ),
-                                       hammering_item.tname() );
-                    // FIXME: Hardcoded damage type
-                    const int smashskill = get_arm_str() + hammering_item.damage_melee( damage_bash );
-                    here.bash( loc.pos_bub( here ), smashskill );
-                }
-            } else {
-                done_crush = false;
-            }
-        }
-    } else {
-        std::string need_str = _( "somethings" );
-
-        switch( can_crush.value() ) {
-            case CRUSH_HAMMER:
-                need_str = _( "a hammering tool" );
-                break;
-            case CRUSH_DRILL_OR_HAMMER_AND_SCREW:
-                need_str = _( "a drill or both hammering tool and screwdriver" );
-                break;
-            default:
-                break;
-        }
-        add_msg_if_player( string_format( _( "You need %s to crush up frozen liquids in rigid container!" ),
-                                          need_str ) );
-    }
-    if( done_crush ) {
-        add_msg_if_player( _( "You crush up %s." ), loc.get_item()->display_name() );
-    }
-    return done_crush;
+    return query_crush_frozen_liquid( *this, loc ) &&
+           execute_crush_frozen_liquid( *this, loc, true );
 }
 
 float Character::power_rating() const

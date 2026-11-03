@@ -2191,6 +2191,58 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     jo.allow_omitted_members();
 
     const std::string action = jo.get_string( "action", "" );
+    if( action == "reload" || action == "reload_cancel" ) {
+        const bool granted = jo.has_int( "grant_seq" ) &&
+                             jo.get_int64( "grant_seq" ) == recipient.turn.grant_seq &&
+                             recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn &&
+                             recipient.turn.remote_moves > 0;
+        remote->set_moves( recipient.turn.remote_moves );
+        const auto messages = Messages::size();
+        std::string result;
+        try {
+            const bool cancel = action == "reload_cancel" && jo.get_string( "operation" ) == "cancel";
+            const bool step = action == "reload" && jo.get_string( "operation" ) != "cancel" && granted;
+            result = execute_reload_request( *remote, get_map(), jo, recipient.reload,
+                                             recipient.pickup, cancel || ( step && recipient.firearm.weapon == 0 ) );
+        } catch( const JsonError &error ) {
+            if( const auto server = get_active_server() ) {
+                server->post_reject( recipient.admission, "Invalid reload request; reconnect to synchronize." );
+            }
+            mp_log( std::string( "[ccb-mp] rejected reload intent: " ) + error.what() );
+            return;
+        }
+        remote = mp_remote_actor( recipient );
+        if( !remote ) {
+            return;
+        }
+        recipient.turn.remote_moves = remote->get_moves();
+        recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
+        recipient.observation.partner_activity = owns_reload_activity( *remote ) ? "ACT_RELOAD" : "";
+        recipient.observation.partner_sleeping = false;
+        flush_action_msgs( recipient, messages, remote->name );
+        if( const auto server = get_active_server() ) {
+            if( !result.empty() ) {
+                server->post_send( recipient.admission, result + "\n" );
+            }
+            std::string state = serialize_remote_player_state( recipient );
+            if( recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn &&
+                !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
+        }
+        g->invalidate_main_ui_adaptor();
+        return;
+    }
+    if( owns_reload_activity( *remote ) ) {
+        // The owned activity and its inventory cannot be overwritten by a
+        // legacy action/state upload while the player is reloading or choosing
+        // placement. Cancellation has its own identity-checked operation above.
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, serialize_remote_player_state( recipient ) );
+        }
+        return;
+    }
     if( !action.empty() && action != "firearm_cancel" && !is_state_sync_message( msg ) &&
         ( !jo.has_int( "grant_seq" ) || jo.get_int64( "grant_seq" ) != recipient.turn.grant_seq ||
           !recipient.turn.granted_this_turn || recipient.turn.client_acted_this_turn ||
@@ -5452,7 +5504,7 @@ void mp_menu_cancel_host()
 void mp_tick_proxy_activity( npc &guy )
 {
     // No activity → nothing to do.  Most turns this is the no-op path.
-    if( !guy.activity ) {
+    if( !guy.activity || owns_reload_activity( guy ) ) {
         return;
     }
     // Give the activity a single step's worth of move budget so per-item
@@ -6325,6 +6377,20 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    if( msg.find( "reload_result" ) != std::string::npos ) {
+        try {
+            JsonValue value = json_loader::from_string( msg );
+            JsonObject response = value.get_object();
+            response.allow_omitted_members();
+            if( apply_reload_result( response ) ) {
+                return true;
+            }
+        } catch( const JsonError & ) {
+            set_client_mode( false );
+            add_msg( m_bad, _( "Invalid reload response.  Reconnect to synchronize your character." ) );
+            return true;
+        }
+    }
     if( msg.find( "firearm_result" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
@@ -8565,7 +8631,7 @@ bool is_client_waiting_for_ack()
 
 void mp_client_post_action( int pre_moves )
 {
-    if( !is_client_mode() || is_client_waiting_for_ack() ) {
+    if( !is_client_mode() || is_client_waiting_for_ack() || mp_session().client_reload.active ) {
         // Intent-based actions already sent their request. In particular the
         // fire UI also handles reach attacks; do not follow them with a legacy
         // inventory snapshot and wait action that can overwrite the result.
@@ -8620,6 +8686,12 @@ void client_set_autosmash_json( const std::string &json )
 
 void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_idle )
 {
+    if( mp_session().client_reload.active ) {
+        // An owned activity sends step/cancel intents, including the frame
+        // where its local view has just been canceled. Never append a wait.
+        return;
+    }
+
     if( !is_client_mode() || mp_session().client_turn.client_last_grant_seq == 0 ||
         mp_session().client_turn.client_waiting_for_ack ) {
         mp_log( "[cdda-mp] dispatch_wait: ack pending, skip" );
@@ -8642,6 +8714,10 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_id
 // state-machine inputs that flip g_partner_activity.
 void client_send_activity_start( const std::string &activity_id_str )
 {
+    if( activity_id_str == "ACT_RELOAD" && mp_session().client_reload.active ) {
+        return;
+    }
+
     if( !is_client_mode() || activity_id_str.empty() ) {
         return;
     }
@@ -8657,6 +8733,10 @@ void client_send_activity_start( const std::string &activity_id_str )
 
 void client_send_activity_end( const std::string &activity_id_str )
 {
+    if( activity_id_str == "ACT_RELOAD" && mp_session().client_reload.active ) {
+        return;
+    }
+
     if( !is_client_mode() ) {
         return;
     }
