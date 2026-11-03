@@ -17,6 +17,7 @@
 #include "ranged_actions.h"
 #include "ret_val.h"
 #include "safe_reference.h"
+#include "sling.h"
 #include "translations.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
@@ -136,8 +137,37 @@ bool execute_throw_intent( Character &who, map &here, const throw_intent &intent
     }
     item_location source = resolve_throw_source( who, here, intent );
     item_location wielded = who.get_wielded_item();
-    if( !can_prepare_throw( who, source ) ||
+    if( !source ||
         intent.wielded != ( wielded ? wielded->uid().get_value() : 0 ) ) {
+        return false;
+    }
+    if( intent.method == throw_method::sling ) {
+        if( !intent.target || intent.blind_from || intent.disposition ||
+            !here.inbounds( *intent.target ) || *intent.target == intent.origin ||
+            who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ||
+            who.has_flag( json_character_flag( "TEMPORARY_SHAPESHIFT_NO_HANDS" ) ) ||
+            who.has_trait( trait_id( "BRAWLER" ) ) ||
+            !can_launch_sling( who, source ).success() ) {
+            return false;
+        }
+        item round = *source;
+        if( round.count_by_charges() ) {
+            round.charges = 1;
+        }
+        if( rl_dist( intent.origin, *intent.target ) > who.throw_range( round ) ||
+            !who.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
+                                      _( "You're too pacified to strike anything…" ) ) ) {
+            return false;
+        }
+        const tripoint_bub_ms target = here.get_bub( *intent.target );
+        who.last_target_pos = *intent.target;
+        Creature *victim = get_creature_tracker().creature_at( target, true );
+        who.last_target = victim ? g->shared_from( *victim ) : shared_ptr_fast<Creature>();
+        const safe_reference<Creature> actor = who.get_safe_reference();
+        mark_ranged_target( who, true );
+        return actor && source && wielded && launch_sling( who, source, target ).has_value();
+    }
+    if( intent.method != throw_method::hand || !can_prepare_throw( who, source ) ) {
         return false;
     }
     std::optional<tripoint_bub_ms> blind;

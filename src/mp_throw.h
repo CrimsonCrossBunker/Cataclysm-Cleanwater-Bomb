@@ -16,7 +16,10 @@ class map;
 
 namespace cata_mp
 {
+enum class throw_method { hand, sling };
+
 struct throw_intent {
+    throw_method method = throw_method::hand;
     tripoint_abs_ms origin;
     std::optional<tripoint_abs_ms> target;
     std::optional<tripoint_abs_ms> blind_from;
