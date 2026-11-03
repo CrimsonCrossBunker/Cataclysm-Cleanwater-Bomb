@@ -156,7 +156,9 @@ TEST_CASE( "mp_pickup_resolves_identity_after_authoritative_ground_replication",
     const auto request = cata_mp::make_pickup_request( selection, here, client );
     REQUIRE( request );
     cata_mp::set_client_mode( false );
+    const auto rng_before_pickup = rng_get_engine();
     const auto result = run_pickup_request( remote, *request, host );
+    CHECK( rng_get_engine() == rng_before_pickup );
     REQUIRE_FALSE( result.empty() );
     CHECK( remote.charges_of( itype_id( "nail" ) ) == 7 );
     CHECK( replica.charges == 13 );
