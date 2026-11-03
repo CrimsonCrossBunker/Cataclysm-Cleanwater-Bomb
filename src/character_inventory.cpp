@@ -52,6 +52,7 @@
 #include "item_pocket.h"
 #include "item_stack.h"
 #include "item_tname.h"
+#include "item_unload.h"
 #include "json.h"
 #include "itype.h"
 #include "iuse.h"
@@ -2865,7 +2866,6 @@ bool Character::unload( item_location &loc, bool bypass_activity,
         struct integral_source {
             item_pocket *pocket;
             std::string label;
-            int total_qty;
         };
         std::vector<integral_source> integral_sources;
         if( target->uses_firing_requirements() ) {
@@ -2898,11 +2898,11 @@ bool Character::unload( item_location &loc, bool bypass_activity,
                         label = string_format( "%s (%s)", entry_name, pd->pocket_id );
                     }
                 }
-                integral_sources.push_back( { p, label, amount } );
+                integral_sources.push_back( { p, label } );
             }
         }
         const int total_sources = static_cast<int>( mags_to_eject.size() +
-            integral_sources.size() );
+                                  integral_sources.size() );
         if( !bypass_activity && total_sources > 1 ) {
             std::vector<std::string> msgs_v;
             msgs_v.reserve( total_sources + 1 );
@@ -2941,35 +2941,14 @@ bool Character::unload( item_location &loc, bool bypass_activity,
             } );
         }
         for( const integral_source &src : integral_sources ) {
-            std::vector<item *> to_remove;
-            const item *rep = nullptr;
-            for( item *e : src.pocket->all_items_top() ) {
-                if( e->has_flag( flag_CASING ) || !e->is_ammo() ) {
-                    continue;
-                }
-                item dropped = *e;
-                if( target->is_filthy() ) {
-                    dropped.set_flag( flag_FILTHY );
-                }
-                if( !this->add_or_drop_with_msg( dropped,
-                                                 dropped.count_by_charges() && dropped.charges > 1 ) ) {
-                    return false;
-                }
-                if( rep == nullptr ) {
-                    rep = e;
-                }
-                to_remove.push_back( e );
+            if( !unload_ammo_pocket( *this, *target, *src.pocket,
+            [&]( item & dropped, const item & original ) {
+            return add_or_drop_with_msg( dropped,
+                                         dropped.count_by_charges() && dropped.charges > 1,
+                                         target, &original );
+            } ) ) {
+                return false;
             }
-            if( rep != nullptr ) {
-                this->mod_moves( -this->item_reload_cost( *target, *rep, src.total_qty ) / 2 );
-            }
-            for( item *e : to_remove ) {
-                src.pocket->remove_item( *e );
-            }
-            src.pocket->on_contents_changed();
-        }
-        if( !integral_sources.empty() ) {
-            target->on_contents_changed();
         }
 
     } else if( target->ammo_remaining( ) ) {

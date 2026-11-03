@@ -4,19 +4,23 @@
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "flag.h"
 #include "game.h"
 #include "game_constants.h"
 #include "handle_liquid.h"
 #include "iexamine.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "item_stack.h"
+#include "item_unload.h"
 #include "liquid_transfer.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "npc.h"
 #include "player_helpers.h"
+#include "ret_val.h"
 #include "rng.h"
 #include "type_id.h"
 #include "units.h"
@@ -212,5 +216,127 @@ TEST_CASE( "native_unload_updates_the_operating_characters_recoil", "[unload][tr
     CHECK( who.get_wielded_item()->ammo_remaining() == 0 );
     CHECK( who.recoil == MAX_RECOIL );
     CHECK( get_avatar().recoil == 29 );
+    CHECK( get_avatar().get_moves() == 517 );
+}
+
+TEST_CASE( "integral_unload_settles_only_fuel_actually_transferred",
+           "[unload][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    who.set_wielded_item( item( itype_id( "test_multimag_turret_flamethrower" ) ) );
+    item_location gun = who.get_wielded_item();
+    REQUIRE( gun->uses_firing_requirements() );
+    item_pocket *fuel = gun->pocket_by_id( "fuel" );
+    REQUIRE( fuel );
+    item gasoline( itype_id( "gasoline" ), calendar::turn, 20 );
+    gasoline.set_owner( faction_id( "your_followers" ) );
+    gasoline.set_old_owner( faction_id( "free_merchants" ) );
+    REQUIRE( fuel->insert_item( gasoline ).success() );
+    gun->set_flag( flag_FILTHY );
+
+    liquid_dest_opt destination;
+    destination.dest_opt = LD_ITEM;
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(),
+                   item( itype_id( "bottle_plastic" ) ) );
+    destination.item_loc = item_location( map_cursor( who.pos_bub() ), &bottle );
+    item existing = gasoline;
+    existing.charges = 10000;
+    const int capacity = bottle.get_remaining_capacity_for_liquid( existing, true );
+    REQUIRE( capacity > gasoline.charges );
+    int transferred = 5;
+    bool cancel = false;
+    SECTION( "partial_container" ) {}
+    SECTION( "full_transfer" ) {
+        transferred = gasoline.charges;
+    }
+    SECTION( "cancel" ) {
+        transferred = 0;
+        cancel = true;
+    }
+    SECTION( "full_destination" ) {
+        transferred = 0;
+    }
+    existing.charges = capacity - transferred;
+    existing.set_flag( flag_FILTHY );
+    REQUIRE( bottle.fill_with( existing, existing.charges ) == existing.charges );
+    const int before_bottle = bottle.legacy_front().charges;
+    // Direct fixture construction bypasses normal wield/reload cache updates.
+    who.invalidate_weight_carried_cache();
+    const units::mass before_weight = who.weight_carried();
+    REQUIRE( before_weight == gun->weight() );
+    const int unload_cost = transferred > 0 ? who.item_reload_cost( *gun, gasoline,
+                            transferred ) / 2 : 0;
+    int calls = 0;
+    const bool complete = unload_ammo_pocket( who, *gun, *fuel,
+    [&]( item & output, const item & original ) {
+        ++calls;
+        CHECK( &original == fuel->all_items_top().front() );
+        CHECK( output.has_flag( flag_FILTHY ) );
+        CHECK_FALSE( original.has_flag( flag_FILTHY ) );
+        if( !cancel ) {
+            liquid_handler::transfer_liquid( who, output, destination );
+        }
+        return output.charges == 0;
+    } );
+    CHECK( calls == 1 );
+    CHECK( complete == ( transferred == gasoline.charges ) );
+    CHECK( gun->ammo_remaining_in_pocket( "fuel" ) == gasoline.charges - transferred );
+    CHECK( bottle.legacy_front().charges == before_bottle + transferred );
+    CHECK( gun->ammo_remaining_in_pocket( "fuel" ) + bottle.legacy_front().charges ==
+           gasoline.charges + before_bottle );
+    CHECK( bottle.legacy_front().get_owner() == gasoline.get_owner() );
+    CHECK( bottle.legacy_front().get_old_owner() == gasoline.get_old_owner() );
+    if( transferred > 0 ) {
+        CHECK( who.weight_carried() < before_weight );
+    } else {
+        CHECK( who.weight_carried() == before_weight );
+    }
+    CHECK( who.weight_carried() == gun->weight() );
+    CHECK( who.get_moves() == 1500 - unload_cost - ( transferred > 0 ? 100 : 0 ) );
+    CHECK( get_avatar().get_moves() == 517 );
+    CHECK_FALSE( get_avatar().activity );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "integral_unload_keeps_earlier_transfers_when_a_later_stack_is_partial",
+           "[unload][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    who.set_wielded_item( item( itype_id( "test_multimag_turret_flamethrower" ) ) );
+    item_location gun = who.get_wielded_item();
+    item_pocket *fuel = gun->pocket_by_id( "fuel" );
+    REQUIRE( fuel );
+    item gasoline( itype_id( "gasoline" ), calendar::turn, 10 );
+    REQUIRE( fuel->insert_item( gasoline, false, false ).success() );
+    REQUIRE( fuel->insert_item( gasoline, false, false ).success() );
+    REQUIRE( fuel->all_items_top().size() == 2 );
+    liquid_dest_opt destination;
+    destination.dest_opt = LD_ITEM;
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(),
+                   item( itype_id( "bottle_plastic" ) ) );
+    destination.item_loc = item_location( map_cursor( who.pos_bub() ), &bottle );
+    item existing = gasoline;
+    existing.charges = 10000;
+    const int capacity = bottle.get_remaining_capacity_for_liquid( existing, true );
+    REQUIRE( capacity > 12 );
+    existing.charges = capacity - 12;
+    REQUIRE( bottle.fill_with( existing, existing.charges ) == existing.charges );
+    item moved = gasoline;
+    moved.charges = 12;
+    const int unload_cost = who.item_reload_cost( *gun, moved, 12 ) / 2;
+    int calls = 0;
+    CHECK_FALSE( unload_ammo_pocket( who, *gun, *fuel,
+    [&]( item & output, const item & ) {
+        ++calls;
+        liquid_handler::transfer_liquid( who, output, destination );
+        return output.charges == 0;
+    } ) );
+    CHECK( calls == 2 );
+    REQUIRE( fuel->all_items_top().size() == 1 );
+    CHECK( fuel->all_items_top().front()->charges == 8 );
+    CHECK( bottle.legacy_front().charges == capacity );
+    CHECK( who.get_moves() == 1500 - unload_cost - 200 );
     CHECK( get_avatar().get_moves() == 517 );
 }
