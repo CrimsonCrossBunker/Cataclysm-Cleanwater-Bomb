@@ -2490,6 +2490,9 @@ const npc &npc::get_trade_delegate() const
 
 void npc::reconcile_schedule()
 {
+    if( has_native_player_control() ) {
+        return;
+    }
     if( myclass.is_null() ) {
         return;
     }
@@ -2519,6 +2522,9 @@ void npc::reconcile_schedule()
 
 void npc::reconcile_schedule_on_load()
 {
+    if( has_native_player_control() ) {
+        return;
+    }
     reconcile_schedule();
 
     if( needs_food() || myclass.is_null() ) {
@@ -3780,7 +3786,14 @@ bool npc::dispose_item( item_location &&obj, const std::string & )
 
 void npc::process_turn()
 {
+    const bool player_controlled = is_player_controlled();
     Character::process_turn();
+
+    if( player_controlled ) {
+        // The native NPC representation does not grant a controlled player
+        // free stamina or autonomous follower-opinion updates.
+        return;
+    }
 
     // NPCs shouldn't be using stamina, but if they have, set it back to max
     // If the stamina is higher than the max (Languorous), set it back to max

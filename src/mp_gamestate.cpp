@@ -1450,7 +1450,8 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // failure rejects the join instead of creating an unpersisted character.
     // Reserve control before publishing or saving the actor. A duplicate local
     // or remote player cannot acquire a second character through admission.
-    auto control = g->player_controls().claim( player.id, *remote );
+    auto control = g->player_controls().claim( player.id, *remote,
+                   player_control_kind::legacy_proxy );
     remote->set_value( "mp_player_id", player.id.str() );
     remote->set_value( "mp_proxy", std::string( "1" ) );
     world_players().save( player, serialize_player( *remote ) );

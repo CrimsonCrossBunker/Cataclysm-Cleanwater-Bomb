@@ -1456,7 +1456,7 @@ float Character::exertion_adjusted_move_multiplier( float level ) const
 
 bool Character::needs_food() const
 {
-    return !( is_npc() && get_option<bool>( "NO_NPC_FOOD" ) );
+    return !( is_npc() && !has_native_player_control() && get_option<bool>( "NO_NPC_FOOD" ) );
 }
 
 void Character::update_sensitive()
@@ -2403,9 +2403,9 @@ void Character::invalidate_leak_level_cache()
 int Character::get_stamina() const
 {
 #ifdef MP_ENABLED
-    if( is_npc() && !cata_mp::is_remote_player( getID() ) ) {
+    if( is_npc() && !has_native_player_control() && !cata_mp::is_remote_player( getID() ) ) {
 #else
-    if( is_npc() ) {
+    if( is_npc() && !has_native_player_control() ) {
 #endif
         // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
         return get_stamina_max();
@@ -2416,9 +2416,9 @@ int Character::get_stamina() const
 int Character::get_stamina_max() const
 {
 #ifdef MP_ENABLED
-    if( is_npc() && !cata_mp::is_remote_player( getID() ) ) {
+    if( is_npc() && !has_native_player_control() && !cata_mp::is_remote_player( getID() ) ) {
 #else
-    if( is_npc() ) {
+    if( is_npc() && !has_native_player_control() ) {
 #endif
         // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
         return 10000;
@@ -2447,9 +2447,10 @@ void Character::mod_stamina( int mod )
 {
     // TODO: Make NPCs smart enough to use stamina
 #ifdef MP_ENABLED
-    if( ( is_npc() && !cata_mp::is_remote_player( getID() ) ) || has_trait( trait_DEBUG_STAMINA ) ) {
+    if( ( is_npc() && !has_native_player_control() &&
+          !cata_mp::is_remote_player( getID() ) ) || has_trait( trait_DEBUG_STAMINA ) ) {
 #else
-    if( is_npc() || has_trait( trait_DEBUG_STAMINA ) ) {
+    if( ( is_npc() && !has_native_player_control() ) || has_trait( trait_DEBUG_STAMINA ) ) {
 #endif
         return;
     }
