@@ -50,7 +50,7 @@ void start_item_consumption( Character &who, const item_location &source, bool r
         }
         if( who.will_eat( *source, true ).success() &&
             query_consumption_ownership( *source, who ) ) {
-            cata_mp::client_start_consume( source, true, !source->is_owned_by( who, true ) );
+            cata_mp::client_start_consume( source, true, !source->is_owned_by( who, true ), reprompt );
         }
         return;
     }

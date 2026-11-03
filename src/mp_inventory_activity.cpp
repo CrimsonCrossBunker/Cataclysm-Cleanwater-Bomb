@@ -9,9 +9,11 @@
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "avatar_action.h"
 #include "character.h"
 #include "flag.h"
 #include "game.h"
+#include "game_inventory.h"
 #include "item.h"
 #include "item_disposition.h"
 #include "item_insert.h"
@@ -34,6 +36,7 @@
 #include "safe_reference.h"
 #include "translations.h"
 #include "uilist.h"
+#include "uistate.h"
 
 namespace cata_mp
 {
@@ -484,9 +487,10 @@ void client_start_insert( const insert_selection &selection )
     } );
 }
 
-void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft )
+void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft,
+                           bool reprompt )
 {
-    if( !begin_client_inventory_activity( consume_activity_actor::client_view() ) ) {
+    if( !begin_client_inventory_activity( consume_activity_actor::client_view( reprompt ) ) ) {
         return;
     }
     send_inventory_activity( "start", [&]( JsonOut & out ) {
@@ -526,6 +530,10 @@ void client_update_inventory_activity_view()
         return;
     }
     if( view.finished ) {
+        const auto *consume = dynamic_cast<const consume_activity_actor *>(
+                                  get_avatar().activity.actor.get() );
+        const bool reprompt = consume && consume->is_client_view() && consume->should_reprompt() &&
+                              !view.cancel_requested;
         if( inventory_activity_view( get_avatar().activity ) ) {
             get_avatar().activity.set_to_null();
         }
@@ -533,6 +541,15 @@ void client_update_inventory_activity_view()
         view = {};
         view.next_request = sequence;
         set_client_turn_activity( "" );
+        if( reprompt && !uistate.open_menu ) {
+            // The result has already replaced the carried items. Keep the menu's
+            // filter/cursor, but discard locations into the previous replica.
+            uistate.consume_uistate.consume_menu_selected_items.clear();
+            uistate.open_menu = []() {
+                avatar_action::eat_or_use( get_avatar(),
+                                           game_menus::inv::consume( uistate.consume_uistate.consume_menu_comestype ) );
+            };
+        }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
     } else if( view.needs_placement && view.preview && !is_client_waiting_for_ack() &&

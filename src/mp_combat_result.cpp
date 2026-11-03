@@ -83,4 +83,32 @@ bool apply_combat_result( Character &actor, const JsonObject &message, pickup_cl
     actor.restore_effects_snapshot( effects );
     return true;
 }
+
+std::string make_player_resume_result( const Character &actor, pickup_host_state &state )
+{
+    const std::string combat = make_combat_result( actor, state );
+    std::ostringstream text;
+    JsonOut out( text );
+    out.start_object();
+    out.member( "type", "player_resume" );
+    out.member( "combat" );
+    *out.get_stream() << combat;
+    out.set_need_separator();
+    out.member( "needs" );
+    actor.store_needs_state( out );
+    out.end_object();
+    return text.str();
+}
+
+bool apply_player_resume_result( Character &actor, const JsonObject &message,
+                                 pickup_client_state &state )
+{
+    JsonObject combat = message.get_object( "combat" );
+    combat.allow_omitted_members();
+    if( !apply_combat_result( actor, combat, state ) ) {
+        return false;
+    }
+    actor.load_needs_state( message.get_object( "needs" ) );
+    return true;
+}
 } // namespace cata_mp
