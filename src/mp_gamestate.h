@@ -206,6 +206,9 @@ void client_finish_firearm_activity();
 void client_finish_ready_firearm_activity();
 firearm_view_phase client_firearm_phase();
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action );
+void client_request_firearm( const tripoint_bub_ms &target, const std::string &action,
+                             const item_location &ammo );
+void client_cancel_firearm_activity( bool unload_ras );
 void client_request_throw( const throw_intent &intent );
 
 // Client only: call immediately after client_send() to suppress stale moves>0

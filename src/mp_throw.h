@@ -9,6 +9,7 @@
 
 #include "coordinates.h"
 #include "item_disposition.h"
+#include "mp_item_source.h"
 
 class Character;
 class item_location;
@@ -23,9 +24,7 @@ struct throw_intent {
     tripoint_abs_ms origin;
     std::optional<tripoint_abs_ms> target;
     std::optional<tripoint_abs_ms> blind_from;
-    std::string source;
-    tripoint_abs_ms source_position;
-    std::vector<int64_t> path;
+    item_source item;
     int64_t wielded = 0;
     bool allow_theft = false;
     std::optional<item_disposition> disposition;

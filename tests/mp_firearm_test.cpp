@@ -31,10 +31,12 @@
 #include "npc.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
+#include "pocket_type.h"
 #include "ranged.h"
 #include "ranged_actions.h"
 #include "rng.h"
 #include "skill.h"
+#include "ret_val.h"
 
 namespace
 {
@@ -107,6 +109,160 @@ class firearm_fixture
         }
 };
 } // namespace
+
+static item_location equip_bow( Character &who )
+{
+    who.set_wielded_item( item( itype_id( "shortbow" ) ) );
+    who.set_skill_level( skill_id( "archery" ), 5 );
+    const auto worn = who.wear_item( item( itype_id( "backpack" ) ), false );
+    REQUIRE( worn );
+    item_location bag( who, & **worn );
+    REQUIRE( bag->put_in( item( itype_id( "arrow_wood" ), calendar::turn, 5 ),
+                          pocket_type::CONTAINER ).success() );
+    who.set_moves( 2000 );
+    who.set_stamina( who.get_stamina_max() );
+    who.recoil = 3000;
+    return item_location( bag, &bag->only_item() );
+}
+
+TEST_CASE( "authoritative_bow_matches_avatar_loading_damage_stamina_and_rng",
+           "[multiplayer][firearm][archery]" )
+{
+    firearm_fixture fixture;
+    npc &actor = fixture.remote();
+    avatar &reference = get_avatar();
+    arm_firearm_shooter( reference, tripoint_bub_ms( 60, 80, 0 ) );
+    item_location ammo = equip_bow( actor );
+    item_location reference_ammo = equip_bow( reference );
+    auto first = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ), tripoint_bub_ms( 65, 60,
+                                            0 ) );
+    first->set_hp( 1000 );
+    auto second = make_shared_fast<monster>( *first );
+    second->spawn( tripoint_bub_ms( 65, 80, 0 ) );
+    REQUIRE( get_creature_tracker().add( first ) );
+    REQUIRE( get_creature_tracker().add( second ) );
+    get_map().build_map_cache( 0 );
+    actor.last_target_pos = first->pos_abs();
+    reference.last_target_pos = second->pos_abs();
+    reference.last_target = second;
+    const bool aim_first = GENERATE( false, true );
+    const auto before = rng_get_engine();
+    item &gun = *reference.get_wielded_item();
+    REQUIRE( prepare_gun_to_fire( reference, gun ) );
+    get_event_bus().send<event_type::character_starts_activity>(
+        reference.getID(), activity_id( "ACT_AIM" ), false );
+    if( aim_first ) {
+        aim_gun_for_moves( reference, gun, second->pos_bub(), 10 );
+        REQUIRE( ready_ranged_ammo( reference, gun, reference_ammo ) );
+    }
+    mark_ranged_target( reference, true );
+    get_event_bus().send<event_type::character_finished_activity>(
+        reference.getID(), activity_id( "ACT_AIM" ), false );
+    REQUIRE( reference.fire_gun( get_map(), second->pos_bub(), 1, gun,
+                                 aim_first ? item_location() : reference_ammo ) == 1 );
+    const auto expected_rng = rng_get_engine();
+    const int reference_stamina = reference.get_stamina();
+    rng_get_engine() = before;
+    cata_mp::firearm_state state;
+    cata_mp::firearm_intent intent;
+    intent.weapon = actor.get_wielded_item()->uid().get_value();
+    intent.mode = actor.get_wielded_item()->gun_get_mode_id();
+    intent.origin = actor.pos_abs();
+    intent.target = first->pos_abs();
+    intent.action = "prepare";
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    intent.ammo = cata_mp::capture_item_source( actor, ammo );
+    if( aim_first ) {
+        intent.action = "AIM";
+        REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+                 cata_mp::firearm_outcome::aiming );
+        REQUIRE( actor.get_wielded_item()->ammo_remaining() == 1 );
+    }
+    intent.action = "FIRE";
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::finished );
+    CHECK( ammo->charges == 4 );
+    CHECK( actor.get_wielded_item()->ammo_remaining() == 0 );
+    CHECK( first->get_hp() == second->get_hp() );
+    CHECK( actor.get_moves() == reference.get_moves() );
+    CHECK( actor.get_stamina() == reference_stamina );
+    CHECK( reference.get_stamina() == reference_stamina ); // Remote firing must not charge the host.
+    CHECK( actor.recoil == Approx( reference.recoil ) );
+    CHECK( rng_get_engine() == expected_rng );
+}
+
+TEST_CASE( "bow_cancellation_preserves_selected_loaded_or_unloaded_arrow",
+           "[multiplayer][firearm][archery]" )
+{
+    firearm_fixture fixture;
+    npc &actor = fixture.remote();
+    item_location ammo = equip_bow( actor );
+    cata_mp::firearm_state state;
+    cata_mp::firearm_intent intent;
+    intent.weapon = actor.get_wielded_item()->uid().get_value();
+    intent.mode = actor.get_wielded_item()->gun_get_mode_id();
+    intent.origin = actor.pos_abs();
+    intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
+    intent.action = "prepare";
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    intent.action = "AIM";
+    intent.ammo = cata_mp::capture_item_source( actor, ammo );
+    const bool unload = GENERATE( false, true );
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    REQUIRE( actor.get_wielded_item()->ammo_remaining() == 1 );
+    cata_mp::finish_firearm_activity( actor, state, true, unload );
+    CHECK( actor.get_wielded_item()->ammo_remaining() == ( unload ? 0 : 1 ) );
+    CHECK( actor.charges_of( itype_id( "arrow_wood" ) ) +
+           actor.get_wielded_item()->ammo_remaining() == 5 );
+    const int moves = actor.get_moves();
+    const auto before = rng_get_engine();
+    cata_mp::finish_firearm_activity( actor, state, true, unload );
+    CHECK( actor.get_moves() == moves );
+    CHECK( rng_get_engine() == before );
+}
+
+TEST_CASE( "sling_preparation_pacification_and_cancel_use_server_state",
+           "[multiplayer][firearm][sling]" )
+{
+    firearm_fixture fixture;
+    npc &actor = fixture.remote();
+    avatar &reference = get_avatar();
+    arm_firearm_shooter( reference, tripoint_bub_ms( 60, 80, 0 ) );
+    actor.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+    reference.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+    const bool pacified = GENERATE( false, true );
+    if( pacified ) {
+        actor.add_effect( efftype_id( "relax_gas" ), 10_minutes );
+        reference.add_effect( efftype_id( "relax_gas" ), 10_minutes );
+    }
+    const auto before = rng_get_engine();
+    const bool expected = reference.try_break_relax_gas( "ready", "blocked" );
+    const auto expected_rng = rng_get_engine();
+    rng_get_engine() = before;
+    auto &peer = only_test_remote( g->multiplayer_session() );
+    cata_mp::firearm_intent intent;
+    intent.weapon = actor.get_wielded_item()->uid().get_value();
+    intent.origin = actor.pos_abs();
+    intent.action = "prepare";
+    firearm_events events;
+    const auto outcome = cata_mp::execute_firearm_intent( actor, get_map(), peer.firearm, intent );
+    CHECK( ( outcome == cata_mp::firearm_outcome::aiming ) == expected );
+    CHECK( actor.get_moves() == reference.get_moves() );
+    CHECK( rng_get_engine() == expected_rng );
+    peer.turn.remote_moves = actor.get_moves();
+    const std::string cancel = "{\"action\":\"firearm_cancel\",\"weapon\":" +
+                               std::to_string( intent.weapon ) + ",\"unload_ras\":false}";
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", cancel, peer.admission } ) );
+    cata_mp::process_mp_events();
+    CHECK( peer.firearm.weapon == 0 );
+    CHECK( actor.get_moves() == reference.get_moves() );
+    CHECK( rng_get_engine() == expected_rng );
+    CHECK( events.starts == 0 );
+    CHECK( events.finishes == 0 );
+}
 
 TEST_CASE( "firearm_intent_matches_native_aim_ammo_damage_and_rng", "[multiplayer][firearm]" )
 {

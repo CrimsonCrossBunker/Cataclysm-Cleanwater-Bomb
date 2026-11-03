@@ -12,6 +12,7 @@
 #include "avatar.h"
 #include "ballistics.h"
 #include "character.h"
+#include "cata_scope_helpers.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "dispersion.h"
@@ -239,6 +240,19 @@ std::optional<dealt_projectile_attack> launch_sling( Character &who, item_locati
 
 void aim_sling( avatar &who )
 {
+    if( cata_mp::is_client_mode() &&
+        cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::aiming ) {
+        cata_mp::client_start_firearm_activity();
+        cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
+        return;
+    }
+    const on_out_of_scope cancel_preparation( [&]() {
+        if( cata_mp::is_client_mode() &&
+            cata_mp::client_firearm_phase() == cata_mp::firearm_view_phase::aiming ) {
+            cata_mp::client_cancel_firearm_activity( false );
+            cata_mp::client_finish_firearm_activity();
+        }
+    } );
     std::vector<item_location> candidates;
     for( const item_location &loc : who.all_items_loc() ) {
         if( is_sling_ammunition( *loc ) ) {
@@ -280,6 +294,7 @@ void aim_sling( avatar &who )
         if( !trajectory.empty() ) {
             intent.target = get_map().get_abs( trajectory.back() );
             cata_mp::client_request_throw( intent );
+            cata_mp::client_finish_firearm_activity();
         }
     } else {
         launch_sling( who, ammo, trajectory.empty() ? std::nullopt :
