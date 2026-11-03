@@ -99,7 +99,7 @@ TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
     cata_mp::set_client_mode( true );
     cata_mp::mp_store_pending_welcome(
         R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
-    session.peer.mp_remote_pos = get_avatar().pos_abs();
+    session.host_observation.mp_remote_pos = get_avatar().pos_abs();
     auto first = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
                                             tripoint_bub_ms( 62, 60, 0 ) );
     auto second = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
@@ -149,7 +149,7 @@ TEST_CASE( "mp_client_damage_reports_use_only_current_native_bindings",
     cata_mp::set_client_mode( true );
     cata_mp::mp_store_pending_welcome(
         R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
-    session.peer.mp_remote_pos = get_avatar().pos_abs();
+    session.host_observation.mp_remote_pos = get_avatar().pos_abs();
     auto original = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
                     tripoint_bub_ms( 62, 60, 0 ) );
     REQUIRE( get_creature_tracker().add( original ) );
@@ -191,7 +191,7 @@ TEST_CASE( "mp_client_duplicate_wire_ids_do_not_rebind_another_monster",
     cata_mp::set_client_mode( true );
     cata_mp::mp_store_pending_welcome(
         R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
-    session.peer.mp_remote_pos = get_avatar().pos_abs();
+    session.host_observation.mp_remote_pos = get_avatar().pos_abs();
     auto original = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
                     tripoint_bub_ms( 62, 60, 0 ) );
     REQUIRE( get_creature_tracker().add( original ) );

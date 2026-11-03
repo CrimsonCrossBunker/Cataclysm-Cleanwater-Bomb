@@ -79,7 +79,7 @@ bool is_state_sync_message( const std::string &wire )
         if( !action.empty() ) {
             return ( type.empty() || type == "action" ) && action == "worn_sync";
         }
-        return type == "trade_delta" || type == "note_sync" || type == "chat" ||
+        return type == "note_sync" || type == "chat" ||
                type == "templates_list" || type == "resync_request";
     } catch( const JsonError & ) {
         return false;

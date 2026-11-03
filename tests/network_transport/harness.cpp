@@ -151,7 +151,7 @@ int main( int argc, char **argv )
             require( client_identity_scope() == "127.0.0.1:" + std::to_string( port ),
                      "identity scope comes from the resolved local request" );
         } else if( mode == "raw" ) {
-            require( raw.start_client( "127.0.0.1:" + std::to_string( port ), 991 ), "raw start" );
+            require( raw.start_client( "127.0.0.1:" + std::to_string( port ), 0 ), "raw start" );
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
             while( !raw.status().connected && std::chrono::steady_clock::now() < deadline ) {
                 std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
@@ -298,7 +298,7 @@ int main( int argc, char **argv )
                                      "connect event owns validated credentials" );
                             admissions[event.admission.peer_id()] = event.admission;
                             std::cout << "EVENT " << static_cast<int>( event.evt_type ) << ' ' << event.admission.peer_id() <<
-                            ' ' <<
+                                      ' ' <<
                                       wire_quote( event.display_name ) << ' ' << wire_quote( event.data ) << std::endl;
                             found = true;
                         }

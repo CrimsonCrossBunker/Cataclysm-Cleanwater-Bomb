@@ -6165,7 +6165,7 @@ std::vector<Character *> Character::get_crafting_helpers() const
         const bool is_mp_partner = cata_mp::is_partner_npc( guy.getID() );
         return getID() != guy.getID()
                && guy.is_npc()
-               && ( !is_mp_partner || cata_mp::is_partner_helping_us() )
+               && ( !is_mp_partner || cata_mp::is_partner_helping( guy.getID(), getID() ) )
                && !guy.in_sleep_state()
                && guy.is_obeying( *this )
                && rl_dist( guy.pos_bub(), pos_bub() ) < pickup_range
@@ -6187,7 +6187,7 @@ std::vector<Character *> Character::get_crafting_group() const
 #ifdef MP_ENABLED
         const bool is_mp_partner = cata_mp::is_partner_npc( guy.getID() );
         return guy.is_ally( *this )
-               && ( !is_mp_partner || cata_mp::is_partner_helping_us() )
+               && ( !is_mp_partner || cata_mp::is_partner_helping( guy.getID(), getID() ) )
                && rl_dist( guy.pos_bub(), pos_bub() ) < pickup_range
                && get_map().clear_path( pos_bub(), guy.pos_bub(), pickup_range, 1, 100 );
 #else

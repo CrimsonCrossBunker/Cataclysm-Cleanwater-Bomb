@@ -3,6 +3,8 @@
 #define CATA_SRC_MP_WORLD_SESSION_H
 
 #include <cstdint>
+#include <map>
+#include <memory>
 
 #include "mp_actor_binding.h"
 #include "mp_apply_watchdog.h"
@@ -10,10 +12,25 @@
 #include "mp_pickup.h"
 #include "mp_server.h"
 #include "mp_player_store.h"
+#include "mp_player_view.h"
 #include "mp_world_state.h"
 
 namespace cata_mp
 {
+// One authenticated player's control, turn and replication state. Neither a
+// reconnect nor another recipient may borrow these baselines or pending ACKs.
+struct remote_player_session {
+    actor_binding actor;
+    bool connected = false;
+    peer_admission admission;
+    player_credentials credentials;
+    bool detach_pending = false;
+    host_turn_state turn;
+    pickup_host_state pickup;
+    host_replication_baselines replication;
+    peer_observation observation;
+};
+
 // Owned by one game/world lifecycle and accessed only by its simulation thread.
 // Persistent identities, transient simulation state and presentation each have
 // an explicit lifetime. Workers publish values, never pointers into this state.
@@ -30,37 +47,33 @@ struct world_session {
         bool host_mode = false;
         std::string last_marked_world;
         world_replication_state replication;
-        host_turn_state host_turn;
+        std::map<uint64_t, std::unique_ptr<remote_player_session>> remote_players;
+        bool host_waiting_for_clients = false;
+        int last_monmove_ms = 0;
+        int host_wait_elapsed_ms = 0;
+        uint32_t grant_sequence = 0;
         client_turn_state client_turn;
-        pickup_host_state host_pickup;
         pickup_client_state client_pickup;
-        peer_observation peer;
+        peer_observation host_observation;
         client_admission_state admission;
         session_presentation presentation;
-        actor_binding remote_actor;
-        bool remote_connected = false;
-        peer_admission remote_admission;
-        player_credentials remote_player;
-        bool remote_detach_pending = false;
         std::optional<player_credentials> local_player;
         std::unique_ptr<player_store> players;
         actor_binding client_host_actor;
+        player_id client_host_player_id;
+        std::map<player_id, std::unique_ptr<player_view>> client_player_views;
         bool client_host_spawned = false;
         bool stale_proxy_cleanup_done = false;
 
-        bool accepts_remote_event( const peer_admission &admission ) const {
-            return remote_connected && remote_admission.matches( admission );
-        }
+        remote_player_session *find_remote( const peer_admission &admission ) const;
+        remote_player_session *find_remote( character_id actor ) const;
+        bool accepts_remote_event( const peer_admission &admission ) const;
 
         void reset();
 
         // Menu/CLI probes precede setup(). Preserve only an unadopted attempt;
         // established connections must end before world objects are replaced.
         void prepare_for_world_load();
-
-        // New admission resets peer baselines and queued turn effects. World
-        // entity IDs and the monotonic grant sequence survive a reconnect.
-        void begin_remote_peer();
 
     private:
         void reset_state( bool preserve_pending_client );
