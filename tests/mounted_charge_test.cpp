@@ -21,6 +21,7 @@
 #include "cata_catch.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
+#include "creature.h"
 #include "damage.h"
 #include "faction.h"
 #include "flag.h"
@@ -38,6 +39,7 @@
 #include "mod_manager.h"
 #include "monster.h"
 #include "mounted_charge.h"
+#include "mtype.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "rng.h"
@@ -86,7 +88,7 @@ monster &setup_mounted_weapon( avatar &player, const itype_id &weapon_type )
     clear_map_without_vision();
     clear_creatures();
 
-    monster &horse = spawn_test_monster( "mon_horse", player.pos_bub() + tripoint::east );
+    monster &horse = spawn_test_monster( "mon_horse_police", player.pos_bub() + tripoint::east );
     horse.friendly = -1;
     player.mount_creature( horse );
     player.set_wielded_item( item( weapon_type ) );
@@ -111,6 +113,24 @@ void start_mounted_charge( avatar &player, monster &horse )
 }
 
 } // namespace
+
+TEST_CASE( "mounted_charge_combat_mount_does_not_refuse_hostile_approach",
+           "[mounted][charge][regression]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    REQUIRE( horse.has_flag( mon_flag_COMBAT_MOUNT ) );
+    REQUIRE( horse.type->has_fear_trigger( mon_trigger::HOSTILE_CLOSE ) );
+    map &here = get_map();
+    monster &threat = spawn_test_monster( "mon_zombie_hulk",
+                                          player.pos_bub() + tripoint::east );
+    here.build_map_cache( player.pos_bub().z() );
+    REQUIRE( player.sees( here, threat ) );
+    REQUIRE( threat.attitude_to( player ) == Creature::Attitude::HOSTILE );
+    CHECK( player.mount_move_refusal_chance( threat ) == 0.0 );
+    CHECK( player.check_mount_will_move( threat.pos_bub() ) );
+    player.forced_dismount();
+}
 
 TEST_CASE( "mounted_charge_profile_has_bounded_momentum", "[mounted][charge]" )
 {
