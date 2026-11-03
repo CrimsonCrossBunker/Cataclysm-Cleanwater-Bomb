@@ -548,6 +548,7 @@ static void mp_partner_activity_transition_check()
 static void check_separation_warning( const tripoint_abs_ms &a, const tripoint_abs_ms &b );
 
 static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_sleep( "sleep" );
 
 // ---------------------------------------------------------------------------
 // Info panel (bottom-left corner)
@@ -2187,6 +2188,17 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     jo.allow_omitted_members();
 
     const std::string action = jo.get_string( "action", "" );
+    if( !action.empty() && !is_state_sync_message( msg ) &&
+        ( !jo.has_int( "grant_seq" ) || jo.get_int64( "grant_seq" ) != recipient.turn.grant_seq ||
+          !recipient.turn.granted_this_turn || recipient.turn.client_acted_this_turn ||
+          recipient.turn.remote_moves <= 0 ) ) {
+        // A retry must not become a second action or an action in the next
+        // world turn. Never apply its attached inventory/terrain mutations.
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, serialize_remote_player_state( recipient ) );
+        }
+        return;
+    }
     if( action == "pickup" ) {
         // An intent must not first apply client tile/inventory mutations.
         // Resolve exact source identities against the authoritative map.
@@ -2376,6 +2388,9 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         const std::string target = jo.get_string( "client_help_target", "" );
         recipient.observation.partner_help_target = target.empty() ? "" : player_id( target ).str();
         mp_partner_activity_transition_check();
+    }
+    if( jo.has_bool( "client_sleeping" ) ) {
+        recipient.observation.partner_sleeping = jo.get_bool( "client_sleeping" );
     }
     if( jo.has_int( "client_activity_pct" ) ) {
         recipient.observation.partner_activity_pct = jo.get_int( "client_activity_pct" );
@@ -4326,6 +4341,9 @@ static void grant_remote_turn( remote_player_session &recipient )
         return;
     }
     recipient.turn.proxy_was_alive = true;
+    if( recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn ) {
+        return; // An outstanding grant must be consumed before another is issued.
+    }
     recipient.turn.client_acted_this_turn = false;
     // FIX #2/#3: accumulate this turn's speed onto any carried AP debt instead of
     // resetting to full speed.  Only issue a real grant (advance grant_seq, unlock
@@ -4424,13 +4442,13 @@ void wait_for_client_action()
     // Every admitted player with a positive action budget must finish this
     // turn. A reply, disconnect or AP debt affects only its own participant.
     process_mp_events();
-    if( !remote_turns_pending() || should_fast_forward() ) {
+    if( !remote_turns_pending() ) {
         return;
     }
     mp_session().host_waiting_for_clients = true;
     const auto start = std::chrono::steady_clock::now();
     std::string previous_activity = get_avatar().activity ? get_avatar().activity.id().str() : "";
-    while( g->uquit == QUIT_NO && remote_turns_pending() && !should_fast_forward() ) {
+    while( g->uquit == QUIT_NO && remote_turns_pending() ) {
         get_mp_queue().wait_for_event( std::chrono::milliseconds( 16 ) );
         process_mp_events();
         if( !remote_turns_pending() ) {
@@ -4477,12 +4495,17 @@ bool host_is_in_wait_activity()
 
 bool should_advance_calendar()
 {
-    // SP / host: always advance.  Client: only advance when moves > 0 — that
-    // means a grant just landed and the current do_turn iteration represents
-    // an actual game turn.  Without this guard, calendar::turn would tick at
-    // every main-loop iteration (~10/sec) regardless of whether the client
-    // had been granted a turn, racing past the host's authoritative time.
-    return !is_client_mode() || get_avatar().get_moves() > 0;
+    return !is_client_mode();
+}
+
+bool client_begin_simulation_turn()
+{
+    auto &turn = mp_session().client_turn;
+    if( !is_client_mode() || turn.observed_host_turn <= turn.processed_host_turn ) {
+        return false;
+    }
+    turn.processed_host_turn = turn.observed_host_turn;
+    return true;
 }
 
 bool is_passive_activity( const std::string &activity_id_str )
@@ -4518,7 +4541,8 @@ bool should_fast_forward()
         return false;
     }
     const player_activity &activity = get_avatar().activity;
-    if( !activity || !is_passive_activity( activity.id().str() ) ) {
+    if( !get_avatar().has_effect( effect_sleep ) &&
+        ( !activity || !is_passive_activity( activity.id().str() ) ) ) {
         return false;
     }
     if( is_client_mode() ) {
@@ -4532,7 +4556,8 @@ bool should_fast_forward()
             continue;
         }
         participants = true;
-        if( !is_passive_activity( recipient.observation.partner_activity ) ) {
+        if( !recipient.observation.partner_sleeping &&
+            !is_passive_activity( recipient.observation.partner_activity ) ) {
             return false;
         }
     }
@@ -6479,12 +6504,21 @@ bool client_apply_message( const std::string &msg )
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
         mp_log( "[cdda-mp] STATE-APPLY: parse done" );
-        mp_session().client_turn.group_fast_forward = jo.get_bool( "group_fast_forward", false );
+        if( jo.has_int( "grant_seq" ) &&
+            jo.get_int64( "grant_seq" ) < mp_session().client_turn.client_last_grant_seq ) {
+            return true;
+        }
 
         // Sync host's calendar turn so the client sees the correct time, lighting, and weather.
         if( jo.has_int( "calendar_turn" ) ) {
-            calendar::turn = time_point( jo.get_int( "calendar_turn" ) );
+            const time_point host_turn( jo.get_int( "calendar_turn" ) );
+            if( host_turn < mp_session().client_turn.observed_host_turn ) {
+                return true;
+            }
+            mp_session().client_turn.observed_host_turn = host_turn;
+            calendar::turn = host_turn;
         }
+        mp_session().client_turn.group_fast_forward = jo.get_bool( "group_fast_forward", false );
 
         if( jo.has_object( "pos" ) ) {
             mp_apply_step _s( "teleport" );
@@ -6938,142 +6972,24 @@ bool client_apply_message( const std::string &msg )
             }
         }
 
-        // "free":true means this isn't a turn-ending action.  Two cases:
-        //  - Wall bump or refused action (moves<=0 broadcast, free=true)
-        //  - Partial-turn update like pldrive that consumed only some AP and
-        //    left budget for more driving inputs (moves>0, free=true).
-        // Clear the ack guard so the restored/partial moves value is accepted
-        // by the seq-bypassed path further down.
-        const bool is_partial_turn = jo.has_bool( "free" ) && jo.get_bool( "free" );
-        if( is_partial_turn ) {
-            mp_session().client_turn.client_waiting_for_ack = false;
-        }
-
-        const uint32_t grant_seq = jo.has_int( "grant_seq" )
-                                   ? static_cast<uint32_t>( jo.get_int( "grant_seq" ) ) : 0;
-
-        // Apply server-authoritative move budget.
-        // Two guards prevent double-application:
-        //  1. ack guard: we sent an action and are waiting for the server's moves=0 ack
-        //  2. seq guard: grant_seq <= last seen means this is a TCP-buffered duplicate
-        // Safety: force-clear ack guard after 5 s to recover from any stuck state.
-        if( mp_session().client_turn.client_waiting_for_ack ) {
-            using namespace std::chrono_literals;
-            if( std::chrono::steady_clock::now() - mp_session().client_turn.ack_set_time > 5s ) {
-                mp_log( "[cdda-mp] ack guard timed out — force-clearing" );
-                mp_session().client_turn.client_waiting_for_ack = false;
+        // Packet reception only updates state. The main loop owns activity
+        // execution; repeated/older grants cannot restore a spent move budget.
+        if( jo.has_int( "moves" ) && jo.has_int( "grant_seq" ) ) {
+            const int64_t sequence = jo.get_int64( "grant_seq" );
+            if( sequence <= 0 || sequence > std::numeric_limits<uint32_t>::max() ) {
+                jo.throw_error_at( "grant_seq", "Invalid turn grant" );
             }
-        }
-        if( jo.has_member( "moves" ) ) {
-            const int srv_moves = jo.get_int( "moves" );
-            // Refresh the "last heard from host" timestamp on any moves-bearing
-            // state message (grants AND ack-clears).
-            mp_session().client_turn.last_grant_time = std::chrono::steady_clock::now();
-            if( is_partial_turn && srv_moves > 0 ) {
-                // Partial-turn update from host (e.g., pldrive consumed some AP
-                // but left budget).  Bypass the seq guard — this isn't a fresh
-                // grant, the host hasn't advanced the calendar.  Just sync the
-                // remaining AP so the client can issue more driving inputs.
-                mp_log( "[cdda-mp] CLI-PARTIAL: moves=" + std::to_string( srv_moves ) );
-                get_avatar().set_moves( srv_moves );
-            } else if( srv_moves <= 0 ) {
-                // ACK: server confirmed our action was received.  Always apply.
-                mp_log( "[cdda-mp] CLI-ACK-CLEAR: moves=" + std::to_string( srv_moves ) +
-                        " seq=" + std::to_string( grant_seq ) +
-                        " ack_was=" + std::to_string( mp_session().client_turn.client_waiting_for_ack ) +
-                        " last_seq=" + std::to_string( mp_session().client_turn.client_last_grant_seq ) );
-                mp_session().client_turn.client_waiting_for_ack = false;
-                get_avatar().set_moves( srv_moves );
-            } else if( ( !mp_session().client_turn.client_waiting_for_ack || get_avatar().activity ) &&
-                       ( grant_seq == 0 || grant_seq > mp_session().client_turn.client_last_grant_seq ) ) {
-                // New grant: seq is fresh AND (no pending ack OR avatar is in an
-                // activity).  The activity-override bypasses the ack guard so
-                // long activities (drop, read, craft) don't stall when grants
-                // arrive faster than the client can ack — the activity is the
-                // pacing authority during a passive activity, not the
-                // handshake.  Seq guard still prevents stale replays.
-                if( grant_seq > 0 ) {
-                    mp_session().client_turn.client_last_grant_seq = grant_seq;
-                }
-                const player_activity &ca = get_avatar().activity;
-                mp_log( "[cdda-mp] CLI-GRANT: moves=" + std::to_string( srv_moves ) +
-                        " seq=" + std::to_string( grant_seq ) +
-                        " act=" + ( ca ? ca.id().str() : "none" ) +
-                        " override_ack=" + std::to_string( ca && mp_session().client_turn.client_waiting_for_ack ) );
-                // If we overrode the ack guard for an activity, clear it now so
-                // the next dispatch isn't suppressed by stale state.
-                if( ca && mp_session().client_turn.client_waiting_for_ack ) {
-                    mp_session().client_turn.client_waiting_for_ack = false;
-                }
-                get_avatar().set_moves( srv_moves );
-                mp_session().client_turn.last_grant_time = std::chrono::steady_clock::now();
-                // If the client is in any long activity, ack the grant
-                // immediately with a "wait" action.  Without this, multiple
-                // host grants pile up in the same process_mp_events drain and
-                // only one gets acked per do_turn, so the host races ahead via
-                // SAFETY-TIMEOUT and calendars desync.  Setting the ack guard
-                // here also causes subsequent grants in the same drain to take
-                // the CLI-SKIP branch, providing proper backpressure so the
-                // host advances at the client's pace.
-                if( ca && !is_passive_activity( ca.id().str() ) ) {
-                    // Interactive activity (ACT_AIM, ACT_FIRSTAID, ACT_AUTOATTACK,
-                    // ACT_AUTODRIVE): its do_turn opens a BLOCKING UI (e.g. aiming's
-                    // target_ui via mode_fire).  Ticking it here — inside
-                    // client_process_incoming, during network-message processing —
-                    // ran that UI re-entrantly and crashed (target_ui::run /
-                    // ~display_buffer_draw_scope) and froze before.  Do NOT tick it;
-                    // the main do_turn act loop drives it in a valid UI context and
-                    // dispatches its own wait when moves are consumed.  Moves were
-                    // already set above from the grant.
-                    mp_log( "[cdda-mp] CLI-GRANT: interactive act=" + ca.id().str() +
-                            " deferred to main loop (no incoming-path tick)" );
-                } else if( ca ) {
-                    // Any passive player_activity in MP is a long action: it needs
-                    // one tick per host grant, and we must ack the grant before
-                    // the next message in this drain (the host's ack-clear) zeroes
-                    // our moves.  Covers `|` wait, crafting, reading, butchering,
-                    // mining, construction, repair, etc. — every activity_actor.
-                    const std::string pre_tick_id = ca.id().str();
-                    const int pre_tick_moves = get_avatar().get_moves();
-                    const int pre_tick_moves_left = ca.moves_left;
-                    get_avatar().activity.do_turn( get_avatar() );
-                    const int post_tick_moves = get_avatar().get_moves();
-                    const player_activity &post_ca = get_avatar().activity;
-                    const int post_tick_moves_left = post_ca ? post_ca.moves_left : 0;
-                    // If the activity completed during this tick, emit the
-                    // explicit end signal BEFORE the wait so the host clears
-                    // its lockstep-bypass state and the wait closes the turn.
-                    // do_turn's outer activity_just_ended detector misses this
-                    // case because pre_activity_id is captured AFTER
-                    // client_process_incoming runs.
-                    if( !get_avatar().activity ) {
-                        mp_session().client_turn.client_turn_activity.clear();
-                        client_send_activity_end( pre_tick_id );
-                    }
-                    mp_log( "[cdda-mp] CLI-GRANT-ACT-ACK: id=" + pre_tick_id
-                            + " moves " + std::to_string( pre_tick_moves ) + "->" + std::to_string( post_tick_moves )
-                            + " moves_left " + std::to_string( pre_tick_moves_left ) + "->" + std::to_string(
-                                post_tick_moves_left )
-                            + " ended=" + std::to_string( !get_avatar().activity )
-                            + " grant_seq=" + std::to_string( grant_seq ) );
-                    client_send( client_enrich_action(
-                                     R"({"type":"action","action":"wait"})" ) );
-                    mp_session().client_turn.client_waiting_for_ack = true;
-                    mp_session().client_turn.ack_set_time = std::chrono::steady_clock::now();
-                    // Mirror the host's per-turn redraw so the client's HUD
-                    // (time, activity %, environmental messages) ticks live
-                    // while the activity runs.  Without this, do_turn never
-                    // exits to the main game loop's redraw path during a long
-                    // activity.
-                    g->invalidate_main_ui_adaptor();
-                }
-            } else {
-                // Stale: ack pending or seq already seen.
-                mp_log( "[cdda-mp] CLI-SKIP: moves=" + std::to_string( srv_moves ) +
-                        " seq=" + std::to_string( grant_seq ) + "/" +
-                        std::to_string( mp_session().client_turn.client_last_grant_seq ) +
-                        " ack=" + std::to_string( mp_session().client_turn.client_waiting_for_ack ) +
-                        " reason=" + ( mp_session().client_turn.client_waiting_for_ack ? "ack-pending" : "old-seq" ) );
+            auto &turn = mp_session().client_turn;
+            const uint32_t grant_seq = static_cast<uint32_t>( sequence );
+            const int moves = jo.get_int( "moves" );
+            turn.last_grant_time = std::chrono::steady_clock::now();
+            const bool fresh = grant_seq > turn.client_last_grant_seq;
+            const bool response = grant_seq == turn.client_last_grant_seq &&
+                                  ( moves <= 0 || jo.get_bool( "free", false ) );
+            if( fresh || response ) {
+                turn.client_last_grant_seq = grant_seq;
+                turn.client_waiting_for_ack = false;
+                get_avatar().set_moves( moves );
             }
         }
 
@@ -7255,6 +7171,9 @@ void client_process_incoming()
         // so the server's first move grant isn't silently ignored after reconnect.
         mp_session().client_turn.client_waiting_for_ack = false;
         mp_session().client_turn.client_last_grant_seq = 0;
+        mp_session().client_turn.observed_host_turn = calendar::before_time_starts;
+        mp_session().client_turn.processed_host_turn = calendar::before_time_starts;
+        mp_session().client_turn.character_turns.reset();
         mp_session().client_pickup = {};
         // Immediately follow with our worn-item list and skin tone.
         client_resync_worn();
@@ -7307,7 +7226,7 @@ void client_process_incoming()
         !mp_session().client_turn.client_autosmash_json.empty() &&
         get_avatar().get_moves() > 0 && !mp_session().client_turn.client_waiting_for_ack ) {
         mp_session().client_turn.autosmash_pending = false;
-        client_send( mp_session().client_turn.client_autosmash_json );
+        client_send( client_enrich_action( mp_session().client_turn.client_autosmash_json ) );
         // FIX #4 (smash stamina): mirror SP avatar::smash on each continued swing.
         // Autosmash only re-fires while the target is still bashable, so every re-fire
         // is a successful swing — burn unconditionally here (manual smash burns in
@@ -7841,16 +7760,16 @@ std::string client_enrich_action( const std::string &json )
         enriched += ",\"char_stats\":" + char_stats;
         enriched += ",\"client_facing\":" + std::to_string(
                         av.facing == FacingDirection::LEFT ? 0 : 1 );
-        // Sync current activity id for HUD/messaging and as a heartbeat for
-        // the host's lockstep bypass.  Primary signals are the explicit
+        // Sync current activity id for HUD/messaging and group pacing.  Primary signals are the explicit
         // activity_start / activity_end actions emitted in assign_activity /
         // do_turn — this field is belt-and-suspenders so a missed lifecycle
         // packet still gets reconciled on the next normal action.  Refresh
         // from live av.activity when present so an activity assigned mid-turn
         // is reflected here too.
-        if( av.activity ) {
-            mp_session().client_turn.client_turn_activity = av.activity.id().str();
-        }
+        mp_session().client_turn.client_turn_activity = av.activity ? av.activity.id().str() : "";
+        enriched += ",\"grant_seq\":" + std::to_string( mp_session().client_turn.client_last_grant_seq );
+        enriched += ",\"client_sleeping\":" + std::string( av.has_effect( effect_sleep ) ? "true" :
+                    "false" );
         const std::string client_act_id = mp_session().client_turn.client_turn_activity;
         enriched += R"(,"client_activity":")" + client_act_id + "\"";
         enriched += ",\"client_help_target\":" + wire_quote( activity_help_target( av.activity ) );
@@ -8187,7 +8106,8 @@ void client_set_autosmash_json( const std::string &json )
 
 void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_idle )
 {
-    if( mp_session().client_turn.client_waiting_for_ack ) {
+    if( !is_client_mode() || mp_session().client_turn.client_last_grant_seq == 0 ||
+        mp_session().client_turn.client_waiting_for_ack ) {
         mp_log( "[cdda-mp] dispatch_wait: ack pending, skip" );
         return;
     }
@@ -8195,16 +8115,6 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_id
     const activity_id &id = pact ? pact.id() : pre_id;
     if( !id && !force_idle ) {
         mp_log( "[cdda-mp] dispatch_wait: no activity, skip" );
-        return;
-    }
-    // Fast-forward mode: when both sides are in passive activities, host has
-    // dropped its strict-lockstep wait (see wait_for_client_action).  We
-    // skip the wait dispatch too — sending one would just queue against the
-    // host's already-bypassed wait and waste a TCP round-trip.  The host's
-    // next grant arrives at near-SP-tick speed and ticks our activity locally.
-    if( should_fast_forward() ) {
-        mp_log( "[cdda-mp] dispatch_wait: FAST-FORWARD, skip wait for act=" +
-                ( id ? id.str() : "idle" ) );
         return;
     }
     mp_log( "[cdda-mp] dispatch_wait: SEND wait for act=" + ( id ? id.str() : "idle" ) );

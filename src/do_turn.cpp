@@ -331,6 +331,45 @@ void handle_key_blocking_activity( int timeout )
 
 namespace
 {
+void update_avatar_memory( avatar &u )
+{
+    // Memory belongs to the local observer even when the host owns simulation.
+    const bool view_blocked = u.has_effect( effect_sleep ) ||
+                              ( u.activity.id() != ACT_AUTODRIVE &&
+                                static_cast<bool>( u.activity.get_progress_message( u ) ) );
+    if( !view_blocked ) {
+        get_map().update_map_memory( u );
+    }
+}
+
+void update_avatar_environment( avatar &u )
+{
+    u.update_bodytemp();
+    {
+        weather_manager &weather = get_weather();
+        u.update_body_wetness( *weather.weather_precise );
+        u.apply_wetness_morale( weather.temperature );
+    }
+
+    if( calendar::once_every( 1_minutes ) ) {
+        u.update_morale();
+    }
+}
+
+void finish_avatar_turn( avatar &u )
+{
+    if( calendar::once_every( 9_turns ) ) {
+        u.check_and_recover_morale();
+    }
+
+    // reset player noise
+    u.volume = 0;
+
+    // Calculate bionic power balance
+    u.power_balance = u.get_power_level() - u.power_prev_turn;
+    u.power_prev_turn = u.get_power_level();
+}
+
 void process_avatar_activity( avatar &u )
 {
     // Poll between actor calls, never inside one: cancellation may destroy
@@ -762,6 +801,57 @@ bool game::do_turn()
 
     drain_renderer_recovery();
 
+    if( cata_mp::is_client_mode() ) {
+        // The host advances the world. View updates and input polling cannot
+        // tick terrain, monsters, missions or world Lua hooks a second time.
+        cata_mp::process_session_turn();
+        avatar &u = get_avatar();
+        const bool advance_character = cata_mp::client_begin_simulation_turn();
+        if( advance_character ) {
+            if( new_game ) {
+                new_game = false;
+                get_weather().on_game_start();
+            }
+            get_weather().temperature_cache.clear();
+            get_weather().update_weather();
+            reset_light_level();
+            for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+                get_map().set_lightmap_cache_dirty( z );
+            }
+            auto &driver = cata_mp::client_character_turn_driver( u );
+            driver.update_body();
+            const bool sleeping = u.has_effect( effect_sleep );
+            const int moves = u.get_moves();
+            const activity_id activity = u.activity.id();
+            cata_mp::set_client_turn_activity( u.activity ? activity.str() : "" );
+            process_avatar_activity( u );
+            driver.process_turn();
+            if( moves > 0 && ( sleeping || u.has_effect( effect_sleep ) ) ) {
+                u.set_moves( 0 );
+            }
+            if( moves > 0 && u.get_moves() <= 0 ) {
+                cata_mp::client_dispatch_wait_for_activity( activity, true );
+            }
+        }
+        if( do_avatar_action_loop() ) {
+            return turn_handler::cleanup_at_end();
+        }
+        if( u.get_moves() <= 0 ) {
+            inp_mngr.pump_events();
+            handle_key_blocking_activity( 0 );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+        if( advance_character ) {
+            update_avatar_memory( u );
+            get_map().invalidate_visibility_cache();
+            update_avatar_environment( u );
+            finish_avatar_turn( u );
+            sounds::process_sound_markers( &u );
+        }
+        present_turn();
+        return false;
+    }
+
     simulate_turn_prefix();
 
     // Keep multiplayer entirely outside the single-player turn path.  The
@@ -793,9 +883,7 @@ void game::simulate_turn_prefix()
         weather.on_game_start();
     } else {
         gamemode->per_turn();
-        // MP callout: client-mode locks the calendar until a grant brings
-        // moves > 0; otherwise the clock races forward ~10 turns/sec while
-        // waiting and diverges from the host.
+        // Only the authority advances the calendar; clients observe host time.
         if( cata_mp::should_advance_calendar() ) {
             calendar::turn += 1_turns;
         }
@@ -864,13 +952,7 @@ void game::simulate_turn_prefix()
 
     debug_hour_timer.print_time();
 
-    // Per-turn body update. In SP this is one turn; in MP-client it must catch
-    // up the host-driven calendar's jumps.
-    if( cata_mp::is_client_mode() ) {
-        cata_mp::client_character_turn_driver( u ).update_body();
-    } else {
-        local_player_controller().update_body();
-    }
+    local_player_controller().update_body();
 
     // Auto-save if autosave is enabled (suppressed in client mode — server owns saves)
     if( !cata_mp::is_client_mode() &&
@@ -899,31 +981,8 @@ void game::simulate_turn_prefix()
         u.healall( 100 );
     }
 
-    // Process avatar activities, polling for interruption between actor calls.
-    // Snapshot moves and activity ID before the loop for client dispatch.
-    const int pre_activity_moves = u.get_moves();
-    const activity_id pre_activity_id = u.activity ? u.activity.id() : activity_id::NULL_ID();
-    if( cata_mp::is_client_mode() ) {
-        // Snapshot this turn's activity id for the wire.
-        cata_mp::set_client_turn_activity( pre_activity_id ? pre_activity_id.str()
-                                           : std::string() );
-        // Client busy-loop fix: yield to network thread when we have an activity
-        // but no moves to tick it.
-        if( pre_activity_id && pre_activity_moves <= 0 ) {
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
-    }
+    // Clients use their host-clocked character phase in do_turn().
     process_avatar_activity( u );
-    // Client-only: tick effects/needs once per elapsed host turn, without granting
-    // local moves. SP/host process_turn() still runs in simulate_turn_suffix().
-    if( cata_mp::is_client_mode() ) {
-        cata_mp::client_character_turn_driver( u ).process_turn();
-    }
-    // Client: if a wait activity consumed the server-granted moves this turn,
-    // dispatch "wait" so the server advances its timeline in sync.
-    if( cata_mp::is_client_mode() && pre_activity_moves > 0 && u.get_moves() <= 0 ) {
-        cata_mp::client_dispatch_wait_for_activity( pre_activity_id );
-    }
 
     // Process NPC sound events before they move or they hear themselves talking
     for( npc &guy : all_npcs() ) {
@@ -1140,17 +1199,12 @@ void game::simulate_turn_suffix()
     // owned geometry values; no worker reads or mutates a live creature.
     get_creature_tracker().precompute_all_zones();
 
-    // process monster and npc turn
-    // Lockstep: wait for the client to ack this turn before running monster AI.
+    // Host waiting and sleep still advance every monster turn. Fast-forward
+    // changes presentation cadence, never simulation or acknowledgements.
     if( cata_mp::is_hosting() ) {
         cata_mp::wait_for_client_action();
-        // Skip monmove when fast-forwarding through a wait activity.
-        if( !cata_mp::host_is_in_wait_activity() ) {
-            monmove();
-        }
-    } else {
-        monmove();
     }
+    monmove();
 
     if( calendar::once_every( time_between_npc_OM_moves ) ) {
         overmap_npc_move();
@@ -1162,23 +1216,7 @@ void game::simulate_turn_suffix()
     // Replenish moves through the current local character assignment.
     local_player_controller().process_turn();
 
-    // Update player map memory from the current field of view.  This used to
-    // happen lazily inside the tiles draw path; running it here in the sim loop
-    // (after the map cache is built, before the visibility cache is
-    // invalidated) lets rendering become pure-read and keeps memory on the sim
-    // side (required by autodrive / NPC pathing that consume it).
-    // Skip only during view-blocking activities (sleeping / reading / long-wait
-    // / crafting) — the same condition that triggers handle_progress_ui's
-    // wait popup.  During those the player cannot see the world, so per-turn
-    // memorisation is pure waste and the source of the stutter.
-    // Autodrive uses the progress UI too, but unlike reading/crafting it moves
-    // the avatar through a visible world and must keep recording map memory.
-    const bool in_long_wait = u.has_effect( effect_sleep ) ||
-                              ( u.activity.id() != ACT_AUTODRIVE &&
-                                static_cast<bool>( u.activity.get_progress_message( u ) ) );
-    if( !in_long_wait ) {
-        m.update_map_memory( u );
-    }
+    update_avatar_memory( u );
 
     // Per-turn world-state updates previously ran inside present_turn().
     // Moving them here keeps simulation advancing every tick regardless of
@@ -1189,31 +1227,15 @@ void game::simulate_turn_suffix()
 
     m.invalidate_visibility_cache();
 
-    u.update_bodytemp();
-    {
-        weather_manager &weather = get_weather();
-        u.update_body_wetness( *weather.weather_precise );
-        u.apply_wetness_morale( weather.temperature );
-    }
-
+    update_avatar_environment( u );
     if( calendar::once_every( 1_minutes ) ) {
-        u.update_morale();
         for( npc &guy : all_npcs() ) {
             guy.update_morale();
             guy.check_and_recover_morale();
         }
     }
 
-    if( calendar::once_every( 9_turns ) ) {
-        u.check_and_recover_morale();
-    }
-
-    // reset player noise
-    u.volume = 0;
-
-    // Calculate bionic power balance
-    u.power_balance = u.get_power_level() - u.power_prev_turn;
-    u.power_prev_turn = u.get_power_level();
+    finish_avatar_turn( u );
 }
 
 void game::present_turn()

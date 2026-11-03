@@ -519,7 +519,8 @@ TEST_CASE( "door_intents_ignore_attached_client_mutations", "[gates][multiplayer
     out.end_array();
     out.end_object();
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                           text.str(), only_test_remote( session ).admission } ) );
+                                           test_granted_action( text.str(), only_test_remote( session ).turn.grant_seq ),
+                                           only_test_remote( session ).admission } ) );
     cata_mp::process_mp_events();
     const ter_str_id expected = reachable ? ( opening ? ter_t_door_o : ter_t_door_c ) : before;
     CHECK( here.ter( target ) == expected );
