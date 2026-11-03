@@ -150,10 +150,34 @@ def main():
         action = {'type': 'action', 'action': 'wait'}
         assert client.command('send ' + json.dumps(action)) == 'OK'
         assert host.command('next').startswith('EVENT 2 ')
-        full = start('full', 'client', port, 'player3', '口令"\\', 'abc')
+        companions = []
+        for identity in ('2', '3'):
+            companion = start('companion' + identity, 'raw', port)
+            assert companion.read() == 'READY'
+            packet = {'type': 'join', 'transport': 'ccb-renet-2', 'password': '口令"\\',
+                      'version': 'abc', 'name': 'same name', 'world_id': 'a' * 32,
+                      'player_id': identity * 32, 'resume_secret': 'b' * 64}
+            assert companion.command('send ' + json.dumps(packet)) == 'OK'
+            assert host.command('next').startswith('EVENT 0 ')
+            assert companion.message()['type'] == 'welcome'
+            assert companion.message()['type'] == 'player_joined'
+            assert client.message()['type'] == 'player_joined'
+            for previous in companions:
+                assert previous.message()['type'] == 'player_joined'
+            companions.append(companion)
+        full = start('full', 'client', port, 'player5', '口令"\\', 'abc')
         assert 'Server is full' in full.read()
         full.close()
-        results.append('existing_game_capacity_enforced')
+        for companion in companions:
+            assert companion.command('send ' + json.dumps(action)) == 'OK'
+            assert host.command('next').startswith('EVENT 2 ')
+        while companions:
+            companions.pop().close()
+            assert host.command('next').startswith('EVENT 1 ')
+            assert client.message()['type'] == 'player_left'
+            for remaining in companions:
+                assert remaining.message()['type'] == 'player_left'
+        results.append('three_remote_players_and_four_player_capacity')
         client.close()
         assert host.command('next').startswith('EVENT 1 '), 'disconnect not delivered'
         reconnect = start('reconnect', 'client', port, '玩家"\\', '口令"\\', 'abc')

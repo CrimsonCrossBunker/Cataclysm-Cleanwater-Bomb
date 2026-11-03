@@ -32,6 +32,8 @@ namespace cata_mp
 // processes connect/disconnect/action events from remote players.
 void process_mp_events();
 
+std::string client_partner_action( const std::string &action, character_id target );
+
 // Cheap outer gate for the game loop.  Single-player code should test this
 // before calling any per-turn multiplayer work so queues, cleanup, logging and
 // UI synchronization are not entered at all in a solo session.
@@ -44,7 +46,8 @@ void process_session_turn();
 
 // Returns a JSON string describing the remote player's current position,
 // HP, and nearby visible tiles. Sent to the client after each action.
-std::string serialize_remote_player_state();
+struct remote_player_session;
+std::string serialize_remote_player_state( remote_player_session &recipient );
 
 // Returns true if the given character_id belongs to a remote player NPC.
 // Used by monmove() to skip AI processing for human-controlled NPCs.
@@ -58,7 +61,7 @@ bool is_partner_npc( character_id id );
 // in an interruptible "wait several minutes" activity.  Reads the activity
 // id last broadcast over the wire — works in either direction (client sees
 // host's wait; host sees client's wait).
-bool is_partner_in_wait_activity();
+bool is_partner_in_wait_activity( character_id target = character_id() );
 
 // Minimum moves_total for the partner's activity to surface the "Help with
 // task" bump-menu entry.  Below this threshold the activity is short enough
@@ -70,18 +73,20 @@ constexpr int HELPER_MIN_MOVES_TOTAL = 10000;
 // committed to helping with our long task.  Read by Character::get_crafting_helpers()
 // to decide whether to include the partner proxy NPC in the SP helper list
 // (which feeds skill / proficiency / time-bonus math).
-bool is_partner_helping_us();
+bool is_partner_helping( character_id helper, character_id worker );
+// Persist the selected player identity in the native activity.
+bool start_helping_partner( character_id target );
 
 // True when the partner's current activity is one that SP's helper system
 // supports (crafting, construction, vehicle, butchery, disassembly).  Reading
 // is intentionally excluded — its "learn alongside" semantics need separate
 // design.  Used by the bump-menu gate.
-bool partner_activity_accepts_help();
+bool partner_activity_accepts_help( character_id target = character_id() );
 
 // Total moves required by the partner's current activity (act.moves_total),
 // snapshotted by the partner's actor::start() and propagated each tick.  Read
 // by the bump-menu predicate.  Zero when partner is idle.
-int partner_activity_moves_total();
+int partner_activity_moves_total( character_id target = character_id() );
 
 // Last progress percent (0-100) the partner reported for their current
 // activity.  Used by the helper's local wait popup to mirror the lead's
@@ -101,15 +106,15 @@ bool mp_in_burst_mode();
 // next serialize_remote_player_state broadcast.  Client consumes it and
 // cancels its own wait activity.  Used by the host's tap-on-shoulder
 // dispatch when the host is interrupting the client's wait.
-void mark_wake_client_pending();
+void mark_wake_client_pending( character_id target );
 
 // Host-only: queue a one-shot signal that the host swapped with / pushed the
 // client this turn (host-initiated, performed locally on the host).  The next
 // state broadcast carries the flag; the client renders the observer message
 // ("<host> swaps places with you.") locally from the proxy's real name, so no
 // rendered text crosses the wire.
-void mark_partner_swap_pending();
-void mark_partner_push_pending();
+void mark_partner_swap_pending( character_id target );
+void mark_partner_push_pending( character_id target );
 
 // Current partner-separation tier (0 = close, 1 = mild warn, 2 = urgent
 // warn / leeway, 3 = pause).  Read by do_turn to auto-pause the calendar
@@ -120,7 +125,7 @@ int get_separation_tier();
 // or nullptr if not connected. On the host that's the client's proxy; on
 // the client that's the host's proxy. Used by the tile renderer to draw a
 // direction indicator when the partner is off-screen.
-::npc *get_partner_npc();
+::npc *get_partner_npc( character_id target = character_id() );
 
 // Host: true while wait_for_client_action() is blocking — i.e. the host has
 // no moves and is waiting for the client to ack the current turn.  Used to
@@ -522,23 +527,13 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id = activity_id(
 void client_send_activity_start( const std::string &activity_id_str );
 void client_send_activity_end( const std::string &activity_id_str );
 
-// Client only: returns the luminance emitted by the host player (flashlight,
-// mutations, etc.) as received in the last state packet.  Used by lightmap.cpp
-// to inject a point light at the host NPC position during build_map_cache().
-float get_host_luminance();
-
-// Host only: returns the luminance emitted by the remote player (client), as
-// received in each action packet.  Used by lightmap.cpp to inject a point light
-// at the remote NPC proxy position during build_map_cache().
-float get_remote_player_luminance();
-
-// Client only: returns the character_id of the host NPC proxy so lightmap.cpp
-// can find the right NPC without knowing internal MP state.
+// Read-only light sources for every remote actor currently loaded in this view.
+struct player_light {
+    tripoint_bub_ms position;
+    float luminance;
+};
+std::vector<player_light> player_lights();
 character_id get_host_npc_character_id();
-
-// Host only: returns the character_id of the remote player NPC proxy so
-// lightmap.cpp can inject the client's light at the correct position.
-character_id get_remote_player_npc_character_id();
 
 // Client only: milliseconds since the server last granted moves to the client.
 // Returns a large value if no grant has been received yet.
@@ -573,20 +568,14 @@ tripoint_abs_ms client_ctrl_veh_abs();
 // client in the next grant.  Silently ignored when not hosting.
 void host_queue_sfx( const std::string &id, const std::string &variant, int vol );
 
-// Called after npc_trading::trade() completes with a remote player proxy.
-// Sends a trade_delta message so the other side's real avatar gains/loses items.
-void mp_post_trade( npc &np, const std::list<item> &items_given,
-                    const std::list<item> &items_taken );
-
-// Pass a single item to the adjacent partner.  Opens the inventory picker,
-// removes the item from the giver, adds it to the partner proxy, and sends
-// a trade_delta so the other side's real avatar gains the item.
-void mp_handle_pass_item();
+// Pass a full owned item through the shared authoritative operation. The
+// client submits an item identity and waits for its carried-inventory result.
+void mp_handle_pass_item( character_id target = character_id() );
 
 // MP: high-five the adjacent partner. Small mutual morale boost (both players),
 // gated on adjacency + the partner being available (idle, not mid-activity).
 // A busy partner is never interrupted — the gesture just whiffs with flavor.
-void mp_high_five();
+void mp_high_five( character_id target = character_id() );
 
 // MP: relay a local yell as authoritative world-noise.  Called from game::chat()
 // right after the avatar shouts.  No-op on the host (its shout already made real

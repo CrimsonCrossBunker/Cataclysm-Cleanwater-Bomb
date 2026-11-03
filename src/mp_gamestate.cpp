@@ -1,6 +1,7 @@
 #include "mp_gamestate.h"
 
 #include <stdexcept>
+#include <limits>
 
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
@@ -9,6 +10,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_path.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -215,7 +217,7 @@ static void mp_log_impl( const std::string &msg, log_role role )
         // launch, never mid-session, so it never pulls live data out from under
         // a debugging run.
         constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 *
-            1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
+                1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
         const std::filesystem::path desired_fs_path = std::filesystem::u8path( desired_path );
         const std::uintmax_t sz =
@@ -332,12 +334,14 @@ void host_queue_sfx( const std::string &id, const std::string &variant, int vol 
     if( !is_hosting() || vol < 5 ) {
         return;
     }
-    if( mp_session().host_turn.host_sfx_queue.size() >= 32 ) {
-        return;
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &recipient = *entry.second;
+        if( recipient.connected && !recipient.detach_pending &&
+            recipient.turn.host_sfx_queue.size() < 32 ) {
+            recipient.turn.host_sfx_queue.push_back( { id, variant, vol } );
+        }
     }
-    mp_session().host_turn.host_sfx_queue.push_back( {id, variant, vol} );
 }
-
 // This is menu/CLI intent, not an active world. It survives initial setup()
 // and is consumed only once the first world turn can create its owned host.
 struct host_request {
@@ -363,9 +367,33 @@ static npc *mp_loaded_actor( actor_binding &binding )
            binding.resolve_loaded( actor, g->npc_lifetimes() ) : nullptr;
 }
 
-static npc *mp_remote_actor()
+static npc *mp_remote_actor( remote_player_session &recipient )
 {
-    return mp_loaded_actor( mp_session().remote_actor );
+    return mp_loaded_actor( recipient.actor );
+}
+
+static const peer_observation &mp_partner_observation( character_id target = character_id() )
+{
+    if( !target.is_valid() ) {
+        if( const npc *partner = get_partner_npc() ) {
+            target = partner->getID();
+        }
+    }
+    if( is_client_mode() ) {
+        for( const auto &entry : mp_session().client_player_views ) {
+            if( entry.second->actor.id() == target ) {
+                return entry.second->observation;
+            }
+        }
+        if( target == mp_session().client_host_actor.id() ) {
+            return mp_session().host_observation;
+        }
+    }
+    if( const auto *recipient = mp_session().find_remote( target ) ) {
+        return recipient->observation;
+    }
+    static const peer_observation empty;
+    return empty;
 }
 
 static npc *mp_host_view_actor()
@@ -422,7 +450,7 @@ static std::pair<int, int> mp_worst_limb_hp( const Character &c )
 }
 
 static const int g_map_sync_cap = 64;
-static std::string build_map_sync_z( int az );
+static std::string build_map_sync_z( remote_player_session &recipient, int az );
 
 // Strip "ACT_" prefix and lowercase the rest so the HUD shows "drop" not
 // "ACT_DROP".  Returns "—" for empty.
@@ -447,7 +475,7 @@ static std::string mp_format_activity( const std::string &act_id )
 // source of truth for any MP message that needs to address the other player.
 static std::string mp_partner_display_name()
 {
-    if( const npc *partner = is_hosting() ? mp_remote_actor() : mp_host_view_actor() ) {
+    if( const npc *partner = is_hosting() ? get_partner_npc() : mp_host_view_actor() ) {
         if( !partner->name.empty() ) {
             return partner->name;
         }
@@ -480,32 +508,34 @@ static void mp_cancel_help_if_partner_done();
 // Templates wire-sync helpers (definitions below alongside notify_session_ending).
 // Forward-declared so the host- and client-side message dispatchers can call
 // them; both dispatchers live above the definitions.
-static void mp_handle_templates_list( const std::string &msg );
-static void mp_handle_template_request( const std::string &msg );
+static void mp_handle_templates_list( const std::string &msg, const peer_admission &recipient = {} );
+static void mp_handle_template_request( const std::string &msg, const peer_admission &recipient = {} );
 static void mp_handle_template_data( const std::string &msg );
-static void mp_send_payload( const std::string &payload );
+static void mp_send_payload( const std::string &payload, const peer_admission &recipient );
+static void mp_templates_sync_on_join( const peer_admission &recipient );
 
 // Fire "<partner> begins <verb>." / "<partner> has finished." on the
 // transition edges.  Caller is responsible for setting g_partner_activity to
 // the latest value before calling this.
 static void mp_partner_activity_transition_check()
 {
-    if( mp_session().peer.partner_activity == mp_session().presentation.partner_activity_prev ) {
+    mp_cancel_help_if_partner_done();
+    if( mp_partner_observation().partner_activity == mp_session().presentation.partner_activity_prev ) {
         return;
     }
     const std::string partner_name = mp_partner_display_name();
     if( mp_session().presentation.partner_activity_prev.empty() &&
-        !mp_session().peer.partner_activity.empty() ) {
+        !mp_partner_observation().partner_activity.empty() ) {
         add_msg( m_info, _( "%1$s begins %2$s." ), partner_name,
-                 mp_activity_verb_phrase( mp_session().peer.partner_activity ) );
+                 mp_activity_verb_phrase( mp_partner_observation().partner_activity ) );
     } else if( !mp_session().presentation.partner_activity_prev.empty() &&
-               mp_session().peer.partner_activity.empty() ) {
+               mp_partner_observation().partner_activity.empty() ) {
         // Use the just-ended activity's verb so the message reads "<name> has
         // finished reading." instead of the generic "<name> has finished."
         add_msg( m_info, _( "%1$s has finished %2$s." ), partner_name,
                  mp_activity_verb_phrase( mp_session().presentation.partner_activity_prev ) );
     }
-    mp_session().presentation.partner_activity_prev = mp_session().peer.partner_activity;
+    mp_session().presentation.partner_activity_prev = mp_partner_observation().partner_activity;
     // Partner's activity changed — if we were helping with the OLD one and
     // they've moved on (or stopped entirely), drop our local commitment so
     // the SP helper bonus stops being applied.
@@ -600,9 +630,9 @@ struct mp_hud_t {
         // wire-state apply path keeps fresh (HP, move_mode, position), plus
         // the latest g_partner_activity / g_partner_activity_pct received
         // from the wire.
-        npc *partner = is_hosting() ? mp_remote_actor() : mp_host_view_actor();
+        npc *partner = is_hosting() ? get_partner_npc() : mp_host_view_actor();
 
-        if( !mp_session().remote_connected && is_hosting() ) {
+        if( mp_session().remote_players.empty() && is_hosting() ) {
             mvwprintz( win, point( 2, crow ), c_dark_gray, "%s",
                        _( "Partner not connected" ) );
             wnoutrefresh( win );
@@ -613,7 +643,7 @@ struct mp_hud_t {
         // to the cached name from the wire when the proxy isn't resolvable
         // (first-frame race after connect, between npc despawn/respawn).
         // Truncated to 10 chars with a ".." continuation marker.
-        std::string pname = partner ? partner->name : mp_session().peer.partner_name_cached;
+        std::string pname = partner ? partner->name : mp_partner_observation().partner_name_cached;
         if( pname.empty() ) {
             pname = "Partner";
         }
@@ -648,7 +678,7 @@ struct mp_hud_t {
         {
             static const mood_face_id mood_face_DEFAULT( "DEFAULT" );
             const std::pair<std::string, nc_color> mf =
-                display::morale_emotion( mp_session().peer.partner_morale, mood_face_DEFAULT.obj() );
+                display::morale_emotion( mp_partner_observation().partner_morale, mood_face_DEFAULT.obj() );
             const nc_color col = partner ? mf.second : c_dark_gray;
             mvwprintz( win, point( x, crow ), col, "%s", mf.first.c_str() );
             // Advance by the actual face width + 1 so the HP bar sits right up
@@ -662,9 +692,9 @@ struct mp_hud_t {
         // local proxy, whose proxy-derived max HP gave the wrong length/color.
         std::string hpbar = "-----";
         nc_color hp_color = c_dark_gray;
-        if( partner && mp_session().peer.partner_hp_max > 0 ) {
+        if( partner && mp_partner_observation().partner_hp_max > 0 ) {
             const std::pair<std::string, nc_color> bar =
-                get_hp_bar( mp_session().peer.partner_hp_cur, mp_session().peer.partner_hp_max );
+                get_hp_bar( mp_partner_observation().partner_hp_cur, mp_partner_observation().partner_hp_max );
             hpbar = bar.first;
             hp_color = bar.second;
         }
@@ -678,8 +708,8 @@ struct mp_hud_t {
         // Activity + progress %.  Use the verb phrase (e.g. "reading",
         // "constructing a vehicle") so the panel matches the begin/finish
         // sentences.  Empty when partner is idle.
-        if( !mp_session().peer.partner_activity.empty() ) {
-            const std::string verb = mp_activity_verb_phrase( mp_session().peer.partner_activity );
+        if( !mp_partner_observation().partner_activity.empty() ) {
+            const std::string verb = mp_activity_verb_phrase( mp_partner_observation().partner_activity );
             // Compose "<verb> NN%" — clamp verb length so the % stays on row.
             const int avail = W - x - 8; // reserve room for " NN%" + drift
             std::string vshown = verb;
@@ -689,7 +719,7 @@ struct mp_hud_t {
             mvwprintz( win, point( x, crow ), c_yellow, "%s", vshown.c_str() );
             x += static_cast<int>( vshown.size() ) + 1;
             mvwprintz( win, point( x, crow ), c_light_blue, "%d%%",
-                       mp_session().peer.partner_activity_pct );
+                       mp_partner_observation().partner_activity_pct );
             x += 5;
         }
 
@@ -699,13 +729,13 @@ struct mp_hud_t {
         {
             std::string ps;
             nc_color pc;
-            if( mp_session().peer.partner_ping_ms < 0 ) {
+            if( mp_partner_observation().partner_ping_ms < 0 ) {
                 ps = "--";
                 pc = c_dark_gray;
             } else {
-                pc = mp_session().peer.partner_ping_ms < 120 ? c_green
-                     : mp_session().peer.partner_ping_ms < 300 ? c_yellow : c_red;
-                ps = std::to_string( mp_session().peer.partner_ping_ms ) + "ms";
+                pc = mp_partner_observation().partner_ping_ms < 120 ? c_green
+                     : mp_partner_observation().partner_ping_ms < 300 ? c_yellow : c_red;
+                ps = std::to_string( mp_partner_observation().partner_ping_ms ) + "ms";
             }
             mvwprintz( win, point( W - static_cast<int>( ps.size() ) - 1, crow ),
                        pc, "%s", ps.c_str() );
@@ -744,7 +774,7 @@ static bool mp_turn_show_green()
     const bool client_blocked_on_ack = is_client_mode() &&
                                        mp_session().client_turn.client_waiting_for_ack;
     const bool go = get_avatar().get_moves() > 0 && !in_wait_act
-                    && !mp_session().host_turn.host_waiting_for_client && !client_blocked_on_ack;
+                    && !mp_session().host_waiting_for_clients && !client_blocked_on_ack;
     const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     if( go ) {
         mp_session().presentation.mp_last_go_time = now;
@@ -921,11 +951,11 @@ static void mp_handle_chat_msg( const std::string &msg )
 void mp_open_chat()
 {
     mp_log( "[cdda-mp] mp_open_chat: ENTER hosting=" + std::string( is_hosting() ? "1" : "0" ) +
-            " remote_connected=" + std::string( mp_session().remote_connected ? "1" : "0" ) +
+            " remote_connected=" + std::string( !mp_session().remote_players.empty() ? "1" : "0" ) +
             " client_mode=" + std::string( is_client_mode() ? "1" : "0" ) );
     // remote_player_connected is host-side only; on the client, being in client
     // mode means we're joined to a host.  Gate on the correct side.
-    const bool partner = is_hosting() ? mp_session().remote_connected : is_client_mode();
+    const bool partner = is_hosting() ? !mp_session().remote_players.empty() : is_client_mode();
     if( !partner ) {
         add_msg( m_warning, _( "No co-op partner connected." ) );
         return;
@@ -950,7 +980,7 @@ void mp_open_chat()
                            R"(","host":)" + ( host ? "true" : "false" ) + "}";
     if( host ) {
         if( auto srv = get_active_server() ) {
-            srv->post_send( mp_session().remote_admission, js + "\n" );
+            srv->post_broadcast( js + "\n" );
         }
     } else {
         client_send( js );
@@ -1069,7 +1099,7 @@ static void parse_welcome_fields( const std::string &msg, bool apply_seed_now )
             JsonArray ho = jo.get_array( "host_omt" );
             if( ho.size() >= 3 ) {
                 mp_session().admission.client_host_spawn_omt = tripoint_abs_omt(
-                        ho.get_int( 0 ), ho.get_int( 1 ), ho.get_int( 2 ) );
+                            ho.get_int( 0 ), ho.get_int( 1 ), ho.get_int( 2 ) );
                 mp_log( "[cdda-mp] welcome: host_omt=" + mp_session().admission.client_host_spawn_omt.to_string() );
             }
         }
@@ -1172,15 +1202,23 @@ static void mp_save_npc_ids()
 {
     std::vector<int> ids;
     std::vector<std::string> names;
-    if( mp_session().remote_actor.id().is_valid() ) {
-        ids.push_back( mp_session().remote_actor.id().get_value() );
-        npc *rn = mp_remote_actor();
-        if( rn && !rn->name.empty() ) {
-            names.push_back( rn->name );
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &recipient = *entry.second;
+        if( recipient.actor.id().is_valid() ) {
+            ids.push_back( recipient.actor.id().get_value() );
+            npc *rn = mp_remote_actor( recipient );
+            if( rn && !rn->name.empty() ) {
+                names.push_back( rn->name );
+            }
         }
     }
     if( mp_session().client_host_actor.id().is_valid() ) {
         ids.push_back( mp_session().client_host_actor.id().get_value() );
+    }
+    for( const auto &entry : mp_session().client_player_views ) {
+        if( entry.second->actor.id().is_valid() ) {
+            ids.push_back( entry.second->actor.id().get_value() );
+        }
     }
     if( ids.empty() && names.empty() ) {
         remove_file( mp_npc_cleanup_path() );
@@ -1301,7 +1339,72 @@ void mp_on_world_exit()
     mp_session().reset();
 }
 
-static void release_remote_player();
+static player_id partner_identity( character_id actor )
+{
+    if( actor == get_avatar().getID() ) {
+        return get_avatar().get_player_id();
+    }
+    if( is_client_mode() ) {
+        if( actor == mp_session().client_host_actor.id() ) {
+            return mp_session().client_host_player_id;
+        }
+        for( const auto &entry : mp_session().client_player_views ) {
+            if( entry.second->actor.id() == actor ) {
+                return entry.first;
+            }
+        }
+    } else if( const auto *recipient = mp_session().find_remote( actor ) ) {
+        return recipient->credentials.id;
+    }
+    return {};
+}
+
+// A helper keeps its chosen identity even when another player moves closer.
+static std::string activity_help_target( const player_activity &activity )
+{
+    return activity.id().str() == "ACT_HELP_PARTNER" && !activity.str_values.empty() ?
+           activity.str_values.front() : std::string();
+}
+
+static npc *helped_partner( const player_activity &activity )
+{
+    const std::string target = activity_help_target( activity );
+    if( target.empty() ) {
+        return nullptr;
+    }
+    if( is_client_mode() ) {
+        if( mp_session().client_host_player_id.str() == target ) {
+            return mp_host_view_actor();
+        }
+        for( const auto &entry : mp_session().client_player_views ) {
+            if( entry.first.str() == target ) {
+                return mp_loaded_actor( entry.second->actor );
+            }
+        }
+    } else {
+        for( const auto &entry : mp_session().remote_players ) {
+            const auto &peer = *entry.second;
+            if( peer.connected && !peer.detach_pending && peer.credentials.id.str() == target ) {
+                return mp_remote_actor( *entry.second );
+            }
+        }
+    }
+    return nullptr;
+}
+
+std::string client_partner_action( const std::string &action, character_id target )
+{
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", action );
+    out.member( "target_player", partner_identity( target ).str() );
+    out.end_object();
+    return client_enrich_action( encoded.str() );
+}
+
+static void release_remote_player( remote_player_session &recipient );
 
 static player_store &world_players()
 {
@@ -1323,20 +1426,17 @@ static std::string serialize_player( const npc &remote )
     return output.str();
 }
 
-bool mp_save_remote_player()
+static bool save_remote_player( remote_player_session &recipient )
 {
-    if( !mp_session().remote_connected ) {
+    if( !recipient.connected ) {
         return true;
     }
-    const npc *remote = mp_session().remote_actor.retained( g->npc_lifetimes() );
+    const npc *remote = recipient.actor.retained( g->npc_lifetimes() );
     if( !remote ) {
         return false;
     }
     try {
-        world_players().save( mp_session().remote_player, serialize_player( *remote ) );
-        if( mp_session().remote_detach_pending ) {
-            release_remote_player();
-        }
+        world_players().save( recipient.credentials, serialize_player( *remote ) );
         return true;
     } catch( const std::exception & ) {
         // A malformed record may contain private credentials in its parser
@@ -1347,6 +1447,21 @@ bool mp_save_remote_player()
     }
 }
 
+
+bool mp_save_remote_player()
+{
+    bool saved = true;
+    for( auto it = mp_session().remote_players.begin(); it != mp_session().remote_players.end(); ) {
+        auto &recipient = *it++->second;
+        // Successful retry may release a disconnected actor and erase its entry.
+        if( !save_remote_player( recipient ) ) {
+            saved = false;
+        } else if( recipient.detach_pending ) {
+            release_remote_player( recipient );
+        }
+    }
+    return saved;
+}
 static std::optional<std::string> restore_player( const player_credentials &player )
 {
     auto &store = world_players();
@@ -1385,7 +1500,7 @@ static std::optional<std::string> restore_player( const player_credentials &play
 static void spawn_remote_player( const std::string &name, const peer_admission &admission,
                                  const player_credentials &player )
 {
-    if( mp_session().remote_connected ) {
+    if( mp_session().remote_players.count( admission.peer_id() ) != 0 ) {
         throw std::runtime_error( "A live or unsaved multiplayer actor already owns this slot" );
     }
     // Legacy association can write a record while restoring. Refuse a player
@@ -1394,6 +1509,10 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         throw std::runtime_error( "Player already has a controller in this world" );
     }
     const auto saved = restore_player( player );
+    auto pending = std::make_unique<remote_player_session>();
+    auto &recipient = *pending;
+    recipient.admission = admission;
+    recipient.credentials = player;
 
     avatar &u = get_avatar();
     map &m = get_map();
@@ -1412,7 +1531,8 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
                 if( candidate == u.pos_bub() ) {
                     continue; // never land on the host's exact tile
                 }
-                if( m.inbounds( candidate ) && !m.impassable( candidate ) ) {
+                if( m.inbounds( candidate ) && !m.impassable( candidate ) &&
+                    !get_creature_tracker().creature_at<Creature>( candidate ) ) {
                     spawn_pos = candidate;
                     found = true;
                 }
@@ -1420,8 +1540,7 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         }
     }
     if( !found ) {
-        std::cout << "[cdda-mp] WARNING: no passable spawn tile found near host, using host tile" <<
-                  std::endl;
+        throw std::runtime_error( "No free spawn tile near the host" );
     }
 
     shared_ptr_fast<npc> remote = make_shared_fast<npc>();
@@ -1440,7 +1559,7 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     }
     // Cache the partner's name so the Co-op panel has a stable fallback even
     // if the NPC pointer briefly becomes unresolvable (load/unload races).
-    mp_session().peer.partner_name_cached = name;
+    recipient.observation.partner_name_cached = name;
 
     // Ensure the NPC has a valid character_id before inserting into the world.
     // make_shared_fast<npc>() + normalize() never calls setID(), so we must
@@ -1459,27 +1578,38 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     remote->set_value( "mp_player_id", player.id.str() );
     remote->set_value( "mp_proxy", std::string( "1" ) );
     world_players().save( player, serialize_player( *remote ) );
-    mp_session().remote_player = player;
+    recipient.credentials = player;
 
     // Always respawn near the host player regardless of saved position
     remote->spawn_at_precise( m.get_abs( spawn_pos ) );
+    bool published = false;
+    const on_out_of_scope rollback( [&]() {
+        if( !published ) {
+            if( g->shared_from( *remote ) ) {
+                g->remove_npc( remote->getID() );
+            }
+            if( overmap_buffer.find_npc( remote->getID() ).get() == remote.get() ) {
+                overmap_buffer.remove_npc( remote->getID() );
+            }
+        }
+    } );
     overmap_buffer.insert_npc( remote );
     g->load_npcs();
 
-    mp_session().remote_actor.bind_player( *remote, player.id, g->npc_lifetimes(),
-                                           std::move( control ) );
+    recipient.actor.bind_player( *remote, player.id, g->npc_lifetimes(),
+                                 std::move( control ) );
     // Tag the proxy so a load-time sweep can find and remove orphans from
     // sessions where the cleanup file went missing (e.g. host saved while
     // connected, then quit — the proxy ends up in the world save).
     remote->set_value( "mp_proxy", std::string( "1" ) );
     mp_log( "[cdda-mp] spawn: remote_player_npc_id=" +
-            std::to_string( mp_session().remote_actor.id().get_value() ) +
-            " valid=" + std::to_string( mp_session().remote_actor.id().is_valid() ) +
+            std::to_string( recipient.actor.id().get_value() ) +
+            " valid=" + std::to_string( recipient.actor.id().is_valid() ) +
             " tagged mp_proxy=1" );
 
     // Co-op partner: apply ally status AFTER load_npcs so the NPC pointer is
     // fully wired into the game state (faction manager, critter tracker, etc.).
-    npc *rn = mp_remote_actor();
+    npc *rn = mp_remote_actor( recipient );
     if( rn ) {
         rn->set_attitude( NPCATT_FOLLOW );
         rn->set_fac( faction_id( "your_followers" ) );
@@ -1488,14 +1618,16 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         rn->op_of_u.value = 10;
         g->add_npc_follower( rn->getID() );
     }
-    mp_session().begin_remote_peer();
-    mp_session().remote_admission = admission;
-    mp_session().remote_connected = true;
-    mp_session().host_turn.remote_moves = rn ? rn->get_speed() : 100;  // grant first turn immediately
-    mp_session().host_turn.client_acted_this_turn = false;
+    recipient.admission = admission;
+    recipient.connected = true;
+    recipient.turn.grant_seq = ++mp_session().grant_sequence;
+    mp_session().remote_players.emplace( admission.peer_id(), std::move( pending ) );
+    published = true;
+    recipient.turn.remote_moves = rn ? rn->get_speed() : 100;  // grant first turn immediately
+    recipient.turn.client_acted_this_turn = false;
     mp_session().presentation.separation_tier = 0;
     mp_session().presentation.separation_settled = false;
-    mp_session().host_turn.last_forwarded_msg_count =
+    recipient.turn.last_forwarded_msg_count =
         Messages::size();  // don't forward pre-connect history
     mp_save_npc_ids();  // persist ID so next session can clean it up
 
@@ -1510,26 +1642,26 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // fresh NPC gets the correct appearance even after a respawn.
     auto srv = get_active_server();
     if( srv ) {
-        srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
-        srv->post_send( mp_session().remote_admission, "{\"type\":\"resync_request\"}\n" );
+        srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
+        srv->post_send( recipient.admission, "{\"type\":\"resync_request\"}\n" );
     }
 
     // Templates wire-sync: send host's local template list so the client can
     // request any it doesn't already have.  Cheap one-shot exchange — the
     // client sends its own list independently on its side.
-    mp_templates_sync_on_join();
+    mp_templates_sync_on_join( admission );
 }
 
-static void release_remote_player()
+static void release_remote_player( remote_player_session &recipient )
 {
-    if( !mp_session().remote_connected ) {
+    if( !recipient.connected ) {
         return;
     }
-    npc *remote = mp_remote_actor();
+    npc *remote = mp_remote_actor( recipient );
     if( remote ) {
         // Clean despawn — the partner quit/disconnected, they are NOT dead.
         // die() drops a corpse carrying all their gear (a pickup-able loot dupe).
-        g->remove_npc( mp_session().remote_actor.id() );
+        g->remove_npc( recipient.actor.id() );
     }
     // Remove from overmap buffer so the NPC doesn't get written back into the
     // world save, which would cause a stale NPC to appear on next load.
@@ -1539,17 +1671,17 @@ static void release_remote_player()
     // found" debugmsg — a BLOCKING modal popup on the host EVERY time the client
     // disconnects ("client quit drags the host down", 2026-06-21). find_npc()
     // returns null without complaint, so we only remove when it's actually there.
-    const auto retained = overmap_buffer.find_npc( mp_session().remote_actor.id() );
-    if( mp_session().remote_actor.owns_instance( retained.get(), g->npc_lifetimes() ) ) {
-        overmap_buffer.remove_npc( mp_session().remote_actor.id() );
+    const auto retained = overmap_buffer.find_npc( recipient.actor.id() );
+    if( recipient.actor.owns_instance( retained.get(), g->npc_lifetimes() ) ) {
+        overmap_buffer.remove_npc( recipient.actor.id() );
     }
 
-    mp_session().remote_connected = false;
-    mp_session().remote_admission = {};
-    mp_session().remote_player = {};
-    mp_session().remote_detach_pending = false;
-    mp_session().remote_actor.reset();
-    mp_session().host_turn.proxy_was_alive = false;
+    recipient.connected = false;
+    recipient.admission = {};
+    recipient.credentials = {};
+    recipient.detach_pending = false;
+    recipient.actor.reset();
+    recipient.turn.proxy_was_alive = false;
     mp_session().presentation.separation_tier = 0;
     mp_session().presentation.separation_settled = false;
     // Do NOT reset g_grant_seq here.  It must stay monotonically increasing so
@@ -1557,24 +1689,32 @@ static void release_remote_player()
     // join path) always sees seq > 0 and accepts the first new grant.  Resetting
     // to 0 here caused a deadlock: client last_seq=N, server restarts at seq=1..N
     // which were all skipped as "old seq".
-    mp_save_npc_ids();  // ID is now invalid — clears the cleanup file entry
+    for( auto it = mp_session().remote_players.begin(); it != mp_session().remote_players.end();
+         ++it ) {
+        if( it->second.get() == &recipient ) {
+            mp_session().remote_players.erase( it );
+            break;
+        }
+    }
+    mp_save_npc_ids();
+    mp_cancel_help_if_partner_done();
     add_msg( m_bad, _( "The other player has disconnected." ) );
     std::cout << "[cdda-mp] Remote player removed from world." << std::endl;
 }
 
-static void remove_remote_player()
+static void remove_remote_player( remote_player_session &recipient )
 {
-    if( !mp_session().remote_connected ) {
+    if( !recipient.connected ) {
         return;
     }
-    if( !mp_save_remote_player() ) {
+    if( !save_remote_player( recipient ) ) {
         // Retain ownership and freeze NPC AI until an explicit world-save retry
         // succeeds. The departed peer must no longer receive turns or actions.
-        mp_session().remote_admission = {};
-        mp_session().remote_detach_pending = true;
+        recipient.admission = {};
+        recipient.detach_pending = true;
         return;
     }
-    release_remote_player();
+    release_remote_player( recipient );
 }
 
 // After substituting an NPC name → "You", the verb is still third-person singular.
@@ -1739,14 +1879,15 @@ static void fix_you_verb( std::string &s )
 // and append them to g_action_msgs_pending for inclusion in the next broadcast.
 // Messages starting with "You " that don't contain the NPC name are host-avatar
 // messages that have no meaning on the client — they are skipped.
-static void flush_action_msgs( unsigned long long pre_msg, const std::string &npc_name )
+static void flush_action_msgs( remote_player_session &recipient,  unsigned long long pre_msg,
+                               const std::string &npc_name )
 {
     const unsigned long long cur = Messages::size();
     if( cur <= pre_msg ) {
         return;
     }
     const size_t count = static_cast<size_t>( cur - pre_msg );
-    mp_session().host_turn.last_forwarded_msg_count = cur;  // advance watermark to avoid double-forward
+    recipient.turn.last_forwarded_msg_count = cur;  // advance watermark to avoid double-forward
     const auto new_msgs = Messages::recent_messages( count );
     for( const auto &[time_str, text] : new_msgs ) {
         ( void )time_str;
@@ -1797,7 +1938,7 @@ static void flush_action_msgs( unsigned long long pre_msg, const std::string &np
             }
         }
         mp_log( "[cdda-mp] flush_action_msgs queued: " + out );
-        mp_session().host_turn.action_msgs_pending.push_back( out );
+        recipient.turn.action_msgs_pending.push_back( out );
     }
 }
 
@@ -1808,7 +1949,7 @@ static void flush_action_msgs( unsigned long long pre_msg, const std::string &np
 // client as their own messages (no attribution — the driver sees these directly).
 void host_capture_vehmove_msgs( unsigned long long pre_msg )
 {
-    if( !is_hosting() || !mp_session().remote_connected ) {
+    if( !is_hosting() || mp_session().remote_players.empty() ) {
         return;
     }
     const unsigned long long cur = Messages::size();
@@ -1822,13 +1963,19 @@ void host_capture_vehmove_msgs( unsigned long long pre_msg )
     for( const auto &[time_str, text] : new_msgs ) {
         ( void )time_str;
         mp_log( "[veh-move] capture queuing: " + text );
-        mp_session().host_turn.action_msgs_pending.push_back( text );
+        for( const auto &entry : mp_session().remote_players ) {
+            auto &recipient = *entry.second;
+            const npc *actor = mp_remote_actor( recipient );
+            if( actor && actor->controlling_vehicle ) {
+                recipient.turn.action_msgs_pending.push_back( text );
+            }
+        }
     }
 }
 
 void host_broadcast_vehicle_step()
 {
-    if( !is_hosting() || !mp_session().remote_connected ) {
+    if( !is_hosting() || mp_session().remote_players.empty() ) {
         return;
     }
     auto srv = get_active_server();
@@ -1866,23 +2013,26 @@ void host_broadcast_vehicle_step()
     // by act_on_map(), which floods the client with dozens of duplicate packets
     // per host turn and stretches the grant→ack cycle to ~500ms.  Same
     // baseline-diff pattern as the cargo broadcast.
-    if( vehicles_json == mp_session().replication.host.last_vehicle_step_payload ) {
-        return;
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &recipient = *entry.second;
+        if( !recipient.connected || recipient.detach_pending ||
+            vehicles_json == recipient.replication.last_vehicle_step_payload ) {
+            continue;
+        }
+        recipient.replication.last_vehicle_step_payload = vehicles_json;
+        srv->post_send( recipient.admission,
+                        R"({"type":"vehicle_step","vehicles":)" + vehicles_json + "}\n" );
     }
-    mp_session().replication.host.last_vehicle_step_payload = vehicles_json;
-    srv->post_send( mp_session().remote_admission,
-                    R"({"type":"vehicle_step","vehicles":)" + vehicles_json + "}\n" );
 }
-
 // A relayed line is shown to the PARTNER, so a mention of the partner by name
 // should read as "you" to them (host's "Niesha swaps places with player2" →
 // client sees "Niesha swaps places with you").  Guarded against the same-name
 // case: if the partner's cached name equals the local player's own name (e.g.
 // both picked the same preset), we can't disambiguate, so leave names rather
 // than collapse to "you swaps places with you".  own_name is the local avatar.
-static void mp_addressee_to_you( std::string &s, const std::string &own_name )
+static void mp_addressee_to_you( std::string &s, const std::string &own_name,
+                                 const std::string &name )
 {
-    const std::string &name = mp_session().peer.partner_name_cached;
     if( name.empty() || name == own_name ) {
         return;
     }
@@ -1896,7 +2046,7 @@ static void mp_addressee_to_you( std::string &s, const std::string &own_name )
 
 void host_capture_avatar_msgs( unsigned long long pre_msg )
 {
-    if( !is_hosting() || !mp_session().remote_connected ) {
+    if( !is_hosting() || mp_session().remote_players.empty() ) {
         return;
     }
     const unsigned long long cur = Messages::size();
@@ -1926,25 +2076,26 @@ void host_capture_avatar_msgs( unsigned long long pre_msg )
         // sees "<host> drops your X" and reads "your" as referring to itself
         // — wrong subject.
         mp_rewrite_first_to_third( out, host_name );
-        mp_addressee_to_you( out, host_name );   // partner's name → "you" (guarded)
-        mp_session().host_turn.host_action_msgs_pending.push_back( out );
+        for( const auto &entry : mp_session().remote_players ) {
+            auto &recipient = *entry.second;
+            std::string addressed = out;
+            mp_addressee_to_you( addressed, host_name, recipient.observation.partner_name_cached );
+            recipient.turn.host_action_msgs_pending.push_back( std::move( addressed ) );
+        }
     }
 }
 
 void host_broadcast_post_action()
 {
-    if( !is_hosting() || !mp_session().remote_connected ) {
-        return;
+    if( const auto srv = get_active_server() ) {
+        for( const auto &entry : mp_session().remote_players ) {
+            auto &recipient = *entry.second;
+            if( recipient.connected && !recipient.detach_pending ) {
+                srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
+            }
+        }
     }
-    auto srv = get_active_server();
-    if( !srv ) {
-        return;
-    }
-    mp_log( "[cdda-mp] HOST-ACK: post-action broadcast grant_seq="
-            + std::to_string( mp_session().host_turn.grant_seq ) );
-    srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
 }
-
 // Standard turn-ending broadcast for handlers in handle_remote_action.
 //
 // All actions that consume the client's full turn budget MUST end with this
@@ -1959,16 +2110,13 @@ void host_broadcast_post_action()
 // exposed the latent bug: subtracting less than the grant left moves > 0 and
 // the client interpreted the broadcast as a new grant instead of an ack-clear,
 // wedging lockstep.
-static void srv_emit_ack( const char *action_name )
+static void srv_emit_ack( remote_player_session &recipient,  const char *action_name )
 {
-    mp_session().host_turn.client_acted_this_turn = true;
-    mp_session().host_turn.remote_moves = 0;
+    recipient.turn.client_acted_this_turn = true;
+    recipient.turn.remote_moves = 0;
     mp_log( std::string( "[cdda-mp] SRV-ACK: moves=0 (" ) + action_name
-            + ") grant_seq=" + std::to_string( mp_session().host_turn.grant_seq ) );
-    auto srv = get_active_server();
-    if( srv ) {
-        srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
-    }
+            + ") grant_seq=" + std::to_string( recipient.turn.grant_seq ) );
+    host_broadcast_post_action();
     // The handler just mutated authoritative world state (positions, items,
     // doors, vehicle flags, etc.) but the host may be sitting in a blocking
     // wait_for_client_action poll where no normal turn boundary triggers a
@@ -1980,16 +2128,54 @@ static void srv_emit_ack( const char *action_name )
 
 static void mp_handle_note_sync( const std::string &msg );
 static void mp_handle_high_five_recv( const std::string &msg );
-static void mp_handle_shout_recv( const std::string &msg );
+static bool mp_apply_high_five( Character &who );
+static void mp_handle_shout_recv( remote_player_session &recipient, const std::string &msg );
+
+static void publish_inventory_update( remote_player_session &recipient )
+{
+    if( npc *actor = mp_remote_actor( recipient ) ) {
+        const std::string message = make_inventory_update( *actor, recipient.pickup );
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, message + "\n" );
+        }
+    }
+}
+
+static Character *resolve_partner_target( remote_player_session &sender, const JsonObject &message )
+{
+    const player_id requested( message.get_string( "target_player", "" ) );
+    npc *actor = mp_remote_actor( sender );
+    if( !actor || !requested.valid() || requested == sender.credentials.id ) {
+        return nullptr;
+    }
+    Character *target = nullptr;
+    if( requested == get_avatar().get_player_id() ) {
+        target = &get_avatar();
+    } else {
+        for( const auto &entry : mp_session().remote_players ) {
+            auto &other = *entry.second;
+            if( other.connected && !other.detach_pending && requested == other.credentials.id ) {
+                target = mp_remote_actor( other );
+                break;
+            }
+        }
+    }
+    if( !target || target->is_dead_state() || target->posz() != actor->posz() ||
+        rl_dist( actor->pos_abs(), target->pos_abs() ) > 1 ) {
+        return nullptr;
+    }
+    return target;
+}
 
 // NOLINTNEXTLINE(readability-function-size)
-static void handle_remote_action( const std::string_view/*name*/, const std::string &msg )
+static void handle_remote_action( remote_player_session &recipient,  const std::string_view/*name*/,
+                                  const std::string &msg )
 {
-    if( !mp_session().remote_connected ) {
+    if( !recipient.connected ) {
         return;
     }
 
-    npc *remote = mp_remote_actor();
+    npc *remote = mp_remote_actor( recipient );
     if( !remote ) {
         return;
     }
@@ -2005,21 +2191,47 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         // An intent must not first apply client tile/inventory mutations.
         // Resolve exact source identities against the authoritative map.
         try {
-            remote->set_moves( mp_session().host_turn.remote_moves );
-            const int64_t previous = mp_session().host_pickup.last_request;
+            remote->set_moves( recipient.turn.remote_moves );
+            const int64_t previous = recipient.pickup.last_request;
             const std::string result = execute_pickup_request( *remote, get_map(), jo,
-                                       mp_session().host_pickup );
+                                       recipient.pickup );
             if( const auto srv = get_active_server() ) {
-                srv->post_send( mp_session().remote_admission, result );
+                srv->post_send( recipient.admission, result );
             }
-            if( previous != mp_session().host_pickup.last_request ) {
+            if( previous != recipient.pickup.last_request ) {
                 mp_session().presentation.last_client_action_label = "pickup";
-                srv_emit_ack( "pickup" );
+                srv_emit_ack( recipient, "pickup" );
             }
         } catch( const JsonError & ) {
             if( const auto srv = get_active_server() ) {
-                srv->post_reject( mp_session().remote_admission,
+                srv->post_reject( recipient.admission,
                                   "Invalid pickup request; reconnect to resynchronize." );
+            }
+        }
+        return;
+    }
+    if( action == "give_item" ) {
+        try {
+            Character *target = resolve_partner_target( recipient, jo );
+            remote_player_session *other = target ? mp_session().find_remote( target->getID() ) : nullptr;
+            if( other && other->pickup.revision >= std::numeric_limits<int64_t>::max() - 1 ) {
+                target = nullptr;
+            }
+            const int64_t previous = recipient.pickup.last_request;
+            remote->set_moves( recipient.turn.remote_moves );
+            const give_result result = execute_give_request( *remote, target, jo, recipient.pickup );
+            if( result.transferred && other ) {
+                publish_inventory_update( *other );
+            }
+            if( const auto server = get_active_server() ) {
+                server->post_send( recipient.admission, result.response + "\n" );
+            }
+            if( previous != recipient.pickup.last_request ) {
+                srv_emit_ack( recipient, "give_item" );
+            }
+        } catch( const std::exception & ) {
+            if( const auto server = get_active_server() ) {
+                server->post_reject( recipient.admission, "Invalid inventory request; reconnect to synchronize." );
             }
         }
         return;
@@ -2031,7 +2243,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             const tripoint_abs_ms target{ jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" ) };
             map &here = get_map();
             const tripoint_abs_ms position = remote->pos_abs();
-            remote->set_moves( mp_session().host_turn.remote_moves );
+            remote->set_moves( recipient.turn.remote_moves );
             if( here.inbounds( position ) && here.inbounds( target ) &&
                 target.z() == position.z() && square_dist( target.xy(), position.xy() ) <= 1 ) {
                 if( action == "open" ) {
@@ -2043,57 +2255,65 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         } catch( const JsonError &e ) {
             mp_log( std::string( "[cdda-mp] door parse error: " ) + e.what() );
         }
-        srv_emit_ack( action.c_str() );
+        srv_emit_ack( recipient, action.c_str() );
+        return;
+    }
+    if( action == "swap_with_partner" || action == "push_partner" || action == "tap_partner" ) {
+        try {
+            if( Character *target = resolve_partner_target( recipient, jo ) ) {
+                map &here = get_map();
+                auto *other = mp_session().find_remote( target->getID() );
+                if( action == "swap_with_partner" && !remote->is_mounted() && !target->is_mounted() ) {
+                    g->swap_critters( *target, *remote );
+                    if( other ) {
+                        other->turn.pending_partner_swap = true;
+                        other->turn.swap_from = remote->name;
+                    } else {
+                        add_msg( _( "%s swaps places with you." ), remote->name );
+                    }
+                } else if( action == "push_partner" && !target->is_mounted() ) {
+                    const tripoint_bub_ms from = remote->pos_bub();
+                    const tripoint_bub_ms to = target->pos_bub();
+                    const auto sign = []( int value ) {
+                        return ( value > 0 ) - ( value < 0 );
+                    };
+                    const tripoint_bub_ms destination = to + tripoint_rel_ms(
+                                                            sign( to.x() - from.x() ), sign( to.y() - from.y() ), 0 );
+                    if( here.inbounds( destination ) && !here.impassable( destination ) &&
+                        !get_creature_tracker().creature_at<Creature>( destination ) ) {
+                        target->setpos( here, destination );
+                        if( other ) {
+                            other->turn.pending_partner_push = true;
+                            other->turn.push_from = remote->name;
+                        } else {
+                            add_msg( _( "%s pushes you out of the way." ), remote->name );
+                        }
+                    }
+                } else if( action == "tap_partner" ) {
+                    if( other ) {
+                        other->turn.pending_wake_client = true;
+                        other->turn.wake_from = remote->name;
+                    } else if( target->activity.id() == activity_id( "ACT_WAIT" ) ||
+                               target->activity.id() == activity_id( "ACT_WAIT_STAMINA" ) ||
+                               target->activity.id() == activity_id( "ACT_WAIT_WEATHER" ) ||
+                               target->activity.id() == activity_id( "ACT_WAIT_NPC" ) ) {
+                        target->cancel_activity();
+                        add_msg( _( "%s taps you on the shoulder." ), remote->name );
+                    }
+                }
+            }
+        } catch( const std::exception & ) {
+            mp_log( "[ccb-mp] rejected invalid partner target" );
+        }
+        srv_emit_ack( recipient, action.c_str() );
         return;
     }
     if( action == "worn_sync" &&
-        ( !pickup_inventory_revision_matches( jo, mp_session().host_pickup ) ||
-          ( mp_session().host_pickup.revision > 0 && !jo.has_object( "carried" ) ) ) ) {
+        ( !pickup_inventory_revision_matches( jo, recipient.pickup ) ||
+          ( recipient.pickup.revision > 0 && !jo.has_object( "carried" ) ) ) ) {
         return; // A pre-pickup client snapshot cannot undo an accepted transfer.
     }
 
-    // Trade delta from client — client traded with the host's NPC proxy on its
-    // side.  Apply item changes to the host's real avatar before anything else.
-    if( msg.find( R"("type":"trade_delta")" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo2 = jv.get_object();
-            jo2.allow_omitted_members();
-            avatar &av = get_avatar();
-            if( jo2.has_array( "give" ) ) {
-                for( const JsonValue &iv : jo2.get_array( "give" ) ) {
-                    JsonObject io = iv.get_object();
-                    io.allow_omitted_members();
-                    item tmp;
-                    tmp.deserialize( io );
-                    av.i_add( tmp );
-                    mp_log( "[cdda-mp] trade_delta(host): gained " + tmp.typeId().str() );
-                }
-            }
-            if( jo2.has_array( "take" ) ) {
-                for( const JsonValue &iv : jo2.get_array( "take" ) ) {
-                    JsonObject io = iv.get_object();
-                    io.allow_omitted_members();
-                    item tmp;
-                    tmp.deserialize( io );
-                    const itype_id tid = tmp.typeId();
-                    bool found = false;
-                    av.remove_items_with( [&tid, &found]( const item & i ) {
-                        if( !found && i.typeId() == tid ) {
-                            found = true;
-                            return true;
-                        }
-                        return false;
-                    }, 1 );
-                    mp_log( "[cdda-mp] trade_delta(host): lost " + tid.str()
-                            + ( found ? " (ok)" : " (NOT FOUND)" ) );
-                }
-            }
-        } catch( const JsonError &e ) {
-            mp_log( std::string( "[cdda-mp] trade_delta(host) parse error: " ) + e.what() );
-        }
-        return;
-    }
 
     if( msg.find( R"("type":"note_sync")" ) != std::string::npos ) {
         mp_handle_note_sync( msg );
@@ -2105,13 +2325,33 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         return;
     }
 
-    if( msg.find( R"("type":"high_five")" ) != std::string::npos ) {
-        mp_handle_high_five_recv( msg );
+    if( jo.get_string( "type", "" ) == "high_five" ) {
+        try {
+            if( Character *target = resolve_partner_target( recipient, jo ) ) {
+                mp_apply_high_five( *remote );
+                mp_apply_high_five( *target );
+                if( const auto *other = mp_session().find_remote( target->getID() ) ) {
+                    if( const auto server = get_active_server() ) {
+                        std::ostringstream encoded;
+                        JsonOut out( encoded );
+                        out.start_object();
+                        out.member( "type", "high_five" );
+                        out.member( "name", remote->name );
+                        out.end_object();
+                        server->post_send( other->admission, encoded.str() + "\n" );
+                    }
+                } else {
+                    add_msg( m_good, _( "%s high-fives you!" ), remote->name );
+                }
+            }
+        } catch( const std::exception & ) {
+            mp_log( "[ccb-mp] rejected invalid high-five target" );
+        }
         return;
     }
 
     if( msg.find( R"("type":"shout")" ) != std::string::npos ) {
-        mp_handle_shout_recv( msg );
+        mp_handle_shout_recv( recipient, msg );
         return;
     }
 
@@ -2123,7 +2363,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
 
     // Give the NPC its current move budget before executing any action.
     // (monmove skips remote player NPCs, so we manage AP ourselves.)
-    remote->set_moves( mp_session().host_turn.remote_moves );
+    remote->set_moves( recipient.turn.remote_moves );
 
     // Track the client's current activity for HUD + partner-notice display
     // AND for the lockstep bypass in wait_for_client_action.  Field is empty
@@ -2132,34 +2372,36 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
     // handled below, but every action carries this snapshot too so a missed
     // start/end can still be reconciled on the next packet.
     if( jo.has_string( "client_activity" ) ) {
-        mp_session().peer.partner_activity = jo.get_string( "client_activity" );
+        recipient.observation.partner_activity = jo.get_string( "client_activity" );
+        const std::string target = jo.get_string( "client_help_target", "" );
+        recipient.observation.partner_help_target = target.empty() ? "" : player_id( target ).str();
         mp_partner_activity_transition_check();
     }
     if( jo.has_int( "client_activity_pct" ) ) {
-        mp_session().peer.partner_activity_pct = jo.get_int( "client_activity_pct" );
+        recipient.observation.partner_activity_pct = jo.get_int( "client_activity_pct" );
     }
     if( jo.has_int( "client_activity_moves_total" ) ) {
-        mp_session().peer.partner_activity_moves_total = jo.get_int( "client_activity_moves_total" );
+        recipient.observation.partner_activity_moves_total = jo.get_int( "client_activity_moves_total" );
     }
     if( jo.has_int( "client_morale" ) ) {
-        mp_session().peer.partner_morale = jo.get_int( "client_morale" );
+        recipient.observation.partner_morale = jo.get_int( "client_morale" );
     }
     if( jo.has_int( "client_hp_cur" ) ) {
-        mp_session().peer.partner_hp_cur = jo.get_int( "client_hp_cur" );
+        recipient.observation.partner_hp_cur = jo.get_int( "client_hp_cur" );
     }
     if( jo.has_int( "client_hp_max" ) ) {
-        mp_session().peer.partner_hp_max = jo.get_int( "client_hp_max" );
+        recipient.observation.partner_hp_max = jo.get_int( "client_hp_max" );
     }
     // Ping: remember the client's stamp to echo back; adopt the client-measured
     // RTT so the host panel shows the same latency the client computed.
     if( jo.has_int( "client_ping" ) ) {
-        mp_session().host_turn.last_client_ping_stamp = jo.get_int( "client_ping" );
+        recipient.turn.last_client_ping_stamp = jo.get_int( "client_ping" );
     }
     if( is_hosting() && jo.has_int( "client_rtt" ) ) {
-        mp_session().peer.partner_ping_ms = jo.get_int( "client_rtt" );
+        recipient.observation.partner_ping_ms = jo.get_int( "client_rtt" );
     }
     if( jo.has_int( "client_calendar_turn" ) ) {
-        mp_session().peer.partner_calendar_turn = jo.get_int( "client_calendar_turn" );
+        recipient.observation.partner_calendar_turn = jo.get_int( "client_calendar_turn" );
     }
 
     // Explicit lifecycle markers for the client's passive activities.  These
@@ -2169,22 +2411,23 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
     // don't race the heartbeat.
     if( msg.find( R"("action":"activity_start")" ) != std::string::npos ) {
         const std::string id = jo.get_string( "activity_id", "" );
-        const std::string prev = mp_session().peer.partner_activity;
+        const std::string prev = recipient.observation.partner_activity;
         if( !id.empty() ) {
-            mp_session().peer.partner_activity = id;
+            recipient.observation.partner_activity = id;
             mp_partner_activity_transition_check();
         }
         mp_log( "[cdda-mp] ACT-START RECV: id=" + id
-                + " g_partner_activity prev=" + prev + " now=" + mp_session().peer.partner_activity );
+                + " g_partner_activity prev=" + prev + " now=" + recipient.observation.partner_activity );
         return;
     }
     if( msg.find( R"("action":"activity_end")" ) != std::string::npos ) {
         const std::string id = jo.get_string( "activity_id", "" );
-        const std::string prev = mp_session().peer.partner_activity;
-        mp_session().peer.partner_activity.clear();
+        const std::string prev = recipient.observation.partner_activity;
+        recipient.observation.partner_activity.clear();
+        recipient.observation.partner_help_target.clear();
         mp_partner_activity_transition_check();
         mp_log( "[cdda-mp] ACT-END RECV: id=" + id
-                + " g_partner_activity prev=" + prev + " now=" + mp_session().peer.partner_activity );
+                + " g_partner_activity prev=" + prev + " now=" + recipient.observation.partner_activity );
         return;
     }
 
@@ -2207,18 +2450,18 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         g->quicksave();
         add_msg( m_info, _( "Your partner saved — the shared world was saved too." ) );
         if( auto srv = get_active_server() ) {
-            srv->post_send( mp_session().remote_admission, "{\"type\":\"save_done\"}\n" );
+            srv->post_send( recipient.admission, "{\"type\":\"save_done\"}\n" );
         }
         return;
     }
 
     // Templates wire-sync handlers (symmetric — same shape on host and client).
     if( msg.find( R"("type":"templates_list")" ) != std::string::npos ) {
-        mp_handle_templates_list( msg );
+        mp_handle_templates_list( msg, recipient.admission );
         return;
     }
     if( msg.find( R"("type":"template_request")" ) != std::string::npos ) {
-        mp_handle_template_request( msg );
+        mp_handle_template_request( msg, recipient.admission );
         return;
     }
     if( msg.find( R"("type":"template_data")" ) != std::string::npos ) {
@@ -2246,7 +2489,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 // mp_addressee_to_you() and the Co-op panel both read it, and a
                 // stale value (the session-id placeholder set at spawn) means a
                 // relayed "Niesha swaps places with Jeff" never converts Jeff→you.
-                mp_session().peer.partner_name_cached = cname;
+                recipient.observation.partner_name_cached = cname;
                 if( was_placeholder ) {
                     add_msg( m_good, _( "%s has connected and joined the game." ), cname );
                 }
@@ -2327,7 +2570,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         // up by the host's between-action forwarder (NPC-name substitution
         // path in serialize_remote_player_state) and sent back as msgs.
         // Otherwise we get an infinite ping-pong of the same notification.
-        mp_session().host_turn.last_forwarded_msg_count = Messages::size();
+        recipient.turn.last_forwarded_msg_count = Messages::size();
     }
 
     // Worn-item sync — client sends this once after joining (and after any
@@ -2537,7 +2780,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             JsonObject jo = jv.get_object();
             jo.allow_omitted_members();
             if( jo.has_float( "client_light" ) || jo.has_int( "client_light" ) ) {
-                mp_session().peer.mp_remote_player_luminance = static_cast<float>( jo.get_float( "client_light" ) );
+                recipient.observation.mp_remote_player_luminance = static_cast<float>
+                        ( jo.get_float( "client_light" ) );
             }
         } catch( const JsonError & ) {}
     }
@@ -2690,7 +2934,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     // visible tile) to ping-pong ~80 KB of items+fields per
                     // turn, blocking the host's input pump.
                     if( touched ) {
-                        mp_session().replication.host.tile_baseline[abs] = compute_tile_state( abs );
+                        recipient.replication.tile_baseline[abs] = compute_tile_state( abs );
                     }
                 }
             }
@@ -2804,82 +3048,13 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         }
     }
 
-    // Partner-menu swap: swap host's avatar with the client's proxy NPC.
-    // Triggered when the client picked "Swap positions" from the bump menu.
-    if( msg.find( R"("action":"swap_with_partner")" ) != std::string::npos ) {
-        avatar &host_av = get_avatar();
-        const tripoint_bub_ms host_pre  = host_av.pos_bub();
-        const tripoint_bub_ms proxy_pre = remote->pos_bub();
-        mp_log( "[cdda-mp] SRV-SWAP-PRE: host=" + host_pre.to_string() +
-                " proxy=" + proxy_pre.to_string() );
-        mp_log( "[cdda-mp] DIAG swap-handler: remote.get_name()='" + remote->get_name() +
-                "' av='" + get_avatar().name + "'" );
-        add_msg( _( "%s swaps places with you." ), remote->get_name() );
-        g->swap_critters( host_av, *remote );
-        mp_log( "[cdda-mp] SRV-SWAP-POST: host=" + host_av.pos_bub().to_string() +
-                " proxy=" + remote->pos_bub().to_string() );
-        srv_emit_ack( "swap_with_partner" );
-        return;
-    }
-
-    // Partner-menu push: host's avatar moves one tile away from the client's
-    // proxy.  Triggered when the client picked "Push away" from the bump menu.
-    // avatar has no move_away_from() (that's npc-only), so compute the step
-    // direction manually: sign of (host - proxy) on each axis.
-    if( msg.find( R"("action":"push_partner")" ) != std::string::npos ) {
-        avatar &host_av = get_avatar();
-        const tripoint_bub_ms host_pos  = host_av.pos_bub();
-        const tripoint_bub_ms proxy_pos = remote->pos_bub();
-        mp_log( "[cdda-mp] SRV-PUSH-PRE: host=" + host_pos.to_string() +
-                " proxy=" + proxy_pos.to_string() );
-        const point d( ( host_pos.x() > proxy_pos.x() ) ? 1
-                       : ( host_pos.x() < proxy_pos.x() ) ? -1 : 0, ( host_pos.y() > proxy_pos.y() ) ? 1
-                       : ( host_pos.y() < proxy_pos.y() ) ? -1 : 0 );
-        const tripoint_bub_ms target = host_pos + tripoint_rel_ms( d.x, d.y, 0 );
-        mp_log( "[cdda-mp] DIAG push-handler: remote.get_name()='" + remote->get_name() +
-                "' av='" + get_avatar().name + "'" );
-        if( ( d.x != 0 || d.y != 0 ) && !m.impassable( target ) ) {
-            host_av.setpos( m, target );
-            add_msg( _( "%s pushes you out of the way." ), remote->get_name() );
-        } else {
-            add_msg( m_warning, _( "%s tries to push you but you have nowhere to go." ),
-                     remote->get_name() );
-        }
-        mp_log( "[cdda-mp] SRV-PUSH-POST: host=" + host_av.pos_bub().to_string() +
-                " proxy=" + remote->pos_bub().to_string() );
-        srv_emit_ack( "push_partner" );
-        return;
-    }
-
-    // Partner-menu tap-on-shoulder: client interrupts host's "wait for
-    // several minutes" activity. Only cancels ACT_WAIT — other activities
-    // (sleep, crafting, reading) are intentionally not interruptible by tap
-    // at this stage. If host isn't waiting, the tap is acknowledged but the
-    // activity state is left alone.
-    if( msg.find( R"("action":"tap_partner")" ) != std::string::npos ) {
-        avatar &host_av = get_avatar();
-        static const activity_id s_act_wait( "ACT_WAIT" );
-        const bool was_waiting = host_av.activity.id() == s_act_wait;
-        mp_log( "[cdda-mp] SRV-TAP-PRE: was_waiting=" + std::to_string( was_waiting ) +
-                " activity=" + host_av.activity.id().str() );
-        if( was_waiting ) {
-            host_av.cancel_activity();
-            add_msg( _( "%s taps you on the shoulder, snapping you out of your wait." ),
-                     remote->get_name() );
-        } else {
-            add_msg( _( "%s taps you on the shoulder." ), remote->get_name() );
-        }
-        srv_emit_ack( "tap_partner" );
-        return;
-    }
-
     // Wait — drain one turn's worth of AP.
     const bool is_wait = msg.find( R"("action":"wait")" ) != std::string::npos ||
                          msg.find( R"("action": "wait")" ) != std::string::npos;
     if( is_wait ) {
         mp_log( "[cdda-mp] wait recv: ctrl_veh=" + std::to_string( remote->controlling_vehicle ) +
-                " g_remote_moves=" + std::to_string( mp_session().host_turn.remote_moves ) );
-        srv_emit_ack( "wait" );
+                " g_remote_moves=" + std::to_string( recipient.turn.remote_moves ) );
+        srv_emit_ack( recipient, "wait" );
         return;
     }
 
@@ -2919,7 +3094,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                                     + " at " + std::to_string( bub_pos.x() ) + ","
                                     + std::to_string( bub_pos.y() ) );
                             here.add_item( bub_pos, std::move( dropped ) );
-                            mp_session().replication.host.tile_baseline.erase( abs_pos );
+                            recipient.replication.tile_baseline.erase( abs_pos );
                         }
                     } catch( const JsonError &e ) {
                         mp_log( "[cdda-mp] drop: item deserialize error: " + std::string( e.what() ) );
@@ -2929,7 +3104,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         } catch( const JsonError &e ) {
             mp_log( "[cdda-mp] drop parse error: " + std::string( e.what() ) );
         }
-        srv_emit_ack( "drop" );
+        srv_emit_ack( recipient, "drop" );
         return;
     }
 
@@ -2990,20 +3165,20 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         }
         // Inlined srv_emit_ack: smash needs custom state injection for the
         // bash animation, so the broadcast is custom rather than the helper.
-        mp_session().host_turn.client_acted_this_turn = true;
-        mp_session().host_turn.remote_moves = 0;
+        recipient.turn.client_acted_this_turn = true;
+        recipient.turn.remote_moves = 0;
         mp_log( "[cdda-mp] SRV-ACK: moves=0 (smash) grant_seq=" +
-                std::to_string( mp_session().host_turn.grant_seq ) );
-        flush_action_msgs( pre_action_msg, remote->name );
+                std::to_string( recipient.turn.grant_seq ) );
+        flush_action_msgs( recipient, pre_action_msg, remote->name );
         auto srv = get_active_server();
         if( srv ) {
-            std::string state = serialize_remote_player_state();
+            std::string state = serialize_remote_player_state( recipient );
             state = state.substr( 0, state.size() - 1 )
                     + R"(,"smash_result":")" + smash_result_str + "\""
                     + ",\"smash_x\":" + std::to_string( smash_target_abs.x() )
                     + ",\"smash_y\":" + std::to_string( smash_target_abs.y() )
                     + ",\"smash_z\":" + std::to_string( smash_target_abs.z() ) + "}";
-            srv->post_send( mp_session().remote_admission, state + "\n" );
+            srv->post_send( recipient.admission, state + "\n" );
         }
         // See NPC-MOVE invalidate for rationale.
         g->invalidate_main_ui_adaptor();
@@ -3028,14 +3203,14 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         } catch( const JsonError &e ) {
             std::cout << "[cdda-mp] position_sync parse error: " << e.what() << std::endl;
         }
-        srv_emit_ack( "position_sync" );
+        srv_emit_ack( recipient, "position_sync" );
         return;
     }
 
     // Eat / use item — client is authoritative over its own nutrition; server just
     // drains one turn of AP and re-broadcasts state so the client's HUD stays current.
     if( msg.find( R"("action":"eat")" ) != std::string::npos ) {
-        srv_emit_ack( "eat" );
+        srv_emit_ack( recipient, "eat" );
         return;
     }
 
@@ -3069,7 +3244,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             mp_log( "[cdda-mp] control_vehicle: proxy released controls" );
             // Host log: NPC-form. Client: direct push (correct grammar, first-person).
             add_msg( _( "%s lets go of the controls." ), remote->name );
-            mp_session().host_turn.action_msgs_pending.emplace_back( _( "You let go of the controls." ) );
+            recipient.turn.action_msgs_pending.emplace_back( _( "You let go of the controls." ) );
         } else if( const optional_vpart_position vp = here.veh_at( bub ) ) {
             vehicle &veh = vp->vehicle();
             const int ctrl_idx = veh.avail_part_with_feature( vp->mount_pos(), "CONTROLS" );
@@ -3111,36 +3286,36 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     mp_log( "[cdda-mp] control_vehicle: proxy took/started+took control of " + veh.name );
                     // Host log: NPC-form. Client: direct push (correct grammar, first-person).
                     add_msg( _( "%s takes control of the %s." ), remote->name, veh.name );
-                    mp_session().host_turn.action_msgs_pending.push_back(
+                    recipient.turn.action_msgs_pending.push_back(
                         string_format( _( "You take control of the %s." ), veh.name ) );
                     if( engine_was_off ) {
                         add_msg( n_gettext( "The %s's engine starts up.",
                                             "The %s's engines start up.", started ), veh.name );
-                        mp_session().host_turn.action_msgs_pending.push_back(
+                        recipient.turn.action_msgs_pending.push_back(
                             string_format( n_gettext( "The %s's engine starts up.",
                                                       "The %s's engines start up.", started ), veh.name ) );
                     }
                 } else {
                     mp_log( "[cdda-mp] control_vehicle: engine failed to start" );
                     add_msg( m_bad, _( "%s can't start the %s's engine." ), remote->name, veh.name );
-                    mp_session().host_turn.action_msgs_pending.push_back(
+                    recipient.turn.action_msgs_pending.push_back(
                         string_format( _( "You can't start the %s's engine." ), veh.name ) );
                 }
             } else {
                 mp_log( "[cdda-mp] control_vehicle: no controls at proxy position" );
                 add_msg( m_info, _( "%s can't drive from here — no controls." ), remote->name );
-                mp_session().host_turn.action_msgs_pending.emplace_back(
+                recipient.turn.action_msgs_pending.emplace_back(
                     _( "You can't drive from here — no controls." ) );
             }
         } else {
             mp_log( "[cdda-mp] control_vehicle: no vehicle at proxy position" );
             add_msg( m_info, _( "No vehicle here for %s to control." ), remote->name );
-            mp_session().host_turn.action_msgs_pending.emplace_back( _( "No vehicle here to control." ) );
+            recipient.turn.action_msgs_pending.emplace_back( _( "No vehicle here to control." ) );
         }
         // Don't use flush_action_msgs here — messages are pushed directly above
         // to avoid grammar issues from NPC-name→"You" substitution ("takes"→"take").
-        mp_session().host_turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( "control_vehicle" );
+        recipient.turn.last_forwarded_msg_count = Messages::size();
+        srv_emit_ack( recipient, "control_vehicle" );
         return;
     }
 
@@ -3171,40 +3346,40 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     " str=" + std::to_string( str ) +
                     " dex=" + std::to_string( dex ) +
                     " drv=" + std::to_string( drv ) +
-                    " moves=" + std::to_string( mp_session().host_turn.remote_moves ) );
+                    " moves=" + std::to_string( recipient.turn.remote_moves ) );
             // pldrive() internally caps moves to get_speed() then deducts the turn cost.
             // Preserve any budget above one speed unit, then use pldrive's remainder.
-            const int excess = std::max( 0, mp_session().host_turn.remote_moves - remote->get_speed() );
+            const int excess = std::max( 0, recipient.turn.remote_moves - remote->get_speed() );
             veh.pldrive( here, *remote, delta.x, delta.y, 0 );
             mp_log( "[cdda-mp] pldrive result: face=" +
                     std::to_string( static_cast<int>( units::to_degrees( veh.face.dir() ) ) ) +
                     " moves_after=" + std::to_string( remote->get_moves() ) );
-            mp_session().host_turn.remote_moves = excess + remote->get_moves();
+            recipient.turn.remote_moves = excess + remote->get_moves();
         } else {
             // No longer at a vehicle — clear control flag so the client gets corrected.
             remote->controlling_vehicle = false;
-            mp_session().host_turn.remote_moves = 0;
+            recipient.turn.remote_moves = 0;
         }
         // Mirror SP's pldrive: turning costs AP but doesn't end the turn unless
         // AP runs out.  If the proxy still has moves, send a partial-turn update
         // (free=true) so the client can do more driving inputs (more turns, cruise
         // changes, pause to commit) in the same turn — matching SP behavior where
         // the driver can chain inputs until moves reach 0.
-        const bool turn_ended = mp_session().host_turn.remote_moves <= 0;
+        const bool turn_ended = recipient.turn.remote_moves <= 0;
         if( turn_ended ) {
-            mp_session().host_turn.client_acted_this_turn = true;
-            mp_session().host_turn.remote_moves = 0;
+            recipient.turn.client_acted_this_turn = true;
+            recipient.turn.remote_moves = 0;
             mp_log( "[cdda-mp] SRV-ACK: moves=0 (pldrive) grant_seq=" +
-                    std::to_string( mp_session().host_turn.grant_seq ) );
+                    std::to_string( recipient.turn.grant_seq ) );
         }
-        flush_action_msgs( pre_action_msg, remote->name );
+        flush_action_msgs( recipient, pre_action_msg, remote->name );
         auto srv = get_active_server();
         if( srv ) {
-            std::string state = serialize_remote_player_state();
+            std::string state = serialize_remote_player_state( recipient );
             if( !turn_ended ) {
                 state = state.substr( 0, state.size() - 1 ) + ",\"free\":true}";
             }
-            srv->post_send( mp_session().remote_admission, state + "\n" );
+            srv->post_send( recipient.admission, state + "\n" );
         }
         // See NPC-MOVE invalidate for rationale.
         g->invalidate_main_ui_adaptor();
@@ -3232,7 +3407,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         // Free action: do NOT deduct g_remote_moves.  Broadcast updated state.
         auto srv = get_active_server();
         if( srv ) {
-            srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
+            srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
         }
         // See NPC-MOVE invalidate for rationale.
         g->invalidate_main_ui_adaptor();
@@ -3248,13 +3423,13 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             mp_log( "[cdda-mp] handbrake: veh=" + veh.name
                     + " vel=" + std::to_string( veh.velocity ) );
             add_msg( _( "%s pulls a handbrake." ), remote->name );
-            mp_session().host_turn.action_msgs_pending.emplace_back( _( "You pull a handbrake." ) );
+            recipient.turn.action_msgs_pending.emplace_back( _( "You pull a handbrake." ) );
             veh.cruise_velocity = 0;
             if( veh.last_turn != 0_degrees &&
                 rng( 15, 60 ) * 100 < std::abs( veh.velocity ) ) {
                 veh.skidding = true;
                 add_msg( m_warning, _( "%s loses control of %s." ), remote->name, veh.name );
-                mp_session().host_turn.action_msgs_pending.push_back( string_format( _( "You lose control of %s." ),
+                recipient.turn.action_msgs_pending.push_back( string_format( _( "You lose control of %s." ),
                         veh.name ) );
                 veh.turn( veh.last_turn > 0_degrees ? 60_degrees : -60_degrees );
             } else {
@@ -3267,8 +3442,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 }
             }
         }
-        mp_session().host_turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( "cruise" );
+        recipient.turn.last_forwarded_msg_count = Messages::size();
+        srv_emit_ack( recipient, "cruise" );
         return;
     }
 
@@ -3286,14 +3461,14 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             mp_log( "[cdda-mp] stop_engine: engines stopped for " + veh.name );
             // Host log: NPC-form. Client: direct push (correct grammar, first-person).
             add_msg( _( "%s turns off the engine and lets go of the controls." ), remote->name );
-            mp_session().host_turn.action_msgs_pending.push_back(
+            recipient.turn.action_msgs_pending.push_back(
                 string_format( _( "You turn the engine off and let go of the controls." ) ) );
         }
         remote->controlling_vehicle = false;
         here.unboard_vehicle( bub );
         remote->in_vehicle = false;
-        mp_session().host_turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( "stop_engine" );
+        recipient.turn.last_forwarded_msg_count = Messages::size();
+        srv_emit_ack( recipient, "stop_engine" );
         return;
     }
 
@@ -3306,15 +3481,15 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             if( veh.engine_on ) {
                 veh.stop_engines( here );
                 add_msg( _( "%s turns off the engine." ), remote->name );
-                mp_session().host_turn.action_msgs_pending.emplace_back( _( "You turn the engine off." ) );
+                recipient.turn.action_msgs_pending.emplace_back( _( "You turn the engine off." ) );
             } else {
                 veh.start_engines( here, remote );
                 add_msg( _( "%s starts the engine." ), remote->name );
-                mp_session().host_turn.action_msgs_pending.emplace_back( _( "You start the engine." ) );
+                recipient.turn.action_msgs_pending.emplace_back( _( "You start the engine." ) );
             }
         }
-        mp_session().host_turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( "toggle_engine" );
+        recipient.turn.last_forwarded_msg_count = Messages::size();
+        srv_emit_ack( recipient, "toggle_engine" );
         return;
     }
 
@@ -3347,8 +3522,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         } catch( const JsonError &e ) {
             mp_log( "[cdda-mp] vehicle_construct parse error: " + std::string( e.what() ) );
         }
-        flush_action_msgs( pre_action_msg, remote->name );
-        srv_emit_ack( "vehicle_construct" );
+        flush_action_msgs( recipient, pre_action_msg, remote->name );
+        srv_emit_ack( recipient, "vehicle_construct" );
         return;
     }
 
@@ -3359,8 +3534,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             vehicle &veh = vp->vehicle();
             veh.honk_horn( here );
         }
-        flush_action_msgs( pre_action_msg, remote->name );
-        srv_emit_ack( "honk" );
+        flush_action_msgs( recipient, pre_action_msg, remote->name );
+        srv_emit_ack( recipient, "honk" );
         return;
     }
 
@@ -3386,7 +3561,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         } catch( const JsonError &e ) {
             mp_log( "[cdda-mp] grab parse error: " + std::string( e.what() ) );
         }
-        srv_emit_ack( "grab" );
+        srv_emit_ack( recipient, "grab" );
         return;
     }
 
@@ -3408,8 +3583,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 " autohaul=" + std::to_string( remote->is_autohauling() ) +
                 " pos=(" + std::to_string( remote->pos_bub().x() ) + "," +
                 std::to_string( remote->pos_bub().y() ) + ")" );
-        flush_action_msgs( pre_action_msg, remote->name );
-        srv_emit_ack( "toggle_haul" );
+        flush_action_msgs( recipient, pre_action_msg, remote->name );
+        srv_emit_ack( recipient, "toggle_haul" );
         return;
     }
 
@@ -3498,7 +3673,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             // dispatches.  If that check missed (position-sync drift, etc.) we
             // land here.  Treat the bump as a consumed turn so the host's
             // wait_for_client_action releases cleanly.
-            srv_emit_ack( "bump_host_fallthrough" );
+            srv_emit_ack( recipient, "bump_host_fallthrough" );
             return;
         }
         const shared_ptr_fast<monster> target = get_creature_tracker().find( next_abs );
@@ -3563,7 +3738,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         if( target ) {
             // melee_attack() charges moves on the NPC internally; capture the result.
             remote->melee_attack( *target, true );
-            mp_session().host_turn.remote_moves = remote->get_moves();
+            recipient.turn.remote_moves = remote->get_moves();
             acted = true;
         } else if( drag_handled_turn ) {
             // Drag fully consumed the turn (collision / stuff in way /
@@ -3573,12 +3748,12 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             // those only fire on an actual step.
             const int mcost = m.combined_movecost( cur, next );
             const bool diag = ( std::abs( offset.x ) + std::abs( offset.y ) ) == 2;
-            const int prev_moves = mp_session().host_turn.remote_moves;
-            mp_session().host_turn.remote_moves -= remote->run_cost( mcost, diag );
-            remote->burn_move_stamina( prev_moves - mp_session().host_turn.remote_moves );
+            const int prev_moves = recipient.turn.remote_moves;
+            recipient.turn.remote_moves -= remote->run_cost( mcost, diag );
+            remote->burn_move_stamina( prev_moves - recipient.turn.remote_moves );
             acted = true;
             mp_log( "[cdda-mp] HOST-DRAG-NO-STEP: proxy held in place, "
-                    "AP charged " + std::to_string( prev_moves - mp_session().host_turn.remote_moves ) );
+                    "AP charged " + std::to_string( prev_moves - recipient.turn.remote_moves ) );
         } else if( !m.impassable( next ) ) {
             // Mirror avatar_action::move boarding semantics: unboard from current
             // vehicle tile before setpos, then board at the new tile if boardable.
@@ -3640,11 +3815,11 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             // all terrain/encumbrance factors, not just the raw tile cost.
             const bool diag = ( std::abs( offset.x ) + std::abs( offset.y ) ) == 2;
             const int mcost = m.combined_movecost( cur, next );
-            const int prev_moves = mp_session().host_turn.remote_moves;
+            const int prev_moves = recipient.turn.remote_moves;
             const int ap_cost = remote->run_cost( mcost, diag );
-            mp_session().host_turn.remote_moves -= ap_cost;
+            recipient.turn.remote_moves -= ap_cost;
             // burn_move_stamina with the actual AP consumed, mirroring game.cpp:7776.
-            remote->burn_move_stamina( prev_moves - mp_session().host_turn.remote_moves );
+            remote->burn_move_stamina( prev_moves - recipient.turn.remote_moves );
             // Auto-transition to walk when stamina runs out (mirrors game.cpp:8970).
             static const move_mode_id walk_id( "walk" );
             if( !remote->can_run() ) {
@@ -3665,22 +3840,22 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
 
     // Capture all messages generated during this action (hits, misses, damage,
     // kills) for forwarding to the client regardless of NPC name filter.
-    flush_action_msgs( pre_action_msg, remote->name );
+    flush_action_msgs( recipient, pre_action_msg, remote->name );
 
     if( acted ) {
-        mp_session().host_turn.client_acted_this_turn = true;
+        recipient.turn.client_acted_this_turn = true;
         // FIX #2/#3: carry an expensive move's AP debt instead of wiping it.
         // g_remote_moves here is (granted budget - real ap_cost).  If the move
         // overspent (cost > budget) it's negative — KEEP that debt so
         // grant_client_turn()'s "+= speed" makes the client skip turns until it's
         // paid off (the SP move economy).  Cap surplus at 0 so a cheap move can't
         // bank budget across turns (preserves one-action-per-grant).
-        mp_session().host_turn.remote_moves = std::min( 0, mp_session().host_turn.remote_moves );
-        mp_log( "[cdda-mp] SRV-ACK: moves=" + std::to_string( mp_session().host_turn.remote_moves ) +
-                " (debt-carry) ack to client, grant_seq=" + std::to_string( mp_session().host_turn.grant_seq ) );
+        recipient.turn.remote_moves = std::min( 0, recipient.turn.remote_moves );
+        mp_log( "[cdda-mp] SRV-ACK: moves=" + std::to_string( recipient.turn.remote_moves ) +
+                " (debt-carry) ack to client, grant_seq=" + std::to_string( recipient.turn.grant_seq ) );
     } else {
         mp_log( "[cdda-mp] SRV-FREE: no-op move (wall/bump), sending free=true, moves=" + std::to_string(
-                    mp_session().host_turn.remote_moves ) );
+                    recipient.turn.remote_moves ) );
     }
 
     // Broadcast updated state.  Wall bumps and other no-ops include "free":true
@@ -3694,23 +3869,23 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         // Evict first so we always re-send even if these submaps were already
         // in g_map_sync_sent from a previous crossing.
         if( next.z() != cur.z() ) {
-            for( auto it = mp_session().replication.host.map_sync_sent.begin();
-                 it != mp_session().replication.host.map_sync_sent.end(); ) {
-                it = ( it->z() == next.z() ) ? mp_session().replication.host.map_sync_sent.erase( it ) : std::next(
+            for( auto it = recipient.replication.map_sync_sent.begin();
+                 it != recipient.replication.map_sync_sent.end(); ) {
+                it = ( it->z() == next.z() ) ? recipient.replication.map_sync_sent.erase( it ) : std::next(
                          it );
             }
-            const std::string zmap = build_map_sync_z( next.z() );
+            const std::string zmap = build_map_sync_z( recipient, next.z() );
             if( !zmap.empty() ) {
-                srv->post_send( mp_session().remote_admission, zmap + "\n" );
+                srv->post_send( recipient.admission, zmap + "\n" );
                 mp_log( "[cdda-mp] RAMP-ZMAP: pre-teleport z=" + std::to_string( next.z() ) +
                         " bytes=" + std::to_string( zmap.size() ) );
             }
         }
-        std::string state = serialize_remote_player_state();
+        std::string state = serialize_remote_player_state( recipient );
         if( !acted ) {
             state = state.substr( 0, state.size() - 1 ) + ",\"free\":true}";
         }
-        srv->post_send( mp_session().remote_admission, state + "\n" );
+        srv->post_send( recipient.admission, state + "\n" );
     }
 
     // Mirror srv_emit_ack's UI invalidation — the move handler inlines its own
@@ -3788,9 +3963,10 @@ static void mp_drain_pending_omsync()
 // Build the overmap-region message for a single z-level.  The region is centered
 // on the host's x/y (`center`); `z` selects the floor.  Throttling and the choice
 // of which floors to sync live in the build_overmap_sync() wrapper below.
-static std::string build_overmap_sync_z( int z, const tripoint_abs_omt &center )
+static std::string build_overmap_sync_z( remote_player_session &recipient,  int z,
+        const tripoint_abs_omt &center )
 {
-    const int R = mp_session().replication.host.om_sync_radius;
+    const int R = recipient.replication.om_sync_radius;
     const point o( center.x() - R, center.y() - R );
     const int w = 2 * R + 1;
     const int h = 2 * R + 1;
@@ -3908,43 +4084,43 @@ static std::string build_overmap_sync_z( int z, const tripoint_abs_omt &center )
 // floor.  Mirror the terrain fix: sync the union of {host z, client proxy z}.
 // Throttled — resends only on the first sync, after the host moves a meaningful
 // x/y distance, or when either player's floor changed (took stairs).
-static std::string build_overmap_sync()
+static std::string build_overmap_sync( remote_player_session &recipient )
 {
-    if( !is_hosting() || !mp_session().remote_connected ) {
+    if( !is_hosting() || !recipient.connected ) {
         return std::string();
     }
     const tripoint_abs_omt center = get_avatar().pos_abs_omt();
     const int host_z = center.z();
     int client_z = host_z;
-    const npc *remote = mp_remote_actor();
+    const npc *remote = mp_remote_actor( recipient );
     if( remote ) {
         client_z = remote->pos_abs_omt().z();
     }
 
     const int step = 20;
-    const bool moved = std::abs( center.x() - mp_session().replication.host.om_sync_last_center.x() ) >=
+    const bool moved = std::abs( center.x() - recipient.replication.om_sync_last_center.x() ) >=
                        step ||
-                       std::abs( center.y() - mp_session().replication.host.om_sync_last_center.y() ) >= step;
-    const bool z_changed = host_z != mp_session().replication.host.om_sync_last_center.z() ||
-                           client_z != mp_session().replication.host.om_sync_last_client_z;
-    if( mp_session().replication.host.om_sync_done && !moved && !z_changed ) {
+                       std::abs( center.y() - recipient.replication.om_sync_last_center.y() ) >= step;
+    const bool z_changed = host_z != recipient.replication.om_sync_last_center.z() ||
+                           client_z != recipient.replication.om_sync_last_client_z;
+    if( recipient.replication.om_sync_done && !moved && !z_changed ) {
         return std::string();
     }
 
     // Build the host's floor first; if nothing's generated there yet, don't latch
     // — retry next turn (mirrors the v1 real_omts==0 retry).
-    std::string host_msg = build_overmap_sync_z( host_z, center );
+    std::string host_msg = build_overmap_sync_z( recipient, host_z, center );
     if( host_msg.empty() ) {
-        mp_session().replication.host.om_sync_done = false;
+        recipient.replication.om_sync_done = false;
         return std::string();
     }
-    mp_session().replication.host.om_sync_last_center = center;
-    mp_session().replication.host.om_sync_last_client_z = client_z;
-    mp_session().replication.host.om_sync_done = true;
+    recipient.replication.om_sync_last_center = center;
+    recipient.replication.om_sync_last_client_z = client_z;
+    recipient.replication.om_sync_done = true;
 
     std::string out = std::move( host_msg );
     if( client_z != host_z ) {
-        const std::string cmsg = build_overmap_sync_z( client_z, center );
+        const std::string cmsg = build_overmap_sync_z( recipient, client_z, center );
         if( !cmsg.empty() ) {
             out += '\n';
             out += cmsg;
@@ -3961,7 +4137,7 @@ static std::string build_overmap_sync()
 // rows stream in as a player moves.  Palette + per-submap RLE, like the overmap
 // sync.  Builds the message for a single z-level `az`; which z-levels get synced
 // (and the sent-set pruning) live in the build_map_sync() wrapper below.
-static std::string build_map_sync_z( int az )
+static std::string build_map_sync_z( remote_player_session &recipient,  int az )
 {
     const std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
     map &m = get_map();
@@ -4008,7 +4184,7 @@ static std::string build_map_sync_z( int az )
     for( int gy = 0; gy < MAPSIZE && sent < g_map_sync_cap; ++gy ) {
         for( int gx = 0; gx < MAPSIZE && sent < g_map_sync_cap; ++gx ) {
             const tripoint_abs_sm sm_abs{ origin.x() + gx, origin.y() + gy, az };
-            if( mp_session().replication.host.map_sync_sent.count( sm_abs ) ) {
+            if( recipient.replication.map_sync_sent.count( sm_abs ) ) {
                 continue;
             }
             const tripoint_abs_ms sm_ms0{ sm_abs.x() *SEEX, sm_abs.y() *SEEY, az };
@@ -4035,7 +4211,7 @@ static std::string build_map_sync_z( int az )
                     ",\"sy\":" + std::to_string( sm_abs.y() ) +
                     ",\"t\":" + rle( ter_cells ) +
                     ",\"f\":" + rle( furn_cells ) + "}";
-            mp_session().replication.host.map_sync_sent.insert( sm_abs );
+            recipient.replication.map_sync_sent.insert( sm_abs );
             ++sent;
         }
     }
@@ -4070,9 +4246,9 @@ static std::string build_map_sync_z( int az )
 // except for the one synced floor (reported 2026-06-14, client a floor below the
 // host).  Fix: sync the union of the host's z and the remote player's z.  Same z
 // => one message (no extra cost); different floors => one message per floor.
-static std::string build_map_sync()
+static std::string build_map_sync( remote_player_session &recipient )
 {
-    if( !is_hosting() || !mp_session().remote_connected ) {
+    if( !is_hosting() || !recipient.connected ) {
         return std::string();
     }
     const tripoint_abs_sm origin = get_map().get_abs_sub();
@@ -4081,7 +4257,7 @@ static std::string build_map_sync()
     // is on a different one.
     const int host_z = get_avatar().posz();
     int client_z = host_z;
-    const npc *remote = mp_remote_actor();
+    const npc *remote = mp_remote_actor( recipient );
     if( remote ) {
         client_z = remote->posz();
     }
@@ -4090,18 +4266,18 @@ static std::string build_map_sync()
     // Forget submaps that have scrolled out of the synced region — a different
     // x/y bubble, or a z-level we're no longer syncing — so a return visit
     // re-syncs them (the client may have regenerated them locally after unload).
-    for( auto it = mp_session().replication.host.map_sync_sent.begin();
-         it != mp_session().replication.host.map_sync_sent.end(); ) {
+    for( auto it = recipient.replication.map_sync_sent.begin();
+         it != recipient.replication.map_sync_sent.end(); ) {
         const bool z_synced = it->z() == host_z || ( two_floors && it->z() == client_z );
         const bool in_bubble = z_synced &&
                                it->x() >= origin.x() && it->x() < origin.x() + MAPSIZE &&
                                it->y() >= origin.y() && it->y() < origin.y() + MAPSIZE;
-        it = in_bubble ? std::next( it ) : mp_session().replication.host.map_sync_sent.erase( it );
+        it = in_bubble ? std::next( it ) : recipient.replication.map_sync_sent.erase( it );
     }
 
-    std::string out = build_map_sync_z( host_z );
+    std::string out = build_map_sync_z( recipient, host_z );
     if( two_floors ) {
-        const std::string client_msg = build_map_sync_z( client_z );
+        const std::string client_msg = build_map_sync_z( recipient, client_z );
         if( !client_msg.empty() ) {
             if( !out.empty() ) {
                 out += '\n';
@@ -4116,32 +4292,15 @@ static std::string build_map_sync()
 // Public API
 // ---------------------------------------------------------------------------
 
-void grant_client_turn()
+static void grant_remote_turn( remote_player_session &recipient )
 {
-    // Capture the world seed each host turn (game-thread read of g->get_seed())
-    // so the network thread can put it in the join 'welcome' without touching
-    // game state. Runs before the connected-check so it's current the moment a
-    // client joins. Seed is constant for a session; the store is idempotent.
-    mp_session().host_info.seed = g->get_seed();
-    // Capture the host avatar's OMT for the join 'welcome' so a client spawns into
-    // the host's area, not its own scenario start_location.
-    mp_capture_host_omt( get_avatar().pos_abs_omt() );
-    if( world_generator && world_generator->active_world ) {
-        mp_set_host_world_name( world_generator->active_world->world_name );
-        mp_session().host_info.world = world_generator->active_world->identity();
-    }
-    // Cache the host's character name for the join 'welcome' so the client's
-    // join dialog can show whose game it is. Runs before the connected-check so
-    // it's current the moment a client probes.
-    mp_set_host_player_name( get_avatar().name );
-    mp_session().hosting.update_welcome( mp_session().host_info );
-    if( !mp_session().remote_connected ) {
+    if( !recipient.connected || recipient.detach_pending ) {
         return;
     }
-    npc *remote = mp_remote_actor();
+    npc *remote = mp_remote_actor( recipient );
     if( !remote ) {
-        mp_session().host_turn.granted_this_turn = false;
-        const npc *retained = mp_session().remote_actor.retained( g->npc_lifetimes() );
+        recipient.turn.granted_this_turn = false;
+        const npc *retained = recipient.actor.retained( g->npc_lifetimes() );
         if( retained && !retained->is_dead_state() ) {
             // Temporary unload or removal from the tracker is not death. Do
             // not grant actions until native loading restores this same actor.
@@ -4153,31 +4312,31 @@ void grant_client_turn()
         // client).  Notify the client cleanly so they get a "You died." flow
         // instead of a silent "Lost connection to server" 20 seconds later
         // when something else times out.  Then tear down the host-side state.
-        if( mp_session().host_turn.proxy_was_alive ) {
+        if( recipient.turn.proxy_was_alive ) {
             mp_log( "[cdda-mp] PROXY-DIED: notifying client and disconnecting" );
             if( auto srv = get_active_server() ) {
-                srv->post_send( mp_session().remote_admission, "{\"type\":\"you_died\"}\n" );
+                srv->post_send( recipient.admission, "{\"type\":\"you_died\"}\n" );
                 // Brief flush window so the packet leaves before the socket
                 // is torn down — same pattern as notify_client_host_died.
                 std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
             }
-            mp_session().host_turn.proxy_was_alive = false;
-            remove_remote_player();
+            recipient.turn.proxy_was_alive = false;
+            remove_remote_player( recipient );
         }
         return;
     }
-    mp_session().host_turn.proxy_was_alive = true;
-    mp_session().host_turn.client_acted_this_turn = false;
+    recipient.turn.proxy_was_alive = true;
+    recipient.turn.client_acted_this_turn = false;
     // FIX #2/#3: accumulate this turn's speed onto any carried AP debt instead of
     // resetting to full speed.  Only issue a real grant (advance grant_seq, unlock
     // the client) when the budget comes out positive; while still negative this is
     // a "deficit turn" — no grant — and wait_for_client_action() advances the
     // host's monmove() solo so the world keeps moving while the client pays off the
     // expensive move (SP-faithful: a costly step burns several turns).
-    mp_session().host_turn.remote_moves += remote->get_speed();
-    mp_session().host_turn.granted_this_turn = ( mp_session().host_turn.remote_moves > 0 );
-    if( mp_session().host_turn.granted_this_turn ) {
-        ++mp_session().host_turn.grant_seq;
+    recipient.turn.remote_moves += remote->get_speed();
+    recipient.turn.granted_this_turn = ( recipient.turn.remote_moves > 0 );
+    if( recipient.turn.granted_this_turn ) {
+        recipient.turn.grant_seq = ++mp_session().grant_sequence;
     }
     const player_activity &ha = get_avatar().activity;
     // turn= is the shared game clock (the client logs calendar_turn in its state
@@ -4185,8 +4344,8 @@ void grant_client_turn()
     // wall-clock skew.  Safe to read here: grant_client_turn runs on the game
     // thread.
     mp_log( "[cdda-mp] grant_client_turn: remote_moves=" + std::to_string(
-                mp_session().host_turn.remote_moves ) +
-            " seq=" + std::to_string( mp_session().host_turn.grant_seq ) +
+                recipient.turn.remote_moves ) +
+            " seq=" + std::to_string( recipient.turn.grant_seq ) +
             " turn=" + std::to_string( to_turn<int>( calendar::turn ) ) +
             " host_act=" + ( ha ? ha.id().str() : "none" ) );
     // Proxy skips npcmove so never auto-regenerates stamina. Replicate the
@@ -4207,365 +4366,101 @@ void grant_client_turn()
         // by the time client_teleport_avatar fires update_map.  If map_sync
         // arrives after remote_player_state the client loads stale disk tiles
         // (t_open_air) first, gravity_check fires, and the client falls.
-        const std::string mapm = build_map_sync();
+        const std::string mapm = build_map_sync( recipient );
         if( !mapm.empty() ) {
-            srv->post_send( mp_session().remote_admission, mapm + "\n" );
+            srv->post_send( recipient.admission, mapm + "\n" );
         }
-        srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
+        srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
         // Stream the host's overmap region so the client's far-map (cities/
         // roads/biomes) matches instead of its own non-deterministic regen.
         // Returns "" unless this is the first sync or the host moved a step,
         // so it's cheap on the steady-state path.
-        const std::string om = build_overmap_sync();
+        const std::string om = build_overmap_sync( recipient );
         if( !om.empty() ) {
-            srv->post_send( mp_session().remote_admission, om + "\n" );
+            srv->post_send( recipient.admission, om + "\n" );
         }
     }
+}
+
+
+void grant_client_turn()
+{
+    // Capture the world seed each host turn (game-thread read of g->get_seed())
+    // so the network thread can put it in the join 'welcome' without touching
+    // game state. Runs before the connected-check so it's current the moment a
+    // client joins. Seed is constant for a session; the store is idempotent.
+    mp_session().host_info.seed = g->get_seed();
+    // Capture the host avatar's OMT for the join 'welcome' so a client spawns into
+    // the host's area, not its own scenario start_location.
+    mp_capture_host_omt( get_avatar().pos_abs_omt() );
+    if( world_generator && world_generator->active_world ) {
+        mp_set_host_world_name( world_generator->active_world->world_name );
+        mp_session().host_info.world = world_generator->active_world->identity();
+    }
+    // Cache the host's character name for the join 'welcome' so the client's
+    // join dialog can show whose game it is. Runs before the connected-check so
+    // it's current the moment a client probes.
+    mp_set_host_player_name( get_avatar().name );
+    mp_session().hosting.update_welcome( mp_session().host_info );
+    for( auto it = mp_session().remote_players.begin(); it != mp_session().remote_players.end(); ) {
+        auto &recipient = *it++->second;
+        grant_remote_turn( recipient );
+    }
+}
+static bool remote_turns_pending()
+{
+    for( const auto &entry : mp_session().remote_players ) {
+        const auto &recipient = *entry.second;
+        if( recipient.connected && !recipient.detach_pending &&
+            recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void wait_for_client_action()
 {
-    // Network retirement prevents delivery, but the owner still drains the
-    // admitted stream through its ordered disconnect. Skipping this wait based
-    // on worker liveness changes input consumption and advances an extra turn.
-    if( !mp_session().remote_connected || mp_session().remote_admission.peer_id() == 0 ) {
+    // Every admitted player with a positive action budget must finish this
+    // turn. A reply, disconnect or AP debt affects only its own participant.
+    process_mp_events();
+    if( !remote_turns_pending() || should_fast_forward() ) {
         return;
     }
-
-    // Sleep is the one true fast-forward case: 28800 ticks of strict lockstep
-    // would mean ~48 minutes wall-clock for 8 hours of game-sleep.  Host-side
-    // sleep effect bypasses the lockstep wait so the host can race through
-    // those turns at native do_turn speed.  Client-side sleep needs its own
-    // bypass once implemented — for now sleep is treated as host-only.
-    {
-        static const efftype_id eff_sleep( "sleep" );
-        if( get_avatar().has_effect( eff_sleep ) ) {
-            process_mp_events();
-            mp_log( "[cdda-mp] lockstep-skip: host_act=sleep" );
-            return;
-        }
-    }
-
-    // Both-passive fast-forward: when both sides are in passive activities
-    // (both crafting, both eating, host crafting + client helping, etc.),
-    // drop strict lockstep so wall-clock progress matches SP's machine-speed
-    // activity ticks.  20-min in-game craft → ~5-10s real-time instead of
-    // ~6.5min under 1:1 lockstep.  SP's per-turn activity cancellation
-    // (hostile-in-sight, low HP, sound, etc.) fires on the host as turns
-    // advance and naturally exits FF: cancel ends av_act, next call returns
-    // false, the following turn re-enters strict lockstep.
-    const bool ff_now = should_fast_forward();
-    if( ff_now != mp_session().host_turn.ff_was_active ) {
-        if( ff_now ) {
-            mp_log( std::string( "[cdda-mp] lockstep-skip: FAST-FORWARD enter host_act=" )
-                    + ( get_avatar().activity ? get_avatar().activity.id().str() : "?" )
-                    + " partner_act=" + mp_session().peer.partner_activity );
-        } else {
-            mp_log( "[cdda-mp] lockstep-resume: FAST-FORWARD exit" );
-        }
-        mp_session().host_turn.ff_was_active = ff_now;
-    }
-    if( ff_now ) {
+    mp_session().host_waiting_for_clients = true;
+    const auto start = std::chrono::steady_clock::now();
+    std::string previous_activity = get_avatar().activity ? get_avatar().activity.id().str() : "";
+    while( g->uquit == QUIT_NO && remote_turns_pending() && !should_fast_forward() ) {
+        get_mp_queue().wait_for_event( std::chrono::milliseconds( 16 ) );
         process_mp_events();
-        return;
-    }
-
-    // FIX #2/#3: deficit turn — the client is still paying off an expensive move's
-    // AP debt, so grant_client_turn() issued no grant this turn.  Don't block on a
-    // client ack that won't come; pump events and let the host advance monmove()
-    // solo, exactly as SP advances turns while a slow character's moves are
-    // negative.  The next grant_client_turn() adds another speed's worth; once the
-    // budget goes positive the client is granted again and strict lockstep resumes.
-    if( !mp_session().host_turn.granted_this_turn ) {
-        process_mp_events();
-        mp_log( "[cdda-mp] lockstep-skip: client in move-debt, g_remote_moves=" +
-                std::to_string( mp_session().host_turn.remote_moves ) + " skip#" + std::to_string(
-                    ++mp_session().presentation.debt_skips ) );
-        return;
-    }
-
-    // No partner-activity bypass: every activity (drop, wear, take_off, read,
-    // craft, eat, wait, …) now dispatches a "wait" ack per tick via the
-    // do_turn post-loop dispatch path, so strict lockstep works for them all.
-    // The earlier g_partner_activity bypass was leftover scaffolding from the
-    // DISCONNECT-TIMEOUT era and would let the host fast-forward freely while
-    // the partner was inside an activity that took even a few packets to
-    // complete (drop on a seat → host's |-wait fast-forwarded ~30 minutes).
-
-    mp_session().host_turn.host_waiting_for_client = true;
-    const std::chrono::steady_clock::time_point t_start = std::chrono::steady_clock::now();
-    // Pure lockstep: every game-turn requires a client ack — including turns
-    // the host spends inside a long activity (|-wait, sleep, craft).  The
-    // activity progresses one game-turn at a time, paced by the client's
-    // round-trip.  This keeps the shared calendar consistent: time only
-    // advances when both ends agree on an action for this turn.
-    //
-    // No wall-clock timeout: in turn-based, "wait indefinitely" is correct.
-    // TCP connection drop (remote_player_connected = false) is the only
-    // legitimate exit besides the client acting.  Each iter caps at 16ms
-    // so SDL stays pumped during long waits.
-    const bool host_in_wait = host_is_in_wait_activity();  // logged only
-    {
-        const player_activity &ha_enter = get_avatar().activity;
-        mp_log( "[cdda-mp] SRV-WAIT: entering, grant_seq=" + std::to_string(
-                    mp_session().host_turn.grant_seq ) +
-                " host_in_wait=" + std::to_string( host_in_wait ) +
-                " host_act=" + ( ha_enter ? ha_enter.id().str() : "none" ) );
-    }
-
-    int iter_count = 0;
-    // Per-phase max times across this SRV-WAIT, logged once on exit so we
-    // don't spam per-iter.  Anything that spikes above ~16ms is blocking the
-    // SDL input pump and explains "I pressed zoom and it didn't react."
-    int max_waitev_ms = 0;
-    int max_drain_ms  = 0;
-    int max_pump_ms   = 0;
-    int max_redraw_ms = 0;
-    int max_input_ms  = 0;
-    // Track host activity across iters so we can detect a transition (cancel
-    // mid-handle_action, or a new activity started somehow) and force-broadcast
-    // it.  Without this, the client's view of g_partner_activity goes stale —
-    // it FF-decides based on what we LAST told it, not what we're doing now.
-    // If host's activity ended after the iteration's grant_client_turn
-    // broadcast but before reaching the wait, the client still thinks FF
-    // applies, suppresses its wait dispatch, and we deadlock waiting for an
-    // ack that won't come.  Cheap to do — only broadcasts on actual edge.
-    std::string prev_wait_host_act = get_avatar().activity
-                                     ? get_avatar().activity.id().str() : "";
-    // Log the partner-interactive skip (below) once per wait, not per-iter.
-    bool logged_partner_interactive_skip = false;
-    while( mp_session().remote_connected ) {
-        // Host requested quit (save&quit / suicide / die) while waiting for the
-        // client: stop waiting immediately so do_turn can return and the game
-        // exits. The client was already told via mp_notify_session_ending().
-        // Without this the wait spins forever once the client has left — no ack
-        // ever arrives — and save&quit appears to do nothing (regression
-        // 2026-06-21: host stuck in SRV-WAIT, uquit=QUIT_SAVED set but ignored).
-        if( g->uquit != QUIT_NO ) {
-            mp_log( "[cdda-mp] SRV-WAIT: uquit=" + std::to_string( g->uquit ) +
-                    " set, breaking out of client wait" );
+        if( !remote_turns_pending() ) {
             break;
         }
-        if( mp_session().host_turn.client_acted_this_turn ) {
-            break;  // client acted, advance shared clock by this turn
+        const std::string activity = get_avatar().activity ? get_avatar().activity.id().str() : "";
+        if( activity != previous_activity ) {
+            host_broadcast_post_action();
+            previous_activity = activity;
         }
-        // Mid-wait FF check: client's activity_start may arrive *after* we
-        // entered the wait (host entered first), so the entry-time
-        // should_fast_forward() returned false.  Re-check each iter — the
-        // moment partner activity flips to passive while ours already is,
-        // bail out and let do_turn race through both crafts at SP speed.
-        // Without this, the client (also in FF) won't dispatch waits, so
-        // g_client_acted_this_turn never flips and we deadlock both ends.
-        if( should_fast_forward() ) {
-            mp_log( "[cdda-mp] SRV-WAIT: FAST-FORWARD engaged mid-wait, bailing" );
-            break;
-        }
-        // Host-activity transition broadcast: if our activity changed since
-        // entering the wait (typically: just cancelled mid-handle_action),
-        // push fresh state to the client right away.  Otherwise the client
-        // keeps thinking we're still crafting and stays in FF — meaning it
-        // never dispatches a wait — meaning this wait never unblocks.
-        const std::string cur_host_act = get_avatar().activity
-                                         ? get_avatar().activity.id().str() : "";
-        if( cur_host_act != prev_wait_host_act ) {
-            mp_log( std::string( "[cdda-mp] SRV-WAIT: host activity transition " ) +
-                    prev_wait_host_act + " -> " + cur_host_act +
-                    ", broadcasting state" );
-            if( auto srv = get_active_server() ) {
-                srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
-            }
-            prev_wait_host_act = cur_host_act;
-        }
-        // Cap each iteration at ~16ms so SDL gets pumped at 60Hz.  Without this
-        // the main thread blocks in TCP recv indefinitely, which trips the macOS
-        // spinning-beachball watchdog.  mp_poll_input() (handle_action) is
-        // intentionally NOT called: it blocks waiting for a keypress, eating the
-        // async-tick budget by up to seconds.  Re-adding host-side menu access
-        // during waits will need a non-blocking input peek, not a full action
-        // dispatcher.
-        // Burst mode: both players in non-interactive activities (e.g. crafting +
-        // helping).  Drop the 16ms throttle so the shared clock advances as fast
-        // as the host's CPU can serialize ticks — turns an 8-hour craft from
-        // minutes of staring at the wait popup into seconds.
-        const std::chrono::milliseconds step = mp_in_burst_mode()
-                                               ? std::chrono::milliseconds( 0 )
-                                               : std::chrono::milliseconds( 16 );
-        const std::chrono::steady_clock::time_point t_iter0 = std::chrono::steady_clock::now();
-        get_mp_queue().wait_for_event( step );
-        const std::chrono::steady_clock::time_point t_after_wait = std::chrono::steady_clock::now();
-        process_mp_events();
-        const std::chrono::steady_clock::time_point t_after_drain = std::chrono::steady_clock::now();
-        // The drain above may have just set g_client_acted_this_turn (the
-        // client's "wait" ack arrived). Break NOW, before the blocking
-        // mp_poll_input() below — otherwise the host sits in handle_action for
-        // 135-327ms even though the client already acked at ~+16ms, pacing
-        // every host move to that input poll and flickering the turn signal
-        // red. Root cause of the host sluggishness/flicker (2026-06-03 logs:
-        // input=150-327ms dominated SRV-WAIT while drain/pump/redraw were
-        // <20ms and the client acked in 16ms). The top-of-loop check only
-        // catches it a full input-poll too late.
-        // Poll input EVERY iteration BEFORE the drain-break. handle_key_blocking_
-        // activity handles BOTH a wait/long activity AND the no-activity host-locked
-        // case (is_host_waiting_for_client() is true throughout SRV-WAIT) — zoom,
-        // m-map, 5-to-cancel, messages. Non-blocking handle_input(0), so it can't
-        // re-pace moves or flicker. The break fires the instant the client acks
-        // (~16ms), before the 100ms-gated poll below; gating this on
-        // get_avatar().activity (prev attempt) missed the COMMON case — the host
-        // sits here with host_act=none most of the time, so input was starved
-        // ("5/zoom/map only occasionally caught").
+        // Keep zoom, activity cancellation and window events responsive without
+        // introducing a blocking gameplay input poll into the network wait.
         inp_mngr.pump_events();
-        // Block up to 16ms for an event (not a non-blocking poll). DIAG proved the
-        // non-blocking poll ran 57x/sec but caught ZERO keys — the SRV-WAIT sub-loop
-        // doesn't deliver SDL events to handle_input(0) the way the main loop does.
-        // Blocking (like the monster-interrupt popup, which IS responsive) catches
-        // them reliably. 16ms ≈ the loop's step, so it adds no real latency.
         handle_key_blocking_activity( 16 );
-        if( mp_session().host_turn.client_acted_this_turn ) {
-            break;
-        }
         ensure_mp_hud();
         inp_mngr.pump_events();
-        const std::chrono::steady_clock::time_point t_after_pump = std::chrono::steady_clock::now();
-        // Redraw the side strip + Co-op panel ~10x/sec while we're blocked so
-        // the host's HUD actually flips to red while locked, instead of staying
-        // green until the wait exits.  Rate-limited because ui_manager::redraw
-        // isn't free and 60Hz redraws are wasteful when nothing visually changes.
-        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if( std::chrono::duration_cast<std::chrono::milliseconds>( now -
-                mp_session().presentation.last_redraw ).count() > 100 ) {
+        const auto now = std::chrono::steady_clock::now();
+        if( std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - mp_session().presentation.last_redraw ).count() > 100 ) {
             ui_manager::redraw();
             mp_session().presentation.last_redraw = now;
         }
-        const std::chrono::steady_clock::time_point t_after_redraw =
-            std::chrono::steady_clock::now();
-        // Mirror the client's locked-input branch: call full handle_action so
-        // every free UI action (zoom, morale, map, inventory, messages, look)
-        // works while the host is waiting for the client.  handle_action gates
-        // moves-consuming actions out via the host-locked check at
-        // handle_action.cpp:3038, so this is safe — only pure UI passes.
-        //
-        // handle_action blocks on a keypress, but its internal TIMEOUT poll
-        // calls process_mp_events for the host every ~125ms, and the
-        // client_just_acted TIMEOUT escape in get_player_input breaks out of
-        // the input poll the moment the client acts.  Net result: host gets
-        // full SP-style input access AND the wait still exits on client ack.
-        // Only run the (blocking) host input poll once we've genuinely been
-        // waiting a while. For a normal move the client acks in tens of ms and
-        // the drain-break above exits the loop long before this threshold — so
-        // mp_poll_input never runs and can't pace the host or flicker the turn
-        // signal red (root cause of the residual movement flicker, 2026-06-03:
-        // max_input=76-442ms on host_act=none waits even after the drain-break,
-        // because handle_action's internal client-acted escape is unreliable
-        // and blocks up to ~440ms). Past the threshold it's a real long wait
-        // (client crafting/sleeping) where the host wants menu access, so
-        // engage the full poll then. SDL still gets pumped every iter via
-        // inp_mngr.pump_events() above, so no beachball during the tight phase.
-        const long wait_elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                         std::chrono::steady_clock::now() - t_start ).count();
-        // No-activity host wait: the blocking input poll stays gated behind 100ms
-        // so it can't pace normal moves / flicker the turn signal. The in-activity
-        // case is now polled non-blocking every iteration above (before the
-        // drain-break), so it's not repeated here.
-        // Partner in an interactive activity (ACT_AIM/FIRSTAID/AUTOATTACK/
-        // AUTODRIVE) runs its UI locally and won't send a wait until it resolves.
-        // mp_poll_input() blocks until a host keypress OR client_acted_this_turn()
-        // — neither happens while the partner aims, so it would sit here for the
-        // ENTIRE aim (the 10s+ "input=" SRV-WAIT phases / host beachball). Skip the
-        // blocking poll then: the non-blocking handle_key_blocking_activity(16)
-        // above still gives the host zoom/menu access, and the loop keeps spinning
-        // every ~16ms (SDL pumped), so the host stays responsive — the mirror of
-        // the client staying responsive while the host aims (ranged.cpp:2988).
-        const bool partner_interactive = partner_in_interactive_activity();
-        if( wait_elapsed_ms > 100 && !get_avatar().activity && !partner_interactive ) {
-            /* MP-FIXME: g->mp_poll_input stubbed for CCB */
-        } else if( partner_interactive && !logged_partner_interactive_skip ) {
-            mp_log( "[cdda-mp] SRV-WAIT: partner interactive (" + mp_session().peer.partner_activity +
-                    ") — skipping blocking host poll to stay responsive" );
-            logged_partner_interactive_skip = true;
-        }
-        const std::chrono::steady_clock::time_point t_after_input =
-            std::chrono::steady_clock::now();
-        const int waitev_ms = static_cast<int>(
-                                  std::chrono::duration_cast<std::chrono::milliseconds>( t_after_wait - t_iter0 ).count() );
-        const int drain_ms = static_cast<int>(
-                                 std::chrono::duration_cast<std::chrono::milliseconds>( t_after_drain - t_after_wait ).count() );
-        const int pump_ms = static_cast<int>(
-                                std::chrono::duration_cast<std::chrono::milliseconds>( t_after_pump - t_after_drain ).count() );
-        const int redraw_ms = static_cast<int>(
-                                  std::chrono::duration_cast<std::chrono::milliseconds>( t_after_redraw - t_after_pump ).count() );
-        const int input_ms = static_cast<int>(
-                                 std::chrono::duration_cast<std::chrono::milliseconds>( t_after_input - t_after_redraw ).count() );
-        max_waitev_ms = std::max( max_waitev_ms, waitev_ms );
-        max_drain_ms  = std::max( max_drain_ms,  drain_ms );
-        max_pump_ms   = std::max( max_pump_ms,   pump_ms );
-        max_redraw_ms = std::max( max_redraw_ms, redraw_ms );
-        max_input_ms  = std::max( max_input_ms,  input_ms );
-        // Flag any single iter where a phase spent > 30ms — that's a smoking
-        // gun for input lag, since the SDL queue can only drain via pump_events
-        // and any phase that hogs the main thread blocks the next keypress.
-        if( waitev_ms > 30 || drain_ms > 30 || pump_ms > 30 ||
-            redraw_ms > 30 || input_ms > 30 ) {
-            mp_log( "[cdda-mp] SRV-WAIT-ITER#" + std::to_string( iter_count ) +
-                    " SLOW: wait=" + std::to_string( waitev_ms ) +
-                    "ms drain=" + std::to_string( drain_ms ) +
-                    "ms pump=" + std::to_string( pump_ms ) +
-                    "ms redraw=" + std::to_string( redraw_ms ) +
-                    "ms input=" + std::to_string( input_ms ) + "ms" );
-        }
-        iter_count++;
     }
-    mp_session().host_turn.host_waiting_for_client = false;
-    // DIAG: per-turn wait duration. The turn-signal shows RED while
-    // g_host_waiting_for_client is true and stays red once that exceeds the
-    // 400ms green-hysteresis — so any value >400ms here is a red flicker the
-    // host sees this turn. Correlate with whether the client was idle.
-    {
-        const long wait_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::steady_clock::now() - t_start ).count();
-        mp_log( "[cdda-mp] SRV-WAIT-DONE: turn_wait=" + std::to_string( wait_ms ) +
-                "ms" + ( wait_ms > 400 ? "  >400 (RED)" : "" ) );
-    }
-    // Force a main-UI repaint each turn cycle.  During a long activity (|-wait,
-    // crafting, sleep) the host's main game loop stays in a tight do_turn() loop
-    // because the avatar always has moves; without this, the time/wait-% HUD
-    // and recent messages don't visibly tick between turns.  ui_manager::redraw()
-    // is a no-op unless something has been invalidated.
+    mp_session().host_waiting_for_clients = false;
+    mp_session().host_wait_elapsed_ms = static_cast<int>(
+                                            std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                    std::chrono::steady_clock::now() - start ).count() );
     g->invalidate_main_ui_adaptor();
     ui_manager::redraw();
-    mp_session().host_turn.wait_elapsed_ms = static_cast<int>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - t_start ).count() );
-    {
-        const player_activity &ha = get_avatar().activity;
-        mp_log( "[cdda-mp] SRV-WAIT: done, elapsed=" + std::to_string(
-                    mp_session().host_turn.wait_elapsed_ms ) +
-                "ms host_act=" + ( ha ? ha.id().str() : "none" ) +
-                " host_in_wait=" + std::to_string( host_in_wait ) +
-                " iters=" + std::to_string( iter_count ) +
-                " acted_flag=" + std::to_string( mp_session().host_turn.client_acted_this_turn ) +
-                " max_wait=" + std::to_string( max_waitev_ms ) +
-                "ms max_drain=" + std::to_string( max_drain_ms ) +
-                "ms max_pump=" + std::to_string( max_pump_ms ) +
-                "ms max_redraw=" + std::to_string( max_redraw_ms ) +
-                "ms max_input=" + std::to_string( max_input_ms ) + "ms" );
-    }
-
-    // Keep the remote NPC proxy's in_vehicle flag in sync with its map position
-    // before monmove() / process_vehicles() runs.  vehicle_move.cpp line ~892 skips
-    // collision for any character with in_vehicle==true, so without this the vehicle
-    // rams into its own passenger each time it moves.
-    if( mp_session().remote_connected ) {
-        npc *remote = mp_remote_actor();
-        if( remote ) {
-            const optional_vpart_position ovp = get_map().veh_at( remote->pos_bub() );
-            remote->in_vehicle = static_cast<bool>( ovp );
-            if( !ovp ) {
-                remote->controlling_vehicle = false;
-            }
-        }
-    }
 }
-
 bool host_is_in_wait_activity()
 {
     if( !is_hosting() ) {
@@ -4619,30 +4514,30 @@ bool is_passive_activity( const std::string &activity_id_str )
 
 bool should_fast_forward()
 {
-    // Need to be in an MP session.  SP never fast-forwards — SP runs activities
-    // at machine speed already.
     if( !is_hosting() && !is_client_mode() ) {
         return false;
     }
-    // Local avatar must be in a passive activity.
-    const player_activity &av_act = get_avatar().activity;
-    if( !av_act || !is_passive_activity( av_act.id().str() ) ) {
+    const player_activity &activity = get_avatar().activity;
+    if( !activity || !is_passive_activity( activity.id().str() ) ) {
         return false;
     }
-    // Partner's reported activity must also be passive.  g_partner_activity is
-    // set by the heartbeat / per-action enrich on the other side — empty when
-    // partner is idle (input loop) which means strict lockstep applies.
-    if( mp_session().peer.partner_activity.empty() ||
-        !is_passive_activity( mp_session().peer.partner_activity ) ) {
-        return false;
+    if( is_client_mode() ) {
+        // The client cannot infer group readiness from the host alone.
+        return mp_session().client_turn.group_fast_forward;
     }
-    // No explicit combat-mode gate here: SP's activity_actor::do_turn already
-    // cancels the activity on hostile-in-sight (and on low HP, hunger, sound,
-    // etc.).  When that fires, av_act becomes null, this returns false on the
-    // next call, and the next do_turn returns to strict lockstep naturally.
-    return true;
+    bool participants = false;
+    for( const auto &entry : mp_session().remote_players ) {
+        const auto &recipient = *entry.second;
+        if( !recipient.connected || recipient.detach_pending ) {
+            continue;
+        }
+        participants = true;
+        if( !is_passive_activity( recipient.observation.partner_activity ) ) {
+            return false;
+        }
+    }
+    return participants;
 }
-
 void mp_log_safemode_check( int newseen, int mostseen, int safe_mode )
 {
     if( !is_client_mode() && !is_hosting() ) {
@@ -4693,7 +4588,7 @@ void mp_log_safemode_check( int newseen, int mostseen, int safe_mode )
 
 void set_last_monmove_ms( int ms )
 {
-    mp_session().host_turn.last_monmove_ms = ms;
+    mp_session().last_monmove_ms = ms;
 }
 
 void set_last_host_action_label( const std::string &label )
@@ -4714,43 +4609,82 @@ void set_last_host_action_label( const std::string &label )
 
 bool is_remote_player( character_id id )
 {
-    return mp_session().remote_connected && id == mp_session().remote_actor.id() &&
-           mp_session().remote_actor.owns_instance( g->critter_by_id<npc>( id ), g->npc_lifetimes() );
+    if( is_client_mode() ) {
+        if( id == mp_session().client_host_actor.id() &&
+            mp_session().client_host_actor.owns_instance( g->critter_by_id<npc>( id ), g->npc_lifetimes() ) ) {
+            return true;
+        }
+        for( const auto &entry : mp_session().client_player_views ) {
+            const auto &binding = entry.second->actor;
+            if( binding.id() == id &&
+                binding.owns_instance( g->critter_by_id<npc>( id ), g->npc_lifetimes() ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+    const auto *recipient = mp_session().find_remote( id );
+    return recipient &&
+           recipient->actor.owns_instance( g->critter_by_id<npc>( id ), g->npc_lifetimes() );
 }
-
 bool is_host_waiting_for_client()
 {
-    return mp_session().host_turn.host_waiting_for_client;
+    return mp_session().host_waiting_for_clients;
 }
 
 bool client_acted_this_turn()
 {
-    return mp_session().host_turn.client_acted_this_turn;
+    return !remote_turns_pending();
 }
 
 bool partner_in_interactive_activity()
 {
-    return !mp_session().peer.partner_activity.empty() &&
-           !is_passive_activity( mp_session().peer.partner_activity );
+    return !mp_partner_observation().partner_activity.empty() &&
+           !is_passive_activity( mp_partner_observation().partner_activity );
 }
 
-bool is_partner_in_wait_activity()
+bool is_partner_in_wait_activity( character_id target )
 {
     // g_partner_activity is the activity id string last broadcast from the
     // other side (host_activity field for the client; client_activity field
     // for the host).  Only the four wait variants count as interruptible.
-    return mp_session().peer.partner_activity == "ACT_WAIT" ||
-           mp_session().peer.partner_activity == "ACT_WAIT_STAMINA" ||
-           mp_session().peer.partner_activity == "ACT_WAIT_WEATHER" ||
-           mp_session().peer.partner_activity == "ACT_WAIT_NPC";
+    return mp_partner_observation( target ).partner_activity == "ACT_WAIT" ||
+           mp_partner_observation( target ).partner_activity == "ACT_WAIT_STAMINA" ||
+           mp_partner_observation( target ).partner_activity == "ACT_WAIT_WEATHER" ||
+           mp_partner_observation( target ).partner_activity == "ACT_WAIT_NPC";
 }
 
-bool is_partner_helping_us()
+bool is_partner_helping( character_id helper, character_id worker )
 {
-    return mp_session().peer.partner_activity == "ACT_HELP_PARTNER";
+    const player_id target = partner_identity( worker );
+    if( !target.valid() || helper == worker ) {
+        return false;
+    }
+    if( helper == get_avatar().getID() ) {
+        return activity_help_target( get_avatar().activity ) == target.str();
+    }
+    const auto &observation = mp_partner_observation( helper );
+    return observation.partner_activity == "ACT_HELP_PARTNER" &&
+           observation.partner_help_target == target.str();
 }
 
-bool partner_activity_accepts_help()
+bool start_helping_partner( character_id target )
+{
+    const npc *partner = get_partner_npc( target );
+    const player_id identity = partner_identity( target );
+    avatar &helper = get_avatar();
+    if( !partner || !identity.valid() || !partner_activity_accepts_help( target ) ||
+        partner->posz() != helper.posz() || rl_dist( partner->pos_abs(), helper.pos_abs() ) > 1 ) {
+        return false;
+    }
+    const int total = partner_activity_moves_total( target );
+    player_activity help( activity_id( "ACT_HELP_PARTNER" ), total > 0 ? total : 1'000'000 );
+    help.str_values.push_back( identity.str() );
+    helper.assign_activity( help );
+    return true;
+}
+
+bool partner_activity_accepts_help( character_id target )
 {
     // SP's helper system (get_crafting_helpers + skill/proficiency math)
     // engages for these activities.  ACT_READ is intentionally excluded:
@@ -4770,17 +4704,21 @@ bool partner_activity_accepts_help()
         "ACT_DISASSEMBLE",
         "ACT_DISASSEMBLE_RECURSIVELY",
     };
-    return eligible.count( mp_session().peer.partner_activity ) > 0;
+    return eligible.count( mp_partner_observation( target ).partner_activity ) > 0;
 }
 
-int partner_activity_moves_total()
+int partner_activity_moves_total( character_id target )
 {
-    return mp_session().peer.partner_activity_moves_total;
+    return mp_partner_observation( target ).partner_activity_moves_total;
 }
 
 int partner_activity_pct()
 {
-    return mp_session().peer.partner_activity_pct;
+    if( get_avatar().activity.id().str() == "ACT_HELP_PARTNER" ) {
+        const npc *target = helped_partner( get_avatar().activity );
+        return target ? mp_partner_observation( target->getID() ).partner_activity_pct : 0;
+    }
+    return mp_partner_observation().partner_activity_pct;
 }
 
 bool mp_in_burst_mode()
@@ -4794,7 +4732,7 @@ bool mp_in_burst_mode()
     if( !get_avatar().activity ) {
         return false;
     }
-    if( mp_session().peer.partner_activity.empty() ) {
+    if( mp_partner_observation().partner_activity.empty() ) {
         return false;
     }
     return true;
@@ -4817,14 +4755,8 @@ static int mp_compute_activity_pct( const player_activity &act )
     // the moves_total branch.
     static const activity_id ACT_HELP_PARTNER_ID( "ACT_HELP_PARTNER" );
     if( act.id() == ACT_HELP_PARTNER_ID ) {
-        // ASSIST-DISPLAY diag (case 2: I help, partner builds): I mirror the
-        // partner's reported pct.  Change-gated.
-        if( mp_session().peer.partner_activity_pct != mp_session().presentation.last_help_pct ) {
-            mp_session().presentation.last_help_pct = mp_session().peer.partner_activity_pct;
-            mp_log( "[cdda-mp] ASSIST-PCT help(mirror): partner pct=" +
-                    std::to_string( mp_session().peer.partner_activity_pct ) );
-        }
-        return mp_session().peer.partner_activity_pct;
+        const npc *target = helped_partner( act );
+        return target ? mp_partner_observation( target->getID() ).partner_activity_pct : 0;
     }
     // Standard path — works for ACT_WAIT and any other actor that sets
     // moves_total properly.
@@ -4882,7 +4814,8 @@ static void mp_cancel_help_if_partner_done()
     if( !av.activity || av.activity.id().str() != "ACT_HELP_PARTNER" ) {
         return;
     }
-    if( partner_activity_accepts_help() ) {
+    const npc *target = helped_partner( av.activity );
+    if( target && partner_activity_accepts_help( target->getID() ) ) {
         return;
     }
     mp_log( "[cdda-mp] HELP-CANCEL: partner activity ended, dropping ACT_HELP_PARTNER" );
@@ -4890,36 +4823,69 @@ static void mp_cancel_help_if_partner_done()
     av.cancel_activity();
 }
 
-void mark_wake_client_pending()
+void mark_wake_client_pending( character_id target )
 {
-    mp_session().host_turn.pending_wake_client = true;
+    if( auto *recipient = mp_session().find_remote( target ) ) {
+        recipient->turn.pending_wake_client = true;
+        recipient->turn.wake_from = get_avatar().name;
+    }
 }
-
-void mark_partner_swap_pending()
+void mark_partner_swap_pending( character_id target )
 {
-    mp_session().host_turn.pending_partner_swap = true;
+    if( auto *recipient = mp_session().find_remote( target ) ) {
+        recipient->turn.pending_partner_swap = true;
+        recipient->turn.swap_from = get_avatar().name;
+    }
 }
-
-void mark_partner_push_pending()
+void mark_partner_push_pending( character_id target )
 {
-    mp_session().host_turn.pending_partner_push = true;
+    if( auto *recipient = mp_session().find_remote( target ) ) {
+        recipient->turn.pending_partner_push = true;
+        recipient->turn.push_from = get_avatar().name;
+    }
 }
-
 int get_separation_tier()
 {
     return mp_session().presentation.separation_tier;
 }
 
-npc *get_partner_npc()
+npc *get_partner_npc( character_id target )
 {
-    if( ( is_hosting() || is_server_mode() ) && mp_session().remote_connected ) {
-        if( npc *remote = mp_remote_actor() ) {
-            return remote;
+    if( is_client_mode() ) {
+        npc *nearest = mp_host_view_actor();
+        if( target.is_valid() && nearest && nearest->getID() == target ) {
+            return nearest;
+        }
+        for( const auto &entry : mp_session().client_player_views ) {
+            npc *actor = mp_loaded_actor( entry.second->actor );
+            if( target.is_valid() && actor && actor->getID() == target ) {
+                return actor;
+            }
+            if( actor && ( !nearest || rl_dist( actor->pos_abs(), get_avatar().pos_abs() ) <
+                           rl_dist( nearest->pos_abs(), get_avatar().pos_abs() ) ) ) {
+                nearest = actor;
+            }
+        }
+        return target.is_valid() ? nullptr : nearest;
+    }
+    if( target.is_valid() ) {
+        auto *recipient = mp_session().find_remote( target );
+        return recipient ? mp_remote_actor( *recipient ) : nullptr;
+    }
+    npc *nearest = nullptr;
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &recipient = *entry.second;
+        if( !recipient.connected || recipient.detach_pending ) {
+            continue;
+        }
+        npc *actor = mp_remote_actor( recipient );
+        if( actor && ( !nearest || rl_dist( actor->pos_abs(), get_avatar().pos_abs() ) <
+                       rl_dist( nearest->pos_abs(), get_avatar().pos_abs() ) ) ) {
+            nearest = actor;
         }
     }
-    return is_client_mode() && mp_session().client_host_spawned ? mp_host_view_actor() : nullptr;
+    return nearest;
 }
-
 bool is_partner_npc( character_id id )
 {
     // Host side: the client's proxy is remote_player_npc_id.
@@ -4961,7 +4927,7 @@ void notify_client_host_died()
     if( !srv ) {
         return;
     }
-    srv->post_send( mp_session().remote_admission, "{\"type\":\"host_died\"}\n" );
+    srv->post_broadcast( "{\"type\":\"host_died\"}\n" );
     // Brief pause so the packet flushes before the death screen takes focus.
     std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
 }
@@ -4988,8 +4954,7 @@ void mp_notify_session_ending()
     if( is_host_mode() ) {
         auto srv = get_active_server();
         if( srv ) {
-            srv->post_send( mp_session().remote_admission,
-                            "{\"type\":\"session_ending\",\"from\":\"host\"}\n" );
+            srv->post_broadcast( "{\"type\":\"session_ending\",\"from\":\"host\"}\n" );
             mp_log( "[cdda-mp] SESSION-END: host notified client" );
         }
     } else if( is_client_mode() ) {
@@ -5031,19 +4996,19 @@ static std::vector<std::string> mp_local_template_names()
 // Pick the right transport for outgoing MP messages from this side.  Both
 // templates messages and the join-time list go through here so we don't keep
 // branching on host/client at every send site.
-static void mp_send_payload( const std::string &payload )
+static void mp_send_payload( const std::string &payload, const peer_admission &recipient )
 {
     if( is_host_mode() ) {
         auto srv = get_active_server();
         if( srv ) {
-            srv->post_send( mp_session().remote_admission, payload + "\n" );
+            srv->post_send( recipient, payload + "\n" );
         }
     } else if( is_client_mode() ) {
         client_send( payload );
     }
 }
 
-void mp_templates_sync_on_join()
+static void mp_templates_sync_on_join( const peer_admission &recipient )
 {
     const std::vector<std::string> names = mp_local_template_names();
     std::ostringstream oss;
@@ -5054,11 +5019,18 @@ void mp_templates_sync_on_join()
         jo.member( "names", names );
         jo.end_object();
     }
-    mp_send_payload( oss.str() );
+    mp_send_payload( oss.str(), recipient );
     mp_log( "[cdda-mp] TEMPLATES: sent list, n=" + std::to_string( names.size() ) );
 }
 
-static void mp_handle_templates_list( const std::string &msg )
+
+void mp_templates_sync_on_join()
+{
+    if( is_client_mode() ) {
+        mp_templates_sync_on_join( {} );
+    }
+}
+static void mp_handle_templates_list( const std::string &msg, const peer_admission &recipient )
 {
     try {
         JsonValue jv = json_loader::from_string( msg );
@@ -5090,14 +5062,14 @@ static void mp_handle_templates_list( const std::string &msg )
             out.member( "names", missing );
             out.end_object();
         }
-        mp_send_payload( oss.str() );
+        mp_send_payload( oss.str(), recipient );
         mp_log( "[cdda-mp] TEMPLATES: requested " + std::to_string( missing.size() ) );
     } catch( const JsonError &e ) {
         mp_log( "[cdda-mp] TEMPLATES list parse error: " + std::string( e.what() ) );
     }
 }
 
-static void mp_handle_template_request( const std::string &msg )
+static void mp_handle_template_request( const std::string &msg, const peer_admission &recipient )
 {
     try {
         JsonValue jv = json_loader::from_string( msg );
@@ -5124,7 +5096,7 @@ static void mp_handle_template_request( const std::string &msg )
                 out.member( "content", *content );
                 out.end_object();
             }
-            mp_send_payload( oss.str() );
+            mp_send_payload( oss.str(), recipient );
             ++sent;
         }
         mp_log( "[cdda-mp] TEMPLATES: sent " + std::to_string( sent ) + " requested" );
@@ -5253,8 +5225,8 @@ std::string mp_game_report_section()
              + ( hw.empty() ? std::string() : "  (world: " + hw + ")" ) + "\n";
     } else if( is_host_mode() ) {
         s += "- Co-op Partner (client): "
-             + ( mp_session().peer.partner_name_cached.empty() ? std::string( "<none connected>" )
-                 : mp_session().peer.partner_name_cached ) + "\n";
+             + ( mp_partner_observation().partner_name_cached.empty() ? std::string( "<none connected>" )
+                 : mp_partner_observation().partner_name_cached ) + "\n";
     }
 #if defined(_WIN32)
     s += "- Co-op Logs (attach to bug reports): %USERPROFILE%\\cdda-mp-server.log (host) / "
@@ -5696,18 +5668,18 @@ static void check_separation_warning( const tripoint_abs_ms &a, const tripoint_a
         mp_session().presentation.separation_tier = 3;
     } else if( dist >= 60 ) {
         mp_session().presentation.separation_tier = std::max( mp_session().presentation.separation_tier,
-            2 );
+                2 );
     } else if( dist >= 40 ) {
         mp_session().presentation.separation_tier = std::max( std::min(
-                mp_session().presentation.separation_tier, 2 ), 1 );
+                    mp_session().presentation.separation_tier, 2 ), 1 );
     } else if( dist < 34 ) {
         mp_session().presentation.separation_tier = 0;
     } else if( dist < 55 ) {
         mp_session().presentation.separation_tier = std::min( mp_session().presentation.separation_tier,
-            1 );
+                1 );
     } else if( dist < 63 ) {
         mp_session().presentation.separation_tier = std::min( mp_session().presentation.separation_tier,
-            2 );
+                2 );
     }
     if( mp_session().presentation.separation_tier != prev ) {
         if( mp_session().presentation.separation_tier == 0 ) {
@@ -5748,7 +5720,7 @@ void process_mp_events()
     // TODO(roadmap): real multi-depth queue for lockstep relaxation / input
     // buffering — see ROADMAP.md "Action queue depth"
     mp_event event;
-    bool turn_action_processed = false;
+    std::set<uint64_t> acted_peers;
     bool state_sync = false;
     size_t drained_events = 0;
     size_t drained_bytes = 0;
@@ -5768,15 +5740,15 @@ void process_mp_events()
             return true;
         }
         state_sync = is_state_sync_message( queued.data );
-        return !turn_action_processed || state_sync;
+        return acted_peers.count( queued.admission.peer_id() ) == 0 || state_sync;
     };
     while( get_mp_queue().pop_if( event, can_drain ) ) {
         ++drained_events;
         drained_bytes += event.data.size();
         // A late disconnect/action from a former transport peer must not act on
         // the currently bound character. Display names are not connection IDs.
-        if( event.evt_type != mp_event::type::connect &&
-            !mp_session().accepts_remote_event( event.admission ) ) {
+        remote_player_session *recipient = mp_session().find_remote( event.admission );
+        if( event.evt_type != mp_event::type::connect && !recipient ) {
             continue;
         }
         if( event.evt_type == mp_event::type::action ) {
@@ -5801,12 +5773,12 @@ void process_mp_events()
                 }
                 break;
             case mp_event::type::disconnect:
-                remove_remote_player();
+                remove_remote_player( *recipient );
                 break;
             case mp_event::type::action:
-                handle_remote_action( event.display_name, event.data );
+                handle_remote_action( *recipient, event.display_name, event.data );
                 if( !state_sync ) {
-                    turn_action_processed = true;
+                    acted_peers.insert( event.admission.peer_id() );
                 }
                 break;
         }
@@ -5916,6 +5888,11 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
 
 static void remove_client_host_npc()
 {
+    for( const auto &entry : mp_session().client_player_views ) {
+        remove_player_view( *entry.second );
+    }
+    mp_session().client_player_views.clear();
+    mp_session().client_host_player_id = {};
     if( !mp_session().client_host_spawned ) {
         return;
     }
@@ -5939,6 +5916,7 @@ static void remove_client_host_npc()
 static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::string &name,
                                     bool host_in_vehicle, bool host_ctrl_veh )
 {
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
     map &m = get_map();
 
     if( !mp_session().client_host_spawned ) {
@@ -6041,21 +6019,62 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
     host_npc->controlling_vehicle = host_ctrl_veh;
 }
 
+static void apply_player_roster( const JsonObject &message )
+{
+    const player_id host( message.get_string( "host_player" ) );
+    const player_id self( message.get_string( "self_player" ) );
+    std::map<player_id, JsonObject> roster;
+    for( const JsonObject member : message.get_array( "players" ) ) {
+        member.allow_omitted_members();
+        const player_id id( member.get_string( "player" ) );
+        if( !id.valid() || id == host || id == self || !roster.emplace( id, member ).second ) {
+            throw std::runtime_error( "Invalid multiplayer roster identity" );
+        }
+        if( mp_session().client_player_views.count( id ) == 0 && !member.has_object( "appearance" ) ) {
+            throw std::runtime_error( "New player view requires a complete appearance" );
+        }
+    }
+    mp_session().client_host_player_id = host;
+    for( const auto &entry : roster ) {
+        auto &view = mp_session().client_player_views[entry.first];
+        if( !view ) {
+            view = std::make_unique<player_view>();
+        }
+        apply_player_view( entry.second, *view );
+    }
+    for( auto it = mp_session().client_player_views.begin();
+         it != mp_session().client_player_views.end(); ) {
+        if( roster.count( it->first ) == 0 ) {
+            remove_player_view( *it->second );
+            it = mp_session().client_player_views.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    mp_save_npc_ids();
+}
+
 // NOLINTNEXTLINE(readability-function-size)
 bool client_apply_message( const std::string &msg )
 {
     if( !is_client_mode() ) {
         return false;
     }
-    if( msg.find( "pickup_result" ) != std::string::npos ) {
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    if( msg.find( "pickup_result" ) != std::string::npos ||
+        msg.find( "inventory_update" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
             JsonObject result = value.get_object();
             result.allow_omitted_members();
+            if( result.get_string( "type", "" ) == "inventory_update" ) {
+                apply_inventory_update( get_avatar(), result, mp_session().client_pickup );
+                return true;
+            }
             if( result.get_string( "type", "" ) == "pickup_result" ) {
                 const bool complete = result.get_bool( "complete" );
                 if( apply_pickup_result( get_avatar(), result, mp_session().client_pickup ) && !complete ) {
-                    add_msg( m_info, _( "Some selected items could not be picked up." ) );
+                    add_msg( m_info, _( "Some selected items could not be moved." ) );
                 }
                 return true;
             }
@@ -6438,57 +6457,6 @@ bool client_apply_message( const std::string &msg )
 
     // Trade delta: the host traded with our proxy — apply item changes to our
     // real avatar so items don't vanish when the next worn_sync overwrites the proxy.
-    if( msg.find( R"("type":"trade_delta")" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            avatar &av = get_avatar();
-            // DIAG (pass-item deadlock, temp): capture the client's grant/move/ack
-            // state when a pass/trade is applied. The host hangs in SRV-WAIT after a
-            // pass-in-vehicle because the client ends at moves<=0 + queued move + no
-            // ack. This handler doesn't touch moves itself, so we want to see whether
-            // moves are already 0 here (grant lost / spent elsewhere) and whether an
-            // ack is pending. Pair with CLI-GRANT / CLI-DRAIN-END.
-            mp_log( "[cdda-mp] TRADE-APPLY: moves=" + std::to_string( av.get_moves() ) +
-                    " ack=" + std::to_string( is_client_waiting_for_ack() ) +
-                    " ms_since_grant=" + std::to_string( ms_since_last_grant() ) + "ms" );
-            // "give" = items the host gave to our proxy → add to our avatar
-            if( jo.has_array( "give" ) ) {
-                for( const JsonValue &iv : jo.get_array( "give" ) ) {
-                    JsonObject io = iv.get_object();
-                    io.allow_omitted_members();
-                    item tmp;
-                    tmp.deserialize( io );
-                    av.i_add( tmp );
-                    mp_log( "[cdda-mp] trade_delta: gained " + tmp.typeId().str() );
-                }
-            }
-            // "take" = items taken from our proxy → remove from our avatar
-            if( jo.has_array( "take" ) ) {
-                for( const JsonValue &iv : jo.get_array( "take" ) ) {
-                    JsonObject io = iv.get_object();
-                    io.allow_omitted_members();
-                    item tmp;
-                    tmp.deserialize( io );
-                    const itype_id tid = tmp.typeId();
-                    bool found = false;
-                    av.remove_items_with( [&tid, &found]( const item & i ) {
-                        if( !found && i.typeId() == tid ) {
-                            found = true;
-                            return true;
-                        }
-                        return false;
-                    }, 1 );
-                    mp_log( "[cdda-mp] trade_delta: lost " + tid.str()
-                            + ( found ? " (ok)" : " (NOT FOUND)" ) );
-                }
-            }
-        } catch( const JsonError &e ) {
-            mp_log( std::string( "[cdda-mp] trade_delta parse error: " ) + e.what() );
-        }
-        return true;
-    }
 
     const bool is_state = msg.find( R"("type":"state")" ) != std::string::npos ||
                           msg.find( R"("type": "state")" ) != std::string::npos;
@@ -6511,6 +6479,7 @@ bool client_apply_message( const std::string &msg )
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
         mp_log( "[cdda-mp] STATE-APPLY: parse done" );
+        mp_session().client_turn.group_fast_forward = jo.get_bool( "group_fast_forward", false );
 
         // Sync host's calendar turn so the client sees the correct time, lighting, and weather.
         if( jo.has_int( "calendar_turn" ) ) {
@@ -6521,16 +6490,16 @@ bool client_apply_message( const std::string &msg )
             mp_apply_step _s( "teleport" );
             JsonObject pos = jo.get_object( "pos" );
             pos.allow_omitted_members();
-            mp_session().peer.mp_remote_pos = tripoint_abs_ms{
+            mp_session().host_observation.mp_remote_pos = tripoint_abs_ms{
                 pos.get_int( "x" ), pos.get_int( "y" ), pos.get_int( "z" )
             };
-            client_teleport_avatar( mp_session().peer.mp_remote_pos );
+            client_teleport_avatar( mp_session().host_observation.mp_remote_pos );
         }
 
         std::string host_name;
         jo.read( "host_name", host_name );
         if( !host_name.empty() ) {
-            mp_session().peer.partner_name_cached = host_name;
+            mp_session().host_observation.partner_name_cached = host_name;
         }
 
         if( jo.has_object( "host_pos" ) ) {
@@ -6546,32 +6515,39 @@ bool client_apply_message( const std::string &msg )
             update_client_host_npc( host_pos, host_name, host_in_veh, host_ctrl_v );
         }
 
+        if( jo.has_array( "players" ) ) {
+            apply_player_roster( jo );
+            mp_cancel_help_if_partner_done();
+        }
+
         // Track the host's current activity for HUD + partner-notice display.
         if( jo.has_string( "host_activity" ) ) {
-            mp_session().peer.partner_activity = jo.get_string( "host_activity" );
+            mp_session().host_observation.partner_activity = jo.get_string( "host_activity" );
+            mp_session().host_observation.partner_help_target = jo.get_string( "host_help_target", "" );
             mp_partner_activity_transition_check();
         }
         if( jo.has_int( "host_activity_pct" ) ) {
             const int new_pct = jo.get_int( "host_activity_pct" );
             // ASSIST-DISPLAY diag: when does the client actually receive a fresh
             // host pct vs. when its screen redraws?  Change-gated.
-            if( new_pct != mp_session().peer.partner_activity_pct ) {
+            if( new_pct != mp_session().host_observation.partner_activity_pct ) {
                 mp_log( "[cdda-mp] ASSIST-PCT: client recv host_activity_pct=" +
                         std::to_string( new_pct ) );
             }
-            mp_session().peer.partner_activity_pct = new_pct;
+            mp_session().host_observation.partner_activity_pct = new_pct;
         }
         if( jo.has_int( "host_activity_moves_total" ) ) {
-            mp_session().peer.partner_activity_moves_total = jo.get_int( "host_activity_moves_total" );
+            mp_session().host_observation.partner_activity_moves_total =
+                jo.get_int( "host_activity_moves_total" );
         }
         if( jo.has_int( "host_morale" ) ) {
-            mp_session().peer.partner_morale = jo.get_int( "host_morale" );
+            mp_session().host_observation.partner_morale = jo.get_int( "host_morale" );
         }
         if( jo.has_int( "host_hp_cur" ) ) {
-            mp_session().peer.partner_hp_cur = jo.get_int( "host_hp_cur" );
+            mp_session().host_observation.partner_hp_cur = jo.get_int( "host_hp_cur" );
         }
         if( jo.has_int( "host_hp_max" ) ) {
-            mp_session().peer.partner_hp_max = jo.get_int( "host_hp_max" );
+            mp_session().host_observation.partner_hp_max = jo.get_int( "host_hp_max" );
         }
         // Ping (CLIENT ONLY — the host adopts the mirrored client_rtt instead,
         // since subtracting our stamp against the host's clock would be garbage).
@@ -6581,7 +6557,7 @@ bool client_apply_message( const std::string &msg )
         if( is_client_mode() && jo.has_int( "host_ping_echo" ) ) {
             const int64_t stamp = jo.get_int( "host_ping_echo" );
             if( stamp >= 0 && stamp == mp_session().client_turn.pending_ping_stamp ) {
-                mp_session().peer.partner_ping_ms = static_cast<int>( mp_mono_ms() - stamp );
+                mp_session().host_observation.partner_ping_ms = static_cast<int>( mp_mono_ms() - stamp );
                 mp_session().client_turn.pending_ping_stamp = -1; // consumed; hold this value until next send
             }
         }
@@ -6590,7 +6566,7 @@ bool client_apply_message( const std::string &msg )
         // the client sets local = host on every state packet, drift here is
         // the gap between packets — useful sanity indicator.
         if( jo.has_int( "calendar_turn" ) ) {
-            mp_session().peer.partner_calendar_turn = jo.get_int( "calendar_turn" );
+            mp_session().host_observation.partner_calendar_turn = jo.get_int( "calendar_turn" );
         }
 
         // Host→client tap-on-shoulder: cancel local wait activity if the
@@ -6619,7 +6595,7 @@ bool client_apply_message( const std::string &msg )
                     }
                 }
                 add_msg( _( "%s taps you on the shoulder, snapping you out of your wait." ),
-                         host_name );
+                         jo.get_string( "wake_from", host_name ) );
             }
         }
 
@@ -6638,15 +6614,16 @@ bool client_apply_message( const std::string &msg )
             mp_log( "[cdda-mp] DIAG cli-render: proxy='" + host_name + "' own_av='" +
                     get_avatar().name + "'" );
             if( jo.has_bool( "partner_swapped" ) && jo.get_bool( "partner_swapped" ) ) {
-                add_msg( _( "%s swaps places with you." ), host_name );
+                add_msg( _( "%s swaps places with you." ), jo.get_string( "swap_from", host_name ) );
             }
             if( jo.has_bool( "partner_pushed" ) && jo.get_bool( "partner_pushed" ) ) {
-                add_msg( _( "%s pushes you out of the way." ), host_name );
+                add_msg( _( "%s pushes you out of the way." ), jo.get_string( "push_from", host_name ) );
             }
         }
 
         if( jo.has_float( "host_light" ) || jo.has_int( "host_light" ) ) {
-            mp_session().peer.mp_host_luminance = static_cast<float>( jo.get_float( "host_light" ) );
+            mp_session().host_observation.mp_host_luminance = static_cast<float>
+                    ( jo.get_float( "host_light" ) );
         }
 
         // Dress the host NPC with the items the host player is wearing and apply
@@ -7712,7 +7689,7 @@ static void client_capture_avatar_msgs()
         return;
     }
     const auto new_msgs = Messages::recent_messages( static_cast<size_t>( cur -
-        mp_session().client_turn.client_msg_watermark ) );
+                          mp_session().client_turn.client_msg_watermark ) );
     mp_session().client_turn.client_msg_watermark = cur;
     const std::string client_name = get_avatar().name;
     for( const auto &[time_str, text] : new_msgs ) {
@@ -7740,7 +7717,8 @@ static void client_capture_avatar_msgs()
             // "Now reading X" → "Roy is now reading X"
             out.insert( 0, client_name + " is " );
         }
-        mp_addressee_to_you( out, client_name );   // partner's name → "you" (guarded)
+        mp_addressee_to_you( out, client_name,
+                             mp_session().host_observation.partner_name_cached );
         mp_session().client_turn.client_msgs_pending.push_back( out );
     }
 }
@@ -7875,6 +7853,7 @@ std::string client_enrich_action( const std::string &json )
         }
         const std::string client_act_id = mp_session().client_turn.client_turn_activity;
         enriched += R"(,"client_activity":")" + client_act_id + "\"";
+        enriched += ",\"client_help_target\":" + wire_quote( activity_help_target( av.activity ) );
         // Progress percentage of the live activity, for the host's Co-op panel.
         // mp_compute_activity_pct handles crafting (item_counter-based) as
         // well as standard moves_total-based activities.
@@ -7902,7 +7881,7 @@ std::string client_enrich_action( const std::string &json )
             const int64_t stamp = mp_mono_ms();
             mp_session().client_turn.pending_ping_stamp = stamp;
             enriched += ",\"client_ping\":" + std::to_string( stamp );
-            enriched += ",\"client_rtt\":" + std::to_string( mp_session().peer.partner_ping_ms );
+            enriched += ",\"client_rtt\":" + std::to_string( mp_session().host_observation.partner_ping_ms );
         }
         if( !mp_session().client_turn.client_msgs_pending.empty() ) {
             std::string msgs = "[";
@@ -7991,26 +7970,37 @@ const std::string &get_client_turn_activity()
     return mp_session().client_turn.client_turn_activity;
 }
 
-float get_host_luminance()
-{
-    return mp_session().peer.mp_host_luminance;
-}
-
-float get_remote_player_luminance()
-{
-    return mp_session().peer.mp_remote_player_luminance;
-}
-
 character_id get_host_npc_character_id()
 {
     return mp_session().client_host_actor.id();
 }
 
-character_id get_remote_player_npc_character_id()
+std::vector<player_light> player_lights()
 {
-    return mp_session().remote_actor.id();
+    std::vector<player_light> result;
+    if( is_client_mode() ) {
+        const npc *host = mp_host_view_actor();
+        if( host && mp_session().host_observation.mp_host_luminance > 0 ) {
+            result.push_back( { host->pos_bub(), mp_session().host_observation.mp_host_luminance } );
+        }
+        for( const auto &entry : mp_session().client_player_views ) {
+            const npc *actor = mp_loaded_actor( entry.second->actor );
+            const float luminance = entry.second->observation.mp_remote_player_luminance;
+            if( actor && luminance > 0 ) {
+                result.push_back( { actor->pos_bub(), luminance } );
+            }
+        }
+    } else if( is_hosting() ) {
+        for( const auto &entry : mp_session().remote_players ) {
+            auto &recipient = *entry.second;
+            const npc *actor = mp_remote_actor( recipient );
+            if( actor && recipient.observation.mp_remote_player_luminance > 0 ) {
+                result.push_back( { actor->pos_bub(), recipient.observation.mp_remote_player_luminance } );
+            }
+        }
+    }
+    return result;
 }
-
 void client_request_pickup( const Pickup::selection &selection )
 {
     avatar &who = get_avatar();
@@ -8379,7 +8369,8 @@ static mp_tile_state compute_tile_state( const tripoint_abs_ms &abs )
 }
 
 // Server: scan the sync area and emit tile entries whose ter/furn/items changed since last broadcast.
-static std::string build_tile_changes( const tripoint_abs_ms &center, int radius )
+static std::string build_tile_changes( remote_player_session &recipient,
+                                       const tripoint_abs_ms &center, int radius )
 {
     std::string out = "[";
     bool first = true;
@@ -8455,7 +8446,7 @@ static std::string build_tile_changes( const tripoint_abs_ms &center, int radius
             const std::string partial_con_sig = mp_partial_con_sig( bub );
             const bool has_pc = m.partial_con_at( bub ) != nullptr;
 
-            auto &baseline = mp_session().replication.host.tile_baseline[abs];
+            auto &baseline = recipient.replication.tile_baseline[abs];
             if( baseline.ter == ter_str && baseline.furn == furn_str &&
                 baseline.items_sig == items_sig && baseline.fields_sig == fields_sig &&
                 baseline.trap_sig == trap_sig && baseline.graffiti_sig == graffiti_sig &&
@@ -8516,7 +8507,8 @@ static std::string build_tile_changes( const tripoint_abs_ms &center, int radius
     return out;
 }
 
-static std::string build_monster_list( const tripoint_abs_ms &center, int radius )
+static std::string build_monster_list( remote_player_session &recipient,
+                                       const tripoint_abs_ms &center, int radius )
 {
     // Periodic keyframe: every KEYFRAME_INTERVAL broadcasts, drop the delta cache
     // so the full snapshot goes out. Self-heals any drift (a fresh joiner that
@@ -8532,9 +8524,9 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
         return e && *e && *e != '0';
     }();
     const bool keyframe = s_force_keyframe ||
-                          ( mp_session().replication.host.keyframe_ctr++ % KEYFRAME_INTERVAL ) == 0;
+                          ( recipient.replication.keyframe_ctr++ % KEYFRAME_INTERVAL ) == 0;
     if( keyframe ) {
-        mp_session().replication.host.server_mon_last_sent.clear();
+        recipient.replication.server_mon_last_sent.clear();
     }
 
     std::string out = "[";
@@ -8578,12 +8570,12 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
         // Delta gate: emit only if new or changed since last broadcast. nid + id
         // are stable, so an identical record string means x/y/z/hp/facing are all
         // unchanged → the client already holds this exact state, omit it.
-        auto cached = mp_session().replication.host.server_mon_last_sent.find( nid );
-        if( cached != mp_session().replication.host.server_mon_last_sent.end() && cached->second == rec ) {
+        auto cached = recipient.replication.server_mon_last_sent.find( nid );
+        if( cached != recipient.replication.server_mon_last_sent.end() && cached->second == rec ) {
             ++n_skipped;
             continue;
         }
-        mp_session().replication.host.server_mon_last_sent[nid] = rec;
+        recipient.replication.server_mon_last_sent[nid] = rec;
         if( !first ) {
             out += ',';
         }
@@ -8595,11 +8587,11 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
     // Prune cache entries for nids no longer in radius so a monster that leaves
     // and later re-enters is re-sent in full (its state may have changed while
     // out of range, and the client removed it via removed_monsters on exit).
-    if( mp_session().replication.host.server_mon_last_sent.size() > seen_nids.size() ) {
-        for( auto it = mp_session().replication.host.server_mon_last_sent.begin();
-             it != mp_session().replication.host.server_mon_last_sent.end(); ) {
+    if( recipient.replication.server_mon_last_sent.size() > seen_nids.size() ) {
+        for( auto it = recipient.replication.server_mon_last_sent.begin();
+             it != recipient.replication.server_mon_last_sent.end(); ) {
             it = seen_nids.count( it->first ) ? std::next( it )
-                 : mp_session().replication.host.server_mon_last_sent.erase( it );
+                 : recipient.replication.server_mon_last_sent.erase( it );
         }
     }
     // Log only when the excluded-near set changes — this fires every broadcast
@@ -8801,7 +8793,7 @@ static void apply_tile_changes( JsonObject &jo )
             const ter_id &cur_ter = m.ter( bub );
             const furn_id &cur_furn = m.furn( bub );
             mp_session().replication.client.client_terfurn_baseline[abs] = cur_ter.id().str() + '|' +
-                cur_furn.id().str();
+                    cur_furn.id().str();
 
             std::string cur_items_sig;
             for( const item &it : m.i_at( bub ) ) {
@@ -9305,7 +9297,7 @@ static void apply_monster_sync( JsonObject &jo )
     mirrors.begin_sync( ct );
 
     constexpr int SYNC_RADIUS = 84;   // match build_monster_list's broadcast radius
-    const tripoint_abs_ms region_center = mp_session().peer.mp_remote_pos;
+    const tripoint_abs_ms region_center = mp_session().host_observation.mp_remote_pos;
 
     // Collect all client monsters inside the sync region for cleanup pass.
     std::unordered_set<monster *> in_region;
@@ -9557,7 +9549,7 @@ static void apply_monster_sync( JsonObject &jo )
             seen_now[key] = strikes;
             phantom_log += mon->type->id.str() + "@dAvatar" +
                            std::to_string( std::max( std::abs( mp.x() - av.x() ),
-                               std::abs( mp.y() - av.y() ) ) ) +
+                                           std::abs( mp.y() - av.y() ) ) ) +
                            "(s" + std::to_string( strikes ) + ") ";
             if( strikes >= PHANTOM_CULL_SYNCS ) {
                 phantom_cull.push_back( mon );
@@ -9621,14 +9613,14 @@ static void apply_monster_sync( JsonObject &jo )
     g->cleanup_dead();
 }
 
-static std::string build_viewport( const tripoint_bub_ms &center )
+static std::string build_viewport( remote_player_session &recipient, const tripoint_bub_ms &center )
 {
     constexpr int W = 41;
     constexpr int H = 21;
 
     map &m = get_map();
     avatar &u = get_avatar();
-    npc *remote = mp_remote_actor();
+    npc *remote = mp_remote_actor( recipient );
 
     tripoint_bub_ms avatar_pos = u.pos_bub();
 
@@ -9674,110 +9666,47 @@ static std::string build_viewport( const tripoint_bub_ms &center )
            R"(,"tiles":")" + tiles + "\"}";
 }
 
-void mp_post_trade( npc &np, const std::list<item> &items_given,
-                    const std::list<item> &items_taken )
-{
-    const bool host_side = is_server_mode() || is_hosting();
-    const bool client_side = is_client_mode();
 
-    if( !host_side && !client_side ) {
-        return;
-    }
-
-    if( !is_partner_npc( np.getID() ) ) {
-        return;
-    }
-
-    std::string give_json = "[";
-    bool gfirst = true;
-    for( const item &it : items_given ) {
-        if( !gfirst ) {
-            give_json += ',';
-        }
-        gfirst = false;
-        std::ostringstream oss;
-        {
-            JsonOut out( oss );
-            it.serialize( out );
-        }
-        give_json += oss.str();
-    }
-    give_json += "]";
-
-    std::string take_json = "[";
-    bool tfirst = true;
-    for( const item &it : items_taken ) {
-        if( !tfirst ) {
-            take_json += ',';
-        }
-        tfirst = false;
-        std::ostringstream oss;
-        {
-            JsonOut out( oss );
-            it.serialize( out );
-        }
-        take_json += oss.str();
-    }
-    take_json += "]";
-
-    std::string payload = "{\"type\":\"trade_delta\","
-                          "\"give\":" + give_json + ","
-                          "\"take\":" + take_json + "}";
-
-    mp_log( "[cdda-mp] trade_delta send: give=" + std::to_string( items_given.size() )
-            + " take=" + std::to_string( items_taken.size() ) );
-
-    if( host_side ) {
-        auto s = get_active_server();
-        if( s ) {
-            s->post_send( mp_session().remote_admission, payload + "\n" );
-        }
-    } else {
-        client_send( payload );
-    }
-}
-
-void mp_handle_pass_item()
+void mp_handle_pass_item( character_id target )
 {
     if( !is_hosting() && !is_client_mode() ) {
         return;
     }
-
-    npc *partner = get_partner_npc();
-    if( !partner ) {
-        add_msg( m_warning, _( "Your partner is not connected." ) );
-        return;
-    }
-
-    avatar &av = get_avatar();
-    if( rl_dist( av.pos_bub().raw(), partner->pos_bub().raw() ) > 1 ) {
+    npc *partner = get_partner_npc( target );
+    avatar &giver = get_avatar();
+    if( !partner || rl_dist( giver.pos_abs(), partner->pos_abs() ) > 1 ) {
         add_msg( m_warning, _( "You need to be adjacent to your partner." ) );
         return;
     }
-
-    item_location loc = game_menus::inv::titled_menu( av,
-        _( "Pass what?" ), _( "You have no items to pass." ) );
-    if( !loc ) {
+    item_location source = game_menus::inv::titled_menu( giver,
+                           _( "Pass what?" ), _( "You have no items to pass." ) );
+    if( !source ) {
         return;
     }
-
-    item given = *loc;
-
-    av.i_rem( loc.get_item() );
-    partner->i_add( given );
-
-    std::list<item> give_list = { given };
-    std::list<item> take_list;
-    mp_post_trade( *partner, give_list, take_list );
-
-    av.mod_moves( -100 );
-    add_msg( _( "You pass the %s to %s." ), given.tname(), partner->get_name() );
-
     if( is_client_mode() ) {
-        mp_client_post_action();
+        const auto request = make_give_request( source, partner_identity( partner->getID() ),
+                                                mp_session().client_pickup );
+        if( request ) {
+            client_send( client_enrich_action( *request ) );
+            giver.set_moves( 0 );
+            client_mark_action_sent();
+        }
+        return;
+    }
+    auto *recipient = mp_session().find_remote( partner->getID() );
+    if( !recipient || recipient->detach_pending ||
+        recipient->pickup.revision >= std::numeric_limits<int64_t>::max() - 1 ) {
+        return;
+    }
+    const std::string name = source->tname();
+    if( Pickup::give_item( giver, *partner, source ) ) {
+        publish_inventory_update( *recipient );
+        host_broadcast_post_action();
+        add_msg( _( "You pass the %s to %s." ), name, partner->get_name() );
+    } else {
+        add_msg( m_info, _( "Your partner cannot carry that item." ) );
     }
 }
-
 // --- High-five partner action -------------------------------------------
 
 // A quick social beat, calibrated just under morale_chat. Anti-farm: only
@@ -9802,9 +9731,9 @@ static constexpr int high_five_moves_cost = 100;
 // Mirror tap-on-shoulder's interruptible set exactly (is_partner_in_wait_activity,
 // which covers all four ACT_WAIT* variants): idle or any wait == available; any
 // real activity (craft / read / sleep / butcher / build / ...) == busy, left alone.
-static bool mp_partner_is_busy()
+static bool mp_partner_is_busy( character_id target )
 {
-    const std::string &a = mp_session().peer.partner_activity;
+    const std::string &a = mp_partner_observation( target ).partner_activity;
     if( a.empty() ) {
         return false;
     }
@@ -9812,12 +9741,12 @@ static bool mp_partner_is_busy()
            a != "ACT_WAIT_WEATHER" && a != "ACT_WAIT_NPC";
 }
 
-void mp_high_five()
+void mp_high_five( character_id target )
 {
     if( !is_hosting() && !is_client_mode() ) {
         return;
     }
-    npc *partner = get_partner_npc();
+    npc *partner = get_partner_npc( target );
     if( !partner ) {
         add_msg( m_warning, _( "Your partner is not connected." ) );
         return;
@@ -9829,8 +9758,9 @@ void mp_high_five()
     }
     // Availability gate — a busy partner is never interrupted; the gesture
     // just whiffs with flavor (same restraint as tap-on-shoulder).
-    if( mp_partner_is_busy() ) {
-        const std::string verb = mp_activity_verb_phrase( mp_session().peer.partner_activity );
+    if( mp_partner_is_busy( target ) ) {
+        const std::string verb = mp_activity_verb_phrase( mp_partner_observation(
+                                     target ).partner_activity );
         if( verb.empty() ) {
             add_msg( m_info, _( "%s is busy and leaves you hanging." ), partner->get_name() );
         } else {
@@ -9852,11 +9782,20 @@ void mp_high_five()
     // The name rides in the packet so the receiver renders the correct
     // attribution itself (avoids the "You"->name substitution path that the
     // yell feature mis-uses).
-    const std::string payload = R"({"type":"high_five","name":")" +
-                                av.get_name() + "\"}";
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "type", "high_five" );
+    out.member( "name", av.get_name() );
+    out.member( "target_player", partner_identity( partner->getID() ).str() );
+    out.end_object();
+    const std::string payload = encoded.str();
     if( is_hosting() || is_server_mode() ) {
+        mp_apply_high_five( *partner );
         if( auto s = get_active_server() ) {
-            s->post_send( mp_session().remote_admission, payload + "\n" );
+            if( const auto *recipient = mp_session().find_remote( partner->getID() ) ) {
+                s->post_send( recipient->admission, payload + "\n" );
+            }
         }
     } else if( is_client_mode() ) {
         client_send( payload );
@@ -9885,9 +9824,9 @@ void mp_relay_shout( int vol, bool order )
             " order=" + ( order ? "1" : "0" ) );
 }
 
-static void mp_handle_shout_recv( const std::string &msg )
+static void mp_handle_shout_recv( remote_player_session &recipient, const std::string &msg )
 {
-    npc *remote = mp_remote_actor();
+    npc *remote = mp_remote_actor( recipient );
     if( !remote ) {
         return;
     }
@@ -9944,7 +9883,7 @@ static void mp_send_note_msg( const std::string &payload )
     if( is_server_mode() || is_hosting() ) {
         auto s = get_active_server();
         if( s ) {
-            s->post_send( mp_session().remote_admission, payload + "\n" );
+            s->post_broadcast( payload + "\n" );
         }
     } else if( is_client_mode() ) {
         client_send( payload );
@@ -9971,9 +9910,9 @@ void mp_sync_note_add( const tripoint_abs_omt &pos, std::string_view text )
         }
     }
     std::string payload = R"({"type":"note_sync","op":"add","x":)" + std::to_string( pos.x() ) + ","
-                           "\"y\":" + std::to_string( pos.y() ) + ","
-                           "\"z\":" + std::to_string( pos.z() ) + ","
-                           "\"text\":\"" + escaped + "\"}";
+                          "\"y\":" + std::to_string( pos.y() ) + ","
+                          "\"z\":" + std::to_string( pos.z() ) + ","
+                          "\"text\":\"" + escaped + "\"}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: add at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -9988,8 +9927,8 @@ void mp_sync_note_delete( const tripoint_abs_omt &pos )
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"delete","x":)" + std::to_string( pos.x() ) + ","
-                           "\"y\":" + std::to_string( pos.y() ) + ","
-                           "\"z\":" + std::to_string( pos.z() ) + "}";
+                          "\"y\":" + std::to_string( pos.y() ) + ","
+                          "\"z\":" + std::to_string( pos.z() ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: delete at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10004,10 +9943,10 @@ void mp_sync_note_danger( const tripoint_abs_omt &pos, int radius, bool dangerou
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"danger","x":)" + std::to_string( pos.x() ) + ","
-                           "\"y\":" + std::to_string( pos.y() ) + ","
-                           "\"z\":" + std::to_string( pos.z() ) + ","
-                           "\"radius\":" + std::to_string( radius ) + ","
-                           "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
+                          "\"y\":" + std::to_string( pos.y() ) + ","
+                          "\"z\":" + std::to_string( pos.z() ) + ","
+                          "\"radius\":" + std::to_string( radius ) + ","
+                          "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: danger at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) + " r=" + std::to_string( radius ) );
@@ -10050,13 +9989,40 @@ static void mp_handle_note_sync( const std::string &msg )
     }
 }
 
-std::string serialize_remote_player_state()
+static std::string build_player_roster( remote_player_session &recipient )
 {
-    if( !mp_session().remote_connected ) {
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_array();
+    std::set<std::string> present;
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &other = *entry.second;
+        if( &other == &recipient || !other.connected ) {
+            continue;
+        }
+        if( const npc *actor = mp_remote_actor( other ) ) {
+            const std::string &id = other.credentials.id.str();
+            present.insert( id );
+            write_player_view( out, other.credentials.id, *actor, other.observation,
+                               recipient.replication.player_appearance[id] );
+        }
+    }
+    out.end_array();
+    for( auto it = recipient.replication.player_appearance.begin();
+         it != recipient.replication.player_appearance.end(); ) {
+        it = present.count( it->first ) == 0 ? recipient.replication.player_appearance.erase(
+                 it ) : std::next( it );
+    }
+    return encoded.str();
+}
+
+std::string serialize_remote_player_state( remote_player_session &recipient )
+{
+    if( !recipient.connected ) {
         return R"({"type":"state","connected":false})";
     }
 
-    npc *remote = mp_remote_actor();
+    npc *remote = mp_remote_actor( recipient );
     if( !remote ) {
         return R"({"type":"state","connected":false})";
     }
@@ -10068,13 +10034,13 @@ std::string serialize_remote_player_state()
     const avatar &host = get_avatar();
     tripoint_abs_ms host_pos = host.pos_abs();
 
-    std::string viewport = build_viewport( pos_bub );
+    std::string viewport = build_viewport( recipient, pos_bub );
     // Broadcast every monster in the reality bubble the client can see (~84-tile
     // view radius), not just 40 — at 40, host monsters in the 40–84 band weren't
     // sent (the EXCLUDED-NEAR diag) and the client filled the gap with its own
     // divergent local-mapgen monsters.  Must match the client's cull radius in
     // apply_monster_sync.
-    std::string monsters     = build_monster_list( pos, 84 );
+    std::string monsters     = build_monster_list( recipient, pos, 84 );
 
     // Death-based monster removal (mirrors removed_vehicles, but glitch-proof).
     // A monster is "removed" only if it had a net id last broadcast and is no
@@ -10094,7 +10060,7 @@ std::string serialize_remote_player_state()
     std::string removed_monsters_json = "[";
     {
         bool rmfirst = true;
-        for( const uint32_t old_nid : mp_session().replication.host.server_mon_known_nids ) {
+        for( const uint32_t old_nid : recipient.replication.server_mon_known_nids ) {
             if( mon_alive_now.count( old_nid ) ) {
                 continue;
             }
@@ -10108,13 +10074,13 @@ std::string serialize_remote_player_state()
         }
     }
     removed_monsters_json += ']';
-    mp_session().replication.host.server_mon_known_nids = std::move( mon_alive_now );
+    recipient.replication.server_mon_known_nids = std::move( mon_alive_now );
 
     // Scan for tile changes around both the remote player AND the host so that
     // doors/terrain the host interacts with also reach the client.
-    std::string tile_changes = build_tile_changes( pos, 20 );
+    std::string tile_changes = build_tile_changes( recipient, pos, 20 );
     if( host_pos != pos ) {
-        std::string host_tc = build_tile_changes( host_pos, 20 );
+        std::string host_tc = build_tile_changes( recipient, host_pos, 20 );
         if( host_tc.size() > 2 ) { // not just "[]"
             if( tile_changes == "[]" ) {
                 tile_changes = host_tc;
@@ -10230,10 +10196,10 @@ std::string serialize_remote_player_state()
     host_worn_sig += std::to_string( host.weight_carried().value() );
 
     std::string host_worn_json;
-    if( host_worn_sig == mp_session().replication.host.host_worn_sig_cache ) {
-        host_worn_json = mp_session().replication.host.host_worn_json_cache;
+    if( host_worn_sig == recipient.replication.host_worn_sig_cache ) {
+        host_worn_json = recipient.replication.host_worn_json_cache;
     } else {
-        mp_session().replication.host.host_worn_sig_cache = host_worn_sig;
+        recipient.replication.host_worn_sig_cache = host_worn_sig;
         host_worn_json = "[";
         bool hwfirst = true;
         for( const item *it : host_worn_items ) {
@@ -10249,13 +10215,13 @@ std::string serialize_remote_player_state()
             host_worn_json += woss.str();
         }
         host_worn_json += "]";
-        mp_session().replication.host.host_worn_json_cache = host_worn_json;
+        recipient.replication.host_worn_json_cache = host_worn_json;
         mp_log( "[cdda-mp] host_worn changed: [" + host_worn_sig + "]" );
     }
 
     // Build the messages JSON.  Two sources:
     //   1. g_action_msgs_pending — all messages from the last remote player action,
-    //      already NPC→"You" substituted and filtered by flush_action_msgs().
+    //      already NPC→"You" substituted and filtered by flush_action_msgs( recipient ).
     //   2. Name-filtered messages generated between actions (monster attacks on the
     //      NPC, etc.) that arrived since the last broadcast.
     const std::string &npc_name = remote->name;
@@ -10283,16 +10249,16 @@ std::string serialize_remote_player_state()
     };
 
     // 1. Action-window messages (unfiltered except for host-avatar "You..." skips).
-    for( const std::string &text : mp_session().host_turn.action_msgs_pending ) {
+    for( const std::string &text : recipient.turn.action_msgs_pending ) {
         append_msg( text );
     }
-    mp_session().host_turn.action_msgs_pending.clear();
+    recipient.turn.action_msgs_pending.clear();
 
     // 1b. Host avatar combat messages forwarded with "You" → host name attribution.
-    for( const std::string &text : mp_session().host_turn.host_action_msgs_pending ) {
+    for( const std::string &text : recipient.turn.host_action_msgs_pending ) {
         append_msg( text );
     }
-    mp_session().host_turn.host_action_msgs_pending.clear();
+    recipient.turn.host_action_msgs_pending.clear();
 
     // 2. Between-action messages mentioning the remote player's NPC or their vehicle.
     // When the client is driving, physics messages (engine dies, collision, etc.)
@@ -10304,12 +10270,12 @@ std::string serialize_remote_player_state()
         }
     }
     const unsigned long long current_msg_count = Messages::size();
-    if( current_msg_count > mp_session().host_turn.last_forwarded_msg_count ) {
+    if( current_msg_count > recipient.turn.last_forwarded_msg_count ) {
         const size_t new_count = static_cast<size_t>( current_msg_count -
-            mp_session().host_turn.last_forwarded_msg_count );
-        mp_session().host_turn.last_forwarded_msg_count = current_msg_count;
+                                 recipient.turn.last_forwarded_msg_count );
+        recipient.turn.last_forwarded_msg_count = current_msg_count;
         const std::vector<std::pair<std::string, std::string>> new_msgs =
-            Messages::recent_messages( new_count );
+                    Messages::recent_messages( new_count );
         for( const auto &[time_str, text] : new_msgs ) {
             ( void )time_str;
             // Swap/push messages are rendered on the client via semantic flags
@@ -10377,16 +10343,16 @@ std::string serialize_remote_player_state()
             // turn-rendering), which would oscillate the baseline and trigger
             // a snapshot resend on every turn, looping client+host indefinitely.
             const size_t parts_now = v->part_count_real();
-            auto pc_it = mp_session().replication.host.server_veh_parts_count.find( nid );
-            if( pc_it != mp_session().replication.host.server_veh_parts_count.end() &&
+            auto pc_it = recipient.replication.server_veh_parts_count.find( nid );
+            if( pc_it != recipient.replication.server_veh_parts_count.end() &&
                 pc_it->second != parts_now ) {
                 mp_log( "[cdda-mp] HOST-VEH-PARTS-CHANGED: nid=" + std::to_string( nid )
                         + " was=" + std::to_string( pc_it->second )
                         + " now=" + std::to_string( parts_now )
                         + " name=\"" + v->name + "\"" );
-                mp_session().replication.host.client_known_veh_nids.erase( nid );
+                recipient.replication.client_known_veh_nids.erase( nid );
             }
-            mp_session().replication.host.server_veh_parts_count[nid] = parts_now;
+            recipient.replication.server_veh_parts_count[nid] = parts_now;
             const tripoint_abs_ms vabs = v->pos_abs();
             const int face_deg     = static_cast<int>( std::lround( to_degrees( v->face.dir() ) ) );
             const int turn_dir_deg = static_cast<int>( std::lround( to_degrees( v->turn_dir ) ) );
@@ -10449,7 +10415,7 @@ std::string serialize_remote_player_state()
                     items_json += item_json;
                 }
                 items_json += "]";
-                auto &baseline = mp_session().replication.host.host_veh_cargo_baseline[vp_abs];
+                auto &baseline = recipient.replication.host_veh_cargo_baseline[vp_abs];
                 if( baseline == items_sig ) {
                     continue; // no change since last broadcast
                 }
@@ -10482,9 +10448,9 @@ std::string serialize_remote_player_state()
             // subsequent broadcasts stay slim.  Field name "snapshot" is a
             // nested JSON object so no escaping is needed.
             std::string snapshot_field;
-            if( !mp_session().replication.host.client_known_veh_nids.count( nid ) ) {
+            if( !recipient.replication.client_known_veh_nids.count( nid ) ) {
                 snapshot_field = ",\"snapshot\":" + ::serialize( *v );
-                mp_session().replication.host.client_known_veh_nids.insert( nid );
+                recipient.replication.client_known_veh_nids.insert( nid );
                 mp_log( "[cdda-mp] HOST-VEH-SNAPSHOT: nid=" + std::to_string( nid )
                         + " name=\"" + v->name + "\" bytes="
                         + std::to_string( snapshot_field.size() ) );
@@ -10518,7 +10484,7 @@ std::string serialize_remote_player_state()
     std::string removed_vehicles_json = "[";
     {
         bool rfirst = true;
-        for( const uint32_t old_nid : mp_session().replication.host.server_veh_live_nids ) {
+        for( const uint32_t old_nid : recipient.replication.server_veh_live_nids ) {
             if( alive_now.count( old_nid ) ) {
                 continue;
             }
@@ -10527,13 +10493,13 @@ std::string serialize_remote_player_state()
             }
             rfirst = false;
             removed_vehicles_json += std::to_string( old_nid );
-            mp_session().replication.host.client_known_veh_nids.erase( old_nid );
-            mp_session().replication.host.server_veh_parts_count.erase( old_nid );
+            recipient.replication.client_known_veh_nids.erase( old_nid );
+            recipient.replication.server_veh_parts_count.erase( old_nid );
             mp_log( "[cdda-mp] HOST-VEH-REMOVED: nid=" + std::to_string( old_nid ) );
         }
     }
     removed_vehicles_json += ']';
-    mp_session().replication.host.server_veh_live_nids = std::move( alive_now );
+    recipient.replication.server_veh_live_nids = std::move( alive_now );
 
     // Host's active effects (bleeding, poison, splints, buffs…) so the client's
     // host-proxy shows the same status + overhead markers. The client->host
@@ -10574,6 +10540,9 @@ std::string serialize_remote_player_state()
     host_hp_json += "]";
 
     return "{\"type\":\"state\","
+           "\"host_player\":\"" + host.get_player_id().str() + "\","
+           "\"self_player\":\"" + recipient.credentials.id.str() + "\","
+           "\"players\":" + build_player_roster( recipient ) + ","
            "\"calendar_turn\":" + std::to_string( to_turn<int>( calendar::turn ) ) + ","
            "\"host_name\":\"" + host.name + "\","
            "\"pos\":{\"x\":" + std::to_string( pos.x() ) +
@@ -10595,6 +10564,7 @@ std::string serialize_remote_player_state()
            "\"host_in_vehicle\":" + std::string( host.in_vehicle ? "true" : "false" ) + ","
            "\"host_ctrl_veh\":" + std::string( host.controlling_vehicle ? "true" : "false" ) + ","
            "\"host_activity\":\"" + ( host.activity ? host.activity.id().str() : "" ) + "\","
+           "\"host_help_target\":" + wire_quote( activity_help_target( host.activity ) ) + ","
            "\"host_activity_pct\":" + std::to_string(
                mp_compute_activity_pct( host.activity ) ) + ","
            "\"host_activity_moves_total\":" + std::to_string(
@@ -10602,64 +10572,67 @@ std::string serialize_remote_player_state()
            "\"host_morale\":" + std::to_string( host.get_morale_level() ) + ","
            "\"host_hp_cur\":" + std::to_string( mp_worst_limb_hp( host ).first ) + ","
            "\"host_hp_max\":" + std::to_string( mp_worst_limb_hp( host ).second ) + ","
-           "\"host_ping_echo\":" + std::to_string( mp_session().host_turn.last_client_ping_stamp ) + ","
+           "\"host_ping_echo\":" + std::to_string( recipient.turn.last_client_ping_stamp ) + ","
            "\"host_effects\":" + host_effects_json + ","
            "\"host_hp\":" + host_hp_json + ","
-    + ( []() -> std::string {
+    + ( [&recipient]() -> std::string {
         // One-shot wake_client signal — emit on this broadcast then clear.
-        if( mp_session().host_turn.pending_wake_client )
-    {
-        mp_session().host_turn.pending_wake_client = false;
-            return "\"wake_client\":true,";
+        if( recipient.turn.pending_wake_client )
+        {
+            recipient.turn.pending_wake_client = false;
+            return "\"wake_client\":true,\"wake_from\":\"" + json_escape_str( recipient.turn.wake_from ) +
+            "\",";
         }
         return "";
     }() ) +
-    ( []() -> std::string {
+    ( [&recipient]() -> std::string {
         // One-shot host→client swap/push signals — client renders the
         // observer message locally from the proxy name (no text relay).
         std::string s;
-        if( mp_session().host_turn.pending_partner_swap )
+        if( recipient.turn.pending_partner_swap )
         {
-            mp_session().host_turn.pending_partner_swap = false;
-            s += "\"partner_swapped\":true,";
+            recipient.turn.pending_partner_swap = false;
+            s += "\"partner_swapped\":true,\"swap_from\":\"" + json_escape_str( recipient.turn.swap_from ) +
+            "\",";
         }
-        if( mp_session().host_turn.pending_partner_push )
+        if( recipient.turn.pending_partner_push )
         {
-            mp_session().host_turn.pending_partner_push = false;
-            s += "\"partner_pushed\":true,";
+            recipient.turn.pending_partner_push = false;
+            s += "\"partner_pushed\":true,\"push_from\":\"" + json_escape_str( recipient.turn.push_from ) +
+            "\",";
         }
         return s;
     }() ) +
     "\"bodyparts\":" + bparts_json +
-    ",\"moves\":" + std::to_string( mp_session().host_turn.remote_moves ) +
+    ",\"moves\":" + std::to_string( recipient.turn.remote_moves ) +
     ",\"speed\":" + std::to_string( remote->get_speed() ) +
     R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
-     ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
-     ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
-     ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
-            // Authoritative grab + hauling state for the client's character.
-            // Client mirrors these onto its local avatar each tick so the
-            // local SP grab/haul code (and its move-cost gating) reads the
-            // same values the host is enforcing.
-            // MP-FIXME: npc::get_grab_type stubbed for CCB
-     ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
-     ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
-     ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
-     ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
-     ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
+    ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
+    ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
+    ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
+    // Authoritative grab + hauling state for the client's character.
+    // Client mirrors these onto its local avatar each tick so the
+    // local SP grab/haul code (and its move-cost gating) reads the
+    // same values the host is enforcing.
+    // MP-FIXME: npc::get_grab_type stubbed for CCB
+    ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
+    ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
+    ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
+    ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
+    ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
     [&]() -> std::string {
         if( !remote->controlling_vehicle )
-    {
-        return "";
-    }
-    map &vmap = get_map();
-    const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
+        {
+            return "";
+        }
+        map &vmap = get_map();
+        const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
         if( !ovp )
-    {
-        return "";
-    }
-    const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
-    return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
+        {
+            return "";
+        }
+        const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
+        return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
         + ",\"y\":" + std::to_string( vabs.y() )
         + ",\"z\":" + std::to_string( vabs.z() ) + "}";
     }() +
@@ -10669,11 +10642,13 @@ std::string serialize_remote_player_state()
     ",\"vehicles\":" + vehicles_json +
     ",\"removed_vehicles\":" + removed_vehicles_json +
     ",\"msgs\":" + msgs_json +
-    ",\"grant_seq\":" + std::to_string( mp_session().host_turn.grant_seq ) +
+    ",\"group_fast_forward\":" + ( should_fast_forward() ? std::string( "true" ) :
+                                   std::string( "false" ) ) +
+    ",\"grant_seq\":" + std::to_string( recipient.turn.grant_seq ) +
     ",\"sfx\":" + [&]() -> std::string {
         std::string j = "[";
         bool first = true;
-        for( const MPSfxEvent &e : mp_session().host_turn.host_sfx_queue )
+        for( const MPSfxEvent &e : recipient.turn.host_sfx_queue )
         {
             if( !first ) {
                 j += ',';
@@ -10687,7 +10662,7 @@ std::string serialize_remote_player_state()
             j += std::to_string( e.vol );
             j += '}';
         }
-        mp_session().host_turn.host_sfx_queue.clear();
+        recipient.turn.host_sfx_queue.clear();
         j += "]";
         return j;
     }() +

@@ -15,6 +15,7 @@
 #include "activity_actor_definitions.h"
 #include "auto_pickup.h"
 #include "character.h"
+#include "cata_scope_helpers.h"
 #include "crafting.h"
 #include "contents_change_handler.h"
 #include "debug.h"
@@ -322,7 +323,7 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
         case STASH: {
             int last_charges = newit.charges;
             ret_val<item_location> ret = player_character.i_add_or_fill( newit, true, nullptr, &it,
-                /*allow_drop=*/false, /*allow_wield=*/false, false );
+                                         /*allow_drop=*/false, /*allow_wield=*/false, false );
             item_location added_it = ret.value();
             if( ret.success() ) {
                 craft_relocated( added_it );
@@ -364,12 +365,12 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
         if( !is_bulk_load( pre_info, info ) ) {
             // Cost to take an item from a container or map
             player_character.mod_moves( -( loc.obtain_cost( player_character,
-                    quantity ) + ( distance * info.extra_moves_per_distance ) ) );
+                                           quantity ) + ( distance * info.extra_moves_per_distance ) ) );
         } else {
             // Pure cost to handling item excluding overhead.
             player_character.mod_moves( ( -std::max( player_character.item_handling_cost( *loc, true, 0,
-                    quantity,
-                    true ), 1 ) + ( distance * info.extra_moves_per_distance ) ) );
+                                          quantity,
+                                          true ), 1 ) + ( distance * info.extra_moves_per_distance ) ) );
         }
         contents_change_handler handler;
         handler.unseal_pocket_containing( loc );
@@ -592,4 +593,26 @@ void Pickup::pick_info::set_src( const item_location &src_ )
 void Pickup::pick_info::set_dst( const item_location &dst_ )
 {
     dst = dst_;
+}
+
+bool Pickup::give_item( Character &giver, Character &receiver, item_location source )
+{
+    if( &giver == &receiver || !source || !source.held_by( giver ) ||
+        giver.posz() != receiver.posz() || rl_dist( giver.pos_abs(), receiver.pos_abs() ) > 1 ||
+        source->made_of( phase_id::LIQUID ) ||
+        ( !receiver.can_stash( *source ) &&
+          ( receiver.has_weapon() || !receiver.can_wield( *source ).success() ) ) ) {
+        return false;
+    }
+    const int receiver_moves = receiver.get_moves();
+    const on_out_of_scope restore_receiver_moves( [&]() {
+        receiver.set_moves( receiver_moves );
+    } );
+    // Native obtain handles container removal, ownership and craft relocation.
+    // Preflight above excludes the interactive overflow/drop fallback.
+    if( !source.obtain( receiver ) ) {
+        return false;
+    }
+    giver.mod_moves( -100 );
+    return true;
 }

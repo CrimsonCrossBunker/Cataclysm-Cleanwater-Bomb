@@ -23,7 +23,7 @@ namespace
 {
 using clock = std::chrono::steady_clock;
 // Lift only after the engine's per-player simulation state is migrated.
-constexpr size_t max_game_peers = 1;
+constexpr size_t max_game_peers = 3;
 
 }
 
@@ -217,7 +217,7 @@ void server::on_message( uint64_t id, const std::string &msg )
             return entry.second.admission.active();
         } );
         if( joined >= max_game_peers ) {
-            reject( "Server is full (current engine supports one remote player)" );
+            reject( "Server is full (four players including the host)" );
             return;
         }
         peer.probed = true;
