@@ -5755,7 +5755,18 @@ void process_mp_events()
     mp_event event;
     bool turn_action_processed = false;
     bool state_sync = false;
+    size_t drained_events = 0;
+    size_t drained_bytes = 0;
+    constexpr size_t max_drain_events = 64;
+    constexpr size_t max_drain_bytes = 1024 * 1024;
     const auto can_drain = [&]( const mp_event & queued ) {
+        // Let one large packet make progress, then yield. Count stale and
+        // bookkeeping events too; neither may monopolize the owner thread.
+        if( drained_events >= max_drain_events ||
+            ( drained_events > 0 &&
+              queued.data.size() > max_drain_bytes - std::min( drained_bytes, max_drain_bytes ) ) ) {
+            return false;
+        }
         state_sync = false;
         if( queued.evt_type != mp_event::type::action ||
             !mp_session().accepts_remote_event( queued.admission ) ) {
@@ -5765,6 +5776,8 @@ void process_mp_events()
         return !turn_action_processed || state_sync;
     };
     while( get_mp_queue().pop_if( event, can_drain ) ) {
+        ++drained_events;
+        drained_bytes += event.data.size();
         // A late disconnect/action from a former transport peer must not act on
         // the currently bound character. Display names are not connection IDs.
         if( event.evt_type != mp_event::type::connect &&

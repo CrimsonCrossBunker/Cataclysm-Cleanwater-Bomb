@@ -157,7 +157,9 @@ void server::on_disconnected( uint64_t id )
             std::lock_guard<std::mutex> lock( impl_->mutex );
             impl_->published.erase( id );
         }
-        impl_->events->push( { mp_event::type::disconnect, peer.name, "", peer.admission } );
+        if( !impl_->events->push( { mp_event::type::disconnect, peer.name, "", peer.admission } ) ) {
+            throw std::runtime_error( "Missing reserved multiplayer disconnect event" );
+        }
         post_broadcast( "{\"type\":\"player_left\",\"name\":" + wire_quote( peer.name ) + "}" );
     }
 }
@@ -177,11 +179,16 @@ void server::on_message( uint64_t id, const std::string &msg )
         // Allow the reliable error to leave before netcode tears down the peer.
         peer.closing = clock::now() + std::chrono::seconds( 1 );
     };
+    const auto enqueue_action = [&]() {
+        if( !impl_->events->push( { mp_event::type::action, peer.name, msg, peer.admission } ) ) {
+            reject( "Host incoming action queue is full; this message was not accepted. Reconnect to resynchronize." );
+        }
+    };
     std::map<std::string, std::string> fields;
     if( !read_handshake( msg, fields ) ) {
         if( peer.admission.active() ) {
             // Large gameplay packets are parsed by the game thread.
-            impl_->events->push( { mp_event::type::action, peer.name, msg, peer.admission } );
+            enqueue_action();
         } else {
             reject( "Invalid handshake" );
         }
@@ -250,14 +257,14 @@ void server::on_message( uint64_t id, const std::string &msg )
                                      ",\"host_omt\":[" + std::to_string( ( *welcome.host_omt )[0] ) + "," +
                                      std::to_string( ( *welcome.host_omt )[1] ) + "," +
                                      std::to_string( ( *welcome.host_omt )[2] ) + "]" : "";
-        send( "{\"type\":\"welcome\",\"transport\":\"ccb-renet-2\",\"player_id\":" +
-              wire_quote( type == "join" ? credentials.id.str() : "probe" ) +
-              ",\"peer_id\":" + std::to_string( id ) +
-              ",\"world\":" + wire_quote( welcome.world_name ) +
-              ",\"world_id\":" + wire_quote( welcome.world.str() ) +
-              ",\"host_name\":" + wire_quote( welcome.player_name ) +
-              ",\"current_turn\":0,\"seed\":" + std::to_string( welcome.seed ) +
-              position + "}" );
+        const std::string welcome_packet =
+            "{\"type\":\"welcome\",\"transport\":\"ccb-renet-2\",\"player_id\":" +
+            wire_quote( type == "join" ? credentials.id.str() : "probe" ) +
+            ",\"peer_id\":" + std::to_string( id ) +
+            ",\"world\":" + wire_quote( welcome.world_name ) +
+            ",\"world_id\":" + wire_quote( welcome.world.str() ) +
+            ",\"host_name\":" + wire_quote( welcome.player_name ) +
+            ",\"current_turn\":0,\"seed\":" + std::to_string( welcome.seed ) + position + "}";
         if( type == "join" ) {
             peer.name = name;
             peer.admission = peer_admission::create( id );
@@ -267,17 +274,23 @@ void server::on_message( uint64_t id, const std::string &msg )
                     peer.admission.retire();
                     return;
                 }
+                if( !impl_->events->push( { mp_event::type::connect, name, "", peer.admission, credentials } ) ) {
+                    peer.admission.retire();
+                    peer.admission = {};
+                    reject( "Host incoming queue cannot admit another connection; try again after it drains." );
+                    return;
+                }
                 impl_->published[id] = peer.admission;
             }
-            impl_->events->push( { mp_event::type::connect, name, "", peer.admission, credentials } );
             post_broadcast( "{\"type\":\"player_joined\",\"name\":" + wire_quote( name ) + "}" );
             mp_log_host( "[ccb-mp] peer joined: " + std::to_string( id ) );
         }
+        send( welcome_packet );
     } else if( type == "quit" ) {
         send( "{\"type\":\"goodbye\"}" );
         peer.closing = clock::now() + std::chrono::milliseconds( 100 );
     } else if( peer.admission.active() ) {
-        impl_->events->push( { mp_event::type::action, peer.name, msg, peer.admission } );
+        enqueue_action();
     } else {
         reject( "Join required before gameplay messages" );
     }
@@ -288,31 +301,38 @@ void server::run()
     mp_log_host( "[ccb-mp] Renet UDP host listening on " + std::to_string( port_ ) );
     try {
         while( !impl_->stopping ) {
-            // Observe membership after draining: a join that arrives between
-            // two runtime calls must not be discarded as an unknown route.
-            const auto packets = impl_->transport.drain( 128 );
-            const auto connected = impl_->transport.connected_peers();
-            for( uint64_t id : connected ) {
-                impl_->peers.try_emplace( id );
-            }
-            std::vector<uint64_t> removed;
-            for( const auto &entry : impl_->peers ) {
-                const auto &peer = entry.second;
-                if( std::find( connected.begin(), connected.end(), entry.first ) == connected.end() ) {
-                    removed.push_back( entry.first );
-                } else if( clock::now() >= peer.closing ||
-                           ( !peer.probed && clock::now() - peer.created > std::chrono::seconds( 10 ) ) ) {
-                    impl_->transport.disconnect_peer( entry.first );
-                    removed.push_back( entry.first );
+            // Bound transient packet copies while retaining the worker
+            // quantum; idle loops still check disconnects and outgoing work.
+            for( size_t packet_index = 0; packet_index < 128; ++packet_index ) {
+                // Observe membership after draining: a join that arrives between
+                // two runtime calls must not be discarded as an unknown route.
+                const auto packets = impl_->transport.drain( 1 );
+                const auto connected = impl_->transport.connected_peers();
+                for( uint64_t id : connected ) {
+                    impl_->peers.try_emplace( id );
                 }
-            }
-            for( uint64_t id : removed ) {
-                on_disconnected( id );
-            }
-            for( const renet_packet &packet : packets ) {
-                std::string msg;
-                if( decode_game_packet( packet.payload, msg ) ) {
-                    on_message( packet.peer_id, msg );
+                std::vector<uint64_t> removed;
+                for( const auto &entry : impl_->peers ) {
+                    const auto &peer = entry.second;
+                    if( std::find( connected.begin(), connected.end(), entry.first ) == connected.end() ) {
+                        removed.push_back( entry.first );
+                    } else if( clock::now() >= peer.closing ||
+                               ( !peer.probed && clock::now() - peer.created > std::chrono::seconds( 10 ) ) ) {
+                        impl_->transport.disconnect_peer( entry.first );
+                        removed.push_back( entry.first );
+                    }
+                }
+                for( uint64_t id : removed ) {
+                    on_disconnected( id );
+                }
+                for( const renet_packet &packet : packets ) {
+                    std::string msg;
+                    if( decode_game_packet( packet.payload, msg ) ) {
+                        on_message( packet.peer_id, msg );
+                    }
+                }
+                if( packets.empty() ) {
+                    break;
                 }
             }
             std::deque<impl::delivery> outgoing;
@@ -367,6 +387,11 @@ void server::update_welcome( server_welcome welcome )
     if( !impl_->stopping ) {
         impl_->welcome = std::move( welcome );
     }
+}
+
+host_session::host_session( size_t event_limit, size_t byte_limit ) :
+    events_( std::make_shared<event_queue>( event_limit, byte_limit ) )
+{
 }
 
 host_session::~host_session()

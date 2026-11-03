@@ -72,6 +72,108 @@ void receive_exact( client_connection &client, const std::string &expected )
 }
 } // namespace
 
+void exercise_queue_limits()
+{
+    const auto admission = peer_admission::create( 51 );
+    event_queue queue( 4, 4096 );
+    require( queue.push( { mp_event::type::connect, "owner", "", admission } ), "join admitted" );
+    require( !queue.push( { mp_event::type::connect, "owner", "", admission } ),
+             "duplicate admission cannot reserve twice" );
+    mp_event event;
+    require( queue.pop( event ) && event.evt_type == mp_event::type::connect, "join first" );
+    require( queue.current_usage().reserved_disconnects == 1,
+             "disconnect reservation outlives join pop" );
+    require( !queue.wait_for_event( 1ms ), "reservation is not a queued event" );
+    for( const char *data : {
+             "first", "second", "third"
+         } ) {
+        require( queue.push( { mp_event::type::action, "owner", data, admission } ), "action admitted" );
+    }
+    require( !queue.push( { mp_event::type::action, "owner", "overflow", admission } ),
+             "bounded event count rejects overflow" );
+    const auto full = queue.current_usage();
+    require( full.queued == 3 && full.reserved_disconnects == 1 && full.bytes <= 4096,
+             "reservation is included in queue accounting" );
+    admission.retire();
+    require( queue.push( { mp_event::type::disconnect, "owner", "", admission } ),
+             "full queue accepts its reserved disconnect after retirement" );
+    require( queue.current_usage().bytes == full.bytes, "reservation transfer needs no extra budget" );
+    for( const char *data : {
+             "first", "second", "third"
+         } ) {
+        require( queue.pop( event ) && event.data == data, "accepted action FIFO preserved" );
+    }
+    require( queue.pop( event ) && event.evt_type == mp_event::type::disconnect &&
+             event.admission.matches( admission ), "disconnect follows accepted actions" );
+    require( queue.empty() && queue.current_usage().bytes == 0, "pop releases charged storage" );
+
+    event_queue no_reserve( 1, 4096 );
+    require( !no_reserve.push( { mp_event::type::connect, "owner", "", peer_admission::create( 52 ) } ),
+             "join cannot consume the disconnect reservation" );
+    event_queue bytes( 8, 2048 );
+    require( bytes.push( { mp_event::type::action, "", std::string( 900, 'x' ), {} } ),
+             "first byte-limited event" );
+    require( !bytes.push( { mp_event::type::action, "", std::string( 900, 'y' ), {} } ),
+             "byte overflow rejected" );
+    require( bytes.pop( event ) && bytes.current_usage().bytes == 0, "byte budget reclaimed" );
+    std::string retained( 4096, 'x' );
+    retained.resize( 1 );
+    require( !bytes.push( { mp_event::type::action, "", std::move( retained ), {} } ),
+             "string capacity is counted, not just its short current length" );
+    require( queue.push( { mp_event::type::connect, "new owner", "", peer_admission::create( 53 ) } ),
+             "new admission after draining" );
+    queue.clear();
+    const auto cleared = queue.current_usage();
+    require( cleared.queued == 0 && cleared.reserved_disconnects == 0 && cleared.bytes == 0,
+             "session clear releases queued and reserved storage" );
+}
+
+void exercise_inbound_overload( uint16_t port )
+{
+    const server_welcome info{ "budget world", "host", 11, {}, world_id( std::string( 32, '5' ) ) };
+    const player_credentials player{ player_id( std::string( 32, 'a' ) ), std::string( 64, 'b' ) };
+    host_session host( 4, 1024 * 1024 );
+    require( host.start( port, "", "abc", info ), "bounded host starts" );
+    client_connection client;
+    client.set_enabled( true );
+    require( client.connect( "127.0.0.1", port, "budget player", "", "abc" ), "bounded host probe" );
+    client.send_join( player );
+    const auto joined = next_event( host );
+    require( joined.evt_type == mp_event::type::connect, "bounded host joins" );
+    for( int i = 0; i < 4; ++i ) {
+        client.send( "{\"type\":\"action\",\"action\":\"wait\",\"sequence\":" + std::to_string( i ) + "}" );
+    }
+    receive_exact( client,
+                   R"({"type":"error","message":"Host incoming action queue is full; this message was not accepted. Reconnect to resynchronize."})" );
+    await( [&]() {
+        const auto usage = host.events().current_usage();
+        return usage.queued == 4 && usage.reserved_disconnects == 0;
+    }, "disconnect reaches a saturated queue without draining its actions" );
+    for( int i = 0; i < 3; ++i ) {
+        require( next_event( host ).data ==
+                 "{\"type\":\"action\",\"action\":\"wait\",\"sequence\":" + std::to_string( i ) + "}",
+                 "overload preserves each previously admitted action in order" );
+    }
+    const auto disconnected = next_event( host );
+    require( disconnected.evt_type == mp_event::type::disconnect &&
+             disconnected.admission.matches( joined.admission ), "ordered reserved disconnect" );
+    require( host.running() && host.events().empty(), "overload ends only the offending admission" );
+    client.reset();
+    host.stop();
+
+    host_session cannot_join( 1, 4096 );
+    require( cannot_join.start( port, "", "abc", info ), "undersized host starts" );
+    require( client.connect( "127.0.0.1", port, "budget player", "", "abc" ), "undersized host probe" );
+    client.send_join( player );
+    receive_exact( client,
+                   R"({"type":"error","message":"Host incoming queue cannot admit another connection; try again after it drains."})" );
+    require( cannot_join.events().empty() &&
+             cannot_join.events().current_usage().reserved_disconnects == 0,
+             "rejected join creates neither actor event nor reservation" );
+    client.reset();
+    cannot_join.stop();
+}
+
 void exercise_context_ownership( uint16_t first_port, uint16_t second_port )
 {
     // Equal entity/coordinate keys in two Rust worlds must have independent
