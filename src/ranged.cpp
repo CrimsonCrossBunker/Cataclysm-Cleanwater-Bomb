@@ -2,6 +2,7 @@
 #include "ranged_actions.h"
 #include "sling.h"
 #include "mp_gamestate.h"
+#include "mp_client_conn.h"
 #include "fault.h"
 
 #include <algorithm>
@@ -308,6 +309,7 @@ class target_ui
         TargetMode mode = TargetMode::Fire;
         // Weapon being fired/thrown
         item *relevant = nullptr;
+        bool defer_target_effects = false;
         // Cached selection range from player's position
         int range = 0;
         // Sling launches share throwing accuracy, but have their own cost and labels.
@@ -588,6 +590,7 @@ target_handler::trajectory target_handler::mode_throw( avatar &you, item &releva
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = blind_throwing ? target_ui::TargetMode::ThrowBlind : target_ui::TargetMode::Throw;
+    ui.defer_target_effects = cata_mp::is_client_mode();
     ui.relevant = &relevant;
     ui.range = you.throw_range( relevant );
 
@@ -3510,7 +3513,7 @@ target_handler::trajectory target_ui::run()
             break;
         }
         case ExitCode::Fire: {
-            if( mode != TargetMode::SelectOnly ) {
+            if( mode != TargetMode::SelectOnly && !defer_target_effects ) {
                 bool harmful = !( mode == TargetMode::Spell && casting->damage( player_character ) <= 0 );
                 on_target_accepted( harmful );
             }

@@ -1,6 +1,7 @@
 #include "avatar_action.h"
 #include "mp_gamestate.h"
 #include "mp_client_conn.h"
+#include "mp_throw.h"
 
 #include <coordinates.h>
 #include <input_enums.h>
@@ -26,6 +27,7 @@
 #include "avatar.h"
 #include "body_part_set.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "color.h"
 #include "creature.h"
@@ -1306,6 +1308,46 @@ void avatar_action::plthrow( avatar &you, item_location loc,
 
     if( !loc ) {
         add_msg( _( "Never mind." ) );
+        return;
+    }
+
+    if( cata_mp::is_client_mode() ) {
+        if( !cata_mp::can_prepare_throw( you, loc ) ) {
+            add_msg( m_info, _( "You can't throw that item right now." ) );
+            return;
+        }
+        cata_mp::throw_intent intent = cata_mp::make_throw_intent( you, loc );
+        if( !in_mech && !cata_mp::throw_keeps_wielded( you, loc ) && !you.is_wielding( *loc ) ) {
+            if( !avatar_action::check_stealing( you, *loc ) ) {
+                return;
+            }
+            intent.allow_theft = !loc->is_owned_by( you, true );
+        }
+        if( !in_mech && !cata_mp::throw_keeps_wielded( you, loc ) &&
+            !you.is_wielding( *loc ) && you.has_wield_conflicts( *loc ) &&
+            !you.get_wielded_item()->has_flag( flag_NO_UNWIELD ) ) {
+            intent.disposition = query_item_disposition( you, you.get_wielded_item() );
+            if( !intent.disposition ) {
+                return;
+            }
+        }
+        if( blind_throw_from_pos ) {
+            intent.blind_from = here.get_abs( *blind_throw_from_pos );
+            you.setpos( here, *blind_throw_from_pos, false );
+        }
+        g->temp_exit_fullscreen();
+        const on_out_of_scope restore_view( [&]() {
+            you.setpos( intent.origin, false );
+            g->reenter_fullscreen();
+        } );
+        item preview = *loc;
+        const auto trajectory = target_handler::mode_throw( you, preview,
+                                blind_throw_from_pos.has_value() );
+        you.setpos( intent.origin, false );
+        if( !trajectory.empty() ) {
+            intent.target = here.get_abs( trajectory.back() );
+        }
+        cata_mp::client_request_throw( intent );
         return;
     }
 
