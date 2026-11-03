@@ -129,6 +129,7 @@
 #include "point.h"
 #include "proficiency.h"
 #include "ranged.h"
+#include "ranged_actions.h"
 #include "recipe.h"
 #include "requirements.h"
 #include "ret_val.h"
@@ -528,48 +529,7 @@ void aim_activity_actor::start( player_activity &act, Character &who )
 
 bool aim_activity_actor::check_gun_ability_to_shoot( Character &who, item &it )
 {
-
-    if( it.has_fault_flag( "RUINED_GUN" ) ) {
-        who.add_msg_if_player( m_bad, _( "Your %s is little more than an awkward club now." ), it.tname() );
-        return false;
-    }
-
-    // if it's a simple fault, character can try to fix it on the fly
-    if( faults::random_of_type_item_has( it, gun_mechanical_simple ) != fault_id::NULL_ID() ) {
-        // fixing fault should cost more than 1 second
-        // but until game running the next activity actor without ever verifying
-        // was the previous one successful or not will be resolved,
-        // it would be safer to limit it somewhat
-        who.mod_moves( -who.get_speed() );
-        who.recoil = MAX_RECOIL;
-        if( it.has_fault( fault_fail_to_feed ) ) {
-            who.add_msg_if_player( m_good,
-                                   _( "You manually cycle your %s, and load a new round." ),
-                                   it.tname() );
-            it.remove_fault( fault_fail_to_feed );
-            it.set_var( "u_know_round_in_chamber", true );
-        } else if( one_in( std::max( 7.0f,
-                                     ( 15.0f - ( 4.0f * who.get_skill_level( skill_gun ) ) ) ) ) ) {
-            who.add_msg_if_player( m_good,
-                                   _( "Your %s has some mechanical malfunction.  You tried to quickly fix it, and it works now!" ),
-                                   it.tname() );
-            it.remove_single_fault_of_type( gun_mechanical_simple );
-            it.set_var( "u_know_round_in_chamber", true );
-        } else {
-            who.add_msg_if_player( m_bad,
-                                   _( "Your %s has some mechanical malfunction.  You tried to quickly fix it, but failed!" ),
-                                   it.tname() );
-            return false;
-        }
-    }
-
-    if( it.has_fault_flag( "OVERHEATED_GUN" ) ) {
-        who.add_msg_if_player( m_warning,
-                               _( "Your %s status screen indicates the gun is venting." ), it.tname() );
-        return false;
-    }
-
-    return true;
+    return prepare_gun_to_fire( who, it );
 }
 
 void aim_activity_actor::do_turn( player_activity &act, Character &who )
