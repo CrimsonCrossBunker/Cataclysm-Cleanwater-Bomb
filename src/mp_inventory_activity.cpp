@@ -15,6 +15,7 @@
 #include "item.h"
 #include "item_disposition.h"
 #include "item_insert.h"
+#include "item_consumption.h"
 #include "item_location.h"
 #include "item_reload.h"
 #include "item_uid.h"
@@ -54,6 +55,46 @@ insert_item_activity_actor *native_insert( Character &who )
 {
     auto *actor = dynamic_cast<insert_item_activity_actor *>( who.activity.actor.get() );
     return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+consume_activity_actor *native_consume( Character &who )
+{
+    auto *actor = dynamic_cast<consume_activity_actor *>( who.activity.actor.get() );
+    return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+bool start_consume( Character &who, map &here, const JsonObject &request )
+{
+    if( who.activity || who.is_dead_state() || who.get_moves() <= 0 ) {
+        return false;
+    }
+    item_source identity;
+    request.read( "source", identity, true );
+    item_location source = resolve_item_source( who, here, identity );
+    const bool consequences = request.get_bool( "allow_consequences", false );
+    const bool theft = request.get_bool( "allow_theft", false );
+    if( !owned_consumption_allowed( who, source, consequences, theft ) ) {
+        return false;
+    }
+    who.last_item = source->typeId();
+    who.assign_activity( consume_activity_actor( source, false, true, consequences, theft ) );
+    return owns_inventory_activity( who );
+}
+
+bool begin_client_inventory_activity( const activity_actor &actor )
+{
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
+        get_avatar().get_moves() <= 0 ) {
+        return false;
+    }
+    view.active = true;
+    view.finished = false;
+    view.cancel_requested = false;
+    view.needs_placement = false;
+    view.activity.clear();
+    get_avatar().assign_activity( actor );
+    return true;
 }
 
 bool start_insert( Character &who, map &here, const JsonObject &request )
@@ -219,9 +260,11 @@ bool owns_inventory_activity( const Character &who )
     const auto *actor = dynamic_cast<const reload_activity_actor *>( who.activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( who.activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( who.activity.actor.get() );
+    const auto *consume = dynamic_cast<const consume_activity_actor *>( who.activity.actor.get() );
     return ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
            ( unload && unload->is_server_owned() && !unload->is_client_view() ) ||
-           ( insert && insert->is_server_owned() && !insert->is_client_view() );
+           ( insert && insert->is_server_owned() && !insert->is_client_view() ) ||
+           ( consume && consume->is_server_owned() && !consume->is_client_view() );
 }
 
 bool inventory_activity_view( const player_activity &activity )
@@ -229,8 +272,9 @@ bool inventory_activity_view( const player_activity &activity )
     const auto *actor = dynamic_cast<const reload_activity_actor *>( activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( activity.actor.get() );
+    const auto *consume = dynamic_cast<const consume_activity_actor *>( activity.actor.get() );
     return ( actor && actor->is_client_view() ) || ( unload && unload->is_client_view() ) ||
-           ( insert && insert->is_client_view() );
+           ( insert && insert->is_client_view() ) || ( consume && consume->is_client_view() );
 }
 
 std::string execute_inventory_activity_request( Character &who, map &here,
@@ -252,7 +296,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 start_owned_unload( who, here, request );
             } else if( kind == "insert" ) {
                 start_insert( who, here, request );
+            } else if( kind == "consume" ) {
+                start_consume( who, here, request );
             }
+            state.tracks_needs = kind == "consume" || native_consume( who );
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
             if( operation == "cancel" ) {
@@ -260,6 +307,12 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( consume_activity_actor *consume = native_consume( who ) ) {
+                if( !consume->prepare_owned_turn( who ) ) {
+                    who.cancel_activity();
+                } else if( who.get_moves() > 0 && operation == "step" ) {
+                    who.activity.do_turn( who );
+                }
             } else if( insert_item_activity_actor *insert = native_insert( who ) ) {
                 if( !insert->prepare_owned_turn( who ) ) {
                     who.cancel_activity();
@@ -339,6 +392,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             out.member( "can_wield", reload_wield_allowed( who, *actor, *preview ) );
         }
     }
+    if( state.tracks_needs ) {
+        out.member( "needs" );
+        who.store_needs_state( out );
+    }
     out.member( "combat" );
     *out.get_stream() << combat;
     out.set_need_separator();
@@ -357,6 +414,9 @@ bool apply_inventory_activity_result( const JsonObject &response )
     combat.allow_omitted_members();
     if( !apply_combat_result( get_avatar(), combat, session.client_pickup ) ) {
         return true;
+    }
+    if( response.has_object( "needs" ) ) {
+        get_avatar().load_needs_state( response.get_object( "needs" ) );
     }
     if( view.active && response.get_int64( "request" ) == view.pending_request ) {
         view.pending_request = 0;
@@ -381,17 +441,9 @@ void client_start_reload( const item_location &selected, const item_location &ta
                           const item_location &ammo, int quantity, int pocket,
                           bool allow_theft, bool allow_hammer )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
-    if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
-        get_avatar().get_moves() <= 0 ) {
+    if( !begin_client_inventory_activity( reload_activity_actor::client_view() ) ) {
         return;
     }
-    view.active = true;
-    view.finished = false;
-    view.cancel_requested = false;
-    view.needs_placement = false;
-    view.activity.clear();
-    get_avatar().assign_activity( reload_activity_actor::client_view() );
     send_inventory_activity( "start", [&]( JsonOut & out ) {
         out.member( "kind", "reload" );
         out.member( "selected", capture_item_source( get_avatar(), selected ) );
@@ -406,20 +458,14 @@ void client_start_reload( const item_location &selected, const item_location &ta
 
 void client_start_unload( const unload_intent &intent )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
-    if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
-        get_avatar().get_moves() <= 0 ) {
-        return;
-    }
-    view.active = true;
-    view.finished = false;
-    view.cancel_requested = false;
-    view.needs_placement = false;
-    view.activity.clear();
     if( intent.destination.path.empty() ) {
-        get_avatar().assign_activity( unload_activity_actor::client_view() );
+        if( !begin_client_inventory_activity( unload_activity_actor::client_view() ) ) {
+            return;
+        }
     } else {
-        get_avatar().assign_activity( insert_item_activity_actor::client_view() );
+        if( !begin_client_inventory_activity( insert_item_activity_actor::client_view() ) ) {
+            return;
+        }
     }
     send_inventory_activity( "start", [&]( JsonOut & out ) {
         out.member( "kind", "unload" );
@@ -429,20 +475,25 @@ void client_start_unload( const unload_intent &intent )
 
 void client_start_insert( const insert_selection &selection )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
-    if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
-        get_avatar().get_moves() <= 0 ) {
+    if( !begin_client_inventory_activity( insert_item_activity_actor::client_view() ) ) {
         return;
     }
-    view.active = true;
-    view.finished = false;
-    view.cancel_requested = false;
-    view.needs_placement = false;
-    view.activity.clear();
-    get_avatar().assign_activity( insert_item_activity_actor::client_view() );
     send_inventory_activity( "start", [&]( JsonOut & out ) {
         out.member( "kind", "insert" );
         out.member( "insert", selection );
+    } );
+}
+
+void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft )
+{
+    if( !begin_client_inventory_activity( consume_activity_actor::client_view() ) ) {
+        return;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "consume" );
+        out.member( "source", capture_item_source( get_avatar(), source ) );
+        out.member( "allow_consequences", allow_consequences );
+        out.member( "allow_theft", allow_theft );
     } );
 }
 

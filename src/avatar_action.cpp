@@ -1,3 +1,4 @@
+#include "item_consumption.h"
 #include "avatar_action.h"
 #include "mp_gamestate.h"
 #include "mp_unload.h"
@@ -1257,9 +1258,11 @@ void avatar_action::eat( avatar &you, item_location &loc )
         add_msg( _( "Never mind." ) );
         return;
     }
-    loc.overflow( here );
-    you.assign_activity( consume_activity_actor( loc, true ) );
-    you.last_item = item( *loc ).typeId();
+    if( !cata_mp::is_client_mode() ) {
+        loc.overflow( here );
+        you.last_item = loc->typeId();
+    }
+    start_item_consumption( you, loc, true );
 }
 
 void avatar_action::eat_or_use( avatar &you, item_location loc )

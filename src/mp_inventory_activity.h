@@ -21,6 +21,7 @@ struct unload_intent;
 struct inventory_activity_host_state {
     int64_t last_request = 0;
     bool needs_placement = false;
+    bool tracks_needs = false;
 };
 struct inventory_activity_client_state {
     int64_t next_request = 0;
@@ -45,6 +46,7 @@ void client_start_reload( const item_location &selected, const item_location &ta
                           bool allow_theft, bool allow_hammer );
 void client_start_unload( const unload_intent &intent );
 void client_start_insert( const insert_selection &selection );
+void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft );
 void client_step_inventory_activity();
 void client_cancel_inventory_activity();
 void client_update_inventory_activity_view();

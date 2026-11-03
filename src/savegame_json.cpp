@@ -4807,6 +4807,7 @@ void player_morale::load( const JsonObject &jsin )
 {
     jsin.allow_omitted_members();
     jsin.read( "morale", points );
+    invalidate();
 }
 
 void mm_submap::serialize( JsonOut &jsout ) const
