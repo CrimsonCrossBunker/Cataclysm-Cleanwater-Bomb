@@ -16,11 +16,6 @@
     "type": "enchantment",
     "id": "fcl_melee_optimization",
     "condition": "ACTIVE",
-    "hit_you_effect": [
-      {
-        "id": "fcl_generic_speed_bonus",
-        "hit_self": true
-      }
-    ]
+    "hit_you_effect": [ { "id": "fcl_generic_speed_bonus", "hit_self": true } ]
   }
 ]

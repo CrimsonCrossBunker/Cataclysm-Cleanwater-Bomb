@@ -11,7 +11,17 @@
     "price": "1 USD",
     "symbol": ",",
     "color": "green",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "PERSONAL", "WATER_FRIENDLY", "SOFT", "NO_REPAIR", "ALLOWS_NATURAL_ATTACKS", "TRADER_AVOID", "USES_BIONIC_POWER" ],
+    "flags": [
+      "INTEGRATED",
+      "UNBREAKABLE",
+      "PERSONAL",
+      "WATER_FRIENDLY",
+      "SOFT",
+      "NO_REPAIR",
+      "ALLOWS_NATURAL_ATTACKS",
+      "TRADER_AVOID",
+      "USES_BIONIC_POWER"
+    ],
     "charges_per_use": 1,
     "qualities": [ [ "HACK", 4 ] ],
     "tool_ammo": [ "battery" ]
