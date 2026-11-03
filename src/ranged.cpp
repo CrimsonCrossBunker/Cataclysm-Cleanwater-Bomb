@@ -1,6 +1,7 @@
 #include "ranged.h"
 #include "ranged_actions.h"
 #include "sling.h"
+#include "mp_gamestate.h"
 #include "fault.h"
 
 #include <algorithm>
@@ -3421,6 +3422,12 @@ target_handler::trajectory target_ui::run()
                 continue;
             }
             set_last_target();
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                cata_mp::client_request_firearm( dst, "FIRE" );
+                timed_out_action = "AIM";
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             loop_exit_code = ExitCode::Fire;
             break;
         } else if( action == "AIM" ) {
@@ -3431,6 +3438,13 @@ target_handler::trajectory target_ui::run()
             // No confirm_non_enemy_target here because we have not initiated the firing.
             // Aiming can be stopped / aborted at any time.
 
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                set_last_target();
+                cata_mp::client_request_firearm( dst, "AIM" );
+                timed_out_action = "AIM";
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             if( !action_aim() ) {
                 timed_out_action = "AIM";
                 loop_exit_code = ExitCode::Timeout;
@@ -3451,6 +3465,12 @@ target_handler::trajectory target_ui::run()
                 continue;
             }
 
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                cata_mp::client_request_firearm( dst, "DROP_AIM" );
+                timed_out_action = "AIM";
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             action_drop_aim();
         } else if( action == "AIMED_SHOT" || action == "CAREFUL_SHOT" || action == "PRECISE_SHOT" ) {
             if( status != Status::Good ) {
@@ -3463,6 +3483,13 @@ target_handler::trajectory target_ui::run()
                 continue;
             }
 
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                set_last_target();
+                cata_mp::client_request_firearm( dst, action );
+                timed_out_action = action;
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             if( action_aim_and_shoot( action ) ) {
                 loop_exit_code = ExitCode::Fire;
             } else {

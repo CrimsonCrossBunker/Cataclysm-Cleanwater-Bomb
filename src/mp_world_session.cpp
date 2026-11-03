@@ -72,6 +72,7 @@ void world_session::reset_state( bool preserve_pending_client )
     grant_sequence = 0;
     client_turn = {};
     client_pickup = {};
+    client_firearm = {};
     host_observation = {};
     presentation = session_presentation();
     last_marked_world.clear();
