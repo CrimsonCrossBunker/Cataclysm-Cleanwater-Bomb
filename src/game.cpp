@@ -159,6 +159,7 @@
 #include "map_iterator.h"
 #include "map_selector.h"
 #include "mapbuffer.h"
+#include "map_scale_constants.h"
 #include "thread_pool.h"
 #include "mapdata.h"
 #include "mapsharing.h"
@@ -11010,6 +11011,18 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
 
     // Update what parts of the world map we can see
     update_overmap_seen();
+
+    // Keep the loaded world bounded: older submaps are persisted before being
+    // evicted, while the current reality bubble remains resident.
+    static constexpr std::size_t max_buffered_submaps =
+        2 * static_cast<std::size_t>( MAPSIZE ) * MAPSIZE * OVERMAP_LAYERS;
+    if( MAPBUFFER.size() > max_buffered_submaps ) {
+        try {
+            MAPBUFFER.save( false, true, false );
+        } catch( const std::exception &err ) {
+            debugmsg( "Automatic map memory cleanup failed: %s", err.what() );
+        }
+    }
 
     return shift;
 }

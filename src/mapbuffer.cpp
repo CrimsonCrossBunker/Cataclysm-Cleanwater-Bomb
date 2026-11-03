@@ -64,6 +64,12 @@ mapbuffer MAPBUFFER;
 mapbuffer::mapbuffer() = default;
 mapbuffer::~mapbuffer() = default;
 
+std::size_t mapbuffer::size() const
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    return submaps.size();
+}
+
 void mapbuffer::clear()
 {
     // Drop any pending/completed background reads first: their captured paths
@@ -238,6 +244,12 @@ void mapbuffer::prefetch_evict_beyond( const tripoint_abs_omt &center, int max_d
 
 void mapbuffer::save( bool delete_after_save )
 {
+    save( delete_after_save, false, true );
+}
+
+void mapbuffer::save( bool delete_after_save, bool outside_reality_bubble_only,
+                      bool show_progress )
+{
     // The prefetch worker reads the same zzip archives this loop rewrites. Park it
     // (and force it to drop any cached archive handle) for the duration of the save
     // so the save path is the sole writer. Resumes on scope exit, even on throw.
@@ -259,7 +271,7 @@ void mapbuffer::save( bool delete_after_save )
 
     for( auto &elem : submaps ) {
         std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if( last_update + update_interval < now ) {
+        if( show_progress && last_update + update_interval < now ) {
             popup.message( _( "Please wait as the map saves [%d/%d]" ),
                            num_saved_submaps, num_total_submaps );
             ui_manager::redraw();
@@ -285,6 +297,9 @@ void mapbuffer::save( bool delete_after_save )
         const cata_path quad_path = dirname / quad_file_name( om_addr );
 
         bool inside_reality_bubble = here.inbounds( om_addr );
+        if( outside_reality_bubble_only && inside_reality_bubble ) {
+            continue;
+        }
         // delete_on_save deletes everything, otherwise delete submaps
         // outside the current map.
         save_quad( dirname, quad_path, om_addr, submaps_to_delete,

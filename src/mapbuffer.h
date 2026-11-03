@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MAPBUFFER_H
 #define CATA_SRC_MAPBUFFER_H
 
+#include <cstddef>
 #include <list>
 #include <map>
 #include <memory>
@@ -30,6 +31,10 @@ class mapbuffer
          * from the mapbuffer (and deleted).
          **/
         void save( bool delete_after_save = false );
+        void save( bool delete_after_save, bool outside_reality_bubble_only,
+                   bool show_progress );
+
+        std::size_t size() const;
 
         /** Delete all buffered submaps. **/
         void clear();

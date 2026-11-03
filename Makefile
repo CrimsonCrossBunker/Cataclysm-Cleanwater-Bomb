@@ -1262,7 +1262,12 @@ $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
 endif
 
 $(TARGET): $(OBJS) $(SHADERS_STAMP) $(LUA_PLATFORM_LINK_MODE_STAMP)
+ifeq ($(TARGETSYSTEM),WINDOWS)
+	$(file >$(ODIR)/$(notdir $(TARGET)).link.rsp,$(W32FLAGS) -o "$(TARGET)" $(foreach obj,$(OBJS),"$(obj)") $(LDFLAGS))
+	+$(LD) @"$(ODIR)/$(notdir $(TARGET)).link.rsp"
+else
 	+$(LD) $(W32FLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+endif
 ifeq ($(RELEASE), 1)
   ifndef DEBUG_SYMBOLS
     ifneq ($(BACKTRACE),1)
