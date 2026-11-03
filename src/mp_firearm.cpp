@@ -24,10 +24,21 @@
 
 namespace cata_mp
 {
-void finish_firearm_activity( Character &who, firearm_state &state, bool canceled )
+void finish_firearm_activity( Character &who, firearm_state &state, bool canceled,
+                              bool unload_ras )
 {
-    if( state.weapon != 0 ) {
-        state = {};
+    const int64_t weapon_id = state.weapon;
+    const bool started = state.activity_started;
+    state = {};
+    const safe_reference<Creature> actor = who.get_safe_reference();
+    item_location weapon = who.get_wielded_item();
+    if( unload_ras && weapon && weapon->uid().get_value() == weapon_id ) {
+        gun_mode mode = weapon->gun_current_mode();
+        if( mode ) {
+            unload_ready_ranged_ammo( who, *mode );
+        }
+    }
+    if( actor && started ) {
         get_event_bus().send<event_type::character_finished_activity>(
             who.getID(), activity_id( "ACT_AIM" ), canceled );
     }
@@ -36,9 +47,7 @@ void finish_firearm_activity( Character &who, firearm_state &state, bool cancele
 bool supports_firearm_intents( const item &weapon )
 {
     const gun_mode mode = weapon.gun_current_mode();
-    return weapon.is_gun() && !is_sling_launcher( weapon ) && mode && !mode.melee() &&
-           mode->gun_skill() != skill_id( "archery" ) &&
-           !mode->has_flag( flag_RELOAD_AND_SHOOT );
+    return is_sling_launcher( weapon ) || ( weapon.is_gun() && mode && !mode.melee() );
 }
 
 firearm_outcome execute_firearm_intent( Character &who, map &here,
@@ -54,10 +63,21 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         ( weapon->is_firearm() && who.has_flag( json_character_flag( "HANDS_CANNOT_USE_FIREARMS" ) ) ) ) {
         return firearm_outcome::rejected;
     }
+    if( is_sling_launcher( *weapon ) ) {
+        if( intent.action != "prepare" || who.has_trait( trait_id( "BRAWLER" ) ) ) {
+            return firearm_outcome::rejected;
+        }
+        finish_firearm_activity( who, state, true );
+        if( !actor || !who.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
+                                                _( "You're too pacified to strike anything…" ) ) ) {
+            return firearm_outcome::rejected;
+        }
+        state.weapon = intent.weapon;
+        return firearm_outcome::aiming;
+    }
     const auto modes = weapon->gun_all_modes();
     const auto selected = modes.find( intent.mode );
-    if( selected == modes.end() || selected->second.melee() ||
-        selected->second->has_flag( flag_RELOAD_AND_SHOOT ) ) {
+    if( selected == modes.end() || selected->second.melee() ) {
         return firearm_outcome::rejected;
     }
     const bool prepare = intent.action == "prepare";
@@ -73,9 +93,33 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         ( !prepare && state.weapon != intent.weapon ) ) {
         return firearm_outcome::rejected;
     }
+    item_location ammo;
+    const bool reload_and_shoot = selected->second->has_flag( flag_RELOAD_AND_SHOOT );
+    const bool needs_ammo = reload_and_shoot && !selected->second->ammo_remaining();
+    if( !prepare && needs_ammo ) {
+        if( !intent.ammo ) {
+            return firearm_outcome::rejected;
+        }
+        ammo = resolve_item_source( who, here, *intent.ammo );
+        item_location used_gun = selected->second.target == &*weapon ? weapon :
+                                 item_location( weapon, selected->second.target );
+        std::vector<item::reload_option> options;
+        who.list_ammo( used_gun, options, false );
+        if( !ammo || std::none_of( options.begin(), options.end(),
+        [&]( const item::reload_option & option ) {
+        return option.ammo == ammo;
+    } ) ) {
+            return firearm_outcome::rejected;
+        }
+    }
+    int range = selected->second->gun_range( &who );
+    if( ammo ) {
+        item loaded = *selected->second;
+        loaded.ammo_set( ammo->typeId(), 1 );
+        range = loaded.gun_range( &who );
+    }
     if( !prepare && ( !here.inbounds( intent.target ) || intent.origin == intent.target ||
-                      std::round( rl_dist_exact( intent.origin, intent.target ) ) >
-                      selected->second->gun_range( &who ) ) ) {
+                      std::round( rl_dist_exact( intent.origin, intent.target ) ) > range ) ) {
         return firearm_outcome::rejected;
     }
     weapon->gun_set_mode( intent.mode );
@@ -98,6 +142,7 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
             return firearm_outcome::rejected;
         }
         state.weapon = intent.weapon;
+        state.activity_started = true;
         get_event_bus().send<event_type::character_starts_activity>(
             who.getID(), activity_id( "ACT_AIM" ), false );
         if( !actor || who.is_dead_state() ) {
@@ -151,6 +196,9 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
     who.last_target = victim ? g->shared_from( *victim ) : shared_ptr_fast<Creature>();
     if( aim ) {
         aim_gun_for_moves( who, *weapon, target, 10 );
+        if( who.get_moves() > 0 && ammo ) {
+            ready_ranged_ammo( who, *gun, ammo );
+        }
         return firearm_outcome::aiming;
     }
     if( threshold && !aim_gun_until_threshold( who, *weapon, target, intent.action ) ) {
@@ -171,7 +219,10 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         return firearm_outcome::rejected;
     }
     gun = weapon->gun_current_mode();
-    who.fire_gun( here, target, gun.qty, *gun, item_location() );
+    if( gun->has_flag( flag_RELOAD_AND_SHOOT ) && !gun->ammo_remaining() && !ammo ) {
+        return firearm_outcome::rejected;
+    }
+    who.fire_gun( here, target, gun.qty, *gun, ammo );
     return firearm_outcome::finished;
 }
 } // namespace cata_mp
