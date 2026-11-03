@@ -47,6 +47,7 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_reload.h"
+#include "item_uid.h"
 #include "item_transformation.h"
 #include "itype.h"
 #include "iuse.h"
@@ -3514,7 +3515,7 @@ namespace
 // A null actor applies only the item contents transition to caller-owned copies.
 // Character, map and source-location effects stay in the authoritative path.
 bool reload_contents( item &target, Character *who, item_location ammo, int qty, int pocket_index,
-                      item *preview_ammo )
+                      item *preview_ammo, int64_t *removed_preview = nullptr )
 {
     if( qty <= 0 ) {
         debugmsg( "Tried to reload zero or less charges" );
@@ -3531,6 +3532,8 @@ bool reload_contents( item &target, Character *who, item_location ammo, int qty,
     const auto remove_ammo = [&]() {
         if( who ) {
             ammo.remove_item();
+        } else if( removed_preview ) {
+            *removed_preview = source().uid().get_value();
         }
     };
     const auto unwrap_speedloader = [&]() {
@@ -3718,6 +3721,57 @@ bool reload_contents( item &target, Character *who, item_location ammo, int qty,
     return true;
 }
 
+item *reload_copy_item( const item &original, item &copy, const item &wanted )
+{
+    if( &original == &wanted ) {
+        return &copy;
+    }
+    const auto source_children = original.all_items_top();
+    const auto copy_children = copy.all_items_top();
+    auto to = copy_children.begin();
+    for( const item *from : source_children ) {
+        if( to == copy_children.end() ) {
+            return nullptr;
+        }
+        if( item *found = reload_copy_item( *from, **to, wanted ) ) {
+            return found;
+        }
+        ++to;
+    }
+    return nullptr;
+}
+
+void update_reload_copy( item &root, int64_t removed )
+{
+    for( item *child : root.all_items_top() ) {
+        if( child->uid().get_value() == removed ) {
+            root.remove_item( *child );
+        } else {
+            update_reload_copy( *child, removed );
+        }
+    }
+    root.on_contents_changed();
+}
+
+// nullopt means the target is not in this subtree.
+std::optional<bool> reload_copy_capacity( const item &root, int64_t target )
+{
+    if( root.uid().get_value() == target ) {
+        return true;
+    }
+    for( const item_pocket *pocket : root.get_pockets( []( const item_pocket & ) {
+    return true;
+} ) ) {
+        for( const item *child : pocket->all_items_top() ) {
+            if( const auto capacity = reload_copy_capacity( *child, target ) ) {
+                return *capacity && pocket->remaining_volume() >= 0_ml &&
+                       pocket->remaining_weight() >= 0_gram;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 bool item::reload( Character &who, item_location ammo, int qty, int pocket_index )
@@ -3737,6 +3791,66 @@ std::optional<item> preview_reload( const item &target, item_location ammo, int 
         return std::nullopt;
     }
     return loaded;
+}
+
+bool reload_would_fit( const item_location &target, item_location ammo, int qty,
+                       int pocket_index )
+{
+    if( !target || !ammo || qty <= 0 ) {
+        return false;
+    }
+    if( !target.has_parent() ) {
+        return true;
+    }
+    item_location ancestor = target;
+    while( ancestor.has_parent() ) {
+        ancestor = ancestor.parent_item();
+    }
+    item contents = *ancestor;
+    item *loaded = reload_copy_item( *ancestor, contents, *target );
+    item external_ammo = *ammo;
+    item *source = reload_copy_item( *ancestor, contents, *ammo );
+    if( !source ) {
+        source = &external_ammo;
+    }
+    const int64_t target_uid = loaded ? loaded->uid().get_value() : 0;
+    int64_t removed = 0;
+    if( !loaded || !reload_contents( *loaded, nullptr, ammo, qty, pocket_index, source, &removed ) ) {
+        return false;
+    }
+    update_reload_copy( contents, removed );
+    return reload_copy_capacity( contents, target_uid ).value_or( false );
+}
+
+std::optional<std::vector<size_t>> reload_item_path( const item &root, const item &child )
+{
+    if( &root == &child ) {
+        return std::vector<size_t> {};
+    }
+    size_t index = 0;
+    for( const item *candidate : root.all_items_top() ) {
+        if( auto path = reload_item_path( *candidate, child ) ) {
+            path->insert( path->begin(), index );
+            return path;
+        }
+        ++index;
+    }
+    return std::nullopt;
+}
+
+item_location reload_item_at( item_location root, const std::vector<size_t> &path )
+{
+    for( size_t index : path ) {
+        if( !root ) {
+            return {};
+        }
+        const auto children = root->all_items_top();
+        if( index >= children.size() ) {
+            return {};
+        }
+        root = item_location( root, *std::next( children.begin(), index ) );
+    }
+    return root;
 }
 
 bool item::detonate( const tripoint_bub_ms &p, std::vector<item> &drops )
