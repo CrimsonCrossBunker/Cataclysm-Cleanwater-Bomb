@@ -10416,39 +10416,15 @@ void map::saven( const tripoint_bub_sm &grid )
     MAPBUFFER.add_submap( abs, submap_to_save );
 }
 
-// Optimized mapgen function that only works properly for very simple overmap types
-// Does not create or require a temporary map and does its own saving.
-// Note that it assumes the map doesn't exist: it's an error to call this when it does.
+// Legacy active-world entry points. Explicit map owners use their buffer directly.
 bool generate_uniform( const tripoint_abs_sm &p, const ter_str_id &ter )
 {
-    if( MAPBUFFER.submap_exists( p ) ) {
-        return false;
-    }
-
-    std::unique_ptr<submap> sm = std::make_unique<submap>();
-    sm->set_all_ter( ter, true );
-    sm->last_touched = calendar::turn;
-    return MAPBUFFER.add_submap( p, sm );
+    return MAPBUFFER.generate_uniform( p, ter );
 }
 
 bool generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &terrain_type )
 {
-    dbg( D_INFO ) << "generate_uniform p: " << p
-                  << "  terrain_type: " << terrain_type.id().str();
-
-    const std::optional<ter_str_id> ter = terrain_type->get_uniform_terrain();
-
-    if( !ter ) {
-        return false;
-    }
-
-    bool ret = true;
-    for( int xd = 0; xd <= 1; xd++ ) {
-        for( int yd = 0; yd <= 1; yd++ ) {
-            ret &= generate_uniform( p + point_rel_sm( xd, yd ), *ter );
-        }
-    }
-    return ret;
+    return MAPBUFFER.generate_uniform_omt( p, terrain_type );
 }
 
 void map::loadn( const point_bub_sm &grid, bool update_vehicles )

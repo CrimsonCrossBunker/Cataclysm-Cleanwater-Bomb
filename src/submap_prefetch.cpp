@@ -16,8 +16,6 @@
 #include "filesystem.h"
 #include "zzip.h"
 
-submap_prefetcher g_submap_prefetcher;
-
 namespace
 {
 byte_budget &prefetch_budget()
@@ -251,7 +249,7 @@ void submap_prefetcher::clear()
     // teardown / shutdown (cleanup_at_end, world switch, main menu), so joining
     // here guarantees the worker is not running during later static destruction —
     // it would otherwise touch other translation units' globals (mmap_file, zstd)
-    // whose destruction order relative to g_submap_prefetcher is unspecified.
+    // whose destruction order relative to a global mapbuffer is unspecified.
     // The worker lazily restarts on the next request(), so this is also safe for
     // mid-session world switches.
     stop_worker();

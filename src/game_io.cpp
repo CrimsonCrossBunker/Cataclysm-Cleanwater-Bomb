@@ -676,7 +676,7 @@ bool game::save_maps()
     try {
         here.save();
         overmap_buffer.save(); // can throw
-        MAPBUFFER.save(); // can throw
+        MAPBUFFER.save( false, &here ); // can throw
         return true;
     } catch( const std::exception &err ) {
         popup( _( "Failed to save the maps: %s" ), err.what() );
