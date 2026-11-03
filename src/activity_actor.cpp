@@ -106,10 +106,8 @@
 #include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
-#ifdef MP_ENABLED
-    #include "mp_client_conn.h"
-    #include "mp_gamestate.h"
-#endif
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
@@ -129,6 +127,7 @@
 #include "point.h"
 #include "proficiency.h"
 #include "ranged.h"
+#include "ranged_actions.h"
 #include "recipe.h"
 #include "requirements.h"
 #include "ret_val.h"
@@ -516,7 +515,10 @@ void aim_activity_actor::start( player_activity &act, Character &who )
     item_location weapon = get_weapon();
     item &it = *weapon.get_item();
 
-    if( !check_gun_ability_to_shoot( who, it ) ) {
+    if( cata_mp::client_uses_firearm_intents( it ) ) {
+        cata_mp::client_start_firearm_activity();
+        cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
+    } else if( !check_gun_ability_to_shoot( who, it ) ) {
         aborted = true;
         finish( act, who );
     }
@@ -528,48 +530,7 @@ void aim_activity_actor::start( player_activity &act, Character &who )
 
 bool aim_activity_actor::check_gun_ability_to_shoot( Character &who, item &it )
 {
-
-    if( it.has_fault_flag( "RUINED_GUN" ) ) {
-        who.add_msg_if_player( m_bad, _( "Your %s is little more than an awkward club now." ), it.tname() );
-        return false;
-    }
-
-    // if it's a simple fault, character can try to fix it on the fly
-    if( faults::random_of_type_item_has( it, gun_mechanical_simple ) != fault_id::NULL_ID() ) {
-        // fixing fault should cost more than 1 second
-        // but until game running the next activity actor without ever verifying
-        // was the previous one successful or not will be resolved,
-        // it would be safer to limit it somewhat
-        who.mod_moves( -who.get_speed() );
-        who.recoil = MAX_RECOIL;
-        if( it.has_fault( fault_fail_to_feed ) ) {
-            who.add_msg_if_player( m_good,
-                                   _( "You manually cycle your %s, and load a new round." ),
-                                   it.tname() );
-            it.remove_fault( fault_fail_to_feed );
-            it.set_var( "u_know_round_in_chamber", true );
-        } else if( one_in( std::max( 7.0f,
-                                     ( 15.0f - ( 4.0f * who.get_skill_level( skill_gun ) ) ) ) ) ) {
-            who.add_msg_if_player( m_good,
-                                   _( "Your %s has some mechanical malfunction.  You tried to quickly fix it, and it works now!" ),
-                                   it.tname() );
-            it.remove_single_fault_of_type( gun_mechanical_simple );
-            it.set_var( "u_know_round_in_chamber", true );
-        } else {
-            who.add_msg_if_player( m_bad,
-                                   _( "Your %s has some mechanical malfunction.  You tried to quickly fix it, but failed!" ),
-                                   it.tname() );
-            return false;
-        }
-    }
-
-    if( it.has_fault_flag( "OVERHEATED_GUN" ) ) {
-        who.add_msg_if_player( m_warning,
-                               _( "Your %s status screen indicates the gun is venting." ), it.tname() );
-        return false;
-    }
-
-    return true;
+    return prepare_gun_to_fire( who, it );
 }
 
 void aim_activity_actor::do_turn( player_activity &act, Character &who )
@@ -584,6 +545,22 @@ void aim_activity_actor::do_turn( player_activity &act, Character &who )
     }
     avatar &you = get_avatar();
 
+    const auto remote_phase = cata_mp::client_firearm_phase();
+    if( cata_mp::is_client_mode() && remote_phase != cata_mp::firearm_view_phase::inactive ) {
+        if( remote_phase == cata_mp::firearm_view_phase::preparing ) {
+            cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
+            return;
+        }
+        if( remote_phase == cata_mp::firearm_view_phase::pending ) {
+            who.set_moves( 0 );
+            return;
+        }
+        if( remote_phase == cata_mp::firearm_view_phase::finished ||
+            remote_phase == cata_mp::firearm_view_phase::rejected ) {
+            act.moves_left = 0;
+            return;
+        }
+    }
     item_location weapon = get_weapon();
     if( !weapon || !avatar_action::can_fire_weapon( you, here, *weapon ) ) {
         aborted = true;
@@ -630,6 +607,17 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 {
     map &here = get_map();
 
+    const bool remote = cata_mp::is_client_mode() &&
+                        cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive;
+    if( remote && cata_mp::client_firearm_phase() == cata_mp::firearm_view_phase::rejected ) {
+        aborted = true;
+    }
+    if( remote ) {
+        if( aborted ) {
+            cata_mp::client_send_activity_end( "ACT_AIM" );
+        }
+        cata_mp::client_finish_firearm_activity();
+    }
     act.set_to_null();
     item_location weapon = get_weapon();
     if( !weapon ) {
@@ -648,7 +636,9 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
     }
 
     gun_mode gun = weapon->gun_current_mode();
-    who.fire_gun( here, fin_trajectory.back(), gun.qty, *gun, reload_loc );
+    if( !remote ) {
+        who.fire_gun( here, fin_trajectory.back(), gun.qty, *gun, reload_loc );
+    }
 
     if( !get_option<bool>( "AIM_AFTER_FIRING" ) ||
         weapon.get_item()->has_fault_of_type( gun_mechanical_simple ) ) {
@@ -672,6 +662,12 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
 void aim_activity_actor::canceled( player_activity &/*act*/, Character &/*who*/ )
 {
+    if( cata_mp::is_client_mode() ) {
+        if( cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive ) {
+            cata_mp::client_send_activity_end( "ACT_AIM" );
+        }
+        cata_mp::client_finish_firearm_activity();
+    }
     unload_RAS_weapon();
     restore_view();
 }

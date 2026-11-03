@@ -1,23 +1,17 @@
 #include "mp_melee.h"
 
 #include <algorithm>
-#include <sstream>
 
 #include "character.h"
-#include "cata_scope_helpers.h"
-#include "rng.h"
 #include "creature_tracker.h"
 #include "effect.h"
 #include "enums.h"
 #include "flag.h"
 #include "item.h"
 #include "item_location.h"
-#include "json.h"
 #include "magic_enchantment.h"
 #include "map.h"
-#include "mp_pickup.h"
 #include "npc.h"
-#include "skill.h"
 #include "translations.h"
 
 namespace cata_mp
@@ -69,70 +63,4 @@ void execute_melee_intent( Character &actor, map &here, const melee_intent &inte
     }
 }
 
-std::string make_melee_result( const Character &actor, pickup_host_state &state )
-{
-    const std::string inventory = make_inventory_update( actor, state );
-    std::ostringstream text;
-    JsonOut out( text );
-    out.start_object();
-    out.member( "type", "melee_result" );
-    out.member( "inventory" );
-    *out.get_stream() << inventory;
-    out.set_need_separator();
-    out.member( "stamina", actor.get_stamina() );
-    out.member( "focus", actor.get_focus_pool() );
-    out.member( "recoil", actor.recoil );
-    out.member( "pain", actor.get_pain() );
-    out.member( "skills" );
-    out.start_object();
-    for( const auto &entry : actor.get_all_skills() ) {
-        out.member( entry.first.str(), entry.second );
-    }
-    out.end_object();
-    out.member( "effects" );
-    out.start_array();
-    for( const effect &eff : actor.get_effects() ) {
-        out.write( eff );
-    }
-    out.end_array();
-    out.end_object();
-    return text.str();
-}
-
-bool apply_melee_result( Character &actor, const JsonObject &message, pickup_client_state &state )
-{
-    const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    const int stamina = message.get_int( "stamina" );
-    const int focus = message.get_int( "focus" );
-    const double recoil = message.get_float( "recoil" );
-    const int pain = message.get_int( "pain" );
-    SkillLevelMap skills;
-    for( const JsonMember &entry : message.get_object( "skills" ) ) {
-        const skill_id id( entry.name() );
-        if( !id.is_valid() ) {
-            message.throw_error_at( "skills", "Unknown skill in melee result" );
-        }
-        skills[id].deserialize( entry.get_object() );
-    }
-    std::vector<effect> effects;
-    for( JsonObject entry : message.get_array( "effects" ) ) {
-        effect eff;
-        eff.deserialize( entry );
-        effects.push_back( eff );
-    }
-    JsonObject inventory = message.get_object( "inventory" );
-    inventory.allow_omitted_members();
-    if( !apply_inventory_update( actor, inventory, state ) ) {
-        return false;
-    }
-    actor.set_stamina( stamina );
-    actor.set_focus_pool( focus );
-    actor.recoil = recoil;
-    actor.set_pain( pain );
-    for( const auto &entry : skills ) {
-        actor.get_skill_level_object( entry.first ) = entry.second;
-    }
-    actor.restore_effects_snapshot( effects );
-    return true;
-}
 } // namespace cata_mp

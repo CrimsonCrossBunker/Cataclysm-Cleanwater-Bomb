@@ -1962,7 +1962,9 @@ static void fire()
     const bool reach = weapon ? !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 :
                        static_cast<int>( you.calculate_by_enchantment( 1,
                                          enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1;
-    if( !( cata_mp::is_client_mode() && reach ) &&
+    const bool remote_attack = ( cata_mp::is_client_mode() && reach ) ||
+                               ( weapon && cata_mp::client_uses_firearm_intents( *weapon ) );
+    if( !remote_attack &&
         !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
                                   _( "You're too pacified to strike anything…" ) ) ) {
         return;

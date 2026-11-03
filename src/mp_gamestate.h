@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "mp_melee.h"
+#include "mp_firearm.h"
 #include "character_id.h"
 #include "coordinates.h"
 #include "type_id.h"
@@ -198,6 +199,12 @@ bool prepare_remote_character_turn( npc &actor );
 void finish_remote_character_turn( npc &actor );
 void client_request_melee( const tripoint_bub_ms &target, melee_action action,
                            const matec_id &technique = matec_id() );
+bool client_uses_firearm_intents( const item &weapon );
+void client_start_firearm_activity();
+void client_finish_firearm_activity();
+void client_finish_ready_firearm_activity();
+firearm_view_phase client_firearm_phase();
+void client_request_firearm( const tripoint_bub_ms &target, const std::string &action );
 
 // Client only: call immediately after client_send() to suppress stale moves>0
 // state packets until the server sends moves=0 (its action acknowledgement).

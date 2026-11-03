@@ -1041,7 +1041,8 @@ bool avatar_action::can_fire_weapon( avatar &you, const map &m, const item &weap
         return false;
     }
 
-    if( !you.try_break_relax_gas( _( "Your eyes steel, and you raise your weapon!" ),
+    if( !cata_mp::client_uses_firearm_intents( weapon ) &&
+        !you.try_break_relax_gas( _( "Your eyes steel, and you raise your weapon!" ),
                                   _( "You can't fire your weapon, it's too heavy…" ) ) ) {
         return false;
     }

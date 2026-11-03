@@ -811,6 +811,7 @@ bool game::do_turn()
         // tick terrain, monsters, missions or world Lua hooks a second time.
         cata_mp::process_session_turn();
         avatar &u = get_avatar();
+        cata_mp::client_finish_ready_firearm_activity();
         const bool advance_character = cata_mp::client_begin_simulation_turn();
         if( advance_character ) {
             if( new_game ) {
