@@ -26,11 +26,10 @@
 #include "type_id.h"
 #include "weather_type.h"
 
-static const efftype_id effect_grabbed( "grabbed" );
-static const efftype_id effect_crowd_crushed( "crowd_crushed" );
-
 static const damage_type_id damage_bash( "bash" );
-static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
+
+static const efftype_id effect_crowd_crushed( "crowd_crushed" );
+static const efftype_id effect_grabbed( "grabbed" );
 
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_longshirt( "test_longshirt" );
@@ -39,6 +38,8 @@ static const itype_id itype_test_umbrella( "test_umbrella" );
 static const itype_id itype_test_zentai( "test_zentai" );
 
 static const limb_score_id limb_score_breathing( "breathing" );
+
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 
 static const ter_str_id ter_t_rock_wall( "t_rock_wall" );
 

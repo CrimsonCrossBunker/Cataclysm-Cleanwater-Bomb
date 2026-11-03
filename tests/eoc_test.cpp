@@ -75,10 +75,10 @@ class recipe;
 static const activity_id ACT_ADD_VARIABLE_COMPLETE( "ACT_ADD_VARIABLE_COMPLETE" );
 static const activity_id ACT_ADD_VARIABLE_DURING( "ACT_ADD_VARIABLE_DURING" );
 static const activity_id ACT_GENERIC_EOC( "ACT_GENERIC_EOC" );
+
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
-static const effect_on_condition_id
-effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR( "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
+
 static const effect_on_condition_id
 effect_on_condition_EOC_MARLOSS_BERRY_CONSUME( "EOC_MARLOSS_BERRY_CONSUME" );
 static const effect_on_condition_id
@@ -95,6 +95,8 @@ static const effect_on_condition_id
 effect_on_condition_EOC_MARLOSS_WINE_CONSUME( "EOC_MARLOSS_WINE_CONSUME" );
 static const effect_on_condition_id
 effect_on_condition_EOC_MYCUS_CONSUME( "EOC_MYCUS_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR( "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
 static const effect_on_condition_id
 effect_on_condition_EOC_TEST_PURIFIABILITY_FALSE( "EOC_TEST_PURIFIABILITY_FALSE" );
 static const effect_on_condition_id
@@ -211,8 +213,10 @@ static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_sleep( "sleep" );
 
 static const flag_id json_flag_FILTHY( "FILTHY" );
+
 static const furn_str_id furn_f_cardboard_box( "f_cardboard_box" );
 static const furn_str_id furn_test_f_eoc( "test_f_eoc" );
+
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_marloss_berry( "marloss_berry" );
@@ -226,11 +230,11 @@ static const itype_id itype_test_eoc_armor_suit( "test_eoc_armor_suit" );
 static const itype_id itype_test_glock( "test_glock" );
 static const itype_id itype_test_knife_combat( "test_knife_combat" );
 static const itype_id itype_test_whiskey_caffenated( "test_whiskey_caffenated" );
-static const matype_id style_aikido( "style_aikido" );
-static const matype_id style_none( "style_none" );
 static const itype_id itype_wine_marloss( "wine_marloss" );
 static const itype_id itype_wine_mycus( "wine_mycus" );
 
+static const matype_id style_aikido( "style_aikido" );
+static const matype_id style_none( "style_none" );
 
 static const morale_type morale_marloss( "morale_marloss" );
 
@@ -238,9 +242,13 @@ static const mtype_id mon_triffid( "mon_triffid" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const mtype_id mon_zombie_smoker( "mon_zombie_smoker" );
 static const mtype_id mon_zombie_tough( "mon_zombie_tough" );
+
 static const recipe_id recipe_cattail_jelly( "cattail_jelly" );
+
 static const skill_id skill_survival( "survival" );
+
 static const spell_id spell_test_eoc_spell( "test_eoc_spell" );
+
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_marloss( "t_marloss" );
@@ -257,10 +265,6 @@ static const trait_id trait_process_mutation( "process_mutation" );
 static const trait_id trait_process_mutation_two( "process_mutation_two" );
 static const trait_id trait_purifiability_first( "purifiability_first" );
 static const trait_id trait_purifiability_second( "purifiability_second" );
-
-#if defined(LOCALIZE)
-    #include "translation_manager.h"
-#endif
 
 namespace
 {

@@ -17,6 +17,13 @@
 #include "translation.h"
 #include "type_id.h"
 
+static const itype_id itype_acorns_cooked( "acorns_cooked" );
+static const itype_id itype_dry_rice( "dry_rice" );
+static const itype_id itype_dry_wheat_stalks( "dry_wheat_stalks" );
+static const itype_id itype_fermentable_liquid_mixture( "fermentable_liquid_mixture" );
+static const itype_id itype_flour_wheat_free( "flour_wheat_free" );
+static const itype_id itype_wheat_stalks( "wheat_stalks" );
+
 TEST_CASE( "mapdata_examine" )
 {
     ter_t data;
@@ -65,11 +72,9 @@ TEST_CASE( "mill_finalize_counts_stackable_food_by_charges", "[iexamine][mill][s
     const tripoint_bub_ms mill_pos = tripoint_bub_ms::zero;
     const furn_id wind_mill( "f_wind_mill" );
     const furn_id wind_mill_active( "f_wind_mill_active" );
-    const itype_id dried_rice( "dry_rice" );
-    const itype_id wheat_free_flour( "flour_wheat_free" );
 
     here.furn_set( mill_pos, wind_mill_active );
-    item rice( dried_rice, calendar::turn_zero );
+    item rice( itype_dry_rice, calendar::turn_zero );
     REQUIRE( rice.count_by_charges() );
     rice.charges = 240;
     here.add_item( mill_pos, rice );
@@ -79,9 +84,9 @@ TEST_CASE( "mill_finalize_counts_stackable_food_by_charges", "[iexamine][mill][s
     int rice_count = 0;
     int flour_count = 0;
     for( const item &it : here.i_at( mill_pos ) ) {
-        if( it.typeId() == dried_rice ) {
+        if( it.typeId() == itype_dry_rice ) {
             rice_count += it.count();
-        } else if( it.typeId() == wheat_free_flour ) {
+        } else if( it.typeId() == itype_flour_wheat_free ) {
             flour_count += it.count();
             CHECK( you.compute_effective_nutrients( it ).kcal() == 65 );
         }
@@ -100,11 +105,9 @@ TEST_CASE( "mill_finalize_leaves_incomplete_charge_batch", "[iexamine][mill][sta
     const tripoint_bub_ms mill_pos = tripoint_bub_ms::zero;
     const furn_id wind_mill( "f_wind_mill" );
     const furn_id wind_mill_active( "f_wind_mill_active" );
-    const itype_id cooked_acorns( "acorns_cooked" );
-    const itype_id wheat_free_flour( "flour_wheat_free" );
 
     here.furn_set( mill_pos, wind_mill_active );
-    item acorns( cooked_acorns, calendar::turn_zero );
+    item acorns( itype_acorns_cooked, calendar::turn_zero );
     REQUIRE( acorns.count_by_charges() );
     acorns.charges = 3;
     here.add_item( mill_pos, acorns );
@@ -114,9 +117,9 @@ TEST_CASE( "mill_finalize_leaves_incomplete_charge_batch", "[iexamine][mill][sta
     int acorn_count = 0;
     int flour_count = 0;
     for( const item &it : here.i_at( mill_pos ) ) {
-        if( it.typeId() == cooked_acorns ) {
+        if( it.typeId() == itype_acorns_cooked ) {
             acorn_count += it.count();
-        } else if( it.typeId() == wheat_free_flour ) {
+        } else if( it.typeId() == itype_flour_wheat_free ) {
             flour_count += it.count();
         }
     }
@@ -148,7 +151,7 @@ TEST_CASE( "compost_fermentation_preserves_biomass_age", "[iexamine][compost]" )
     map &here = get_map();
     const tripoint_bub_ms pos = tripoint_bub_ms::zero;
     here.furn_set( pos, furn_id( "f_compost_full" ) );
-    item biomass( itype_id( "fermentable_liquid_mixture" ), calendar::turn );
+    item biomass( itype_fermentable_liquid_mixture, calendar::turn );
     biomass.charges = 10;
     biomass.set_age( 10_days );
     REQUIRE( biomass.age() == 10_days );
@@ -172,7 +175,7 @@ TEST_CASE( "stook_preserves_grain_quantity_and_nutrients", "[iexamine][stook][st
     const tripoint_bub_ms pos = tripoint_bub_ms::zero;
     const int count = GENERATE( 1, 10 );
     here.furn_set( pos, furn_id( "f_stook_full" ) );
-    item grain( itype_id( "wheat_stalks" ), calendar::turn - 336_hours, count );
+    item grain( itype_wheat_stalks, calendar::turn - 336_hours, count );
     const int kcal = you.compute_effective_nutrients( grain ).kcal();
     REQUIRE( grain.count() == count );
     here.add_item( pos, grain );
@@ -181,7 +184,7 @@ TEST_CASE( "stook_preserves_grain_quantity_and_nutrients", "[iexamine][stook][st
 
     int dried_count = 0;
     for( const item &it : here.i_at( pos ) ) {
-        REQUIRE( it.typeId() == itype_id( "dry_wheat_stalks" ) );
+        REQUIRE( it.typeId() == itype_dry_wheat_stalks );
         dried_count += it.count();
         CHECK( you.compute_effective_nutrients( it ).kcal() == kcal );
     }

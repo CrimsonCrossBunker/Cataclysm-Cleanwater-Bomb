@@ -72,10 +72,10 @@ static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 
 static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
+static const faction_id faction_free_merchants( "free_merchants" );
+
 static const flag_id json_flag_ITEM_BROKEN( "ITEM_BROKEN" );
 static const flag_id json_flag_USE_UPS( "USE_UPS" );
-
-static const faction_id faction_free_merchants( "free_merchants" );
 
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
 static const furn_str_id furn_f_solar_cooker( "f_solar_cooker" );
@@ -195,16 +195,17 @@ static const recipe_id recipe_macaroni_cooked( "macaroni_cooked" );
 static const recipe_id recipe_magazine_battery_light_mod( "magazine_battery_light_mod" );
 static const recipe_id recipe_makeshift_funnel( "makeshift_funnel" );
 static const recipe_id recipe_sushi_rice( "sushi_rice" );
-static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
 static const recipe_id
-recipe_test_rot_result_rot_auto_gate( "test_rot_result_short_rot_auto_gate" );
-static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_raw_rot_auto_raw" );
+recipe_test_rot_result_raw_rot_auto_raw( "test_rot_result_raw_rot_auto_raw" );
+static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
 static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
 static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
 static const recipe_id
 recipe_test_rot_result_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
 static const recipe_id recipe_test_rot_result_rot_shortest( "test_rot_result_rot_shortest" );
 static const recipe_id recipe_test_rot_result_rot_weighted( "test_rot_result_rot_weighted" );
+static const recipe_id
+recipe_test_rot_result_short_rot_auto_gate( "test_rot_result_short_rot_auto_gate" );
 static const recipe_id recipe_test_tallow( "test_tallow" );
 static const recipe_id recipe_test_tallow2( "test_tallow2" );
 static const recipe_id recipe_test_waist_apron_long( "test_waist_apron_long" );
@@ -3065,7 +3066,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_result_rot_auto_raw, 1, comps,
+        item craft( &*recipe_test_rot_result_raw_rot_auto_raw, 1, comps,
                     std::vector<item_comp> {}, false );
 
         THEN( "the most rotten component wins without dilution" ) {
@@ -3099,7 +3100,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_result_rot_auto_gate, 1, comps,
+        item craft( &*recipe_test_rot_result_short_rot_auto_gate, 1, comps,
                     std::vector<item_comp> {}, false );
 
         THEN( "the shortest remaining lifespan is inherited" ) {

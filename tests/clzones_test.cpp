@@ -53,10 +53,6 @@
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 
-static const itype_id itype_hammer( "hammer" );
-
-static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
-
 static const faction_id faction_your_followers( "your_followers" );
 
 static const itype_id itype_556( "556" );
@@ -65,6 +61,7 @@ static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_belt223( "belt223" );
 static const itype_id itype_bottle_glass( "bottle_glass" );
 static const itype_id itype_chem_washing_soda( "chem_washing_soda" );
+static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_test_apple( "test_apple" );
 static const itype_id itype_test_bitter_almond( "test_bitter_almond" );
 static const itype_id itype_test_heavy_boulder( "test_heavy_boulder" );
@@ -82,6 +79,7 @@ static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart
 static const vproto_id vehicle_prototype_test_turret_rig( "test_turret_rig" );
 
 static const zone_type_id zone_type_LOOT_CHEMICAL( "LOOT_CHEMICAL" );
+static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
 static const zone_type_id zone_type_LOOT_DEFAULT( "LOOT_DEFAULT" );
 static const zone_type_id zone_type_LOOT_DRINK( "LOOT_DRINK" );
 static const zone_type_id zone_type_LOOT_FOOD( "LOOT_FOOD" );
@@ -3790,10 +3788,10 @@ TEST_CASE( "avatar_zone_sorting_multi_tile_personal_zones",
 
     // Place 3 apples on each orthogonal source tile (skip the player's own tile).
     const std::vector<tripoint_bub_ms> source_positions = {
-        player_pos + tripoint( 1, 0, 0 ),
-        player_pos + tripoint( -1, 0, 0 ),
-        player_pos + tripoint( 0, 1, 0 ),
-        player_pos + tripoint( 0, -1, 0 )
+        player_pos + tripoint::east,
+        player_pos + tripoint::west,
+        player_pos + tripoint::south,
+        player_pos + tripoint::north
     };
     constexpr int apples_per_tile = 3;
     for( const tripoint_bub_ms &src : source_positions ) {

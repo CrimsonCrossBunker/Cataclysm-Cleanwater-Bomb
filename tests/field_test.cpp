@@ -33,10 +33,12 @@ static const field_type_str_id field_fd_test( "fd_test" );
 static const field_type_str_id field_fd_test_fire_reaction( "fd_test_fire_reaction" );
 static const field_type_str_id field_fd_test_fire_reaction_source( "fd_test_fire_reaction_source" );
 
-static const itype_id itype_test_acid_contact_boots( "test_acid_contact_boots" );
 static const itype_id itype_test_2x4( "test_2x4" );
+static const itype_id itype_test_acid_contact_boots( "test_acid_contact_boots" );
 static const itype_id itype_test_hazmat_hat( "test_hazmat_hat" );
 static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
+
+static const mtype_id mon_zombie_acidic( "mon_zombie_acidic" );
 
 static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_tree_walnut( "t_tree_walnut" );
@@ -677,13 +679,13 @@ TEST_CASE( "acid_warnings_do_not_control_damage", "[field][player][acid]" )
     const override_option warning_option( "ACID_DANGER_WARNING", warnings ? "true" : "false" );
     const tripoint_bub_ms pos( 65, 65, 0 );
     you.setpos( here, pos );
-    const tripoint_bub_ms acid_pos = pos + point( 1, 0 );
+    const tripoint_bub_ms acid_pos = pos + point::east;
     here.add_field( acid_pos, fd_acid, 3 );
     CHECK( g->get_dangerous_tile( acid_pos ).empty() == !warnings );
-    const tripoint_bub_ms fire_pos = pos + point( 0, 1 );
+    const tripoint_bub_ms fire_pos = pos + point::south;
     here.add_field( fire_pos, fd_fire, 3 );
     CHECK_FALSE( g->get_dangerous_tile( fire_pos ).empty() );
-    const mtype &corpse = mtype_id( "mon_zombie_acidic" ).obj();
+    const mtype &corpse = mon_zombie_acidic.obj();
     REQUIRE( corpse.bloodType().obj().has_acid );
     CHECK( g->can_pulp_acid_corpse( you, corpse ) == !warnings );
     you.setpos( here, acid_pos );

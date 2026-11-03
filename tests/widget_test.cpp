@@ -113,6 +113,17 @@ static const weather_type_id weather_snowing( "snowing" );
 static const weather_type_id weather_sunny( "sunny" );
 
 static const widget_id widget_all_location_info_rows_layout( "all_location_info_rows_layout" );
+static const widget_id widget_focus_num( "focus_num" );
+static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
+static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
+static const widget_id widget_ll_place_info( "ll_place_info" );
+static const widget_id widget_ll_place_layout( "ll_place_layout" );
+static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
+static const widget_id widget_mood_desc_label( "mood_desc_label" );
+static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
+static const widget_id widget_sound_num( "sound_num" );
+static const widget_id widget_speed_num( "speed_num" );
+static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
@@ -187,17 +198,6 @@ static const widget_id widget_test_weather_text( "test_weather_text" );
 static const widget_id widget_test_weather_text_height5( "test_weather_text_height5" );
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
-static const widget_id widget_focus_num( "focus_num" );
-static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
-static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
-static const widget_id widget_ll_place_info( "ll_place_info" );
-static const widget_id widget_ll_place_layout( "ll_place_layout" );
-static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
-static const widget_id widget_mood_desc_label( "mood_desc_label" );
-static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
-static const widget_id widget_sound_num( "sound_num" );
-static const widget_id widget_speed_num( "speed_num" );
-static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
@@ -3102,7 +3102,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
 {
     clear_avatar();
     avatar &ava = get_avatar();
-    widget sound = widget_id( "sound_num" ).obj();
+    widget sound = widget_sound_num.obj();
     ava.volume = 6;
     REQUIRE_FALSE( ava.is_deaf() );
     const std::string hearing = sound.show( ava, 20 );

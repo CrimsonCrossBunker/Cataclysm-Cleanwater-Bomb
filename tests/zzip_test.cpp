@@ -80,23 +80,23 @@ TEST_CASE( "zzip_long_paths_preserve_compressed_save_contents", "[zzip][save][re
     const bool relative_path = GENERATE( false, true );
     const std::filesystem::path root = std::filesystem::absolute(
                                            std::filesystem::u8path( PATH_INFO::user_dir() ) /
-                                           ( "zzip-long-" + std::string( 240, 'x' ) ) );
+                                           std::filesystem::u8path( "zzip-long-" + std::string( 240, 'x' ) ) );
     REQUIRE_FALSE( std::filesystem::exists( native_file_path( root ) ) );
     on_out_of_scope cleanup( [&]() {
         std::error_code error;
         std::filesystem::remove_all( native_file_path( root, true ), error );
     } );
-    std::filesystem::path directory = root / "regions";
+    std::filesystem::path directory = root / std::filesystem::u8path( "regions" );
     while( directory.native().size() < 300 ) {
-        directory /= "remembered-terrain-archive-directory";
+        directory /= std::filesystem::u8path( "remembered-terrain-archive-directory" );
     }
     REQUIRE( std::filesystem::create_directories( native_file_path( directory ) ) );
-    const std::filesystem::path plain_path = directory / "plain-memory.json";
+    const std::filesystem::path plain_path = directory / std::filesystem::u8path( "plain-memory.json" );
     write_to_file( plain_path.generic_u8string(), []( std::ostream & output ) {
         output << "uncompressed remembered terrain";
     } );
     CHECK( read_entire_file( plain_path ) == "uncompressed remembered terrain" );
-    std::filesystem::path archive_path = directory / "terrain.zzip";
+    std::filesystem::path archive_path = directory / std::filesystem::u8path( "terrain.zzip" );
     if( relative_path ) {
         archive_path = std::filesystem::relative( archive_path );
     }
@@ -113,7 +113,7 @@ TEST_CASE( "zzip_long_paths_preserve_compressed_save_contents", "[zzip][save][re
     archive.reset();
 
     std::filesystem::path blocked_archive = directory.filename();
-    blocked_archive += ".hot.zzip";
+    blocked_archive += std::filesystem::u8path( ".hot.zzip" );
     REQUIRE( std::filesystem::create_directory( native_file_path( directory / blocked_archive ) ) );
     std::shared_ptr<zzip_stack> stack = zzip_stack::load( directory );
     REQUIRE( stack );

@@ -1,6 +1,7 @@
 #include <vehicle_uid.h>
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -80,12 +81,13 @@ TEST_CASE( "vehicle_uid_construction_and_move_assignment", "[vehicle]" )
     vehicle source( vehicle_prototype_bicycle );
     vehicle target( vehicle_prototype_bicycle );
     REQUIRE( source.uid().is_valid() );
-    const auto source_uid = source.uid().get_value();
+    const vehicle_uid &moved_from_uid = source.uid();
+    const int64_t source_uid = moved_from_uid.get_value();
 
     target = std::move( source );
 
     CHECK( target.uid().get_value() == source_uid );
-    CHECK( source.uid().get_value() == 0 );
+    CHECK( moved_from_uid.get_value() == 0 );
 }
 
 TEST_CASE( "vehicle_uid_lookup_lifecycle", "[vehicle]" )
@@ -103,8 +105,8 @@ TEST_CASE( "vehicle_uid_lookup_lifecycle", "[vehicle]" )
     REQUIRE( first->uid().is_valid() );
     REQUIRE( second->uid().is_valid() );
 
-    const auto first_uid = first->uid().get_value();
-    const auto second_uid = second->uid().get_value();
+    const int64_t first_uid = first->uid().get_value();
+    const int64_t second_uid = second->uid().get_value();
     CHECK( first_uid != second_uid );
     CHECK( vehicle::find_vehicle_by_uid( here, first_uid ) == first );
     CHECK( vehicle::find_vehicle_by_uid( here, 0 ) == nullptr );

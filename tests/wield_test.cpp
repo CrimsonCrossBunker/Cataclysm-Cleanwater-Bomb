@@ -32,12 +32,12 @@ static const itype_id itype_backpack_hiking( "backpack_hiking" );
 static const itype_id itype_bag_plastic( "bag_plastic" );
 static const itype_id itype_gloves_wool( "gloves_wool" );
 static const itype_id itype_halligan( "halligan" );
+static const itype_id itype_hammer_sledge( "hammer_sledge" );
 static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_knife_hunting( "knife_hunting" );
 static const itype_id itype_metal_tank( "metal_tank" );
 static const itype_id itype_pants_cargo( "pants_cargo" );
 static const itype_id itype_sheath( "sheath" );
-static const itype_id itype_sledgehammer( "hammer_sledge" );
 static const itype_id itype_test_9mm_ammo( "test_9mm_ammo" );
 
 static constexpr point_bub_ms player_pos{ 50, 50 };
@@ -81,7 +81,7 @@ TEST_CASE( "wool_gloves_preserve_two_handed_wielding", "[wield]" )
 {
     clear_avatar();
     avatar &guy = get_avatar();
-    const item tool{ itype_sledgehammer };
+    const item tool{ itype_hammer_sledge };
     // Wounded but usable hands must not become a missing arm just from gloves.
     for( const bodypart_id hand : {
              bodypart_id( "hand_l" ), bodypart_id( "hand_r" )
