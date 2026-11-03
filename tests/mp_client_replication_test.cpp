@@ -16,6 +16,7 @@
 #include "mp_world_session.h"
 #include "mtype.h"
 #include "player_helpers.h"
+#include "worldfactory.h"
 
 namespace
 {
@@ -56,6 +57,34 @@ std::string state_message( std::initializer_list<wire_monster> monsters,
 }
 } // namespace
 
+TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
+           "[multiplayer][world_identity][regression]" )
+{
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+    } );
+    const world_id local = world_generator->active_world->identity();
+    const std::string remote_id( 32, local.str() == std::string( 32, '1' ) ? '2' : '1' );
+    cata_mp::set_client_mode( true );
+    cata_mp::mp_store_pending_welcome( "{\"type\":\"welcome\",\"world_id\":\"" + remote_id + "\"}" );
+    CHECK( session.admission.host_world.str() == remote_id );
+    CHECK( session.admission.host_world != local );
+    const auto pending = session.admission.pending_welcome;
+    const auto seed = g->get_seed();
+    CHECK_FALSE( cata_mp::client_apply_message(
+                     R"({"type":"welcome","world_id":"33333333333333333333333333333333","seed":999})" ) );
+    CHECK_FALSE( cata_mp::client_apply_message( R"({"type":"welcome","seed":999})" ) );
+    CHECK_THROWS( cata_mp::mp_store_pending_welcome( R"({"type":"welcome","world_id":"bad"})" ) );
+    CHECK( session.admission.pending_welcome == pending );
+    CHECK( session.admission.host_world.str() == remote_id );
+    CHECK( g->get_seed() == seed );
+    CHECK( world_generator->active_world->identity() == local );
+    session.reset();
+    CHECK_FALSE( session.admission.host_world.valid() );
+}
+
 TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
            "[multiplayer][client_replication][entity_identity][regression]" )
 {
@@ -68,6 +97,8 @@ TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
         get_creature_tracker().clear();
     } );
     cata_mp::set_client_mode( true );
+    cata_mp::mp_store_pending_welcome(
+        R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
     session.peer.mp_remote_pos = get_avatar().pos_abs();
     auto first = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
                                             tripoint_bub_ms( 62, 60, 0 ) );
@@ -80,11 +111,13 @@ TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
     REQUIRE( session.replication.client.monsters.find( 5 ) == first.get() );
     REQUIRE( session.replication.client.monsters.find( 6 ) == second.get() );
     // A queued welcome within the same connection must not erase live bindings.
-    REQUIRE( cata_mp::client_apply_message( R"({"type":"welcome","world":"first"})" ) );
+    REQUIRE( cata_mp::client_apply_message(
+                 R"({"type":"welcome","world_id":"11111111111111111111111111111111","world":"first"})" ) );
     CHECK( session.replication.client.monsters.find( 5 ) == first.get() );
     // A new successful connection probe resets replication before its first
     // state, even when these native monsters have not been destroyed/reloaded.
-    cata_mp::mp_store_pending_welcome( R"({"type":"welcome","world":"next"})" );
+    cata_mp::mp_store_pending_welcome(
+        R"({"type":"welcome","world_id":"22222222222222222222222222222222","world":"next"})" );
     REQUIRE( session.replication.client.monsters.known_id( *first ) == 0 );
     REQUIRE( session.replication.client.last_monster_hp.empty() );
     REQUIRE( cata_mp::client_apply_message( state_message( {{ 5, second.get(), 40 }} ) ) );
@@ -114,6 +147,8 @@ TEST_CASE( "mp_client_damage_reports_use_only_current_native_bindings",
         get_creature_tracker().clear();
     } );
     cata_mp::set_client_mode( true );
+    cata_mp::mp_store_pending_welcome(
+        R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
     session.peer.mp_remote_pos = get_avatar().pos_abs();
     auto original = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
                     tripoint_bub_ms( 62, 60, 0 ) );
@@ -154,6 +189,8 @@ TEST_CASE( "mp_client_duplicate_wire_ids_do_not_rebind_another_monster",
         get_creature_tracker().clear();
     } );
     cata_mp::set_client_mode( true );
+    cata_mp::mp_store_pending_welcome(
+        R"({"type":"welcome","world_id":"11111111111111111111111111111111"})" );
     session.peer.mp_remote_pos = get_avatar().pos_abs();
     auto original = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
                     tripoint_bub_ms( 62, 60, 0 ) );

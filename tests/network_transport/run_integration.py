@@ -114,6 +114,7 @@ def main():
         welcome = client.message()
         assert welcome['world'] == '测试世界"\\\n' and welcome['seed'] == 12345
         assert welcome['host_omt'] == [1, 2, 0]
+        assert welcome['world_id'] == 'a' * 32
         assert client.command('pending-setup') == 'OK'
         assert client.command('competing-client') == 'OK'
         assert host.command('competing-client') == 'OK'

@@ -18,6 +18,7 @@
 #include "coordinates.h"
 #include "mp_entity_registry.h"
 #include "type_id.h"
+#include "world_identity.h"
 
 class monster;
 class vehicle;
@@ -364,6 +365,8 @@ struct peer_observation {
 };
 
 struct client_admission_state {
+    // Host authority namespace; never the client's local scratch-world ID.
+    world_id host_world;
     // Client: world name received from host in 'welcome'.  Empty until the first
     // welcome is processed.  Exposed via mp_client_host_world_name().
     std::string client_host_world_name{};

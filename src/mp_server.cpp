@@ -236,6 +236,16 @@ void server::on_message( uint64_t id, const std::string &msg )
             std::lock_guard<std::mutex> lock( impl_->mutex );
             welcome = impl_->welcome;
         }
+        if( !welcome.world.valid() ) {
+            reject( "Host world identity is unavailable" );
+            return;
+        }
+        // The owner may have changed worlds after a probe. Do not admit that
+        // old probe's join into a different namespace or player store.
+        if( type == "join" && fields["world_id"] != welcome.world.str() ) {
+            reject( "Host world changed; reconnect before joining" );
+            return;
+        }
         const std::string position = welcome.host_omt ?
                                      ",\"host_omt\":[" + std::to_string( ( *welcome.host_omt )[0] ) + "," +
                                      std::to_string( ( *welcome.host_omt )[1] ) + "," +
@@ -244,6 +254,7 @@ void server::on_message( uint64_t id, const std::string &msg )
               wire_quote( type == "join" ? credentials.id.str() : "probe" ) +
               ",\"peer_id\":" + std::to_string( id ) +
               ",\"world\":" + wire_quote( welcome.world_name ) +
+              ",\"world_id\":" + wire_quote( welcome.world.str() ) +
               ",\"host_name\":" + wire_quote( welcome.player_name ) +
               ",\"current_turn\":0,\"seed\":" + std::to_string( welcome.seed ) +
               position + "}" );

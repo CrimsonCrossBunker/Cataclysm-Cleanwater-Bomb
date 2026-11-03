@@ -17,6 +17,7 @@ add_executable(input_replay_test
     input_replay_test.cpp
     "${CCB_ROOT}/src/input_replay.cpp"
     "${CCB_ROOT}/src/player_identity.cpp"
+    "${CCB_ROOT}/src/identity_random.cpp"
     "${CCB_ROOT}/src/cached_options.cpp")
 target_include_directories(input_replay_test PRIVATE "${CCB_ROOT}/src")
 target_include_directories(input_replay_test SYSTEM PRIVATE "${CCB_ROOT}/src/third-party")

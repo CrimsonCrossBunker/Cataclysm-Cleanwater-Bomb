@@ -721,6 +721,13 @@ void game::reenter_fullscreen()
  */
 bool game::setup()
 {
+    // Establish durable world identity before replacing the current registries.
+    // Menu/load callers already handle setup failures; activation itself stays
+    // free of I/O and cannot publish an identity whose write failed.
+    if( !world_generator || !world_generator->active_world ) {
+        return false;
+    }
+    world_generator->active_world->identity();
     new_game = true;
     // A full world setup replaces every finalized registry.  Retire the
     // previous world's Platform states while their world and native content

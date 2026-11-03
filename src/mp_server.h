@@ -10,6 +10,7 @@
 #include <thread>
 
 #include "mp_admission.h"
+#include "world_identity.h"
 
 namespace cata_mp
 {
@@ -22,6 +23,7 @@ struct server_welcome {
     std::string player_name;
     unsigned int seed = 0;
     std::optional<std::array<int, 3>> host_omt;
+    world_id world;
 };
 
 class server
