@@ -14,6 +14,7 @@
 #include "item_pocket.h"
 #include "item_stack.h"
 #include "item_unload.h"
+#include "item_uid.h"
 #include "liquid_transfer.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -338,5 +339,52 @@ TEST_CASE( "integral_unload_keeps_earlier_transfers_when_a_later_stack_is_partia
     CHECK( fuel->all_items_top().front()->charges == 8 );
     CHECK( bottle.legacy_front().charges == capacity );
     CHECK( who.get_moves() == 1500 - unload_cost - 200 );
+    CHECK( get_avatar().get_moves() == 517 );
+}
+
+TEST_CASE( "unload_liquid_destination_uses_vehicle_and_tank_identity",
+           "[unload][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    npc &who = fixture.actor();
+    map &here = get_map();
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), who.pos_bub() + tripoint::east,
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int first = veh->install_part( here, point_rel_ms::zero, vpart_id( "tank_test" ) );
+    REQUIRE( first >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "frame" ) ) >= 0 );
+    const int second = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "tank_test" ) );
+    REQUIRE( second >= 0 );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    REQUIRE( here.veh_at( who.pos_bub() + tripoint::east ) );
+    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    item water( itype_id( "water_clean" ), calendar::turn, 2 );
+    item_location root = who.get_wielded_item();
+    REQUIRE( root->fill_with( water, 2 ) == 2 );
+    item &source = root->legacy_front();
+    unload_liquid_choice choice;
+    choice.source = source.uid().get_value();
+    choice.kind = LD_VEH;
+    choice.vehicle = veh->uid().get_value();
+    choice.tank = veh->part( second ).get_base().uid().get_value();
+    bool valid = true;
+    SECTION( "selected_tank" ) {}
+    SECTION( "unknown_tank" ) {
+        choice.tank = -1;
+        valid = false;
+    }
+    SECTION( "different_vehicle" ) {
+        choice.vehicle = -1;
+        valid = false;
+    }
+    CHECK( receive_unloaded_item( who, source, *root, &source,
+                                  std::vector<unload_liquid_choice> { choice } ) == valid );
+    CHECK( source.charges == ( valid ? 0 : 2 ) );
+    CHECK( veh->part( first ).ammo_remaining() == 0 );
+    CHECK( veh->part( second ).ammo_remaining() == ( valid ? 2 : 0 ) );
+    CHECK( who.get_moves() == ( valid ? 500 : 1500 ) );
     CHECK( get_avatar().get_moves() == 517 );
 }

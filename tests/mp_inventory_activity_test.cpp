@@ -29,6 +29,11 @@
 #include "mp_pickup.h"
 #include "mp_queue.h"
 #include "mp_inventory_activity.h"
+#include "mp_unload.h"
+#include "handle_liquid.h"
+#include "item_unload.h"
+#include "item_uid.h"
+#include "map_selector.h"
 #include "mp_world_session.h"
 #include "npc.h"
 #include "player_helpers.h"
@@ -84,7 +89,8 @@ struct reload_fixture {
         JsonValue value = json_loader::from_string( wire );
         JsonObject input = value.get_object();
         input.allow_omitted_members();
-        return cata_mp::execute_inventory_activity_request( who, get_map(), input, reload, inventory, authorized );
+        return cata_mp::execute_inventory_activity_request( who, get_map(), input, reload, inventory,
+                authorized );
     }
     std::string start( Character &who, const item_location &target, const item_location &ammo,
                        int quantity ) {
@@ -332,7 +338,12 @@ TEST_CASE( "client_inventory_activity_view_does_not_advance_native_or_emit_lifec
     cata_mp::set_client_mode( true );
     reload_events events;
     who.set_moves( 100 );
-    who.assign_activity( reload_activity_actor::client_view() );
+    SECTION( "reload" ) {
+        who.assign_activity( reload_activity_actor::client_view() );
+    }
+    SECTION( "unload" ) {
+        who.assign_activity( unload_activity_actor::client_view() );
+    }
     who.activity.moves_left = 500;
     auto &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
@@ -342,10 +353,11 @@ TEST_CASE( "client_inventory_activity_view_does_not_advance_native_or_emit_lifec
     CHECK( who.activity.moves_left == 500 );
     CHECK( who.get_moves() == 0 );
     CHECK( rng_get_engine() == before );
+    const activity_id view_id = who.activity.id();
     who.cancel_activity();
     g->multiplayer_session().client_turn.client_last_grant_seq = 1;
     REQUIRE_FALSE( cata_mp::is_client_waiting_for_ack() );
-    cata_mp::client_dispatch_wait_for_activity( activity_id( "ACT_RELOAD" ), true );
+    cata_mp::client_dispatch_wait_for_activity( view_id, true );
     cata_mp::mp_client_post_action( 100 );
     CHECK_FALSE( cata_mp::is_client_waiting_for_ack() );
     CHECK( events.starts == 0 );
@@ -422,4 +434,264 @@ TEST_CASE( "reload_save_after_source_exhaustion_retains_ammo_name_and_quantity",
     const auto messages = Messages::recent_messages( 1 );
     REQUIRE( messages.size() == 1 );
     CHECK( messages.front().second.find( item::nname( itype_id( "556" ), 3 ) ) != std::string::npos );
+}
+
+namespace
+{
+std::string start_unload( reload_fixture &fixture, Character &who,
+                          const item_location &root, const unload_selection &selection,
+                          const std::vector<unload_liquid_choice> &liquids = {} )
+{
+    const auto intent = cata_mp::make_unload_intent( who, root, selection, liquids );
+    return fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "unload" );
+        out.member( "unload", intent );
+    } ) );
+}
+} // namespace
+
+TEST_CASE( "owned_unload_selects_only_the_requested_integral_source",
+           "[multiplayer][unload_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    get_avatar().set_moves( 517 );
+    item gun( itype_id( "test_multimag_gun_integral_ammo" ) );
+    item battery( itype_id( "heavy_battery_cell" ) );
+    battery.ammo_set( itype_id( "battery" ), 100 );
+    REQUIRE( gun.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
+    REQUIRE( gun.put_in( item( itype_id( "9mm" ), calendar::turn, 1 ),
+                         pocket_type::MAGAZINE ).success() );
+    who.set_wielded_item( gun );
+    item_location root = who.get_wielded_item();
+    const auto options = unload_sources( *root );
+    REQUIRE( options.size() == 2 );
+    unload_selection selected{ root, { options.back().identity } };
+    bool valid = true;
+    SECTION( "integral_only" ) {}
+    SECTION( "stale_source" ) {
+        selected.sources = { -1 };
+        valid = false;
+    }
+    SECTION( "duplicate_source" ) {
+        selected.sources.push_back( selected.sources.front() );
+        valid = false;
+    }
+    const int before = who.get_moves();
+    start_unload( fixture, who, root, selected );
+    CHECK( root->ammo_remaining_in_pocket( "ammo" ) == ( valid ? 0 : 1 ) );
+    REQUIRE( root->magazines_current().size() == 1 );
+    CHECK( root->magazines_current().front()->ammo_remaining() == 100 );
+    CHECK( ( who.get_moves() < before ) == valid );
+    CHECK( get_avatar().get_moves() == 517 );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "owned_unload_uses_explicit_liquid_container_without_host_ui",
+           "[multiplayer][unload_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_moves( 1500 );
+    get_avatar().set_moves( 517 );
+    who.set_wielded_item( item( itype_id( "test_multimag_turret_flamethrower" ) ) );
+    item_location root = who.get_wielded_item();
+    item_pocket *fuel = root->pocket_by_id( "fuel" );
+    REQUIRE( fuel );
+    item gasoline( itype_id( "gasoline" ), calendar::turn, 20 );
+    REQUIRE( fuel->insert_item( gasoline ).success() );
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "bottle_plastic" ) ) );
+    item supply = gasoline;
+    supply.charges = 10000;
+    const int capacity = bottle.get_remaining_capacity_for_liquid( supply, true );
+    REQUIRE( capacity > 5 );
+    REQUIRE( bottle.fill_with( supply, capacity - 5 ) == capacity - 5 );
+    unload_liquid_choice choice;
+    choice.source = fuel->all_items_top().front()->uid().get_value();
+    choice.kind = LD_ITEM;
+    choice.container = capture_item_source( who, item_location( map_cursor( who.pos_bub() ),
+                                            &bottle ) );
+    const auto sources = unload_sources( *root );
+    REQUIRE( sources.size() == 1 );
+    unload_selection selected{ root, { sources.front().identity } };
+    const auto intent = cata_mp::make_unload_intent( who, root, selected, { choice } );
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "unload" );
+        out.member( "unload", intent );
+    } );
+    fixture.run( who, wire );
+    CHECK( root->ammo_remaining_in_pocket( "fuel" ) == 15 );
+    CHECK( bottle.legacy_front().charges == capacity );
+    const int after = who.get_moves();
+    CHECK( after < 1400 );
+    fixture.run( who, wire );
+    CHECK( root->ammo_remaining_in_pocket( "fuel" ) == 15 );
+    CHECK( bottle.legacy_front().charges == capacity );
+    CHECK( who.get_moves() == after );
+    CHECK( get_avatar().get_moves() == 517 );
+    CHECK_FALSE( get_avatar().activity );
+}
+
+TEST_CASE( "owned_unload_activity_progress_cancel_and_source_loss",
+           "[multiplayer][unload_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    item mag( itype_id( "stanag30" ) );
+    mag.ammo_set( itype_id( "556" ), 30 );
+    who.set_wielded_item( mag );
+    const item_location root = who.get_wielded_item();
+    reload_events events;
+    start_unload( fixture, who, root, { root, {} } );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    REQUIRE( who.activity.id() == activity_id( "ACT_UNLOAD" ) );
+    const int total = who.activity.moves_left;
+    REQUIRE( total > 100 );
+    const std::string first_step = fixture.request( who, "step" );
+    fixture.run( who, first_step );
+    REQUIRE( who.activity );
+    CHECK( who.activity.moves_left < total );
+    CHECK( root->ammo_remaining() == 30 );
+    const int progress = who.activity.moves_left;
+    fixture.run( who, first_step );
+    CHECK( who.activity.moves_left == progress );
+    SECTION( "finish_once" ) {
+        who.set_moves( 100000 );
+        const std::string finish = fixture.request( who, "step" );
+        fixture.run( who, finish );
+        CHECK_FALSE( who.activity );
+        CHECK( root->ammo_remaining() == 0 );
+        const int moves = who.get_moves();
+        fixture.run( who, finish );
+        CHECK( who.get_moves() == moves );
+    }
+    SECTION( "cancel_without_ap" ) {
+        who.set_moves( 0 );
+        fixture.run( who, fixture.request( who, "cancel" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( root->ammo_remaining() == 30 );
+        CHECK( who.get_moves() == 0 );
+    }
+    SECTION( "removed_source" ) {
+        who.remove_weapon();
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( who.get_moves() == 100 );
+    }
+    SECTION( "removed_source_after_save" ) {
+        save_reload_activity( who );
+        who.remove_weapon();
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( who.get_moves() == 100 );
+    }
+    CHECK( events.starts == 1 );
+    CHECK( events.finishes == 1 );
+}
+
+TEST_CASE( "owned_unload_liquid_activity_revalidates_destination_after_save",
+           "[multiplayer][unload_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    item_location root = who.get_wielded_item();
+    item water( itype_id( "water_clean" ), calendar::turn, 2 );
+    REQUIRE( root->fill_with( water, 2 ) == 2 );
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "bottle_plastic" ) ) );
+    item_location destination( map_cursor( who.pos_bub() ), &bottle );
+    unload_liquid_choice choice;
+    choice.source = root->legacy_front().uid().get_value();
+    choice.kind = LD_ITEM;
+    choice.container = capture_item_source( who, destination );
+    start_unload( fixture, who, root, { root, {} }, { choice } );
+    REQUIRE( who.activity );
+    std::ostringstream saved;
+    JsonOut out( saved );
+    who.activity.serialize( out );
+    JsonValue input = json_loader::from_string( saved.str() );
+    player_activity loaded;
+    loaded.deserialize( input.get_object() );
+    who.activity = std::move( loaded );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    bool missing = false;
+    SECTION( "destination_retained" ) {}
+    SECTION( "destination_removed" ) {
+        destination.remove_item();
+        missing = true;
+    }
+    who.set_moves( 100000 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    if( missing ) {
+        CHECK( root->legacy_front().charges == 2 );
+    } else {
+        CHECK( root->is_container_empty() );
+        CHECK( destination->legacy_front().charges == 2 );
+    }
+}
+
+TEST_CASE( "owned_unload_rejects_another_players_item_and_stale_cancel",
+           "[multiplayer][unload_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    item mag( itype_id( "stanag30" ) );
+    mag.ammo_set( itype_id( "556" ), 30 );
+    get_avatar().set_wielded_item( mag );
+    const item_location foreign = get_avatar().get_wielded_item();
+    start_unload( fixture, who, foreign, { foreign, {} } );
+    CHECK_FALSE( who.activity );
+    CHECK( foreign->ammo_remaining() == 30 );
+    CHECK( who.get_moves() == 100 );
+    who.set_wielded_item( mag );
+    const item_location own = who.get_wielded_item();
+    start_unload( fixture, who, own, { own, {} } );
+    REQUIRE( who.activity );
+    const std::string old_identity = std::to_string( who.activity.identity_generation() );
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    start_unload( fixture, who, own, { own, {} } );
+    REQUIRE( who.activity );
+    fixture.run( who, fixture.request( who, "cancel", {}, old_identity ) );
+    CHECK( who.activity );
+    CHECK( own->ammo_remaining() == 30 );
+}
+
+TEST_CASE( "owned_unload_wire_applies_without_client_gameplay_hooks_or_rng",
+           "[multiplayer][unload_owned]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    item mag( itype_id( "stanag30" ) );
+    mag.ammo_set( itype_id( "556" ), 3 );
+    remote.set_wielded_item( mag );
+    item_location root = remote.get_wielded_item();
+    const std::string started = start_unload( fixture, remote, root, { root, {} } );
+    REQUIRE( remote.activity );
+    remote.set_moves( 100000 );
+    const std::string finished = fixture.run( remote, fixture.request( remote, "step" ) );
+    REQUIRE_FALSE( remote.activity );
+    avatar &local = get_avatar();
+    cata_mp::set_client_mode( true );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.active = true;
+    view.pending_request = 1;
+    reload_events events;
+    local.assign_activity( unload_activity_actor::client_view() );
+    const auto rng = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( started ) );
+    REQUIRE( cata_mp::inventory_activity_view( local.activity ) );
+    CHECK( local.get_wielded_item()->ammo_remaining() == 3 );
+    view.pending_request = 2;
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    CHECK( local.get_wielded_item()->ammo_remaining() == 0 );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( local.activity );
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    CHECK( local.get_wielded_item()->ammo_remaining() == 0 );
+    CHECK( events.starts == 0 );
+    CHECK( events.finishes == 0 );
+    CHECK( rng_get_engine() == rng );
 }

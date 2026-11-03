@@ -272,7 +272,7 @@ static bool get_liquid_target( item &liquid, const item *const source, const int
                                const tripoint_bub_ms *const source_pos,
                                const vehicle *const source_veh,
                                const monster *const source_mon,
-                               liquid_dest_opt &target )
+                               liquid_dest_opt &target, bool allow_consume = true )
 {
     if( !liquid.made_of_from_type( phase_id::LIQUID ) ) {
         dbg( D_ERROR ) << "game:handle_liquid: Tried to handle_liquid a non-liquid!";
@@ -327,7 +327,7 @@ static bool get_liquid_target( item &liquid, const item *const source, const int
     std::vector<std::function<void()>> actions;
     // Allow consuming freshly crafted liquids (no vehicle/map source), matching CBN;
     // still exclude liquids obtained from monsters.
-    if( player_character.can_consume_as_is( liquid ) && !source_mon ) {
+    if( allow_consume && player_character.can_consume_as_is( liquid ) && !source_mon ) {
         menu.addentry( -1, true, 'e', _( "Consume it" ) );
         actions.emplace_back( [&]() {
             target.dest_opt = LD_CONSUME;
@@ -680,6 +680,14 @@ bool handle_liquid( item_location &liquid, const item *const source, const int r
         return success;
     }
     return false;
+}
+
+liquid_dest_opt query_liquid_target( item &liquid, const item *source, int radius,
+                                     bool allow_consume )
+{
+    liquid_dest_opt target;
+    get_liquid_target( liquid, source, radius, nullptr, nullptr, nullptr, target, allow_consume );
+    return target;
 }
 
 liquid_dest_opt select_liquid_target( item &liquid, const int radius )

@@ -16,6 +16,7 @@ class player_activity;
 namespace cata_mp
 {
 struct pickup_host_state;
+struct unload_intent;
 struct inventory_activity_host_state {
     int64_t last_request = 0;
     bool needs_placement = false;
@@ -34,12 +35,14 @@ struct inventory_activity_client_state {
 
 bool owns_inventory_activity( const Character &who );
 bool inventory_activity_view( const player_activity &activity );
-std::string execute_inventory_activity_request( Character &who, map &here, const JsonObject &request,
-                                    inventory_activity_host_state &state, pickup_host_state &inventory, bool authorized = true );
+std::string execute_inventory_activity_request( Character &who, map &here,
+        const JsonObject &request,
+        inventory_activity_host_state &state, pickup_host_state &inventory, bool authorized = true );
 bool apply_inventory_activity_result( const JsonObject &response );
 void client_start_reload( const item_location &selected, const item_location &target,
                           const item_location &ammo, int quantity, int pocket,
                           bool allow_theft, bool allow_hammer );
+void client_start_unload( const unload_intent &intent );
 void client_step_inventory_activity();
 void client_cancel_inventory_activity();
 void client_update_inventory_activity_view();

@@ -115,6 +115,9 @@ bool perform_liquid_transfer( item_location &liquid, liquid_dest_opt &target );
 
 // Select destination to use, but don't actually do anything with it. Does not allow for spilling.
 liquid_dest_opt select_liquid_target( item &liquid, int radius );
+// Destination selection only, including ground and vehicle choices. No transfer or activity.
+liquid_dest_opt query_liquid_target( item &liquid, const item *source, int radius,
+                                     bool allow_consume = true );
 
 } // namespace liquid_handler
 

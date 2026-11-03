@@ -1,4 +1,4 @@
-#include "mp_item_source.h"
+#include "item_source.h"
 
 #include <algorithm>
 
@@ -13,8 +13,6 @@
 #include "vehicle_selector.h"
 #include "visitable.h"
 
-namespace cata_mp
-{
 void item_source::serialize( JsonOut &out ) const
 {
     out.start_object();
@@ -99,5 +97,3 @@ item_source capture_item_source( const Character &who, item_location source )
     }
     return intent;
 }
-
-} // namespace cata_mp
