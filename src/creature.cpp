@@ -2043,6 +2043,15 @@ void Creature::clear_effects()
     }
     effects->clear();
 }
+void Creature::restore_effects_snapshot( const std::vector<effect> &snapshot )
+{
+    clear_effects();
+    for( const effect &entry : snapshot ) {
+        ( *effects )[entry.get_id()][entry.get_bp()] = entry;
+        on_effect_int_change( entry.get_id(), entry.get_intensity(), entry.get_bp() );
+    }
+}
+
 bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
 {
     const safe_reference<Creature> creature_reference = get_safe_reference();

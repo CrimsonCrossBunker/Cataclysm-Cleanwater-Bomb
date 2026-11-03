@@ -535,10 +535,11 @@ void monmove()
 
     // Now, do active NPCs.
     for( npc &guy : g->all_npcs() ) {
-        // Remote player NPCs are driven by network input, not AI.
-        if( cata_mp::is_remote_player( guy.getID() ) ) {
+        // Network input replaces AI, not physical character turns. The same
+        // owned-character path below advances effects/body without NPC actions.
+        const bool remote_controlled = cata_mp::prepare_remote_character_turn( guy );
+        if( remote_controlled ) {
             cata_mp::mp_tick_proxy_activity( guy );
-            continue;
         }
         if( has_creature_do_turn || has_npc_do_turn ) {
             cata::lua_platform::native_callback_arguments payload = {
@@ -614,6 +615,10 @@ void monmove()
             } else {
                 guy.npc_update_body();
             }
+        }
+
+        if( remote_controlled ) {
+            cata_mp::finish_remote_character_turn( guy );
         }
 
         if( cata_mp::is_hosting() ) {

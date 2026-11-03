@@ -5999,8 +5999,12 @@ bool game::npc_menu( npc &who )
         }
     } else if( choice == attack ) {
         if( who.is_enemy() || query_yn( _( "You may be attacked!  Proceed?" ) ) ) {
-            u.melee_attack( who, true );
-            who.on_attacked( u );
+            if( cata_mp::is_client_mode() ) {
+                cata_mp::client_request_melee( who.pos_bub(), cata_mp::melee_action::strike );
+            } else {
+                u.melee_attack( who, true );
+                who.on_attacked( u );
+            }
         }
     } else if( choice == disarm ) {
         if( who.is_enemy() || query_yn( _( "You may be attacked!  Proceed?" ) ) ) {

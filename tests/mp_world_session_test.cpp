@@ -1,6 +1,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
+#include "character_martial_arts.h"
 #include "game.h"
 #include "json_loader.h"
 #include "json.h"
@@ -10,6 +11,9 @@
 #include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_melee.h"
+#include "skill.h"
+#include "item_uid.h"
 #include "mp_protocol.h"
 #include "mp_queue.h"
 #include "mp_world_session.h"
@@ -1199,4 +1203,216 @@ TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
     CHECK( last.turn.client_acted_this_turn );
     CHECK( cata_mp::client_acted_this_turn() );
     CHECK_FALSE( session.host_waiting_for_clients );
+}
+
+TEST_CASE( "authoritative_melee_uses_native_rng_damage_and_action_cost", "[multiplayer][melee]" )
+{
+    clear_avatar();
+    clear_map();
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        get_creature_tracker().clear();
+    } );
+    get_avatar().setpos( get_map(), tripoint_bub_ms( 90, 90, 0 ) );
+    npc &actor = bind_test_player( session );
+    npc &reference = spawn_npc( { 70, 60 }, "test_talker" );
+    const auto reference_control = g->player_controls().claim(
+                                       cata_mp::player_id( std::string( 32, '8' ) ), reference );
+    for( Character *person : {
+             &actor, &reference
+         } ) {
+        clear_character( *person, true );
+        person->set_wielded_item( item( itype_id( "spear_wood" ) ) );
+        person->set_skill_level( skill_id( "melee" ), 5 );
+        person->reset_cardio_acc();
+        person->set_stamina( person->get_stamina_max() );
+        person->set_moves( 100 );
+    }
+    actor.set_value( "mp_proxy", std::string( "1" ) );
+    actor.set_value( "mp_player_id", test_player().str() );
+    reference.setpos( get_map(), tripoint_bub_ms( 70, 60, 0 ) );
+    cata_mp::melee_action action = cata_mp::melee_action::strike;
+    const matec_id technique( "test_active_strike" );
+    SECTION( "adjacent_strike" ) {}
+    SECTION( "reach_attack" ) {
+        action = cata_mp::melee_action::reach;
+    }
+    SECTION( "active_technique" ) {
+        action = cata_mp::melee_action::technique;
+        for( Character *person : {
+                 &actor, &reference
+             } ) {
+            person->set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+            const matype_id style( "test_style_ma1" );
+            person->martial_arts_data->add_martialart( style );
+            person->martial_arts_data->set_style( style );
+        }
+    }
+    const int distance = action == cata_mp::melee_action::reach ? 2 : 1;
+    auto first = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                                            tripoint_bub_ms( 60 + distance, 60, 0 ) );
+    first->set_hp( 1000 );
+    auto second = make_shared_fast<monster>( *first );
+    second->spawn( tripoint_bub_ms( 70 + distance, 60, 0 ) );
+    REQUIRE( get_creature_tracker().add( first ) );
+    REQUIRE( get_creature_tracker().add( second ) );
+    const auto before = rng_get_engine();
+    if( action == cata_mp::melee_action::reach ) {
+        reference.reach_attack( second->pos_bub(), -1, false );
+    } else if( action == cata_mp::melee_action::technique ) {
+        REQUIRE( reference.use_active_technique( *second, technique ) );
+    } else {
+        reference.melee_attack( *second, true );
+    }
+    const auto expected_rng = rng_get_engine();
+    rng_get_engine() = before;
+    cata_mp::melee_intent intent;
+    intent.action = action;
+    intent.technique = technique;
+    intent.origin = actor.pos_abs();
+    intent.target = first->pos_abs();
+    cata_mp::execute_melee_intent( actor, get_map(), intent );
+    CHECK( first->get_hp() == second->get_hp() );
+    CHECK( actor.get_moves() == reference.get_moves() );
+    CHECK( actor.get_stamina() == reference.get_stamina() );
+    CHECK( actor.get_focus_pool() == reference.get_focus_pool() );
+    CHECK( actor.get_skill_level_object( skill_id( "melee" ) ).exercise( true ) ==
+           reference.get_skill_level_object( skill_id( "melee" ) ).exercise( true ) );
+    CHECK( rng_get_engine() == expected_rng );
+}
+
+TEST_CASE( "melee_intent_rejects_stale_targets_and_attached_mutation_payloads",
+           "[multiplayer][melee]" )
+{
+    clear_avatar();
+    clear_map();
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        get_creature_tracker().clear();
+    } );
+    get_avatar().setpos( get_map(), tripoint_bub_ms( 90, 90, 0 ) );
+    npc &actor = bind_test_player( session );
+    auto &peer = only_test_remote( session );
+    peer.connected = true;
+    clear_character( actor, true );
+    actor.set_value( "mp_proxy", std::string( "1" ) );
+    actor.set_value( "mp_player_id", test_player().str() );
+    actor.set_wielded_item( item( itype_id( "spear_wood" ) ) );
+    auto target = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ), tripoint_bub_ms( 61, 60,
+                  0 ) );
+    target->set_hp( 1000 );
+    REQUIRE( get_creature_tracker().add( target ) );
+    cata_mp::serialize_remote_player_state( peer );
+    const auto id = session.replication.entity_ids.known_id( *target );
+    REQUIRE( id != 0 );
+    uint64_t request_revision = peer.pickup.revision;
+    const auto send = [&]( uint32_t target_id, tripoint_abs_ms position ) {
+        std::ostringstream text;
+        JsonOut out( text );
+        out.start_object();
+        out.member( "action", "melee" );
+        out.member( "mode", "strike" );
+        out.member( "origin", actor.pos_abs() );
+        out.member( "target", position );
+        out.member( "target_monster", target_id );
+        out.member( "grant_seq", peer.turn.grant_seq );
+        out.member( "inventory_revision", request_revision );
+        out.member( "char_stats" );
+        out.start_object();
+        out.member( "str", 999 );
+        out.end_object();
+        out.member( "client_monster_hits" );
+        out.start_array();
+        out.start_object();
+        out.member( "nid", id );
+        out.member( "hp", 1 );
+        out.end_object();
+        out.end_array();
+        out.end_object();
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", text.str(), peer.admission } ) );
+        cata_mp::process_mp_events();
+    };
+    const int strength = actor.get_str_base();
+    const auto before = rng_get_engine();
+    send( id + 100, target->pos_abs() );
+    CHECK( target->get_hp() == 1000 );
+    CHECK( actor.get_str_base() == strength );
+    CHECK_FALSE( peer.turn.client_acted_this_turn );
+    CHECK( rng_get_engine() == before );
+    request_revision = peer.pickup.revision;
+    target->setpos( get_map(), tripoint_bub_ms( 65, 60, 0 ) );
+    send( id, target->pos_abs() );
+    CHECK( target->get_hp() == 1000 );
+    CHECK_FALSE( peer.turn.client_acted_this_turn );
+    request_revision = peer.pickup.revision;
+    target->setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
+    bool partial_turn = false;
+    peer.turn.remote_moves = 1;
+    SECTION( "attack_spends_full_budget" ) {}
+    SECTION( "fast_attack_preserves_remaining_budget" ) {
+        peer.turn.remote_moves = 1000;
+        partial_turn = true;
+    }
+    send( id, target->pos_abs() );
+    CHECK( actor.get_str_base() == strength );
+    CHECK( target->get_hp() > 1 );
+    CHECK( peer.turn.remote_moves == actor.get_moves() );
+    if( partial_turn ) {
+        CHECK( peer.turn.remote_moves > 0 );
+        REQUIRE_FALSE( peer.turn.client_acted_this_turn );
+    } else {
+        REQUIRE( peer.turn.client_acted_this_turn );
+    }
+    const int hp = target->get_hp();
+    const auto settled_rng = rng_get_engine();
+    send( id, target->pos_abs() );
+    CHECK( target->get_hp() == hp );
+    CHECK( rng_get_engine() == settled_rng );
+}
+
+TEST_CASE( "melee_result_preserves_weapon_identity_and_skill_progress_without_stale_rollback",
+           "[multiplayer][melee]" )
+{
+    clear_avatar();
+    clear_map();
+    npc &actor = spawn_npc( { 61, 60 }, "test_talker" );
+    const on_out_of_scope cleanup( [&]() {
+        clear_npcs();
+        clear_avatar();
+    } );
+    clear_character( actor, true );
+    actor.set_wielded_item( item( itype_id( "spear_wood" ) ) );
+    actor.get_skill_level_object( skill_id( "melee" ) ).set_exercise( 4321, true );
+    actor.set_focus_pool( 43210 );
+    const auto control = g->player_controls().claim(
+                             cata_mp::player_id( std::string( 32, '8' ) ), actor );
+    actor.set_stamina( 1234 );
+    actor.add_effect( efftype_id( "stunned" ), 3_turns );
+    cata_mp::pickup_host_state host;
+    cata_mp::pickup_client_state client;
+    const std::string wire = cata_mp::make_melee_result( actor, host );
+    JsonValue value = json_loader::from_string( wire );
+    JsonObject message = value.get_object();
+    message.allow_omitted_members();
+    avatar &observer = get_avatar();
+    const auto before_rng = rng_get_engine();
+    REQUIRE( cata_mp::apply_melee_result( observer, message, client ) );
+    CHECK( rng_get_engine() == before_rng );
+    REQUIRE( observer.get_wielded_item() );
+    CHECK( observer.get_wielded_item()->uid() == actor.get_wielded_item()->uid() );
+    CHECK( observer.get_stamina() == 1234 );
+    CHECK( observer.get_focus_pool() == 43210 );
+    CHECK( observer.get_skill_level_object( skill_id( "melee" ) ).exercise( true ) == 4321 );
+    CHECK( observer.get_effect_dur( efftype_id( "stunned" ) ) == 3_turns );
+    observer.set_stamina( 500 );
+    CHECK_FALSE( cata_mp::apply_melee_result( observer, message, client ) );
+    CHECK( observer.get_stamina() == 500 );
 }

@@ -9,6 +9,7 @@
 #include <string_view>
 #include <vector>
 
+#include "mp_melee.h"
 #include "character_id.h"
 #include "coordinates.h"
 #include "type_id.h"
@@ -192,6 +193,11 @@ std::string client_enrich_action( const std::string &json );
 // UI selection only: publish a value request, leaving carried items and the
 // map unchanged until the authoritative response arrives.
 void client_request_pickup( const Pickup::selection &selection );
+// Bridge the network action budget through the native owned-character phase.
+bool prepare_remote_character_turn( npc &actor );
+void finish_remote_character_turn( npc &actor );
+void client_request_melee( const tripoint_bub_ms &target, melee_action action,
+                           const matec_id &technique = matec_id() );
 
 // Client only: call immediately after client_send() to suppress stale moves>0
 // state packets until the server sends moves=0 (its action acknowledgement).

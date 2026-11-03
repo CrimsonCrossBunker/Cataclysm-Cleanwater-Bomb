@@ -17,6 +17,7 @@
 #include "creature_tracker.h"
 #include "mp_gamestate.h"
 #include "mp_world_session.h"
+#include "mp_test_helpers.h"
 #include "player_activity.h"
 #include "mp_actor_binding.h"
 #include "npc.h"
@@ -339,4 +340,52 @@ TEST_CASE( "host_wait_activity_keeps_monsters_advancing",
     g->simulate_turn_suffix();
     CHECK( zombie->get_effect_dur( stunned ) == 9_turns );
     CHECK( fixture.local.activity.id() == activity_id( "ACT_WAIT" ) );
+}
+
+TEST_CASE( "remote_player_body_and_combat_effects_advance_without_npc_ai",
+           "[multiplayer][melee][character_turn]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const override_option npc_food( "NO_NPC_FOOD", "false" );
+    calendar::turn = calendar::turn_zero + 11_hours;
+    control_fixture fixture;
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+    } );
+    npc &actor = fixture.follower();
+    clear_character( actor, true );
+    actor.setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
+    const player_id owner( std::string( 32, '7' ) );
+    auto &peer = make_test_remote( session );
+    actor.set_value( "mp_proxy", std::string( "1" ) );
+    actor.set_value( "mp_player_id", owner.str() );
+    peer.actor.bind_player( actor, owner, g->npc_lifetimes(), g->player_controls().claim( owner,
+                            actor ) );
+    peer.connected = true;
+    REQUIRE( cata_mp::is_remote_player( actor.getID() ) );
+    const efftype_id blind( "blind" );
+    actor.add_effect( blind, 500_turns );
+    actor.set_moves( -37 );
+    peer.turn.remote_moves = -37;
+    actor.set_stamina( actor.get_stamina_max() / 2 );
+    const int stamina = actor.get_stamina();
+    const auto position = actor.pos_abs();
+    calendar::turn += 1_turns;
+    g->simulate_turn_suffix();
+    CHECK( actor.pos_abs() == position );
+    CHECK( actor.get_moves() == -37 + actor.get_speed() );
+    CHECK( actor.get_effect_dur( blind ) == 499_turns );
+    CHECK( peer.turn.remote_moves == actor.get_moves() );
+    CHECK( actor.get_stamina() > stamina );
+    CHECK( actor.get_stamina() < actor.get_stamina_max() );
+    const int after_body = actor.get_stamina();
+    peer.turn.remote_moves = -200;
+    peer.turn.granted_this_turn = false;
+    cata_mp::grant_client_turn();
+    CHECK( actor.get_stamina() == after_body );
+    CHECK( peer.turn.remote_moves == -200 );
+    CHECK_FALSE( peer.turn.granted_this_turn );
 }
