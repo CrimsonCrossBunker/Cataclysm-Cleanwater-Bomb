@@ -31,6 +31,14 @@
     }
   },
   {
+    "id": "bionics_common",
+    "type": "item_group",
+    "copy-from": "bionics_common",
+    "extend": {
+      "items": [ [ "fcl_bio_linguistic_coprocessor", 8 ] ]
+    }
+  },
+  {
     "type": "item_group",
     "id": "bionics_retail",
     "subtype": "distribution",
