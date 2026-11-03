@@ -2598,7 +2598,7 @@ void Character::update_stamina( int turns )
 
 int Character::get_cardiofit() const
 {
-    if( is_npc() ) {
+    if( is_npc() && !has_native_player_control() ) {
         // No point in doing a bunch of checks on NPCs for now since they can't use cardio.
         return 2 * get_cardio_acc_base();
     }
