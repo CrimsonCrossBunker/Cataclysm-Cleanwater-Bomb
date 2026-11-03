@@ -1578,8 +1578,9 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // failure rejects the join instead of creating an unpersisted character.
     // Reserve control before publishing or saving the actor. A duplicate local
     // or remote player cannot acquire a second character through admission.
-    auto control = g->player_controls().claim( player.id, *remote,
-                   player_control_kind::legacy_proxy );
+    // The world advances the admitted player's native body/effect/AP phases;
+    // commands supply actions, while the NPC representation never runs AI.
+    auto control = g->player_controls().claim( player.id, *remote );
     remote->set_value( "mp_player_id", player.id.str() );
     remote->set_value( "mp_proxy", std::string( "1" ) );
     world_players().save( player, serialize_player( *remote ) );
@@ -1643,10 +1644,15 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     std::cout << "[cdda-mp] Spawned remote player '" << name << "' at "
               << spawn_pos.x() << "," << spawn_pos.y() << std::endl;
 
-    // Send initial state to player 2, then ask it to resend worn/hair so the
-    // fresh NPC gets the correct appearance even after a respawn.
+    // A returning player's server save owns the inventory. Establish its
+    // revision before draining the connection's already queued worn_sync;
+    // the old local save must not replace the restored character.
+    const std::string resumed = saved && rn ? make_player_resume_result( *rn, recipient.pickup ) : "";
     auto srv = get_active_server();
     if( srv ) {
+        if( !resumed.empty() ) {
+            srv->post_send( recipient.admission, resumed + "\n" );
+        }
         srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
         srv->post_send( recipient.admission, "{\"type\":\"resync_request\"}\n" );
     }
@@ -2757,26 +2763,36 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         return;
     }
 
-    // Graceful session-end notification from the client (v1 save handshake).
-    // Snapshot the host's world before the TCP socket goes down so any
-    // shared state the client touched is captured.  Client owns its own
-    // .sav, so nothing to do for their character on this side.
+    // A remote player can change the authoritative world without the host
+    // taking an action. Bypass quicksave's local-avatar dirty counter and
+    // report success only after the world and remote characters are written.
     if( msg.find( R"("action":"session_ending")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SESSION-END RECV: client is leaving — auto-saving host" );
-        add_msg( m_warning, _( "Your partner is leaving.  The game has been saved." ) );
-        g->quicksave( true );
+        if( g->save() ) {
+            add_msg( m_info, _( "Your partner is leaving.  The shared world has been saved." ) );
+        } else {
+            add_msg( m_bad,
+                     _( "Your partner is leaving, but saving the shared world failed.  Keep the world open and retry saving." ) );
+        }
         return;
     }
 
     // Co-op save handshake: the client saved on their side and asked us to save
     // the shared world too, so the host's authoritative save and the client's
-    // local save stay at the same game-time.  Reply save_done for confirmation.
+    // local save stay at the same game-time. Reply with the actual outcome.
     if( msg.find( R"("action":"save_request")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SAVE-REQ RECV: partner asked host to save the shared world" );
-        g->quicksave();
-        add_msg( m_info, _( "Your partner saved — the shared world was saved too." ) );
+        const bool saved = g->save();
+        if( saved ) {
+            add_msg( m_info, _( "Your partner saved — the shared world was saved too." ) );
+        } else {
+            add_msg( m_bad,
+                     _( "Your partner requested a save, but saving the shared world failed.  Keep the world open and retry saving." ) );
+        }
         if( auto srv = get_active_server() ) {
-            srv->post_send( recipient.admission, "{\"type\":\"save_done\"}\n" );
+            srv->post_send( recipient.admission, saved ?
+                            "{\"type\":\"save_done\",\"saved\":true}\n" :
+                            "{\"type\":\"save_done\",\"saved\":false}\n" );
         }
         return;
     }
@@ -6414,6 +6430,21 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    if( msg.find( "player_resume" ) != std::string::npos ) {
+        try {
+            const JsonValue value = json_loader::from_string( msg );
+            const JsonObject message = value.get_object();
+            message.allow_omitted_members();
+            if( message.get_string( "type", "" ) == "player_resume" ) {
+                apply_player_resume_result( get_avatar(), message, mp_session().client_pickup );
+                return true;
+            }
+        } catch( const JsonError & ) {
+            set_client_mode( false );
+            add_msg( m_bad, _( "Could not restore your saved character from the host.  Reconnect to retry." ) );
+            return true;
+        }
+    }
     if( msg.find( "inventory_activity_result" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
@@ -6830,11 +6861,20 @@ bool client_apply_message( const std::string &msg )
         return true;
     }
 
-    // Co-op save handshake: the host saved the shared world at our request.
+    // Co-op save handshake: receipt alone is not proof of a successful save.
     if( msg.find( R"("type":"save_done")" ) != std::string::npos ) {
-        mp_log( "[cdda-mp] SAVE-DONE RECV: host saved the shared world" );
-        add_msg( m_good,
-                 _( "The host saved the shared world — your progress is in sync.  (Your inventory isn't fully mirrored to the host yet — known limitation.)" ) );
+        const JsonValue value = json_loader::from_string( msg );
+        const JsonObject result = value.get_object();
+        result.allow_omitted_members();
+        const bool saved = result.get_bool( "saved", false );
+        mp_log( saved ? "[cdda-mp] SAVE-DONE RECV: host saved the shared world" :
+                "[cdda-mp] SAVE-DONE RECV: host did not confirm a successful save" );
+        if( saved ) {
+            add_msg( m_good, _( "The host saved the shared world and your character." ) );
+        } else {
+            add_msg( m_bad,
+                     _( "The host did not confirm a successful save.  Keep the session open and ask the host to retry saving." ) );
+        }
         return true;
     }
 

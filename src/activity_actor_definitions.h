@@ -1991,7 +1991,10 @@ class consume_activity_actor : public activity_actor
 
         void start( player_activity &act, Character &guy ) override;
         void do_turn( player_activity &, Character & ) override;
-        static consume_activity_actor client_view();
+        static consume_activity_actor client_view( bool reprompt = false );
+        bool should_reprompt() const {
+            return reprompt_consume_menu;
+        }
         bool is_server_owned() const {
             return server_owned;
         }

@@ -32,6 +32,7 @@
 #include "map_selector.h"
 #include "messages.h"
 #include "mp_client_conn.h"
+#include "mp_combat_result.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
 #include "mp_item_source.h"
@@ -44,6 +45,7 @@
 #include "ret_val.h"
 #include "rng.h"
 #include "units.h"
+#include "uistate.h"
 
 namespace
 {
@@ -930,8 +932,7 @@ struct consumption_fixture : reload_fixture {
     std::optional<player_control> control;
     npc &remote() {
         npc &who = reload_fixture::remote();
-        control.emplace( controls.claim( cata_mp::player_id( std::string( 32, '6' ) ), who,
-                                         player_control_kind::legacy_proxy ) );
+        control.emplace( controls.claim( cata_mp::player_id( std::string( 32, '6' ) ), who ) );
         REQUIRE( who.is_player_controlled() );
         who.stomach.empty();
         who.guts.empty();
@@ -1085,6 +1086,9 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
            "[multiplayer][consume_owned]" )
 {
     consumption_fixture fixture;
+    restore_on_out_of_scope restore_menu( uistate.open_menu );
+    restore_on_out_of_scope restore_consume_ui( uistate.consume_uistate );
+    uistate.open_menu.reset();
     npc &remote = fixture.remote();
     remote.set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 2 ) );
     const std::string started = fixture.run( remote, consume_request( fixture, remote,
@@ -1100,7 +1104,7 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     auto &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
-    local.assign_activity( consume_activity_actor::client_view() );
+    local.assign_activity( consume_activity_actor::client_view( true ) );
     const auto rng = rng_get_engine();
     consumption_events events;
     REQUIRE( cata_mp::client_apply_message( started ) );
@@ -1111,9 +1115,108 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     CHECK( needs_state( local ) == expected );
     CHECK( local.get_morale_level() == expected_morale );
     cata_mp::client_update_inventory_activity_view();
+    REQUIRE( uistate.open_menu.has_value() );
+    uistate.open_menu.reset(); // The UI consumed the deferred menu callback.
     REQUIRE( cata_mp::client_apply_message( finished ) );
     REQUIRE( cata_mp::client_apply_message( started ) );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( uistate.open_menu.has_value() );
     CHECK( needs_state( local ) == expected );
+    CHECK( events.actors.empty() );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "client_consumption_continuation_respects_cancel_and_other_ui",
+           "[multiplayer][consume_owned]" )
+{
+    reload_fixture fixture;
+    restore_on_out_of_scope restore_menu( uistate.open_menu );
+    restore_on_out_of_scope restore_consume_ui( uistate.consume_uistate );
+    uistate.open_menu.reset();
+    cata_mp::set_client_mode( true );
+    avatar &local = get_avatar();
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    local.assign_activity( consume_activity_actor::client_view( true ) );
+    view.active = true;
+    view.finished = true;
+    view.next_request = 17;
+    bool existing_menu_ran = false;
+    SECTION( "cancel does not reopen the menu" ) {
+        local.cancel_activity();
+    }
+    SECTION( "single item use does not reopen the menu" ) {
+        local.assign_activity( consume_activity_actor::client_view() );
+    }
+    SECTION( "a pending menu is preserved" ) {
+        uistate.open_menu = [&]() {
+            existing_menu_ran = true;
+        };
+    }
+    const bool had_menu = uistate.open_menu.has_value();
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( view.active );
+    CHECK( view.next_request == 17 );
+    CHECK( uistate.open_menu.has_value() == had_menu );
+    if( had_menu ) {
+        ( *uistate.open_menu )();
+        CHECK( existing_menu_ran );
+    }
+}
+
+TEST_CASE( "shared_save_acknowledgement_requires_explicit_success",
+           "[multiplayer][coop_save]" )
+{
+    reload_fixture fixture;
+    cata_mp::set_client_mode( true );
+    Messages::clear_messages();
+    std::string response;
+    bool saved = false;
+    SECTION( "successful write" ) {
+        response = R"({"type":"save_done","saved":true})";
+        saved = true;
+    }
+    SECTION( "failed write" ) {
+        response = R"({"type":"save_done","saved":false})";
+    }
+    SECTION( "legacy receipt without a write result" ) {
+        response = R"({"type":"save_done"})";
+    }
+    REQUIRE( cata_mp::client_apply_message( response ) );
+    const auto messages = Messages::recent_messages( 1 );
+    REQUIRE( messages.size() == 1 );
+    CHECK( ( messages.front().second.find( "The host saved the shared world" ) != std::string::npos ) ==
+           saved );
+    CHECK( ( messages.front().second.find( "did not confirm a successful save" ) != std::string::npos )
+           ==
+           !saved );
+}
+
+TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_rollback",
+           "[multiplayer][coop_save]" )
+{
+    consumption_fixture fixture;
+    npc &remote = fixture.remote();
+    remote.set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 3 ) );
+    remote.set_thirst( 42 );
+    const std::string resumed = cata_mp::make_player_resume_result( remote, fixture.inventory );
+    REQUIRE( fixture.inventory.revision > 0 );
+    avatar &local = get_avatar();
+    cata_mp::set_client_mode( true );
+    local.set_wielded_item( item( itype_id( "rock" ) ) );
+    const auto rng = rng_get_engine();
+    consumption_events events;
+    REQUIRE( cata_mp::client_apply_message( resumed ) );
+    REQUIRE( local.get_wielded_item() );
+    CHECK( local.get_wielded_item()->typeId() == itype_id( "chocolate" ) );
+    CHECK( local.get_wielded_item()->charges == 3 );
+    CHECK( local.get_thirst() == 42 );
+    remote.get_wielded_item()->charges = 2;
+    remote.set_thirst( 24 );
+    REQUIRE( cata_mp::client_apply_message( cata_mp::make_player_resume_result( remote,
+                                            fixture.inventory ) ) );
+    REQUIRE( cata_mp::client_apply_message( resumed ) );
+    CHECK( local.get_wielded_item()->charges == 2 );
+    CHECK( local.get_thirst() == 24 );
     CHECK( events.actors.empty() );
     CHECK( rng_get_engine() == rng );
 }
