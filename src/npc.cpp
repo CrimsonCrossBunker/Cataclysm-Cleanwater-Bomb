@@ -4374,7 +4374,10 @@ void npc_follower_rules::clear_flags()
 
 int npc::get_thirst() const
 {
-    return Character::get_thirst() - units::to_milliliter<int>( stomach.get_water() ) / 5;
+    // The NPC planning estimate includes undigested water. A player-controlled
+    // body uses the same physiological thirst value as a local avatar.
+    return Character::get_thirst() - ( is_player_controlled() ? 0 :
+                                       units::to_milliliter<int>( stomach.get_water() ) / 5 );
 }
 
 std::string npc::describe_mission() const

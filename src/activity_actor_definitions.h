@@ -1957,6 +1957,11 @@ class consume_activity_actor : public activity_actor
         item_location consume_location;
         item consume_item;
         bool was_canceled = false;
+        bool server_owned = false;
+        bool view_only = false;
+        bool allow_consequences = false;
+        bool allow_theft = false;
+        item_source owned_source;
         // whether to show the consume menu after this activity finishes
         bool reprompt_consume_menu = false;
 
@@ -1970,8 +1975,11 @@ class consume_activity_actor : public activity_actor
         }
     public:
         explicit consume_activity_actor( const item_location &consume_location,
-                                         bool reprompt_consume_menu = false ) :
-            consume_location( consume_location ), reprompt_consume_menu( reprompt_consume_menu ) {}
+                                         bool reprompt_consume_menu = false, bool owned = false,
+                                         bool consequences = false, bool theft = false ) :
+            consume_location( consume_location ), server_owned( owned ),
+            allow_consequences( consequences ), allow_theft( theft ),
+            reprompt_consume_menu( reprompt_consume_menu ) {}
 
         explicit consume_activity_actor( const item &consume_item, bool reprompt_consume_menu = false ) :
             consume_item( consume_item ), reprompt_consume_menu( reprompt_consume_menu ) {}
@@ -1982,7 +1990,15 @@ class consume_activity_actor : public activity_actor
         }
 
         void start( player_activity &act, Character &guy ) override;
-        void do_turn( player_activity &, Character & ) override {}
+        void do_turn( player_activity &, Character & ) override;
+        static consume_activity_actor client_view();
+        bool is_server_owned() const {
+            return server_owned;
+        }
+        bool is_client_view() const {
+            return view_only;
+        }
+        bool prepare_owned_turn( Character &who );
         void finish( player_activity &act, Character & ) override;
         void canceled( player_activity &, Character &who ) override;
 

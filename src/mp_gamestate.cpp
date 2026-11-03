@@ -8754,7 +8754,7 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_id
 void client_send_activity_start( const std::string &activity_id_str )
 {
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
-          activity_id_str == "ACT_INSERT_ITEM" ) &&
+          activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8775,7 +8775,7 @@ void client_send_activity_start( const std::string &activity_id_str )
 void client_send_activity_end( const std::string &activity_id_str )
 {
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
-          activity_id_str == "ACT_INSERT_ITEM" ) &&
+          activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }

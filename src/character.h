@@ -1977,12 +1977,12 @@ class Character : public Creature, public visitable
         /** Used for eating object at a location. Removes item if all of it was consumed.
         *   @returns trinary enum NONE, SOME or ALL amount consumed.
         */
-        trinary consume( item_location loc, bool force = false );
+        trinary consume( item_location loc, bool force = false, bool ownership_confirmed = false );
 
         /** Used for eating a particular item that doesn't need to be in inventory.
          *  @returns trinary enum NONE, SOME or ALL (doesn't remove).
          */
-        trinary consume( item &target, bool force = false );
+        trinary consume( item &target, bool force = false, bool ownership_confirmed = false );
 
         /**
          * Stores an item inside another consuming moves proportional to weapon skill and volume.
@@ -3010,6 +3010,9 @@ class Character : public Creature, public visitable
         // hooks. Parse all roots before replacing the current owned items.
         void store_carried_items( JsonOut &json ) const;
         void load_carried_items( const JsonObject &data );
+        // Replica-only needs/morale state; no ingestion, digestion or gameplay hooks.
+        void store_needs_state( JsonOut &json ) const;
+        void load_needs_state( const JsonObject &data );
 
         int scent = 0;
         pimpl<bionic_collection> my_bionics;
