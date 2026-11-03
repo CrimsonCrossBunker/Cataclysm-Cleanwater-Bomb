@@ -11,5 +11,16 @@
         "npc_message": "%1$s's reacts with robotic precision."
       }
     ]
+  },
+  {
+    "type": "enchantment",
+    "id": "fcl_melee_optimization",
+    "condition": "ACTIVE",
+    "hit_you_effect": [
+      {
+        "id": "fcl_generic_speed_bonus",
+        "hit_self": true
+      }
+    ]
   }
 ]

@@ -11,5 +11,30 @@
     "min_damage": 100,
     "max_damage": 100,
     "base_casting_time": 1
+  },
+  {
+    "id": "fcl_generic_speed_bonus",
+    "type": "SPELL",
+    "name": {
+      "str": "Futurism Stacking Speed Bonus",
+      "//~": "NO_I18N"
+    },
+    "description": {
+      "str": "Grants you a stackable speed bonus.",
+      "//~": "NO_I18N"
+    },
+    "message": "",
+    "valid_targets": [
+      "self"
+    ],
+    "effect": "attack",
+    "effect_str": "fcl_generic_speed_bonus",
+    "shape": "blast",
+    "flags": [
+      "NO_PROJECTILE"
+    ],
+    "base_casting_time": 1,
+    "min_duration": 100,
+    "max_duration": 100
   }
 ]

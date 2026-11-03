@@ -96,5 +96,16 @@
     "price": "10 kUSD",
     "price_postapoc": "1 kUSD",
     "difficulty": 9
+  },
+  {
+    "id": "fcl_bio_melee_optimization_unit",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Melee Optimization Unit CBM" },
+    "description": "An implanted AI module calculates the optimal followup to each of your melee strikes, allowing you to chain them with unnatural speed and grace.  This bionic must be active to function.",
+    "price": "10 kUSD",
+    "price_postapoc": "1 kUSD",
+    "difficulty": 10
   }
 ]

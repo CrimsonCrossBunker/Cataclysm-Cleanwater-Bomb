@@ -96,5 +96,17 @@
     "act_cost": "12 kJ",
     "react_cost": "12 kJ",
     "time": "1 s"
+  },
+  {
+    "id": "fcl_bio_melee_optimization_unit",
+    "type": "bionic",
+    "name": { "str": "Melee Optimization Unit" },
+    "description": "An implanted AI module calculates the optimal followup to each of your melee strikes, allowing you to chain them with unnatural speed and grace.  This bionic must be active to function.",
+    "occupied_bodyparts": [ [ "head", 10 ], [ "arm_l", 5 ], [ "arm_r", 5 ], [ "leg_l", 10 ], [ "leg_r", 10 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "enchantments": [ "fcl_melee_optimization" ],
+    "act_cost": "12 kJ",
+    "react_cost": "12 kJ",
+    "time": "1 s"
   }
 ]
