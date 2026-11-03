@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+struct insert_selection;
 class Character;
 class item;
 class item_location;
@@ -43,6 +44,7 @@ void client_start_reload( const item_location &selected, const item_location &ta
                           const item_location &ammo, int quantity, int pocket,
                           bool allow_theft, bool allow_hammer );
 void client_start_unload( const unload_intent &intent );
+void client_start_insert( const insert_selection &selection );
 void client_step_inventory_activity();
 void client_cancel_inventory_activity();
 void client_update_inventory_activity_view();

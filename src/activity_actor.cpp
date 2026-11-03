@@ -8374,15 +8374,64 @@ static item_location single_container_from_stack( item_location &loc )
     return loc;
 }
 
+insert_item_activity_actor insert_item_activity_actor::client_view()
+{
+    insert_item_activity_actor actor;
+    actor.view_only = true;
+    return actor;
+}
+
+void insert_item_activity_actor::remember_owned_locations( const Character &who )
+{
+    owned_selection = capture_insert_selection( who, holster, items,
+                      allow_fill_count_by_charge_item_nested );
+    owned_unsealed.clear();
+    for( const item_location &container : handler.pending_containers() ) {
+        if( container ) {
+            owned_unsealed.push_back( capture_item_source( who, container ) );
+        }
+    }
+}
+
+bool insert_item_activity_actor::prepare_owned_turn( Character &who )
+{
+    holster = resolve_item_source( who, get_map(), owned_selection.destination );
+    items.clear();
+    for( const auto &selected : owned_selection.items ) {
+        items.emplace_back( resolve_item_source( who, get_map(), selected.first ), selected.second );
+    }
+    handler = contents_change_handler();
+    for( const item_source &source : owned_unsealed ) {
+        item_location container = resolve_item_source( who, get_map(), source );
+        if( container ) {
+            handler.add_unsealed( container );
+        }
+    }
+    return !items.empty() && valid_insert_item( who, holster, items.front().first );
+}
+
+void insert_item_activity_actor::do_turn( player_activity &, Character & )
+{
+    if( view_only ) {
+        cata_mp::client_step_inventory_activity();
+    }
+}
+
 void insert_item_activity_actor::start( player_activity &act, Character &who )
 {
-    if( items.empty() ) {
-        debugmsg( "ACT_INSERT_ITEM was passed an empty list" );
-        act.set_to_null();
+    if( view_only ) {
+        act.moves_left = act.moves_total = 1;
+        return;
     }
-
+    if( server_owned ) {
+        remember_owned_locations( who );
+    }
+    if( items.empty() || !holster || !items.front().first ||
+        ( server_owned && !prepare_owned_turn( who ) ) ) {
+        act.set_to_null();
+        return;
+    }
     all_pockets_rigid = holster->all_pockets_rigid();
-
     const int total_moves = item_move_cost( who, items.front().first, false );
     act.moves_left = total_moves;
     act.moves_total = total_moves;
@@ -8524,6 +8573,13 @@ static ret_val<void> try_insert( item_location &holster, drop_location &holstere
 
 void insert_item_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( view_only ) {
+        return;
+    }
+    if( ( server_owned && !prepare_owned_turn( who ) ) || !holster || items.empty() ) {
+        who.cancel_activity();
+        return;
+    }
     bool success = false;
     bool bulk_load = false;
     Character *carrier = holster.carrier();
@@ -8531,6 +8587,10 @@ void insert_item_activity_actor::finish( player_activity &act, Character &who )
     if( holstered_item.first ) {
         success = true;
         item &it = *holstered_item.first;
+        if( it.count_by_charges() ) {
+            // The selected stack may have shrunk since this activity began.
+            holstered_item.second = std::min( holstered_item.second, it.charges );
+        }
         // Check if next is bulk load before moving item.
         auto itr = std::next( items.begin() );
         if( itr != items.end() && itr->first ) {
@@ -8587,7 +8647,7 @@ void insert_item_activity_actor::finish( player_activity &act, Character &who )
     }
 
     drop_locations items_remain;
-    if( who.is_avatar() && reopen_menu && !success ) {
+    if( who.is_avatar() && !server_owned && reopen_menu && !success ) {
         items_remain.insert( items_remain.end(), items.begin(), items.end() );
     }
 
@@ -8607,6 +8667,9 @@ void insert_item_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
 
+    if( server_owned ) {
+        remember_owned_locations( who );
+    }
     // Restart the activity
     const int total_moves = item_move_cost( who, items.front().first, bulk_load );
     act.moves_left = total_moves;
@@ -8615,6 +8678,13 @@ void insert_item_activity_actor::finish( player_activity &act, Character &who )
 
 void insert_item_activity_actor::canceled( player_activity &/*act*/, Character &who )
 {
+    if( view_only ) {
+        cata_mp::client_cancel_inventory_activity();
+        return;
+    }
+    if( server_owned ) {
+        prepare_owned_turn( who );
+    }
     handler.handle_by( who );
 }
 
@@ -8622,9 +8692,16 @@ void insert_item_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
 
-    jsout.member( "holster", holster );
-    jsout.member( "items", items );
-    jsout.member( "handler", handler );
+    jsout.member( "server_owned", server_owned );
+    jsout.member( "view_only", view_only );
+    if( server_owned ) {
+        jsout.member( "owned_selection", owned_selection );
+        jsout.member( "owned_unsealed", owned_unsealed );
+    } else if( !view_only ) {
+        jsout.member( "holster", holster );
+        jsout.member( "items", items );
+        jsout.member( "handler", handler );
+    }
     jsout.member( "all_pockets_rigid", all_pockets_rigid );
     jsout.member( "reopen_menu", reopen_menu );
     jsout.member( "allow_fill_charge_item_nested", allow_fill_count_by_charge_item_nested );
@@ -8638,6 +8715,10 @@ std::unique_ptr<activity_actor> insert_item_activity_actor::deserialize( JsonVal
 
     JsonObject data = jsin.get_object();
 
+    data.read( "server_owned", actor.server_owned );
+    data.read( "view_only", actor.view_only );
+    data.read( "owned_selection", actor.owned_selection );
+    data.read( "owned_unsealed", actor.owned_unsealed );
     data.read( "holster", actor.holster );
     data.read( "items", actor.items );
     data.read( "handler", actor.handler );

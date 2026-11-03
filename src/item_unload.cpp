@@ -11,6 +11,7 @@
 #include "flag.h"
 #include "game_constants.h"
 #include "item.h"
+#include "item_insert.h"
 #include "item_pocket.h"
 #include "item_uid.h"
 #include "json.h"
@@ -345,7 +346,8 @@ bool start_item_unload( Character &who, item_location loc, const unload_selectio
                         bool bypass_activity, const item_location &new_container,
                         const unload_liquid_choices &choices )
 {
-    if( !valid_unload_selection( loc, selection ) || ( choices && new_container ) ) {
+    if( !valid_unload_selection( loc, selection ) ||
+        ( new_container && !loc->is_container() ) ) {
         return false;
     }
     item &it = *loc;
@@ -389,7 +391,7 @@ bool start_item_unload( Character &who, item_location loc, const unload_selectio
         if( new_container == item_location::nowhere ) {
             who.assign_activity( unload_activity_actor( moves, loc, choices ) );
         } else if( !locs.empty() ) {
-            who.assign_activity( insert_item_activity_actor( new_container, locs, true ) );
+            start_item_insert( who, new_container, locs, !choices.has_value(), true, choices.has_value() );
         }
 
         return true;
