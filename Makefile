@@ -1348,6 +1348,18 @@ $(ODIR)/lua/%.o: $(SRC_DIR)/lua/%.c
 
 $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $(PCHFLAGS) -MMD -MP $<
+ifeq ($(PCH), 1)
+	# Some GCC/PCH combinations omit source headers from -MMD output.
+	# Scan without the forced PCH so callers rebuild after class layout changes.
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MM -MP -MT "$@" -MF "$(@:.o=.d)" "$<"
+endif
+
+# Explicitly repair old, incomplete dependencies without deleting object files.
+.PHONY: header-dependencies
+header-dependencies: $(patsubst $(SRC_DIR)/%.cpp,$(ODIR)/%.headers,$(wildcard $(SRC_DIR)/*.cpp))
+
+$(ODIR)/%.headers: $(SRC_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MM -MP -MT "$(ODIR)/$*.o" -MF "$(ODIR)/$*.d" "$<"
 
 $(ODIR)/%.o: $(SRC_DIR)/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -MMD -MP $<

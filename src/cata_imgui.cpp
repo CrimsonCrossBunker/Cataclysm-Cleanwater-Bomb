@@ -11,6 +11,7 @@
 #undef IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui/imgui_freetype.h>
 
+#include "guyuan_ui.h"
 #include "catacharset.h"
 #include "cached_options.h"
 #include "color.h"
@@ -1235,6 +1236,7 @@ void cataimgui::window::mark_resized()
 
 void cataimgui::window::draw()
 {
+    const guyuan_ui::scoped_style theme;
     button_action.clear();
     if( !is_open ) {
         return;

@@ -1,4 +1,5 @@
 #include "advanced_inv.h"
+#include "guyuan_hud.h"
 
 #include <advanced_inv_pane.h>
 #include <cursesdef.h>
@@ -2056,7 +2057,12 @@ void advanced_inventory::display()
 
     if( !is_visible() ) {
         init();
-        ui = std::make_unique<ui_adaptor>();
+        if( guyuan_hud::enabled() ) {
+            ui = std::make_unique<ui_adaptor>( ui_adaptor::disable_uis_below{} );
+            ui->is_imgui = true;
+        } else {
+            ui = std::make_unique<ui_adaptor>();
+        }
         ui->on_screen_resize( [&]( ui_adaptor & ui ) {
             constexpr int min_w_height = 10;
             const int min_w_width = FULL_SCREEN_WIDTH;
@@ -2088,13 +2094,20 @@ void advanced_inventory::display()
                 spopup->window( panes[src].window, point( 4, w_height - 1 ), w_width / 2 - 4 );
             }
 
-            ui.position( point( colstart, headstart ), point( w_width, head_height + w_height ) );
+            if( guyuan_hud::enabled() ) {
+                ui.position( point::zero, point( TERMX, TERMY ) );
+            } else {
+                ui.position( point( colstart, headstart ), point( w_width, head_height + w_height ) );
+            }
         } );
         ui->mark_resize();
 
         ui->on_redraw( [&]( const ui_adaptor & ) {
             if( always_recalc ) {
                 recalc = true;
+            }
+            if( draw_guyuan_window() ) {
+                return;
             }
 
             redraw_pane( advanced_inventory::side::left );
@@ -2138,7 +2151,24 @@ void advanced_inventory::display()
             break;
         }
 
-        process_action( ctxt.handle_input() );
+        std::string action = guyuan_action.empty() ?
+                             ctxt.handle_input( guyuan_visible ? 50 : -1 ) : "TIMEOUT";
+        if( !guyuan_action.empty() ) {
+            src = guyuan_side;
+            dest = src == left ? right : left;
+            if( guyuan_index >= 0 ) {
+                panes[src].index = guyuan_index;
+                panes[src].fix_index();
+            }
+            action = std::move( guyuan_action );
+            guyuan_action.clear();
+            guyuan_index = -1;
+        }
+        if( action == "HELP_KEYBINDINGS" ) {
+            ctxt.display_menu();
+            continue;
+        }
+        process_action( action );
     }
 }
 

@@ -1,4 +1,5 @@
 #include "inventory_ui.h"
+#include "guyuan_hud.h"
 
 #include <color.h>
 #include <coordinates.h>
@@ -2655,7 +2656,12 @@ shared_ptr_fast<ui_adaptor> inventory_selector::create_or_get_ui_adaptor()
 {
     shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
     if( !current_ui ) {
-        ui = current_ui = make_shared_fast<ui_adaptor>();
+        if( guyuan_hud::enabled() && !native_view_only ) {
+            ui = current_ui = make_shared_fast<ui_adaptor>( ui_adaptor::disable_uis_below{} );
+            current_ui->is_imgui = true;
+        } else {
+            ui = current_ui = make_shared_fast<ui_adaptor>();
+        }
         current_ui->on_screen_resize( [this]( ui_adaptor & ) {
             prepare_layout();
         } );
@@ -3266,13 +3272,20 @@ void inventory_selector::resize_window( int width, int height )
     }
     shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
     if( current_ui ) {
-        current_ui->position_from_window( w_inv );
+        if( guyuan_hud::enabled() && !native_view_only ) {
+            current_ui->position( point::zero, point( TERMX, TERMY ) );
+        } else {
+            current_ui->position_from_window( w_inv );
+        }
     }
 }
 
 void inventory_selector::refresh_window()
 {
     cata_assert( w_inv );
+    if( draw_guyuan_window() ) {
+        return;
+    }
 
     if( get_option<std::string>( "INVENTORY_HIGHLIGHT" ) != "disable" ) {
         highlight();
@@ -3581,10 +3594,51 @@ drop_location inventory_selector::get_only_choice() const
     return drop_location();
 }
 
+void inventory_selector::selection_error( const std::string &message )
+{
+    if( guyuan_visible ) {
+        guyuan_message = message;
+        if( const auto current_ui = ui.lock() ) {
+            current_ui->invalidate_ui();
+        }
+    } else {
+        popup( message, PF_GET_KEY );
+    }
+}
+
 inventory_input inventory_selector::get_input()
 {
-    std::string const &action = ctxt.handle_input();
+    // A short timeout lets graphical commands wake the native input loop.
+    std::string action = guyuan_action.empty() ?
+                         ctxt.handle_input( guyuan_visible ? 50 : -1 ) : "TIMEOUT";
+    if( !guyuan_action.empty() ) {
+        action = std::move( guyuan_action );
+        guyuan_action.clear();
+        guyuan_message.clear();
+        inventory_entry *entry = nullptr;
+        if( guyuan_item && highlight( guyuan_item ) ) {
+            entry = &get_active_column().get_highlighted();
+        }
+        guyuan_item = item_location();
+        if( action == "HELP_KEYBINDINGS" ) {
+            ctxt.display_menu();
+            return { "TIMEOUT", 0, nullptr };
+        }
+        if( action != "SELECT" && action != "MOUSE_MOVE" ) {
+            entry = nullptr;
+        }
+        return { action, 0, entry };
+    }
+    if( guyuan_visible && ( action == "SELECT" || action == "COORDINATE" ||
+                           action == "MOUSE_MOVE" || action == "CLICK_AND_DRAG" ||
+                           action == "SCROLL_UP" || action == "SCROLL_DOWN" ) ) {
+        // ImGui owns the pixel hitboxes and scrollbar, not the old text rectangles.
+        return { "TIMEOUT", 0, nullptr };
+    }
     int const ch = ctxt.get_raw_input().get_first_input();
+    if( action != "TIMEOUT" ) {
+        guyuan_message.clear();
+    }
     return process_input( action, ch );
 }
 
@@ -4636,8 +4690,9 @@ void inventory_multiselector::toggle_entries( int &count, const toggle_mode mode
         if( !denial.empty() ) {
             const std::string assembled = highlighted_entry.any_item().get_item()->display_name() + ":\n"
                                           + colorize( denial, c_red );
-            if( static_cast<size_t>( utf8_width( denial ) ) > highlighted_entry.cached_denial_space ) {
-                popup( assembled, PF_GET_KEY );
+            if( guyuan_hud::enabled() ||
+                static_cast<size_t>( utf8_width( denial ) ) > highlighted_entry.cached_denial_space ) {
+                selection_error( assembled );
             }
         }
         count = 0;
@@ -4720,8 +4775,8 @@ drop_locations inventory_multiselector::execute( bool allow_empty )
 
         if( input.action == "CONFIRM" ) {
             if( to_use.empty() && !allow_empty ) {
-                popup_getkey( _( "No items were selected.  Use %s to select them." ),
-                              ctxt.get_desc( "TOGGLE_ENTRY" ) );
+                selection_error( string_format( _( "No items were selected.  Use %s to select them." ),
+                                                ctxt.get_desc( "TOGGLE_ENTRY" ) ) );
                 continue;
             }
             break;
@@ -5543,6 +5598,7 @@ trade_selector::trade_selector( trade_ui *parent, Character &u,
     ctxt.register_action( ACTION_SWITCH_PANES );
     ctxt.register_action( ACTION_AUTOBALANCE );
     ctxt.register_action( ACTION_BANKBALANCE );
+    native_view_only = true;
     resize( size, origin );
     _ui = create_or_get_ui_adaptor();
 }

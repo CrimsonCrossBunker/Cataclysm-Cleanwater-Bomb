@@ -81,6 +81,13 @@ class advanced_inventory
         static constexpr int head_height = 5;
         bool move_all_items_and_waiting_to_quit = false;
 
+        bool draw_guyuan_window();
+        std::string guyuan_action;
+        side guyuan_side = left;
+        int guyuan_index = -1;
+        std::array<int, NUM_PANES> guyuan_scrolled_index = {{ -1, -1 }};
+        bool guyuan_visible = false;
+
         std::unique_ptr<ui_adaptor> ui;
         std::shared_ptr<input_context> shortcut_context;
         std::unique_ptr<string_input_popup> spopup;
