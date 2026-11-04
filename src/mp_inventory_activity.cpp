@@ -11,10 +11,12 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "character.h"
+#include "creature_tracker.h"
 #include "flag.h"
 #include "game.h"
 #include "game_inventory.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_disposition.h"
 #include "item_insert.h"
 #include "item_consumption.h"
@@ -64,6 +66,35 @@ consume_activity_actor *native_consume( Character &who )
 {
     auto *actor = dynamic_cast<consume_activity_actor *>( who.activity.actor.get() );
     return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+firstaid_activity_actor *native_firstaid( Character &who )
+{
+    auto *actor = dynamic_cast<firstaid_activity_actor *>( who.activity.actor.get() );
+    return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+bool start_firstaid( Character &who, map &here, const JsonObject &request )
+{
+    item_source identity;
+    request.read( "source", identity, true );
+    item_location source = resolve_item_source( who, here, identity );
+    Character *patient = &who;
+    if( !request.get_bool( "self", false ) ) {
+        tripoint_abs_ms position;
+        request.read( "target", position, true );
+        patient = here.inbounds( position ) ?
+                  get_creature_tracker().creature_at<Character>( here.get_bub( position ) ) : nullptr;
+        const std::string player = request.get_string( "target_player", "" );
+        if( !patient || ( !player.empty() ? partner_identity( patient->getID() ).str() != player :
+                          partner_identity( patient->getID() ).valid() || !patient->is_npc() ||
+                          patient->getID().get_value() != request.get_int( "target_npc", -1 ) ) ) {
+            return false;
+        }
+    }
+    const bodypart_str_id part( request.get_string( "bodypart" ) );
+    return part.is_valid() && start_owned_healing( who, *patient, source, part.id(),
+            request.get_bool( "allow_theft", false ) );
 }
 
 bool start_consume( Character &who, map &here, const JsonObject &request )
@@ -264,7 +295,9 @@ bool owns_inventory_activity( const Character &who )
     const auto *unload = dynamic_cast<const unload_activity_actor *>( who.activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( who.activity.actor.get() );
     const auto *consume = dynamic_cast<const consume_activity_actor *>( who.activity.actor.get() );
-    return ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
+    const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>( who.activity.actor.get() );
+    return ( firstaid && firstaid->is_server_owned() && !firstaid->is_client_view() ) ||
+           ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
            ( unload && unload->is_server_owned() && !unload->is_client_view() ) ||
            ( insert && insert->is_server_owned() && !insert->is_client_view() ) ||
            ( consume && consume->is_server_owned() && !consume->is_client_view() );
@@ -276,7 +309,9 @@ bool inventory_activity_view( const player_activity &activity )
     const auto *unload = dynamic_cast<const unload_activity_actor *>( activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( activity.actor.get() );
     const auto *consume = dynamic_cast<const consume_activity_actor *>( activity.actor.get() );
-    return ( actor && actor->is_client_view() ) || ( unload && unload->is_client_view() ) ||
+    const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>( activity.actor.get() );
+    return ( firstaid && firstaid->is_client_view() ) || ( actor && actor->is_client_view() ) ||
+           ( unload && unload->is_client_view() ) ||
            ( insert && insert->is_client_view() ) || ( consume && consume->is_client_view() );
 }
 
@@ -287,12 +322,18 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     const int64_t sequence = request.get_int64( "request" );
     const std::string operation = request.get_string( "operation" );
     const safe_reference<Creature> lifetime = who.get_safe_reference();
+    if( const auto *firstaid = native_firstaid( who ) ) {
+        state.tracks_body = true;
+        state.healing_patient = firstaid->patient_id();
+    }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
         state.last_request = sequence;
         if( operation == "start" ) {
             state.needs_placement = false;
             const std::string kind = request.get_string( "kind", "reload" );
+            state.tracks_body = kind == "firstaid";
+            state.healing_patient = character_id();
             if( kind == "reload" ) {
                 start_reload( who, here, request );
             } else if( kind == "unload" ) {
@@ -301,6 +342,11 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 start_insert( who, here, request );
             } else if( kind == "consume" ) {
                 start_consume( who, here, request );
+            } else if( kind == "firstaid" ) {
+                start_firstaid( who, here, request );
+                if( const auto *firstaid = native_firstaid( who ) ) {
+                    state.healing_patient = firstaid->patient_id();
+                }
             }
             state.tracks_needs = kind == "consume" || native_consume( who );
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
@@ -310,6 +356,12 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( firstaid_activity_actor *firstaid = native_firstaid( who ) ) {
+                if( !firstaid->prepare_owned_turn( who ) ) {
+                    who.cancel_activity();
+                } else if( who.get_moves() > 0 && operation == "step" ) {
+                    who.activity.do_turn( who );
+                }
             } else if( consume_activity_actor *consume = native_consume( who ) ) {
                 if( !consume->prepare_owned_turn( who ) ) {
                     who.cancel_activity();
@@ -399,6 +451,12 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         out.member( "needs" );
         who.store_needs_state( out );
     }
+    if( state.tracks_body ) {
+        out.member( "body" );
+        who.store_turn_state( out );
+        out.member( "practice" );
+        who.store_practice_state( out );
+    }
     out.member( "combat" );
     *out.get_stream() << combat;
     out.set_need_separator();
@@ -420,6 +478,10 @@ bool apply_inventory_activity_result( const JsonObject &response )
     }
     if( response.has_object( "needs" ) ) {
         get_avatar().load_needs_state( response.get_object( "needs" ) );
+    }
+    if( response.has_object( "body" ) ) {
+        get_avatar().load_turn_state( response.get_object( "body" ) );
+        get_avatar().load_practice_state( response.get_object( "practice" ) );
     }
     if( view.active && response.get_int64( "request" ) == view.pending_request ) {
         view.pending_request = 0;
@@ -501,6 +563,24 @@ void client_start_consume( const item_location &source, bool allow_consequences,
     } );
 }
 
+void client_start_firstaid( const item_location &source, Character &patient,
+                            const bodypart_str_id &part, bool allow_theft, bool reprompt )
+{
+    if( !begin_client_inventory_activity( firstaid_activity_actor::client_view( reprompt ) ) ) {
+        return;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "firstaid" );
+        out.member( "source", capture_item_source( get_avatar(), source ) );
+        out.member( "self", &patient == &get_avatar() );
+        out.member( "target", patient.pos_abs() );
+        out.member( "target_player", partner_identity( patient.getID() ).str() );
+        out.member( "target_npc", patient.getID().get_value() );
+        out.member( "bodypart", part.str() );
+        out.member( "allow_theft", allow_theft );
+    } );
+}
+
 void client_step_inventory_activity()
 {
     const auto &view = g->multiplayer_session().client_inventory_activity;
@@ -532,8 +612,11 @@ void client_update_inventory_activity_view()
     if( view.finished ) {
         const auto *consume = dynamic_cast<const consume_activity_actor *>(
                                   get_avatar().activity.actor.get() );
-        const bool reprompt = consume && consume->is_client_view() && consume->should_reprompt() &&
-                              !view.cancel_requested;
+        const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>(
+                                   get_avatar().activity.actor.get() );
+        const bool reprompt = !view.cancel_requested &&
+                              ( ( consume && consume->is_client_view() && consume->should_reprompt() ) ||
+                                ( firstaid && firstaid->is_client_view() && firstaid->should_reprompt() ) );
         if( inventory_activity_view( get_avatar().activity ) ) {
             get_avatar().activity.set_to_null();
         }

@@ -6,6 +6,9 @@
 #include <memory>
 #include <string>
 
+#include "character_id.h"
+#include "type_id.h"
+
 struct insert_selection;
 class Character;
 class item;
@@ -22,6 +25,8 @@ struct inventory_activity_host_state {
     int64_t last_request = 0;
     bool needs_placement = false;
     bool tracks_needs = false;
+    bool tracks_body = false;
+    character_id healing_patient;
 };
 struct inventory_activity_client_state {
     int64_t next_request = 0;
@@ -48,6 +53,8 @@ void client_start_unload( const unload_intent &intent );
 void client_start_insert( const insert_selection &selection );
 void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft,
                            bool reprompt = false );
+void client_start_firstaid( const item_location &source, Character &patient,
+                            const bodypart_str_id &part, bool allow_theft, bool reprompt = false );
 void client_step_inventory_activity();
 void client_cancel_inventory_activity();
 void client_update_inventory_activity_view();

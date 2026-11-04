@@ -4,6 +4,7 @@
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_pocket.h"
 #include "itype.h"
 #include "iuse.h"
@@ -57,6 +58,10 @@ void start_item_consumption( Character &who, const item_location &source, bool r
 {
     if( who.is_avatar() && cata_mp::is_client_mode() ) {
         if( !source || cata_mp::is_client_waiting_for_ack() || who.get_moves() <= 0 ) {
+            return;
+        }
+        if( healing_action( source ) ) {
+            select_client_healing( who, source, nullptr, reprompt );
             return;
         }
         const restore_on_out_of_scope restore_rng( rng_get_engine() );

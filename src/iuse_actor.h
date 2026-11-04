@@ -996,6 +996,8 @@ class heal_actor : public iuse_actor
         int get_disinfected_level( const Character &healer ) const;
         /** How many intensity levels of bleeding will be reduced using this actor by `healer`. */
         int get_stopbleed_level( const Character &healer ) const;
+        int healing_cost( const Character &healer ) const;
+        bool can_treat_part( const Character &patient, const bodypart_id &part ) const;
         /** Does the actual healing. Returns charges used. */
         int finish_using( Character &healer, Character &patient, item &it, bodypart_id healed ) const;
 
