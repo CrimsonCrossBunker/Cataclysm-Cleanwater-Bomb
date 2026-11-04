@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <memory>
@@ -29,6 +30,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
+#include "character_id.h"
 #include "character_martial_arts.h"
 #include "color.h"
 #include "coordinates.h"
@@ -118,8 +120,8 @@ static const efftype_id effect_amigara( "amigara" );
 static const efftype_id effect_beartrap( "beartrap" );
 static const efftype_id effect_contacts( "contacts" );
 static const efftype_id effect_downed( "downed" );
-static const efftype_id effect_grabbed( "grabbed" );
 static const efftype_id effect_fearparalyze( "fearparalyze" );
+static const efftype_id effect_grabbed( "grabbed" );
 static const efftype_id effect_heavysnare( "heavysnare" );
 static const efftype_id effect_hit_by_player( "hit_by_player" );
 static const efftype_id effect_incorporeal( "incorporeal" );

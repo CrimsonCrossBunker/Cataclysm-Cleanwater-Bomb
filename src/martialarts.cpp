@@ -61,6 +61,8 @@ static const bionic_id bio_armor_arms( "bio_armor_arms" );
 static const bionic_id bio_armor_legs( "bio_armor_legs" );
 static const bionic_id bio_cqb( "bio_cqb" );
 
+static const efftype_id effect_downed( "downed" );
+
 static const flag_id json_flag_PROVIDES_TECHNIQUES( "PROVIDES_TECHNIQUES" );
 
 static const json_character_flag json_flag_ALWAYS_BLOCK( "ALWAYS_BLOCK" );
@@ -1058,7 +1060,7 @@ bool ma_technique::activation_allowed( const Character &character,
         ( character.has_effect( grapple_cooldown_effect() ) || character.is_mounted() ||
           character.get_wielded_item() || character.get_working_arm_count() < 2 ||
           !character.has_two_arms_lifting() ||
-          character.has_effect( efftype_id( "downed" ) ) || character.in_sleep_state() ||
+          character.has_effect( effect_downed ) || character.in_sleep_state() ||
           character.get_stamina() < grapple_stamina ) ) {
         return false;
     }

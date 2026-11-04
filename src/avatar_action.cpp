@@ -69,6 +69,7 @@
 #include "rng.h"
 #include "sling.h"
 #include "sounds.h"
+#include "string_formatter.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"

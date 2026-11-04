@@ -138,6 +138,7 @@ static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_lightsnare( "lightsnare" );
 static const efftype_id effect_maimed_arm( "maimed_arm" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_monster_armor( "monster_armor" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_nemesis_buff( "nemesis_buff" );
@@ -2643,9 +2644,8 @@ bool monster::movement_impaired()
 
 bool monster::move_effects( bool )
 {
-    const efftype_id grip( "martial_grapple" );
-    if( has_effect( grip ) ) {
-        Creature *const source = get_effect( grip ).get_source().resolve_creature();
+    if( has_effect( effect_martial_grapple ) ) {
+        Creature *const source = get_effect( effect_martial_grapple ).get_source().resolve_creature();
         Character *const holder = source ? source->as_character() : nullptr;
         if( holder && !holder->is_dead_state() && is_adjacent( holder, false ) &&
             !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
@@ -2654,7 +2654,7 @@ bool monster::move_effects( bool )
             holder->get_stamina() >= 100 ) {
             return false;
         }
-        remove_effect( grip );
+        remove_effect( effect_martial_grapple );
     }
     // This function is relatively expensive, we want that cached
     // IMPORTANT: If adding any new effects here, make SURE to
