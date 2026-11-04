@@ -10,6 +10,9 @@
 #include "action.h"
 #include "avatar.h"
 #include "avatar_action.h"
+#include "bionics.h"
+#include "bionic_activation.h"
+#include "field_type.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
@@ -3217,3 +3220,261 @@ TEST_CASE( "examine_prying_preserves_tools_without_a_manual_use_action",
     CHECK( here.i_at( target ).size() == count );
     CHECK( rng_get_engine() == rng_after );
 }
+
+namespace
+{
+unsigned int prepare_targeted_bionic( Character &who, const bionic_id &id )
+{
+    who.add_bionic( bionic_id( "bio_power_storage" ) );
+    const unsigned int uid = who.add_bionic( id );
+    who.set_max_power_level( 200_kJ );
+    who.set_power_level( 200_kJ );
+    who.set_moves( 100 );
+    return uid;
+}
+void prepare_bionic_target( map &here, const tripoint_bub_ms &target, const bionic_id &id )
+{
+    if( id == bionic_id( "bio_lockpick" ) ) {
+        here.ter_set( target, ter_str_id( "t_door_locked" ) );
+    } else if( id == bionic_id( "bio_lighter" ) ) {
+        here.add_item_or_charges( target, item( itype_id( "2x4" ) ) );
+        REQUIRE( here.is_flammable( target ) );
+    } else {
+        here.furn_set( target, furn_str_id( "f_console" ) );
+        REQUIRE( here.has_flag( ter_furn_flag::TFLAG_CONSOLE, target ) );
+    }
+}
+std::string bionic_request( reload_fixture &fixture, Character &who, unsigned int uid,
+                            const bionic_id &id, const tripoint_abs_ms &target )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "bionic_activation" );
+        out.member( "bionic_uid", uid );
+        out.member( "bionic_type", id );
+        out.member( "target", target );
+    } );
+}
+} // namespace
+
+TEST_CASE( "targeted_bionics_execute_once_on_the_owning_player", "[mp_bionic]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim(
+                          cata_mp::player_id( std::string( 32, '9' ) ), remote );
+    avatar &host = get_avatar();
+    map &here = get_map();
+    host.setpos( here, tripoint_bub_ms( 65, 60, 0 ) );
+    const bionic_id id( GENERATE( "bio_lockpick", "bio_lighter", "bio_emp" ) );
+    CAPTURE( id.str() );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    prepare_targeted_bionic( host, id );
+    const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
+    prepare_bionic_target( here, target, id );
+    const auto before = remote.get_power_level();
+    const std::string wire = bionic_request( fixture, remote, uid, id, here.get_abs( target ) );
+    fixture.run( remote, wire );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+    CHECK( host.get_power_level() == before );
+    const auto after_start = rng_get_engine();
+    fixture.run( remote, wire );
+    CHECK( rng_get_engine() == after_start );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+    if( id == bionic_id( "bio_lockpick" ) ) {
+        REQUIRE( remote.activity.id() == activity_id( "ACT_LOCKPICK" ) );
+        save_reload_activity( remote );
+        remote.set_moves( 100 );
+        remote.activity.moves_left = 1;
+        fixture.run( remote, fixture.request( remote, "step" ) );
+        CHECK_FALSE( remote.activity );
+        CHECK( here.ter( target ) == ter_str_id( "t_door_c" ).id() );
+    } else if( id == bionic_id( "bio_lighter" ) ) {
+        CHECK( here.get_field( target, fd_fire ) );
+        CHECK( remote.get_moves() == 0 );
+    } else {
+        CHECK( here.furn( target ) == furn_str_id( "f_machinery_electronic" ).id() );
+        CHECK( remote.get_moves() == 0 );
+    }
+}
+
+TEST_CASE( "targeted_bionics_reject_invalid_intents_and_cancel_removed_implants", "[mp_bionic]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    map &here = get_map();
+    const bionic_id id( "bio_lockpick" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
+    prepare_bionic_target( here, target, id );
+    const std::string failure = GENERATE( "far", "power", "shorted", "wrong_uid", "wrong_type", "removed_after_load" );
+    CAPTURE( failure );
+    if( failure == "power" ) {
+        remote.set_power_level( 0_kJ );
+    } else if( failure == "shorted" ) {
+        ( *remote.find_bionic_by_uid( uid ) )->incapacitated_time = 1_minutes;
+    }
+    const auto before_power = remote.get_power_level();
+    const auto before_rng = rng_get_engine();
+    fixture.run( remote, bionic_request( fixture, remote,
+                                       failure == "wrong_uid" ? uid + 100 : uid,
+                                       failure == "wrong_type" ? bionic_id( "bio_lighter" ) : id,
+                                       here.get_abs( failure == "far" ? target + tripoint::east : target ) ) );
+    if( failure == "removed_after_load" ) {
+        REQUIRE( remote.activity );
+        save_reload_activity( remote );
+        remote.remove_bionic( **remote.find_bionic_by_uid( uid ) );
+        // Another instance of the same type must not inherit the old work.
+        const unsigned int replacement = remote.add_bionic( id );
+        REQUIRE( replacement != uid );
+        remote.set_moves( 100 );
+        remote.activity.moves_left = 1;
+        fixture.run( remote, fixture.request( remote, "step" ) );
+    } else {
+        CHECK( remote.get_power_level() == before_power );
+        CHECK( rng_get_engine() == before_rng );
+    }
+    CHECK_FALSE( remote.activity );
+    CHECK( here.ter( target ) == ter_str_id( "t_door_locked" ).id() );
+}
+
+TEST_CASE( "bionic_identity_is_not_recycled_after_character_restore", "[mp_bionic][bionics]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const bionic_id id( "bio_lockpick" );
+    const unsigned int uid = prepare_targeted_bionic( who, id );
+    who.remove_bionic( **who.find_bionic_by_uid( uid ) );
+    const std::string mode = GENERATE( "save", "player_state", "turn_state" );
+    CAPTURE( mode );
+    std::ostringstream saved;
+    JsonOut out( saved );
+    if( mode == "save" ) {
+        who.serialize( out );
+    } else if( mode == "player_state" ) {
+        who.store_player_state( out );
+    } else {
+        who.store_turn_state( out );
+    }
+    const JsonObject data = json_loader::from_string( saved.str() ).get_object();
+    if( mode == "save" ) {
+        npc restored;
+        restored.deserialize( data );
+        CHECK( restored.add_bionic( id ) > uid );
+        return;
+    } else if( mode == "player_state" ) {
+        who.load_player_state( data );
+    } else {
+        who.load_turn_state( data );
+    }
+    CHECK( who.add_bionic( id ) > uid );
+}
+
+TEST_CASE( "bionic_menu_and_examine_only_queue_client_requests", "[mp_bionic]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    const bionic_id id( "bio_lockpick" );
+    const unsigned int uid = prepare_targeted_bionic( who, id );
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    prepare_bionic_target( here, target, id );
+    const auto before_power = who.get_power_level();
+    const auto before_rng = rng_get_engine();
+    cata_mp::set_client_mode( true );
+    SECTION( "native_menu_entry" ) {
+        bool close_ui = false;
+        const bionic_activation_choices choices{ here.get_abs( target ) };
+        REQUIRE( who.activate_bionic( **who.find_bionic_by_uid( uid ), false, &close_ui, &choices ) );
+        CHECK( close_ui );
+    }
+    SECTION( "examine_entry" ) {
+        iexamine::locked_object_pickable( who, target );
+    }
+    CHECK( cata_mp::inventory_activity_view( who.activity ) );
+    CHECK( who.activity.execution() == activity_execution::presentation );
+    CHECK( who.get_power_level() == before_power );
+    CHECK( rng_get_engine() == before_rng );
+    CHECK( here.ter( target ) == ter_str_id( "t_door_locked" ).id() );
+}
+
+TEST_CASE( "bionic_emp_affects_the_character_at_the_target_tile", "[mp_bionic]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    avatar &host = get_avatar();
+    map &here = get_map();
+    host.setpos( here, remote.pos_bub() + tripoint::west );
+    const bionic_id id( "bio_emp" );
+    const unsigned int uid = prepare_targeted_bionic( host, id );
+    prepare_targeted_bionic( remote, bionic_id( "bio_lockpick" ) );
+    const auto host_power = host.get_power_level();
+    const auto remote_power = remote.get_power_level();
+    REQUIRE( execute_owned_bionic_activation( host, uid, id, { remote.pos_abs() } ) );
+    CHECK( host.get_power_level() == host_power - id->power_activate );
+    CHECK( remote.get_power_level() < remote_power );
+}
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+TEST_CASE( "bionic_native_hooks_keep_lua_state_on_the_acting_character", "[mp_bionic][lua][platform]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    reload_fixture fixture;
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const std::string mod = "owned_bionic_hook";
+    const auto runtime = platform::make_runtime( mod, 4110, lua );
+    const on_out_of_scope cleanup( []() { platform::shutdown(); } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    platform::runtime_world_ready( true );
+    lua["ccb"] = ccb;
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim(
+                          cata_mp::player_id( std::string( 32, '9' ) ), remote );
+    avatar &host = get_avatar();
+    host.setpos( get_map(), tripoint_bub_ms( 65, 60, 0 ) );
+    const bionic_id id( "bio_lockpick" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const unsigned int host_uid = prepare_targeted_bionic( host, id );
+    const bool remove_during_hook = GENERATE( false, true );
+    lua.set_function( "mutate_native", [&]() {
+        if( remove_during_hook ) {
+            const auto bio = remote.find_bionic_by_uid( uid );
+            if( bio ) {
+                remote.remove_bionic( **bio );
+            }
+        }
+    } );
+    const auto registered = lua.safe_script( R"lua(
+ccb.runtime.handler("activated", function(context)
+    local state = ccb.state.character
+    state.set("uses", state.get("uses", 0) + 1)
+    mutate_native()
+end)
+ccb.runtime.hook("on_bionic_activated", "activated")
+)lua", sol::script_pass_on_error );
+    REQUIRE( registered.valid() );
+    const auto uses = [&]( Character &who ) {
+        const auto &values = who.lua_character_state.for_mod( mod );
+        const auto found = values.find( "uses" );
+        return found == values.end() ? int64_t( 0 ) : std::get<int64_t>( found->second );
+    };
+    const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
+    prepare_bionic_target( get_map(), target, id );
+    const std::string wire = bionic_request( fixture, remote, uid, id, get_map().get_abs( target ) );
+    fixture.run( remote, wire );
+    CHECK( uses( remote ) == 1 );
+    CHECK( uses( host ) == 0 );
+    CHECK( static_cast<bool>( remote.activity ) == !remove_during_hook );
+    fixture.run( remote, wire );
+    CHECK( uses( remote ) == 1 );
+    const tripoint_bub_ms host_target = host.pos_bub() + tripoint::east;
+    prepare_bionic_target( get_map(), host_target, id );
+    REQUIRE( execute_owned_bionic_activation( host, host_uid, id,
+                                            { get_map().get_abs( host_target ) } ) );
+    CHECK( uses( host ) == 1 );
+    CHECK( uses( remote ) == 1 );
+}
+#endif

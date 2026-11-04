@@ -1663,6 +1663,10 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
 
             sol::protected_function callback = handler->second.callback;
             callback_scope scope( *owner );
+            const sol::optional<game_handle> character = payload["character"];
+            if( character ) {
+                owner->callback_character = *character;
+            }
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
                 report_callback_error( *owner, handler_id, result,

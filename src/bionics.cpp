@@ -24,6 +24,9 @@
 #include "avatar_action.h"
 #include "ballistics.h"
 #include "bionics.h"
+#include "bionic_activation.h"
+#include "character_action_guard.h"
+#include "mp_inventory_activity.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
@@ -761,8 +764,36 @@ void npc::check_or_use_weapon_cbm( const bionic_id &cbm_id )
 // Well, because like diseases, which are also in a Big Switch, bionics don't
 // share functions....
 
-bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close_bionics_ui )
+bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close_bionics_ui,
+                                 const bionic_activation_choices *choices )
 {
+    const character_action_guard lifetime( *this );
+    if( !lifetime ) {
+        return false;
+    }
+    if( !eff_only && is_avatar() ) {
+        const auto client = cata_mp::client_activate_bionic( initial_bio, choices );
+        if( client ) {
+            if( *client && close_bionics_ui ) {
+                *close_bionics_ui = true;
+            }
+            return *client;
+        }
+    }
+    if( choices && !valid_bionic_activation_choices( *this, initial_bio, *choices ) ) {
+        return false;
+    }
+    if( !choices && bionic_requires_adjacent_target( initial_bio.id ) ) {
+        if( !is_avatar() ) {
+            return false;
+        }
+        const bionic_uid uid = initial_bio.get_uid();
+        const auto selected = query_bionic_activation_choices( *this, initial_bio );
+        const auto current = lifetime ? find_bionic_by_uid( uid ) : std::nullopt;
+        // Target selection may pump input/network updates; re-resolve the CBM.
+        return selected && current && activate_bionic( **current, eff_only, close_bionics_ui, &*selected );
+    }
+    const auto initial_activity = activity.identity_generation();
     const safe_reference<Creature> character_reference = get_safe_reference();
     const bionic_uid activation_uid = initial_bio.get_uid();
     const bool mounted = is_mounted();
@@ -831,7 +862,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         Creature *live_creature = character_reference.get();
         Character *live_character = live_creature == nullptr ? nullptr :
                                     live_creature->as_character();
-        if( live_character == nullptr ) {
+        if( !lifetime || live_character == nullptr ) {
             return false;
         }
         const std::optional<bionic *> spell_bionic =
@@ -863,7 +894,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         Creature *live_creature = character_reference.get();
         Character *live_character = live_creature == nullptr ? nullptr :
                                     live_creature->as_character();
-        if( live_character == nullptr ||
+        if( !lifetime || live_character == nullptr ||
             !live_character->find_bionic_by_uid( activation_uid ) ) {
             return false;
         }
@@ -880,7 +911,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
     Creature *live_creature = character_reference.get();
     Character *live_character = live_creature == nullptr ? nullptr :
                                 live_creature->as_character();
-    if( live_character == nullptr ) {
+    if( !lifetime || live_character == nullptr ) {
         return false;
     }
     const std::optional<bionic *> activated_bionic =
@@ -904,7 +935,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         Creature *current_creature = character_reference.get();
         Character *current_character = current_creature == nullptr ? nullptr :
                                        current_creature->as_character();
-        if( current_character == nullptr ) {
+        if( !lifetime || current_character == nullptr ) {
             return false;
         }
         const std::optional<bionic *> current_bionic =
@@ -924,6 +955,12 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         }
         return true;
     };
+
+    if( choices && ( activity.identity_generation() != initial_activity || activity ||
+                     !valid_bionic_activation_choices( *this, bio, *choices ) ) ) {
+        refund_power();
+        return false;
+    }
 
     item tmp_item;
     avatar &player_character = get_avatar();
@@ -962,7 +999,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
                     Creature *live_creature = character_reference.get();
                     Character *live_character = live_creature == nullptr ? nullptr :
                                                 live_creature->as_character();
-                    if( live_character == nullptr ) {
+                    if( !lifetime || live_character == nullptr ) {
                         return false;
                     }
                     const std::optional<bionic *> current_activation =
@@ -1009,7 +1046,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
             Creature *live_creature = character_reference.get();
             Character *live_character = live_creature == nullptr ? nullptr :
                                         live_creature->as_character();
-            if( live_character == nullptr ) {
+            if( !lifetime || live_character == nullptr ) {
                 return false;
             }
             const std::optional<bionic *> current_activation =
@@ -1115,10 +1152,15 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         add_msg_activate();
         add_msg_if_player( m_info, _( "You can now run faster, assisted by joint servomotors." ) );
     } else if( bio.id == bio_lighter ) {
-        const std::optional<tripoint_bub_ms> pnt = choose_adjacent( _( "Start a fire where?" ) );
+        const std::optional<tripoint_bub_ms> pnt = choices ?
+                std::make_optional( here.get_bub( *choices->target ) ) :
+                choose_adjacent( _( "Start a fire where?" ) );
         if( pnt && here.is_flammable( *pnt ) && !here.get_field( *pnt, fd_fire ) ) {
             add_msg_activate();
             here.add_field( *pnt, fd_fire, 1, 0_turns, true, effect_source( this ) );
+            if( !lifetime ) {
+                return false;
+            }
             if( has_unfulfilled_pyromania() ) {
                 fulfill_pyromania_msg( _( "You happily light a fire." ), 5, 10, 3_hours, 2_hours );
             }
@@ -1139,10 +1181,14 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
             set_rad( 0 );
         }
     } else if( bio.id == bio_emp ) {
-        if( const std::optional<tripoint_bub_ms> pnt = choose_adjacent(
-                    _( "Create an EMP where?" ) ) ) {
+        if( const std::optional<tripoint_bub_ms> pnt = choices ?
+                std::make_optional( here.get_bub( *choices->target ) ) :
+                choose_adjacent( _( "Create an EMP where?" ) ) ) {
             add_msg_activate();
             explosion_handler::emp_blast( *pnt );
+            if( !lifetime ) {
+                return false;
+            }
             mod_moves( -100 );
         } else {
             refund_power();
@@ -1219,14 +1265,12 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
 
         mod_moves( -100 );
     } else if( bio.id == bio_lockpick ) {
-        if( !is_avatar() ) {
-            return false;
-        }
-        std::optional<tripoint_bub_ms> target = lockpick_activity_actor::select_location(
-                player_character );
+        const std::optional<tripoint_bub_ms> target = choices ?
+                std::make_optional( here.get_bub( *choices->target ) ) :
+                is_avatar() ? lockpick_activity_actor::select_location( player_character ) : std::nullopt;
         if( target.has_value() ) {
             add_msg_activate();
-            assign_activity( lockpick_activity_actor::use_bionic( here.get_abs( *target ) ) );
+            assign_activity( lockpick_activity_actor::use_bionic( here.get_abs( *target ), activation_uid ) );
             if( close_bionics_ui ) {
                 *close_bionics_ui = true;
             }
@@ -4245,13 +4289,12 @@ bionic_uid Character::generate_bionic_uid() const
 
 void Character::update_last_bionic_uid() const
 {
-    next_bionic_uid = 0;
-    for( bionic &bio : *my_bionics ) {
-        if( bio.get_uid() > next_bionic_uid ) {
-            next_bionic_uid = bio.get_uid();
-        }
+    // Activities and callbacks retain installed-instance identities. Removing
+    // an implant must not let a later installation reuse its identity.
+    next_bionic_uid = std::max( next_bionic_uid, bionic_uid( 1 ) );
+    for( const bionic &bio : *my_bionics ) {
+        next_bionic_uid = std::max( next_bionic_uid, bio.get_uid() + 1 );
     }
-    next_bionic_uid++;
 }
 
 void Character::force_bionic_deactivation( bionic &bio )

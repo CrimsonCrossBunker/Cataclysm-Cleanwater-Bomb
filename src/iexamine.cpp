@@ -21,6 +21,7 @@
 #include "avatar.h"
 #include "basecamp.h"
 #include "bionics.h"
+#include "bionic_activation.h"
 #include "mp_inventory_activity.h"
 #include "bodypart.h"
 #include "cached_options.h"
@@ -2175,10 +2176,11 @@ void iexamine::locked_object_pickable( Character &you, const tripoint_bub_ms &ex
 
     if( you.has_bionic( bio_lockpick ) ) {
         if( you.get_power_level() >= bio_lockpick->power_activate ) {
-            you.mod_power_level( -bio_lockpick->power_activate );
-            you.add_msg_if_player( m_info, _( "You activate your %s." ), bio_lockpick->name );
-            you.assign_activity( lockpick_activity_actor::use_bionic( here.get_abs( examp ) ) );
-            return;
+            const auto bio = you.find_bionic_by_type( bio_lockpick );
+            const bionic_activation_choices choices{ here.get_abs( examp ) };
+            if( bio && you.activate_bionic( **bio, false, nullptr, &choices ) ) {
+                return;
+            }
         } else {
             you.add_msg_if_player( m_info, _( "You don't have enough power to activate your %s." ),
                                    bio_lockpick->name );
