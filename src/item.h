@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include "item_load_context.h"
 #include "calendar.h"
 #include "cata_lazy.h"
 #include "cata_utility.h"
@@ -670,11 +671,19 @@ class item : public visitable
         bool allows_speedloader( const itype_id &speedloader_id ) const;
 
         template<typename Archive>
-        void io( Archive & );
+        void io( Archive &, item_load_context context = item_load_context::saved_game );
         using archive_type_tag = io::object_archive_tag;
 
         void serialize( JsonOut &json ) const;
-        void deserialize( const JsonObject &data );
+        void deserialize( const JsonObject &data,
+                          item_load_context context = item_load_context::saved_game );
+        // Restore a current item tree without legacy migrations or gameplay RNG.
+        static item from_current_state( const JsonObject &data );
+        void store_current_state( JsonOut &json ) const;
+        // Apply an already decoded snapshot at the same address. Matching item
+        // nodes retain their safe references; removed nodes invalidate normally.
+        void apply_current_state( item &&state, bool include_contents = true );
+        static void reuse_current_nodes( std::list<item> &existing, std::list<item> &incoming );
 
         const std::string &symbol() const;
         /**

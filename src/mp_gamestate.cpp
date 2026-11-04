@@ -4672,6 +4672,9 @@ bool prepare_remote_character_turn( npc &actor )
         return false;
     }
     actor.set_moves( peer->turn.remote_moves );
+    if( peer->player_state_initialized ) {
+        peer->inventory_before_turn = capture_inventory_turn( actor );
+    }
     return true;
 }
 
@@ -4680,6 +4683,16 @@ void finish_remote_character_turn( npc &actor )
     if( auto *peer = mp_session().find_remote( actor.getID() ) ) {
         if( peer->actor.owns_instance( &actor, g->npc_lifetimes() ) ) {
             peer->turn.remote_moves = actor.get_moves();
+            if( peer->inventory_before_turn ) {
+                const auto update = make_inventory_turn_update( actor, *peer->inventory_before_turn,
+                                    peer->pickup );
+                peer->inventory_before_turn.reset();
+                if( update ) {
+                    if( const auto server = get_active_server() ) {
+                        server->post_send( peer->admission, *update + "\n" );
+                    }
+                }
+            }
         }
     }
 }
@@ -6544,11 +6557,16 @@ bool client_apply_message( const std::string &msg )
         }
     }
     if( msg.find( "pickup_result" ) != std::string::npos ||
-        msg.find( "inventory_update" ) != std::string::npos ) {
+        msg.find( "inventory_update" ) != std::string::npos ||
+        msg.find( "inventory_delta" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
             JsonObject result = value.get_object();
             result.allow_omitted_members();
+            if( result.get_string( "type", "" ) == "inventory_delta" ) {
+                apply_inventory_turn_update( get_avatar(), result, mp_session().client_pickup );
+                return true;
+            }
             if( result.get_string( "type", "" ) == "inventory_update" ) {
                 apply_inventory_update( get_avatar(), result, mp_session().client_pickup );
                 return true;

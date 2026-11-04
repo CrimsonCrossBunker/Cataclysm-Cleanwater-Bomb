@@ -3012,6 +3012,7 @@ class Character : public Creature, public visitable
         // hooks. Parse all roots before replacing the current owned items.
         void store_carried_items( JsonOut &json ) const;
         void load_carried_items( const JsonObject &data );
+        void refresh_carried_item_caches();
         // Portable body, abilities and carried state. Identity, position,
         // activities and other world relationships remain owned by the receiver.
         void store_player_state( JsonOut &json ) const;

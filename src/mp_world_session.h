@@ -31,6 +31,7 @@ struct remote_player_session {
     bool player_state_initialized = false;
     host_turn_state turn;
     pickup_host_state pickup;
+    std::optional<inventory_turn_snapshot> inventory_before_turn;
     firearm_state firearm;
     inventory_activity_host_state inventory_activity;
     host_replication_baselines replication;
