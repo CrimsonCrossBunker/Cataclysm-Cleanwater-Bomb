@@ -4829,7 +4829,139 @@ vehicle &owned_test_vehicle( Character &who, const tripoint_bub_ms &position,
     return *target;
 }
 
+vehicle_control_selection control_choice( const Character &who, const vehicle &target,
+        const std::string &action )
+{
+    vehicle_control_selection choice;
+    choice.vehicle_id = target.uid().get_value();
+    choice.position = who.pos_abs();
+    choice.action = action;
+    return choice;
+}
+
+std::string control_request( reload_fixture &fixture, Character &who,
+                             const vehicle_control_selection &choice )
+{
+    return fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "vehicle_control" );
+        out.member( "vehicle_control", choice );
+    } );
+}
 } // namespace
+
+TEST_CASE( "owned_vehicle_start_uses_native_time_survives_save_and_releases_without_unboarding",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    avatar &host = get_avatar();
+    host.setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    const int host_moves = host.get_moves();
+    const int battery = target.fuel_left( here, itype_id( "battery" ) );
+    const std::string request = control_request( fixture, who, control_choice( who, target, "take" ) );
+    fixture.run( who, request );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    REQUIRE( who.activity.moves_left > 1 );
+    CHECK_FALSE( target.engine_on );
+    CHECK( target.fuel_left( here, itype_id( "battery" ) ) == battery );
+    CHECK( who.controlling_vehicle );
+    CHECK( who.in_vehicle );
+    CHECK_FALSE( host.controlling_vehicle );
+    CHECK_FALSE( host.activity );
+    // Engine starting is time-based. Save the pending native activity before
+    // advancing a world turn, which may legitimately complete a warm engine.
+    const int total = who.activity.moves_left;
+    save_reload_activity( who );
+    CHECK( who.activity.moves_left == total );
+    const int left = who.activity.moves_left;
+    fixture.run( who, request );
+    CHECK( who.activity.moves_left == left );
+    who.set_moves( 100000 );
+    const std::string step = fixture.request( who, "step" );
+    const size_t messages_before_start = recipient.feedback.pending.size();
+    fixture.run( who, step );
+    REQUIRE_FALSE( who.activity );
+    REQUIRE( target.engine_on );
+    CHECK( recipient.feedback.pending.size() == messages_before_start + 1 );
+    const int after_start = target.fuel_left( here, itype_id( "battery" ) );
+    fixture.run( who, step );
+    CHECK( target.fuel_left( here, itype_id( "battery" ) ) == after_start );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "release" ) ) );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK( who.in_vehicle );
+    CHECK( target.engine_on );
+    CHECK( target.get_passenger( here.veh_at( who.pos_bub() )->part_index() ) == &who );
+    CHECK( host.get_moves() == host_moves );
+}
+
+TEST_CASE( "owned_vehicle_controls_reject_wrong_identity_and_competing_driver",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    map &here = get_map();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    vehicle_control_selection choice = control_choice( who, target, "take" );
+    SECTION( "wrong vehicle identity" ) {
+        ++choice.vehicle_id;
+    }
+    SECTION( "out of reach controls" ) {
+        who.setpos( here, who.pos_bub() + tripoint_rel_ms( 6, 0, 0 ) );
+    }
+    SECTION( "another player already driving" ) {
+        avatar &host = get_avatar();
+        host.setpos( here, who.pos_bub() );
+        host.controlling_vehicle = true;
+    }
+    SECTION( "locked vehicle" ) {
+        target.is_locked = true;
+    }
+    const auto before = rng_get_engine();
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK_FALSE( who.activity );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK_FALSE( target.engine_on );
+    CHECK( rng_get_engine() == before );
+}
+
+TEST_CASE( "owned_vehicle_start_cancels_when_controls_are_lost_or_vehicle_replaced",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    map &here = get_map();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "take" ) ) );
+    REQUIRE( who.activity );
+    SECTION( "player cancels startup" ) {
+        fixture.run( who, fixture.request( who, "cancel" ) );
+        CHECK_FALSE( who.controlling_vehicle );
+        CHECK( who.in_vehicle );
+        CHECK_FALSE( target.engine_on );
+    }
+    SECTION( "controls disappear" ) {
+        for( const vpart_reference &part : target.get_avail_parts( "CONTROLS" ) ) {
+            target.set_hp( part.part(), 0, false );
+        }
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( target.engine_on );
+    }
+    SECTION( "replacement vehicle must not inherit cranking" ) {
+        const tripoint_bub_ms original = target.pos_bub( here );
+        here.destroy_vehicle( &target );
+        vehicle &replacement = owned_test_vehicle( who, original );
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( replacement.engine_on );
+    }
+    CHECK_FALSE( who.activity );
+}
 
 TEST_CASE( "native_engine_start_checks_actual_driver_limbs",
            "[multiplayer][vehicle_control_owned]" )
@@ -4851,6 +4983,23 @@ TEST_CASE( "native_engine_start_checks_actual_driver_limbs",
     host.set_part_hp_cur( bodypart_id( "leg_l" ), 0 );
     host.set_part_hp_cur( bodypart_id( "leg_r" ), 0 );
     CHECK( target.start_engine( here, engine, who ) );
+}
+
+TEST_CASE( "vehicle_start_client_view_never_executes_native_start",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    who.set_moves( 100 );
+    cata_mp::set_client_mode( true );
+    const auto before = rng_get_engine();
+    CHECK( cata_mp::client_vehicle_control( control_choice( who, target, "take" ) ) );
+    REQUIRE( cata_mp::inventory_activity_view( who.activity ) );
+    who.activity.do_turn( who );
+    CHECK_FALSE( target.engine_on );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK( rng_get_engine() == before );
 }
 
 TEST_CASE( "remote_vehicle_binding_is_per_character_and_rejects_replacement_identity",
@@ -4901,4 +5050,48 @@ TEST_CASE( "remote_vehicle_binding_is_per_character_and_rejects_replacement_iden
         CHECK( get_remote_vehicle( remote, here ) == nullptr );
     }
     CHECK( get_remote_vehicle( host, here ) == &first );
+}
+
+TEST_CASE( "vehicle_start_assignment_handles_removed_owner_or_vehicle",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    const bool retire_owner = GENERATE( false, true );
+    class remove_on_start : public event_subscriber
+    {
+        public:
+            character_id owner;
+            vehicle *target;
+            bool retire;
+            bool fired = false;
+            remove_on_start( character_id owner, vehicle *target, bool retire ) :
+                owner( owner ), target( target ), retire( retire ) {
+                get_event_bus().subscribe( this );
+            }
+            void notify( const cata::event &event ) override {
+                if( !fired && event.type() == event_type::character_starts_activity &&
+                    event.get<character_id>( "character" ) == owner ) {
+                    fired = true;
+                    if( retire ) {
+                        g->remove_npc( owner );
+                    } else {
+                        get_map().destroy_vehicle( target );
+                    }
+                }
+            }
+    } events( who.getID(), &target, retire_owner );
+    const std::string reply = fixture.run( who, control_request( fixture, who,
+                              control_choice( who, target, "take" ) ) );
+    REQUIRE( events.fired );
+    if( retire_owner ) {
+        CHECK( reply.empty() );
+        CHECK_FALSE( target.engine_on );
+    } else {
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK_FALSE( who.controlling_vehicle );
+    }
 }

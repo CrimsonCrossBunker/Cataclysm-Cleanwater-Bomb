@@ -5659,42 +5659,14 @@ void game::control_vehicle( const std::optional<tripoint_bub_ms> &p )
                 veh->interact_with( &here, target_pos );
                 return; // interact_with offers to hotwire
             }
-            if( !veh->handle_potential_theft( u ) ) {
-                return; // player not owner and refused to steal
+            const auto selection = query_vehicle_control( u, here, *veh, here.get_abs( target_pos ), "take" );
+            if( !selection || !execute_vehicle_control( u, here, *selection ) ) {
+                return;
             }
-            const item_location weapon = u.get_wielded_item();
-            if( weapon ) {
-                if( u.worn_with_flag( flag_RESTRICT_HANDS ) ) {
-                    add_msg( m_info, _( "Something you are wearing hinders the use of both hands." ) );
-                    return;
-                }
-                if( !u.has_two_arms_lifting() ) {
-                    if( query_yn(
-                            _( "You can't drive because you have to wield a %s.\n\nPut it away?" ),
-                            weapon->tname() ) ) {
-                        if( !u.unwield() ) {
-                            return;
-                        }
-                    } else {
-                        return;
-                    }
-                } else if( weapon->is_two_handed( u ) ) {
-                    if( query_yn(
-                            _( "You can't drive because you have to wield a %s with both hands.\n\nPut it away?" ),
-                            weapon->tname() ) ) {
-                        if( !u.unwield() ) {
-                            return;
-                        }
-                    } else {
-                        return;
-                    }
-                }
-            }
-            if( veh->engine_on ) {
-                u.controlling_vehicle = true;
-                add_msg( _( "You take control of the %s." ), veh->name );
-            } else {
-                veh->start_engines( here, &u, true );
+            // Native activity assignment can invoke callbacks that remove the vehicle.
+            veh = vehicle::find_vehicle_by_uid( here, selection->vehicle_id );
+            if( !veh ) {
+                return;
             }
             // Success!
             if( u.controlling_vehicle ) {

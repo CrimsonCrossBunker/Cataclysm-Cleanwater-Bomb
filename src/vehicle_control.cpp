@@ -115,3 +115,199 @@ vehicle *get_remote_vehicle( Character &who, map &here )
     }
     return target;
 }
+
+void vehicle_control_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "vehicle", vehicle_id );
+    out.member( "position", position );
+    out.member( "action", action );
+    out.member( "allow_theft", allow_theft );
+    out.member( "weapon", weapon_id );
+    if( unwield ) {
+        out.member( "unwield" );
+        out.start_object();
+        out.member( "action", unwield->action );
+        out.member( "container", unwield->container );
+        out.member( "pocket", unwield->pocket );
+        out.end_object();
+    }
+    out.end_object();
+}
+
+void vehicle_control_selection::deserialize( const JsonObject &data )
+{
+    data.read( "vehicle", vehicle_id, true );
+    data.read( "position", position, true );
+    data.read( "action", action, true );
+    data.read( "allow_theft", allow_theft );
+    data.read( "weapon", weapon_id );
+    unwield.reset();
+    if( data.has_object( "unwield" ) ) {
+        const JsonObject choice = data.get_object( "unwield" );
+        unwield = item_disposition{ choice.get_string( "action" ), choice.get_int64( "container" ),
+                                    choice.get_int64( "pocket" ) };
+    }
+}
+
+bool vehicle_control_accessible( const Character &who, map &here, const vehicle &target,
+                                 const tripoint_abs_ms &position, const std::string &action )
+{
+    if( who.is_dead_state() || !here.inbounds( position ) ) {
+        return false;
+    }
+    const optional_vpart_position at = here.veh_at( position );
+    if( !at || &at->vehicle() != &target ) {
+        return false;
+    }
+    const bool releasing = action == "release";
+    const bool stopping = action == "stop" || action == "stop_driving";
+    const bool taking = action == "take";
+    if( !releasing && !stopping && !taking && action != "start" ) {
+        return false;
+    }
+    if( releasing ) {
+        return target.player_in_control( here, who );
+    }
+    if( target.is_locked || ( action == "stop_driving" && !target.player_in_control( here, who ) ) ) {
+        return false;
+    }
+    if( resolve_remote_vehicle( who, here ) != &target ) {
+        if( rl_dist( who.pos_abs(), position ) > 1 || who.pos_abs().z() != position.z() ||
+            ( taking && who.pos_abs() != position ) ) {
+            return false;
+        }
+        const bool controls = target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0;
+        const bool reins = target.avail_part_with_feature( at->mount_pos(), "CONTROL_ANIMAL" ) >= 0 &&
+                           target.has_engine_type( itype_id( "animal" ), false ) && target.get_harnessed_animal( here );
+        if( !controls && !reins ) {
+            return false;
+        }
+    }
+    // A second player may reach another control tile on the same vehicle.
+    // Seated and remote drivers both participate in the same ownership check.
+    return g->get_creatures_if( [&]( const Creature & creature ) {
+        const Character *other = creature.as_character();
+        return other && other != &who && target.player_in_control( here, *other );
+    } ).empty();
+}
+
+std::optional<vehicle_control_selection> query_vehicle_control( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position, const std::string &action )
+{
+    if( !vehicle_control_accessible( who, here, target, position, action ) ) {
+        who.add_msg_if_player( _( "You cannot operate these vehicle controls right now." ) );
+        return std::nullopt;
+    }
+    vehicle_control_selection selection;
+    selection.vehicle_id = target.uid().get_value();
+    selection.position = position;
+    selection.action = action;
+    if( action == "take" && target.has_owner() && !target.is_owned_by( who ) ) {
+        selection.allow_theft = who.query_yn(
+                                    _( "This vehicle belongs to: %s, there may be consequences if you are observed interacting with it, continue?" ),
+                                    target.get_owner_name() );
+        if( !selection.allow_theft ) {
+            return std::nullopt;
+        }
+    }
+    const item_location weapon = who.get_wielded_item();
+    if( action == "take" && weapon ) {
+        if( who.worn_with_flag( flag_RESTRICT_HANDS ) ) {
+            who.add_msg_if_player( _( "Something you are wearing hinders the use of both hands." ) );
+            return std::nullopt;
+        }
+        if( !who.has_two_arms_lifting() || weapon->is_two_handed( who ) ) {
+            selection.weapon_id = weapon->uid().get_value();
+            selection.unwield = query_item_disposition( who, weapon,
+                                _( "Put your weapon away to use the vehicle controls?" ) );
+            if( !selection.unwield ) {
+                return std::nullopt;
+            }
+        }
+    }
+    return selection;
+}
+
+bool execute_vehicle_control( Character &who, map &here,
+                              const vehicle_control_selection &selection )
+{
+    vehicle *target = vehicle::find_vehicle_by_uid( here, selection.vehicle_id );
+    if( !target || who.activity || who.get_moves() <= 0 ||
+        !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
+        return false;
+    }
+    const bool taking = selection.action == "take";
+    if( taking && target->has_owner() && !target->is_owned_by( who ) && !selection.allow_theft ) {
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    if( taking ) {
+        const item_location weapon = who.get_wielded_item();
+        if( weapon && who.worn_with_flag( flag_RESTRICT_HANDS ) ) {
+            return false;
+        }
+        if( weapon && ( !who.has_two_arms_lifting() || weapon->is_two_handed( who ) ) ) {
+            if( !selection.unwield || weapon->uid().get_value() != selection.weapon_id ||
+                !execute_item_disposition( who, weapon, *selection.unwield ) ) {
+                return false;
+            }
+            if( !lifetime || who.activity || who.get_wielded_item() ) {
+                return false;
+            }
+            target = vehicle::find_vehicle_by_uid( here, selection.vehicle_id );
+            if( !target ||
+                !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
+                return false;
+            }
+        }
+        // Native theft consequences run once, after a real owner choice.
+        if( !target->handle_potential_theft( who, false, false ) || !lifetime ) {
+            return false;
+        }
+        target = vehicle::find_vehicle_by_uid( here, selection.vehicle_id );
+        if( !target || who.activity ||
+            !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
+            return false;
+        }
+    }
+    if( selection.action == "release" || selection.action == "stop_driving" ) {
+        if( selection.action == "stop_driving" ) {
+            target->disable_smart_controller_if_needed();
+            target->stop_engines( here );
+        }
+        who.controlling_vehicle = false;
+        if( resolve_remote_vehicle( who, here ) == target ) {
+            set_remote_vehicle( who, here, nullptr );
+        }
+        // Letting go does not make the seated player exit the vehicle.
+        who.add_msg_if_player( _( "You let go of the controls." ) );
+        return true;
+    }
+    if( selection.action == "stop" ) {
+        target->disable_smart_controller_if_needed();
+        target->stop_engines( here );
+        who.add_msg_if_player( _( "You turn the engine off." ) );
+        return true;
+    }
+    if( taking ) {
+        if( resolve_remote_vehicle( who, here ) != target ) {
+            const optional_vpart_position seat = here.veh_at( who.pos_bub() );
+            if( seat && seat->part_with_feature( VPFLAG_BOARDABLE, false ) ) {
+                here.board_vehicle( who.pos_bub(), &who );
+            }
+        }
+        if( target->engine_on ) {
+            who.controlling_vehicle = true;
+            who.add_msg_if_player( _( "You take control of the %s." ), target->name );
+        }
+        target->is_following = false;
+        target->is_patrolling = false;
+        target->autopilot_on = false;
+        target->is_autodriving = false;
+    }
+    if( !target->engine_on ) {
+        target->start_engines( here, &who, taking );
+    }
+    return true;
+}

@@ -3087,39 +3087,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         }
 
         if( act == ACTION_CONTROL_VEHICLE ) {
-            if( cata_mp::client_ctrl_veh() ) {
-                map &vmap = get_map();
-                const tripoint_abs_ms vabs = cata_mp::client_ctrl_veh_abs();
-                if( vmap.inbounds( vabs ) ) {
-                    const tripoint_bub_ms vbub = vmap.get_bub( vabs );
-                    if( const optional_vpart_position ovp = vmap.veh_at( vbub ) ) {
-                        vehicle &veh = ovp->vehicle();
-                        tripoint_bub_ms ctrl_pos = vbub;
-                        for( const vpart_reference &vpr : veh.get_avail_parts( "CONTROLS" ) ) {
-                            ctrl_pos = vpr.pos_bub( vmap );
-                            break;
-                        }
-                        veh.interact_with( &vmap, ctrl_pos );
-                    }
-                }
-            } else {
-                cata_mp::mp_log( "[cdda-mp] ^: client ctrl_veh hit, moves=" +
-                                 std::to_string( player_character.get_moves() ) +
-                                 " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) );
-                map &cv_map = get_map();
-                const tripoint_bub_ms cv_pos = player_character.pos_bub();
-                if( const optional_vpart_position ovp = cv_map.veh_at( cv_pos ) ) {
-                    vehicle &veh = ovp->vehicle();
-                    if( !veh.handle_potential_theft( player_character ) ) {
-                        return true;
-                    }
-                    if( veh.is_locked ) {
-                        veh.interact_with( &cv_map, cv_pos );
-                        return true;
-                    }
-                }
-                mp_dispatch( R"({"type":"action","action":"control_vehicle"})" );
-            }
+            cata_mp::client_query_vehicle_control();
             return true;
         }
 

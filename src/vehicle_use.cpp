@@ -1,5 +1,6 @@
-#include "vehicle.h" // IWYU pragma: associated
+#include "vehicle.h"
 #include "vehicle_control.h"
+#include "mp_inventory_activity.h"
 
 #include <calendar.h>
 #include <cata_bitset.h>
@@ -2491,10 +2492,17 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
                                          ? has_parts( {"CTRL_ELECTRONIC", "REMOTE_CONTROL"} ).any()
                                          : has_part_here( "CTRL_ELECTRONIC" );
     const bool controls_here = has_part_here( "CONTROLS" );
-    const bool player_is_driving = get_player_character().controlling_vehicle;
+    const bool player_is_driving = player_in_control( *here, get_player_character() );
     const bool player_inside = here->veh_at( get_player_character().pos_abs() ) ?
                                &here->veh_at( get_player_character().pos_abs() )->vehicle() == this :
                                false;
+    const auto control_action = [this, here, vppos]( const std::string & action ) {
+        Character &who = get_player_character();
+        const auto selection = query_vehicle_control( who, *here, *this, here->get_abs( vppos ), action );
+        if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
+            execute_vehicle_control( who, *here, *selection );
+        }
+    };
     bool power_linked = false;
     bool item_linked = false;
     bool tow_linked = false;
@@ -2596,63 +2604,42 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
 
     if( remote ) {
         menu.add( _( "Stop controlling" ) )
-            .hotkey( "RELEASE_CONTROLS" )
-            .skip_theft_check()
-        .on_submit( [] {
-            get_player_character().controlling_vehicle = false;
-            g->setremoteveh( nullptr );
-            add_msg( _( "You stop controlling the vehicle." ) );
+        .hotkey( "RELEASE_CONTROLS" )
+        .skip_theft_check()
+        .on_submit( [control_action] {
+            control_action( "release" );
         } );
     } else {
         if( has_part( "ENGINE" ) ) {
             if( ( controls_here && player_is_driving ) || ( remote && engine_on ) ) {
                 menu.add( _( "Stop driving" ) )
-                    .hotkey( "TOGGLE_ENGINE" )
-                    .skip_theft_check()
-                .on_submit( [this, here] {
-                    if( engine_on && has_engine_type_not( fuel_type_muscle, true ) )
-                {
-                    add_msg( _( "You turn the engine off and let go of the controls." ) );
-                    } else
-                    {
-                        add_msg( _( "You let go of the controls." ) );
-                    }
-                    disable_smart_controller_if_needed();
-                    stop_engines( *here );
-                    get_player_character().controlling_vehicle = false;
-                    g->setremoteveh( nullptr );
+                .hotkey( "TOGGLE_ENGINE" )
+                .skip_theft_check()
+                .on_submit( [control_action] {
+                    control_action( "stop_driving" );
                 } );
             } else if( controls_here && has_engine_type_not( fuel_type_muscle, true ) ) {
                 menu.add( engine_on ? colorize( _( "Turn off the engine" ), c_pink ) : _( "Turn on the engine" ) )
-                    .hotkey( "TOGGLE_ENGINE" )
-                    .skip_theft_check()
-                .on_submit( [this, here] {
-                    if( engine_on )
-                {
-                    disable_smart_controller_if_needed();
-                        add_msg( _( "You turn the engine off." ) );
-                        stop_engines( *here );
-                    } else
-                    {
-                        start_engines( *here, &get_player_character() );
-                    }
+                .hotkey( "TOGGLE_ENGINE" )
+                .skip_theft_check()
+                .on_submit( [this, control_action] {
+                    control_action( engine_on ? "stop" : "start" );
                 } );
             }
         }
 
         if( player_is_driving ) {
             menu.add( _( "Let go of controls" ) )
-                .hotkey( "RELEASE_CONTROLS" )
-                .skip_locked_check() // in case player somehow controls locked vehicle
-                .skip_theft_check()
-            .on_submit( [] {
-                get_player_character().controlling_vehicle = false;
-                add_msg( _( "You let go of the controls." ) );
+            .hotkey( "RELEASE_CONTROLS" )
+            .skip_locked_check() // in case player somehow controls locked vehicle
+            .skip_theft_check()
+            .on_submit( [control_action] {
+                control_action( "release" );
             } );
 
             menu.add( _( "Pull handbrake" ) )
-                .hotkey( "PULL_HANDBRAKE" )
-                .on_submit( [here] { handbrake( *here ); } );
+            .hotkey( "PULL_HANDBRAKE" )
+            .on_submit( [here] { handbrake( *here ); } );
         }
 
         const bool has_engine_or_fuel_controls = ( engines.size() > 1 ) ||
