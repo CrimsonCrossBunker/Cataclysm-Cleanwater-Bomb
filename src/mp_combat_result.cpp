@@ -75,12 +75,14 @@ bool apply_combat_result( Character &actor, const JsonObject &message, pickup_cl
     actor.set_stamina( stamina );
     actor.set_focus_pool( focus );
     actor.recoil = recoil;
-    actor.set_pain( pain );
+    // The authority already resolved pain reactions and activity interruptions.
+    actor.Creature::set_pain( pain );
     actor.set_power_level( power );
     for( const auto &entry : skills ) {
         actor.get_skill_level_object( entry.first ) = entry.second;
     }
     actor.restore_effects_snapshot( effects );
+    actor.on_stat_change( "perceived_pain", actor.get_perceived_pain() );
     return true;
 }
 

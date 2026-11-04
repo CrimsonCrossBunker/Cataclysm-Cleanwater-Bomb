@@ -445,6 +445,11 @@ ret_val<void> iuse_actor::can_use( const Character &, const item &, map *,
     return ret_val<void>::make_success();
 }
 
+bool iuse_actor::is_immediate_consumption() const
+{
+    return false;
+}
+
 bool iuse_actor::is_valid() const
 {
     return item_action_generator::generator().action_exists( type );
