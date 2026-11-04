@@ -224,5 +224,38 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_skitterbot_rat",
+    "copy-from": "broken_skitterbot",
+    "color": "light_gray",
+    "name": "broken rat snatcher",
+    "description": "A broken rat snatcher, now harmless and inert.  Could be stripped down or re-crafted."
+  },
+  {
+    "id": "bot_skitterbot_rat",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "looks_like": "broken_skitterbot",
+    "name": "inactive rat snatcher",
+    "description": "A small hexapod drone designed to hold small pests, folded into a small cube for easy storage.  It's capable of hunting all sorts of small mammals with remarkable efficiency, but shouldn't be expected to handle anything much bigger than a rat.",
+    "material": [ "steel", "plastic" ],
+    "weight": "750 g",
+    "volume": "1 L",
+    "price": "200 USD",
+    "price_postapoc": "100 USD",
+    "to_hit": -3,
+    "symbol": ";",
+    "color": "dark_gray",
+    "use_action": {
+      "type": "place_monster",
+      "monster_id": "mon_skitterbot_rat",
+      "difficulty": 1,
+      "moves": 100,
+      "skills": [ "electronics", "computer" ]
+    },
+    "flags": [ "TRADER_AVOID", "SINGLE_USE" ],
+    "melee_damage": { "bash": 2 }
   }
 ]
