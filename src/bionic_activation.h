@@ -4,6 +4,7 @@
 
 #include <optional>
 #include "coordinates.h"
+#include "item_source.h"
 #include "martial_style_selection.h"
 #include "type_id.h"
 
@@ -14,6 +15,7 @@ struct bionic;
 struct bionic_activation_choices {
     std::optional<tripoint_abs_ms> target;
     std::optional<martial_style_choice> martial_style = std::nullopt;
+    std::optional<item_source> water_corpse = std::nullopt;
 };
 enum class bionic_action {
     activate,
@@ -21,7 +23,7 @@ enum class bionic_action {
 };
 bool bionic_requires_adjacent_target( const bionic_id &id );
 bool supports_owned_bionic_action( const bionic &bio, bionic_action action );
-bool valid_bionic_activation_choices( const Character &who, const bionic &bio,
+bool valid_bionic_activation_choices( Character &who, const bionic &bio,
                                       const bionic_activation_choices &choices );
 std::optional<bionic_activation_choices> query_bionic_activation_choices(
     Character &who, const bionic &bio );

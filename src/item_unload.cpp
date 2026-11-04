@@ -7,6 +7,11 @@
 
 #include "activity_actor_definitions.h"
 #include "calendar.h"
+#include "avatar.h"
+#include "cata_scope_helpers.h"
+#include "rng.h"
+#include "veh_interact.h"
+#include "vpart_position.h"
 #include "character.h"
 #include "flag.h"
 #include "game_constants.h"
@@ -197,6 +202,34 @@ void visit_unload_liquids( const unload_selection &selection,
             visit( target.uid().get_value(), ammo );
         }
     }
+}
+
+unload_liquid_choice query_liquid_destination( const item &liquid, const item *target,
+        int64_t identity, bool allow_consume )
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    item preview = liquid;
+    const liquid_dest_opt selected = liquid_handler::query_liquid_target( preview,
+                                     target, 1, allow_consume );
+    unload_liquid_choice choice;
+    choice.source = identity;
+    choice.kind = selected.dest_opt;
+    choice.container = capture_item_source( get_avatar(), selected.item_loc );
+    if( selected.dest_opt == LD_VEH && selected.veh ) {
+        const auto tank = veh_interact::select_part( get_map(), *selected.veh,
+        [&preview]( const map &, const vehicle_part & part ) {
+            return part.is_tank() && part.can_reload( preview );
+        }, _( "Select target tank" ) );
+        if( tank ) {
+            choice.vehicle = selected.veh->uid().get_value();
+            choice.tank = tank->part().get_base().uid().get_value();
+        } else {
+            choice.kind = LD_NULL;
+        }
+    } else if( selected.dest_opt == LD_GROUND || selected.dest_opt == LD_KEG ) {
+        choice.position = get_map().get_abs( selected.pos );
+    }
+    return choice;
 }
 
 void unload_liquid_choice::serialize( JsonOut &out ) const

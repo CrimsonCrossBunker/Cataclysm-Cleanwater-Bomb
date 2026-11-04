@@ -13,6 +13,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "bionic_water_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
 #include "character_action_guard.h"
@@ -326,6 +327,7 @@ bool begin_client_inventory_activity( const player_activity &activity )
     view.cancel_requested = false;
     view.needs_placement = false;
     view.item_use_progress.clear();
+    view.water_source_uid = 0;
     view.craft_decision.clear();
     view.construction_decision.clear();
     view.construction_prompt.clear();
@@ -349,6 +351,7 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     }
     bionic_activation_choices choices;
     request.read( "martial_style", choices.martial_style );
+    request.read( "water_corpse", choices.water_corpse );
     tripoint_abs_ms target;
     if( request.read( "target", target ) ) {
         choices.target = target;
@@ -358,7 +361,8 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     // Refresh conservatively even if native activation subsequently returns false.
     refresh_observers = action == bionic_action::activate &&
                         ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) ||
-                          type == bionic_id( "bio_resonator" ) || type == bionic_id( "bio_magnet" ) );
+                          type == bionic_id( "bio_resonator" ) || type == bionic_id( "bio_magnet" ) ||
+                          type == bionic_id( "bio_water_extractor" ) );
     return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ), type, choices, action );
 }
 
@@ -685,6 +689,13 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( auto *water = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() ) ) {
+                if( water->prepare( who ) && operation == "choose" && who.get_moves() > 0 ) {
+                    unload_liquid_choice choice;
+                    request.read( "liquid", choice, true );
+                    state.refresh_observers = true;
+                    water->apply_choice( who, choice, request.get_bool( "allow_consequences", false ) );
+                }
             } else if( auto *build = native_construction( who ) ) {
                 if( !build->prepare_owned_turn( who ) ) {
                     who.cancel_activity();
@@ -828,6 +839,13 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         out.member( "construction_prompt", build->choice_prompt() );
         out.member( "construction_text", build->choice_is_text() );
     }
+    if( auto *water = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() ) ) {
+        const auto preview = water->preview( who );
+        if( preview ) {
+            out.member( "water_source_uid", water->source_uid() );
+            out.member( "water_preview", *preview );
+        }
+    }
     if( active && state.tracks_item_use ) {
         out.member( "item_use_progress", who.activity.get_verb().translated() );
     }
@@ -921,6 +939,8 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.can_wield = response.get_bool( "can_wield", false );
         view.preview.reset();
         view.item_use_progress = response.get_string( "item_use_progress", "" );
+        view.water_source_uid = 0;
+        response.read( "water_source_uid", view.water_source_uid );
         view.craft_decision = response.get_string( "craft_decision", "" );
         view.construction_decision = response.get_string( "construction_decision", "" );
         view.construction_prompt = response.get_string( "construction_prompt", "" );
@@ -936,6 +956,10 @@ bool apply_inventory_activity_result( const JsonObject &response )
         if( response.has_object( "craft_preview" ) ) {
             view.preview = std::make_shared<item>();
             response.read( "craft_preview", *view.preview, true );
+        }
+        if( response.has_object( "water_preview" ) ) {
+            view.preview = std::make_shared<item>();
+            response.read( "water_preview", *view.preview, true );
         }
         if( view.craft_decision == "repeat" ) {
             response.read( "craft_recipe", view.craft_recipe, true );
@@ -1245,6 +1269,9 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
         if( selected->martial_style ) {
             out.member( "martial_style", *selected->martial_style );
         }
+        if( selected->water_corpse ) {
+            out.member( "water_corpse", *selected->water_corpse );
+        }
     } );
     return true;
 }
@@ -1328,7 +1355,7 @@ void client_step_inventory_activity()
         get_avatar().activity.set_to_null();
         return;
     }
-    if( view.cancel_requested || view.needs_placement || view.finished ||
+    if( view.cancel_requested || view.needs_placement || view.finished || view.water_source_uid > 0 ||
         !view.craft_decision.empty() || !view.construction_decision.empty() ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
@@ -1404,6 +1431,20 @@ void client_update_inventory_activity_view()
         }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
+    } else if( view.water_source_uid > 0 && view.preview && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        const item water = *view.preview;
+        const auto choice = query_liquid_destination( water, nullptr, view.water_source_uid, true );
+        if( choice.kind == LD_NULL ) {
+            view.cancel_requested = true;
+            send_inventory_activity( "cancel" );
+        } else if( choice.kind != LD_CONSUME || get_avatar().will_eat( water, true ).success() ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "liquid", choice );
+                out.member( "allow_consequences", true );
+            } );
+        }
     } else if( !view.construction_decision.empty() && !is_client_waiting_for_ack() ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         std::string text;
