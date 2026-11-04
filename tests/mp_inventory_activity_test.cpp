@@ -86,6 +86,8 @@
 #include "uistate.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_electronics.h"
+#include "level_cache.h"
 #include "veh_utils.h"
 #include "remote_vehicle_activity.h"
 #include "vpart_range.h"
@@ -6173,4 +6175,277 @@ TEST_CASE( "saved_remote_security_scan_never_uses_a_replacement_controller",
     CHECK_FALSE( controller->active );
     CHECK( controller->ammo_remaining() == ammo );
     CHECK_FALSE( resolve_remote_vehicle( who, get_map() ) );
+}
+
+namespace
+{
+vehicle &electronic_vehicle( Character &who )
+{
+    vehicle &target = radio_vehicle( who, false );
+    who.setpos( get_map(), target.get_avail_parts( "CTRL_ELECTRONIC" ).begin()->pos_bub( get_map() ) );
+    who.set_moves( 100 );
+    return target;
+}
+
+point_rel_ms next_electronic_mount( const vehicle &target )
+{
+    point_rel_ms front = point_rel_ms::zero;
+    for( const vpart_reference &part : target.get_all_parts() ) {
+        if( !part.part().removed && part.mount_pos().x() > front.x() ) {
+            front = part.mount_pos();
+        }
+    }
+    return front + point_rel_ms( 1, 0 );
+}
+
+vehicle_control_selection electronic_choice( Character &who, vehicle &target,
+        const std::string &system, bool enabled, int64_t part = 0 )
+{
+    auto choice = control_choice( who, target, "electronics" );
+    choice.electronics = vehicle_electronics_selection{ system, part, enabled };
+    return choice;
+}
+
+void require_lights( const vehicle &target, bool enabled )
+{
+    REQUIRE_FALSE( empty( target.get_avail_parts( "CONE_LIGHT" ) ) );
+    for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
+        CHECK( part.part().enabled == enabled );
+    }
+}
+} // namespace
+
+TEST_CASE( "owned_vehicle_device_choices_are_read_only_and_replay_once",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
+        part.part().enabled = false;
+    }
+    const auto initial_rng = rng_get_engine();
+    const auto options = vehicle_electronics_options( who, here, target );
+    const auto lights = std::find_if( options.begin(), options.end(), []( const vehicle_electronics_option &option ) {
+        return option.choice.system == "CONE_LIGHT";
+    } );
+    REQUIRE( lights != options.end() );
+    CHECK( lights->enabled );
+    CHECK( lights->choice.enabled );
+    require_lights( target, false );
+    CHECK( rng_get_engine() == initial_rng );
+    const auto request = control_request( fixture, who, electronic_choice( who, target, "CONE_LIGHT", true ) );
+    fixture.run( who, request );
+    require_lights( target, true );
+    CHECK( here.get_cache_ref( who.posz() ).lightmap_dirty );
+    CHECK_FALSE( recipient.feedback.pending.empty() );
+    const auto rng = rng_get_engine();
+    fixture.run( who, request );
+    require_lights( target, true );
+    CHECK( rng_get_engine() == rng );
+    fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "CONE_LIGHT", false ) ) );
+    require_lights( target, false );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK_FALSE( get_avatar().controlling_vehicle );
+}
+
+TEST_CASE( "owned_vehicle_electronics_rejects_forged_systems_and_lost_access",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
+        part.part().enabled = false;
+    }
+    auto choice = electronic_choice( who, target, "CONE_LIGHT", true );
+    SECTION( "engine is not an electronic switch" ) {
+        choice.electronics->system = "ENGINE";
+    }
+    SECTION( "group does not accept arbitrary part IDs" ) {
+        choice.electronics->part_id = 123456;
+    }
+    SECTION( "operator left the controls" ) {
+        who.setpos( get_map(), tripoint_bub_ms( 100, 100, 0 ) );
+    }
+    SECTION( "vehicle was locked" ) {
+        target.is_locked = true;
+    }
+    SECTION( "electronic controls were removed" ) {
+        for( const vpart_reference &control : target.get_avail_parts( "CTRL_ELECTRONIC" ) ) {
+            target.remove_part( control.part() );
+        }
+        REQUIRE_FALSE( vehicle_electronics_position( who, get_map(), target ) );
+    }
+    const auto rng = rng_get_engine();
+    fixture.run( who, control_request( fixture, who, choice ) );
+    require_lights( target, false );
+    CHECK_FALSE( target.engine_on );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "owned_camera_and_reactor_commands_validate_power_and_hardware_identity",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    SECTION( "camera state is explicit and refreshes visibility" ) {
+        REQUIRE( target.install_part( here, point_rel_ms::zero, vpart_id( "cam_control" ) ) >= 0 );
+        target.camera_on = false;
+        const auto request = control_request( fixture, who, electronic_choice( who, target, "camera", true ) );
+        fixture.run( who, request );
+        CHECK( target.camera_on );
+        CHECK( here.get_cache_ref( who.posz() ).seen_cache_dirty );
+        fixture.run( who, request );
+        CHECK( target.camera_on );
+        fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "camera", false ) ) );
+        CHECK_FALSE( target.camera_on );
+        target.discharge_battery( here, target.fuel_left( here, itype_id( "battery" ) ) );
+        REQUIRE( target.fuel_left( here, itype_id( "battery" ) ) == 0 );
+        fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "camera", true ) ) );
+        CHECK_FALSE( target.camera_on );
+    }
+    SECTION( "removed reactor never addresses its replacement" ) {
+        const point_rel_ms mount = next_electronic_mount( target );
+        REQUIRE( target.install_part( here, mount, vpart_id( "frame" ) ) >= 0 );
+        const int index = target.install_part( here, mount, vpart_id( "compact_ASRG_containment" ) );
+        REQUIRE( index >= 0 );
+        target.part( index ).enabled = false;
+        const int64_t id = target.part( index ).get_base().uid().get_value();
+        const auto choice = electronic_choice( who, target, "reactor", true, id );
+        fixture.run( who, control_request( fixture, who, choice ) );
+        CHECK( target.part( index ).enabled );
+        target.remove_part( target.part( index ) );
+        const int replacement = target.install_part( here, mount, vpart_id( "compact_ASRG_containment" ) );
+        REQUIRE( replacement >= 0 );
+        target.part( replacement ).enabled = false;
+        REQUIRE( target.part( replacement ).get_base().uid().get_value() != id );
+        fixture.run( who, control_request( fixture, who, choice ) );
+        CHECK_FALSE( target.part( replacement ).enabled );
+    }
+}
+
+TEST_CASE( "owned_motorized_doors_keep_native_blocking_locking_and_group_rules",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const auto doors = target.get_avail_parts( "DOOR" );
+    REQUIRE_FALSE( empty( doors ) );
+    const int door = doors.begin()->part_index();
+    const point_rel_ms mount = target.part( door ).mount;
+    const int motor = target.install_part( here, mount, vpart_id( "door_motor" ) );
+    REQUIRE( motor >= 0 );
+    if( !target.part_has_lock( door ) ) {
+        REQUIRE( target.install_part( here, mount, vpart_id( "door_lock" ) ) >= 0 );
+    }
+    const int64_t id = target.part( door ).get_base().uid().get_value();
+    target.open( here, door );
+    const auto close = electronic_choice( who, target, "door_open", false, id );
+    get_avatar().setpos( here, here.get_bub( target.abs_part_pos( target.part( door ) ) ) );
+    fixture.run( who, control_request( fixture, who, close ) );
+    CHECK( target.part( door ).open );
+    CHECK_FALSE( recipient.feedback.pending.empty() );
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    fixture.run( who, control_request( fixture, who, close ) );
+    CHECK_FALSE( target.part( door ).open );
+    fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "door_lock", true, id ) ) );
+    CHECK( target.part( door ).locked );
+    const auto all_open = control_request( fixture, who, electronic_choice( who, target, "doors_open", true ) );
+    fixture.run( who, all_open );
+    CHECK_FALSE( target.part( door ).locked );
+    CHECK( target.part( door ).open );
+    fixture.run( who, all_open );
+    CHECK( target.part( door ).open );
+    fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "doors_and_curtains_close", false ) ) );
+    CHECK_FALSE( target.part( door ).open );
+    target.remove_part( target.part( motor ) );
+    fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "door_open", true, id ) ) );
+    CHECK_FALSE( target.part( door ).open );
+}
+
+TEST_CASE( "remote_one_shot_electronics_uses_the_authorized_controller_once",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = radio_vehicle( who );
+    const item_location controller = remote_controller( who );
+    for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
+        part.part().enabled = false;
+    }
+    fixture.run( who, radio_request( fixture, who, "action", target.uid().get_value() ) );
+    REQUIRE( who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) );
+    auto choice = electronic_choice( who, target, "CONE_LIGHT", true );
+    choice.position = target.get_avail_parts( "REMOTE_CONTROLS" ).begin()->pos_abs();
+    const int ammo = controller->ammo_remaining();
+    const auto request = fixture.request( who, "choose", [&]( JsonOut &out ) {
+        out.member( "vehicle_control", choice );
+    } );
+    fixture.run( who, request );
+    CHECK_FALSE( who.activity );
+    require_lights( target, true );
+    CHECK( controller->ammo_remaining() == ammo - 1 );
+    CHECK_FALSE( resolve_remote_vehicle( who, get_map() ) );
+    fixture.run( who, request );
+    CHECK( controller->ammo_remaining() == ammo - 1 );
+}
+
+TEST_CASE( "native_electronics_menu_dispatches_the_same_operator_command",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    vehicle &target = electronic_vehicle( who );
+    for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
+        part.part().enabled = false;
+    }
+    veh_menu menu( target, "test electronics" );
+    target.build_electronics_menu( here, menu );
+    require_lights( target, false );
+    const auto entries = menu.get_items();
+    const auto lights = std::find_if( entries.begin(), entries.end(), []( const veh_menu_item &entry ) {
+        return entry._hotkey_action == "TOGGLE_HEADLIGHT";
+    } );
+    REQUIRE( lights != entries.end() );
+    REQUIRE( lights->_enabled );
+    REQUIRE( lights->_on_submit );
+    lights->_on_submit();
+    require_lights( target, true );
+}
+
+TEST_CASE( "planter_enabling_reads_the_operator_environment_instead_of_the_host",
+           "[multiplayer][vehicle_electronics_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    map &here = get_map();
+    vehicle &target = electronic_vehicle( who );
+    const int planter = target.install_part( here, next_electronic_mount( target ), vpart_id( "seed_drill" ) );
+    REQUIRE( planter >= 0 );
+    who.setpos( here, tripoint_bub_ms( 50, 50, 0 ), false );
+    here.ter_set( who.pos_bub(), ter_str_id( "t_greenhouse_tilled" ) );
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, -1 ), false );
+    REQUIRE( warm_enough_to_plant( who.pos_bub(), itype_id( "seed_buckwheat" ) ).success() );
+    REQUIRE_FALSE( warm_enough_to_plant( get_avatar().pos_bub(), itype_id( "seed_buckwheat" ) ).success() );
+    CHECK( can_enable_vehicle_part( who, here, target, target.part( planter ) ) );
+    CHECK_FALSE( target.can_enable( here, target.part( planter ) ) );
+    // Ordinary soil must forecast temperature without advancing wind or gameplay RNG.
+    here.ter_set( who.pos_bub(), ter_str_id( "t_dirt" ) );
+    const auto rng = rng_get_engine();
+    const int wind = weather_generator::current_winddir;
+    vehicle_electronics_options( who, here, target );
+    CHECK( rng_get_engine() == rng );
+    CHECK( weather_generator::current_winddir == wind );
 }
