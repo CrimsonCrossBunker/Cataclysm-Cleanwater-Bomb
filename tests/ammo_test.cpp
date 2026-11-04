@@ -1,4 +1,3 @@
-#include <list>
 #include <set>
 #include <string>
 
@@ -13,7 +12,6 @@
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "talker_avatar.h"
-#include "talker_character.h"
 #include "type_id.h"
 #include "units.h"
 
@@ -147,8 +145,12 @@ TEST_CASE( "ammo_types", "[ammo][ammo_types]" )
         CHECK( has_ammo_types( item( itype_colt_army ) ) );
         CHECK( has_ammo_types( item( itype_hand_crossbow ) ) );
         CHECK( has_ammo_types( item( itype_compositebow ) ) );
-        CHECK( has_ammo_types( item( itype_sling ) ) );
         CHECK( has_ammo_types( item( itype_slingshot ) ) );
+    }
+
+    SECTION( "throwing aids do not expose gun ammunition types" ) {
+        CHECK_FALSE( item( itype_sling ).is_gun() );
+        CHECK_FALSE( has_ammo_types( item( itype_sling ) ) );
     }
 
     SECTION( "TOOL items with integral MAGAZINE pockets have ammo_types" ) {

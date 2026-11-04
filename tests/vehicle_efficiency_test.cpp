@@ -38,6 +38,21 @@ static const efftype_id effect_blind( "blind" );
 
 static const itype_id itype_battery( "battery" );
 
+static const ter_str_id ter_t_pavement( "t_pavement" );
+
+static const vpart_location_id vpart_location_on_door( "on_door" );
+
+static const vproto_id vehicle_prototype_ambulance( "ambulance" );
+static const vproto_id vehicle_prototype_car( "car" );
+static const vproto_id vehicle_prototype_car_sports( "car_sports" );
+static const vproto_id vehicle_prototype_electric_car( "electric_car" );
+static const vproto_id vehicle_prototype_fire_engine( "fire_engine" );
+static const vproto_id vehicle_prototype_fire_truck( "fire_truck" );
+static const vproto_id vehicle_prototype_humvee( "humvee" );
+static const vproto_id vehicle_prototype_road_roller( "road_roller" );
+static const vproto_id vehicle_prototype_suv( "suv" );
+static const vproto_id vehicle_prototype_truck_swat( "truck_swat" );
+
 static void clear_game( const ter_id &terrain )
 {
     map &here = get_map();
@@ -422,6 +437,43 @@ TEST_CASE( "make_vehicle_efficiency_case", "[.]" )
 // Amount of fuel needed to reach safe speed.
 // Amount of cruising range for a fixed amount of fuel.
 // Fix test for electric vehicles
+TEST_CASE( "vehicle_efficiency_mass_change_is_door_window_mass", "[vehicle][engine]" )
+{
+    const std::map<vproto_id, int> mass_before_door_windows = {
+        { vehicle_prototype_road_roller, 33096593 },
+        { vehicle_prototype_car, 1016912 },
+        { vehicle_prototype_suv, 1255580 },
+        { vehicle_prototype_fire_engine, 2100450 },
+        { vehicle_prototype_car_sports, 1006190 },
+        { vehicle_prototype_ambulance, 1718621 },
+        { vehicle_prototype_electric_car, 666429 },
+        { vehicle_prototype_truck_swat, 6053351 },
+        { vehicle_prototype_fire_truck, 6188743 },
+        { vehicle_prototype_humvee, 5524216 }
+    };
+
+    for( const auto &legacy : mass_before_door_windows ) {
+        CAPTURE( legacy.first );
+        clear_game( ter_t_pavement.id() );
+        map &here = get_map();
+        vehicle *veh = here.add_vehicle( legacy.first, tripoint_bub_ms( 60, 60, 0 ),
+                                         -90_degrees, 0, veh_spawn_status::UNDAMAGED );
+        REQUIRE( veh != nullptr );
+        units::mass window_mass;
+        for( const vpart_reference &part : veh->get_all_parts() ) {
+            veh->get_items( part.part() ).clear();
+            part.part().ammo_consume( part.part().ammo_remaining(), &here, part.pos_bub( here ) );
+            if( part.info().location == vpart_location_on_door ) {
+                window_mass += part.part().get_base().weight();
+            }
+        }
+        REQUIRE( window_mass > 0_gram );
+        CHECK( to_gram( veh->total_mass( here ) - window_mass ) == legacy.second );
+        REQUIRE( test_data::eff_data.count( legacy.first ) == 1 );
+        CHECK( to_gram( veh->total_mass( here ) ) == test_data::eff_data.at( legacy.first ).forward[0] );
+    }
+}
+
 TEST_CASE( "vehicle_efficiency", "[vehicle] [engine]" )
 {
     REQUIRE_FALSE( test_data::eff_data.empty() );

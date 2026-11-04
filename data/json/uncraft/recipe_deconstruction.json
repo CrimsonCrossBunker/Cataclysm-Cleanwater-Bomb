@@ -8091,5 +8091,13 @@
     "time": "2 h",
     "qualities": [ { "id": "SAW_M", "level": 3 }, { "id": "SAW_M_FINE", "level": 2 }, { "id": "HAMMER", "level": 3 } ],
     "components": [ [ [ "alloy_sheet", 12 ] ] ]
+  },
+  {
+    "type": "uncraft",
+    "activity_level": "MODERATE_EXERCISE",
+    "result": "wood_panel",
+    "time": "10 m",
+    "qualities": [ { "id": "SAW_W", "level": 2 } ],
+    "components": [ [ [ "2x4", 5 ] ] ]
   }
 ]
