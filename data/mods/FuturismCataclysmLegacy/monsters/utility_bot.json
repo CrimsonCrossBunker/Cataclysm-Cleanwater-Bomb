@@ -134,5 +134,68 @@
     ],
     "//": "Medium instead of heavy armor, since this is a 'non-military' robot.",
     "armor": { "bash": 15, "cut": 20, "bullet": 30, "heat": 10 }
+  },
+
+  {
+    "id": "mon_tripod",
+    "type": "MONSTER",
+    "name": { "str": "tripod" },
+    "description": "The Honda Crop King.  Originally designed for agriculture, it has a trio of spiked retractable cables and where it used to mount pesticide sprayer the PrepNet Phyle have modified it to have a flamethrower for their war against the Mycus.",
+    "default_faction": "berserk_bot",
+    "species": [ "ROBOT" ],
+    "diff": 20,
+    "volume": "92500 ml",
+    "weight": "120 kg",
+    "hp": 80,
+    "speed": 90,
+    "material": [ "steel" ],
+    "symbol": "R",
+    "color": "white",
+    "aggression": 0,
+    "morale": 100,
+    "aggro_character": false,
+    "melee_skill": 10,
+    "melee_dice": 16,
+    "melee_dice_sides": 2,
+    "melee_dice_ap": 6,
+    "melee_damage": [ { "damage_type": "cut", "amount": 6 } ],
+    "path_settings": { "max_dist": 5 },
+    "revert_to_itype": "bot_tripod",
+    "starting_ammo": { "napalm": 10000 },
+    "special_attacks": [
+      {
+        "type": "gun",
+        "cooldown": 1,
+        "gun_type": "rm451_flamethrower",
+        "ammo_type": "napalm",
+        "fake_skills": [ [ "gun", 4 ], [ "launcher", 5 ] ],
+        "fake_dex": 10,
+        "no_ammo_sound": "hiss!",
+        "ranges": [ [ 0, 10, "DEFAULT" ] ],
+        "require_targeting_player": true,
+        "require_targeting_npc": true,
+        "require_targeting_monster": true,
+        "target_moving_vehicles": true,
+        "targeting_cost": 200,
+        "targeting_timeout_extend": -10,
+        "targeting_sound": "\"Hostile detected.\"",
+        "targeting_volume": 10
+      }
+    ],
+    "death_drops": { "groups": [ [ "robots", 4 ], [ "tripod", 1 ] ] },
+    "death_function": { "corpse_type": "BROKEN" },
+    "flags": [
+      "SEES",
+      "HEARS",
+      "GOODHEARING",
+      "BASHES",
+      "NO_BREATHE",
+      "BIOLOGICALPROOF",
+      "ELECTRONIC",
+      "CLIMBS",
+      "PRIORITIZE_TARGETS",
+      "FIREPROOF"
+    ],
+    "armor": { "bash": 30, "cut": 50, "bullet": 60, "fcl_laser": 30, "fcl_plasma": 20, "electric": 10 }
   }
 ]

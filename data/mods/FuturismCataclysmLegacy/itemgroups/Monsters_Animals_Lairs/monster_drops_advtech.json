@@ -28,5 +28,17 @@
       { "item": "hard_plate", "prob": 30 },
       { "item": "robot_controls", "prob": 5 }
     ]
+  },
+  {
+    "type": "item_group",
+    "id": "tripod",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "flamethrower", "prob": 1, "charges": [ 0, 3000 ] },
+      [ "sheet_kevlar_layered", 10 ],
+      [ "ceramic_armor", 15 ],
+      [ "alloy_plate", 10 ],
+      [ "robot_controls", 3 ]
+    ]
   }
 ]

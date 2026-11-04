@@ -182,5 +182,47 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_tripod",
+    "symbol": ",",
+    "color": "green",
+    "name": { "str": "broken tripod" },
+    "category": "other",
+    "description": "A broken tripod.  Now that its legs lie broken and immobile, the world seems a little less threatening.  Could be gutted for parts.",
+    "price": "10 USD",
+    "material": [ "steel", "plastic" ],
+    "weight": "430000 g",
+    "volume": "187500 ml",
+    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
+    "melee_damage": { "bash": 10, "cut": 6 }
+  },
+  {
+    "id": "bot_tripod",
+    "looks_like": "broken_tripod",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "inactive tripod" },
+    "description": "This is an inactive Honda Crop King.  Using this item involves placing it on the ground, loading the unit with napalm in your inventory and turning it on.  If reprogrammed and rewired successfully the tribot will then identify you as an ally, roam around or follow you, and impale hostiles with its spiked cable weapons.",
+    "weight": "120000 g",
+    "volume": "92500 ml",
+    "price": "1000 kUSD",
+    "to_hit": -3,
+    "material": [ "steel" ],
+    "symbol": ";",
+    "color": "light_green",
+    "use_action": {
+      "type": "place_monster",
+      "monster_id": "mon_tripod",
+      "friendly_msg": "The tribot rises to its feet and scans the area for contaminants.",
+      "hostile_msg": "The tribot glowers down at you and ignites its flamethrower.  Turns out you hate the smell of napalm.",
+      "//": "No observed open deployment, likely a prototype or secret project",
+      "difficulty": 15,
+      "moves": 500,
+      "skills": [ "electronics", "computer" ]
+    },
+    "flags": [ "SINGLE_USE" ],
+    "melee_damage": { "bash": 8 }
   }
 ]
