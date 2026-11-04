@@ -108,7 +108,8 @@
         "?": { "item": "autodoc_supplies", "chance": 100 }
       },
       "monster": { "ö": { "monster": "mon_skitterbot" }, "∑": { "monster": "mon_zombie_static" } },
-      "vendingmachines": { "V": { "item_group": "fcl_vending_medicine", "reinforced": true } }
+      "vendingmachines": { "V": { "item_group": "fcl_vending_medicine", "reinforced": true } },
+      "place_monster": [ { "monster": "mon_medibot", "x": [6, 14], "y": [18, 20], "chance": 35 } ]
     }
   },
   {
