@@ -65,6 +65,8 @@
 #include "weakpoint.h"
 #include "weighted_list.h"
 
+struct item_activation_choices;
+
 class JsonObject;
 class JsonOut;
 class SkillLevel;
@@ -2130,6 +2132,9 @@ class Character : public Creature, public visitable
         /** As above, but with a pre-selected method. Debugmsg if this item doesn't have this method. */
         virtual bool invoke_item( item *, const std::string &, const tripoint_bub_ms &pt,
                                   int pre_obtain_moves = -1 );
+        // Explicit player choices for native authoritative execution.
+        bool invoke_item( item *, const std::string &, const tripoint_bub_ms &,
+                          int pre_obtain_moves, const item_activation_choices *choices );
         /** As above two, but with position equal to current position */
         virtual bool invoke_item( item * );
         virtual bool invoke_item( item *, const std::string & );

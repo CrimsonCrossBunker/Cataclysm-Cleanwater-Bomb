@@ -55,6 +55,9 @@ item_location form_loc_recursive( T &loc, item &it );
  */
 class iuse_transform : public iuse_actor
 {
+    private:
+        std::optional<int> use_impl( Character *, item &, map *, const tripoint_bub_ms &,
+                                     const item_activation_choices * ) const;
     public:
         item_transformation transform;
 
@@ -83,8 +86,12 @@ class iuse_transform : public iuse_actor
 
         /** Asks you to set a timer for a countdown */
         bool set_timer = false;
+        bool query_activation_choices( item_activation_choices & ) const override;
+        bool valid_activation_choices( const item_activation_choices & ) const override;
+        std::optional<int> use_with_choices( Character *, item &, map *,
+                                             const tripoint_bub_ms &, const item_activation_choices & ) const override;
         bool supports_owned_activation() const override {
-            return !set_timer;
+            return true;
         }
 
 
@@ -339,6 +346,8 @@ class delayed_transform_iuse : public iuse_transform
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here,
                                 const tripoint_bub_ms &pos ) const override;
+        std::optional<int> use_with_choices( Character *, item &, map *,
+                                             const tripoint_bub_ms &, const item_activation_choices & ) const override;
         std::unique_ptr<iuse_actor> clone() const override;
 };
 

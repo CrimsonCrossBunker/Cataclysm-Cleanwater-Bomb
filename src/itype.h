@@ -45,6 +45,8 @@
 #include "weighted_list.h"
 
 // IWYU pragma: no_forward_declare std::hash
+struct item_activation_choices;
+
 class Character;
 class Item_factory;
 class Trait_group;
@@ -1889,7 +1891,8 @@ struct itype {
         std::optional<int> invoke( Character *p, item &it, const tripoint_bub_ms &pos,
                                    const std::string &iuse_name ) const;
         std::optional<int> invoke( Character *p, item &it, map *here, const tripoint_bub_ms &pos,
-                                   const std::string &iuse_name ) const;
+                                   const std::string &iuse_name,
+                                   const item_activation_choices *choices = nullptr ) const;
         int tick( Character *p, item &it, const tripoint_bub_ms &pos ) const;
 
         virtual ~itype() = default;

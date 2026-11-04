@@ -23,6 +23,7 @@ class item;
 class map;
 class monster;
 struct iteminfo;
+struct item_activation_choices;
 template<typename T> class ret_val;
 
 // iuse methods return the number of charges expended, which is usually "1", or no value.
@@ -300,6 +301,13 @@ class iuse_actor
             return is_immediate_consumption();
         }
 
+        // Selection belongs to the local player's UI; validation/execution also
+        // work on server-owned characters and never prompt for missing choices.
+        virtual bool query_activation_choices( item_activation_choices & ) const;
+        virtual bool valid_activation_choices( const item_activation_choices & ) const;
+        virtual std::optional<int> use_with_choices( Character *, item &, map *,
+                const tripoint_bub_ms &, const item_activation_choices & ) const;
+
         virtual void info( const item &, std::vector<iteminfo> & ) const {}
         /**
          * Returns a deep copy of this object. Example implementation:
@@ -342,7 +350,8 @@ struct use_function {
 
         // TODO: Replace map unaware overload with map aware.
         std::optional<int> call( Character *, item &, const tripoint_bub_ms & ) const;
-        std::optional<int> call( Character *, item &, map *here, const tripoint_bub_ms & ) const;
+        std::optional<int> call( Character *, item &, map *here, const tripoint_bub_ms &,
+                                 const item_activation_choices *choices = nullptr ) const;
         // TODO: Replace map unaware overload with map aware.
         ret_val<void> can_call( const Character &, const item &, const tripoint_bub_ms &pos ) const;
         ret_val<void> can_call( const Character &, const item &, map *here,

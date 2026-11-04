@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <sstream>
 #include <vector>
 
@@ -23,6 +24,8 @@
 #include "game.h"
 #include "handle_liquid.h"
 #include "item.h"
+#include "item_activation.h"
+#include "iuse_actor.h"
 #include "item_components.h"
 #include "item_healing.h"
 #include "item_insert.h"
@@ -2748,4 +2751,134 @@ TEST_CASE( "mp_native_item_activation_transforms_once", "[mp_inventory_activity]
     CHECK( remote.get_moves() == moves );
     CHECK( remote.get_wielded_item()->countdown_point == countdown );
     CHECK_FALSE( remote.activity );
+}
+
+
+TEST_CASE( "mp_item_activation_timer_uses_player_choice_once",
+           "[mp_inventory_activity][mp_item_activation]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    avatar &host = get_avatar();
+    host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+    host.set_moves( 1000 );
+    host.set_wielded_item( item( itype_id( "c4" ) ) );
+    remote.set_moves( 1000 );
+    remote.set_wielded_item( item( itype_id( "c4" ) ) );
+    const auto source = capture_item_source( remote, remote.get_wielded_item() );
+    const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", source );
+        out.member( "item_type", "c4" );
+        out.member( "method", "transform" );
+        out.member( "target", remote.pos_abs() );
+        out.member( "timer_seconds", 37 );
+    } );
+    const auto before_rng = rng_get_engine();
+    fixture.run( remote, request );
+    const auto after_rng = rng_get_engine();
+    REQUIRE( remote.get_wielded_item() );
+    CHECK( remote.get_wielded_item()->typeId() == itype_id( "c4armed" ) );
+    CHECK( remote.get_wielded_item()->countdown_point == calendar::turn + 37_seconds );
+    const int moves = remote.get_moves();
+    fixture.run( remote, request );
+    CHECK( remote.get_moves() == moves );
+    CHECK( remote.get_wielded_item()->countdown_point == calendar::turn + 37_seconds );
+    CHECK( rng_get_engine() == after_rng );
+
+    // The same explicit choice follows the same native operation on the host.
+    rng_get_engine() = before_rng;
+    item_activation_choices choices;
+    choices.timer_seconds = 37;
+    REQUIRE( execute_owned_item_activation( host, host.get_wielded_item(), "transform",
+                                           host.pos_abs(), false, false, choices ) );
+    CHECK( host.get_wielded_item()->typeId() == remote.get_wielded_item()->typeId() );
+    CHECK( host.get_wielded_item()->countdown_point == remote.get_wielded_item()->countdown_point );
+    CHECK( host.get_moves() == moves );
+    CHECK( rng_get_engine() == after_rng );
+
+    // Timer is native item state and survives the normal save format.
+    std::ostringstream saved;
+    JsonOut out( saved );
+    remote.get_wielded_item()->serialize( out );
+    item restored;
+    JsonValue value = json_loader::from_string( saved.str() );
+    restored.deserialize( value.get_object() );
+    CHECK( restored.typeId() == itype_id( "c4armed" ) );
+    CHECK( restored.countdown_point == calendar::turn + 37_seconds );
+}
+
+TEST_CASE( "mp_item_activation_rejects_invalid_choices_before_effects",
+           "[mp_inventory_activity][mp_item_activation]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero + 1_days;
+    remote.set_moves( 1000 );
+    remote.set_wielded_item( item( itype_id( "c4" ) ) );
+    const auto source = capture_item_source( remote, remote.get_wielded_item() );
+    const auto before_rng = rng_get_engine();
+    for( const std::optional<int> seconds : { std::optional<int>(), std::optional<int>( 0 ),
+                                            std::optional<int>( -1 ), std::optional<int>( std::numeric_limits<int>::max() ) } ) {
+        const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
+            out.member( "kind", "item_use" );
+            out.member( "source", source );
+            out.member( "item_type", "c4" );
+            out.member( "method", "transform" );
+            out.member( "target", remote.pos_abs() );
+            if( seconds ) {
+                out.member( "timer_seconds", *seconds );
+            }
+        } );
+        const std::string result = fixture.run( remote, request );
+        JsonValue value = json_loader::from_string( result );
+        JsonObject response = value.get_object();
+        response.allow_omitted_members();
+        CHECK( response.get_string( "activity" ).empty() );
+        CHECK( remote.get_moves() == 1000 );
+        CHECK( remote.get_wielded_item()->typeId() == itype_id( "c4" ) );
+        CHECK( rng_get_engine() == before_rng );
+    }
+    // A stale or malicious choice cannot retime a fixed-fuse transformation.
+    remote.set_wielded_item( item( itype_id( "grenade" ) ) );
+    item_activation_choices choices;
+    choices.timer_seconds = 90;
+    CHECK_FALSE( execute_owned_item_activation( remote, remote.get_wielded_item(), "transform",
+                 remote.pos_abs(), false, false, choices ) );
+    CHECK( remote.get_wielded_item()->typeId() == itype_id( "grenade" ) );
+    CHECK( remote.get_moves() == 1000 );
+    CHECK( rng_get_engine() == before_rng );
+}
+
+TEST_CASE( "item_activation_choices_preserve_delayed_readiness_and_npc_defaults",
+           "[mp_item_activation]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    calendar::turn = calendar::turn_zero + 1_days;
+    delayed_transform_iuse action;
+    action.transform.target = itype_id( "c4armed" );
+    action.set_timer = true;
+    action.transform_age = 100;
+    item explosive( itype_id( "c4" ), calendar::turn );
+    item_activation_choices choices;
+    choices.timer_seconds = 23;
+    CHECK_FALSE( action.use_with_choices( &remote, explosive, &get_map(), remote.pos_bub(), choices ) );
+    CHECK( explosive.typeId() == itype_id( "c4" ) );
+    explosive.set_age( 100_seconds );
+    REQUIRE( action.time_to_do( explosive ) == 0 );
+    REQUIRE( action.use_with_choices( &remote, explosive, &get_map(), remote.pos_bub(), choices ) );
+    CHECK( explosive.typeId() == itype_id( "c4armed" ) );
+    CHECK( explosive.countdown_point == calendar::turn + 23_seconds );
+
+    // An ordinary NPC call, with no player choice channel, keeps the type's fuse.
+    item automatic( itype_id( "c4" ) );
+    iuse_transform normal;
+    normal.transform.target = itype_id( "c4armed" );
+    normal.set_timer = true;
+    REQUIRE( normal.use( &remote, automatic, &get_map(), remote.pos_bub() ) );
+    CHECK( automatic.typeId() == itype_id( "c4armed" ) );
+    CHECK( automatic.countdown_point == calendar::turn + 6_seconds );
 }
