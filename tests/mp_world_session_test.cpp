@@ -2,6 +2,8 @@
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
 #include "character_martial_arts.h"
+#include "flag.h"
+#include "effect.h"
 #include "game.h"
 #include "json_loader.h"
 #include "json.h"
@@ -676,6 +678,19 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     cata_mp::finish_remote_character_turn( *actor );
     CHECK( only_test_remote( session ).turn.remote_moves > 0 );
     CHECK( only_test_remote( session ).turn.remote_moves == actor->get_moves() );
+    // A stale replica must not erase the server's stamina or bleeding. This
+    // goes through dispatch for an initialized, native-controlled player.
+    actor->set_stamina( 1234 );
+    actor->add_effect( efftype_id( "bleed" ), 10_minutes, bodypart_id( "arm_l" ), 2 );
+    const time_duration bleeding = actor->get_effect( efftype_id( "bleed" ),
+                                   bodypart_id( "arm_l" ) ).get_duration();
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                           R"({"action":"activity_end","client_stamina":9999,"client_bleed":[]})",
+                                           admissions.at( 101 ) } ) );
+    cata_mp::process_mp_events();
+    CHECK( actor->get_stamina() == 1234 );
+    CHECK( actor->get_effect( efftype_id( "bleed" ),
+                              bodypart_id( "arm_l" ) ).get_duration() == bleeding );
     const auto before_unload = g->npc_lifetimes().acquire( *actor );
     actor->on_unload();
     g->remove_npc( actor->getID() );
@@ -1170,38 +1185,35 @@ TEST_CASE( "mp_failed_admission_metadata_cannot_leak_into_another_world",
     CHECK( current.admission.pending_welcome.empty() );
 }
 
-TEST_CASE( "mp_client_body_updates_restart_in_a_new_world_at_the_same_time",
-           "[multiplayer][world_session][lifecycle][regression]" )
+TEST_CASE( "activated_mutation_flags_belong_to_the_queried_player",
+           "[multiplayer][world_session][body_authority][regression]" )
 {
-    REQUIRE_FALSE( cata_mp::is_session_active() );
-    const restore_on_out_of_scope restore_time( calendar::turn );
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    auto &session = g->multiplayer_session();
-    const on_out_of_scope cleanup( [&]() {
-        session.reset();
-        clear_avatar();
-    } );
+    clear_avatar();
     clear_map_without_vision();
-    const auto start_world = [&]() {
-        session.reset();
-        calendar::turn = calendar::turn_zero + 11_hours;
-        clear_avatar();
-        cata_mp::set_client_mode( true );
-        avatar &player = get_avatar();
-        player.set_stamina( player.get_stamina_max() / 2 );
-        calendar::turn += 1_turns;
-        return player.get_stamina();
-    };
-    const int first_initial = start_world();
-    cata_mp::client_character_turn_driver( get_avatar() ).update_body();
-    const int first_updated = get_avatar().get_stamina();
-    REQUIRE( first_updated > first_initial );
-    cata_mp::client_character_turn_driver( get_avatar() ).update_body();
-    CHECK( get_avatar().get_stamina() == first_updated );
-
-    const int second_initial = start_world();
-    cata_mp::client_character_turn_driver( get_avatar() ).update_body();
-    CHECK( get_avatar().get_stamina() > second_initial );
+    npc remote;
+    remote.normalize();
+    remote.set_stored_kcal( remote.get_healthy_kcal() );
+    const trait_id mutation( "WEB_RAPPEL" );
+    const json_character_flag flag( "WEB_RAPPEL" );
+    avatar &local = get_avatar();
+    local.set_mutation( mutation );
+    remote.set_mutation( mutation );
+    REQUIRE( remote.can_power_mutation( mutation ) );
+    remote.activate_mutation( mutation );
+    REQUIRE( remote.has_active_mutation( mutation ) );
+    REQUIRE_FALSE( local.has_active_mutation( mutation ) );
+    CHECK( remote.has_trait_flag( flag ) );
+    CHECK( remote.count_trait_flag( flag ) == 1 );
+    CHECK_FALSE( local.has_trait_flag( flag ) );
+    CHECK( local.count_trait_flag( flag ) == 0 );
+    remote.deactivate_mutation( mutation );
+    local.activate_mutation( mutation );
+    CHECK_FALSE( remote.has_trait_flag( flag ) );
+    CHECK( remote.count_trait_flag( flag ) == 0 );
+    CHECK( local.has_trait_flag( flag ) );
+    CHECK( local.count_trait_flag( flag ) == 1 );
+    clear_avatar();
 }
 
 // Requires the co-op runtime adjacent to the test executable, as for the game.

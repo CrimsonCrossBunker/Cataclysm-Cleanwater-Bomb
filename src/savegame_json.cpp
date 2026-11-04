@@ -1711,6 +1711,176 @@ void Character::store_player_state( JsonOut &out ) const
     out.end_object();
 }
 
+void Character::store_turn_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "schema", 1 );
+    out.member( "needs" );
+    store_needs_state( out );
+    out.member( "mana", magic->available_mana() );
+    out.member( "str_max", str_max );
+    out.member( "dex_max", dex_max );
+    out.member( "int_max", int_max );
+    out.member( "per_max", per_max );
+    out.member( "str_bonus", str_bonus );
+    out.member( "dex_bonus", dex_bonus );
+    out.member( "int_bonus", int_bonus );
+    out.member( "per_bonus", per_bonus );
+    out.member( "stamina", stamina );
+    out.member( "cardio_acc", cardio_acc );
+    out.member( "activity_history", activity_history );
+    out.member( "daily_sleep", daily_sleep );
+    out.member( "continuous_sleep", continuous_sleep );
+    out.member( "radiation", radiation );
+    out.member( "focus_pool", focus_pool );
+    out.member( "oxygen", oxygen );
+    out.member( "scent", scent );
+    out.member( "type_of_scent", type_of_scent );
+    out.member( "recoil", recoil );
+    out.member( "power_level", power_level );
+    out.member( "max_power_level_modifier", max_power_level_modifier );
+    out.member( "pain", get_pain() );
+    out.member( "speed_base", speed_base );
+    out.member( "speed_bonus", speed_bonus );
+    out.member( "num_blocks", num_blocks );
+    out.member( "num_dodges", num_dodges );
+    out.member( "num_blocks_bonus", num_blocks_bonus );
+    out.member( "num_dodges_bonus", num_dodges_bonus );
+    out.member( "free_dodges_left", free_dodges_left );
+    out.member( "armor_bonus", armor_bonus );
+    out.member( "dodge_bonus", dodge_bonus );
+    out.member( "block_bonus", block_bonus );
+    out.member( "hit_bonus", hit_bonus );
+    out.member( "bash_bonus", bash_bonus );
+    out.member( "cut_bonus", cut_bonus );
+    out.member( "bash_mult", bash_mult );
+    out.member( "cut_mult", cut_mult );
+    out.member( "melee_quiet", melee_quiet );
+    out.member( "throw_resist", throw_resist );
+    out.member( "archery_aim_counter", archery_aim_counter );
+    out.member( "underwater", underwater );
+    out.member( "traits", my_traits );
+    out.member( "mutations", my_mutations );
+    out.member( "cached_mutations", cached_mutations );
+    out.member( "bionics", *my_bionics );
+    out.member( "effects", *effects );
+    out.member( "damage_over_time", damage_over_time_map );
+    out.member( "body", body );
+    out.end_object();
+}
+
+void Character::load_turn_state( const JsonObject &snapshot )
+{
+    if( snapshot.get_int( "schema" ) != 1 ) {
+        snapshot.throw_error_at( "schema", "Unsupported character turn state" );
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    // Back up only the projected body state. Carried items, activities and
+    // identity are neither serialized nor replaced by an ordinary turn frame.
+    std::ostringstream previous;
+    JsonOut backup( previous );
+    store_turn_state( backup );
+    const auto restore = [&]( const JsonObject & data ) {
+        data.allow_omitted_members();
+        const auto read = [&]( const char *member, auto & value ) {
+            if( !data.read( member, value, true ) ) {
+                data.throw_error_at( member, "Missing character turn state field" );
+            }
+        };
+        read( "str_max", str_max );
+        read( "dex_max", dex_max );
+        read( "int_max", int_max );
+        read( "per_max", per_max );
+        read( "str_bonus", str_bonus );
+        read( "dex_bonus", dex_bonus );
+        read( "int_bonus", int_bonus );
+        read( "per_bonus", per_bonus );
+        read( "stamina", stamina );
+        read( "cardio_acc", cardio_acc );
+        read( "activity_history", activity_history );
+        read( "daily_sleep", daily_sleep );
+        read( "continuous_sleep", continuous_sleep );
+        read( "radiation", radiation );
+        read( "focus_pool", focus_pool );
+        read( "oxygen", oxygen );
+        read( "scent", scent );
+        read( "type_of_scent", type_of_scent );
+        read( "recoil", recoil );
+        read( "power_level", power_level );
+        read( "max_power_level_modifier", max_power_level_modifier );
+        read( "speed_base", speed_base );
+        read( "speed_bonus", speed_bonus );
+        read( "num_blocks", num_blocks );
+        read( "num_dodges", num_dodges );
+        read( "num_blocks_bonus", num_blocks_bonus );
+        read( "num_dodges_bonus", num_dodges_bonus );
+        read( "free_dodges_left", free_dodges_left );
+        read( "armor_bonus", armor_bonus );
+        read( "dodge_bonus", dodge_bonus );
+        read( "block_bonus", block_bonus );
+        read( "hit_bonus", hit_bonus );
+        read( "bash_bonus", bash_bonus );
+        read( "cut_bonus", cut_bonus );
+        read( "bash_mult", bash_mult );
+        read( "cut_mult", cut_mult );
+        read( "melee_quiet", melee_quiet );
+        read( "throw_resist", throw_resist );
+        read( "archery_aim_counter", archery_aim_counter );
+        read( "underwater", underwater );
+        read( "traits", my_traits );
+        read( "mutations", my_mutations );
+        read( "cached_mutations", cached_mutations );
+        read( "bionics", *my_bionics );
+        read( "effects", *effects );
+        read( "damage_over_time", damage_over_time_map );
+        read( "body", body );
+        if( body.empty() ) {
+            data.throw_error_at( "body", "Character turn state requires a body" );
+        }
+        for( const auto &part : body ) {
+            if( !part.first.is_valid() ) {
+                data.throw_error_at( "body", "Unknown body part in character turn state" );
+            }
+        }
+        // Direct assignment avoids Character::set_pain/add_effect:
+        // those can wake a character, cancel an activity, or run gameplay hooks.
+        trait_flag_cache.clear();
+        next_bionic_uid = 0;
+        *morale = player_morale();
+        const JsonObject needs = data.get_object( "needs" );
+        load_needs_state( needs );
+        for( const trait_id &mut : get_functioning_mutations() ) {
+            morale->on_mutation_gain( mut );
+        }
+        for( const effect &eff : get_effects() ) {
+            morale->on_effect_int_change( eff.get_id(), eff.get_intensity(), eff.get_bp() );
+        }
+        Creature::set_pain( data.get_int( "pain" ) );
+        morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+        morale->on_stat_change( "radiation", radiation );
+        // Cache reconstruction can change permanent bonuses. The owner-provided
+        // points are authoritative and must be applied after those callbacks.
+        morale->load( needs );
+        magic->set_mana( data.get_int( "mana" ) );
+        recalculate_enchantment_cache( false );
+        my_mutations_dirty.clear();
+        old_mutation_cache->clear();
+        old_mutation_cache->mutations = enchantment_cache->mutations;
+        new_mutation_cache->clear();
+        recalculate_size();
+        calc_mutation_levels();
+        update_bionic_power_capacity();
+        flag_encumbrance();
+        recalc_sight_limits();
+    };
+    try {
+        restore( snapshot );
+    } catch( const JsonError & ) {
+        restore( json_loader::from_string( previous.str() ).get_object() );
+        throw;
+    }
+}
+
 void Character::load_player_state( const JsonObject &snapshot )
 {
     if( snapshot.get_int( "schema" ) != 1 ) {
@@ -1851,11 +2021,16 @@ void Character::load_player_state( const JsonObject &snapshot )
             member.read( ( *_skills )[id] );
         }
         *morale = player_morale();
-        morale->load( data );
         for( const trait_id &mut : get_functioning_mutations() ) {
             morale->on_mutation_gain( mut );
         }
-        set_pain( data.get_int( "pain" ) );
+        for( const effect &eff : get_effects() ) {
+            morale->on_effect_int_change( eff.get_id(), eff.get_intensity(), eff.get_bp() );
+        }
+        Creature::set_pain( data.get_int( "pain" ) );
+        morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+        morale->on_stat_change( "radiation", radiation );
+        morale->load( data );
 
         auto restored_values = values;
         read( "values", restored_values );

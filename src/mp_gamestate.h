@@ -16,7 +16,6 @@
 #include "type_id.h"
 
 class Character;
-class character_turn_driver;
 class item;
 class npc;
 enum class object_type : int;
@@ -189,8 +188,8 @@ void mp_client_dispatch_grab_if_changed( object_type pre_type,
 // forwards a toggle_haul action to the host when is_hauling() actually flipped.
 void mp_client_dispatch_hauling_if_changed( bool pre_hauling );
 
-// Enrich a client action JSON with the current client_light and client_bleed fields.
-// Call before any direct client_send() to ensure the server always receives light/bleed state.
+// Attach local input/activity observations to a request. Body state remains
+// server-owned and is never uploaded by this path.
 std::string client_enrich_action( const std::string &json );
 // UI selection only: publish a value request, leaving carried items and the
 // map unchanged until the authoritative response arrives.
@@ -512,11 +511,6 @@ void mp_log( const std::string &msg );
 // No-op outside MP. Throttled internally (emits only when newseen / nearest-hostile
 // distance / safe_mode change) so it never floods the log during 200-turn/sec FF.
 void mp_log_safemode_check( int newseen, int mostseen, int safe_mode );
-
-// Current client compatibility driver, bound to the exact local character.
-// Its observed-clock timing resets with the session. SP/host use their native
-// player control driver instead. Does not make client body state authoritative.
-character_turn_driver &client_character_turn_driver( Character &actor );
 
 // Client only: re-send the client's current worn-item list, skin tone, hair,
 // and wielded weapon to the server so the remote NPC proxy stays in sync.
