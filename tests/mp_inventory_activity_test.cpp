@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "activity_actor_definitions.h"
+#include "action.h"
 #include "avatar.h"
 #include "avatar_action.h"
 #include "calendar.h"
@@ -24,6 +25,8 @@
 #include "game.h"
 #include "handle_liquid.h"
 #include "item.h"
+#include "iexamine.h"
+#include "options_helpers.h"
 #include "item_activation.h"
 #include "tool_activity_target.h"
 #include "iuse_actor.h"
@@ -3049,4 +3052,168 @@ TEST_CASE( "owned_tool_target_tracks_absolute_surface_and_vehicle_identity",
     CHECK( checked_lock );
     here.destroy_vehicle( car );
     CHECK_FALSE( occupied.matches( here ) );
+}
+
+TEST_CASE( "automatic_mining_is_authoritative_and_only_completed_work_queues_movement",
+           "[multiplayer][mp_auto_tool]" )
+{
+    reload_fixture fixture;
+    map &here = get_map();
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim(
+                          cata_mp::player_id( std::string( 32, '9' ) ), remote );
+    avatar &local = get_avatar();
+    local.clear_destination();
+    const on_out_of_scope clear_route( [&local]() { local.clear_destination(); } );
+    const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
+    here.ter_set( target, ter_str_id( "t_rock" ) );
+    remote.set_wielded_item( item( itype_id( "jackhammer_mining" ) ) );
+    item_location tool = remote.get_wielded_item();
+    tool->ammo_set( itype_id( "gasoline" ), 1200 );
+    const std::string outcome = GENERATE( "finish", "cancel", "empty", "stunned", "lost_tool" );
+    CAPTURE( outcome );
+    if( outcome == "empty" ) {
+        tool->ammo_set( itype_id( "gasoline" ), 0 );
+    } else if( outcome == "stunned" ) {
+        remote.add_effect( efftype_id( "stunned" ), 1_minutes );
+    }
+    const auto rng_before_start = rng_get_engine();
+    const std::string wire = fixture.request( remote, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "auto_mine" );
+        out.member( "source", cata_mp::capture_item_source( remote, tool ) );
+        out.member( "item_type", tool->typeId() );
+        out.member( "method", "JACKHAMMER" );
+        out.member( "target", here.get_abs( target ) );
+    } );
+    const std::string started = fixture.run( remote, wire );
+    const auto rng_after_start = rng_get_engine();
+    fixture.run( remote, wire );
+    const bool accepted = outcome != "empty" && outcome != "stunned";
+    CHECK( static_cast<bool>( remote.activity ) == accepted );
+    CHECK( static_cast<bool>( fixture.reload.automatic_mining_target ) == accepted );
+    CHECK( rng_get_engine() == rng_after_start );
+    if( !accepted ) {
+        CHECK( rng_get_engine() == rng_before_start );
+    }
+    CHECK( here.ter( target ) == ter_str_id( "t_rock" ).id() );
+    std::string result = started;
+    if( accepted ) {
+        save_reload_activity( remote );
+        if( outcome == "lost_tool" ) {
+            remote.remove_weapon();
+        }
+        remote.set_moves( 100 );
+        remote.activity.moves_left = 0;
+        result = fixture.run( remote, fixture.request( remote, outcome == "cancel" ? "cancel" : "step" ) );
+        CHECK_FALSE( remote.activity );
+    }
+    const bool finished = outcome == "finish";
+    CHECK( here.passable( target ) == finished );
+    CHECK( ( result.find( "automatic_mining_destination" ) != std::string::npos ) == finished );
+    CHECK_FALSE( fixture.reload.automatic_mining_target );
+    if( finished ) {
+        CHECK( tool->ammo_remaining() < 1200 );
+    } else if( outcome != "lost_tool" ) {
+        CHECK( tool->ammo_remaining() == ( outcome == "empty" ? 0 : 1200 ) );
+    }
+
+    // Apply the real authority result to a client view. It must queue the
+    // follow-up step exactly once without executing the mining actor locally.
+    local.setpos( here, remote.pos_bub() );
+    cata_mp::set_client_mode( true );
+    player_activity view_activity{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view_activity.set_execution( activity_execution::presentation );
+    local.assign_activity( view_activity );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.active = true;
+    view.pending_request = fixture.sequence;
+    const auto rng_before_replica = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    CHECK( local.has_destination() == finished );
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( local.activity );
+    CHECK( rng_get_engine() == rng_before_replica );
+    if( finished ) {
+        CHECK( local.get_next_auto_move_direction() == ACTION_MOVE_RIGHT );
+        CHECK_FALSE( local.has_destination() );
+    }
+}
+
+TEST_CASE( "automatic_and_examine_tool_entries_only_create_client_views",
+           "[multiplayer][mp_auto_tool]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    who.clear_destination();
+    const on_out_of_scope clear_route( [&who]() { who.clear_destination(); } );
+    map &here = get_map();
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    const override_option auto_features( "AUTO_FEATURES", "true" );
+    const override_option auto_mining( "AUTO_MINING", "true" );
+    restore_on_out_of_scope restore_mostseen( g->mostseen );
+    g->mostseen = 0;
+    cata_mp::set_client_mode( true );
+    who.set_moves( 100 );
+    auto rng_before = rng_get_engine();
+    SECTION( "automatic_mining" ) {
+        here.ter_set( target, ter_str_id( "t_rock" ) );
+        who.set_wielded_item( item( itype_id( "pickaxe" ) ) );
+        rng_before = rng_get_engine();
+        REQUIRE( cata_mp::client_auto_mine( here.get_abs( target ) ) );
+        CHECK( here.ter( target ) == ter_str_id( "t_rock" ).id() );
+        CHECK_FALSE( who.has_destination() );
+    }
+    SECTION( "examine_pry" ) {
+        here.ter_set( target, ter_str_id( "test_t_prying1" ) );
+        who.set_wielded_item( item( itype_id( "test_halligan" ) ) );
+        rng_before = rng_get_engine();
+        iexamine::locked_object( who, target );
+        CHECK( here.ter( target ) == ter_str_id( "test_t_prying1" ).id() );
+    }
+    SECTION( "explicit_lockpick_target" ) {
+        here.ter_set( target, ter_str_id( "t_door_locked" ) );
+        who.set_wielded_item( item( itype_id( "test_sonic_screwdriver" ) ) );
+        std::string method = "PICK_LOCK";
+        rng_before = rng_get_engine();
+        REQUIRE( cata_mp::client_activate_item( who.get_wielded_item(), method, here.get_abs( target ) ) );
+        CHECK( here.ter( target ) == ter_str_id( "t_door_locked" ).id() );
+    }
+    CHECK( who.activity.execution() == activity_execution::presentation );
+    CHECK( cata_mp::inventory_activity_view( who.activity ) );
+    CHECK( rng_get_engine() == rng_before );
+    CHECK_FALSE( dynamic_cast<prying_activity_actor *>( who.activity.actor.get() ) );
+    CHECK_FALSE( dynamic_cast<lockpick_activity_actor *>( who.activity.actor.get() ) );
+}
+
+TEST_CASE( "examine_prying_preserves_tools_without_a_manual_use_action",
+           "[multiplayer][mp_auto_tool]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    map &here = get_map();
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    here.ter_set( target, ter_str_id( "test_t_prying1" ) );
+    who.set_wielded_item( item( itype_id( "nail_puller_bronze" ) ) );
+    const item_location tool = who.get_wielded_item();
+    REQUIRE_FALSE( supports_owned_item_activation( *tool, "CROWBAR" ) );
+    const std::string start = fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "examine_pry" );
+        out.member( "source", cata_mp::capture_item_source( who, tool ) );
+        out.member( "item_type", tool->typeId() );
+        out.member( "target", here.get_abs( target ) );
+    } );
+    fixture.run( who, start );
+    REQUIRE( who.activity.id() == activity_id( "ACT_PRYING" ) );
+    CHECK( who.activity.execution() == activity_execution::authoritative );
+    who.activity.moves_left = 1;
+    who.set_moves( 100 );
+    const std::string finish = fixture.request( who, "step" );
+    fixture.run( who, finish );
+    CHECK( here.ter( target ) == ter_str_id( "t_dirt" ).id() );
+    const auto count = here.i_at( target ).size();
+    const auto rng_after = rng_get_engine();
+    fixture.run( who, finish );
+    CHECK( here.i_at( target ).size() == count );
+    CHECK( rng_get_engine() == rng_after );
 }
