@@ -25,6 +25,7 @@
 #include "ballistics.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "bionic_world_effects.h"
 #include "character_action_guard.h"
 #include "mp_inventory_activity.h"
 #include "bodypart.h"
@@ -96,11 +97,6 @@
 #include "weather.h"
 #include "weather_gen.h"
 
-static const ammo_effect_str_id ammo_effect_DRAW_AS_LINE( "DRAW_AS_LINE" );
-static const ammo_effect_str_id ammo_effect_JET( "JET" );
-static const ammo_effect_str_id ammo_effect_NO_DAMAGE_SCALING( "NO_DAMAGE_SCALING" );
-static const ammo_effect_str_id ammo_effect_NO_ITEM_DAMAGE( "NO_ITEM_DAMAGE" );
-
 static const bionic_id afs_bio_dopamine_stimulators( "afs_bio_dopamine_stimulators" );
 static const bionic_id bio_blood_anal( "bio_blood_anal" );
 static const bionic_id bio_cqb( "bio_cqb" );
@@ -124,7 +120,6 @@ static const bionic_id bio_teleport( "bio_teleport" );
 static const bionic_id bio_torsionratchet( "bio_torsionratchet" );
 static const bionic_id bio_water_extractor( "bio_water_extractor" );
 
-static const damage_type_id damage_bash( "bash" );
 
 static const efftype_id effect_assisted( "assisted" );
 static const efftype_id effect_asthma( "asthma" );
@@ -159,15 +154,7 @@ static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const material_id fuel_type_metabolism( "metabolism" );
 static const material_id fuel_type_sun_light( "sunlight" );
 static const material_id fuel_type_wind( "wind" );
-static const material_id material_budget_steel( "budget_steel" );
-static const material_id material_ch_steel( "ch_steel" );
-static const material_id material_hc_steel( "hc_steel" );
-static const material_id material_iron( "iron" );
-static const material_id material_lc_steel( "lc_steel" );
-static const material_id material_mc_steel( "mc_steel" );
 static const material_id material_muscle( "muscle" );
-static const material_id material_qt_steel( "qt_steel" );
-static const material_id material_steel( "steel" );
 
 static const morale_type morale_feeling_good( "morale_feeling_good" );
 
@@ -1119,16 +1106,9 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         }
     } else if( bio.id == bio_resonator ) {
         add_msg_activate();
-        //~Sound of a bionic sonic-resonator shaking the area
-        sounds::sound( pos_bub(), 30, sounds::sound_t::combat, _( "VRRRRMP!" ), false, "bionic",
-                       static_cast<std::string>( bio_resonator ) );
-        for( const tripoint_bub_ms &bashpoint : here.points_in_radius( pos_bub(), 1 ) ) {
-            here.bash( bashpoint, 110 );
-            // Multibash effect, so that doors &c will fall
-            here.bash( bashpoint, 110 );
-            here.bash( bashpoint, 110 );
+        if( !bionic_resonance( *this, here ) ) {
+            return false;
         }
-
         mod_moves( -100 );
     } else if( bio.id == bio_teleport ) {
         if( mounted ) {
@@ -1233,43 +1213,9 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         }
     } else if( bio.id == bio_magnet ) {
         add_msg_activate();
-        static const std::set<material_id> affected_materials =
-        { material_iron, material_steel, material_lc_steel, material_mc_steel, material_hc_steel, material_ch_steel, material_qt_steel, material_budget_steel };
-        // Remember all items that will be affected, then affect them
-        // Don't "snowball" by affecting some items multiple times
-        std::vector<std::pair<item, tripoint_bub_ms>> affected;
-        const units::mass weight_cap = weight_capacity();
-        for( const tripoint_bub_ms &p : here.points_in_radius( pos_bub(), 10 ) ) {
-            if( p == pos_bub() || !here.has_items( p ) || here.has_flag( ter_furn_flag::TFLAG_SEALED, p ) ) {
-                continue;
-            }
-
-            map_stack stack = here.i_at( p );
-            for( auto it = stack.begin(); it != stack.end(); it++ ) {
-                if( it->weight() < weight_cap &&
-                    it->made_of_any( affected_materials ) ) {
-                    affected.emplace_back( *it, p );
-                    stack.erase( it );
-                    break;
-                }
-            }
+        if( !bionic_magnetic_attraction( *this, here ) ) {
+            return false;
         }
-
-        for( const std::pair<item, tripoint_bub_ms> &pr : affected ) {
-            projectile proj;
-            proj.speed  = 50;
-            proj.impact = damage_instance();
-            // FIXME: Hardcoded damage type
-            proj.impact.add_damage( damage_bash, pr.first.weight() / 250_gram );
-            // make the projectile stop one tile short to prevent hitting the player
-            proj.range = rl_dist( pr.second, pos_bub() ) - 1;
-            proj.proj_effects = {{ ammo_effect_NO_ITEM_DAMAGE, ammo_effect_DRAW_AS_LINE, ammo_effect_NO_DAMAGE_SCALING, ammo_effect_JET }};
-
-            dealt_projectile_attack dealt;
-            projectile_attack( dealt, proj, pr.second, pos_bub(), dispersion_sources{ 0 }, this );
-            here.add_item_or_charges( dealt.end_point, pr.first );
-        }
-
         mod_moves( -100 );
     } else if( bio.id == bio_lockpick ) {
         const std::optional<tripoint_bub_ms> target = choices ?

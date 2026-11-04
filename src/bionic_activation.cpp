@@ -33,9 +33,7 @@ bool supports_owned_bionic_action( const bionic &bio, bionic_action action )
     // These native branches need additional choices, an owner-specific report,
     // or a world/position result beyond an ordinary character-state reply.
     for( const char *id : {
-             "bio_water_extractor", "bio_remote",
-             "bio_resonator", "bio_teleport",
-             "bio_magnet"
+             "bio_water_extractor", "bio_remote", "bio_teleport"
          } ) {
         if( bio.id == bionic_id( id ) ) {
             return false;
