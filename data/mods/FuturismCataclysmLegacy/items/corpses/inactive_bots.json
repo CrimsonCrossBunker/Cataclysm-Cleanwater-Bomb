@@ -282,5 +282,57 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_utilibot",
+    "symbol": ",",
+    "color": "light_gray",
+    "looks_like": "broken_cleanerbot",
+    "name": { "str": "broken Seneschal" },
+    "category": "other",
+    "description": "A broken Seneschal, now limp and unmoving.  Could be gutted for parts or crafted into a salvaged robot.",
+    "material": [ "steel", "plastic" ],
+    "weight": "140 kg",
+    "volume": "62500 ml",
+    "to_hit": -3,
+    "flags": [ "TRADER_AVOID", "LEAK_DAM", "RADIOACTIVE" ],
+    "melee_damage": { "bash": 6, "cut": 6 }
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_utilibot_const",
+    "copy-from": "broken_utilibot",
+    "color": "dark_gray",
+    "name": "broken Udarnik",
+    "volume": "680388 ml",
+    "weight": "680388 g",
+    "description": "A broken Udarnik, now wrecked and immobile.  Could be stripped down for parts."
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_utilibot_hostile",
+    "copy-from": "broken_utilibot_const",
+    "color": "dark_gray",
+    "name": "broken Udarnik",
+    "description": "A broken Udarnik, now wrecked and immobile.  Could be stripped down for parts."
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_medibot",
+    "symbol": ",",
+    "color": "white",
+    "looks_like": "broken_tripod",
+    "name": "broken surgical droid",
+    "category": "other",
+    "description": "A broken surgical robot, now crumpled and inert.  Could be stripped down for parts.",
+    "price": "300 USD",
+    "price_postapoc": "10 USD",
+    "material": [ "steel", "plastic" ],
+    "weight": "140 kg",
+    "volume": "62500 ml",
+    "to_hit": -3,
+    "flags": [ "TRADER_AVOID" ],
+    "melee_damage": { "bash": 6, "cut": 6 }
   }
 ]
