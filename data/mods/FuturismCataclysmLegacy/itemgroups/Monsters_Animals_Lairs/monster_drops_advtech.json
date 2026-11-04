@@ -37,7 +37,7 @@
       { "item": "flamethrower", "prob": 1, "charges": [ 0, 3000 ] },
       [ "sheet_kevlar_layered", 10 ],
       [ "ceramic_armor", 15 ],
-      [ "alloy_plate", 10 ],
+      [ "alloy_sheet", 10 ],
       [ "robot_controls", 3 ]
     ]
   },
