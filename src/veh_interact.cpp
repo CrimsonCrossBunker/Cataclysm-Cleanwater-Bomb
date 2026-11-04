@@ -222,12 +222,11 @@ void veh_interact::assign_activity( map &here )
         time = 1_seconds;
     }
 
-    const point_rel_ms q = veh->coord_translate( pt ? pt->mount : veh->part( 0 ).mount );
     const vehicle_part *vpt = pt ? pt : &veh->part( 0 );
     player_character.set_moves( 0 );
     player_character.assign_activity(
-        vehicle_activity_actor( sel_cmd, time, veh, veh->pos_abs() + q,
-                                tripoint_rel_ms( cursor_vp_mount, 0 ), veh->index_of_part( vpt ), vp->id, refill_target ) );
+        vehicle_activity_actor( sel_cmd, time, veh, veh->abs_part_pos( *vpt ),
+                                tripoint_rel_ms( cursor_vp_mount, -cursor_level ), veh->index_of_part( vpt ), vp->id, refill_target ) );
 }
 
 void orient_part( map &here, vehicle *veh, const vpart_info &vpinfo, int partnum,
@@ -270,6 +269,13 @@ void orient_part( map &here, vehicle *veh, const vpart_info &vpinfo, int partnum
 void veh_interact::run( map &here, vehicle &veh, const point_rel_ms &p )
 {
     veh_interact vehint( here, veh, p );
+    for( const vpart_reference &part : veh.get_all_parts() ) {
+        if( part.mount_pos() == -p && part.pos_bub( here ).z() == get_avatar().posz() ) {
+            vehint.cursor_level = part.part().mount_level;
+            break;
+        }
+    }
+    vehint.move_cursor( here, point_rel_ms::zero );
     vehint.do_main_loop( here );
     vehint.assign_activity( here );
 }
@@ -524,6 +530,8 @@ veh_interact::veh_interact( map &here, vehicle &veh, const point_rel_ms &p )
     main_context.register_action( "CONFIRM" );
     main_context.register_action( "HELP_KEYBINDINGS" );
     main_context.register_action( "FILTER" );
+    main_context.register_action( "VEHICLE_DECK_UP" );
+    main_context.register_action( "VEHICLE_DECK_DOWN" );
     main_context.register_action( "ANY_INPUT" );
 
     count_durability();
@@ -810,6 +818,8 @@ void veh_interact::do_main_loop( map &here )
                     popup( _( "You cannot relabel this vehicle as it is owned by: %s." ), owner_fac->get_name() );
                 }
             }
+        } else if( action == "VEHICLE_DECK_UP" || action == "VEHICLE_DECK_DOWN" ) {
+            change_deck( here, action == "VEHICLE_DECK_UP" ? 1 : -1 );
         } else if( action == "FUEL_LIST_DOWN" ) {
             move_fuel_cursor( here, 1 );
         } else if( action == "FUEL_LIST_UP" ) {
@@ -1389,7 +1399,7 @@ bool veh_interact::update_part_requirements( map &here )
     }
     nmsg += res.second;
 
-    const ret_val<void> can_mount = veh->can_mount( -cursor_vp_mount, *sel_vpart_info );
+    const ret_val<void> can_mount = veh->can_mount( tripoint_rel_ms( -cursor_vp_mount, cursor_level ), *sel_vpart_info );
     if( !can_mount.success() ) {
         ok = false;
         nmsg += _( "<color_white>Cannot install due to:</color>\n> " ) +
@@ -1585,6 +1595,7 @@ void veh_interact::do_repair( map &here )
     if( reason == task_reason::INVALID_TARGET ) {
         vehicle_part *most_repairable = get_most_repairable_part();
         if( most_repairable && most_repairable->is_repairable() ) {
+            cursor_level = most_repairable->mount_level;
             move_cursor( here, ( most_repairable->mount.raw() + cursor_vp_mount ).rotate( 3 ) );
             return;
         }
@@ -2174,6 +2185,7 @@ void veh_interact::overview( map &here,
         }
 
         if( overview_pos >= 0 && static_cast<size_t>( overview_pos ) < overview_opts.size() ) {
+            cursor_level = overview_opts[overview_pos].part->mount_level;
             move_cursor( here, ( overview_opts[overview_pos].part->mount.raw() + cursor_vp_mount ).rotate(
                              3 ) );
         }
@@ -2648,6 +2660,11 @@ std::pair<bool, std::string> veh_interact::calc_lift_requirements( map &here, co
  */
 int veh_interact::part_at_mount( const vehicle &veh, const point_rel_ms &mount )
 {
+    return part_at_mount( veh, tripoint_rel_ms( mount, 0 ) );
+}
+
+int veh_interact::part_at_mount( const vehicle &veh, const tripoint_rel_ms &mount )
+{
     const int displayed = veh.part_displayed_at( mount );
     if( displayed >= 0 ) {
         return displayed;
@@ -2659,7 +2676,7 @@ int veh_interact::part_at_mount( const vehicle &veh, const point_rel_ms &mount )
 int veh_interact::part_at( const point_rel_ms &d )
 {
     const point_rel_ms vd{ -cursor_vp_mount + d.rotate( 1 ) };
-    return part_at_mount( *veh, vd );
+    return part_at_mount( *veh, tripoint_rel_ms( vd, cursor_level ) );
 }
 
 /**
@@ -2729,6 +2746,24 @@ bool veh_interact::can_potentially_install( const vpart_info &vpart )
  * @param d How far to move the cursor.
  * @param dstart_at How far to change the start position for vehicle part descriptions
  */
+void veh_interact::change_deck( map &here, int dz )
+{
+    int highest = 0;
+    for( const vpart_reference &part : veh->get_all_parts() ) {
+        highest = std::max( highest, part.part().mount_level );
+    }
+    const int next = cursor_level + dz;
+    if( next < 0 || next > std::min( highest + 1, 10 ) ||
+        !here.inbounds( veh->mount_to_tripoint( &here,
+                        tripoint_rel_ms( -cursor_vp_mount, next ) ) ) ) {
+        return;
+    }
+    cursor_level = next;
+    start_at = 0;
+    start_limit = 0;
+    move_cursor( here, point_rel_ms::zero );
+}
+
 void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at )
 {
     cursor_vp_mount += d.rotate( 3 );
@@ -2741,8 +2776,8 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
     // Update the current active component index to the new position.
     cpart = part_at( point_rel_ms::zero );
     const point_rel_ms vd = -cursor_vp_mount;
-    const point_rel_ms q = veh->coord_translate( vd );
-    const tripoint_bub_ms vehp = veh->pos_bub( here ) + q;
+    const tripoint_bub_ms vehp = veh->mount_to_tripoint( &here,
+                                    tripoint_rel_ms( vd, cursor_level ) );
     const bool has_critter = get_creature_tracker().creature_at( vehp );
     terrain_here = here.ter( vehp ).obj();
     bool obstruct = here.impassable_ter_furn( vehp );
@@ -2784,7 +2819,7 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
     need_repair.clear();
     parts_here.clear();
     if( cpart >= 0 ) {
-        parts_here = veh->parts_at_relative( veh->part( cpart ).mount, true );
+        parts_here = veh->parts_at_relative( veh->part( cpart ).mount_pos3(), true );
         for( size_t i = 0; i < parts_here.size(); i++ ) {
             vehicle_part &pt = veh->part( parts_here[i] );
 
@@ -2859,7 +2894,7 @@ void veh_interact::display_veh( map &here )
             selection = std::make_pair( *service_area_start,
                                         service_area_end.value_or( -cursor_vp_mount ) );
         }
-        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart, selection ) ) {
+        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart, selection, cursor_level ) ) {
             return;
         }
     }
@@ -2922,7 +2957,10 @@ void veh_interact::display_veh( map &here )
     //Iterate over structural parts so we only hit each square once
     for( const int structural_part_idx : veh->all_parts_at_location( vpart_location_structure ) ) {
         const vehicle_part &vp = veh->part( structural_part_idx );
-        const vpart_display vd = veh->get_display_of_tile( vp.mount, false, false );
+        if( vp.mount_level != cursor_level ) {
+            continue;
+        }
+        const vpart_display vd = veh->get_display_of_tile( vp.mount_pos3(), false, false );
         const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
 
         if( q != point_rel_ms::zero ) { // cursor is not on this part
@@ -2936,8 +2974,8 @@ void veh_interact::display_veh( map &here )
     }
 
     const point pt_disp( getmaxx( w_disp ) / 2, getmaxy( w_disp ) / 2 );
-    const tripoint_bub_ms pos_at_cursor = veh->pos_bub( here ) + veh->coord_translate(
-            -cursor_vp_mount );
+    const tripoint_bub_ms pos_at_cursor = veh->mount_to_tripoint( &here,
+                                         tripoint_rel_ms( -cursor_vp_mount, cursor_level ) );
     const optional_vpart_position ovp = here.veh_at( pos_at_cursor );
     col_at_cursor = hilite( col_at_cursor );
     if( here.impassable_ter_furn( pos_at_cursor ) || ( ovp && &ovp->vehicle() != veh ) ) {
@@ -3234,7 +3272,10 @@ void veh_interact::display_name()
 
     mvwprintz( w_name, point( 1 + utf8_width( _( "Name: " ) ), 0 ),
                !veh->is_owned_by( get_player_character(), true ) ? c_light_red : c_light_green,
-               string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) );
+               string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) +
+               string_format( _( "  楼层 %d  [%s / %s]" ), cursor_level + 1,
+                              main_context.get_desc( "VEHICLE_DECK_UP" ),
+                              main_context.get_desc( "VEHICLE_DECK_DOWN" ) ) );
     wnoutrefresh( w_name );
 }
 

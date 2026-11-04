@@ -1,0 +1,31 @@
+[
+  {
+    "id": "rv_double_decker",
+    "copy-from": "rv",
+    "type": "vehicle",
+    "name": "双层房车",
+    "parts": [
+      { "x": -2, "y": 1, "parts": [ "deck_stairs" ] },
+      { "x": -2, "y": 1, "z": 1, "parts": [ "hdframe", "aisle", "roof" ] },
+      { "x": -2, "y": 0, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -2, "y": -1, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -2, "y": 2, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -2, "y": 3, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -3, "y": -1, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -3, "y": 0, "z": 1, "parts": [ "hdframe", "aisle", "roof" ] },
+      { "x": -3, "y": 1, "z": 1, "parts": [ "hdframe", "aisle", "aisle_lights", "roof" ] },
+      { "x": -3, "y": 2, "z": 1, "parts": [ "hdframe", "aisle", "roof" ] },
+      { "x": -3, "y": 3, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -4, "y": -1, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -4, "y": 0, "z": 1, "parts": [ "hdframe", "bed", "roof" ] },
+      { "x": -4, "y": 1, "z": 1, "parts": [ "hdframe", "aisle", "aisle_lights", "roof" ] },
+      { "x": -4, "y": 2, "z": 1, "parts": [ "hdframe", "trunk", "roof" ] },
+      { "x": -4, "y": 3, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -5, "y": -1, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -5, "y": 0, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -5, "y": 1, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -5, "y": 2, "z": 1, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": -5, "y": 3, "z": 1, "parts": [ "hdframe", "board", "roof" ] }
+    ]
+  }
+]

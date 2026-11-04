@@ -4031,6 +4031,12 @@ void vehicle_part::deserialize( const JsonObject &data )
 
     data.read( "mount_dx", mount.x() );
     data.read( "mount_dy", mount.y() );
+    data.read( "mount_level", mount_level );
+    if( mount_level < 0 || mount_level > 10 ) {
+        data.throw_error_at( "mount_level", "vehicle deck out of range" );
+    }
+    precalc[0].z() = mount_level;
+    precalc[1].z() = mount_level;
     data.read( "open", open );
     int direction_int;
     data.read( "direction", direction_int );
@@ -4092,6 +4098,9 @@ void vehicle_part::serialize( JsonOut &json ) const
     json.member( "base", base );
     json.member( "mount_dx", mount.x() );
     json.member( "mount_dy", mount.y() );
+    if( mount_level != 0 ) {
+        json.member( "mount_level", mount_level );
+    }
     json.member( "open", open );
     json.member( "direction", std::lround( to_degrees( direction ) ) );
     json.member( "blood", blood );
@@ -4163,6 +4172,7 @@ void label::deserialize( const JsonObject &data )
     data.read( "x", x() );
     data.read( "y", y() );
     data.read( "text", text );
+    data.read( "z", mount_level );
 }
 
 void label::serialize( JsonOut &json ) const
@@ -4171,6 +4181,9 @@ void label::serialize( JsonOut &json ) const
     json.member( "x", x() );
     json.member( "y", y() );
     json.member( "text", text );
+    if( mount_level != 0 ) {
+        json.member( "z", mount_level );
+    }
     json.end_object();
 }
 

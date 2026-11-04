@@ -1299,7 +1299,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             const vehicle &veh = ovp->vehicle();
                             const vpart_display vd =
                                 veh.get_display_of_tile(
-                                    ovp->mount_pos() );
+                                    ovp->mount_pos3() );
                             if( !vd.id.is_null() ) {
                                 const int subtile =
                                     vd.is_open ? open_ :
@@ -1312,7 +1312,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                     vd.carried_furn,
                                     vd.has_cargo,
                                     get_vpart_tint( veh,
-                                                    ovp->mount_pos() ) );
+                                                    ovp->mount_pos3() ) );
                                 continue;
                             }
                         }
@@ -4391,7 +4391,7 @@ SDL_Rect cata_tiles::vehicle_preview_selection_rect( const point_rel_ms &first,
 
 bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const vehicle &veh,
                                        const point_rel_ms &cursor_vp_mount, int &cpart,
-                                       const std::optional<std::pair<point_rel_ms, point_rel_ms>> &selection )
+                                       const std::optional<std::pair<point_rel_ms, point_rel_ms>> &selection, int deck )
 {
     // Reuses the normal map sprite path (draw_from_id_string, exactly as draw_vpart does) to
     // render the vehicle into an arbitrary curses window, without modifying the core renderer.
@@ -4448,7 +4448,10 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     // One sprite per structural square, mirroring the ASCII display_veh().
     for( const int part_idx : veh.all_parts_at_location( vpart_location_structure ) ) {
         const vehicle_part &vp = veh.part( part_idx );
-        const vpart_display vd = veh.get_display_of_tile( vp.mount, false, false );
+        if( vp.mount_level != deck ) {
+            continue;
+        }
+        const vpart_display vd = veh.get_display_of_tile( vp.mount_pos3(), false, false );
         if( vd.id.is_null() ) {
             continue;
         }
@@ -4464,7 +4467,7 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
         // Tint with the DISPLAYED part's paint (which may be a board/door on top
         // of this structure frame), mirroring the main-map path. The frame itself
         // is never colored by a palette, so checking vp here would always be empty.
-        pending_part_tint_ = get_vpart_tint( veh, vp.mount );
+        pending_part_tint_ = get_vpart_tint( veh, vp.mount_pos3() );
         draw_from_id_string( "vp_" + vd.id.str(), TILE_CATEGORY::VEHICLE_PART, empty_string,
                              screen_tile, subtile, rotation, lit_level::LIT, false, height_3d, 0,
                              vd.variant.id );

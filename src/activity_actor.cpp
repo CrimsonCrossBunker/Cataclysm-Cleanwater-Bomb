@@ -12419,7 +12419,8 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
     }
 
     vehicle &veh = ovp->vehicle();
-    const point_rel_ms &d = vp_mount_location_opp.xy();
+    const point_rel_ms d = vp_mount_location_opp.xy();
+    const tripoint_rel_ms deck_mount = vp_mount_location_opp;
     const vpart_id part_id = vp_id;
     const vpart_info &vpinfo = part_id.obj();
     const int vp_ind = vp_index;
@@ -12465,7 +12466,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             }
 
             you.invalidate_crafting_inventory();
-            const int partnum = veh.install_part( here, d, part_id, std::move( base ), installed_with );
+            const int partnum = veh.install_part( here, deck_mount, part_id, std::move( base ), installed_with );
             if( partnum < 0 ) {
                 debugmsg( "complete_vehicle install part fails dx=%d dy=%d id=%s",
                           d.x(), d.y(), part_id.c_str() );
@@ -12487,7 +12488,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 orient_part( here, &veh, vpinfo, partnum, q );
             }
 
-            const tripoint_bub_ms vehp = veh.pos_bub( here ) + tripoint_rel_ms( q, 0 );
+            const tripoint_bub_ms vehp = veh.bub_part_pos( here, partnum );
             // TODO: allow boarding for non-players as well.
             Character *const pl = get_creature_tracker().creature_at<Character>( vehp );
             if( vpinfo.has_flag( VPFLAG_BOARDABLE ) && pl ) {
@@ -12701,7 +12702,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             }
 
             // Save these values now so they aren't lost when parts or vehicles are destroyed.
-            const point_rel_ms part_mount = vp->mount;
+            const tripoint_rel_ms part_mount = vp->mount_pos3();
             const tripoint_bub_ms part_pos = veh.bub_part_pos( here, *vp );
 
             veh.unlink_cables( here, part_mount, you,

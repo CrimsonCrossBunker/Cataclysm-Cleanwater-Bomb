@@ -83,6 +83,24 @@ The line defines parts at location X,Y. Strings, like "PARTID1" and "PARTID3", s
 
 Several different lines can have the same X, Y co-ordinates and each one adds additional parts to that location.
 
+### Vehicle Decks
+
+Part placements accept an optional `z` (0 through 10), relative to the chassis deck.
+Omitting `z` retains the original single-deck behavior. Installation order still applies:
+place a supporting frame before its attached components; upper frames may connect to a
+frame directly below or to a neighboring frame on the same deck. Item spawn placements
+also accept `z`, and cargo is resolved on that deck.
+
+```json
+{ "x": 0, "y": 0, "z": 1, "parts": [ "frame", "aisle", "roof" ] }
+```
+
+The `deck_stairs` part connects its mount to the same mount on the next deck. Both
+ends need a passable, boardable part. It uses the normal ascend/descend actions and
+can be installed or removed through vehicle interaction. Vehicle interaction provides
+configurable deck-up/deck-down actions, defaulting to `<` and `>`. Each deck remains
+part of the same vehicle, not a separate map or vehicle entity.
+
 ### Extra options
 
 #### Turrets

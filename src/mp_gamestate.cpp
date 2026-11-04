@@ -3587,7 +3587,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             g_action_msgs_pending.emplace_back( _( "You let go of the controls." ) );
         } else if( const optional_vpart_position vp = here.veh_at( bub ) ) {
             vehicle &veh = vp->vehicle();
-            const int ctrl_idx = veh.avail_part_with_feature( vp->mount_pos(), "CONTROLS" );
+            const int ctrl_idx = veh.avail_part_with_feature( vp->mount_pos3(), "CONTROLS" );
             mp_log( "[cdda-mp] control_vehicle: ctrl_idx=" + std::to_string( ctrl_idx ) +
                     " engine_on=" + std::to_string( veh.engine_on ) );
             if( ctrl_idx >= 0 ) {

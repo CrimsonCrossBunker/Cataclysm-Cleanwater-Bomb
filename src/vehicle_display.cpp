@@ -60,7 +60,7 @@ std::string vpart_display::get_tileset_id() const
     return res;
 }
 
-vpart_display vehicle::get_display_of_tile( const point_rel_ms &dp, bool rotate, bool include_fake,
+vpart_display vehicle::get_display_of_tile( const tripoint_rel_ms &dp, bool rotate, bool include_fake,
         bool below_roof, bool roof ) const
 {
     const int part_idx = part_displayed_at( dp, include_fake, below_roof, roof );
@@ -156,7 +156,7 @@ int vehicle::print_part_list( const catacurses::window &win, int y1,
     if( p < 0 || p >= static_cast<int>( parts.size() ) ) {
         return y1;
     }
-    std::vector<int> pl = this->parts_at_relative( parts[p].mount, true, include_fakes );
+    std::vector<int> pl = this->parts_at_relative( parts[p].mount_pos3(), true, include_fakes );
     int y = y1;
     for( size_t i = 0; i < pl.size(); i++ ) {
         const vehicle_part &vp = parts[pl[i]];
@@ -255,7 +255,7 @@ void vehicle::print_vparts_descs( const catacurses::window &win, int max_y, int 
         return;
     }
 
-    std::vector<int> pl = this->parts_at_relative( parts[p].mount, true );
+    std::vector<int> pl = this->parts_at_relative( parts[p].mount_pos3(), true );
     std::string msg;
 
     int lines = 0;

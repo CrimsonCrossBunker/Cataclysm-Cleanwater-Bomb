@@ -1452,6 +1452,7 @@ void vehicle_item_spawn::deserialize( const JsonObject &jo )
 {
     mandatory( jo, false, "x", pos.x() );
     mandatory( jo, false, "y", pos.y() );
+    optional( jo, false, "z", mount_level, numeric_bound_reader{ 0, 10 }, 0 );
 
     mandatory( jo, false, "chance", chance, numeric_bound_reader{ 0, 100 } );
 
@@ -1488,6 +1489,13 @@ void vehicle_prototype::load( const JsonObject &jo, std::string_view )
         mandatory( part, false, "x", pos.x() );
         mandatory( part, false, "y", pos.y() );
         mandatory( part, false, "parts", tmp, veh_proto_part_def_reader{ pos } );
+        const int level = part.get_int( "z", 0 );
+        if( level < 0 || level > 10 ) {
+            part.throw_error_at( "z", "vehicle deck out of range" );
+        }
+        for( part_def &definition : tmp ) {
+            definition.mount_level = level;
+        }
         // gross
         parts.insert( parts.end(), tmp.begin(), tmp.end() );
     }
@@ -1515,7 +1523,7 @@ void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
     json.member( "id", "/TO_BE_REPLACED/" );
     json.member( "type", "vehicle" );
     json.member( "name", "/TO_BE_REPLACED/" );
-    std::map<point_rel_ms, std::list<const vehicle_part *>> vp_map;
+    std::map<tripoint_rel_ms, std::list<const vehicle_part *>> vp_map;
     int mount_min_y = 123;
     int mount_max_y = -123;
     // Form a map of existing real parts
@@ -1525,7 +1533,7 @@ void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
         const vehicle_part &p = vpr.part();
         mount_max_y = mount_max_y < p.mount.y() ? p.mount.y() : mount_max_y;
         mount_min_y = mount_min_y > p.mount.y() ? p.mount.y() : mount_min_y;
-        vp_map[p.mount].push_back( &p );
+        vp_map[p.mount_pos3()].push_back( &p );
     }
     int mount_min_x = vp_map.begin()->first.x();
     int mount_max_x = vp_map.rbegin()->first.x();
@@ -1565,6 +1573,9 @@ void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
         json.start_object();
         json.member( "x", vp_pos.first.x() );
         json.member( "y", vp_pos.first.y() );
+        if( vp_pos.first.z() != 0 ) {
+            json.member( "z", vp_pos.first.z() );
+        }
 
         json.member( "parts" );
         json.start_array();
@@ -1623,6 +1634,9 @@ void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
             json.start_object();
             json.member( "x", vp.mount_pos().x() );
             json.member( "y", vp.mount_pos().y() );
+            if( vp.part().mount_level != 0 ) {
+                json.member( "z", vp.part().mount_level );
+            }
             json.member( "chance", 100 );
             json.member( "items" );
             json.start_array();
@@ -1658,7 +1672,7 @@ void vehicles::finalize_prototypes()
     vehicle_prototype_factory.finalize();
     for( const vehicle_prototype &const_proto : vehicles::get_all_prototypes() ) {
         vehicle_prototype &proto = const_cast<vehicle_prototype &>( const_proto );
-        std::unordered_set<point_rel_ms> cargo_spots;
+        std::unordered_set<tripoint_rel_ms> cargo_spots;
 
         // Calling the constructor with empty vproto_id as parameter
         // makes constructor bypass copying the (non-existing) blueprint.
@@ -1688,7 +1702,7 @@ void vehicles::finalize_prototypes()
                 }
             }
 
-            const int part_idx = blueprint.install_part( here, pt.pos, pt.part );
+            const int part_idx = blueprint.install_part( here, tripoint_rel_ms( pt.pos, pt.mount_level ), pt.part );
             if( part_idx < 0 ) {
                 debugmsg( "init_vehicles: '%s' part '%s'(%d) can't be installed to %d,%d",
                           blueprint.name, pt.part.c_str(),
@@ -1775,13 +1789,13 @@ void vehicles::finalize_prototypes()
             }
 
             if( pt.part.obj().has_flag( VPFLAG_CARGO ) ) {
-                cargo_spots.insert( pt.pos );
+                cargo_spots.insert( tripoint_rel_ms( pt.pos, pt.mount_level ) );
             }
         }
         blueprint.enable_refresh();
 
         for( vehicle_item_spawn &i : proto.item_spawns ) {
-            if( cargo_spots.count( i.pos ) == 0 ) {
+            if( cargo_spots.count( tripoint_rel_ms( i.pos, i.mount_level ) ) == 0 ) {
                 debugmsg( "Invalid spawn location (no CARGO vpart) in %s (%d, %d): %d%%",
                           proto.name, i.pos.x(), i.pos.y(), i.chance );
             }

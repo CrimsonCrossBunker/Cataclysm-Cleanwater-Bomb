@@ -1068,7 +1068,7 @@ bool game::start_game()
                     u.setpos( pos );
 
                     // Delete the items that would have spawned here from a "corpse"
-                    for( const int sp : v.v->parts_at_relative( vp.mount_pos(), true ) ) {
+                    for( const int sp : v.v->parts_at_relative( vp.mount_pos3(), true ) ) {
                         vpart_reference( *v.v, sp ).items().clear();
                     }
 
@@ -5593,8 +5593,8 @@ void game::control_vehicle( const std::optional<tripoint_bub_ms> &p )
 
     if( const optional_vpart_position vp = here.veh_at( target_pos ) ) {
         veh = &vp->vehicle();
-        const int controls_idx = veh->avail_part_with_feature( vp->mount_pos(), "CONTROLS" );
-        const int reins_idx = veh->avail_part_with_feature( vp->mount_pos(), "CONTROL_ANIMAL" );
+        const int controls_idx = veh->avail_part_with_feature( vp->mount_pos3(), "CONTROLS" );
+        const int reins_idx = veh->avail_part_with_feature( vp->mount_pos3(), "CONTROL_ANIMAL" );
         controls_ok = controls_idx >= 0; // controls available to "drive"
         reins_ok = reins_idx >= 0 // reins + animal available to "drive"
                    && veh->has_engine_type( fuel_type_animal, false )
@@ -9950,16 +9950,25 @@ void game::vertical_move( int movez, bool force, bool peeking )
 
     map &here = get_map();
     tripoint_bub_ms pos = u.pos_bub( here );
+    const optional_vpart_position vehicle_here = here.veh_at( pos );
+    const std::optional<tripoint_bub_ms> vehicle_stairs = !force && vehicle_here ?
+            vehicle_here->vehicle().deck_transition( here, pos, movez ) : std::nullopt;
+    if( vehicle_stairs && ( u.is_mounted() ||
+                           get_creature_tracker().creature_at( *vehicle_stairs ) ) ) {
+        add_msg( m_info, _( "车内楼梯的出口被占用了。" ) );
+        return;
+    }
 
     // Force means we're going down, even if there's no staircase, etc.
     bool climbing = false;
     climbing_aid_id climbing_aid = climbing_aid_default;
     int move_cost = 100;
-    tripoint_bub_ms stairs( pos.xy(), pos.z() + movez );
+    tripoint_bub_ms stairs = vehicle_stairs.value_or(
+                                tripoint_bub_ms( pos.xy(), pos.z() + movez ) );
     bool wall_cling = u.has_flag( json_flag_WALL_CLING );
     bool adjacent_climb = false;
     bool climb_flying = u.has_flag( json_flag_CLIMB_FLYING );
-    if( !force && movez == 1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) &&
+    if( !force && !vehicle_stairs && movez == 1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) &&
         !u.is_underwater() ) {
         // Climbing
 
@@ -10053,7 +10062,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
         }
     }
 
-    if( !force && movez == -1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos ) &&
+    if( !force && !vehicle_stairs && movez == -1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos ) &&
         !u.is_underwater() && !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR_WATER, pos ) &&
         !u.has_effect( effect_gliding ) ) {
         tripoint_bub_ms dest_phase = pos;
@@ -10072,7 +10081,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
             add_msg( m_info, _( "You can't go down here!" ) );
             return;
         }
-    } else if( !climbing && !force && movez == 1 &&
+    } else if( !climbing && !force && !vehicle_stairs && movez == 1 &&
                !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) && !u.is_underwater() ) {
         add_msg( m_info, _( "You can't go up here!" ) );
         return;
@@ -10202,7 +10211,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
     // Find the corresponding staircase
     bool rope_ladder = false;
     // TODO: Remove the stairfinding, make the mapgen gen aligned maps
-    if( !force && !climbing && !swimming ) {
+    if( !force && !climbing && !swimming && !vehicle_stairs ) {
         const std::optional<tripoint_bub_ms> pnt = find_or_make_stairs( here, z_after, rope_ladder, peeking,
                 pos );
         if( !pnt ) {
@@ -10217,6 +10226,9 @@ void game::vertical_move( int movez, bool force, bool peeking )
     }
 
     // LAST CHANCE TO ABORT! Everything past here assumes the movement is going ahead.
+    if( vehicle_stairs && u.in_vehicle ) {
+        here.unboard_vehicle( pos );
+    }
 
     std::vector<monster *> monsters_following;
     if( std::abs( movez ) == 1 ) {
@@ -10356,6 +10368,10 @@ void game::vertical_move( int movez, bool force, bool peeking )
 
     here.invalidate_map_cache( here.get_abs_sub().z() );
     here.build_map_cache( here.get_abs_sub().z() );
+    if( vehicle_stairs && !u.in_vehicle &&
+        here.veh_at( u.pos_bub( here ) ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+        here.board_vehicle( u.pos_bub( here ), &u );
+    }
     u.gravity_check();
 
     u.recoil = MAX_RECOIL;

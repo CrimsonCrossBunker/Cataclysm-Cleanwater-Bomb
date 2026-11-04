@@ -1,5 +1,10 @@
 [
   {
+    "id": "DECK_STAIRS",
+    "type": "json_flag",
+    "info": "This part connects this vehicle deck to the deck immediately above it."
+  },
+  {
     "id": "ALTERNATOR",
     "type": "json_flag",
     "info": "When mounted on an engine and the engine is on it will provide up to <color_green>%dW</color> of electrical power to the vehicle.",

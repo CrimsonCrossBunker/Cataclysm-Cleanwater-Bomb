@@ -108,6 +108,7 @@ class veh_interact
 
         // Hidden parts must remain selectable even when no visible frame remains.
         static int part_at_mount( const vehicle &veh, const point_rel_ms &mount );
+        static int part_at_mount( const vehicle &veh, const tripoint_rel_ms &mount );
 
         // Inventory requirements are independent of the selected vehicle tile.
         static std::map<const vpart_info *, bool> installation_requirement_availability(
@@ -158,6 +159,8 @@ class veh_interact
         // functionally, this works as the cursor position for the top-down vehicle view
         // see vehicle::build_interact_menu for initial assignment
         point_rel_ms cursor_vp_mount = point_rel_ms::zero;
+        int cursor_level = 0;
+        void change_deck( map &here, int dz );
         /* starting offset for vehicle parts description display and max offset for scrolling */
         int start_at = 0;
         int start_limit = 0;
