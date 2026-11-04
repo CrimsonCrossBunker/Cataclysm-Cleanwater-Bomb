@@ -1,5 +1,6 @@
 #include "item_consumption.h"
 #include "character.h"
+#include "character_action_guard.h"
 
 #include <activity_tracker.h>
 #include <body_part_set.h>
@@ -5808,13 +5809,21 @@ void Character::assign_activity( const activity_actor &actor )
 
 void Character::assign_activity( const player_activity &act )
 {
+    const character_action_guard lifetime( *this );
+    if( !lifetime ) {
+        return;
+    }
     bool resuming = false;
     if( !backlog.empty() && backlog.front().can_resume_with( act, *this ) ) {
         resuming = true;
         add_msg_if_player( _( "You resume your task." ) );
         activity = backlog.front();
         backlog.pop_front();
+        const auto identity = activity.identity_generation();
         activity.set_resume_values( act, *this );
+        if( !lifetime || activity.identity_generation() != identity ) {
+            return;
+        }
     } else {
         if( activity ) {
             backlog.push_front( activity );
@@ -5826,7 +5835,11 @@ void Character::assign_activity( const player_activity &act )
         activity = act;
     }
 
+    const auto identity = activity.identity_generation();
     activity.start_or_resume( *this, resuming );
+    if( !lifetime || activity.identity_generation() != identity ) {
+        return;
+    }
 
 #ifdef MP_ENABLED
     if( is_avatar() && cata_mp::is_client_mode() && activity ) {
@@ -5856,7 +5869,12 @@ bool Character::has_activity( const std::vector<activity_id> &types ) const
 
 void Character::cancel_activity()
 {
+    const character_action_guard lifetime( *this, true );
+    const auto identity = activity.identity_generation();
     activity.canceled( *this );
+    if( !lifetime || ( activity && activity.identity_generation() != identity ) ) {
+        return;
+    }
     if( has_activity( ACT_MOVE_ITEMS ) && is_hauling() ) {
         stop_hauling();
     }
@@ -5909,7 +5927,8 @@ void Character::resume_backlog_activity()
 
 void Character::process_activity()
 {
-    while( get_moves() > 0 && activity ) {
+    const character_action_guard lifetime( *this );
+    while( lifetime && get_moves() > 0 && activity ) {
         activity.do_turn( *this );
     }
 }

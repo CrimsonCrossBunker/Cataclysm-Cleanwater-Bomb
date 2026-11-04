@@ -1466,6 +1466,7 @@ void game::remove_npc( character_id const &id )
         return n->getID() == id;
     } );
     if( it != active_npc.end() ) {
+        retire_npc_lifetime( **it );
         active_npc.erase( it );
     }
 }
