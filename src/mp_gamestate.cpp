@@ -1,3 +1,4 @@
+#include "vehicle_control.h"
 #include "mp_gamestate.h"
 #include "mp_combat_result.h"
 #include "mp_throw.h"
@@ -2308,6 +2309,55 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         return;
     }
+    if( action == "pldrive" || action == "cruise" || action == "handbrake" ) {
+        // Driving is an intent, not a character/vehicle upload. The grant above
+        // and native control lookup select the operator and vehicle on the host.
+        const auto messages = Messages::size();
+        remote->set_moves( recipient.turn.remote_moves );
+        try {
+            if( recipient.firearm.weapon == 0 ) {
+                if( action == "pldrive" ) {
+                    const tripoint_rel_ms input( jo.get_int( "dx", 0 ), jo.get_int( "dy", 0 ),
+                                                 jo.get_int( "dz", 0 ) );
+                    const int excess = std::max( 0, recipient.turn.remote_moves - remote->get_speed() );
+                    if( drive_vehicle( *remote, get_map(), input ) ) {
+                        remote = mp_remote_actor( recipient );
+                        if( !remote ) {
+                            return;
+                        }
+                        // Steering caps moves to one speed unit; acceleration alone
+                        // does not. Never count the excess budget twice.
+                        if( input.x() != 0 && input.z() == 0 &&
+                            remote->get_moves() != recipient.turn.remote_moves ) {
+                            remote->mod_moves( excess );
+                        }
+                    }
+                } else if( action == "cruise" ) {
+                    adjust_vehicle_cruise( *remote, get_map(), jo.get_int( "dy", 0 ) );
+                } else {
+                    brake_vehicle( *remote, get_map() );
+                }
+            }
+        } catch( const JsonError &error ) {
+            mp_log( std::string( "[ccb-mp] rejected driving intent: " ) + error.what() );
+        }
+        remote = mp_remote_actor( recipient );
+        if( !remote ) {
+            return;
+        }
+        recipient.turn.remote_moves = remote->get_moves();
+        recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
+        flush_action_msgs( recipient, messages, remote->name );
+        if( const auto server = get_active_server() ) {
+            std::string state = serialize_remote_player_state( recipient );
+            if( !recipient.turn.client_acted_this_turn && !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
+        }
+        g->invalidate_main_ui_adaptor();
+        return;
+    }
     if( action == "firearm_cancel" ) {
         // Cancellation can arrive while AP is exhausted; the owned preparation
         // identity makes retries harmless, without accepting client mutations.
@@ -3604,134 +3654,6 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     // Never accept the old unversioned toggle/instant-start path.
     if( action == "control_vehicle" ) {
         srv_emit_ack( recipient, "control_vehicle" );
-        return;
-    }
-
-    // Pldrive — client is at vehicle controls, translate directional input to
-    // vehicle::pldrive() exactly as handle_action.cpp does in single-player.
-    if( msg.find( R"("action":"pldrive")" ) != std::string::npos ) {
-        point delta;
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            delta.x = jo.get_int( "dx", 0 );
-            delta.y = jo.get_int( "dy", 0 );
-        } catch( const JsonError &e ) {
-            mp_log( "[cdda-mp] pldrive parse error: " + std::string( e.what() ) );
-        }
-        map &here = get_map();
-        const tripoint_bub_ms bub = remote->pos_bub();
-        if( const optional_vpart_position vp = here.veh_at( bub ) ) {
-            vehicle &veh = vp->vehicle();
-            const int face_before = static_cast<int>( units::to_degrees( veh.face.dir() ) );
-            const int str = remote->get_str();
-            const int dex = remote->get_dex();
-            const int drv = remote->get_skill_level( skill_id( "driving" ) );
-            mp_log( "[cdda-mp] pldrive: dx=" + std::to_string( delta.x ) +
-                    " dy=" + std::to_string( delta.y ) +
-                    " face=" + std::to_string( face_before ) +
-                    " str=" + std::to_string( str ) +
-                    " dex=" + std::to_string( dex ) +
-                    " drv=" + std::to_string( drv ) +
-                    " moves=" + std::to_string( recipient.turn.remote_moves ) );
-            // pldrive() internally caps moves to get_speed() then deducts the turn cost.
-            // Preserve any budget above one speed unit, then use pldrive's remainder.
-            const int excess = std::max( 0, recipient.turn.remote_moves - remote->get_speed() );
-            veh.pldrive( here, *remote, delta.x, delta.y, 0 );
-            mp_log( "[cdda-mp] pldrive result: face=" +
-                    std::to_string( static_cast<int>( units::to_degrees( veh.face.dir() ) ) ) +
-                    " moves_after=" + std::to_string( remote->get_moves() ) );
-            recipient.turn.remote_moves = excess + remote->get_moves();
-        } else {
-            // No longer at a vehicle — clear control flag so the client gets corrected.
-            remote->controlling_vehicle = false;
-            recipient.turn.remote_moves = 0;
-        }
-        // Mirror SP's pldrive: turning costs AP but doesn't end the turn unless
-        // AP runs out.  If the proxy still has moves, send a partial-turn update
-        // (free=true) so the client can do more driving inputs (more turns, cruise
-        // changes, pause to commit) in the same turn — matching SP behavior where
-        // the driver can chain inputs until moves reach 0.
-        const bool turn_ended = recipient.turn.remote_moves <= 0;
-        if( turn_ended ) {
-            recipient.turn.client_acted_this_turn = true;
-            recipient.turn.remote_moves = 0;
-            mp_log( "[cdda-mp] SRV-ACK: moves=0 (pldrive) grant_seq=" +
-                    std::to_string( recipient.turn.grant_seq ) );
-        }
-        flush_action_msgs( recipient, pre_action_msg, remote->name );
-        auto srv = get_active_server();
-        if( srv ) {
-            std::string state = serialize_remote_player_state( recipient );
-            if( !turn_ended ) {
-                state = state.substr( 0, state.size() - 1 ) + ",\"free\":true}";
-            }
-            srv->post_send( recipient.admission, state + "\n" );
-        }
-        // See NPC-MOVE invalidate for rationale.
-        g->invalidate_main_ui_adaptor();
-        return;
-    }
-
-    // Cruise speed adjustment — free action (mirrors SP: cruise_thrust costs no AP).
-    if( msg.find( R"("action":"cruise")" ) != std::string::npos ) {
-        int dy = 0;
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            dy = jo.get_int( "dy", 0 );
-        } catch( const JsonError &e ) {
-            mp_log( "[cdda-mp] cruise parse error: " + std::string( e.what() ) );
-        }
-        map &here = get_map();
-        if( const optional_vpart_position vp = here.veh_at( remote->pos_bub() ) ) {
-            vehicle &veh = vp->vehicle();
-            veh.cruise_thrust( here, -dy * 400 );
-            mp_log( "[cdda-mp] cruise: dy=" + std::to_string( dy )
-                    + " cruise_vel=" + std::to_string( veh.cruise_velocity ) );
-        }
-        // Free action: do NOT deduct g_remote_moves.  Broadcast updated state.
-        auto srv = get_active_server();
-        if( srv ) {
-            srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
-        }
-        // See NPC-MOVE invalidate for rationale.
-        g->invalidate_main_ui_adaptor();
-        return;
-    }
-
-    // Handbrake — client pressed smash key while in vehicle control mode.
-    if( msg.find( R"("action":"handbrake")" ) != std::string::npos ) {
-        map &here = get_map();
-        const tripoint_bub_ms bub = remote->pos_bub();
-        if( const optional_vpart_position vp = here.veh_at( bub ) ) {
-            vehicle &veh = vp->vehicle();
-            mp_log( "[cdda-mp] handbrake: veh=" + veh.name
-                    + " vel=" + std::to_string( veh.velocity ) );
-            add_msg( _( "%s pulls a handbrake." ), remote->name );
-            recipient.turn.action_msgs_pending.emplace_back( _( "You pull a handbrake." ) );
-            veh.cruise_velocity = 0;
-            if( veh.last_turn != 0_degrees &&
-                rng( 15, 60 ) * 100 < std::abs( veh.velocity ) ) {
-                veh.skidding = true;
-                add_msg( m_warning, _( "%s loses control of %s." ), remote->name, veh.name );
-                recipient.turn.action_msgs_pending.push_back( string_format( _( "You lose control of %s." ),
-                        veh.name ) );
-                veh.turn( veh.last_turn > 0_degrees ? 60_degrees : -60_degrees );
-            } else {
-                int braking_power = std::abs( veh.velocity ) / 2 + 10 * 100;
-                if( std::abs( veh.velocity ) < braking_power ) {
-                    veh.stop( here );
-                } else {
-                    int sgn = veh.velocity > 0 ? 1 : -1;
-                    veh.velocity = sgn * ( std::abs( veh.velocity ) - braking_power );
-                }
-            }
-        }
-        recipient.turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( recipient, "cruise" );
         return;
     }
 
@@ -11115,7 +11037,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
     R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
     ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
     ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
-    ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
+    ",\"client_ctrl_veh\":" + ( controlled_vehicle( *remote, get_map() ) ? "true" : "false" ) +
     // Authoritative grab + hauling state for the client's character.
     // Client mirrors these onto its local avatar each tick so the
     // local SP grab/haul code (and its move-cost gating) reads the
@@ -11127,17 +11049,12 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
     ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
     ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
     [&]() -> std::string {
-        if( !remote->controlling_vehicle )
+        vehicle *target = controlled_vehicle( *remote, get_map() );
+        if( !target )
         {
             return "";
         }
-        map &vmap = get_map();
-        const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
-        if( !ovp )
-        {
-            return "";
-        }
-        const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
+        const tripoint_abs_ms vabs = target->pos_abs();
         return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
         + ",\"y\":" + std::to_string( vabs.y() )
         + ",\"z\":" + std::to_string( vabs.z() ) + "}";

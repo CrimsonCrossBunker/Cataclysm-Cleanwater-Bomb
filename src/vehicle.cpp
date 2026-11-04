@@ -1,5 +1,6 @@
 #include "vehicle.h"
 #include "vehicle_control.h" // IWYU pragma: associated
+#include "character_action_guard.h"
 #include "vpart_position.h" // IWYU pragma: associated
 #include "vpart_range.h" // IWYU pragma: associated
 
@@ -361,7 +362,7 @@ bool vehicle::player_in_control( const map &here, const Character &p ) const
         p.controlling_vehicle &&
         ( ( part_with_feature( vp->mount_pos(), "CONTROL_ANIMAL", true ) >= 0 &&
             has_engine_type( fuel_type_animal, false ) && get_harnessed_animal( here ) ) ||
-          ( part_with_feature( vp->part_index(), VPFLAG_CONTROLS, false ) >= 0 ) )
+          ( avail_part_with_feature( vp->part_index(), VPFLAG_CONTROLS ) >= 0 ) )
       ) {
         return true;
     }
@@ -3829,8 +3830,23 @@ Character *vehicle::get_driver( map &here ) const
 {
     for( const int vp : boarded_parts() ) {
         Character *occupant = get_passenger( vp );
-        if( occupant && player_in_control( here, *occupant ) ) {
+        if( occupant && occupant->controlling_vehicle && !occupant->is_dead_state() &&
+            player_in_control( here, *occupant ) ) {
             return occupant;
+        }
+    }
+    // Controls can be installed without a seat. Resolve their occupants through
+    // the spatial index instead of treating the avatar as an implicit driver or
+    // scanning every character for every parked vehicle.
+    for( const char *feature : {
+             "CONTROLS", "CONTROL_ANIMAL"
+         } ) {
+        for( const vpart_reference &control : get_avail_parts( feature ) ) {
+            Character *occupant = get_creature_tracker().creature_at<Character>( control.pos_bub( here ) );
+            if( occupant && occupant->controlling_vehicle && !occupant->is_dead_state() &&
+                player_in_control( here, *occupant ) ) {
+                return occupant;
+            }
         }
     }
     return nullptr;
@@ -3998,15 +4014,13 @@ int64_t vehicle::fuel_left( map &here, const itype_id &ftype,
     //muscle engines have infinite fuel
     if( ftype == fuel_type_muscle ) {
         Character *driver = get_driver( here );
-        if( !driver ) {
-            // FIXME: Should return fl, not arbitrarily assume player
-            driver = &get_player_character();
+        if( !driver || driver->is_dead_state() ) {
+            return fl;
         }
         const optional_vpart_position vp = here.veh_at( driver->pos_bub() );
 
         //if the engine in the tile is a muscle engine, and someone is ready to control this vehicle
-        // TODO: Allow NPCs to power those
-        if( vp && &vp->vehicle() == this && driver ) {
+        if( vp && &vp->vehicle() == this ) {
             const int p = avail_part_with_feature( vp->part_index(), VPFLAG_ENGINE );
             if( p >= 0 ) {
                 const vehicle_part &vp = parts[p];
@@ -5593,30 +5607,41 @@ void vehicle::consume_fuel( map &here, int load, bool idling )
     if( idling ) {
         return;
     }
-    Character *driver = get_driver( here );
-
-    // Only process muscle power and training things when someone is actually driving.
-    // Note that the vehicle can be moving even if nobody is driving it.
+    Character *driver = vehicle_operator( *this, here );
     if( !driver ) {
-        // FIXME: Should return early, not arbitrarily assume player
-        // Make our pointer valid so we don't dereference nullptr and crash in the upcoming code
-        driver = &get_player_character();
+        return;
     }
+    const character_action_guard driver_lifetime( *driver );
+    const safe_reference<vehicle> vehicle_lifetime = get_safe_reference();
+    bool boating = in_deep_water;
 
     // if engine is under load, player is actively piloting a vehicle, so train appropriate vehicle proficiency
     if( load > 0 ) {
-        practice_pilot_proficiencies( *driver, in_deep_water );
+        practice_pilot_proficiencies( *driver, boating );
+        if( !driver_lifetime || !vehicle_lifetime ) {
+            return;
+        }
         if( is_flying_in_air() ) {
+            std::vector<proficiency_id> training;
             for( const int index : control_req_parts ) {
-                for( const proficiency_id prof : parts[index].info().control_air.proficiencies ) {
-                    if( !driver->has_proficiency( prof ) ) {
-                        driver->practice_proficiency( prof, 1_seconds );
+                const auto &proficiencies = parts[index].info().control_air.proficiencies;
+                training.insert( training.end(), proficiencies.begin(), proficiencies.end() );
+            }
+            for( const proficiency_id &prof : training ) {
+                if( !driver->has_proficiency( prof ) ) {
+                    driver->practice_proficiency( prof, 1_seconds );
+                    if( !driver_lifetime || !vehicle_lifetime ) {
+                        return;
                     }
                 }
             }
         }
     }
 
+    // Remote operation never supplies muscle power from an off-vehicle body.
+    if( driver != get_driver( here ) ) {
+        return;
+    }
     if( load > 0 && fuel_left( here, fuel_type_muscle ) > 0 &&
         driver->has_effect( effect_winded ) ) {
         cruise_velocity = 0;
@@ -5684,8 +5709,12 @@ void practice_pilot_proficiencies( Character &p, bool &boating )
 
 void practice_athletic_proficiency( Character &p )
 {
+    const character_action_guard lifetime( p );
     // Perform athletics practice
     p.practice( skill_swimming, 1 );
+    if( !lifetime ) {
+        return;
+    }
 
     // We are already a master athlete, practice has no effect
     if( p.has_proficiency( proficiency_prof_athlete_master ) ) {
@@ -6486,7 +6515,8 @@ void vehicle::idle( map &here, bool on_map )
     if( engine_on && total_power( here ) > 0_W ) {
         // Consume fuel at here only if the vehicle is not thrusting.
         // See the condition under which vehicle::thrust() is called in vehicle::gain_moves().
-        if( !( ( player_in_control( here, player_character ) || is_following || is_patrolling ) &&
+        if( !( ( vehicle_operator( *this, here ) || tags.count( "IN_CONTROL_OVERRIDE" ) ||
+                 is_following || is_patrolling ) &&
                cruise_velocity != 0 ) ) {
             int idle_rate = alternator_load;
             if( idle_rate < 10 ) {
@@ -6945,9 +6975,10 @@ void vehicle::place_zones( map &pmap ) const
 
 void vehicle::gain_moves( map &here )
 {
+    const safe_reference<vehicle> lifetime = get_safe_reference();
     fuel_used_last_turn.clear();
     check_falling_or_floating();
-    const bool pl_control = player_is_driving_this_veh( &here );
+    const bool pl_control = vehicle_operator( *this, here ) || tags.count( "IN_CONTROL_OVERRIDE" );
     if( is_moving() || is_falling ) {
         if( !loose_parts.empty() ) {
             shed_loose_parts();
@@ -6970,13 +7001,17 @@ void vehicle::gain_moves( map &here )
         of_turn = .001;
     }
     of_turn_carry = 0;
-    // cruise control TODO: enable for NPC?
+    // Cruise control follows the actual seated or remote operator.
     if( ( pl_control || is_following || is_patrolling ) && cruise_velocity != velocity ) {
         thrust( here, cruise_velocity > velocity ? 1 : -1 );
     } else if( is_rotorcraft( here ) && velocity == 0 ) {
         // rotorcraft uses fuel for hover
         // whether it's flying or not is checked inside thrust function
         thrust( here, 0 );
+    }
+
+    if( !lifetime ) {
+        return;
     }
 
     // Force off-map connected vehicles to load by visiting them every time we gain moves.
