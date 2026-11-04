@@ -140,6 +140,31 @@ vehicle *get_remote_vehicle( Character &who, map &here )
     return target;
 }
 
+void write_remote_vehicle_binding( const Character &who, map &here, JsonOut &out )
+{
+    const vehicle *target = resolve_remote_vehicle( who, here );
+    out.start_object();
+    out.member( "uid", target ? target->uid().get_value() : 0 );
+    if( target ) {
+        out.member( "position", target->pos_abs() );
+    }
+    out.end_object();
+}
+
+void apply_remote_vehicle_binding( Character &who, const JsonObject &view )
+{
+    const int64_t uid = view.get_int64( "uid" );
+    tripoint_abs_ms position;
+    who.remove_value( legacy_position );
+    if( uid > 0 && view.read( "position", position ) ) {
+        who.set_value( binding_uid, std::to_string( uid ) );
+        who.set_value( binding_position, position );
+    } else {
+        who.remove_value( binding_uid );
+        who.remove_value( binding_position );
+    }
+}
+
 Character *vehicle_operator( const vehicle &target, map &here )
 {
     if( Character *driver = target.get_driver( here ) ) {
@@ -314,8 +339,26 @@ void vehicle_control_selection::deserialize( const JsonObject &data )
     }
 }
 
+bool remote_vehicle_accessible( const Character &who, map &here, const vehicle &target,
+                                const item_location &controller )
+{
+    if( who.is_dead_state() || !controller || !controller.held_by( who ) || controller->is_broken() ||
+        !controller->type->can_use( "REMOTEVEH" ) || !controller->ammo_sufficient( &who, "REMOTEVEH" ) ||
+        !here.inbounds( target.pos_abs() ) || rl_dist( who.pos_abs(), target.pos_abs() ) >= 40 ||
+        target.fuel_left( here, itype_id( "battery" ) ) <= 0 ||
+        ( empty( target.get_avail_parts( "REMOTE_CONTROLS" ) ) &&
+          empty( target.get_avail_parts( "CTRL_ELECTRONIC" ) ) ) ) {
+        return false;
+    }
+    return g->get_creatures_if( [&]( const Creature & creature ) {
+        const Character *other = creature.as_character();
+        return other && other != &who && target.player_in_control( here, *other );
+    } ).empty();
+}
+
 bool vehicle_control_accessible( const Character &who, map &here, const vehicle &target,
-                                 const tripoint_abs_ms &position, const std::string &action )
+                                 const tripoint_abs_ms &position, const std::string &action,
+                                 const item_location *remote_source )
 {
     if( who.is_dead_state() || !here.inbounds( position ) ) {
         return false;
@@ -331,6 +374,11 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const bool alarm = action == "alarm";
     const bool smash_alarm = action == "smash_alarm";
     const bool security = hotwire || alarm || smash_alarm;
+    if( remote_source &&
+        ( !remote_vehicle_accessible( who, here, target, *remote_source ) || security ||
+          taking || releasing || action == "stop_driving" ) ) {
+        return false;
+    }
     if( !releasing && !stopping && !taking && action != "start" &&
         action != "engines" && !security && !autopilot_action( action ) ) {
         return false;
@@ -347,7 +395,7 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
           empty( target.get_avail_parts( "CTRL_ELECTRONIC" ) ) ) ) {
         return false;
     }
-    if( security || resolve_remote_vehicle( who, here ) != &target ) {
+    if( security || ( !remote_source && resolve_remote_vehicle( who, here ) != &target ) ) {
         if( rl_dist( who.pos_abs(), position ) > 1 || who.pos_abs().z() != position.z() ||
             ( taking && who.pos_abs() != position ) ) {
             return false;
@@ -396,9 +444,10 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
 }
 
 std::optional<vehicle_control_selection> query_vehicle_control( Character &who, map &here,
-        vehicle &target, const tripoint_abs_ms &position, const std::string &action )
+        vehicle &target, const tripoint_abs_ms &position, const std::string &action,
+        const item_location *remote_source )
 {
-    if( !vehicle_control_accessible( who, here, target, position, action ) ) {
+    if( !vehicle_control_accessible( who, here, target, position, action, remote_source ) ) {
         who.add_msg_if_player( _( "You cannot operate these vehicle controls right now." ) );
         return std::nullopt;
     }
@@ -435,9 +484,9 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
 }
 
 std::optional<vehicle_control_selection> query_vehicle_engines( Character &who, map &here,
-        vehicle &target, const tripoint_abs_ms &position )
+        vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source )
 {
-    auto selection = query_vehicle_control( who, here, target, position, "engines" );
+    auto selection = query_vehicle_control( who, here, target, position, "engines", remote_source );
     if( !selection ) {
         return std::nullopt;
     }
@@ -489,8 +538,46 @@ std::optional<vehicle_control_selection> query_vehicle_engines( Character &who, 
     return selection;
 }
 
+std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source )
+{
+    uilist menu;
+    menu.title = _( "Vehicle controls" );
+    const std::vector<std::pair<std::string, std::string>> options = {
+        { "take", _( "Take control" ) },
+        { "release", _( "Let go of controls" ) },
+        { "stop_driving", _( "Stop driving" ) },
+        {
+            target.engine_on ? "stop" : "start", target.engine_on ?
+            _( "Turn off the engine" ) : _( "Turn on the engine" )
+        },
+        { "engines", _( "Control individual engines" ) },
+        { "hotwire", _( "Hotwire" ) },
+        { "alarm", _( "Trigger the alarm" ) },
+        { "smash_alarm", _( "Try to smash alarm" ) },
+        { "autopilot", _( "Control autopilot" ) }
+    };
+    for( size_t i = 0; i < options.size(); ++i ) {
+        const auto &action = options[i].first;
+        const bool autopilot = action == "autopilot";
+        menu.addentry( i, ( !autopilot || target.has_part( "AUTOPILOT" ) || target.autopilot_on ) &&
+                       vehicle_control_accessible( who, here, target, position,
+                               autopilot ? "autopilot_stop" : action, remote_source ),
+                       MENU_AUTOASSIGN, options[i].second );
+    }
+    menu.query();
+    if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= options.size() ) {
+        return std::nullopt;
+    }
+    const std::string &action = options[menu.ret].first;
+    return action == "autopilot" ? query_vehicle_autopilot( who, here, target,
+            position, remote_source ) :
+           action == "engines" ? query_vehicle_engines( who, here, target, position, remote_source ) :
+           query_vehicle_control( who, here, target, position, action, remote_source );
+}
+
 std::optional<vehicle_control_selection> query_vehicle_autopilot( Character &who, map &here,
-        vehicle &target, const tripoint_abs_ms &position )
+        vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source )
 {
     uilist menu;
     menu.title = _( "Choose action for the autopilot" );
@@ -532,7 +619,7 @@ std::optional<vehicle_control_selection> query_vehicle_autopilot( Character &who
     const std::string action = selected == 0 ? "autopilot_patrol" :
                                selected == 1 ? "autopilot_follow" : selected == 2 ? "autopilot_stop" :
                                target.precollision_on ? "precollision_off" : "precollision_on";
-    return query_vehicle_control( who, here, target, position, action );
+    return query_vehicle_control( who, here, target, position, action, remote_source );
 }
 
 namespace
@@ -585,11 +672,12 @@ void smash_vehicle_alarm( Character &player_character, map &here, vehicle &targe
 } // namespace
 
 bool execute_vehicle_control( Character &who, map &here,
-                              const vehicle_control_selection &selection )
+                              const vehicle_control_selection &selection, const item_location *remote_source )
 {
     vehicle *target = vehicle::find_vehicle_by_uid( here, selection.vehicle_id );
     if( !target || who.activity || who.get_moves() <= 0 ||
-        !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
+        !vehicle_control_accessible( who, here, *target, selection.position, selection.action,
+                                     remote_source ) ) {
         return false;
     }
     const bool taking = selection.action == "take";
@@ -600,6 +688,14 @@ bool execute_vehicle_control( Character &who, map &here,
         return false;
     }
     const character_action_guard lifetime( who );
+    const on_out_of_scope retain_remote_start( [&]() {
+        if( lifetime && remote_source ) {
+            auto *startup = dynamic_cast<start_engines_activity_actor *>( who.activity.actor.get() );
+            if( startup ) {
+                startup->allow_remote_start( who, *remote_source, selection.vehicle_id );
+            }
+        }
+    } );
     if( taking ) {
         const item_location weapon = who.get_wielded_item();
         if( weapon && who.worn_with_flag( flag_RESTRICT_HANDS ) ) {
@@ -615,7 +711,8 @@ bool execute_vehicle_control( Character &who, map &here,
             }
             target = vehicle::find_vehicle_by_uid( here, selection.vehicle_id );
             if( !target ||
-                !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
+                !vehicle_control_accessible( who, here, *target, selection.position, selection.action,
+                                             remote_source ) ) {
                 return false;
             }
         }
@@ -627,7 +724,8 @@ bool execute_vehicle_control( Character &who, map &here,
         }
         target = vehicle::find_vehicle_by_uid( here, selection.vehicle_id );
         if( !target || who.activity ||
-            !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
+            !vehicle_control_accessible( who, here, *target, selection.position, selection.action,
+                                         remote_source ) ) {
             return false;
         }
     }

@@ -391,7 +391,8 @@ bool iuse_transform::valid_activation_choices( const item_activation_choices &ch
     if( !set_timer ) {
         return choices.empty();
     }
-    return choices.timer_seconds && *choices.timer_seconds > 0 &&
+    return choices.remote_vehicle_action.empty() && !choices.remote_vehicle_uid &&
+           choices.timer_seconds && *choices.timer_seconds > 0 &&
            static_cast<int64_t>( to_turn<int>( calendar::turn ) ) + *choices.timer_seconds <=
            to_turn<int>( calendar::turn_max );
 }

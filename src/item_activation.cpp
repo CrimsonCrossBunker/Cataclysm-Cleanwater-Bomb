@@ -1,4 +1,7 @@
 #include "item_activation.h"
+#include "avatar.h"
+#include "game.h"
+#include "remote_vehicle_activity.h"
 #include "tool_activity_target.h"
 
 #include "cata_scope_helpers.h"
@@ -34,6 +37,9 @@ bool query_item_activation_choices( const item &source, const std::string &metho
     choices = {};
     if( method.empty() ) {
         return supports_owned_item_activation( source, method );
+    }
+    if( method == "REMOTEVEH" ) {
+        return query_remote_vehicle_choices( get_avatar(), source, choices );
     }
     const item *used = source.get_usable_item( method );
     const use_function *use = used ? used->type->get_use( method ) : nullptr;

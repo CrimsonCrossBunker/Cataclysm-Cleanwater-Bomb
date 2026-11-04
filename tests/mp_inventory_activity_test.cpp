@@ -86,6 +86,8 @@
 #include "uistate.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "veh_utils.h"
+#include "remote_vehicle_activity.h"
 #include "vpart_range.h"
 #include "veh_type.h"
 #include "vpart_position.h"
@@ -5855,4 +5857,320 @@ TEST_CASE( "owned_autopilot_patrol_uses_initiating_faction_zones_and_survives_sa
     CHECK_FALSE( target.is_patrolling );
     CHECK_FALSE( target.autopilot_on );
     CHECK( target.cruise_velocity == 0 );
+}
+
+namespace
+{
+item_location remote_controller( Character &who )
+{
+    item controller( itype_id( "remotevehcontrol" ) );
+    item battery( itype_id( "light_battery_cell" ) );
+    battery.ammo_set( itype_id( "battery" ), 100 );
+    REQUIRE( controller.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
+    who.set_wielded_item( controller );
+    who.set_moves( 1000 );
+    REQUIRE( who.get_wielded_item()->ammo_sufficient( &who, "REMOTEVEH" ) );
+    return who.get_wielded_item();
+}
+
+vehicle &radio_vehicle( Character &who, bool advanced = true )
+{
+    map &here = get_map();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    if( empty( target.get_avail_parts( advanced ? "REMOTE_CONTROLS" : "CTRL_ELECTRONIC" ) ) ) {
+        REQUIRE( target.install_part( here, point_rel_ms::zero,
+                                     vpart_id( advanced ? "drive_by_wire_controls" : "controls_electronic" ) ) >= 0 );
+    }
+    who.setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    return target;
+}
+
+std::string radio_request( reload_fixture &fixture, Character &who, const std::string &action,
+                           std::optional<int64_t> uid = std::nullopt )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", capture_item_source( who, who.get_wielded_item() ) );
+        out.member( "item_type", "remotevehcontrol" );
+        out.member( "method", "REMOTEVEH" );
+        out.member( "target", who.pos_abs() );
+        out.member( "remote_vehicle_action", action );
+        out.member( "remote_vehicle_uid", uid );
+    } );
+}
+
+void arrange_security_prompt( Character &who, item &controller, vehicle &target )
+{
+    map &here = get_map();
+    if( !target.has_security_working( here ) ) {
+        REQUIRE( target.install_part( here, point_rel_ms::zero, vpart_id( "vehicle_alarm" ) ) >= 0 );
+    }
+    REQUIRE( target.has_security_working( here ) );
+    target.is_locked = true;
+    target.is_alarm_on = false;
+    who.set_skill_level( skill_id( "computer" ), 10 );
+    who.set_int_bonus( 4 );
+    auto selected = rng_get_engine();
+    bool found = false;
+    for( int attempt = 0; attempt < 100 && !found; ++attempt ) {
+        selected = rng_get_engine();
+        REQUIRE( controller.activation_success() );
+        const int roll = dice( 12, who.get_int() ) - 50;
+        found = roll >= 0 && roll < 20;
+    }
+    REQUIRE( found );
+    rng_get_engine() = selected;
+}
+} // namespace
+
+TEST_CASE( "remote_controller_take_and_stop_belong_to_operator_and_replay_once",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = radio_vehicle( who );
+    target.engine_on = true;
+    const item_location controller = remote_controller( who );
+    const int before = controller->ammo_remaining();
+    const int host_moves = get_avatar().get_moves();
+    const auto request = radio_request( fixture, who, "control", target.uid().get_value() );
+    const std::string result = fixture.run( who, request );
+    CHECK( controller->active );
+    CHECK( resolve_remote_vehicle( who, get_map() ) == &target );
+    CHECK_FALSE( resolve_remote_vehicle( get_avatar(), get_map() ) );
+    CHECK( get_avatar().get_moves() == host_moves );
+    CHECK_FALSE( get_avatar().activity );
+    CHECK( controller->ammo_remaining() == before - 1 );
+    const auto rng = rng_get_engine();
+    fixture.run( who, request );
+    CHECK( controller->ammo_remaining() == before - 1 );
+    CHECK( rng_get_engine() == rng );
+    JsonObject reply = json_loader::from_string( result ).get_object();
+    reply.allow_omitted_members();
+    JsonObject binding = reply.get_object( "remote_vehicle" );
+    binding.allow_omitted_members();
+    CHECK( binding.get_int64( "uid" ) == target.uid().get_value() );
+    fixture.run( who, radio_request( fixture, who, "stop" ) );
+    CHECK_FALSE( controller->active );
+    CHECK_FALSE( resolve_remote_vehicle( who, get_map() ) );
+    CHECK( target.engine_on );
+}
+
+TEST_CASE( "remote_security_scan_survives_save_and_owner_choice_without_reroll",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = radio_vehicle( who );
+    target.engine_on = true;
+    item_location controller = remote_controller( who );
+    arrange_security_prompt( who, *controller, target );
+    const auto request = radio_request( fixture, who, "control", target.uid().get_value() );
+    fixture.run( who, request );
+    auto *actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( actor );
+    REQUIRE( actor->waiting_for_security() );
+    CHECK( who.get_moves() == 1000 );
+    const auto scanned = rng_get_engine();
+    fixture.run( who, request );
+    CHECK( rng_get_engine() == scanned );
+    save_reload_activity( who );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( actor );
+    REQUIRE( actor->waiting_for_security() );
+    CHECK( rng_get_engine() == scanned );
+    const bool consent = GENERATE( false, true );
+    const int charges = controller->charges;
+    const int ammo = controller->ammo_remaining();
+    const int battery_ammo = controller->magazine_current()->ammo_remaining();
+    auto canceled_rng = rng_get_engine();
+    {
+        // TEST_DATA's finished-activity EOC chooses its sole string with rng.
+        // Include that native callback, but no second security dice roll.
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        rng( 0, 0 );
+        canceled_rng = rng_get_engine();
+    }
+    const auto answer = fixture.request( who, "choose", [&]( JsonOut &out ) {
+        out.member( "remote_security", consent );
+    } );
+    fixture.run( who, answer );
+    CHECK_FALSE( who.activity );
+    if( consent ) {
+        CHECK_FALSE( target.is_locked );
+        CHECK( resolve_remote_vehicle( who, get_map() ) == &target );
+        const int effort = ( 1000 - who.get_moves() ) / 100;
+        CHECK( controller->charges == charges - effort );
+        CHECK( controller->ammo_remaining() == ammo - effort - 1 );
+        CHECK( controller->magazine_current()->ammo_remaining() == battery_ammo - 1 );
+        CHECK( who.get_moves() <= 800 );
+        CHECK( who.get_moves() >= 200 );
+    } else {
+        CHECK( target.is_locked );
+        CHECK_FALSE( controller->active );
+        CHECK( who.get_moves() == 900 );
+        CHECK( controller->charges == charges - 1 );
+        CHECK( controller->ammo_remaining() == ammo - 1 );
+        CHECK( controller->magazine_current()->ammo_remaining() == battery_ammo );
+        CHECK( rng_get_engine() == canceled_rng );
+    }
+    const auto final_rng = rng_get_engine();
+    const int final_moves = who.get_moves();
+    fixture.run( who, answer );
+    CHECK( rng_get_engine() == final_rng );
+    CHECK( who.get_moves() == final_moves );
+}
+
+TEST_CASE( "one_remote_vehicle_action_keeps_native_startup_without_granting_driving",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = radio_vehicle( who, false );
+    const item_location controller = remote_controller( who );
+    fixture.run( who, radio_request( fixture, who, "action", target.uid().get_value() ) );
+    auto *actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( actor );
+    REQUIRE( actor->waiting_for_action() );
+    CHECK_FALSE( controller->active );
+    CHECK_FALSE( resolve_remote_vehicle( who, here ) );
+    vehicle_control_selection choice;
+    choice.vehicle_id = target.uid().get_value();
+    choice.position = target.get_avail_parts( "CTRL_ELECTRONIC" ).begin()->pos_abs();
+    choice.action = "start";
+    const std::string action = fixture.request( who, "choose", [&]( JsonOut &out ) {
+        out.member( "vehicle_control", choice );
+    } );
+    fixture.run( who, action );
+    REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK_FALSE( controller->active );
+    save_reload_activity( who );
+    SECTION( "startup completes with the same controller" ) {
+        who.set_moves( who.activity.moves_left );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( target.engine_on );
+        CHECK_FALSE( resolve_remote_vehicle( who, here ) );
+    }
+    SECTION( "dropping the controller cancels the saved startup" ) {
+        who.remove_weapon();
+        who.set_moves( 1000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK_FALSE( target.engine_on );
+    }
+}
+
+TEST_CASE( "remote_access_rejects_unreachable_and_replaced_vehicles_before_rng",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = radio_vehicle( who );
+    const item_location controller = remote_controller( who );
+    const int64_t uid = target.uid().get_value();
+    SECTION( "out of radio range" ) {
+        who.setpos( get_map(), tripoint_bub_ms( 1, 1, 0 ) );
+    }
+    SECTION( "original vehicle no longer exists" ) {
+        get_map().destroy_vehicle( &target );
+    }
+    const auto rng = rng_get_engine();
+    const int ammo = controller->ammo_remaining();
+    fixture.run( who, radio_request( fixture, who, "control", uid ) );
+    CHECK_FALSE( who.activity );
+    CHECK_FALSE( controller->active );
+    CHECK( controller->ammo_remaining() == ammo );
+    CHECK( who.get_moves() == 1000 );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "local_remote_controller_retains_native_invocation_result_and_charge",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &target = radio_vehicle( who );
+    target.engine_on = true;
+    item_location controller = remote_controller( who );
+    const int before = controller->ammo_remaining();
+    item_activation_choices choices;
+    choices.remote_vehicle_action = "control";
+    choices.remote_vehicle_uid = target.uid().get_value();
+    // invoke_item returns whether the item itself was consumed, not success.
+    CHECK_FALSE( who.Character::invoke_item( controller.get_item(), "REMOTEVEH", who.pos_bub(),
+                                           who.get_moves(), &choices ) );
+    CHECK( controller->ammo_remaining() == before - 1 );
+    CHECK( controller->active );
+    CHECK( resolve_remote_vehicle( who, get_map() ) == &target );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "local_vehicle_menu_requires_its_live_remote_controller_outside_reach",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    vehicle &target = radio_vehicle( who );
+    who.setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
+    target.engine_on = true;
+    const item_location controller = remote_controller( who );
+    const tripoint_bub_ms controls = target.get_avail_parts( "CONTROLS" ).begin()->pos_bub( here );
+    REQUIRE( rl_dist( controls, who.pos_bub() ) > 1 );
+    const int access = GENERATE( 0, 1, 2 );
+    INFO( "0: ordinary menu, 1: authenticated radio, 2: dropped controller; access=" << access );
+    veh_menu menu( target, "test remote vehicle menu" );
+    if( access != 0 ) {
+        menu.remote_controller = &controller;
+    }
+    target.build_interact_menu( menu, &here, controls, false );
+    const std::vector<veh_menu_item> entries = menu.get_items();
+    const auto stop = std::find_if( entries.begin(), entries.end(), []( const veh_menu_item &entry ) {
+        return entry._hotkey_action == "TOGGLE_ENGINE";
+    } );
+    REQUIRE( stop != entries.end() );
+    REQUIRE( stop->_enabled );
+    REQUIRE( stop->_on_submit );
+    if( access == 2 ) {
+        who.remove_weapon();
+    }
+    stop->_on_submit();
+    CHECK( target.engine_on == ( access != 1 ) );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK_FALSE( resolve_remote_vehicle( who, here ) );
+}
+
+TEST_CASE( "saved_remote_security_scan_never_uses_a_replacement_controller",
+           "[multiplayer][vehicle_remote_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = radio_vehicle( who );
+    item_location controller = remote_controller( who );
+    arrange_security_prompt( who, *controller, target );
+    fixture.run( who, radio_request( fixture, who, "control", target.uid().get_value() ) );
+    REQUIRE( who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) );
+    save_reload_activity( who );
+    who.remove_weapon();
+    controller = remote_controller( who );
+    const int ammo = controller->ammo_remaining();
+    fixture.run( who, fixture.request( who, "choose", []( JsonOut &out ) {
+        out.member( "remote_security", true );
+    } ) );
+    CHECK_FALSE( who.activity );
+    CHECK( target.is_locked );
+    CHECK_FALSE( controller->active );
+    CHECK( controller->ammo_remaining() == ammo );
+    CHECK_FALSE( resolve_remote_vehicle( who, get_map() ) );
 }
