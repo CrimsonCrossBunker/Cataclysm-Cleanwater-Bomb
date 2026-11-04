@@ -119,22 +119,29 @@ static const damage_type_id damage_stab( "stab" );
 static const efftype_id effect_amigara( "amigara" );
 static const efftype_id effect_beartrap( "beartrap" );
 static const efftype_id effect_contacts( "contacts" );
+static const efftype_id effect_crushed( "crushed" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_fearparalyze( "fearparalyze" );
 static const efftype_id effect_grabbed( "grabbed" );
+static const efftype_id effect_harnessed( "harnessed" );
 static const efftype_id effect_heavysnare( "heavysnare" );
 static const efftype_id effect_hit_by_player( "hit_by_player" );
+static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_lightsnare( "lightsnare" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_natural_stance( "natural_stance" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_stunned( "stunned" );
+static const efftype_id effect_tied( "tied" );
 static const efftype_id effect_transition_contacts( "transition_contacts" );
 static const efftype_id effect_venom_dmg( "venom_dmg" );
 static const efftype_id effect_venom_player1( "venom_player1" );
 static const efftype_id effect_venom_player2( "venom_player2" );
 static const efftype_id effect_venom_weaken( "venom_weaken" );
+static const efftype_id effect_webbed( "webbed" );
 static const efftype_id effect_winded( "winded" );
 
 static const itype_id itype_fur( "fur" );
@@ -143,6 +150,7 @@ static const itype_id itype_sheet_cotton( "sheet_cotton" );
 
 static const json_character_flag json_flag_BLOCK_HUGE_ATTACKS( "BLOCK_HUGE_ATTACKS" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+static const json_character_flag json_flag_CANNOT_GAIN_EFFECTS( "CANNOT_GAIN_EFFECTS" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
 static const json_character_flag json_flag_CBQ_LEARN_BONUS( "CBQ_LEARN_BONUS" );
@@ -1724,24 +1732,24 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         victim->has_flag( json_flag_CANNOT_MOVE ) || victim->has_flag( mon_flag_PLASTIC ) ||
         victim->has_flag( mon_flag_FLIES ) || victim->type->bodytype == "blob" ||
         victim->type->bodytype == "snake" || victim->type->bodytype == "fish" ||
-        victim->has_effect( efftype_id( "ridden" ) ) ||
-        victim->has_effect( efftype_id( "harnessed" ) ) ||
-        victim->has_effect( efftype_id( "tied" ) ) ) {
+        victim->has_effect( effect_ridden ) ||
+        victim->has_effect( effect_harnessed ) ||
+        victim->has_effect( effect_tied ) ) {
         attacker.add_msg_if_player( m_info, _( "You cannot get a safe grappling grip on this target." ) );
         return false;
     }
-    const efftype_id grip( "martial_grapple" );
-    if( victim->is_immune_effect( grip ) ||
-        victim->has_flag( json_character_flag( "CANNOT_GAIN_EFFECTS" ) ) ) {
+    if( victim->is_immune_effect( effect_martial_grapple ) ||
+        victim->has_flag( json_flag_CANNOT_GAIN_EFFECTS ) ) {
         return false;
     }
-    const bool holding = victim->has_effect( grip ) &&
-                         victim->get_effect( grip ).get_source().get_character_id() == attacker.getID();
+    const bool holding = victim->has_effect( effect_martial_grapple ) &&
+                         victim->get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID();
     if( technique.grapple_action != "hold" && !holding ) {
         attacker.add_msg_if_player( m_info, _( "You must first establish your own grappling grip." ) );
         return false;
     }
-    if( technique.grapple_action == "hold" && victim->has_effect( grip ) && !holding ) {
+    if( technique.grapple_action == "hold" && victim->has_effect( effect_martial_grapple ) &&
+        !holding ) {
         return false;
     }
     const int size_difference = static_cast<int>( victim->get_size() ) -
@@ -1767,9 +1775,9 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     const tripoint_bub_ms retreat = attacker.pos_bub() - direction;
     if( technique.grapple_action != "hold" ) {
         for( const efftype_id &restraint : {
-                 efftype_id( "beartrap" ), efftype_id( "webbed" ),
-                 efftype_id( "lightsnare" ), efftype_id( "heavysnare" ),
-                 efftype_id( "crushed" ), efftype_id( "in_pit" )
+                 effect_beartrap, effect_webbed,
+                 effect_lightsnare, effect_heavysnare,
+                 effect_crushed, effect_in_pit
              } ) {
             if( attacker.has_effect( restraint ) || victim->has_effect( restraint ) ) {
                 attacker.add_msg_if_player( m_info,
@@ -1792,8 +1800,8 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
             ( !victim->can_move_to( attacker.pos_bub() ) ||
               here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, retreat ) ||
               attacker.has_effect( effect_grabbed ) ||
-              attacker.has_effect( efftype_id( "beartrap" ) ) ||
-              attacker.has_effect( efftype_id( "tied" ) ) ||
+              attacker.has_effect( effect_beartrap ) ||
+              attacker.has_effect( effect_tied ) ||
               attacker.has_flag( json_flag_CANNOT_MOVE ) ) ) ) ) {
         attacker.add_msg_if_player( m_info,
                                     _( "There is no safe, clear space behind you for this technique." ) );
@@ -1808,14 +1816,15 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     attacker.add_effect( technique.grapple_cooldown_effect(), technique.grapple_cooldown );
     if( technique.grapple_action == "hold" ) {
         for( monster &other : g->all_monsters() ) {
-            if( other.has_effect( grip ) &&
-                other.get_effect( grip ).get_source().get_character_id() == attacker.getID() ) {
-                other.remove_effect( grip );
+            if( other.has_effect( effect_martial_grapple ) &&
+                other.get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID() ) {
+                other.remove_effect( effect_martial_grapple );
             }
         }
         const int duration = std::max( 2, static_cast<int>( 6 - 3 * load ) -
                                        std::max( 0, size_difference ) );
-        victim->add_effect( effect_source( &attacker ), grip, time_duration::from_turns( duration ) );
+        victim->add_effect( effect_source( &attacker ), effect_martial_grapple,
+                            time_duration::from_turns( duration ) );
         attacker.add_msg_player_or_npc( _( "You establish a grappling grip on %s!" ),
                                         _( "<npcname> establishes a grappling grip on %s!" ), victim->disp_name() );
     } else if( technique.grapple_action == "drag" ) {
@@ -1827,7 +1836,7 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_player_or_npc( _( "You step back, dragging %s with you!" ),
                                         _( "<npcname> steps back, dragging %s along!" ), victim->disp_name() );
     } else {
-        victim->remove_effect( grip );
+        victim->remove_effect( effect_martial_grapple );
         victim->setpos( here, retreat );
         const int duration = std::max( 1, static_cast<int>( 4 - 2 * load ) -
                                        std::max( 0, size_difference ) );
