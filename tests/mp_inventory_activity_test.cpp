@@ -13,6 +13,7 @@
 #include "character.h"
 #include "craft_command.h"
 #include "crafting.h"
+#include "construction.h"
 #include "bodypart.h"
 #include "effect.h"
 #include "magic.h"
@@ -36,6 +37,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
+#include "mapdata.h"
 #include "skill.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -56,6 +58,10 @@
 #include "rng.h"
 #include "units.h"
 #include "uistate.h"
+#include "vehicle.h"
+#include "vpart_position.h"
+#include "submap.h"
+
 
 namespace
 {
@@ -2210,4 +2216,286 @@ TEST_CASE( "craft_timers_notify_only_the_owning_player", "[multiplayer][craft_ow
     CHECK( received.front().message == "timer" );
     CHECK( received.front().alarm );
     CHECK( cata_mp::take_craft_notifications( notices ) == "[]" );
+}
+
+TEST_CASE( "owned_construction_start_and_completion_apply_once",
+           "[multiplayer][construction_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    set_time( calendar::turn_zero + 12_hours );
+    map &here = get_map();
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    here.ter_set( target, ter_str_id( "t_dirt" ) );
+    const construction_str_id id( "constr_wall_half" );
+    for( const auto &[skill, level] : id->required_skills ) {
+        who.set_skill_level( skill, level );
+        who.set_knowledge_level( skill, level );
+    }
+    for( int i = 0; i < 10; ++i ) {
+        here.add_item_or_charges( who.pos_bub(), item( itype_id( "2x4" ) ) );
+    }
+    here.add_item_or_charges( who.pos_bub(), item( itype_id( "nail" ), calendar::turn, 20 ) );
+    here.add_item_or_charges( who.pos_bub(), item( itype_id( "hammer" ) ) );
+    who.invalidate_crafting_inventory();
+    auto selected = construction_selection::prepare( who, id.obj(), here.get_abs( target ) );
+    REQUIRE( selected );
+    CHECK_FALSE( here.partial_con_at( target ) );
+
+    SECTION( "invalid_material_quantity_does_not_start_or_consume" ) {
+        REQUIRE_FALSE( selected->components.empty() );
+        selected->components.front().comp.count = 1;
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "construction" );
+            out.member( "selection", *selected );
+        } ) );
+        CHECK_FALSE( here.partial_con_at( target ) );
+        CHECK_FALSE( who.activity );
+        int boards = 0;
+        for( const item &it : here.i_at( who.pos_bub() ) ) {
+            if( it.typeId() == itype_id( "2x4" ) ) {
+                boards += it.count();
+            }
+        }
+        CHECK( boards == 10 );
+    }
+    SECTION( "automatic_blueprint_selects_materials_on_the_server" ) {
+        map_stack ground = here.i_at( who.pos_bub() );
+        const auto boards = std::find_if( ground.begin(), ground.end(), []( const item & it ) {
+            return it.typeId() == itype_id( "2x4" );
+        } );
+        REQUIRE( boards != ground.end() );
+        REQUIRE( boards->count_by_charges() );
+        REQUIRE( boards->charges == 10 );
+        item carried = *boards;
+        carried.charges = 5;
+        boards->mod_charges( -5 );
+        who.i_add( carried );
+        REQUIRE( who.charges_of( itype_id( "2x4" ) ) == 5 );
+        who.invalidate_crafting_inventory();
+        // i_add may wield the boards and spend the setup character's moves.
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "construction_auto" );
+            out.member( "construction", id );
+            out.member( "position", here.get_abs( target ) );
+        } ) );
+        REQUIRE( cata_mp::owns_inventory_activity( who ) );
+        REQUIRE( here.partial_con_at( target ) );
+        int consumed_boards = 0;
+        for( const item &it : here.partial_con_at( target )->components ) {
+            if( it.typeId() == itype_id( "2x4" ) ) {
+                consumed_boards += it.count();
+            }
+        }
+        CHECK( consumed_boards == 10 );
+        CHECK( who.amount_of( itype_id( "2x4" ) ) == 0 );
+    }
+    SECTION( "start_reload_progress_and_finish" ) {
+        const std::string start = fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "construction" );
+            out.member( "selection", *selected );
+        } );
+        fixture.run( who, start );
+        REQUIRE( cata_mp::owns_inventory_activity( who ) );
+        partial_con *site = here.partial_con_at( target );
+        REQUIRE( site );
+        const int64_t uid = site->uid;
+        REQUIRE( uid > 0 );
+        const auto components = site->components.size();
+        REQUIRE( components > 0 );
+        fixture.run( who, start );
+        CHECK( site->uid == uid );
+        CHECK( site->components.size() == components );
+        save_reload_activity( who );
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        REQUIRE( site->counter > 0 );
+        site->counter = 9999999;
+        who.set_moves( 100 );
+        const std::string finish = fixture.request( who, "step" );
+        fixture.run( who, finish );
+        CHECK_FALSE( here.partial_con_at( target ) );
+        CHECK_FALSE( who.activity );
+        CHECK( here.ter( target ) == ter_str_id( "t_wall_half" ) );
+        const auto rng = rng_get_engine();
+        fixture.run( who, finish );
+        CHECK( rng_get_engine() == rng );
+        CHECK( here.ter( target ) == ter_str_id( "t_wall_half" ) );
+        CHECK_FALSE( get_avatar().activity );
+    }
+}
+
+TEST_CASE( "owned_construction_rejects_replaced_sites_and_refunds_only_once",
+           "[multiplayer][construction_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    set_time( calendar::turn_zero + 12_hours );
+    map &here = get_map();
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    const construction_str_id id( "constr_wall_half" );
+    for( const auto &[skill, level] : id->required_skills ) {
+        who.set_skill_level( skill, level );
+    }
+    partial_con original;
+    original.id = id.id();
+    original.components.emplace_back( itype_id( "2x4" ) );
+    here.partial_con_set( target, original );
+    const int64_t old_uid = here.partial_con_at( target )->uid;
+    auto change = [&]( const std::string & kind, int64_t uid ) {
+        return fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", kind );
+            out.member( "position", here.get_abs( target ) );
+            out.member( "site", uid );
+        } );
+    };
+    fixture.run( who, change( "construction_resume", old_uid ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    save_reload_activity( who );
+    here.partial_con_remove( target );
+    here.partial_con_set( target, original );
+    const int64_t replacement = here.partial_con_at( target )->uid;
+    REQUIRE( replacement != old_uid );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( here.partial_con_at( target )->counter == 0 );
+    fixture.run( who, change( "construction_cancel", old_uid ) );
+    REQUIRE( here.partial_con_at( target ) );
+    const std::string cancel = change( "construction_cancel", replacement );
+    fixture.run( who, cancel );
+    CHECK_FALSE( here.partial_con_at( target ) );
+    const auto count = [&]() {
+        return std::count_if( here.i_at( who.pos_bub() ).begin(), here.i_at( who.pos_bub() ).end(),
+        []( const item & it ) {
+            return it.typeId() == itype_id( "2x4" );
+        } );
+    };
+    CHECK( count() == 1 );
+    fixture.run( who, cancel );
+    CHECK( count() == 1 );
+}
+
+TEST_CASE( "owned_vehicle_construction_waits_for_its_players_name",
+           "[multiplayer][construction_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    set_time( calendar::turn_zero + 12_hours );
+    map &here = get_map();
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    partial_con site;
+    site.id = construction_str_id( "constr_veh" ).id();
+    site.counter = 10000000;
+    site.components.emplace_back( itype_id( "frame" ) );
+    here.partial_con_set( target, site );
+    who.assign_activity( build_construction_activity_actor( here.get_abs( target ), &who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    const auto *actor = dynamic_cast<const build_construction_activity_actor *>
+                        ( who.activity.actor.get() );
+    REQUIRE( actor );
+    REQUIRE( actor->waiting_for() == "vehicle_name" );
+    save_reload_activity( who );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( here.veh_at( target ) );
+    CHECK( who.get_moves() == 100 );
+    fixture.run( who, fixture.request( who, "choose", [&]( JsonOut & out ) {
+        out.member( "decision", "vehicle_name" );
+        out.member( "text", "Remote workshop" );
+    } ) );
+    save_reload_activity( who );
+    const std::string finish = fixture.request( who, "step" );
+    fixture.run( who, finish );
+    REQUIRE( here.veh_at( target ) );
+    CHECK( here.veh_at( target )->vehicle().name == "Remote workshop" );
+    CHECK_FALSE( here.partial_con_at( target ) );
+    CHECK_FALSE( who.activity );
+    const auto rng = rng_get_engine();
+    fixture.run( who, finish );
+    CHECK( rng_get_engine() == rng );
+    CHECK( here.veh_at( target )->vehicle().name == "Remote workshop" );
+}
+
+TEST_CASE( "construction_site_save_preserves_identity_and_loads_legacy_layout",
+           "[multiplayer][construction_owned]" )
+{
+    reload_fixture fixture;
+    submap original;
+    original.set_all_ter( ter_str_id( "t_dirt" ) );
+    // Two legacy entries exercise the optional metadata delimiter between sites.
+    const JsonValue legacy = json_loader::from_string(
+                                 R"([0,1,0,5000000,"constr_pit_shallow",[],2,3,0,0,"constr_wall_half",[]])" );
+    original.load( legacy, "partial_constructions", 0 );
+    REQUIRE( original.partial_constructions.size() == 2 );
+    const tripoint_sm_ms first( 0, 1, 0 );
+    const tripoint_sm_ms second( 2, 3, 0 );
+    const int64_t first_uid = original.partial_constructions.at( first ).uid;
+    const int64_t second_uid = original.partial_constructions.at( second ).uid;
+    REQUIRE( first_uid > 0 );
+    REQUIRE( second_uid > first_uid );
+    std::ostringstream stream;
+    JsonOut out( stream );
+    out.start_object();
+    original.store( out );
+    out.end_object();
+    JsonValue saved = json_loader::from_string( stream.str() );
+    const JsonObject object = saved.get_object();
+    object.allow_omitted_members();
+    submap restored;
+    restored.load( object.get_member( "partial_constructions" ), "partial_constructions", 0 );
+    REQUIRE( restored.partial_constructions.size() == 2 );
+    CHECK( restored.partial_constructions.at( first ).uid == first_uid );
+    CHECK( restored.partial_constructions.at( second ).uid == second_uid );
+    CHECK( restored.partial_constructions.at( first ).counter == 5000000 );
+    CHECK( g->assign_construction_uid() > second_uid );
+}
+
+TEST_CASE( "blueprint_client_only_requests_work_and_preserves_its_planner",
+           "[multiplayer][construction_owned]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    who.assign_activity( multi_build_construction_activity_actor() );
+    cata_mp::set_client_mode( true );
+    who.set_moves( 100 );
+    map &here = get_map();
+    const tripoint_abs_ms target = who.pos_abs() + tripoint::east;
+    REQUIRE( cata_mp::client_start_blueprint_construction(
+                 construction_str_id( "constr_wall_half" ), target ) );
+    CHECK( cata_mp::inventory_activity_view( who.activity ) );
+    CHECK_FALSE( here.partial_con_at( here.get_bub( target ) ) );
+    REQUIRE_FALSE( who.backlog.empty() );
+    CHECK( who.backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) );
+    CHECK( who.backlog.front().auto_resume );
+    partial_con replica;
+    replica.id = construction_str_id( "constr_wall_half" ).id();
+    here.partial_con_set( here.get_bub( target ), replica );
+    const std::string upload = cata_mp::client_enrich_action( R"({"action":"wait"})" );
+    CHECK( upload.find( "partial_con" ) == std::string::npos );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.pending_request = 0;
+    view.finished = true;
+    SECTION( "accepted_work_resumes_the_blueprint_planner" ) {
+        view.activity = "42";
+        cata_mp::client_update_inventory_activity_view();
+        CHECK( who.activity.id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) );
+        CHECK( who.backlog.empty() );
+        CHECK_FALSE( view.active );
+    }
+    SECTION( "rejected_start_does_not_repeat_automatically" ) {
+        cata_mp::client_update_inventory_activity_view();
+        CHECK_FALSE( who.activity );
+        REQUIRE_FALSE( who.backlog.empty() );
+        CHECK_FALSE( who.backlog.front().auto_resume );
+        CHECK_FALSE( view.active );
+    }
+    SECTION( "declined_work_does_not_restart_the_planner" ) {
+        view.activity = "42";
+        who.backlog.front().auto_resume = false;
+        cata_mp::client_update_inventory_activity_view();
+        CHECK_FALSE( who.activity );
+        CHECK_FALSE( view.active );
+    }
+
 }

@@ -8297,8 +8297,14 @@ void map::partial_con_set( const tripoint_bub_ms &p, const partial_con &con )
         debugmsg( "Tried to set construction at %s but the submap is not loaded", l.to_string() );
         return;
     }
-    if( !current_submap->partial_constructions.emplace( tripoint_sm_ms( l, p.z() ), con ).second ) {
+    const auto inserted = current_submap->partial_constructions.emplace( tripoint_sm_ms( l, p.z() ),
+                          con );
+    if( !inserted.second ) {
         debugmsg( "set partial con on top of terrain which already has a partial con" );
+    } else if( inserted.first->second.uid <= 0 ) {
+        inserted.first->second.uid = g->assign_construction_uid();
+    } else {
+        g->observe_construction_uid( inserted.first->second.uid );
     }
     set_draw_points_cache_dirty();
 }

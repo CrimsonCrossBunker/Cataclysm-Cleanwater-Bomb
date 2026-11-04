@@ -7439,6 +7439,9 @@ void submap::store( JsonOut &jsout ) const
             jsout.write( it );
         }
         jsout.end_array();
+        jsout.start_object();
+        jsout.member( "uid", elem.second.uid );
+        jsout.end_object();
     }
     jsout.end_array();
 
@@ -7822,6 +7825,15 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 item tmp;
                 tmp.deserialize( component_json );
                 pc.components.push_back( tmp );
+            }
+            // Older saves have the next site's x coordinate here, not metadata.
+            if( partial_constructions_json.has_more() && partial_constructions_json.test_object() ) {
+                partial_constructions_json.next_object().read( "uid", pc.uid );
+            }
+            if( pc.uid <= 0 ) {
+                pc.uid = g->assign_construction_uid();
+            } else {
+                g->observe_construction_uid( pc.uid );
             }
             partial_constructions[pt] = pc;
         }

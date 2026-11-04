@@ -1710,6 +1710,8 @@ void game::unserialize_master( const JsonValue &jv )
             jsin.read( next_monster_uid );
         } else if( name == "next_vehicle_uid" ) {
             jsin.read( next_vehicle_uid );
+        } else if( name == "next_construction_uid" ) {
+            jsin.read( next_construction_uid );
         } else if( name == "active_missions" ) {
             mission::unserialize_all( jsin );
         } else if( name == "factions" ) {
@@ -1928,6 +1930,7 @@ void game::serialize_master( std::ostream &fout )
         json.member( "next_item_uid", next_item_uid );
         json.member( "next_monster_uid", next_monster_uid );
         json.member( "next_vehicle_uid", next_vehicle_uid );
+        json.member( "next_construction_uid", next_construction_uid );
 
         json.member( "active_missions" );
         mission::serialize_all( json );
