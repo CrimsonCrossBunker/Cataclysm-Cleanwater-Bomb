@@ -10,6 +10,9 @@
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "bodypart.h"
+#include "effect.h"
+#include "magic.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
@@ -1203,6 +1206,10 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     remote.set_skill_level( skill_id( "mechanics" ), 6 );
     remote.set_mutation( trait_id( "QUICK" ) );
     remote.set_mutation( trait_id( "CARNIVORE" ) );
+    remote.set_mutation( trait_id( "MASOCHIST" ) );
+    remote.set_pain( 80 );
+    const int expected_morale = remote.get_morale_level();
+    REQUIRE( expected_morale > 0 );
     // Set the authoritative body after trait setup, which itself recalculates HP.
     // A snapshot must retain this state, rather than recompute it from strength.
     remote.set_part_hp_max( bodypart_id( "arm_l" ), 137 );
@@ -1226,6 +1233,7 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     CHECK( local.get_wielded_item()->charges == 3 );
     CHECK( local.get_thirst() == 42 );
     CHECK( local.get_str_base() == 15 );
+    CHECK( local.get_morale_level() == expected_morale );
     CHECK( local.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
     CHECK( local.get_part_hp_max( bodypart_id( "arm_l" ) ) == 137 );
     CHECK( local.get_skill_level( skill_id( "mechanics" ) ) == 6 );
@@ -1248,6 +1256,7 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     CHECK_THROWS_AS( local.load_player_state( json_loader::from_string( malformed ).get_object() ),
                      JsonError );
     CHECK( local.get_str_base() == 15 );
+    CHECK( local.get_morale_level() == expected_morale );
     REQUIRE( local.get_wielded_item() );
     CHECK( local.get_wielded_item()->charges == 3 );
     remote.get_wielded_item()->charges = 2;
@@ -1259,4 +1268,106 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     CHECK( local.get_thirst() == 24 );
     CHECK( events.actors.empty() );
     CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
+           "[multiplayer][body_authority]" )
+{
+    consumption_fixture fixture;
+    npc &owner = fixture.remote();
+    owner.set_mutation( trait_id( "CARNIVORE" ) );
+    owner.set_mutation( trait_id( "MASOCHIST" ) );
+    owner.add_effect( efftype_id( "took_prozac" ), 3_hours );
+    owner.set_pain( 80 );
+    const int expected_morale = owner.get_morale_level();
+    REQUIRE( expected_morale > 0 );
+    owner.set_part_hp_max( bodypart_id( "arm_l" ), 137 );
+    owner.set_part_hp_cur( bodypart_id( "arm_l" ), 17 );
+    owner.set_part_temp_cur( bodypart_id( "arm_l" ), units::from_legacy_bodypart_temp( 3800 ) );
+    owner.set_part_wetness( bodypart_id( "arm_l" ), 12 );
+    owner.set_stamina( 1234 );
+    owner.set_thirst( 42 );
+    owner.magic->set_mana( 456 );
+    owner.add_effect( efftype_id( "bleed" ), 10_minutes, bodypart_id( "arm_l" ), 2 );
+    owner.add_effect( efftype_id( "sleep" ), 3_hours );
+    const auto snapshot = [&]() {
+        std::ostringstream encoded;
+        JsonOut out( encoded );
+        owner.store_turn_state( out );
+        return encoded.str();
+    };
+    const auto frame = [&]( int64_t revision ) {
+        return R"({"type":"state","character_revision":)" + std::to_string( revision ) +
+               R"(,"character_turn":)" + snapshot() + "}";
+    };
+    const std::string first = frame( 1 );
+    const JsonObject projected = json_loader::from_string( snapshot() ).get_object();
+    projected.allow_omitted_members();
+    CHECK_FALSE( projected.has_member( "inv" ) );
+    CHECK_FALSE( projected.has_member( "worn" ) );
+    CHECK_FALSE( projected.has_member( "weapon" ) );
+    CHECK_FALSE( projected.has_member( "activity" ) );
+    CHECK_FALSE( projected.has_member( "location" ) );
+
+    avatar &replica = get_avatar();
+    cata_mp::set_client_mode( true );
+    replica.set_wielded_item( item( itype_id( "rock" ) ) );
+    const item_location held = replica.get_wielded_item();
+    const item *const address = held.get_item();
+    const character_id identity = replica.getID();
+    const tripoint_abs_ms position = replica.pos_abs();
+    replica.activity = player_activity( activity_id( "ACT_WAIT" ), 400 );
+    replica.set_moves( 37 );
+    replica.add_effect( efftype_id( "poison" ), 10_minutes );
+    REQUIRE_FALSE( replica.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
+    const auto rng = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( first ) );
+    CHECK( replica.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
+    CHECK( replica.get_part_hp_max( bodypart_id( "arm_l" ) ) == 137 );
+    CHECK( replica.get_part_temp_cur( bodypart_id( "arm_l" ) ) ==
+           units::from_legacy_bodypart_temp( 3800 ) );
+    CHECK( replica.get_part_wetness( bodypart_id( "arm_l" ) ) == 12 );
+    CHECK( replica.get_stamina() == 1234 );
+    CHECK( replica.get_thirst() == 42 );
+    CHECK( replica.magic->available_mana() == 456 );
+    CHECK( replica.get_pain() == 80 );
+    CHECK( replica.get_morale_level() == expected_morale );
+    CHECK( replica.get_effect( efftype_id( "sleep" ) ).get_duration() == 3_hours );
+    CHECK( replica.get_effect( efftype_id( "bleed" ), bodypart_id( "arm_l" ) ).get_duration() ==
+           10_minutes );
+    CHECK_FALSE( replica.has_effect( efftype_id( "poison" ) ) );
+    CHECK( replica.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
+    CHECK( replica.getID() == identity );
+    CHECK( replica.pos_abs() == position );
+    CHECK( replica.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( replica.activity.moves_left == 400 );
+    CHECK( replica.get_moves() == 37 );
+    CHECK( held.get_item() == address );
+    CHECK( replica.get_wielded_item().get_item() == address );
+    CHECK( rng_get_engine() == rng );
+
+    // Two updates may occur without advancing the game calendar. The earlier
+    // frame must not undo a more recent effect removal or stamina expenditure.
+    owner.set_stamina( 900 );
+    owner.remove_effect( efftype_id( "bleed" ) );
+    REQUIRE( cata_mp::client_apply_message( frame( 2 ) ) );
+    REQUIRE( cata_mp::client_apply_message( first ) );
+    CHECK( replica.get_stamina() == 900 );
+    CHECK_FALSE( replica.has_effect( efftype_id( "bleed" ) ) );
+    CHECK( held.get_item() == address );
+
+    // A malformed body cannot leave a half-imported character behind.
+    owner.set_stamina( 500 );
+    std::string malformed = snapshot();
+    const auto body = malformed.find( "\"body\":" );
+    REQUIRE( body != std::string::npos );
+    malformed.replace( body, 6, "\"missing_body\"" );
+    const auto before_rejected = rng_get_engine();
+    CHECK_THROWS_AS( replica.load_turn_state( json_loader::from_string( malformed ).get_object() ),
+                     JsonError );
+    CHECK( replica.get_stamina() == 900 );
+    CHECK( replica.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
+    CHECK( replica.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( held.get_item() == address );
+    CHECK( rng_get_engine() == before_rejected );
 }

@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "calendar.h"
-#include "character_turn.h"
 #include "color.h"
 #include "coordinates.h"
 #include "mp_entity_registry.h"
@@ -195,6 +194,7 @@ struct world_replication_state {
 };
 
 struct host_turn_state {
+    int64_t character_revision = 0;
     std::vector<MPSfxEvent> host_sfx_queue{};
     // Server: cumulative AP for the remote player (replaces the NPC's own moves which
     // are skipped by monmove since is_remote_player() returns true).
@@ -249,12 +249,12 @@ struct host_turn_state {
 };
 
 struct client_turn_state {
+    int64_t last_character_revision = 0;
     // Socket reads may refresh a view many times in one host turn. Only the
-    // main loop consumes a new clock value and advances the local character.
+    // main loop consumes a new clock value for local presentation/input.
     time_point observed_host_turn = calendar::before_time_starts;
     time_point processed_host_turn = calendar::before_time_starts;
     bool group_fast_forward = false;
-    character_turn_driver character_turns;
     // Client: "keep smashing" continuation state.
     // When set, auto-re-fire the smash action after each partial bash until the
     // target is destroyed or the bash fails to make progress.

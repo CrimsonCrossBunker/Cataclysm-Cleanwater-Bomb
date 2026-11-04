@@ -3021,6 +3021,11 @@ class Character : public Creature, public visitable
         void store_needs_state( JsonOut &json ) const;
         void load_needs_state( const JsonObject &data );
 
+        // Per-turn body/effect projection. Does not replace carried items,
+        // identity, position, activities, or execute simulation callbacks.
+        void store_turn_state( JsonOut &json ) const;
+        void load_turn_state( const JsonObject &data );
+
         int scent = 0;
         pimpl<bionic_collection> my_bionics;
         pimpl<character_martial_arts> martial_arts_data;
