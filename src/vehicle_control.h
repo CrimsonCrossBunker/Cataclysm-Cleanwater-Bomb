@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "coordinates.h"
 #include "item_disposition.h"
@@ -31,6 +32,15 @@ bool adjust_vehicle_cruise( Character &who, map &here, int direction );
 bool brake_vehicle( Character &who, map &here );
 
 // Explicit choices only; the server revalidates access, identity and costs.
+struct vehicle_engine_selection {
+    int64_t part_id = 0;
+    std::string fuel;
+    bool enabled = false;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
 struct vehicle_control_selection {
     int64_t vehicle_id = 0;
     tripoint_abs_ms position;
@@ -38,6 +48,7 @@ struct vehicle_control_selection {
     bool allow_theft = false;
     int64_t weapon_id = 0;
     std::optional<item_disposition> unwield;
+    std::vector<vehicle_engine_selection> engines;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
@@ -47,6 +58,8 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
                                  const tripoint_abs_ms &position, const std::string &action );
 std::optional<vehicle_control_selection> query_vehicle_control( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position, const std::string &action );
+std::optional<vehicle_control_selection> query_vehicle_engines( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position );
 bool execute_vehicle_control( Character &who, map &here,
                               const vehicle_control_selection &selection );
 #endif // CATA_SRC_VEHICLE_CONTROL_H

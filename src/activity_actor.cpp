@@ -1345,38 +1345,60 @@ std::unique_ptr<activity_actor> bookbinder_copy_activity_actor::deserialize( Jso
     return actor.clone();
 }
 
-void hotwire_car_activity_actor::start( player_activity &act, Character & )
+vehicle *hotwire_car_activity_actor::target_vehicle( Character &who )
 {
+    map &here = get_map();
+    if( vehicle_id == 0 ) {
+        // Legacy saves identified the first part by position. Bind it once, then
+        // use the current operator's control position for access checks.
+        const optional_vpart_position old = here.veh_at( target );
+        if( !old ) {
+            return nullptr;
+        }
+        vehicle_id = old->vehicle().uid().get_value();
+        target = who.pos_abs();
+        for( const vpart_reference &control : old->vehicle().get_avail_parts( "CONTROLS" ) ) {
+            if( rl_dist( control.pos_abs(), who.pos_abs() ) <= 1 ) {
+                target = control.pos_abs();
+                break;
+            }
+        }
+    }
+    vehicle *found = vehicle::find_vehicle_by_uid( here, vehicle_id );
+    return found &&
+           vehicle_control_accessible( who, here, *found, target, "hotwire" ) ? found : nullptr;
+}
+
+void hotwire_car_activity_actor::start( player_activity &act, Character &who )
+{
+    if( !target_vehicle( who ) ) {
+        act.set_to_null();
+        return;
+    }
     act.moves_total = moves_total;
     act.moves_left = moves_total;
 }
 
 void hotwire_car_activity_actor::do_turn( player_activity &act, Character &who )
 {
-    map &here = get_map();
-    if( calendar::once_every( 1_minutes ) ) {
-        bool lost = !here.veh_at( here.get_bub( target ) ).has_value();
-        if( lost ) {
-            act.set_to_null();
-            debugmsg( "Lost ACT_HOTWIRE_CAR target vehicle" );
-        }
-        if( calendar::once_every( 5_minutes ) ) {
-            who.practice( skill_mechanics, 1, 2, true );
-        }
+    if( !target_vehicle( who ) ) {
+        act.set_to_null();
+        return;
+    }
+    if( calendar::once_every( 5_minutes ) ) {
+        who.practice( skill_mechanics, 1, 2, true );
     }
 }
 
 void hotwire_car_activity_actor::finish( player_activity &act, Character &who )
 {
     act.set_to_null();
-
-    map &here = get_map();
-    const optional_vpart_position vp = here.veh_at( here.get_bub( target ) );
-    if( !vp ) {
-        debugmsg( "Lost ACT_HOTWIRE_CAR target vehicle" );
+    vehicle *found = target_vehicle( who );
+    if( !found ) {
         return;
     }
-    vehicle &veh = vp->vehicle();
+    map &here = get_map();
+    vehicle &veh = *found;
 
     int skill = round( who.get_average_skill_level( skill_mechanics ) );
     if( skill > rng( 1, 6 ) ) {
@@ -1406,6 +1428,7 @@ void hotwire_car_activity_actor::serialize( JsonOut &jsout ) const
 
     jsout.member( "target", target );
     jsout.member( "moves_total", moves_total );
+    jsout.member( "vehicle_id", vehicle_id );
 
     jsout.end_object();
 }
@@ -1418,6 +1441,7 @@ std::unique_ptr<activity_actor> hotwire_car_activity_actor::deserialize( JsonVal
 
     data.read( "target", actor.target );
     data.read( "moves_total", actor.moves_total );
+    data.read( "vehicle_id", actor.vehicle_id );
 
     return actor.clone();
 }

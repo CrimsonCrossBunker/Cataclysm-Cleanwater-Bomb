@@ -630,7 +630,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     }
     if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
-        state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" );
+        state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
+                                  who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" );
     }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
@@ -1306,7 +1307,9 @@ bool client_vehicle_control( const vehicle_control_selection &choice )
     if( !is_client_mode() ) {
         return false;
     }
-    player_activity view{ start_engines_activity_actor( 0_seconds, tripoint_rel_ms::zero, false ) };
+    player_activity view = choice.action == "hotwire" ?
+                           player_activity( hotwire_car_activity_actor( 0, choice.position, choice.vehicle_id ) ) :
+                           player_activity( start_engines_activity_actor( 0_seconds, tripoint_rel_ms::zero, false ) );
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
         send_inventory_activity( "start", [&]( JsonOut & out ) {
@@ -1321,26 +1324,45 @@ void client_query_vehicle_control()
 {
     avatar &who = get_avatar();
     map &here = get_map();
-    const optional_vpart_position at = here.veh_at( who.pos_bub() );
-    if( !at ) {
+    vehicle *target = controlled_vehicle( who, here );
+    tripoint_abs_ms position = who.pos_abs();
+    if( target ) {
+        if( resolve_remote_vehicle( who, here ) == target ) {
+            position = target->pos_abs();
+        }
+    } else if( const optional_vpart_position at = here.veh_at( who.pos_bub() ) ) {
+        target = &at->vehicle();
+    }
+    if( !target ) {
         add_msg( _( "No vehicle here to control." ) );
         return;
     }
-    vehicle &target = at->vehicle();
-    std::string action = "take";
-    if( client_ctrl_veh() ) {
-        uilist menu;
-        menu.title = _( "Vehicle controls" );
-        menu.addentry( 0, true, 'r', _( "Let go of controls" ) );
-        menu.addentry( 1, true, 's', _( "Stop driving" ) );
-        menu.addentry( 2, !target.engine_on, 'e', _( "Turn on the engine" ) );
-        menu.query();
-        if( menu.ret < 0 || menu.ret > 2 ) {
-            return;
-        }
-        action = menu.ret == 0 ? "release" : menu.ret == 1 ? "stop_driving" : "start";
+    uilist menu;
+    menu.title = _( "Vehicle controls" );
+    const std::vector<std::pair<std::string, std::string>> options = {
+        { "take", _( "Take control" ) },
+        { "release", _( "Let go of controls" ) },
+        { "stop_driving", _( "Stop driving" ) },
+        {
+            target->engine_on ? "stop" : "start", target->engine_on ?
+            _( "Turn off the engine" ) : _( "Turn on the engine" )
+        },
+        { "engines", _( "Control individual engines" ) },
+        { "hotwire", _( "Hotwire" ) },
+        { "alarm", _( "Trigger the alarm" ) },
+        { "smash_alarm", _( "Try to smash alarm" ) }
+    };
+    for( size_t i = 0; i < options.size(); ++i ) {
+        menu.addentry( i, vehicle_control_accessible( who, here, *target, position, options[i].first ),
+                       MENU_AUTOASSIGN, options[i].second );
     }
-    const auto selection = query_vehicle_control( who, here, target, who.pos_abs(), action );
+    menu.query();
+    if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= options.size() ) {
+        return;
+    }
+    const std::string &action = options[menu.ret].first;
+    const auto selection = action == "engines" ? query_vehicle_engines( who, here, *target, position ) :
+                           query_vehicle_control( who, here, *target, position, action );
     if( selection ) {
         client_vehicle_control( *selection );
     }

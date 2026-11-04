@@ -54,9 +54,11 @@
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
+#include "line.h"
 #include "map_iterator.h"
 #include "mapdata.h"
 #include "skill.h"
+#include "temp_crafting_inventory.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_selector.h"
@@ -4994,9 +4996,13 @@ TEST_CASE( "vehicle_start_client_view_never_executes_native_start",
     who.set_moves( 100 );
     cata_mp::set_client_mode( true );
     const auto before = rng_get_engine();
-    CHECK( cata_mp::client_vehicle_control( control_choice( who, target, "take" ) ) );
+    const bool hotwire = GENERATE( false, true );
+    target.is_locked = hotwire;
+    CHECK( cata_mp::client_vehicle_control( control_choice( who, target,
+                                           hotwire ? "hotwire" : "take" ) ) );
     REQUIRE( cata_mp::inventory_activity_view( who.activity ) );
     who.activity.do_turn( who );
+    CHECK( target.is_locked == hotwire );
     CHECK_FALSE( target.engine_on );
     CHECK_FALSE( who.controlling_vehicle );
     CHECK( rng_get_engine() == before );
@@ -5311,4 +5317,283 @@ TEST_CASE( "remote_driving_feedback_and_sinking_do_not_depend_on_the_host",
         CHECK_FALSE( who.controlling_vehicle );
         CHECK( vehicle::find_vehicle_by_uid( here, id ) == nullptr );
     }
+}
+
+TEST_CASE( "owned_hotwire_uses_operator_skill_time_save_and_replay",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    target.is_locked = true;
+    who.i_add( item( itype_id( "screwdriver" ) ) );
+    who.set_skill_level( skill_id( "mechanics" ), 8 );
+    who.set_moves( 100 );
+    avatar &host = get_avatar();
+    host.setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    const int host_moves = host.get_moves();
+    const std::string request = control_request( fixture, who, control_choice( who, target, "hotwire" ) );
+    fixture.run( who, request );
+    REQUIRE( who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK( who.activity.moves_total == to_moves<int>( 750_seconds ) );
+    save_reload_activity( who );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( who.activity.moves_left == to_moves<int>( 750_seconds ) - 100 );
+    CHECK( target.is_locked );
+    CHECK( host.get_moves() == host_moves );
+    CHECK_FALSE( host.activity );
+    who.set_moves( who.activity.moves_left );
+    const std::string finish = fixture.request( who, "step" );
+    fixture.run( who, finish );
+    REQUIRE_FALSE( who.activity );
+    CHECK_FALSE( target.is_locked );
+    CHECK_FALSE( target.engine_on );
+    const auto after = rng_get_engine();
+    fixture.run( who, finish );
+    CHECK( rng_get_engine() == after );
+}
+
+TEST_CASE( "owned_hotwire_cancels_lost_tools_controls_and_replaced_vehicles",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    target.is_locked = true;
+    // Prototype cargo can supply extra screwdrivers. This case removes the
+    // only available tool, rather than merely the operator's personal one.
+    for( const vpart_reference &part : target.get_avail_parts( "CARGO" ) ) {
+        target.get_items( part.part() ).clear();
+    }
+    item_location tool = who.i_add( item( itype_id( "screwdriver" ) ) );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "hotwire" ) ) );
+    REQUIRE( who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) );
+    SECTION( "tool removed" ) {
+        tool.remove_item();
+        who.invalidate_crafting_inventory();
+        REQUIRE_FALSE( who.crafting_inventory( &here ).has_quality( quality_id( "SCREW" ) ) );
+    }
+    SECTION( "operator moved away" ) {
+        who.setpos( here, tripoint_bub_ms( 80, 80, 0 ) );
+    }
+    SECTION( "controls destroyed" ) {
+        const int controls = target.avail_part_with_feature( here.veh_at( who.pos_bub() )->part_index(),
+                             VPFLAG_CONTROLS );
+        REQUIRE( controls >= 0 );
+        target.set_hp( target.part( controls ), 0, false );
+    }
+    SECTION( "vehicle replaced at the same coordinates" ) {
+        const tripoint_bub_ms position = target.pos_bub( here );
+        here.destroy_vehicle( &target );
+        vehicle &replacement = owned_test_vehicle( who, position );
+        replacement.is_locked = true;
+        save_reload_activity( who );
+    }
+    who.set_moves( 1000000 );
+    const auto before = rng_get_engine();
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( rng_get_engine() == before );
+    for( const wrapped_vehicle &entry : here.get_vehicles() ) {
+        CHECK( entry.v->is_locked );
+        CHECK_FALSE( entry.v->engine_on );
+    }
+}
+
+TEST_CASE( "owned_engine_configuration_validates_all_choices_before_applying",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    REQUIRE_FALSE( target.engines.empty() );
+    vehicle_part &engine = target.part( target.engines.front() );
+    engine.enabled = true;
+    target.engine_on = true;
+    vehicle_control_selection selection = control_choice( who, target, "engines" );
+    selection.engines.push_back( { engine.get_base().uid().get_value(), engine.fuel_current().str(), false } );
+    SECTION( "stale part after a valid choice" ) {
+        selection.engines.push_back( { std::numeric_limits<int64_t>::max(), engine.fuel_current().str(), false } );
+    }
+    SECTION( "duplicate part" ) {
+        selection.engines.push_back( selection.engines.front() );
+    }
+    SECTION( "unsupported fuel" ) {
+        selection.engines.front().fuel = "water_clean";
+    }
+    SECTION( "wrong vehicle identity" ) {
+        ++selection.vehicle_id;
+    }
+    const auto before = rng_get_engine();
+    fixture.run( who, control_request( fixture, who, selection ) );
+    CHECK( engine.enabled );
+    CHECK( target.engine_on );
+    CHECK_FALSE( who.activity );
+    CHECK( rng_get_engine() == before );
+}
+
+TEST_CASE( "owned_engine_configuration_stops_all_and_restarts_with_native_time",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    get_avatar().setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    vehicle_control_selection selection = control_choice( who, target, "engines" );
+    for( const int index : target.engines ) {
+        vehicle_part &part = target.part( index );
+        part.enabled = true;
+        selection.engines.push_back( { part.get_base().uid().get_value(), part.fuel_current().str(), false } );
+    }
+    REQUIRE_FALSE( selection.engines.empty() );
+    target.engine_on = true;
+    const std::string disable = control_request( fixture, who, selection );
+    fixture.run( who, disable );
+    CHECK_FALSE( target.engine_on );
+    CHECK_FALSE( who.activity );
+    for( const int index : target.engines ) {
+        CHECK_FALSE( target.part( index ).enabled );
+    }
+    fixture.run( who, disable );
+    CHECK_FALSE( target.engine_on );
+    selection.engines.front().enabled = true;
+    const int battery = target.fuel_left( here, itype_id( "battery" ) );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, selection ) );
+    REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    CHECK_FALSE( target.engine_on );
+    CHECK( target.fuel_left( here, itype_id( "battery" ) ) == battery );
+    CHECK_FALSE( get_avatar().activity );
+    save_reload_activity( who );
+    who.set_moves( 100000 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( target.engine_on );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "obsolete_vehicle_toggles_cannot_upload_state_or_change_engines",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    g->multiplayer_session().host_mode = true;
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    here.board_vehicle( who.pos_bub(), &who );
+    who.controlling_vehicle = true;
+    target.engine_on = true;
+    const int strength = who.get_str_base();
+    const auto before = rng_get_engine();
+    for( const char *action : { "control_vehicle", "stop_engine", "toggle_engine" } ) {
+        next_test_remote_turn( recipient );
+        const std::string wire = test_granted_action( std::string( "{\"action\":\"" ) + action +
+                                 "\",\"char_stats\":{\"str\":999}}", recipient.turn.grant_seq );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", wire,
+                                                recipient.admission } ) );
+        cata_mp::process_mp_events();
+        CHECK( target.engine_on );
+        CHECK( who.in_vehicle );
+        CHECK( who.controlling_vehicle );
+        CHECK( who.get_str_base() == strength );
+        CHECK_FALSE( who.activity );
+    }
+    CHECK( rng_get_engine() == before );
+}
+
+TEST_CASE( "vehicle_alarm_operations_use_the_actual_operator",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    const int controls = target.avail_part_with_feature( here.veh_at( who.pos_bub() )->part_index(),
+                         VPFLAG_CONTROLS );
+    REQUIRE( controls >= 0 );
+    if( !target.has_security_working( here ) ) {
+        REQUIRE( target.install_part( here, target.part( controls ).mount,
+                                      vpart_id( "vehicle_alarm" ) ) >= 0 );
+    }
+    REQUIRE( target.has_security_working( here ) );
+    get_avatar().set_skill_level( skill_id( "mechanics" ), 0 );
+    who.set_skill_level( skill_id( "mechanics" ), 10 );
+    target.is_locked = false;
+    target.is_alarm_on = false;
+    const auto unlocked_rng = rng_get_engine();
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "alarm" ) ) );
+    CHECK_FALSE( target.is_alarm_on );
+    CHECK( rng_get_engine() == unlocked_rng );
+    target.is_locked = true;
+    const auto count = recipient.feedback.pending.size();
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "alarm" ) ) );
+    REQUIRE( target.is_alarm_on );
+    CHECK( recipient.feedback.pending.size() > count );
+    const int controls_hp = target.part( controls ).hp();
+    // Select a roll where a skilled operator stops the alarm, but the unskilled
+    // host would damage the controls.  Keep this independent of setup RNG use.
+    auto alarm_rng = rng_get_engine();
+    bool selected_roll = false;
+    for( int attempt = 0; attempt < 100 && !selected_roll; ++attempt ) {
+        alarm_rng = rng_get_engine();
+        const int roll = rng( 1, 100 );
+        selected_roll = roll >= 10 && roll <= 20;
+    }
+    REQUIRE( selected_roll );
+    rng_get_engine() = alarm_rng;
+    const std::string request = control_request( fixture, who, control_choice( who, target, "smash_alarm" ) );
+    fixture.run( who, request );
+    CHECK_FALSE( target.is_alarm_on );
+    CHECK( target.part( controls ).hp() == controls_hp );
+    CHECK( target.is_locked );
+    const auto after = rng_get_engine();
+    fixture.run( who, request );
+    CHECK( rng_get_engine() == after );
+}
+
+TEST_CASE( "legacy_hotwire_save_binds_nearby_controls_to_vehicle_identity",
+           "[multiplayer][vehicle_menu_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    target.is_locked = true;
+    who.i_add( item( itype_id( "screwdriver" ) ) );
+    who.set_skill_level( skill_id( "mechanics" ), 8 );
+    const tripoint_abs_ms controls = who.pos_abs();
+    bool adjacent = false;
+    for( const tripoint_abs_ms &position : target.get_points() ) {
+        if( rl_dist( controls, position ) == 1 ) {
+            who.setpos( here, here.get_bub( position ) );
+            adjacent = true;
+            break;
+        }
+    }
+    REQUIRE( adjacent );
+    std::ostringstream stream;
+    JsonOut out( stream );
+    out.start_object();
+    out.member( "target", target.pos_abs() );
+    out.member( "moves_total", 100 );
+    out.end_object();
+    JsonValue value = json_loader::from_string( stream.str() );
+    const auto actor = hotwire_car_activity_actor::deserialize( value );
+    player_activity activity( *actor );
+    actor->start( activity, who );
+    REQUIRE( activity );
+    CHECK( activity.moves_left == 100 );
+    actor->finish( activity, who );
+    CHECK_FALSE( target.is_locked );
 }
