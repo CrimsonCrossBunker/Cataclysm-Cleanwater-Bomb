@@ -26,6 +26,7 @@
 #include "input_context.h"
 #include "input_enums.h"
 #include "inventory.h"
+#include "mp_inventory_activity.h"
 #include "item.h"
 #include "item_location.h"
 #include "localized_comparator.h"
@@ -956,7 +957,7 @@ void avatar::power_bionics()
                     ui.mark_resize();
                     if( tmp->powered ) {
                         deactivate_bionic( bio );
-                        if( bio_data.deactivated_close_ui ) {
+                        if( bio_data.deactivated_close_ui || cata_mp::inventory_activity_view( activity ) ) {
                             ui.reset();
                             break;
                         }

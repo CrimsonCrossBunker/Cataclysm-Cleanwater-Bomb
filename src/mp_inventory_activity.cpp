@@ -339,7 +339,7 @@ bool begin_client_inventory_activity( const activity_actor &actor )
     return begin_client_inventory_activity( player_activity( actor ) );
 }
 
-bool start_bionic_activation( Character &who, const JsonObject &request )
+bool start_bionic_action( Character &who, const JsonObject &request, bionic_action action )
 {
     const int64_t uid = request.get_int64( "bionic_uid" );
     if( uid <= 0 || uid > std::numeric_limits<unsigned int>::max() ) {
@@ -347,10 +347,11 @@ bool start_bionic_activation( Character &who, const JsonObject &request )
     }
     bionic_activation_choices choices;
     tripoint_abs_ms target;
-    request.read( "target", target, true );
-    choices.target = target;
-    return execute_owned_bionic_activation( who, static_cast<unsigned int>( uid ),
-                                            bionic_id( request.get_string( "bionic_type" ) ), choices );
+    if( request.read( "target", target ) ) {
+        choices.target = target;
+    }
+    return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ),
+                                        bionic_id( request.get_string( "bionic_type" ) ), choices, action );
 }
 
 bool start_item_use( Character &who, map &here, const JsonObject &request,
@@ -622,7 +623,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             const std::string kind = request.get_string( "kind", "reload" );
             state.tracks_crafting = kind == "craft" || kind == "craft_resume";
             state.tracks_item_use = kind == "item_use" || kind == "auto_mine" || kind == "examine_pry" ||
-                                    kind == "bionic_activation";
+                                    kind == "bionic_activation" || kind == "bionic_deactivation";
             if( !who.activity ) {
                 state.automatic_mining_target.reset();
             }
@@ -632,8 +633,9 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                                 state.tracks_item_use;
             state.tracks_needs = state.tracks_needs || construction_request;
             state.healing_patient = character_id();
-            if( kind == "bionic_activation" ) {
-                start_bionic_activation( who, request );
+            if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
+                start_bionic_action( who, request, kind == "bionic_activation" ?
+                                     bionic_action::activate : bionic_action::deactivate );
             } else if( state.tracks_item_use ) {
                 start_item_use( who, here, request, state, kind );
             } else if( kind == "reload" ) {
@@ -1180,30 +1182,36 @@ static bool client_activate_item_impl( const item_location &source, std::string 
     return true;
 }
 
-std::optional<bool> client_activate_bionic( const bionic &bio,
+namespace
+{
+std::optional<bool> client_bionic_action( const bionic &bio, bionic_action action,
         const bionic_activation_choices *choices )
 {
-    if( !is_client_mode() || !bionic_requires_adjacent_target( bio.id ) ) {
+    if( !is_client_mode() ) {
         return std::nullopt;
     }
     avatar &who = get_avatar();
+    const character_action_guard lifetime( who );
     if( is_client_waiting_for_ack() || who.get_moves() <= 0 ||
         g->multiplayer_session().client_inventory_activity.active ) {
         return true;
     }
-    if( !supports_owned_bionic_activation( bio ) ) {
+    if( !supports_owned_bionic_action( bio, action ) ) {
         add_msg( m_info,
-                 _( "This bionic's additional activation choices are not supported in multiplayer yet." ) );
+                 _( "This bionic action is not supported in multiplayer yet." ) );
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const unsigned int uid = bio.get_uid();
     const bionic_id type = bio.id;
-    const auto selected = choices ? std::make_optional( *choices ) :
-                          query_bionic_activation_choices( who, bio );
-    const auto current = who.find_bionic_by_uid( uid );
+    const auto selected = action == bionic_action::deactivate ?
+                          std::make_optional( bionic_activation_choices{} ) :
+                          choices ? std::make_optional( *choices ) : query_bionic_activation_choices( who, bio );
+    const auto current = lifetime ? who.find_bionic_by_uid( uid ) : std::nullopt;
     if( !selected || !current || ( *current )->id != type ||
-        !valid_bionic_activation_choices( who, **current, *selected ) ) {
+        !supports_owned_bionic_action( **current, action ) ||
+        ( action == bionic_action::activate &&
+          !valid_bionic_activation_choices( who, **current, *selected ) ) ) {
         return false;
     }
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
@@ -1212,12 +1220,27 @@ std::optional<bool> client_activate_bionic( const bionic &bio,
         return true;
     }
     send_inventory_activity( "start", [&]( JsonOut & out ) {
-        out.member( "kind", "bionic_activation" );
+        out.member( "kind", action == bionic_action::activate ? "bionic_activation" :
+                    "bionic_deactivation" );
         out.member( "bionic_uid", uid );
         out.member( "bionic_type", type );
-        out.member( "target", *selected->target );
+        if( selected->target ) {
+            out.member( "target", *selected->target );
+        }
     } );
     return true;
+}
+} // namespace
+
+std::optional<bool> client_activate_bionic( const bionic &bio,
+        const bionic_activation_choices *choices )
+{
+    return client_bionic_action( bio, bionic_action::activate, choices );
+}
+
+std::optional<bool> client_deactivate_bionic( const bionic &bio )
+{
+    return client_bionic_action( bio, bionic_action::deactivate, nullptr );
 }
 
 bool client_activate_item( const item_location &source, std::string &method,
