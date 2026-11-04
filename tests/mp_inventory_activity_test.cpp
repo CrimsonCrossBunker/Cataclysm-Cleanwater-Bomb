@@ -6449,3 +6449,295 @@ TEST_CASE( "planter_enabling_reads_the_operator_environment_instead_of_the_host"
     CHECK( rng_get_engine() == rng );
     CHECK( weather_generator::current_winddir == wind );
 }
+
+namespace
+{
+struct appliance_fixture : vehicle_control_fixture {
+    restore_on_out_of_scope<time_point> saved_turn{ calendar::turn };
+    appliance_fixture() {
+        calendar::turn = calendar::turn_zero + 1_days;
+    }
+};
+
+int install_test_appliance( Character &who, vehicle &target, const std::string &type )
+{
+    map &here = get_map();
+    const point_rel_ms mount = next_electronic_mount( target );
+    if( vpart_id( type )->location.str() != "structure" ) {
+        REQUIRE( target.install_part( here, mount, vpart_id( "frame" ) ) >= 0 );
+    }
+    const auto allowed = target.can_mount( mount, vpart_id( type ).obj() );
+    INFO( allowed.str() );
+    REQUIRE( allowed.success() );
+    const int index = target.install_part( here, mount, vpart_id( type ) );
+    REQUIRE( index >= 0 );
+    target.part( index ).enabled = false;
+    here.add_vehicle_to_cache( &target );
+    who.setpos( here, here.get_bub( target.abs_part_pos( target.part( index ) ) ) + tripoint_rel_ms( 0, 1, 0 ) );
+    who.set_moves( 100 );
+    return index;
+}
+
+void fill_appliance_water( vehicle &target, const itype_id &type = itype_id( "water" ) )
+{
+    for( const int index : target.fuel_containers ) {
+        if( target.part( index ).is_tank() ) {
+            target.part( index ).ammo_set( type, 100 );
+            break;
+        }
+    }
+    REQUIRE( target.fuel_left( get_map(), type ) == 100 );
+}
+
+vehicle_control_selection appliance_choice( Character &who, vehicle &target, int part,
+        bool enabled, bool detergent = false, usage_from from = usage_from::player )
+{
+    auto choice = control_choice( who, target, "appliance" );
+    choice.position = target.abs_part_pos( target.part( part ) );
+    choice.appliance = vehicle_appliance_selection{};
+    choice.appliance->part_id = target.part( part ).get_base().uid().get_value();
+    choice.appliance->enabled = enabled;
+    if( detergent ) {
+        choice.appliance->detergent = comp_selection<item_comp>{from, item_comp( itype_id( "detergent" ), 5 )};
+    }
+    return choice;
+}
+
+void add_dirty_cargo( vehicle &target, int part, const itype_id &type = itype_id( "tshirt" ) )
+{
+    item cargo( type, calendar::turn );
+    cargo.set_flag( flag_FILTHY );
+    cargo.set_age( 30_minutes );
+    REQUIRE( target.add_item( get_map(), target.part( part ), cargo ) );
+}
+} // namespace
+
+TEST_CASE( "owned_washer_uses_operator_supplies_and_never_duplicates_start_costs",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "washing_machine" );
+    fill_appliance_water( target );
+    add_dirty_cargo( target, machine );
+    who.i_add( item( itype_id( "detergent" ), calendar::turn, 10 ) );
+    // Adding supplies can wield them and spend the fixture's initial moves.
+    who.set_moves( 100 );
+    get_avatar().i_add( item( itype_id( "detergent" ), calendar::turn, 20 ) );
+    const auto rng = rng_get_engine();
+    const auto query = query_vehicle_appliance( who, get_map(), target,
+                       target.abs_part_pos( target.part( machine ) ), target.part( machine ).get_base().uid().get_value() );
+    REQUIRE( query );
+    REQUIRE( query->appliance );
+    REQUIRE( query->appliance->detergent );
+    REQUIRE( valid_vehicle_appliance_selection( who, get_map(), target, query->position, *query->appliance ) );
+    CHECK_FALSE( target.part( machine ).enabled );
+    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 100 );
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == 10 );
+    CHECK( rng_get_engine() == rng );
+    const auto request = control_request( fixture, who, *query );
+    fixture.run( who, request );
+    CHECK( target.part( machine ).enabled );
+    CHECK( target.get_items( target.part( machine ) ).only_item().age() == 0_turns );
+    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 76 );
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == 5 );
+    CHECK( get_avatar().charges_of( itype_id( "detergent" ) ) == 20 );
+    CHECK_FALSE( recipient.feedback.pending.empty() );
+    fixture.run( who, request );
+    // A new request with the same desired state is also a harmless no-op.
+    fixture.run( who, control_request( fixture, who, *query ) );
+    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 76 );
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == 5 );
+    fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, false ) ) );
+    CHECK_FALSE( target.part( machine ).enabled );
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == 5 );
+}
+
+TEST_CASE( "owned_washer_rejects_forged_or_stale_choices_without_consuming_resources",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "washing_machine" );
+    fill_appliance_water( target );
+    add_dirty_cargo( target, machine );
+    who.i_add( item( itype_id( "detergent" ), calendar::turn, 5 ) );
+    // Adding supplies can wield them and spend the fixture's initial moves.
+    who.set_moves( 100 );
+    get_avatar().i_add( item( itype_id( "detergent" ), calendar::turn, 20 ) );
+    auto choice = appliance_choice( who, target, machine, true, true );
+    SECTION( "only the host has detergent" ) {
+        who.use_charges( itype_id( "detergent" ), 5 );
+    }
+    SECTION( "wrong quantity" ) {
+        choice.appliance->detergent->comp.count = 0;
+    }
+    SECTION( "wrong material" ) {
+        choice.appliance->detergent->comp.type = itype_id( "water" );
+    }
+    SECTION( "invalid source" ) {
+        choice.appliance->detergent->use_from = usage_from::none;
+    }
+    SECTION( "operator left" ) {
+        who.setpos( get_map(), tripoint_bub_ms( 100, 100, 0 ) );
+    }
+    SECTION( "operator has no moves" ) {
+        who.set_moves( 0 );
+    }
+    SECTION( "locked vehicle" ) {
+        target.is_locked = true;
+    }
+    SECTION( "replacement machine" ) {
+        const point_rel_ms mount = target.part( machine ).mount;
+        target.remove_part( target.part( machine ) );
+        REQUIRE( target.install_part( get_map(), mount, vpart_id( "washing_machine" ) ) >= 0 );
+    }
+    const int detergent = who.charges_of( itype_id( "detergent" ) );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK_FALSE( target.part( machine ).enabled );
+    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 100 );
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == detergent );
+    CHECK( get_avatar().charges_of( itype_id( "detergent" ) ) == 20 );
+}
+
+TEST_CASE( "owned_dishwasher_preserves_content_rules_and_mixed_source_selection",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "dishwasher" );
+    fill_appliance_water( target, itype_id( "water_clean" ) );
+    const bool soft = GENERATE( false, true );
+    add_dirty_cargo( target, machine, itype_id( soft ? "tshirt" : "bio_power_storage" ) );
+    who.i_add( item( itype_id( "detergent" ), calendar::turn, 2 ) );
+    // Adding supplies can wield them and spend the fixture's initial moves.
+    who.set_moves( 100 );
+    get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "detergent" ), calendar::turn, 3 ) );
+    fixture.run( who, control_request( fixture, who,
+                                      appliance_choice( who, target, machine, true, true, usage_from::both ) ) );
+    CHECK( target.part( machine ).enabled == !soft );
+    CHECK( target.fuel_left( get_map(), itype_id( "water_clean" ) ) == ( soft ? 100 : 76 ) );
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == ( soft ? 2 : 0 ) );
+    CHECK( get_map().i_at( who.pos_bub() ).empty() == !soft );
+}
+
+TEST_CASE( "owned_autoclave_preserves_sterilization_preconditions",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "autoclave" );
+    fill_appliance_water( target );
+    item cbm( itype_id( "bio_power_storage" ), calendar::turn );
+    cbm.unset_flag( flag_FILTHY );
+    cbm.unset_flag( flag_id( "NO_PACKED" ) );
+    cbm.set_age( 30_minutes );
+    bool valid = true;
+    SECTION( "packed CBM" ) {}
+    SECTION( "unpacked CBM" ) {
+        cbm.set_flag( flag_id( "NO_PACKED" ) );
+        valid = false;
+    }
+    SECTION( "filthy CBM" ) {
+        cbm.set_flag( flag_FILTHY );
+        valid = false;
+    }
+    REQUIRE( target.add_item( get_map(), target.part( machine ), cbm ) );
+    fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, true ) ) );
+    CHECK( target.part( machine ).enabled == valid );
+    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == ( valid ? 92 : 100 ) );
+    CHECK( target.get_items( target.part( machine ) ).only_item().age() == ( valid ? 0_turns : 30_minutes ) );
+}
+
+TEST_CASE( "owned_cooker_checks_power_and_resets_nested_food_progress",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "app_electric_cooker" );
+    item food( itype_id( "meat" ), calendar::turn );
+    food.set_var( "cook_energy_done", "123" );
+    item jar( itype_id( "jar_glass_sealed" ), calendar::turn );
+    REQUIRE( jar.put_in( food, pocket_type::CONTAINER ).success() );
+    REQUIRE( target.add_item( get_map(), target.part( machine ), jar ) );
+    const bool powered = GENERATE( false, true );
+    if( !powered ) {
+        target.discharge_battery( get_map(), target.fuel_left( get_map(), itype_id( "battery" ) ) );
+    }
+    fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, true ) ) );
+    CHECK( target.part( machine ).enabled == powered );
+    const item &stored = target.get_items( target.part( machine ) ).only_item();
+    const item *raw = stored.all_items_top( pocket_type::CONTAINER ).front();
+    CHECK( raw->get_var( "cook_energy_done" ) == ( powered ? "0" : "123" ) );
+}
+
+TEST_CASE( "owned_weather_station_start_and_cancel_reuse_native_timer",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "veh_mobile_weather_station" );
+    const auto start = control_request( fixture, who, appliance_choice( who, target, machine, true ) );
+    fixture.run( who, start );
+    CHECK( target.part( machine ).enabled );
+    REQUIRE( target.get_items( target.part( machine ) ).size() == 1 );
+    CHECK( target.get_items( target.part( machine ) ).only_item().typeId() == itype_id( "mws_weather_data_incomplete" ) );
+    CHECK( target.get_items( target.part( machine ) ).only_item().age() == 0_turns );
+    fixture.run( who, start );
+    CHECK( target.get_items( target.part( machine ) ).size() == 1 );
+    fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, false ) ) );
+    CHECK_FALSE( target.part( machine ).enabled );
+}
+
+TEST_CASE( "owned_boiler_outside_its_dimension_never_destroys_cargo",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "ap_nl_safehouse_boiler" );
+    REQUIRE( target.add_item( get_map(), target.part( machine ), item( itype_id( "rock" ), calendar::turn ) ) );
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, true ) ) );
+    CHECK( target.get_items( target.part( machine ) ).size() == 1 );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+}
+
+TEST_CASE( "native_appliance_callback_uses_owned_command_and_stable_hardware_identity",
+           "[multiplayer][vehicle_appliance_owned]" )
+{
+    appliance_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &target = electronic_vehicle( who );
+    const int machine = install_test_appliance( who, target, "washing_machine" );
+    fill_appliance_water( target );
+    add_dirty_cargo( target, machine );
+    who.i_add( item( itype_id( "detergent" ), calendar::turn, 10 ) );
+    // Adding supplies can wield them and spend the fixture's initial moves.
+    who.set_moves( 100 );
+    veh_menu menu( target, "appliances" );
+    add_vehicle_appliance_menu( menu, get_map(), target, target.abs_part_pos( target.part( machine ) ) );
+    const auto entries = menu.get_items();
+    REQUIRE( entries.size() == 1 );
+    CHECK_FALSE( target.part( machine ).enabled );
+    const bool removed = GENERATE( false, true );
+    if( removed ) {
+        target.remove_part( target.part( machine ) );
+    }
+    entries.front()._on_submit();
+    CHECK( who.charges_of( itype_id( "detergent" ) ) == ( removed ? 10 : 5 ) );
+    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == ( removed ? 100 : 76 ) );
+}
