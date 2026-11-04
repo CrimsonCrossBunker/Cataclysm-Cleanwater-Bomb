@@ -196,7 +196,7 @@
       "PRIORITIZE_TARGETS",
       "FIREPROOF"
     ],
-    "armor": { "bash": 30, "cut": 50, "bullet": 60, "fcl_laser": 30, "fcl_plasma": 20, "electric": 10 }
+    "armor": { "bash": 30, "cut": 50, "bullet": 60, "heat": 10, "electric": 10 }
   },
   {
     "id": "mon_medibot",
@@ -276,7 +276,7 @@
     "death_function": { "corpse_type": "BROKEN" },
     "death_drops": { "groups": [ [ "broken_robots", 3 ] ] },
     "flags": [ "SEES", "HEARS", "ELECTRONIC", "BIOLOGICALPROOF", "NO_BREATHE", "PRIORITIZE_TARGETS", "PATH_AVOID_DANGER" ],
-    "armor": { "bash": 15, "cut": 20, "bullet": 30, "fcl_laser": 10 }
+    "armor": { "bash": 15, "cut": 20, "bullet": 30, "heat": 10 }
   },
   {
     "id": "mon_utilibot_const",
