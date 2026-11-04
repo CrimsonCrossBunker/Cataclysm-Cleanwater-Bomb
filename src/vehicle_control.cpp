@@ -1,6 +1,7 @@
 #include "vehicle_control.h"
 
 #include <charconv>
+#include <cstdlib>
 #include <string>
 #include <system_error>
 
@@ -16,6 +17,8 @@
 #include "translations.h"
 #include "map.h"
 #include "line.h"
+#include "npc.h"
+#include "rng.h"
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -114,6 +117,128 @@ vehicle *get_remote_vehicle( Character &who, map &here )
         set_remote_vehicle( who, here, nullptr );
     }
     return target;
+}
+
+Character *vehicle_operator( const vehicle &target, map &here )
+{
+    if( Character *driver = target.get_driver( here ) ) {
+        if( !driver->is_dead_state() ) {
+            return driver;
+        }
+    }
+    // Most parked vehicles cannot be remotely controlled. Do not walk the
+    // character list (or anyone's inventory) for those vehicles.
+    if( empty( target.get_avail_parts( "REMOTE_CONTROLS" ) ) ) {
+        return nullptr;
+    }
+    Character &avatar = get_player_character();
+    if( !avatar.is_dead_state() && resolve_remote_vehicle( avatar, here ) == &target ) {
+        return &avatar;
+    }
+    for( npc &candidate : g->all_npcs() ) {
+        if( !candidate.is_dead_state() && resolve_remote_vehicle( candidate, here ) == &target ) {
+            return &candidate;
+        }
+    }
+    return nullptr;
+}
+
+vehicle *controlled_vehicle( const Character &who, map &here )
+{
+    if( who.is_dead_state() ) {
+        return nullptr;
+    }
+    vehicle *target = resolve_remote_vehicle( who, here );
+    if( !target ) {
+        target = veh_pointer_or_null( here.veh_at( who.pos_bub() ) );
+    }
+    return target && vehicle_operator( *target, here ) == &who ? target : nullptr;
+}
+
+bool drive_vehicle( Character &who, map &here, const tripoint_rel_ms &input )
+{
+    if( input.x() < -1 || input.x() > 1 || input.y() < -1 || input.y() > 1 ||
+        input.z() < -1 || input.z() > 1 || input == tripoint_rel_ms::zero ||
+        ( input.z() != 0 && ( input.x() != 0 || input.y() != 0 ) ) ) {
+        return false;
+    }
+    vehicle *target = controlled_vehicle( who, here );
+    if( !target ) {
+        who.controlling_vehicle = false;
+        who.add_msg_if_player( m_info, _( "You cannot operate these vehicle controls right now." ) );
+        return false;
+    }
+    if( target->is_on_ramp && input.x() != 0 ) {
+        who.add_msg_if_player( m_bad, _( "You can't turn the vehicle while on a ramp." ) );
+        return false;
+    }
+    if( input.z() != 0 ) {
+        if( !target->can_control_in_air( who ) ) {
+            who.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle fly." ) );
+            return false;
+        }
+        if( !target->is_flyable() ) {
+            who.add_msg_if_player( m_info, _( "This vehicle doesn't look very airworthy." ) );
+            return false;
+        }
+        if( input.z() < 0 ) {
+            if( !target->check_heli_descend( here, who ) ) {
+                return false;
+            }
+            who.add_msg_if_player( m_info, _( "You steer the vehicle into a descent." ) );
+        } else {
+            if( !target->check_heli_ascend( here, who ) ) {
+                return false;
+            }
+            who.add_msg_if_player( m_info, _( "You steer the vehicle into an ascent." ) );
+        }
+    }
+    if( !target->is_flying_in_air() && !target->can_control_on_land( who ) ) {
+        who.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle move." ) );
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    target->pldrive( here, who, input.x(), input.y(), input.z() );
+    return true;
+}
+
+bool adjust_vehicle_cruise( Character &who, map &here, int direction )
+{
+    if( direction < -1 || direction > 1 ) {
+        return false;
+    }
+    vehicle *target = controlled_vehicle( who, here );
+    if( !target || ( !target->is_flying_in_air() && !target->can_control_on_land( who ) ) ) {
+        return false;
+    }
+    target->cruise_thrust( here, -direction * 400 );
+    return true;
+}
+
+bool brake_vehicle( Character &who, map &here )
+{
+    vehicle *target = controlled_vehicle( who, here );
+    if( !target ) {
+        return false;
+    }
+    who.add_msg_player_or_npc( _( "You pull a handbrake." ), _( "<npcname> pulls a handbrake." ) );
+    target->cruise_velocity = 0;
+    if( target->last_turn != 0_degrees && rng( 15, 60 ) * 100 < std::abs( target->velocity ) ) {
+        target->skidding = true;
+        who.add_msg_player_or_npc( m_warning, _( "You lose control of %s." ),
+                                   _( "<npcname> loses control of %s." ), target->name );
+        target->turn( target->last_turn > 0_degrees ? 60_degrees : -60_degrees );
+    } else {
+        const int braking_power = std::abs( target->velocity ) / 2 + 1000;
+        if( std::abs( target->velocity ) < braking_power ) {
+            target->stop( here );
+        } else {
+            const int sign = target->velocity > 0 ? 1 : -1;
+            target->velocity = sign * ( std::abs( target->velocity ) - braking_power );
+        }
+    }
+    who.set_moves( 0 );
+    return true;
 }
 
 void vehicle_control_selection::serialize( JsonOut &out ) const

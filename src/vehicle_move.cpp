@@ -1,4 +1,6 @@
 #include "vehicle.h" // IWYU pragma: associated
+#include "vehicle_control.h"
+#include "character_action_guard.h"
 
 #include <algorithm>
 #include <array>
@@ -205,20 +207,23 @@ void vehicle::smart_controller_handle_turn( map &here,
             vp.part().enabled = false;
         }
 
-        if( player_is_driving_this_veh( &here ) ) {
+        if( Character *operator_character = vehicle_operator( *this, here ) ) {
             if( aircraft ) {
-                add_msg( _( "Smart controller does not support flying vehicles." ) );
+                operator_character->add_msg_if_player( _( "Smart controller does not support flying vehicles." ) );
             } else if( c_engines.empty() ) {
                 //TODO: make translation
-                add_msg( _( "Smart controller can not detect any controllable engine." ) );
+                operator_character->add_msg_if_player(
+                    _( "Smart controller can not detect any controllable engine." ) );
             } else if( c_engines.size() == 1 ) {
                 //TODO: make translation
-                add_msg( _( "Smart controller detects only a single electric engine." ) );
-                add_msg( _( "An electric engine does not need optimization." ) );
+                operator_character->add_msg_if_player(
+                    _( "Smart controller detects only a single electric engine." ) );
+                operator_character->add_msg_if_player( _( "An electric engine does not need optimization." ) );
             } else {
-                add_msg( _( "Smart controller does not support more than five engines." ) );
+                operator_character->add_msg_if_player(
+                    _( "Smart controller does not support more than five engines." ) );
             }
-            add_msg( m_bad, _( "Smart controller is shutting down." ) );
+            operator_character->add_msg_if_player( m_bad, _( "Smart controller is shutting down." ) );
         }
         has_enabled_smart_controller = false;
         smart_controller_state = std::nullopt;
@@ -324,7 +329,7 @@ void vehicle::smart_controller_handle_turn( map &here,
     // turn on/off combustion engines when necessary
     if( !has_electric_engine ) {
         if( !discharge_forbidden_soft && is_stationary && engine_on && !autopilot_on &&
-            !player_is_driving_this_veh( &here ) ) {
+            !vehicle_operator( *this, here ) && !tags.count( "IN_CONTROL_OVERRIDE" ) ) {
             stop_engines( here );
             sfx::do_vehicle_engine_sfx();
             // temporary solution
@@ -435,9 +440,9 @@ void vehicle::smart_controller_handle_turn( map &here,
             for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) ) {
                 vp.part().enabled = false;
             }
-            if( player_is_driving_this_veh( &here ) ) {
-                add_msg( m_bad, _( "Smart controller failed to start an engine." ) );
-                add_msg( m_bad, _( "Smart controller is shutting down." ) );
+            if( Character *operator_character = vehicle_operator( *this, here ) ) {
+                operator_character->add_msg_if_player( m_bad, _( "Smart controller failed to start an engine." ) );
+                operator_character->add_msg_if_player( m_bad, _( "Smart controller is shutting down." ) );
             }
             has_enabled_smart_controller = false;
 
@@ -473,7 +478,8 @@ void vehicle::thrust( map &here, int thd, int z )
         turn_dir = face.dir();
         stop( here );
     }
-    bool pl_ctrl = player_is_driving_this_veh( &here );
+    const safe_reference<vehicle> lifetime = get_safe_reference();
+    Character *operator_character = vehicle_operator( *this, here );
 
     // No need to change velocity if there are no wheels
     if( ( is_watercraft() && can_float( here ) ) || ( is_aircraft( here ) && ( z != 0 ||
@@ -481,14 +487,14 @@ void vehicle::thrust( map &here, int thd, int z )
         // we're good
     } else if( in_deep_water && !can_float( here ) ) {
         stop( here );
-        if( pl_ctrl ) {
-            add_msg( _( "The %s is too leaky!" ), name );
+        if( operator_character ) {
+            operator_character->add_msg_if_player( _( "The %s is too leaky!" ), name );
         }
         return;
     } else if( !valid_wheel_config( here )  && z == 0 ) {
         stop( here );
-        if( pl_ctrl ) {
-            add_msg( _( "The %s doesn't have enough wheels to move!" ), name );
+        if( operator_character ) {
+            operator_character->add_msg_if_player( _( "The %s doesn't have enough wheels to move!" ), name );
         }
         return;
     }
@@ -532,9 +538,10 @@ void vehicle::thrust( map &here, int thd, int z )
         accel = 0;
     }
     if( accel < 200 && velocity > 0 && is_towing() ) {
-        if( pl_ctrl ) {
-            add_msg( _( "The %s struggles to pull the %s on this surface!" ), name,
-                     tow_data.get_towed()->name );
+        if( operator_character ) {
+            operator_character->add_msg_if_player( _( "The %s struggles to pull the %s on this surface!" ),
+                                                   name,
+                                                   tow_data.get_towed()->name );
         }
         return;
     }
@@ -547,13 +554,13 @@ void vehicle::thrust( map &here, int thd, int z )
         } else if( is_airship( here ) ) {
             return;
         }
-        if( pl_ctrl ) {
+        if( operator_character ) {
             if( has_engine_type( fuel_type_muscle, true ) ) {
-                add_msg( _( "The %s is too heavy to move!" ), name );
+                operator_character->add_msg_if_player( _( "The %s is too heavy to move!" ), name );
             } else {
-                add_msg( n_gettext( "The %s is too heavy for its engine!",
-                                    "The %s is too heavy for its engines!",
-                                    engines.size() ), name );
+                operator_character->add_msg_if_player( n_gettext( "The %s is too heavy for its engine!",
+                                                       "The %s is too heavy for its engines!",
+                                                       engines.size() ), name );
             }
         }
         return;
@@ -620,17 +627,17 @@ void vehicle::thrust( map &here, int thd, int z )
     if( load >= 1 && thrusting ) {
         //abort if engines not operational
         if( total_power( here ) <= 0_W || !engine_on || ( z == 0 && accel == 0 ) ) {
-            if( pl_ctrl && !is_aircraft( here ) ) {
+            if( operator_character && !is_aircraft( here ) ) {
                 if( total_power( here, false ) <= 0_W ) {
-                    add_msg( m_info, _( "The %s doesn't have an engine!" ), name );
+                    operator_character->add_msg_if_player( m_info, _( "The %s doesn't have an engine!" ), name );
                 } else if( has_engine_type( fuel_type_muscle, true ) ) {
-                    add_msg( m_info, _( "The %s's mechanism is out of reach!" ), name );
+                    operator_character->add_msg_if_player( m_info, _( "The %s's mechanism is out of reach!" ), name );
                 } else if( !engine_on ) {
-                    add_msg( _( "The %s's engine isn't on!" ), name );
+                    operator_character->add_msg_if_player( _( "The %s's engine isn't on!" ), name );
                 } else if( traction < 0.01f ) {
-                    add_msg( _( "The %s is stuck." ), name );
+                    operator_character->add_msg_if_player( _( "The %s is stuck." ), name );
                 } else {
-                    add_msg( _( "The %s's engine emits a sneezing sound." ), name );
+                    operator_character->add_msg_if_player( _( "The %s's engine emits a sneezing sound." ), name );
                 }
             }
             cruise_velocity = 0;
@@ -655,6 +662,9 @@ void vehicle::thrust( map &here, int thd, int z )
         noise_and_smoke( here, load + alternator_load );
         check_flats_do_rim_damage_or_sounds( here );
         consume_fuel( here, load + alternator_load, false );
+        if( !lifetime ) {
+            return;
+        }
         //break the engines a bit, if going too fast.
         const int strn = static_cast<int>( strain( here ) * strain( here ) * 100 );
         for( const int p : engines ) {
@@ -690,7 +700,10 @@ void vehicle::thrust( map &here, int thd, int z )
             monster *mon = get_monster( here, e );
             if( mon != nullptr && mon->has_effect( effect_harnessed ) ) {
                 if( velocity > mon->get_speed() * 12 ) {
-                    add_msg( m_bad, _( "Your %s is not fast enough to keep up with the %s" ), mon->get_name(), name );
+                    if( Character *operator_character = vehicle_operator( *this, here ) ) {
+                        operator_character->add_msg_if_player( m_bad,
+                                                               _( "Your %s is not fast enough to keep up with the %s" ), mon->get_name(), name );
+                    }
                     int dmg = rng( 0, 10 );
                     damage_direct( here, vp, dmg );
                 }
@@ -1637,6 +1650,8 @@ bool vehicle::check_heli_ascend( map &here, Character &p ) const
 void vehicle::pldrive( map &here, Character &driver, const int trn, const int acceleration,
                        const int z )
 {
+    const character_action_guard driver_lifetime( driver );
+    const safe_reference<vehicle> vehicle_lifetime = get_safe_reference();
     bool is_non_proficient = false;
     float effective_driver_skill = driver.get_skill_level( skill_driving );
     float vehicle_proficiency;
@@ -1670,6 +1685,9 @@ void vehicle::pldrive( map &here, Character &driver, const int trn, const int ac
     if( z != 0 && is_aircraft( here ) ) {
         driver.set_moves( std::min( driver.get_moves(), 0 ) );
         thrust( here, 0, z );
+        if( !driver_lifetime || !vehicle_lifetime ) {
+            return;
+        }
     }
     units::angle turn_delta = vehicles::steer_increment * trn;
     const float handling_diff = handling_difficulty( here ) + non_prof_penalty;
@@ -1763,6 +1781,9 @@ void vehicle::pldrive( map &here, Character &driver, const int trn, const int ac
             driver.get_dex() + effective_driver_skill * 2 ) {
             driver.add_msg_if_player( _( "You regain control of the %s." ), name );
             driver.practice( skill_driving, velocity / 5 );
+            if( !driver_lifetime || !vehicle_lifetime ) {
+                return;
+            }
             velocity = static_cast<int>( forward_velocity() );
             skidding = false;
             move.init( turn_dir );
@@ -2051,16 +2072,17 @@ vehicle *vehicle::act_on_map( map &here )
     if( decrement_summon_timer( here ) ) {
         return nullptr;
     }
-    const bool pl_ctrl = player_is_driving_this_veh( &here );
+    Character *operator_character = vehicle_operator( *this, here );
+    const bool controlled = operator_character || tags.count( "IN_CONTROL_OVERRIDE" );
     // TODO: Remove this hack, have vehicle sink a z-level
     if( in_deep_water && !can_float( here ) ) {
-        add_msg( m_bad, _( "Your %s sank." ), name );
-        if( pl_ctrl ) {
-            unboard_all( here );
+        if( operator_character ) {
+            operator_character->add_msg_if_player( m_bad, _( "Your %s sank." ), name );
+            if( resolve_remote_vehicle( *operator_character, here ) == this ) {
+                set_remote_vehicle( *operator_character, here, nullptr );
+            }
         }
-        if( g->remoteveh() == this ) {
-            g->setremoteveh( nullptr );
-        }
+        unboard_all( here );
 
         here.on_vehicle_moved( sm_pos.z() );
         // Destroy vehicle (sank to nowhere)
@@ -2134,21 +2156,18 @@ vehicle *vehicle::act_on_map( map &here )
 
     bool can_use_rails = this->can_use_rails( here );
     if( one_in( 10 ) ) {
-        bool controlled = false;
-        // It can even be an NPC, but must be at the controls
-        for( int boarded : boarded_parts() ) {
-            if( part_with_feature( boarded, VPFLAG_CONTROLS, true ) >= 0 ) {
-                controlled = true;
-                Character *passenger = get_passenger( boarded );
-                if( passenger != nullptr ) {
-                    passenger->practice( skill_driving, 1 );
-                }
+        if( operator_character ) {
+            const character_action_guard driver_lifetime( *operator_character );
+            const safe_reference<vehicle> lifetime = get_safe_reference();
+            operator_character->practice( skill_driving, 1 );
+            if( !lifetime ) {
+                return nullptr;
             }
         }
 
         // Eventually send it skidding if no control
         // But not if it's remotely controlled, is in water or can use rails
-        if( !controlled && !pl_ctrl && !( is_watercraft() && can_float( here ) ) && !can_use_rails &&
+        if( !controlled && !( is_watercraft() && can_float( here ) ) && !can_use_rails &&
             !is_flying && requested_z_change == 0 ) {
             skidding = true;
         }
