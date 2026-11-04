@@ -1433,7 +1433,7 @@ static std::string serialize_player( const npc &remote )
 
 static bool save_remote_player( remote_player_session &recipient )
 {
-    if( !recipient.connected ) {
+    if( !recipient.connected || recipient.awaiting_character ) {
         return true;
     }
     const npc *remote = recipient.actor.retained( g->npc_lifetimes() );
@@ -1503,7 +1503,7 @@ static std::optional<std::string> restore_player( const player_credentials &play
 }
 
 static void spawn_remote_player( const std::string &name, const peer_admission &admission,
-                                 const player_credentials &player )
+                                 const player_credentials &player, const JsonObject *initial = nullptr )
 {
     if( mp_session().remote_players.count( admission.peer_id() ) != 0 ) {
         throw std::runtime_error( "A live or unsaved multiplayer actor already owns this slot" );
@@ -1513,11 +1513,29 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     if( g->player_controls().is_reserved( player.id ) ) {
         throw std::runtime_error( "Player already has a controller in this world" );
     }
+    for( const auto &entry : mp_session().remote_players ) {
+        if( entry.second->credentials.id == player.id ) {
+            throw std::runtime_error( "Player already has a pending admission" );
+        }
+    }
     const auto saved = restore_player( player );
     auto pending = std::make_unique<remote_player_session>();
     auto &recipient = *pending;
     recipient.admission = admission;
     recipient.credentials = player;
+    if( !saved && !initial ) {
+        // No actor is published, advanced or saved until its complete initial
+        // state arrives. A disconnect here leaves no blank character record.
+        recipient.connected = true;
+        recipient.awaiting_character = true;
+        recipient.turn.client_acted_this_turn = true;
+        recipient.observation.partner_name_cached = name;
+        mp_session().remote_players.emplace( admission.peer_id(), std::move( pending ) );
+        if( const auto server = get_active_server() ) {
+            server->post_send( admission, "{\"type\":\"player_create_request\"}\n" );
+        }
+        return;
+    }
 
     avatar &u = get_avatar();
     map &m = get_map();
@@ -1560,11 +1578,15 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         mp_log( "[ccb-mp] restored persistent actor=" + std::to_string( remote->getID().get_value() ) );
     } else {
         remote->normalize();
-        remote->name = name;
+        remote->load_player_state( *initial );
+        if( remote->is_dead_state() || remote->name.empty() ) {
+            throw std::runtime_error( "Initial player character is dead or unnamed" );
+        }
     }
+    recipient.player_state_initialized = true;
     // Cache the partner's name so the Co-op panel has a stable fallback even
     // if the NPC pointer briefly becomes unresolvable (load/unload races).
-    recipient.observation.partner_name_cached = name;
+    recipient.observation.partner_name_cached = remote->name;
 
     // Ensure the NPC has a valid character_id before inserting into the world.
     // make_shared_fast<npc>() + normalize() never calls setID(), so we must
@@ -1637,17 +1659,11 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         Messages::size();  // don't forward pre-connect history
     mp_save_npc_ids();  // persist ID so next session can clean it up
 
-    // Don't announce the join here — at spawn the only name we have is the
-    // "player2" placeholder (the client's real name arrives a beat later in
-    // its first char_stats). The named announcement fires from the char_stats
-    // handler the moment the proxy is renamed from the placeholder.
-    std::cout << "[cdda-mp] Spawned remote player '" << name << "' at "
-              << spawn_pos.x() << "," << spawn_pos.y() << std::endl;
-
-    // A returning player's server save owns the inventory. Establish its
-    // revision before draining the connection's already queued worn_sync;
-    // the old local save must not replace the restored character.
-    const std::string resumed = saved && rn ? make_player_resume_result( *rn, recipient.pickup ) : "";
+    add_msg( m_good, _( "%s has connected and joined the game." ), remote->name );
+    // Establish the authoritative body and inventory before queued legacy
+    // uploads can run. Existing records retain their saved state, including
+    // records made before full character bootstrap was implemented.
+    const std::string resumed = rn ? make_player_resume_result( *rn, recipient.pickup ) : "";
     auto srv = get_active_server();
     if( srv ) {
         if( !resumed.empty() ) {
@@ -2186,18 +2202,38 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         return;
     }
 
+    JsonValue jv_top = json_loader::from_string( msg );
+    JsonObject jo = jv_top.get_object();
+    jo.allow_omitted_members();
+    const std::string action = jo.get_string( "action", "" );
+    if( recipient.awaiting_character ) {
+        if( action != "player_create" ) {
+            return;
+        }
+        const auto admission = recipient.admission;
+        const auto credentials = recipient.credentials;
+        const auto name = recipient.observation.partner_name_cached;
+        // Complete admission creates and persists a fresh actor atomically.
+        // Nothing from this upload can replace an already saved character.
+        mp_session().remote_players.erase( admission.peer_id() );
+        try {
+            const JsonObject initial = jo.get_object( "player_state" );
+            spawn_remote_player( name, admission, credentials, &initial );
+        } catch( const std::exception & ) {
+            if( const auto server = get_active_server() ) {
+                server->post_reject( admission, "Could not initialize player character; reconnect to retry" );
+            }
+        }
+        return;
+    }
+    if( action == "player_create" ) {
+        return; // Duplicate/late bootstrap never overwrites a live character.
+    }
     npc *remote = mp_remote_actor( recipient );
     if( !remote ) {
         return;
     }
 
-    // Parse the full action JSON once here so char_stats and other top-level
-    // fields are accessible without re-parsing inside each action block.
-    JsonValue jv_top = json_loader::from_string( msg );
-    JsonObject jo = jv_top.get_object();
-    jo.allow_omitted_members();
-
-    const std::string action = jo.get_string( "action", "" );
     if( action == "inventory_activity" || action == "inventory_activity_cancel" ) {
         const bool granted = jo.has_int( "grant_seq" ) &&
                              jo.get_int64( "grant_seq" ) == recipient.turn.grant_seq &&
@@ -2813,7 +2849,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
 
     // Apply the client's real character stats to the proxy so all action
     // handlers (pldrive steering, melee, etc.) use the player's actual values.
-    if( jo.has_object( "char_stats" ) ) {
+    if( !recipient.player_state_initialized && jo.has_object( "char_stats" ) ) {
         JsonObject cs = jo.get_object( "char_stats" );
         cs.allow_omitted_members();
         // Rename the proxy from the "player2" placeholder to the client's real
@@ -2928,7 +2964,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             if( carried_snapshot ) {
                 remote->load_carried_items( jo.get_object( "carried" ) );
             }
-            if( jo.has_bool( "male" ) ) {
+            if( !recipient.player_state_initialized && jo.has_bool( "male" ) ) {
                 remote->male = jo.get_bool( "male" );
             }
             if( !carried_snapshot && jo.has_array( "worn" ) ) {
@@ -3024,7 +3060,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             // proxy first, then apply the client's list.  This covers chargen
             // cosmetics AND physical mutations (Fangs, Sleek Fur, Spines, etc.)
             // which the old per-type clearing missed.
-            if( jo.has_array( "appearance" ) ) {
+            if( !recipient.player_state_initialized && jo.has_array( "appearance" ) ) {
                 std::vector<trait_id> to_unset;
                 for( const trait_id &existing : remote->get_mutations() ) {
                     to_unset.push_back( existing );
@@ -6582,6 +6618,20 @@ bool client_apply_message( const std::string &msg )
         // the same welcome earlier via mp_store_pending_welcome() so start_game
         // can act on it before worldgen.
         parse_welcome_fields( msg, /*apply_seed_now=*/true );
+        return true;
+    }
+
+    if( msg.find( R"("type":"player_create_request")" ) != std::string::npos ) {
+        // Only the host's first-admission request permits this upload. Future
+        // actions carry intents; reconnects receive the host's saved snapshot.
+        std::ostringstream text;
+        JsonOut out( text );
+        out.start_object();
+        out.member( "action", "player_create" );
+        out.member( "player_state" );
+        get_avatar().store_player_state( out );
+        out.end_object();
+        client_send( text.str() );
         return true;
     }
 

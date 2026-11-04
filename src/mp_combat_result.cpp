@@ -86,16 +86,13 @@ bool apply_combat_result( Character &actor, const JsonObject &message, pickup_cl
 
 std::string make_player_resume_result( const Character &actor, pickup_host_state &state )
 {
-    const std::string combat = make_combat_result( actor, state );
     std::ostringstream text;
     JsonOut out( text );
     out.start_object();
     out.member( "type", "player_resume" );
-    out.member( "combat" );
-    *out.get_stream() << combat;
-    out.set_need_separator();
-    out.member( "needs" );
-    actor.store_needs_state( out );
+    out.member( "inventory_revision", ++state.revision );
+    out.member( "player_state" );
+    actor.store_player_state( out );
     out.end_object();
     return text.str();
 }
@@ -103,12 +100,13 @@ std::string make_player_resume_result( const Character &actor, pickup_host_state
 bool apply_player_resume_result( Character &actor, const JsonObject &message,
                                  pickup_client_state &state )
 {
-    JsonObject combat = message.get_object( "combat" );
-    combat.allow_omitted_members();
-    if( !apply_combat_result( actor, combat, state ) ) {
+    const int64_t revision = message.get_int64( "inventory_revision" );
+    if( revision <= state.revision ) {
         return false;
     }
-    actor.load_needs_state( message.get_object( "needs" ) );
+    actor.load_player_state( message.get_object( "player_state" ) );
+    state.revision = revision;
+    state.pending_request = 0;
     return true;
 }
 } // namespace cata_mp

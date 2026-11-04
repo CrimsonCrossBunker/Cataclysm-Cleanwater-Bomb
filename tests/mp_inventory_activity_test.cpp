@@ -28,6 +28,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
+#include "skill.h"
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "messages.h"
@@ -1198,11 +1199,25 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     npc &remote = fixture.remote();
     remote.set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 3 ) );
     remote.set_thirst( 42 );
+    remote.set_str_base( 15 );
+    remote.set_skill_level( skill_id( "mechanics" ), 6 );
+    remote.set_mutation( trait_id( "QUICK" ) );
+    remote.set_mutation( trait_id( "CARNIVORE" ) );
+    // Set the authoritative body after trait setup, which itself recalculates HP.
+    // A snapshot must retain this state, rather than recompute it from strength.
+    remote.set_part_hp_max( bodypart_id( "arm_l" ), 137 );
+    remote.set_part_hp_cur( bodypart_id( "arm_l" ), 17 );
+    REQUIRE( remote.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
     const std::string resumed = cata_mp::make_player_resume_result( remote, fixture.inventory );
     REQUIRE( fixture.inventory.revision > 0 );
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
     local.set_wielded_item( item( itype_id( "rock" ) ) );
+    local.set_str_base( 8 );
+    REQUIRE_FALSE( local.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
+    const auto identity = local.getID();
+    const auto position = local.pos_abs();
+    local.activity = player_activity( activity_id( "ACT_WAIT" ), 400 );
     const auto rng = rng_get_engine();
     consumption_events events;
     REQUIRE( cata_mp::client_apply_message( resumed ) );
@@ -1210,6 +1225,31 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     CHECK( local.get_wielded_item()->typeId() == itype_id( "chocolate" ) );
     CHECK( local.get_wielded_item()->charges == 3 );
     CHECK( local.get_thirst() == 42 );
+    CHECK( local.get_str_base() == 15 );
+    CHECK( local.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
+    CHECK( local.get_part_hp_max( bodypart_id( "arm_l" ) ) == 137 );
+    CHECK( local.get_skill_level( skill_id( "mechanics" ) ) == 6 );
+    CHECK( local.has_trait( trait_id( "QUICK" ) ) );
+    CHECK( local.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
+    CHECK( local.getID() == identity );
+    CHECK( local.pos_abs() == position );
+    CHECK( local.activity.id() == activity_id( "ACT_WAIT" ) );
+    // Bad packets must not leave a half-replaced body or lose carried items.
+    std::ostringstream before;
+    JsonOut saved( before );
+    local.store_player_state( saved );
+    std::string malformed = before.str();
+    const auto body = malformed.find( "\"body\":" );
+    REQUIRE( body != std::string::npos );
+    malformed.replace( body, 6, "\"missing_body\"" );
+    const auto strength = malformed.find( "\"str_max\":15" );
+    REQUIRE( strength != std::string::npos );
+    malformed.replace( strength, 12, "\"str_max\":99" );
+    CHECK_THROWS_AS( local.load_player_state( json_loader::from_string( malformed ).get_object() ),
+                     JsonError );
+    CHECK( local.get_str_base() == 15 );
+    REQUIRE( local.get_wielded_item() );
+    CHECK( local.get_wielded_item()->charges == 3 );
     remote.get_wielded_item()->charges = 2;
     remote.set_thirst( 24 );
     REQUIRE( cata_mp::client_apply_message( cata_mp::make_player_resume_result( remote,
