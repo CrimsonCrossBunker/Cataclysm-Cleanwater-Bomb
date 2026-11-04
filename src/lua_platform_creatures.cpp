@@ -2924,7 +2924,8 @@ sol::table explosion_character(
     }
     if( options.flashbang ) {
         explosion_handler::flashbang(
-            target, options.flashbang_avatar_is_immune, options.flashbang_radius );
+            target, options.flashbang_avatar_is_immune ? &get_player_character() : nullptr,
+            options.flashbang_radius );
     }
     sol::table value = state.create_table();
     value["queued"] = true;

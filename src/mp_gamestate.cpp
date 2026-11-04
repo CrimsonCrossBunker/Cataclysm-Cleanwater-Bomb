@@ -2113,6 +2113,21 @@ void host_broadcast_post_action()
         }
     }
 }
+
+static void send_inventory_activity_observers( const remote_player_session &initiator )
+{
+    if( const auto server = get_active_server() ) {
+        const auto *patient = mp_session().find_remote( initiator.inventory_activity.healing_patient );
+        for( const auto &entry : mp_session().remote_players ) {
+            auto &observer = *entry.second;
+            if( &observer != &initiator && observer.connected && !observer.detach_pending &&
+                ( initiator.inventory_activity.refresh_observers || &observer == patient ) ) {
+                server->post_send( observer.admission, serialize_remote_player_state( observer ) + "\n" );
+            }
+        }
+    }
+}
+
 // Standard turn-ending broadcast for handlers in handle_remote_action.
 //
 // All actions that consume the client's full turn budget MUST end with this
@@ -2249,6 +2264,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         remote = mp_remote_actor( recipient );
         if( !remote ) {
+            send_inventory_activity_observers( recipient );
             return;
         }
         recipient.turn.remote_moves = remote->get_moves();
@@ -2267,12 +2283,8 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                 state.insert( state.size() - 1, ",\"free\":true" );
             }
             server->post_send( recipient.admission, state + "\n" );
-            if( auto *patient = mp_session().find_remote( recipient.inventory_activity.healing_patient ) ) {
-                if( patient != &recipient && patient->connected && !patient->detach_pending ) {
-                    server->post_send( patient->admission, serialize_remote_player_state( *patient ) + "\n" );
-                }
-            }
         }
+        send_inventory_activity_observers( recipient );
         g->invalidate_main_ui_adaptor();
         return;
     }

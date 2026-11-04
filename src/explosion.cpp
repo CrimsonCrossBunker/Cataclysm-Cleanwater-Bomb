@@ -660,7 +660,7 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
     }
 }
 
-void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
+void flashbang( const tripoint_bub_ms &p, const Creature *immune, const int radius )
 {
 
     auto penalize_char = []( map & here, Character & guy, const tripoint_bub_ms & p,
@@ -716,16 +716,19 @@ void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
     }
 
     Character &you = get_player_character();
-    if( !player_immune && rl_dist( you.pos_bub(), p ) <= radius ) {
+    if( &you != immune && rl_dist( you.pos_bub(), p ) <= radius ) {
         penalize_char( here, you, p, radius );
     }
 
     for( npc &guy : g->all_npcs() ) {
-        penalize_char( here, guy, p, radius );
+        if( &guy != immune ) {
+            penalize_char( here, guy, p, radius );
+        }
     }
 
     for( monster &critter : g->all_monsters() ) {
-        if( critter.type->in_species( species_ROBOT ) || critter.has_flag( mon_flag_FLASHBANGPROOF ) ) {
+        if( &critter == immune || critter.type->in_species( species_ROBOT ) ||
+            critter.has_flag( mon_flag_FLASHBANGPROOF ) ) {
             continue;
         }
         // TODO: can the following code be called for all types of creatures
@@ -746,7 +749,7 @@ void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
 }
 
 void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int dam_mult,
-                bool ignore_player )
+                const Creature *immune )
 {
     draw_explosion( p, radius, c_blue );
 
@@ -754,7 +757,7 @@ void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int d
                    "misc", "shockwave" );
 
     for( monster &critter : g->all_monsters() ) {
-        if( critter.posz() != p.z() ) {
+        if( &critter == immune || critter.posz() != p.z() ) {
             continue;
         }
         if( rl_dist( critter.pos_bub(), p ) <= radius ) {
@@ -764,7 +767,9 @@ void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int d
     }
     // TODO: combine the two loops and the case for avatar using all_creatures()
     for( npc &guy : g->all_npcs() ) {
-        if( guy.posz() != p.z() ) {
+        if( &guy == immune || guy.posz() != p.z() ||
+            ( guy.is_player_controlled() && guy.has_trait( trait_LEG_TENT_BRACE ) &&
+              guy.is_barefoot() ) ) {
             continue;
         }
         if( rl_dist( guy.pos_bub(), p ) <= radius ) {
@@ -773,7 +778,7 @@ void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int d
         }
     }
     Character &player_character = get_player_character();
-    if( rl_dist( player_character.pos_bub(), p ) <= radius && !ignore_player &&
+    if( rl_dist( player_character.pos_bub(), p ) <= radius && &player_character != immune &&
         ( !player_character.has_trait( trait_LEG_TENT_BRACE ) ||
           !player_character.is_barefoot() ) ) {
         add_msg( m_bad, _( "You're caught in the shockwave!" ) );
