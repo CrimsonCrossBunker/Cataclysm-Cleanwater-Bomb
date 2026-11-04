@@ -13,11 +13,14 @@
 #include "coordinates.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
+#include "item_uid.h"
 #include "json.h"
 #include "map.h"
 #include "map_selector.h"
 #include "pickup.h"
 #include "player_identity.h"
+#include "rng.h"
 #include <stdexcept>
 
 namespace cata_mp
@@ -291,6 +294,175 @@ bool apply_inventory_update( Character &who, const JsonObject &result, pickup_cl
     who.load_carried_items( result.get_object( "carried" ) );
     state.revision = revision;
     // A pending pickup retains its request number until its own ACK arrives.
+    return true;
+}
+
+namespace
+{
+struct carried_turn_node {
+    item *value;
+    int64_t parent;
+    int pocket;
+    int position;
+};
+
+std::vector<carried_turn_node> carried_turn_nodes( Character &who )
+{
+    std::vector<carried_turn_node> nodes;
+    const auto visit = [&]( const auto & self, item & current, int64_t parent,
+    int pocket, int position ) -> void {
+        nodes.push_back( { &current, parent, pocket, position } );
+        int index = 0;
+        for( item_pocket *child_pocket : current.get_pockets( []( const item_pocket & )
+    {
+        return true;
+    } ) )
+        {
+            int child_position = 0;
+            for( item *child : child_pocket->all_items_top() ) {
+                self( self, *child, current.uid().get_value(), index, child_position++ );
+            }
+            ++index;
+        }
+    };
+    if( item_location weapon = who.get_wielded_item() ) {
+        visit( visit, *weapon, 0, -1, 0 );
+    }
+    int position = 0;
+    for( item_location root : who.top_items_loc() ) {
+        visit( visit, *root, 0, -2, position++ );
+    }
+    return nodes;
+}
+
+std::string scalar_item_state( const item &value )
+{
+    std::ostringstream text;
+    JsonOut out( text );
+    value.store_current_state( out );
+    return text.str();
+}
+}
+
+inventory_turn_snapshot capture_inventory_turn( Character &who )
+{
+    inventory_turn_snapshot result;
+    for( const carried_turn_node &node : carried_turn_nodes( who ) ) {
+        const item &value = *node.value;
+        auto &entry = result.items[value.uid().get_value()];
+        entry.parent = node.parent;
+        entry.pocket = node.pocket;
+        entry.position = node.position;
+        entry.charges = value.charges;
+        entry.type = value.typeId().str();
+        if( value.needs_processing() || value.is_battery() ) {
+            entry.state = scalar_item_state( value );
+        }
+    }
+    return result;
+}
+
+std::optional<std::string> make_inventory_turn_update( Character &who,
+        const inventory_turn_snapshot &before, pickup_host_state &state )
+{
+    const auto nodes = carried_turn_nodes( who );
+    std::vector<std::pair<int64_t, std::string>> changed;
+    // Structural changes are uncommon. Reconcile a complete graph in that case;
+    // ordinary charge/timer/rot updates never serialize unrelated carried items.
+    if( nodes.size() != before.items.size() ) {
+        return make_inventory_update( who, state );
+    }
+    for( const carried_turn_node &node : nodes ) {
+        const item &value = *node.value;
+        const int64_t uid = value.uid().get_value();
+        const auto old = before.items.find( uid );
+        if( old == before.items.end() || old->second.parent != node.parent ||
+            old->second.pocket != node.pocket || old->second.position != node.position ||
+            old->second.type != value.typeId().str() ) {
+            return make_inventory_update( who, state );
+        }
+        if( !old->second.state.empty() || value.needs_processing() || value.is_battery() ||
+            old->second.charges != value.charges ) {
+            std::string current = scalar_item_state( value );
+            if( current != old->second.state ) {
+                changed.emplace_back( uid, std::move( current ) );
+            }
+        }
+    }
+    if( changed.empty() ) {
+        return std::nullopt;
+    }
+    if( state.revision >= std::numeric_limits<int64_t>::max() - 1 ) {
+        throw std::overflow_error( "Inventory revision exhausted" );
+    }
+    std::ostringstream text;
+    JsonOut out( text );
+    out.start_object();
+    out.member( "type", "inventory_delta" );
+    out.member( "base_revision", state.revision );
+    out.member( "inventory_revision", state.revision + 1 );
+    out.member( "items" );
+    out.start_array();
+    for( const auto &entry : changed ) {
+        out.start_object();
+        out.member( "uid", entry.first );
+        out.member( "state" );
+        *out.get_stream() << entry.second;
+        out.set_need_separator();
+        out.end_object();
+    }
+    out.end_array();
+    out.end_object();
+    ++state.revision;
+    return text.str();
+}
+
+bool apply_inventory_turn_update( Character &who, const JsonObject &message,
+                                  pickup_client_state &state )
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const int64_t revision = required_counter( message, "inventory_revision" );
+    if( revision <= state.revision ) {
+        return false;
+    }
+    if( required_counter( message, "base_revision" ) != state.revision ||
+        revision != state.revision + 1 ) {
+        message.throw_error_at( "base_revision", "Missing inventory update; reconnect required" );
+    }
+    std::unordered_map<int64_t, item *> owned;
+    std::unordered_map<int64_t, int64_t> parents;
+    for( const carried_turn_node &node : carried_turn_nodes( who ) ) {
+        owned.emplace( node.value->uid().get_value(), node.value );
+        parents.emplace( node.value->uid().get_value(), node.parent );
+    }
+    std::set<int64_t> seen;
+    std::vector<std::pair<item *, item>> restored;
+    // Decode and validate the entire message before changing any live item.
+    for( JsonObject entry : message.get_array( "items" ) ) {
+        const int64_t uid = entry.get_int64( "uid" );
+        const auto target = owned.find( uid );
+        const JsonObject data = entry.get_object( "state" );
+        item value = item::from_current_state( data );
+        if( target == owned.end() || !seen.insert( uid ).second ||
+            value.uid().get_value() != uid || value.typeId() != target->second->typeId() ||
+            data.has_member( "contents" ) ) {
+            entry.throw_error_at( "uid", "Item delta does not match the owned item graph" );
+        }
+        restored.emplace_back( target->second, std::move( value ) );
+    }
+    for( auto &entry : restored ) {
+        entry.first->apply_current_state( std::move( entry.second ), false );
+    }
+    std::set<int64_t> invalidated;
+    for( const auto &entry : restored ) {
+        int64_t parent = parents.at( entry.first->uid().get_value() );
+        while( parent != 0 && invalidated.insert( parent ).second ) {
+            owned.at( parent )->on_contents_changed();
+            parent = parents.at( parent );
+        }
+    }
+    who.refresh_carried_item_caches();
+    state.revision = revision;
     return true;
 }
 } // namespace cata_mp

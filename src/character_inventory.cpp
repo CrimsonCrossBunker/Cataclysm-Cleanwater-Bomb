@@ -1093,21 +1093,33 @@ void Character::load_carried_items( const JsonObject &data )
     if( !outfit_data.has_array( "worn" ) ) {
         outfit_data.throw_error_at( "worn", "Carried item snapshot requires a worn array" );
     }
-    restored_outfit.deserialize( outfit_data );
-    restored_inventory.json_load_items( data.get_array( "inventory" ) );
+    for( JsonObject entry : outfit_data.get_array( "worn" ) ) {
+        restored_outfit.worn.emplace_back( item::from_current_state( entry ) );
+    }
+    restored_inventory.load_current_items( data.get_array( "inventory" ) );
     if( data.get_bool( "has_weapon" ) ) {
-        restored_weapon.deserialize( data.get_object( "weapon" ) );
+        restored_weapon = item::from_current_state( data.get_object( "weapon" ) );
     }
 
+    item::reuse_current_nodes( worn.worn, restored_outfit.worn );
     worn = std::move( restored_outfit );
-    *inv = std::move( restored_inventory );
-    weapon = std::move( restored_weapon );
+    inv->apply_current_state( std::move( restored_inventory ) );
+    if( !weapon.is_null() && weapon.uid() == restored_weapon.uid() ) {
+        weapon.apply_current_state( std::move( restored_weapon ) );
+    } else {
+        weapon = std::move( restored_weapon );
+    }
+    refresh_carried_item_caches();
+}
+
+void Character::refresh_carried_item_caches()
+{
     invalidate_leak_level_cache();
     invalidate_weight_carried_cache();
     invalidate_inventory_validity_cache();
     invalidate_crafting_inventory();
     flag_encumbrance();
-    recalculate_enchantment_cache();
+    recalculate_enchantment_cache( false );
     recalc_sight_limits();
 }
 

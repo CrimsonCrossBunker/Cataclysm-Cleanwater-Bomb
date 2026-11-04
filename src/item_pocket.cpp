@@ -3007,3 +3007,13 @@ bool pocket_constraint::operator!=( const pocket_constraint &o ) const
 {
     return !( *this == o );
 }
+
+void item_pocket::release_current_nodes( std::list<item> &nodes )
+{
+    nodes.splice( nodes.end(), contents );
+}
+
+void item_pocket::reuse_current_nodes( std::list<item> &nodes )
+{
+    item::reuse_current_nodes( nodes, contents );
+}

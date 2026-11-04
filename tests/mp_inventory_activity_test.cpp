@@ -1371,3 +1371,172 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
     CHECK( held.get_item() == address );
     CHECK( rng_get_engine() == before_rejected );
 }
+
+
+TEST_CASE( "current_item_replica_preserves_zero_charges_and_timers",
+           "[multiplayer][item_turn]" )
+{
+    reload_fixture fixture;
+    item ammo( itype_id( "556" ), calendar::turn, 5 );
+    ammo.charges = 0;
+    ammo.active = true;
+    ammo.item_counter = 7;
+    ammo.countdown_point = calendar::turn + 13_turns;
+    const auto encode = []( const item & value ) {
+        std::ostringstream text;
+        JsonOut out( text );
+        value.serialize( out );
+        return text.str();
+    };
+    const std::string wire = encode( ammo );
+    const auto rng = rng_get_engine();
+    item restored = item::from_current_state( json_loader::from_string( wire ).get_object() );
+    CHECK( rng_get_engine() == rng );
+    CHECK( restored.uid() == ammo.uid() );
+    CHECK( restored.charges == 0 );
+    CHECK( restored.active );
+    CHECK( restored.item_counter == 7 );
+    CHECK( restored.countdown_point == ammo.countdown_point );
+    CHECK( ammo.charges == 0 );
+    CHECK( encode( restored ) == wire );
+
+    CHECK_THROWS_AS( item::from_current_state( json_loader::from_string(
+                         R"({"typeid":"556","uid":0})" ).get_object() ), JsonError );
+    item rock( itype_id( "rock" ) );
+    rock.charges = -1;
+    const std::string rock_wire = encode( rock );
+    CHECK( rock.charges == -1 );
+    CHECK( item::from_current_state( json_loader::from_string( rock_wire ).get_object() ).charges ==
+           -1 );
+
+    // Historical save compatibility still repairs old zero-count ammunition.
+    item legacy;
+    legacy.deserialize( json_loader::from_string( wire ).get_object() );
+    CHECK( legacy.charges > 0 );
+
+    item bag( itype_id( "backpack" ) );
+    REQUIRE( bag.put_in( ammo, pocket_type::CONTAINER ).success() );
+    item cable( itype_id( "power_cord" ) );
+    cable.link().last_processed = calendar::turn - 17_turns;
+    REQUIRE( bag.put_in( cable, pocket_type::CONTAINER ).success() );
+    const std::string nested = encode( bag );
+    const auto nested_rng = rng_get_engine();
+    item restored_bag = item::from_current_state( json_loader::from_string( nested ).get_object() );
+    CHECK( rng_get_engine() == nested_rng );
+    CHECK( encode( restored_bag ) == nested );
+}
+
+TEST_CASE( "native_item_turns_replicate_changes_and_preserve_surviving_locations",
+           "[multiplayer][item_turn]" )
+{
+    reload_fixture fixture;
+    npc &owner = fixture.remote();
+    owner.set_wielded_item( item( itype_id( "backpack" ) ) );
+    item_location bag = owner.get_wielded_item();
+    item temporary( itype_id( "rock" ) );
+    temporary.ethereal = true;
+    temporary.set_var( "ethereal", 2 );
+    REQUIRE( bag->put_in( temporary, pocket_type::CONTAINER ).success() );
+    REQUIRE( bag->put_in( item( itype_id( "556" ), calendar::turn, 5 ),
+                          pocket_type::CONTAINER ).success() );
+    avatar &replica = get_avatar();
+    cata_mp::set_client_mode( true );
+    const auto initial = cata_mp::make_inventory_update( owner, fixture.inventory );
+    REQUIRE( cata_mp::client_apply_message( initial ) );
+    auto &client = g->multiplayer_session().client_pickup;
+    const item_location replica_bag = replica.get_wielded_item();
+    const item *const bag_address = replica_bag.get_item();
+    const auto source_ammo = owner.items_with( []( const item & it ) {
+        return it.typeId() == itype_id( "556" );
+    } );
+    const auto replica_ammo = replica.items_with( []( const item & it ) {
+        return it.typeId() == itype_id( "556" );
+    } );
+    const auto replica_rocks = replica.items_with( []( const item & it ) {
+        return it.typeId() == itype_id( "rock" );
+    } );
+    REQUIRE( source_ammo.size() == 1 );
+    REQUIRE( replica_ammo.size() == 1 );
+    REQUIRE( replica_rocks.size() == 1 );
+    const item_location rounds( replica_bag, replica_ammo.front() );
+    const item_location disappearing( replica_bag, replica_rocks.front() );
+    const item *const rounds_address = rounds.get_item();
+    replica.activity = player_activity( activity_id( "ACT_WAIT" ), 400 );
+    replica.activity.targets.push_back( rounds );
+
+    const auto before = cata_mp::capture_inventory_turn( owner );
+    CHECK_FALSE( cata_mp::make_inventory_turn_update( owner, before, fixture.inventory ) );
+    owner.process_items( &get_map() );
+    source_ammo.front()->charges = 3;
+    const auto first = cata_mp::make_inventory_turn_update( owner, before, fixture.inventory );
+    REQUIRE( first );
+    const JsonObject delta = json_loader::from_string( *first ).get_object();
+    delta.allow_omitted_members();
+    CHECK( delta.get_string( "type" ) == "inventory_delta" );
+    CHECK_FALSE( delta.has_member( "carried" ) );
+    CHECK( delta.get_array( "items" ).size() == 2 );
+    const auto before_apply = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( *first ) );
+    CHECK( rng_get_engine() == before_apply );
+    REQUIRE( rounds.get_item() == rounds_address );
+    CHECK( rounds->charges == 3 );
+    REQUIRE( disappearing );
+    CHECK( disappearing->get_var( "ethereal", 0 ) == 1 );
+    CHECK( replica_bag.get_item() == bag_address );
+    CHECK( replica.activity.targets.front().get_item() == rounds_address );
+    CHECK( client.revision == fixture.inventory.revision );
+    const auto old_upload = json_loader::from_string( R"({"inventory_revision":1})" ).get_object();
+    CHECK_FALSE( cata_mp::pickup_inventory_revision_matches( old_upload, fixture.inventory ) );
+
+    const auto second_before = cata_mp::capture_inventory_turn( owner );
+    owner.process_items( &get_map() );
+    source_ammo.front()->charges = 0;
+    const auto second = cata_mp::make_inventory_turn_update( owner, second_before, fixture.inventory );
+    REQUIRE( second );
+    const JsonObject graph = json_loader::from_string( *second ).get_object();
+    graph.allow_omitted_members();
+    CHECK( graph.get_string( "type" ) == "inventory_update" );
+    REQUIRE( cata_mp::client_apply_message( *second ) );
+    CHECK_FALSE( disappearing );
+    CHECK( replica_bag.get_item() == bag_address );
+    REQUIRE( rounds.get_item() == rounds_address );
+    CHECK( rounds->charges == 0 );
+    CHECK( replica.activity.targets.front().get_item() == rounds_address );
+    CHECK( replica.items_with( []( const item & it ) {
+        return it.typeId() == itype_id( "rock" );
+    } ).empty() );
+    REQUIRE( cata_mp::client_apply_message( *first ) );
+    CHECK( client.revision == fixture.inventory.revision );
+    CHECK_FALSE( disappearing );
+}
+
+TEST_CASE( "item_delta_rejects_gaps_and_duplicate_ids_before_modifying_items",
+           "[multiplayer][item_turn]" )
+{
+    reload_fixture fixture;
+    avatar &replica = get_avatar();
+    replica.set_wielded_item( item( itype_id( "556" ), calendar::turn, 5 ) );
+    item_location rounds = replica.get_wielded_item();
+    std::ostringstream payload;
+    {
+        JsonOut out( payload );
+        rounds->store_current_state( out );
+    }
+    const auto request = [&]( int64_t base, bool duplicate ) {
+        const std::string entry = R"({"uid":)" + std::to_string( rounds->uid().get_value() ) +
+                                  R"(,"state":)" + payload.str() + "}";
+        return R"({"base_revision":)" + std::to_string( base ) +
+               R"(,"inventory_revision":2,"items":[)" + entry + ( duplicate ? "," + entry : "" ) + "]}";
+    };
+    rounds->charges = 3;
+    cata_mp::pickup_client_state client;
+    client.revision = 1;
+    const auto rng = rng_get_engine();
+    CHECK_THROWS_AS( cata_mp::apply_inventory_turn_update( replica,
+                     json_loader::from_string( request( 0, false ) ).get_object(), client ), JsonError );
+    CHECK_THROWS_AS( cata_mp::apply_inventory_turn_update( replica,
+                     json_loader::from_string( request( 1, true ) ).get_object(), client ), JsonError );
+    CHECK( rounds->charges == 3 );
+    CHECK( client.revision == 1 );
+    CHECK( rng_get_engine() == rng );
+}

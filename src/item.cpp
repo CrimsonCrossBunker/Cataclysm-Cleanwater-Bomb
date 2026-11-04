@@ -411,6 +411,26 @@ item::~item() = default;
 item &item::operator=( const item & ) = default;
 item &item::operator=( item && ) noexcept = default;
 
+void item::reuse_current_nodes( std::list<item> &existing, std::list<item> &incoming )
+{
+    std::unordered_map<int64_t, std::list<item>::iterator> by_uid;
+    for( auto it = existing.begin(); it != existing.end(); ++it ) {
+        by_uid.emplace( it->uid().get_value(), it );
+    }
+    for( auto it = incoming.begin(); it != incoming.end(); ) {
+        const auto match = by_uid.find( it->uid().get_value() );
+        const auto old = match == by_uid.end() ? existing.end() : match->second;
+        if( old == existing.end() ) {
+            ++it;
+            continue;
+        }
+        old->apply_current_state( std::move( *it ) );
+        it = incoming.erase( it );
+        incoming.splice( it, existing, old );
+        by_uid.erase( match );
+    }
+}
+
 item item::make_corpse( const mtype_id &mt, time_point turn, const std::string &name,
                         const int upgrade_time )
 {

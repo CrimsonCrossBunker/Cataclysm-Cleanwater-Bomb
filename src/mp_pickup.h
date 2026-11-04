@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <map>
 #include <string>
 
 class Character;
@@ -50,6 +51,25 @@ std::optional<std::string> make_give_request( const item_location &source, const
 give_result execute_give_request( Character &giver, Character *receiver, const JsonObject &request,
                                   pickup_host_state &state );
 std::string make_inventory_update( const Character &who, pickup_host_state &state );
+
+// A turn-local baseline: topology and cheap counters for all processed items,
+// scalar payloads only for items that can change during native processing.
+struct inventory_turn_item {
+    int64_t parent = 0;
+    int pocket = 0;
+    int position = 0;
+    int charges = 0;
+    std::string type;
+    std::string state;
+};
+struct inventory_turn_snapshot {
+    std::map<int64_t, inventory_turn_item> items;
+};
+inventory_turn_snapshot capture_inventory_turn( Character &who );
+std::optional<std::string> make_inventory_turn_update( Character &who,
+        const inventory_turn_snapshot &before, pickup_host_state &state );
+bool apply_inventory_turn_update( Character &who, const JsonObject &message,
+                                  pickup_client_state &state );
 } // namespace cata_mp
 
 #endif // CATA_SRC_MP_PICKUP_H
