@@ -2142,22 +2142,65 @@ class craft_activity_actor : public activity_actor
         craft_activity_actor() = default;
 
         item_location craft_item;
-        bool is_long;
+        bool is_long = false;
         mode mode_ = mode::active;
+        bool server_owned = false;
+        bool view_only = false;
+        bool practice_choice_made = false;
+        bool resume_planning = false;
+        std::string view_progress;
+        character_id owner_id;
+        item_source owned_source;
+        std::string input_needed;
+        recipe_id next_recipe;
+        int next_batch = 0;
+        std::optional<tripoint_abs_ms> next_location;
 
         float activity_override = NO_EXERCISE;
         std::optional<requirement_data> cached_continuation_requirements; // NOLINT(cata-serialize)
-        float cached_crafting_speed; // NOLINT(cata-serialize)
-        int cached_assistants; // NOLINT(cata-serialize)
+        float cached_crafting_speed = 0; // NOLINT(cata-serialize)
+        int cached_assistants = 0; // NOLINT(cata-serialize)
         crafting_cost_context cached_cost_ctx; // NOLINT(cata-serialize)
         bool cost_ctx_ready = false; // NOLINT(cata-serialize)
-        double cached_base_total_moves; // NOLINT(cata-serialize)
-        double cached_cur_total_moves; // NOLINT(cata-serialize)
-        float cached_workbench_multiplier; // NOLINT(cata-serialize)
-        bool use_cached_workbench_multiplier; // NOLINT(cata-serialize)
+        double cached_base_total_moves = 1; // NOLINT(cata-serialize)
+        double cached_cur_total_moves = 1; // NOLINT(cata-serialize)
+        float cached_workbench_multiplier = 0; // NOLINT(cata-serialize)
+        bool use_cached_workbench_multiplier = false; // NOLINT(cata-serialize)
         bool check_if_craft_okay( item_location &craft_item, Character &crafter );
+        void check_failure( Character &crafter );
     public:
-        craft_activity_actor( item_location &it, bool is_long );
+        craft_activity_actor( item_location &it, bool is_long, Character *owner = nullptr,
+                              bool resuming = false );
+
+        static craft_activity_actor client_view();
+        bool is_client_view() const {
+            return view_only;
+        }
+        bool is_server_owned() const {
+            return server_owned;
+        }
+        bool prepare_owned_turn( Character &who );
+        bool apply_owned_choice( Character &who, const JsonObject &choice );
+        void deliver_owned_results( Character &who,
+                                    const std::vector<unload_liquid_choice> &liquids = {} );
+        const item_location &target() const {
+            return craft_item;
+        }
+        const std::string &waiting_for() const {
+            return input_needed;
+        }
+        void update_view_progress( const std::string &text ) {
+            view_progress = text;
+        }
+        const recipe_id &repeat_recipe() const {
+            return next_recipe;
+        }
+        int repeat_batch() const {
+            return next_batch;
+        }
+        const std::optional<tripoint_abs_ms> &repeat_location() const {
+            return next_location;
+        }
 
         const activity_id &get_type() const override {
             static const activity_id ACT_CRAFT( "ACT_CRAFT" );

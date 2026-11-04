@@ -6825,8 +6825,9 @@ std::unique_ptr<activity_actor> unload_activity_actor::deserialize( JsonValue &j
     return actor.clone();
 }
 
-craft_activity_actor::craft_activity_actor( item_location &it, const bool is_long ) :
-    craft_item( it ), is_long( is_long )
+craft_activity_actor::craft_activity_actor( item_location &it, const bool is_long,
+        Character *owner, bool resuming ) : craft_item( it ), is_long( is_long ),
+    resume_planning( resuming )
 {
     cached_crafting_speed = 0;
     cached_assistants = 0;
@@ -6834,6 +6835,169 @@ craft_activity_actor::craft_activity_actor( item_location &it, const bool is_lon
     cached_cur_total_moves = 1;
     cached_workbench_multiplier = 0;
     use_cached_workbench_multiplier = false;
+    if( owner ) {
+        server_owned = true;
+        owner_id = owner->getID();
+        owned_source = capture_item_source( *owner, it );
+    }
+}
+
+craft_activity_actor craft_activity_actor::client_view()
+{
+    craft_activity_actor actor;
+    actor.view_only = true;
+    return actor;
+}
+
+bool craft_activity_actor::prepare_owned_turn( Character &who )
+{
+    if( !server_owned || view_only || who.getID() != owner_id || who.is_dead_state() ) {
+        return false;
+    }
+    if( input_needed == "repeat" ) {
+        return true;
+    }
+    if( !craft_item || !craft_item->is_craft() ||
+        resolve_item_source( who, get_map(), owned_source ) != craft_item ||
+        square_dist( craft_item.pos_abs(), who.pos_abs() ) > 1 ) {
+        return false;
+    }
+    if( craft_has_pending_components( *craft_item ) ) {
+        input_needed = "components";
+        return true;
+    }
+    craft_item->get_craft_results().components_pending = false;
+    if( input_needed == "components" ) {
+        input_needed.clear();
+    }
+    if( craft_item->item_counter >= 10000000 ) {
+        if( input_needed == "resume" || input_needed == "repair" ) {
+            input_needed.clear();
+        }
+        resume_planning = false;
+        return true;
+    }
+    if( resume_planning ) {
+        input_needed = "resume";
+        return true;
+    }
+    if( !craft_item->get_making().character_has_required_proficiencies( who ) ) {
+        return false;
+    }
+    if( input_needed.empty() && ( !craft_item->get_continue_reqs().is_empty() ||
+                                  !craft_item->has_tools_to_continue() ) ) {
+        input_needed = "repair";
+    }
+    return true;
+}
+
+bool craft_activity_actor::apply_owned_choice( Character &who, const JsonObject &choice )
+{
+    if( !prepare_owned_turn( who ) || choice.get_string( "decision" ) != input_needed ) {
+        return false;
+    }
+    if( input_needed == "repair" || input_needed == "resume" ) {
+        std::optional<std::vector<attention_plan>> plans;
+        if( input_needed == "resume" ) {
+            if( !who.has_recipe( &craft_item->get_making() ) ) {
+                return false;
+            }
+            plans = read_craft_plans( who, craft_item->get_making(), craft_item->get_making_batch_size(),
+                                      choice.get_array( "plans" ), &*craft_item );
+            if( !plans ) {
+                return false;
+            }
+        }
+        const auto selected = craft_resume_selection::from_selection( who, *craft_item,
+                              choice.get_object( "selection" ) );
+        if( !selected || !selected->apply( who, *craft_item ) ) {
+            return false;
+        }
+        if( plans ) {
+            craft_item->set_step_plans( std::move( *plans ) );
+            craft_apply_resume_replan( craft_item );
+            resume_planning = false;
+        }
+        cached_continuation_requirements.reset();
+        cost_ctx_ready = false;
+        cached_crafting_speed = 0;
+        use_cached_workbench_multiplier = false;
+    } else if( input_needed == "practice_stop" ) {
+        if( choice.get_bool( "stop" ) ) {
+            who.cancel_activity();
+            return true;
+        }
+        input_needed.clear();
+        check_failure( who );
+        return true;
+    } else if( input_needed == "practice_continue" ) {
+        is_long = choice.get_bool( "repeat" );
+        practice_choice_made = true;
+    } else {
+        return false;
+    }
+    input_needed.clear();
+    return true;
+}
+
+void craft_activity_actor::deliver_owned_results( Character &who,
+        const std::vector<unload_liquid_choice> &liquids )
+{
+    if( !prepare_owned_turn( who ) || !craft_item ) {
+        return;
+    }
+    if( input_needed == "components" ) {
+        const safe_reference<Creature> lifetime = who.get_safe_reference();
+        const auto identity = who.activity.identity_generation();
+        item_location workpiece = craft_item;
+        const bool ready = unload_craft_components( who, workpiece, liquids );
+        if( !lifetime || who.activity.identity_generation() != identity ) {
+            return;
+        }
+        if( !workpiece ) {
+            who.cancel_activity();
+        } else if( ready ) {
+            input_needed.clear();
+        }
+        return;
+    }
+    if( craft_item->item_counter < 10000000 ) {
+        return;
+    }
+    const recipe &rec = craft_item->get_making();
+    if( !practice_choice_made && rec.is_practice() && !is_long &&
+        craft_item->get_making_batch_size() == 1 ) {
+        input_needed = "practice_continue";
+        return;
+    }
+    next_recipe = rec.ident();
+    next_batch = craft_item->get_making_batch_size();
+    next_location = craft_item.where_recursive() == item_location::type::character ?
+                    std::nullopt : std::make_optional( craft_item.pos_abs() );
+    const safe_reference<Creature> lifetime = who.get_safe_reference();
+    const auto identity = who.activity.identity_generation();
+    // Completion callbacks can replace the activity. Do not give them a
+    // reference to storage owned by this actor, which they may destroy.
+    item_location workpiece = craft_item;
+    const bool done = deliver_owned_craft( who, workpiece, liquids );
+    if( !lifetime || who.activity.identity_generation() != identity ) {
+        return;
+    }
+    craft_item = workpiece;
+    who.activity.targets = workpiece ? std::vector<item_location> { workpiece } :
+                           std::vector<item_location> {};
+    if( done ) {
+        if( is_long ) {
+            input_needed = "repeat";
+        } else {
+            who.cancel_activity();
+        }
+    } else if( workpiece ) {
+        owned_source = capture_item_source( who, workpiece );
+        input_needed = "results";
+    } else {
+        who.cancel_activity();
+    }
 }
 
 bool craft_activity_actor::check_if_craft_okay( item_location &craft_item, Character &crafter )
@@ -6856,6 +7020,12 @@ bool craft_activity_actor::check_if_craft_okay( item_location &craft_item, Chara
         return false;
     }
 
+    if( server_owned ) {
+        return prepare_owned_turn( crafter );
+    }
+    if( craft_has_pending_components( *craft ) && !unload_craft_components( crafter, craft_item ) ) {
+        return false;
+    }
     if( !cached_continuation_requirements ) {
         cached_continuation_requirements = craft->get_continue_reqs();
     }
@@ -6864,8 +7034,17 @@ bool craft_activity_actor::check_if_craft_okay( item_location &craft_item, Chara
 
 void craft_activity_actor::start( player_activity &act, Character &crafter )
 {
-    if( !check_if_craft_okay( craft_item, crafter ) ) {
+    if( view_only ) {
+        act.moves_total = act.moves_left = 1;
+        return;
+    }
+    if( !craft_available_to( crafter, craft_item ) || !check_if_craft_okay( craft_item, crafter ) ) {
         act.set_to_null();
+        return;
+    }
+    if( server_owned ) {
+        craft_item->set_crafter_id( owner_id );
+        craft_item->get_craft_results().owner_selects_destination = true;
     }
     activity_override = craft_item.get_item()->get_making().exertion_level();
     cached_crafting_speed = 0;
@@ -6877,6 +7056,23 @@ void craft_activity_actor::start( player_activity &act, Character &crafter )
 
 void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
 {
+    if( view_only ) {
+        cata_mp::client_step_inventory_activity();
+        return;
+    }
+    if( server_owned ) {
+        if( !prepare_owned_turn( crafter ) ) {
+            crafter.cancel_activity();
+            return;
+        }
+        if( !input_needed.empty() ) {
+            return;
+        }
+        if( craft_item->item_counter >= 10000000 ) {
+            deliver_owned_results( crafter );
+            return;
+        }
+    }
     map &here = get_map();
 
     if( !check_if_craft_okay( craft_item, crafter ) ) {
@@ -7166,6 +7362,10 @@ void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
 
     // if item_counter has reached 100% or more
     if( craft.item_counter >= 10000000 ) {
+        if( server_owned ) {
+            deliver_owned_results( crafter );
+            return;
+        }
         if( rec.is_practice() && !is_long && craft.get_making_batch_size() == 1 ) {
             if( crafter.is_avatar() && query_yn( _( "Keep practicing until proficiency increases?" ) ) ) {
                 is_long = true;
@@ -7185,7 +7385,10 @@ void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
         }
     } else {
         if( level_up && craft.get_making().is_practice() ) {
-            if( crafter.is_avatar() ) {
+            if( server_owned ) {
+                input_needed = "practice_stop";
+                return;
+            } else if( crafter.is_avatar() ) {
                 if( query_yn( _( "Your proficiency has increased.  Stop practicing?" ) ) ) {
                     crafter.cancel_activity();
                     return;
@@ -7196,26 +7399,42 @@ void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
             }
         }
 
-        if( craft.item_counter >= craft.get_next_failure_point() ) {
-            bool destroy = craft.handle_craft_failure( crafter );
-            // If the craft needs to be destroyed, do it and stop crafting.
-            if( destroy ) {
-                crafter.add_msg_player_or_npc( _( "There is nothing left of the %s to craft from." ),
-                                               _( "There is nothing left of the %s <npcname> was crafting." ), craft.tname() );
-                craft_item.remove_item();
-                crafter.cancel_activity();
-            }
-        }
+        check_failure( crafter );
+    }
+}
+
+void craft_activity_actor::check_failure( Character &crafter )
+{
+    item_location target = craft_item;
+    if( !target || target->item_counter < target->get_next_failure_point() ) {
+        return;
+    }
+    cached_continuation_requirements.reset();
+    const safe_reference<Creature> lifetime = crafter.get_safe_reference();
+    // The local continuation prompt may cancel and destroy this actor.
+    const bool destroy = target->handle_craft_failure( crafter, !server_owned );
+    if( lifetime && destroy && target ) {
+        crafter.add_msg_player_or_npc( _( "There is nothing left of the %s to craft from." ),
+                                       _( "There is nothing left of the %s <npcname> was crafting." ), target->tname() );
+        target.remove_item();
+        crafter.cancel_activity();
     }
 }
 
 void craft_activity_actor::finish( player_activity &act, Character & )
 {
+    if( view_only || server_owned ) {
+        return;
+    }
     act.set_to_null();
 }
 
 void craft_activity_actor::canceled( player_activity &/*act*/, Character &/*who*/ )
 {
+    if( view_only ) {
+        cata_mp::client_cancel_inventory_activity();
+        return;
+    }
     item *craft = craft_item.get_item();
     // item_location::get_item() will return nullptr if the item is lost
     if( !craft ) {
@@ -7223,7 +7442,8 @@ void craft_activity_actor::canceled( player_activity &/*act*/, Character &/*who*
     }
     const recipe item_recipe = craft->get_making();
     // recipe items with no components and results/result_eocs can be safely removed
-    if( item_recipe.result() == itype_id::NULL_ID() && item_recipe.result_eocs.empty() &&
+    if( craft->get_craft_results().stage == craft_completion_stage::not_started &&
+        item_recipe.result() == itype_id::NULL_ID() && item_recipe.result_eocs.empty() &&
         craft->components.empty() ) {
         craft_item.remove_item();
     }
@@ -7231,6 +7451,9 @@ void craft_activity_actor::canceled( player_activity &/*act*/, Character &/*who*
 
 std::string craft_activity_actor::get_progress_message( const player_activity & ) const
 {
+    if( view_only ) {
+        return view_progress;
+    }
     if( !craft_item ) {
         //We have somehow lost the craft item.  This will be handled in do_turn in the check_if_craft_is_ok call.
         return "";
@@ -7271,6 +7494,17 @@ void craft_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "craft_loc", craft_item );
     jsout.member( "long", is_long );
     jsout.member( "activity_override", activity_override );
+    jsout.member( "server_owned", server_owned );
+    jsout.member( "view_only", view_only );
+    jsout.member( "owner_id", owner_id );
+    jsout.member( "owned_source", owned_source );
+    jsout.member( "input_needed", input_needed );
+    jsout.member( "practice_choice_made", practice_choice_made );
+    jsout.member( "resume_planning", resume_planning );
+    jsout.member( "view_progress", view_progress );
+    jsout.member( "next_recipe", next_recipe );
+    jsout.member( "next_batch", next_batch );
+    jsout.member( "next_location", next_location );
     if( mode_ == mode::waiting ) {
         jsout.member( "mode", "waiting" );
     }
@@ -7287,6 +7521,17 @@ std::unique_ptr<activity_actor> craft_activity_actor::deserialize( JsonValue &js
     data.read( "craft_loc", actor.craft_item );
     data.read( "long", actor.is_long );
     data.read( "activity_override", actor.activity_override );
+    data.read( "server_owned", actor.server_owned );
+    data.read( "view_only", actor.view_only );
+    data.read( "owner_id", actor.owner_id );
+    data.read( "owned_source", actor.owned_source );
+    data.read( "input_needed", actor.input_needed );
+    data.read( "practice_choice_made", actor.practice_choice_made );
+    data.read( "resume_planning", actor.resume_planning );
+    data.read( "view_progress", actor.view_progress );
+    data.read( "next_recipe", actor.next_recipe );
+    data.read( "next_batch", actor.next_batch );
+    data.read( "next_location", actor.next_location );
     std::string mode_str;
     if( data.read( "mode", mode_str ) && mode_str == "waiting" ) {
         actor.mode_ = mode::waiting;

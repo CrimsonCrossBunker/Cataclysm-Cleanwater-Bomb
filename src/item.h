@@ -37,6 +37,7 @@
 #include "item_pocket.h"
 #include "item_tname.h"
 #include "item_uid.h"
+#include "craft_result_state.h"
 #include "material.h"
 #include "math_parser_diag_value.h"
 #include "point.h"
@@ -3281,7 +3282,7 @@ class item : public visitable
          * @param crafter the crafting player.
          * @return whether the craft being worked on should be entirely destroyed
          */
-        bool handle_craft_failure( Character &crafter );
+        bool handle_craft_failure( Character &crafter, bool prompt_continue = true );
 
         /**
          * Returns requirement data representing what is needed to resume work on an in progress craft.
@@ -3344,6 +3345,8 @@ class item : public visitable
         void set_env_check_at( time_point t );
 
         character_id get_crafter_id() const;
+        craft_result_state &get_craft_results();
+        const craft_result_state &get_craft_results() const;
         void set_crafter_id( character_id id );
 
         int get_passive_start_counter() const;
@@ -3648,6 +3651,7 @@ class item : public visitable
                 bool tools_to_continue = false;
                 int batch_size = -1;
                 std::vector<std::vector<step_tool_alloc>> step_tool_allocs;
+                craft_result_state completion;
                 std::optional<units::mass> cached_weight; // NOLINT(cata-serialize)
                 std::optional<units::volume> cached_volume; // NOLINT(cata-serialize)
 
@@ -3735,7 +3739,7 @@ class item : public visitable
         time_point countdown_point = calendar::turn_max;
 
         units::specific_energy specific_energy = units::from_joule_per_gram(
-                -10 ); // Specific energy J/g. Negative value for unprocessed.
+                    -10 ); // Specific energy J/g. Negative value for unprocessed.
         units::temperature temperature = units::from_kelvin( 0 );       // Temperature of the item .
         int mission_id = -1;       // Refers to a mission in game's master list
         int player_id = -1;        // Only give a mission to the right player!
@@ -3874,6 +3878,7 @@ inline bool is_crafting_component( const item &component )
  * Filter for crafting components first pass searches excluding undesirable properties.
  */
 bool is_preferred_component( const item &component );
+bool is_preferred_component( const item &component, const Character &crafter );
 
 struct disp_mod_by_barrel {
     units::length barrel_length;
@@ -3892,6 +3897,6 @@ struct disp_mod_by_barrel {
  * For display purposes only.
  */
 std::vector<std::pair<const item *, int>> get_item_duplicate_counts(
-    const std::list<const item *> &items );
+        const std::list<const item *> &items );
 
 #endif // CATA_SRC_ITEM_H

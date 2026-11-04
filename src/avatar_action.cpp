@@ -3,6 +3,7 @@
 #include "mp_gamestate.h"
 #include "mp_unload.h"
 #include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
 #include "mp_throw.h"
 
 #include <coordinates.h>
@@ -1515,6 +1516,10 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
     // Submit the original source before obtain/overflow can mutate the replica.
     // Native medication use already follows the consumption activity path.
+    if( cata_mp::is_client_mode() && loc->is_craft() ) {
+        cata_mp::client_resume_craft( loc );
+        return;
+    }
     if( cata_mp::is_client_mode() && method == "heal" && healing_action( loc ) ) {
         select_client_healing( you, loc );
         return;

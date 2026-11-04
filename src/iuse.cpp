@@ -44,6 +44,8 @@
 #include "construction.h"
 #include "coordinates.h"
 #include "crafting.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
 #include "crafting_enums.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -8602,6 +8604,15 @@ static item *wield_before_use( Character *const p, item *const it, const std::st
 
 std::optional<int> iuse::craft( Character *p, item *it, const tripoint_bub_ms & )
 {
+    if( p->is_avatar() && cata_mp::is_client_mode() ) {
+        for( const item_location &source : p->all_items_loc() ) {
+            if( source.get_item() == it ) {
+                cata_mp::client_resume_craft( source );
+                break;
+            }
+        }
+        return std::nullopt;
+    }
     if( p->cant_do_mounted() ) {
         return std::nullopt;
     }
@@ -8618,6 +8629,13 @@ std::optional<int> iuse::craft( Character *p, item *it, const tripoint_bub_ms & 
     }
 
     item_location craft_loc( *p, it );
+    if( craft_has_pending_components( *it ) && !unload_craft_components( *p, craft_loc ) ) {
+        return std::nullopt;
+    }
+    it = craft_loc.get_item();
+    if( !it ) {
+        return std::nullopt;
+    }
     craft_resolve_overdue_passive( *it, calendar::turn, craft_loc );
     if( !craft_loc || !craft_loc.get_item() ) {
         return std::nullopt;
