@@ -35,6 +35,7 @@
 #include "recipe.h"
 #include "string_id.h"
 #include "type_id.h"
+#include "tool_activity_target.h"
 #include "uistate.h"
 #include "units.h"
 #include "units_fwd.h"
@@ -1341,6 +1342,7 @@ class lockpick_activity_actor : public activity_actor
         std::optional<item_location> lockpick;
         std::optional<item> fake_lockpick;
         tripoint_abs_ms target;
+        std::optional<tool_activity_target> owned_target;
 
         lockpick_activity_actor(
             int moves_total,
@@ -1371,7 +1373,7 @@ class lockpick_activity_actor : public activity_actor
         }
 
         void start( player_activity &act, Character & ) override;
-        void do_turn( player_activity &, Character & ) override {}
+        void do_turn( player_activity &, Character & ) override;
         void finish( player_activity &act, Character &who ) override;
 
         static std::optional<tripoint_bub_ms> select_location( avatar &you );
@@ -1823,6 +1825,7 @@ class mine_activity_actor : public activity_actor
         item_location mining_tool;
         tripoint_abs_ms mined_location;
         time_duration mining_duration;
+        std::optional<tool_activity_target> owned_target;
 };
 
 class pickaxe_activity_actor : public mine_activity_actor
@@ -2937,13 +2940,10 @@ class prying_activity_actor : public activity_actor
         tripoint_bub_ms target;
         item_location tool;
         bool prying_nails = false;
+        std::optional<tool_activity_target> owned_target;
 
         bool can_resume_with_internal( const activity_actor &other,
-                                       const Character &/*who*/ ) const override {
-            const prying_activity_actor &actor = static_cast<const prying_activity_actor &>
-                                                 ( other );
-            return actor.target == target;
-        }
+                                       const Character &who ) const override;
 
         // regular prying has lots of conditionals...
         void handle_prying( Character &who );

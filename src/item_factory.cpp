@@ -2001,6 +2001,12 @@ class iuse_function_wrapper : public iuse_actor
                    std::end( immediate );
         }
 
+        bool supports_owned_activation() const override {
+            return is_immediate_consumption() || cpp_function == &iuse::crowbar ||
+                   cpp_function == &iuse::crowbar_weak || cpp_function == &iuse::pickaxe ||
+                   cpp_function == &iuse::jackhammer || cpp_function == &iuse::pick_lock;
+        }
+
         void load( const JsonObject &, const std::string & ) override {}
 };
 
