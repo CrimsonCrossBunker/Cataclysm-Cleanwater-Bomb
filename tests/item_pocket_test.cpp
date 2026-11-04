@@ -1287,10 +1287,10 @@ TEST_CASE( "pocket_exact_escrow_restores_identity_and_order", "[pocket][transact
     const int index = GENERATE( 0, 1, 2 );
     pocket_data data( pocket_type::CONTAINER );
     item_pocket pocket( &data );
-    const item rock( itype_test_rock );
-    REQUIRE_FALSE( rock.count_by_charges() );
+    const item specimen( itype_test_screwdriver );
+    REQUIRE_FALSE( specimen.count_by_charges() );
     for( int i = 0; i < 3; ++i ) {
-        pocket.add( rock );
+        pocket.add( specimen );
     }
     const auto original = pocket.all_items_top();
     REQUIRE( original.size() == 3 );
@@ -1317,10 +1317,10 @@ TEST_CASE( "pocket_exact_escrow_rejects_changed_gap_and_wrong_pocket",
     pocket_data data( pocket_type::CONTAINER );
     item_pocket pocket( &data );
     item_pocket other( &data );
-    const item rock( itype_test_rock );
-    REQUIRE_FALSE( rock.count_by_charges() );
+    const item specimen( itype_test_screwdriver );
+    REQUIRE_FALSE( specimen.count_by_charges() );
     for( int i = 0; i < 3; ++i ) {
-        pocket.add( rock );
+        pocket.add( specimen );
     }
     const auto original = pocket.all_items_top();
     REQUIRE( original.size() == 3 );
@@ -1348,10 +1348,10 @@ TEST_CASE( "pocket_exact_escrow_unwinds_multiple_extractions_in_reverse",
 {
     pocket_data data( pocket_type::CONTAINER );
     item_pocket pocket( &data );
-    const item rock( itype_test_rock );
-    REQUIRE_FALSE( rock.count_by_charges() );
+    const item specimen( itype_test_screwdriver );
+    REQUIRE_FALSE( specimen.count_by_charges() );
     for( int i = 0; i < 3; ++i ) {
-        pocket.add( rock );
+        pocket.add( specimen );
     }
     const auto original = pocket.all_items_top();
     REQUIRE( original.size() == 3 );

@@ -143,7 +143,13 @@ static constexpr tripoint_bub_ms dude_pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
 
 TEST_CASE( "strong_mutation_venom_keeps_character_effects", "[melee][mutation][venom]" )
 {
-    standard_npc attacker( "VenomTester", dude_pos, {}, 10, 12, 20, 12, 12 );
+    struct venom_attacker : standard_npc {
+        using standard_npc::standard_npc;
+        float hit_roll() const override {
+            return 1000.0f;
+        }
+    };
+    venom_attacker attacker( "VenomTester", dude_pos, {}, 10, 12, 20, 12, 12 );
     standard_npc target( "VenomTarget", dude_pos + tripoint::east, {}, 0, 8, 8, 8, 8 );
     target.set_movement_mode( move_mode_prone );
     attacker.set_skill_level( skill_unarmed, 10 );

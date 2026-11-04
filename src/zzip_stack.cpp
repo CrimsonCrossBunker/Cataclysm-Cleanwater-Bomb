@@ -3,12 +3,15 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "filesystem.h"
+#include "std_hash_fs_path.h"
 #include "zzip.h"
 
 static constexpr std::string_view kColdSuffix = ".cold.zzip";
@@ -344,7 +347,8 @@ std::optional<zzip> zzip_stack::load_temp( file_temp temp ) const
 
     std::optional<zzip> z = zzip::load( path_ / zzip_path, dictionary_ );
     if( !z ) {
-        return z;
+        throw std::runtime_error( "Cannot open compressed save archive: " +
+                                  ( path_ / zzip_path ).generic_u8string() );
     }
     std::vector<std::filesystem::path> entries = z->get_entries();
     for( std::filesystem::path const &p : entries ) {

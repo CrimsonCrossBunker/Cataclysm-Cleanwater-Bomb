@@ -33021,7 +33021,7 @@
         "lua_name": "ModDefinition",
         "registration": {
           "installer": "platform_v1.install_mod_definition",
-          "line": 238,
+          "line": 240,
           "namespace": "ccb",
           "path": "src/lua_platform_loader.cpp"
         },

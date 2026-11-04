@@ -1,5 +1,6 @@
 #include "ui_manager.h"
 
+#include <cuboid_rectangle.h>
 #include <functional>
 #include <iterator>
 #include <optional>
@@ -430,6 +431,9 @@ void ui_adaptor::redraw_invalidated( )
     restore_on_out_of_scope prev_restart_redrawing( restart_redrawing );
     redraw_in_progress = true;
 
+#if defined(TILES)
+    bool redrew_ui = false;
+#endif
     do {
         // Changed by the resize and redraw callbacks if they call `debugmsg`.
         // When this becomes true, the `debugmsg` call would have already changed
@@ -508,6 +512,9 @@ void ui_adaptor::redraw_invalidated( )
                     if( ui.redraw_cb ) {
                         ui.default_cursor();
                         ui.redraw_cb( ui );
+#if defined(TILES)
+                        redrew_ui = true;
+#endif
                         if( ui.cursor_type == cursor::last ) {
                             ui.record_term_cursor();
                             cata_assert( ui.cursor_type != cursor::last );
@@ -545,6 +552,11 @@ void ui_adaptor::redraw_invalidated( )
 #endif
     imclient->end_frame();
     imgui_frame_started = false;
+#if defined(TILES)
+    if( redrew_ui ) {
+        renderer_recovery_redraw_complete();
+    }
+#endif
 
     // if any ImGui window needed to calculate the size of its contents,
     //  it needs an extra frame to draw. We do that here.

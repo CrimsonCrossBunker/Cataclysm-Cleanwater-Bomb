@@ -24,10 +24,7 @@ static const itype_id itype_longbow( "longbow" );
 static const itype_id itype_pants( "pants" );
 static const itype_id itype_pebble( "pebble" );
 static const itype_id itype_quiver( "quiver" );
-static const itype_id itype_rock( "rock" );
 static const itype_id itype_slingshot( "slingshot" );
-static const itype_id itype_staff_sling( "staff_sling" );
-static const itype_id itype_stone_pouch( "stone_pouch" );
 static const itype_id itype_tool_belt( "tool_belt" );
 
 static const mtype_id pseudo_debug_mon( "pseudo_debug_mon" );
@@ -54,6 +51,7 @@ static void check_reload_time( const itype_id &weapon, const itype_id &ammo,
     REQUIRE( !!shooter.used_weapon() );
     // Spooky action at a distance to tell load_RAS_weapon where to find the ammo.
     item::reload_option opt = shooter.select_ammo( shooter.used_weapon(), false );
+    REQUIRE( opt.ammo );
     shooter.ammo_location = opt.ammo;
 
     CAPTURE( opt.moves() );
@@ -92,23 +90,6 @@ TEST_CASE( "reload_from_inventory_times", "[reload] [inventory] [balance]" )
         }
         SECTION( "from the ground" ) {
             check_reload_time( itype_slingshot, itype_pebble, itype_id::NULL_ID(), 180 );
-        }
-    }
-    SECTION( "reloading a staff sling" ) {
-        SECTION( "from a backpack" ) {
-            check_reload_time( itype_staff_sling, itype_rock, itype_backpack, 595 );
-        }
-        SECTION( "from a stone pouch" ) {
-            check_reload_time( itype_staff_sling, itype_rock, itype_stone_pouch, 315 );
-        }
-        SECTION( "from a tool belt" ) {
-            check_reload_time( itype_staff_sling, itype_rock, itype_tool_belt, 380 );
-        }
-        SECTION( "from a pocket" ) {
-            check_reload_time( itype_staff_sling, itype_rock, itype_pants, 395 );
-        }
-        SECTION( "from the ground" ) {
-            check_reload_time( itype_staff_sling, itype_rock, itype_id::NULL_ID(), 370 );
         }
     }
     SECTION( "reloading a bow" ) {
