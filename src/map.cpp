@@ -10288,8 +10288,6 @@ void map::shift( const point_rel_sm &sp )
 
     shift_traps( sp );
 
-    vehicle *remoteveh = g->remoteveh();
-
     for( int gridz = zmin; gridz <= zmax; gridz++ ) {
         level_cache *cache = get_cache_lazy( gridz );
         if( !cache ) {
@@ -10343,8 +10341,6 @@ void map::shift( const point_rel_sm &sp )
     }
 
     rebuild_vehicle_level_caches();
-
-    g->setremoteveh( remoteveh );
 
     if( !support_cache_dirty.empty() ) {
         std::set<tripoint_bub_ms> old_cache = std::move( support_cache_dirty );

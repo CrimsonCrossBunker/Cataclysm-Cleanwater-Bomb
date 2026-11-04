@@ -3274,14 +3274,20 @@ class start_engines_activity_actor : public activity_actor
     private:
         time_duration initial_moves; // NOLINT(cata-serialize)
         tripoint_rel_ms engine_position;
-        bool take_control;
+        bool take_control = false;
+        int64_t vehicle_id = 0;
+        bool remote_control = false;
+
+        vehicle *target_vehicle( Character &who ) const;
 
         // private empty constructor for deserialization
         explicit start_engines_activity_actor() = default;
     public:
         explicit start_engines_activity_actor( time_duration initial_moves,
-                                               tripoint_rel_ms engine_position, bool take_control ) :
-            initial_moves( initial_moves ), engine_position( engine_position ), take_control( take_control ) {};
+                                               tripoint_rel_ms engine_position, bool take_control,
+                                               int64_t vehicle_id = 0, bool remote_control = false ) :
+            initial_moves( initial_moves ), engine_position( engine_position ), take_control( take_control ),
+            vehicle_id( vehicle_id ), remote_control( remote_control ) {};
 
         const activity_id &get_type() const override {
             static const activity_id ACT_START_ENGINES( "ACT_START_ENGINES" );
@@ -3289,7 +3295,8 @@ class start_engines_activity_actor : public activity_actor
         }
 
         void start( player_activity &act, Character & ) override;
-        void do_turn( player_activity &, Character & ) override {};
+        void do_turn( player_activity &act, Character &who ) override;
+        void canceled( player_activity &act, Character &who ) override;
         void finish( player_activity &act, Character &who ) override;
 
         std::unique_ptr<activity_actor> clone() const override {

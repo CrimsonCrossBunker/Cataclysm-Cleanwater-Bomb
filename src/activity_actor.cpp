@@ -160,6 +160,7 @@
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -13765,20 +13766,64 @@ void start_engines_activity_actor::start( player_activity &act, Character & )
     act.moves_left = act.moves_total;
 }
 
-void start_engines_activity_actor::finish( player_activity &act, Character &who )
+vehicle *start_engines_activity_actor::target_vehicle( Character &who ) const
 {
-    act.set_to_null();
-    // Find the vehicle by looking for a remote vehicle first, then at
-    // engine_position away from avatar
-    vehicle *veh = g->remoteveh();
     map &here = get_map();
-    if( !veh ) {
-        const tripoint_bub_ms pos = get_player_character().pos_bub() + engine_position;
-        veh = veh_pointer_or_null( here.veh_at( pos ) );
-        if( !veh ) {
-            return;
+    vehicle *target = vehicle_id > 0 ? vehicle::find_vehicle_by_uid( here, vehicle_id ) : nullptr;
+    if( vehicle_id == 0 ) {
+        // Old saves have only a relative engine position. Resolve it for the
+        // activity owner, never for the local avatar or another controller.
+        target = get_remote_vehicle( who, here );
+        if( !target ) {
+            target = veh_pointer_or_null( here.veh_at( who.pos_bub() + engine_position ) );
         }
     }
+    if( !target || who.is_dead_state() ) {
+        return nullptr;
+    }
+    if( remote_control || ( vehicle_id == 0 && target->remote_controlled( who ) ) ) {
+        return resolve_remote_vehicle( who, here ) == target ? target : nullptr;
+    }
+    for( const vpart_reference &part : target->get_all_parts() ) {
+        if( part.part().is_available() && ( part.has_feature( "CONTROLS" ) ||
+                                            ( !take_control && part.has_feature( "CTRL_ELECTRONIC" ) ) ||
+                                            part.has_feature( "CONTROL_ANIMAL" ) ) &&
+            rl_dist( who.pos_abs(), part.pos_abs() ) <= 1 &&
+            ( !take_control || ( who.controlling_vehicle && who.pos_abs() == part.pos_abs() ) ) ) {
+            return target;
+        }
+    }
+    return nullptr;
+}
+
+void start_engines_activity_actor::do_turn( player_activity &, Character &who )
+{
+    if( !target_vehicle( who ) ) {
+        who.cancel_activity();
+    }
+}
+
+void start_engines_activity_actor::canceled( player_activity &, Character &who )
+{
+    if( take_control ) {
+        // Cancel the control acquired for this startup, even if its controls
+        // or vehicle disappeared. A newly selected remote vehicle is independent.
+        vehicle *remote = resolve_remote_vehicle( who, get_map() );
+        if( !remote || remote->uid().get_value() == vehicle_id ) {
+            who.controlling_vehicle = false;
+        }
+    }
+}
+
+void start_engines_activity_actor::finish( player_activity &act, Character &who )
+{
+    vehicle *veh = target_vehicle( who );
+    if( !veh ) {
+        who.cancel_activity();
+        return;
+    }
+    act.set_to_null();
+    map &here = get_map();
 
     int attempted = 0;
     int non_muscle_attempted = 0;
@@ -13794,7 +13839,7 @@ void start_engines_activity_actor::finish( player_activity &act, Character &who 
                 !veh->is_engine_type( vp, itype_animal ) ) {
                 non_muscle_attempted++;
             }
-            if( veh->start_engine( here, vp ) ) {
+            if( veh->start_engine( here, vp, who ) ) {
                 started++;
                 if( !veh->is_engine_type( vp, itype_muscle ) &&
                     !veh->is_engine_type( vp, itype_animal ) ) {
@@ -13815,29 +13860,20 @@ void start_engines_activity_actor::finish( player_activity &act, Character &who 
     if( attempted == 0 ) {
         who.add_msg_if_player( m_info, _( "The %s doesn't have an engine!" ), veh_name );
     } else if( non_muscle_attempted > 0 ) {
-        const tripoint_bub_ms &character_position = who.pos_bub();
-
-        //Some non-muscle engines tried to start
         if( non_muscle_attempted == non_muscle_started ) {
-            //All of the non-muscle engines started
-            add_msg_if_player_sees( character_position, n_gettext( "The %s's engine starts up.",
-                                    "The %s's engines start up.", non_muscle_started ), veh_name );
+            const std::string message = string_format( n_gettext( "The %s's engine starts up.",
+                                        "The %s's engines start up.", non_muscle_started ), veh_name );
+            who.add_msg_player_or_npc( message, message );
         } else if( non_muscle_started > 0 ) {
-            //Only some of the non-muscle engines started
-            add_msg_if_player_sees( character_position, n_gettext( "One of the %s's engines start up.",
-                                    "Some of the %s's engines start up.", non_muscle_started ), veh_name );
+            const std::string message = string_format( n_gettext( "One of the %s's engines start up.",
+                                        "Some of the %s's engines start up.", non_muscle_started ), veh_name );
+            who.add_msg_player_or_npc( message, message );
         } else if( non_combustion_started > 0 ) {
-            //Non-combustions "engines" started
             who.add_msg_if_player( _( "The %s is ready for movement." ), veh_name );
         } else {
-            //All of the non-muscle engines failed
-            if( who.is_avatar() ) {
-                add_msg( m_bad, n_gettext( "The %s's engine fails to start.",
-                                           "The %s's engines fail to start.", non_muscle_attempted ), veh_name );
-            } else {
-                add_msg_if_player_sees( character_position, n_gettext( "The %s's engine fails to start.",
+            const std::string message = string_format( n_gettext( "The %s's engine fails to start.",
                                         "The %s's engines fail to start.", non_muscle_attempted ), veh_name );
-            }
+            who.add_msg_player_or_npc( m_bad, message, message );
         }
     }
 
@@ -13852,6 +13888,8 @@ void start_engines_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
     jsout.member( "engine_position", engine_position );
     jsout.member( "take_control", take_control );
+    jsout.member( "vehicle_id", vehicle_id );
+    jsout.member( "remote_control", remote_control );
     jsout.end_object();
 }
 
@@ -13861,6 +13899,8 @@ std::unique_ptr<activity_actor> start_engines_activity_actor::deserialize( JsonV
     JsonObject data = jsin.get_object();
     data.read( "engine_position", actor.engine_position );
     data.read( "take_control", actor.take_control );
+    data.read( "vehicle_id", actor.vehicle_id );
+    data.read( "remote_control", actor.remote_control );
     return actor.clone();
 }
 

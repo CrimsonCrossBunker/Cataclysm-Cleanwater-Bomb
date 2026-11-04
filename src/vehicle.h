@@ -1144,6 +1144,7 @@ class vehicle
         bool auto_select_fuel( map &here, vehicle_part &vp );
         // Attempt to start an engine
         bool start_engine( map &here, vehicle_part &vp );
+        bool start_engine( map &here, vehicle_part &vp, Character &driver );
         // stop all engines
         void stop_engines( map &here );
         // Attempt to start the vehicle's active engines
