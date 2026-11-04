@@ -357,7 +357,8 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     // A world callback may retire the activator after affecting bystanders.
     // Refresh conservatively even if native activation subsequently returns false.
     refresh_observers = action == bionic_action::activate &&
-                        ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) );
+                        ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) ||
+                          type == bionic_id( "bio_resonator" ) || type == bionic_id( "bio_magnet" ) );
     return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ), type, choices, action );
 }
 

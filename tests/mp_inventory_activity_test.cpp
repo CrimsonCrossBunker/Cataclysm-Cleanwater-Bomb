@@ -51,6 +51,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
+#include "map_iterator.h"
 #include "mapdata.h"
 #include "skill.h"
 #include "map_helpers.h"
@@ -4210,7 +4211,7 @@ TEST_CASE( "client_world_bionics_do_not_execute_area_effects_locally", "[mp_worl
     avatar &host = get_avatar();
     npc &other = fixture.remote();
     host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
-    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave" ) );
+    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave", "bio_resonator", "bio_magnet" ) );
     const unsigned int uid = prepare_targeted_bionic( host, id );
     host.set_max_power_level( 500_kJ );
     host.set_power_level( 500_kJ );
@@ -4235,7 +4236,7 @@ TEST_CASE( "world_bionic_requests_require_ownership_and_native_power", "[mp_worl
     bind_feedback_player( remote, 'a', 701 );
     avatar &host = get_avatar();
     host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
-    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave" ) );
+    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave", "bio_resonator", "bio_magnet" ) );
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     const std::string failure = GENERATE( "unauthorized", "power", "wrong_uid" );
     CAPTURE( id, failure );
@@ -4277,4 +4278,210 @@ TEST_CASE( "remote_player_bracing_protects_from_shockwave_like_local_bracing", "
     CHECK( remote.pos_abs() == remote_position );
     CHECK_FALSE( host.has_effect( efftype_id( "stunned" ) ) );
     CHECK_FALSE( remote.has_effect( efftype_id( "stunned" ) ) );
+}
+
+namespace
+{
+void add_magnet_test_item( map &here, const tripoint_bub_ms &position )
+{
+    item pipe( itype_id( "pipe" ) );
+    pipe.set_var( "ccb_magnet_test", 1 );
+    here.add_item( position, std::move( pipe ) );
+}
+
+int count_magnet_test_items( map &here, const tripoint_bub_ms &origin )
+{
+    int count = 0;
+    for( const tripoint_bub_ms &p : here.points_in_radius( origin, 12 ) ) {
+        for( const item &entry : here.i_at( p ) ) {
+            if( entry.has_var( "ccb_magnet_test" ) ) {
+                count += entry.count();
+            }
+        }
+    }
+    return count;
+}
+}
+
+TEST_CASE( "owned_resonator_changes_terrain_once_and_projects_the_delta", "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATIONS", "false" );
+    map &here = get_map();
+    avatar &host = get_avatar();
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    npc &other = spawn_npc( { 64, 62 }, "test_talker" );
+    auto &observer = bind_feedback_player( other, 'b', 702 );
+    const bool local = GENERATE( false, true );
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    host.setpos( here, local ? origin : tripoint_bub_ms( 30, 30, 0 ) );
+    remote.setpos( here, local ? tripoint_bub_ms( 30, 30, 0 ) : origin );
+    Character &activator = local ? static_cast<Character &>( host ) : remote;
+    const bionic_id id( "bio_resonator" );
+    const unsigned int uid = prepare_targeted_bionic( activator, id );
+    const tripoint_bub_ms door = origin + tripoint::east;
+    here.ter_set( door, ter_str_id( "t_door_c" ) );
+    const tripoint_abs_ms absolute = here.get_abs( door );
+    cata_mp::serialize_remote_player_state( observer );
+    std::string request;
+    if( local ) {
+        REQUIRE( activator.activate_bionic( **activator.find_bionic_by_uid( uid ) ) );
+    } else {
+        request = bionic_switch_request( fixture, remote, uid, id, true );
+        fixture.run( remote, request );
+        CHECK( fixture.reload.refresh_observers );
+    }
+    CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
+    CHECK( activator.get_moves() == 0 );
+    CHECK( here.ter( door ) != ter_str_id( "t_door_c" ).id() );
+    CHECK( here.passable( door ) );
+    const ter_id destroyed = here.ter( door );
+    if( !local ) {
+        const auto rng = rng_get_engine();
+        fixture.run( remote, request );
+        CHECK_FALSE( fixture.reload.refresh_observers );
+        CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
+        CHECK( here.ter( door ) == destroyed );
+        CHECK( rng_get_engine() == rng );
+    }
+    const JsonValue state = json_loader::from_string( cata_mp::serialize_remote_player_state( observer ) );
+    const JsonObject data = state.get_object();
+    data.allow_omitted_members();
+    bool found = false;
+    for( const JsonValue &entry : data.get_array( "tile_changes" ) ) {
+        const JsonObject tile = entry.get_object();
+        tile.allow_omitted_members();
+        if( tile.get_int( "x" ) == absolute.x() && tile.get_int( "y" ) == absolute.y() &&
+            tile.get_int( "z" ) == absolute.z() ) {
+            found = true;
+            CHECK( tile.get_string( "ter" ) == destroyed.id().str() );
+        }
+    }
+    CHECK( found );
+}
+
+TEST_CASE( "owned_magnet_preserves_item_counts_and_projects_source_and_landing", "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATION_PROJECTILES", "false" );
+    map &here = get_map();
+    avatar &host = get_avatar();
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    npc &other = spawn_npc( { 64, 65 }, "test_talker" );
+    auto &observer = bind_feedback_player( other, 'b', 702 );
+    const bool local = GENERATE( false, true );
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    host.setpos( here, local ? origin : tripoint_bub_ms( 30, 30, 0 ) );
+    remote.setpos( here, local ? tripoint_bub_ms( 30, 30, 0 ) : origin );
+    Character &activator = local ? static_cast<Character &>( host ) : remote;
+    const bionic_id id( "bio_magnet" );
+    const unsigned int uid = prepare_targeted_bionic( activator, id );
+    const tripoint_bub_ms source = origin + tripoint( 4, 0, 0 );
+    const tripoint_bub_ms landing = origin + tripoint::east;
+    const tripoint_bub_ms sealed = origin + tripoint( 0, 4, 0 );
+    const tripoint_bub_ms distant = origin + tripoint( 12, 0, 0 );
+    here.furn_set( sealed, furn_str_id( "f_crate_c" ) );
+    REQUIRE( here.has_flag( ter_furn_flag::TFLAG_SEALED, sealed ) );
+    for( const auto &p : { source, source, sealed, distant, origin } ) {
+        add_magnet_test_item( here, p );
+    }
+    const tripoint_bub_ms nonmetal = origin + tripoint( 4, 2, 0 );
+    here.add_item( nonmetal, item( itype_id( "rock" ) ) );
+    activator.set_wielded_item( item( itype_id( "pipe" ) ) );
+    const int64_t wielded_uid = activator.get_wielded_item()->uid().get_value();
+    REQUIRE( count_magnet_test_items( here, origin ) == 5 );
+    cata_mp::serialize_remote_player_state( observer );
+    std::string request;
+    if( local ) {
+        REQUIRE( activator.activate_bionic( **activator.find_bionic_by_uid( uid ) ) );
+    } else {
+        request = bionic_switch_request( fixture, remote, uid, id, true );
+        fixture.run( remote, request );
+        CHECK( fixture.reload.refresh_observers );
+    }
+    CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
+    CHECK( activator.get_moves() == 0 );
+    CHECK( activator.get_wielded_item()->uid().get_value() == wielded_uid );
+    CHECK( count_magnet_test_items( here, origin ) == 5 );
+    for( const auto &p : { source, landing, sealed, distant, origin, nonmetal } ) {
+        CHECK( here.i_at( p ).size() == 1 );
+    }
+    if( !local ) {
+        const auto rng = rng_get_engine();
+        fixture.run( remote, request );
+        CHECK_FALSE( fixture.reload.refresh_observers );
+        CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
+        CHECK( here.i_at( source ).size() == 1 );
+        CHECK( here.i_at( landing ).size() == 1 );
+        CHECK( count_magnet_test_items( here, origin ) == 5 );
+        CHECK( rng_get_engine() == rng );
+    }
+    const JsonValue state = json_loader::from_string( cata_mp::serialize_remote_player_state( observer ) );
+    const JsonObject data = state.get_object();
+    data.allow_omitted_members();
+    int found = 0;
+    for( const JsonValue &entry : data.get_array( "tile_changes" ) ) {
+        const JsonObject tile = entry.get_object();
+        tile.allow_omitted_members();
+        for( const auto &p : { source, landing } ) {
+            const tripoint_abs_ms absolute = here.get_abs( p );
+            if( tile.get_int( "x" ) == absolute.x() && tile.get_int( "y" ) == absolute.y() &&
+                tile.get_int( "z" ) == absolute.z() ) {
+                ++found;
+                CHECK( tile.get_array( "items" ).size() == 1 );
+            }
+        }
+    }
+    CHECK( found == 2 );
+}
+
+TEST_CASE( "magnetic_attraction_restores_unlaunched_items_when_a_hit_retires_the_operator",
+           "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATION_PROJECTILES", "false" );
+    map &here = get_map();
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    avatar &victim = get_avatar();
+    victim.setpos( here, tripoint_bub_ms( 58, 60, 0 ) );
+    victim.set_dodges_left( 0 );
+    victim.set_free_dodges_left( 0 );
+    victim.set_mutation( trait_id( "HUGE" ) );
+    const bionic_id id( "bio_magnet" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const tripoint_bub_ms origin = remote.pos_bub();
+    for( int x = 52; x <= 56; ++x ) {
+        add_magnet_test_item( here, tripoint_bub_ms( x, 60, 0 ) );
+    }
+    REQUIRE( count_magnet_test_items( here, origin ) == 5 );
+    class retire_on_damage : public event_subscriber
+    {
+        public:
+            character_id source;
+            character_id target;
+            bool retired = false;
+            retire_on_damage( character_id source, character_id target ) : source( source ), target( target ) {
+                get_event_bus().subscribe( this );
+            }
+            void notify( const cata::event &event ) override {
+                if( !retired && event.type() == event_type::character_takes_damage &&
+                    event.get<character_id>( "character" ) == target && event.get<int>( "damage" ) > 0 ) {
+                    retired = true;
+                    g->remove_npc( source );
+                }
+            }
+    } events( remote.getID(), victim.getID() );
+    fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
+    REQUIRE( events.retired );
+    CHECK( fixture.reload.refresh_observers );
+    CHECK( count_magnet_test_items( here, origin ) == 5 );
+    int returned = 0;
+    for( int x = 52; x <= 56; ++x ) {
+        returned += here.i_at( tripoint_bub_ms( x, 60, 0 ) ).size();
+    }
+    CHECK( returned > 0 );
+    CHECK( returned < 5 );
 }
