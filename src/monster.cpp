@@ -2643,6 +2643,19 @@ bool monster::movement_impaired()
 
 bool monster::move_effects( bool )
 {
+    const efftype_id grip( "martial_grapple" );
+    if( has_effect( grip ) ) {
+        Creature *const source = get_effect( grip ).get_source().resolve_creature();
+        Character *const holder = source ? source->as_character() : nullptr;
+        if( holder && !holder->is_dead_state() && is_adjacent( holder, false ) &&
+            !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
+            holder->has_two_arms_lifting() &&
+            !holder->has_effect( effect_downed ) && !holder->in_sleep_state() &&
+            holder->get_stamina() >= 100 ) {
+            return false;
+        }
+        remove_effect( grip );
+    }
     // This function is relatively expensive, we want that cached
     // IMPORTANT: If adding any new effects here, make SURE to
     // add them to hardcoded_movement_impairing in effect.cpp
