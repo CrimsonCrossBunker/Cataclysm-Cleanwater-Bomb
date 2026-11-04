@@ -1,0 +1,25 @@
+[
+  {
+    "type": "monster_attack",
+    "attack_type": "melee",
+    "id": "hypo_pkill",
+    "cooldown": 5,
+    "move_cost": 0,
+    "damage_max_instance": [
+      {
+        "damage_type": "stab",
+        "amount": 5,
+        "armor_penetration": 15,
+        "armor_multiplier": 0.2
+      }
+    ],
+    "effects": [
+      { "id": "pkill3", "duration": 300 },
+      { "id": "pkill2", "duration": 600 }
+    ],
+    "hit_dmg_u": "%1$s injects you with a syringe!",
+    "hit_dmg_npc": "%1$s injects <npcname> with a syringe!",
+    "no_dmg_msg_u": "%1$s tries to inject you, but fails to penetrate your armor!",
+    "no_dmg_msg_npc": "%1$s tries to inject <npcname>, but fails to penetrate their armor!"
+  }
+]

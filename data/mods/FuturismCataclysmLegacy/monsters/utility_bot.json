@@ -197,5 +197,33 @@
       "FIREPROOF"
     ],
     "armor": { "bash": 30, "cut": 50, "bullet": 60, "fcl_laser": 30, "fcl_plasma": 20, "electric": 10 }
+  },
+  {
+    "id": "mon_medibot",
+    "type": "MONSTER",
+    "name": "faulty surgical droid",
+    "looks_like": "mon_tripod",
+    "description": "A free roaming medical robot capable of administering powerful anesthetics and performing complex surgical operations, usually in that order.  Faulty bio-diagnostic programs resulted in numerous lawsuits before the Cataclysm.",
+    "default_faction": "berserk_bot",
+    "species": [ "ROBOT" ],
+    "volume": "62500 ml",
+    "weight": "81500 g",
+    "hp": 70,
+    "speed": 80,
+    "material": [ "steel", "plastic" ],
+    "symbol": "R",
+    "color": "white",
+    "morale": 100,
+    "melee_dice": 4,
+    "melee_dice_sides": 3,
+    "melee_damage": [ { "damage_type": "cut", "amount": 5 } ],
+    "attack_effs": [ { "id": "bleed", "chance": 20, "duration": 3 } ],
+    "vision_day": 50,
+    "special_attacks": [ { "id": "hypo_pkill" } ],
+    "anger_triggers": [ "FRIEND_ATTACKED", "PLAYER_WEAK", "HURT", "PLAYER_CLOSE" ],
+    "death_function": { "corpse_type": "BROKEN" },
+    "death_drops": { "groups": [ [ "broken_robots", 3 ] ] },
+    "flags": [ "SEES", "HEARS", "ELECTRONIC", "BIOLOGICALPROOF", "NO_BREATHE", "PRIORITIZE_TARGETS", "PATH_AVOID_DANGER" ],
+    "armor": { "bash": 15, "cut": 20, "bullet": 30, "fcl_laser": 10 }
   }
 ]
