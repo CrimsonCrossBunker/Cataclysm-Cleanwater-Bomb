@@ -251,9 +251,9 @@
   {
     "id": "mon_utilibot",
     "type": "MONSTER",
-    "name": { "str": "EINAC Seneschal" },
+    "name": { "str": "UNCANNY Seneschal" },
     "looks_like": "mon_hazmatbot",
-    "description": "One of the many cheaper models produced by EINAC.  It is supposedly multi-purpose, and equipped with several tools to facilitate this; however, it is commonly used for janitorial work.",
+    "description": "One of the many cheaper models produced by UNCANNY.  It is supposedly multi-purpose, and equipped with several tools to facilitate this; however, it is commonly used for janitorial work.",
     "default_faction": "utility_bot",
     "species": [ "ROBOT" ],
     "volume": "62500 ml",
