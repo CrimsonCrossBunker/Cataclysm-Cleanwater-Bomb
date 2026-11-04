@@ -98,7 +98,8 @@ also accept `z`, and cargo is resolved on that deck.
 The `deck_stairs` part connects its mount to the same mount on the next deck. Both
 ends need a passable, boardable part. It uses the normal ascend/descend actions and
 can be installed or removed through vehicle interaction. Vehicle interaction provides
-configurable deck-up/deck-down actions, defaulting to `<` and `>`. Each deck remains
+configurable deck-up/deck-down actions, defaulting to `Ctrl+PageUp` and `Ctrl+PageDown`.
+The vehicle inspection keybinding menu (`?`) lists both actions. Each deck remains
 part of the same vehicle, not a separate map or vehicle entity.
 
 ### Extra options

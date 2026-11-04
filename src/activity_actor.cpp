@@ -12379,14 +12379,12 @@ void vehicle_activity_actor::finish( player_activity &act, Character &you )
     if( !you.is_npc() ) {
         if( vp ) {
             here.invalidate_map_cache( here.get_abs_sub().z() );
-            // TODO: Z (and also where the activity is queued)
-            // Or not, because the vehicle coordinates are dropped anyway
             if( you.backlog.empty() || !you.backlog.front().is_multi_type() ) {
                 const point_rel_ms &mount_loc = vp_mount_location.xy();
                 if( vp->vehicle().is_appliance() ) {
                     g->exam_appliance( vp->vehicle(), mount_loc );
                 } else {
-                    g->exam_vehicle( vp->vehicle(), mount_loc );
+                    g->exam_vehicle( vp->vehicle(), mount_loc, vp_mount_location_opp.z() );
                 }
             }
             return;
@@ -12427,6 +12425,14 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
 
     switch( sub_activity ) {
         case VEHICLE_INSTALL: {
+            const ret_val<void> valid_mount = veh.can_mount( deck_mount, vpinfo );
+            if( !valid_mount.success() ) {
+                you.add_msg_player_or_npc( m_info,
+                                         _( "无法在载具第 %1$d 层安装%2$s：%3$s" ),
+                                         _( "<npcname>无法在载具第 %1$d 层安装%2$s：%3$s" ),
+                                         deck_mount.z() + 1, vpinfo.name(), valid_mount.str() );
+                break;
+            }
             const temp_crafting_inventory &inv = you.crafting_inventory();
             const requirement_data reqs = vpinfo.install_requirements();
             if( !reqs.can_make_with_inventory( &you, inv, is_crafting_component, 1, craft_flags::none,
@@ -12468,8 +12474,8 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             you.invalidate_crafting_inventory();
             const int partnum = veh.install_part( here, deck_mount, part_id, std::move( base ), installed_with );
             if( partnum < 0 ) {
-                debugmsg( "complete_vehicle install part fails dx=%d dy=%d id=%s",
-                          d.x(), d.y(), part_id.c_str() );
+                debugmsg( "complete_vehicle install part fails dx=%d dy=%d dz=%d id=%s",
+                          d.x(), d.y(), deck_mount.z(), part_id.c_str() );
                 break;
             }
             ::vehicle_part &vp_new = veh.part( partnum );

@@ -22,6 +22,7 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flag.h"
+#include "game.h"
 #include "gun_mode.h"
 #include "inventory.h"
 #include "iuse_actor.h"
@@ -576,7 +577,8 @@ std::vector<tripoint_bub_ms> npc_attack_gun::targetable_creatures( const npc &so
     creature_tracker &tracker = get_creature_tracker();
     std::vector<tripoint_bub_ms> positions;
     const auto &monsters = tracker.get_monsters_list();
-    const size_t creature_count = monsters.size() + tracker.active_npc.size() + 1;
+    auto npcs = g->all_npcs();
+    const size_t creature_count = monsters.size() + npcs.items.size() + 1;
     if( bounds.size() <= creature_count ) {
         // Tiny ranges in dense crowds are cheaper to scan than the whole creature list.
         for( const tripoint_bub_ms &p : bounds ) {
@@ -604,10 +606,8 @@ std::vector<tripoint_bub_ms> npc_attack_gun::targetable_creatures( const npc &so
             consider( *mon );
         }
     }
-    for( const auto &person : tracker.active_npc ) {
-        if( person ) {
-            consider( *person );
-        }
+    for( const npc &person : npcs ) {
+        consider( person );
     }
     consider( get_player_character() );
     // Equal attack scores retain the original x-then-y-then-z tile traversal order.

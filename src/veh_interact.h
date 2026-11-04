@@ -104,7 +104,7 @@ class veh_interact
             int part_index = -1;
         };
 
-        static void run( map &here,  vehicle &veh, const point_rel_ms &p );
+        static void run( map &here, vehicle &veh, const point_rel_ms &p, int deck = -1 );
 
         // Hidden parts must remain selectable even when no visible frame remains.
         static int part_at_mount( const vehicle &veh, const point_rel_ms &mount );

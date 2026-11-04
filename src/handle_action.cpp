@@ -3458,6 +3458,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
 
                 const tripoint_bub_ms pos = player_character.pos_bub();
+                if( const optional_vpart_position vp = here.veh_at( pos );
+                    vp && vp->vehicle().deck_transition( here, pos, -1 ) ) {
+                    vertical_move( -1, false );
+                    break;
+                }
                 const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( pos, -1 ) ) {
@@ -3535,6 +3540,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 pldrive( tripoint_rel_ms::above );
                 break;
             }
+            if( has_vehicle_control( player_character ) ) {
+                const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                if( vp && vp->vehicle().is_aircraft( here ) ) {
+                    pldrive( tripoint_rel_ms::above );
+                    break;
+                }
+            }
+            if( const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                vp && vp->vehicle().deck_transition( here, player_character.pos_bub(), 1 ) ) {
+                vertical_move( 1, false );
+                break;
+            }
             if( !player_character.in_vehicle ) {
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( player_character.pos_bub(), 1 ) ) {
@@ -3546,11 +3563,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     break;
                 }
                 vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
-            } else if( has_vehicle_control( player_character ) ) {
-                const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                if( vp && vp->vehicle().is_aircraft( here ) ) {
-                    pldrive( tripoint_rel_ms::above );
-                }
             }
             break;
 

@@ -5521,7 +5521,7 @@ void game::exam_appliance( vehicle &veh, const point_rel_ms &c )
     veh_app_interact::run( here, veh, c );
 }
 
-void game::exam_vehicle( vehicle &veh, const point_rel_ms &c )
+void game::exam_vehicle( vehicle &veh, const point_rel_ms &c, int deck )
 {
     map &here = get_map();
 
@@ -5529,7 +5529,7 @@ void game::exam_vehicle( vehicle &veh, const point_rel_ms &c )
         add_msg( m_info, _( "This is your %s" ), veh.name );
         return;
     }
-    veh_interact::run( here, veh, c );
+    veh_interact::run( here, veh, c, deck );
 }
 
 void game::open_gate( const tripoint_bub_ms &p )

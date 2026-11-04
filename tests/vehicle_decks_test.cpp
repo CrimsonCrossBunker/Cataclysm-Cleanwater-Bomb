@@ -1,15 +1,23 @@
 #include <sstream>
 #include <string>
 
+#include "action.h"
 #include "active_item_cache.h"
+#include "activity_actor_definitions.h"
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "input.h"
+#include "input_context.h"
+#include "input_enums.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "player_activity.h"
+#include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
 #include "veh_interact.h"
@@ -56,6 +64,10 @@ TEST_CASE( "vehicle_decks_separate_stacked_components", "[vehicle][decks]" )
     CHECK( veh.part_with_feature( tripoint_rel_ms::zero, "CARGO", true ) >= 0 );
     CHECK( veh.part_with_feature( tripoint_rel_ms::above, "CARGO", true ) == -1 );
     CHECK( veh_interact::part_at_mount( veh, tripoint_rel_ms::above ) >= 0 );
+    vpart_position( veh, 0 ).set_label( "lower" );
+    vpart_position( veh, 1 ).set_label( "upper" );
+    CHECK( vpart_position( veh, 0 ).get_label() == "lower" );
+    CHECK( vpart_position( veh, 1 ).get_label() == "upper" );
 }
 
 TEST_CASE( "vehicle_deck_stairs_connect_only_the_same_vehicle", "[vehicle][decks]" )
@@ -75,9 +87,13 @@ TEST_CASE( "vehicle_deck_stairs_connect_only_the_same_vehicle", "[vehicle][decks
     CHECK_FALSE( veh.deck_transition( here, lower, -1 ).has_value() );
     CHECK( here.valid_move( lower, upper, false, false ) );
     CHECK_FALSE( here.valid_move( lower, upper, false, true ) );
+    CHECK( can_interact_at( ACTION_MOVE_UP, here, lower ) );
+    CHECK( can_interact_at( ACTION_MOVE_DOWN, here, upper ) );
     veh.remove_part( veh.part( stairs ) );
     veh.part_removal_cleanup( here );
     CHECK_FALSE( veh.deck_transition( here, lower, 1 ).has_value() );
+    CHECK_FALSE( can_interact_at( ACTION_MOVE_UP, here, lower ) );
+    CHECK_FALSE( can_interact_at( ACTION_MOVE_DOWN, here, upper ) );
 }
 
 TEST_CASE( "vehicle_decks_preserve_height_when_turning_moving_and_loading", "[vehicle][decks][save]" )
@@ -115,4 +131,85 @@ TEST_CASE( "vehicle_deck_active_items_retain_their_level", "[vehicle][decks][ite
     REQUIRE( active.size() == 2 );
     CHECK( active[0].location == active[1].location );
     CHECK( active[0].mount_level != active[1].mount_level );
+}
+
+TEST_CASE( "vehicle_deck_switch_bindings", "[vehicle][decks][input]" )
+{
+    input_context ctxt( "VEH_INTERACT", keyboard_mode::keycode );
+    ctxt.register_action( "DESC_LIST_UP" );
+    ctxt.register_action( "DESC_LIST_DOWN" );
+    ctxt.register_action( "PAGE_UP" );
+    ctxt.register_action( "PAGE_DOWN" );
+    ctxt.register_action( "VEHICLE_DECK_UP" );
+    ctxt.register_action( "VEHICLE_DECK_DOWN" );
+    const bool down = GENERATE( false, true );
+    const std::string action = down ? "VEHICLE_DECK_DOWN" : "VEHICLE_DECK_UP";
+    for( const input_event_t type : { input_event_t::keyboard_char, input_event_t::keyboard_code } ) {
+        CHECK( ctxt.input_to_action( input_event( { keymod_t::ctrl }, down ? KEY_NPAGE : KEY_PPAGE,
+                                     type ) ) == action );
+    }
+    CHECK( ctxt.input_to_action( input_event( { keymod_t::shift }, down ? '.' : ',',
+                                 input_event_t::keyboard_code ) ) ==
+           ( down ? "DESC_LIST_DOWN" : "DESC_LIST_UP" ) );
+    CHECK( ctxt.input_to_action( input_event( down ? KEY_NPAGE : KEY_PPAGE,
+                                 input_event_t::keyboard_code ) ) == ( down ? "PAGE_DOWN" : "PAGE_UP" ) );
+}
+
+TEST_CASE( "vehicle_deck_modification_activities_keep_the_selected_deck", "[vehicle][decks][activity]" )
+{
+    clear_avatar();
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    you.set_mutation( trait_id( "DEBUG_HS" ) );
+    you.setpos( here, veh.bub_part_pos( here, 0 ) );
+    REQUIRE( veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "aisle" ) ) >= 0 );
+    here.add_vehicle_to_cache( &veh );
+
+    vehicle_activity_actor install( VEHICLE_INSTALL, 1_seconds, &veh, veh.abs_part_pos( 1 ),
+                                    -tripoint_rel_ms::above, 1, vpart_id( "aisle" ) );
+    player_activity installing( install );
+    install.complete_vehicle( installing, you );
+    const int upper = veh.part_with_feature( tripoint_rel_ms::above, "AISLE", true );
+    REQUIRE( upper >= 0 );
+    const int lower = veh.part_with_feature( tripoint_rel_ms::zero, "AISLE", true );
+    REQUIRE( lower >= 0 );
+    CHECK( upper != lower );
+
+    vehicle_activity_actor remove( VEHICLE_REMOVE, 1_seconds, &veh, veh.abs_part_pos( upper ),
+                                   -tripoint_rel_ms::above, upper, vpart_id( "aisle" ) );
+    player_activity removing( remove );
+    remove.complete_vehicle( removing, you );
+    CHECK( veh.part_with_feature( tripoint_rel_ms::above, "AISLE", true ) == -1 );
+    CHECK( veh.part_with_feature( tripoint_rel_ms::zero, "AISLE", true ) >= 0 );
+    clear_avatar();
+}
+
+TEST_CASE( "vehicle_deck_turret_activity_requires_a_mount_on_the_same_deck",
+           "[vehicle][decks][activity][turret]" )
+{
+    clear_avatar();
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    you.set_mutation( trait_id( "DEBUG_HS" ) );
+    you.setpos( here, veh.bub_part_pos( here, 0 ) );
+    REQUIRE( veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "turret_mount" ) ) >= 0 );
+    const vpart_id turret( "turret_mossberg_930" );
+    REQUIRE( turret.is_valid() );
+    REQUIRE_FALSE( veh.can_mount( tripoint_rel_ms::above, turret.obj() ).success() );
+    const bool upper_mount = GENERATE( false, true );
+    if( upper_mount ) {
+        REQUIRE( veh.install_part( here, tripoint_rel_ms::above, vpart_id( "turret_mount" ) ) >= 0 );
+    }
+    here.add_vehicle_to_cache( &veh );
+    const int count_before = veh.part_count();
+    vehicle_activity_actor install( VEHICLE_INSTALL, 1_seconds, &veh, veh.abs_part_pos( 1 ),
+                                    -tripoint_rel_ms::above, 1, turret );
+    player_activity installing( install );
+    install.complete_vehicle( installing, you );
+    CHECK( veh.part_count() == count_before + ( upper_mount ? 1 : 0 ) );
+    CHECK( ( veh.part_with_feature( tripoint_rel_ms::above, "TURRET", true ) >= 0 ) == upper_mount );
+    CHECK( veh.part_with_feature( tripoint_rel_ms::zero, "TURRET", true ) == -1 );
+    clear_avatar();
 }

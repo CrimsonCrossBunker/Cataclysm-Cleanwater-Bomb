@@ -266,7 +266,7 @@ void orient_part( map &here, vehicle *veh, const vpart_info &vpinfo, int partnum
     veh->part( partnum ).direction = dir;
 }
 
-void veh_interact::run( map &here, vehicle &veh, const point_rel_ms &p )
+void veh_interact::run( map &here, vehicle &veh, const point_rel_ms &p, int deck )
 {
     veh_interact vehint( here, veh, p );
     for( const vpart_reference &part : veh.get_all_parts() ) {
@@ -274,6 +274,9 @@ void veh_interact::run( map &here, vehicle &veh, const point_rel_ms &p )
             vehint.cursor_level = part.part().mount_level;
             break;
         }
+    }
+    if( deck >= 0 && deck <= 10 ) {
+        vehint.cursor_level = deck;
     }
     vehint.move_cursor( here, point_rel_ms::zero );
     vehint.do_main_loop( here );
@@ -1409,7 +1412,7 @@ bool veh_interact::update_part_requirements( map &here )
     sel_vpart_info->format_description( nmsg, c_light_gray, getmaxx( w_msg ) - 4 );
 
     msg = colorize( nmsg, c_light_gray );
-    return ok || player_character.has_trait( trait_DEBUG_HS );
+    return can_mount.success() && ( ok || player_character.has_trait( trait_DEBUG_HS ) );
 }
 
 /**
@@ -3270,12 +3273,13 @@ void veh_interact::display_name()
     // NOLINTNEXTLINE(cata-use-named-point-constants)
     mvwprintz( w_name, point( 1, 0 ), c_light_gray, _( "Name: " ) );
 
-    mvwprintz( w_name, point( 1 + utf8_width( _( "Name: " ) ), 0 ),
-               !veh->is_owned_by( get_player_character(), true ) ? c_light_red : c_light_green,
-               string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) +
-               string_format( _( "  楼层 %d  [%s / %s]" ), cursor_level + 1,
-                              main_context.get_desc( "VEHICLE_DECK_UP" ),
-                              main_context.get_desc( "VEHICLE_DECK_DOWN" ) ) );
+    trim_and_print( w_name, point( 1 + utf8_width( _( "Name: " ) ), 0 ),
+                    getmaxx( w_name ) - utf8_width( _( "Name: " ) ) - 2,
+                    !veh->is_owned_by( get_player_character(), true ) ? c_light_red : c_light_green,
+                    string_format( _( "楼层 %d  [%s / %s]  " ), cursor_level + 1,
+                                   main_context.get_desc( "VEHICLE_DECK_UP" ),
+                                   main_context.get_desc( "VEHICLE_DECK_DOWN" ) ) +
+                    string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) );
     wnoutrefresh( w_name );
 }
 
