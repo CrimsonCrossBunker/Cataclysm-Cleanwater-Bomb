@@ -100,29 +100,7 @@ bool start_owned_unload( Character &who, map &here, const JsonObject &request )
 unload_liquid_choice query_owned_liquid_destination( const item &liquid, const item *target,
         int64_t identity )
 {
-    const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    item preview = liquid;
-    const liquid_dest_opt selected = liquid_handler::query_liquid_target( preview,
-                                     target, 1, false );
-    unload_liquid_choice choice;
-    choice.source = identity;
-    choice.kind = selected.dest_opt;
-    choice.container = capture_item_source( get_avatar(), selected.item_loc );
-    if( selected.dest_opt == LD_VEH && selected.veh ) {
-        const auto tank = veh_interact::select_part( get_map(), *selected.veh,
-        [&preview]( const map &, const vehicle_part & part ) {
-            return part.is_tank() && part.can_reload( preview );
-        }, _( "Select target tank" ) );
-        if( tank ) {
-            choice.vehicle = selected.veh->uid().get_value();
-            choice.tank = tank->part().get_base().uid().get_value();
-        } else {
-            choice.kind = LD_NULL;
-        }
-    } else if( selected.dest_opt == LD_GROUND || selected.dest_opt == LD_KEG ) {
-        choice.position = get_map().get_abs( selected.pos );
-    }
-    return choice;
+    return query_liquid_destination( liquid, target, identity );
 }
 
 void client_select_unload( const item_location &root, const item_location &new_container )

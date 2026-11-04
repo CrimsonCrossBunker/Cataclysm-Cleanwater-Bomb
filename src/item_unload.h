@@ -40,6 +40,10 @@ struct unload_liquid_choice {
     void deserialize( const JsonObject &object );
 };
 
+// Frontend-only selection; no transfer or activity is executed here.
+unload_liquid_choice query_liquid_destination( const item &liquid, const item *target,
+        int64_t identity, bool allow_consume = false );
+
 std::vector<item_location> unload_targets( const item_location &root );
 std::vector<unload_source_option> unload_sources( item &target );
 std::optional<unload_selection> query_unload_selection( const item_location &root,
