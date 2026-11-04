@@ -8,16 +8,22 @@
 #include <system_error>
 
 #include "character.h"
+#include "clzones.h"
+#include "faction.h"
+#include "mp_client_conn.h"
 #include "debug.h"
 #include "activity_actor_definitions.h"
 #include "temp_crafting_inventory.h"
 #include "skill.h"
 #include "itype.h"
+#include "input_context.h"
+#include "input_enums.h"
 #include "uilist.h"
 #include "veh_type.h"
 #include "character_action_guard.h"
 #include "cata_scope_helpers.h"
 #include "game.h"
+#include "game_constants.h"
 #include "flag.h"
 #include "item.h"
 #include "item_location.h"
@@ -38,6 +44,12 @@ namespace
 constexpr const char *binding_uid = "remote_vehicle_uid";
 constexpr const char *binding_position = "remote_vehicle_position";
 constexpr const char *legacy_position = "remote_controlling_vehicle";
+
+bool autopilot_action( const std::string &action )
+{
+    return action == "autopilot_follow" || action == "autopilot_patrol" ||
+           action == "autopilot_stop" || action == "precollision_on" || action == "precollision_off";
+}
 
 bool has_remote_controller( const Character &who )
 {
@@ -320,7 +332,7 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const bool smash_alarm = action == "smash_alarm";
     const bool security = hotwire || alarm || smash_alarm;
     if( !releasing && !stopping && !taking && action != "start" &&
-        action != "engines" && !security ) {
+        action != "engines" && !security && !autopilot_action( action ) ) {
         return false;
     }
     if( releasing ) {
@@ -328,6 +340,11 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     }
     if( ( target.is_locked && !security ) ||
         ( action == "stop_driving" && !target.player_in_control( here, who ) ) ) {
+        return false;
+    }
+    if( autopilot_action( action ) && action != "autopilot_stop" &&
+        ( empty( target.get_avail_parts( "AUTOPILOT" ) ) ||
+          empty( target.get_avail_parts( "CTRL_ELECTRONIC" ) ) ) ) {
         return false;
     }
     if( security || resolve_remote_vehicle( who, here ) != &target ) {
@@ -339,6 +356,10 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
         const bool reins = target.avail_part_with_feature( at->mount_pos(), "CONTROL_ANIMAL" ) >= 0 &&
                            target.has_engine_type( itype_id( "animal" ), false ) && target.get_harnessed_animal( here );
         if( !controls && ( security || !reins ) ) {
+            return false;
+        }
+        if( autopilot_action( action ) && action != "autopilot_stop" &&
+            target.avail_part_with_feature( at->mount_pos(), "CTRL_ELECTRONIC" ) < 0 ) {
             return false;
         }
     }
@@ -386,7 +407,7 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     selection.position = position;
     selection.action = action;
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
-                             action == "alarm" || action == "smash_alarm";
+                             action == "alarm" || action == "smash_alarm" || autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
         selection.allow_theft = who.query_yn(
                                     _( "This vehicle belongs to: %s, there may be consequences if you are observed interacting with it, continue?" ),
@@ -468,6 +489,52 @@ std::optional<vehicle_control_selection> query_vehicle_engines( Character &who, 
     return selection;
 }
 
+std::optional<vehicle_control_selection> query_vehicle_autopilot( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position )
+{
+    uilist menu;
+    menu.title = _( "Choose action for the autopilot" );
+    menu.input_category = "VEHICLE";
+    menu.hilight_disabled = true;
+    menu.desc_enabled = true;
+    const auto add_choice = [&]( const std::string & binding, const std::string & label,
+    const std::string & description ) {
+        const auto keys = input_context( "VEHICLE" ).keys_bound_to( binding, 1 );
+        menu.additional_actions.emplace_back( binding, translation() );
+        menu.entries.emplace_back( static_cast<int>( menu.entries.size() ), !target.is_locked,
+                                   keys.empty() ? input_event() : keys.front(), label, description );
+        if( target.is_locked ) {
+            menu.entries.back().desc += "\n" + std::string( _( "Vehicle is locked." ) );
+        }
+    };
+    add_choice( "CONTROL_AUTOPILOT_PATROL", _( "Patrol…" ),
+                _( "Program the autopilot to patrol a nearby vehicle patrol zone.  If no zones are nearby, you will be prompted to create one." ) );
+    add_choice( "CONTROL_AUTOPILOT_FOLLOW", _( "Follow…" ),
+                _( "Program the autopilot to follow you.  It might be a good idea to have a remote control available to tell it to stop, too." ) );
+    add_choice( "CONTROL_AUTOPILOT_STOP", _( "Stop…" ),
+                _( "Stop all autopilot related activities." ) );
+    add_choice( "CONTROL_AUTOPILOT_CAS", target.precollision_on ?
+                _( "Disable pre-collision system" ) : _( "Enable pre-collision system" ),
+                _( "Toggle pre-collision system" ) );
+    menu.query();
+    const int selected = menu.ret;
+    if( selected < 0 ) {
+        return std::nullopt;
+    }
+    if( selected == 0 && !cata_mp::is_client_mode() &&
+        !zone_manager::get_manager().has_near( zone_type_id( "VEHICLE_PATROL" ), target.pos_abs(),
+                MAX_VIEW_DISTANCE, who.get_faction()->id ) ) {
+        // Preserve the local zone editor. A remote request uses server zones;
+        // it must never open the host's editor while processing an action.
+        zone_manager_ui::display_zone_manager();
+        return std::nullopt;
+    }
+    const std::string action = selected == 0 ? "autopilot_patrol" :
+                               selected == 1 ? "autopilot_follow" : selected == 2 ? "autopilot_stop" :
+                               target.precollision_on ? "precollision_off" : "precollision_on";
+    return query_vehicle_control( who, here, target, position, action );
+}
+
 namespace
 {
 void smash_vehicle_alarm( Character &player_character, map &here, vehicle &target )
@@ -527,7 +594,8 @@ bool execute_vehicle_control( Character &who, map &here,
     }
     const bool taking = selection.action == "take";
     const bool theft_check = taking || selection.action == "engines" || selection.action == "hotwire" ||
-                             selection.action == "alarm" || selection.action == "smash_alarm";
+                             selection.action == "alarm" || selection.action == "smash_alarm" ||
+                             autopilot_action( selection.action );
     if( theft_check && target->has_owner() && !target->is_owned_by( who ) && !selection.allow_theft ) {
         return false;
     }
@@ -562,6 +630,40 @@ bool execute_vehicle_control( Character &who, map &here,
             !vehicle_control_accessible( who, here, *target, selection.position, selection.action ) ) {
             return false;
         }
+    }
+    if( selection.action == "autopilot_patrol" ) {
+        if( !zone_manager::get_manager().has_near( zone_type_id( "VEHICLE_PATROL" ), target->pos_abs(),
+                MAX_VIEW_DISTANCE, who.get_faction()->id ) ) {
+            who.add_msg_if_player( _( "No vehicle patrol zone nearby." ) );
+            return false;
+        }
+        target->enable_patrol( here, who );
+        return true;
+    }
+    if( selection.action == "autopilot_follow" ) {
+        target->stop_autodriving( false );
+        target->autopilot_on = true;
+        target->is_following = true;
+        target->following_character = who.getID();
+        target->is_patrolling = false;
+        if( !target->engine_on ) {
+            target->start_engines( here, &who );
+        }
+        return true;
+    }
+    if( selection.action == "autopilot_stop" ) {
+        target->stop_autodriving();
+        target->autopilot_on = false;
+        target->following_character.reset();
+        target->stop_engines( here );
+        who.add_msg_if_player( _( "You turn the engine off." ) );
+        return true;
+    }
+    if( selection.action == "precollision_on" || selection.action == "precollision_off" ) {
+        target->precollision_on = selection.action == "precollision_on";
+        who.add_msg_if_player( target->precollision_on ? _( "You turn on pre-collision system." ) :
+                               _( "You turn off pre-collision system." ) );
+        return true;
     }
     if( selection.action == "hotwire" ) {
         const float skill = std::max( 1.0f, who.get_skill_level( skill_id( "mechanics" ) ) );
@@ -660,6 +762,7 @@ bool execute_vehicle_control( Character &who, map &here,
             who.add_msg_if_player( _( "You take control of the %s." ), target->name );
         }
         target->is_following = false;
+        target->following_character.reset();
         target->is_patrolling = false;
         target->autopilot_on = false;
         target->is_autodriving = false;

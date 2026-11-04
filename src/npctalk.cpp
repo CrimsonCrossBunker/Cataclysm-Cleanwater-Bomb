@@ -1030,7 +1030,7 @@ static void assign_veh_to_follow()
     for( wrapped_vehicle &veh : here.get_vehicles() ) {
         vehicle *v = veh.v;
         if( v->has_engine_type( itype_animal, false ) && v->is_owned_by( player_character ) ) {
-            v->activate_animal_follow( here );
+            v->activate_animal_follow( here, player_character );
         }
     }
 }
@@ -1044,7 +1044,7 @@ static void tell_magic_veh_to_follow()
             for( const vpart_reference &vp : v->get_all_parts() ) {
                 const vpart_info &vpi = vp.info();
                 if( vpi.has_flag( "MAGIC_FOLLOW" ) && v->is_owned_by( player_character ) ) {
-                    v->activate_magical_follow();
+                    v->activate_magical_follow( player_character );
                     break;
                 }
             }
