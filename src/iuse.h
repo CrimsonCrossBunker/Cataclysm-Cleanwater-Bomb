@@ -291,6 +291,9 @@ class iuse_actor
         virtual std::optional<int> use( Character *, item &, map *here, const tripoint_bub_ms & ) const = 0;
         virtual ret_val<void> can_use( const Character &, const item &, map *here,
                                        const tripoint_bub_ms & ) const;
+        // This use action completes on the supplied actor without local UI or
+        // replacing its activity. Unknown/scripted/targeted actions opt out.
+        virtual bool is_immediate_consumption() const;
         virtual void info( const item &, std::vector<iteminfo> & ) const {}
         /**
          * Returns a deep copy of this object. Example implementation:

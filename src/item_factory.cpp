@@ -1987,6 +1987,20 @@ class iuse_function_wrapper : public iuse_actor
             return std::make_unique<iuse_function_wrapper>( *this );
         }
 
+        bool is_immediate_consumption() const override {
+            // These native callbacks use the supplied Character and finish
+            // immediately. Keep UI/target selection and activity starters out.
+            static const use_function_pointer immediate[] = {
+                &iuse::antibiotic, &iuse::weak_antibiotic, &iuse::strong_antibiotic,
+                &iuse::antifungal, &iuse::antiparasitic, &iuse::anticonvulsant,
+                &iuse::xanax, &iuse::prozac, &iuse::thorazine, &iuse::coke,
+                &iuse::meth, &iuse::flumed, &iuse::flusleep, &iuse::flu_vaccine,
+                &iuse::eyedrops, &iuse::chew, &iuse::smoking, &iuse::ecig
+            };
+            return std::find( std::begin( immediate ), std::end( immediate ), cpp_function ) !=
+                   std::end( immediate );
+        }
+
         void load( const JsonObject &, const std::string & ) override {}
 };
 

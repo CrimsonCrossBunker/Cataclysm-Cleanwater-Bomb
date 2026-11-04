@@ -283,17 +283,33 @@ std::optional<int> itype::invoke( Character *p, item &it, const tripoint_bub_ms 
     return itype::invoke( p, it, &get_map(), pos );
 }
 
+const use_function *itype::get_default_use() const
+{
+    if( !has_use() ) {
+        return nullptr;
+    }
+    const auto transform = use_methods.find( "transform" );
+    return transform != use_methods.end() ? &transform->second : &use_methods.begin()->second;
+}
+
+static std::optional<int> invoke_use( const use_function &use, Character *p, item &it,
+                                      map *here, const tripoint_bub_ms &pos )
+{
+    if( p ) {
+        const auto ret = use.can_call( *p, it, here, pos );
+        if( !ret.success() ) {
+            p->add_msg_if_player( m_info, ret.str() );
+            return 0;
+        }
+    }
+    return use.call( p, it, here, pos );
+}
+
 std::optional<int> itype::invoke( Character *p, item &it, map *here,
                                   const tripoint_bub_ms &pos ) const
 {
-    if( !has_use() ) {
-        return 0;
-    }
-    if( use_methods.find( "transform" ) != use_methods.end() ) {
-        return invoke( p, it, here, pos, "transform" );
-    } else {
-        return invoke( p, it, here, pos, use_methods.begin()->first );
-    }
+    const use_function *use = get_default_use();
+    return use ? invoke_use( *use, p, it, here, pos ) : std::optional<int>( 0 );
 }
 
 std::optional<int> itype::invoke( Character *p, item &it, const tripoint_bub_ms &pos,
@@ -311,16 +327,7 @@ std::optional<int> itype::invoke( Character *p, item &it, map *here, const tripo
                   iuse_name, nname( 1 ) );
         return 0;
     }
-    if( p ) {
-        const auto ret = use->can_call( *p, it, here, pos );
-
-        if( !ret.success() ) {
-            p->add_msg_if_player( m_info, ret.str() );
-            return 0;
-        }
-    }
-
-    return use->call( p, it, here, pos );
+    return invoke_use( *use, p, it, here, pos );
 }
 
 std::string gun_type_type::name() const

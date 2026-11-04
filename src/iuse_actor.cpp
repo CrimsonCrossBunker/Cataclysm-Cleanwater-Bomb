@@ -1088,6 +1088,11 @@ void consume_drug_iuse::info( const item &, std::vector<iteminfo> &dump ) const
 }
 
 
+bool consume_drug_iuse::is_immediate_consumption() const
+{
+    return true;
+}
+
 std::optional<int> consume_drug_iuse::use( Character *p, item &it, map *here,
         const tripoint_bub_ms & ) const
 {
