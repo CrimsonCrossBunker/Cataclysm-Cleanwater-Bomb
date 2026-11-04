@@ -3578,15 +3578,14 @@ lockpick_activity_actor lockpick_activity_actor::use_item(
 }
 
 lockpick_activity_actor lockpick_activity_actor::use_bionic(
-    const tripoint_abs_ms &target
+    const tripoint_abs_ms &target, unsigned int bionic_uid
 )
 {
-    return lockpick_activity_actor {
-        to_moves<int>( 4_seconds ),
-        std::nullopt,
-        item( itype_pseudo_bio_picklock ),
-        target
+    lockpick_activity_actor result {
+        to_moves<int>( 4_seconds ), std::nullopt, item( itype_pseudo_bio_picklock ), target
     };
+    result.bionic_uid = bionic_uid;
+    return result;
 }
 
 int lockpick_activity_actor::lockpicking_moves(
@@ -3632,11 +3631,28 @@ int lockpick_activity_actor::lockpicking_moves(
     }
 }
 
+bool lockpick_activity_actor::check_bionic( player_activity &act, Character &who ) const
+{
+    if( act.execution() != activity_execution::authoritative || lockpick ) {
+        return true;
+    }
+    const auto bio = who.find_bionic_by_uid( bionic_uid );
+    if( !bio || ( *bio )->id != bionic_id( "bio_lockpick" ) ||
+        ( *bio )->incapacitated_time > 0_turns ) {
+        act.set_to_null();
+        return false;
+    }
+    return true;
+}
+
 void lockpick_activity_actor::start( player_activity &act, Character &who )
 {
     act.moves_left = moves_total;
     act.moves_total = moves_total;
 
+    if( !check_bionic( act, who ) ) {
+        return;
+    }
     start_owned_tool_activity( act, who, lockpick, target, owned_target );
     const time_duration lockpicking_time = time_duration::from_moves( moves_total );
     add_msg_debug( debugmode::DF_ACT_LOCKPICK, "lockpicking time = %s",
@@ -3645,12 +3661,15 @@ void lockpick_activity_actor::start( player_activity &act, Character &who )
 
 void lockpick_activity_actor::do_turn( player_activity &act, Character &who )
 {
-    continue_owned_tool_activity( act, who, lockpick, owned_target );
+    if( check_bionic( act, who ) ) {
+        continue_owned_tool_activity( act, who, lockpick, owned_target );
+    }
 }
 
 void lockpick_activity_actor::finish( player_activity &act, Character &who )
 {
-    if( !continue_owned_tool_activity( act, who, lockpick, owned_target ) ) {
+    if( !check_bionic( act, who ) ||
+        !continue_owned_tool_activity( act, who, lockpick, owned_target ) ) {
         return;
     }
     act.set_to_null();
@@ -3867,6 +3886,7 @@ void lockpick_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "moves_total", moves_total );
     jsout.member( "lockpick", lockpick );
     jsout.member( "fake_lockpick", fake_lockpick );
+    jsout.member( "bionic_uid", bionic_uid );
     jsout.member( "target", target );
     jsout.member( "owned_target", owned_target );
 
@@ -3882,6 +3902,7 @@ std::unique_ptr<activity_actor> lockpick_activity_actor::deserialize( JsonValue 
     data.read( "moves_total", actor.moves_total );
     data.read( "lockpick", actor.lockpick );
     data.read( "fake_lockpick", actor.fake_lockpick );
+    data.read( "bionic_uid", actor.bionic_uid );
     data.read( "target", actor.target );
     data.read( "owned_target", actor.owned_target );
 

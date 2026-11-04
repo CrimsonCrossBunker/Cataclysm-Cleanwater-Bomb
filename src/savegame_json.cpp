@@ -987,6 +987,9 @@ void Character::load( const JsonObject &data )
     }
 
     data.read( "my_bionics", *my_bionics );
+    next_bionic_uid = 0;
+    data.read( "next_bionic_uid", next_bionic_uid );
+    update_last_bionic_uid();
     my_bionics->erase( std::remove_if( my_bionics->begin(), my_bionics->end(),
     []( const bionic & it ) {
         return it.id.is_null(); // remove obsoleted bionics
@@ -1580,6 +1583,7 @@ void Character::store( JsonOut &json ) const
     json.member( "martial_arts_data", martial_arts_data );
     // "Fracking Toasters" - Saul Tigh, toaster
     json.member( "my_bionics", *my_bionics );
+    json.member( "next_bionic_uid", next_bionic_uid );
 
     json.member_as_string( "move_mode",  move_mode );
 
@@ -1791,6 +1795,7 @@ void Character::store_turn_state( JsonOut &out ) const
     out.member( "mutations", my_mutations );
     out.member( "cached_mutations", cached_mutations );
     out.member( "bionics", *my_bionics );
+    out.member( "next_bionic_uid", next_bionic_uid );
     out.member( "effects", *effects );
     out.member( "damage_over_time", damage_over_time_map );
     out.member( "body", body );
@@ -1874,6 +1879,8 @@ void Character::load_turn_state( const JsonObject &snapshot )
         // those can wake a character, cancel an activity, or run gameplay hooks.
         trait_flag_cache.clear();
         next_bionic_uid = 0;
+        data.read( "next_bionic_uid", next_bionic_uid );
+        update_last_bionic_uid();
         *morale = player_morale();
         const JsonObject needs = data.get_object( "needs" );
         load_needs_state( needs );
@@ -1988,6 +1995,8 @@ void Character::load_player_state( const JsonObject &snapshot )
         trait_flag_cache.clear();
         read( "my_bionics", *my_bionics );
         next_bionic_uid = 0;
+        data.read( "next_bionic_uid", next_bionic_uid );
+        update_last_bionic_uid();
         read( "move_mode", move_mode );
         read( "known_monsters", known_monsters );
         read( "power_level", power_level );

@@ -113,6 +113,7 @@ struct attention_plan;
 struct bionic;
 struct construction;
 struct crafting_cost_context;
+struct bionic_activation_choices;
 struct dealt_projectile_attack;
 /// @brief Item slot used to apply modifications from food and meds
 struct islot_comestible;
@@ -1848,7 +1849,8 @@ class Character : public Creature, public visitable
 
         // --------------- Bionic Stuff ---------------
         /** Handles bionic activation effects of the entered bionic, returns if anything activated */
-        bool activate_bionic( bionic &bio, bool eff_only = false, bool *close_bionics_ui = nullptr );
+        bool activate_bionic( bionic &bio, bool eff_only = false, bool *close_bionics_ui = nullptr,
+                              const bionic_activation_choices *choices = nullptr );
         std::vector<bionic_id> get_bionics() const;
         std::vector<const item *> get_pseudo_items() const;
         // Innate items a craft can draw: exposed pseudo items plus the hard-coded
