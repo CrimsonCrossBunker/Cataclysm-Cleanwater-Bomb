@@ -30,6 +30,7 @@
 #include "creature_tracker.h"
 #include "debug.h"
 #include "distraction_manager.h"
+#include "effect.h"
 #include "enums.h"
 #include "flag.h"
 #include "game.h"
@@ -68,6 +69,7 @@
 #include "rng.h"
 #include "sling.h"
 #include "sounds.h"
+#include "string_formatter.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -903,9 +905,16 @@ void avatar_action::active_technique( avatar &you, map &m )
     menu.desc_enabled = true;
     menu.hilight_disabled = true;
     for( size_t i = 0; i < available.size(); ++i ) {
-        const bool enabled = available[i] != tec_mounted_charge || mounted_charge_available( you );
+        const bool enabled = ( available[i] != tec_mounted_charge || mounted_charge_available( you ) ) &&
+                             ( available[i]->grapple_action.empty() || available[i]->activation_allowed( you, "start" ) );
+        std::string description = available[i]->get_description();
+        if( !available[i]->grapple_action.empty() &&
+            you.has_effect( available[i]->grapple_cooldown_effect() ) ) {
+            description += string_format( _( "\nRecovering: %s remaining.\n" ),
+                                          to_string( you.get_effect( available[i]->grapple_cooldown_effect() ).get_duration() ) );
+        }
         menu.addentry_desc( i, enabled, MENU_AUTOASSIGN, available[i]->name.translated(),
-                            available[i]->get_description() );
+                            description );
     }
     menu.query( true, 50, true );
     if( menu.ret < 0 ) {

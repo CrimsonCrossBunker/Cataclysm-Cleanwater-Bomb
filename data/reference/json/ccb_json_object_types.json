@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:347b07381816d88eb226f758bf213e221b8ed1a41b256d021c481d53bd439626",
+    "source_fingerprint": "sha256:27f986f976ff3bcdbdd145b035fba895f1c69becd47607de2e0c76791ffdea78",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6823,
-    "top_level_objects": 95301,
+    "tracked_json_files": 6829,
+    "top_level_objects": 95338,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15193,
+        "occurrences": 15204,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -796,7 +796,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2354,
+        "occurrences": 2356,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -1602,7 +1602,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 237,
+        "occurrences": 245,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1684,
+        "occurrences": 1689,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3334,7 +3334,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 280,
+        "occurrences": 282,
         "examples": [
           {
             "path": "data/json/artifact/legacy_artifact_passive.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7812,
+        "occurrences": 7813,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -9633,11 +9633,11 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 352,
+        "occurrences": 359,
         "examples": [
           {
-            "path": "data/json/martialarts_fictional.json",
-            "pointer": "/7"
+            "path": "data/json/martial_grappling.json",
+            "pointer": "/4"
           }
         ],
         "contract_roots": [
