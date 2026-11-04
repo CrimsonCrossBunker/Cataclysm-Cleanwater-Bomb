@@ -2141,6 +2141,10 @@ class lua_platform_iuse_actor : public iuse_actor
                                        here, position );
         }
 
+        bool supports_owned_activation() const override {
+            return true;
+        }
+
         std::unique_ptr<iuse_actor> clone() const override {
             return std::make_unique<lua_platform_iuse_actor>( *this );
         }

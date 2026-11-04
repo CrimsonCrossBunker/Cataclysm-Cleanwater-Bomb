@@ -31,6 +31,8 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "iuse.h"
+#include "iuse_actor.h"
+#include "mp_inventory_activity.h"
 #include "map.h"
 #include "output.h"
 #include "pimpl.h"
@@ -424,7 +426,12 @@ void game::item_action_menu( item_location loc )
     const item_action_id action = std::get<0>( menu_items[kmenu.ret] );
     item *it = iactions[action];
 
-    u.invoke_item( it, action );
+    std::string method = action;
+    if( it && u.has_item( *it ) &&
+        cata_mp::client_activate_item( form_loc_recursive<Character>( u, *it ), method ) ) {
+        return;
+    }
+    u.invoke_item( it, method );
 
     u.inv->restack( u );
     u.inv->unsort();
