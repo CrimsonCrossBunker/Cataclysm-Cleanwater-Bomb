@@ -37,6 +37,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bionic_water_activity.h"
+#include "remote_vehicle_activity.h"
 #include "bodypart.h"
 #include "butchery.h"
 #include "butchery_requirements.h"
@@ -13805,6 +13806,11 @@ vehicle *start_engines_activity_actor::target_vehicle( Character &who ) const
     if( !target || who.is_dead_state() ) {
         return nullptr;
     }
+    if( remote_source ) {
+        const item_location controller = resolve_item_source( who, here, *remote_source );
+        return !target->is_locked && remote_vehicle_accessible( who, here, *target, controller ) ?
+               target : nullptr;
+    }
     if( remote_control || ( vehicle_id == 0 && target->remote_controlled( who ) ) ) {
         return resolve_remote_vehicle( who, here ) == target ? target : nullptr;
     }
@@ -13818,6 +13824,15 @@ vehicle *start_engines_activity_actor::target_vehicle( Character &who ) const
         }
     }
     return nullptr;
+}
+
+void start_engines_activity_actor::allow_remote_start( Character &who,
+        const item_location &controller,
+        int64_t target_id )
+{
+    if( !take_control && vehicle_id == target_id ) {
+        remote_source = capture_item_source( who, controller );
+    }
 }
 
 void start_engines_activity_actor::do_turn( player_activity &, Character &who )
@@ -13914,6 +13929,7 @@ void start_engines_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "take_control", take_control );
     jsout.member( "vehicle_id", vehicle_id );
     jsout.member( "remote_control", remote_control );
+    jsout.member( "remote_source", remote_source );
     jsout.end_object();
 }
 
@@ -13925,6 +13941,7 @@ std::unique_ptr<activity_actor> start_engines_activity_actor::deserialize( JsonV
     data.read( "take_control", actor.take_control );
     data.read( "vehicle_id", actor.vehicle_id );
     data.read( "remote_control", actor.remote_control );
+    data.read( "remote_source", actor.remote_source );
     return actor.clone();
 }
 
@@ -17720,6 +17737,7 @@ deserialize_functions = {
     { ACT_INSERT_ITEM, &insert_item_activity_actor::deserialize },
     { ACT_INVOKE_ITEM, &invoke_item_activity_actor::deserialize },
     { activity_id( "ACT_BIONIC_WATER" ), &bionic_water_activity_actor::deserialize },
+    { activity_id( "ACT_REMOTE_VEHICLE" ), &remote_vehicle_activity_actor::deserialize },
     { ACT_JACKHAMMER, &jackhammer_activity_actor::deserialize },
     { ACT_LOCKPICK, &lockpick_activity_actor::deserialize },
     { ACT_LONGSALVAGE, &longsalvage_activity_actor::deserialize },

@@ -3,6 +3,7 @@
 #define CATA_SRC_ITEM_ACTIVATION_H
 
 #include <optional>
+#include <cstdint>
 #include <string>
 
 #include "coords_fwd.h"
@@ -14,8 +15,10 @@ class item_location;
 // Player input only; costs and gameplay effects are always computed natively.
 struct item_activation_choices {
     std::optional<int> timer_seconds;
+    std::string remote_vehicle_action;
+    std::optional<int64_t> remote_vehicle_uid;
     bool empty() const {
-        return !timer_seconds;
+        return !timer_seconds && remote_vehicle_action.empty() && !remote_vehicle_uid;
     }
 };
 

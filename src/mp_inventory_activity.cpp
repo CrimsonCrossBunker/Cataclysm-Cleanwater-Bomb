@@ -14,6 +14,7 @@
 #include "bionics.h"
 #include "bionic_activation.h"
 #include "bionic_water_activity.h"
+#include "remote_vehicle_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
 #include "character_action_guard.h"
@@ -331,6 +332,9 @@ bool begin_client_inventory_activity( const player_activity &activity )
     view.needs_placement = false;
     view.item_use_progress.clear();
     view.water_source_uid = 0;
+    view.remote_security_prompt = false;
+    view.remote_vehicle_target = 0;
+    view.remote_controller = {};
     view.craft_decision.clear();
     view.construction_decision.clear();
     view.construction_prompt.clear();
@@ -384,6 +388,8 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     if( request.has_member( "timer_seconds" ) ) {
         choices.timer_seconds = request.get_int( "timer_seconds" );
     }
+    request.read( "remote_vehicle_action", choices.remote_vehicle_action );
+    request.read( "remote_vehicle_uid", choices.remote_vehicle_uid );
     if( kind == "examine_pry" ) {
         return execute_owned_prying( who, source, target,
                                      request.get_bool( "allow_theft", false ),
@@ -391,6 +397,7 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     }
     const bool automatic = kind == "auto_mine";
     const std::string method = request.get_string( "method" );
+    state.refresh_observers = state.refresh_observers || method == "REMOTEVEH";
     if( automatic && ( source != who.get_wielded_item() || method.empty() ||
                        method != automatic_mining_method( who, here, target ) ) ) {
         return false;
@@ -631,7 +638,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
         state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
-                                  who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" );
+                                  who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
+                                  who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" );
     }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
@@ -708,6 +716,16 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( auto *remote = dynamic_cast<remote_vehicle_activity_actor *>
+                                      ( who.activity.actor.get() ) ) {
+                if( operation == "choose" && who.get_moves() > 0 && request.has_bool( "remote_security" ) ) {
+                    remote->answer_security( who, request.get_bool( "remote_security" ) );
+                } else if( operation == "choose" && who.get_moves() > 0 &&
+                           request.has_object( "vehicle_control" ) ) {
+                    vehicle_control_selection selection;
+                    request.read( "vehicle_control", selection, true );
+                    remote->apply_action( who, selection );
+                }
             } else if( auto *water = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() ) ) {
                 if( water->prepare( who ) && operation == "choose" && who.get_moves() > 0 ) {
                     unload_liquid_choice choice;
@@ -868,6 +886,14 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( active && state.tracks_item_use ) {
         out.member( "item_use_progress", who.activity.get_verb().translated() );
     }
+    if( const auto *remote = dynamic_cast<const remote_vehicle_activity_actor *>
+                             ( who.activity.actor.get() ) ) {
+        out.member( "remote_security_prompt", remote->waiting_for_security() );
+        out.member( "remote_vehicle_target", remote->waiting_for_action() ? remote->target_id() : 0 );
+        out.member( "remote_controller", capture_item_source( who, remote->source( who ) ) );
+    }
+    out.member( "remote_vehicle" );
+    write_remote_vehicle_binding( who, here, out );
     out.member( "controlling_vehicle", who.controlling_vehicle );
     out.member( "in_vehicle", who.in_vehicle );
     out.member( "needs_placement", state.needs_placement );
@@ -931,6 +957,9 @@ bool apply_inventory_activity_result( const JsonObject &response )
         set_client_ctrl_veh( get_avatar().controlling_vehicle );
     }
     response.read( "in_vehicle", get_avatar().in_vehicle );
+    if( response.has_object( "remote_vehicle" ) ) {
+        apply_remote_vehicle_binding( get_avatar(), response.get_object( "remote_vehicle" ) );
+    }
     if( response.has_member( "lua_character_state" ) ) {
         response.read( "lua_character_state", get_avatar().lua_character_state, true );
     }
@@ -966,6 +995,11 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.item_use_progress = response.get_string( "item_use_progress", "" );
         view.water_source_uid = 0;
         response.read( "water_source_uid", view.water_source_uid );
+        view.remote_security_prompt = response.get_bool( "remote_security_prompt", false );
+        view.remote_vehicle_target = 0;
+        response.read( "remote_vehicle_target", view.remote_vehicle_target );
+        view.remote_controller = {};
+        response.read( "remote_controller", view.remote_controller );
         view.craft_decision = response.get_string( "craft_decision", "" );
         view.construction_decision = response.get_string( "construction_decision", "" );
         view.construction_prompt = response.get_string( "construction_prompt", "" );
@@ -1242,6 +1276,10 @@ static bool client_activate_item_impl( const item_location &source, std::string 
         if( choices.timer_seconds ) {
             out.member( "timer_seconds", *choices.timer_seconds );
         }
+        if( !choices.remote_vehicle_action.empty() ) {
+            out.member( "remote_vehicle_action", choices.remote_vehicle_action );
+            out.member( "remote_vehicle_uid", choices.remote_vehicle_uid );
+        }
     } );
     return true;
 }
@@ -1337,39 +1375,7 @@ void client_query_vehicle_control()
         add_msg( _( "No vehicle here to control." ) );
         return;
     }
-    uilist menu;
-    menu.title = _( "Vehicle controls" );
-    const std::vector<std::pair<std::string, std::string>> options = {
-        { "take", _( "Take control" ) },
-        { "release", _( "Let go of controls" ) },
-        { "stop_driving", _( "Stop driving" ) },
-        {
-            target->engine_on ? "stop" : "start", target->engine_on ?
-            _( "Turn off the engine" ) : _( "Turn on the engine" )
-        },
-        { "engines", _( "Control individual engines" ) },
-        { "hotwire", _( "Hotwire" ) },
-        { "alarm", _( "Trigger the alarm" ) },
-        { "smash_alarm", _( "Try to smash alarm" ) },
-        { "autopilot", _( "Control autopilot" ) }
-    };
-    for( size_t i = 0; i < options.size(); ++i ) {
-        const auto &action = options[i].first;
-        const bool autopilot = action == "autopilot";
-        menu.addentry( i, ( !autopilot || target->has_part( "AUTOPILOT" ) || target->autopilot_on ) &&
-                       vehicle_control_accessible( who, here, *target, position,
-                               autopilot ? "autopilot_stop" : action ),
-                       MENU_AUTOASSIGN, options[i].second );
-    }
-    menu.query();
-    if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= options.size() ) {
-        return;
-    }
-    const std::string &action = options[menu.ret].first;
-    const auto selection = action == "autopilot" ? query_vehicle_autopilot( who, here, *target,
-                           position ) :
-                           action == "engines" ? query_vehicle_engines( who, here, *target, position ) :
-                           query_vehicle_control( who, here, *target, position, action );
+    const auto selection = query_owned_vehicle_menu( who, here, *target, position );
     if( selection ) {
         client_vehicle_control( *selection );
     }
@@ -1454,6 +1460,7 @@ void client_step_inventory_activity()
         return;
     }
     if( view.cancel_requested || view.needs_placement || view.finished || view.water_source_uid > 0 ||
+        view.remote_security_prompt || view.remote_vehicle_target > 0 ||
         !view.craft_decision.empty() || !view.construction_decision.empty() ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
@@ -1529,6 +1536,38 @@ void client_update_inventory_activity_view()
         }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
+    } else if( view.remote_security_prompt && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        const bool consent = get_avatar().query_yn( _( "Try to hack this car's security system?" ) );
+        send_inventory_activity( "choose", [&]( JsonOut & out ) {
+            out.member( "remote_security", consent );
+        } );
+    } else if( view.remote_vehicle_target > 0 && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        avatar &who = get_avatar();
+        map &here = get_map();
+        vehicle *target = vehicle::find_vehicle_by_uid( here, view.remote_vehicle_target );
+        const item_location source = resolve_item_source( who, here, view.remote_controller );
+        std::optional<vehicle_control_selection> selection;
+        if( target && source ) {
+            const auto controls = target->get_avail_parts( "REMOTE_CONTROLS" );
+            const auto electronics = target->get_avail_parts( "CTRL_ELECTRONIC" );
+            if( !empty( controls ) || !empty( electronics ) ) {
+                const auto position = empty( controls ) ? electronics.begin()->pos_abs() :
+                                      controls.begin()->pos_abs();
+                selection = query_owned_vehicle_menu( who, here, *target, position, &source );
+            }
+        }
+        if( selection ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "vehicle_control", *selection );
+            } );
+        } else {
+            view.cancel_requested = true;
+            send_inventory_activity( "cancel" );
+        }
     } else if( view.water_source_uid > 0 && view.preview && !is_client_waiting_for_ack() &&
                get_avatar().get_moves() > 0 ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );

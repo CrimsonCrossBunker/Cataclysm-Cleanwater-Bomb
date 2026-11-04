@@ -2344,14 +2344,16 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     const bool player_inside = here->veh_at( get_player_character().pos_abs() ) ?
                                &here->veh_at( get_player_character().pos_abs() )->vehicle() == this :
                                false;
-    const auto control_action = [this, here, vppos]( const std::string & action ) {
+    const auto control_action = [this, here, vppos,
+          remote_source = menu.remote_controller]( const std::string & action ) {
         Character &who = get_player_character();
         const auto selection = action == "autopilot" ?
-                               query_vehicle_autopilot( who, *here, *this, here->get_abs( vppos ) ) :
-                               action == "engines" ? query_vehicle_engines( who, *here, *this, here->get_abs( vppos ) ) :
-                               query_vehicle_control( who, *here, *this, here->get_abs( vppos ), action );
+                               query_vehicle_autopilot( who, *here, *this, here->get_abs( vppos ), remote_source ) :
+                               action == "engines" ? query_vehicle_engines( who, *here, *this, here->get_abs( vppos ),
+                                       remote_source ) :
+                               query_vehicle_control( who, *here, *this, here->get_abs( vppos ), action, remote_source );
         if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
-            execute_vehicle_control( who, *here, *selection );
+            execute_vehicle_control( who, *here, *selection, remote_source );
         }
     };
     bool power_linked = false;

@@ -43,6 +43,7 @@
 #include "item.h"
 #include "item_contents.h"
 #include "item_factory.h"
+#include "remote_vehicle_activity.h"
 #include "item_group.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
@@ -2004,7 +2005,22 @@ class iuse_function_wrapper : public iuse_actor
         bool supports_owned_activation() const override {
             return is_immediate_consumption() || cpp_function == &iuse::crowbar ||
                    cpp_function == &iuse::crowbar_weak || cpp_function == &iuse::pickaxe ||
-                   cpp_function == &iuse::jackhammer || cpp_function == &iuse::pick_lock;
+                   cpp_function == &iuse::jackhammer || cpp_function == &iuse::pick_lock ||
+                   cpp_function == &iuse::remoteveh;
+        }
+
+        bool valid_activation_choices( const item_activation_choices &choices ) const override {
+            return cpp_function == &iuse::remoteveh ? valid_remote_vehicle_choices( choices ) :
+                   iuse_actor::valid_activation_choices( choices );
+        }
+
+        std::optional<int> use_with_choices( Character *who, item &source, map *here,
+                                             const tripoint_bub_ms &position,
+                                             const item_activation_choices &choices ) const override {
+            if( cpp_function == &iuse::remoteveh ) {
+                return who ? begin_remote_vehicle_access( *who, source, choices ) : std::nullopt;
+            }
+            return iuse_actor::use_with_choices( who, source, here, position, choices );
         }
 
         void load( const JsonObject &, const std::string & ) override {}

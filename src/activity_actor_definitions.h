@@ -26,6 +26,7 @@
 #include "item.h"
 #include "item_insert.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "item_unload.h"
 #include "itype.h"
 #include "memory_fast.h"
@@ -3276,6 +3277,7 @@ class start_engines_activity_actor : public activity_actor
         bool take_control = false;
         int64_t vehicle_id = 0;
         bool remote_control = false;
+        std::optional<item_source> remote_source;
 
         vehicle *target_vehicle( Character &who ) const;
 
@@ -3297,6 +3299,8 @@ class start_engines_activity_actor : public activity_actor
         void do_turn( player_activity &act, Character &who ) override;
         void canceled( player_activity &act, Character &who ) override;
         void finish( player_activity &act, Character &who ) override;
+
+        void allow_remote_start( Character &who, const item_location &controller, int64_t target_id );
 
         std::unique_ptr<activity_actor> clone() const override {
             return std::make_unique<start_engines_activity_actor>( *this );
