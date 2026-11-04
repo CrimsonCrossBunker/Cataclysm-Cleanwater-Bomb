@@ -25,6 +25,7 @@
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_activation.h"
+#include "tool_activity_target.h"
 #include "iuse_actor.h"
 #include "item_components.h"
 #include "item_healing.h"
@@ -62,6 +63,7 @@
 #include "units.h"
 #include "uistate.h"
 #include "vehicle.h"
+#include "veh_type.h"
 #include "vpart_position.h"
 #include "submap.h"
 
@@ -2506,7 +2508,6 @@ TEST_CASE( "blueprint_client_only_requests_work_and_preserves_its_planner",
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "cata_path.h"
 #include "inventory.h"
-#include "item_activation.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_test_support.h"
 #include "path_info.h"
@@ -2881,4 +2882,171 @@ TEST_CASE( "item_activation_choices_preserve_delayed_readiness_and_npc_defaults"
     REQUIRE( normal.use( &remote, automatic, &get_map(), remote.pos_bub() ) );
     CHECK( automatic.typeId() == itype_id( "c4armed" ) );
     CHECK( automatic.countdown_point == calendar::turn + 6_seconds );
+}
+
+
+TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
+           "[mp_inventory_activity][mp_adjacent_tool]" )
+{
+    const std::string method = GENERATE( "CROWBAR", "PICKAXE", "JACKHAMMER", "PICK_LOCK" );
+    CAPTURE( method );
+    reload_fixture fixture;
+    map &here = get_map();
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim(
+                          cata_mp::player_id( std::string( 32, '9' ) ), remote );
+    avatar &host = get_avatar();
+    host.setpos( here, tripoint_bub_ms( 62, 60, 0 ) );
+    const tripoint_bub_ms target( 61, 60, 0 );
+    const ter_id original = ter_str_id( method == "CROWBAR" ? "test_t_prying1" :
+                                       method == "PICK_LOCK" ? "t_door_locked" : "t_rock" ).id();
+    here.ter_set( target, original );
+    const itype_id tool_id( method == "CROWBAR" ? "test_halligan" :
+                           method == "PICKAXE" ? "pickaxe" :
+                           method == "JACKHAMMER" ? "jackhammer_mining" : "test_sonic_screwdriver" );
+    for( Character *who : { static_cast<Character *>( &host ), static_cast<Character *>( &remote ) } ) {
+        item tool( tool_id );
+        if( method == "JACKHAMMER" ) {
+            tool.ammo_set( itype_id( "gasoline" ), 1200 );
+        }
+        who->set_wielded_item( std::move( tool ) );
+        who->set_moves( 1000 );
+    }
+    const std::string start = fixture.request( remote, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", capture_item_source( remote, remote.get_wielded_item() ) );
+        out.member( "item_type", tool_id );
+        out.member( "method", method );
+        out.member( "target", here.get_abs( target ) );
+    } );
+    fixture.run( remote, start );
+    REQUIRE( remote.activity );
+    CHECK( remote.activity.execution() == activity_execution::authoritative );
+    CHECK( remote.activity.moves_total > 0 );
+    const int work = remote.activity.moves_left;
+    fixture.run( remote, start );
+    CHECK( remote.activity.moves_left == work );
+    save_reload_activity( remote );
+    CHECK( remote.activity.execution() == activity_execution::authoritative );
+
+    REQUIRE( execute_owned_item_activation( host, host.get_wielded_item(), method,
+                                           here.get_abs( target ), false, false ) );
+    REQUIRE( host.activity );
+    const auto host_ammo = host.get_wielded_item()->ammo_remaining();
+    remote.activity.moves_left = 1;
+    remote.set_moves( 100 );
+    const std::string finish = fixture.request( remote, "step" );
+    fixture.run( remote, finish );
+    CHECK_FALSE( remote.activity );
+    CHECK( here.ter( target ) != original );
+    if( method == "PICK_LOCK" ) {
+        CHECK( remote.get_skill_level_object( skill_id( "traps" ) ).exercise() > 0 );
+        CHECK( host.get_skill_level_object( skill_id( "traps" ) ).exercise() == 0 );
+    }
+    if( method == "JACKHAMMER" ) {
+        CHECK( remote.get_wielded_item()->ammo_remaining() < host_ammo );
+    }
+    const auto after_rng = rng_get_engine();
+    const auto drops = here.i_at( target ).size();
+    const auto remote_ammo = remote.get_wielded_item()->ammo_remaining();
+    fixture.run( remote, finish );
+    CHECK( rng_get_engine() == after_rng );
+    CHECK( here.i_at( target ).size() == drops );
+    CHECK( remote.get_wielded_item()->ammo_remaining() == remote_ammo );
+
+    // The host's old activity must not harvest the replacement surface.
+    host.activity.moves_left = 1;
+    host.set_moves( 100 );
+    host.activity.do_turn( host );
+    CHECK_FALSE( host.activity );
+    CHECK( here.i_at( target ).size() == drops );
+    CHECK( host.get_wielded_item()->ammo_remaining() == host_ammo );
+    CHECK( rng_get_engine() == after_rng );
+}
+
+TEST_CASE( "mp_adjacent_tools_reject_bad_targets_and_lost_access",
+           "[mp_inventory_activity][mp_adjacent_tool]" )
+{
+    reload_fixture fixture;
+    map &here = get_map();
+    npc &remote = fixture.remote();
+    remote.set_wielded_item( item( itype_id( "test_halligan" ) ) );
+    remote.set_moves( 1000 );
+    const auto before_rng = rng_get_engine();
+    for( const tripoint_bub_ms &target : { remote.pos_bub(), tripoint_bub_ms( 64, 60, 0 ),
+                                        tripoint_bub_ms( 60, 60, 1 ) } ) {
+        here.ter_set( target, ter_str_id( "test_t_prying1" ) );
+        CHECK_FALSE( execute_owned_item_activation( remote, remote.get_wielded_item(), "CROWBAR",
+                     here.get_abs( target ), false, false ) );
+        CHECK_FALSE( remote.activity );
+        CHECK( remote.get_moves() == 1000 );
+        CHECK( rng_get_engine() == before_rng );
+    }
+    const tripoint_bub_ms target( 61, 60, 0 );
+    here.ter_set( target, ter_str_id( "test_t_prying1" ) );
+    REQUIRE( execute_owned_item_activation( remote, remote.get_wielded_item(), "CROWBAR",
+                                           here.get_abs( target ), false, false ) );
+    SECTION( "tool_removed" ) {
+        remote.remove_weapon();
+    }
+    SECTION( "actor_moved_away" ) {
+        remote.setpos( here, tripoint_bub_ms( 64, 60, 0 ) );
+    }
+    SECTION( "target_changed_while_saved" ) {
+        save_reload_activity( remote );
+        here.ter_set( target, ter_str_id( "t_door_locked" ) );
+    }
+    remote.activity.moves_left = 1;
+    remote.set_moves( 100 );
+    remote.activity.do_turn( remote );
+    CHECK_FALSE( remote.activity );
+    CHECK( here.i_at( target ).empty() );
+}
+
+TEST_CASE( "owned_tool_target_tracks_absolute_surface_and_vehicle_identity",
+           "[mp_adjacent_tool]" )
+{
+    reload_fixture fixture;
+    map &here = get_map();
+    const tripoint_bub_ms target( 61, 60, 0 );
+    here.ter_set( target, ter_str_id( "t_door_locked" ) );
+    const auto captured = tool_activity_target::capture( here, here.get_abs( target ) );
+    std::ostringstream stream;
+    JsonOut out( stream );
+    captured.serialize( out );
+    tool_activity_target restored;
+    JsonValue value = json_loader::from_string( stream.str() );
+    restored.deserialize( value.get_object() );
+    CHECK( restored.position == here.get_abs( target ) );
+    CHECK( restored.matches( here ) );
+    here.ter_set( target, ter_str_id( "t_door_c" ) );
+    CHECK_FALSE( restored.matches( here ) );
+    here.ter_set( target, ter_str_id( "t_pavement" ) );
+    const auto empty = tool_activity_target::capture( here, here.get_abs( target ) );
+    vehicle *car = here.add_vehicle( vproto_id( "car" ), target, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( car );
+    const auto occupied = tool_activity_target::capture( here, here.get_abs( target ) );
+    CHECK( occupied.vehicle == car->uid().get_value() );
+    CHECK_FALSE( empty.matches( here ) );
+    bool checked_lock = false;
+    for( int i = 0; i < car->part_count(); ++i ) {
+        if( car->part( i ).info().has_flag( "LOCKABLE_DOOR" ) ) {
+            if( !car->part_has_lock( i ) ) {
+                const point_rel_ms mount = car->part( i ).mount;
+                REQUIRE( car->install_part( here, mount, vpart_id( "door_lock" ) ) >= 0 );
+            }
+            car->part( i ).locked = true;
+            const auto door = tool_activity_target::capture( here,
+                              here.get_abs( car->bub_part_pos( here, i ) ) );
+            REQUIRE( door.locked_part != 0 );
+            CHECK( door.matches( here ) );
+            car->part( i ).locked = false;
+            CHECK_FALSE( door.matches( here ) );
+            checked_lock = true;
+            break;
+        }
+    }
+    CHECK( checked_lock );
+    here.destroy_vehicle( car );
+    CHECK_FALSE( occupied.matches( here ) );
 }

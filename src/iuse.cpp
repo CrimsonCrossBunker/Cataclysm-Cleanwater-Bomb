@@ -4,6 +4,7 @@
 #include "iuse.h"
 
 #include "item_activation.h"
+#include "tool_activity_target.h"
 
 #include <clone_ptr.h>
 #include <algorithm>
@@ -2474,6 +2475,11 @@ std::optional<int> iuse::crowbar_weak( Character *p, item *it, const tripoint_bu
 
 std::optional<int> iuse::crowbar( Character *p, item *it, const tripoint_bub_ms &pos )
 {
+    if( !p || !it || ( p->activity.execution() == activity_execution::authoritative &&
+                       !valid_adjacent_tool_target( adjacent_tool_action::pry, *p, get_map(), *it,
+                               get_map().get_abs( pos ) ) ) ) {
+        return std::nullopt;
+    }
     if( p->cant_do_mounted() ) {
         return std::nullopt;
     }
@@ -2492,8 +2498,8 @@ std::optional<int> iuse::crowbar( Character *p, item *it, const tripoint_bub_ms 
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = ( pos != p->pos_bub( here ) ) ?
-        pos : choose_adjacent_highlight(
-            here, _( "Pry where?" ), _( "There is nothing to pry nearby." ), f, false );
+            pos : choose_adjacent_highlight(
+                here, _( "Pry where?" ), _( "There is nothing to pry nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -2751,6 +2757,12 @@ static std::optional<int> dig_tool( Character *p, item *it, const tripoint_bub_m
         return std::nullopt;
     }
 
+    if( p->activity.execution() == activity_execution::authoritative &&
+        !valid_adjacent_tool_target( activity == ACT_PICKAXE ? adjacent_tool_action::mine :
+                                     adjacent_tool_action::drill, *p, get_map(), *it,
+                                     get_map().get_abs( target ) ) ) {
+        return std::nullopt;
+    }
     tripoint_bub_ms pnt( target );
     // This should only be true when called through activating the item directly. That is, the player activated it.
     if( target == p->pos_bub() ) {
@@ -2825,26 +2837,23 @@ std::optional<int> iuse::jackhammer( Character *p, item *it, const tripoint_bub_
 
 std::optional<int> iuse::pick_lock( Character *p, item *it, const tripoint_bub_ms &pos )
 {
-    if( p->is_npc() ) {
+    if( !p || !it || p->cant_do_mounted() ) {
         return std::nullopt;
     }
-    avatar &you = dynamic_cast<avatar &>( *p );
-
-    std::optional<tripoint_bub_ms> target;
-    // Prompt for a target lock to pick, or use the given tripoint
-    if( pos == you.pos_bub() ) {
-        target = lockpick_activity_actor::select_location( you );
-    } else {
-        target = pos;
+    map &here = get_map();
+    std::optional<tripoint_bub_ms> target = pos;
+    if( pos == p->pos_bub() ) {
+        if( !p->is_avatar() || p->activity.execution() == activity_execution::authoritative ) {
+            return std::nullopt;
+        }
+        target = lockpick_activity_actor::select_location( static_cast<avatar &>( *p ) );
     }
-    if( !target.has_value() ) {
+    if( !target || !valid_adjacent_tool_target( adjacent_tool_action::lockpick, *p, here,
+            *it, here.get_abs( *target ) ) ) {
         return std::nullopt;
     }
-
-    you.assign_activity( lockpick_activity_actor::use_item( item_location( you, it ),
-            get_map().get_abs( *target ),
-            *p
-                                                          ) );
+    p->assign_activity( lockpick_activity_actor::use_item( item_location( *p, it ),
+                        here.get_abs( *target ), *p ) );
     return 1;
 }
 
