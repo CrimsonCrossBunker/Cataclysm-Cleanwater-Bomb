@@ -47,6 +47,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_io.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "character.h"
@@ -842,6 +843,7 @@ void Character::load( const JsonObject &data )
     data.read( "sensitive_mod", sensitive_mod );
 
     data.read( "proficiencies", _proficiencies );
+    data.read( "learned_recipes", *learned_recipes );
 
     _proficiencies->migrate_proficiencies();
 
@@ -1573,6 +1575,7 @@ void Character::store( JsonOut &json ) const
     json.end_object();
 
     json.member( "proficiencies", _proficiencies );
+    json.member( "learned_recipes", *learned_recipes );
 
     // npc; unimplemented
     json.member( "power_level", power_level );
@@ -1694,6 +1697,222 @@ void Character::store( JsonOut &json ) const
     json.member( "inactive_eocs", inactive_effect_on_condition_vector );
 }
 
+// Current character state crosses a player boundary; savegame world links do not.
+// Keep the native writer, but deliberately avoid the save loader's migrations,
+// activity restoration, wear/mutation hooks and world-identity rebinding.
+void Character::store_player_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "schema", 1 );
+    out.member( "character" );
+    out.start_object();
+    store( out );
+    out.end_object();
+    out.end_object();
+}
+
+void Character::load_player_state( const JsonObject &snapshot )
+{
+    if( snapshot.get_int( "schema" ) != 1 ) {
+        snapshot.throw_error_at( "schema", "Unsupported player character state" );
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    // Restore the old state if an incomplete/invalid packet fails after parsing
+    // some fields. No gameplay callbacks run in either direction.
+    std::ostringstream previous;
+    JsonOut backup( previous );
+    store_player_state( backup );
+    const auto restore = [&]( const JsonObject & data ) {
+        data.allow_omitted_members();
+        for( const char *member : {
+                 "skills", "mental_metrics"
+             } ) {
+            if( !data.has_object( member ) ) {
+                data.throw_error_at( member, "Player character state requires an object" );
+            }
+        }
+        for( const char *member : {
+                 "inv", "queued_effect_on_conditions"
+             } ) {
+            if( !data.has_array( member ) ) {
+                data.throw_error_at( member, "Player character state requires an array" );
+            }
+        }
+        const auto read = [&]( const char *member, auto & value ) {
+            if( !data.read( member, value, true ) ) {
+                data.throw_error_at( member, "Missing player character state field" );
+            }
+        };
+        read( "str_max", str_max );
+        read( "dex_max", dex_max );
+        read( "int_max", int_max );
+        read( "per_max", per_max );
+        read( "str_bonus", str_bonus );
+        read( "dex_bonus", dex_bonus );
+        read( "per_bonus", per_bonus );
+        read( "int_bonus", int_bonus );
+        read( "name", name );
+        read( "play_name", play_name );
+        read( "base_age", init_age );
+        read( "base_height", init_height );
+        read( "blood_type", my_blood_type );
+        read( "blood_rh_factor", blood_rh_factor );
+        read( "avg_nat_bpm", avg_nat_bpm );
+        read( "custom_profession", custom_profession );
+        read( "healthy", lifestyle );
+        read( "healthy_mod", daily_health );
+        read( "health_tally", health_tally );
+        read( "sensitive", sensitive );
+        read( "sensitive_mod", sensitive_mod );
+        read( "daily_sleep", daily_sleep );
+        read( "continuous_sleep", continuous_sleep );
+        read( "thirst", thirst );
+        read( "hunger", hunger );
+        read( "sleepiness", sleepiness );
+        read( "cardio_acc", cardio_acc );
+        read( "activity_history", activity_history );
+        read( "sleep_deprivation", sleep_deprivation );
+        read( "stored_calories", stored_calories );
+        read( "radiation", radiation );
+        read( "stamina", stamina );
+        read( "vitamin_levels", vitamin_levels );
+        read( "daily_vitamins", daily_vitamins );
+        read( "pkill", pkill );
+        read( "consumption_history", consumption_history );
+        read( "stim", stim );
+        read( "type_of_scent", type_of_scent );
+        read( "focus_pool", focus_pool );
+        read( "kill_xp", kill_xp );
+        read( "oxygen", oxygen );
+        read( "traits", my_traits );
+        read( "mutations", my_mutations );
+        read( "cached_mutations", cached_mutations );
+        trait_flag_cache.clear();
+        read( "my_bionics", *my_bionics );
+        next_bionic_uid = 0;
+        read( "move_mode", move_mode );
+        read( "known_monsters", known_monsters );
+        read( "power_level", power_level );
+        read( "max_power_level_modifier", max_power_level_modifier );
+        read( "stomach", stomach );
+        read( "guts", guts );
+        read( "last_sleep_check", last_sleep_check );
+        read( "slow_rad", slow_rad );
+        read( "scent", scent );
+        read( "male", male );
+        read( "free_dodges_left", free_dodges_left );
+        read( "cash", cash );
+        read( "recoil", recoil );
+        read( "book_chapters", book_chapters );
+        read( "addictions", addictions );
+        read( "death_eocs", death_eocs );
+        read( "lua_platform_death_mod", lua_platform_death_mod );
+        read( "lua_platform_death_handler", lua_platform_death_handler );
+        read( "inactive_eocs", inactive_effect_on_condition_vector );
+        read( "effects", *effects );
+        read( "damage_over_time_map", damage_over_time_map );
+        read( "blocks_left", num_blocks );
+        read( "dodges_left", num_dodges );
+        read( "num_blocks_bonus", num_blocks_bonus );
+        read( "num_dodges_bonus", num_dodges_bonus );
+        read( "armor_bonus", armor_bonus );
+        read( "speed", speed_base );
+        read( "speed_bonus", speed_bonus );
+        read( "dodge_bonus", dodge_bonus );
+        read( "block_bonus", block_bonus );
+        read( "hit_bonus", hit_bonus );
+        read( "bash_bonus", bash_bonus );
+        read( "cut_bonus", cut_bonus );
+        read( "bash_mult", bash_mult );
+        read( "cut_mult", cut_mult );
+        read( "melee_quiet", melee_quiet );
+        read( "throw_resist", throw_resist );
+        read( "archery_aim_counter", archery_aim_counter );
+        read( "body", body );
+        if( body.empty() ) {
+            data.throw_error_at( "body", "Player character state requires a body" );
+        }
+        const JsonObject metrics = data.get_object( "mental_metrics" );
+        mental_metric_guilt_kills = metrics.get_int( "guilt_kills" );
+        mental_metric_human_dissections = metrics.get_int( "human_dissections" );
+        mental_metric_cannibalism = metrics.get_int( "cannibalism" );
+        // These loaders have legacy merge behavior; start from empty owners.
+        *magic = known_magic();
+        read( "magic", magic );
+        read( "martial_arts_data", martial_arts_data );
+        read( "proficiencies", _proficiencies );
+        read( "learned_recipes", *learned_recipes );
+        _skills->clear();
+        for( const JsonMember member : data.get_object( "skills" ) ) {
+            const skill_id id( member.name() );
+            if( !id.is_valid() ) {
+                data.throw_error_at( "skills", "Unknown skill in player character state" );
+            }
+            member.read( ( *_skills )[id] );
+        }
+        *morale = player_morale();
+        morale->load( data );
+        for( const trait_id &mut : get_functioning_mutations() ) {
+            morale->on_mutation_gain( mut );
+        }
+        set_pain( data.get_int( "pain" ) );
+
+        auto restored_values = values;
+        read( "values", restored_values );
+        // Session ownership belongs to the destination, never to a snapshot.
+        for( const std::string key : {
+                 "mp_proxy", "mp_player_id"
+             } ) {
+            restored_values.erase( key );
+            const auto owned = values.find( key );
+            if( owned != values.end() ) {
+                restored_values.insert( *owned );
+            }
+        }
+        values = std::move( restored_values );
+        queued_effect_on_conditions = queued_eocs();
+        for( JsonObject entry : data.get_array( "queued_effect_on_conditions" ) ) {
+            queued_eoc value;
+            value.time = time_point( entry.get_int( "time" ) );
+            value.eoc = effect_on_condition_id( entry.get_string( "eoc" ) );
+            entry.read( "context", value.context );
+            queued_effect_on_conditions.push( value );
+        }
+        outfit restored_outfit;
+        read( "worn", restored_outfit );
+        inventory restored_inventory;
+        restored_inventory.json_load_items( data.get_array( "inv" ) );
+        item restored_weapon;
+        data.read( "weapon", restored_weapon );
+        worn = std::move( restored_outfit );
+        *inv = std::move( restored_inventory );
+        weapon = std::move( restored_weapon );
+        invalidate_pseudo_items();
+        invalidate_leak_level_cache();
+        invalidate_weight_carried_cache();
+        invalidate_inventory_validity_cache();
+        invalidate_crafting_inventory();
+        recalculate_enchantment_cache( false );
+        my_mutations_dirty.clear();
+        old_mutation_cache->clear();
+        old_mutation_cache->mutations = enchantment_cache->mutations;
+        new_mutation_cache->clear();
+        recalculate_size();
+        calc_mutation_levels();
+        update_bionic_power_capacity();
+        flag_encumbrance();
+        recalc_sight_limits();
+    };
+    try {
+        restore( snapshot.get_object( "character" ) );
+    } catch( const JsonError & ) {
+        const JsonObject original = json_loader::from_string( previous.str() ).get_object();
+        original.allow_omitted_members();
+        restore( original.get_object( "character" ) );
+        throw;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///// avatar.h
 
@@ -1743,7 +1962,7 @@ void avatar::store( JsonOut &json ) const
     json.member( "grab_type", obj_type_name[static_cast<int>( grab_type ) ] );
 
     // npc: unimplemented, potentially useful
-    json.member( "learned_recipes", *learned_recipes );
+
 
     // Player only, books they have read at least once.
     json.member( "items_identified", items_identified );
@@ -1877,7 +2096,7 @@ void avatar::load( const JsonObject &data )
         set_scenario( generic_scenario );
     }
 
-    data.read( "learned_recipes", *learned_recipes );
+
     valid_autolearn_skills->clear(); // Invalidates the cache
 
     items_identified.clear();

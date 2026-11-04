@@ -20,6 +20,7 @@
 #include "mp_world_session.h"
 #include "mp_test_helpers.h"
 #include "rng.h"
+#include "recipe.h"
 #include "avatar.h"
 #include "activity_actor_definitions.h"
 #include "calendar.h"
@@ -52,6 +53,27 @@ npc &bind_test_player( cata_mp::world_session &session )
     only_test_remote( session ).actor.bind_player( actor, test_player(), g->npc_lifetimes(),
             g->player_controls().claim( test_player(), actor ) );
     return actor;
+}
+
+std::string initial_player_packet( const std::string &name )
+{
+    const restore_on_out_of_scope restore_name( get_avatar().name );
+    get_avatar().name = name;
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "action", "player_create" );
+    out.member( "player_state" );
+    get_avatar().store_player_state( out );
+    out.end_object();
+    return encoded.str();
+}
+
+void finish_player_creation( const cata_mp::peer_admission &admission, const std::string &name )
+{
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                           initial_player_packet( name ), admission } ) );
+    cata_mp::process_mp_events();
 }
 
 void bind_test_view( cata_mp::world_session &session )
@@ -187,6 +209,15 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
     }
     cata_mp::process_mp_events();
     REQUIRE( session.remote_players.size() == 3 );
+    for( size_t i = 0; i < admissions.size(); ++i ) {
+        const auto *pending = session.find_remote( admissions[i] );
+        REQUIRE( pending );
+        REQUIRE( pending->awaiting_character );
+        CHECK_FALSE( pending->actor.id().is_valid() );
+        CHECK_FALSE( file_exist( records[i] ) );
+        finish_player_creation( admissions[i], i == 0 ? "first owner" :
+                                i == 1 ? "second owner" : "third owner" );
+    }
     auto *first = session.find_remote( admissions[0] );
     auto *second = session.find_remote( admissions[1] );
     auto *third = session.find_remote( admissions[2] );
@@ -268,10 +299,10 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
     third_actor->setpos( get_map(), tripoint_bub_ms( 64, 60, 0 ) );
     second->observation.partner_activity_pct = 17;
     CHECK( cata_mp::partner_activity_pct() == 53 );
-    send( admissions[1], R"({"action":"worn_sync","client_activity":""})" );
+    send( admissions[1], R"({"action":"activity_end","client_activity":""})" );
     cata_mp::process_mp_events();
     CHECK( get_avatar().activity.id().str() == "ACT_HELP_PARTNER" );
-    send( admissions[2], R"({"action":"worn_sync","client_activity":""})" );
+    send( admissions[2], R"({"action":"activity_end","client_activity":""})" );
     cata_mp::process_mp_events();
     CHECK_FALSE( get_avatar().activity );
 
@@ -616,7 +647,16 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
         admissions[peer] = cata_mp::peer_admission::create( peer );
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect, "connection nickname", "", admissions[peer], identity } ) );
         cata_mp::process_mp_events();
+        if( const auto *pending = session.find_remote( admissions[peer] );
+            pending && pending->awaiting_character ) {
+            CHECK_FALSE( file_exist( record ) );
+            finish_player_creation( admissions[peer], "Rosalee Blanco" );
+        }
     };
+    const recipe_id known_recipe( "balclava" );
+    REQUIRE( known_recipe.is_valid() );
+    get_avatar().learn_recipe( &known_recipe.obj() );
+    get_avatar().set_str_base( 17 );
     connect( 101, profile );
     REQUIRE( only_test_remote( session ).connected );
     const auto original_id = only_test_remote( session ).actor.id();
@@ -624,6 +664,10 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     npc *actor = g->critter_by_id<npc>( original_id );
     REQUIRE( actor );
     REQUIRE( actor->has_native_player_control() );
+    CHECK( actor->get_str_base() == 17 );
+    CHECK( actor->knows_recipe( &known_recipe.obj() ) );
+    CHECK( actor->getID() != get_avatar().getID() );
+    CHECK( actor->get_value( "mp_player_id" ).str() == profile.id.str() );
     // Use the world phase's actual prepare/advance/finish path. An admitted
     // compatibility proxy otherwise keeps negative AP forever after an action.
     only_test_remote( session ).turn.remote_moves = -5;
@@ -642,14 +686,14 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     g->load_npcs();
     CHECK( only_test_remote( session ).actor.resolve_loaded( actor, g->npc_lifetimes() ) == actor );
     CHECK_FALSE( before_unload.resolve( g->npc_lifetimes() ) );
-    actor->name = "before final sync";
+    actor->name = "Rosalee Blanco";
     actor->set_value( "identity_regression", std::string( "retained" ) );
     std::filesystem::rename( record.get_unrelative_path(), backup.get_unrelative_path() );
     std::filesystem::create_directory( record.get_unrelative_path() );
-    // The worker accepted this final action before observing disconnect. Its
-    // retirement must not reorder the owner stream or lose the saved update.
+    // A queued stale stats upload cannot overwrite the authoritative actor,
+    // even when transport retirement precedes owner-thread dispatch.
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
-                                           R"({"action":"worn_sync","char_stats":{"name":"Rosalee Blanco"}})",
+                                           R"({"action":"worn_sync","char_stats":{"name":"stale upload","str":99}})",
                                            admissions.at( 101 ) } ) );
     admissions.at( 101 ).retire();
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 101 ) } ) );
@@ -674,9 +718,13 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     REQUIRE( actor );
     CHECK( actor->name == "Rosalee Blanco" );
     CHECK( actor->get_value( "identity_regression" ).str() == "retained" );
+    CHECK( actor->get_str_base() == 17 );
+    CHECK( actor->knows_recipe( &known_recipe.obj() ) );
     REQUIRE( actor->get_wielded_item() );
     CHECK( actor->get_wielded_item()->charges == 3 );
     CHECK( only_test_remote( session ).pickup.revision > 0 );
+    finish_player_creation( admissions.at( 202 ), "replacement attempt" );
+    CHECK( actor->name == "Rosalee Blanco" );
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
                                            R"({"action":"worn_sync","wielded":"","char_stats":{"name":"stale local save"}})",
                                            admissions.at( 202 ) } ) );
@@ -1437,4 +1485,45 @@ TEST_CASE( "melee_result_preserves_weapon_identity_and_skill_progress_without_st
     observer.set_stamina( 500 );
     CHECK_FALSE( cata_mp::apply_combat_result( observer, message, client ) );
     CHECK( observer.get_stamina() == 500 );
+}
+
+TEST_CASE( "mp_incomplete_first_join_never_persists_a_default_character",
+           "[multiplayer][world_session][player_identity]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const cata_mp::player_credentials profile{ player_id( std::string( 32, '8' ) ),
+            std::string( 64, 'c' ) };
+    const auto record = PATH_INFO::world_base_save_path() / ( "mp_actor_" + profile.id.str() +
+                        ".json" );
+    REQUIRE_FALSE( file_exist( record ) );
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        remove_file( record );
+        remove_file( PATH_INFO::world_base_save_path() / "mp_npc_cleanup.json" );
+        cata_mp::get_mp_queue().clear();
+    } );
+    const auto admission = cata_mp::peer_admission::create( 901 );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect,
+                                           "pending", "", admission, profile } ) );
+    cata_mp::process_mp_events();
+    REQUIRE( session.find_remote( admission ) );
+    REQUIRE( session.find_remote( admission )->awaiting_character );
+    CHECK( cata_mp::mp_save_remote_player() );
+    CHECK_FALSE( file_exist( record ) );
+    SECTION( "disconnect before sending character" ) {
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect,
+                                               "pending", "", admission } ) );
+    }
+    SECTION( "invalid character rejected without a record" ) {
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "pending",
+                                               R"({"action":"player_create","player_state":{"schema":999}})", admission } ) );
+    }
+    cata_mp::process_mp_events();
+    CHECK( session.remote_players.empty() );
+    CHECK_FALSE( file_exist( record ) );
+    CHECK_FALSE( g->player_controls().is_reserved( profile.id ) );
 }
