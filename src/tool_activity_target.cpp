@@ -8,6 +8,7 @@
 #include "item_source.h"
 #include "item_uid.h"
 #include "json.h"
+#include "itype.h"
 #include "line.h"
 #include "map.h"
 #include "mapdata.h"
@@ -29,6 +30,23 @@ adjacent_tool_action adjacent_tool_method( const std::string &method )
         return adjacent_tool_action::drill;
     }
     return method == "PICK_LOCK" ? adjacent_tool_action::lockpick : adjacent_tool_action::none;
+}
+
+std::string automatic_mining_method( const Character &who, map &here,
+                                     const tripoint_abs_ms &target )
+{
+    const item_location tool = who.get_wielded_item();
+    if( !tool || !tool->has_flag( flag_DIG_TOOL ) ||
+        who.has_effect( efftype_id( "stunned" ) ) ||
+        who.has_effect( efftype_id( "psi_stunned" ) ) ||
+        who.has_effect( efftype_id( "incorporeal" ) ) ||
+        who.has_flag( json_character_flag( "CANNOT_MOVE" ) ) ) {
+        return {};
+    }
+    const std::string method = tool->type->can_use( "PICKAXE" ) ? "PICKAXE" :
+                               tool->type->can_use( "JACKHAMMER" ) ? "JACKHAMMER" : "";
+    return valid_adjacent_tool_target( adjacent_tool_method( method ), who, here, *tool, target ) ?
+           method : std::string();
 }
 
 bool valid_adjacent_tool_target( adjacent_tool_action action, const Character &who,
@@ -114,6 +132,7 @@ void tool_activity_target::serialize( JsonOut &out ) const
     out.member( "furniture", furniture );
     out.member( "vehicle", vehicle );
     out.member( "locked_part", locked_part );
+    out.member( "tool_source", tool_source );
     out.end_object();
 }
 
@@ -124,6 +143,7 @@ void tool_activity_target::deserialize( const JsonObject &data )
     data.read( "furniture", furniture, true );
     data.read( "vehicle", vehicle, true );
     data.read( "locked_part", locked_part, true );
+    data.read( "tool_source", tool_source );
 }
 
 bool continue_owned_tool_activity( player_activity &activity, Character &who,
@@ -136,6 +156,10 @@ bool continue_owned_tool_activity( player_activity &activity, Character &who,
     map &here = get_map();
     if( !target || who.pos_abs().z() != target->position.z() ||
         rl_dist( who.pos_abs(), target->position ) != 1 || !target->matches( here ) ||
+        // A restored item_location resolves lazily and reports a debug error
+        // when its target has disappeared. Check the saved stable source first
+        // so losing a tool between load and continuation cancels normally.
+        ( tool && target->tool_source && !resolve_item_source( who, here, *target->tool_source ) ) ||
         ( tool && ( !*tool || ( *tool )->is_broken() ||
                     resolve_item_source( who, here, capture_item_source( who, *tool ) ) != *tool ) ) ) {
         activity.set_to_null();
@@ -153,6 +177,9 @@ void start_owned_tool_activity( player_activity &activity, Character &who,
         map &here = get_map();
         if( here.inbounds( position ) ) {
             target = tool_activity_target::capture( here, position );
+            if( tool && *tool ) {
+                target->tool_source = capture_item_source( who, *tool );
+            }
         }
         continue_owned_tool_activity( activity, who, tool, target );
     }

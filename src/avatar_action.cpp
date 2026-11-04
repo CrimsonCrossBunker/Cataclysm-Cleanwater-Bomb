@@ -49,6 +49,7 @@
 #include "item.h"
 #include "lua_platform_runtime.h"
 #include "item_healing.h"
+#include "tool_activity_target.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
@@ -341,28 +342,18 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
         }
     }
 
-    item_location weapon = you.get_wielded_item();
-    if( m.has_flag( ter_furn_flag::TFLAG_MINEABLE, dest_loc ) && g->mostseen == 0 &&
-        get_option<bool>( "AUTO_FEATURES" ) && get_option<bool>( "AUTO_MINING" ) &&
-        !m.veh_at( dest_loc ) && !you.is_underwater() && !you.has_effect( effect_stunned ) &&
-        !you.has_effect( effect_psi_stunned ) && !is_riding && !you.has_effect( effect_incorporeal ) &&
-        !m.impassable_field_at( dest_loc ) && !you.has_flag( json_flag_CANNOT_MOVE ) ) {
-        if( weapon && weapon->has_flag( flag_DIG_TOOL ) ) {
-            std::string mining_action;
-            if( weapon->type->can_use( "PICKAXE" ) ) {
-                mining_action = "PICKAXE";
-            } else if( weapon->type->can_use( "JACKHAMMER" ) ) {
-                mining_action = "JACKHAMMER";
-            }
-            if( !mining_action.empty() ) {
-                you.invoke_item( &*weapon, mining_action, dest_loc );
-                // Only queue the move when mining actually started. Empty or
-                // unsuitable tools must not leave an automatic retry queued.
-                if( you.activity ) {
-                    you.defer_move( dest_loc );
-                }
+    if( g->mostseen == 0 && get_option<bool>( "AUTO_FEATURES" ) &&
+        get_option<bool>( "AUTO_MINING" ) ) {
+        const std::string method = automatic_mining_method( you, m, m.get_abs( dest_loc ) );
+        if( !method.empty() ) {
+            if( cata_mp::client_auto_mine( m.get_abs( dest_loc ) ) ) {
                 return true;
             }
+            you.invoke_item( &*you.get_wielded_item(), method, dest_loc );
+            if( you.activity ) {
+                you.defer_move( dest_loc );
+            }
+            return true;
         }
     }
 
