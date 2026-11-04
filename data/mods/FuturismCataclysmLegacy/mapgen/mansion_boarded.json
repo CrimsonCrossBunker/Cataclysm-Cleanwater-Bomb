@@ -181,7 +181,12 @@
         "........................",
         "........................"
       ],
-      "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_carpets_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_bathroom",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
@@ -217,7 +222,12 @@
         "........................",
         "........................"
       ],
-      "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_carpets_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_bathroom",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 0, 23 ], "y": [ 12, 23 ], "chance": 15, "repeat": [ 1, 2 ] } ]
     }
   },
@@ -325,7 +335,12 @@
         "........................",
         "........................"
       ],
-      "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_lino_kitchen", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_carpets_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_kitchen",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 0, 23 ], "y": [ 0, 15 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
@@ -397,7 +412,12 @@
         ".......#S,,,+,9|      T|",
         ".......########||++|||||"
       ],
-      "palettes": [ "parametrized_linoleum_palette", "standard_domestic_palette", "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_linoleum_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_bathroom",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 9, 23 ], "y": [ 4, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
@@ -469,7 +489,12 @@
         ".......#S,,,+,9|      T|",
         ".......########||++|||||"
       ],
-      "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_carpets_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_bathroom",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 6, 23 ], "y": [ 4, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
@@ -541,7 +566,12 @@
         ".......#S,,,+,9|      T|",
         ".......########||++|||||"
       ],
-      "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_carpets_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_bathroom",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 5, 23 ], "y": [ 6, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
@@ -613,7 +643,12 @@
         ".......#S,,,+,9|      T|",
         ".......########||++|||||"
       ],
-      "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_lino_bathroom", "standard_domestic_landscaping_palette" ],
+      "palettes": [
+        "parametrized_carpets_palette",
+        "standard_domestic_palette",
+        "standard_domestic_lino_bathroom",
+        "standard_domestic_landscaping_palette"
+      ],
       "place_monster": [ { "monster": "mon_utilibot", "x": [ 10, 23 ], "y": [ 6, 23 ], "chance": 25, "repeat": [ 1, 2 ] } ]
     }
   },
