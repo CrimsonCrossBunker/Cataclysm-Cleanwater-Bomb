@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6823,
-    "top_level_objects": 95300,
+    "top_level_objects": 95301,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8214,
+        "occurrences": 8215,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -10213,7 +10213,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1611,
+        "occurrences": 1612,
         "examples": [
           {
             "path": "data/json/recipes/armor/mutant_clothing.json",
