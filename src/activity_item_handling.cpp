@@ -61,6 +61,8 @@
 #include "map_selector.h"
 #include "mapdata.h"
 #include "messages.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -3347,6 +3349,11 @@ static bool construction_activity( Character &you, const zone_data * /*zone*/,
         get_craft_reservations().provider_tile_reserved( site ) ) {
         return false;
     }
+    if( you.is_avatar() && cata_mp::is_client_mode() ) {
+        // Keep blueprint planning local; only the authoritative actor consumes
+        // materials and advances the site. assign_activity preserves the planner.
+        return cata_mp::client_start_blueprint_construction( built_chosen.id, site );
+    }
     std::list<item> used;
     // create the partial construction struct
     partial_con pc;
@@ -4030,7 +4037,10 @@ bool multi_build_construction_activity_actor::multi_activity_do( Character &you,
                          _fac_id( you ) );
 
     if( reason == do_activity_reason::CAN_DO_CONSTRUCTION ) {
-        if( here.partial_con_at( src_loc ) ) {
+        if( const partial_con *site = here.partial_con_at( src_loc ) ) {
+            if( you.is_avatar() && cata_mp::is_client_mode() ) {
+                return !cata_mp::client_change_construction( src, site->uid, false );
+            }
             you.assign_activity( build_construction_activity_actor( src ) );
             return false;
         }

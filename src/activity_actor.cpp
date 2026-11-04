@@ -10113,8 +10113,57 @@ std::unique_ptr<activity_actor> tent_deconstruct_activity_actor::deserialize( Js
     return actor.clone();
 }
 
+build_construction_activity_actor::build_construction_activity_actor(
+    const tripoint_abs_ms &location, Character *owner ) : construction_location( location ),
+    server_owned( owner != nullptr ), owner_id( owner ? owner->getID() : character_id() )
+{
+}
+
+build_construction_activity_actor build_construction_activity_actor::client_view()
+{
+    build_construction_activity_actor actor;
+    actor.view_only = true;
+    return actor;
+}
+
+void build_construction_activity_actor::start( player_activity &, Character &who )
+{
+    if( !server_owned || view_only ) {
+        return;
+    }
+    const map &here = get_map();
+    partial_con *site = get_map().partial_con_at( here.get_bub( construction_location ) );
+    if( site ) {
+        site_uid = site->uid;
+        construction_type = site->id.obj().id;
+    }
+    if( !prepare_owned_turn( who ) ) {
+        who.cancel_activity();
+    }
+}
+
+void build_construction_activity_actor::canceled( player_activity &, Character & )
+{
+    if( view_only ) {
+        cata_mp::client_cancel_inventory_activity();
+    }
+}
+
 void build_construction_activity_actor::do_turn( player_activity &act, Character &you )
 {
+    if( view_only ) {
+        cata_mp::client_step_inventory_activity();
+        return;
+    }
+    if( server_owned ) {
+        if( !prepare_owned_turn( you ) ) {
+            you.cancel_activity();
+            return;
+        }
+        if( !decision.empty() ) {
+            return;
+        }
+    }
     map &here = get_map();
     const tripoint_bub_ms construction_bub = here.get_bub( construction_location );
     partial_con *pc = here.partial_con_at( construction_bub );
@@ -10129,6 +10178,10 @@ void build_construction_activity_actor::do_turn( player_activity &act, Character
         }
         add_msg( m_info, _( "%s did not find an unfinished construction at the activity spot." ),
                  you.disp_name() );
+        return;
+    }
+    if( server_owned && pc->counter >= 10000000 ) {
+        complete_construction( act, you );
         return;
     }
     you.set_activity_level( pc->id->activity_level );
@@ -10151,27 +10204,44 @@ void build_construction_activity_actor::do_turn( player_activity &act, Character
     // Clamp to >= 100 to prevent division by 0 or int overflow on characters with high speed;
     const double base_total_moves = std::max( 100, built.time );
     // Current expected total moves, includes construction speed modifiers and assistants
-    const double cur_total_moves = std::max( 100, built.adjusted_time() );
+    const double cur_total_moves = std::max( 100, built.adjusted_time( you ) );
     // Delta progress in moves adjusted for current crafting speed
     const double delta_progress = you.get_moves() * base_total_moves / cur_total_moves;
     // Current progress in moves
     const double current_progress = old_counter * base_total_moves / 10000000.0 +
                                     delta_progress;
     you.set_moves( 0 );
+    const auto identity = you.activity.identity_generation();
+    const int64_t original_site = pc->uid;
+    const safe_reference<Creature> lifetime = you.get_safe_reference();
     pc->id->do_turn_special( construction_bub, you );
+    // A deconstruction refusal removes the site and cancels this actor.
+    if( !lifetime || you.activity.identity_generation() != identity ) {
+        return;
+    }
+    pc = here.partial_con_at( construction_bub );
+    if( !pc || pc->uid != original_site ) {
+        you.cancel_activity();
+        return;
+    }
     // Current progress as a percent of base_total_moves to 2 decimal places
     pc->counter = std::round( current_progress / base_total_moves * 10000000.0 );
     pc->counter = std::min( pc->counter, 10000000 );
     // If construction_progress has reached 100% or more
     if( pc->counter >= 10000000 ) {
         // Activity is canceled in complete_construction()
-        complete_construction( act, you );
+        if( !server_owned || ( prepare_owned_turn( you ) && decision.empty() ) ) {
+            complete_construction( act, you );
+        }
     }
 }
 
 std::string build_construction_activity_actor::get_progress_message( const player_activity & )
 const
 {
+    if( view_only ) {
+        return view_progress;
+    }
     map &here = get_map();
 
     partial_con *pc =
@@ -10189,6 +10259,16 @@ void build_construction_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
     jsout.member( "construction_location", construction_location );
+    jsout.member( "server_owned", server_owned );
+    jsout.member( "view_only", view_only );
+    jsout.member( "owner_id", owner_id );
+    jsout.member( "site_uid", site_uid );
+    jsout.member( "construction", construction_type );
+    jsout.member( "answers", answers );
+    jsout.member( "decision", decision );
+    jsout.member( "prompt", prompt );
+    jsout.member( "text_choice", text_choice );
+    jsout.member( "view_progress", view_progress );
     jsout.end_object();
 }
 
@@ -10197,6 +10277,16 @@ std::unique_ptr<activity_actor> build_construction_activity_actor::deserialize( 
     build_construction_activity_actor actor;
     JsonObject data = jsin.get_object();
     data.read( "construction_location", actor.construction_location );
+    data.read( "server_owned", actor.server_owned );
+    data.read( "view_only", actor.view_only );
+    data.read( "owner_id", actor.owner_id );
+    data.read( "site_uid", actor.site_uid );
+    data.read( "construction", actor.construction_type );
+    data.read( "answers", actor.answers );
+    data.read( "decision", actor.decision );
+    data.read( "prompt", actor.prompt );
+    data.read( "text_choice", actor.text_choice );
+    data.read( "view_progress", actor.view_progress );
 
     return actor.clone();
 }

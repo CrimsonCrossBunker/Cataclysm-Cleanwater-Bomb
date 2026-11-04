@@ -3202,6 +3202,13 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                         continue;
                     }
                     const tripoint_bub_ms bub = m.get_bub( abs );
+                    // Construction is authoritative. Reject legacy snapshots,
+                    // including their attached terrain/items, and never let a
+                    // different player's upload overwrite an active work site.
+                    if( to.has_object( "partial_con" ) || to.get_bool( "partial_con_remove", false ) ||
+                        m.partial_con_at( bub ) ) {
+                        continue;
+                    }
                     bool touched = false;
                     if( to.has_string( "ter" ) ) {
                         const ter_id tid( to.get_string( "ter" ) );
@@ -3289,16 +3296,6 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                             m.delete_graffiti( bub );
                         } else {
                             m.set_graffiti( bub, gtext );
-                        }
-                        touched = true;
-                    }
-                    // Partial construction (the client's in-progress build site).
-                    if( to.has_object( "partial_con" ) ) {
-                        mp_apply_partial_con_obj( bub, to.get_object( "partial_con" ) );
-                        touched = true;
-                    } else if( to.get_bool( "partial_con_remove", false ) ) {
-                        if( m.partial_con_at( bub ) ) {
-                            m.partial_con_remove( bub );
                         }
                         touched = true;
                     }
@@ -5196,22 +5193,12 @@ static int mp_compute_activity_pct( const player_activity &act )
     // moves_total — which the actor pins to 1, so the moves_total branch reads 0%.
     static const activity_id ACT_BUILD_ID( "ACT_BUILD" );
     if( act.id() == ACT_BUILD_ID && act.actor ) {
-        if( const build_construction_activity_actor *bca =
-                dynamic_cast<const build_construction_activity_actor *>( act.actor.get() ) ) {
-            map &m = get_map();
-#if 0 // MP-FIXME: get_construction_location private in CCB
-            if( partial_con *pc = m.partial_con_at( m.get_bub( bca->get_construction_location() ) ) ) {
-                const int pct = std::clamp( pc->counter / 100000, 0, 100 );
-                if( pct != mp_session().presentation.last_build_pct ) {
-                    mp_session().presentation.last_build_pct = pct;
-                    mp_log( "[cdda-mp] ASSIST-PCT build(local): pct=" + std::to_string( pct ) +
-                            " counter=" + std::to_string( pc->counter ) );
-                }
-                return pct;
+        if( const auto *builder = dynamic_cast<const build_construction_activity_actor *>
+                                  ( act.actor.get() ) ) {
+            map &here = get_map();
+            if( const partial_con *site = here.partial_con_at( here.get_bub( builder->location() ) ) ) {
+                return std::clamp( site->counter / 100000, 0, 100 );
             }
-#endif
-            ( void )m;
-            ( void )bca;
         }
     }
     return 0;
@@ -7910,20 +7897,8 @@ static std::string build_client_tile_changes( int radius = 10 )
                 graffiti_baseline = graffiti_sig_c;
             }
 
-            // Partial construction — baseline-gated.  The counter changes each
-            // turn during a build, so this re-sends the build tile every turn
-            // (one tile, cheap) until the construction completes.
-            const std::string partial_con_sig_c = mp_partial_con_sig( bub );
-            const bool has_pc_c = m.partial_con_at( bub ) != nullptr;
-            auto &pc_baseline = mp_session().replication.client.client_partial_con_baseline[abs];
-            const bool pc_changed = pc_baseline != partial_con_sig_c;
-            const bool had_pc_c = !pc_baseline.empty();
-            if( pc_changed ) {
-                pc_baseline = partial_con_sig_c;
-            }
-
             if( !terfurn_changed && !items_changed && !fields_changed &&
-                !trap_changed && !graffiti_changed && !pc_changed ) {
+                !trap_changed && !graffiti_changed ) {
                 continue;
             }
 
@@ -7952,13 +7927,6 @@ static std::string build_client_tile_changes( int radius = 10 )
             }
             if( graffiti_changed ) {
                 out += R"(,"graffiti":")" + json_escape_str( graffiti_sig_c ) + "\"";
-            }
-            if( pc_changed ) {
-                if( has_pc_c ) {
-                    out += ",\"partial_con\":" + mp_partial_con_obj_json( bub );
-                } else if( had_pc_c ) {
-                    out += ",\"partial_con_remove\":true";
-                }
             }
             out += "}";
         }
@@ -8817,7 +8785,7 @@ void client_send_activity_start( const std::string &activity_id_str )
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
           activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
           activity_id_str == "ACT_FIRSTAID" || activity_id_str == "ACT_CRAFT" ||
-          activity_id_str == "ACT_CRAFT_WAIT" ) &&
+          activity_id_str == "ACT_CRAFT_WAIT" || activity_id_str == "ACT_BUILD" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8840,7 +8808,7 @@ void client_send_activity_end( const std::string &activity_id_str )
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
           activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
           activity_id_str == "ACT_FIRSTAID" || activity_id_str == "ACT_CRAFT" ||
-          activity_id_str == "ACT_CRAFT_WAIT" ) &&
+          activity_id_str == "ACT_CRAFT_WAIT" || activity_id_str == "ACT_BUILD" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8870,10 +8838,10 @@ void client_send_activity_end( const std::string &activity_id_str )
 // consumed components + a progress counter) lives in the submap's
 // partial_constructions map, NOT in the per-tile snapshot — so before this it was
 // invisible to the other player even though the % rode the activity packet.  These
-// helpers serialize/apply it alongside the tile snapshot in BOTH directions
-// (host map_sync + client_tile_changes), since construction runs on both sides.
+// helpers replicate server-owned sites to client views. Clients submit start,
+// resume and remove intents instead of uploading site snapshots.
 
-// Stable fingerprint: construction id + counter (drives per-turn % updates) +
+// Stable fingerprint: site identity + construction id + counter +
 // component count (covers start/finish).  Empty when no build site here.
 static std::string mp_partial_con_sig( const tripoint_bub_ms &bub )
 {
@@ -8881,7 +8849,8 @@ static std::string mp_partial_con_sig( const tripoint_bub_ms &bub )
     if( !pc ) {
         return std::string();
     }
-    return pc->id.obj().id.str() + ':' + std::to_string( pc->counter ) + ':' +
+    return pc->id.obj().id.str() + ':' + std::to_string( pc->uid ) + ':' +
+           std::to_string( pc->counter ) + ':' +
            std::to_string( pc->components.size() );
 }
 
@@ -8901,7 +8870,8 @@ static std::string mp_partial_con_obj_json( const tripoint_bub_ms &bub )
     }
     comp_json += "]";
     return R"({"con":")" + pc->id.obj().id.str() + R"(","counter":)" +
-           std::to_string( pc->counter ) + ",\"components\":" + comp_json + "}";
+           std::to_string( pc->counter ) + ",\"uid\":" + std::to_string( pc->uid ) +
+           ",\"components\":" + comp_json + "}";
 }
 
 // Apply a received "partial_con" object to a tile.  Updates the counter/id in
@@ -8915,15 +8885,21 @@ static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, const JsonObje
     if( !con_sid.is_valid() ) {
         return;
     }
-    const int counter = po.get_int( "counter", 0 );
+    const int counter = std::clamp( po.get_int( "counter", 0 ), 0, 10000000 );
+    int64_t uid = 0;
+    po.read( "uid", uid );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
     map &m = get_map();
     if( partial_con *existing = m.partial_con_at( bub ) ) {
-        existing->counter = counter;
-        existing->id = con_sid.id();
-        return;
+        if( existing->uid == uid && existing->id == con_sid.id() ) {
+            existing->counter = counter;
+            return;
+        }
+        m.partial_con_remove( bub );
     }
     partial_con pc;
     pc.id = con_sid.id();
+    pc.uid = uid;
     pc.counter = counter;
     if( po.has_array( "components" ) ) {
         for( const JsonValue &iv : po.get_array( "components" ) ) {
@@ -8931,7 +8907,7 @@ static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, const JsonObje
                 item comp;
                 JsonObject io = iv.get_object();
                 io.allow_omitted_members();
-                comp.deserialize( io );
+                comp.deserialize( io, item_load_context::current_state );
                 if( !comp.typeId().is_empty() && comp.typeId().is_valid() ) {
                     pc.components.push_back( std::move( comp ) );
                 }
@@ -9382,16 +9358,13 @@ static void apply_tile_changes( JsonObject &jo )
 
         // Partial construction (the host's in-progress build site).  An object
         // creates/updates it; partial_con_remove clears it (build finished or
-        // cancelled).  Keeps the client's g_client_partial_con_baseline in step so
-        // it doesn't echo the host's construction straight back.
+        // cancelled). Clients never upload these replicated sites.
         if( to.has_object( "partial_con" ) ) {
             mp_apply_partial_con_obj( bub, to.get_object( "partial_con" ) );
-            mp_session().replication.client.client_partial_con_baseline[abs] = mp_partial_con_sig( bub );
         } else if( to.get_bool( "partial_con_remove", false ) ) {
             if( m.partial_con_at( bub ) ) {
                 m.partial_con_remove( bub );
             }
-            mp_session().replication.client.client_partial_con_baseline[abs] = std::string();
         }
 
         // Refresh client→server baselines to match the state we just installed

@@ -153,7 +153,6 @@ struct client_replication_state {
     std::unordered_map<tripoint_abs_ms, std::string> client_trap_baseline{};
     std::unordered_map<tripoint_abs_ms, std::string> client_graffiti_baseline{};
     std::unordered_map<tripoint_abs_ms, std::string> client_field_baseline{};
-    std::unordered_map<tripoint_abs_ms, std::string> client_partial_con_baseline{};
     // Client→server vehicle cargo baseline.  Keyed by the absolute tile position
     // of the cargo vpart so the host can find the vehicle + part by tile lookup.
     // Mirrors the item baseline but for items stored inside vehicle cargo parts

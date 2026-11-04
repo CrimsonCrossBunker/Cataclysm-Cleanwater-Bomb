@@ -8,6 +8,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
@@ -768,6 +769,56 @@ bool selected_tools_available( Character &who,
     } );
 }
 } // namespace
+
+bool validate_requirement_selection( Character &who, const requirement_data &requirements,
+                                     std::vector<comp_selection<item_comp>> &components,
+                                     std::vector<comp_selection<tool_comp>> &tools )
+{
+    if( !canonical_selections( components, requirements.get_components(), 1, false ) ||
+        !canonical_selections( tools, requirements.get_tools(), 1, true ) ||
+        !requirements.can_make_with_inventory( &who, who.crafting_inventory(),
+                is_crafting_component, 1, craft_flags::none, false ) ||
+        !who.preview_crafting_components( components, 1, is_crafting_component ) ) {
+        return false;
+    }
+    temp_crafting_inventory nearby;
+    nearby.form_from_map( who.pos_bub(), pickup_range, &who );
+    struct charge_budget {
+        int64_t map = 0;
+        int64_t player = 0;
+        int64_t total = 0;
+    };
+    std::map<itype_id, charge_budget> charges;
+    for( const auto &selected : tools ) {
+        const itype_id type = selected.comp.type;
+        if( selected.comp.count <= 0 ) {
+            if( !who.has_amount( type, 1 ) && !nearby.has_tools( type, 1 ) ) {
+                return false;
+            }
+            continue;
+        }
+        const int64_t cost = static_cast<int64_t>( selected.comp.count ) * type->charge_factor();
+        auto &budget = charges[type];
+        budget.total += cost;
+        if( selected.use_from == usage_from::map ) {
+            budget.map += cost;
+        } else if( selected.use_from == usage_from::player ) {
+            budget.player += cost;
+        }
+        if( budget.total > INT_MAX ) {
+            return false;
+        }
+    }
+    for( const auto &[type, budget] : charges ) {
+        if( ( budget.map && !nearby.has_charges( type, budget.map ) ) ||
+            ( budget.player &&
+              !who.crafting_inventory( who.pos_bub(), -1 ).has_charges( type, budget.player ) ) ||
+            !who.crafting_inventory().has_charges( type, budget.total ) ) {
+            return false;
+        }
+    }
+    return true;
+}
 
 void write_craft_plans( JsonOut &out, const std::vector<attention_plan> &plans )
 {
