@@ -143,6 +143,20 @@ class tile_lookup_res
         }
 };
 
+// 3D-only silhouette metadata captured during the tileset's existing alpha
+// scan. Indices are sprite-local pixels; -1 means that row/column is empty.
+struct sprite_alpha_profile {
+    std::vector<int> top;
+    std::vector<int> bottom;
+    std::vector<int> left;
+    std::vector<int> right;
+};
+
+struct sprite_alpha_scan {
+    SDL_Rect bounds = { 0, 0, 0, 0 };
+    std::shared_ptr<const sprite_alpha_profile> profile;
+};
+
 class texture
 {
     private:
@@ -151,14 +165,17 @@ class texture
         // Tightest rect containing non-transparent pixels, relative to srcrect origin.
         // Used for tint overlay bounds so transparent padding is excluded.
         SDL_Rect opaque_rect = { 0, 0, 0, 0 };
+        std::shared_ptr<const sprite_alpha_profile> alpha_profile;
 
     public:
         texture( std::shared_ptr<SDL_Texture> ptr,
                  const SDL_Rect &rect ) : sdl_texture_ptr( std::move( ptr ) ),
             srcrect( rect ), opaque_rect( { 0, 0, rect.w, rect.h } ) { }
         texture( std::shared_ptr<SDL_Texture> ptr,
-                 const SDL_Rect &rect, const SDL_Rect &opaque ) : sdl_texture_ptr( std::move( ptr ) ),
-            srcrect( rect ), opaque_rect( opaque ) { }
+                 const SDL_Rect &rect, const SDL_Rect &opaque,
+                 std::shared_ptr<const sprite_alpha_profile> profile = nullptr ) :
+            sdl_texture_ptr( std::move( ptr ) ), srcrect( rect ), opaque_rect( opaque ),
+            alpha_profile( std::move( profile ) ) { }
         texture() = default;
 
         /// Returns the width (first) and height (second) of the stored texture.
@@ -168,6 +185,9 @@ class texture
         /// Returns the opaque pixel bounding box relative to the sprite origin.
         const SDL_Rect &get_opaque_rect() const {
             return opaque_rect;
+        }
+        const std::shared_ptr<const sprite_alpha_profile> &get_alpha_profile_3d() const {
+            return alpha_profile;
         }
         /// Returns the underlying SDL_Texture pointer (for blend mode changes).
         const std::shared_ptr<SDL_Texture> &get_texture_ptr() const {
@@ -690,6 +710,8 @@ struct texture_draw_data {
     std::pair<float, float> uv1;
     // tightest non-transparent pixel bounds, relative to the dimensions origin
     SDL_Rect opaque_rect = { 0, 0, 0, 0 };
+    // shared silhouette metadata for 3D ground-level edge extrusion
+    std::shared_ptr<const sprite_alpha_profile> alpha_profile;
 };
 
 // One tile's fg/bg sprite resolution for the 3D renderer, as produced by
@@ -828,12 +850,6 @@ class cata_tiles
         // unaffected.
         void get_field_rota_subtile_3d( int field_id, const std::array<int, 4> &neighborhood,
                                         int &subtile, int &rotation );
-
-        // 3D-only: the map-memory sweep draw() performs at its end (memorize
-        // everything the avatar currently sees), for the reality-bubble level
-        // center.z(). Render3D bypasses draw(), so it runs this itself; the 2D
-        // path never calls it. center's x/y are not used, only its z.
-        void memorize_map_memory( const tripoint_bub_ms &center );
 
     protected:
         /** How many rows and columns of tiles fit into given dimensions, fully

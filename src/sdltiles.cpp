@@ -2259,6 +2259,9 @@ recipe_result renderer_resource_coordinator::recipe_device_reset()
     if( check_pause_abort() ) {
         return { recipe_outcome::failure };
     }
+    // Device reset invalidates the 3D textures and in-flight frames too. The
+    // next terrain draw re-probes the still-live renderer from scratch.
+    render3d::on_renderer_destroyed();
     reset_context_minimaps();
     if( check_pause_abort() ) {
         return { recipe_outcome::failure };
@@ -2377,6 +2380,9 @@ bool renderer_resource_coordinator::install_renderer_with_fallback()
         if( check_pause_abort() ) {
             return false;
         }
+        // Release 3D wrappers, GPU resources and asynchronous frame owners
+        // while the dying renderer still owns their device.
+        render3d::on_renderer_destroyed();
         renderer.reset();
         if( check_pause_abort() ) {
             return false;

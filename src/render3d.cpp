@@ -84,9 +84,9 @@ constexpr int INSTANCE_STRIDE = 64;
 
 constexpr float LEVEL_HEIGHT = 2.6f;
 constexpr float FLOOR_THICK = 0.1f;
-// walls stop just under the next level's floor slab (slab bottom is
-// LEVEL_HEIGHT - FLOOR_THICK) so the two never intersect and z-fight
-constexpr float WALL_HEIGHT = LEVEL_HEIGHT - FLOOR_THICK - 0.01f;
+// wall tops end inside the next level's floor slab: high enough to close the
+// seam, but below the slab top so they cannot replace the upper floor surface
+constexpr float WALL_HEIGHT = LEVEL_HEIGHT - FLOOR_THICK * 0.5f;
 constexpr float TREE_HEIGHT = 3.0f;
 constexpr float SHRUB_HEIGHT = 0.9f;
 constexpr float FURN_QUAD_HEIGHT = 1.2f;
@@ -103,6 +103,8 @@ constexpr float FIELD_DECAL_Z = 0.001f;
 constexpr float FIELD_DECAL_STAGGER = 0.0003f;
 constexpr float FIELD_RISER_HEIGHT = 1.4f;
 constexpr float FIELD_RISER_OFFSET = 0.008f;
+// ground-level utility runs sit above the floor and the existing low decals
+constexpr float FLAT_UTILITY_Z = 0.006f;
 // vehicle parts draw as flat ground decals, above the field decals (2D draws
 // vparts after fields/items); they use MODE_FLATQUAD_DECAL (no depth write) so
 // co-tile and overlapping decals order by painter's algorithm, never z-fight.
@@ -1360,11 +1362,12 @@ SDL_GPUTexture *gpu_texture_of( SDL_Texture *texture )
 struct sprite_info {
     SDL_Texture *atlas = nullptr;
     float u0 = 0.0f, v0 = 0.0f, u1 = 0.0f, v1 = 0.0f;
-    // opaque-cropped uv, used ONLY by the ground layer: big-section sprites
-    // (giant.png trees etc.) are larger than one tile with transparent padding
-    // which 2D hides via anchoring; a no-discard floor would show the padding
-    // as black margins, so the floor samples just the opaque bounds
+    // opaque-cropped uv, used by the ground layer and utility shells:
+    // big-section sprites (giant.png trees etc.) are larger than one tile with
+    // transparent padding which 2D hides via anchoring; a no-discard floor would
+    // show the padding as black margins, and a utility shell must not extrude it
     float gu0 = 0.0f, gv0 = 0.0f, gu1 = 0.0f, gv1 = 0.0f;
+    std::shared_ptr<const sprite_alpha_profile> alpha_profile;
     float aspect = 1.0f; // sprite pixel width / height
     // sprite canvas size in tileset pixels; the paper doll uses it (with
     // `offset`) to place overlay layers on the same canvas scale as the body
@@ -1399,6 +1402,7 @@ bool fill_sprite_info( const texture_draw_data &d, sprite_info &out )
                  : 1.0f;
     out.px_w = d.dimensions.w;
     out.px_h = d.dimensions.h;
+    out.alpha_profile = d.alpha_profile;
     if( d.opaque_rect.w > 0 && d.dimensions.w > 0 && d.dimensions.h > 0 ) {
         const float dw = static_cast<float>( d.dimensions.w );
         const float dh = static_cast<float>( d.dimensions.h );
@@ -1484,6 +1488,15 @@ bool wall_opening( const ter_t &t )
              t.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF ) );
 }
 
+// a genuinely empty window/door frame: the opening is structural, with no
+// terrain sprite standing in it. open doors and closeable windows keep their
+// panels and their own fg/bg composition
+bool empty_frame_terrain( const ter_t &t )
+{
+    return t.movecost > 0 && t.open.is_null() && t.close.is_null() &&
+           ( t.has_flag( ter_furn_flag::TFLAG_WINDOW ) || wall_opening( t ) );
+}
+
 // a solid wall whose sprite can clamp a door/window panel (sill + lintel) or
 // back a doorway's lintel: WALL-flagged, impassable, never a panel or a fence
 bool wall_terrain( const ter_t &t )
@@ -1491,6 +1504,39 @@ bool wall_terrain( const ter_t &t )
     return t.movecost == 0 && t.has_flag( ter_furn_flag::TFLAG_WALL ) &&
            !door_or_window( t ) &&
            !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE );
+}
+
+// ground-level utility runs are horizontal surfaces, not standing barriers.
+// Match the terrain's own id, never looks_like: downspouts borrow the metal-post
+// sprite, and real posts must remain vertical.
+bool flat_utility_terrain( const ter_t &t, const int z )
+{
+    static constexpr std::array<std::string_view, 7> ground_ids = {{
+            "t_sewage_pipe", "t_nl_sewage_pipe", "t_nl_sewage_pipe_border",
+            "t_LIXA_tube", "t_LIXA_unfolded_tube", "t_LIXA_unfolded_tube_broken",
+            "t_gutter"
+        }
+    };
+    const std::string_view id( t.id.str() );
+    if( std::find( ground_ids.begin(), ground_ids.end(), id ) != ground_ids.end() ) {
+        return true;
+    }
+    if( z <= 0 ) {
+        return false;
+    }
+    static constexpr std::array<std::string_view, 4> roof_ids = {{
+            "t_gutter_drop", "t_gutter_downspout",
+            "t_vitrified_gutter_drop", "t_vitrified_downspout"
+        }
+    };
+    return std::find( roof_ids.begin(), roof_ids.end(), id ) != roof_ids.end();
+}
+
+// freestanding recreational equipment has a vertical face, not a floor decal
+bool upright_equipment_terrain( const ter_t &t )
+{
+    static constexpr std::array<std::string_view, 2> ids = {{ "t_monkey_bars", "t_slide" }};
+    return std::find( ids.begin(), ids.end(), std::string_view( t.id.str() ) ) != ids.end();
 }
 
 // 2D composites a tile's bg under its fg. for a few locked/alarmed objects the
@@ -1810,7 +1856,8 @@ void push_instance( instance_sink out, const float dx, const float dy,
                     const bool no_discard = false, const int rota4 = 0,
                     const bool side_strip = false, const float pad_value = -1.0f,
                     const bool ghost = false, const float saturation = 1.0f,
-                    const bool memory = false, const bool soft_alpha = false )
+                    const bool memory = false, const bool soft_alpha = false,
+                    const bool edge_skirt = false )
 {
     out.data[0] = dx;
     out.data[1] = dy;
@@ -1836,13 +1883,187 @@ void push_instance( instance_sink out, const float dx, const float dy,
     // unlit and recolors them through the MEMORY_MAP_MODE preset),
     // bit7: soft alpha — dithered translucency proportional to the sampled
     // alpha, for field sprites whose semi-transparent pixels 2D would blend
+    // bit8: silhouette side — transpose linequad UV so the run follows sprite v
+    // while sampling a fixed sprite-u edge column (independent of world rotation)
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
     out.data[14] = ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
                    ( ghost ? 32.0f : 0.0f ) + ( memory ? 64.0f : 0.0f ) +
-                   ( soft_alpha ? 128.0f : 0.0f );
+                   ( soft_alpha ? 128.0f : 0.0f ) + ( edge_skirt ? 256.0f : 0.0f );
     out.data[15] = pad_value >= 0.0f ? pad_value
                    : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f );
+}
+
+// A ground-level utility keeps its full horizontal sprite and extends the
+// actual alpha silhouette down to the floor. Runs with the same boundary are
+// merged so pixel-art detail does not turn into one instance per pixel.
+int push_utility_shell( std::vector<float> &top_out, std::vector<float> &side_out,
+                        const float dx, const float dy, const float wz,
+                        const sprite_info &spr, const float r, const float g, const float b,
+                        const int rota4, const bool ghost, const float saturation,
+                        const bool memory )
+{
+    push_instance( top_out, dx, dy, wz + FLAT_UTILITY_Z, 1.0f, 1.0f, 1.0f, spr,
+                   r, g, b, false, rota4, false, -1.0f, ghost, saturation, memory );
+    int emitted = 1;
+    const float side_base = wz - 0.001f;
+    const float side_height = FLAT_UTILITY_Z + 0.001f;
+    const int rot = rota4 & 3;
+
+    const auto inverse_point = [rot]( const float u, const float v, float &x, float &y ) {
+        if( rot == 1 ) {
+            x = 1.0f - v;
+            y = u;
+        } else if( rot == 2 ) {
+            x = 1.0f - u;
+            y = 1.0f - v;
+        } else if( rot == 3 ) {
+            x = v;
+            y = 1.0f - u;
+        } else {
+            x = u;
+            y = v;
+        }
+    };
+    const auto inverse_direction = [rot]( const float u, const float v, float &x, float &y ) {
+        if( rot == 1 ) {
+            x = -v;
+            y = u;
+        } else if( rot == 2 ) {
+            x = -u;
+            y = -v;
+        } else if( rot == 3 ) {
+            x = v;
+            y = -u;
+        } else {
+            x = u;
+            y = v;
+        }
+    };
+
+    const auto emit_edge = [&]( const float lo, const float hi, const float fixed,
+                                const float uv_lo, const float uv_hi, const float uv_fixed,
+                                const bool along_x ) {
+        if( hi <= lo ) {
+            return;
+        }
+        sprite_info edge = spr;
+        const auto atlas_u = [&]( const float u ) {
+            return spr.u0 + u * ( spr.u1 - spr.u0 );
+        };
+        const auto atlas_v = [&]( const float v ) {
+            return spr.v0 + v * ( spr.v1 - spr.v0 );
+        };
+        if( along_x ) {
+            edge.u0 = atlas_u( uv_lo );
+            edge.u1 = atlas_u( uv_hi );
+            edge.v0 = edge.v1 = atlas_v( uv_fixed );
+        } else {
+            edge.u0 = edge.u1 = atlas_u( uv_fixed );
+            edge.v0 = atlas_v( uv_lo );
+            edge.v1 = atlas_v( uv_hi );
+        }
+
+        const float cx = along_x ? ( lo + hi ) * 0.5f : fixed;
+        const float cy = along_x ? fixed : ( lo + hi ) * 0.5f;
+        float wx, wy, dirx, diry;
+        inverse_point( cx, cy, wx, wy );
+        inverse_direction( along_x ? 1.0f : 0.0f, along_x ? 0.0f : 1.0f, dirx, diry );
+        const float run_pad = std::abs( diry ) > 0.5f ? 1.0f : 0.0f;
+        const bool reversed = run_pad == 0 ? dirx < 0.0f : diry < 0.0f;
+        if( reversed ) {
+            if( along_x ) {
+                std::swap( edge.u0, edge.u1 );
+            } else {
+                std::swap( edge.v0, edge.v1 );
+            }
+        }
+        push_instance( side_out, dx + wx, dy + wy, side_base, hi - lo, side_height, 1.0f,
+                       edge, r, g, b, false, 0, false, run_pad, ghost, saturation, memory,
+                       false, !along_x );
+        ++emitted;
+    };
+
+    const int w = std::max( spr.px_w, 1 );
+    const int h = std::max( spr.px_h, 1 );
+    sprite_alpha_profile fallback;
+    const sprite_alpha_profile *profile = spr.alpha_profile.get();
+    if( profile == nullptr || static_cast<int>( profile->top.size() ) < w ||
+        static_cast<int>( profile->bottom.size() ) < w ||
+        static_cast<int>( profile->left.size() ) < h ||
+        static_cast<int>( profile->right.size() ) < h ) {
+        fallback.top.assign( w, 0 );
+        fallback.bottom.assign( w, h - 1 );
+        fallback.left.assign( h, 0 );
+        fallback.right.assign( h, w - 1 );
+        profile = &fallback;
+    }
+
+    for( int x = 0; x < w; ) {
+        const int edge = profile->top[x];
+        if( edge < 0 ) {
+            ++x;
+            continue;
+        }
+        const int begin = x;
+        int end = begin + 1;
+        while( end < w && profile->top[end] == edge ) {
+            ++end;
+        }
+        emit_edge( begin / static_cast<float>( w ), end / static_cast<float>( w ),
+                   edge / static_cast<float>( h ), ( begin + 0.5f ) / w, ( end - 0.5f ) / w,
+                   ( edge + 0.5f ) / h, true );
+        x = end;
+    }
+    for( int x = 0; x < w; ) {
+        const int edge = profile->bottom[x];
+        if( edge < 0 ) {
+            ++x;
+            continue;
+        }
+        const int begin = x;
+        int end = begin + 1;
+        while( end < w && profile->bottom[end] == edge ) {
+            ++end;
+        }
+        emit_edge( begin / static_cast<float>( w ), end / static_cast<float>( w ),
+                   ( edge + 1.0f ) / h, ( begin + 0.5f ) / w, ( end - 0.5f ) / w,
+                   ( edge + 0.5f ) / h, true );
+        x = end;
+    }
+    for( int y = 0; y < h; ) {
+        const int edge = profile->left[y];
+        if( edge < 0 ) {
+            ++y;
+            continue;
+        }
+        const int begin = y;
+        int end = begin + 1;
+        while( end < h && profile->left[end] == edge ) {
+            ++end;
+        }
+        emit_edge( begin / static_cast<float>( h ), end / static_cast<float>( h ),
+                   edge / static_cast<float>( w ), ( begin + 0.5f ) / h, ( end - 0.5f ) / h,
+                   ( edge + 0.5f ) / w, false );
+        y = end;
+    }
+    for( int y = 0; y < h; ) {
+        const int edge = profile->right[y];
+        if( edge < 0 ) {
+            ++y;
+            continue;
+        }
+        const int begin = y;
+        int end = begin + 1;
+        while( end < h && profile->right[end] == edge ) {
+            ++end;
+        }
+        emit_edge( begin / static_cast<float>( h ), end / static_cast<float>( h ),
+                   ( edge + 1.0f ) / w, ( begin + 0.5f ) / h, ( end - 0.5f ) / h,
+                   ( edge + 0.5f ) / w, false );
+        y = end;
+    }
+    return emitted;
 }
 
 float creature_size_scale( const creature_size size )
@@ -2058,9 +2279,9 @@ const orientation_cache_entry &cached_orientation( map &here, const avatar &you,
     orientation_cache_map &cache = orientation_cache();
     auto it = cache.find( key );
     // CCB does not have the source branch's geometry/sight revisions. The
-    // whole cache is cleared by the turn/position/memory/visibility sweep
-    // below; this per-level generation also catches asynchronous visibility
-    // rebuilds between sweeps.
+    // whole cache is cleared by the turn/position/memory/visibility
+    // invalidation below; this per-level generation also catches visibility
+    // rebuilds between invalidations.
     if( it != cache.end() &&
         it->second.visibility_generation == level.visibility_generation &&
         it->second.memory_visible == memory_visible ) {
@@ -2361,11 +2582,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // fallback) ground, and the inherited lintel caps the wall line
         const bool is_opening = wall_opening( t );
         const bool is_panel = door_or_window( t ) || is_opening;
+        const bool is_empty_frame = is_panel && empty_frame_terrain( t );
         const bool is_fence = !is_panel && t.has_flag( "THIN_OBSTACLE" );
+        const bool is_flat_utility = is_fence && flat_utility_terrain( t, p.z() );
+        const bool is_upright_equipment = upright_equipment_terrain( t );
         const bool is_wall = !is_tree && !is_shrub && !is_panel && !is_fence &&
-                             t.movecost == 0;
+                             !is_upright_equipment && t.movecost == 0;
         const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
-                                 !is_wall;
+                                 !is_wall && !is_upright_equipment;
         // an edge segment's stored rotation is 0 for a N-S wall line and 1 for
         // an E-W one (cata_tiles::get_rotation_and_subtile)
         const bool ew_line = ( ( mt.get_ter_rotation() % 2 ) + 2 ) % 2 == 1;
@@ -2373,7 +2597,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         int lookup_subtile = -1;
         int lookup_rota = 0;
         bool force_rota = false;
-        if( plain_floor || is_tree || is_shrub ) {
+        if( plain_floor || is_tree || is_shrub || is_flat_utility || is_upright_equipment ) {
             // 2D's memory draw uses the stored subtile and rotation as-is
             lookup_subtile = mt.get_ter_subtile();
             lookup_rota = mt.get_ter_rotation();
@@ -2400,7 +2624,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // icon); both layers stand on the panel and the floor falls back to
         // t_floor
         const bool is_window_panel = t.has_flag( "WINDOW" ) && !t.has_flag( "DOOR" );
-        const bool layered_face = is_panel && btex && !is_opening && wants_layered_face( t );
+        const bool layered_face = is_panel && !is_empty_frame && btex && !is_opening &&
+                                  wants_layered_face( t );
         // diagnostic: remembered door-family classification trace, once per id
         if( is_panel || t.has_flag( "LOCKED" ) ) {
             static std::unordered_set<std::string> logged_mem_doors;
@@ -2444,7 +2669,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                            wz - 0.001f, 1.0f, 1.0f, 1.0f, ground_spr, gr, gg, gb,
                            false, ground_rot4, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else {
+        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) ) {
+            // Horizontal objects without a bg must not acquire an unrelated
+            // hash-colored floor box beneath their textured top and silhouette.
             sprite_info gspr = ground_spr;
             gspr.u0 = ground_spr.gu0;
             gspr.v0 = ground_spr.gv0;
@@ -2527,9 +2754,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             const bool wok = mem_clamp_wall( wspr );
             if( is_window_panel ) {
                 constexpr float SILL_H = 0.85f;
-                push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
-                               pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
-                ++count;
+                if( !is_empty_frame ) {
+                    push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
+                                   pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
+                    ++count;
+                }
                 if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
                     // the indicator layer rides a hair proud of the glass so
                     // it never z-fights the face it composites over; grow
@@ -2563,9 +2792,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     count += 2;
                 }
             } else {
-                push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
-                               pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
-                ++count;
+                if( !is_empty_frame ) {
+                    push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
+                                   pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
+                    ++count;
+                }
                 if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
                     // the indicator layer rides a hair proud of the board so it
                     // never z-fights the face it composites over. the box grows
@@ -2592,6 +2823,17 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     ++count;
                 }
             }
+        } else if( is_upright_equipment ) {
+            std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP, ftex ? fspr.atlas : nullptr );
+            push_instance( v, dx + 0.5f, dy + 0.5f, wz - FENCE_HEIGHT * fspr.base_drop,
+                           1.0f, FENCE_HEIGHT, 1.0f, fspr, or_, og, ob,
+                           false, 0, false, -1.0f, false, 1.0f, true );
+            ++count;
+        } else if( is_flat_utility ) {
+            std::vector<float> &top = bucket_for( MODE_FLATQUAD, ftex ? fspr.atlas : nullptr );
+            std::vector<float> &sides = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
+            count += push_utility_shell( top, sides, dx, dy, wz, fspr, or_, og, ob, tl.fg_rot4,
+                                         false, 1.0f, true );
         } else if( is_fence ) {
             const float fh = t.has_flag( "TINY" ) ? 0.35f : FENCE_HEIGHT;
             std::vector<float> &v = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
@@ -2771,12 +3013,15 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // standing slabs on the bg/t_floor ground
                 const bool is_opening = wall_opening( *t );
                 const bool is_panel = door_or_window( *t ) || is_opening;
+                const bool is_empty_frame = is_panel && empty_frame_terrain( *t );
                 const bool is_fence = !is_panel && t->has_flag( "THIN_OBSTACLE" );
+                const bool is_flat_utility = is_fence && flat_utility_terrain( *t, p.z() );
+                const bool is_upright_equipment = upright_equipment_terrain( *t );
                 const bool is_wall = !is_tree && !is_shrub && !is_panel && !is_fence &&
-                                     t->movecost == 0;
+                                     !is_upright_equipment && t->movecost == 0;
                 // wall-line connections orient door/window panels and fence slabs
                 // (bit order S=1, E=2, W=4, N=8)
-                const uint8_t wall_conn = ( is_panel || is_fence )
+                const uint8_t wall_conn = ( is_panel || ( is_fence && !is_flat_utility ) )
                                           ? terrain_connections_cached( here, you, p, t->connect_to_groups ) : 0;
                 const bool ew_line = ( wall_conn & 0x06 ) != 0; // true: the line runs E-W
 
@@ -2786,18 +3031,19 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // variant seed and the rotation/variant rule. Every plain
                 // floor gets the true connection subtile (connect groups, else
                 // same-id neighborhood, exactly as 2D's draw_terrain per tile);
-                // walls, fences and panels keep the straight "edge" middle
-                // segment since they are drawn as vertical faces
+                // walls, ordinary fences and panels keep the straight "edge" middle
+                // segment since they are drawn as vertical faces; flat utility runs
+                // instead use their true top-down connection shape
                 const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
-                                         !is_wall;
-                const bool shaped = plain_floor;
+                                         !is_wall && !is_upright_equipment;
+                const bool shaped = plain_floor || is_flat_utility || is_upright_equipment;
                 int rota = 0, subtile = 0;
                 if( tiles && shaped ) {
                     terrain_rota_subtile_cached( tiles, here, you, p, rota, subtile );
-                } else if( is_wall || is_fence || is_panel ) {
+                } else if( is_wall || ( is_fence && !is_flat_utility ) || is_panel ) {
                     subtile = SUBTILE_EDGE;
                 }
-                const bool force_rota = is_wall || is_fence || is_panel;
+                const bool force_rota = is_wall || ( is_fence && !is_flat_utility ) || is_panel;
                 const int lookup_subtile = shaped ? subtile : ( force_rota ? SUBTILE_EDGE : -1 );
                 const int lookup_rota = shaped ? rota
                                       : ( is_fence || is_wall ) ? 1
@@ -2829,7 +3075,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // panel, floor falls back to t_floor
                 const bool is_window_panel = t->has_flag( "WINDOW" ) &&
                                              !t->has_flag( "DOOR" );
-                const bool layered_face = is_panel && btex && !is_opening &&
+                const bool layered_face = is_panel && !is_empty_frame && btex && !is_opening &&
                                           wants_layered_face( *t );
                 // diagnostic: door-family classification trace, once per
                 // terrain id (strlock = raw flag string, doorenum = bitflag),
@@ -2912,12 +3158,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // rendering black.
                 // upper levels: no sprite means nothing real to stand on (tree
                 // canopies are spriteless terrain) — skip instead of painting a
-                // hash-colored floor in the sky
-                if( dz <= 0 || ground_tex ) {
+                // hash-colored floor in the sky. Horizontal utilities likewise
+                // get no hash-colored base when their tile has no real bg.
+                if( !is_empty_frame && ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) ) {
                     // the base-id / wood-floor fallbacks have no connection
                     // rotation: only a shaped fg sprite carries one
                     const int ground_rot4 = ( !btex && !dtex ) ? frot4 : 0;
-                    if( shaped && !btex && !dtex && ground_spr.has_transparency ) {
+                    if( plain_floor && !btex && !dtex && ground_spr.has_transparency ) {
                         // transparent floor sprite with no bg (roof corner trim):
                         // a flat cutout quad — a box's side faces would sample the
                         // sprite's transparent rows and leave dark seams
@@ -2945,8 +3192,15 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
                 // levels above an indoor column near the player show ONLY their
                 // (translucent) floor slab: drawing the walls/furniture up there
-                // too would read as seeing the upper story from inside
+                // too would read as seeing the upper story from inside. Horizontal
+                // utilities are part of that roof surface and must not be cut out.
                 if( ghost ) {
+                    if( is_flat_utility ) {
+                        std::vector<float> &top = bucket_for( MODE_FLATQUAD, ftex ? fspr.atlas : nullptr );
+                        std::vector<float> &sides = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
+                        count += push_utility_shell( top, sides, dx, dy, wz, fspr, or_, og, ob, frot4,
+                                                     ghost, tone.sat, false );
+                    }
                     continue;
                 }
 
@@ -3037,9 +3291,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         // window = glass band at middle height, clamped by a sill
                         // voxel below and a lintel voxel above
                         constexpr float SILL_H = 0.85f;
-                        push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
-                                       pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
-                        ++count;
+                        if( !is_empty_frame ) {
+                            push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
+                                           pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
+                            ++count;
+                        }
                         if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
                             // the indicator layer rides a hair proud of the
                             // glass so it never z-fights the face it
@@ -3073,9 +3329,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         }
                     } else {
                         // door = grounded panel + a lintel voxel up to the wall top
-                        push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
-                                       pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
-                        ++count;
+                        if( !is_empty_frame ) {
+                            push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
+                                           pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
+                            ++count;
+                        }
                         if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
                             // the indicator layer rides a hair proud of the board
                             // so it never z-fights the face it composites over.
@@ -3103,11 +3361,22 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             ++count;
                         }
                     }
+                } else if( is_upright_equipment && !roof_unseen ) {
+                    std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP, ftex ? fspr.atlas : nullptr );
+                    push_instance( v, dx + 0.5f, dy + 0.5f, wz - FENCE_HEIGHT * fspr.base_drop,
+                                   1.0f, FENCE_HEIGHT, 1.0f, fspr, or_, og, ob,
+                                   false, 0, false, -1.0f, ghost, tone.sat );
+                    ++count;
+                } else if( is_flat_utility ) {
+                    std::vector<float> &top = bucket_for( MODE_FLATQUAD, ftex ? fspr.atlas : nullptr );
+                    std::vector<float> &sides = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
+                    count += push_utility_shell( top, sides, dx, dy, wz, fspr, or_, og, ob, frot4,
+                                                 ghost, tone.sat, false );
                 } else if( is_fence ) {
                     // fences are flat vertical quads standing on the fence line — a
                     // box would smear the sprite's transparent margins over its end
                     // and top faces. pad encodes the run direction for the shader.
-                    // TINY thin obstacles (rain gutters, dock rails) are low strips,
+                    // Remaining TINY thin obstacles (dock rails) are low strips,
                     // not full-height fences
                     const float fh = t->has_flag( "TINY" ) ? 0.35f : FENCE_HEIGHT;
                     std::vector<float> &v = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
@@ -4602,12 +4871,9 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     const Uint64 total_begin = profile_ticks( profile );
     const Uint64 memory_begin = profile_ticks( profile );
 
-    // map memory: remembered terrain is drawn for tiles the player cannot see
-    // right now. Render3D bypasses cata_tiles::draw, which normally prepares
-    // the memory region and sweeps what is visible into it, so do both here:
-    // the whole reality bubble (the same region 2D prepares; prepare_region
-    // early-outs until the bubble shifts) and a sweep once per turn, player
-    // position or visibility-cache change.
+    // CCB writes map memory in map::update_map_memory during simulation. The
+    // 3D renderer only prepares the all-z read window and invalidates its own
+    // orientation cache when the current view inputs change.
     map &here = get_map();
     if( tiles ) {
         avatar &you = get_avatar();
@@ -4627,7 +4893,6 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
             calendar::turn != last_sweep_turn ||
             mem_level.visibility_generation != last_visibility_generation ) {
             clear_orientation_cache();
-            tiles->memorize_map_memory( center );
             last_sweep_pos = upos;
             last_sweep_turn = calendar::turn;
             last_visibility_generation = mem_level.visibility_generation;

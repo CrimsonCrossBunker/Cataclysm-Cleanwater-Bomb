@@ -3107,7 +3107,7 @@ static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture
     if( owner ) {
         *owner = std::move( texture_ptr );
     }
-    SDL_Rect rect = tile->get_srcrect();
+    SDL_Rect rect = tile->get_source_rect();
 
     int buf_w = 0;
     int buf_h = 0;
@@ -3120,7 +3120,8 @@ static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture
     std::pair<float, float> uv0{ rect.x / static_cast<float>( buf_w ), rect.y / static_cast<float>( buf_h ) };
     std::pair<float, float> uv1{ ( rect.x + rect.w ) / static_cast<float>( buf_w ), ( rect.y + rect.h ) / static_cast<float>( buf_h ) };
 
-    return texture_draw_data{ raw, rect, uv0, uv1, tile->get_opaque_rect() };
+    return texture_draw_data{ raw, rect, uv0, uv1, tile->get_opaque_rect(),
+                              tile->get_alpha_profile_3d() };
 }
 
 bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
@@ -6499,56 +6500,7 @@ void cata_tiles::get_field_rota_subtile_3d( int field_id, const std::array<int, 
         int &subtile, int &rotation )
 {
     // exactly the call draw_field_or_item makes for its field connection shape
-    get_tile_values( field_id, neighborhood, subtile, rotation, 0 );
-}
-
-void cata_tiles::memorize_map_memory( const tripoint_bub_ms &center )
-{
-    map &here = get_map();
-    avatar &you = get_avatar();
-    const visibility_variables &cache = here.get_visibility_variables_cache();
-    // Match the CCB 2D draw range. Its update_visibility_cache() recursively
-    // refreshes levels below the avatar, and visible_at rejects every tile the
-    // current visibility cache does not expose.
-    const int draw_min_z = std::max( you.posz() - fov_3d_z_range, -OVERMAP_DEPTH );
-    for( int zlev = center.z(); zlev >= draw_min_z; --zlev ) {
-        const level_cache &ch = here.access_cache( zlev );
-        const auto visible_at = [&]( const tripoint_bub_ms & q ) {
-            return here.inbounds( q ) && !would_apply_vision_effects(
-                       here.get_visibility( ch.visibility_cache[q.x()][q.y()], cache ) );
-        };
-        for( int y = 0; y < MAPSIZE_Y; y++ ) {
-            for( int x = 0; x < MAPSIZE_X; x++ ) {
-                const tripoint_bub_ms p( x, y, zlev );
-                if( !visible_at( p ) ) {
-                    continue;
-                }
-                int height_3d = 0;
-                std::array<bool, 5> invisible;
-                invisible[0] = false;
-                for( int i = 0; i < 4; i++ ) {
-                    invisible[1 + i] = !visible_at( p + neighborhood[i] );
-                }
-                const lit_level lighting = ch.visibility_cache[x][y];
-                draw_terrain( p, lighting, height_3d, invisible, true );
-                if( here.memory_cache_dec_is_dirty( p ) ) {
-                    you.memorize_clear_decoration( here.get_abs( p ), "" );
-                    draw_furniture( p, lighting, height_3d, invisible, true );
-                    draw_trap( p, lighting, height_3d, invisible, true );
-                    draw_part_con( p, lighting, height_3d, invisible, true );
-                    draw_vpart_no_roof( p, lighting, height_3d, invisible, true );
-                    draw_vpart_roof( p, lighting, height_3d, invisible, true );
-                    here.memory_cache_dec_set_dirty( p, false );
-                }
-            }
-        }
-        // draw_terrain re-dirties connecting terrain on every visit; clear it
-        // here like draw() does so the flag does not force a sweep every frame.
-        here.access_cache( zlev ).map_memory_sweep_pending = false;
-    }
-}
-
-    }
+    map::get_tile_values( field_id, neighborhood, subtile, rotation, 0 );
 }
 
 void cata_tiles::do_tile_loading_report()

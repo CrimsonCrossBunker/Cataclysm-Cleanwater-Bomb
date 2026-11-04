@@ -11,7 +11,7 @@ layout(location = 3) in vec3 a_inst_scale;  // box/xquad: size in meters; billbo
 layout(location = 4) in vec2 a_inst_uv0;    // atlas uv, top-left
 layout(location = 5) in vec2 a_inst_uv1;    // atlas uv, bottom-right
 layout(location = 6) in vec4 a_inst_color;  // rgb = light tint
-layout(location = 7) in float a_inst_flags; // bit0: textured; bit1: no cutout; bit2-3: top uv rotation; bit4: side strip
+layout(location = 7) in float a_inst_flags; // bit0: textured; bit1: no cutout; bit2-3: top uv rotation; bit4: side strip; bit8: silhouette side
 layout(location = 8) in float a_inst_pad;   // bit4 mode: strip v coordinate (sprite bottom edge)
 
 layout(set = 1, binding = 0) uniform UBO {
@@ -56,7 +56,14 @@ void main()
         vec3 axis = a_inst_pad > 0.5 ? vec3( 0.0, 1.0, 0.0 ) : vec3( 1.0, 0.0, 0.0 );
         world = a_inst_pos + axis * ( a_pos.x * a_inst_scale.x )
               + cam_up.xyz * ( a_pos.y * a_inst_scale.y );
-        uv_local = a_aux.xy;
+        int iflags = int( a_inst_flags + 0.5 );
+        if( ( iflags & 256 ) != 0 ) {
+            // silhouette side following sprite v along its run; sprite u is
+            // the fixed edge-pixel column, independent of world rotation
+            uv_local = vec2( a_aux.y, a_aux.x );
+        } else {
+            uv_local = a_aux.xy;
+        }
         shade = 0.95;
     } else if( mode == 5 ) {
         // flat horizontal quad (floor overlays, cutout floor tiles): no
