@@ -12,6 +12,9 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "character_martial_arts.h"
+#include "martial_style_selection.h"
+#include "martialarts.h"
 #include "field_type.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
@@ -3648,7 +3651,7 @@ TEST_CASE( "bionic_switches_reject_unmigrated_choices_and_invalid_stops", "[mp_b
     reload_fixture fixture;
     npc &remote = fixture.remote();
     SECTION( "unmigrated_choice" ) {
-        const bionic_id id( "bio_cqb" );
+        const bionic_id id( "bio_water_extractor" );
         const unsigned int uid = prepare_targeted_bionic( remote, id );
         const auto power = remote.get_power_level();
         const auto rng = rng_get_engine();
@@ -3910,4 +3913,217 @@ TEST_CASE( "informational_bionics_report_the_owning_body_without_host_input", "[
     const auto displayed = Messages::recent_messages( Messages::size() );
     REQUIRE_FALSE( displayed.empty() );
     CHECK( displayed.back().second == last_line );
+}
+
+namespace
+{
+std::string martial_choice_request( reload_fixture &fixture, Character &who,
+                                   const martial_style_choice &choice )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "martial_style" );
+        out.member( "martial_style", choice );
+    } );
+}
+
+std::string cqb_choice_request( reload_fixture &fixture, Character &who, unsigned int uid,
+                               const martial_style_choice &choice )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "bionic_activation" );
+        out.member( "bionic_uid", uid );
+        out.member( "bionic_type", "bio_cqb" );
+        out.member( "martial_style", choice );
+    } );
+}
+}
+
+TEST_CASE( "martial_style_choices_apply_native_effects_only_to_the_owner", "[mp_martial]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    avatar &host = get_avatar();
+    const matype_id karate( "style_karate" );
+    const matype_id none( "style_none" );
+    const martial_style_choice choice{ martial_style_action::select, karate };
+    remote.martial_arts_data->add_martialart( karate );
+    REQUIRE_FALSE( karate->static_buffs.empty() );
+    const efftype_id stance = karate->static_buffs.front()->get_effect_id();
+    const int moves = remote.get_moves();
+    const std::string request = martial_choice_request( fixture, remote, choice );
+    const std::string result = fixture.run( remote, request );
+    CHECK( remote.martial_arts_data->selected_style() == karate );
+    CHECK( remote.has_effect( stance ) );
+    CHECK( remote.get_moves() == moves );
+    CHECK( host.martial_arts_data->selected_style() == none );
+    CHECK_FALSE( host.has_effect( stance ) );
+    const auto rng = rng_get_engine();
+    fixture.run( remote, request );
+    CHECK( rng_get_engine() == rng );
+
+    host.martial_arts_data->add_martialart( karate );
+    host.set_moves( 100 );
+    cata_mp::set_client_mode( true );
+    REQUIRE( cata_mp::client_select_martial_style( choice ) );
+    CHECK( host.martial_arts_data->selected_style() == none );
+    CHECK_FALSE( host.has_effect( stance ) );
+    CHECK( host.activity.execution() == activity_execution::presentation );
+    g->multiplayer_session().client_inventory_activity.pending_request = fixture.sequence;
+    const auto before_apply = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK( host.martial_arts_data->selected_style() == karate );
+    CHECK( host.has_effect( stance ) );
+    CHECK( rng_get_engine() == before_apply );
+    CHECK_FALSE( host.activity );
+}
+
+TEST_CASE( "martial_preferences_are_owned_replay_safe_and_survive_save", "[mp_martial]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), remote );
+    auto &arts = *remote.martial_arts_data;
+    const matype_id style( "test_style_ma1" );
+    const matype_id none( "style_none" );
+    arts.add_martialart( style );
+    remote.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    REQUIRE( style->weapon_valid( remote.get_wielded_item() ) );
+    const martial_style_choice automatic{ martial_style_action::toggle_auto, matype_id() };
+    const std::string auto_request = martial_choice_request( fixture, remote, automatic );
+    fixture.run( remote, auto_request );
+    fixture.run( remote, auto_request );
+    CHECK( arts.auto_style );
+    CHECK( arts.selected_style() == style );
+    fixture.run( remote, martial_choice_request( fixture, remote,
+                 { martial_style_action::select, none } ) );
+    CHECK( arts.selected_style() == none );
+    const std::string hands = martial_choice_request( fixture, remote,
+                              { martial_style_action::toggle_hands_free, matype_id() } );
+    fixture.run( remote, hands );
+    fixture.run( remote, hands );
+    CHECK( arts.keep_hands_free );
+    CHECK_FALSE( get_avatar().martial_arts_data->auto_style );
+    CHECK_FALSE( get_avatar().martial_arts_data->keep_hands_free );
+
+    std::ostringstream saved;
+    JsonOut out( saved );
+    remote.serialize( out );
+    npc restored;
+    restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    REQUIRE( restored.martial_arts_data->auto_style );
+    REQUIRE( restored.martial_arts_data->keep_hands_free );
+    restored.set_wielded_item( item( itype_id( "test_weapon2" ) ) );
+    CHECK( restored.martial_arts_data->selected_style() == style );
+    restored.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    CHECK( restored.martial_arts_data->selected_style() == none );
+}
+
+TEST_CASE( "cqb_choice_uses_installed_styles_and_preserves_native_cancellation_cost", "[mp_martial]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), remote );
+    const bionic_id id( "bio_cqb" );
+    const matype_id karate( "style_karate" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const auto before = remote.get_power_level();
+    const auto styles = available_martial_styles( remote, uid );
+    REQUIRE( std::find( styles.begin(), styles.end(), karate ) != styles.end() );
+    CHECK_FALSE( remote.has_active_bionic( id ) );
+    CHECK_FALSE( remote.martial_arts_data->has_martialart( karate ) );
+    CHECK( remote.get_power_level() == before );
+    const martial_style_action action = GENERATE( martial_style_action::select,
+                                        martial_style_action::cancel, martial_style_action::toggle_hands_free );
+    const martial_style_choice choice{ action, action == martial_style_action::select ? karate : matype_id() };
+    const std::string request = cqb_choice_request( fixture, remote, uid, choice );
+    const std::string result = fixture.run( remote, request );
+    CHECK( remote.has_active_bionic( id ) == ( action != martial_style_action::cancel ) );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+    CHECK_FALSE( remote.martial_arts_data->has_martialart( karate ) );
+    if( action == martial_style_action::select ) {
+        CHECK( remote.martial_arts_data->selected_style() == karate );
+        CHECK( remote.has_effect( karate->static_buffs.front()->get_effect_id() ) );
+    } else if( action == martial_style_action::toggle_hands_free ) {
+        CHECK( remote.martial_arts_data->keep_hands_free );
+    }
+    const auto after = rng_get_engine();
+    fixture.run( remote, request );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+    CHECK( rng_get_engine() == after );
+
+    avatar &host = get_avatar();
+    const unsigned int local_uid = prepare_targeted_bionic( host, id );
+    const auto local_power = host.get_power_level();
+    bionic_activation_choices input;
+    input.martial_style = choice;
+    cata_mp::set_client_mode( true );
+    REQUIRE( host.activate_bionic( **host.find_bionic_by_uid( local_uid ), false, nullptr, &input ) );
+    CHECK_FALSE( host.has_active_bionic( id ) );
+    CHECK( host.get_power_level() == local_power );
+    CHECK_FALSE( host.martial_arts_data->keep_hands_free );
+    g->multiplayer_session().client_inventory_activity.pending_request = fixture.sequence;
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK( host.has_active_bionic( id ) == remote.has_active_bionic( id ) );
+    CHECK( host.get_power_level() == remote.get_power_level() );
+    CHECK( host.martial_arts_data->selected_style() == remote.martial_arts_data->selected_style() );
+    CHECK( host.martial_arts_data->keep_hands_free == remote.martial_arts_data->keep_hands_free );
+}
+
+TEST_CASE( "martial_and_cqb_choices_reject_unavailable_or_wrong_action_data", "[mp_martial]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    const matype_id karate( "style_karate" );
+    const matype_id none( "style_none" );
+    const martial_style_choice choose{ martial_style_action::select, karate };
+    fixture.run( remote, martial_choice_request( fixture, remote, choose ) );
+    CHECK( remote.martial_arts_data->selected_style() == none );
+    remote.martial_arts_data->add_martialart( karate );
+    fixture.run( remote, martial_choice_request( fixture, remote, choose ), false );
+    CHECK( remote.martial_arts_data->selected_style() == none );
+    fixture.run( remote, martial_choice_request( fixture, remote,
+                 { martial_style_action::toggle_hands_free, karate } ) );
+    CHECK_FALSE( remote.martial_arts_data->keep_hands_free );
+    const bionic_id id( "bio_cqb" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const auto power = remote.get_power_level();
+    fixture.run( remote, cqb_choice_request( fixture, remote, uid,
+                 { martial_style_action::select, matype_id( "not_a_real_style" ) } ) );
+    CHECK_FALSE( remote.has_active_bionic( id ) );
+    CHECK( remote.get_power_level() == power );
+    bionic_activation_choices extra;
+    extra.martial_style = choose;
+    const bionic_id ordinary( "bio_night_vision" );
+    const unsigned int ordinary_uid = prepare_targeted_bionic( remote, ordinary );
+    CHECK_FALSE( execute_owned_bionic_action( remote, ordinary_uid, ordinary, extra ) );
+    CHECK_FALSE( execute_owned_bionic_action( remote, uid, id, extra, bionic_action::deactivate ) );
+}
+
+TEST_CASE( "martial_turn_projection_rejects_unknown_styles_without_partial_changes", "[mp_martial]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    remote.martial_arts_data->add_martialart( matype_id( "style_karate" ) );
+    std::ostringstream stream;
+    JsonOut out( stream );
+    remote.store_turn_state( out );
+    std::string invalid = stream.str();
+    const size_t position = invalid.find( "style_karate" );
+    REQUIRE( position != std::string::npos );
+    invalid.replace( position, std::string( "style_karate" ).size(), "nonexistent_martial_style" );
+    avatar &host = get_avatar();
+    const matype_id judo( "style_judo" );
+    host.martial_arts_data->add_martialart( judo );
+    host.martial_arts_data->set_style( judo );
+    host.set_rad( 73 );
+    const auto rng = rng_get_engine();
+    const JsonValue value = json_loader::from_string( invalid );
+    REQUIRE_THROWS_AS( host.load_turn_state( value.get_object() ), JsonError );
+    CHECK( host.martial_arts_data->selected_style() == judo );
+    CHECK( host.get_rad() == 73 );
+    CHECK( rng_get_engine() == rng );
 }

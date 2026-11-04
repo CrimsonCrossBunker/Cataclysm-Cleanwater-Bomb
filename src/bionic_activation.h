@@ -4,6 +4,7 @@
 
 #include <optional>
 #include "coordinates.h"
+#include "martial_style_selection.h"
 #include "type_id.h"
 
 class Character;
@@ -12,6 +13,7 @@ struct bionic;
 // Choices are collected by the owning frontend; costs and effects stay native.
 struct bionic_activation_choices {
     std::optional<tripoint_abs_ms> target;
+    std::optional<martial_style_choice> martial_style = std::nullopt;
 };
 enum class bionic_action {
     activate,
