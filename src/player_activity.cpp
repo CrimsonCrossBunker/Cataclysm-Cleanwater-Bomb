@@ -21,6 +21,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -223,8 +224,16 @@ std::optional<std::string> player_activity::get_progress_message( const avatar &
 
 void player_activity::start_or_resume( Character &who, bool resuming )
 {
+    const character_action_guard lifetime( who );
+    const auto identity = identity_generation();
+    if( !lifetime ) {
+        return;
+    }
     if( actor && !resuming ) {
         actor->start( *this, who );
+        if( !lifetime || identity_generation() != identity ) {
+            return;
+        }
     }
     if( !type.is_null() && rooted() ) {
         who.rooted_message();
@@ -243,7 +252,10 @@ void player_activity::do_turn( Character &you )
         actor->do_turn( *this, you );
         return;
     }
-    const safe_reference<Creature> character_reference = you.get_safe_reference();
+    const character_action_guard character_reference( you );
+    if( !character_reference ) {
+        return;
+    }
     // Specifically call the do turn function for the cancellation activity early
     // This is because the game can get stuck trying to fuel a fire when it's not...
     if( type == ACT_MIGRATION_CANCEL ) {
@@ -416,8 +428,14 @@ void player_activity::do_turn( Character &you )
                     break;
             }
         }
+        if( !character_reference || identity_generation() != dispatched_identity ) {
+            return;
+        }
         if( !ignoreQuery && auto_resume ) {
             you.assign_activity( wait_stamina_activity_actor( you.get_stamina_max() ) );
+            if( !character_reference ) {
+                return;
+            }
         }
         activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
         return;
@@ -500,13 +518,21 @@ void player_activity::do_turn( Character &you )
 
 void player_activity::canceled( Character &who )
 {
+    const character_action_guard lifetime( who, true );
+    const auto identity = identity_generation();
     const bool view_only = client_firearm_view( who, type );
     if( *this && actor ) {
         actor->canceled( *this, who );
+        if( !lifetime || ( *this && identity_generation() != identity ) ) {
+            return;
+        }
     }
     activity_handlers::clean_may_activity_occupancy_items_var( who );
     if( !view_only ) {
         get_event_bus().send<event_type::character_finished_activity>( who.getID(), type, true );
+        if( !lifetime || ( *this && identity_generation() != identity ) ) {
+            return;
+        }
     }
     g->wait_popup_reset();
 }

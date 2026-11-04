@@ -8,6 +8,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
@@ -92,7 +93,11 @@ bool Character::practice_proficiency( const proficiency_id &prof, const time_dur
     }
 
     if( learned ) {
+        const character_action_guard lifetime( *this );
         get_event_bus().send<event_type::gains_proficiency>( getID(), prof );
+        if( !lifetime ) {
+            return learned;
+        }
         add_msg_if_player( m_good, _( "You are now proficient in %s!" ), prof->name() );
     }
     return learned;

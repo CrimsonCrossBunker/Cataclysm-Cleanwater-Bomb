@@ -108,6 +108,15 @@ npc_lifetime npc_lifetime_registry::active_reference( npc &value ) const
     return result;
 }
 
+npc_lifetime npc_lifetime_registry::track_active( npc &value )
+{
+    const auto found = impl_->states.find( value.getID().get_value() );
+    if( found != impl_->states.end() && !found->second.expired() ) {
+        return active_reference( value );
+    }
+    return acquire( value );
+}
+
 void npc_lifetime_registry::activate( npc &value )
 {
     acquire( value );

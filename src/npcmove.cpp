@@ -35,6 +35,7 @@
 #include "cata_algo.h"
 #include "lua_platform_hooks.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
 #include "character_oracle.h"
@@ -4861,6 +4862,10 @@ bool npc::can_do_pulp()
 
 bool npc::do_player_activity()
 {
+    const character_action_guard lifetime( *this );
+    if( !lifetime ) {
+        return true;
+    }
     const bool mute_activity = activity.is_null() ? false :
                                activity.id()->mute_npc_completion_message();
     int old_moves = moves;
@@ -4878,7 +4883,7 @@ bool npc::do_player_activity()
     const int moves_before = moves;
     while( moves > 0 && activity && !has_destination() ) {
         activity.do_turn( *this );
-        if( !is_active() ) {
+        if( !lifetime || !is_active() ) {
             return true;
         }
     }

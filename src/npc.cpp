@@ -40,6 +40,7 @@
 #include "bodypart.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -1768,7 +1769,11 @@ bool npc::wield( item_location loc, bool remove_old )
 void npc::drop( const drop_locations &what, const tripoint_bub_ms &target,
                 bool stash )
 {
+    const character_action_guard lifetime( *this );
     Character::drop( what, target, stash );
+    if( !lifetime ) {
+        return;
+    }
     // TODO: Remove the hack. Its here because npcs didn't process activities, but they do now
     // so is this necessary?
     activity.do_turn( *this );
