@@ -20,5 +20,32 @@
     "flags": [ "NEVER_JAMS", "BIONIC_WEAPON", "TRADER_AVOID", "ZERO_WEIGHT" ],
     "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "40x46mm": 1 } } ],
     "melee_damage": { "bash": 9 }
+  },
+  {
+    "id": "vibrating_blaster",
+    "looks_like": "modular_ar15",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "vibrating bioblaster" },
+    "description": "You ripped this from a mi-go abomination.  You think you should wear gloves to reload it.",
+    "weight": "5140 g",
+    "volume": "1500 ml",
+    "price": "4 kUSD",
+    "ammo": [ "acidic_bore" ],
+    "to_hit": -1,
+    "material": [ "alien_resin" ],
+    "symbol": "(",
+    "color": "magenta",
+    "skill": "launcher",
+    "range": 30,
+    "ranged_damage": { "damage_type": "stab", "amount": 19, "armor_penetration": 12 },
+    "dispersion": 90,
+    "durability": 7,
+    "loudness": 4,
+    "clip_size": 80,
+    "ammo_effects": [ "ACID" ],
+    "flags": [ "NO_UNLOAD", "NON_FOULING" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "acidic_bore": 80 } } ],
+    "melee_damage": { "bash": 4 }
   }
 ]

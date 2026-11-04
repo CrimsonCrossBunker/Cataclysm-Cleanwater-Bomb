@@ -16,5 +16,11 @@
     "id": "fcl_fusion_pellet",
     "name": "fusion pellet",
     "default": "fcl_fusion_pellet"
+  },
+  {
+    "type": "ammunition_type",
+    "id": "acidic_bore",
+    "name": "acidic bore",
+    "default": "acidic_bore"
   }
 ]

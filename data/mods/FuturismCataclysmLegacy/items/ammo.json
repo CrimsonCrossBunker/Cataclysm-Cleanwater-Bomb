@@ -81,5 +81,25 @@
     "capacity": 20,
     "reload_time": 600,
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "fcl_fusion_pellet": 20 } } ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "id": "acidic_bore",
+    "price": "100 USD",
+    "price_postapoc": "5 USD",
+    "name": { "str": "acidic bore" },
+    "symbol": "=",
+    "color": "red",
+    "description": "This wriggling nodule of resin and flesh appears to be secreting a pungent fluid.  You'd probably best feed it into the bioblaster.",
+    "material": [ "alien_resin" ],
+    "volume": "250 ml",
+    "weight": "1 g",
+    "ammo_type": "acidic_bore",
+    "damage": { "damage_type": "stab", "amount": 5 },
+    "dispersion": 100,
+    "count": 80,
+    "stack_size": 80,
+    "loudness": 9
   }
 ]

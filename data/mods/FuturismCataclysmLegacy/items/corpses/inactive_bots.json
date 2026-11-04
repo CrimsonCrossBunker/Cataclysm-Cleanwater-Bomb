@@ -257,5 +257,30 @@
     },
     "flags": [ "TRADER_AVOID", "SINGLE_USE" ],
     "melee_damage": { "bash": 2 }
+  },
+  {
+    "id": "bot_migoturret",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "inactive brain blaster" },
+    "description": "This is a horrifying monstrosity.  Using this item is cannibalism in all but taste and involves turning it on and placing it on the ground, where it will attach itself.  If reprogrammed and rewired successfully the turret will identify you as a friendly, and attack all enemies with its revolving laser cannons.",
+    "weight": "40750 g",
+    "volume": "30 L",
+    "price": "6 kUSD",
+    "to_hit": -3,
+    "material": [ "alien_resin" ],
+    "symbol": ";",
+    "color": "green",
+    "use_action": {
+      "type": "place_monster",
+      "monster_id": "fcl_mon_migoturret",
+      "friendly_msg": "The brain blaster swivels towards you.  Hi new friend!",
+      "hostile_msg": "The brain blaster swivels towards you.  You feel a buzzing in the air.",
+      "difficulty": 6,
+      "moves": 100,
+      "skills": [ "cooking", "computer" ]
+    },
+    "flags": [ "SINGLE_USE" ],
+    "melee_damage": { "bash": 8 }
   }
 ]
