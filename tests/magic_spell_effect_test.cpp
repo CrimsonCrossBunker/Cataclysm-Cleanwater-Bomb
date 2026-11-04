@@ -167,7 +167,8 @@ TEST_CASE( "remove_field_fd_fatigue", "[magic]" )
         swirling_air_msg = "";
         tear_in_reality_msg = "";
 
-        std::vector<std::pair<std::string, std::string>> msgs = Messages::recent_messages( 0 );
+        std::vector<std::pair<std::string, std::string>> msgs = Messages::recent_messages(
+                    Messages::size() );
 
         for( std::pair<std::string, std::string> msg_pair : msgs ) {
             std::string msg = std::get<1>( msg_pair );

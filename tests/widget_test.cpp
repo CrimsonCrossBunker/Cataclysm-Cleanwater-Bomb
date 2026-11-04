@@ -11,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "activity_tracker.h"
@@ -18,9 +19,9 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "catacharset.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
@@ -36,6 +37,7 @@
 #include "mission.h"
 #include "monster.h"
 #include "options_helpers.h"
+#include "output.h"
 #include "overmap.h"
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
@@ -62,6 +64,7 @@
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_deaf( "deaf" );
 static const efftype_id effect_disinfected( "disinfected" );
 static const efftype_id effect_hunger_blank( "hunger_blank" );
 static const efftype_id effect_hunger_engorged( "hunger_engorged" );
@@ -108,6 +111,19 @@ static const weather_type_id weather_lightning( "lightning" );
 static const weather_type_id weather_portal_storm( "portal_storm" );
 static const weather_type_id weather_snowing( "snowing" );
 static const weather_type_id weather_sunny( "sunny" );
+
+static const widget_id widget_all_location_info_rows_layout( "all_location_info_rows_layout" );
+static const widget_id widget_focus_num( "focus_num" );
+static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
+static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
+static const widget_id widget_ll_place_info( "ll_place_info" );
+static const widget_id widget_ll_place_layout( "ll_place_layout" );
+static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
+static const widget_id widget_mood_desc_label( "mood_desc_label" );
+static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
+static const widget_id widget_sound_num( "sound_num" );
+static const widget_id widget_speed_num( "speed_num" );
+static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
@@ -182,17 +198,6 @@ static const widget_id widget_test_weather_text( "test_weather_text" );
 static const widget_id widget_test_weather_text_height5( "test_weather_text_height5" );
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
-static const widget_id widget_focus_num( "focus_num" );
-static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
-static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
-static const widget_id widget_ll_place_info( "ll_place_info" );
-static const widget_id widget_ll_place_layout( "ll_place_layout" );
-static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
-static const widget_id widget_mood_desc_label( "mood_desc_label" );
-static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
-static const widget_id widget_sound_num( "sound_num" );
-static const widget_id widget_speed_num( "speed_num" );
-static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
@@ -2746,9 +2751,17 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
     clear_map_without_vision();
     fill_overmap_area( ava, oter_id( "field" ) );
 
-    widget place = widget_ll_place_layout.obj();
+    const bool nested_columns = GENERATE( false, true );
+    widget place = nested_columns ? widget_ll_place_layout.obj() :
+                   widget_all_location_info_rows_layout.obj();
+    widget_hud_layout layout;
+    layout.mode = widget_hud_layout_mode::custom;
+    layout.columns = 80;
+    layout.node_overrides["ll_place_layout@0/ll_place_info@0"].label_columns = 10;
+    layout.node_overrides["ll_place_layout@0/ll_place_info@0"].width_columns = 40;
     const std::vector<std::string> lines = string_split(
-            remove_color_tags( place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
+            remove_color_tags( nested_columns ? place.layout_for_hud( ava, layout ) :
+                               place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
 
     REQUIRE( lines.size() == 8 );
     for( const std::string &line : lines ) {
@@ -2801,6 +2814,16 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
     for( const bool derive_hud_width : {
              false, true
          } ) {
+        int shared_label_width = 4;
+        if( derive_hud_width ) {
+            shared_label_width = 0;
+            for( const auto &row : fields ) {
+                for( const widget_id &field : row ) {
+                    shared_label_width = std::max( shared_label_width,
+                                                   utf8_width( field->_label.translated(), true ) );
+                }
+            }
+        }
         const std::string formatted = derive_hud_width ?
                                       movement.layout_for_hud( ava, 42 ) :
                                       movement.layout_with_label_width( ava, 42, 4 );
@@ -2834,7 +2857,7 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
                 // Both paths reserve one shared separator slot as well as the
                 // label slot, so a one-cell separator cannot shift a value
                 // left of a sibling using the normal ": " separator.
-                CHECK( value_column == starts[column] + 6 );
+                CHECK( value_column == starts[column] + shared_label_width + 2 );
                 if( row == 0 ) {
                     first_row_values[column] = value_column;
                 } else {
@@ -3079,7 +3102,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
 {
     clear_avatar();
     avatar &ava = get_avatar();
-    widget sound = widget_id( "sound_num" ).obj();
+    widget sound = widget_sound_num.obj();
     ava.volume = 6;
     REQUIRE_FALSE( ava.is_deaf() );
     const std::string hearing = sound.show( ava, 20 );
@@ -3089,7 +3112,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
         ava.wear_item( item( itype_ear_plugs ), false );
     }
     SECTION( "temporary_deafness" ) {
-        ava.add_effect( efftype_id( "deaf" ), 1_minutes, false, 3 );
+        ava.add_effect( effect_deaf, 5_minutes, false, 3 );
     }
 
     REQUIRE( ava.is_deaf() );

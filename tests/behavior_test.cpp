@@ -15,6 +15,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_oracle.h"
@@ -1892,6 +1893,10 @@ TEST_CASE( "bt_camp_resident_goals", "[npc][behavior]" )
 
     // Create a real camp so the BT predicates can resolve it.
     const tripoint_abs_omt camp_omt = project_to<coords::omt>( guy.pos_abs() );
+    overmap_buffer.clear_camps( camp_omt.xy() );
+    const on_out_of_scope cleanup_camp( [&camp_omt]() {
+        overmap_buffer.clear_camps( camp_omt.xy() );
+    } );
     here.add_camp( camp_omt, "faction_camp" );
     std::optional<basecamp *> bcp = overmap_buffer.find_camp( camp_omt.xy() );
     REQUIRE( bcp );
@@ -1909,8 +1914,9 @@ TEST_CASE( "bt_camp_resident_goals", "[npc][behavior]" )
         CHECK( bt_goal( guy ) != "free_time" );
     }
     SECTION( "away from camp: return_to_camp" ) {
-        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 2, 50, 0 ) );
+        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 4, 50, 0 ) );
         REQUIRE( guy.pos_abs_omt() != *guy.assigned_camp );
+        REQUIRE_FALSE( ( *bcp )->point_within_camp( guy.pos_abs_omt() ) );
         CHECK( bt_goal( guy ) == "return_to_camp" );
     }
     SECTION( "severe thirst beats free_time" ) {
@@ -1932,6 +1938,10 @@ TEST_CASE( "bt_camp_resident_expansion_tile", "[npc][behavior]" )
     const tripoint_bub_ms mid{ MAPSIZE_X / 2, MAPSIZE_Y / 2, 0 };
     const tripoint_abs_omt camp_omt = project_to<coords::omt>( here.get_abs( mid ) );
 
+    overmap_buffer.clear_camps( camp_omt.xy() );
+    const on_out_of_scope cleanup_camp( [&camp_omt]() {
+        overmap_buffer.clear_camps( camp_omt.xy() );
+    } );
     here.add_camp( camp_omt, "faction_camp" );
     std::optional<basecamp *> bcp = overmap_buffer.find_camp( camp_omt.xy() );
     REQUIRE( bcp );

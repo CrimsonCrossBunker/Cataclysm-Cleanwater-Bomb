@@ -94,11 +94,12 @@ class ModSdkTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             mod = self.make_sdk(root, "before")
+            original = (root / "before.d.lua").read_bytes()
             (root / "before.d.lua").write_text("changed", encoding="utf-8")
             moved = root / "moved"
             shutil.move(mod, moved)
             metadata, text = mod_sdk.read_sdk(moved)
-            self.assertEqual(text, DECLARATIONS)
+            self.assertEqual(text.encode("utf-8"), original)
             self.assertEqual(metadata["platform_version"], 1)
             settings = json.loads((moved / ".luarc.json").read_text())
             library = moved / settings["workspace.library"][0]

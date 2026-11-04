@@ -37,6 +37,12 @@ static const itype_id itype_test_ATTACK_SPEED_ench_item_2( "test_ATTACK_SPEED_en
 static const itype_id itype_test_BONUS_DODGE_ench_item_1( "test_BONUS_DODGE_ench_item_1" );
 static const itype_id itype_test_BONUS_DODGE_ench_item_2( "test_BONUS_DODGE_ench_item_2" );
 static const itype_id
+itype_test_LIMB_SCORE_MANIP_BP_ench_item( "test_LIMB_SCORE_MANIP_BP_ench_item" );
+static const itype_id
+itype_test_LIMB_SCORE_ZERO_BP_ench_item( "test_LIMB_SCORE_ZERO_BP_ench_item" );
+static const itype_id itype_test_LIMB_SCORE_ench_item( "test_LIMB_SCORE_ench_item" );
+static const itype_id itype_test_MAX_HP_BP_ench_item( "test_MAX_HP_BP_ench_item" );
+static const itype_id
 itype_test_MELEE_STAMINA_CONSUMPTION_ench_item_0( "test_MELEE_STAMINA_CONSUMPTION_ench_item_0" );
 static const itype_id
 itype_test_MELEE_STAMINA_CONSUMPTION_ench_item_1( "test_MELEE_STAMINA_CONSUMPTION_ench_item_1" );
@@ -44,17 +50,15 @@ static const itype_id
 itype_test_MELEE_STAMINA_CONSUMPTION_ench_item_2( "test_MELEE_STAMINA_CONSUMPTION_ench_item_2" );
 static const itype_id itype_test_MELEE_TO_HIT_ench_item_1( "test_MELEE_TO_HIT_ench_item_1" );
 static const itype_id itype_test_MELEE_TO_HIT_ench_item_2( "test_MELEE_TO_HIT_ench_item_2" );
-static const itype_id itype_test_MAX_HP_BP_ench_item( "test_MAX_HP_BP_ench_item" );
-static const itype_id itype_test_LIMB_SCORE_ench_item( "test_LIMB_SCORE_ench_item" );
-static const itype_id
-itype_test_LIMB_SCORE_ZERO_BP_ench_item( "test_LIMB_SCORE_ZERO_BP_ench_item" );
-static const itype_id
-itype_test_LIMB_SCORE_MANIP_BP_ench_item( "test_LIMB_SCORE_MANIP_BP_ench_item" );
 static const itype_id
 itype_test_PAIN_PENALTY_MOD_ench_item_1( "test_PAIN_PENALTY_MOD_ench_item_1" );
 static const itype_id itype_test_SPEED_ench_item( "test_SPEED_ench_item" );
 static const itype_id itype_test_STAT_ench_item_1( "test_STAT_ench_item_1" );
 static const itype_id itype_test_ring_strength_1( "test_ring_strength_1" );
+
+static const limb_score_id limb_score_balance( "balance" );
+static const limb_score_id limb_score_lift( "lift" );
+static const limb_score_id limb_score_manip( "manip" );
 
 static const mtype_id pseudo_debug_mon( "pseudo_debug_mon" );
 
@@ -480,22 +484,21 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     clear_map_without_vision();
     Character &guy = get_player_character();
     clear_avatar();
+    guy.wear_item( item( itype_debug_backpack ), false );
 
-    static const bodypart_id bp_arm_l( "arm_l" );
-    static const bodypart_id bp_arm_r( "arm_r" );
-    static const bodypart_id bp_leg_r( "leg_r" );
-    static const limb_score_id score_lift( "lift" );
-    static const limb_score_id score_balance( "balance" );
-    static const limb_score_id score_manip( "manip" );
+    const bodypart_id bp_arm_l( "arm_l" );
+    const bodypart_id bp_arm_r( "arm_r" );
+    const bodypart_id bp_leg_r( "leg_r" );
 
-    INFO( "Default character: arm max HP is 84 (60 base + 8 str * 3)" );
+    INFO( "Capture baseline limb HP before applying the enchantment" );
     const int arm_l_hp_before = guy.get_part_hp_max( bp_arm_l );
     const int arm_r_hp_before = guy.get_part_hp_max( bp_arm_r );
     const int leg_r_hp_before = guy.get_part_hp_max( bp_leg_r );
-    REQUIRE( arm_l_hp_before == 84 );
+    REQUIRE( arm_l_hp_before > 0 );
+    REQUIRE( arm_l_hp_before == arm_r_hp_before );
 
-    const float lift_before = guy.get_limb_score( score_lift );
-    const float balance_before = guy.get_limb_score( score_balance );
+    const float lift_before = guy.get_limb_score( limb_score_lift );
+    const float balance_before = guy.get_limb_score( limb_score_balance );
 
     INFO( "Obtain item with per-bodypart max HP enchantment" );
     guy.i_add( item( itype_test_MAX_HP_BP_ench_item ) );
@@ -509,20 +512,20 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     guy.i_add( item( itype_test_LIMB_SCORE_ench_item ) );
     guy.recalculate_enchantment_cache();
     INFO( "Left arm's lift contribution is doubled, balance gets a global +0.5" );
-    CHECK( guy.get_limb_score( score_lift ) == Approx( lift_before + 0.5f ) );
-    CHECK( guy.get_limb_score( score_balance ) == Approx( balance_before + 0.5f ) );
+    CHECK( guy.get_limb_score( limb_score_lift ) == Approx( lift_before + 0.5f ) );
+    CHECK( guy.get_limb_score( limb_score_balance ) == Approx( balance_before + 0.5f ) );
 
     INFO( "Obtain item that tries to add lift to torso, which does not provide the lift score" );
-    const float lift_with_torso_bonus = guy.get_limb_score( score_lift );
+    const float lift_with_torso_bonus = guy.get_limb_score( limb_score_lift );
     guy.i_add( item( itype_test_LIMB_SCORE_ZERO_BP_ench_item ) );
     guy.recalculate_enchantment_cache();
     INFO( "Torso does not provide lift, so the per-part add must be a no-op" );
-    CHECK( guy.get_limb_score( score_lift ) == Approx( lift_with_torso_bonus ) );
+    CHECK( guy.get_limb_score( limb_score_lift ) == Approx( lift_with_torso_bonus ) );
 
     INFO( "Obtain item that adds manip to hand_l; the bonus must survive the group clamp" );
-    const float manip_before = guy.get_limb_score( score_manip );
+    const float manip_before = guy.get_limb_score( limb_score_manip );
     guy.i_add( item( itype_test_LIMB_SCORE_MANIP_BP_ench_item ) );
     guy.recalculate_enchantment_cache();
     INFO( "hand_l's +0.5 manip must be fully applied on top of the clamped base score" );
-    CHECK( guy.get_limb_score( score_manip ) == Approx( manip_before + 0.5f ) );
+    CHECK( guy.get_limb_score( limb_score_manip ) == Approx( manip_before + 0.5f ) );
 }

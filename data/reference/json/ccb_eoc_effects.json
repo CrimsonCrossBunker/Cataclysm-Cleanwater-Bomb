@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:0db8ef32c74cb4a5207fee3e64b45d88e42767c565f9f419c0d722825e6572e3",
+    "source_fingerprint": "sha256:27f986f976ff3bcdbdd145b035fba895f1c69becd47607de2e0c76791ffdea78",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -7437,7 +7437,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2551,
+        "occurrences": 2554,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -13205,11 +13205,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 99,
+        "occurrences": 100,
         "examples": [
           {
-            "path": "data/mods/Isolation-Protocol/Player/Perks/perk_eoc.json",
-            "pointer": "/4/effect/2/then/1/npc_message"
+            "path": "data/mods/FuturismCataclysmLegacy/enchantments.json",
+            "pointer": "/0/hit_me_effect/0/npc_message"
           }
         ],
         "confidence": "lexical_only",

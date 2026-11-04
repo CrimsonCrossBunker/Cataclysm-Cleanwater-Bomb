@@ -120,6 +120,7 @@ static const bionic_id bio_shockwave( "bio_shockwave" );
 static const bionic_id bio_teleport( "bio_teleport" );
 static const bionic_id bio_torsionratchet( "bio_torsionratchet" );
 static const bionic_id bio_water_extractor( "bio_water_extractor" );
+static const bionic_id fcl_bio_dopamine_stimulators( "fcl_bio_dopamine_stimulators" );
 
 static const damage_type_id damage_bash( "bash" );
 
@@ -2091,8 +2092,9 @@ void Character::process_bionic( bionic &initial_bio )
             deactivate_processed_bionic();
             return;
         }
-    } else if( bio.id == afs_bio_dopamine_stimulators ) {
-        // Aftershock
+    } else if( bio.id == afs_bio_dopamine_stimulators ||
+               bio.id == fcl_bio_dopamine_stimulators ) {
+        // Aftershock / Futurism Cataclysm Legacy
         add_morale( morale_feeling_good, 20, 20, 30_minutes, 20_minutes, true );
     }
 }

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "fcl_bio_whip_weapon",
+    "type": "ITEM",
+    "symbol": "/",
+    "color": "red",
+    "name": { "str": "monofilament whip" },
+    "description": "A long filament of nested carbon nanotubes only a few microns in diameter.  In essence a very thin, very strong and very sharp blade that you throw at a moment's notice.",
+    "weight": "40 g",
+    "volume": "200 ml",
+    "price": "35 USD",
+    "price_postapoc": "5 USD",
+    "material": [ "nanotubes" ],
+    "flags": [
+      "REACH_ATTACK",
+      "REACH3",
+      "NONCONDUCTIVE",
+      "BIONIC_WEAPON",
+      "BIONIC_WEAPON_MELEE",
+      "UNBREAKABLE_MELEE",
+      "TRADER_AVOID",
+      "USE_UPS"
+    ],
+    "techniques": [ "WBLOCK_1", "WIDE", "SPIN", "RAPID" ],
+    "to_hit": { "grip": "bad", "length": "long", "surface": "every", "balance": "clumsy" },
+    "weapon_category": [ "BIONIC_WEAPONRY" ],
+    "melee_damage": { "cut": 27 }
+  }
+]
