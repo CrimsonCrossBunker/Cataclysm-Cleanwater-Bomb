@@ -73,6 +73,8 @@
     "type": "item_group",
     "subtype": "distribution",
     "items": [
+      [ "bio_betavoltaic", 10 ],
+      [ "bio_claws", 10 ],
       [ "fcl_bio_missiles", 10 ],
       [ "fcl_bio_melee_counteraction", 10 ],
       [ "fcl_bio_monowhip", 10 ],
