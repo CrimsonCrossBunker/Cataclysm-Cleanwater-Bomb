@@ -72,6 +72,8 @@
 #include "veh_type.h"
 #include "vpart_position.h"
 #include "submap.h"
+#include "weather.h"
+#include "weather_gen.h"
 
 
 namespace
@@ -3409,7 +3411,7 @@ TEST_CASE( "bionic_emp_affects_the_character_at_the_target_tile", "[mp_bionic]" 
     prepare_targeted_bionic( remote, bionic_id( "bio_lockpick" ) );
     const auto host_power = host.get_power_level();
     const auto remote_power = remote.get_power_level();
-    REQUIRE( execute_owned_bionic_activation( host, uid, id, { remote.pos_abs() } ) );
+    REQUIRE( execute_owned_bionic_action( host, uid, id, { remote.pos_abs() } ) );
     CHECK( host.get_power_level() == host_power - id->power_activate );
     CHECK( remote.get_power_level() < remote_power );
 }
@@ -3472,9 +3474,279 @@ ccb.runtime.hook("on_bionic_activated", "activated")
     CHECK( uses( remote ) == 1 );
     const tripoint_bub_ms host_target = host.pos_bub() + tripoint::east;
     prepare_bionic_target( get_map(), host_target, id );
-    REQUIRE( execute_owned_bionic_activation( host, host_uid, id,
+    REQUIRE( execute_owned_bionic_action( host, host_uid, id,
                                             { get_map().get_abs( host_target ) } ) );
     CHECK( uses( host ) == 1 );
     CHECK( uses( remote ) == 1 );
+}
+#endif
+
+
+namespace
+{
+std::string bionic_switch_request( reload_fixture &fixture, Character &who, unsigned int uid,
+                                  const bionic_id &id, bool enabled )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", enabled ? "bionic_activation" : "bionic_deactivation" );
+        out.member( "bionic_uid", uid );
+        out.member( "bionic_type", id );
+    } );
+}
+} // namespace
+
+TEST_CASE( "bionic_switches_set_only_the_owning_players_native_state", "[mp_bionic_switch]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    avatar &host = get_avatar();
+    const bionic_id id( "bio_night_vision" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const unsigned int host_uid = prepare_targeted_bionic( host, id );
+    const auto host_power = host.get_power_level();
+    const auto before = remote.get_power_level();
+    const std::string start = bionic_switch_request( fixture, remote, uid, id, true );
+    fixture.run( remote, start );
+    CHECK( remote.has_active_bionic( id ) );
+    CHECK( remote.has_flag( json_character_flag( "NIGHT_VISION" ) ) );
+    CHECK_FALSE( host.has_active_bionic( id ) );
+    CHECK( host.get_power_level() == host_power );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+    const auto after_start = rng_get_engine();
+    fixture.run( remote, start );
+    CHECK( rng_get_engine() == after_start );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+
+    const std::string stop = bionic_switch_request( fixture, remote, uid, id, false );
+    const std::string result = fixture.run( remote, stop );
+    CHECK_FALSE( remote.has_active_bionic( id ) );
+    CHECK_FALSE( remote.has_flag( json_character_flag( "NIGHT_VISION" ) ) );
+    CHECK( remote.get_power_level() == before - id->power_activate - id->power_deactivate );
+    const auto after_stop = rng_get_engine();
+    fixture.run( remote, stop );
+    CHECK( rng_get_engine() == after_stop );
+    CHECK( remote.get_power_level() == before - id->power_activate - id->power_deactivate );
+
+    // The real reply updates the replica without rerunning native callbacks.
+    const auto host_bionic = host.find_bionic_by_uid( host_uid );
+    REQUIRE( host_bionic );
+    REQUIRE( host.activate_bionic( **host_bionic ) );
+    cata_mp::set_client_mode( true );
+    player_activity activity{ invoke_item_activity_actor( item_location(), std::string() ) };
+    activity.set_execution( activity_execution::presentation );
+    host.assign_activity( activity );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.active = true;
+    view.pending_request = fixture.sequence;
+    const auto rng_before_reply = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( host.activity );
+    CHECK_FALSE( host.has_active_bionic( id ) );
+    CHECK_FALSE( host.has_flag( json_character_flag( "NIGHT_VISION" ) ) );
+    CHECK( host.get_power_level() == remote.get_power_level() );
+    CHECK( rng_get_engine() == rng_before_reply );
+}
+
+TEST_CASE( "bionic_switches_preserve_exclusion_and_native_periodic_effects", "[mp_bionic_switch]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    avatar &host = get_avatar();
+    SECTION( "hearing_and_earplugs" ) {
+        const bionic_id hearing( "bio_ears" );
+        const unsigned int hearing_uid = prepare_targeted_bionic( remote, hearing );
+        prepare_targeted_bionic( host, hearing );
+        if( !host.has_active_bionic( hearing ) ) {
+            REQUIRE( host.activate_bionic( **host.find_bionic_by_type( hearing ) ) );
+        }
+        const bionic_id plugs( "bio_earplugs" );
+        const auto plug = remote.find_bionic_by_type( plugs );
+        REQUIRE( plug );
+        fixture.run( remote, bionic_switch_request( fixture, remote, ( *plug )->get_uid(), plugs, true ) );
+        CHECK( remote.has_flag( json_character_flag( "DEAF" ) ) );
+        CHECK_FALSE( remote.has_active_bionic( hearing ) );
+        CHECK( host.has_active_bionic( hearing ) );
+        fixture.run( remote, bionic_switch_request( fixture, remote, hearing_uid, hearing, true ) );
+        CHECK_FALSE( remote.has_flag( json_character_flag( "DEAF" ) ) );
+        CHECK( remote.has_active_bionic( hearing ) );
+    }
+    SECTION( "painkiller_tick" ) {
+        const bionic_id id( "bio_painkiller" );
+        const unsigned int uid = prepare_targeted_bionic( remote, id );
+        prepare_targeted_bionic( host, id );
+        remote.set_pain( 100 );
+        remote.set_painkiller( 0 );
+        host.set_painkiller( 0 );
+        fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
+        REQUIRE( remote.has_active_bionic( id ) );
+        const auto before_tick = remote.get_power_level();
+        remote.process_bionic( **remote.find_bionic_by_uid( uid ) );
+        CHECK( remote.get_painkiller() == 1 );
+        CHECK( remote.get_power_level() == before_tick - id->power_trigger );
+        CHECK( host.get_painkiller() == 0 );
+    }
+    SECTION( "retract_existing_weapon" ) {
+        const bionic_id id( "bio_claws" );
+        const unsigned int uid = prepare_targeted_bionic( remote, id );
+        REQUIRE( remote.activate_bionic( **remote.find_bionic_by_uid( uid ) ) );
+        REQUIRE( remote.is_using_bionic_weapon() );
+        host.set_wielded_item( item( itype_id( "hammer" ) ) );
+        fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, false ) );
+        CHECK_FALSE( remote.has_active_bionic( id ) );
+        CHECK_FALSE( remote.is_using_bionic_weapon() );
+        CHECK_FALSE( remote.get_wielded_item() );
+        REQUIRE( host.get_wielded_item() );
+        CHECK( host.get_wielded_item()->typeId() == itype_id( "hammer" ) );
+    }
+    SECTION( "evaporator_uses_its_owners_environment" ) {
+        const bionic_id id( "bio_evap" );
+        const unsigned int uid = prepare_targeted_bionic( remote, id );
+        const bool underwater = GENERATE( true, false );
+        remote.set_underwater( underwater );
+        host.set_underwater( !underwater );
+        const restore_on_out_of_scope humidity( get_weather().weather_precise->humidity );
+        get_weather().weather_precise->humidity = 80;
+        fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
+        CHECK( remote.has_active_bionic( id ) == !underwater );
+    }
+}
+
+TEST_CASE( "bionic_switch_client_entries_do_not_toggle_the_replica", "[mp_bionic_switch]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    const bionic_id id( "bio_night_vision" );
+    const unsigned int uid = prepare_targeted_bionic( who, id );
+    const bool enabled = GENERATE( true, false );
+    if( !enabled ) {
+        REQUIRE( who.activate_bionic( **who.find_bionic_by_uid( uid ) ) );
+    }
+    const auto before_power = who.get_power_level();
+    const auto before_rng = rng_get_engine();
+    cata_mp::set_client_mode( true );
+    if( enabled ) {
+        bool close_ui = false;
+        REQUIRE( who.activate_bionic( **who.find_bionic_by_uid( uid ), false, &close_ui ) );
+        CHECK( close_ui );
+    } else {
+        REQUIRE( who.deactivate_bionic( **who.find_bionic_by_uid( uid ) ) );
+    }
+    CHECK( who.has_active_bionic( id ) == !enabled );
+    CHECK( who.get_power_level() == before_power );
+    CHECK( rng_get_engine() == before_rng );
+    CHECK( cata_mp::inventory_activity_view( who.activity ) );
+}
+
+TEST_CASE( "bionic_switches_reject_unmigrated_choices_and_invalid_stops", "[mp_bionic_switch]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    SECTION( "unmigrated_choice" ) {
+        const bionic_id id( "bio_cqb" );
+        const unsigned int uid = prepare_targeted_bionic( remote, id );
+        const auto power = remote.get_power_level();
+        const auto rng = rng_get_engine();
+        fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
+        CHECK_FALSE( remote.has_active_bionic( id ) );
+        CHECK( remote.get_power_level() == power );
+        CHECK( rng_get_engine() == rng );
+        avatar &who = get_avatar();
+        const unsigned int local_uid = prepare_targeted_bionic( who, id );
+        cata_mp::set_client_mode( true );
+        CHECK_FALSE( who.activate_bionic( **who.find_bionic_by_uid( local_uid ) ) );
+        CHECK_FALSE( who.activity );
+        CHECK_FALSE( who.has_active_bionic( id ) );
+    }
+    SECTION( "shorted_or_wrong_identity" ) {
+        const bionic_id id( "bio_night_vision" );
+        const unsigned int uid = prepare_targeted_bionic( remote, id );
+        REQUIRE( remote.activate_bionic( **remote.find_bionic_by_uid( uid ) ) );
+        const bool shorted = GENERATE( true, false );
+        if( shorted ) {
+            ( *remote.find_bionic_by_uid( uid ) )->incapacitated_time = 1_minutes;
+        }
+        const auto power = remote.get_power_level();
+        const auto rng = rng_get_engine();
+        fixture.run( remote, bionic_switch_request( fixture, remote, shorted ? uid : uid + 100, id, false ) );
+        CHECK( ( *remote.find_bionic_by_uid( uid ) )->powered );
+        CHECK( remote.get_power_level() == power );
+        CHECK( rng_get_engine() == rng );
+    }
+}
+
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+TEST_CASE( "bionic_switch_hooks_retain_owned_activities_and_safe_deactivation", "[mp_bionic_switch][lua][platform]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    reload_fixture fixture;
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const std::string mod = "owned_bionic_switch";
+    const auto runtime = platform::make_runtime( mod, 4111, lua );
+    const on_out_of_scope cleanup( []() { platform::shutdown(); } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    platform::runtime_world_ready( true );
+    lua["ccb"] = ccb;
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim(
+                          cata_mp::player_id( std::string( 32, '9' ) ), remote );
+    const bionic_id id( "bio_night_vision" );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const bool remove_on_stop = GENERATE( false, true );
+    lua.set_function( "begin_native_work", [&]() {
+        remote.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    } );
+    lua.set_function( "stop_native", [&]() {
+        if( remove_on_stop ) {
+            const auto bio = remote.find_bionic_by_uid( uid );
+            if( bio ) {
+                remote.remove_bionic( **bio );
+            }
+        }
+    } );
+    const auto registered = lua.safe_script( R"lua(
+ccb.runtime.handler("on", function(context)
+    local state = ccb.state.character
+    state.set("started", state.get("started", 0) + 1)
+    begin_native_work()
+end)
+ccb.runtime.handler("off", function(context)
+    local state = ccb.state.character
+    state.set("stopped", state.get("stopped", 0) + 1)
+    stop_native()
+end)
+ccb.runtime.hook("on_bionic_activated", "on")
+ccb.runtime.hook("on_bionic_deactivated", "off")
+)lua", sol::script_pass_on_error );
+    REQUIRE( registered.valid() );
+    const auto value = [&]( Character &who, const std::string &key ) {
+        const auto &values = who.lua_character_state.for_mod( mod );
+        const auto found = values.find( key );
+        return found == values.end() ? int64_t( 0 ) : std::get<int64_t>( found->second );
+    };
+    const auto before = remote.get_power_level();
+    fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
+    CHECK( remote.get_power_level() == before - id->power_activate );
+    CHECK( remote.has_active_bionic( id ) );
+    REQUIRE( remote.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( remote.activity.execution() == activity_execution::authoritative );
+    CHECK( value( remote, "started" ) == 1 );
+    CHECK( value( get_avatar(), "started" ) == 0 );
+    remote.cancel_activity();
+    remote.set_moves( 100 );
+    const std::string stop = bionic_switch_request( fixture, remote, uid, id, false );
+    fixture.run( remote, stop );
+    CHECK_FALSE( remote.has_active_bionic( id ) );
+    CHECK( remote.find_bionic_by_uid( uid ).has_value() == !remove_on_stop );
+    CHECK( value( remote, "stopped" ) == 1 );
+    CHECK( value( get_avatar(), "stopped" ) == 0 );
+    fixture.run( remote, stop );
+    CHECK( value( remote, "stopped" ) == 1 );
 }
 #endif
