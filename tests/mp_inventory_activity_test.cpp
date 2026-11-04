@@ -5712,7 +5712,10 @@ TEST_CASE( "autopilot_missing_target_never_falls_back_to_host_and_legacy_binds_o
     }
     SECTION( "assigned player outside loaded map" ) {
         target.following_character = who.getID();
-        who.setpos( tripoint_abs_ms( 100000, 100000, 0 ) );
+        // Leave the reality bubble without generating distant overmaps.
+        const tripoint_bub_ms outside( here.getmapsize() * SEEX, 60, 0 );
+        REQUIRE_FALSE( here.inbounds( outside ) );
+        who.setpos( here, outside, false );
         target.autopilot_follow( here );
         CHECK_FALSE( target.is_following );
     }
