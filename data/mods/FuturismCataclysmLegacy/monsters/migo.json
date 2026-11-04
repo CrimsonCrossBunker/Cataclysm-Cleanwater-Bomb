@@ -32,7 +32,7 @@
         "target_moving_vehicles": true
       }
     ],
-    "death_drops": {},
+    "death_drops": {  },
     "death_function": { "corpse_type": "BROKEN" },
     "flags": [ "SEES", "ELECTRONIC", "IMMOBILE", "NO_BREATHE" ],
     "armor": { "bash": 14, "cut": 16 }

@@ -37,9 +37,7 @@
         { "item": "con_mix_foldable", "x": [ 0, 8 ], "y": [ 5, 7 ] },
         { "item": "diesel_generator", "x": [ 0, 8 ], "y": [ 5, 7 ], "chance": 70 }
       ],
-      "place_vehicles": [
-        { "vehicle": "small_utility_vehicles", "x": 12, "y": 4, "chance": 70, "rotation": 180 }
-      ]
+      "place_vehicles": [ { "vehicle": "small_utility_vehicles", "x": 12, "y": 4, "chance": 70, "rotation": 180 } ]
     }
   }
 ]
