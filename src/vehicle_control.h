@@ -60,6 +60,8 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
         vehicle &target, const tripoint_abs_ms &position, const std::string &action );
 std::optional<vehicle_control_selection> query_vehicle_engines( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position );
+std::optional<vehicle_control_selection> query_vehicle_autopilot( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position );
 bool execute_vehicle_control( Character &who, map &here,
                               const vehicle_control_selection &selection );
 #endif // CATA_SRC_VEHICLE_CONTROL_H

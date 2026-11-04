@@ -1132,6 +1132,8 @@ class vehicle
         void autopilot_patrol( map *here );
         units::angle get_angle_from_targ( const tripoint_abs_ms &targ ) const;
         void drive_to_local_target( map *here, const tripoint_abs_ms &target, bool follow_protocol );
+        Character *get_follow_target() const;
+        void autopilot_follow( map &here );
         // Drive automatically towards some destination for one turn.
         autodrive_result do_autodrive( map &here,  Character &driver );
         // Stop any kind of automatic vehicle control and apply the brakes.
@@ -1993,8 +1995,8 @@ class vehicle
 
         // Process the trap beneath
         void handle_trap( map *here, const tripoint_bub_ms &p, vehicle_part &vp_wheel );
-        void activate_magical_follow();
-        void activate_animal_follow( map &here );
+        void activate_magical_follow( Character &who );
+        void activate_animal_follow( map &here, Character &who );
         /**
          * vehicle is driving itself
          */
@@ -2275,9 +2277,8 @@ class vehicle
         void play_music( map &here ) const;
         void play_chimes( map &here ) const;
         void operate_planter( map &here );
-        void autopilot_patrol_check( map &here );
         void toggle_autopilot( map &here );
-        void enable_patrol( map &here );
+        void enable_patrol( map &here, Character &who );
         void toggle_tracking();
         void display_effects();
         //scoop operation,pickups, battery drain, etc.
@@ -2641,6 +2642,9 @@ class vehicle
         bool is_autodriving = false;
         bool is_following = false;
         bool is_patrolling = false;
+        // Missing only for legacy saves/scripts that followed the local avatar.
+        std::optional<character_id> following_character;
+        faction_id patrol_faction = your_fac;
         bool all_wheels_on_one_axis = false; // NOLINT(cata-serialize)
         // at least one engine is on, of any type
         bool engine_on = false;

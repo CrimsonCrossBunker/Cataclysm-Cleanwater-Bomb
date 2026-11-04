@@ -4862,6 +4862,10 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "is_autodriving", is_autodriving );
     data.read( "is_following", is_following );
     data.read( "is_patrolling", is_patrolling );
+    following_character.reset();
+    patrol_faction = your_fac;
+    data.read( "following_character", following_character );
+    data.read( "patrol_faction", patrol_faction );
     data.read( "autodrive_local_target", autodrive_local_target );
     data.read( "airworthy", flyable );
     data.read( "requested_z_change", requested_z_change );
@@ -4987,6 +4991,8 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "is_autodriving", is_autodriving );
     json.member( "is_following", is_following );
     json.member( "is_patrolling", is_patrolling );
+    json.member( "following_character", following_character );
+    json.member( "patrol_faction", patrol_faction );
     json.member( "autodrive_local_target", autodrive_local_target );
     json.member( "airworthy", flyable );
     json.member( "requested_z_change", requested_z_change );

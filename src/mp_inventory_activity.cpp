@@ -1350,10 +1350,15 @@ void client_query_vehicle_control()
         { "engines", _( "Control individual engines" ) },
         { "hotwire", _( "Hotwire" ) },
         { "alarm", _( "Trigger the alarm" ) },
-        { "smash_alarm", _( "Try to smash alarm" ) }
+        { "smash_alarm", _( "Try to smash alarm" ) },
+        { "autopilot", _( "Control autopilot" ) }
     };
     for( size_t i = 0; i < options.size(); ++i ) {
-        menu.addentry( i, vehicle_control_accessible( who, here, *target, position, options[i].first ),
+        const auto &action = options[i].first;
+        const bool autopilot = action == "autopilot";
+        menu.addentry( i, ( !autopilot || target->has_part( "AUTOPILOT" ) || target->autopilot_on ) &&
+                       vehicle_control_accessible( who, here, *target, position,
+                               autopilot ? "autopilot_stop" : action ),
                        MENU_AUTOASSIGN, options[i].second );
     }
     menu.query();
@@ -1361,7 +1366,9 @@ void client_query_vehicle_control()
         return;
     }
     const std::string &action = options[menu.ret].first;
-    const auto selection = action == "engines" ? query_vehicle_engines( who, here, *target, position ) :
+    const auto selection = action == "autopilot" ? query_vehicle_autopilot( who, here, *target,
+                           position ) :
+                           action == "engines" ? query_vehicle_engines( who, here, *target, position ) :
                            query_vehicle_control( who, here, *target, position, action );
     if( selection ) {
         client_vehicle_control( *selection );

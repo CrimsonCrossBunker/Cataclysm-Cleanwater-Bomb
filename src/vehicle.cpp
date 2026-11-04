@@ -680,12 +680,13 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
     refresh( );
 }
 
-void vehicle::activate_magical_follow()
+void vehicle::activate_magical_follow( Character &who )
 {
     for( vehicle_part &vp : parts ) {
         if( vp.info().fuel_type == fuel_type_mana ) {
             vp.enabled = true;
             is_following = true;
+            following_character = who.getID();
             engine_on = true;
         } else {
             vp.enabled = true;
@@ -693,7 +694,7 @@ void vehicle::activate_magical_follow()
     }
 }
 
-void vehicle::activate_animal_follow( map &here )
+void vehicle::activate_animal_follow( map &here, Character &who )
 {
     for( size_t e = 0; e < parts.size(); e++ ) {
         vehicle_part &vp = parts[ e ];
@@ -702,12 +703,39 @@ void vehicle::activate_animal_follow( map &here )
             if( mon && mon->has_effect( effect_harnessed ) ) {
                 vp.enabled = true;
                 is_following = true;
+                following_character = who.getID();
                 engine_on = true;
             }
         } else {
             vp.enabled = true;
         }
     }
+}
+
+Character *vehicle::get_follow_target() const
+{
+    if( !is_following ) {
+        return nullptr;
+    }
+    Character *who = following_character ? g->critter_by_id<Character>( *following_character ) :
+                     &get_avatar();
+    return who && !who->is_dead_state() ? who : nullptr;
+}
+
+void vehicle::autopilot_follow( map &here )
+{
+    if( !is_following ) {
+        return;
+    }
+    Character *who = get_follow_target();
+    if( !who || !here.inbounds( who->pos_abs() ) ) {
+        stop_autodriving();
+        return;
+    }
+    // Bind legacy local-avatar follow once; an explicit missing owner never
+    // redirects an already assigned vehicle to another player's body.
+    following_character = who->getID();
+    drive_to_local_target( &here, who->pos_abs(), true );
 }
 
 void vehicle::autopilot_patrol( map *here )
@@ -731,8 +759,7 @@ void vehicle::autopilot_patrol( map *here )
             return;
         }
         if( !here->inbounds( here->get_bub( autodrive_local_target ) ) ) {
-            autodrive_local_target = tripoint_abs_ms::zero;
-            is_patrolling = false;
+            stop_autodriving();
             return;
         }
         drive_to_local_target( here, autodrive_local_target, false );
@@ -740,9 +767,9 @@ void vehicle::autopilot_patrol( map *here )
     }
     zone_manager &mgr = zone_manager::get_manager();
     const auto &zone_src_set =
-        mgr.get_near( zone_type_VEHICLE_PATROL, pos_abs(), MAX_VIEW_DISTANCE );
+        mgr.get_near( zone_type_VEHICLE_PATROL, pos_abs(), MAX_VIEW_DISTANCE, nullptr, patrol_faction );
     if( zone_src_set.empty() ) {
-        is_patrolling = false;
+        stop_autodriving();
         return;
     }
     // get corners.
@@ -826,8 +853,9 @@ static int get_turn_from_angle( const units::angle &angle, const tripoint_abs_ms
 void vehicle::drive_to_local_target( map *here, const tripoint_abs_ms &target,
                                      bool follow_protocol )
 {
-    Character &player_character = get_player_character();
-    if( follow_protocol && player_character.in_vehicle ) {
+    Character *followed = follow_protocol ? get_follow_target() : nullptr;
+    if( follow_protocol && ( !followed || followed->in_vehicle ||
+                             !here->inbounds( followed->pos_abs() ) ) ) {
         if( here == &reality_bubble() ) { // TODO: Make sound handling map aware
             sounds::sound( pos_bub( *here ), 30, sounds::sound_t::alert,
                            string_format( _( "the %s emitting a beep and saying \"Autonomous driving protocols suspended!\"" ),
@@ -860,16 +888,16 @@ void vehicle::drive_to_local_target( map *here, const tripoint_abs_ms &target,
     // we really want to avoid running the player over.
     // If its a helicopter, we dont need to worry about airborne obstacles so much
     // And fuel efficiency is terrible at low speeds.
-    const int safe_player_follow_speed = 400 *
-                                         player_character.current_movement_mode()->move_speed_mult();
     if( follow_protocol ) {
+        const int safe_player_follow_speed = 400 *
+                                             followed->current_movement_mode()->move_speed_mult();
         if( ( ( turn_x > 0 || turn_x < 0 ) && velocity > safe_player_follow_speed ) ||
-            rl_dist( vehpos, here->get_abs( player_character.pos_bub( *here ) ) ) < 7 + ( (
+            rl_dist( vehpos, followed->pos_abs() ) < 7 + ( (
                         mount_max.y() * 3 ) + 4 ) ) {
             accel_y = 1;
         }
         if( ( velocity < std::min( safe_velocity( *here ), safe_player_follow_speed ) && turn_x == 0 &&
-              rl_dist( vehpos, here->get_abs( player_character.pos_bub( *here ) ) ) > 8 + ( (
+              rl_dist( vehpos, followed->pos_abs() ) > 8 + ( (
                           mount_max.y() * 3 ) + 4 ) ) ||
             velocity < 100 ) {
             accel_y = -1;
@@ -894,7 +922,7 @@ bool vehicle::precollision_check( units::angle &angle, map &here, bool follow_pr
     if( !precollision_on ) {
         return false;
     }
-    Character &player_character = get_player_character();
+    const Character *followed = follow_protocol ? get_follow_target() : nullptr;
     // now we got the angle to the target, we can work out when we are heading towards disaster.
     // Check the tileray in the direction we need to head towards.
     std::set<point_abs_ms> points_to_check = immediate_path( &here, angle );
@@ -911,18 +939,12 @@ bool vehicle::precollision_check( units::angle &angle, map &here, bool follow_pr
             stop = true;
             break;
         }
-        if( elem == player_character.pos_bub().xy() ) {
-            if( follow_protocol || player_character.in_vehicle ) {
-                continue;
-            } else {
-                stop = true;
-                break;
-            }
-        }
         bool its_a_pet = false;
-        if( creatures.creature_at( {elem, sm_pos.z()} ) ) {
-            npc *guy = creatures.creature_at<npc>( { elem, sm_pos.z() } );
-            if( guy && !guy->in_vehicle ) {
+        if( Creature *creature = creatures.creature_at( {elem, sm_pos.z()} ) ) {
+            if( const Character *person = creature->as_character() ) {
+                if( person == followed || ( person->in_vehicle && ovp && &ovp->vehicle() == this ) ) {
+                    continue;
+                }
                 stop = true;
                 break;
             }
