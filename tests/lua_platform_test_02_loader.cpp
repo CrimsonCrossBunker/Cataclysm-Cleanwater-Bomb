@@ -49,6 +49,34 @@ empty_export_loads = (empty_export_loads or 0) + 1
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_platform_loader_preserves_file_preambles_and_error_lines",
+           "[lua][platform][loader][regression]" )
+{
+    platform_lua_test_directory files;
+    files.write( std::filesystem::u8path( "module.lua" ),
+                 "\xef\xbb\xbf#!/usr/bin/env lua\nreturn 42\n" );
+    files.write( std::filesystem::u8path( "mod.lua" ),
+                 "\xef\xbb\xbf#!/usr/bin/env lua\n"
+                 "local ccb = require('ccb')\n"
+                 "assert(require('module') == 42)\n"
+                 "return ccb.ModDefinition { id = 'file-preamble-test' }\n" );
+    files.write( std::filesystem::u8path( "main.lua" ),
+                 "#!/usr/bin/env lua\nassert(require('module') == 42)\n" );
+    cata::lua_platform::mod_definition metadata;
+    std::string error;
+    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    REQUIRE( metadata.id == "file-preamble-test" );
+    const cata::lua_platform::mod_source source = {
+        metadata.id, files.root, files.root / std::filesystem::u8path( "main.lua" )
+    };
+    REQUIRE( cata::lua_platform::validate_mods( { source }, error ) );
+    files.write( std::filesystem::u8path( "main.lua" ),
+                 "\xef\xbb\xbf#!/usr/bin/env lua\nerror('line preserved')\n" );
+    CHECK_FALSE( cata::lua_platform::validate_mods( { source }, error ) );
+    CHECK( error.find( "main.lua:2:" ) != std::string::npos );
+    CHECK( error.find( "line preserved" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_platform_loader_finds_native_modules_beside_the_mod_entry",
            "[lua][platform][loader]" )
 {
