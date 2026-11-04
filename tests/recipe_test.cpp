@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
-#include <vector>
+#include <vector>
 
 #include "build_reqs.h"
 #include "calendar.h"
@@ -17,7 +17,7 @@
 #include "type_id.h"
 #include "units.h"
 
-static const itype_id itype_splinter( "splinter" );
+static const itype_id itype_splinter( "splinter" );
 
 static std::string reqs_to_json_string( const requirement_data &reqs )
 {
