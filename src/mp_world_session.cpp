@@ -71,6 +71,7 @@ void world_session::reset_state( bool preserve_pending_client )
     host_wait_elapsed_ms = 0;
     grant_sequence = 0;
     client_turn = {};
+    client_feedback_sequence = 0;
     client_pickup = {};
     client_firearm = {};
     client_inventory_activity = {};

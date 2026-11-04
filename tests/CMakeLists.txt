@@ -34,6 +34,12 @@ if (BUILD_TESTING)
         list(REMOVE_DUPLICATES CATACLYSM_DDA_TEST_SOURCES)
     endif ()
 
+    option(CATA_TEST_REAL_MESSAGES "Test the production message log instead of the recording stub" OFF)
+    if (CATA_TEST_REAL_MESSAGES)
+        list(REMOVE_ITEM CATACLYSM_DDA_TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/fake_messages.cpp")
+        list(APPEND CATACLYSM_DDA_TEST_SOURCES "${CMAKE_SOURCE_DIR}/src/messages.cpp")
+    endif ()
+
     # Enabling benchmarks
     add_definitions(-DCATCH_CONFIG_ENABLE_BENCHMARKING)
 

@@ -1298,7 +1298,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         const oter_id &cur_om_ter = overmap_buffer.ter( pos_abs_omt() );
         /* cache g->get_temperature( player location ) since it is used twice. No reason to recalc */
         weather_manager &weather = get_weather();
-        const units::temperature player_local_temp = weather.get_temperature( player_character.pos_bub() );
+        const units::temperature player_local_temp = weather.get_temperature( pos_bub() );
         const int windpower = get_local_windpower( weather.windspeed + vehwindspeed,
                               cur_om_ter, pos_abs(), weather.winddirection, g->is_sheltered( pos_bub() ) );
         add_msg_if_player( m_info, _( "Temperature: %s." ), print_temperature( player_local_temp ) );
@@ -1306,7 +1306,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         add_msg_if_player( m_info, _( "Relative Humidity: %s." ),
                            print_humidity(
                                get_local_humidity( weatherPoint.humidity, get_weather().weather_id,
-                                       g->is_sheltered( player_character.pos_bub() ) ) ) );
+                                       g->is_sheltered( pos_bub() ) ) ) );
         add_msg_if_player( m_info, _( "Pressure: %s." ),
                            print_pressure( static_cast<int>( weatherPoint.pressure ) ) );
         add_msg_if_player( m_info, _( "Wind Speed: %.1f %s." ),

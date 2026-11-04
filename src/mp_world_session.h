@@ -15,6 +15,7 @@
 #include "mp_server.h"
 #include "mp_player_store.h"
 #include "mp_player_view.h"
+#include "mp_player_feedback.h"
 #include "mp_world_state.h"
 
 namespace cata_mp
@@ -36,6 +37,7 @@ struct remote_player_session {
     inventory_activity_host_state inventory_activity;
     host_replication_baselines replication;
     peer_observation observation;
+    player_feedback_queue feedback;
 };
 
 // Owned by one game/world lifecycle and accessed only by its simulation thread.
@@ -60,6 +62,7 @@ struct world_session {
         int host_wait_elapsed_ms = 0;
         uint32_t grant_sequence = 0;
         client_turn_state client_turn;
+        int64_t client_feedback_sequence = 0;
         pickup_client_state client_pickup;
         firearm_view_state client_firearm;
         inventory_activity_client_state client_inventory_activity;

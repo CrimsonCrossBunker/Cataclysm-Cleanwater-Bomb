@@ -53,6 +53,10 @@
 #include "map_helpers_tests.h"
 #include "map_selector.h"
 #include "messages.h"
+#include "message_routing.h"
+#include "mp_player_feedback.h"
+#include "mp_test_helpers.h"
+#include "viewer.h"
 #include "mp_client_conn.h"
 #include "mp_combat_result.h"
 #include "mp_gamestate.h"
@@ -3750,3 +3754,160 @@ ccb.runtime.hook("on_bionic_deactivated", "off")
     CHECK( value( remote, "stopped" ) == 1 );
 }
 #endif
+
+namespace
+{
+cata_mp::remote_player_session &bind_feedback_player( npc &actor, char id, uint64_t peer )
+{
+    auto &recipient = make_test_remote( g->multiplayer_session(), peer );
+    recipient.connected = true;
+    recipient.credentials.id = player_id( std::string( 32, id ) );
+    actor.set_value( "mp_proxy", std::string( "1" ) );
+    actor.set_value( "mp_player_id", recipient.credentials.id.str() );
+    recipient.actor.bind_player( actor, recipient.credentials.id, g->npc_lifetimes(),
+                                 g->player_controls().claim( recipient.credentials.id, actor ) );
+    return recipient;
+}
+}
+
+TEST_CASE( "native_player_feedback_keeps_private_and_observer_messages_separate", "[mp_feedback]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    auto &recipient = bind_feedback_player( remote, 'a', 701 );
+    npc &other = spawn_npc( { 62, 60 }, "test_talker" );
+    auto &other_recipient = bind_feedback_player( other, 'b', 702 );
+    avatar &host = get_avatar();
+    host.setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
+    get_map().build_map_cache( 0 );
+    REQUIRE( get_player_view().sees( get_map(), remote ) );
+    Messages::clear_messages();
+
+    remote.add_msg_if_player( m_bad, "private owner failure" );
+    REQUIRE( recipient.feedback.pending.size() == 1 );
+    CHECK( recipient.feedback.pending.front().params.type == m_bad );
+    CHECK( other_recipient.feedback.pending.empty() );
+    CHECK( Messages::size() == 0 );
+    remote.add_msg_player_or_npc( m_good, "owner success", "<npcname> succeeds" );
+    REQUIRE( recipient.feedback.pending.size() == 2 );
+    REQUIRE( Messages::size() == 1 );
+    CHECK( Messages::recent_messages( 1 ).front().second.find( "succeeds" ) != std::string::npos );
+    CHECK( Messages::recent_messages_for_player( 1, recipient.credentials.id ).empty() );
+    CHECK( Messages::recent_messages_for_player( 1, other_recipient.credentials.id ).size() == 1 );
+    remote.add_msg_player_or_say( m_warning, "owner instruction", "NPC-only speech" );
+    CHECK( recipient.feedback.pending.back().text == "owner instruction" );
+    CHECK( Messages::size() == 1 );
+
+    // Same displayed text with a different audience must not coalesce.
+    const auto observer = Messages::recent_messages( 1 ).front().second;
+    Messages::add_msg( m_good, observer );
+    CHECK( Messages::size() == 2 );
+    CHECK( Messages::recent_messages_for_player( 2, recipient.credentials.id ).size() == 1 );
+    Messages::add_observer_msg( m_good, observer, recipient.credentials.id );
+    CHECK( Messages::recent_messages_for_player( 1, recipient.credentials.id ).empty() );
+
+    // Tags and copied numeric IDs alone cannot route private messages.
+    npc impostor;
+    impostor.setID( remote.getID() );
+    impostor.set_value( "mp_proxy", std::string( "1" ) );
+    impostor.set_value( "mp_player_id", recipient.credentials.id.str() );
+    const auto before = recipient.feedback.sequence;
+    impostor.add_msg_if_player( "must not be delivered" );
+    CHECK( recipient.feedback.sequence == before );
+    recipient.admission.retire();
+    remote.add_msg_if_player( "disconnected" );
+    CHECK( recipient.feedback.sequence == before );
+    CHECK( cata_mp::take_player_feedback( recipient ) == "[]" );
+    CHECK( recipient.feedback.pending.empty() );
+}
+
+TEST_CASE( "native_feedback_survives_full_logs_and_replays_without_advancing_gameplay_rng", "[mp_feedback]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    auto &recipient = bind_feedback_player( remote, 'a', 701 );
+    const override_option options( "MESSAGE_LIMIT", "20" );
+    Messages::clear_messages();
+    for( int i = 0; i < 40; ++i ) {
+        Messages::add_msg( "host log " + std::to_string( i ) );
+    }
+    const size_t host_size = Messages::size();
+    for( int i = 0; i < 140; ++i ) {
+        remote.add_msg_if_player( game_message_params( m_bad, gmf_bypass_cooldown ), "owner repeated message" );
+    }
+    CHECK( Messages::size() == host_size );
+    REQUIRE( recipient.feedback.pending.size() == cata_mp::player_feedback_queue::max_pending );
+    CHECK( recipient.feedback.pending.front().sequence == 13 );
+    CHECK( recipient.feedback.pending.back().sequence == 140 );
+    remote.add_msg_if_player( std::string( 8191, 'x' ) + "汽油" );
+    CHECK( recipient.feedback.pending.back().text == std::string( 8191, 'x' ) );
+    const std::string wire = "{\"player_feedback\":" + cata_mp::take_player_feedback( recipient ) + "}";
+    CHECK( recipient.feedback.pending.empty() );
+    const JsonValue value = json_loader::from_string( wire );
+    const JsonObject data = value.get_object();
+    get_avatar().add_effect( efftype_id( "weed_high" ), 3_hours );
+    const auto rng_before = rng_get_engine();
+    cata_mp::apply_player_feedback( data );
+    CHECK( rng_get_engine() == rng_before );
+    CHECK( g->multiplayer_session().client_feedback_sequence == 141 );
+    CHECK( g->multiplayer_session().client_turn.client_msg_watermark == Messages::size() );
+    const auto first = Messages::recent_messages( Messages::size() );
+    cata_mp::apply_player_feedback( data );
+    CHECK( Messages::recent_messages( Messages::size() ) == first );
+    CHECK( rng_get_engine() == rng_before );
+
+    g->multiplayer_session().reset();
+    CHECK( g->multiplayer_session().client_feedback_sequence == 0 );
+    cata_mp::apply_player_feedback( data );
+    CHECK( g->multiplayer_session().client_feedback_sequence == 141 );
+}
+
+TEST_CASE( "informational_bionics_report_the_owning_body_without_host_input", "[mp_feedback]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    auto &recipient = bind_feedback_player( remote, 'a', 701 );
+    const bionic_id id( GENERATE( "bio_geiger", "bio_blood_anal", "bio_meteorologist" ) );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    remote.set_rad( 53 );
+    get_avatar().set_rad( 11 );
+    remote.add_effect( efftype_id( "poison" ), 1_hours );
+    const auto power = remote.get_power_level();
+    const std::string request = bionic_switch_request( fixture, remote, uid, id, true );
+    Messages::clear_messages();
+    fixture.run( remote, request );
+    REQUIRE_FALSE( recipient.feedback.pending.empty() );
+    CHECK( remote.get_power_level() == power - id->power_activate );
+    const int64_t sequence = recipient.feedback.sequence;
+    fixture.run( remote, request );
+    CHECK( recipient.feedback.sequence == sequence );
+    std::string report;
+    for( const auto &entry : recipient.feedback.pending ) {
+        report += entry.text + "\n";
+    }
+    if( id == bionic_id( "bio_geiger" ) ) {
+        CHECK( report.find( "53" ) != std::string::npos );
+        CHECK( report.find( "11" ) == std::string::npos );
+    } else if( id == bionic_id( "bio_blood_anal" ) ) {
+        CHECK( report.find( "Blood Test Results" ) != std::string::npos );
+        CHECK( report.find( "Poison" ) != std::string::npos );
+    } else {
+        CHECK( report.find( "Temperature:" ) != std::string::npos );
+        CHECK( report.find( "Relative Humidity:" ) != std::string::npos );
+        CHECK( report.find( "Wind Direction:" ) != std::string::npos );
+    }
+    const std::string last_line = recipient.feedback.pending.back().text;
+    // The actual state producer includes the private channel, then drains it.
+    const std::string state = cata_mp::serialize_remote_player_state( recipient );
+    const JsonValue state_value = json_loader::from_string( state );
+    const JsonObject data = state_value.get_object();
+    data.allow_omitted_members();
+    REQUIRE( data.has_array( "player_feedback" ) );
+    CHECK_FALSE( data.get_array( "player_feedback" ).empty() );
+    CHECK( recipient.feedback.pending.empty() );
+    Messages::clear_messages();
+    cata_mp::apply_player_feedback( data );
+    const auto displayed = Messages::recent_messages( Messages::size() );
+    REQUIRE_FALSE( displayed.empty() );
+    CHECK( displayed.back().second == last_line );
+}

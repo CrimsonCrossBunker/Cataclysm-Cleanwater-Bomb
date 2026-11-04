@@ -439,6 +439,19 @@ void Character::conduct_blood_analysis()
         colors.emplace_back( elem.first->get_rating() == m_good ? c_green : c_red );
     }
 
+    if( !is_avatar() ) {
+        // A controlled body reports to its owner without opening a modal on
+        // the host. The player's message log keeps the full result readable.
+        add_msg_if_player( m_info, _( "Blood Test Results" ) );
+        if( effect_descriptions.empty() ) {
+            add_msg_if_player( m_info, _( "No effects." ) );
+        }
+        for( size_t i = 0; i < effect_descriptions.size(); ++i ) {
+            add_msg_if_player( colors[i] == c_green ? m_good : m_bad, effect_descriptions[i] );
+        }
+        return;
+    }
+
     const int win_w = 46;
     size_t win_h = 0;
     catacurses::window w;
