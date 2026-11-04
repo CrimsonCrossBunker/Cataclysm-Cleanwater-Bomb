@@ -444,9 +444,11 @@
     "recurrence": "1 second",
     "global": true,
     "run_for_npcs": false,
+    "//0": "Cheap anathema-presence check first: and/or short-circuit, so the 60 u_near_om_location scans below only run while an Anathema is within 60 tiles.",
     "//1": "Near holy ground, near vast water, the sun has risen, or you're about to outrun it (55 tiles away).",
     "condition": {
       "and": [
+        { "math": [ "u_monsters_nearby('mon_vampire_anathema', 'radius': 60) > 0" ] },
         {
           "or": [
             { "u_near_om_location": "church_1", "range": 5 },
@@ -512,8 +514,7 @@
             "is_day",
             { "math": [ "u_monsters_nearby('mon_vampire_anathema', 'radius': 55) == 0" ] }
           ]
-        },
-        { "math": [ "u_monsters_nearby('mon_vampire_anathema', 'radius': 60) > 0" ] }
+        }
       ]
     },
     "//2": "Despawn the Anathema, adjust var for later to bring them back.",
