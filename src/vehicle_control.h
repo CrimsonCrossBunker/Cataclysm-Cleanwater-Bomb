@@ -10,6 +10,7 @@
 #include "coordinates.h"
 #include "item_disposition.h"
 #include "vehicle_electronics.h"
+#include "vehicle_appliance.h"
 
 class JsonObject;
 class JsonOut;
@@ -56,6 +57,7 @@ struct vehicle_control_selection {
     std::optional<item_disposition> unwield;
     std::vector<vehicle_engine_selection> engines;
     std::optional<vehicle_electronics_selection> electronics;
+    std::optional<vehicle_appliance_selection> appliance;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
@@ -76,6 +78,8 @@ std::optional<vehicle_control_selection> query_vehicle_electronics( Character &w
         const std::string &submenu = {} );
 std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source = nullptr );
+std::optional<vehicle_control_selection> query_vehicle_appliance( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position, int64_t part_id = 0 );
 // remote_source is supplied only by a completed native security scan; it is
 // never accepted from a serialized vehicle_control_selection.
 bool execute_vehicle_control( Character &who, map &here,

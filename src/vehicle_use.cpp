@@ -1,6 +1,7 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vehicle_electronics.h"
+#include "vehicle_appliance.h"
 #include "character_action_guard.h"
 #include "mp_inventory_activity.h"
 
@@ -88,18 +89,13 @@ static const ammotype ammo_battery( "battery" );
 
 static const damage_type_id damage_bash( "bash" );
 
-static const dimension_id
-dimension_world_netherum_labyrinth_safehouse( "netherum_labyrinth_safehouse" );
 
 static const efftype_id effect_harnessed( "harnessed" );
 static const efftype_id effect_tied( "tied" );
 
 static const fault_id fault_engine_starter( "fault_engine_starter" );
 
-static const flag_id json_flag_DETERGENT( "DETERGENT" );
-static const flag_id json_flag_FILTHY( "FILTHY" );
 static const flag_id json_flag_IRREMOVABLE( "IRREMOVABLE" );
-static const flag_id json_flag_NO_PACKED( "NO_PACKED" );
 static const flag_id json_flag_PSEUDO( "PSEUDO" );
 
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
@@ -111,11 +107,9 @@ static const itype_id fuel_type_muscle( "muscle" );
 static const itype_id fuel_type_none( "null" );
 static const itype_id fuel_type_wind( "wind" );
 static const itype_id itype_battery( "battery" );
-static const itype_id itype_detergent( "detergent" );
 static const itype_id itype_fungal_seeds( "fungal_seeds" );
 static const itype_id itype_large_repairkit( "large_repairkit" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
-static const itype_id itype_mws_weather_data_incomplete( "mws_weather_data_incomplete" );
 static const itype_id itype_power_cord( "power_cord" );
 static const itype_id itype_pseudo_magazine( "pseudo_magazine" );
 static const itype_id itype_pseudo_magazine_mod( "pseudo_magazine_mod" );
@@ -1168,302 +1162,32 @@ void vehicle::lock_or_unlock( const int part_index, const bool locking )
 
 void vehicle::use_autoclave( map &here, int p )
 {
-    vehicle_part &vp = parts[p];
-    vehicle_stack items = get_items( vp );
-    bool filthy_items = std::any_of( items.begin(), items.end(), []( const item & i ) {
-        return i.has_flag( json_flag_FILTHY );
-    } );
-
-    bool unpacked_items = std::any_of( items.begin(), items.end(), []( const item & i ) {
-        return i.has_flag( json_flag_NO_PACKED );
-    } );
-
-    bool cbms = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.is_bionic();
-    } );
-
-    if( vp.enabled ) {
-        vp.enabled = false;
-        add_msg( m_bad,
-                 _( "You turn the autoclave off before it's finished the program, and open its door." ) );
-    } else if( items.empty() ) {
-        add_msg( m_bad, _( "The autoclave is empty; there's no point in starting it." ) );
-    } else if( fuel_left( here, itype_water ) < 8 && fuel_left( here, itype_water_clean ) < 8 ) {
-        add_msg( m_bad, _( "You need 8 charges of water in the tanks of the %s for the autoclave to run." ),
-                 name );
-    } else if( filthy_items ) {
-        add_msg( m_bad,
-                 _( "You need to remove all filthy items from the autoclave to start the sterilizing cycle." ) );
-    } else if( !cbms ) {
-        add_msg( m_bad, _( "Only CBMs can be sterilized in an autoclave." ) );
-    } else if( unpacked_items ) {
-        add_msg( m_bad, _( "You should put your CBMs in autoclave pouches to keep them sterile." ) );
-    } else {
-        vp.enabled = true;
-        for( item &n : items ) {
-            n.set_age( 0_turns );
-        }
-
-        if( fuel_left( here, itype_water ) >= 8 ) {
-            drain( here, itype_water, 8 );
-        } else {
-            drain( here, itype_water_clean, 8 );
-        }
-
-        add_msg( m_good, _( "You turn the autoclave on and it starts its cycle." ) );
-    }
+    use_vehicle_appliance( get_player_character(), here, *this, p );
 }
 
-// TODO: Organize magic number consumption.
 void vehicle::use_washing_machine( map &here, int p )
 {
-    vehicle_part &vp = parts[p];
-    avatar &player_character = get_avatar();
-    // Get all the items that can be used as detergent
-    const temp_crafting_inventory &inv = player_character.crafting_inventory();
-    std::vector<const item *> detergents = inv.items_with( [inv]( const item & it ) {
-        return it.has_flag( json_flag_DETERGENT ) && inv.has_charges( it.typeId(), 5 );
-    } );
-
-    vehicle_stack items = get_items( vp );
-    bool filthy_items = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.has_flag( json_flag_FILTHY );
-    } );
-
-    bool cbms = std::any_of( items.begin(), items.end(), []( const item & i ) {
-        return i.is_bionic();
-    } );
-
-    if( vp.enabled ) {
-        vp.enabled = false;
-        add_msg( m_bad,
-                 _( "You turn the washing machine off before it's finished its cycle, and open its lid." ) );
-    } else if( items.empty() ) {
-        add_msg( m_bad, _( "The washing machine is empty; there's no point in starting it." ) );
-    } else if( fuel_left( here, itype_water ) < 24 && fuel_left( here, itype_water_clean ) < 24 ) {
-        add_msg( m_bad,
-                 _( "You need 24 charges of water in the tanks of the %s to fill the washing machine." ), name );
-    } else if( detergents.empty() ) {
-        add_msg( m_bad, _( "You need 5 charges of a detergent for the washing machine." ) );
-    } else if( !filthy_items ) {
-        add_msg( m_bad,
-                 _( "You need to remove all non-filthy items from the washing machine to start the washing program." ) );
-    } else if( cbms ) {
-        add_msg( m_bad, _( "CBMs can't be cleaned in a washing machine.  You need to remove them." ) );
-    } else {
-        uilist detergent_selector;
-        detergent_selector.text = _( "Use what detergent?" );
-
-        std::vector<itype_id> det_types;
-        for( const item *it : detergents ) {
-            itype_id det_type = it->typeId();
-            // If the vector does not contain the detergent type, add it
-            if( std::find( det_types.begin(), det_types.end(), det_type ) == det_types.end() ) {
-                det_types.emplace_back( det_type );
-            }
-
-        }
-        int chosen_detergent = 0;
-        // If there's a choice to be made on what detergent to use, ask the player
-        if( det_types.size() > 1 ) {
-            for( size_t i = 0; i < det_types.size(); ++i ) {
-                detergent_selector.addentry( i, true, 0, item::nname( det_types[i] ) );
-            }
-            detergent_selector.addentry( UILIST_CANCEL, true, 0, _( "Cancel" ) );
-            detergent_selector.query();
-            chosen_detergent = detergent_selector.ret;
-        }
-
-        // If the player exits the menu, don't do anything else
-        if( chosen_detergent == UILIST_CANCEL ) {
-            return;
-        }
-
-        vp.enabled = true;
-        for( item &n : items ) {
-            n.set_age( 0_turns );
-        }
-
-        if( fuel_left( here, itype_water ) >= 24 ) {
-            drain( here, itype_water, 24 );
-        } else {
-            drain( here, itype_water_clean, 24 );
-        }
-
-        std::vector<item_comp> detergent;
-        detergent.emplace_back( det_types[chosen_detergent], 5 );
-        player_character.consume_items( detergent, 1, is_crafting_component );
-
-        add_msg( m_good,
-                 _( "You pour some detergent into the washing machine, close its lid, and turn it on.  The washing machine is being filled from the water tanks." ) );
-    }
+    use_vehicle_appliance( get_player_character(), here, *this, p );
 }
 
-// TODO: Organize magic number consumption.
 void vehicle::use_dishwasher( map &here, int p )
 {
-    vehicle_part &vp = parts[p];
-    avatar &player_character = get_avatar();
-    bool detergent_is_enough = player_character.crafting_inventory().has_charges( itype_detergent, 5 );
-    vehicle_stack items = get_items( vp );
-    bool filthy_items = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.has_flag( json_flag_FILTHY );
-    } );
-
-    std::string buffer;
-    buffer += _( "Soft items can't be cleaned in a dishwasher; you should use a washing machine for that.  You need to remove them:" );
-    bool soft_items = false;
-    for( const item &it : items ) {
-        if( it.is_soft() ) {
-            soft_items = true;
-            buffer += " " + it.tname();
-        }
-    }
-
-    if( vp.enabled ) {
-        vp.enabled = false;
-        add_msg( m_bad,
-                 _( "You turn the dishwasher off before it's finished its cycle, and open its lid." ) );
-    } else if( items.empty() ) {
-        add_msg( m_bad, _( "The dishwasher is empty, there's no point in starting it." ) );
-    } else if( fuel_left( here, itype_water ) < 24 && fuel_left( here, itype_water_clean ) < 24 ) {
-        add_msg( m_bad, _( "You need 24 charges of water in the tanks of the %s to fill the dishwasher." ),
-                 name );
-    } else if( !detergent_is_enough ) {
-        add_msg( m_bad, _( "You need 5 charges of a detergent for the dishwasher." ) );
-    } else if( !filthy_items ) {
-        add_msg( m_bad,
-                 _( "You need to remove all non-filthy items from the dishwasher to start the washing program." ) );
-    } else if( soft_items ) {
-        add_msg( m_bad, buffer );
-    } else {
-        vp.enabled = true;
-        for( item &n : items ) {
-            n.set_age( 0_turns );
-        }
-
-        if( fuel_left( here, itype_water ) >= 24 ) {
-            drain( here, itype_water, 24 );
-        } else {
-            drain( here, itype_water_clean, 24 );
-        }
-
-        std::vector<item_comp> detergent;
-        detergent.emplace_back( itype_detergent, 5 );
-        player_character.consume_items( detergent, 1, is_crafting_component );
-
-        add_msg( m_good,
-                 _( "You pour some detergent into the dishwasher, close its lid, and turn it on.  The dishwasher is being filled from the water tanks." ) );
-    }
+    use_vehicle_appliance( get_player_character(), here, *this, p );
 }
 
 void vehicle::use_mws( map &here, int p )
 {
-    vehicle_part &vp = parts[p];
-    vehicle_stack items = get_items( vp );
-
-    if( vp.enabled ) {
-        vp.enabled = false;
-        add_msg( m_bad,
-                 _( "You switch off the sensor array before it is finished its recording." ) );
-    } else {
-        vp.enabled = true;
-        //check if an internal timer is there already, if not, add one
-        if( items.empty() ) {
-            add_item( here, vp, item( itype_mws_weather_data_incomplete, calendar::turn_zero ) );
-        }
-        for( item &n : items ) {
-            n.set_age( 0_turns );
-        }
-        add_msg( m_good,
-                 _( "The printer whirs and the instruments start to spin as you switch on the sensor array." ) );
-    }
+    use_vehicle_appliance( get_player_character(), here, *this, p );
 }
 
 void vehicle::use_auto_cooker( map &here, int p )
 {
-    vehicle_part &vp = parts[p];
-    vehicle_stack items = get_items( vp );
-
-    if( vp.enabled ) {
-        vp.enabled = false;
-        add_msg( m_bad, _( "You turn off the electric cooker." ) );
-        return;
-    }
-
-    const auto has_cookable_recursive = [&]( const item & it, auto & check ) -> bool {
-        if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
-        !it.get_comestible()->cook_result.is_empty() )
-    {
-        return true;
-    }
-for( const item *content : it.all_items_top( pocket_type::CONTAINER ) )
-    {
-        if( check( *content, check ) ) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    bool has_cookable = false;
-    for( const item &it : items ) {
-        if( has_cookable_recursive( it, has_cookable_recursive ) ) {
-            has_cookable = true;
-            break;
-        }
-    }
-
-    if( !has_cookable ) {
-        add_msg( m_bad, _( "The electric cooker has no raw food that can be automatically cooked." ) );
-        return;
-    }
-
-    const auto [battery_remaining, battery_capacity] = connected_battery_power_level( here );
-    if( battery_remaining <= 0 ) {
-        add_msg( m_bad, _( "The electric cooker has no power." ) );
-        return;
-    }
-
-    vp.enabled = true;
-    const auto reset_cookable_recursive = [&]( item & it, auto & reset ) -> void {
-        if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
-        !it.get_comestible()->cook_result.is_empty() )
-    {
-        it.set_var( "cook_energy_done", "0" );
-        }
-for( item *content : it.all_items_top( pocket_type::CONTAINER ) )
-    {
-        reset( *content, reset );
-        }
-    };
-    for( item &it : items ) {
-        reset_cookable_recursive( it, reset_cookable_recursive );
-    }
-
-    add_msg( m_good, _( "You turn on the electric cooker." ) );
+    use_vehicle_appliance( get_player_character(), here, *this, p );
 }
 
 void vehicle::use_nl_boiler( map &here, int p )
 {
-    if( g->get_dimension_prefix() == dimension_world_netherum_labyrinth_safehouse ) {
-        vehicle_part &vp = parts[p];
-        vehicle_stack items = get_items( vp );
-
-        units::mass total_weight = 0_gram;
-        for( item &it : items ) {
-            total_weight += it.weight();
-            remove_item( vp, &it );
-        }
-
-        charge_battery( here, total_weight / 10_gram, false );
-
-        add_msg( m_good,
-                 _( "You turn the crank and the combustion chamber flashes, leaving behind not but an acrid smell." ) );
-    } else {
-        add_msg( m_bad,
-                 _( "You turn the crank and nothing happens." ) );
-    }
+    use_vehicle_appliance( get_player_character(), here, *this, p );
 }
 
 void vehicle::use_monster_capture( int part, map */*here*/, const tripoint_bub_ms &pos )
@@ -2512,69 +2236,13 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
             enabled = ammo_amount >= tool_item.typeId()->charges_to_use();
         }
         menu.add( string_format( _( "Use %s" ), tool_type->nname( 1 ) ) )
-            .enable( enabled )
-            .hotkey( hk )
-            .skip_locked_check( tool_ammo.is_null() || tool_ammo->ammo->type != ammo_battery )
-            .on_submit( [this, vppos, tool_type, here] { use_vehicle_tool( *this, here, vppos, tool_type ); } );
+        .enable( enabled )
+        .hotkey( hk )
+        .skip_locked_check( tool_ammo.is_null() || tool_ammo->ammo->type != ammo_battery )
+        .on_submit( [this, vppos, tool_type, here] { use_vehicle_tool( *this, here, vppos, tool_type ); } );
     }
 
-    const std::optional<vpart_reference> vp_autoclave = vp.avail_part_with_feature( "AUTOCLAVE" );
-    if( vp_autoclave ) {
-        const size_t cl_idx = vp_autoclave->part_index();
-        menu.add( vp_autoclave->part().enabled
-                  ? _( "Deactivate the autoclave" )
-                  : _( "Activate the autoclave (1.5 hours)" ) )
-            .hotkey( "TOGGLE_AUTOCLAVE" )
-            .on_submit( [this, cl_idx, here] { use_autoclave( *here, cl_idx ); } );
-    }
-
-    const std::optional<vpart_reference> vp_washing_machine =
-        vp.avail_part_with_feature( "WASHING_MACHINE" );
-    if( vp_washing_machine ) {
-        const size_t wm_idx = vp_washing_machine->part_index();
-        menu.add( vp_washing_machine->part().enabled
-                  ? _( "Deactivate the washing machine" )
-                  : _( "Activate the washing machine (1.5 hours)" ) )
-            .hotkey( "TOGGLE_WASHING_MACHINE" )
-            .on_submit( [this, wm_idx, here] { use_washing_machine( *here, wm_idx ); } );
-    }
-
-    const std::optional<vpart_reference> vp_dishwasher = vp.avail_part_with_feature( "DISHWASHER" );
-    if( vp_dishwasher ) {
-        const size_t dw_idx = vp_dishwasher->part_index();
-        menu.add( vp_dishwasher->part().enabled
-                  ? _( "Deactivate the dishwasher" )
-                  : _( "Activate the dishwasher (1.5 hours)" ) )
-            .hotkey( "TOGGLE_DISHWASHER" )
-            .on_submit( [this, dw_idx, here] { use_dishwasher( *here, dw_idx ); } );
-    }
-
-    const std::optional<vpart_reference> vp_mws = vp.avail_part_with_feature( "MWS" );
-    //mobile weather station
-    if( vp_mws ) {
-        const size_t dw_idx = vp_mws->part_index();
-        menu.add( vp_mws->part().enabled
-                  ? _( "Deactivate the sensor array" )
-                  : _( "Activate the recording subroutine (1 hour)" ) )
-            .hotkey( "TOGGLE_MWS" )
-            .on_submit( [this, dw_idx, here] { use_mws( *here, dw_idx ); } );
-    }
-    const std::optional<vpart_reference> vp_auto_cooker = vp.avail_part_with_feature( "AUTO_COOKER" );
-    if( vp_auto_cooker ) {
-        const size_t ac_idx = vp_auto_cooker->part_index();
-        menu.add( vp_auto_cooker->part().enabled
-                  ? _( "Deactivate the electric cooker" )
-                  : _( "Activate the electric cooker" ) )
-            .hotkey( "TOGGLE_AUTO_COOKER" )
-            .on_submit( [this, ac_idx, here] { use_auto_cooker( *here, ac_idx ); } );
-    }
-
-    const std::optional<vpart_reference> vp_nl_boiler = vp.avail_part_with_feature( "NL_BOILER" );
-    if( vp_nl_boiler ) {
-        const size_t dw_idx = vp_nl_boiler->part_index();
-        menu.add( _( "Activate the boiler" ) )
-            .on_submit( [this, dw_idx, here] { use_nl_boiler( *here, dw_idx ); } );
-    }
+    add_vehicle_appliance_menu( menu, *here, *this, here->get_abs( vppos ) );
 
     const std::optional<vpart_reference> vp_cargo = vp.cargo();
     // Whether vehicle part (cargo) contains items, and whether map tile (ground) has items
