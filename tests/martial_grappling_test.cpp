@@ -95,7 +95,7 @@ TEST_CASE( "active_grappling_is_bound_to_appropriate_styles",
                               matec_id( entry.second ) ) != available.end() );
         }
     }
-    for( const std::string &style : {
+    for( const char *style : {
              "style_boxing", "style_none"
          } ) {
         avatar &dude = prepare_grappler( style );
