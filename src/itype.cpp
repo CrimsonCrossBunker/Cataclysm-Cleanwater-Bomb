@@ -293,7 +293,8 @@ const use_function *itype::get_default_use() const
 }
 
 static std::optional<int> invoke_use( const use_function &use, Character *p, item &it,
-                                      map *here, const tripoint_bub_ms &pos )
+                                      map *here, const tripoint_bub_ms &pos,
+                                      const item_activation_choices *choices = nullptr )
 {
     if( p ) {
         const auto ret = use.can_call( *p, it, here, pos );
@@ -302,7 +303,7 @@ static std::optional<int> invoke_use( const use_function &use, Character *p, ite
             return 0;
         }
     }
-    return use.call( p, it, here, pos );
+    return use.call( p, it, here, pos, choices );
 }
 
 std::optional<int> itype::invoke( Character *p, item &it, map *here,
@@ -319,7 +320,8 @@ std::optional<int> itype::invoke( Character *p, item &it, const tripoint_bub_ms 
 }
 
 std::optional<int> itype::invoke( Character *p, item &it, map *here, const tripoint_bub_ms &pos,
-                                  const std::string &iuse_name ) const
+                                  const std::string &iuse_name,
+                                  const item_activation_choices *choices ) const
 {
     const use_function *use = get_use( iuse_name );
     if( use == nullptr ) {
@@ -327,7 +329,7 @@ std::optional<int> itype::invoke( Character *p, item &it, map *here, const tripo
                   iuse_name, nname( 1 ) );
         return 0;
     }
-    return invoke_use( *use, p, it, here, pos );
+    return invoke_use( *use, p, it, here, pos, choices );
 }
 
 std::string gun_type_type::name() const

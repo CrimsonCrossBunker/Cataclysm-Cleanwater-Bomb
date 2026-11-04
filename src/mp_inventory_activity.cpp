@@ -344,9 +344,13 @@ bool start_item_use( Character &who, map &here, const JsonObject &request )
     }
     tripoint_abs_ms target;
     request.read( "target", target, true );
+    item_activation_choices choices;
+    if( request.has_member( "timer_seconds" ) ) {
+        choices.timer_seconds = request.get_int( "timer_seconds" );
+    }
     return execute_owned_item_activation( who, source, request.get_string( "method" ), target,
                                           request.get_bool( "allow_theft", false ),
-                                          request.get_bool( "allow_wet", false ) );
+                                          request.get_bool( "allow_wet", false ), choices );
 }
 
 bool start_insert( Character &who, map &here, const JsonObject &request )
@@ -1066,6 +1070,10 @@ bool client_activate_item( const item_location &source, std::string &method )
         !who.query_yn( _( "This item is still wet and it will break if you turn it on.  Proceed?" ) ) ) {
         return true;
     }
+    item_activation_choices choices;
+    if( !query_item_activation_choices( *source, method, choices ) ) {
+        return true;
+    }
     const item_source identity = capture_item_source( who, source );
     const itype_id type = source->typeId();
     const bool allow_theft = !source->is_owned_by( who, true );
@@ -1084,6 +1092,9 @@ bool client_activate_item( const item_location &source, std::string &method )
         out.member( "target", target );
         out.member( "allow_theft", allow_theft );
         out.member( "allow_wet", wet );
+        if( choices.timer_seconds ) {
+            out.member( "timer_seconds", *choices.timer_seconds );
+        }
     } );
     return true;
 }

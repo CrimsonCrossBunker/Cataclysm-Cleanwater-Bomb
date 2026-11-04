@@ -1,5 +1,9 @@
 #include "iuse_actor.h"
 
+#include <cstdint>
+
+#include "item_activation.h"
+
 #include <color.h>
 #include <imgui/imgui.h>
 #include <iuse.h>
@@ -368,8 +372,47 @@ void iuse_transform::load( const JsonObject &obj, const std::string & )
     optional( obj, false, "menu_text", menu_text );
 }
 
-std::optional<int> iuse_transform::use( Character *p, item &it, map *,
+bool iuse_transform::query_activation_choices( item_activation_choices &choices ) const
+{
+    choices = {};
+    if( !set_timer ) {
+        return true;
+    }
+    int seconds = 0;
+    if( !query_int( seconds, false, _( "Set the timer to how many seconds (0 to cancel)?" ) ) ) {
+        return false;
+    }
+    choices.timer_seconds = seconds;
+    return valid_activation_choices( choices );
+}
+
+bool iuse_transform::valid_activation_choices( const item_activation_choices &choices ) const
+{
+    if( !set_timer ) {
+        return choices.empty();
+    }
+    return choices.timer_seconds && *choices.timer_seconds > 0 &&
+           static_cast<int64_t>( to_turn<int>( calendar::turn ) ) + *choices.timer_seconds <=
+           to_turn<int>( calendar::turn_max );
+}
+
+std::optional<int> iuse_transform::use_with_choices( Character *p, item &it, map *here,
+        const tripoint_bub_ms &pos, const item_activation_choices &choices ) const
+{
+    if( !valid_activation_choices( choices ) ) {
+        return std::nullopt;
+    }
+    return use_impl( p, it, here, pos, &choices );
+}
+
+std::optional<int> iuse_transform::use( Character *p, item &it, map *here,
                                         const tripoint_bub_ms &pos ) const
+{
+    return use_impl( p, it, here, pos, nullptr );
+}
+
+std::optional<int> iuse_transform::use_impl( Character *p, item &it, map *,
+        const tripoint_bub_ms &pos, const item_activation_choices *choices ) const
 {
     if( !x_in_y( chance, 100 ) ) {
         return 0;
@@ -409,14 +452,16 @@ std::optional<int> iuse_transform::use( Character *p, item &it, map *,
     int timer_time = 0;
     bool got_timer_value = false;
 
-    if( set_timer && p->is_avatar() ) {
-        got_timer_value = query_int( timer_time, false,
-                                     _( "Set the timer to how many seconds (0 to cancel)?" ) );
-        if( !got_timer_value || timer_time <= 0 ) {
+    if( set_timer && ( choices || p->is_avatar() ) ) {
+        item_activation_choices selected;
+        got_timer_value = choices ? valid_activation_choices( *choices ) :
+                          query_activation_choices( selected );
+        if( !got_timer_value ) {
             p->add_msg_if_player( _( "Never mind." ) );
             return std::nullopt;
         }
 
+        timer_time = *( choices ? choices->timer_seconds : selected.timer_seconds );
         p->add_msg_if_player( n_gettext( "You set the timer to %d second.",
                                          "You set the timer to %d seconds.", timer_time ), timer_time );
     }
@@ -1204,6 +1249,15 @@ std::optional<int> delayed_transform_iuse::use( Character *p, item &it,
         return std::nullopt;
     }
     return iuse_transform::use( p, it, here, pos );
+}
+
+std::optional<int> delayed_transform_iuse::use_with_choices( Character *p, item &it,
+        map *here, const tripoint_bub_ms &pos, const item_activation_choices &choices ) const
+{
+    if( !p || time_to_do( it ) > 0 ) {
+        return std::nullopt;
+    }
+    return iuse_transform::use_with_choices( p, it, here, pos, choices );
 }
 
 std::unique_ptr<iuse_actor> place_monster_iuse::clone() const

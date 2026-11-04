@@ -3,6 +3,8 @@
 #include "dialogue.h"
 #include "iuse.h"
 
+#include "item_activation.h"
+
 #include <clone_ptr.h>
 #include <algorithm>
 #include <array>
@@ -9144,8 +9146,27 @@ std::optional<int> use_function::call( Character *p, item &it,
     return use_function::call( p, it, &get_map(), pos );
 }
 
-std::optional<int> use_function::call( Character *p, item &it,
-                                       map *here, const tripoint_bub_ms &pos ) const
+bool iuse_actor::query_activation_choices( item_activation_choices &choices ) const
 {
-    return actor->use( p, it, here, pos );
+    choices = {};
+    return supports_owned_activation();
+}
+
+bool iuse_actor::valid_activation_choices( const item_activation_choices &choices ) const
+{
+    return supports_owned_activation() && choices.empty();
+}
+
+std::optional<int> iuse_actor::use_with_choices( Character *p, item &it, map *here,
+        const tripoint_bub_ms &pos, const item_activation_choices &choices ) const
+{
+    return valid_activation_choices( choices ) ? use( p, it, here, pos ) : std::nullopt;
+}
+
+std::optional<int> use_function::call( Character *p, item &it,
+                                       map *here, const tripoint_bub_ms &pos,
+                                       const item_activation_choices *choices ) const
+{
+    return choices ? actor->use_with_choices( p, it, here, pos, *choices ) :
+           actor->use( p, it, here, pos );
 }

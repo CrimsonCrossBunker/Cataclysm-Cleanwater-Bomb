@@ -27,15 +27,39 @@ bool supports_owned_item_activation( const item &source, const std::string &meth
     return use && use->get_actor_ptr() && use->get_actor_ptr()->supports_owned_activation();
 }
 
+bool query_item_activation_choices( const item &source, const std::string &method,
+                                    item_activation_choices &choices )
+{
+    choices = {};
+    if( method.empty() ) {
+        return supports_owned_item_activation( source, method );
+    }
+    const item *used = source.get_usable_item( method );
+    const use_function *use = used ? used->type->get_use( method ) : nullptr;
+    return use && use->get_actor_ptr() && use->get_actor_ptr()->query_activation_choices( choices );
+}
+
+bool valid_item_activation_choices( const item &source, const std::string &method,
+                                    const item_activation_choices &choices )
+{
+    if( method.empty() ) {
+        return choices.empty() && supports_owned_item_activation( source, method );
+    }
+    const item *used = source.get_usable_item( method );
+    const use_function *use = used ? used->type->get_use( method ) : nullptr;
+    return use && use->get_actor_ptr() && use->get_actor_ptr()->valid_activation_choices( choices );
+}
+
 bool execute_owned_item_activation( Character &who, item_location source,
                                     const std::string &method, const tripoint_abs_ms &target,
-                                    bool allow_theft, bool allow_wet )
+                                    bool allow_theft, bool allow_wet,
+                                    const item_activation_choices &choices )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
     if( !lifetime || who.activity || who.get_moves() <= 0 || !source ||
         resolve_item_source( who, here, capture_item_source( who, source ) ) != source ||
-        !supports_owned_item_activation( *source, method ) || source->is_broken() ||
+        !valid_item_activation_choices( *source, method, choices ) || source->is_broken() ||
         who.has_effect( efftype_id( "incorporeal" ) ) || !here.inbounds( target ) ||
         rl_dist( who.pos_abs(), target ) > 1 ||
         ( !source->is_owned_by( who, true ) && !allow_theft ) ) {
@@ -108,7 +132,7 @@ bool execute_owned_item_activation( Character &who, item_location source,
     if( method.empty() ) {
         who.Character::invoke_item( source.get_item(), position, pre_obtain_moves );
     } else {
-        who.invoke_item( source.get_item(), method, position, pre_obtain_moves );
+        who.invoke_item( source.get_item(), method, position, pre_obtain_moves, &choices );
     }
     if( !lifetime ) {
         return true;

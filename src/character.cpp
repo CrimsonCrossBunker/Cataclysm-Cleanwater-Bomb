@@ -4957,13 +4957,20 @@ bool Character::invoke_item( item *used, const std::string &method )
 bool Character::invoke_item( item *used, const std::string &method, const tripoint_bub_ms &pt,
                              int pre_obtain_moves )
 {
+    return invoke_item( used, method, pt, pre_obtain_moves, nullptr );
+}
+
+bool Character::invoke_item( item *used, const std::string &method, const tripoint_bub_ms &pt,
+                             int pre_obtain_moves, const item_activation_choices *choices )
+{
     if( method.empty() ) {
-        return invoke_item( used, pt, pre_obtain_moves );
+        return choices && !choices->empty() ? false : invoke_item( used, pt, pre_obtain_moves );
     }
     const character_action_guard lifetime( *this );
     if( !lifetime || !used ||
-        ( activity.execution() == activity_execution::authoritative &&
-          !supports_owned_item_activation( *used, method ) ) ) {
+        ( ( choices || activity.execution() == activity_execution::authoritative ) &&
+          !valid_item_activation_choices( *used, method,
+                                          choices ? *choices : item_activation_choices{} ) ) ) {
         return false;
     }
 
@@ -5011,7 +5018,7 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
         return false;
     }
     std::optional<int> charges_used = actually_used->type->invoke( this, *actually_used,
-                                      pt, method );
+                                      &get_map(), pt, method, choices );
     if( !lifetime ) {
         return false;
     }
