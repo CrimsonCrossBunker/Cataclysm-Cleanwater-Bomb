@@ -988,6 +988,15 @@
     "can_resume": false
   },
   {
+    "id": "ACT_BIONIC_WATER",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "extracting water",
+    "rooted": true,
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
     "id": "ACT_INVOKE_ITEM",
     "type": "activity_type",
     "activity_level": "NO_EXERCISE",

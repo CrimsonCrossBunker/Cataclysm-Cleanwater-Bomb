@@ -25,6 +25,7 @@
 #include "ballistics.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "bionic_water_activity.h"
 #include "bionic_world_effects.h"
 #include "character_action_guard.h"
 #include "mp_inventory_activity.h"
@@ -136,7 +137,6 @@ static const itype_id itype_anesthetic( "anesthetic" );
 static const itype_id itype_burnt_out_bionic( "burnt_out_bionic" );
 static const itype_id itype_radiocontrol( "radiocontrol" );
 static const itype_id itype_remotevehcontrol( "remotevehcontrol" );
-static const itype_id itype_water_clean( "water_clean" );
 
 static const json_character_flag json_flag_BIONIC_ARMOR_INTERFACE( "BIONIC_ARMOR_INTERFACE" );
 static const json_character_flag json_flag_BIONIC_FAULTY( "BIONIC_FAULTY" );
@@ -770,7 +770,8 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
     if( choices && !valid_bionic_activation_choices( *this, initial_bio, *choices ) ) {
         return false;
     }
-    if( !choices && bionic_requires_adjacent_target( initial_bio.id ) ) {
+    if( !choices && ( bionic_requires_adjacent_target( initial_bio.id ) ||
+                      initial_bio.id == bio_water_extractor ) ) {
         if( !is_avatar() ) {
             return false;
         }
@@ -1182,33 +1183,19 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
             return false;
         }
     } else if( bio.id == bio_water_extractor ) {
-        bool no_target = true;
-        bool extracted = false;
-        for( item &it : here.i_at( pos_bub() ) ) {
-            static const units::volume volume_per_water_charge = 500_ml;
-            if( it.is_corpse() ) {
-                const int avail = it.get_var( "remaining_water", it.volume() / volume_per_water_charge );
-                if( avail > 0 ) {
-                    no_target = false;
-                    if( query_yn( _( "Extract water from the %s" ),
-                                  colorize( it.tname(), it.color_in_inventory() ) ) ) {
-                        item water( itype_water_clean, calendar::turn, avail );
-                        water.set_item_temperature( it.temperature );
-                        if( liquid_handler::consume_liquid( water ) ) {
-                            add_msg_activate();
-                            extracted = true;
-                            it.set_var( "remaining_water", water.charges );
-                        }
-                        break;
-                    }
-                }
-            }
+        const bool owned = activity.execution() == activity_execution::authoritative;
+        assign_activity( bionic_water_activity_actor( *choices->water_corpse, activation_uid,
+                         eff_only ? 0_kJ : activation_cost ) );
+        if( !lifetime ) {
+            return false;
         }
-        if( no_target ) {
-            add_msg_if_player( m_bad, _( "There is no suitable corpse on this tile." ) );
+        if( owned && close_bionics_ui ) {
+            *close_bionics_ui = true;
         }
-        if( !extracted ) {
-            refund_power();
+        if( !owned && !run_local_bionic_water( *this ) ) {
+            return false;
+        }
+        if( !lifetime ) {
             return false;
         }
     } else if( bio.id == bio_magnet ) {

@@ -36,6 +36,7 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "bionics.h"
+#include "bionic_water_activity.h"
 #include "bodypart.h"
 #include "butchery.h"
 #include "butchery_requirements.h"
@@ -17654,6 +17655,7 @@ deserialize_functions = {
     { ACT_HOTWIRE_CAR, &hotwire_car_activity_actor::deserialize },
     { ACT_INSERT_ITEM, &insert_item_activity_actor::deserialize },
     { ACT_INVOKE_ITEM, &invoke_item_activity_actor::deserialize },
+    { activity_id( "ACT_BIONIC_WATER" ), &bionic_water_activity_actor::deserialize },
     { ACT_JACKHAMMER, &jackhammer_activity_actor::deserialize },
     { ACT_LOCKPICK, &lockpick_activity_actor::deserialize },
     { ACT_LONGSALVAGE, &longsalvage_activity_actor::deserialize },

@@ -12,6 +12,8 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "bionic_water_activity.h"
+#include "cached_options.h"
 #include "character_martial_arts.h"
 #include "martial_style_selection.h"
 #include "martialarts.h"
@@ -3653,7 +3655,7 @@ TEST_CASE( "bionic_switches_reject_unmigrated_choices_and_invalid_stops", "[mp_b
     reload_fixture fixture;
     npc &remote = fixture.remote();
     SECTION( "unmigrated_choice" ) {
-        const bionic_id id( "bio_water_extractor" );
+        const bionic_id id( "bio_remote" );
         const unsigned int uid = prepare_targeted_bionic( remote, id );
         const auto power = remote.get_power_level();
         const auto rng = rng_get_engine();
@@ -4484,4 +4486,310 @@ TEST_CASE( "magnetic_attraction_restores_unlaunched_items_when_a_hit_retires_the
     }
     CHECK( returned > 0 );
     CHECK( returned < 5 );
+}
+namespace
+{
+item_location extraction_corpse( Character &who, int charges )
+{
+    item corpse = item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn );
+    corpse.set_var( "remaining_water", charges );
+    corpse.set_item_temperature( units::from_celsius( 20 ) );
+    return get_map().add_item_or_charges_ret_loc( who.pos_bub(), corpse );
+}
+
+std::string water_start_request( reload_fixture &fixture, Character &who, unsigned int uid,
+                                const item_source &corpse )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "bionic_activation" );
+        out.member( "bionic_uid", uid );
+        out.member( "bionic_type", bionic_id( "bio_water_extractor" ) );
+        out.member( "water_corpse", corpse );
+    } );
+}
+
+std::string water_choice_request( reload_fixture &fixture, Character &who,
+                                 const unload_liquid_choice &choice )
+{
+    return fixture.request( who, "choose", [&]( JsonOut &out ) {
+        out.member( "liquid", choice );
+        out.member( "allow_consequences", true );
+    } );
+}
+} // namespace
+
+TEST_CASE( "water_extraction_keeps_one_activation_across_containers_and_save", "[mp_bionic_water]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    avatar &host = get_avatar();
+    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
+    prepare_targeted_bionic( host, bionic_id( "bio_water_extractor" ) );
+    host.set_moves( 517 );
+    const auto corpse = extraction_corpse( who, 7 );
+    const auto source = capture_item_source( who, corpse );
+    const auto start = water_start_request( fixture, who, uid, source );
+    fixture.run( who, start );
+    REQUIRE( who.activity.id() == activity_id( "ACT_BIONIC_WATER" ) );
+    CHECK( who.get_power_level() == 180_kJ );
+    fixture.run( who, start );
+    CHECK( who.get_power_level() == 180_kJ );
+    save_reload_activity( who );
+    who.process_activity();
+    CHECK( who.get_moves() == 0 );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 7 );
+    who.set_moves( 100 );
+
+    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    item_location bottle = who.get_wielded_item();
+    item water( itype_id( "water_clean" ), calendar::turn, 7 );
+    const int capacity = bottle->get_remaining_capacity_for_liquid( water, true );
+    REQUIRE( capacity > 0 );
+    REQUIRE( capacity < 7 );
+    unload_liquid_choice choice;
+    choice.source = corpse->uid().get_value();
+    choice.kind = LD_ITEM;
+    choice.container = capture_item_source( who, bottle );
+    const auto pour = water_choice_request( fixture, who, choice );
+    fixture.run( who, pour );
+    CHECK( fixture.reload.refresh_observers );
+    REQUIRE_FALSE( bottle->is_container_empty() );
+    CHECK( bottle->legacy_front().charges == capacity );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 7 - capacity );
+    CHECK( who.get_moves() == 0 );
+    CHECK( who.get_power_level() == 180_kJ );
+    const auto rng = rng_get_engine();
+    fixture.run( who, pour );
+    CHECK_FALSE( fixture.reload.refresh_observers );
+    CHECK( rng_get_engine() == rng );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 7 - capacity );
+    save_reload_activity( who );
+
+    const auto landing = who.pos_bub() + tripoint::east;
+    choice.kind = LD_GROUND;
+    choice.position = get_map().get_abs( landing );
+    who.set_moves( 100 );
+    fixture.run( who, water_choice_request( fixture, who, choice ) );
+    CHECK_FALSE( who.activity );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 0 );
+    int spilled = 0;
+    for( const item &entry : get_map().i_at( landing ) ) {
+        if( entry.typeId() == itype_id( "water_clean" ) ) {
+            spilled += entry.charges;
+        }
+    }
+    CHECK( spilled == 7 - capacity );
+    CHECK( who.get_power_level() == 180_kJ );
+    CHECK( host.get_power_level() == 200_kJ );
+    CHECK( host.get_moves() == 517 );
+    CHECK_FALSE( host.activity );
+}
+
+TEST_CASE( "water_extraction_cancel_refunds_only_unused_activation", "[mp_bionic_water]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
+    const auto corpse = extraction_corpse( who, 4 );
+    fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
+    const bool extracted = GENERATE( false, true );
+    if( extracted ) {
+        who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+        unload_liquid_choice choice;
+        choice.source = corpse->uid().get_value();
+        choice.kind = LD_ITEM;
+        choice.container = capture_item_source( who, who.get_wielded_item() );
+        fixture.run( who, water_choice_request( fixture, who, choice ) );
+        REQUIRE( corpse->get_var( "remaining_water", -1 ) < 4 );
+    }
+    REQUIRE( who.activity );
+    save_reload_activity( who );
+    const auto cancel = fixture.request( who, "cancel" );
+    fixture.run( who, cancel );
+    fixture.run( who, cancel );
+    CHECK_FALSE( who.activity );
+    CHECK( who.get_power_level() == ( extracted ? 180_kJ : 200_kJ ) );
+    if( !extracted ) {
+        CHECK( corpse->get_var( "remaining_water", -1 ) == 4 );
+    }
+}
+
+TEST_CASE( "water_extraction_revalidates_corpse_and_destination_identity", "[mp_bionic_water]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const bionic_id type( "bio_water_extractor" );
+    const auto uid = prepare_targeted_bionic( who, type );
+    auto corpse = extraction_corpse( who, 4 );
+    const auto source = capture_item_source( who, corpse );
+    fixture.run( who, water_start_request( fixture, who, uid, source ) );
+    save_reload_activity( who );
+    unload_liquid_choice choice;
+    choice.source = source.path.front();
+    choice.kind = LD_GROUND;
+    choice.position = who.pos_abs();
+    const std::string failure = GENERATE( "replaced_corpse", "moved", "removed_bionic",
+                                         "host_container", "far_destination", "wrong_corpse", "unauthorized" );
+    CAPTURE( failure );
+    if( failure == "replaced_corpse" ) {
+        corpse.remove_item();
+        extraction_corpse( who, 4 );
+    } else if( failure == "moved" ) {
+        who.setpos( get_map(), who.pos_bub() + tripoint::east );
+    } else if( failure == "removed_bionic" ) {
+        who.remove_bionic( **who.find_bionic_by_uid( uid ) );
+    } else if( failure == "host_container" ) {
+        get_avatar().set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+        choice.kind = LD_ITEM;
+        choice.container = capture_item_source( get_avatar(), get_avatar().get_wielded_item() );
+    } else if( failure == "far_destination" ) {
+        choice.position += tripoint( 4, 0, 0 );
+    } else if( failure == "wrong_corpse" ) {
+        ++choice.source;
+    }
+    fixture.run( who, water_choice_request( fixture, who, choice ), failure != "unauthorized" );
+    if( corpse ) {
+        CHECK( corpse->get_var( "remaining_water", -1 ) == 4 );
+    }
+    if( who.activity ) {
+        fixture.run( who, fixture.request( who, "cancel" ) );
+    }
+    CHECK_FALSE( who.activity );
+    CHECK( who.get_power_level() == 200_kJ );
+    for( const item &entry : get_map().i_at( get_map().get_bub( source.position ) ) ) {
+        CHECK( entry.typeId() != itype_id( "water_clean" ) );
+    }
+}
+
+TEST_CASE( "water_extraction_drinks_as_owner_and_survives_callback_cancellation", "[mp_bionic_water]" )
+{
+    consumption_fixture fixture;
+    npc &who = fixture.remote();
+    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
+    const auto corpse = extraction_corpse( who, 4 );
+    fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
+    class cancel_on_drink : public event_subscriber {
+        public:
+            Character &who;
+            item_location corpse;
+            int count = 0;
+            cancel_on_drink( Character &who, item_location corpse ) : who( who ), corpse( corpse ) {
+                get_event_bus().subscribe( this );
+            }
+            void notify( const cata::event &event ) override {
+                if( event.type() == event_type::character_consumes_item ) {
+                    ++count;
+                    CHECK( event.get<character_id>( "character" ) == who.getID() );
+                    CHECK( corpse->get_var( "remaining_water", -1 ) == 0 );
+                    who.cancel_activity();
+                }
+            }
+    } observer( who, corpse );
+    consumption_events consumption;
+    const auto stomach = who.stomach.contains();
+    const auto host_stomach = get_avatar().stomach.contains();
+    unload_liquid_choice choice;
+    choice.source = corpse->uid().get_value();
+    choice.kind = LD_CONSUME;
+    const auto request = water_choice_request( fixture, who, choice );
+    fixture.run( who, request );
+    REQUIRE( observer.count == 1 );
+    CHECK( consumption.actors == std::vector<character_id>{ who.getID() } );
+    CHECK_FALSE( who.activity );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 3 );
+    CHECK( who.get_power_level() == 180_kJ );
+    CHECK( who.stomach.contains() > stomach );
+    CHECK( get_avatar().stomach.contains() == host_stomach );
+    CHECK( who.get_moves() < 100 );
+    const auto rng = rng_get_engine();
+    fixture.run( who, request );
+    CHECK( observer.count == 1 );
+    CHECK( rng_get_engine() == rng );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 3 );
+}
+
+TEST_CASE( "local_water_extraction_preserves_synchronous_pour_and_cancel", "[mp_bionic_water]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
+    const auto corpse = extraction_corpse( who, 4 );
+    bionic_activation_choices choices;
+    choices.water_corpse = capture_item_source( who, corpse );
+    const bool pour = GENERATE( true, false );
+    const restore_on_out_of_scope restore( test_mode_spilling_action );
+    test_mode_spilling_action = pour ? test_mode_spilling_action_t::spill_all :
+                               test_mode_spilling_action_t::cancel_spill;
+    CHECK( who.activate_bionic( **who.find_bionic_by_uid( uid ), false, nullptr, &choices ) == pour );
+    CHECK_FALSE( who.activity );
+    CHECK( who.get_power_level() == ( pour ? 180_kJ : 200_kJ ) );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == ( pour ? 0 : 4 ) );
+}
+
+TEST_CASE( "client_water_selection_is_presentation_only_and_receives_remaining_water", "[mp_bionic_water]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const bionic_id id( "bio_water_extractor" );
+    const auto uid = prepare_targeted_bionic( who, id );
+    const auto corpse = extraction_corpse( who, 4 );
+    const auto result = fixture.run( who, water_start_request( fixture, who, uid,
+                                    capture_item_source( who, corpse ) ) );
+    avatar &local = get_avatar();
+    local.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+    const auto local_uid = prepare_targeted_bionic( local, id );
+    const auto local_corpse = extraction_corpse( local, 5 );
+    bionic_activation_choices choices;
+    choices.water_corpse = capture_item_source( local, local_corpse );
+    cata_mp::set_client_mode( true );
+    const auto rng = rng_get_engine();
+    REQUIRE( local.activate_bionic( **local.find_bionic_by_uid( local_uid ), false, nullptr, &choices ) );
+    CHECK( local.get_power_level() == 200_kJ );
+    CHECK( local_corpse->get_var( "remaining_water", -1 ) == 5 );
+    CHECK( rng_get_engine() == rng );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.pending_request = fixture.sequence;
+    REQUIRE( cata_mp::client_apply_message( result ) );
+    CHECK( local.activity.execution() == activity_execution::presentation );
+    CHECK( view.water_source_uid == corpse->uid().get_value() );
+    REQUIRE( view.preview );
+    CHECK( view.preview->typeId() == itype_id( "water_clean" ) );
+    CHECK( view.preview->charges == 4 );
+    CHECK( local.get_power_level() == 180_kJ );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "water_extraction_never_duplicates_frozen_water", "[mp_bionic_water]" )
+{
+    consumption_fixture fixture;
+    npc &who = fixture.remote();
+    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
+    auto corpse = extraction_corpse( who, 4 );
+    corpse->set_item_temperature( units::from_celsius( -20 ) );
+    fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
+    const auto *actor = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( actor );
+    const auto preview = actor->preview( who );
+    REQUIRE( preview );
+    REQUIRE_FALSE( preview->made_of( phase_id::LIQUID ) );
+    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    const auto stomach = who.stomach.contains();
+    consumption_events events;
+    unload_liquid_choice choice;
+    choice.source = corpse->uid().get_value();
+    choice.kind = GENERATE( LD_ITEM, LD_GROUND, LD_CONSUME );
+    choice.container = capture_item_source( who, who.get_wielded_item() );
+    choice.position = who.pos_abs();
+    fixture.run( who, water_choice_request( fixture, who, choice ) );
+    CHECK_FALSE( who.activity );
+    CHECK( who.get_power_level() == 200_kJ );
+    CHECK( who.get_moves() == 100 );
+    CHECK( corpse->get_var( "remaining_water", -1 ) == 4 );
+    CHECK( who.get_wielded_item()->is_container_empty() );
+    CHECK( who.charges_of( itype_id( "water_clean" ) ) == 0 );
+    CHECK( who.stomach.contains() == stomach );
+    CHECK( events.actors.empty() );
+    for( const item &entry : get_map().i_at( who.pos_bub() ) ) {
+        CHECK( entry.typeId() != itype_id( "water_clean" ) );
+    }
 }
