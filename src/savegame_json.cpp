@@ -466,6 +466,7 @@ void player_activity::serialize( JsonOut &json ) const
     json.member( "type", type );
 
     if( !type.is_null() ) {
+        json.member( "execution", static_cast<int>( execution_ ) );
         json.member( "actor", actor );
         json.member( "moves_total", moves_total );
         json.member( "moves_left", moves_left );
@@ -490,6 +491,11 @@ void player_activity::serialize( JsonOut &json ) const
 void player_activity::deserialize( const JsonObject &data )
 {
     data.allow_omitted_members();
+    const int execution = data.get_int( "execution", 0 );
+    if( execution < 0 || execution > static_cast<int>( activity_execution::presentation ) ) {
+        data.throw_error_at( "execution", "Invalid activity execution owner" );
+    }
+    execution_ = static_cast<activity_execution>( execution );
     std::string tmptype;
     int tmppos = 0;
 
@@ -996,6 +1002,8 @@ void Character::load( const JsonObject &data )
     invalidate_pseudo_items();
     update_bionic_power_capacity();
     data.read( "death_eocs", death_eocs );
+    lua_character_state = {};
+    data.read( "lua_character_state", lua_character_state );
     data.read( "lua_platform_death_mod", lua_platform_death_mod );
     data.read( "lua_platform_death_handler", lua_platform_death_handler );
     worn.on_takeoff( *this );
@@ -1644,6 +1652,7 @@ void Character::store( JsonOut &json ) const
     // "Looks like I picked the wrong week to quit smoking." - Steve McCroskey
     json.member( "addictions", addictions );
     json.member( "death_eocs", death_eocs );
+    json.member( "lua_character_state", lua_character_state );
     json.member( "lua_platform_death_mod", lua_platform_death_mod );
     json.member( "lua_platform_death_handler", lua_platform_death_handler );
     json.member( "worn", worn ); // also saves contents
@@ -1995,6 +2004,7 @@ void Character::load_player_state( const JsonObject &snapshot )
         read( "book_chapters", book_chapters );
         read( "addictions", addictions );
         read( "death_eocs", death_eocs );
+        read( "lua_character_state", lua_character_state );
         read( "lua_platform_death_mod", lua_platform_death_mod );
         read( "lua_platform_death_handler", lua_platform_death_handler );
         read( "inactive_eocs", inactive_effect_on_condition_vector );

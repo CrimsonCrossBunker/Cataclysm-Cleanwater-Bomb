@@ -53,7 +53,6 @@ set(LUA_PLATFORM_ENABLED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_snapshots.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_registry.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_services.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_state.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_values.cpp)
 if (CATA_ENABLE_LUA_PLATFORM)
     list(REMOVE_ITEM CATACLYSM_DDA_SOURCES

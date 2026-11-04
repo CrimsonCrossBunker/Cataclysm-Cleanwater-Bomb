@@ -47,6 +47,7 @@
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
+#include "lua_platform_runtime.h"
 #include "item_healing.h"
 #include "item_location.h"
 #include "item_pocket.h"
@@ -1496,6 +1497,7 @@ void avatar_action::use_item( avatar &you )
 void avatar_action::use_item( avatar &you, item_location &loc, std::string const &method )
 {
     map &here = get_map();
+    std::string selected_method = method;
 
     if( you.has_effect( effect_incorporeal ) ) {
         you.add_msg_if_player( m_bad, _( "You can't use anything while incorporeal." ) );
@@ -1522,6 +1524,12 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
     }
     if( cata_mp::is_client_mode() && method == "heal" && healing_action( loc ) ) {
         select_client_healing( you, loc );
+        return;
+    }
+    if( cata_mp::is_client_mode() &&
+        ( !loc->is_medication() ||
+          cata::lua_platform::has_platform_item_use_handler( loc->typeId().str() ) ) &&
+        cata_mp::client_activate_item( loc, selected_method ) ) {
         return;
     }
     if( cata_mp::is_client_mode() && loc->is_medication() ) {
@@ -1590,13 +1598,13 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
     if( use_in_place ) {
         update_lum( loc, false );
-        you.use( loc, pre_obtain_moves, method );
+        you.use( loc, pre_obtain_moves, selected_method );
         if( loc ) {
             update_lum( loc, true );
             loc.make_active();
         }
     } else {
-        you.use( loc, pre_obtain_moves, method );
+        you.use( loc, pre_obtain_moves, selected_method );
 
         if( parent_pocket && on_person && parent_pocket->will_spill() ) {
             parent_pocket->handle_liquid_or_spill( you, loc.parent_item().get_item() );

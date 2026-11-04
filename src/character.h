@@ -31,6 +31,7 @@
 #include "cata_utility.h"
 #include "character_attire.h"
 #include "character_id.h"
+#include "lua_platform_state.h"
 #include "city.h"  // IWYU pragma: keep
 #include "compatibility.h"
 #include "coordinates.h"
@@ -2971,6 +2972,7 @@ class Character : public Creature, public visitable
         bool male = false;
 
         std::vector<effect_on_condition_id> death_eocs;
+        cata::lua_platform::character_script_state lua_character_state;
         std::string lua_platform_death_mod;
         std::string lua_platform_death_handler;
         outfit worn;

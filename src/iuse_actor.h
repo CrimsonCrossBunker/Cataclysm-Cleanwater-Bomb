@@ -83,6 +83,10 @@ class iuse_transform : public iuse_actor
 
         /** Asks you to set a timer for a countdown */
         bool set_timer = false;
+        bool supports_owned_activation() const override {
+            return !set_timer;
+        }
+
 
         /** displayed if activation fails due to damage, with %s replaced by item name */
         translation damage_failure_msg;

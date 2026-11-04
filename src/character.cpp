@@ -1,4 +1,5 @@
 #include "item_consumption.h"
+#include "item_activation.h"
 #include "character.h"
 #include "character_action_guard.h"
 
@@ -112,6 +113,7 @@
 #ifdef MP_ENABLED
     #include "mp_client_conn.h"
     #include "mp_gamestate.h"
+    #include "mp_inventory_activity.h"
 #endif
 #include "move_mode.h"
 #include "mtype.h"
@@ -4927,13 +4929,17 @@ bool Character::invoke_item( item *used )
 bool Character::invoke_item( item *used, const tripoint_bub_ms &pt,
                              int pre_obtain_moves )
 {
-    if( used == nullptr ||
+    const character_action_guard lifetime( *this );
+    if( !lifetime || used == nullptr ||
         !cata::lua_platform::has_platform_item_use_handler( used->typeId().str() ) ) {
         return false;
     }
     const std::optional<int> result =
         cata::lua_platform::invoke_platform_item_use_handler(
             this, *used, &get_map(), pt );
+    if( !lifetime ) {
+        return false;
+    }
     if( !result ) {
         if( pre_obtain_moves >= 0 ) {
             set_moves( pre_obtain_moves );
@@ -4953,6 +4959,12 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
 {
     if( method.empty() ) {
         return invoke_item( used, pt, pre_obtain_moves );
+    }
+    const character_action_guard lifetime( *this );
+    if( !lifetime || !used ||
+        ( activity.execution() == activity_execution::authoritative &&
+          !supports_owned_item_activation( *used, method ) ) ) {
+        return false;
     }
 
     if( used->is_broken() ) {
@@ -5000,6 +5012,9 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
     }
     std::optional<int> charges_used = actually_used->type->invoke( this, *actually_used,
                                       pt, method );
+    if( !lifetime ) {
+        return false;
+    }
     if( !charges_used.has_value() ) {
         set_moves( pre_obtain_moves );
         return false;
@@ -5813,6 +5828,7 @@ void Character::assign_activity( const player_activity &act )
     if( !lifetime ) {
         return;
     }
+    const bool authoritative = activity.execution() == activity_execution::authoritative;
     bool resuming = false;
     if( !backlog.empty() && backlog.front().can_resume_with( act, *this ) ) {
         resuming = true;
@@ -5835,6 +5851,9 @@ void Character::assign_activity( const player_activity &act )
         activity = act;
     }
 
+    if( authoritative && activity.execution() != activity_execution::presentation ) {
+        activity.set_execution( activity_execution::authoritative );
+    }
     const auto identity = activity.identity_generation();
     activity.start_or_resume( *this, resuming );
     if( !lifetime || activity.identity_generation() != identity ) {
@@ -8781,6 +8800,15 @@ void Character::knock_back_to( const tripoint_bub_ms &to )
 
 void Character::use_wielded()
 {
+    if( is_avatar() && cata_mp::is_client_mode() ) {
+        item_location source = get_wielded_item();
+        std::string method;
+        if( source && cata_mp::client_activate_item( source, method ) ) {
+            return;
+        }
+        use( source, -1, method );
+        return;
+    }
     use( -1 );
 }
 

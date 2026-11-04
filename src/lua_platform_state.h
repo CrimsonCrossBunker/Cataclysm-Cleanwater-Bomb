@@ -104,6 +104,19 @@ script_persistent_value read_persistent_value( const JsonObject &entry );
 void assign_persistent_value( script_persistent_state &state, const std::string &key,
                               const script_persistent_value &value );
 
+// Character-owned Mod state follows the native actor through saves and snapshots.
+// An empty Mod entry is retained so legacy sidecars cannot resurrect deleted keys.
+class character_script_state
+{
+    public:
+        script_persistent_state &for_mod( const std::string &mod_id );
+        void migrate_legacy( const std::string &mod_id, script_persistent_state values );
+        void serialize( JsonOut &json ) const;
+        void deserialize( const JsonObject &json );
+    private:
+        std::map<std::string, script_persistent_state> mods_;
+};
+
 // Versioned, typed JSON codec.  Integers and floating-point values deliberately
 // retain distinct types across a save/load round trip.
 void write_persistent_state( std::ostream &output, const script_persistent_state &state );

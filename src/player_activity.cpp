@@ -22,6 +22,7 @@
 #include "calendar.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "cata_scope_helpers.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -37,6 +38,7 @@
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "rng.h"
 #include "skill.h"
 #include "sounds.h"
@@ -170,6 +172,9 @@ std::string player_activity::get_str_value( size_t index, std::string_view def )
 
 std::optional<std::string> player_activity::get_progress_message( const avatar &u ) const
 {
+    if( execution_ == activity_execution::presentation ) {
+        return g->multiplayer_session().client_inventory_activity.item_use_progress;
+    }
     if( type == ACT_NULL || get_verb().empty() ) {
         return std::optional<std::string>();
     }
@@ -224,6 +229,9 @@ std::optional<std::string> player_activity::get_progress_message( const avatar &
 
 void player_activity::start_or_resume( Character &who, bool resuming )
 {
+    if( execution_ == activity_execution::presentation ) {
+        return;
+    }
     const character_action_guard lifetime( who );
     const auto identity = identity_generation();
     if( !lifetime ) {
@@ -247,6 +255,10 @@ void player_activity::start_or_resume( Character &who, bool resuming )
 
 void player_activity::do_turn( Character &you )
 {
+    if( execution_ == activity_execution::presentation ) {
+        cata_mp::client_step_inventory_activity();
+        return;
+    }
     if( cata_mp::inventory_activity_view( *this ) ) {
         // Progress and all gameplay/Lua lifecycle hooks belong to the server.
         actor->do_turn( *this, you );
@@ -256,6 +268,15 @@ void player_activity::do_turn( Character &you )
     if( !character_reference ) {
         return;
     }
+    const bool authoritative = execution_ == activity_execution::authoritative;
+    const on_out_of_scope continue_authority( [&]() {
+        // Legacy actors sometimes replace the activity directly instead of
+        // calling Character::assign_activity. Keep their continuation owned.
+        if( authoritative && character_reference ) {
+            you.activity.set_execution( you.activity ? activity_execution::authoritative :
+                                        activity_execution::local );
+        }
+    } );
     // Specifically call the do turn function for the cancellation activity early
     // This is because the game can get stuck trying to fuel a fire when it's not...
     if( type == ACT_MIGRATION_CANCEL ) {
@@ -304,11 +325,13 @@ void player_activity::do_turn( Character &you )
         // NPCs that re-enter the reality bubble may have a large backlog of moves.
         // Allow them to fast-forward time-based activities proportionally.
         const int base_progress = 100;
-        const int npc_bonus = you.is_npc() ? std::max( 0, you.get_moves() - base_progress ) : 0;
+        // A remote player's NPC body follows the same clock as the avatar.
+        const bool npc_catchup = you.is_npc() && !you.is_player_controlled();
+        const int npc_bonus = npc_catchup ? std::max( 0, you.get_moves() - base_progress ) : 0;
         const int progress = base_progress + npc_bonus;
         if( moves_left >= progress ) {
             moves_left -= progress * activity_mult;
-            if( you.is_npc() ) {
+            if( npc_catchup ) {
                 you.mod_moves( -progress );
             } else {
                 you.set_moves( 0 );
@@ -518,6 +541,10 @@ void player_activity::do_turn( Character &you )
 
 void player_activity::canceled( Character &who )
 {
+    if( execution_ == activity_execution::presentation ) {
+        cata_mp::client_cancel_inventory_activity();
+        return;
+    }
     const character_action_guard lifetime( who, true );
     const auto identity = identity_generation();
     const bool view_only = client_firearm_view( who, type );

@@ -39,6 +39,7 @@ struct inventory_activity_host_state {
     bool tracks_needs = false;
     bool tracks_body = false;
     bool tracks_crafting = false;
+    bool tracks_item_use = false;
     character_id healing_patient;
     std::vector<craft_notice> notices;
 };
@@ -52,6 +53,7 @@ struct inventory_activity_client_state {
     bool needs_placement = false;
     bool can_wield = false;
     std::shared_ptr<item> preview;
+    std::string item_use_progress;
     std::string craft_decision;
     recipe_id craft_recipe;
     int craft_batch = 0;
@@ -79,6 +81,9 @@ void client_start_unload( const unload_intent &intent );
 void client_start_insert( const insert_selection &selection );
 void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft,
                            bool reprompt = false );
+// Returns true when the client request was handled. Unsupported native methods
+// remain on their existing path until their additional choices are migrated.
+bool client_activate_item( const item_location &source, std::string &method );
 void client_start_firstaid( const item_location &source, Character &patient,
                             const bodypart_str_id &part, bool allow_theft, bool reprompt = false );
 void client_start_craft( const craft_command &command );

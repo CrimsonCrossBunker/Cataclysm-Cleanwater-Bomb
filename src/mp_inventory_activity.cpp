@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <sstream>
 #include <set>
@@ -11,6 +12,7 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "cata_scope_helpers.h"
 #include "craft_command.h"
 #include "crafting.h"
@@ -22,6 +24,7 @@
 #include "game.h"
 #include "game_inventory.h"
 #include "item.h"
+#include "item_activation.h"
 #include "item_healing.h"
 #include "item_disposition.h"
 #include "item_insert.h"
@@ -30,6 +33,7 @@
 #include "item_reload.h"
 #include "item_uid.h"
 #include "itype.h"
+#include "iuse.h"
 #include "json.h"
 #include "map.h"
 #include "messages.h"
@@ -44,6 +48,7 @@
 #include "ret_val.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "string_formatter.h"
 #include "translations.h"
 #include "uilist.h"
 #include "uistate.h"
@@ -303,7 +308,7 @@ bool start_consume( Character &who, map &here, const JsonObject &request )
     return owns_inventory_activity( who );
 }
 
-bool begin_client_inventory_activity( const activity_actor &actor )
+bool begin_client_inventory_activity( const player_activity &activity )
 {
     auto &view = g->multiplayer_session().client_inventory_activity;
     if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
@@ -314,13 +319,34 @@ bool begin_client_inventory_activity( const activity_actor &actor )
     view.finished = false;
     view.cancel_requested = false;
     view.needs_placement = false;
+    view.item_use_progress.clear();
     view.craft_decision.clear();
     view.construction_decision.clear();
     view.construction_prompt.clear();
     view.construction_text = false;
     view.activity.clear();
-    get_avatar().assign_activity( actor );
+    get_avatar().assign_activity( activity );
     return true;
+}
+
+bool begin_client_inventory_activity( const activity_actor &actor )
+{
+    return begin_client_inventory_activity( player_activity( actor ) );
+}
+
+bool start_item_use( Character &who, map &here, const JsonObject &request )
+{
+    item_source identity;
+    request.read( "source", identity, true );
+    item_location source = resolve_item_source( who, here, identity );
+    if( !source || source->typeId().str() != request.get_string( "item_type" ) ) {
+        return false;
+    }
+    tripoint_abs_ms target;
+    request.read( "target", target, true );
+    return execute_owned_item_activation( who, source, request.get_string( "method" ), target,
+                                          request.get_bool( "allow_theft", false ),
+                                          request.get_bool( "allow_wet", false ) );
 }
 
 bool start_insert( Character &who, map &here, const JsonObject &request )
@@ -483,6 +509,9 @@ void send_inventory_activity( const std::string &operation,
 
 bool owns_inventory_activity( const Character &who )
 {
+    if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
+        return true;
+    }
     const auto *build = dynamic_cast<const build_construction_activity_actor *>
                         ( who.activity.actor.get() );
     const auto *craft = dynamic_cast<const craft_activity_actor *>( who.activity.actor.get() );
@@ -502,6 +531,9 @@ bool owns_inventory_activity( const Character &who )
 
 bool inventory_activity_view( const player_activity &activity )
 {
+    if( activity.execution() == activity_execution::presentation ) {
+        return true;
+    }
     const auto *build = dynamic_cast<const build_construction_activity_actor *>( activity.actor.get() );
     const auto *craft = dynamic_cast<const craft_activity_actor *>( activity.actor.get() );
     const auto *actor = dynamic_cast<const reload_activity_actor *>( activity.actor.get() );
@@ -521,7 +553,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
 {
     const int64_t sequence = request.get_int64( "request" );
     const std::string operation = request.get_string( "operation" );
-    const safe_reference<Creature> lifetime = who.get_safe_reference();
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return {};
+    }
     if( const auto *firstaid = native_firstaid( who ) ) {
         state.tracks_body = true;
         state.healing_patient = firstaid->patient_id();
@@ -532,6 +567,9 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( native_craft( who ) ) {
         state.tracks_crafting = state.tracks_body = state.tracks_needs = true;
     }
+    if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
+        state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
+    }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
         state.last_request = sequence;
@@ -539,12 +577,16 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             state.needs_placement = false;
             const std::string kind = request.get_string( "kind", "reload" );
             state.tracks_crafting = kind == "craft" || kind == "craft_resume";
+            state.tracks_item_use = kind == "item_use";
             const bool construction_request = kind == "construction" || kind == "construction_auto" ||
                                               kind == "construction_resume" || kind == "construction_cancel";
-            state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request;
+            state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request ||
+                                state.tracks_item_use;
             state.tracks_needs = state.tracks_needs || construction_request;
             state.healing_patient = character_id();
-            if( kind == "reload" ) {
+            if( kind == "item_use" ) {
+                start_item_use( who, here, request );
+            } else if( kind == "reload" ) {
                 start_reload( who, here, request );
             } else if( kind == "unload" ) {
                 start_owned_unload( who, here, request );
@@ -564,7 +606,11 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     state.healing_patient = firstaid->patient_id();
                 }
             }
-            state.tracks_needs = kind == "consume" || state.tracks_crafting || native_consume( who );
+            if( !lifetime ) {
+                return {};
+            }
+            state.tracks_needs = kind == "consume" || state.tracks_crafting ||
+                                 state.tracks_item_use || construction_request || native_consume( who );
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
             if( operation == "cancel" ) {
@@ -627,6 +673,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                                                     capture_item_source( who, target ) ) != target ) {
                     who.cancel_activity();
                 } else if( who.get_moves() > 0 && operation == "step" ) {
+                    who.activity.do_turn( who );
+                }
+            } else if( who.activity.execution() == activity_execution::authoritative ) {
+                if( operation == "step" && who.get_moves() > 0 ) {
                     who.activity.do_turn( who );
                 }
             } else if( !reload_locations_accessible( who, here, *native_reload( who ) ) ) {
@@ -700,6 +750,9 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         out.member( "construction_prompt", build->choice_prompt() );
         out.member( "construction_text", build->choice_is_text() );
     }
+    if( active && state.tracks_item_use ) {
+        out.member( "item_use_progress", who.activity.get_verb().translated() );
+    }
     out.member( "needs_placement", state.needs_placement );
     if( craft ) {
         out.member( "craft_progress", craft->get_progress_message( who.activity ) );
@@ -728,10 +781,13 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         out.member( "body" );
         who.store_turn_state( out );
         out.member( "practice" );
-        const bool learned = state.tracks_crafting && ( !craft ||
+        const bool learned = state.tracks_item_use || ( state.tracks_crafting && ( !craft ||
                              craft->waiting_for() == "repeat" || ( craft->target() &&
-                                     craft->target()->get_craft_results().stage >= craft_completion_stage::byproducts ) );
+                                     craft->target()->get_craft_results().stage >= craft_completion_stage::byproducts ) ) );
         who.store_practice_state( out, learned );
+    }
+    if( state.tracks_item_use ) {
+        out.member( "lua_character_state", who.lua_character_state );
     }
     out.member( "combat" );
     *out.get_stream() << combat;
@@ -748,10 +804,14 @@ bool apply_inventory_activity_result( const JsonObject &response )
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     auto &session = g->multiplayer_session();
     auto &view = session.client_inventory_activity;
+
     JsonObject combat = response.get_object( "combat" );
     combat.allow_omitted_members();
     if( !apply_combat_result( get_avatar(), combat, session.client_pickup ) ) {
         return true;
+    }
+    if( response.has_member( "lua_character_state" ) ) {
+        response.read( "lua_character_state", get_avatar().lua_character_state, true );
     }
     if( response.has_object( "needs" ) ) {
         get_avatar().load_needs_state( response.get_object( "needs" ) );
@@ -774,6 +834,7 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.needs_placement = response.get_bool( "needs_placement" );
         view.can_wield = response.get_bool( "can_wield", false );
         view.preview.reset();
+        view.item_use_progress = response.get_string( "item_use_progress", "" );
         view.craft_decision = response.get_string( "craft_decision", "" );
         view.construction_decision = response.get_string( "construction_decision", "" );
         view.construction_prompt = response.get_string( "construction_prompt", "" );
@@ -962,6 +1023,69 @@ void client_start_consume( const item_location &source, bool allow_consequences,
         out.member( "allow_consequences", allow_consequences );
         out.member( "allow_theft", allow_theft );
     } );
+}
+
+bool client_activate_item( const item_location &source, std::string &method )
+{
+    if( !is_client_mode() || !source || source->has_relic_activation() ) {
+        return false;
+    }
+    avatar &who = get_avatar();
+    if( is_client_waiting_for_ack() || who.get_moves() <= 0 ||
+        g->multiplayer_session().client_inventory_activity.active ) {
+        return true;
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const auto &methods = source->type->use_methods;
+    if( method.empty() && !methods.empty() ) {
+        if( methods.size() == 1 ) {
+            method = methods.begin()->first;
+        } else {
+            uilist menu;
+            menu.text = string_format( _( "What to do with your %s?" ), source->tname() );
+            for( const auto &entry : methods ) {
+                const auto available = entry.second.can_call( who, *source, source.pos_bub( get_map() ) );
+                menu.addentry_desc( MENU_AUTOASSIGN, available.success(), MENU_AUTOASSIGN,
+                                    entry.second.get_name(), available.str() );
+            }
+            menu.query();
+            if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= methods.size() ) {
+                return true;
+            }
+            method = std::next( methods.begin(), menu.ret )->first;
+        }
+    }
+    if( !supports_owned_item_activation( *source, method ) ) {
+        return false;
+    }
+    if( !query_consumption_ownership( *source, who ) ) {
+        return true;
+    }
+    const bool wet = source->wetness && source->has_flag( flag_WATER_BREAK_ACTIVE );
+    if( wet &&
+        !who.query_yn( _( "This item is still wet and it will break if you turn it on.  Proceed?" ) ) ) {
+        return true;
+    }
+    const item_source identity = capture_item_source( who, source );
+    const itype_id type = source->typeId();
+    const bool allow_theft = !source->is_owned_by( who, true );
+    const tripoint_abs_ms target = source->has_flag( flag_ALLOWS_REMOTE_USE ) ? source.pos_abs() :
+                                   who.pos_abs();
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !begin_client_inventory_activity( view ) ) {
+        return true;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", identity );
+        out.member( "item_type", type );
+        out.member( "method", method );
+        out.member( "target", target );
+        out.member( "allow_theft", allow_theft );
+        out.member( "allow_wet", wet );
+    } );
+    return true;
 }
 
 void client_start_firstaid( const item_location &source, Character &patient,
