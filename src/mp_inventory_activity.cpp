@@ -13,6 +13,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "martial_style_selection.h"
 #include "character.h"
 #include "character_action_guard.h"
 #include "cata_scope_helpers.h"
@@ -346,6 +347,7 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
         return false;
     }
     bionic_activation_choices choices;
+    request.read( "martial_style", choices.martial_style );
     tripoint_abs_ms target;
     if( request.read( "target", target ) ) {
         choices.target = target;
@@ -630,10 +632,16 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             const bool construction_request = kind == "construction" || kind == "construction_auto" ||
                                               kind == "construction_resume" || kind == "construction_cancel";
             state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request ||
-                                state.tracks_item_use;
+                                state.tracks_item_use || kind == "martial_style";
             state.tracks_needs = state.tracks_needs || construction_request;
             state.healing_patient = character_id();
-            if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
+            if( kind == "martial_style" ) {
+                martial_style_choice choice;
+                request.read( "martial_style", choice, true );
+                if( !who.activity ) {
+                    execute_martial_style_choice( who, choice );
+                }
+            } else if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
                 start_bionic_action( who, request, kind == "bionic_activation" ?
                                      bionic_action::activate : bionic_action::deactivate );
             } else if( state.tracks_item_use ) {
@@ -1227,10 +1235,31 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
         if( selected->target ) {
             out.member( "target", *selected->target );
         }
+        if( selected->martial_style ) {
+            out.member( "martial_style", *selected->martial_style );
+        }
     } );
     return true;
 }
 } // namespace
+
+bool client_select_martial_style( const martial_style_choice &choice )
+{
+    avatar &who = get_avatar();
+    if( !is_client_mode() || !valid_martial_style_choice( who, choice ) ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !begin_client_inventory_activity( view ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "martial_style" );
+        out.member( "martial_style", choice );
+    } );
+    return true;
+}
 
 std::optional<bool> client_activate_bionic( const bionic &bio,
         const bionic_activation_choices *choices )

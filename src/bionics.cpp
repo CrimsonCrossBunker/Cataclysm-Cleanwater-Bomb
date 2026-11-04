@@ -1104,9 +1104,16 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         }
     } else if( bio.id == bio_cqb ) {
         add_msg_activate();
-        const avatar *you = as_avatar();
-        if( you && !martial_arts_data->pick_style( *you ) ) {
-            bio.powered = false;
+        const bool selected = choices ? execute_martial_style_choice( *this, *choices->martial_style ) :
+                              !is_avatar() || martial_arts_data->pick_style( *this );
+        if( !lifetime ) {
+            return false;
+        }
+        if( !selected ) {
+            const auto current = find_bionic_by_uid( activation_uid );
+            if( current ) {
+                ( *current )->powered = false;
+            }
             add_msg_if_player( m_info, _( "You change your mind and turn it off." ) );
             return false;
         }

@@ -17,6 +17,7 @@ struct construction_selection;
 class Character;
 struct bionic;
 struct bionic_activation_choices;
+struct martial_style_choice;
 class craft_command;
 class item;
 class item_location;
@@ -95,6 +96,7 @@ bool client_auto_mine( const tripoint_abs_ms &target );
 std::optional<bool> client_activate_bionic( const bionic &bio,
         const bionic_activation_choices *choices = nullptr );
 std::optional<bool> client_deactivate_bionic( const bionic &bio );
+bool client_select_martial_style( const martial_style_choice &choice );
 bool client_examine_pry( const item_location &tool, const tripoint_abs_ms &target );
 void client_start_firstaid( const item_location &source, Character &patient,
                             const bodypart_str_id &part, bool allow_theft, bool reprompt = false );
