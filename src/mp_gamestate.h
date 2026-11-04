@@ -12,6 +12,7 @@
 #include "mp_melee.h"
 #include "mp_firearm.h"
 #include "character_id.h"
+#include "player_identity.h"
 #include "coordinates.h"
 #include "type_id.h"
 
@@ -33,6 +34,8 @@ struct throw_intent;
 // Called once per game turn from do_turn() — drains the event queue and
 // processes connect/disconnect/action events from remote players.
 void process_mp_events();
+
+player_id partner_identity( character_id actor );
 
 std::string client_partner_action( const std::string &action, character_id target );
 

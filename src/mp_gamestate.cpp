@@ -1332,7 +1332,7 @@ void mp_on_world_exit()
     mp_session().reset();
 }
 
-static player_id partner_identity( character_id actor )
+player_id partner_identity( character_id actor )
 {
     if( actor == get_avatar().getID() ) {
         return get_avatar().get_player_id();
@@ -2265,6 +2265,11 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                 state.insert( state.size() - 1, ",\"free\":true" );
             }
             server->post_send( recipient.admission, state + "\n" );
+            if( auto *patient = mp_session().find_remote( recipient.inventory_activity.healing_patient ) ) {
+                if( patient != &recipient && patient->connected && !patient->detach_pending ) {
+                    server->post_send( patient->admission, serialize_remote_player_state( *patient ) + "\n" );
+                }
+            }
         }
         g->invalidate_main_ui_adaptor();
         return;
@@ -4897,7 +4902,7 @@ bool is_passive_activity( const std::string &activity_id_str )
     // Activities where the avatar is committed turn-after-turn without
     // per-turn user input.  Once entered, SP's activity_actor::do_turn ticks
     // the activity on every game turn at machine speed.  Excludes:
-    //  - ACT_FIRSTAID, ACT_AIM, ACT_AUTOATTACK, ACT_AUTODRIVE — interactive
+    //  - ACT_AIM, ACT_AUTOATTACK, ACT_AUTODRIVE — interactive
     //  - ACT_NULL / empty — not in an activity
     static const std::set<std::string> passive = {
         "ACT_CRAFT", "ACT_LONG_CRAFT", "ACT_DISASSEMBLE", "ACT_DISMEMBER",
@@ -4913,7 +4918,7 @@ bool is_passive_activity( const std::string &activity_id_str )
         "ACT_FORAGE", "ACT_FISH",
         "ACT_FILL_LIQUID", "ACT_PICKUP", "ACT_MOVE_ITEMS",
         "ACT_WAIT", "ACT_WAIT_STAMINA", "ACT_WAIT_WEATHER", "ACT_WAIT_NPC",
-        "ACT_SLEEP",
+        "ACT_SLEEP", "ACT_FIRSTAID",
         "ACT_HELP_PARTNER",
     };
     return passive.count( activity_id_str ) > 0;
@@ -8809,7 +8814,8 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_id
 void client_send_activity_start( const std::string &activity_id_str )
 {
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
-          activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ) &&
+          activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
+          activity_id_str == "ACT_FIRSTAID" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8830,7 +8836,8 @@ void client_send_activity_start( const std::string &activity_id_str )
 void client_send_activity_end( const std::string &activity_id_str )
 {
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
-          activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ) &&
+          activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
+          activity_id_str == "ACT_FIRSTAID" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }

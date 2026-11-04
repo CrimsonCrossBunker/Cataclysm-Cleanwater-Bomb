@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "cached_options.h"
@@ -11,6 +12,8 @@
 #include "event.h"
 #include "event_bus.h"
 #include "pimpl.h"
+#include "json.h"
+#include "skill.h"
 #include "proficiency.h"
 #include "translations.h"
 #include "type_id.h"
@@ -133,4 +136,33 @@ std::vector<proficiency_id> Character::proficiencies_offered_to( const Character
         }
     }
     return ret;
+}
+
+void Character::store_practice_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "skills" );
+    out.start_object();
+    for( const auto &entry : get_all_skills() ) {
+        out.member( entry.first.str(), entry.second );
+    }
+    out.end_object();
+    out.member( "proficiencies", *_proficiencies );
+    out.end_object();
+}
+
+void Character::load_practice_state( const JsonObject &data )
+{
+    SkillLevelMap skills;
+    for( const JsonMember &entry : data.get_object( "skills" ) ) {
+        const skill_id id( entry.name() );
+        if( !id.is_valid() ) {
+            data.throw_error_at( "skills", "Unknown skill in activity result" );
+        }
+        skills[id].deserialize( entry.get_object() );
+    }
+    proficiency_set proficiencies;
+    proficiencies.deserialize( data.get_object( "proficiencies" ) );
+    *_skills = std::move( skills );
+    *_proficiencies = std::move( proficiencies );
 }

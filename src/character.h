@@ -3024,6 +3024,9 @@ class Character : public Creature, public visitable
 
         // Per-turn body/effect projection. Does not replace carried items,
         // identity, position, activities, or execute simulation callbacks.
+        // Activity result projection; restore progress without practicing again.
+        void store_practice_state( JsonOut &json ) const;
+        void load_practice_state( const JsonObject &data );
         void store_turn_state( JsonOut &json ) const;
         void load_turn_state( const JsonObject &data );
 
