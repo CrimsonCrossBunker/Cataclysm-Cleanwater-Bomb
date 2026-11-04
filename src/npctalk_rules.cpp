@@ -27,6 +27,7 @@
 #include "ui_manager.h"
 
 static std::map<cbm_recharge_rule, std::string> recharge_map = {
+    {cbm_recharge_rule::CBM_RECHARGE_AUTO, "<ally_rule_cbm_recharge_auto_text>" },
     {cbm_recharge_rule::CBM_RECHARGE_ALL, "<ally_rule_cbm_recharge_all_text>" },
     {cbm_recharge_rule::CBM_RECHARGE_MOST, "<ally_rule_cbm_recharge_most_text>" },
     {cbm_recharge_rule::CBM_RECHARGE_SOME, "<ally_rule_cbm_recharge_some_text>" },
@@ -35,6 +36,7 @@ static std::map<cbm_recharge_rule, std::string> recharge_map = {
 };
 
 static std::map<cbm_reserve_rule, std::string> reserve_map = {
+    {cbm_reserve_rule::CBM_RESERVE_AUTO, "<ally_rule_cbm_reserve_auto_text>" },
     {cbm_reserve_rule::CBM_RESERVE_ALL, "<ally_rule_cbm_reserve_all_text>" },
     {cbm_reserve_rule::CBM_RESERVE_MOST, "<ally_rule_cbm_reserve_most_text>" },
     {cbm_reserve_rule::CBM_RESERVE_SOME, "<ally_rule_cbm_reserve_some_text>" },
@@ -69,7 +71,7 @@ void follower_rules_ui::draw_follower_rules_ui( npc *guy )
     ctxt.register_navigate_ui_list();
     ctxt.register_leftright();
     ctxt.register_action( "MOUSE_MOVE" );
-    ctxt.register_action( "CONFIRM", to_translation( "Set, toggle, or reset selected rule" ) );
+    ctxt.register_action( "CONFIRM", to_translation( "设置、切换或重置所选规则" ) );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "ANY_INPUT" );
@@ -158,52 +160,52 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
 {
     std::string toggle_label;
     if( exporting_rules ) {
-        cataimgui::draw_colored_text( string_format( _( "Exporting rules from <color_white>%s</color>" ),
+        cataimgui::draw_colored_text( string_format( _( "导出<color_white>%s</color>的设置" ),
                                       guy->disp_name() ), c_blue );
         //~Label for a button used to copy NPC follower rules to another NPC
-        toggle_label = _( "Export" );
+        toggle_label = _( "导出" );
     } else {
-        cataimgui::draw_colored_text( string_format( _( "Importing rules to <color_white>%s</color>" ),
+        cataimgui::draw_colored_text( string_format( _( "将设置导入<color_white>%s</color>" ),
                                       guy->disp_name() ), c_yellow );
         //~Label for a button used to copy NPC follower rules from another NPC
-        toggle_label = _( "Import" );
+        toggle_label = _( "导入" );
     }
     // Not ideal but leaves plenty of room for even verbose languages. Really anywhere top-right-ish is fine
     ImGui::SameLine( ImGui::GetWindowWidth() * 0.7 );
-    if( ImGui::Button( _( "Return to rules settings" ) ) ) {
+    if( ImGui::Button( _( "返回队友设置" ) ) ) {
         still_in_popup = false;
         return;
     }
     if( g->get_follower_list().size() < 2 ) {
         cataimgui::draw_colored_text( string_format(
-                                          _( "Functions unavailable.  %s is your only follower." ),
+                                          _( "无法使用此功能，%s 是你唯一的队友。" ),
                                           guy->disp_name() ), c_red );
         return;
     }
-    if( ImGui::Button( _( "Toggle export/import" ) ) ) {
+    if( ImGui::Button( _( "切换导入／导出" ) ) ) {
         exporting_rules = !exporting_rules;
     }
     ImGui::NewLine();
     cataimgui::draw_colored_text( string_format(
-                                      _( "Individual settings are colored if they already match to %s." ),
+                                      _( "与 %s 相同的设置会以颜色标记。" ),
                                       guy->disp_name() ) );
     if( ImGui::BeginTable( "##SETTINGS_SWAP_TABLE", 8, ImGuiTableFlags_None,
                            ImVec2( window_width, window_height ) ) ) {
-        ImGui::TableSetupColumn( _( "Name" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "姓名" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Behaviors" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "行为" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Aiming" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "瞄准" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Engagement" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "交战" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "CBM recharge" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "仿生充电" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "CBM reserve" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "能源预留" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Pickup list" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "拾取名单" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "ALL" ), ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn( _( "全部" ), ImGuiTableColumnFlags_WidthStretch,
                                  static_cast<float>( window_width / 8.0f ) );
         ImGui::TableHeadersRow();
         int button_number = 0;
@@ -303,7 +305,7 @@ void follower_rules_ui_impl::checkbox( int rule_number, const T &this_rule,
         guy->rules.toggle_specific_override_state( this_rule.rule, rule_enabled );
     }
     ImGui::SameLine();
-    auto label = _( "Default" );
+    auto label = _( "恢复默认" );
     auto x = ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize -
              ImGui::GetStyle().WindowPadding.x - ImGui::CalcTextSize( label, nullptr, true ).x;
     ImGui::SetCursorPosX( x );
@@ -378,27 +380,27 @@ void follower_rules_ui_impl::draw_controls()
     input_event assigned_hotkey = input_ptr->first_unassigned_hotkey( hotkeys );
     input_event pressed_key = input_ptr->get_raw_input();
 
-    cataimgui::draw_colored_text( string_format( _( "Rules for your follower, %s" ),
+    cataimgui::draw_colored_text( string_format( _( "队友设置：%s" ),
                                   guy->disp_name() ) );
     ImGui::Separator();
 
-    if( ImGui::Button( _( "Import settings from follower" ) ) ) {
+    if( ImGui::Button( _( "从其他队友导入设置" ) ) ) {
         exporting_rules = false;
         in_popup = true;
         return;
     }
-    if( ImGui::Button( _( "Export settings to follower" ) ) ) {
+    if( ImGui::Button( _( "将设置导出给其他队友" ) ) ) {
         exporting_rules = true;
         in_popup = true;
         return;
     }
 
-    cataimgui::draw_colored_text( _( "Hotkey:" ) );
+    cataimgui::draw_colored_text( _( "快捷键：" ) );
     ImGui::NewLine();
 
 
     print_hotkey( assigned_hotkey );
-    if( ImGui::Button( _( "Default ALL" ) ) || pressed_key == assigned_hotkey ) {
+    if( ImGui::Button( _( "全部恢复默认" ) ) || pressed_key == assigned_hotkey ) {
         ImGui::SetKeyboardFocusHere( -1 );
         // TODO: use query_yn here as a safeguard against fatfingering. Can't use it right now,
         // it destructs the imgui instance(?!) which obviously causes us to crash
@@ -406,6 +408,10 @@ void follower_rules_ui_impl::draw_controls()
         guy->rules = default_values;
     }
     ImGui::NewLine();
+
+    if( !ImGui::CollapsingHeader( _( "高级指令" ) ) ) {
+        return;
+    }
 
     int rule_number = 0;
     /* Handle all of our regular, boolean rules */
@@ -417,12 +423,12 @@ void follower_rules_ui_impl::draw_controls()
 
     // Engagement rules require their own set of buttons, each instruction is unique
     assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
-    radio_group( "ENGAGEMENT_RULES", _( "Engagement rules:" ), &guy->rules.engagement, engagement_rules,
+    radio_group( "ENGAGEMENT_RULES", _( "交战方式：" ), &guy->rules.engagement, engagement_rules,
                  assigned_hotkey, pressed_key );
 
     // Aiming rule also has a non-boolean set of values
     assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
-    radio_group( "AIMING_RULES", _( "Aiming rules:" ), &guy->rules.aim, aim_rule_map, assigned_hotkey,
+    radio_group( "AIMING_RULES", _( "瞄准方式：" ), &guy->rules.aim, aim_rule_map, assigned_hotkey,
                  pressed_key );
 
     /* Shows CBM rules, but only if the character has bionics. Must be last because it will
@@ -430,11 +436,11 @@ void follower_rules_ui_impl::draw_controls()
     the character has bionics. That's bad for muscle memory! */
     if( !guy->get_bionics().empty() ) {
         assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
-        radio_group( "RECHARGE_RULES", _( "CBM recharging rules:" ), &guy->rules.cbm_recharge, recharge_map,
+        radio_group( "RECHARGE_RULES", _( "仿生能源充电：" ), &guy->rules.cbm_recharge, recharge_map,
                      assigned_hotkey, pressed_key );
 
         assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
-        radio_group( "RESERVE_RULES", _( "CBM reserve rules" ), &guy->rules.cbm_reserve, reserve_map,
+        radio_group( "RESERVE_RULES", _( "仿生能源预留" ), &guy->rules.cbm_reserve, reserve_map,
                      assigned_hotkey, pressed_key );
     }
 

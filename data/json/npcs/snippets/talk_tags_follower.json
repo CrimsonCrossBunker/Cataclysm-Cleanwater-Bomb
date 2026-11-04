@@ -1,6 +1,26 @@
 [
   {
     "type": "snippet",
+    "category": "<ally_rule_share_supplies_true_text>",
+    "text": [ "共享补给，并将多余物资存入储物区。" ]
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_share_supplies_false_text>",
+    "text": [ "保留自己的补给，不共享，也不自动存放。" ]
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_cbm_recharge_auto_text>",
+    "text": "自动充电：根据远行和危险情况准备仿生能源。"
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_cbm_reserve_auto_text>",
+    "text": "自动预留：根据防御组件消耗保留应急能源。"
+  },
+  {
+    "type": "snippet",
     "category": "<hungry>",
     "//": "Complaint when the NPC is hungry and wants food.",
     "text": [
@@ -861,304 +881,304 @@
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_recharge_all_text>",
-    "text": "<mypronoun> will recharge power CBMs until <mypronoun> has 90% of total power."
+    "text": "能源低于 90% 时尝试充电。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_recharge_most_text>",
-    "text": "<mypronoun> will recharge power CBMs until <mypronoun> has 75% of total power."
+    "text": "能源低于 75% 时尝试充电。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_recharge_some_text>",
-    "text": "<mypronoun> will recharge power CBMs until <mypronoun> has 50% of total power."
+    "text": "能源低于 50% 时尝试充电。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_recharge_little_text>",
-    "text": "<mypronoun> will recharge power CBMs until <mypronoun> has 25% of total power."
+    "text": "能源低于 25% 时尝试充电。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_recharge_none_text>",
-    "text": "<mypronoun> will recharge power CBMs until <mypronoun> has 10% of total power."
+    "text": "能源低于 10% 时尝试充电。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_reserve_all_text>",
-    "text": "<mypronoun> will reserve 100% of CBM power for defense or utility CBMs."
+    "text": "为防御或辅助仿生组件预留 100% 的能源。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_reserve_most_text>",
-    "text": "<mypronoun> will reserve 75% of CBM power for defense or utility CBMs."
+    "text": "为防御或辅助仿生组件预留 75% 的能源。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_reserve_some_text>",
-    "text": "<mypronoun> will reserve 50% of CBM power for defense or utility CBMs."
+    "text": "为防御或辅助仿生组件预留 50% 的能源。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_reserve_little_text>",
-    "text": "<mypronoun> will reserve 25% of CBM power for defense or utility CBMs."
+    "text": "为防御或辅助仿生组件预留 25% 的能源。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_cbm_reserve_none_text>",
-    "text": "<mypronoun> will not reserve any power for defense or utility CBMs."
+    "text": "不为防御或辅助仿生组件预留能源。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_aim_when_convenient>",
-    "text": "<mypronoun> will aim when it's convenient."
+    "text": "根据战况选择瞄准时机。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_aim_spray>",
-    "text": "<mypronoun> will not bother to aim at all."
+    "text": "不额外瞄准，直接射击。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_aim_precise>",
-    "text": "<mypronoun> will take time and aim carefully."
+    "text": "花时间仔细瞄准。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_aim_strictly_precise>",
-    "text": "<mypronoun> will only shoot after taking a long time to aim."
+    "text": "充分瞄准后才射击。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_none>",
-    "text": "<mypronoun> won't fight unless their life depends on it."
+    "text": "除非生命受到威胁，否则不战斗。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_close>",
-    "text": "<mypronoun> will attack enemies that get too close."
+    "text": "攻击距离过近的敌人。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_weak>",
-    "text": "<mypronoun> will attack enemies that they can kill easily."
+    "text": "攻击能够轻松击败的敌人。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_hit>",
-    "text": "<mypronoun> will attack only enemies that you attack first."
+    "text": "只攻击玩家率先攻击的敌人。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_all>",
     "text": [
-      { "text": "<mypronoun> will attack anything they want.", "weight": 999 },
-      { "text": "<npc_name> has permission to go <color_red>ABSOLUTELY AXE CRAZY!</color>", "weight": 1 }
+      { "text": "自主攻击敌人。", "weight": 999 },
+      { "text": "允许 <npc_name><color_red>大开杀戒！</color>", "weight": 1 }
     ]
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_free_fire>",
-    "text": "<mypronoun> will attack any enemy within range of their ranged weapon, but won't move."
+    "text": "攻击远程武器射程内的敌人，但不移动。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_engagement_no_move>",
-    "text": "<mypronoun> will attack only enemies they can reach without moving."
+    "text": "只攻击不移动就能打到的敌人。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_use_guns_true_text>",
-    "text": "<mypronoun> will use ranged weapons."
+    "text": "允许使用远程武器。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_use_guns_false_text>",
-    "text": "<mypronoun> will not use ranged weapons."
+    "text": "禁止使用远程武器。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_use_grenades_true_text>",
-    "text": "<mypronoun> will use grenades."
+    "text": "允许使用手雷。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_use_grenades_false_text>",
-    "text": "<mypronoun> will not use grenades."
+    "text": "禁止使用手雷。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_use_silent_true_text>",
-    "text": "<mypronoun> will only use silenced ranged weapons."
+    "text": "只使用消音远程武器。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_use_silent_false_text>",
-    "text": "<mypronoun> will use any ranged weapons."
+    "text": "不限制远程武器的噪声。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_avoid_friendly_fire_true_text>",
-    "text": "<mypronoun> will avoid shooting if allies are in the line of fire."
+    "text": "友军处于射线上时避免射击。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_avoid_friendly_fire_false_text>",
-    "text": "<mypronoun> will shoot even if allies are in the line of fire."
+    "text": "即使友军处于射线上也允许射击。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_pick_up_true_text>",
-    "text": "<mypronoun> will pick up items."
+    "text": "允许拾取物品。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_pick_up_true_list_text>",
-    "text": "<mypronoun> will only pick up items from the whitelist."
+    "text": "只拾取白名单中的物品。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_pick_up_false_text>",
-    "text": "<mypronoun> will not pick up items."
+    "text": "禁止拾取物品。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_bash_true_text>",
-    "text": "<mypronoun> will bash down obstacles."
+    "text": "允许砸毁障碍物。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_bash_false_text>",
-    "text": "<mypronoun> will not bash down obstacles."
+    "text": "禁止砸毁障碍物。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_sleep_true_text>",
-    "text": "<mypronoun> will sleep when tired."
+    "text": "疲倦时允许自行睡觉。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_sleep_false_text>",
-    "text": "<mypronoun> will stay awake as long as possible."
+    "text": "尽可能保持清醒。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_complain_true_text>",
-    "text": "<mypronoun> will complain about wounds and needs."
+    "text": "汇报伤势、需求与自主行动。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_complain_false_text>",
-    "text": "<mypronoun> will only complain in an emergency."
+    "text": "只在紧急情况下汇报。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_pulp_true_text>",
-    "text": "<mypronoun> will smash nearby zombie corpses."
+    "text": "捣烂附近的丧尸尸体。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_allow_pulp_false_text>",
-    "text": "<mypronoun> will leave zombie corpses intact."
+    "text": "不捣烂丧尸尸体。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_close_doors_true_text>",
-    "text": "<mypronoun> will close doors after passing through."
+    "text": "通过后随手关门。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_close_doors_false_text>",
-    "text": "<mypronoun> will not close doors."
+    "text": "不主动关门。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_lock_doors_true_text>",
-    "text": "<mypronoun> will lock doors when closing them."
+    "text": "关门时同时上锁。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_lock_doors_false_text>",
-    "text": "<mypronoun> will not lock doors."
+    "text": "不上锁。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_follow_close_true_text>",
-    "text": "<mypronoun> will follow you closely even when threatened."
+    "text": "即使受到威胁也紧跟玩家。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_follow_close_false_text>",
-    "text": "<mypronoun> will move freely as needed."
+    "text": "根据需要自由走位。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_follow_distance_2_true_text>",
-    "text": "<mypronoun> will follow you at about two paces."
+    "text": "与玩家保持约两步距离。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_follow_distance_2_false_text>",
-    "text": "<mypronoun> will follow you at about four paces."
+    "text": "与玩家保持约四步距离。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_follow_distance_request_2_text>",
-    "text": "Follow me at about two paces."
+    "text": "与我保持约两步距离。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_follow_distance_request_4_text>",
-    "text": "Follow me at about four paces."
+    "text": "与我保持约四步距离。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_avoid_doors_true_text>",
-    "text": "<mypronoun> will not go places that require opening a door."
+    "text": "不前往需要开门才能到达的位置。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_avoid_doors_false_text>",
-    "text": "<mypronoun> will open doors to reach a destination."
+    "text": "允许开门前往目的地。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_avoid_locks_true_text>",
-    "text": "<mypronoun> will not try to unlock doors."
+    "text": "不尝试解锁门。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_avoid_locks_false_text>",
-    "text": "<mypronoun> will unlock doors to open them."
+    "text": "允许解锁并打开门。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_hold_the_line_true_text>",
-    "text": "<mypronoun> will hold the line by not moving into doorways or obstructions adjacent to you."
+    "text": "保持阵线，不进入玩家旁边的门口或障碍位置。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_hold_the_line_false_text>",
-    "text": "<mypronoun> will move freely to attack enemies."
+    "text": "允许自由移动攻击敌人。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_ignore_noise_true_text>",
-    "text": "<mypronoun> will not investigate noises."
+    "text": "不调查声音。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_ignore_noise_false_text>",
-    "text": "<mypronoun> will investigate noises from unseen places."
+    "text": "调查视野外传来的声音。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_forbid_engage_true_text>",
-    "text": "<mypronoun> will not engage enemies if avoidable."
+    "text": "尽可能避免接敌。"
   },
   {
     "type": "snippet",
     "category": "<ally_rule_forbid_engage_false_text>",
-    "text": "<mypronoun> will follow normal engagement rules."
+    "text": "按交战指令行动。"
   }
 ]

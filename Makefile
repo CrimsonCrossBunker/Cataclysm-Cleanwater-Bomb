@@ -1354,12 +1354,21 @@ ifeq ($(PCH), 1)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MM -MP -MT "$@" -MF "$(@:.o=.d)" "$<"
 endif
 
-# Explicitly repair old, incomplete dependencies without deleting object files.
-.PHONY: header-dependencies
-header-dependencies: $(patsubst $(SRC_DIR)/%.cpp,$(ODIR)/%.headers,$(wildcard $(SRC_DIR)/*.cpp))
+# Remake legacy dependency files before make evaluates any object timestamps.
+# A recipe-only fix misses objects whose old PCH dependencies omit changed headers.
+HEADER_DEPFILES := $(filter $(OBJS:.o=.d),$(patsubst $(SRC_DIR)/%.cpp,$(ODIR)/%.d,$(wildcard $(SRC_DIR)/*.cpp)))
+HEADER_DEPENDENCY_STAMP := $(ODIR)/header-dependencies-v1.stamp
 
-$(ODIR)/%.headers: $(SRC_DIR)/%.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MM -MP -MT "$(ODIR)/$*.o" -MF "$(ODIR)/$*.d" "$<"
+$(HEADER_DEPENDENCY_STAMP):
+	@mkdir -p $(@D)
+	@touch "$@"
+
+$(HEADER_DEPFILES): $(ODIR)/%.d: $(SRC_DIR)/%.cpp $(HEADER_DEPENDENCY_STAMP)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MM -MP -MT "$(ODIR)/$*.o" -MF "$@.tmp" "$<"
+	@mv "$@.tmp" "$@"
+
+.PHONY: header-dependencies
+header-dependencies: $(HEADER_DEPFILES)
 
 $(ODIR)/%.o: $(SRC_DIR)/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -MMD -MP $<

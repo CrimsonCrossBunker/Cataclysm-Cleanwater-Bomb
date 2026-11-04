@@ -27,7 +27,7 @@ class follower_rules_ui_impl : public cataimgui::window
     public:
         std::string last_action;
         input_context *input_ptr = nullptr;
-        explicit follower_rules_ui_impl() : cataimgui::window( _( "Rules for your follower" ),
+        explicit follower_rules_ui_impl() : cataimgui::window( _( "队友设置" ),
                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) {
         }
 

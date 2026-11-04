@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <list>
 #include <memory>
 #include <optional>
@@ -9,10 +10,12 @@
 #include "creature_tracker.h"
 #include "flag.h"
 #include "game.h"
+#include "gun_mode.h"
 #include "item.h"
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "monster.h"
 #include "npc.h"
 #include "npc_attack.h"
@@ -343,3 +346,204 @@ TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
 // TODO: Add scenarios for:
 // - NPCs carrying a mix of weapons
 // - NPCs trying to shoot through allies
+
+
+TEST_CASE( "NPC_sniper_acquires_a_visible_distant_enemy_without_advancing",
+           "[npc_attack][ranged][autonomy]" )
+{
+    clear_map_and_put_player_underground();
+    clear_vehicles();
+    scoped_weather_override sunny_weather( weather_sunny );
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    shooter.set_attitude( NPCATT_FOLLOW );
+    shooter.rules = npc_follower_rules();
+    shooter.set_skill_level( skill_id( "gun" ), 10 );
+    shooter.set_skill_level( skill_id( "rifle" ), 10 );
+    arm_shooter( shooter, itype_id( "remington_700" ), { itype_id( "rifle_scope" ) } );
+    get_player_character().setpos( get_map(), main_npc_start_tripoint + tripoint( 0, 2, 0 ) );
+    monster *enemy = npc_attack_setup::spawn_zombie_at_range( 24 );
+    REQUIRE( enemy != nullptr );
+    set_time_to_day();
+    REQUIRE( shooter.rules.engagement == combat_engagement::CLOSE );
+    REQUIRE( shooter.sees( get_map(), *enemy ) );
+    const item_location gun = shooter.get_wielded_item();
+    REQUIRE( gun );
+    REQUIRE( shooter.confident_shoot_range( *gun,
+                                          shooter.most_accurate_aiming_method_limit( *gun ) ) >= 24 );
+    shooter.invalidate_range_cache();
+    shooter.regen_ai_cache();
+    CHECK( shooter.current_target() == enemy );
+    shooter.evaluate_best_attack( enemy );
+    CHECK( dynamic_cast<npc_attack_gun *>( shooter.get_current_attack().get() ) != nullptr );
+    const tripoint_bub_ms position = shooter.pos_bub();
+    shooter.set_moves( 100 );
+    CHECK_FALSE( shooter.autonomous_tactical_step() );
+    CHECK( shooter.pos_bub() == position );
+}
+
+TEST_CASE( "NPC_can_schedule_an_empty_firearm_with_a_loaded_spare_magazine",
+           "[npc_attack][ranged][reload]" )
+{
+    clear_map_and_put_player_underground();
+    scoped_weather_override sunny_weather( weather_sunny );
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    shooter.rules = npc_follower_rules();
+    REQUIRE( shooter.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
+    shooter.set_wielded_item( item( itype_id( "glock_19" ) ) );
+    item magazine( itype_id( "glockmag" ) );
+    magazine.ammo_set( itype_id( "9mm" ), 15 );
+    const item_location spare = shooter.i_add( magazine );
+    REQUIRE( spare );
+    monster *enemy = npc_attack_setup::spawn_zombie_at_range( 5 );
+    REQUIRE( enemy != nullptr );
+    set_time_to_day();
+    REQUIRE( shooter.sees( get_map(), *enemy ) );
+    item_location gun = shooter.get_wielded_item();
+    REQUIRE( gun );
+    REQUIRE( gun->ammo_remaining() == 0 );
+    npc_attack_gun attack( *gun, gun->gun_current_mode() );
+    const npc_attack_rating rating = attack.evaluate( shooter, enemy );
+    REQUIRE( rating.value().has_value() );
+    CHECK( rating.target() == enemy->pos_bub() );
+    CHECK( gun->ammo_remaining() == 0 );
+    CHECK( spare->ammo_remaining() == 15 );
+    shooter.set_moves( 100 );
+    attack.use( shooter, enemy->pos_bub() );
+    CHECK( gun->ammo_remaining() == 15 );
+    CHECK( shooter.get_moves() < 100 );
+}
+
+TEST_CASE( "NPC_reload_prefers_a_ready_magazine_over_loose_rounds_and_inferior_magazines",
+           "[npc_attack][reload]" )
+{
+    clear_map_and_put_player_underground();
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    REQUIRE( shooter.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
+    item weapon( itype_id( "glock_19" ) );
+    weapon.ammo_set( itype_id( "9mm" ), 5 );
+    shooter.set_wielded_item( weapon );
+    item magazine( itype_id( "glockmag" ) );
+    magazine.ammo_set( itype_id( "9mm" ), 2 );
+    REQUIRE( shooter.i_add( magazine ) );
+    magazine.ammo_set( itype_id( "9mm" ), 15 );
+    const item_location full_magazine = shooter.i_add( magazine );
+    REQUIRE( full_magazine );
+    REQUIRE( shooter.i_add( item( itype_id( "9mm" ), calendar::turn, 100 ) ) );
+    const item_location gun = shooter.get_wielded_item();
+    REQUIRE( gun );
+    SECTION( "a full magazine wins over filling the inserted one" ) {
+        const item::reload_option reload = shooter.select_ammo( gun );
+        REQUIRE( reload );
+        CHECK( reload.ammo == full_magazine );
+        CHECK( shooter.find_usable_ammo( gun ) == full_magazine );
+        shooter.set_moves( 100 );
+        const int cost = reload.moves();
+        shooter.do_reload( gun );
+        CHECK( gun->ammo_remaining() == 15 );
+        CHECK( shooter.get_moves() == 100 - cost );
+    }
+    SECTION( "private magazines are not used" ) {
+        full_magazine->set_owner( faction_id( "free_merchants" ) );
+        const item::reload_option reload = shooter.select_ammo( gun );
+        REQUIRE( reload );
+        CHECK( reload.ammo != full_magazine );
+        CHECK( reload.ammo->is_ammo() );
+    }
+}
+
+
+TEST_CASE( "NPC_can_load_a_first_shot_without_filling_a_magazine_during_combat",
+           "[npc_attack][reload]" )
+{
+    clear_map_and_put_player_underground();
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    REQUIRE( shooter.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
+    item weapon( itype_id( "glock_19" ) );
+    weapon.ammo_set( itype_id( "9mm" ), 15 );
+    REQUIRE( weapon.magazine_current() != nullptr );
+    weapon.magazine_current()->ammo_unset();
+    shooter.set_wielded_item( weapon );
+    REQUIRE( shooter.i_add( item( itype_id( "9mm" ), calendar::turn, 100 ) ) );
+    const item_location gun = shooter.get_wielded_item();
+    REQUIRE( gun );
+    REQUIRE( shooter.select_ammo( gun ).qty() == 15 );
+    shooter.ai_cache.total_danger = 1;
+    REQUIRE_FALSE( shooter.is_safe() );
+    const item::reload_option reload = shooter.select_ammo( gun );
+    REQUIRE( reload );
+    CHECK( reload.qty() == 1 );
+    shooter.set_moves( 100 );
+    shooter.do_reload( gun );
+    CHECK( gun->ammo_remaining() == 1 );
+}
+
+
+TEST_CASE( "NPC_fires_the_evaluated_burst_instead_of_the_previous_single_shot_mode",
+           "[npc_attack][ranged]" )
+{
+    clear_map_and_put_player_underground();
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    arm_shooter( shooter, itype_modular_m16a4 );
+    const item_location gun = shooter.get_wielded_item();
+    REQUIRE( gun );
+    gun->set_flag( flag_NEVER_JAMS );
+    REQUIRE( gun->gun_set_mode( gun_mode_id( "DEFAULT" ) ) );
+    const gun_mode burst = gun->gun_all_modes().at( gun_mode_id( "BURST" ) );
+    REQUIRE( burst.qty == 3 );
+    const int rounds = gun->ammo_remaining();
+    REQUIRE( rounds >= burst.qty );
+    shooter.recoil = 0;
+    shooter.set_moves( 1000 );
+    npc_attack_gun attack( *gun, burst );
+    attack.use( shooter, shooter.pos_bub() + tripoint( 1, 0, 0 ) );
+    CHECK( gun->gun_current_mode().qty == burst.qty );
+    CHECK( gun->ammo_remaining() == rounds - burst.qty );
+}
+
+TEST_CASE( "NPC_sparse_gun_candidates_preserve_occupied_tile_order_and_best_attack",
+           "[npc_attack][ranged][autonomy][candidates]" )
+{
+    clear_map_and_put_player_underground();
+    scoped_weather_override sunny_weather( weather_sunny );
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    shooter.rules = npc_follower_rules();
+    item weapon( itype_id( "glock_19" ) );
+    weapon.ammo_set( itype_id( "9mm" ), 15 );
+    shooter.set_wielded_item( weapon );
+    get_player_character().setpos( get_map(), main_npc_start_tripoint + tripoint( 0, 2, 0 ) );
+    monster *enemy = npc_attack_setup::spawn_zombie_at_range( 5 );
+    REQUIRE( enemy != nullptr );
+    REQUIRE( g->place_critter_at( mon_zombie, main_npc_start_tripoint + tripoint( 2, -3, 0 ) ) );
+    set_time_to_day();
+    item_location gun = shooter.get_wielded_item();
+    REQUIRE( gun );
+    npc_attack_gun attack( *gun, gun->gun_current_mode() );
+    std::vector<tripoint_bub_ms> expected;
+    for( const tripoint_bub_ms &p : get_map().points_in_radius( shooter.pos_bub(),
+            gun->gun_range( &shooter ) ) ) {
+        if( get_creature_tracker().creature_at( p ) ) {
+            expected.push_back( p );
+        }
+    }
+    const auto evaluations = attack.all_evaluations( shooter, enemy );
+    REQUIRE( evaluations.size() == expected.size() );
+    npc_attack_rating best( std::nullopt, shooter.pos_bub() );
+    for( size_t i = 0; i < evaluations.size(); ++i ) {
+        if( evaluations[i].value() ) {
+            CHECK( evaluations[i].target() == expected[i] );
+        }
+        if( evaluations[i] > best ) {
+            best = evaluations[i];
+        }
+    }
+    const npc_attack_rating selected = attack.evaluate( shooter, enemy );
+    CHECK( selected.value() == best.value() );
+    CHECK( selected.target() == best.target() );
+    CHECK( gun->ammo_remaining() == 15 );
+}

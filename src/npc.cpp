@@ -3280,6 +3280,7 @@ bool npc::is_dead() const
 
 void npc::reboot()
 {
+    autonomy = {};
     //The NPC got into an infinite loop, in game.cpp  -monmove() - a debugmsg just popped up
     // informing player of this.
     // put them to sleep and reboot their brain.
@@ -3598,6 +3599,7 @@ void npc::npc_update_body()
 
 void npc::on_load( map *here )
 {
+    autonomy = npc_autonomy_state{};
     // Reconcile only changed traits; an unchanged personality must not
     // repeatedly activate passive enchantments when re-entering the bubble.
     generate_personality_traits();
@@ -3995,6 +3997,10 @@ std::vector<std::string> npc::extended_description() const
             c_yellow ) :
                       colorize( _( "Unaware of you" ), c_green ) );
 
+    if( is_player_ally() && !autonomy.reason.empty() ) {
+        tmp.emplace_back( string_format( _( "Current plan: %s" ), autonomy.reason ) );
+    }
+
     if( hit_by_player ) {
         tmp.emplace_back( "--" );
         tmp.emplace_back( _( "Is still innocent and killing them will be considered murder." ) );
@@ -4230,10 +4236,11 @@ npc_follower_rules::npc_follower_rules()
 
     set_flag( ally_rule::use_guns );
     clear_flag( ally_rule::use_grenades );
-    set_flag( ally_rule::use_silent );
+    clear_flag( ally_rule::use_silent );
     set_flag( ally_rule::avoid_friendly_fire );
 
-    clear_flag( ally_rule::allow_pick_up );
+    set_flag( ally_rule::allow_pick_up );
+    set_flag( ally_rule::share_supplies );
     clear_flag( ally_rule::allow_bash );
     set_flag( ally_rule::allow_sleep );
     set_flag( ally_rule::allow_complain );

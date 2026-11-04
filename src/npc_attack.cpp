@@ -24,6 +24,7 @@
 #include "flag.h"
 #include "gun_mode.h"
 #include "inventory.h"
+#include "iuse_actor.h"
 #include "item.h"
 #include "item_location.h"
 #include "magic.h"
@@ -32,6 +33,7 @@
 #include "map_iterator.h"
 #include "mapdata.h"
 #include "messages.h"
+#include "monster.h"
 #include "npc.h"
 #include "pimpl.h"
 #include "point.h"
@@ -78,6 +80,20 @@ static bool has_obstruction( const tripoint_bub_ms &from, const tripoint_bub_ms 
         }
     }
     return false;
+}
+
+// Planning estimate only; the actual attack retains native armor/weakpoint resolution.
+static double damage_after_armor( const damage_instance &damage, const Creature &target )
+{
+    static const bodypart_id torso( "torso" );
+    double result = 0.0;
+    for( const damage_unit &unit : damage.damage_units ) {
+        result += npc_autonomy::effective_damage( unit.amount,
+                  target.get_armor_type( unit.type, torso ), unit.res_pen,
+                  unit.res_mult * unit.unconditional_res_mult,
+                  unit.damage_multiplier * unit.unconditional_damage_mult );
+    }
+    return result;
 }
 
 static bool can_move( const npc &source )
@@ -434,25 +450,23 @@ npc_attack_rating npc_attack_melee::evaluate_critter( const npc &source,
         }
     }
 
-    // TODO: Give bashing weapons a better
-    // rating against armored targets
-    double damage{ weapon.base_damage_melee().total_damage() };
-    damage *= 100.0 / weapon.attack_time( source );
-    const int reach_range{ weapon.reach_range( source ).first };
-    const int distance_to_me = clamp( rl_dist( source.pos_bub(), critter->pos_bub() ) - reach_range, 0,
-                                      10 );
-    // Multiplier of 0.5f to 1.5f based on distance
-    const float distance_multiplier = 1.5f - distance_to_me * 0.1f;
-    double potential = damage * distance_multiplier;
-
-    if( damage >= critter->get_hp() ) {
+    const double damage = damage_after_armor( weapon.base_damage_melee(), *critter );
+    const int reach_range = weapon.reach_range( source ).first;
+    const int approach = std::max( 0, rl_dist( source.pos_bub(), critter->pos_bub() ) - reach_range );
+    const int attack_moves = std::max( 25, weapon.attack_time( source ) );
+    const double hit = std::clamp( 0.5 + ( source.get_melee_hit_base() -
+                                         critter->get_dodge_base() ) * 0.08, 0.1, 0.95 );
+    double potential = npc_autonomy::attack_utility( damage, hit,
+                       attack_moves + approach * 100, critter->get_hp(),
+                       source.autonomous_reserved_damage( *critter ), approach * 50 );
+    if( damage * hit >= critter->get_hp() ) {
         potential *= npc_attack_constants::kill_modifier;
     }
-    if( target && target->pos_bub() == critter->pos_bub() ) {
+    if( target == critter ) {
         potential *= npc_attack_constants::target_modifier;
     }
-
-    return npc_attack_rating( static_cast<int>( std::round( potential ) ), critter->pos_bub() );
+    return npc_attack_rating( static_cast<int>( std::round( potential ) ), critter->pos_bub(),
+                              static_cast<int>( std::round( damage * hit ) ) );
 }
 
 void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
@@ -464,10 +478,8 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         return;
     }
 
-    if( !gun.ammo_sufficient( &source ) ) {
-        // todo: make gun an item_location instead of getting wielded item here
-        // but since wielding is required before this, it should be fine
-        source.do_reload( source.get_wielded_item() );
+    if( !gunmode->ammo_sufficient( &source ) ) {
+        source.do_reload( form_loc_recursive( source, *gunmode.target ) );
         add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is reloading %s", source.disp_name(),
                        gun.display_name() );
         return;
@@ -475,7 +487,7 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
 
     if( has_obstruction( source.pos_bub(), location, false ) ||
         ( source.rules.has_flag( ally_rule::avoid_friendly_fire ) &&
-          !source.wont_hit_friend( location, gun, false ) ) ) {
+          !source.wont_hit_friend( location, *gunmode, false ) ) ) {
         if( can_move( source ) ) {
             source.avoid_friendly_fire();
         } else {
@@ -484,39 +496,53 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         return;
     }
 
+    source.autonomous_announce( "attack", _( "I'll cover you with my gun." ) );
     const Target_attributes target( source.pos_bub(), location );
-    const aim_mods_cache aim_cache = source.gen_aim_mods_cache( gun );
-
-    // Only aim if we aren't in risk of being hit
-    // TODO: Get distance to closest enemy
-    if( target.range > 1 && source.aim_per_move( gun, source.recoil, target, aim_cache ) > 0 &&
-        source.confident_gun_mode_range( gunmode, source.recoil ) < target.range ) {
-        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is aiming", source.disp_name() );
-        source.aim( Target_attributes( source.pos_bub(), location ) );
-    } else {
-        if( source.is_hallucination() ) {
-            gun_mode mode = source.get_wielded_item()->gun_current_mode();
-            source.pretend_fire( &source, mode.qty, *mode );
-        } else {
-            source.fire_gun( location );
+    const aim_mods_cache aim_cache = source.gen_aim_mods_cache( *gunmode );
+    // Stop aiming once this shot meets the requested confidence, not only at zero recoil.
+    while( target.range > 1 && source.get_moves() > 0 &&
+           source.confident_gun_mode_range( gunmode, source.recoil ) < target.range ) {
+        const double improvement = source.aim_per_move( *gunmode, source.recoil, target, aim_cache );
+        if( improvement <= MIN_RECOIL_IMPROVEMENT ) {
+            break;
         }
-        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s fires %s", source.disp_name(),
-                       gun.display_name() );
+        source.recoil = std::max( 0.0, source.recoil - improvement );
+        source.mod_moves( -1 );
     }
+    if( source.get_moves() <= 0 ) {
+        return;
+    }
+    for( const auto &mode : gun.gun_all_modes() ) {
+        if( mode.second.target == gunmode.target && mode.second.qty == gunmode.qty &&
+            mode.second.flags == gunmode.flags ) {
+            gun.gun_set_mode( mode.first );
+            break;
+        }
+    }
+    if( source.is_hallucination() ) {
+        source.pretend_fire( &source, gunmode.qty, *gunmode.target );
+    } else {
+        source.fire_gun( get_map(), location, gunmode.qty, *gunmode.target, item_location() );
+    }
+    add_msg_debug( debugmode::debug_filter::DF_NPC, "%s fires %s", source.disp_name(),
+                   gun.display_name() );
 }
 
 bool npc_attack_gun::can_use( const npc &source ) const
 {
-    // can't attack with something you can't wield or which lacks ammo.
-    return ( source.is_wielding( *gunmode ) || source.can_wield( *gunmode ).success() )
-           && gun.has_ammo();
+    if( !source.is_wielding( gun ) && !source.can_wield( gun ).success() ) {
+        return false;
+    }
+    return gunmode->ammo_sufficient( &source ) ||
+           static_cast<bool>( source.find_usable_ammo(
+                                  form_loc_recursive( const_cast<npc &>( source ), *gunmode.target ) ) );
 }
 
 int npc_attack_gun::base_time_penalty( const npc &source ) const
 {
     const item &weapon = *gunmode;
     int time_penalty = 0;
-    if( source.is_wielding( weapon ) ) {
+    if( !source.is_wielding( gun ) ) {
         time_penalty += npc_attack_constants::base_time_penalty;
     }
     // we want the need to reload a gun cumulative with needing to wield the gun
@@ -529,7 +555,71 @@ int npc_attack_gun::base_time_penalty( const npc &source ) const
 tripoint_range<tripoint_bub_ms> npc_attack_gun::targetable_points( const npc &source ) const
 {
     const item &weapon = *gunmode;
-    return get_map().points_in_radius( source.pos_bub(), weapon.gun_range() );
+    int range = weapon.gun_range( &source );
+    if( !weapon.ammo_sufficient( &source ) ) {
+        const item_location ammo = source.find_usable_ammo(
+                                       form_loc_recursive( const_cast<npc &>( source ), *gunmode.target ) );
+        if( ammo ) {
+            item prepared( weapon );
+            prepared.ammo_set( ammo->ammo_current(), 1 );
+            range = prepared.gun_range( &source );
+        }
+    }
+    return get_map().points_in_radius( source.pos_bub(), range );
+}
+
+std::vector<tripoint_bub_ms> npc_attack_gun::targetable_creatures( const npc &source ) const
+{
+    const auto bounds = targetable_points( source );
+    const tripoint_bub_ms minimum = bounds.min();
+    const tripoint_bub_ms maximum = bounds.max();
+    creature_tracker &tracker = get_creature_tracker();
+    std::vector<tripoint_bub_ms> positions;
+    const auto &monsters = tracker.get_monsters_list();
+    const size_t creature_count = monsters.size() + tracker.active_npc.size() + 1;
+    if( bounds.size() <= creature_count ) {
+        // Tiny ranges in dense crowds are cheaper to scan than the whole creature list.
+        for( const tripoint_bub_ms &p : bounds ) {
+            if( tracker.creature_at( p ) ) {
+                positions.push_back( p );
+            }
+        }
+        return positions;
+    }
+    positions.reserve( creature_count );
+    const auto consider = [&]( const Creature &critter ) {
+        const tripoint_bub_ms p = critter.pos_bub();
+        if( p.x() < minimum.x() || p.x() > maximum.x() ||
+            p.y() < minimum.y() || p.y() > maximum.y() ||
+            p.z() < minimum.z() || p.z() > maximum.z() || critter.is_dead_state() ) {
+            return;
+        }
+        // Preserve the original tracker lookup, including riders and hallucination filtering.
+        if( tracker.creature_at( p ) ) {
+            positions.push_back( p );
+        }
+    };
+    for( const auto &mon : monsters ) {
+        if( mon ) {
+            consider( *mon );
+        }
+    }
+    for( const auto &person : tracker.active_npc ) {
+        if( person ) {
+            consider( *person );
+        }
+    }
+    consider( get_player_character() );
+    // Equal attack scores retain the original x-then-y-then-z tile traversal order.
+    std::sort( positions.begin(), positions.end(), []( const tripoint_bub_ms &a,
+    const tripoint_bub_ms &b ) {
+        if( a.z() != b.z() ) {
+            return a.z() < b.z();
+        }
+        return a.y() != b.y() ? a.y() < b.y() : a.x() < b.x();
+    } );
+    positions.erase( std::unique( positions.begin(), positions.end() ), positions.end() );
+    return positions;
 }
 
 npc_attack_rating npc_attack_gun::evaluate(
@@ -540,15 +630,11 @@ npc_attack_rating npc_attack_gun::evaluate(
         return effectiveness;
     }
     const int time_penalty = base_time_penalty( source );
-    creature_tracker &creatures = get_creature_tracker();
-    for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
-        if( creatures.creature_at( targetable_point ) ) {
-            npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                targetable_point );
-            effectiveness_at_point -= time_penalty;
-            if( effectiveness_at_point > effectiveness ) {
-                effectiveness = effectiveness_at_point;
-            }
+    for( const tripoint_bub_ms &point : targetable_creatures( source ) ) {
+        npc_attack_rating evaluated = evaluate_tripoint( source, target, point );
+        evaluated -= time_penalty;
+        if( evaluated > effectiveness ) {
+            effectiveness = evaluated;
         }
     }
     return effectiveness;
@@ -562,14 +648,12 @@ std::vector<npc_attack_rating> npc_attack_gun::all_evaluations( const npc &sourc
         return effectiveness;
     }
     const int time_penalty = base_time_penalty( source );
-    creature_tracker &creatures = get_creature_tracker();
-    for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
-        if( creatures.creature_at( targetable_point ) ) {
-            npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                targetable_point );
-            effectiveness_at_point -= time_penalty;
-            effectiveness.push_back( effectiveness_at_point );
-        }
+    const auto positions = targetable_creatures( source );
+    effectiveness.reserve( positions.size() );
+    for( const tripoint_bub_ms &point : positions ) {
+        npc_attack_rating evaluated = evaluate_tripoint( source, target, point );
+        evaluated -= time_penalty;
+        effectiveness.push_back( evaluated );
     }
     return effectiveness;
 }
@@ -577,43 +661,70 @@ std::vector<npc_attack_rating> npc_attack_gun::all_evaluations( const npc &sourc
 npc_attack_rating npc_attack_gun::evaluate_tripoint(
     const npc &source, const Creature *target, const tripoint_bub_ms &location ) const
 {
-    const item &gun = *gunmode.target;
-    const int damage = gun.gun_damage().total_damage() * gunmode.qty;
-    double potential = damage;
-
     const Creature *critter = get_creature_tracker().creature_at( location );
-    if( !critter ) {
-        // TODO: AOE ammo effects
+    if( !critter || !source.sees( get_map(), *critter ) ||
+        source.attitude_to( *critter ) != Creature::Attitude::HOSTILE ) {
         return npc_attack_rating( std::nullopt, location );
     }
-
-    const Creature::Attitude att = source.attitude_to( *critter );
-    if( att != Creature::Attitude::HOSTILE ) {
-        // No point in attacking neutral/friendly targets
+    const item *weapon = gunmode.target;
+    std::optional<item> prepared;
+    int reload_moves = 0;
+    if( !weapon->ammo_sufficient( &source ) ) {
+        const item_location ammo = source.find_usable_ammo(
+                                       form_loc_recursive( const_cast<npc &>( source ), *gunmode.target ) );
+        if( !ammo ) {
+            return npc_attack_rating( std::nullopt, location );
+        }
+        reload_moves = source.item_reload_cost( *weapon, *ammo,
+                       ammo->is_magazine() ? ammo->ammo_remaining() : 1 );
+        prepared.emplace( *weapon );
+        prepared->ammo_set( ammo->ammo_current(), ammo->is_magazine() ? ammo->ammo_remaining() : 1 );
+        weapon = &*prepared;
+    }
+    const int distance = rl_dist( source.pos_bub(), location );
+    if( distance > weapon->gun_range( &source ) ) {
         return npc_attack_rating( std::nullopt, location );
     }
-
     const bool avoids_friendly_fire = source.rules.has_flag( ally_rule::avoid_friendly_fire );
-    const int distance_to_me = rl_dist( location, source.pos_bub() );
-
-    // Make attacks that involve moving to find clear LOS slightly less likely
-    if( has_obstruction( source.pos_bub(), location, avoids_friendly_fire ) ) {
-        potential *= 0.9f;
-    } else if( avoids_friendly_fire &&
-               !source.wont_hit_friend( location, gun, false ) ) {
-        potential *= 0.95f;
+    const bool obstructed = has_obstruction( source.pos_bub(), location, avoids_friendly_fire ) ||
+                            ( avoids_friendly_fire && !source.wont_hit_friend( location, *weapon, false ) );
+    // An immobile shooter cannot resolve a blocked firing lane by sidestepping.
+    if( obstructed && !can_move( source ) ) {
+        return npc_attack_rating( std::nullopt, location );
     }
-
-    // Prefer targets not directly next to you
-    potential *= distance_to_me > 2 ? 1.15f : 0.85f;
-
-    if( damage >= critter->get_hp() ) {
+    const int shots = std::min( gunmode.qty, weapon->shots_remaining( get_map(), &source ) );
+    const double damage = damage_after_armor( weapon->gun_damage(), *critter ) * shots;
+    const int aim_recoil = source.most_accurate_aiming_method_limit( *weapon );
+    const double hit = npc_autonomy::hit_estimate( distance,
+                       source.confident_gun_mode_range( gunmode, aim_recoil ), critter->ranged_target_size() );
+    // One native aim calculation, rather than simulating every aiming move per candidate.
+    const Target_attributes attributes( source.pos_bub(), location );
+    const aim_mods_cache cache = source.gen_aim_mods_cache( *weapon );
+    const int starting_recoil = source.is_wielding( gun ) ? source.recoil : MAX_RECOIL;
+    const double gain = source.aim_per_move( *weapon, starting_recoil, attributes, cache );
+    const bool needs_aim = distance > 1 &&
+                           source.confident_gun_mode_range( gunmode, starting_recoil ) < distance;
+    const int aim_moves = needs_aim && gain > MIN_RECOIL_IMPROVEMENT ?
+                         std::clamp( static_cast<int>( std::ceil( std::max( 0, starting_recoil - aim_recoil ) /
+                                     gain ) ), 0, 300 ) : 0;
+    const int preparation = reload_moves + aim_moves + ( source.is_wielding( gun ) ? 0 : 100 );
+    const int approach_moves = std::max( 0, distance - 2 ) * 100 * std::max( 1, source.get_speed() ) /
+                               std::max( 1, critter->get_speed() );
+    const int firing_moves = 100 + std::max( 0, shots - 1 ) * 10;
+    const int exposure = std::max( 0, preparation + firing_moves - approach_moves );
+    double potential = npc_autonomy::attack_utility( damage, hit, preparation + firing_moves,
+                       critter->get_hp(), source.autonomous_reserved_damage( *critter ), exposure );
+    if( obstructed ) {
+        potential *= 0.25;
+    }
+    if( damage * hit >= critter->get_hp() ) {
         potential *= npc_attack_constants::kill_modifier;
     }
-    if( target && target->pos_bub() == critter->pos_bub() ) {
+    if( target == critter ) {
         potential *= npc_attack_constants::target_modifier;
     }
-    return npc_attack_rating( static_cast<int>( std::round( potential ) ), location );
+    return npc_attack_rating( static_cast<int>( std::round( potential ) ), location,
+                              static_cast<int>( std::round( damage * hit ) ) );
 }
 
 void npc_attack_activate_item::use( npc &source, const tripoint_bub_ms &/*location*/ ) const

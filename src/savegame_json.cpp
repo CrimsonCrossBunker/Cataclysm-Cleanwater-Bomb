@@ -1973,35 +1973,33 @@ void npc_follower_rules::deserialize( const JsonObject &data )
     int tmpaim = 0;
     data.read( "aim", tmpaim );
     aim = static_cast<aim_rule>( tmpaim );
-    int tmpreserve = 50;
+    int tmpreserve = static_cast<int>( cbm_reserve_rule::CBM_RESERVE_AUTO );
     data.read( "cbm_reserve", tmpreserve );
     cbm_reserve = static_cast<cbm_reserve_rule>( tmpreserve );
-    int tmprecharge = 50;
+    int tmprecharge = static_cast<int>( cbm_recharge_rule::CBM_RECHARGE_AUTO );
     data.read( "cbm_recharge", tmprecharge );
     cbm_recharge = static_cast<cbm_recharge_rule>( tmprecharge );
 
-    // deserialize the flags so they can be changed between save games
+    // Missing rules inherit current defaults; saved commands take precedence.
+    const npc_follower_rules defaults;
     for( const auto &rule : ally_rule_strs ) {
-        bool tmpflag = false;
-        // legacy to handle rules that were saved before overrides
+        bool tmpflag = defaults.has_flag( rule.second.rule, false );
+        // Legacy unprefixed values are superseded by explicitly saved rules.
         data.read( rule.first, tmpflag );
-        if( tmpflag ) {
-            set_flag( rule.second.rule );
-        } else {
-            clear_flag( rule.second.rule );
-        }
         data.read( "rule_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_flag( rule.second.rule );
         } else {
             clear_flag( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_enable_" + rule.first, tmpflag );
         if( tmpflag ) {
             enable_override( rule.second.rule );
         } else {
             disable_override( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_override( rule.second.rule );
