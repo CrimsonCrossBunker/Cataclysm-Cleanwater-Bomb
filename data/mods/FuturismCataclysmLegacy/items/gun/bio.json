@@ -1,0 +1,24 @@
+[
+  {
+    "id": "fcl_bionic_rocket",
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "name": { "str": "deployed grenade launcher" },
+    "description": "A grenade launcher mounted onto your right-hand wrist.  Less powerful than a proper grenade launcher, but infinitely more portable, and quick to reload.",
+    "volume": "2250 ml",
+    "price": "0 cent",
+    "material": [ "steel", "plastic" ],
+    "symbol": "(",
+    "looks_like": "bio_int_enhancer",
+    "color": "magenta",
+    "skill": "launcher",
+    "ammo": [ "40x46mm" ],
+    "dispersion": 290,
+    "durability": 6,
+    "clip_size": 1,
+    "reload": 150,
+    "flags": [ "NEVER_JAMS", "BIONIC_WEAPON", "TRADER_AVOID", "ZERO_WEIGHT" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "40x46mm": 1 } } ],
+    "melee_damage": { "bash": 9 }
+  }
+]
