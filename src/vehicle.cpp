@@ -1,4 +1,5 @@
-#include "vehicle.h" // IWYU pragma: associated
+#include "vehicle.h"
+#include "vehicle_control.h" // IWYU pragma: associated
 #include "vpart_position.h" // IWYU pragma: associated
 #include "vpart_range.h" // IWYU pragma: associated
 
@@ -384,20 +385,7 @@ bool vehicle::player_is_driving_this_veh( map *here ) const
 
 bool vehicle::remote_controlled( const Character &p ) const
 {
-    vehicle *veh = g->remoteveh();
-    if( veh != this ) {
-        return false;
-    }
-
-    for( const vpart_reference &vp : get_avail_parts( "REMOTE_CONTROLS" ) ) {
-        if( rl_dist( p.pos_abs(), vp.pos_abs() ) <= 40 ) {
-            return true;
-        }
-    }
-
-    add_msg( m_bad, _( "Lost connection with the vehicle due to distance!" ) );
-    g->setremoteveh( nullptr );
-    return false;
+    return resolve_remote_vehicle( p, get_map() ) == this;
 }
 
 void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status init_veh_status,

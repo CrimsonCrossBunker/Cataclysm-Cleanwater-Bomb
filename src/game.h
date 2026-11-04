@@ -1393,9 +1393,6 @@ class game
         std::time_t last_save_timestamp = 0; // NOLINT(cata-serialize)
 
         mutable std::array<float, OVERMAP_LAYERS> latest_lightlevels; // NOLINT(cata-serialize)
-        // remoteveh() cache
-        time_point remoteveh_cache_time; // NOLINT(cata-serialize)
-        vehicle *remoteveh_cache; // NOLINT(cata-serialize)
         /** Has an NPC been spawned since last load? */
         bool npcs_dirty = false; // NOLINT(cata-serialize)
         /** Has anything died in this turn and needs to be cleaned up? */

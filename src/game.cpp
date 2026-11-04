@@ -243,6 +243,7 @@
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
 #include "viewer.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -269,7 +270,6 @@ static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
 
 static const bionic_id bio_jointservo( "bio_jointservo" );
 static const bionic_id bio_probability_travel( "bio_probability_travel" );
-static const bionic_id bio_remote( "bio_remote" );
 
 static const character_modifier_id character_modifier_slip_prevent_mod( "slip_prevent_mod" );
 
@@ -330,7 +330,6 @@ static const itype_id itype_battery( "battery" );
 static const itype_id itype_disassembly( "disassembly" );
 static const itype_id itype_grapnel( "grapnel" );
 static const itype_id itype_manhole_cover( "manhole_cover" );
-static const itype_id itype_remotevehcontrol( "remotevehcontrol" );
 static const itype_id itype_rope_30( "rope_30" );
 static const itype_id itype_swim_fins( "swim_fins" );
 static const itype_id itype_towel( "towel" );
@@ -496,7 +495,6 @@ game::game() :
     next_item_uid( 1 ),
     next_monster_uid( 1 ),
     next_vehicle_uid( 1 ),
-    remoteveh_cache_time( calendar::before_time_starts ),
     last_mouse_edge_scroll( std::chrono::steady_clock::now() ),
     dimension_prefix( dimension_world_default )
 {
@@ -819,8 +817,6 @@ void game::reset_game_state()
     scent.reset();
     effect_on_conditions::clear( u );
     u.character_mood_face( true );
-    remoteveh_cache_time = calendar::before_time_starts;
-    remoteveh_cache = nullptr;
     global_variables &globvars = get_globals();
     globvars.clear_global_values();
     unique_npcs.clear();
@@ -2947,48 +2943,12 @@ input_context get_default_mode_input_context()
 
 vehicle *game::remoteveh()
 {
-    map &here = get_map();
-
-    if( calendar::turn == remoteveh_cache_time ) {
-        return remoteveh_cache;
-    }
-    remoteveh_cache_time = calendar::turn;
-    diag_value const *remote_controlling_vehicle = u.maybe_get_value( "remote_controlling_vehicle" );
-    if( !remote_controlling_vehicle ||
-        ( !u.has_active_bionic( bio_remote ) && !u.has_active_item( itype_remotevehcontrol ) ) ) {
-        remoteveh_cache = nullptr;
-    } else {
-        // FIXME: migrate to abs
-        tripoint_bub_ms vp( remote_controlling_vehicle->tripoint().raw() );
-        vehicle *veh = veh_pointer_or_null( here.veh_at( vp ) );
-        if( veh && veh->fuel_left( here, itype_battery ) > 0 ) {
-            remoteveh_cache = veh;
-        } else {
-            remoteveh_cache = nullptr;
-        }
-    }
-    return remoteveh_cache;
+    return get_remote_vehicle( u, get_map() );
 }
 
 void game::setremoteveh( vehicle *veh )
 {
-    map &here = get_map();
-
-    remoteveh_cache_time = calendar::turn;
-    remoteveh_cache = veh;
-    if( veh != nullptr && !u.has_active_bionic( bio_remote ) &&
-        !u.has_active_item( itype_remotevehcontrol ) ) {
-        debugmsg( "Tried to set remote vehicle without bio_remote or remotevehcontrol" );
-        veh = nullptr;
-    }
-
-    if( veh == nullptr ) {
-        u.remove_value( "remote_controlling_vehicle" );
-        return;
-    }
-
-    // FIXME: migrate to abs
-    u.set_value( "remote_controlling_vehicle", tripoint_abs_ms{ veh->pos_bub( here ).raw() } );
+    set_remote_vehicle( u, get_map(), veh );
 }
 
 bool game::try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target )

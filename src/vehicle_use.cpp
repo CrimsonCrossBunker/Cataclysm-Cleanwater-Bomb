@@ -1,4 +1,5 @@
 #include "vehicle.h" // IWYU pragma: associated
+#include "vehicle_control.h"
 
 #include <calendar.h>
 #include <cata_bitset.h>
@@ -698,26 +699,31 @@ bool vehicle::auto_select_fuel( map &here, vehicle_part &vp )
 
 bool vehicle::start_engine( map &here, vehicle_part &vp )
 {
+    return start_engine( here, vp, get_player_character() );
+}
+
+bool vehicle::start_engine( map &here, vehicle_part &vp, Character &player_character )
+{
     const vpart_info &vpi = vp.info();
     if( !is_engine_on( vp ) ) {
         return false;
     }
 
-    Character &player_character = get_player_character();
     const bool out_of_fuel = !auto_select_fuel( here, vp );
     if( out_of_fuel ) {
         if( vpi.fuel_type == fuel_type_muscle ) {
             // Muscle engines cannot start with broken limbs
             if( vpi.has_flag( "MUSCLE_ARMS" ) && !player_character.has_two_arms_lifting() ) {
-                add_msg( _( "You cannot use %s with a broken arm." ), vp.name() );
+                player_character.add_msg_if_player( _( "You cannot use %s with a broken arm." ), vp.name() );
                 return false;
             } else if( vpi.has_flag( "MUSCLE_LEGS" ) && ( player_character.get_working_leg_count() < 2 ) ) {
-                add_msg( _( "You cannot use %s without at least two legs." ), vp.name() );
+                player_character.add_msg_if_player( _( "You cannot use %s without at least two legs." ),
+                                                    vp.name() );
                 return false;
             }
         } else {
-            add_msg( _( "Looks like the %1$s is out of %2$s." ), vp.name(),
-                     item::nname( vpi.fuel_type ) );
+            player_character.add_msg_if_player( _( "Looks like the %1$s is out of %2$s." ), vp.name(),
+                                                item::nname( vpi.fuel_type ) );
             return false;
         }
     }
@@ -725,14 +731,15 @@ bool vehicle::start_engine( map &here, vehicle_part &vp )
     if( has_part( player_character.pos_abs(), "NEED_LEG" ) &&
         player_character.get_working_leg_count() < 1 &&
         !has_part( player_character.pos_abs(), "IGNORE_LEG_REQUIREMENT" ) ) {
-        add_msg( _( "You need at least one leg to control the %s." ), vp.name() );
+        player_character.add_msg_if_player( _( "You need at least one leg to control the %s." ),
+                                            vp.name() );
         return false;
     }
     if( has_part( player_character.pos_abs(), "INOPERABLE_SMALL" ) &&
         ( player_character.get_size() == creature_size::small ||
           player_character.get_size() == creature_size::tiny ) &&
         !has_part( player_character.pos_abs(), "IGNORE_HEIGHT_REQUIREMENT" ) ) {
-        add_msg( _( "You are too short to reach the pedals!" ) );
+        player_character.add_msg_if_player( _( "You are too short to reach the pedals!" ) );
         return false;
     }
 
@@ -881,7 +888,11 @@ void vehicle::start_engines( map &here, Character *driver, const bool take_contr
     }
 
     if( !has_engine ) {
-        add_msg( m_info, _( "The %s doesn't have an engine!" ), name );
+        if( driver ) {
+            driver->add_msg_if_player( m_info, _( "The %s doesn't have an engine!" ), name );
+        } else {
+            add_msg( m_info, _( "The %s doesn't have an engine!" ), name );
+        }
         refresh( );
         return;
     }
@@ -890,11 +901,13 @@ void vehicle::start_engines( map &here, Character *driver, const bool take_contr
         driver->controlling_vehicle = true;
         driver->add_msg_if_player( _( "You take control of the %s." ), name );
     }
+    // Assignment invokes gameplay callbacks. Finish touching this vehicle first.
+    refresh();
     if( !autodrive && driver ) {
         driver->assign_activity( start_engines_activity_actor( start_time,
-                starting_engine_position - driver->pos_bub(), take_control ) );
+                                 starting_engine_position - driver->pos_bub(), take_control, uid().get_value(),
+                                 resolve_remote_vehicle( *driver, here ) == this ) );
     }
-    refresh( );
 }
 
 void vehicle::enable_patrol( map &here )

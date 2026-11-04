@@ -45,6 +45,7 @@
 #include "item_consumption.h"
 #include "player_control.h"
 #include "flag.h"
+#include "faction.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_reload.h"
@@ -80,6 +81,8 @@
 #include "units.h"
 #include "uistate.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
+#include "vpart_range.h"
 #include "veh_type.h"
 #include "vpart_position.h"
 #include "submap.h"
@@ -4792,4 +4795,110 @@ TEST_CASE( "water_extraction_never_duplicates_frozen_water", "[mp_bionic_water]"
     for( const item &entry : get_map().i_at( who.pos_bub() ) ) {
         CHECK( entry.typeId() != itype_id( "water_clean" ) );
     }
+}
+
+namespace
+{
+struct vehicle_control_fixture : reload_fixture {
+    vehicle_control_fixture() {
+        // clear_avatar() clears items/body but does not reset driving flags.
+        get_avatar().controlling_vehicle = false;
+        get_avatar().in_vehicle = false;
+    }
+    ~vehicle_control_fixture() {
+        get_avatar().controlling_vehicle = false;
+        get_avatar().in_vehicle = false;
+    }
+};
+
+vehicle &owned_test_vehicle( Character &who, const tripoint_bub_ms &position,
+                             const std::string &prototype = "car" )
+{
+    map &here = get_map();
+    vehicle *target = here.add_vehicle( vproto_id( prototype ), position, 0_degrees, 100,
+                                      veh_spawn_status::UNDAMAGED );
+    REQUIRE( target );
+    target->is_locked = false;
+    target->engine_on = false;
+    target->set_owner( who.get_faction()->id );
+    for( const vpart_reference &part : target->get_avail_parts( "CONTROLS" ) ) {
+        who.setpos( here, part.pos_bub( here ) );
+        return *target;
+    }
+    FAIL( "fixture vehicle needs controls" );
+    return *target;
+}
+
+} // namespace
+
+TEST_CASE( "native_engine_start_checks_actual_driver_limbs",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ), "bicycle" );
+    avatar &host = get_avatar();
+    host.setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    REQUIRE_FALSE( target.engines.empty() );
+    vehicle_part &engine = target.part( target.engines.front() );
+    engine.enabled = true;
+    who.set_part_hp_cur( bodypart_id( "leg_l" ), 0 );
+    who.set_part_hp_cur( bodypart_id( "leg_r" ), 0 );
+    CHECK_FALSE( target.start_engine( here, engine, who ) );
+    who.set_part_hp_cur( bodypart_id( "leg_l" ), who.get_part_hp_max( bodypart_id( "leg_l" ) ) );
+    who.set_part_hp_cur( bodypart_id( "leg_r" ), who.get_part_hp_max( bodypart_id( "leg_r" ) ) );
+    host.set_part_hp_cur( bodypart_id( "leg_l" ), 0 );
+    host.set_part_hp_cur( bodypart_id( "leg_r" ), 0 );
+    CHECK( target.start_engine( here, engine, who ) );
+}
+
+TEST_CASE( "remote_vehicle_binding_is_per_character_and_rejects_replacement_identity",
+           "[multiplayer][vehicle_control_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    avatar &host = get_avatar();
+    npc &remote = fixture.remote();
+    vehicle &first = owned_test_vehicle( host, tripoint_bub_ms( 45, 45, 0 ) );
+    vehicle &second = owned_test_vehicle( remote, tripoint_bub_ms( 65, 65, 0 ) );
+    for( vehicle *target : { &first, &second } ) {
+        REQUIRE( target->install_part( here, point_rel_ms::zero,
+                                      vpart_id( "drive_by_wire_controls" ) ) >= 0 );
+    }
+    for( Character *who : { static_cast<Character *>( &host ), static_cast<Character *>( &remote ) } ) {
+        item controller( itype_id( "remotevehcontrol" ) );
+        controller.active = true;
+        who->set_wielded_item( controller );
+    }
+    REQUIRE( set_remote_vehicle( host, here, &first ) );
+    REQUIRE( set_remote_vehicle( remote, here, &second ) );
+    CHECK( get_remote_vehicle( host, here ) == &first );
+    CHECK( get_remote_vehicle( remote, here ) == &second );
+    CHECK_FALSE( first.remote_controlled( remote ) );
+    const auto before = rng_get_engine();
+    CHECK( resolve_remote_vehicle( host, here ) == &first );
+    CHECK( rng_get_engine() == before );
+    SECTION( "old bubble-coordinate save migrates to identity" ) {
+        set_remote_vehicle( remote, here, nullptr );
+        remote.set_value( "remote_controlling_vehicle", tripoint_abs_ms( second.pos_bub( here ).raw() ) );
+        REQUIRE( get_remote_vehicle( remote, here ) == &second );
+        CHECK_FALSE( remote.maybe_get_value( "remote_controlling_vehicle" ) );
+        CHECK( remote.maybe_get_value( "remote_vehicle_uid" ) );
+    }
+    SECTION( "stale position hint cannot select another vehicle" ) {
+        remote.set_value( "remote_vehicle_position", first.pos_abs() );
+        CHECK( get_remote_vehicle( remote, here ) == &second );
+    }
+    SECTION( "replaced vehicle does not inherit binding" ) {
+        const tripoint_bub_ms position = second.pos_bub( here );
+        here.destroy_vehicle( &second );
+        owned_test_vehicle( remote, position );
+        CHECK( get_remote_vehicle( remote, here ) == nullptr );
+    }
+    SECTION( "one disconnected controller does not clear the other" ) {
+        remote.get_wielded_item()->active = false;
+        CHECK( get_remote_vehicle( remote, here ) == nullptr );
+    }
+    CHECK( get_remote_vehicle( host, here ) == &first );
 }
