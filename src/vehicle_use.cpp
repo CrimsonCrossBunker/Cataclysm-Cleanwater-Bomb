@@ -418,106 +418,20 @@ void vehicle::control_reactors( map &here )
 
 void vehicle::control_engines( map &here )
 {
-    bool dirty = false;
-
-    veh_menu menu( this, _( "Toggle which?" ) );
-    do {
-        menu.reset();
-        for( const int engine_idx : engines ) {
-            const vehicle_part &vp = parts[engine_idx];
-            for( const itype_id &fuel_type : vp.info().engine_info->fuel_opts ) {
-                const bool is_active = vp.enabled && vp.fuel_current() == fuel_type;
-                const bool has_fuel = is_perpetual_type( vp ) || fuel_left( here, fuel_type );
-                menu.add( string_format( "[%s] %s %s", is_active ? "x" : " ", vp.name(), fuel_type->nname( 1 ) ) )
-                    .enable( vp.is_available() && has_fuel )
-                    .keep_menu_open()
-                .on_submit( [this, engine_idx, fuel_type, &dirty] {
-                    vehicle_part &vp = parts[engine_idx];
-                    if( vp.fuel_current() == fuel_type )
-                    {
-                        vp.enabled = !vp.enabled;
-                    } else
-                    {
-                        vp.fuel_set( fuel_type );
-                    }
-                    dirty = true;
-                } );
-            }
-        }
-    } while( menu.query() );
-
-    if( !dirty ) {
-        return;
-    }
-
-    bool engines_were_on = engine_on;
-    for( const int p : engines ) {
-        const vehicle_part &vp = parts[p];
-        engine_on |= vp.enabled;
-    }
-
-    // if current velocity greater than new configuration safe speed
-    // drop down cruise velocity.
-    int safe_vel = safe_velocity( here );
-    if( velocity > safe_vel ) {
-        cruise_velocity = safe_vel;
-    }
-
-    if( engines_were_on && !engine_on ) {
-        add_msg( _( "You turn off the %s's engines to change their configurations." ), name );
-    } else if( !get_player_character().controlling_vehicle ) {
-        add_msg( _( "You change the %s's engine configuration." ), name );
-    }
-
-    if( engine_on ) {
-        start_engines( here );
+    Character &who = get_player_character();
+    const auto selection = query_vehicle_engines( who, here, *this, who.pos_abs() );
+    if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
+        execute_vehicle_control( who, here, *selection );
     }
 }
 
 void vehicle::smash_security_system( map &here )
 {
-    int idx_security = -1;
-    int idx_controls = -1;
-    for( const int p : speciality ) { //get security and controls location
-        const vehicle_part &vp = part( p );
-        if( vp.info().has_flag( "SECURITY" ) && !vp.is_broken() ) {
-            idx_security = p;
-            idx_controls = part_with_feature( vp.mount, "CONTROLS", true );
-            break;
-        }
+    Character &who = get_player_character();
+    const auto selection = query_vehicle_control( who, here, *this, who.pos_abs(), "smash_alarm" );
+    if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
+        execute_vehicle_control( who, here, *selection );
     }
-    Character &player_character = get_player_character();
-    if( idx_controls < 0 || idx_security < 0 ) {
-        debugmsg( "No security system found on vehicle." );
-        return; // both must be valid parts
-    }
-    vehicle_part &vp_controls = part( idx_controls );
-    vehicle_part &vp_security = part( idx_security );
-    ///\EFFECT_MECHANICS reduces chance of damaging controls when smashing security system
-    const float skill = player_character.get_skill_level( skill_mechanics );
-    const int percent_controls = 70 / ( 1 + skill );
-    const int percent_alarm = ( skill + 3 ) * 10;
-    const int rand = rng( 1, 100 );
-
-    if( percent_controls > rand ) {
-        damage_direct( here, vp_controls, vp_controls.info().durability / 4 );
-
-        if( vp_controls.removed || vp_controls.is_broken() ) {
-            player_character.controlling_vehicle = false;
-            is_alarm_on = false;
-            add_msg( _( "You destroy the controls…" ) );
-        } else {
-            add_msg( _( "You damage the controls." ) );
-        }
-    }
-    if( percent_alarm > rand ) {
-        damage_direct( here, vp_security, vp_security.info().durability / 5 );
-        // chance to disable alarm immediately, or disable on destruction
-        if( percent_alarm / 4 > rand || vp_security.is_broken() ) {
-            is_alarm_on = false;
-        }
-    }
-    add_msg( is_alarm_on ? _( "The alarm keeps going." ) : _( "The alarm stops." ) );
 }
 
 void vehicle::autopilot_patrol_check( map &here )
@@ -2477,7 +2391,9 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
                                false;
     const auto control_action = [this, here, vppos]( const std::string & action ) {
         Character &who = get_player_character();
-        const auto selection = query_vehicle_control( who, *here, *this, here->get_abs( vppos ), action );
+        const auto selection = action == "engines" ?
+                               query_vehicle_engines( who, *here, *this, here->get_abs( vppos ) ) :
+                               query_vehicle_control( who, *here, *this, here->get_abs( vppos ), action );
         if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
             execute_vehicle_control( who, *here, *selection );
         }
@@ -2536,35 +2452,30 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
             description += time_string;
 
             menu.add( _( "Hotwire" ) )
-                .enable( get_player_character().crafting_inventory().has_quality( qual_SCREW ) )
-                .desc( description )
-                .skip_locked_check()
-                .hotkey( "HOTWIRE" )
-            .on_submit( [this, required_time] {
-                const int moves = to_moves<int>( required_time );
-                const tripoint_abs_ms target = pos_abs() + coord_translate( parts[0].mount );
-                const hotwire_car_activity_actor hotwire_act( moves, target );
-                get_player_character().assign_activity( hotwire_act );
-            } );
+            .skip_theft_check()
+            .enable( get_player_character().crafting_inventory().has_quality( qual_SCREW ) )
+            .desc( description )
+            .skip_locked_check()
+            .hotkey( "HOTWIRE" )
+            .on_submit( [control_action] { control_action( "hotwire" ); } );
         }
 
         if( !is_alarm_on && has_security_working( *here ) ) {
             menu.add( _( "Trigger the alarm" ) )
-                .desc( _( "Trigger the alarm to make noise." ) )
-                .skip_locked_check()
-                .hotkey( "TOGGLE_ALARM" )
-            .on_submit( [this] {
-                is_alarm_on = true;
-                add_msg( _( "You trigger the alarm!" ) );
-            } );
+            .skip_theft_check()
+            .desc( _( "Trigger the alarm to make noise." ) )
+            .skip_locked_check()
+            .hotkey( "TOGGLE_ALARM" )
+            .on_submit( [control_action] { control_action( "alarm" ); } );
         }
     }
 
     if( is_alarm_on && controls_here && !is_moving() && player_inside ) {
         menu.add( _( "Try to smash alarm" ) )
-            .skip_locked_check()
-            .hotkey( "TOGGLE_ALARM" )
-            .on_submit( [this, here] { smash_security_system( *here ); } );
+        .skip_theft_check()
+        .skip_locked_check()
+        .hotkey( "TOGGLE_ALARM" )
+        .on_submit( [control_action] { control_action( "smash_alarm" ); } );
     }
     for( const vpart_reference &vp : this->get_avail_parts( "EOC_ACTIVATION" ) ) {
         vehicle_part &part = vp.part();
@@ -2628,15 +2539,16 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
 
         if( controls_here && has_engine_or_fuel_controls ) {
             menu.add( _( "Control individual engines" ) )
-                .hotkey( "CONTROL_ENGINES" )
-                .on_submit( [this, here] { control_engines( *here ); } );
+            .skip_theft_check()
+            .hotkey( "CONTROL_ENGINES" )
+            .on_submit( [control_action] { control_action( "engines" ); } );
         }
     }
 
     if( controls_here && has_part( "AUTOPILOT" ) && has_electronic_controls ) {
         menu.add( _( "Control autopilot" ) )
-            .hotkey( "CONTROL_AUTOPILOT" )
-            .on_submit( [this, here] { toggle_autopilot( *here ); } );
+        .hotkey( "CONTROL_AUTOPILOT" )
+        .on_submit( [this, here] { toggle_autopilot( *here ); } );
     }
 
     if( is_appliance() || vp.avail_part_with_feature( "CTRL_ELECTRONIC" ) ) {

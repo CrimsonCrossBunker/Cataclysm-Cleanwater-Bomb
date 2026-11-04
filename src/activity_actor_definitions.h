@@ -850,21 +850,20 @@ class hotwire_car_activity_actor : public activity_actor
     private:
         int moves_total;
 
-        /**
-         * Position of first vehicle part; used to identify the vehicle
-         * TODO: find something more reliable (to cover cases when vehicle is moved/damaged)
-         */
+        // Control position plus persistent identity; old saves bind on first use.
         tripoint_abs_ms target;
+        int64_t vehicle_id = 0;
+        vehicle *target_vehicle( Character &who );
 
         bool can_resume_with_internal( const activity_actor &other, const Character & ) const override {
             const hotwire_car_activity_actor &a = static_cast<const hotwire_car_activity_actor &>( other );
-            return target == a.target && moves_total == a.moves_total;
+            return target == a.target && vehicle_id == a.vehicle_id && moves_total == a.moves_total;
         }
 
     public:
         hotwire_car_activity_actor( int moves_total,
-                                    const tripoint_abs_ms &target ): moves_total( moves_total ),
-            target( target ) {}
+                                    const tripoint_abs_ms &target, int64_t vehicle_id = 0 ): moves_total( moves_total ),
+            target( target ), vehicle_id( vehicle_id ) {}
 
         const activity_id &get_type() const override {
             static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );

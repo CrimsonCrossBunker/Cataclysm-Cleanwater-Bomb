@@ -2309,6 +2309,12 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         return;
     }
+    if( action == "control_vehicle" || action == "stop_engine" || action == "toggle_engine" ) {
+        // Current clients use identity-checked vehicle_control requests. Legacy
+        // toggles must not apply attached character, inventory or vehicle data.
+        srv_emit_ack( recipient, action.c_str() );
+        return;
+    }
     if( action == "pldrive" || action == "cruise" || action == "handbrake" ) {
         // Driving is an intent, not a character/vehicle upload. The grant above
         // and native control lookup select the operator and vehicle on the host.
@@ -3647,59 +3653,6 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     // drains one turn of AP and re-broadcasts state so the client's HUD stays current.
     if( msg.find( R"("action":"eat")" ) != std::string::npos ) {
         srv_emit_ack( recipient, "eat" );
-        return;
-    }
-
-    // Vehicle control now uses the sequenced, owner-validated activity request.
-    // Never accept the old unversioned toggle/instant-start path.
-    if( action == "control_vehicle" ) {
-        srv_emit_ack( recipient, "control_vehicle" );
-        return;
-    }
-
-    // Stop engine — client selected "Stop engine" from driving menu.
-    if( msg.find( R"("action":"stop_engine")" ) != std::string::npos ) {
-        map &here = get_map();
-        const tripoint_bub_ms bub = remote->pos_bub();
-        if( const optional_vpart_position vp = here.veh_at( bub ) ) {
-            vehicle &veh = vp->vehicle();
-            veh.engine_on = false;
-            for( const int p : veh.engines ) {
-                veh.part( p ).enabled = false;
-            }
-            veh.cruise_velocity = 0;
-            mp_log( "[cdda-mp] stop_engine: engines stopped for " + veh.name );
-            // Host log: NPC-form. Client: direct push (correct grammar, first-person).
-            add_msg( _( "%s turns off the engine and lets go of the controls." ), remote->name );
-            recipient.turn.action_msgs_pending.push_back(
-                string_format( _( "You turn the engine off and let go of the controls." ) ) );
-        }
-        remote->controlling_vehicle = false;
-        here.unboard_vehicle( bub );
-        remote->in_vehicle = false;
-        recipient.turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( recipient, "stop_engine" );
-        return;
-    }
-
-    // Toggle engine while not driving (at controls but not in control mode).
-    if( msg.find( R"("action":"toggle_engine")" ) != std::string::npos ) {
-        map &here = get_map();
-        const tripoint_bub_ms bub = remote->pos_bub();
-        if( const optional_vpart_position vp = here.veh_at( bub ) ) {
-            vehicle &veh = vp->vehicle();
-            if( veh.engine_on ) {
-                veh.stop_engines( here );
-                add_msg( _( "%s turns off the engine." ), remote->name );
-                recipient.turn.action_msgs_pending.emplace_back( _( "You turn the engine off." ) );
-            } else {
-                veh.start_engines( here, remote );
-                add_msg( _( "%s starts the engine." ), remote->name );
-                recipient.turn.action_msgs_pending.emplace_back( _( "You start the engine." ) );
-            }
-        }
-        recipient.turn.last_forwarded_msg_count = Messages::size();
-        srv_emit_ack( recipient, "toggle_engine" );
         return;
     }
 
