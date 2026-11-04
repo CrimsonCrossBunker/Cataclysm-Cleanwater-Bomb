@@ -308,6 +308,7 @@
         "ranges": [ [ 0, 3, "BURST" ] ]
       }
     ],
+    "death_function": { "corpse_type": "BROKEN" },
     "extend": { "flags": [ "DROPS_AMMO" ] }
   },
   {
@@ -325,6 +326,7 @@
     "melee_dice_sides": 5,
     "melee_dice_ap": 4,
     "special_attacks": [ { "id": "smash", "throw_strength": 96 } ],
+    "death_function": { "corpse_type": "BROKEN" },
     "extend": { "flags": [ "BASHES", "DESTROYS", "ATTACKMON" ] }
   }
 ]
