@@ -35,7 +35,7 @@ bool supports_owned_bionic_action( const bionic &bio, bionic_action action )
     for( const char *id : {
              "bio_water_extractor", "bio_remote",
              "bio_resonator", "bio_teleport",
-             "bio_magnet", "bio_flashbang", "bio_shockwave"
+             "bio_magnet"
          } ) {
         if( bio.id == bionic_id( id ) ) {
             return false;

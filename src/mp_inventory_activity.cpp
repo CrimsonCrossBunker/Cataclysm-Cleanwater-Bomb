@@ -340,7 +340,8 @@ bool begin_client_inventory_activity( const activity_actor &actor )
     return begin_client_inventory_activity( player_activity( actor ) );
 }
 
-bool start_bionic_action( Character &who, const JsonObject &request, bionic_action action )
+bool start_bionic_action( Character &who, const JsonObject &request, bionic_action action,
+                          bool &refresh_observers )
 {
     const int64_t uid = request.get_int64( "bionic_uid" );
     if( uid <= 0 || uid > std::numeric_limits<unsigned int>::max() ) {
@@ -352,8 +353,12 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     if( request.read( "target", target ) ) {
         choices.target = target;
     }
-    return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ),
-                                        bionic_id( request.get_string( "bionic_type" ) ), choices, action );
+    const bionic_id type( request.get_string( "bionic_type" ) );
+    // A world callback may retire the activator after affecting bystanders.
+    // Refresh conservatively even if native activation subsequently returns false.
+    refresh_observers = action == bionic_action::activate &&
+                        ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) );
+    return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ), type, choices, action );
 }
 
 bool start_item_use( Character &who, map &here, const JsonObject &request,
@@ -600,6 +605,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
 {
     const int64_t sequence = request.get_int64( "request" );
     const std::string operation = request.get_string( "operation" );
+    state.refresh_observers = false;
     const character_action_guard lifetime( who );
     if( !lifetime ) {
         return {};
@@ -643,7 +649,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 }
             } else if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
                 start_bionic_action( who, request, kind == "bionic_activation" ?
-                                     bionic_action::activate : bionic_action::deactivate );
+                                     bionic_action::activate : bionic_action::deactivate, state.refresh_observers );
             } else if( state.tracks_item_use ) {
                 start_item_use( who, here, request, state, kind );
             } else if( kind == "reload" ) {

@@ -1287,11 +1287,17 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         }
     } else if( bio.id == bio_flashbang ) {
         add_msg_activate();
-        explosion_handler::flashbang( pos_bub(), true );
+        explosion_handler::flashbang( pos_bub(), this );
+        if( !lifetime ) {
+            return false;
+        }
         mod_moves( -100 );
     } else if( bio.id == bio_shockwave ) {
         add_msg_activate();
-        explosion_handler::shockwave( pos_bub(), 3, 4, 2, 8, true );
+        explosion_handler::shockwave( pos_bub(), 3, 4, 2, 8, this );
+        if( !lifetime ) {
+            return false;
+        }
         add_msg_if_player( m_neutral, _( "You unleash a powerful shockwave!" ) );
         mod_moves( -100 );
     } else if( bio.id == bio_meteorologist ) {

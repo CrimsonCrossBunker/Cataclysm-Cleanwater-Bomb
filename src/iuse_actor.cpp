@@ -997,7 +997,7 @@ std::optional<int> explosion_iuse::use( Character *p, item &it, map *here,
     }
     if( do_flashbang ) {
         // TODO: Use map aware 'flashbang' operation when available.
-        explosion_handler::flashbang( pos, flashbang_player_immune );
+        explosion_handler::flashbang( pos, flashbang_player_immune ? &get_player_character() : nullptr );
     }
     if( fields_radius >= 0 && fields_type.id() ) {
         const effect_source field_source = source != nullptr

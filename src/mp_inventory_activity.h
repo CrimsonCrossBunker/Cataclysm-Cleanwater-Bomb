@@ -43,6 +43,8 @@ struct inventory_activity_host_state {
     bool tracks_body = false;
     bool tracks_crafting = false;
     bool tracks_item_use = false;
+    // Per-request delivery scope, including native effects whose callbacks abort the actor.
+    bool refresh_observers = false;
     character_id healing_patient;
     std::optional<tripoint_abs_ms> automatic_mining_target;
     ter_str_id automatic_mining_terrain;
