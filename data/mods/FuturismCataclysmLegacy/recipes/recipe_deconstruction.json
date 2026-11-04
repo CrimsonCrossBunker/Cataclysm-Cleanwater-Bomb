@@ -158,6 +158,31 @@
     ]
   },
   {
+    "result": "broken_utilibot_const",
+    "type": "uncraft",
+    "activity_level": "LIGHT_EXERCISE",
+    "time": "2 h",
+    "skill_used": "electronics",
+    "difficulty": 4,
+    "using": [ [ "soldering_standard", 20 ], [ "welding_standard", 5 ] ],
+    "qualities": [ { "id": "SCREW_FINE", "level": 1 }, { "id": "SAW_M", "level": 1 } ],
+    "components": [
+      [ [ "ai_module", 1 ] ],
+      [ [ "robot_controls", 1 ] ],
+      [ [ "sensor_module", 1 ] ],
+      [ [ "utilibot_const_chassis", 1 ] ],
+      [ [ "memory_module", 1 ] ],
+      [ [ "identification_module", 1 ] ],
+      [ [ "self_monitoring_module", 1 ] ],
+      [ [ "pathfinding_module", 1 ] ],
+      [ [ "targeting_module", 1 ] ],
+      [ [ "gun_module", 2 ] ],
+      [ [ "nailgun", 1 ] ],
+      [ [ "welder", 1 ] ],
+      [ [ "steel_chunk", 6 ] ]
+    ]
+  },
+  {
     "result": "broken_utilibot_hostile",
     "type": "uncraft",
     "activity_level": "LIGHT_EXERCISE",
