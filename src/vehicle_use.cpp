@@ -3,6 +3,7 @@
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
 #include "vehicle_water.h"
+#include "vehicle_toolstation.h"
 #include "character_action_guard.h"
 #include "mp_inventory_activity.h"
 
@@ -224,9 +225,9 @@ void vehicle::build_electronics_menu( map &here, veh_menu &menu )
             item *arc_itm = &arc_vp.part().base;
 
             menu.add( _( "Play arcade machine" ) )
-                .hotkey( "ARCADE" )
-                .enable( !!arc_itm )
-                .on_submit( [arc_itm] { iuse::portable_game( &get_avatar(), arc_itm, tripoint_bub_ms::zero ); } );
+            .hotkey( "ARCADE" )
+            .enable( !!arc_itm )
+            .on_submit( [arc_itm] { iuse::portable_game( &get_avatar(), arc_itm, tripoint_bub_ms::zero ); } );
             break;
         }
     }
@@ -631,7 +632,7 @@ void vehicle::reload_seeds( map *here, const tripoint_bub_ms &pos )
 {
     Character &player_character = get_player_character();
     std::vector<item_location> seed_inv = player_character.cache_get_items_with( "is_seed",
-        &item::is_seed );
+                                          &item::is_seed );
 
     auto seed_entries = iexamine::get_seed_entries( seed_inv );
     seed_entries.emplace( seed_entries.begin(), itype_id::NULL_ID(), _( "No seed" ), 0 );
@@ -779,7 +780,7 @@ void vehicle::operate_reaper( map &here )
     for( const vpart_reference &vp : get_enabled_parts( "REAPER" ) ) {
         const tripoint_bub_ms reaper_pos = vp.pos_bub( here );
         int plant_produced = std::max( 1, static_cast<int>( rng( 1, vp.info().bonus ) *
-            ::get_option<float>( "CROP_HARVEST_MULTIPLIER" ) ) );
+                                       ::get_option<float>( "CROP_HARVEST_MULTIPLIER" ) ) );
         int seed_produced = rng( 1, 3 );
         const units::volume max_pickup_volume = vp.info().size / 20;
         here.grow_plant( reaper_pos );
@@ -1233,9 +1234,9 @@ static void place_carried_furniture( map &here, vehicle_part &part )
         _( "Can't put furniture there.  There is a vehicle or another furniture in the way." );
 
     std::optional<tripoint_bub_ms> selected_tile = choose_adjacent_highlight( here,
-        string_format( _( "Select where to place the %s." ), tied_down_furniture->name() ),
-        fail_msg,
-        tile_without_furniture_obstruction, false, false );
+            string_format( _( "Select where to place the %s." ), tied_down_furniture->name() ),
+            fail_msg,
+            tile_without_furniture_obstruction, false, false );
 
     if( selected_tile ) {
         part.unload_furniture( here, *selected_tile );
@@ -1252,9 +1253,9 @@ static void pickup_furniture_for_carry( map &here, vehicle_part &part )
     };
 
     std::optional<tripoint_bub_ms> selected_tile = choose_adjacent_highlight( here,
-        _( "Select a furniture to load into the vehicle." ),
-        _( "No adjacent furniture." ),
-        tile_with_furniture, false, true );
+            _( "Select a furniture to load into the vehicle." ),
+            _( "No adjacent furniture." ),
+            tile_with_furniture, false, true );
 
     if( !selected_tile ) {
         return; // no adjacent furniture (they got msg) or they cancelled on purpose, so just return
@@ -1352,8 +1353,8 @@ void vehicle::use_harness( int part, map *here, const tripoint_bub_ms &pos )
 
     // TODO: Make 'choose_adjacent_highlight' map aware.
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            *here, _( "Where is the creature to harness?" ), _( "There is no creature to harness nearby." ), f,
-            false );
+                *here, _( "Where is the creature to harness?" ), _( "There is no creature to harness nearby." ), f,
+                false );
     if( !pnt_ ) {
         add_msg( m_info, _( "Never mind." ) );
         return;
@@ -1414,13 +1415,13 @@ void vehicle::build_bike_rack_menu( map &here, veh_menu &menu, int part )
         const bool has_this_name_racked = has_veh_name_racked( rackable.name );
 
         menu.add( string_format( _( "Attach the %s to the rack" ), rackable.name ) )
-            .desc( has_this_name_racked
-                   ? string_format( _( "This vehicle already has '%s' racked.  "
-                                       "Please rename before racking." ), rackable.name )
-                   : "" )
-            .enable( !has_this_name_racked )
-            .hotkey_auto()
-            .skip_locked_check()
+        .desc( has_this_name_racked
+               ? string_format( _( "This vehicle already has '%s' racked.  "
+                                   "Please rename before racking." ), rackable.name )
+               : "" )
+        .enable( !has_this_name_racked )
+        .hotkey_auto()
+        .skip_locked_check()
         .on_submit( [this, rackable] {
             bikerack_racking_activity_actor rack( *this, *rackable.veh, rackable.racks );
             get_player_character().assign_activity( rack );
@@ -1432,8 +1433,8 @@ void vehicle::build_bike_rack_menu( map &here, veh_menu &menu, int part )
     for( const unrackable_vehicle &unrackable : find_vehicles_to_unrack(
              part, /*only_healthy=*/ false ) ) {
         menu.add( string_format( _( "Remove the %s from the rack" ), unrackable.name ) )
-            .hotkey_auto()
-            .skip_locked_check()
+        .hotkey_auto()
+        .skip_locked_check()
         .on_submit( [this, unrackable] {
             bikerack_unracking_activity_actor unrack( *this, unrackable.parts, unrackable.racks );
             get_player_character().assign_activity( unrack );
@@ -1444,9 +1445,9 @@ void vehicle::build_bike_rack_menu( map &here, veh_menu &menu, int part )
 
     if( !has_rack_actions ) {
         menu.add( _( "Bike rack is empty" ) )
-            .desc( _( "Nothing to take off or put on the rack is nearby." ) )
-            .enable( false )
-            .skip_locked_check();
+        .desc( _( "Nothing to take off or put on the rack is nearby." ) )
+        .enable( false )
+        .skip_locked_check();
     }
 }
 
@@ -1720,7 +1721,7 @@ int vehicle::run_legacy_charge_tool_uses( map &here, const itype_id &tool_type, 
         return 0;
     }
     const int got_uses = tool.consume_tool_uses( do_uses, here,
-        tripoint_bub_ms::zero, nullptr );
+                         tripoint_bub_ms::zero, nullptr );
     const int consumed = ammo_in_tool - tool.ammo_remaining_linked( here, nullptr );
     if( consumed > 0 ) {
         discharge_battery( here, consumed );
@@ -1919,9 +1920,9 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
 
     if( !is_appliance() ) {
         menu.add( _( "Examine vehicle" ) )
-            .skip_theft_check()
-            .skip_locked_check()
-            .hotkey( "EXAMINE_VEHICLE" )
+        .skip_theft_check()
+        .skip_locked_check()
+        .hotkey( "EXAMINE_VEHICLE" )
         .on_submit( [this, vp] {
             const vpart_position non_fake( *this, get_non_fake_part( vp.part_index() ) );
             const point_rel_ms start_pos = non_fake.mount_pos().rotate( 2 );
@@ -1929,18 +1930,18 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         } );
 
         menu.add( tracking_on ? _( "Forget vehicle position" ) : _( "Remember vehicle position" ) )
-            .skip_theft_check()
-            .skip_locked_check()
-            .keep_menu_open()
-            .hotkey( "TOGGLE_TRACKING" )
-            .on_submit( [this] { toggle_tracking(); } );
+        .skip_theft_check()
+        .skip_locked_check()
+        .keep_menu_open()
+        .hotkey( "TOGGLE_TRACKING" )
+        .on_submit( [this] { toggle_tracking(); } );
     }
 
     if( has_visible_effect() ) {
         menu.add( _( "Examine vehicle effects" ) )
-            .skip_theft_check()
-            .skip_locked_check()
-            .on_submit( [this] { display_effects(); } );
+        .skip_theft_check()
+        .skip_locked_check()
+        .on_submit( [this] { display_effects(); } );
     }
 
     bool has_immobilizer = false;
@@ -1992,8 +1993,8 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         menu.add( string_format( _( "Activate  %s" ), vp.part().name() ) )
         .on_submit( [this, &part] {
             if( part.info().activatable_eoc )
-        {
-            dialogue newDialog( get_talker_for( get_player_character() ), nullptr );
+            {
+                dialogue newDialog( get_talker_for( get_player_character() ), nullptr );
                 part.info().activatable_eoc.value()->activate( newDialog );
             }
             cata::lua_platform::invoke_vehicle_part_activation_handler(
@@ -2068,11 +2069,11 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
 
     if( has_electronic_controls && has_part( "SMART_ENGINE_CONTROLLER" ) ) {
         menu.add( _( "Smart controller settings" ) )
-            .hotkey( "CONTROL_SMART_ENGINE" )
+        .hotkey( "CONTROL_SMART_ENGINE" )
         .on_submit( [this] {
             if( !smart_controller_cfg )
-        {
-            smart_controller_cfg = smart_controller_config();
+            {
+                smart_controller_cfg = smart_controller_config();
             }
 
             smart_controller_settings cfg_view = smart_controller_settings(
@@ -2080,7 +2081,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
                 smart_controller_cfg -> battery_lo,
                 smart_controller_cfg -> battery_hi );
             smart_controller_ui( cfg_view ).control();
-for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
+            for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
             {
                 vp.part().enabled = cfg_view.enabled;
             }
@@ -2091,8 +2092,8 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
 
     if( turret.can_unload() ) {
         menu.add( string_format( _( "Unload %s" ), turret.name() ) )
-            .hotkey( "UNLOAD_TURRET" )
-            .skip_locked_check()
+        .hotkey( "UNLOAD_TURRET" )
+        .skip_locked_check()
         .on_submit( [this, vppos, here] {
             item_location loc = turret_query( here, vppos ).base();
             get_player_character().unload( loc );
@@ -2101,8 +2102,8 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
 
     if( turret.can_reload() ) {
         menu.add( string_format( _( "Reload %s" ), turret.name() ) )
-            .hotkey( "RELOAD_TURRET" )
-            .skip_locked_check()
+        .hotkey( "RELOAD_TURRET" )
+        .skip_locked_check()
         .on_submit( [this, vppos, here] {
             item_location loc = turret_query( here, vppos ).base();
             item::reload_option opt = get_player_character().select_ammo( loc, true );
@@ -2116,43 +2117,43 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
 
     if( controls_here && has_part( "TURRET" ) ) {
         menu.add( _( "Set turret targeting modes" ) )
-            .hotkey( "TURRET_TARGET_MODE" )
-            .on_submit( [this] { turrets_set_targeting(); } );
+        .hotkey( "TURRET_TARGET_MODE" )
+        .on_submit( [this] { turrets_set_targeting(); } );
 
         menu.add( _( "Set turret firing modes" ) )
-            .hotkey( "TURRET_FIRE_MODE" )
-            .on_submit( [this] { turrets_set_mode(); } );
+        .hotkey( "TURRET_FIRE_MODE" )
+        .on_submit( [this] { turrets_set_mode(); } );
 
         // We can also fire manual turrets with ACTION_FIRE while standing at the controls.
         menu.add( _( "Aim turrets manually" ) )
-            .hotkey( "TURRET_MANUAL_AIM" )
-            .on_submit( [this] { turrets_aim_and_fire_all_manual( true ); } );
+        .hotkey( "TURRET_MANUAL_AIM" )
+        .on_submit( [this] { turrets_aim_and_fire_all_manual( true ); } );
 
         // This lets us manually override and set the target for the automatic turrets instead.
         menu.add( _( "Aim automatic turrets" ) )
-            .hotkey( "TURRET_MANUAL_OVERRIDE" )
-            .on_submit( [this] { turrets_override_automatic_aim(); } );
+        .hotkey( "TURRET_MANUAL_OVERRIDE" )
+        .on_submit( [this] { turrets_override_automatic_aim(); } );
 
         menu.add( _( "Aim individual turret" ) )
-            .hotkey( "TURRET_SINGLE_FIRE" )
-            .on_submit( [this] { turrets_aim_and_fire_single(); } );
+        .hotkey( "TURRET_SINGLE_FIRE" )
+        .on_submit( [this] { turrets_aim_and_fire_single(); } );
     }
 
     if( controls_here ) {
         if( has_part( "HORN" ) ) {
             menu.add( _( "Honk horn" ) )
-                .skip_locked_check()
-                .hotkey( "SOUND_HORN" )
-                .on_submit( [this, here] { honk_horn( *here ); } );
+            .skip_locked_check()
+            .hotkey( "SOUND_HORN" )
+            .on_submit( [this, here] { honk_horn( *here ); } );
         }
     }
 
     if( power_linked ) {
         menu.add( _( "Disconnect power connections" ) )
-            .enable( !item_linked && !tow_linked )
-            .desc( string_format( !item_linked && !tow_linked ? "" : _( "Remove other cables first" ) ) )
-            .skip_locked_check()
-            .hotkey( "DISCONNECT_CABLES" )
+        .enable( !item_linked && !tow_linked )
+        .desc( string_format( !item_linked && !tow_linked ? "" : _( "Remove other cables first" ) ) )
+        .skip_locked_check()
+        .hotkey( "DISCONNECT_CABLES" )
         .on_submit( [here, this, vp] {
             unlink_cables( *here, vp.mount_pos(), get_player_character(), true, true, true );
             get_player_character().pause();
@@ -2162,61 +2163,12 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
         std::string menu_text = item_linked && tow_linked ? _( "Disconnect items and tow cables" ) :
                                 item_linked ? _( "Disconnect items" ) : _( "Disconnect tow cables" );
         menu.add( menu_text )
-            .skip_locked_check()
-            .hotkey( "DISCONNECT_CABLES" )
+        .skip_locked_check()
+        .hotkey( "DISCONNECT_CABLES" )
         .on_submit( [here, this, vp] {
             unlink_cables( *here, vp.mount_pos(), get_player_character(), true, true, false );
             get_player_character().pause();
         } );
-    }
-
-    const std::optional<vpart_reference> vp_toolstation = vp.avail_part_with_feature( "VEH_TOOLS" );
-    // Remove attached tools that have become incompatible with workstation because of migration etc
-    if( vp_toolstation && !vp.get_tools( *here ).empty() ) {
-        const vpart_info vp_info = vp_toolstation->info();
-        if( vp_info.toolkit_info ) {
-            const std::set<itype_id> &allowed_tool_types = vp_info.toolkit_info->allowed_types;
-
-            std::set<itype_id> builtin_tool_types;
-            for( const auto &[tool_type, _] : vp_info.get_pseudo_tools() ) {
-                builtin_tool_types.insert( tool_type );
-            }
-
-            std::vector<item> &stored_tools = vp_toolstation->part().tools;
-            std::vector<item> tools_to_remove;
-            // Tool is incompatible if it's not in allowed types and isn't a pseudo tool
-            for( const item &tool_item : stored_tools ) {
-                const itype_id &tool_type = tool_item.typeId();
-                if( builtin_tool_types.find( tool_type ) != builtin_tool_types.end() ) {
-                    continue;
-                }
-                if( allowed_tool_types.find( tool_type ) == allowed_tool_types.end() ) {
-                    tools_to_remove.push_back( tool_item );
-                }
-            }
-
-            if( !tools_to_remove.empty() ) {
-                Character &you = get_player_character();
-                for( item &tool_to_remove : tools_to_remove ) {
-                    you.add_msg_if_player( _( "The %s is no longer compatible with %s and pops out." ),
-                                           tool_to_remove.tname(), vp_toolstation->part().name( false ) );
-                    you.add_or_drop_with_msg( tool_to_remove );
-                }
-
-                stored_tools.erase( std::remove_if( stored_tools.begin(),
-                                                    stored_tools.end(),
-                [&tools_to_remove]( const item & item_to_remove ) {
-                    return std::find_if( tools_to_remove.begin(), tools_to_remove.end(),
-                    [&item_to_remove]( const item & tools_to_remove_item ) {
-                        return tools_to_remove_item.typeId() == item_to_remove.typeId();
-                    } ) != tools_to_remove.end();
-                } ),
-                stored_tools.end() );
-
-                invalidate_mass();
-                you.invalidate_crafting_inventory();
-            }
-        }
     }
 
     for( const auto&[tool_item, hk] : vp.get_tools( *here ) ) {
@@ -2251,17 +2203,17 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
             here->has_items( vp.pos_bub( *here ) ) ||
             ( vp_cargo && !vp_cargo->items().empty() ) ) ) {
         menu.add( _( "Get items" ) )
-            .hotkey( "GET_ITEMS" )
-            .skip_locked_check()
-            .skip_theft_check()
-            .on_submit( [vppos] { g->pickup( vppos ); } );
+        .hotkey( "GET_ITEMS" )
+        .skip_locked_check()
+        .skip_theft_check()
+        .on_submit( [vppos] { g->pickup( vppos ); } );
     }
 
     const std::optional<vpart_reference> vp_curtain = vp.avail_part_with_feature( "CURTAIN" );
     if( vp_curtain && !vp_curtain->part().open ) {
         menu.add( _( "Peek through the closed curtains" ) )
-            .hotkey( "CURTAIN_PEEK" )
-            .skip_locked_check()
+        .hotkey( "CURTAIN_PEEK" )
+        .skip_locked_check()
         .on_submit( [vppos] {
             add_msg( _( "You carefully peek through the curtains." ) );
             g->peek( vppos );
@@ -2275,8 +2227,8 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
     if( vp_monster_capture ) {
         const size_t mc_idx = vp_monster_capture->part_index();
         menu.add( _( "Capture or release a creature" ) )
-            .hotkey( "USE_CAPTURE_MONSTER_VEH" )
-            .on_submit( [this, mc_idx, vppos, here] { use_monster_capture( mc_idx, here, vppos ); } );
+        .hotkey( "USE_CAPTURE_MONSTER_VEH" )
+        .on_submit( [this, mc_idx, vppos, here] { use_monster_capture( mc_idx, here, vppos ); } );
     }
 
     const std::optional<vpart_reference> vp_furniture_tiedown =
@@ -2284,8 +2236,8 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
     if( vp_furniture_tiedown ) {
         const size_t mc_idx = vp_furniture_tiedown->part_index();
         menu.add( _( "Tie down or remove a furniture" ) )
-            .hotkey( "USE_TIEDOWN_FURNITURE_VEH" )
-            .on_submit( [this, mc_idx, vppos, here] { use_tiedown_furniture( mc_idx, here, vppos ); } );
+        .hotkey( "USE_TIEDOWN_FURNITURE_VEH" )
+        .on_submit( [this, mc_idx, vppos, here] { use_tiedown_furniture( mc_idx, here, vppos ); } );
     }
 
     const std::optional<vpart_reference> vp_bike_rack = vp.avail_part_with_feature( "BIKE_RACK_VEH" );
@@ -2297,97 +2249,35 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
     if( vp_harness ) {
         const size_t hn_idx = vp_harness->part_index();
         menu.add( _( "Harness an animal" ) )
-            .hotkey( "USE_ANIMAL_CTRL" )
-            .on_submit( [this, hn_idx, here, vppos] { use_harness( hn_idx, here, vppos ); } );
+        .hotkey( "USE_ANIMAL_CTRL" )
+        .on_submit( [this, hn_idx, here, vppos] { use_harness( hn_idx, here, vppos ); } );
     }
 
     if( vp.avail_part_with_feature( "PLANTER" ) ) {
         menu.add( _( "Reload seed drill with seeds" ) )
-            .hotkey( "USE_PLANTER" )
-            .on_submit( [this, vppos, here] { reload_seeds( here, vppos ); } );
+        .hotkey( "USE_PLANTER" )
+        .on_submit( [this, vppos, here] { reload_seeds( here, vppos ); } );
     }
 
     const std::optional<vpart_reference> vp_workbench = vp.avail_part_with_feature( "WORKBENCH" );
     if( vp_workbench ) {
         const size_t wb_idx = vp_workbench->part_index();
         menu.add( string_format( _( "Craft at the %s" ), vp_workbench->part().name() ) )
-            .hotkey( "USE_WORKBENCH" )
-            .skip_locked_check()
+        .hotkey( "USE_WORKBENCH" )
+        .skip_locked_check()
         .on_submit( [this, wb_idx, vppos] {
             const vpart_reference vp_workbench( *this, wb_idx );
             iexamine::workbench_internal( get_player_character(), vppos, vp_workbench );
         } );
     }
 
-    if( vp_toolstation && vp_toolstation->info().toolkit_info ) {
-        const size_t vp_idx = vp_toolstation->part_index();
-        const std::string vp_name = vp_toolstation->part().name( /* with_prefix = */ false );
-
-        menu.add( string_format( _( "Attach a tool to %s" ), vp_name ) )
-            .skip_locked_check( true )
-        .on_submit( [this, vp_idx, vp_name, here] {
-            Character &you = get_player_character();
-            vehicle_part &vp = part( vp_idx );
-            std::set<itype_id> allowed_types = vp.info().toolkit_info->allowed_types;
-            for( const std::pair<const item, int> &pair : prepare_tools( *here, vp ) )
-            {
-                allowed_types.erase( pair.first.typeId() ); // one tool of each kind max
-            }
-
-            item_location loc = game_menus::inv::veh_tool_attach( you, vp_name, allowed_types );
-
-            if( !loc )
-            {
-                you.add_msg_if_player( _( "Never mind." ) );
-                return;
-            }
-
-            item &obj = *loc.get_item();
-            you.add_msg_if_player( _( "You attach %s to %s." ), obj.tname(), vp_name );
-
-            vp.tools.emplace_back( obj );
-            loc.remove_item();
-            invalidate_mass();
-            you.invalidate_crafting_inventory();
-        } );
-
-        const bool detach_ok = !get_tools( part( vp_idx ) ).empty();
-        menu.add( string_format( _( "Detach a tool from %s" ), vp_name ) )
-            .enable( detach_ok )
-            .desc( string_format( detach_ok ? "" : _( "There are no tools attached to %s" ), vp_name ) )
-            .skip_locked_check( true )
-        .on_submit( [this, vp_idx, vp_name] {
-            veh_menu detach_menu( this, string_format( _( "Detach a tool from %s" ), vp_name ) );
-
-            vehicle_part &vp_tools = part( vp_idx );
-for( item &i : get_tools( vp_tools ) )
-        {
-            detach_menu.add( i.display_name() )
-                           .skip_locked_check( true )
-                           .skip_theft_check( true )
-                .on_submit( [this, &i, &vp_tools, vp_name]() {
-                    Character &you = get_player_character();
-                    std::vector<item> &tools = get_tools( vp_tools );
-                    const auto it_to_remove = std::find_if( tools.begin(), tools.end(),
-                    [&i]( const item & it ) {
-                        return &it == &i;
-                    } );
-                    get_player_character().add_msg_if_player( _( "You detach %s from %s." ),
-                            i.tname(), vp_name );
-                    you.add_or_drop_with_msg( *it_to_remove );
-                    tools.erase( it_to_remove );
-                    invalidate_mass();
-                    you.invalidate_crafting_inventory();
-                } );
-
-            }
-            detach_menu.query();
-        } );
-    }
+    // Browsing is not a transfer: incompatible legacy tools remain detachable
+    // instead of being silently moved into the menu viewer's inventory.
+    add_vehicle_toolstation_menu( menu, *here, *this, here->get_abs( vppos ) );
 
     if( is_foldable() && !remote ) {
         menu.add( string_format( _( "Fold %s" ), name ) )
-            .hotkey( "FOLD_VEHICLE" )
+        .hotkey( "FOLD_VEHICLE" )
         .on_submit( [this] {
             vehicle_folding_activity_actor folding_act( *this );
             get_avatar().assign_activity( folding_act );
@@ -2400,19 +2290,19 @@ for( item &i : get_tools( vp_tools ) )
     if( vp_lockable_door && vp_door_lock && !vp_lockable_door->part().open ) {
         if( doors::can_lock_door( *here, get_player_character(), p ) ) {
             menu.add( string_format( _( "Lock %s" ), vp_lockable_door->part().name() ) )
-                .hotkey( "LOCK_DOOR" )
+            .hotkey( "LOCK_DOOR" )
             .on_submit( [p, here] {
                 doors::lock_door( *here, get_player_character(), p );
             } );
         } else if( doors::can_unlock_door( *here, get_player_character(), p ) ) {
             menu.add( string_format( _( "Unlock %s" ), vp_lockable_door->part().name() ) )
-                .hotkey( "UNLOCK_DOOR" )
+            .hotkey( "UNLOCK_DOOR" )
             .on_submit( [p, here] {
                 doors::unlock_door( *here, get_player_character(), p );
             } );
         } else if( vp_lockable_door->part().locked ) {
             menu.add( string_format( _( "Check the lock on %s" ), vp_lockable_door->part().name() ) )
-                .hotkey( "LOCKPICK" )
+            .hotkey( "LOCKPICK" )
             .on_submit( [p] {
                 iexamine::locked_object( get_player_character(), p );
             } );
