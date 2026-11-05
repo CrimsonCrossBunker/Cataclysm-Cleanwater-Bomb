@@ -88,6 +88,7 @@
 #include "vehicle_control.h"
 #include "vehicle_heating.h"
 #include "vehicle_toolstation.h"
+#include "vehicle_tool_use.h"
 #include "repair_activity.h"
 #include "activity_handlers.h"
 #include "iuse_actor.h"
@@ -7971,4 +7972,180 @@ TEST_CASE( "vehicle_tool_menu_does_not_eject_items_before_an_explicit_detach",
     choice.toolstation->tool_id = identity;
     REQUIRE( execute_vehicle_control( who, get_map(), choice ) );
     CHECK( target.get_tools( target.part( station ) ).empty() );
+}
+
+namespace
+{
+vehicle_control_selection instant_tool_choice( Character &who, vehicle &target, int part )
+{
+    auto choice = control_choice( who, target, "tool_use" );
+    choice.position = target.abs_part_pos( target.part( part ) );
+    const auto options = vehicle_tool_use_options( target, choice.position );
+    REQUIRE( options.size() == 1 );
+    choice.tool_use = options.front();
+    REQUIRE( valid_vehicle_tool_use( who, get_map(), target, choice.position, *choice.tool_use ) );
+    return choice;
+}
+} // namespace
+
+TEST_CASE( "mounted_towels_clean_only_the_operator_and_do_not_repeat_requests",
+           "[multiplayer][vehicle_tool_use_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const bool installed = GENERATE( false, true );
+    const int part = install_test_appliance( who, target,
+                                           installed ? "veh_tools_kitchen" : "towel_hanger" );
+    if( installed ) {
+        target.get_tools( target.part( part ) ).emplace_back( itype_id( "towel" ) );
+    }
+    auto choice = instant_tool_choice( who, target, part );
+    CHECK( ( choice.tool_use->installed_tool != 0 ) == installed );
+    target.is_locked = true; // Unpowered tools do not require the ignition key.
+    who.add_effect( efftype_id( "slimed" ), 10_minutes );
+    get_avatar().add_effect( efftype_id( "slimed" ), 10_minutes );
+    const int host_moves = get_avatar().get_moves();
+    const int power = target.battery_left( get_map() );
+    const std::string request = control_request( fixture, who, choice );
+    fixture.run( who, request );
+    CHECK_FALSE( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK( who.get_moves() == 50 );
+    CHECK( get_avatar().has_effect( efftype_id( "slimed" ) ) );
+    CHECK( get_avatar().get_moves() == host_moves );
+    CHECK( target.battery_left( get_map() ) == power );
+    who.add_effect( efftype_id( "slimed" ), 10_minutes );
+    const auto rng = rng_get_engine();
+    fixture.run( who, request );
+    CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK( who.get_moves() == 50 );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "mounted_weather_readings_charge_the_selected_vehicle_and_reach_the_operator",
+           "[multiplayer][vehicle_tool_use_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int part = install_test_appliance( who, target, "veh_mobile_weather_station" );
+    const auto choice = instant_tool_choice( who, target, part );
+    const int power = target.battery_left( get_map() );
+    REQUIRE( power > 1 );
+    Messages::clear_messages();
+    recipient.feedback.pending.clear();
+    const auto request = control_request( fixture, who, choice );
+    fixture.run( who, request );
+    CHECK( target.battery_left( get_map() ) == power - 1 );
+    CHECK_FALSE( recipient.feedback.pending.empty() );
+    CHECK( Messages::recent_messages( 10 ).empty() );
+    CHECK( who.get_moves() == 100 );
+    fixture.run( who, request );
+    CHECK( target.battery_left( get_map() ) == power - 1 );
+}
+
+TEST_CASE( "mounted_tools_reject_changed_hardware_access_and_forged_actions_before_effects",
+           "[multiplayer][vehicle_tool_use_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &target = electronic_vehicle( who );
+    const int part = install_test_appliance( who, target, "veh_mobile_weather_station" );
+    auto choice = instant_tool_choice( who, target, part );
+    const std::string failure = GENERATE( "part", "installed", "type", "method", "action", "removed",
+                                         "distance", "locked", "owner", "power", "incorporeal" );
+    CAPTURE( failure );
+    if( failure == "part" ) {
+        ++choice.tool_use->part;
+    } else if( failure == "installed" ) {
+        choice.tool_use->installed_tool = target.part( part ).get_base().uid().get_value();
+    } else if( failure == "type" ) {
+        choice.tool_use->tool = "towel";
+    } else if( failure == "method" ) {
+        choice.tool_use->method = "HOTPLATE";
+    } else if( failure == "action" ) {
+        choice.action = "stop";
+    } else if( failure == "removed" ) {
+        target.remove_part( target.part( part ) );
+    } else if( failure == "distance" ) {
+        who.setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
+    } else if( failure == "locked" ) {
+        target.is_locked = true;
+    } else if( failure == "owner" ) {
+        target.set_owner( faction_id( "no_faction" ) );
+    } else if( failure == "power" ) {
+        target.discharge_battery( get_map(), target.battery_left( get_map() ) );
+    } else if( failure == "incorporeal" ) {
+        who.add_effect( efftype_id( "incorporeal" ), 1_hours );
+    }
+    const auto rng = rng_get_engine();
+    const int power = target.battery_left( get_map() );
+    CHECK_FALSE( execute_vehicle_control( who, get_map(), choice ) );
+    CHECK( target.battery_left( get_map() ) == power );
+    CHECK( who.get_moves() == 100 );
+    CHECK_FALSE( who.activity );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "mounted_tool_menu_is_readonly_and_revalidates_installed_identity",
+           "[multiplayer][vehicle_tool_use_owned]" )
+{
+    vehicle_control_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &target = electronic_vehicle( who );
+    const int part = install_test_appliance( who, target, "veh_tools_kitchen" );
+    auto &tools = target.get_tools( target.part( part ) );
+    tools.emplace_back( itype_id( "towel" ) );
+    const auto choice = instant_tool_choice( who, target, part );
+    who.add_effect( efftype_id( "slimed" ), 10_minutes );
+    const auto rng = rng_get_engine();
+    veh_menu menu( target, "tool fixture" );
+    add_vehicle_tool_use_menu( menu, get_map(), target, choice.position );
+    const auto entries = menu.get_items();
+    REQUIRE( entries.size() == 1 );
+    REQUIRE( entries.front()._enabled );
+    REQUIRE( entries.front()._on_submit );
+    CHECK( rng_get_engine() == rng );
+    CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+    SECTION( "native menu uses the same operation" ) {
+        entries.front()._on_submit();
+        CHECK_FALSE( who.has_effect( efftype_id( "slimed" ) ) );
+        CHECK( who.get_moves() == 50 );
+    }
+    SECTION( "a replacement of the same type is not the selected tool" ) {
+        tools.clear();
+        tools.emplace_back( itype_id( "towel" ) );
+        entries.front()._on_submit();
+        CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+        CHECK( who.get_moves() == 100 );
+    }
+    SECTION( "client submits a choice without applying local gameplay" ) {
+        cata_mp::set_client_mode( true );
+        const auto before = rng_get_engine();
+        entries.front()._on_submit();
+        CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+        CHECK( rng_get_engine() == before );
+        CHECK( g->multiplayer_session().client_inventory_activity.pending_request != 0 );
+    }
+}
+
+TEST_CASE( "portable_weather_and_towels_use_the_same_owned_native_callbacks",
+           "[multiplayer][vehicle_tool_use_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    who.set_wielded_item( item( itype_id( "towel" ) ) );
+    who.add_effect( efftype_id( "slimed" ), 10_minutes );
+    CHECK( execute_owned_item_activation( who, who.get_wielded_item(), "TOWEL", who.pos_abs(), false, false ) );
+    CHECK_FALSE( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK( who.get_wielded_item()->is_filthy() );
+    CHECK( who.get_wielded_item()->has_flag( flag_WET ) );
+    CHECK( who.get_moves() == 50 );
+    who.set_wielded_item( item( itype_id( "hygrometer" ) ) );
+    CHECK( execute_owned_item_activation( who, who.get_wielded_item(), "WEATHER_TOOL", who.pos_abs(),
+                                         false, false ) );
+    CHECK( who.get_moves() == 50 );
 }
