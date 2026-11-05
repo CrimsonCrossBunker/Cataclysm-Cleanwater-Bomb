@@ -2006,6 +2006,9 @@ class consume_activity_actor : public activity_actor
         bool is_client_view() const {
             return view_only;
         }
+        bool consumes_vehicle_water() const {
+            return owned_source.kind == "vehicle_faucet";
+        }
         bool prepare_owned_turn( Character &who );
         void finish( player_activity &act, Character & ) override;
         void canceled( player_activity &, Character &who ) override;

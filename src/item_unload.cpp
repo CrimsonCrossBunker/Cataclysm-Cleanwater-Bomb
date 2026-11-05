@@ -254,6 +254,54 @@ void unload_liquid_choice::deserialize( const JsonObject &object )
     object.read( "tank", tank, true );
 }
 
+bool resolve_liquid_destination( Character &who, const unload_liquid_choice &choice,
+                                 const item &source, liquid_dest_opt &destination,
+                                 std::optional<int> &tank )
+{
+    destination = {};
+    tank.reset();
+    destination.dest_opt = choice.kind;
+    map &here = get_map();
+    if( choice.kind == LD_ITEM ) {
+        destination.item_loc = resolve_item_source( who, here, choice.container );
+        if( !destination.item_loc || &*destination.item_loc == &source ||
+            source.has_item( *destination.item_loc ) || destination.item_loc->has_item( source ) ) {
+            return false;
+        }
+    } else if( choice.kind == LD_VEH ) {
+        if( choice.tank == source.uid().get_value() ) {
+            return false;
+        }
+        for( const tripoint_bub_ms &pos : here.points_in_radius( who.pos_bub(), 1 ) ) {
+            const optional_vpart_position at = here.veh_at( pos );
+            if( !at || at->vehicle().uid().get_value() != choice.vehicle ) {
+                continue;
+            }
+            vehicle &veh = at->vehicle();
+            for( const vpart_reference &part : veh.get_all_parts() ) {
+                if( part.part().get_base().uid().get_value() == choice.tank ) {
+                    destination.veh = &veh;
+                    tank = part.part_index();
+                    break;
+                }
+            }
+            break;
+        }
+        if( !tank ) {
+            return false;
+        }
+    } else if( choice.kind == LD_GROUND || choice.kind == LD_KEG ) {
+        destination.pos = here.get_bub( choice.position );
+        if( destination.pos.z() != who.pos_bub().z() ||
+            rl_dist( destination.pos, who.pos_bub() ) > 1 ) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    return true;
+}
+
 bool receive_unloaded_item( Character &who, item &output, const item &target,
                             const item *original, const unload_liquid_choices &choices )
 {
@@ -270,41 +318,8 @@ bool receive_unloaded_item( Character &who, item &output, const item &target,
         return false;
     }
     liquid_dest_opt destination;
-    destination.dest_opt = selected->kind;
     std::optional<int> tank;
-    map &here = get_map();
-    if( selected->kind == LD_ITEM ) {
-        destination.item_loc = resolve_item_source( who, here, selected->container );
-        if( !destination.item_loc || &*destination.item_loc == &target ||
-            target.has_item( *destination.item_loc ) || destination.item_loc->has_item( target ) ) {
-            return false;
-        }
-    } else if( selected->kind == LD_VEH ) {
-        for( const tripoint_bub_ms &pos : here.points_in_radius( who.pos_bub(), 1 ) ) {
-            const optional_vpart_position at = here.veh_at( pos );
-            if( !at || at->vehicle().uid().get_value() != selected->vehicle ) {
-                continue;
-            }
-            vehicle &veh = at->vehicle();
-            for( const vpart_reference &part : veh.get_all_parts() ) {
-                if( part.part().get_base().uid().get_value() == selected->tank ) {
-                    destination.veh = &veh;
-                    tank = part.part_index();
-                    break;
-                }
-            }
-            break;
-        }
-        if( !tank ) {
-            return false;
-        }
-    } else if( selected->kind == LD_GROUND || selected->kind == LD_KEG ) {
-        destination.pos = here.get_bub( selected->position );
-        if( destination.pos.z() != who.pos_bub().z() ||
-            rl_dist( destination.pos, who.pos_bub() ) > 1 ) {
-            return false;
-        }
-    } else {
+    if( !resolve_liquid_destination( who, *selected, target, destination, tank ) ) {
         return false;
     }
     liquid_handler::transfer_liquid( who, output, destination, tank );

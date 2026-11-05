@@ -5812,7 +5812,8 @@ void Character::assign_activity( const activity_id &type, int moves, int index, 
 {
     // This is not a perfect safety net, but I don't know of another way to get all activity actors and what activity_ids might be associated with them.
     for( const auto &actor_ptr : activity_actors::deserialize_functions ) {
-        if( actor_ptr.first == type ) {
+        // Faucets use an owned actor while other liquid sources still use the legacy handler.
+        if( actor_ptr.first == type && type != activity_id( "ACT_FILL_LIQUID" ) ) {
             debugmsg( "Tried to assign generic activity %s to activity that has an actor!", type.c_str() );
             return;
         }

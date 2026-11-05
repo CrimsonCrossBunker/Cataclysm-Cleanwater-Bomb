@@ -11,6 +11,7 @@
 #include "map.h"
 #include "map_selector.h"
 #include "vehicle_selector.h"
+#include "vehicle_water.h"
 #include "visitable.h"
 
 void item_source::serialize( JsonOut &out ) const
@@ -31,6 +32,9 @@ void item_source::deserialize( const JsonObject &object )
 
 item_location resolve_item_source( Character &who, map &here, const item_source &intent )
 {
+    if( intent.kind == "vehicle_faucet" ) {
+        return resolve_vehicle_water_source( who, here, intent );
+    }
     if( intent.path.empty() || intent.path.size() > 64 ) {
         return item_location();
     }
@@ -80,6 +84,9 @@ item_location resolve_item_source( Character &who, map &here, const item_source 
 
 item_source capture_item_source( const Character &who, item_location source )
 {
+    if( const auto water = capture_vehicle_water_source( who, source ) ) {
+        return *water;
+    }
     item_source intent;
     while( source ) {
         intent.path.push_back( source->uid().get_value() );

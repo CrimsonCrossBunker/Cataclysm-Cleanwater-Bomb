@@ -639,7 +639,11 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
         state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
                                   who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
-                                  who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" );
+                                  who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) ||
+                                  who.activity.id() == activity_id( "ACT_FILL_LIQUID" );
+    }
+    if( const auto *consume = native_consume( who ) ) {
+        state.refresh_observers = state.refresh_observers || consume->consumes_vehicle_water();
     }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
