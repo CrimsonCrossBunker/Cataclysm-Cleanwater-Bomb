@@ -108,7 +108,11 @@
     "type": "effect_on_condition",
     "id": "bio_noise_quiet_burn",
     "condition": {
-      "and": [ { "or": [ { "u_has_bionics": "bio_ethanol" }, { "u_has_bionics": "bio_lampoil" } ] }, { "one_in_chance": 480 }, { "not": { "u_has_effect": "effect_bio_noise_quiet_burn_cooldown" } } ]
+      "and": [
+        { "or": [ { "u_has_bionics": "bio_ethanol" }, { "u_has_bionics": "bio_lampoil" } ] },
+        { "one_in_chance": 480 },
+        { "not": { "u_has_effect": "effect_bio_noise_quiet_burn_cooldown" } }
+      ]
     },
     "effect": [
       { "u_make_sound": "Hiss!!!", "volume": 6, "type": "movement" },
