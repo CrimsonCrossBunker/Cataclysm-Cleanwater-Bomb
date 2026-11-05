@@ -30,7 +30,7 @@ void item_source::deserialize( const JsonObject &object )
     object.read( "path", path, true );
 }
 
-item_location resolve_item_source( Character &who, map &here, const item_source &intent )
+item_location resolve_item_source( Character &who, map &here, const item_source &intent, int range )
 {
     if( intent.kind == "vehicle_faucet" ) {
         return resolve_vehicle_water_source( who, here, intent );
@@ -48,7 +48,7 @@ item_location resolve_item_source( Character &who, map &here, const item_source 
             root = item_location( who, items.front() );
         }
     } else if( intent.kind == "map" ) {
-        for( map_cursor &cursor : map_selector( who.pos_bub(), 1 ) ) {
+        for( map_cursor &cursor : map_selector( who.pos_bub(), range ) ) {
             if( cursor.pos_abs() == intent.position ) {
                 const auto items = cursor.items_with( root_matches );
                 if( items.size() == 1 && !cursor.find_parent( *items.front() ) ) {
@@ -57,7 +57,7 @@ item_location resolve_item_source( Character &who, map &here, const item_source 
             }
         }
     } else if( intent.kind == "vehicle" ) {
-        for( vehicle_cursor &cursor : vehicle_selector( here, who.pos_bub(), 1 ) ) {
+        for( vehicle_cursor &cursor : vehicle_selector( here, who.pos_bub(), range ) ) {
             const auto items = cursor.items_with( root_matches );
             if( items.size() == 1 && !cursor.find_parent( *items.front() ) ) {
                 item_location candidate( cursor, items.front() );

@@ -86,6 +86,8 @@
 #include "uistate.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_heating.h"
+#include "iuse.h"
 #include "vehicle_selector.h"
 #include "vehicle_electronics.h"
 #include "level_cache.h"
@@ -4783,7 +4785,7 @@ TEST_CASE( "client_water_selection_is_presentation_only_and_receives_remaining_w
     view.pending_request = fixture.sequence;
     REQUIRE( cata_mp::client_apply_message( result ) );
     CHECK( local.activity.execution() == activity_execution::presentation );
-    CHECK( view.water_source_uid == corpse->uid().get_value() );
+    CHECK( view.liquid_source_uid == corpse->uid().get_value() );
     REQUIRE( view.preview );
     CHECK( view.preview->typeId() == itype_id( "water_clean" ) );
     CHECK( view.preview->charges == 4 );
@@ -7054,4 +7056,324 @@ TEST_CASE( "legacy_actorless_liquid_save_still_executes_its_native_transfer",
     REQUIRE_FALSE( bottle->empty() );
     CHECK( bottle->only_item().charges == 1 );
     CHECK( target.part( tank ).ammo_remaining() == 3 );
+}
+
+namespace
+{
+vehicle_control_selection heating_choice( Character &who, vehicle &target,
+        const item_location &food, const std::string &tool = "hotplate" )
+{
+    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    const int part = install_test_appliance( who, target, "veh_tools_kitchen" );
+    auto &tools = target.get_tools( target.part( part ) );
+    tools.emplace_back( itype_id( tool ), calendar::turn );
+    target.discharge_battery( get_map(), INT_MAX );
+    target.charge_battery( get_map(), 10000 );
+    auto choice = control_choice( who, target, "heating" );
+    choice.position = target.abs_part_pos( target.part( part ) );
+    choice.heating = vehicle_heating_selection{};
+    choice.heating->part = target.part( part ).get_base().uid().get_value();
+    choice.heating->installed_tool = tools.back().uid().get_value();
+    choice.heating->tool = tool;
+    choice.heating->method = itype_id( tool )->get_use( "HEAT_SOLID_ITEMS" ) ?
+                             "HEAT_SOLID_ITEMS" : "HOTPLATE";
+    choice.heating->items.emplace_back( capture_item_source( who, food ), 1 );
+    set_time_to_day();
+    REQUIRE( who.fine_detail_vision_mod() <= 4 );
+    who.set_moves( 100 );
+    return choice;
+}
+
+std::pair<std::string, std::string> finish_vehicle_heating( reload_fixture &fixture, Character &who )
+{
+    REQUIRE( is_vehicle_heating( who.activity ) );
+    for( int turn = 0; who.activity.moves_left > 100 && turn < 2000; ++turn ) {
+        who.set_moves( 100 );
+        calendar::turn += 1_seconds;
+        who.activity.do_turn( who );
+        REQUIRE( who.activity );
+    }
+    REQUIRE( who.activity.moves_left <= 100 );
+    who.set_moves( 100 );
+    const std::string request = fixture.request( who, "step" );
+    const std::string response = fixture.run( who, request );
+    REQUIRE( ( !who.activity || vehicle_heating_liquid( who.activity ) ) );
+    return {request, response};
+}
+} // namespace
+
+TEST_CASE( "mounted_heating_owns_food_power_duration_and_saved_completion",
+           "[multiplayer][vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "apple" ), calendar::turn, 2 ) );
+    item_location food = who.get_wielded_item();
+    food->set_item_temperature( units::from_kelvin( 280 ) );
+    vehicle &target = electronic_vehicle( who );
+    const auto choice = heating_choice( who, target, food );
+    const std::string host = needs_state( get_avatar() );
+    const units::mass mass = food->count_by_charges() ? food->weight( false, false ) / food->charges :
+                             food->weight( false, false );
+    const auto required = heating_requirements_for_weight( 0_gram, mass, food->volume( false, true, 1 ) );
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const auto rng = rng_get_engine();
+    CHECK( valid_vehicle_heating( who, get_map(), target, choice.position, *choice.heating ) );
+    CHECK( rng_get_engine() == rng );
+    const std::string start = control_request( fixture, who, choice );
+    fixture.run( who, start );
+    REQUIRE( is_vehicle_heating( who.activity ) );
+    CHECK( who.activity.moves_total == required.time );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    fixture.run( who, start );
+    save_reload_activity( who );
+    const auto completed = finish_vehicle_heating( fixture, who );
+    CHECK_FALSE( who.activity );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) ==
+           battery - required.ammo * itype_id( "hotplate" )->charges_to_use() );
+    const auto hot = who.items_with( []( const item &it ) {
+        return it.typeId() == itype_id( "apple" ) && it.has_own_flag( flag_HOT );
+    } );
+    REQUIRE( hot.size() == 1 );
+    CHECK( hot.front()->count() == 1 );
+    const int remaining = target.fuel_left( get_map(), itype_id( "battery" ) );
+    fixture.run( who, completed.first );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == remaining );
+    CHECK( needs_state( get_avatar() ) == host );
+}
+
+TEST_CASE( "mounted_heating_cancels_without_loss_when_inputs_or_access_change",
+           "[multiplayer][vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location food = drinking_source( who );
+    food->set_item_temperature( units::from_kelvin( 280 ) );
+    vehicle &target = electronic_vehicle( who );
+    const auto choice = heating_choice( who, target, food );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( is_vehicle_heating( who.activity ) );
+    // Resolve by stable identity without retaining a part pointer across mutation.
+    int index = -1;
+    for( const vpart_reference &entry : target.get_all_parts() ) {
+        if( entry.part().get_base().uid().get_value() == choice.heating->part ) {
+            index = entry.part_index();
+        }
+    }
+    REQUIRE( index >= 0 );
+    SECTION( "heater removed" ) {
+        target.remove_part( target.part( index ) );
+    }
+    SECTION( "installed tool replaced" ) {
+        target.get_tools( target.part( index ) ).clear();
+        target.get_tools( target.part( index ) ).emplace_back( itype_id( "hotplate" ) );
+    }
+    SECTION( "operator moved away" ) {
+        who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 5, 0, 0 ) );
+    }
+    SECTION( "power exhausted" ) {
+        target.discharge_battery( get_map(), INT_MAX );
+    }
+    SECTION( "selected portion disappeared" ) {
+        food->charges = 0;
+    }
+    SECTION( "cancel without moves" ) {
+        who.set_moves( 0 );
+        fixture.run( who, fixture.request( who, "cancel" ) );
+    }
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int charges = food->charges;
+    if( who.activity ) {
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+    }
+    CHECK_FALSE( who.activity );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( food->charges == charges );
+    CHECK_FALSE( food->has_own_flag( flag_HOT ) );
+}
+
+TEST_CASE( "mounted_heating_preserves_liquid_until_owner_choice_and_replays_without_duplication",
+           "[multiplayer][vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location food = drinking_source( who );
+    food->set_item_temperature( units::from_kelvin( 280 ) );
+    vehicle &target = electronic_vehicle( who );
+    const auto choice = heating_choice( who, target, food );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    finish_vehicle_heating( fixture, who );
+    REQUIRE( food->charges == 1 );
+    REQUIRE( vehicle_heating_liquid( who.activity ) );
+    CHECK( vehicle_heating_liquid( who.activity )->charges == 1 );
+    CHECK( vehicle_heating_liquid( who.activity )->has_own_flag( flag_HOT ) );
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    save_reload_activity( who );
+    const auto pending = vehicle_heating_liquid( who.activity );
+    REQUIRE( pending );
+    item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ) ) );
+    unload_liquid_choice destination;
+    destination.source = pending->uid().get_value();
+    destination.kind = LD_ITEM;
+    destination.container = capture_item_source( who, bottle );
+    who.set_moves( 100 );
+    const std::string request = fixture.request( who, "choose", [&]( JsonOut & out ) {
+        out.member( "liquid", destination );
+    } );
+    fixture.run( who, request );
+    REQUIRE_FALSE( who.activity );
+    REQUIRE_FALSE( bottle->empty() );
+    CHECK( bottle->only_item().charges == 1 );
+    CHECK( bottle->only_item().has_own_flag( flag_HOT ) );
+    fixture.run( who, request );
+    CHECK( bottle->only_item().charges == 1 );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+}
+
+TEST_CASE( "mounted_heating_rejects_forged_requests_before_consuming_resources",
+           "[multiplayer][vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location food = drinking_source( who );
+    vehicle &target = electronic_vehicle( who );
+    auto choice = heating_choice( who, target, food );
+    SECTION( "wrong tool identity" ) { ++choice.heating->installed_tool; }
+    SECTION( "missing hardware" ) { choice.heating->part = 0; }
+    SECTION( "unavailable method" ) { choice.heating->method = "HEAT_ALL_ITEMS"; }
+    SECTION( "oversized portion" ) { choice.heating->items.front().second = 999; }
+    SECTION( "duplicate item" ) { choice.heating->items.push_back( choice.heating->items.front() ); }
+    SECTION( "another player's item" ) {
+        choice.heating->items.front().first = capture_item_source( get_avatar(), drinking_source( get_avatar() ) );
+    }
+    SECTION( "locked electric vehicle" ) { target.is_locked = true; }
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK_FALSE( who.activity );
+    CHECK( food->charges == 2 );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+}
+
+TEST_CASE( "canceling_saved_heated_liquid_keeps_the_result_and_does_not_refund_spent_energy",
+           "[multiplayer][vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location food = drinking_source( who );
+    food->set_item_temperature( units::from_kelvin( 280 ) );
+    vehicle &target = electronic_vehicle( who );
+    const auto choice = heating_choice( who, target, food );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    const auto completed = finish_vehicle_heating( fixture, who );
+    REQUIRE( vehicle_heating_liquid( who.activity ) );
+    const int64_t output_id = vehicle_heating_liquid( who.activity )->uid().get_value();
+    const JsonValue view = json_loader::from_string( completed.second );
+    const JsonObject state = view.get_object();
+    state.allow_omitted_members();
+    CHECK( state.get_int64( "liquid_source_uid" ) == output_id );
+    save_reload_activity( who );
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    who.set_moves( 0 );
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    CHECK_FALSE( who.activity );
+    int spilled = 0;
+    for( const item &it : get_map().i_at( who.pos_bub() ) ) {
+        if( it.typeId() == itype_id( "water_clean" ) ) {
+            spilled += it.charges;
+            CHECK( it.has_own_flag( flag_HOT ) );
+        }
+    }
+    CHECK( spilled == 1 );
+    CHECK( food->charges == 1 );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+}
+
+TEST_CASE( "legacy_portable_heating_actor_still_loads_and_finishes",
+           "[vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    who.set_wielded_item( item( itype_id( "hotplate" ), calendar::turn ) );
+    item_location food = who.i_add( item( itype_id( "apple" ), calendar::turn, 1 ) );
+    food->set_item_temperature( units::from_kelvin( 280 ) );
+    heating_requirements required{ 0_ml, 0, 100 };
+    heater source{ who.get_wielded_item(), false, 0, 0, {}, false };
+    who.assign_activity( heat_activity_actor( {{food, 1}}, required, source ) );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    who.activity.serialize( out );
+    JsonValue value = json_loader::from_string( encoded.str() );
+    player_activity restored;
+    restored.deserialize( value.get_object() );
+    REQUIRE( dynamic_cast<heat_activity_actor *>( restored.actor.get() ) );
+    CHECK_FALSE( is_vehicle_heating( restored ) );
+    who.activity = std::move( restored );
+    who.set_moves( 100 );
+    who.activity.do_turn( who );
+    CHECK_FALSE( who.activity );
+    CHECK( who.items_with( []( const item &it ) {
+        return it.typeId() == itype_id( "apple" ) && it.has_own_flag( flag_HOT );
+    } ).size() == 1 );
+}
+
+TEST_CASE( "item_source_search_range_remains_native_operation_owned",
+           "[vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const tripoint_bub_ms location = who.pos_bub() + tripoint_rel_ms( 2, 0, 0 );
+    item &placed = get_map().add_item_or_charges( location, item( itype_id( "apple" ), calendar::turn, 1 ) );
+    item_location source( map_cursor( location ), &placed );
+    const auto identity = capture_item_source( who, source );
+    CHECK_FALSE( resolve_item_source( who, get_map(), identity ) );
+    CHECK( resolve_item_source( who, get_map(), identity, 3 ) == source );
+    // Ground items are shared by nearby players, but the range belongs to the
+    // acting character and cannot be extended by a distant player's request.
+    CHECK( resolve_item_source( get_avatar(), get_map(), identity, 3 ) == source );
+    get_avatar().setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 10, 0, 0 ) );
+    CHECK_FALSE( resolve_item_source( get_avatar(), get_map(), identity, 3 ) );
+}
+
+TEST_CASE( "mounted_hotplate_charges_startup_once_and_preserves_legacy_position_handoff",
+           "[multiplayer][vehicle_heating_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location food = drinking_source( who );
+    food->set_item_temperature( units::from_kelvin( 280 ) );
+    vehicle &target = electronic_vehicle( who );
+    const int gas_tank = install_test_appliance( who, target, "small_pressure_tank" );
+    target.part( gas_tank ).ammo_set( itype_id( "propane" ), 1000 );
+    REQUIRE( target.part( gas_tank ).ammo_remaining() == 1000 );
+    const itype_id tool( "test_vehicle_hotplate_startup" );
+    const auto choice = heating_choice( who, target, food, tool.str() );
+    REQUIRE( choice.heating->method == "HOTPLATE" );
+    const int before = target.fuel_left( get_map(), itype_id( "propane" ) );
+    const int initial = item( tool ).ammo_required();
+    REQUIRE( initial > 0 );
+    const auto required = heating_requirements_for_weight( 0_gram,
+                          food->weight( false, false ) / food->charges, food->volume( false, true, 1 ) );
+    const std::string start = control_request( fixture, who, choice );
+    fixture.run( who, start );
+    REQUIRE( is_vehicle_heating( who.activity ) );
+    CHECK( target.fuel_left( get_map(), itype_id( "propane" ) ) == before - initial );
+    fixture.run( who, start );
+    save_reload_activity( who );
+    CHECK( target.fuel_left( get_map(), itype_id( "propane" ) ) == before - initial );
+    finish_vehicle_heating( fixture, who );
+    CHECK( target.fuel_left( get_map(), itype_id( "propane" ) ) ==
+           before - initial - required.ammo * tool->charges_to_use() );
+    who.cancel_activity();
+
+    avatar &local = get_avatar();
+    local.setpos( get_map(), get_map().get_bub( choice.position ) + tripoint_rel_ms( 0, 1, 0 ) );
+    heating_requirements legacy_cost{ 0_ml, 0, 100 };
+    heater old_source{ {}, false, 0, 0, {}, true };
+    local.assign_activity( heat_activity_actor( {}, legacy_cost, old_source ) );
+    REQUIRE( vehicle::use_vehicle_tool( target, &get_map(), get_map().get_bub( choice.position ),
+                                       tool, true ) );
+    REQUIRE( local.activity.coords.size() == 1 );
+    CHECK( local.activity.coords.front() == choice.position );
 }

@@ -14,6 +14,7 @@
 #include "bionics.h"
 #include "bionic_activation.h"
 #include "bionic_water_activity.h"
+#include "vehicle_heating.h"
 #include "remote_vehicle_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
@@ -331,7 +332,7 @@ bool begin_client_inventory_activity( const player_activity &activity )
     view.cancel_requested = false;
     view.needs_placement = false;
     view.item_use_progress.clear();
-    view.water_source_uid = 0;
+    view.liquid_source_uid = 0;
     view.remote_security_prompt = false;
     view.remote_vehicle_target = 0;
     view.remote_controller = {};
@@ -640,7 +641,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
                                   who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
                                   who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) ||
-                                  who.activity.id() == activity_id( "ACT_FILL_LIQUID" );
+                                  who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) ||
+                                  is_vehicle_heating( who.activity );
     }
     if( const auto *consume = native_consume( who ) ) {
         state.refresh_observers = state.refresh_observers || consume->consumes_vehicle_water();
@@ -729,6 +731,15 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     vehicle_control_selection selection;
                     request.read( "vehicle_control", selection, true );
                     remote->apply_action( who, selection );
+                }
+            } else if( is_vehicle_heating( who.activity ) ) {
+                if( operation == "choose" && who.get_moves() > 0 ) {
+                    unload_liquid_choice choice;
+                    request.read( "liquid", choice, true );
+                    state.refresh_observers = true;
+                    apply_vehicle_heating_liquid( who, choice, request.get_bool( "allow_consequences", false ) );
+                } else if( operation == "step" && who.get_moves() > 0 ) {
+                    who.activity.do_turn( who );
                 }
             } else if( auto *water = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() ) ) {
                 if( water->prepare( who ) && operation == "choose" && who.get_moves() > 0 ) {
@@ -883,9 +894,13 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( auto *water = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() ) ) {
         const auto preview = water->preview( who );
         if( preview ) {
-            out.member( "water_source_uid", water->source_uid() );
-            out.member( "water_preview", *preview );
+            out.member( "liquid_source_uid", water->source_uid() );
+            out.member( "liquid_preview", *preview );
         }
+    }
+    if( const item *liquid = vehicle_heating_liquid( who.activity ) ) {
+        out.member( "liquid_source_uid", liquid->uid().get_value() );
+        out.member( "liquid_preview", *liquid );
     }
     if( active && state.tracks_item_use ) {
         out.member( "item_use_progress", who.activity.get_verb().translated() );
@@ -997,8 +1012,8 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.can_wield = response.get_bool( "can_wield", false );
         view.preview.reset();
         view.item_use_progress = response.get_string( "item_use_progress", "" );
-        view.water_source_uid = 0;
-        response.read( "water_source_uid", view.water_source_uid );
+        view.liquid_source_uid = 0;
+        response.read( "liquid_source_uid", view.liquid_source_uid );
         view.remote_security_prompt = response.get_bool( "remote_security_prompt", false );
         view.remote_vehicle_target = 0;
         response.read( "remote_vehicle_target", view.remote_vehicle_target );
@@ -1020,9 +1035,9 @@ bool apply_inventory_activity_result( const JsonObject &response )
             view.preview = std::make_shared<item>();
             response.read( "craft_preview", *view.preview, true );
         }
-        if( response.has_object( "water_preview" ) ) {
+        if( response.has_object( "liquid_preview" ) ) {
             view.preview = std::make_shared<item>();
-            response.read( "water_preview", *view.preview, true );
+            response.read( "liquid_preview", *view.preview, true );
         }
         if( view.craft_decision == "repeat" ) {
             response.read( "craft_recipe", view.craft_recipe, true );
@@ -1463,7 +1478,7 @@ void client_step_inventory_activity()
         get_avatar().activity.set_to_null();
         return;
     }
-    if( view.cancel_requested || view.needs_placement || view.finished || view.water_source_uid > 0 ||
+    if( view.cancel_requested || view.needs_placement || view.finished || view.liquid_source_uid > 0 ||
         view.remote_security_prompt || view.remote_vehicle_target > 0 ||
         !view.craft_decision.empty() || !view.construction_decision.empty() ) {
         client_update_inventory_activity_view();
@@ -1572,11 +1587,11 @@ void client_update_inventory_activity_view()
             view.cancel_requested = true;
             send_inventory_activity( "cancel" );
         }
-    } else if( view.water_source_uid > 0 && view.preview && !is_client_waiting_for_ack() &&
+    } else if( view.liquid_source_uid > 0 && view.preview && !is_client_waiting_for_ack() &&
                get_avatar().get_moves() > 0 ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         const item water = *view.preview;
-        const auto choice = query_liquid_destination( water, nullptr, view.water_source_uid, true );
+        const auto choice = query_liquid_destination( water, nullptr, view.liquid_source_uid, true );
         if( choice.kind == LD_NULL ) {
             view.cancel_requested = true;
             send_inventory_activity( "cancel" );

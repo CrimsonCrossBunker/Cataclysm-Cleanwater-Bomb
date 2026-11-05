@@ -12,6 +12,7 @@
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
 #include "vehicle_water.h"
+#include "vehicle_heating.h"
 
 class JsonObject;
 class JsonOut;
@@ -60,6 +61,7 @@ struct vehicle_control_selection {
     std::optional<vehicle_electronics_selection> electronics;
     std::optional<vehicle_appliance_selection> appliance;
     std::optional<vehicle_water_selection> water;
+    std::optional<vehicle_heating_selection> heating;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
