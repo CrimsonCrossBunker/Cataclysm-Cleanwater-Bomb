@@ -2007,7 +2007,7 @@ class iuse_function_wrapper : public iuse_actor
                    cpp_function == &iuse::crowbar_weak || cpp_function == &iuse::pickaxe ||
                    cpp_function == &iuse::jackhammer || cpp_function == &iuse::pick_lock ||
                    cpp_function == &iuse::remoteveh || cpp_function == &iuse::towel ||
-                   cpp_function == &iuse::weather_tool;
+                   cpp_function == &iuse::weather_tool || cpp_function == &iuse::hacksaw;
         }
 
         bool valid_activation_choices( const item_activation_choices &choices ) const override {

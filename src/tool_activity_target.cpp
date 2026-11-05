@@ -26,6 +26,9 @@ adjacent_tool_action adjacent_tool_method( const std::string &method )
     if( method == "PICKAXE" ) {
         return adjacent_tool_action::mine;
     }
+    if( method == "HACKSAW" ) {
+        return adjacent_tool_action::saw;
+    }
     if( method == "JACKHAMMER" ) {
         return adjacent_tool_action::drill;
     }
@@ -58,6 +61,10 @@ bool valid_adjacent_tool_target( adjacent_tool_action action, const Character &w
     }
     const tripoint_bub_ms pos = here.get_bub( target );
     switch( action ) {
+        case adjacent_tool_action::saw:
+            return tool.get_quality( quality_id( "SAW_M" ) ) >= 2 &&
+                   ( here.has_furn( pos ) ? here.furn( pos )->hacksaw->valid() :
+                     here.ter( pos )->hacksaw->valid() );
         case adjacent_tool_action::pry:
             return here.has_furn( pos ) ? here.furn( pos )->prying->valid() :
                    here.ter( pos )->prying->valid();
@@ -87,6 +94,7 @@ std::optional<tripoint_abs_ms> query_adjacent_tool_target( adjacent_tool_action 
 {
     const std::string prompt = action == adjacent_tool_action::pry ? _( "Pry where?" ) :
                                action == adjacent_tool_action::lockpick ? _( "Use your lockpick where?" ) :
+                               action == adjacent_tool_action::saw ? _( "Cut up metal where?" ) :
                                action == adjacent_tool_action::drill ? _( "Drill where?" ) : _( "Mine where?" );
     const auto valid = [&]( const tripoint_bub_ms & pos ) {
         return valid_adjacent_tool_target( action, who, here, tool, here.get_abs( pos ) );

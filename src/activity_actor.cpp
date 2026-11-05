@@ -1450,8 +1450,11 @@ std::unique_ptr<activity_actor> hotwire_car_activity_actor::deserialize( JsonVal
     return actor.clone();
 }
 
-void hacksaw_activity_actor::start( player_activity &act, Character &/*who*/ )
+void hacksaw_activity_actor::start( player_activity &act, Character &who )
 {
+    if( !continue_work( act, who ) ) {
+        return;
+    }
     const map &here = get_map();
     int moves_before_quality;
 
@@ -1487,11 +1490,15 @@ void hacksaw_activity_actor::start( player_activity &act, Character &/*who*/ )
     if( qual < 2 ) {
         if( !testing ) {
             debugmsg( "Item %s with 'HACKSAW' use action requires SAW_M quality of at least 2.",
-                      tool->typeId().c_str() );
+                      type ? type->c_str() : tool->typeId().c_str() );
         }
         act.set_to_null();
         return;
     }
+
+    quality_at_start = qual;
+    powered = type ? ( ( *type )->charges_to_use() > 0 || !( *type )->firing_requirements.empty() ) :
+              tool->needs_charges_to_use();
 
     // Speed based on the SAW_M quality.  A hacksaw, at SAW_M 2, matches the duration in JSON data.
     // The reciprocating saw has SAW_M 3 and it cuts twice as fast as a hacksaw since it's an 800
@@ -1515,47 +1522,38 @@ static void tool_out_of_charges( Character &who, const std::string &tool_name )
 
 void hacksaw_activity_actor::do_turn( player_activity &act, Character &who )
 {
-    moves_left = act.moves_left;
+    if( !continue_work( act, who ) ) {
+        return;
+    }
     map &here = get_map();
-
-    std::string method = "HACKSAW";
-
-    if( !veh_pos.has_value() ) {
-        if( tool->ammo_sufficient( &who, method ) ) {
-            std::map<std::string, int>::const_iterator iter = tool->type->ammo_scale.find( method );
-            const int uses = iter == tool->type->ammo_scale.end() ? 1 : iter->second;
-
-            tool->consume_tool_uses( uses, here, tool.pos_bub( here ), &who );
-            sfx::play_activity_sound( "tool", "hacksaw", sfx::get_heard_volume( target ) );
-            if( calendar::once_every( 1_minutes ) ) {
-                //~ Sound of a metal sawing tool at work!
-                sounds::sound( target, 15, sounds::sound_t::destructive_activity, _( "grnd grnd grnd" ) );
-            }
-        } else {
-            tool_out_of_charges( who, tool->tname() );
-        }
-    } else {
-        map &here = get_map();
-        const optional_vpart_position vp = here.veh_at( veh_pos.value() );
-        if( !vp ) {
-            debugmsg( "Lost ACT_HACKSAW vehicle tool" );
-            return;
-        }
-        vehicle &veh = vp->vehicle();
-        if( vehicle::use_vehicle_tool( veh, &here, veh_pos.value(), type.value(), true ) ) {
-            sfx::play_activity_sound( "tool", "hacksaw", sfx::get_heard_volume( target ) );
-            if( calendar::once_every( 1_minutes ) ) {
-                //~ Sound of a metal sawing tool at work!
-                sounds::sound( target, 15, sounds::sound_t::destructive_activity, _( "grnd grnd grnd" ) );
-            }
-        } else {
-            tool_out_of_charges( who, type.value()->nname( 1 ) );
-        }
+    bool supplied = false;
+    if( mounted ) {
+        supplied = consume_mounted_tool_turn( who, here, *mounted );
+    } else if( tool->ammo_sufficient( &who, "HACKSAW" ) ) {
+        const auto scale = tool->type->ammo_scale.find( "HACKSAW" );
+        const int uses = scale == tool->type->ammo_scale.end() ? 1 : scale->second;
+        supplied = tool->consume_tool_uses( uses, here, tool.pos_bub( here ), &who ) == uses;
+    }
+    if( !supplied ) {
+        const std::string name = mounted ? itype_id( mounted->tool.tool )->nname( 1 ) : tool->tname();
+        who.add_msg_if_player( m_bad, _( "Your %1$s ran out of charges." ), name );
+        act.moves_left = moves_left;
+        who.cancel_activity();
+        return;
+    }
+    moves_left = act.moves_left;
+    sfx::play_activity_sound( "tool", "hacksaw", sfx::get_heard_volume( target ) );
+    if( calendar::once_every( 1_minutes ) ) {
+        //~ Sound of a metal sawing tool at work!
+        sounds::sound( target, 15, sounds::sound_t::destructive_activity, _( "grnd grnd grnd" ) );
     }
 }
 
 void hacksaw_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( !continue_work( act, who ) ) {
+        return;
+    }
     map &here = get_map();
     const activity_data_common *data;
 
@@ -1628,58 +1626,118 @@ void hacksaw_activity_actor::finish( player_activity &act, Character &who )
     act.set_to_null();
 }
 
+void hacksaw_activity_actor::bind_owned_work( Character &who, const tripoint_abs_ms &position,
+        const mounted_tool_source *source )
+{
+    map &here = get_map();
+    owned_target = tool_activity_target::capture( here, position );
+    if( source ) {
+        mounted = *source;
+        type = itype_id( source->tool.tool );
+        veh_pos = here.get_bub( source->position );
+        tool = item_location::nowhere;
+    } else if( tool ) {
+        owned_target->tool_source = capture_item_source( who, tool );
+    }
+    quality_at_start = get_tool_quality();
+    powered = type ? ( ( *type )->charges_to_use() > 0 || !( *type )->firing_requirements.empty() ) :
+              ( tool && tool->needs_charges_to_use() );
+}
+
+bool hacksaw_activity_actor::continue_work( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    if( type && veh_pos && !mounted ) {
+        // Upgrade an older position-only mounted activity once. Subsequent
+        // turns and saves retain the exact vehicle and hardware identities.
+        const auto part = here.veh_at( *veh_pos );
+        const auto source = part ? capture_mounted_tool( part->vehicle(), here.get_abs( *veh_pos ),
+                            *type, "HACKSAW" ) : std::nullopt;
+        if( !source || !here.inbounds( target ) ) {
+            act.set_to_null();
+            return false;
+        }
+        bind_owned_work( who, here.get_abs( target ), &*source );
+        act.set_execution( activity_execution::authoritative );
+    }
+    if( mounted && !mounted_tool_item( who, here, *mounted ) ) {
+        act.set_to_null();
+        return false;
+    }
+    if( act.execution() == activity_execution::authoritative ) {
+        if( who.is_mounted() || who.has_effect( efftype_id( "incorporeal" ) ) ||
+            !continue_owned_tool_activity( act, who, mounted ? std::nullopt :
+                                           std::make_optional( tool ), owned_target ) ) {
+            act.set_to_null();
+            return false;
+        }
+        target = here.get_bub( owned_target->position );
+    } else if( !tool ) {
+        act.set_to_null();
+        return false;
+    }
+    return true;
+}
+
 float hacksaw_activity_actor::exertion_level() const
 {
-    if( tool->needs_charges_to_use() ) {
-        return LIGHT_EXERCISE;
-    } else {
-        return get_type()->exertion_level();
-    }
+    const bool legacy_powered = type && ( ( *type )->charges_to_use() > 0 ||
+                                          !( *type )->firing_requirements.empty() );
+    return ( powered || legacy_powered || ( !type && tool && tool->needs_charges_to_use() ) ) ?
+           LIGHT_EXERCISE : get_type()->exertion_level();
 }
 
 int hacksaw_activity_actor::get_tool_quality() const
 {
-    int qual = 0;
-    if( type.has_value() ) {
-        item veh_tool = item( type.value(), calendar::turn );
-        for( const auto &quality : type.value()->qualities ) {
-            if( quality.first == qual_SAW_M ) {
-                qual = quality.second.level;
+    if( type ) {
+        int quality = 0;
+        for( const auto &entry : ( *type )->qualities ) {
+            if( entry.first == qual_SAW_M ) {
+                quality = entry.second.level;
             }
         }
-        for( const auto &quality : type.value()->charged_qualities ) {
-            if( quality.first == qual_SAW_M ) {
-                qual = std::max( qual, quality.second.level );
+        for( const auto &entry : ( *type )->charged_qualities ) {
+            if( entry.first == qual_SAW_M ) {
+                quality = std::max( quality, entry.second.level );
             }
         }
-    } else {
-        qual = tool->get_quality( qual_SAW_M );
+        return quality;
     }
+    return tool ? tool->get_quality( qual_SAW_M ) : 0;
+}
 
-    return qual;
+bool hacksaw_activity_actor::can_resume_with_internal( const activity_actor &other,
+        const Character & ) const
+{
+    const auto &next = static_cast<const hacksaw_activity_actor &>( other );
+    if( owned_target && ( !owned_target->matches( get_map() ) || !next.owned_target ||
+                          owned_target->position != next.owned_target->position ) ) {
+        return false;
+    }
+    // Older saves do not store quality. Resolve their original tool lazily,
+    // after the character's inventory has been restored.
+    const int old_quality = quality_at_start > 1 ? quality_at_start : get_tool_quality();
+    return old_quality > 1 && next.get_tool_quality() > 1 &&
+           ( owned_target || target == next.target );
 }
 
 void hacksaw_activity_actor::set_resume_values_internal( const activity_actor &other,
-        const Character &/*who*/ )
+        const Character & )
 {
-    // This method recalculates moves_left based on tool quality comparison but it doesn't have
-    // access to update the moves_left on the corresponding player_activity.  You must set the
-    // player_activity's moves_left separately after resuming the activity_actor.
-
-    const hacksaw_activity_actor &actor = static_cast<const hacksaw_activity_actor &>( other );
-
-    int actor_qual = actor.get_tool_quality();
-    int qual = get_tool_quality();
-
-    int new_moves_left = -1;
-    if( actor_qual > 1 ) {
-        new_moves_left = moves_left * ( qual - 1 ) / ( actor_qual - 1 );
-    }
-    add_msg_debug( debugmode::DF_ACTIVITY,
-                   "Hacksaw resume.  Actor quality: %d, quality: %d, moves_left: %d, new_moves_left: %d.",
-                   actor_qual, qual, moves_left, new_moves_left );
-    moves_left = new_moves_left;
-    tool = actor.tool;
+    const auto &next = static_cast<const hacksaw_activity_actor &>( other );
+    const int quality = next.get_tool_quality();
+    const int old_quality = quality_at_start > 1 ? quality_at_start : get_tool_quality();
+    // Keep completed work when switching saw quality or portable/mounted source.
+    moves_left = static_cast<int>( static_cast<int64_t>( moves_left ) *
+                                   ( old_quality - 1 ) / ( quality - 1 ) );
+    target = next.target;
+    tool = next.tool;
+    type = next.type;
+    veh_pos = next.veh_pos;
+    mounted = next.mounted;
+    owned_target = next.owned_target;
+    quality_at_start = quality;
+    powered = next.powered;
 }
 
 void hacksaw_activity_actor::serialize( JsonOut &jsout ) const
@@ -1690,6 +1748,10 @@ void hacksaw_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "type", type );
     jsout.member( "veh_pos", veh_pos );
     jsout.member( "moves_left", moves_left );
+    jsout.member( "owned_target", owned_target );
+    jsout.member( "mounted", mounted );
+    jsout.member( "quality", quality_at_start );
+    jsout.member( "powered", powered );
     jsout.end_object();
 }
 
@@ -1702,6 +1764,10 @@ std::unique_ptr<activity_actor> hacksaw_activity_actor::deserialize( JsonValue &
     data.read( "type", actor.type );
     data.read( "veh_pos", actor.veh_pos );
     data.read( "moves_left", actor.moves_left );
+    data.read( "owned_target", actor.owned_target );
+    data.read( "mounted", actor.mounted );
+    data.read( "quality", actor.quality_at_start );
+    data.read( "powered", actor.powered );
     return std::make_unique<hacksaw_activity_actor>( actor );
 }
 

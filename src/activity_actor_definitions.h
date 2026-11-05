@@ -42,6 +42,7 @@
 #include "units_fwd.h"
 #include "veh_interact.h"
 #include "vehicle.h"
+#include "vehicle_tool_use.h"
 
 #include "activity_actor.h"
 
@@ -748,6 +749,8 @@ class hacksaw_activity_actor : public activity_actor
         void finish( player_activity &act, Character &who ) override;
         float exertion_level() const override;
         int get_tool_quality() const;
+        void bind_owned_work( Character &who, const tripoint_abs_ms &position,
+                              const mounted_tool_source *source = nullptr );
 
         std::unique_ptr<activity_actor> clone() const override {
             return std::make_unique<hacksaw_activity_actor>( *this );
@@ -755,6 +758,10 @@ class hacksaw_activity_actor : public activity_actor
 
         void serialize( JsonOut &jsout ) const override;
         static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+
+        std::optional<int> remaining_moves_on_resume() const override {
+            return moves_left;
+        }
 
         int moves_left = 0;
         // debugmsg causes a backtrace when fired during cata_test
@@ -764,13 +771,15 @@ class hacksaw_activity_actor : public activity_actor
         item_location tool;
         std::optional<itype_id> type;
         std::optional<tripoint_bub_ms> veh_pos;
+        std::optional<tool_activity_target> owned_target;
+        std::optional<mounted_tool_source> mounted;
+        int quality_at_start = 0;
+        bool powered = false;
+
+        bool continue_work( player_activity &act, Character &who );
 
         bool can_resume_with_internal( const activity_actor &other,
-                                       const Character &/*who*/ ) const override {
-            const hacksaw_activity_actor &actor = static_cast<const hacksaw_activity_actor &>
-                                                  ( other );
-            return actor.target == target;
-        }
+                                       const Character &who ) const override;
 
         void set_resume_values_internal( const activity_actor &other,
                                          const Character &/*who*/ ) override;

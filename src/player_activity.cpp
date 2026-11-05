@@ -623,6 +623,9 @@ void player_activity::set_resume_values( const player_activity &other, const Cha
 
     if( actor && other.actor ) {
         actor->set_resume_values( *other.actor, who );
+        if( const std::optional<int> remaining = actor->remaining_moves_on_resume() ) {
+            moves_left = *remaining;
+        }
     }
 }
 

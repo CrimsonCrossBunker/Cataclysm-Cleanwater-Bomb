@@ -69,6 +69,8 @@
 #include "flat_set.h" // IWYU pragma: keep
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "hacksaw_activity.h"
+#include "vehicle_tool_use.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "handle_liquid.h"
@@ -4469,112 +4471,23 @@ std::optional<int> iuse::oxytorch( Character *p, item *it, const tripoint_bub_ms
     return std::nullopt;
 }
 
-std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms &it_pnt )
+std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms &position )
 {
-    if( !p ) {
-        debugmsg( "%s called action hacksaw that requires character but no character is present",
-                  it->typeId().str() );
+    if( !p || !it || p->cant_do_mounted() ) {
         return std::nullopt;
     }
-    if( p->cant_do_mounted() ) {
+    if( it->has_flag( flag_PSEUDO ) ) {
+        query_mounted_saw( *p, *it, position );
         return std::nullopt;
     }
-
     map &here = get_map();
-    const std::function<bool( const tripoint_bub_ms & )> f =
-    [&here, p]( const tripoint_bub_ms & pnt ) {
-        if( pnt == p->pos_bub( here ) ) {
-            return false;
-        } else if( here.has_furn( pnt ) ) {
-            return here.furn( pnt )->hacksaw->valid();
-        } else if( const ter_id &t = here.ter( pnt ); !t->is_null() ) {
-            return t->hacksaw->valid();
-        }
-        return false;
-    };
-
-    if( !it->activation_success() ) {
-        p->add_msg_if_player( m_bad,
-                              _( "The blade of your %s disconnects at one end, so you put it back into place." ), it->tname() );
-        return std::nullopt;
+    const bool authority = p->activity.execution() == activity_execution::authoritative;
+    const auto target = authority ? std::make_optional( here.get_abs( position ) ) :
+                        query_adjacent_tool_target( adjacent_tool_action::saw, *p, here, *it );
+    if( target && ( authority || query_hacksaw_work( *p, *it, *target ) ) ) {
+        start_hacksaw_work( *p, item_location( *p, it ), *target );
     }
-
-
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
-    if( !pnt_ ) {
-        return std::nullopt;
-    }
-    const tripoint_bub_ms &pnt = *pnt_;
-    if( !f( pnt ) ) {
-        if( pnt == p->pos_bub() ) {
-            p->add_msg_if_player( m_info, _( "Why would you do that?" ) );
-            p->add_msg_if_player( m_info, _( "You're not even chained to a boiler." ) );
-        } else {
-            p->add_msg_if_player( m_info, _( "You can't cut that." ) );
-        }
-        return std::nullopt;
-    }
-    // Assign activity to calculate total_moves via ::start _before_ asking for confirmation.
-    if( p->pos_bub() == it_pnt ) {
-        p->assign_activity( hacksaw_activity_actor( pnt, item_location{ *p, it } ) );
-    } else {
-        p->assign_activity( hacksaw_activity_actor( pnt, it->typeId(), it_pnt ) );
-    }
-
-    std::string query;
-    if( p->activity.moves_left == p->activity.moves_total ) {
-        query += string_format( _( "Cut up metal using your %1$s?" ), it->tname() );
-    } else {
-        query += string_format( _( "Resume cutting up metal using your %1$s?" ), it->tname() );
-    }
-
-    // HACK: Update the player_activity moves_left based on progress stored in the activity_actor.
-    int activity_actor_moves_left = static_cast<const hacksaw_activity_actor &>(
-                                        *p->activity.actor ).moves_left;
-    p->activity.moves_left = activity_actor_moves_left;
-
-    query += "\n";
-    query += _( "Time to complete: " );
-    int required_moves = p->activity.moves_left;
-    add_msg_debug( debugmode::DF_ACTIVITY, "iuse hacksaw required_moves: %d.", required_moves );
-
-    const float weary_mult = p->exertion_adjusted_move_multiplier( p->activity.exertion_level() );
-    time_duration required_time = time_duration::from_turns( required_moves * weary_mult /
-                                  p->get_speed() );
-    const std::string time_string = colorize( to_string( required_time, true ), c_light_gray );
-    query += time_string;
-
-    if( it->uses_firing_requirements() ) {
-        const int per_turn = std::max( 1, static_cast<int>( p->get_speed() * weary_mult ) );
-        const int first_tick = std::min( required_moves,
-                                         std::max( 1, static_cast<int>( p->get_moves() * weary_mult ) ) );
-        const int remaining = std::max( 0, required_moves - first_tick );
-        const int turns = 1 + ( remaining + per_turn - 1 ) / per_turn;
-        query += "\n";
-        query += string_format( _( "This will require: %s." ),
-                                it->format_consumption_requirements( "HACKSAW",
-                                        gun_mode_DEFAULT,
-                                        std::max( 1, turns ) ) );
-    } else if( it->ammo_required() ) {
-        const int charges_needed = it->ammo_required() * required_moves / 100;
-        query += "\n";
-        if( it->ammo_current()->nname( charges_needed ) == "battery" ) {
-            query += string_format( _( "This will require %d kJ." ), charges_needed );
-        } else {
-            query += string_format(
-                         _( "This will require %d %s." ),
-                         charges_needed, it->ammo_current()->nname( charges_needed )
-                     );
-        }
-    }
-
-    if( !query_yn( query ) ) {
-        p->cancel_activity();
-        p->add_msg_if_player( m_info, _( "You decide not to cut up this metal." ) );
-    }
-
-    return std::nullopt;
+    return std::nullopt; // Charges are consumed by the activity, once per turn.
 }
 
 std::optional<int> iuse::boltcutters( Character *p, item *it, const tripoint_bub_ms & )
