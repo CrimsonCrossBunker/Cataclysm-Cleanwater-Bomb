@@ -6297,8 +6297,12 @@ units::energy Character::available_ups() const
     }
 
     cache_visit_items_with( flag_IS_UPS, [&available_charges]( const item_location & it ) {
-        available_charges += units::from_kilojoule( static_cast < std::int64_t >
-                             ( it->ammo_remaining( ) ) );
+        if( it->uses_energy() ) {
+            available_charges += it->energy_remaining( nullptr );
+        } else {
+            available_charges += units::from_kilojoule( static_cast < std::int64_t >
+                                 ( it->ammo_remaining( ) ) );
+        }
     } );
 
     return available_charges;
