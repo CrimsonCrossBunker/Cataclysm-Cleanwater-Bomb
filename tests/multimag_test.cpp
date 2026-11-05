@@ -1357,9 +1357,9 @@ TEST_CASE( "multimag_energy_consumption_reaches_the_battery_well", "[multimag][b
     const int requested = GENERATE( 3, 10, 15 );
     const int consumed = std::min( requested, 10 );
     REQUIRE( gun.energy_remaining( nullptr ) == 10_kJ );
-    CHECK( gun.energy_consume( units::from_kilojoule( requested ), tripoint_bub_ms::zero,
-                               nullptr ) == units::from_kilojoule( consumed ) );
-    CHECK( gun.energy_remaining( nullptr ) == units::from_kilojoule( 10 - consumed ) );
+    CHECK( gun.energy_consume( requested * 1_kJ, tripoint_bub_ms::zero,
+                               nullptr ) == consumed * 1_kJ );
+    CHECK( gun.energy_remaining( nullptr ) == ( 10 - consumed ) * 1_kJ );
     CHECK( gun.ammo_remaining_in_pocket( "ammo" ) == 15 );
     CHECK( gun.ammo_remaining_in_pocket( "power" ) == 10 - consumed );
 }
