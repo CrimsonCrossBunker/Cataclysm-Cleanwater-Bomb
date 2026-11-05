@@ -24,6 +24,8 @@
 #include "units.h"
 
 class Character;
+struct item_comp;
+template<typename T> struct comp_selection;
 class JsonObject;
 class item;
 class item_location;
@@ -907,7 +909,8 @@ class repair_item_actor : public iuse_actor
         };
 
         /** Attempts to repair target item with selected tool */
-        attempt_hint repair( Character &pl, item &tool, item_location &fix, bool refit_only = false ) const;
+        attempt_hint repair( Character &pl, item &tool, item_location &fix, bool refit_only = false,
+                             const comp_selection<item_comp> *material = nullptr ) const;
         /// Checks if repairs on target item are possible. Excludes checks on tool.
         /// Doesn't just estimate - should not return true if repairs are not possible or false if they are.
         /// @param pl character performing the fix
@@ -930,12 +933,13 @@ class repair_item_actor : public iuse_actor
         /// @param check_consumed_available if false skips checking if materials consumed by repair are available for `pl`
         /// @return true if check succeeds
         bool handle_components( Character &pl, const item &fix, bool print_msg, bool just_check,
-                                bool check_consumed_available ) const;
+                                bool check_consumed_available,
+                                const comp_selection<item_comp> *material = nullptr ) const;
         /** Returns the chance to repair and to damage an item. */
         std::pair<float, float> repair_chance(
             const Character &pl, const item &fix, repair_type action_type ) const;
         /** What are we most likely trying to do with this item? */
-        repair_type default_action( const item &fix, int current_skill_level ) const;
+        repair_type default_action( const Character &who, const item &fix, int current_skill_level ) const;
         /**
          * Calculates the difficulty to repair an item based on its materials.
          * Normally the difficulty to repair is that of the most difficult material.
@@ -944,6 +948,10 @@ class repair_item_actor : public iuse_actor
         int repair_recipe_difficulty( const item &fix ) const;
         /** Describes members of `repair_type` enum */
         static std::string action_description( repair_type );
+
+        bool supports_owned_activation() const override {
+            return true;
+        }
 
         explicit repair_item_actor( const std::string &type = "repair_item" ) : iuse_actor( type ) {}
 

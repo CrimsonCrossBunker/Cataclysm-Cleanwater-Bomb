@@ -15,6 +15,7 @@
 #include "bionic_activation.h"
 #include "bionic_water_activity.h"
 #include "vehicle_heating.h"
+#include "repair_activity.h"
 #include "remote_vehicle_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
@@ -334,6 +335,7 @@ bool begin_client_inventory_activity( const player_activity &activity )
     view.item_use_progress.clear();
     view.liquid_source_uid = 0;
     view.remote_security_prompt = false;
+    view.repair_prompt.reset();
     view.remote_vehicle_target = 0;
     view.remote_controller = {};
     view.craft_decision.clear();
@@ -642,7 +644,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                                   who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
                                   who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) ||
                                   who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) ||
-                                  is_vehicle_heating( who.activity );
+                                  is_vehicle_heating( who.activity ) ||
+                                  dynamic_cast<repair_activity_actor *>( who.activity.actor.get() );
     }
     if( const auto *consume = native_consume( who ) ) {
         state.refresh_observers = state.refresh_observers || consume->consumes_vehicle_water();
@@ -731,6 +734,14 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     vehicle_control_selection selection;
                     request.read( "vehicle_control", selection, true );
                     remote->apply_action( who, selection );
+                }
+            } else if( auto *repair = dynamic_cast<repair_activity_actor *>( who.activity.actor.get() ) ) {
+                if( operation == "choose" && who.get_moves() > 0 && request.has_object( "repair_choice" ) ) {
+                    repair_activity_choice choice;
+                    request.read( "repair_choice", choice, true );
+                    repair->apply_choice( who, choice );
+                } else if( operation == "step" && who.get_moves() > 0 && !repair->waiting ) {
+                    who.activity.do_turn( who );
                 }
             } else if( is_vehicle_heating( who.activity ) ) {
                 if( operation == "choose" && who.get_moves() > 0 ) {
@@ -898,6 +909,11 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             out.member( "liquid_preview", *preview );
         }
     }
+    if( const auto *repair = dynamic_cast<const repair_activity_actor *>( who.activity.actor.get() ) ) {
+        if( repair->waiting ) {
+            out.member( "repair_prompt", *repair );
+        }
+    }
     if( const item *liquid = vehicle_heating_liquid( who.activity ) ) {
         out.member( "liquid_source_uid", liquid->uid().get_value() );
         out.member( "liquid_preview", *liquid );
@@ -1015,6 +1031,11 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.liquid_source_uid = 0;
         response.read( "liquid_source_uid", view.liquid_source_uid );
         view.remote_security_prompt = response.get_bool( "remote_security_prompt", false );
+        view.repair_prompt.reset();
+        if( response.has_object( "repair_prompt" ) ) {
+            view.repair_prompt = std::make_shared<repair_activity_actor>();
+            view.repair_prompt->read( response.get_object( "repair_prompt" ) );
+        }
         view.remote_vehicle_target = 0;
         response.read( "remote_vehicle_target", view.remote_vehicle_target );
         view.remote_controller = {};
@@ -1479,7 +1500,7 @@ void client_step_inventory_activity()
         return;
     }
     if( view.cancel_requested || view.needs_placement || view.finished || view.liquid_source_uid > 0 ||
-        view.remote_security_prompt || view.remote_vehicle_target > 0 ||
+        view.remote_security_prompt || view.repair_prompt || view.remote_vehicle_target > 0 ||
         !view.craft_decision.empty() || !view.construction_decision.empty() ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
@@ -1555,6 +1576,16 @@ void client_update_inventory_activity_view()
         }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
+    } else if( view.repair_prompt && !is_client_waiting_for_ack() && get_avatar().get_moves() > 0 ) {
+        const auto choice = view.repair_prompt->query_choice( get_avatar() );
+        if( choice ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "repair_choice", *choice );
+            } );
+        } else {
+            view.cancel_requested = true;
+            send_inventory_activity( "cancel" );
+        }
     } else if( view.remote_security_prompt && !is_client_waiting_for_ack() &&
                get_avatar().get_moves() > 0 ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );

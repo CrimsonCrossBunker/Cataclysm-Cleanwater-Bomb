@@ -1831,7 +1831,7 @@ bool vehicle::use_vehicle_tool( vehicle &veh, map *here, const tripoint_bub_ms &
 
     // HACK: Evil hack incoming
     player_activity &act = get_player_character().activity;
-    if( act.id() == ACT_REPAIR_ITEM &&
+    if( !act.actor && act.id() == ACT_REPAIR_ITEM &&
         ( tool_type == itype_welder ||
           tool_type == itype_welder_crude ||
           tool_type == itype_welding_kit ||
