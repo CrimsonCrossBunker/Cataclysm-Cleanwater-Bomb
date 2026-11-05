@@ -264,13 +264,15 @@ struct heater {
     void serialize( JsonOut &jsout ) const;
     void deserialize( const JsonValue &jsin );
 };
+drop_locations query_heating_targets( Character &who, const item &tool, const heater &source,
+                                      bool liquid_items, bool solid_items );
 heater find_heater( Character *, item *, bool force_use_it );
 heater find_vehicle_heater( const tripoint_bub_ms &position, const item &tool );
 heating_requirements heating_requirements_for_weight( const units::mass &,
         const units::mass &, const units::volume & );
 
 using use_function_pointer = std::optional<int> ( * )( Character *, item *,
-    const tripoint_bub_ms & );
+                             const tripoint_bub_ms & );
 
 class iuse_actor
 {

@@ -24,5 +24,7 @@ struct item_source {
 };
 
 item_source capture_item_source( const Character &who, item_location source );
-item_location resolve_item_source( Character &who, map &here, const item_source &source );
+// Search radius is selected by the native operation, never read from a client request.
+item_location resolve_item_source( Character &who, map &here, const item_source &source,
+                                   int range = 1 );
 #endif // CATA_SRC_ITEM_SOURCE_H

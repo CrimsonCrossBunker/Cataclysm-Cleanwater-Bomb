@@ -163,6 +163,7 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vehicle_water.h"
+#include "vehicle_heating.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -14107,8 +14108,13 @@ void heat_activity_actor::serialize( JsonOut &jsout ) const
 
 std::unique_ptr<activity_actor> heat_activity_actor::deserialize( JsonValue &jsin )
 {
-    heat_activity_actor actor;
     JsonObject data = jsin.get_object();
+    if( data.get_bool( "vehicle_heating", false ) ) {
+        // The delegated reader checks the fields of this actor variant.
+        data.allow_omitted_members();
+        return deserialize_vehicle_heating( jsin );
+    }
+    heat_activity_actor actor;
     data.read( "to_heat", actor.to_heat );
     data.read( "time", actor.requirements.time );
     data.read( "ammo", actor.requirements.ammo );
