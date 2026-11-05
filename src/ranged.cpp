@@ -634,13 +634,15 @@ target_handler::trajectory target_handler::mode_unarmed_reach( avatar &you )
     return ui.run();
 }
 
-target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turret_data &turret )
+target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turret_data &turret,
+        item &preview )
 {
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = target_ui::TargetMode::TurretManual;
     ui.turret = &turret;
-    ui.relevant = &*turret.base();
+    ui.relevant = &preview;
+    ui.defer_target_effects = true;
     ui.range = turret.range();
     ui.ammo = turret.ammo_data();
 
@@ -671,6 +673,7 @@ target_handler::trajectory target_handler::mode_turrets( avatar &you, vehicle &v
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = target_ui::TargetMode::Turrets;
+    ui.defer_target_effects = true;
     ui.veh = &veh;
     ui.vturrets = &turrets;
     ui.range = range_total;

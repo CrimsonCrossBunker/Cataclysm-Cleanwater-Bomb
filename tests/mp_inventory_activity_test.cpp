@@ -89,6 +89,8 @@
 #include "vehicle_heating.h"
 #include "vehicle_toolstation.h"
 #include "vehicle_tool_use.h"
+#include "vehicle_turret_control.h"
+#include "gun_mode.h"
 #include "hacksaw_activity.h"
 #include "repair_activity.h"
 #include "activity_handlers.h"
@@ -8503,4 +8505,320 @@ TEST_CASE( "saw_resume_progress_is_set_before_callbacks_and_does_not_overwrite_r
     CHECK( replacement.fired );
     CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
     CHECK( who.activity.moves_left == 777 );
+}
+
+namespace
+{
+struct owned_turret_fixture : vehicle_control_fixture {
+    vehicle &rig( Character &who, units::angle direction = 0_degrees ) {
+        map &here = get_map();
+        vehicle *car = here.add_vehicle( vproto_id( "test_turret_rig" ),
+                                        tripoint_bub_ms( 60, 60, 0 ), direction, 0,
+                                        veh_spawn_status::PRISTINE, false, true );
+        REQUIRE( car );
+        REQUIRE( car->install_part( here, point_rel_ms::zero, vpart_id( "controls" ) ) >= 0 );
+        car->set_owner( who.get_faction()->id );
+        car->is_locked = false;
+        car->charge_battery( here, 1000, false );
+        who.setpos( here, car->bub_part_pos( here, 0 ) );
+        who.set_moves( 100 );
+        return *car;
+    }
+    int install( vehicle &car, const point_rel_ms &mount = point_rel_ms::zero ) {
+        map &here = get_map();
+        if( mount != point_rel_ms::zero ) {
+            REQUIRE( car.install_part( here, mount, vpart_id( "turret_mount" ) ) >= 0 );
+        }
+        const int index = car.install_part( here, mount, vpart_id( "turret_test_multimag_turret_gun" ) );
+        REQUIRE( index >= 0 );
+        item gun( car.part( index ).get_base() );
+        gun.faults.clear();
+        gun.set_flag( flag_id( "NEVER_JAMS" ) );
+        item magazine( itype_id( "glockmag" ) );
+        magazine.ammo_set( itype_id( "9mm" ), 15 );
+        REQUIRE( gun.put_in( magazine, pocket_type::MAGAZINE_WELL ).success() );
+        car.part( index ).set_base( std::move( gun ) );
+        car.part( index ).enabled = false;
+        REQUIRE( car.turret_query( car.part( index ) ).query() == turret_data::status::ready );
+        return index;
+    }
+    vehicle_control_selection choice( Character &who, vehicle &car, int index,
+                                      const std::string &operation ) {
+        auto result = control_choice( who, car, operation == "fire_direct" ? "turret_direct" : "turret" );
+        result.position = car.abs_part_pos( car.part( index ) );
+        vehicle_turret_selection selected;
+        selected.operation = operation;
+        selected.operator_position = who.pos_abs();
+        selected.turrets.push_back( capture_vehicle_turret( car, car.part( index ) ) );
+        if( operation != "targeting" && operation != "mode" ) {
+            selected.target = result.position + tripoint( 0, 5, 0 );
+        }
+        result.turret = selected;
+        return result;
+    }
+};
+} // namespace
+
+TEST_CASE( "owned_turret_configuration_is_explicit_and_does_not_take_another_drivers_controls",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int index = fixture.install( car );
+    const int control = car.install_part( get_map(), point_rel_ms::zero, vpart_id( "controls_turret" ) );
+    REQUIRE( control >= 0 );
+    avatar &driver = get_avatar();
+    driver.setpos( get_map(), who.pos_bub() );
+    driver.controlling_vehicle = true;
+    who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
+    const int driver_moves = driver.get_moves();
+    auto choice = fixture.choice( who, car, index, "targeting" );
+    choice.turret->turrets.front().automatic = true;
+    const auto rng = rng_get_engine();
+    REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
+    CHECK( rng_get_engine() == rng );
+    CHECK_FALSE( car.part( index ).enabled );
+    const auto request = control_request( fixture, who, choice );
+    fixture.run( who, request );
+    CHECK( car.part( index ).enabled );
+    CHECK( car.part( control ).enabled );
+    fixture.run( who, request );
+    CHECK( car.part( index ).enabled );
+    CHECK( car.part( index ).target.first == car.part( index ).target.second );
+    choice = fixture.choice( who, car, index, "mode" );
+    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "BURST" ) );
+    CHECK( driver.controlling_vehicle );
+    CHECK_FALSE( who.controlling_vehicle );
+    CHECK( driver.get_moves() == driver_moves );
+    CHECK( who.get_moves() == 100 );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "owned_console_turrets_bill_the_operator_and_selected_vehicle_once",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int first = fixture.install( car );
+    const std::string operation = GENERATE( "aim_manual", "aim_single" );
+    auto choice = fixture.choice( who, car, first, operation );
+    int second = -1;
+    if( operation == "aim_manual" ) {
+        second = fixture.install( car, point_rel_ms( 1, 0 ) );
+        choice.turret->turrets.push_back( capture_vehicle_turret( car, car.part( second ) ) );
+    }
+    get_avatar().set_mutation( trait_id( "GUNSHY" ) );
+    get_avatar().set_moves( 321 );
+    const auto host_target = get_avatar().last_target_pos;
+    const int battery = car.battery_left( get_map() );
+    const auto wire = control_request( fixture, who, choice );
+    fixture.run( who, wire );
+    CHECK( who.get_moves() == 0 );
+    const int consumed = 15 - car.part( first ).get_base().ammo_remaining() +
+                         ( second < 0 ? 0 : 15 - car.part( second ).get_base().ammo_remaining() );
+    REQUIRE( consumed > 0 );
+    CHECK( battery - car.battery_left( get_map() ) == consumed * 5 );
+    CHECK( car.part( first ).target.first == car.part( first ).target.second );
+    CHECK( get_avatar().get_moves() == 321 );
+    CHECK( get_avatar().last_target_pos == host_target );
+    const auto rng = rng_get_engine();
+    const int after = car.battery_left( get_map() );
+    fixture.run( who, wire );
+    CHECK( car.battery_left( get_map() ) == after );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "owned_direct_turret_fire_uses_the_shooters_selected_mode_and_native_cost",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int index = fixture.install( car );
+    auto choice = fixture.choice( who, car, index, "fire_direct" );
+    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    // Direct operation of the mounted gun does not acquire locked driving controls.
+    car.is_locked = true;
+    const int host_moves = get_avatar().get_moves();
+    const double host_recoil = get_avatar().recoil;
+    const int battery = car.battery_left( get_map() );
+    const auto rng = rng_get_engine();
+    REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
+    CHECK( rng_get_engine() == rng );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "DEFAULT" ) );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( who.get_moves() < 100 );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "BURST" ) );
+    const int consumed = 15 - car.part( index ).get_base().ammo_remaining();
+    REQUIRE( consumed > 0 );
+    CHECK( battery - car.battery_left( get_map() ) == consumed * 5 );
+    CHECK( get_avatar().get_moves() == host_moves );
+    CHECK( get_avatar().recoil == host_recoil );
+    CHECK_FALSE( who.has_effect( efftype_id( "on_roof" ) ) );
+}
+
+TEST_CASE( "owned_automatic_turret_override_schedules_native_fire_without_firing_during_selection",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int index = fixture.install( car );
+    car.part( index ).enabled = true;
+    auto choice = fixture.choice( who, car, index, "aim_auto" );
+    const int battery = car.battery_left( get_map() );
+    const auto rng = rng_get_engine();
+    REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
+    CHECK( car.part( index ).target.second != *choice.turret->target );
+    CHECK( rng_get_engine() == rng );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK( who.get_moves() == 0 );
+    CHECK( car.part( index ).target.second == *choice.turret->target );
+    CHECK( car.battery_left( get_map() ) == battery );
+    CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
+    REQUIRE( car.automatic_fire_turret( car.part( index ) ) > 0 );
+    CHECK( car.battery_left( get_map() ) < battery );
+    CHECK( car.part( index ).target.first == car.part( index ).target.second );
+}
+
+TEST_CASE( "owned_turret_rejects_stale_hardware_targets_roles_and_resources_before_side_effects",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int index = fixture.install( car );
+    auto choice = fixture.choice( who, car, index, "aim_manual" );
+    const std::string fault = GENERATE( "hardware", "part_position", "mode", "ammo", "operator",
+                                       "range", "locked", "role", "duplicate", "power", "trait", "automatic" );
+    CAPTURE( fault );
+    auto &selected = choice.turret->turrets.front();
+    if( fault == "hardware" ) {
+        selected.part += 100000;
+    } else if( fault == "part_position" ) {
+        selected.position += tripoint( 0, 1, 0 );
+    } else if( fault == "mode" ) {
+        selected.mode = gun_mode_id( "not_a_gun_mode" );
+    } else if( fault == "ammo" ) {
+        selected.ammo = itype_id( "gasoline" );
+    } else if( fault == "operator" ) {
+        who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
+    } else if( fault == "range" ) {
+        choice.turret->target = who.pos_abs() + tripoint( 100, 0, 0 );
+    } else if( fault == "locked" ) {
+        car.is_locked = true;
+    } else if( fault == "role" ) {
+        choice.action = "turret_direct";
+    } else if( fault == "duplicate" ) {
+        choice.turret->turrets.push_back( selected );
+    } else if( fault == "power" ) {
+        car.discharge_battery( get_map(), car.battery_left( get_map() ) );
+    } else if( fault == "trait" ) {
+        who.set_mutation( trait_id( "BRAWLER" ) );
+    } else if( fault == "automatic" ) {
+        car.part( index ).enabled = true;
+    }
+    const auto rng = rng_get_engine();
+    const int battery = car.battery_left( get_map() );
+    const auto previous_target = car.part( index ).target;
+    CHECK_FALSE( execute_vehicle_control( who, get_map(), choice ) );
+    CHECK( rng_get_engine() == rng );
+    CHECK( who.get_moves() == 100 );
+    CHECK( car.battery_left( get_map() ) == battery );
+    CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
+    CHECK( car.part( index ).target == previous_target );
+}
+
+TEST_CASE( "owned_turret_configuration_validates_the_whole_selection_before_applying_changes",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int first = fixture.install( car );
+    const int second = fixture.install( car, point_rel_ms( 1, 0 ) );
+    auto choice = fixture.choice( who, car, first, "mode" );
+    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    choice.turret->turrets.push_back( capture_vehicle_turret( car, car.part( second ) ) );
+    SECTION( "one part has been replaced" ) {
+        item replacement( itype_id( "test_multimag_turret_gun" ) );
+        car.part( second ).set_base( std::move( replacement ) );
+    }
+    SECTION( "one mode does not exist" ) {
+        choice.turret->turrets.back().mode = gun_mode_id( "absent" );
+    }
+    const auto rng = rng_get_engine();
+    CHECK_FALSE( execute_vehicle_control( who, get_map(), choice ) );
+    CHECK( car.part( first ).get_base().gun_get_mode_id() == gun_mode_id( "DEFAULT" ) );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "client_turret_choices_do_not_fire_or_change_live_modes_ammo_and_targets",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &car = fixture.rig( who );
+    const int index = fixture.install( car );
+    auto choice = fixture.choice( who, car, index, "fire_direct" );
+    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    const int battery = car.battery_left( get_map() );
+    const auto previous_target = car.part( index ).target;
+    const auto rng = rng_get_engine();
+    REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
+    CHECK( who.get_moves() == 100 );
+    cata_mp::set_client_mode( true );
+    REQUIRE( cata_mp::client_vehicle_control( choice ) );
+    CHECK( who.activity.execution() == activity_execution::presentation );
+    // The local input grant waits for the server; turret costs are not applied locally.
+    CHECK( who.get_moves() == 0 );
+    who.activity.do_turn( who );
+    CHECK( car.battery_left( get_map() ) == battery );
+    CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "DEFAULT" ) );
+    CHECK( car.part( index ).target == previous_target );
+    CHECK( rng_get_engine() == rng );
+    CHECK( g->multiplayer_session().client_inventory_activity.pending_request != 0 );
+}
+
+TEST_CASE( "owned_turret_preview_preserves_rotated_mount_range_without_changing_the_weapon",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who, 90_degrees );
+    const int index = fixture.install( car, point_rel_ms( 1, 0 ) );
+    who.setpos( get_map(), car.bub_part_pos( get_map(), index ) );
+    auto choice = fixture.choice( who, car, index, "fire_direct" );
+    const auto data = car.turret_query( car.part( index ) );
+    choice.turret->target = who.pos_abs() + tripoint( data.range(), 0, 0 );
+    REQUIRE( data.in_range( *choice.turret->target ) );
+    const auto rng = rng_get_engine();
+    const int battery = car.battery_left( get_map() );
+    REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
+    CHECK( rng_get_engine() == rng );
+    CHECK( car.battery_left( get_map() ) == battery );
+    CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
+}
+
+TEST_CASE( "owned_console_target_on_the_turret_mount_preserves_native_no_shot_behavior",
+           "[multiplayer][vehicle_turret_owned]" )
+{
+    owned_turret_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = fixture.rig( who );
+    const int index = fixture.install( car );
+    who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
+    auto choice = fixture.choice( who, car, index, "aim_single" );
+    choice.turret->target = choice.turret->turrets.front().position;
+    const int battery = car.battery_left( get_map() );
+    REQUIRE( execute_vehicle_control( who, get_map(), choice ) );
+    CHECK( who.get_moves() == 0 );
+    CHECK( car.battery_left( get_map() ) == battery );
+    CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
+    CHECK( car.part( index ).target.first == car.part( index ).target.second );
 }

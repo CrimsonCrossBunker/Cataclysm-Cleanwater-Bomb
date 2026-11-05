@@ -333,6 +333,9 @@ void vehicle_control_selection::serialize( JsonOut &out ) const
     if( tool_use ) {
         out.member( "tool_use", *tool_use );
     }
+    if( turret ) {
+        out.member( "turret", *turret );
+    }
     if( unwield ) {
         out.member( "unwield" );
         out.start_object();
@@ -366,6 +369,8 @@ void vehicle_control_selection::deserialize( const JsonObject &data )
     data.read( "toolstation", toolstation );
     tool_use.reset();
     data.read( "tool_use", tool_use );
+    turret.reset();
+    data.read( "turret", turret );
     unwield.reset();
     if( data.has_object( "unwield" ) ) {
         const JsonObject choice = data.get_object( "unwield" );
@@ -416,20 +421,36 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const bool repair = action == "repair";
     const bool toolstation = action == "toolstation";
     const bool tool_use = action == "tool_use";
+    const bool turret = action == "turret";
+    const bool direct_turret = action == "turret_direct";
     if( remote_source &&
         ( !remote_vehicle_accessible( who, here, target, *remote_source ) || security ||
           taking || releasing || appliance || water || heating || repair || toolstation || tool_use ||
+          direct_turret ||
           action == "stop_driving" ) ) {
         return false;
     }
     if( !releasing && !stopping && !taking && action != "start" &&
         action != "engines" && !security && !electronics && !appliance && !water && !heating && !repair &&
-        !toolstation && !tool_use &&
+        !toolstation && !tool_use && !turret && !direct_turret &&
         !autopilot_action( action ) ) {
         return false;
     }
     if( releasing ) {
         return target.player_in_control( here, who );
+    }
+    if( direct_turret ) {
+        // The native direct-fire action operates the gun on the player's tile,
+        // without acquiring driving control or unlocking the vehicle.
+        return position == who.pos_abs() &&
+               target.avail_part_with_feature( at->mount_pos(), "TURRET" ) >= 0;
+    }
+    if( turret ) {
+        // A gunner can operate a console while another player drives.
+        return !target.is_locked && target.has_part( "TURRET" ) &&
+               ( remote_source || resolve_remote_vehicle( who, here ) == &target ||
+                 ( position.z() == who.pos_abs().z() && rl_dist( who.pos_abs(), position ) <= 1 &&
+                   target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0 ) );
     }
     if( tool_use ) {
         return who.pos_abs().z() == position.z() && rl_dist( who.pos_abs(), position ) <= 1 &&
@@ -535,7 +556,7 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
                              action == "alarm" || action == "smash_alarm" || action == "electronics" || action == "appliance" ||
                              action == "water" || action == "heating" || action == "repair" || action == "toolstation" ||
-                             action == "tool_use" ||
+                             action == "tool_use" || action == "turret" ||
                              autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
         selection.allow_theft = who.query_yn(
@@ -642,7 +663,9 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
         { "heating", _( "Heat items with a vehicle tool" ) },
         { "repair", _( "Repair items with a vehicle tool" ) },
         { "toolstation", _( "Attach or detach vehicle tools" ) },
-        { "tool_use", _( "Use a vehicle tool" ) }
+        { "tool_use", _( "Use a vehicle tool" ) },
+        { "turret", _( "Turret controls" ) },
+        { "turret_direct", _( "Aim this turret directly" ) }
     };
     for( size_t i = 0; i < options.size(); ++i ) {
         const auto &action = options[i].first;
@@ -667,6 +690,8 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
            action == "repair" ? query_vehicle_repair( who, here, target, position ) :
            action == "toolstation" ? query_vehicle_toolstation( who, here, target, position ) :
            action == "tool_use" ? query_vehicle_tool_use( who, here, target, position ) :
+           action == "turret" ? query_vehicle_turrets( who, here, target, position, {}, remote_source ) :
+           action == "turret_direct" ? query_vehicle_turrets( who, here, target, position, "fire_direct" ) :
            query_vehicle_control( who, here, target, position, action, remote_source );
 }
 
@@ -809,6 +834,13 @@ bool execute_vehicle_control( Character &who, map &here,
                 selection.position, *selection.tool_use ) ) ) {
         return false;
     }
+    if( ( selection.action == "turret" || selection.action == "turret_direct" ) !=
+        selection.turret.has_value() ||
+        ( selection.turret &&
+          ( ( selection.action == "turret_direct" ) != ( selection.turret->operation == "fire_direct" ) ||
+            !valid_vehicle_turret_control( who, here, *target, *selection.turret ) ) ) ) {
+        return false;
+    }
     const bool taking = selection.action == "take";
     const bool theft_check = taking || selection.action == "engines" || selection.action == "hotwire" ||
                              selection.action == "alarm" || selection.action == "smash_alarm" ||
@@ -816,6 +848,7 @@ bool execute_vehicle_control( Character &who, map &here,
                              selection.action == "appliance" || selection.action == "water" ||
                              selection.action == "heating" || selection.action == "repair" ||
                              selection.action == "toolstation" || selection.action == "tool_use" ||
+                             selection.action == "turret" ||
                              autopilot_action( selection.action );
     if( theft_check && target->has_owner() && !target->is_owned_by( who ) && !selection.allow_theft ) {
         return false;
@@ -873,6 +906,9 @@ bool execute_vehicle_control( Character &who, map &here,
     }
     if( selection.tool_use ) {
         return execute_vehicle_tool_use( who, here, *target, selection.position, *selection.tool_use );
+    }
+    if( selection.turret ) {
+        return execute_vehicle_turret_control( who, here, *target, *selection.turret );
     }
     if( selection.toolstation ) {
         return execute_vehicle_tool_selection( who, here, *target, selection.position,

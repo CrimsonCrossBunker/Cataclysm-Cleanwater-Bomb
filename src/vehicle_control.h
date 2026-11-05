@@ -16,6 +16,7 @@
 #include "repair_activity.h"
 #include "vehicle_toolstation.h"
 #include "vehicle_tool_use.h"
+#include "vehicle_turret_control.h"
 
 class JsonObject;
 class JsonOut;
@@ -68,6 +69,7 @@ struct vehicle_control_selection {
     std::optional<repair_tool_source> repair;
     std::optional<vehicle_tool_selection> toolstation;
     std::optional<vehicle_tool_use_selection> tool_use;
+    std::optional<vehicle_turret_selection> turret;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );

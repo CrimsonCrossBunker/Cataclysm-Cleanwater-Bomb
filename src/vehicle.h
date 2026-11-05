@@ -2190,29 +2190,6 @@ class vehicle
          */
         int automatic_fire_turret( vehicle_part &pt );
 
-    private:
-        /*
-         * Find all turrets that are ready to fire.
-         * @param manual Include turrets set to 'manual' targeting mode
-         * @param automatic Include turrets set to 'automatic' targeting mode
-         */
-        std::vector<vehicle_part *> find_all_ready_turrets( bool manual, bool automatic );
-
-        /*
-         * Select target using the aiming UI and set turrets to aim at it.
-         * Assumes all turrets are ready to fire.
-         * @return False if target selection was aborted / no target was found
-         */
-        bool turrets_aim( std::vector<vehicle_part *> &turrets );
-
-        /*
-         * Select target using the aiming UI, set turrets to aim at it and fire them.
-         * Assumes all turrets are ready to fire.
-         * @return Number of shots fired by all turrets (which may be zero)
-         */
-        int turrets_aim_and_fire( std::vector<vehicle_part *> &turrets );
-
-    public:
         /**
          *  Try to assign a crew member (who must be a player ally) to a specific seat
          *  @note enforces NPC's being assigned to only one seat (per-vehicle) at once
