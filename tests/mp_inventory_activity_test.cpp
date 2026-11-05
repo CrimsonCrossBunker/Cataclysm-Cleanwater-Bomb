@@ -87,6 +87,9 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vehicle_heating.h"
+#include "repair_activity.h"
+#include "activity_handlers.h"
+#include "iuse_actor.h"
 #include "iuse.h"
 #include "vehicle_selector.h"
 #include "vehicle_electronics.h"
@@ -176,6 +179,7 @@ class reload_events : public event_subscriber
     public:
         int starts = 0;
         int finishes = 0;
+        std::optional<cata_default_random_engine> rng_at_finish;
         reload_events() {
             get_event_bus().subscribe( this );
         }
@@ -185,6 +189,7 @@ class reload_events : public event_subscriber
             }
             if( event.type() == event_type::character_finished_activity ) {
                 ++finishes;
+                rng_at_finish = rng_get_engine();
             }
         }
 };
@@ -7376,4 +7381,392 @@ TEST_CASE( "mounted_hotplate_charges_startup_once_and_preserves_legacy_position_
                                        tool, true ) );
     REQUIRE( local.activity.coords.size() == 1 );
     CHECK( local.activity.coords.front() == choice.position );
+}
+
+namespace
+{
+item_location repair_fixture_target( Character &who )
+{
+    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    set_time_to_day();
+    REQUIRE( who.fine_detail_vision_mod() <= 1 );
+    item_location target = who.i_add( item( itype_id( "pot" ) ) );
+    REQUIRE( target );
+    target->set_damage( 2 * itype::damage_scale );
+    target->set_degradation( 0 );
+    for( int i = 0; i < 10; ++i ) {
+        who.i_add( item( itype_id( "steel_chunk" ) ) );
+    }
+    REQUIRE( who.charges_of( itype_id( "steel_chunk" ) ) == 10 );
+    who.set_moves( 100 );
+    return target;
+}
+
+item_location repair_fixture_tool( Character &who )
+{
+    item tool( itype_id( "test_owned_repair_tool" ) );
+    tool.ammo_set( itype_id( "battery" ), 1000 );
+    const item_location result = who.i_add( tool );
+    REQUIRE( result );
+    REQUIRE( result->ammo_remaining() == 1000 );
+    who.set_moves( 100 );
+    return result;
+}
+
+std::string repair_start_request( reload_fixture &fixture, Character &who, const item_location &tool )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", capture_item_source( who, tool ) );
+        out.member( "item_type", tool->typeId() );
+        out.member( "method", "repair_metal" );
+        out.member( "target", who.pos_abs() );
+    } );
+}
+
+repair_activity_choice repair_choice( Character &who, const item_location &target )
+{
+    repair_activity_choice result;
+    result.target = capture_item_source( who, target );
+    result.repeat = static_cast<int>( repair_repeat::ONCE );
+    result.material = { usage_from::player, item_comp( itype_id( "steel_chunk" ), 1 ) };
+    return result;
+}
+
+std::string repair_choose_request( reload_fixture &fixture, Character &who,
+                                  const repair_activity_choice &choice )
+{
+    return fixture.request( who, "choose", [&]( JsonOut &out ) {
+        out.member( "repair_choice", choice );
+    } );
+}
+
+repair_activity_actor &repair_actor( Character &who )
+{
+    auto *actor = dynamic_cast<repair_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( who.activity );
+    REQUIRE( actor );
+    return *actor;
+}
+
+vehicle_control_selection mounted_repair_choice( Character &who, vehicle &target,
+        const itype_id &type = itype_id( "test_owned_repair_tool" ) )
+{
+    const int part = install_test_appliance( who, target, "veh_tools_workshop" );
+    auto &tools = target.get_tools( target.part( part ) );
+    tools.emplace_back( type );
+    target.discharge_battery( get_map(), INT_MAX );
+    target.charge_battery( get_map(), 10000 );
+    auto result = control_choice( who, target, "repair" );
+    result.position = target.abs_part_pos( target.part( part ) );
+    result.repair.emplace();
+    result.repair->vehicle_id = result.vehicle_id;
+    result.repair->position = result.position;
+    result.repair->part = target.part( part ).get_base().uid().get_value();
+    result.repair->installed_tool = tools.back().uid().get_value();
+    result.repair->tool = tools.back().typeId().str();
+    result.repair->method = "repair_metal";
+    who.set_moves( 100 );
+    return result;
+}
+} // namespace
+
+TEST_CASE( "owned_portable_repair_keeps_choices_resources_and_saved_progress_with_its_player",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const item_location target = repair_fixture_target( who );
+    const item_location tool = repair_fixture_tool( who );
+    const std::string host_before = needs_state( get_avatar() );
+    const std::string start = repair_start_request( fixture, who, tool );
+    const std::string started = fixture.run( who, start );
+    REQUIRE( repair_actor( who ).waiting );
+    JsonValue response = json_loader::from_string( started );
+    JsonObject data = response.get_object();
+    data.allow_omitted_members();
+    REQUIRE( data.has_object( "repair_prompt" ) );
+    repair_activity_actor prompt;
+    prompt.read( data.get_object( "repair_prompt" ) );
+    CHECK( prompt.source.portable.path == repair_actor( who ).source.portable.path );
+    fixture.run( who, start );
+    CHECK( tool->ammo_remaining() == 1000 );
+    const std::string choose = repair_choose_request( fixture, who, repair_choice( who, target ) );
+    fixture.run( who, choose );
+    REQUIRE_FALSE( repair_actor( who ).waiting );
+    CHECK( who.activity.moves_total == 100 );
+    fixture.run( who, choose );
+    save_reload_activity( who );
+    who.set_moves( 100 );
+    const std::string step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    REQUIRE( repair_actor( who ).waiting );
+    CHECK( target->damage() == itype::damage_scale );
+    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 9 );
+    CHECK( tool->ammo_remaining() == 1000 - tool->ammo_required() );
+    fixture.run( who, step );
+    CHECK( target->damage() == itype::damage_scale );
+    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 9 );
+    CHECK( needs_state( get_avatar() ) == host_before );
+    who.set_moves( 0 );
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    CHECK_FALSE( who.activity );
+}
+
+TEST_CASE( "owned_repair_rejects_another_players_items_and_unavailable_material_choices",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const item_location target = repair_fixture_target( who );
+    const item_location tool = repair_fixture_tool( who );
+    fixture.run( who, repair_start_request( fixture, who, tool ) );
+    auto choice = repair_choice( who, target );
+    SECTION( "another player's target" ) {
+        choice.target = capture_item_source( get_avatar(), repair_fixture_target( get_avatar() ) );
+    }
+    SECTION( "unrelated component type" ) { choice.material.comp.type = itype_id( "apple" ); }
+    SECTION( "unavailable nearby components" ) { choice.material.use_from = usage_from::map; }
+    SECTION( "invalid repeat mode" ) { choice.repeat = 2; }
+    SECTION( "refitting a rigid pot" ) { choice.repeat = static_cast<int>( repair_repeat::REFIT_ONCE ); }
+    const auto random_before = rng_get_engine();
+    fixture.run( who, repair_choose_request( fixture, who, choice ) );
+    CHECK( repair_actor( who ).waiting );
+    CHECK( rng_get_engine() == random_before );
+    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 10 );
+    CHECK( target->damage() == 2 * itype::damage_scale );
+    CHECK( tool->ammo_remaining() == 1000 );
+}
+
+TEST_CASE( "mounted_repair_bills_the_selected_vehicle_once_and_keeps_inventory_tool_power",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const item_location target = repair_fixture_target( who );
+    const item_location carried_tool = repair_fixture_tool( who );
+    vehicle &car = electronic_vehicle( who );
+    const auto selected = mounted_repair_choice( who, car );
+    const int before = car.fuel_left( get_map(), itype_id( "battery" ) );
+    const auto random_before = rng_get_engine();
+    CHECK( valid_vehicle_repair( who, get_map(), car, selected.position, *selected.repair ) );
+    CHECK( rng_get_engine() == random_before );
+    fixture.run( who, control_request( fixture, who, selected ) );
+    fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
+    REQUIRE_FALSE( repair_actor( who ).waiting );
+    save_reload_activity( who );
+    who.set_moves( 100 );
+    const auto step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    REQUIRE( repair_actor( who ).waiting );
+    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == before - carried_tool->ammo_required() );
+    CHECK( carried_tool->ammo_remaining() == 1000 );
+    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 9 );
+    CHECK( target->damage() == itype::damage_scale );
+    fixture.run( who, step );
+    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == before - carried_tool->ammo_required() );
+}
+
+TEST_CASE( "mounted_repair_rechecks_hardware_access_and_materials_before_attempting",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const item_location target = repair_fixture_target( who );
+    vehicle &car = electronic_vehicle( who );
+    const auto selected = mounted_repair_choice( who, car );
+    fixture.run( who, control_request( fixture, who, selected ) );
+    fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
+    REQUIRE_FALSE( repair_actor( who ).waiting );
+    const int before = car.fuel_left( get_map(), itype_id( "battery" ) );
+    SECTION( "owner moved away" ) { who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 8, 0, 0 ) ); }
+    SECTION( "locked vehicle" ) { car.is_locked = true; }
+    SECTION( "removed hardware" ) {
+        for( const vpart_reference &part : car.get_all_parts() ) {
+            if( part.part().get_base().uid().get_value() == selected.repair->part ) {
+                car.remove_part( part.part() );
+                break;
+            }
+        }
+    }
+    SECTION( "replaced installed tool" ) {
+        for( const vpart_reference &part : car.get_all_parts() ) {
+            if( part.part().get_base().uid().get_value() == selected.repair->part ) {
+                car.get_tools( part.part() ).clear();
+                car.get_tools( part.part() ).emplace_back( itype_id( "test_owned_repair_tool" ) );
+                break;
+            }
+        }
+    }
+    SECTION( "material moved out of reach" ) {
+        for( item *component : who.items_with( []( const item &it ) {
+        return it.typeId() == itype_id( "steel_chunk" );
+        } ) ) {
+            item_location( who, component ).remove_item();
+        }
+        who.invalidate_crafting_inventory();
+    }
+    // TEST_DATA's completion event consumes RNG even without a repair attempt.
+    // Observe after its callback, immediately before the actor settles the work.
+    reload_events events;
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( target->damage() == 2 * itype::damage_scale );
+    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == before );
+    REQUIRE( events.finishes == 1 );
+    REQUIRE( events.rng_at_finish );
+    CHECK( rng_get_engine() == *events.rng_at_finish );
+    CHECK( ( !who.activity || repair_actor( who ).waiting ) );
+}
+
+TEST_CASE( "owned_repair_preserves_native_attempt_and_random_sequence",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location target = repair_fixture_target( who );
+    item_location tool = repair_fixture_tool( who );
+    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    fixture.run( who, repair_start_request( fixture, who, tool ) );
+    fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
+    const auto *native = dynamic_cast<const repair_item_actor *>(
+                             tool->get_use( "repair_metal" )->get_actor_ptr() );
+    REQUIRE( native );
+    const auto random_before = rng_get_engine();
+    REQUIRE( native->repair( who, *tool, target ) == repair_item_actor::AS_SUCCESS );
+    tool->consume_tool_uses( 1, get_map(), who.pos_bub(), &who );
+    const auto expected_rng = rng_get_engine();
+    const int expected_damage = target->damage();
+    const int expected_ammo = tool->ammo_remaining();
+    const int expected_components = who.charges_of( itype_id( "steel_chunk" ) );
+    target->set_damage( 2 * itype::damage_scale );
+    tool->ammo_set( itype_id( "battery" ), 1000 );
+    who.i_add( item( itype_id( "steel_chunk" ) ) );
+    who.invalidate_crafting_inventory();
+    rng_get_engine() = random_before;
+    repair_actor( who ).finish( who.activity, who );
+    CHECK( target->damage() == expected_damage );
+    CHECK( tool->ammo_remaining() == expected_ammo );
+    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == expected_components );
+    CHECK( rng_get_engine() == expected_rng );
+}
+
+TEST_CASE( "actorless_legacy_repair_still_loads_and_completes",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const item_location target = repair_fixture_target( who );
+    const item_location tool = repair_fixture_tool( who );
+    who.assign_activity( activity_id( "ACT_REPAIR_ITEM" ), 100 );
+    who.activity.targets = { tool, target };
+    who.activity.str_values = { "repair_metal" };
+    who.activity.values = { static_cast<int>( repair_repeat::ONCE ) };
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    who.activity.serialize( out );
+    JsonValue value = json_loader::from_string( encoded.str() );
+    player_activity restored;
+    restored.deserialize( value.get_object() );
+    REQUIRE( restored.id() == activity_id( "ACT_REPAIR_ITEM" ) );
+    REQUIRE_FALSE( restored.actor );
+    who.activity = std::move( restored );
+    repair_item_finish( &who.activity, &who, true );
+    CHECK_FALSE( who.activity );
+    CHECK( target->damage() == itype::damage_scale );
+    CHECK( tool->ammo_remaining() == 1000 - tool->ammo_required() );
+}
+
+TEST_CASE( "owned_repair_repeat_and_refit_stop_at_the_native_completion_boundary",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    item_location target = repair_fixture_target( who );
+    const item_location tool = repair_fixture_tool( who );
+    const bool refit = GENERATE( false, true );
+    if( refit ) {
+        target = who.i_add( item( itype_id( "lc_chainmail_vest" ) ) );
+        REQUIRE( target );
+        target->set_damage( 2 * itype::damage_scale );
+        target->set_degradation( 0 );
+        target->unset_flag( flag_FIT );
+        REQUIRE( target->has_flag( flag_VARSIZE ) );
+        who.i_add( item( itype_id( "lc_chain_link" ) ) );
+    }
+    who.set_moves( 100 );
+    fixture.run( who, repair_start_request( fixture, who, tool ) );
+    auto choice = repair_choice( who, target );
+    choice.repeat = static_cast<int>( refit ? repair_repeat::REFIT_FULL : repair_repeat::FULL );
+    if( refit ) {
+        choice.material.comp.type = itype_id( "lc_chain_link" );
+    }
+    // Quantities are derived by the server, even if a client supplies a forged one.
+    choice.material.comp.count = -999;
+    fixture.run( who, repair_choose_request( fixture, who, choice ) );
+    REQUIRE_FALSE( repair_actor( who ).waiting );
+    const int attempts = refit ? 1 : 2;
+    for( int i = 0; i < attempts; ++i ) {
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+    }
+    REQUIRE( repair_actor( who ).waiting );
+    CHECK( target->damage() == ( refit ? 2 * itype::damage_scale : 0 ) );
+    if( refit ) {
+        CHECK( target->has_flag( flag_FIT ) );
+    }
+    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == ( refit ? 10 : 10 - attempts ) );
+    if( refit ) {
+        CHECK( who.amount_of( itype_id( "lc_chain_link" ) ) == 0 );
+    }
+    CHECK( tool->ammo_remaining() == 1000 - attempts * tool->ammo_required() );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( tool->ammo_remaining() == 1000 - attempts * tool->ammo_required() );
+}
+
+TEST_CASE( "mounted_multimag_repair_consumes_each_bound_resource_once",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    const item_location target = repair_fixture_target( who );
+    vehicle &car = electronic_vehicle( who );
+    test_water_tank( car, itype_id( "gasoline" ), 1000 );
+    const auto selected = mounted_repair_choice( who, car, itype_id( "test_owned_multimag_repair_tool" ) );
+    const int battery = car.fuel_left( get_map(), itype_id( "battery" ) );
+    const int fuel = car.fuel_left( get_map(), itype_id( "gasoline" ) );
+    fixture.run( who, control_request( fixture, who, selected ) );
+    fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
+    REQUIRE_FALSE( repair_actor( who ).waiting );
+    save_reload_activity( who );
+    who.set_moves( 100 );
+    const auto step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    CHECK( target->damage() == itype::damage_scale );
+    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == battery - 2 );
+    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    fixture.run( who, step );
+    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == battery - 2 );
+    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+}
+
+TEST_CASE( "repair_resize_uses_the_operator_body_instead_of_the_host",
+           "[multiplayer][repair_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    get_avatar().set_mutation( trait_id( "SMALL2" ) );
+    REQUIRE( get_avatar().get_size() == creature_size::tiny );
+    REQUIRE( who.get_size() == creature_size::medium );
+    item clothing( itype_id( "lc_chainmail_vest" ) );
+    clothing.set_flag( flag_FIT );
+    clothing.set_flag( flag_UNDERSIZE );
+    REQUIRE( clothing.has_flag( flag_VARSIZE ) );
+    item tool( itype_id( "test_owned_repair_tool" ) );
+    const auto *native = dynamic_cast<const repair_item_actor *>(
+                             tool.get_use( "repair_metal" )->get_actor_ptr() );
+    REQUIRE( native );
+    CHECK( native->default_action( who, clothing, 10 ) == repair_item_actor::RT_UPSIZING );
+    CHECK( native->default_action( get_avatar(), clothing, 10 ) != repair_item_actor::RT_UPSIZING );
 }

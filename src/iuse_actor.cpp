@@ -32,6 +32,8 @@
 #include "calendar.h"
 #include "cata_imgui.h"
 #include "character.h"
+#include "character_action_guard.h"
+#include "repair_activity.h"
 #include "character_id.h"
 #include "clothing_mod.h"
 #include "clzones.h"
@@ -122,7 +124,6 @@
 #include "weather.h"
 
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
-static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 
 static const damage_type_id damage_acid( "acid" );
 static const damage_type_id damage_bash( "bash" );
@@ -3366,13 +3367,11 @@ std::optional<int> repair_item_actor::use( Character *p, item &it,
         return std::nullopt;
     }
 
-    p->assign_activity( ACT_REPAIR_ITEM, 0, p->get_item_position( &it ), INT_MIN );
-    // We also need to store the repair actor subtype in the activity
-    p->activity.str_values.push_back( type );
-    // storing of item_location to support repairs by tools on the ground
-    p->activity.targets.emplace_back( form_loc( *p, here, pos, it ) );
-    // All repairs are done in the activity, including charge cost and target item selection
-    return 0;
+    if( it.has_flag( flag_PSEUDO ) ) {
+        return query_mounted_repair( *p, it, pos, type ) ? std::optional<int>( 0 ) : std::nullopt;
+    }
+    return start_owned_repair( *p, form_loc( *p, here, pos, it ), type ) ?
+           std::optional<int>( 0 ) : std::nullopt;
 }
 
 std::unique_ptr<iuse_actor> repair_item_actor::clone() const
@@ -3395,7 +3394,8 @@ std::set<itype_id> repair_item_actor::get_valid_repair_materials( const item &fi
 }
 
 bool repair_item_actor::handle_components( Character &pl, const item &fix,
-        bool print_msg, bool just_check, bool check_consumed_available ) const
+        bool print_msg, bool just_check, bool check_consumed_available,
+        const comp_selection<item_comp> *material ) const
 {
     // Entries valid for repaired items
     std::set<itype_id> valid_entries = get_valid_repair_materials( fix );
@@ -3465,6 +3465,26 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
         }
 
         return false;
+    }
+
+    if( material ) {
+        if( ( material->use_from != usage_from::map && material->use_from != usage_from::player &&
+              material->use_from != usage_from::both ) ||
+        std::none_of( comps.begin(), comps.end(), [&]( const item_comp & candidate ) {
+        return candidate.type == material->comp.type;
+    } ) ) {
+            return false;
+        }
+        comp_selection<item_comp> selected = *material;
+        // The player chooses material and source, never the quantity consumed.
+        selected.comp.count = items_needed;
+        if( !pl.preview_crafting_components( { selected }, 1, filter ) ) {
+            return false;
+        }
+        if( !just_check ) {
+            pl.consume_items( selected, 1, filter );
+        }
+        return true;
     }
 
     if( !just_check ) {
@@ -3645,7 +3665,8 @@ std::pair<float, float> repair_item_actor::repair_chance(
     return std::make_pair( success_chance, damage_chance );
 }
 
-repair_item_actor::repair_type repair_item_actor::default_action( const item &fix,
+repair_item_actor::repair_type repair_item_actor::default_action( const Character &who,
+        const item &fix,
         int current_skill_level ) const
 {
     if( fix.damage() > fix.degradation() ) {
@@ -3658,12 +3679,11 @@ repair_item_actor::repair_type repair_item_actor::default_action( const item &fi
         return RT_REFIT;
     }
 
-    Character &player_character = get_player_character();
-    const bool smol = player_character.get_size() == creature_size::tiny;
+    const bool smol = who.get_size() == creature_size::tiny;
 
     const bool is_undersized = fix.has_flag( flag_UNDERSIZE );
     const bool is_oversized = fix.has_flag( flag_OVERSIZE );
-    const bool resizing_matters = fix.get_sizing( player_character ) != item::sizing::ignore;
+    const bool resizing_matters = fix.get_sizing( who ) != item::sizing::ignore;
 
     const bool too_big_while_smol = smol && !is_undersized && !is_oversized;
     if( too_big_while_smol && can_be_refitted && resizing_matters ) {
@@ -3715,12 +3735,13 @@ static bool damage_item( Character &pl, item_location &fix )
 }
 
 repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &tool,
-        item_location &fix, bool refit_only ) const
+        item_location &fix, bool refit_only, const comp_selection<item_comp> *material ) const
 {
     if( !can_use_tool( pl, tool, true ) ) {
         return AS_CANT_USE_TOOL;
     }
-    if( !can_repair_target( pl, *fix, true, true ) ) {
+    if( !fix || !can_repair_target( pl, *fix, true, true ) ||
+        ( material && !handle_components( pl, *fix, false, true, true, material ) ) ) {
         return AS_CANT;
     }
 
@@ -3737,7 +3758,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
             action = RT_REFIT;
         }
     } else {
-        action = default_action( *fix, current_skill_level );
+        action = default_action( pl, *fix, current_skill_level );
     }
     const auto chance = repair_chance( pl, *fix, action );
     int practice_amount = repair_recipe_difficulty( *fix ) / 2 + 1;
@@ -3765,7 +3786,11 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
     if( current_skill_level > trains_skill_to ) {
         practice_amount = 0;
     }
+    const character_action_guard lifetime( pl );
     pl.practice( used_skill, practice_amount, trains_skill_to );
+    if( !lifetime || !fix ) {
+        return AS_CANT;
+    }
 
     if( roll == FAILURE ) {
         if( chance.first <= 0.0f ) {
@@ -3780,10 +3805,16 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
         return AS_RETRY;
     }
 
+    if( roll == SUCCESS && ( action == RT_REPAIR || action == RT_REFIT ||
+                             action == RT_DOWNSIZING || action == RT_UPSIZING ) ) {
+        if( !handle_components( pl, *fix, false, false, true, material ) || !lifetime || !fix ) {
+            return AS_CANT;
+        }
+    }
+
     if( action == RT_REPAIR ) {
         if( roll == SUCCESS ) {
             const std::string startdurability = fix->durability_indicator( true );
-            handle_components( pl, *fix, false, false, true );
 
             fix->mod_damage( -itype::damage_scale );
 
@@ -3810,7 +3841,6 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
                 pl.calc_encumbrance();
             }
-            handle_components( pl, *fix, false, false, true );
             return AS_SUCCESS;
         }
 
@@ -3824,7 +3854,6 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->set_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            handle_components( pl, *fix, false, false, true );
             return AS_SUCCESS;
         }
         return AS_RETRY;
@@ -3837,7 +3866,6 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->unset_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            handle_components( pl, *fix, false, false, true );
             return AS_SUCCESS;
         }
         return AS_RETRY;

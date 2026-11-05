@@ -164,6 +164,7 @@
 #include "vehicle_control.h"
 #include "vehicle_water.h"
 #include "vehicle_heating.h"
+#include "repair_activity.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -17741,6 +17742,7 @@ deserialize_functions = {
     { ACT_HAND_CRANK, &hand_crank_activity_actor::deserialize },
     { ACT_HARVEST, &harvest_activity_actor::deserialize},
     { ACT_HEATING, &heat_activity_actor::deserialize },
+    { activity_id( "ACT_REPAIR_ITEM" ), &repair_activity_actor::deserialize },
     { ACT_HOTWIRE_CAR, &hotwire_car_activity_actor::deserialize },
     { ACT_INSERT_ITEM, &insert_item_activity_actor::deserialize },
     { ACT_INVOKE_ITEM, &invoke_item_activity_actor::deserialize },

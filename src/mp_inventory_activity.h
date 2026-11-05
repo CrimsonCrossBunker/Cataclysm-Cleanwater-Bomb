@@ -27,6 +27,7 @@ class JsonObject;
 class JsonOut;
 class map;
 class player_activity;
+class repair_activity_actor;
 
 namespace cata_mp
 {
@@ -66,6 +67,7 @@ struct inventory_activity_client_state {
     std::string item_use_progress;
     int64_t liquid_source_uid = 0;
     bool remote_security_prompt = false;
+    std::shared_ptr<repair_activity_actor> repair_prompt;
     int64_t remote_vehicle_target = 0;
     item_source remote_controller;
     std::string craft_decision;

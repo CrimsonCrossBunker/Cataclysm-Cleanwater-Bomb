@@ -534,8 +534,9 @@ void player_activity::deserialize( const JsonObject &data )
     // ACT_MIGRATION_CANCEL will clear the backlog and reset npc state
     // this may cause inconvenience but should avoid any lasting damage to npcs
     // Vehicle faucets have an actor; other liquid sources retain their legacy handler.
-    const bool legacy_liquid = type == activity_id( "ACT_FILL_LIQUID" );
-    if( is_obsolete || ( has_actor && !legacy_liquid &&
+    const bool legacy_handler = type == activity_id( "ACT_FILL_LIQUID" ) ||
+                                type == activity_id( "ACT_REPAIR_ITEM" );
+    if( is_obsolete || ( has_actor && !legacy_handler &&
                          ( data.has_null( "actor" ) || !data.has_member( "actor" ) ) ) ) {
         actor = std::make_unique<migration_cancel_activity_actor>( type );
         type = ACT_MIGRATION_CANCEL;
