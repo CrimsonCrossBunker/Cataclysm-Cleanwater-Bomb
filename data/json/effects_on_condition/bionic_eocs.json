@@ -136,7 +136,13 @@
   {
     "type": "effect_on_condition",
     "id": "bio_noise_digestive",
-    "condition": { "and": [ { "u_has_bionics": "bio_metabolics" }, { "one_in_chance": 1800 }, { "not": { "u_has_effect": "effect_bio_noise_digestive_cooldown" } } ] },
+    "condition": {
+      "and": [
+        { "u_has_bionics": "bio_metabolics" },
+        { "one_in_chance": 1800 },
+        { "not": { "u_has_effect": "effect_bio_noise_digestive_cooldown" } }
+      ]
+    },
     "effect": [
       { "u_make_sound": "*STOMACH GURGLING NOISES*", "volume": 14, "type": "movement" },
       { "u_add_effect": "effect_bio_noise_digestive_cooldown", "duration": "10 minutes" },
@@ -159,7 +165,13 @@
   {
     "type": "effect_on_condition",
     "id": "bio_noise_gasoline",
-    "condition": { "and": [ { "u_has_bionics": "bio_fuel_cell_gasoline" }, { "one_in_chance": 900 }, { "not": { "u_has_effect": "effect_bio_noise_gasoline_cooldown" } } ] },
+    "condition": {
+      "and": [
+        { "u_has_bionics": "bio_fuel_cell_gasoline" },
+        { "one_in_chance": 900 },
+        { "not": { "u_has_effect": "effect_bio_noise_gasoline_cooldown" } }
+      ]
+    },
     "effect": [
       { "u_add_effect": "effect_bio_noise_gasoline_cooldown", "duration": "10 minutes" },
       { "u_make_sound": "*ENGINE IDLES*", "volume": 15, "type": "movement" }
