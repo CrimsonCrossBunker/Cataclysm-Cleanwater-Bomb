@@ -175,6 +175,23 @@ static const std::vector<pocket_consumption_entry> *resolve_firing_entries(
     return set.for_mode( gun_mode_DEFAULT );
 }
 
+static bool consumption_uses_battery( const item &host, const std::string &pocket_id )
+{
+    if( const item_pocket *pocket = host.pocket_by_id( pocket_id ) ) {
+        return host.pocket_accepts_battery( pocket );
+    }
+    if( host.is_tool() && ( host.has_flag( flag_USE_UPS ) ||
+                            host.has_flag( flag_USES_BIONIC_POWER ) ) ) {
+        for( const pocket_data &definition : host.type->pockets ) {
+            if( definition.pocket_id == pocket_id ) {
+                const item_pocket base_pocket( &definition );
+                return host.pocket_accepts_battery( &base_pocket );
+            }
+        }
+    }
+    return false;
+}
+
 // Per-mode feasibility for multimag. Local pocket stock is non-fungible
 // across pocket ids; only the external pool (cable + UPS + bionic) is
 // shared, and it's usable only by battery-flavored entries.
@@ -194,8 +211,7 @@ static int feasible_uses( const item &host,
             continue;
         }
         const int local = host.ammo_remaining_in_pocket( e.pocket );
-        const item_pocket *p = host.pocket_by_id( e.pocket );
-        if( host.pocket_accepts_battery( p ) ) {
+        if( consumption_uses_battery( host, e.pocket ) ) {
             battery.push_back( { q, local } );
         } else {
             n_max = std::min( n_max, local / q );
@@ -2672,6 +2688,11 @@ bool item::pocket_accepts_battery( const item_pocket *p ) const
     if( p == nullptr ) {
         return false;
     }
+    const itype_id default_magazine = p->magazine_default();
+    if( !default_magazine.is_null() && !default_magazine.is_empty() &&
+        default_magazine->magazine && default_magazine->magazine->type.count( ammo_battery ) ) {
+        return true;
+    }
     for( const ammotype &at : p->ammo_types() ) {
         if( at == ammo_battery ) {
             return true;
@@ -2927,8 +2948,7 @@ int multimag_drain( item &host, const std::vector<pocket_consumption_entry> &ent
         if( qty <= 0 ) {
             continue;
         }
-        const item_pocket *p = host.pocket_by_id( e.pocket );
-        const bool battery = host.pocket_accepts_battery( p );
+        const bool battery = consumption_uses_battery( host, e.pocket );
         if( battery ) {
             const int from_cable = std::min( qty, cable_left );
             cable_left -= from_cable;
@@ -3060,7 +3080,7 @@ int item::effective_qty( const pocket_consumption_entry &e ) const
 {
     const item_pocket *p = pocket_by_id( e.pocket );
     const bool is_primary = pocket_is_primary_ammo( p );
-    const bool is_battery = pocket_accepts_battery( p );
+    const bool is_battery = consumption_uses_battery( *this, e.pocket );
 
     float multiplier = 1.0f;
     int modifier_int = 0;
