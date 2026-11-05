@@ -2092,8 +2092,11 @@ units::energy item::energy_consume( units::energy qty, map *here, const tripoint
     }
 
     // Consume energy from contained magazine
-    if( magazine_current() ) {
-        qty -= magazine_current()->energy_consume( qty, here, pos, carrier );
+    for( item *mag : magazines_current() ) {
+        qty -= mag->energy_consume( qty, here, pos, carrier );
+        if( qty == 0_kJ ) {
+            break;
+        }
     }
 
     // Consume UPS energy from various sources
@@ -2746,6 +2749,14 @@ static int method_scale( const itype *type, const std::string &method )
 static std::string format_entry_name( const item &host, const pocket_consumption_entry &e,
                                       int qty )
 {
+    if( consumption_uses_battery( host, e.pocket ) ) {
+        if( host.has_flag( flag_USE_UPS ) ) {
+            return n_gettext( "charge from some UPS", "charges from some UPS", qty );
+        }
+        if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
+            return _( "kJ of bionic power" );
+        }
+    }
     const item_pocket *p = host.pocket_by_id( e.pocket );
     if( p == nullptr ) {
         return e.pocket;
