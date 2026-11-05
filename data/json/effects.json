@@ -4071,6 +4071,27 @@
     ]
   },
   {
+    "id": "effect_bio_noise_quiet_burn_cooldown",
+    "type": "effect_type",
+    "//": "cooldown mark of bio_noise_quiet_burn eoc",
+    "name": [ "" ],
+    "desc": [ "" ]
+  },
+  {
+    "id": "effect_bio_noise_digestive_cooldown",
+    "type": "effect_type",
+    "//": "cooldown mark of bio_noise_digestive eoc",
+    "name": [ "" ],
+    "desc": [ "" ]
+  },
+  {
+    "id": "effect_bio_noise_gasoline_cooldown",
+    "type": "effect_type",
+    "//": "cooldown mark of bio_noise_gasoline eoc",
+    "name": [ "" ],
+    "desc": [ "" ]
+  },
+  {
     "type": "effect_type",
     "id": "crushed",
     "apply_message": "The ceiling collapses on you!",
