@@ -15,6 +15,7 @@
 
 class Character;
 class item;
+class monster;
 class npc;
 enum class object_type : int;
 struct WORLD;
@@ -212,6 +213,9 @@ void set_host_mode( bool enabled );
 // True when this instance is hosting (listen server running), regardless of
 // whether it is also a headless dedicated server.
 bool is_hosting();
+
+void mp_client_monster_op_sent( const monster &mon, bool killed );
+void mp_server_mon_force_resend( uint32_t nid );
 
 // Called when a world is unloaded (quit-to-menu). Resets per-world MP state —
 // currently the stale-NPC sweep guard — so re-entering any

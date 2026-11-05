@@ -582,7 +582,7 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--server", {},
-                "Run as dedicated headless multiplayer server",
+                "Reserved server mode; use --host for playable hosting",
                 section_default,
                 0,
                 [&result]( int, const char ** ) -> int {
@@ -780,7 +780,7 @@ static bool copy_legacy_android_saves( const std::filesystem::path &source,
                                        destination_entry.u8string();
         } else {
             const std::filesystem::path temporary_entry = destination /
-                ( ".migration-" + source_entry.filename().u8string() + ".tmp" );
+                    ( ".migration-" + source_entry.filename().u8string() + ".tmp" );
             error.clear();
             std::filesystem::remove_all( temporary_entry, error );
             if( !error ) {
@@ -823,7 +823,7 @@ static void migrate_legacy_android_user_data( const std::string &legacy_user_dir
     }
     if( error ) {
         DebugLog( D_ERROR, D_MAIN ) << "Unable to compare Android storage directories; "
-                                       "migration will not run: " << error.message();
+                                    "migration will not run: " << error.message();
         return;
     }
 
@@ -866,7 +866,7 @@ static void migrate_legacy_android_user_data( const std::string &legacy_user_dir
             const bool skip_generated_cache = std::string( directory ) == "config" ||
                                               std::string( directory ) == "memorial";
             success = copy_legacy_android_directory( source_directory,
-                destination / directory, skip_generated_cache ) && success;
+                      destination / directory, skip_generated_cache ) && success;
         }
     }
 
@@ -876,7 +876,7 @@ static void migrate_legacy_android_user_data( const std::string &legacy_user_dir
 
     if( !success ) {
         DebugLog( D_ERROR, D_MAIN ) <<
-        "Android user-data migration was incomplete and will be retried next launch.";
+                                    "Android user-data migration was incomplete and will be retried next launch.";
         return;
     }
 

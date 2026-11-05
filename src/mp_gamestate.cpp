@@ -1,4 +1,5 @@
 #include "mp_gamestate.h"
+#include "mp_magic.h"
 
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
@@ -200,7 +201,7 @@ void mp_log( const std::string &msg )
         // launch, never mid-session, so it never pulls live data out from under
         // a debugging run.
         constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 *
-            1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
+                1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
         const std::filesystem::path desired_fs_path = std::filesystem::u8path( desired_path );
         const std::uintmax_t sz =
@@ -429,6 +430,8 @@ void host_queue_sfx( const std::string &id, const std::string &variant, int vol 
 // The character_id of the remote player's NPC. Invalid when no remote player is connected.
 static character_id remote_player_npc_id;
 static bool remote_player_connected = false;
+// The connection identity stays stable when char_stats renames the proxy.
+static std::string remote_player_connection_name;
 // Client-side: NPC representing the host player in the client's local world.
 static character_id client_host_npc_id;
 static bool client_host_npc_spawned = false;
@@ -1831,6 +1834,7 @@ static void mp_cull_local_npcs()
 // that enters a world twice per launch hits it.
 void mp_on_world_exit()
 {
+    mp_magic_reset();
     mp_cleanup_done = false;
     // A world exit ends any co-op session.  Clear the host/client session mode so
     // the NEXT game started from the menu is treated as plain single-player.
@@ -1912,6 +1916,8 @@ static void spawn_remote_player( const std::string &name )
         std::cout << "[cdda-mp] Remote player already exists, ignoring spawn." << std::endl;
         return;
     }
+    mp_magic_reset();
+    remote_player_connection_name = name;
     // Purge any stale NPCs from previous sessions that share this name —
     // covers artifacts that predate the ID-tracking cleanup file.
     purge_npcs_by_name( name );
@@ -2035,6 +2041,8 @@ static void spawn_remote_player( const std::string &name )
 
 static void remove_remote_player()
 {
+    mp_magic_reset();
+    remote_player_connection_name.clear();
     if( !remote_player_connected ) {
         return;
     }
@@ -2485,7 +2493,7 @@ static void mp_handle_high_five_recv( const std::string &msg );
 static void mp_handle_shout_recv( const std::string &msg );
 
 // NOLINTNEXTLINE(readability-function-size)
-static void handle_remote_action( const std::string_view/*name*/, const std::string &msg )
+static void handle_remote_action( const std::string_view name, const std::string &msg )
 {
     if( !remote_player_connected ) {
         return;
@@ -2493,6 +2501,15 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
 
     npc *remote = g->critter_by_id<npc>( remote_player_npc_id );
     if( !remote ) {
+        return;
+    }
+
+    if( msg.find( "\"type\":\"client_monster_op\"" ) != std::string::npos ||
+        msg.find( "\"type\":\"magic_resync_request\"" ) != std::string::npos ||
+        msg.find( "\"type\":\"partner_spell\"" ) != std::string::npos ) {
+        if( name == remote_player_connection_name ) {
+            mp_handle_spell_message( msg );
+        }
         return;
     }
 
@@ -3769,7 +3786,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 veh.skidding = true;
                 add_msg( m_warning, _( "%s loses control of %s." ), remote->name, veh.name );
                 g_action_msgs_pending.push_back( string_format( _( "You lose control of %s." ),
-                        veh.name ) );
+                                                 veh.name ) );
                 veh.turn( veh.last_turn > 0_degrees ? 60_degrees : -60_degrees );
             } else {
                 int braking_power = std::abs( veh.velocity ) / 2 + 10 * 100;
@@ -6357,6 +6374,9 @@ void process_mp_events()
     // buffering — see ROADMAP.md "Action queue depth"
     auto is_state_sync = []( const std::string_view data ) {
         return data.find( R"("action":"worn_sync")" ) != std::string::npos
+               || data.find( R"("type":"client_monster_op")" ) != std::string::npos
+               || data.find( R"("type":"magic_resync_request")" ) != std::string::npos
+               || data.find( R"("type":"partner_spell")" ) != std::string::npos
                || data.find( R"("type":"trade_delta")" ) != std::string::npos
                || data.find( R"("type":"note_sync")" ) != std::string::npos
                || data.find( R"("type":"chat")" ) != std::string::npos
@@ -7057,6 +7077,7 @@ static bool apply_one_state_message( const std::string &msg )
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
         mp_log( "[cdda-mp] STATE-APPLY: parse done" );
+        mp_magic_client_state( jo );
 
         // Sync host's calendar turn so the client sees the correct time, lighting, and weather.
         if( jo.has_int( "calendar_turn" ) ) {
@@ -8157,6 +8178,29 @@ static std::string build_client_veh_cargo_changes( int radius = 12 )
 
 // Build JSON array of monsters the client damaged since the last server sync.
 // Uses g_last_monster_hp (last server-reported HP) as the baseline.
+void mp_client_monster_op_sent( const monster &mon, bool killed )
+{
+    if( killed ) {
+        g_last_monster_hp.erase( mon.mp_net_id );
+        g_client_pending_kill[mon.mp_net_id] = CLIENT_PENDING_KILL_SYNCS;
+    } else {
+        // A polymorph's HP rescale is not a combat hit.
+        g_last_monster_hp[mon.mp_net_id] = mon.get_hp();
+    }
+}
+
+int mp_client_monster_prior_hp( const monster &mon )
+{
+    const auto baseline = g_last_monster_hp.find( mon.mp_net_id );
+    return is_client_mode() && baseline != g_last_monster_hp.end() &&
+           mon.get_hp() < baseline->second ? std::max( 0, mon.get_hp() ) : -1;
+}
+
+void mp_server_mon_force_resend( uint32_t nid )
+{
+    g_server_mon_last_sent.erase( nid );
+}
+
 static std::string build_client_monster_hits()
 {
     std::string hits;
@@ -8240,7 +8284,7 @@ static void client_capture_avatar_msgs()
         return;
     }
     const auto new_msgs = Messages::recent_messages( static_cast<size_t>( cur -
-        g_client_msg_watermark ) );
+                          g_client_msg_watermark ) );
     g_client_msg_watermark = cur;
     const std::string client_name = get_avatar().name;
     for( const auto &[time_str, text] : new_msgs ) {
@@ -9072,6 +9116,8 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
                           + ",\"y\":" + std::to_string( mp.y() )
                           + ",\"z\":" + std::to_string( mp.z() )
                           + ",\"hp\":" + std::to_string( mon_ptr->get_hp() )
+                          + ",\"fr\":" + std::to_string( mon_ptr->friendly )
+                          + ",\"eff\":" + mp_monster_effects_wire( *mon_ptr )
                           + ",\"facing\":" + std::to_string( mon_facing ) + "}";
         // Delta gate: emit only if new or changed since last broadcast. nid + id
         // are stable, so an identical record string means x/y/z/hp/facing are all
@@ -9949,6 +9995,17 @@ static void apply_monster_sync( JsonObject &jo )
 
         matched.insert( best );
 
+        const mtype_id authoritative_type( mo.get_string( "id", "" ) );
+        if( authoritative_type.is_valid() && best->type->id != authoritative_type ) {
+            best->poly( authoritative_type );
+        }
+        if( mo.has_int( "fr" ) ) {
+            best->friendly = mo.get_int( "fr" );
+        }
+        if( !best->is_dead() ) {
+            mp_apply_monster_effects( *best, mo );
+        }
+
         // Silent-drop diagnostic: remember live nids; forget ones the host reports
         // dead (server_hp<=0) so a later revival re-spawn isn't mis-flagged.
         if( nid != 0 ) {
@@ -10062,7 +10119,7 @@ static void apply_monster_sync( JsonObject &jo )
             seen_now[key] = strikes;
             phantom_log += mon->type->id.str() + "@dAvatar" +
                            std::to_string( std::max( std::abs( mp.x() - av.x() ),
-                               std::abs( mp.y() - av.y() ) ) ) +
+                                           std::abs( mp.y() - av.y() ) ) ) +
                            "(s" + std::to_string( strikes ) + ") ";
             if( strikes >= PHANTOM_CULL_SYNCS ) {
                 phantom_cull.push_back( mon );
@@ -10261,7 +10318,7 @@ void mp_handle_pass_item()
     }
 
     item_location loc = game_menus::inv::titled_menu( av,
-        _( "Pass what?" ), _( "You have no items to pass." ) );
+                        _( "Pass what?" ), _( "You have no items to pass." ) );
     if( !loc ) {
         return;
     }
@@ -10478,9 +10535,9 @@ void mp_sync_note_add( const tripoint_abs_omt &pos, std::string_view text )
         }
     }
     std::string payload = R"({"type":"note_sync","op":"add","x":)" + std::to_string( pos.x() ) + ","
-                           "\"y\":" + std::to_string( pos.y() ) + ","
-                           "\"z\":" + std::to_string( pos.z() ) + ","
-                           "\"text\":\"" + escaped + "\"}";
+                          "\"y\":" + std::to_string( pos.y() ) + ","
+                          "\"z\":" + std::to_string( pos.z() ) + ","
+                          "\"text\":\"" + escaped + "\"}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: add at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10495,8 +10552,8 @@ void mp_sync_note_delete( const tripoint_abs_omt &pos )
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"delete","x":)" + std::to_string( pos.x() ) + ","
-                           "\"y\":" + std::to_string( pos.y() ) + ","
-                           "\"z\":" + std::to_string( pos.z() ) + "}";
+                          "\"y\":" + std::to_string( pos.y() ) + ","
+                          "\"z\":" + std::to_string( pos.z() ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: delete at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10511,10 +10568,10 @@ void mp_sync_note_danger( const tripoint_abs_omt &pos, int radius, bool dangerou
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"danger","x":)" + std::to_string( pos.x() ) + ","
-                           "\"y\":" + std::to_string( pos.y() ) + ","
-                           "\"z\":" + std::to_string( pos.z() ) + ","
-                           "\"radius\":" + std::to_string( radius ) + ","
-                           "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
+                          "\"y\":" + std::to_string( pos.y() ) + ","
+                          "\"z\":" + std::to_string( pos.z() ) + ","
+                          "\"radius\":" + std::to_string( radius ) + ","
+                          "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: danger at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) + " r=" + std::to_string( radius ) );
@@ -10816,7 +10873,7 @@ std::string serialize_remote_player_state()
         const size_t new_count = static_cast<size_t>( current_msg_count - g_last_forwarded_msg_count );
         g_last_forwarded_msg_count = current_msg_count;
         const std::vector<std::pair<std::string, std::string>> new_msgs =
-            Messages::recent_messages( new_count );
+                    Messages::recent_messages( new_count );
         for( const auto &[time_str, text] : new_msgs ) {
             ( void )time_str;
             // Swap/push messages are rendered on the client via semantic flags
@@ -11084,7 +11141,7 @@ std::string serialize_remote_player_state()
     }
     host_hp_json += "]";
 
-    return "{\"type\":\"state\","
+    return "{\"type\":\"state\",\"spell_generation\":\"" + mp_magic_host_generation() + "\","
            "\"calendar_turn\":" + std::to_string( to_turn<int>( calendar::turn ) ) + ","
            "\"host_name\":\"" + host.name + "\","
            "\"pos\":{\"x\":" + std::to_string( pos.x() ) +
@@ -11119,12 +11176,12 @@ std::string serialize_remote_player_state()
     + ( []() -> std::string {
         // One-shot wake_client signal — emit on this broadcast then clear.
         if( g_pending_wake_client )
-    {
-        g_pending_wake_client = false;
-        return "\"wake_client\":true,";
-    }
-    return "";
-}() ) +
+        {
+            g_pending_wake_client = false;
+            return "\"wake_client\":true,";
+        }
+        return "";
+    }() ) +
     ( []() -> std::string {
         // One-shot host→client swap/push signals — client renders the
         // observer message locally from the proxy name (no text relay).
@@ -11145,32 +11202,32 @@ std::string serialize_remote_player_state()
     ",\"moves\":" + std::to_string( g_remote_moves ) +
     ",\"speed\":" + std::to_string( remote->get_speed() ) +
     R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
-     ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
-     ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
-     ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
-            // Authoritative grab + hauling state for the client's character.
-            // Client mirrors these onto its local avatar each tick so the
-            // local SP grab/haul code (and its move-cost gating) reads the
-            // same values the host is enforcing.
-            // MP-FIXME: npc::get_grab_type stubbed for CCB
-     ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
-     ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
-     ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
-     ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
-     ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
+    ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
+    ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
+    ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
+    // Authoritative grab + hauling state for the client's character.
+    // Client mirrors these onto its local avatar each tick so the
+    // local SP grab/haul code (and its move-cost gating) reads the
+    // same values the host is enforcing.
+    // MP-FIXME: npc::get_grab_type stubbed for CCB
+    ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
+    ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
+    ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
+    ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
+    ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
     [&]() -> std::string {
         if( !remote->controlling_vehicle )
-    {
-        return "";
-    }
-    map &vmap = get_map();
-    const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
+        {
+            return "";
+        }
+        map &vmap = get_map();
+        const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
         if( !ovp )
-    {
-        return "";
-    }
-    const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
-    return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
+        {
+            return "";
+        }
+        const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
+        return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
         + ",\"y\":" + std::to_string( vabs.y() )
         + ",\"z\":" + std::to_string( vabs.z() ) + "}";
     }() +

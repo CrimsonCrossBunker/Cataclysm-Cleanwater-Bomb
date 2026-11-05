@@ -243,7 +243,10 @@ server::server( uint16_t port, std::string password, std::string version )
     : port_( port )
     , password_( std::move( password ) )
     , version_( std::move( version ) )
-    , impl_( std::make_unique<impl>( port ) ) {}
+    , impl_( std::make_unique<impl>( port ) )
+{
+    port_ = impl_->acceptor.local_endpoint().port();
+}
 
 server::~server() = default;
 
