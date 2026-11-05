@@ -41,6 +41,7 @@ static const itype_id itype_rm13_armor( "rm13_armor" );
 static const itype_id itype_rm13_armor_on( "rm13_armor_on" );
 static const itype_id itype_rm13_armor_rebreather_on( "rm13_armor_rebreather_on" );
 static const itype_id itype_rm13_battery( "rm13_battery" );
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 
 TEST_CASE( "rm13_default_battery_can_be_unloaded", "[item][battery][rm13]" )
 {
@@ -224,7 +225,7 @@ TEST_CASE( "rm13_hit_uses_the_installed_power_source", "[item][battery][toolmod]
             you.i_add( ups );
         } else {
             you.set_max_power_level( 10_kJ );
-            you.set_power_level( units::from_kilojoule( stored ) );
+            you.set_power_level( stored * 1_kJ );
         }
     }
     if( rebreather ) {
@@ -237,12 +238,12 @@ TEST_CASE( "rm13_hit_uses_the_installed_power_source", "[item][battery][toolmod]
     REQUIRE( worn.has_value() );
     item &worn_armor = **worn;
     REQUIRE( worn_armor.active );
-    REQUIRE( worn_armor.energy_remaining( &you ) == units::from_kilojoule( stored ) );
+    REQUIRE( worn_armor.energy_remaining( &you ) == stored * 1_kJ );
     const int rebreather_before = worn_armor.ammo_remaining_in_pocket( "rebreather" );
     damage_unit hit( damage_bash, hit_damage );
     const bodypart_id torso( "torso" );
     if( subpart ) {
-        const sub_bodypart_id upper_torso = sub_bodypart_str_id( "torso_upper" ).id();
+        const sub_bodypart_id upper_torso = sub_body_part_torso_upper.id();
         you.armor_absorb( hit, worn_armor, torso, upper_torso, 0, false );
     } else {
         you.armor_absorb( hit, worn_armor, torso, 0, false );
