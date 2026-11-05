@@ -1,11 +1,11 @@
+#include <initializer_list>
 #include <list>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
-#include "calendar.h"
 #include "cata_catch.h"
-#include "character.h"
 #include "character_attire.h"
 #include "coordinates.h"
 #include "flexbuffer_json.h"
