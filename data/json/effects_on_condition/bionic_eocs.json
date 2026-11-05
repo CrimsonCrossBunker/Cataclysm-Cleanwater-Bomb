@@ -155,8 +155,11 @@
   {
     "type": "effect_on_condition",
     "id": "bio_noise_gasoline",
-    "condition": { "and": [ { "u_has_bionics": "bio_fuel_cell_gasoline" }, { "one_in_chance": 900 } ] },
-    "effect": [ { "u_make_sound": "*ENGINE IDLES*", "volume": 15, "type": "movement" } ]
+    "condition": { "and": [ { "u_has_bionics": "bio_fuel_cell_gasoline" }, { "one_in_chance": 900 }, { "not": { "u_has_effect": "effect_bio_noise_gasoline_cooldown" } } ] },
+    "effect": [
+      { "u_add_effect": "effect_bio_noise_gasoline_cooldown", "duration": "10 minutes" },
+      { "u_make_sound": "*ENGINE IDLES*", "volume": 15, "type": "movement" }
+    ]
   },
   {
     "type": "effect_on_condition",
