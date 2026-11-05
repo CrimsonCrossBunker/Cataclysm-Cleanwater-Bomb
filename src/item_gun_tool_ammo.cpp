@@ -291,13 +291,23 @@ static int ceil_kilojoules( const units::energy energy )
     return static_cast<int>( ( joules + 999 ) / 1000 );
 }
 
-static auto reserve_firing_requirement_external_power(
+namespace
+{
+struct external_power_reservation {
+    int ups_kj = 0;
+    int bionic_kj = 0;
+};
+
+struct dps_comp_data {
+    mtype_id mon_id;
+    bool display;
+    bool evaluate;
+};
+} // namespace
+
+static external_power_reservation reserve_firing_requirement_external_power(
     const item &host, const Character *carrier, int uses )
 {
-    struct external_power_reservation {
-        int ups_kj = 0;
-        int bionic_kj = 0;
-    };
     external_power_reservation reservation;
     if( carrier == nullptr || uses <= 0 || !uses_firing_requirement_external_power( host ) ) {
         return reservation;
@@ -358,7 +368,7 @@ static int feasible_uses_with_external_power(
     int high = std::min( requested, energy_limited );
     while( low < high ) {
         const int mid = low + ( high - low + 1 ) / 2;
-        const auto reservation =
+        const external_power_reservation reservation =
             reserve_firing_requirement_external_power( host, carrier, mid );
         const int pool = cable + std::max( 0, ups - reservation.ups_kj ) +
                          std::max( 0, bionic - reservation.bionic_kj );
@@ -650,15 +660,6 @@ double item::effective_dps( const Character &guy, Creature &mon ) const
     total_damage += summary.second;
     return total_damage * to_moves<double>( 1_seconds ) / total_moves;
 }
-
-namespace
-{
-struct dps_comp_data {
-    mtype_id mon_id;
-    bool display;
-    bool evaluate;
-};
-} // namespace
 
 static const std::vector<std::pair<translation, dps_comp_data>> dps_comp_monsters = {
     { to_translation( "Best" ), { pseudo_debug_mon, true, false } },
@@ -2935,7 +2936,7 @@ int multimag_drain( item &host, const std::vector<pocket_consumption_entry> &ent
     if( allowed <= 0 ) {
         return 0;
     }
-    const auto reservation =
+    const external_power_reservation reservation =
         reserve_firing_requirement_external_power( host, carrier, allowed );
 
     int cable_left = cable_initial;
