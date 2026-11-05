@@ -85,6 +85,7 @@
 #include "uistate.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_turret_control.h"
 #include "vpart_position.h"
 
 static const efftype_id effect_amigara( "amigara" );
@@ -1116,48 +1117,8 @@ void avatar_action::fire_ranged_bionic( avatar &you, const item &fake_gun )
 
 bool avatar_action::fire_turret_manual( avatar &you, map &m, turret_data &turret )
 {
-    if( !turret.base()->is_gun() ) {
-        debugmsg( "Expected turret base to be a gun." );
-        return false;
-    }
-
-    switch( turret.query() ) {
-        case turret_data::status::no_ammo:
-            add_msg( m_bad, _( "The %s is out of ammo." ), turret.name() );
-            return false;
-        case turret_data::status::no_power:
-            add_msg( m_bad, _( "The %s is not powered." ), turret.name() );
-            return false;
-        case turret_data::status::ready:
-            break;
-        default:
-            debugmsg( "Unknown turret status" );
-            return false;
-    }
-
-    // check if any gun modes are usable
-    std::vector<std::string> messages;
-    const std::map<gun_mode_id, gun_mode> gunmodes = turret.base()->gun_all_modes();
-    if( !std::any_of( gunmodes.begin(), gunmodes.end(),
-    [&you, &m, &messages]( const std::pair<const gun_mode_id, gun_mode> &p ) {
-    return gunmode_checks_common( you, m, messages, p.second );
-    } ) ) {
-        // no gunmode is usable, dump reason messages why not
-        for( const std::string &msg : messages ) {
-            add_msg( m_bad, msg );
-        }
-        return false;
-    }
-
-    // all checks passed - start aiming
-    g->temp_exit_fullscreen();
-    target_handler::trajectory trajectory = target_handler::mode_turret_manual( you, turret );
-
-    if( !trajectory.empty() ) {
-        turret.fire( you, &m, trajectory.back() );
-    }
-    g->reenter_fullscreen();
-    return true;
+    const auto at = m.veh_at( you.pos_abs() );
+    return turret && at && use_vehicle_turrets( you, m, at->vehicle(), you.pos_abs(), "fire_direct" );
 }
 
 void avatar_action::mend( avatar &you, item_location loc )

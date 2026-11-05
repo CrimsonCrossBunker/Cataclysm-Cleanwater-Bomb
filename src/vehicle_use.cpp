@@ -1,4 +1,5 @@
 #include "vehicle.h"
+#include "vehicle_turret_control.h"
 #include "vehicle_control.h"
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
@@ -2138,25 +2139,40 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     if( controls_here && has_part( "TURRET" ) ) {
         menu.add( _( "Set turret targeting modes" ) )
         .hotkey( "TURRET_TARGET_MODE" )
-        .on_submit( [this] { turrets_set_targeting(); } );
+        .skip_theft_check()
+        .on_submit( [this, here, vppos] {
+            use_vehicle_turrets( get_player_character(), *here, *this, here->get_abs( vppos ), "targeting" );
+        } );
 
         menu.add( _( "Set turret firing modes" ) )
         .hotkey( "TURRET_FIRE_MODE" )
-        .on_submit( [this] { turrets_set_mode(); } );
+        .skip_theft_check()
+        .on_submit( [this, here, vppos] {
+            use_vehicle_turrets( get_player_character(), *here, *this, here->get_abs( vppos ), "mode" );
+        } );
 
         // We can also fire manual turrets with ACTION_FIRE while standing at the controls.
         menu.add( _( "Aim turrets manually" ) )
         .hotkey( "TURRET_MANUAL_AIM" )
-        .on_submit( [this] { turrets_aim_and_fire_all_manual( true ); } );
+        .skip_theft_check()
+        .on_submit( [this, here, vppos] {
+            use_vehicle_turrets( get_player_character(), *here, *this, here->get_abs( vppos ), "aim_manual" );
+        } );
 
         // This lets us manually override and set the target for the automatic turrets instead.
         menu.add( _( "Aim automatic turrets" ) )
         .hotkey( "TURRET_MANUAL_OVERRIDE" )
-        .on_submit( [this] { turrets_override_automatic_aim(); } );
+        .skip_theft_check()
+        .on_submit( [this, here, vppos] {
+            use_vehicle_turrets( get_player_character(), *here, *this, here->get_abs( vppos ), "aim_auto" );
+        } );
 
         menu.add( _( "Aim individual turret" ) )
         .hotkey( "TURRET_SINGLE_FIRE" )
-        .on_submit( [this] { turrets_aim_and_fire_single(); } );
+        .skip_theft_check()
+        .on_submit( [this, here, vppos] {
+            use_vehicle_turrets( get_player_character(), *here, *this, here->get_abs( vppos ), "aim_single" );
+        } );
     }
 
     if( controls_here ) {
