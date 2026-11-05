@@ -327,6 +327,9 @@ void vehicle_control_selection::serialize( JsonOut &out ) const
     if( repair ) {
         out.member( "repair", *repair );
     }
+    if( toolstation ) {
+        out.member( "toolstation", *toolstation );
+    }
     if( unwield ) {
         out.member( "unwield" );
         out.start_object();
@@ -356,6 +359,8 @@ void vehicle_control_selection::deserialize( const JsonObject &data )
     data.read( "heating", heating );
     repair.reset();
     data.read( "repair", repair );
+    toolstation.reset();
+    data.read( "toolstation", toolstation );
     unwield.reset();
     if( data.has_object( "unwield" ) ) {
         const JsonObject choice = data.get_object( "unwield" );
@@ -404,18 +409,26 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const bool water = action == "water";
     const bool heating = action == "heating";
     const bool repair = action == "repair";
+    const bool toolstation = action == "toolstation";
     if( remote_source &&
         ( !remote_vehicle_accessible( who, here, target, *remote_source ) || security ||
-          taking || releasing || appliance || water || heating || repair || action == "stop_driving" ) ) {
+          taking || releasing || appliance || water || heating || repair || toolstation ||
+          action == "stop_driving" ) ) {
         return false;
     }
     if( !releasing && !stopping && !taking && action != "start" &&
         action != "engines" && !security && !electronics && !appliance && !water && !heating && !repair &&
+        !toolstation &&
         !autopilot_action( action ) ) {
         return false;
     }
     if( releasing ) {
         return target.player_in_control( here, who );
+    }
+    if( toolstation ) {
+        // Native attachment/detachment does not require unlocking the vehicle.
+        return who.pos_abs().z() == position.z() && rl_dist( who.pos_abs(), position ) <= 1 &&
+               has_vehicle_toolstation( target, position );
     }
     if( repair ) {
         return who.pos_abs().z() == position.z() && rl_dist( who.pos_abs(), position ) <= 1 &&
@@ -511,7 +524,7 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     selection.action = action;
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
                              action == "alarm" || action == "smash_alarm" || action == "electronics" || action == "appliance" ||
-                             action == "water" || action == "heating" || action == "repair" ||
+                             action == "water" || action == "heating" || action == "repair" || action == "toolstation" ||
                              autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
         selection.allow_theft = who.query_yn(
@@ -616,7 +629,8 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
         { "appliance", _( "Use installed appliance" ) },
         { "water", _( "Use vehicle water" ) },
         { "heating", _( "Heat items with a vehicle tool" ) },
-        { "repair", _( "Repair items with a vehicle tool" ) }
+        { "repair", _( "Repair items with a vehicle tool" ) },
+        { "toolstation", _( "Attach or detach vehicle tools" ) }
     };
     for( size_t i = 0; i < options.size(); ++i ) {
         const auto &action = options[i].first;
@@ -639,6 +653,7 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
            action == "water" ? query_vehicle_water( who, here, target, position ) :
            action == "heating" ? query_vehicle_heating( who, here, target, position ) :
            action == "repair" ? query_vehicle_repair( who, here, target, position ) :
+           action == "toolstation" ? query_vehicle_toolstation( who, here, target, position ) :
            query_vehicle_control( who, here, target, position, action, remote_source );
 }
 
@@ -771,12 +786,18 @@ bool execute_vehicle_control( Character &who, map &here,
                 *selection.repair ) ) ) {
         return false;
     }
+    if( ( selection.action == "toolstation" ) != selection.toolstation.has_value() ||
+        ( selection.toolstation && !valid_vehicle_tool_selection( who, here, *target,
+                selection.position, *selection.toolstation ) ) ) {
+        return false;
+    }
     const bool taking = selection.action == "take";
     const bool theft_check = taking || selection.action == "engines" || selection.action == "hotwire" ||
                              selection.action == "alarm" || selection.action == "smash_alarm" ||
                              selection.action == "electronics" ||
                              selection.action == "appliance" || selection.action == "water" ||
                              selection.action == "heating" || selection.action == "repair" ||
+                             selection.action == "toolstation" ||
                              autopilot_action( selection.action );
     if( theft_check && target->has_owner() && !target->is_owned_by( who ) && !selection.allow_theft ) {
         return false;
@@ -831,6 +852,10 @@ bool execute_vehicle_control( Character &who, map &here,
     }
     if( selection.repair ) {
         return execute_vehicle_repair( who, *selection.repair );
+    }
+    if( selection.toolstation ) {
+        return execute_vehicle_tool_selection( who, here, *target, selection.position,
+                                               *selection.toolstation );
     }
     if( selection.heating ) {
         return execute_vehicle_heating( who, here, *target, selection.position, *selection.heating );
