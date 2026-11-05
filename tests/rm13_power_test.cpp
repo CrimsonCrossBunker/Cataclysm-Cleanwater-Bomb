@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "bodypart.h"
 #include "cata_catch.h"
 #include "character_attire.h"
 #include "coordinates.h"
@@ -24,6 +25,7 @@
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
+#include "subbodypart.h"
 #include "type_id.h"
 #include "units.h"
 
