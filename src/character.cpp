@@ -5837,7 +5837,8 @@ void Character::assign_activity( const player_activity &act )
     if( !lifetime ) {
         return;
     }
-    const bool authoritative = activity.execution() == activity_execution::authoritative;
+    const bool authoritative = activity.execution() == activity_execution::authoritative ||
+                               act.execution() == activity_execution::authoritative;
     bool resuming = false;
     if( !backlog.empty() && backlog.front().can_resume_with( act, *this ) ) {
         resuming = true;

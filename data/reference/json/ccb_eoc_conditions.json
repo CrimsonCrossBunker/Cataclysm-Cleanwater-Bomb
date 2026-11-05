@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:18f4bf60d2273153be548ceffbe4b1bae520ed6bbcff47d20b1d265cdd9a8bf0",
+    "source_fingerprint": "sha256:51e6d59b09c397509d8b8a452be943a458ab3790e93b696f12c3b42dc68f5aac",
     "contract_roots": [
       "data/core",
       "data/json",

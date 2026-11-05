@@ -32,6 +32,7 @@
 #include "game_inventory.h"
 #include "item.h"
 #include "item_activation.h"
+#include "hacksaw_activity.h"
 #include "tool_activity_target.h"
 #include "item_healing.h"
 #include "item_disposition.h"
@@ -1299,6 +1300,10 @@ static bool client_activate_item_impl( const item_location &source, std::string 
             return true;
         }
         target = *selected;
+        if( action == adjacent_tool_action::saw && !explicit_target &&
+            !query_hacksaw_work( who, *tool, target ) ) {
+            return true;
+        }
     }
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
