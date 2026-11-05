@@ -24,7 +24,7 @@
 #include "units.h"
 
 static const ammotype ammo_battery( "battery" );
-static const flag_id flag_IRREMOVABLE( "IRREMOVABLE" );
+static const flag_id json_flag_IRREMOVABLE( "IRREMOVABLE" );
 static const itype_id itype_UPS_ON( "UPS_ON" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_battery( "battery" );
@@ -45,7 +45,7 @@ TEST_CASE( "rm13_default_battery_can_be_unloaded", "[item][battery][rm13]" )
     armor.ammo_set( itype_battery, 5000 );
     REQUIRE( armor.magazine_current() != nullptr );
     REQUIRE( armor.magazine_current()->typeId() == itype_rm13_battery );
-    CHECK_FALSE( armor.magazine_current()->has_flag( flag_IRREMOVABLE ) );
+    CHECK_FALSE( armor.magazine_current()->has_flag( json_flag_IRREMOVABLE ) );
     REQUIRE( armor.ammo_remaining_in_pocket( "battery" ) == 5000 );
     item_location carried = you.i_add( armor );
     REQUIRE( you.unload( carried, true ) );

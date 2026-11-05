@@ -291,10 +291,13 @@ static int ceil_kilojoules( const units::energy energy )
     return static_cast<int>( ( joules + 999 ) / 1000 );
 }
 
+namespace
+{
 struct external_power_reservation {
     int ups_kj = 0;
     int bionic_kj = 0;
 };
+}
 
 static external_power_reservation reserve_firing_requirement_external_power(
     const item &host, const Character *carrier, int uses )
