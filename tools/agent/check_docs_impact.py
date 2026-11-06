@@ -141,6 +141,37 @@ def inventory_metadata_only_change(
                 if not isinstance(evidence, dict):
                     return False
                 counters.append((evidence, "occurrences"))
+                examples = entry.get("example_evidence", {})
+                if not isinstance(examples, dict):
+                    return False
+                counters.append((examples, "occurrences"))
+                references = examples.get("examples", [])
+                if not isinstance(references, list):
+                    return False
+                for reference in references:
+                    if not isinstance(reference, dict):
+                        return False
+                    if set(reference) != {"path", "pointer"}:
+                        return False
+                    reference_path = reference["path"]
+                    if not isinstance(reference_path, str) or not re.fullmatch(
+                        r"data/(?:core|json|mods|sound)/(?:[\w.-]+/)*[\w.-]+\.json",
+                        reference_path,
+                    ):
+                        return False
+                    if any(
+                        part in {".", ".."}
+                        for part in reference_path.split("/")
+                    ):
+                        return False
+                    pointer = reference["pointer"]
+                    if not isinstance(pointer, str) or not re.fullmatch(
+                        r"(?:/(?:[^~/]|~[01])*)+", pointer
+                    ):
+                        return False
+                    reference["pointer"] = re.sub(
+                        r"/(?:0|[1-9][0-9]*)(?=/|$)", "/0", pointer
+                    )
                 if "documentation" not in entry:
                     continue
                 documentation = entry["documentation"]
