@@ -334,12 +334,19 @@ class InventoryMetadataImpactTest(unittest.TestCase):
         for reference in (
             {"path": "data/json/other.json", "pointer": "/1/effect/0/effect"},
             {"path": "data/json/effects.json", "pointer": "/1/effect/0/other"},
-            {"path": "data/json/../effects.json", "pointer": "/1/effect/0/effect"},
+            {
+                "path": "data/json/../effects.json",
+                "pointer": "/1/effect/0/effect",
+            },
             {"path": "src/effects.json", "pointer": "/1/effect/0/effect"},
             {"path": "data/json/effects.json", "pointer": "/1/~2/effect"},
             {"path": "data/json/effects.json", "pointer": 1},
             {"path": "data/json/effects.json"},
-            {"path": "data/json/effects.json", "pointer": "/1/effect", "extra": True},
+            {
+                "path": "data/json/effects.json",
+                "pointer": "/1/effect",
+                "extra": True,
+            },
         ):
             after = copy.deepcopy(self.before)
             after["entries"][0]["example_evidence"]["examples"] = [reference]

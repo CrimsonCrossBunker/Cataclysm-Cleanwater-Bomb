@@ -155,7 +155,8 @@ def inventory_metadata_only_change(
                         return False
                     reference_path = reference["path"]
                     if not isinstance(reference_path, str) or not re.fullmatch(
-                        r"data/(?:core|json|mods|sound)/(?:[\w.-]+/)*[\w.-]+\.json",
+                        r"data/(?:core|json|mods|sound)/"
+                        r"(?:[\w.-]+/)*[\w.-]+\.json",
                         reference_path,
                     ):
                         return False
