@@ -2030,6 +2030,7 @@ void map::unboard_vehicle( const vpart_reference &vp, Character *passenger, bool
 {
     // Mark the part as un-occupied regardless of whether there's a live passenger here.
     vp.part().remove_flag( vp_flag::passenger_flag );
+    vp.part().passenger_id = character_id();
     vp.vehicle().invalidate_mass();
 
     if( !passenger ) {
@@ -2051,18 +2052,21 @@ void map::unboard_vehicle( const vpart_reference &vp, Character *passenger, bool
 void map::unboard_vehicle( const tripoint_bub_ms &p, bool dead_passenger )
 {
     const std::optional<vpart_reference> vp = veh_at( p ).part_with_feature( VPFLAG_BOARDABLE, false );
-    Character *passenger = nullptr;
+    Character *occupant = get_creature_tracker().creature_at<Character>( p );
     if( !vp ) {
-        debugmsg( "map::unboard_vehicle: vehicle not found" );
-        // Try and force unboard the player anyway.
-        passenger = get_creature_tracker().creature_at<Character>( p );
-        if( passenger ) {
-            passenger->in_vehicle = false;
-            passenger->controlling_vehicle = false;
+        if( occupant && occupant->in_vehicle ) {
+            DebugLog( D_WARNING, D_MAP ) << "Clearing stale passenger state without a vehicle at " << p;
+            occupant->in_vehicle = false;
+            occupant->controlling_vehicle = false;
+        } else {
+            debugmsg( "map::unboard_vehicle: vehicle not found" );
         }
         return;
     }
-    passenger = vp->get_passenger();
+    Character *passenger = vp->get_passenger();
+    if( !passenger && occupant && occupant->in_vehicle ) {
+        passenger = occupant;
+    }
     unboard_vehicle( *vp, passenger, dead_passenger );
 }
 
