@@ -16,15 +16,18 @@
 #include "ret_val.h"
 #include "type_id.h"
 
+static const furn_str_id furn_f_thistle( "f_thistle" );
+static const ter_str_id ter_t_grass( "t_grass" );
+
 TEST_CASE( "godco_fungus_mission_clears_preexisting_weeds", "[mapgen][mission]" )
 {
     clear_map_without_vision();
     map &here = get_map();
     const tripoint_bub_ms target( 21, 21, 0 );
     const tripoint_bub_ms outside( 30, 30, 0 );
-    here.ter_set( target, ter_str_id( "t_grass" ) );
-    here.furn_set( target, furn_str_id( "f_thistle" ) );
-    here.furn_set( outside, furn_str_id( "f_thistle" ) );
+    here.ter_set( target, ter_t_grass );
+    here.furn_set( target, furn_f_thistle );
+    here.furn_set( outside, furn_f_thistle );
     JsonArray missions = json_loader::from_path(
                              PATH_INFO::datadir_path() / "json/npcs/godco/godco_missions.json" ).get_array();
     bool found = false;
@@ -46,8 +49,8 @@ TEST_CASE( "godco_fungus_mission_clears_preexisting_weeds", "[mapgen][mission]" 
             CHECK( generator.update_map( md ).success() );
         } );
         CHECK( diagnostics.empty() );
-        CHECK( here.furn( target ) != furn_str_id( "f_thistle" ) );
-        CHECK( here.furn( outside ) == furn_str_id( "f_thistle" ) );
+        CHECK( here.furn( target ) != furn_f_thistle );
+        CHECK( here.furn( outside ) == furn_f_thistle );
         break;
     }
     REQUIRE( found );
