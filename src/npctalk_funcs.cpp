@@ -2295,14 +2295,16 @@ npc *pick_follower()
 
 void talk_function::distribute_food_auto( npc &p )
 {
-    std::optional<basecamp *> bcp = overmap_buffer.find_camp( p.pos_abs_omt().xy() );
-    if( !bcp ) {
-        debugmsg( "distribute_food_auto called without a basecamp, aborting." );
-        return;
-    }
-    basecamp *npc_camp = *bcp;
-    if( !npc_camp->allowed_access_by( p ) ) {
-        debugmsg( "distribute_food_auto called on npc that isn't allowed to access local basecamp storage, aborting." );
+    basecamp *npc_camp = nullptr;
+    int nearest_distance = 4;
+    overmap_buffer.foreach_loaded_camp( [&p, &npc_camp, &nearest_distance]( basecamp & candidate ) {
+        const int distance = rl_dist( candidate.camp_omt_pos().xy(), p.pos_abs_omt().xy() );
+        if( distance < nearest_distance && candidate.allowed_access_by( p ) ) {
+            npc_camp = &candidate;
+            nearest_distance = distance;
+        }
+    } );
+    if( !npc_camp ) {
         return;
     }
 
