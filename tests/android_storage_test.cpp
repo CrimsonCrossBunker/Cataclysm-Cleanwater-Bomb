@@ -1,3 +1,4 @@
+#include <functional>
 #include <filesystem>
 #include <fstream>
 #include <string>
