@@ -1,3 +1,5 @@
+#include <cstdint>
+#include <functional>
 #include <string>
 
 #include "avatar.h"
