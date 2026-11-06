@@ -1,9 +1,12 @@
+#include <list>
 #include <functional>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "item_uid.h"
+#include "flat_set.h"
 #include "cata_catch.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
@@ -17,6 +20,9 @@
 #include "type_id.h"
 #include "units.h"
 
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_light_battery_cell( "light_battery_cell" );
+
 TEST_CASE( "battery_restore_remaps_pockets_without_losing_state", "[item][pocket][save]" )
 {
     const itype_id battery_id( GENERATE( "heavy_battery_cell", "heavy_plus_battery_cell" ) );
@@ -26,7 +32,7 @@ TEST_CASE( "battery_restore_remaps_pockets_without_losing_state", "[item][pocket
     const std::vector<pocket_data> old_pockets = { heavy };
     item_contents original( old_pockets );
     item battery( battery_id );
-    battery.ammo_set( itype_id( "battery" ), 123 );
+    battery.ammo_set( itype_battery, 123 );
     battery.set_var( "item_label", "saved battery" );
     battery.set_favorite( true );
     REQUIRE( original.insert_item( battery, pocket_type::MAGAZINE_WELL ).success() );
@@ -37,7 +43,7 @@ TEST_CASE( "battery_restore_remaps_pockets_without_losing_state", "[item][pocket
     loaded.deserialize( json_loader::from_string( stream.str() ).get_object() );
 
     pocket_data light( pocket_type::MAGAZINE_WELL );
-    light.item_id_restriction.insert( itype_id( "light_battery_cell" ) );
+    light.item_id_restriction.insert( itype_light_battery_cell );
     light.max_item_length = 1_meter;
     std::vector<pocket_data> new_pockets;
     bool compatible = false;
