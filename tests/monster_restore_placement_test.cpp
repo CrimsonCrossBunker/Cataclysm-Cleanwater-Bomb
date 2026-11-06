@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 
 #include "avatar.h"
@@ -11,8 +12,10 @@
 #include "horde_entity.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_iterator.h"
 #include "memory_fast.h"
 #include "monster.h"
+#include "monster_uid.h"
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "point.h"
