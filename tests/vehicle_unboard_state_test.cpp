@@ -16,6 +16,10 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 
+static const vproto_id vehicle_prototype_none( "none" );
+static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_seat( "seat" );
+
 TEST_CASE( "unboarding_repairs_stale_passenger_state", "[vehicle][character]" )
 {
     clear_avatar();
@@ -27,10 +31,10 @@ TEST_CASE( "unboarding_repairs_stale_passenger_state", "[vehicle][character]" )
     const std::string state = GENERATE( "normal", "missing_flag", "missing_id", "missing_vehicle" );
     std::optional<vpart_reference> seat;
     if( state != "missing_vehicle" ) {
-        vehicle *veh = here.add_vehicle( vproto_id( "none" ), location, 0_degrees, 0 );
+        vehicle *veh = here.add_vehicle( vehicle_prototype_none, location, 0_degrees, 0 );
         REQUIRE( veh != nullptr );
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "seat" ) ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_seat ) >= 0 );
         veh->refresh();
         here.add_vehicle_to_cache( veh );
         here.board_vehicle( location, &you );
