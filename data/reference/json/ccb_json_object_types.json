@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:856b5ce362046b7738a3b1ddf18553aadc8d7fd15ffb0770a4774bd739f178e6",
+    "source_fingerprint": "sha256:4956f70247dafe1455ecde7eb51b1c71b3fe27ad43deea49495baf18a7b393ee",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6840,
-    "top_level_objects": 95402,
+    "top_level_objects": 95406,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -3047,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5638,
+        "occurrences": 5639,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1685,
+        "occurrences": 1688,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3299,7 +3299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5826
+            "line": 5827
           }
         ],
         "confidence": "lexical_only"
@@ -3766,7 +3766,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5364
+            "line": 5365
           }
         ],
         "confidence": "lexical_only"
@@ -9834,7 +9834,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5561
+            "line": 5562
           }
         ],
         "confidence": "lexical_only"
