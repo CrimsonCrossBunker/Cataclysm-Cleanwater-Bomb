@@ -8193,12 +8193,10 @@ ret_val<void> run_mapgen_update_func_transactional(
     };
 
     const tripoint_abs_sm base = project_to<coords::sm>( omt_pos );
-    const std::size_t z_count = static_cast<std::size_t>( footprint.max_z - footprint.min_z + 1 );
-    const std::size_t x_count = static_cast<std::size_t>(
-                                    footprint.max_submap_x - footprint.min_submap_x + 1 );
-    const std::size_t y_count = static_cast<std::size_t>(
-                                    footprint.max_submap_y - footprint.min_submap_y + 1 );
-    const std::size_t snapshot_count = x_count * y_count * z_count;
+    const int z_count = footprint.max_z - footprint.min_z + 1;
+    const int x_count = footprint.max_submap_x - footprint.min_submap_x + 1;
+    const int y_count = footprint.max_submap_y - footprint.min_submap_y + 1;
+    const std::size_t snapshot_count = static_cast<std::size_t>( x_count ) * y_count * z_count;
     std::vector<submap_snapshot> snapshots;
     try {
         snapshots.reserve( snapshot_count );
