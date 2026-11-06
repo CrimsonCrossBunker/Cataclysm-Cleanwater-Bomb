@@ -16,9 +16,10 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 
-static const vproto_id vehicle_prototype_none( "none" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_seat( "seat" );
+
+static const vproto_id vehicle_prototype_none( "none" );
 
 TEST_CASE( "unboarding_repairs_stale_passenger_state", "[vehicle][character]" )
 {
