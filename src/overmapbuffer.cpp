@@ -2400,7 +2400,7 @@ void overmapbuffer::spawn_monster( const tripoint_abs_sm &p, bool spawn_nonlocal
             }
             const shared_ptr_fast<monster> restored(
                 std::make_unique<monster>( stored.copy_for_persistence() ) );
-            placed = g->place_critter_around( restored, local, 1, true );
+            placed = g->place_critter_around( restored, local, 1 );
             // TODO: make sure entity data such as destination is synched
         } else {
             placed = g->place_critter_around( entry.node.mapped().type_id->id, local, 1 );
