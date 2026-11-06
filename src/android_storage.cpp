@@ -43,7 +43,7 @@ static bool copy_legacy_android_directory( const std::filesystem::path &source,
 
     while( entry != end ) {
         const std::filesystem::path source_entry = entry->path();
-        if( !skip_generated_cache || source_entry.filename() != "cache" ) {
+        if( !skip_generated_cache || source_entry.filename() != std::filesystem::u8path( "cache" ) ) {
             const std::filesystem::path destination_entry = destination / source_entry.filename();
             error.clear();
             std::filesystem::copy( source_entry, destination_entry,
@@ -104,7 +104,7 @@ static bool copy_legacy_android_saves( const std::filesystem::path &source,
                                        destination_entry.u8string();
         } else {
             const std::filesystem::path temporary_entry = destination /
-                    ( ".migration-" + source_entry.filename().u8string() + ".tmp" );
+                    std::filesystem::u8path( ".migration-" + source_entry.filename().u8string() + ".tmp" );
             error.clear();
             std::filesystem::remove_all( temporary_entry, error );
             if( !error ) {
@@ -153,7 +153,7 @@ void migrate_legacy_android_user_data( const std::string &legacy_user_dir,
     }
 
     const std::filesystem::path completion_marker =
-        destination / ".legacy-android-migration-v1.complete";
+        destination / std::filesystem::u8path( ".legacy-android-migration-v1.complete" );
     if( std::filesystem::exists( completion_marker, error ) &&
         std::filesystem::is_regular_file( completion_marker, error ) ) {
         return;
@@ -175,7 +175,7 @@ void migrate_legacy_android_user_data( const std::string &legacy_user_dir,
         }
     };
     for( const char *directory : user_directories ) {
-        const std::filesystem::path source_directory = source / directory;
+        const std::filesystem::path source_directory = source / std::filesystem::u8path( directory );
         error.clear();
         if( !std::filesystem::exists( source_directory, error ) ||
             !std::filesystem::is_directory( source_directory, error ) ) {
@@ -188,18 +188,21 @@ void migrate_legacy_android_user_data( const std::string &legacy_user_dir,
         }
         if( std::string( directory ) == "save" ) {
             success = copy_legacy_android_saves( source_directory,
-                                                 destination / directory ) && success;
+                                                 destination / std::filesystem::u8path( directory ) ) && success;
         } else {
             const bool skip_generated_cache = std::string( directory ) == "config" ||
                                               std::string( directory ) == "memorial";
             success = copy_legacy_android_directory( source_directory,
-                      destination / directory, skip_generated_cache ) && success;
+                      destination / std::filesystem::u8path( directory ), skip_generated_cache ) && success;
         }
     }
 
-    success = remove_android_migration_cache( destination / "cache" ) && success;
-    success = remove_android_migration_cache( destination / "config" / "cache" ) && success;
-    success = remove_android_migration_cache( destination / "memorial" / "cache" ) && success;
+    success = remove_android_migration_cache( destination / std::filesystem::u8path( "cache" ) ) &&
+              success;
+    success = remove_android_migration_cache( destination / std::filesystem::u8path( "config" ) /
+              std::filesystem::u8path( "cache" ) ) && success;
+    success = remove_android_migration_cache( destination / std::filesystem::u8path( "memorial" ) /
+              std::filesystem::u8path( "cache" ) ) && success;
 
     if( !success ) {
         DebugLog( D_ERROR, D_MAIN ) <<
