@@ -798,19 +798,19 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
                 continue;
             }
 
-            for( item &it : pocket.edit_contents() ) {
-                const ret_val<item *> inserted = current_pocket_iter->insert_item( std::move( it ),
+            std::list<item> &items = pocket.edit_contents();
+            for( auto it = items.begin(); it != items.end(); ) {
+                const ret_val<item *> inserted = current_pocket_iter->insert_item( std::move( *it ),
                                                  into_bottom, restack_charges, ignore_contents );
-                if( !inserted.success() ) {
-                    // insert_item only moves the item after a successful containment check.
-                    // NOLINTNEXTLINE(bugprone-use-after-move)
-                    uninserted_items.push_back( std::move( it ) );
-                    DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME ) <<
-                            "error: item " << uninserted_items.back().typeId().str() <<
-                            "cannot fit into pocket while loading: " << inserted.str();
+                if( inserted.success() ) {
+                    it = items.erase( it );
+                } else {
+                    ++it;
                 }
             }
-            pocket.clear_items();
+            if( !items.empty() ) {
+                mismatched_pockets.push_back( &pocket );
+            }
 
             if( pocket.saved_sealed() ) {
                 current_pocket_iter->seal();
@@ -888,8 +888,9 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
                 // Failed pocket lookup or containment leaves the item available for migration.
                 // NOLINTNEXTLINE(bugprone-use-after-move)
                 uninserted_items.push_back( std::move( it ) );
-                debugmsg( "error: item %s cannot fit into any pocket while loading: %s",
-                          uninserted_items.back().typeId().str(), inserted.str() );
+                DebugLog( D_WARNING, D_GAME ) << "Preserving item " <<
+                                              uninserted_items.back().typeId().str() <<
+                                              " in a migration pocket: " << inserted.str();
             }
         }
         pocket->clear_items();
