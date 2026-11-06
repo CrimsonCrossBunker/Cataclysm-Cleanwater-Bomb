@@ -3592,16 +3592,30 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                 return;
             }
 
-            dat.m.furn_set( tripoint_bub_ms( x.get(), y.get(), dat.zlevel() + z.get() ),
-                            furn_str_id::NULL_ID() );
+            const jmapgen_int px( x.get() );
+            const jmapgen_int py( y.get() );
+            const jmapgen_int pz( z.get() );
+            const tripoint_bub_ms pos( px.get(), py.get(), dat.zlevel() + pz.get() );
+            const furn_id chosen_furn = furniture.get( dat );
+            dat.m.furn_set( pos, furn_str_id::NULL_ID() );
             if( item_spawner ) {
-                item_spawner->apply( dat, x, y, z, context );
+                item_spawner->apply( dat, px, py, pz, context );
             }
             if( item_group_spawner ) {
-                item_group_spawner->apply( dat, x, y, z,  context );
+                if( chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+                    // A plant's seed is required state, independent of loot spawn rates.
+                    item seed = item_group::item_from( item_group_spawner->group_id,
+                                                       calendar::start_of_cataclysm );
+                    if( !seed.is_seed() ) {
+                        return;
+                    }
+                    seed.set_owner( faction_id( item_group_spawner->faction ) );
+                    dat.m.add_item( pos, std::move( seed ) );
+                } else {
+                    item_group_spawner->apply( dat, px, py, pz, context );
+                }
             }
-            const furn_id &chosen_furn = furniture.get( dat );
-            dat.m.furn_set( tripoint_bub_ms( x.get(), y.get(), dat.zlevel() + z.get() ), chosen_furn );
+            dat.m.furn_set( pos, chosen_furn );
         }
 };
 
