@@ -1,5 +1,7 @@
 #include <string>
 
+#include "clone_ptr.h"
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "calendar.h"
@@ -10,8 +12,9 @@
 #include "npc.h"
 #include "player_activity.h"
 #include "player_helpers.h"
-#include "talker.h"
 #include "type_id.h"
+
+static const activity_id ACT_GENERIC_GAME( "ACT_GENERIC_GAME" );
 
 TEST_CASE( "dialogue_starts_tabletop_game_actor", "[npc][activity][dialogue]" )
 {
@@ -25,7 +28,7 @@ TEST_CASE( "dialogue_starts_tabletop_game_actor", "[npc][activity][dialogue]" )
     })" ).get_object();
     const talk_effect_t effect( definition, "effect", "test_data" );
     effect.apply( d );
-    REQUIRE( you.activity.id() == activity_id( "ACT_GENERIC_GAME" ) );
+    REQUIRE( you.activity.id() == ACT_GENERIC_GAME );
     REQUIRE( dynamic_cast<tabletop_game_activity_actor *>( you.activity.actor.get() ) != nullptr );
     CHECK( you.activity.moves_total == to_moves<int>( 45_minutes ) );
     CHECK( you.activity.moves_left == you.activity.moves_total );
