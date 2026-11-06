@@ -543,7 +543,7 @@ int overmapbuffer::get_horde_size( const tripoint_abs_omt &p, int filter )
 {
     int horde_size = 0;
     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-            p, filter );
+                p, filter );
     for( std::unordered_map<tripoint_abs_ms, horde_entity> *horde_group : hordes ) {
         horde_size += horde_group->size();
     }
@@ -685,7 +685,7 @@ void overmapbuffer::set_passable( const tripoint_abs_omt &p,
 
 void overmapbuffer::signal_hordes( const tripoint_abs_sm &center, const int sig_power )
 {
-    for( overmap * &om : get_overmaps_near( center, sig_power ) ) {
+    for( overmap*&om : get_overmaps_near( center, sig_power ) ) {
         om->signal_hordes( project_to<coords::ms>( center ), sig_power );
     }
 }
@@ -735,7 +735,7 @@ void overmapbuffer::process_mongroups()
     // arbitrary radius to include nearby overmaps (aside from the current one)
     const int radius = MAPSIZE * 2;
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap * &om : get_overmaps_near( center, radius ) ) {
+    for( overmap*&om : get_overmaps_near( center, radius ) ) {
         om->process_mongroups();
     }
 }
@@ -745,7 +745,7 @@ void overmapbuffer::move_hordes()
     // arbitrary radius to include nearby overmaps (aside from the current one)
     const int radius = MAPSIZE * 2;
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap * &om : get_overmaps_near( center, radius ) ) {
+    for( overmap*&om : get_overmaps_near( center, radius ) ) {
         om->move_hordes();
     }
 }
@@ -1187,7 +1187,7 @@ pf::simple_path<tripoint_abs_omt> overmapbuffer::get_travel_path(
 
     constexpr int radius = 4 * OMAPX; // radius of search in OMTs = 4 overmaps
     const pf::simple_path<tripoint_abs_omt> &path = pf::find_overmap_path( src, dest, radius, estimate,
-        game::display_om_pathfinding_progress, std::nullopt, params.allow_diagonal );
+            game::display_om_pathfinding_progress, std::nullopt, params.allow_diagonal );
     return path;
 }
 
@@ -1892,10 +1892,10 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_companion_mission_npcs( int
 }
 
 std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near( const tripoint_abs_sm &p,
-        int radius )
+                               int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
-    for( overmap * &it : get_overmaps_near( p.xy(), radius ) ) {
+    for( overmap*&it : get_overmaps_near( p.xy(), radius ) ) {
         auto temp = it->get_npcs( [&]( const npc & guy ) {
             // Global position of NPC, in submap coordinates
             const tripoint_abs_sm pos = guy.pos_abs_sm();
@@ -1907,10 +1907,10 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near( const tripoint_a
 }
 
 std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near_omt( const tripoint_abs_omt &p,
-        int radius )
+                               int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
-    for( overmap * &it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
+    for( overmap*&it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
         auto temp = it->get_npcs( [&]( const npc & guy ) {
             // Global position of NPC, in submap coordinates
             tripoint_abs_omt pos = guy.pos_abs_omt();
@@ -1933,7 +1933,7 @@ static radio_tower_reference create_radio_tower_reference( const overmap &om, ra
 radio_tower_reference overmapbuffer::find_radio_station( const int frequency )
 {
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap * &om : get_overmaps_near( center, RADIO_MAX_STRENGTH ) ) {
+    for( overmap*&om : get_overmaps_near( center, RADIO_MAX_STRENGTH ) ) {
         for( radio_tower &tower : om->radios ) {
             const radio_tower_reference rref = create_radio_tower_reference( *om, tower, center );
             if( rref.signal_strength > 0 && tower.frequency == frequency ) {
@@ -1951,7 +1951,7 @@ std::vector<radio_tower_reference> overmapbuffer::find_all_radio_stations()
     // perceived signal strength is distance (in submaps) - signal strength, so towers
     // further than RADIO_MAX_STRENGTH submaps away can never be received at all.
     const int radius = RADIO_MAX_STRENGTH;
-    for( overmap * &om : get_overmaps_near( center, radius ) ) {
+    for( overmap*&om : get_overmaps_near( center, radius ) ) {
         for( radio_tower &tower : om->radios ) {
             const radio_tower_reference rref = create_radio_tower_reference( *om, tower, center );
             if( rref.signal_strength > 0 ) {
@@ -2128,7 +2128,7 @@ void overmapbuffer::inc_major_river_count()
     global_state.major_river_count++;
 }
 
-unique_special_deck_state & overmapbuffer::get_deck_state(
+unique_special_deck_state &overmapbuffer::get_deck_state(
     const overmap_special_id &id, int successes, int deck_size )
 {
     auto [it, inserted] = global_state.unique_special_decks.try_emplace( id );
@@ -2436,7 +2436,7 @@ void overmapbuffer::despawn_monster( const monster &critter )
     }
 }
 
-horde_entity * overmapbuffer::entity_at( const tripoint_abs_ms &p )
+horde_entity *overmapbuffer::entity_at( const tripoint_abs_ms &p )
 {
     point_abs_om omp;
     tripoint_om_ms oms;
@@ -2455,7 +2455,7 @@ std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> overmapbuffer::h
     return om.hordes_at( omt, filter );
 }
 
-horde_entity & overmapbuffer::spawn_monster( const tripoint_abs_ms &p, mtype_id id )
+horde_entity &overmapbuffer::spawn_monster( const tripoint_abs_ms &p, mtype_id id )
 {
     // Get the overmap coordinates and get the overmap, sm is now local to that overmap
     point_abs_om omp;
@@ -2520,7 +2520,7 @@ overmapbuffer::t_extras_vector overmapbuffer::get_extras( int z, std::string_vie
 
 bool overmapbuffer::is_safe( const tripoint_abs_omt &p )
 {
-    for( mongroup * &mongrp : monsters_at( p ) ) {
+    for( mongroup*&mongrp : monsters_at( p ) ) {
         if( !mongrp->is_safe() ) {
             return false;
         }
@@ -2538,8 +2538,8 @@ bool overmapbuffer::is_in_city( const tripoint_abs_omt &p )
 }
 
 std::optional<std::vector<tripoint_abs_omt>> overmapbuffer::place_special(
-    const overmap_special &special, const tripoint_abs_omt &origin, om_direction::type dir,
-    const bool must_be_unexplored, const bool force )
+            const overmap_special &special, const tripoint_abs_omt &origin, om_direction::type dir,
+            const bool must_be_unexplored, const bool force )
 {
     const overmap_with_local_coords om_loc = get_om_global( origin );
 
