@@ -159,7 +159,7 @@
       "place_monster": [
         { "group": "GROUP_VANILLA_ONLY_HUMANS", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] },
         { "monster": "mon_utilibot", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] }
-       ]
+      ]
     }
   },
   {
@@ -325,8 +325,8 @@
       },
       "place_monster": [
         { "group": "GROUP_VANILLA_ONLY_HUMANS", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] },
-      { "monster": "mon_utilibot", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] }
-    ]
+        { "monster": "mon_utilibot", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 25, "repeat": [ 1, 2 ] }
+      ]
     }
   },
   {
