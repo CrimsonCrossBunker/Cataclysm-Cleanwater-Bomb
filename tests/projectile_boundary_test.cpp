@@ -31,8 +31,8 @@ TEST_CASE( "projectiles_stop_at_the_loaded_map_boundary", "[projectile][bounds]"
     clear_map_without_vision();
     map &here = get_map();
     avatar &you = get_avatar();
-    const point direction = GENERATE( point( -1, 0 ), point( 1, 0 ), point( 0, -1 ),
-                                      point( 0, 1 ), point( -1, -1 ), point( 1, 1 ) );
+    const point direction = GENERATE( point::west, point::east, point::north,
+                                      point::south, point::north_west, point::south_east );
     const tripoint_bub_ms source( direction.x < 0 ? 1 : direction.x > 0 ? MAPSIZE_X - 2 : 60,
                                   direction.y < 0 ? 1 : direction.y > 0 ? MAPSIZE_Y - 2 : 60, 0 );
     const tripoint_bub_ms target = source + tripoint_rel_ms( direction.x, direction.y, 0 );
