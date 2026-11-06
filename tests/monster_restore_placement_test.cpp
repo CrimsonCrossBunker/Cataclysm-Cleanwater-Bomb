@@ -18,6 +18,9 @@
 #include "point.h"
 #include "type_id.h"
 
+static const mtype_id mon_zombie( "mon_zombie" );
+static const ter_str_id ter_t_wall( "t_wall" );
+
 TEST_CASE( "restored_monsters_use_legal_unoccupied_positions", "[monster][hordes][save]" )
 {
     clear_avatar();
@@ -26,7 +29,7 @@ TEST_CASE( "restored_monsters_use_legal_unoccupied_positions", "[monster][hordes
     get_avatar().setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
     const tripoint_bub_ms target( 65, 65, 0 );
     const tripoint_abs_ms absolute_target = here.get_abs( target );
-    monster stored( mtype_id( "mon_zombie" ) );
+    monster stored( mon_zombie );
     stored.spawn( absolute_target );
     stored.ensure_uid();
     stored.set_hp( 17 );
@@ -36,14 +39,14 @@ TEST_CASE( "restored_monsters_use_legal_unoccupied_positions", "[monster][hordes
     bool blocked = false;
 
     SECTION( "occupied_position_uses_nearby_ground" ) {
-        REQUIRE( g->place_critter_at( mtype_id( "mon_zombie" ), target ) != nullptr );
+        REQUIRE( g->place_critter_at( mon_zombie, target ) != nullptr );
     }
     SECTION( "impassable_position_uses_nearby_ground" ) {
-        here.ter_set( target, ter_str_id( "t_wall" ) );
+        here.ter_set( target, ter_t_wall );
     }
     SECTION( "no_available_ground_keeps_the_stored_monster" ) {
         for( const tripoint_bub_ms &p : here.points_in_radius( target, 1 ) ) {
-            here.ter_set( p, ter_str_id( "t_wall" ) );
+            here.ter_set( p, ter_t_wall );
         }
         blocked = true;
     }
