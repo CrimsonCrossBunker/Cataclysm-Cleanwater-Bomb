@@ -18,8 +18,9 @@
 #include "type_id.h"
 
 static const mtype_id mon_zombie( "mon_zombie" );
-static const spell_id spell_test_spell_tp_ghost( "test_spell_tp_ghost" );
 static const mtype_id test_mon_mummy( "test_mon_mummy" );
+
+static const spell_id spell_test_spell_tp_ghost( "test_spell_tp_ghost" );
 
 TEST_CASE( "summoning_on_occupied_ground_is_a_normal_failure", "[magic][summon]" )
 {
