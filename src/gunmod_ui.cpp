@@ -42,6 +42,7 @@
 #include "value_ptr.h"
 #include "visitable.h"
 
+static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 static const itype_id itype_large_repairkit( "large_repairkit" );
 static const itype_id itype_small_repairkit( "small_repairkit" );
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
@@ -66,7 +67,7 @@ item preview_change( const item &gun, const item &mod, bool installing )
     if( installing ) {
         preview.put_in( mod, pocket_type::MOD );
     } else if( item *installed = preview.gunmod_find( mod.typeId() ) ) {
-        preview.gun_set_mode( gun_mode_id( "DEFAULT" ) );
+        preview.gun_set_mode( gun_mode_DEFAULT );
         preview.remove_item( *installed );
     }
     preview.on_contents_changed();
@@ -201,7 +202,7 @@ struct row {
     item_location mod;
     gunmod_location location;
     nc_color color = c_light_gray;
-    std::string status = {};
+    std::string status;
 };
 
 struct windows {
@@ -241,7 +242,7 @@ void draw_rows( const catacurses::window &window, const std::string &title,
     }
     position.normalize( static_cast<int>( rows.size() ), height );
     if( rows.empty() ) {
-        trim_and_print( window, point( 1, 1 ), std::max( 1, width - 2 ), c_dark_gray,
+        trim_and_print( window, point::south_east, std::max( 1, width - 2 ), c_dark_gray,
                         _( "No matching modifications." ) );
     }
     for( int index = position.offset; index < static_cast<int>( rows.size() ) &&
@@ -377,10 +378,10 @@ std::vector<std::string> statistics( const Character &who, const item &gun,
         add( _( "Recoil (unsupported)" ), gun.gun_recoil( who ) / 100.0,
              preview.gun_recoil( who ) / 100.0, _( " MOA" ) );
     } else {
-        lines.push_back( _( "Loaded damage and recoil require matching ammunition." ) );
+        lines.emplace_back( _( "Loaded damage and recoil require matching ammunition." ) );
     }
     if( gun.ammo_types() != preview.ammo_types() ) {
-        lines.push_back( _( "Ammunition compatibility changes; check ammunition before firing." ) );
+        lines.emplace_back( _( "Ammunition compatibility changes; check ammunition before firing." ) );
     }
     const auto current_modes = gun.gun_all_modes();
     const auto proposed_modes = preview.gun_all_modes();
@@ -395,7 +396,7 @@ std::vector<std::string> statistics( const Character &who, const item &gun,
         }
     }
     if( lines.empty() ) {
-        lines.push_back( _( "No changes to the displayed statistics." ) );
+        lines.emplace_back( _( "No changes to the displayed statistics." ) );
     }
     return lines;
 }
@@ -424,7 +425,7 @@ std::vector<std::string> requirements( const Character &who, const item_location
         lines.push_back( string_format( _( "Success: %1$d%%; damage on failure: %2$d%%" ),
                                         option.success, option.damage ) );
         if( who.has_trait( trait_DEBUG_HS ) || who.meets_requirements( *mod, *gun ) ) {
-            lines.push_back( _( "Character requirements: met." ) );
+            lines.emplace_back( _( "Character requirements: met." ) );
         } else {
             lines.push_back( string_format( _( "Missing requirements: %s" ),
                                             who.enumerate_unmet_requirements( *mod, *gun ) ) );
@@ -436,10 +437,10 @@ std::vector<std::string> requirements( const Character &who, const item_location
         }
         lines.push_back( string_format( _( "Source: %s" ), mod.describe( &who ) ) );
         if( !who.is_wielding( *gun ) ) {
-            lines.push_back( _( "The gun must be wielded; handling time is additional." ) );
+            lines.emplace_back( _( "The gun must be wielded; handling time is additional." ) );
         }
         if( mod->is_irremovable() ) {
-            lines.push_back( _( "Warning: this installation is permanent." ) );
+            lines.emplace_back( _( "Warning: this installation is permanent." ) );
         }
     }
     return lines;
@@ -505,7 +506,7 @@ void show( Character &who, item_location gun, bool resume )
         }
         const std::string availability = state.availability_filter == 1 ? _( "Ready" ) :
                                          ( state.availability_filter == 2 ? _( "Blocked" ) : _( "All" ) );
-        trim_and_print( display.root, point( 1, 1 ), std::max( 1, TERMX - 2 ), c_light_gray,
+        trim_and_print( display.root, point::south_east, std::max( 1, TERMX - 2 ), c_light_gray,
                         string_format( _( "Filter: %1$s [%2$s]" ), filter, availability ) );
         const std::string controls = string_format( _( "%1$s Switch  %2$s Install/remove  %3$s Filter  "
                                      "%4$s Tool  %5$s Details  %6$s Help  %7$s Back" ),

@@ -22,10 +22,19 @@
 #include "type_id.h"
 #include "value_ptr.h"
 
+static const activity_id ACT_GUNMOD_ADD( "ACT_GUNMOD_ADD" );
+static const itype_id itype_223( "223" );
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_bow_sight( "bow_sight" );
+static const itype_id itype_match_trigger( "match_trigger" );
+static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
 static const itype_id itype_offset_sight_rail( "offset_sight_rail" );
+static const itype_id itype_rail_mount( "rail_mount" );
 static const itype_id itype_red_dot_sight( "red_dot_sight" );
 static const itype_id itype_shoulder_strap( "shoulder_strap" );
 static const itype_id itype_sl8( "sl8" );
+static const itype_id itype_small_repairkit( "small_repairkit" );
+static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 static const gunmod_location location_rail( "rail" );
 static const gunmod_location location_sights( "sights" );
 
@@ -33,7 +42,7 @@ TEST_CASE( "gunmod_menu_layout_fits_terminal", "[gunmod][ui]" )
 {
     const int width = GENERATE( 40, 80, 120, 200 );
     const int height = GENERATE( 10, 24, 40, 60 );
-    const auto layout = gunmod_ui::layout_for_terminal( width, height );
+    const gunmod_ui::menu_layout layout = gunmod_ui::layout_for_terminal( width, height );
     CAPTURE( width, height );
     CHECK( layout.width == width );
     CHECK( layout.height == height );
@@ -53,12 +62,12 @@ TEST_CASE( "gunmod_menu_layout_fits_terminal", "[gunmod][ui]" )
 
 TEST_CASE( "gunmod_preview_adds_and_expands_slots_without_mutating_items", "[gunmod][ui]" )
 {
-    itype gun_type = *itype_sl8;
+    std::unique_ptr<itype> gun_type = std::make_unique<itype>( *itype_sl8 );
     const bool existing_slot = GENERATE( false, true );
     if( !existing_slot ) {
-        gun_type.gun->valid_mod_locations.erase( location_sights );
+        gun_type->gun->valid_mod_locations.erase( location_sights );
     }
-    item gun( &gun_type, calendar::turn );
+    item gun( gun_type.get(), calendar::turn );
     item mod( itype_offset_sight_rail );
     const auto original_slots = gun.get_mod_locations();
     REQUIRE( gun.is_gunmod_compatible( mod ).success() );
@@ -97,12 +106,12 @@ TEST_CASE( "gunmod_removal_preview_restores_slots", "[gunmod][ui]" )
 
 TEST_CASE( "gunmod_removal_accounts_for_every_added_slot", "[gunmod][ui]" )
 {
-    itype gun_type = *itype_sl8;
-    gun_type.gun->valid_mod_locations.erase( location_sights );
-    itype adapter_type = *itype_offset_sight_rail;
-    adapter_type.gunmod->add_mod[location_sights] = 2;
-    item gun( &gun_type, calendar::turn );
-    item adapter( &adapter_type, calendar::turn );
+    std::unique_ptr<itype> gun_type = std::make_unique<itype>( *itype_sl8 );
+    gun_type->gun->valid_mod_locations.erase( location_sights );
+    std::unique_ptr<itype> adapter_type = std::make_unique<itype>( *itype_offset_sight_rail );
+    adapter_type->gunmod->add_mod[location_sights] = 2;
+    item gun( gun_type.get(), calendar::turn );
+    item adapter( adapter_type.get(), calendar::turn );
     REQUIRE( gun.put_in( adapter, pocket_type::MOD ).success() );
     REQUIRE( gunmod_ui::removal_denial( gun, adapter ).empty() );
     REQUIRE( gun.put_in( item( itype_red_dot_sight ), pocket_type::MOD ).success() );
@@ -121,10 +130,10 @@ TEST_CASE( "gunmod_removal_accounts_for_every_added_slot", "[gunmod][ui]" )
 TEST_CASE( "gunmod_removal_blocks_permanent_and_loaded_modifications", "[gunmod][ui]" )
 {
     item gun( itype_sl8 );
-    CHECK_FALSE( gunmod_ui::removal_denial( gun, item( itype_id( "rail_mount" ) ) ).empty() );
-    item trigger( itype_id( "match_trigger" ) );
+    CHECK_FALSE( gunmod_ui::removal_denial( gun, item( itype_rail_mount ) ).empty() );
+    item trigger( itype_match_trigger );
     CHECK( gunmod_ui::removal_denial( gun, trigger ).empty() );
-    gun.ammo_set( itype_id( "223" ), 1 );
+    gun.ammo_set( itype_223, 1 );
     REQUIRE( gun.ammo_remaining() == 1 );
     CHECK_FALSE( gunmod_ui::removal_denial( gun, trigger ).empty() );
 }
@@ -135,7 +144,7 @@ TEST_CASE( "gunmod_menu_uses_authoritative_compatibility_reason", "[gunmod][ui]"
     avatar &you = get_avatar();
     arm_shooter( you, itype_sl8 );
     const item_location gun = you.get_wielded_item();
-    item mod( itype_id( "bow_sight" ) );
+    item mod( itype_bow_sight );
     const auto result = gun->is_gunmod_compatible( mod );
     REQUIRE_FALSE( result.success() );
     CHECK( gunmod_ui::installation_denial( you, gun, mod ) == result.str() );
@@ -148,7 +157,7 @@ TEST_CASE( "gunmod_tool_preview_matches_installation_choices", "[gunmod][ui]" )
     arm_shooter( you, itype_sl8 );
     const item_location gun = you.get_wielded_item();
     item mod( itype_shoulder_strap );
-    mod.set_flag( flag_id( "INSTALL_DIFFICULT" ) );
+    mod.set_flag( flag_INSTALL_DIFFICULT );
     const auto odds = you.gunmod_installation_odds( gun, mod );
     REQUIRE( odds.first < 100 );
     auto options = gunmod_ui::installation_options( you, gun, mod );
@@ -163,8 +172,8 @@ TEST_CASE( "gunmod_tool_preview_matches_installation_choices", "[gunmod][ui]" )
     CHECK( options[2].damage == 0 );
     CHECK_FALSE( options[2].available );
     item kit( options[1].tool );
-    item battery( itype_id( "medium_battery_cell" ) );
-    battery.ammo_set( itype_id( "battery" ), 56 );
+    item battery( itype_medium_battery_cell );
+    battery.ammo_set( itype_battery, 56 );
     REQUIRE( kit.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
     REQUIRE( kit.ammo_remaining() == 56 );
     const item_location stored_kit = you.i_add( kit );
@@ -182,9 +191,9 @@ TEST_CASE( "gunmod_installation_consumes_only_the_selected_tool", "[gunmod][acti
     arm_shooter( you, itype_sl8 );
     item_location gun = you.get_wielded_item();
     item_location mod = you.i_add( item( itype_shoulder_strap ) );
-    item kit( itype_id( "small_repairkit" ) );
-    item battery( itype_id( "medium_battery_cell" ) );
-    battery.ammo_set( itype_id( "battery" ), 56 );
+    item kit( itype_small_repairkit );
+    item battery( itype_medium_battery_cell );
+    battery.ammo_set( itype_battery, 56 );
     REQUIRE( kit.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
     item_location stored_kit = you.i_add( kit );
     REQUIRE( stored_kit );
@@ -204,7 +213,7 @@ TEST_CASE( "gunmod_installation_keeps_selected_item_instance", "[gunmod][activit
     clear_avatar();
     avatar &you = get_avatar();
     arm_shooter( you, itype_sl8 );
-    you.set_mutation( trait_id( "DEBUG_HS" ) );
+    you.set_mutation( trait_DEBUG_HS );
     item first( itype_shoulder_strap );
     first.set_damage( 1000 );
     you.i_add( first );
@@ -213,7 +222,7 @@ TEST_CASE( "gunmod_installation_keeps_selected_item_instance", "[gunmod][activit
     item_location selected = you.i_add( second );
     item_location gun = you.get_wielded_item();
     you.gunmod_add( *gun, *selected, itype_id::NULL_ID() );
-    REQUIRE( you.activity.id() == activity_id( "ACT_GUNMOD_ADD" ) );
+    REQUIRE( you.activity.id() == ACT_GUNMOD_ADD );
     REQUIRE( you.activity.targets.size() == 2 );
     CHECK( you.activity.targets[1] == selected );
     you.activity.actor->finish( you.activity, you );
