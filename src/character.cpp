@@ -77,6 +77,7 @@
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
+#include "gunmod_ui.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "inventory.h"
@@ -8779,6 +8780,16 @@ void Character::use( item_location loc, int pre_obtain_moves, std::string const 
 
     item &used = *loc;
     last_item = used.typeId();
+
+    if( is_avatar() && used.is_gun() && !used.is_gunmod() && method.empty() &&
+        !used.type->has_use() && !used.has_relic_activation() ) {
+        const int menu_moves = get_moves();
+        gunmod_ui::show( *this, loc );
+        if( !activity && get_moves() == menu_moves ) {
+            set_moves( pre_obtain_moves );
+        }
+        return;
+    }
 
     if( used.is_tool() ) {
         if( !used.type->has_use() ) {

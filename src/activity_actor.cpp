@@ -73,6 +73,7 @@
 #include "game_inventory.h"
 #include "gates.h"
 #include "gun_mode.h"
+#include "gunmod_ui.h"
 #include "handle_liquid.h"
 #include "harvest.h"
 #include "iexamine.h"
@@ -998,6 +999,8 @@ void gunmod_remove_activity_actor::start( player_activity &act, Character & )
 
 void gunmod_remove_activity_actor::finish( player_activity &act, Character &who )
 {
+    const bool show_menu = reopen_menu;
+    const item_location gun_location = gun;
     item *it_gun = gun.get_item();
     if( !it_gun ) {
         debugmsg( "ACT_GUNMOD_REMOVE lost target gun" );
@@ -1016,6 +1019,9 @@ void gunmod_remove_activity_actor::finish( player_activity &act, Character &who 
     act.set_to_null();
     gunmod_remove( who, *it_gun, *it_mod );
     it_gun->on_contents_changed();
+    if( show_menu ) {
+        gunmod_ui::show( who, gun_location, true );
+    }
 }
 
 bool gunmod_remove_activity_actor::gunmod_unload( Character &who, item &gunmod )
@@ -1089,6 +1095,7 @@ void gunmod_remove_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "moves_total", moves_total );
     jsout.member( "gun", gun );
     jsout.member( "gunmod", gunmod_idx );
+    jsout.member( "reopen_menu", reopen_menu );
 
     jsout.end_object();
 }
@@ -1102,6 +1109,7 @@ std::unique_ptr<activity_actor> gunmod_remove_activity_actor::deserialize( JsonV
     data.read( "moves_total", actor.moves_total );
     data.read( "gun", actor.gun );
     data.read( "gunmod", actor.gunmod_idx );
+    data.read( "reopen_menu", actor.reopen_menu );
 
     return actor.clone();
 }
@@ -11823,6 +11831,7 @@ void gunmod_add_activity_actor::start( player_activity &act, Character & )
 
 void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
 {
+    const bool show_menu = reopen_menu;
     act.set_to_null();
     // first unpack all of our arguments
     if( act.values.size() != 4 ) {
@@ -11830,6 +11839,11 @@ void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
 
+    if( act.targets.size() != 2 || !act.targets[0] || !act.targets[1] ) {
+        add_msg( m_info, _( "The gun or modification is no longer available." ) );
+        return;
+    }
+    const item_location gun_location = act.targets[0];
     item &gun = *act.targets.at( 0 );
     item &mod = *act.targets.at( 1 );
 
@@ -11841,6 +11855,14 @@ void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
     // any tool charges used during installation
     const itype_id tool( act.name );
     const int qty = act.values[3];
+
+    if( !tool.is_empty() && qty > 0 && !who.has_charges( tool, qty ) ) {
+        add_msg( m_info, _( "The installation tool no longer has enough charges." ) );
+        if( show_menu ) {
+            gunmod_ui::show( who, gun_location, true );
+        }
+        return;
+    }
 
     if( !gun.is_gunmod_compatible( mod ).success() ) {
         debugmsg( "Invalid arguments in ACT_GUNMOD_ADD" );
@@ -11876,6 +11898,9 @@ void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
     } else {
         add_msg( m_info, _( "You failed at installing the %s." ), mod.tname() );
     }
+    if( show_menu ) {
+        gunmod_ui::show( who, gun_location, true );
+    }
 }
 
 void gunmod_add_activity_actor::serialize( JsonOut &jsout ) const
@@ -11884,6 +11909,7 @@ void gunmod_add_activity_actor::serialize( JsonOut &jsout ) const
 
     jsout.member( "moves", moves );
     jsout.member( "name", name );
+    jsout.member( "reopen_menu", reopen_menu );
 
     jsout.end_object();
 }
@@ -11896,6 +11922,7 @@ std::unique_ptr<activity_actor> gunmod_add_activity_actor::deserialize( JsonValu
 
     data.read( "moves", actor.moves );
     data.read( "name", actor.name );
+    data.read( "reopen_menu", actor.reopen_menu );
 
     return actor.clone();
 }

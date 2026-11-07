@@ -251,3 +251,30 @@ The recommended layout in SCREEN_READER_MODE is the following:
 That is:
 1. Add the currently-selected list entry to the detail pane at the side, and
 2. Disable display of the list of options.
+
+## Gun modification management
+
+Activating a gun opens its modification manager.  Guns with an existing activation
+offer a choice between modification management and their original action.  Browsing
+does not retrieve the gun, consume tool charges, or start installation work.
+
+The manager uses terminal cells and `ui_adaptor` resize callbacks, like the inventory.
+Wide terminals display carried modifications and installed slots side by side;
+narrow terminals show the active pane.  Switching panes preserves the filter and
+selection.  Confirming a slot filters the available modifications by slot type.
+Unavailable modifications remain selectable so their blocking reason can be read.
+
+Selecting a modification previews the whole gun without changing the real item.
+The slot display includes capacity supplied by modifications and marks additions
+and removals.  Slots are pooled by type, not represented as invented parent-child
+attachments.  Removal is blocked if the remaining capacity cannot hold installed
+modifications.  Permanent modifications remain visible and cannot be removed.
+
+The lower panels show installation requirements, tool choices, time, risk, and
+current-to-preview statistics.  Details and slot previews can be scrolled separately.
+Loaded damage and recoil are compared only with matching ammunition.  There is
+no aggregate equipment score.  Keybindings are configurable in `GUNMOD_MANAGER`.
+
+Confirmed changes use the normal installation and removal activities, including
+handling time, interruption, and installation failure.  Normal completion returns
+to the manager with the real result; canceling an activity does not reopen it.

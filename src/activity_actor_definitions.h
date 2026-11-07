@@ -707,6 +707,8 @@ class gunmod_remove_activity_actor : public activity_actor
         int gunmod_idx;
 
     public:
+        bool reopen_menu = false;
+
         gunmod_remove_activity_actor(
             int moves_total,
             const item_location &gun,
@@ -3916,6 +3918,8 @@ class fix_wound_activity_actor : public activity_actor
 class gunmod_add_activity_actor : public activity_actor
 {
     public:
+        bool reopen_menu = false;
+
         gunmod_add_activity_actor() = default;
         gunmod_add_activity_actor( int moves, std::string name ) : moves( moves ),
             name( std::move( name ) ) {}

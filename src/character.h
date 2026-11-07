@@ -2014,7 +2014,8 @@ class Character : public Creature, public visitable
         bool gunmod_remove( item_location gun_loc, item &mod );
 
         /** Starts activity to install gunmod having warned user about any risk of failure or irremovable mods s*/
-        void gunmod_add( item &gun, item &mod );
+        void gunmod_add( item &gun, item &mod,
+                         const std::optional<itype_id> &tool = std::nullopt );
 
         /** Starts activity to install toolmod */
         void toolmod_add( item_location tool, item_location mod );
