@@ -130,8 +130,7 @@ void frame::prepare()
     results_.resize( inputs_.size() );
     used_workers_ = false;
     const auto compute = [this]( std::size_t begin, std::size_t end ) noexcept {
-        for( std::size_t i = begin; i < end; ++i )
-        {
+        for( std::size_t i = begin; i < end; ++i ) {
             results_[i] = tile_preparation::prepare( inputs_[i] );
         }
     };
@@ -142,7 +141,7 @@ void frame::prepare()
     }
     const std::size_t batches = worker_count() + 1;
     const std::size_t stride = ( inputs_.size() + batches - 1 ) / batches;
-    std::array<std::future<void>, 4 > pending;
+    std::array<std::future<void>, 4> pending;
     std::size_t submitted = 0;
     try {
         for( std::size_t i = 1; i < batches; ++i ) {
@@ -171,15 +170,18 @@ void frame::prepare()
     }
 }
 
-const std::vector<result, compute_allocator<result>> &frame::results() const {
+const std::vector<result, compute_allocator<result>> &frame::results() const
+{
     return results_;
 }
 
-unsigned frame::worker_count() const {
+unsigned frame::worker_count() const
+{
     return workers_;
 }
 
-bool frame::can_parallelize( std::size_t count ) const {
+bool frame::can_parallelize( std::size_t count ) const
+{
     // Fixed value/copy/queue measurements show a loss at 4096 mixed tiles.
     constexpr std::size_t minimum_parallel_tiles = 16384;
     return worker_count() != 0 && !is_pool_worker_thread() && count >= minimum_parallel_tiles;

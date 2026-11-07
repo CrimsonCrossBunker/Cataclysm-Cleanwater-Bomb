@@ -111,8 +111,8 @@ class cata_thread_pool
          */
         template<typename F, typename... Args>
         auto submit_returning( F &&f, Args &&...args )
-        -> std::future<std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>... >> {
-            using R = std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>... >;
+        -> std::future<std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>> {
+            using R = std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>;
             auto task = std::make_shared<std::packaged_task<R()>>(
                             std::bind( std::forward<F>( f ), std::forward<Args>( args )... )
                         );
