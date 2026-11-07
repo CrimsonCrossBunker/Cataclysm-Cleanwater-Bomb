@@ -13,6 +13,7 @@
 #include "cata_shader.h"
 #include "debug.h"
 #include "point.h"
+#include "sdl_renderer_policy.h"
 
 #include <SDL3_image/SDL_image.h>
 
@@ -61,23 +62,23 @@ static SDL_ScaleMode scale_quality_to_mode( const std::string &quality )
     return SDL_SCALEMODE_LINEAR;
 }
 
-void RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
+bool RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
                  const SDL_Rect *srcrect, const SDL_Rect *dstrect )
 {
     if( !renderer ) {
         dbg( D_ERROR ) << "Tried to render to a null renderer";
-        return;
+        return false;
     }
     if( !texture ) {
         dbg( D_ERROR ) << "Tried to render a null texture";
-        return;
+        return false;
     }
     SDL_FRect fsrc;
     SDL_FRect fdst;
     const SDL_FRect *fsrcp = srcrect ? &( fsrc = to_frect( *srcrect ) ) : nullptr;
     const SDL_FRect *fdstp = dstrect ? &( fdst = to_frect( *dstrect ) ) : nullptr;
-    printErrorIf( !SDL_RenderTexture( renderer.get(), texture.get(), fsrcp, fdstp ),
-                  "SDL_RenderTexture failed" );
+    return !printErrorIf( !SDL_RenderTexture( renderer.get(), texture.get(), fsrcp, fdstp ),
+                          "SDL_RenderTexture failed" );
 }
 
 bool RenderTexturedMesh( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
@@ -110,8 +111,8 @@ SDL_Texture_Ptr CreateTexture( const SDL_Renderer_Ptr &renderer, Uint32 format, 
         return SDL_Texture_Ptr();
     }
     SDL_Texture_Ptr result( SDL_CreateTexture( renderer.get(),
-            static_cast<SDL_PixelFormat>( format ),
-            static_cast<SDL_TextureAccess>( access ), w, h ) );
+                            static_cast<SDL_PixelFormat>( format ),
+                            static_cast<SDL_TextureAccess>( access ), w, h ) );
     printErrorIf( !result, "SDL_CreateTexture failed" );
     if( result ) {
         SDL_SetTextureScaleMode( result.get(),
@@ -527,7 +528,7 @@ void RenderCopyEx( const SDL_Renderer_Ptr &renderer, SDL_Texture *const texture,
     const SDL_FRect *fdstp = dstrect ? &( fdst = to_frect( *dstrect ) ) : nullptr;
     const SDL_FPoint *fcenterp = center ? &( fcenter = to_fpoint( *center ) ) : nullptr;
     printErrorIf( !SDL_RenderTextureRotated( renderer.get(), texture, fsrcp, fdstp, angle,
-            fcenterp, flip ),
+                  fcenterp, flip ),
                   "SDL_RenderTextureRotated failed" );
 }
 
@@ -678,7 +679,7 @@ SDL_Surface_Ptr ConvertSurfaceFormat( const SDL_Surface_Ptr &surface, const Uint
         return SDL_Surface_Ptr();
     }
     SDL_Surface_Ptr result( SDL_ConvertSurface( surface.get(),
-            static_cast<SDL_PixelFormat>( pixel_format ) ) );
+                            static_cast<SDL_PixelFormat>( pixel_format ) ) );
     printErrorIf( !result, "SDL_ConvertSurface failed" );
     return result;
 }
@@ -892,11 +893,11 @@ bool GetRendererMaxTextureSize( const SDL_Renderer_Ptr &renderer, int *max_w, in
     }
     if( max_w ) {
         *max_w = static_cast<int>( SDL_GetNumberProperty( props,
-            SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
+                                   SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
     }
     if( max_h ) {
         *max_h = static_cast<int>( SDL_GetNumberProperty( props,
-            SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
+                                   SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
     }
     return true;
 }
@@ -937,7 +938,7 @@ void RenderSetLogicalSize( const SDL_Renderer_Ptr &renderer, const int w, const 
         return;
     }
     printErrorIf( !SDL_SetRenderLogicalPresentation( renderer.get(), w, h,
-            SDL_LOGICAL_PRESENTATION_LETTERBOX ),
+                  SDL_LOGICAL_PRESENTATION_LETTERBOX ),
                   "SDL_SetRenderLogicalPresentation failed" );
 }
 
@@ -963,7 +964,7 @@ bool RenderReadPixels( const SDL_Renderer_Ptr &renderer, const SDL_Rect *rect,
     // SDL3 chooses the surface format. Honor the caller's requested format
     // and pitch instead of copying bytes from a potentially different layout.
     const bool converted = SDL_ConvertPixels( surf->w, surf->h, surf->format,
-        surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
+                           surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
     SDL_DestroySurface( surf );
     return converted;
 }
@@ -1258,7 +1259,7 @@ SDL_Renderer_Ptr CreateRenderer( const SDL_Window_Ptr &window, const char *drive
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_SPIRV_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_DXIL_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_MSL_BOOLEAN, true );
-    SDL_Renderer_Ptr result( SDL_CreateRendererWithProperties( props ) );
+    SDL_Renderer_Ptr result( create_compatible_renderer( props ) );
     SDL_DestroyProperties( props );
     printErrorIf( !result, "SDL_CreateRendererWithProperties failed" );
     return result;

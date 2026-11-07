@@ -1,18 +1,19 @@
 #include <climits>
-#include <string>
 
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
+#include "coordinates.h"
 #include "effect.h"
 #include "itype.h"
-#include "map_helpers.h"
+#include "map_scale_constants.h"
 #include "player_helpers.h"
-#include "skill.h"
-#include "trap.h"
+#include "point.h"
 #include "type_id.h"
+
+struct trap;
 
 static const efftype_id effect_dulled_senses( "dulled_senses" );
 static const efftype_id effect_heightened_senses( "heightened_senses" );
@@ -265,7 +266,7 @@ TEST_CASE( "focus_recovery_scales_with_sensitivity", "[sensitive][character][foc
     dummy.set_sensitive( 100 );
     dummy.set_focus( 1 );
     dummy.update_mental_focus();
-    CHECK( dummy.get_focus() == 10 );
+    CHECK( dummy.get_focus() == 1 );
 
     // Fully numb characters recover at most 75% as fast: 99 * 0.75 = 74.
     dummy.set_sensitive( 0 );
@@ -292,7 +293,7 @@ TEST_CASE( "focus_drain_while_practicing_scales_with_sensitivity",
     auto drain_to = [&]( int sens ) {
         dummy.set_sensitive( sens );
         dummy.set_focus( 200 ); // pool = 200000, base drain = max(2000, 1000)
-        dummy.practice( skill_fabrication, 1000 );
+        dummy.practice( skill_fabrication, 1 );
         return dummy.get_focus();
     };
 

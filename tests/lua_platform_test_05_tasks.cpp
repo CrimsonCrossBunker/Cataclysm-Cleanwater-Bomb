@@ -39,6 +39,7 @@
 #include <utility>
 #include <vector>
 #include "cata_catch.h"
+#include "map_helpers.h"
 #include "lua_platform_sol.h"
 
 namespace cata::lua_platform
@@ -519,6 +520,7 @@ TEST_CASE( "lua_platform_persistent_task_participants_snapshot_and_dispatch_exac
 TEST_CASE( "lua_platform_persistent_task_vehicle_actor_reacquires_persistent_identity",
            "[lua][platform][runtime][tasks][handles][vehicle]" )
 {
+    clear_map_without_vision();
     cata::lua_platform::clear_active_runtimes();
 
     sol::state lua;

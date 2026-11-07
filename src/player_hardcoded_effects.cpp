@@ -158,7 +158,7 @@ static void eff_fun_onfire( Character &u, effect &it )
 {
     const int intense = it.get_intensity();
     u.deal_damage( it.get_source().resolve_creature(), it.get_bp(), damage_instance( damage_heat,
-            rng( intense, intense * 2 ) ) );
+                   rng( intense, intense * 2 ) ) );
     if( u.is_limb_broken( it.get_bp() ) ) {
         // Set effect to be cleaned up during effect processing instead of endlessly burning broken limb.
         // TODO: Transfer damage towards core instead? (e.g. broken feet --> try legs, if broken --> try torso etc)
@@ -255,7 +255,7 @@ static void eff_fun_fungus( Character &u, effect &it )
                 u.mod_thirst( awfulness );
                 ///\EFFECT_STR decreases damage taken by fungus effect
                 u.apply_damage( nullptr, bodypart_id( "torso" ), awfulness / std::max( u.get_str(),
-                        1 ) ); // can't be healthy
+                                1 ) ); // can't be healthy
             }
             break;
         case 3:
@@ -835,10 +835,10 @@ static void eff_fun_hypovolemia( Character &u, effect &it )
     // bleed out lambda
     auto bleed_out = [&] {
         if( u.has_effect( effect_bleed ) )
-    {
-        u.add_msg_player_or_npc( m_bad,
-                                 _( "You bleed to death!" ),
-                                 _( "<npcname> bleeds to death!" ) );
+        {
+            u.add_msg_player_or_npc( m_bad,
+                                     _( "You bleed to death!" ),
+                                     _( "<npcname> bleeds to death!" ) );
             get_event_bus().send<event_type::dies_from_bleeding>( u.getID() );
         } else
         {
@@ -1067,16 +1067,19 @@ static void eff_fun_sleep( Character &u, effect &it )
         it.mod_intensity( 1 );
     }
 
-    if( u.has_effect( effect_narcosis ) && u.get_sleepiness() <= 25 ) {
+    int current_sleepiness = u.get_sleepiness();
+    const bool anesthetized = u.has_effect( effect_narcosis );
+
+    if( anesthetized && u.get_sleepiness() <= 25 ) {
         u.set_sleepiness( 25 ); //Prevent us from waking up naturally while under anesthesia
     }
 
     if( u.get_sleepiness() < -25 && it.get_duration() > 3_minutes &&
-        !u.has_effect( effect_narcosis ) ) {
+        !anesthetized ) {
         it.set_duration( 1_turns * dice( 3, 10 ) );
     }
 
-    if( u.get_sleepiness() <= 0 && u.get_sleepiness() > -20 && !u.has_effect( effect_narcosis ) ) {
+    if( u.get_sleepiness() <= 0 && u.get_sleepiness() > -20 && !anesthetized ) {
         u.mod_sleepiness( -25 );
         if( u.get_sleep_deprivation() < SLEEP_DEPRIVATION_HARMLESS ) {
             u.add_msg_if_player( m_good, _( "You feel well rested." ) );
@@ -1148,107 +1151,126 @@ static void eff_fun_sleep( Character &u, effect &it )
         strength = 3; // High strength
     }
 
-    // Get a dream if category strength is high enough.
-    if( strength != 0 ) {
-        //Once every 6 / 3 / 2 hours, with a bit of randomness
-        if( calendar::once_every( 6_hours / strength ) && one_in( 3 ) ) {
-            // Select a dream
-            std::string dream = u.get_category_dream( cat, strength );
-            if( !dream.empty() ) {
-                u.add_msg_if_player( dream );
-            }
-            // Mycus folks upgrade in their sleep.
-            if( u.has_trait( trait_THRESH_MYCUS ) ) {
-                if( one_in( 8 ) ) {
-                    u.mutate_category( mutation_category_MYCUS, false, true );
-                    u.mod_stored_kcal( -87 );
-                    u.mod_thirst( 10 );
-                    u.mod_sleepiness( 5 );
-                }
-            }
-        }
-    }
-
     bool woke_up = false;
-    int tirednessVal = rng( 5, 200 ) + rng( 0, std::abs( u.get_sleepiness() * 2 * 5 ) );
-    if( !u.is_blind() && !u.has_effect( effect_narcosis ) &&
-        !u.has_active_mutation( trait_CHLOROMORPH ) && !u.has_bionic( bio_sleep_shutdown ) ) {
-        // People who can see while sleeping are acclimated to the light.
-        if( !u.has_flag( json_flag_SEESLEEP ) ) {
-            if( u.has_trait( trait_HEAVYSLEEPER2 ) && !u.has_trait( trait_HIBERNATE ) ) {
-                // So you can too sleep through noon
-                if( ( tirednessVal * 1.25 ) < here.ambient_light_at( u.pos_bub() ) && ( u.get_sleepiness() < 10 ||
-                        one_in( u.get_sleepiness() / 2 ) ) ) {
+    int tirednessVal =
+        rng( 5, 200 ) + rng( 0, std::abs( u.get_sleepiness() * 2 * 5 ) );
+
+    if( !anesthetized ) {
+        // Use 1 hour here because that divides cleanly into 2, 3, and 6 hours for the inner once_in check.
+        if( calendar::once_every( 1_hours ) ) {
+            // Get a dream if category strength is high enough.
+            if( strength != 0 ) {
+                // Once every 6 / 3 / 2 hours, with a bit of randomness.
+                if( calendar::once_every( 6_hours / strength ) && one_in( 6 ) ) {
+                    // Select a dream.
+                    std::string dream = u.get_category_dream( cat, strength );
+                    if( !dream.empty() ) {
+                        u.add_msg_if_player( dream );
+                    }
+                    // Mycus folks upgrade in their sleep.
+                    if( u.has_trait( trait_THRESH_MYCUS ) ) {
+                        if( one_in( 8 ) ) {
+                            u.mutate_category( mutation_category_MYCUS, false, true );
+                            u.mod_stored_kcal( -87 );
+                            u.mod_thirst( 10 );
+                            u.mod_sleepiness( 5 );
+                            current_sleepiness += 5;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Slightly wonky once_every() time so this isn't obviously every ten minutes.
+        if( calendar::once_every( 465_seconds ) &&
+            current_sleepiness < sleepiness_levels::MASSIVE_SLEEPINESS &&
+            !u.is_blind() && !u.has_active_mutation( trait_CHLOROMORPH ) &&
+            !u.has_bionic( bio_sleep_shutdown ) ) {
+            // People who can see while sleeping are acclimated to the light.
+            if( !u.has_flag( json_flag_SEESLEEP ) ) {
+                if( u.has_trait( trait_HEAVYSLEEPER2 ) && !u.has_trait( trait_HIBERNATE ) ) {
+                    // So you can too sleep through noon
+                    if( ( tirednessVal * 1.25 ) < here.ambient_light_at( u.pos_bub() ) && ( current_sleepiness < 10 ||
+                            one_in( current_sleepiness / 2 ) ) ) {
+                        u.add_msg_if_player( _( "It's too bright to sleep." ) );
+                        // Set ourselves up for removal
+                        it.set_duration( 0_turns );
+                        woke_up = true;
+                    }
+                    // Ursine hibernators would likely do so indoors.  Plants, though, might be in the sun.
+                } else if( u.has_trait( trait_HIBERNATE ) ) {
+                    if( ( tirednessVal * 5 ) < here.ambient_light_at( u.pos_bub() ) && ( current_sleepiness < 10 ||
+                            one_in( current_sleepiness / 2 ) ) ) {
+                        u.add_msg_if_player( _( "It's too bright to sleep." ) );
+                        // Set ourselves up for removal
+                        it.set_duration( 0_turns );
+                        woke_up = true;
+                    }
+                } else if( tirednessVal < here.ambient_light_at( u.pos_bub() ) && ( current_sleepiness < 10 ||
+                           one_in( current_sleepiness / 2 ) ) ) {
                     u.add_msg_if_player( _( "It's too bright to sleep." ) );
                     // Set ourselves up for removal
                     it.set_duration( 0_turns );
                     woke_up = true;
                 }
-                // Ursine hibernators would likely do so indoors.  Plants, though, might be in the sun.
-            } else if( u.has_trait( trait_HIBERNATE ) ) {
-                if( ( tirednessVal * 5 ) < here.ambient_light_at( u.pos_bub() ) && ( u.get_sleepiness() < 10 ||
-                        one_in( u.get_sleepiness() / 2 ) ) ) {
-                    u.add_msg_if_player( _( "It's too bright to sleep." ) );
-                    // Set ourselves up for removal
+            } else if( u.has_flag( json_flag_SEESLEEP ) ) {
+                Creature *hostile_critter = g->is_hostile_very_close();
+                if( hostile_critter != nullptr ) {
+                    u.add_msg_if_player( _( "You see %s approaching!" ),
+                                         hostile_critter->disp_name() );
                     it.set_duration( 0_turns );
                     woke_up = true;
                 }
-            } else if( tirednessVal < here.ambient_light_at( u.pos_bub() ) && ( u.get_sleepiness() < 10 ||
-                    one_in( u.get_sleepiness() / 2 ) ) ) {
-                u.add_msg_if_player( _( "It's too bright to sleep." ) );
-                // Set ourselves up for removal
-                it.set_duration( 0_turns );
-                woke_up = true;
-            }
-        } else if( u.has_flag( json_flag_SEESLEEP ) ) {
-            Creature *hostile_critter = g->is_hostile_very_close();
-            if( hostile_critter != nullptr ) {
-                u.add_msg_if_player( _( "You see %s approaching!" ),
-                                     hostile_critter->disp_name() );
-                it.set_duration( 0_turns );
-                woke_up = true;
             }
         }
-    }
 
-    // Have we already woken up?
-    if( !woke_up && !u.has_effect( effect_narcosis ) ) {
-        // Cold or heat may wake you up.
-        // Player will sleep through cold or heat if sleepy enough
-        for( const bodypart_id &bp : u.get_all_body_parts() ) {
-            const units::temperature curr_temp = u.get_part_temp_cur( bp );
-            const units::temperature_delta sleepiness_modifier = units::from_celsius_delta(
-                    u.get_sleepiness() / 1000.0 );
-            if( curr_temp < BODYTEMP_VERY_COLD - sleepiness_modifier ) {
-                if( one_in( 30000 ) ) {
-                    u.add_msg_if_player( _( "You toss and turn trying to keep warm." ) );
+        // Have we already woken up?
+        if( !woke_up && calendar::once_every( 180_seconds ) &&
+            !u.has_active_bionic( bio_sleep_shutdown ) ) {
+            // Cold or heat may wake you up.
+            // Player will sleep through cold or heat if sleepy enough
+            const units::temperature_delta sleepiness_modifier =
+                units::from_celsius_delta( current_sleepiness / 1000.0 );
+            for( const bodypart_id &bp : u.get_all_body_parts() ) {
+                const units::temperature curr_temp = u.get_part_temp_cur( bp );
+                if( curr_temp < BODYTEMP_VERY_COLD - sleepiness_modifier ) {
+                    if( one_in( 30000 ) ) {
+                        u.add_msg_if_player( _( "You toss and turn trying to keep warm." ) );
+                    }
+                    if( curr_temp < BODYTEMP_FREEZING - sleepiness_modifier ||
+                        one_in( units::to_celsius( curr_temp ) * 3000 + 16500 ) ) {
+                        u.add_msg_if_player( m_bad, _( "It's too cold to sleep." ) );
+                        // Set ourselves up for removal
+                        it.set_duration( 0_turns );
+                        woke_up = true;
+                        break;
+                    }
+                } else if( curr_temp > BODYTEMP_VERY_HOT + sleepiness_modifier ) {
+                    if( one_in( 30000 ) ) {
+                        u.add_msg_if_player( _( "You toss and turn in the heat." ) );
+                    }
+                    if( curr_temp > BODYTEMP_SCORCHING + sleepiness_modifier ||
+                        one_in( 76500 - units::to_celsius( curr_temp ) * 500 ) ) {
+                        u.add_msg_if_player( m_bad, _( "It's too hot to sleep." ) );
+                        // Set ourselves up for removal
+                        it.set_duration( 0_turns );
+                        woke_up = true;
+                        break;
+                    }
                 }
-                if( curr_temp < BODYTEMP_FREEZING - sleepiness_modifier ||
-                    one_in( units::to_celsius( curr_temp ) * 3000 + 16500 ) ) {
-                    u.add_msg_if_player( m_bad, _( "It's too cold to sleep." ) );
-                    // Set ourselves up for removal
+            }
+            if( !woke_up ) {
+                if( u.get_thirst() > 240 && current_sleepiness < sleepiness_levels::MASSIVE_SLEEPINESS &&
+                    u.get_effect_int( effect_hypovolemia ) < 3 ) {
+                    u.add_msg_if_player( m_bad, _( "You can't sleep, you are in desperate need of water!" ) );
                     it.set_duration( 0_turns );
                     woke_up = true;
-                    break;
-                }
-            } else if( curr_temp > BODYTEMP_VERY_HOT + sleepiness_modifier ) {
-                if( one_in( 30000 ) ) {
-                    u.add_msg_if_player( _( "You toss and turn in the heat." ) );
-                }
-                if( curr_temp > BODYTEMP_SCORCHING + sleepiness_modifier ||
-                    one_in( 76500 - units::to_celsius( curr_temp ) * 500 ) ) {
-                    u.add_msg_if_player( m_bad, _( "It's too hot to sleep." ) );
-                    // Set ourselves up for removal
-                    it.set_duration( 0_turns );
-                    woke_up = true;
-                    break;
                 }
             }
         }
     }
 
-    // A bit of a hack: check if we are about to wake up for any reason, including regular
-    // timing out of sleep
+    // Check if we are about to wake up for any reason, including regular timing out of sleep.
     if( it.get_duration() == 1_turns || woke_up ) {
         u.wake_up();
     }

@@ -74,6 +74,7 @@ static const itype_id itype_butter( "butter" );
 static const itype_id itype_cash_card( "cash_card" );
 static const itype_id itype_chem_black_powder( "chem_black_powder" );
 static const itype_id itype_chem_muriatic_acid( "chem_muriatic_acid" );
+static const itype_id itype_down_mattress( "down_mattress" );
 static const itype_id itype_duffelbag( "duffelbag" );
 static const itype_id itype_efile_photos( "efile_photos" );
 static const itype_id itype_efile_recipes( "efile_recipes" );
@@ -102,6 +103,7 @@ static const itype_id itype_test_one_per_layer_ring_c( "test_one_per_layer_ring_
 static const itype_id itype_test_rock( "test_rock" );
 static const itype_id itype_test_smart_phone( "test_smart_phone" );
 static const itype_id itype_test_waterproof_bag( "test_waterproof_bag" );
+static const itype_id itype_tire_repair_kit( "tire_repair_kit" );
 static const itype_id itype_towel( "towel" );
 static const itype_id itype_usb_drive( "usb_drive" );
 static const itype_id itype_walnut( "walnut" );
@@ -343,7 +345,7 @@ static void assert_minimum_length_to_volume_ratio( const item &target )
     }
     // Minimum possible length is if the item is a sphere.
     const float minimal_diameter = std::cbrt( ( 3.0 * units::to_milliliter( target.base_volume() ) ) /
-        ( 4.0 * M_PI ) );
+                                   ( 4.0 * M_PI ) );
     CHECK( units::to_millimeter( target.length() ) >= minimal_diameter * 10.0 );
 }
 
@@ -1350,7 +1352,7 @@ TEST_CASE( "item_relative_rot_after_is_non_mutating", "[item][rot]" )
     const double initial_rot = butter.get_relative_rot();
 
     const double simulated_rot = butter.get_relative_rot_after( temperatures::normal, 1.0f,
-        1_hours );
+                                 1_hours );
 
     CHECK( butter.get_relative_rot() == initial_rot );
     CHECK( simulated_rot > initial_rot );
@@ -1419,6 +1421,26 @@ TEST_CASE( "uncraft_sanity_check", "[item]" )
                                  to_gram( sum_of_components_weight ), tolerance * 100.f ) );
             CHECK( is_within_tolerance );
         }
+    }
+}
+
+TEST_CASE( "repaired_uncraft_recipes_conserve_mass", "[item][recipe]" )
+{
+    for( const itype_id &type : {
+             itype_tire_repair_kit, itype_down_mattress
+         } ) {
+        CAPTURE( type );
+        REQUIRE( type.is_valid() );
+        REQUIRE( test_data::known_bad_uncraft.count( type ) == 0 );
+        const item target( type );
+        const std::vector<item_comp> components = target.get_uncraft_components();
+        REQUIRE_FALSE( components.empty() );
+        units::mass component_mass;
+        for( const item_comp &component : components ) {
+            component_mass += component.type->weight * component.count;
+        }
+        REQUIRE( component_mass > 0_gram );
+        CHECK( units::abs( component_mass - type->weight ) <= type->weight * 0.1f );
     }
 }
 

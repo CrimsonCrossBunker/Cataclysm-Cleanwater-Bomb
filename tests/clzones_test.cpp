@@ -28,6 +28,7 @@
 #include "clone_ptr.h"
 #include "clzones.h"
 #include "coordinates.h"
+#include "debug.h"
 #include "enums.h"
 #include "item.h"
 #include "item_location.h"
@@ -52,10 +53,6 @@
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 
-static const itype_id itype_hammer( "hammer" );
-
-static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
-
 static const faction_id faction_your_followers( "your_followers" );
 
 static const itype_id itype_556( "556" );
@@ -64,6 +61,7 @@ static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_belt223( "belt223" );
 static const itype_id itype_bottle_glass( "bottle_glass" );
 static const itype_id itype_chem_washing_soda( "chem_washing_soda" );
+static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_test_apple( "test_apple" );
 static const itype_id itype_test_bitter_almond( "test_bitter_almond" );
 static const itype_id itype_test_heavy_boulder( "test_heavy_boulder" );
@@ -81,6 +79,7 @@ static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart
 static const vproto_id vehicle_prototype_test_turret_rig( "test_turret_rig" );
 
 static const zone_type_id zone_type_LOOT_CHEMICAL( "LOOT_CHEMICAL" );
+static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
 static const zone_type_id zone_type_LOOT_DEFAULT( "LOOT_DEFAULT" );
 static const zone_type_id zone_type_LOOT_DRINK( "LOOT_DRINK" );
 static const zone_type_id zone_type_LOOT_FOOD( "LOOT_FOOD" );
@@ -226,7 +225,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
                           false, true, zone_abs, zone_abs );
     cart->zones_dirty = true;
     zone_data *first = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), first_data,
-        &here );
+                       &here );
     REQUIRE( first != nullptr );
 
     bool returned_pointer_is_current = false;
@@ -240,7 +239,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
     zone_data second_data( "Second", zone_type_LOOT_FOOD, faction_your_followers,
                            false, true, zone_abs, zone_abs );
     zone_data *second = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), second_data,
-        &here );
+                        &here );
     REQUIRE( second != nullptr );
 
     REQUIRE( zm.remove( *first, &here ) );
@@ -345,7 +344,7 @@ TEST_CASE( "vehicle_zone_remove_uses_non_global_map_context", "[zones][vehicle]"
     zone_data new_zone( "Outside reality bubble", zone_type_LOOT_FOOD,
                         faction_your_followers, false, true, zone_abs, zone_abs );
     zone_data *created = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), new_zone,
-        other_map.cast_to_map() );
+                         other_map.cast_to_map() );
     REQUIRE( created != nullptr );
     created->set_enabled( false );
     CHECK_FALSE( created->get_enabled() );
@@ -365,11 +364,14 @@ TEST_CASE( "vehicle_zone_edit_snapshot_failure_is_fail_closed", "[zones][vehicle
     zone_data detached_zone( "Detached", zone_type_LOOT_FOOD, faction_your_followers,
                              false, true, tripoint_abs_ms::zero, tripoint_abs_ms::zero );
     detached_zone.set_is_vehicle( true );
-    CHECK_FALSE( zm.zone_edited( detached_zone ) );
-
-    CHECK_FALSE( detached_zone.set_name( "Must stay detached" ) );
+    const std::string diagnostics = capture_debugmsg_during( [&]() {
+        CHECK_FALSE( zm.zone_edited( detached_zone ) );
+        CHECK_FALSE( detached_zone.set_name( "Must stay detached" ) );
+        detached_zone.set_enabled( false );
+    } );
+    const std::string diagnostic = "Could not snapshot vehicle zone before editing";
+    CHECK( diagnostics == diagnostic + diagnostic + diagnostic );
     CHECK( detached_zone.get_name() == "Detached" );
-    detached_zone.set_enabled( false );
     CHECK( detached_zone.get_enabled() );
 }
 
@@ -737,7 +739,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
         int inserted = 0;
         for( int i = 0; i < max_item_in_square; ++i ) {
             item *added = here.add_item_or_charges_ret_loc( dest_pos, item( itype_test_rod_14cm ),
-                false ).get_item();
+                          false ).get_item();
             if( added == nullptr ) {
                 break;
             }
@@ -762,10 +764,10 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
     bool spillable_skipped = false;
     zone_sorting::zone_items items = zone_sorting::populate_items( src_pos );
     zone_sorting::unload_sort_options opts = zone_sorting::set_unload_options( dummy, src_abs,
-        false );
+            false );
     std::vector<item_location> other_activity;
     CHECK_FALSE( zone_sorting::has_items_to_sort( dummy, src_abs, opts, other_activity, items,
-            &pickup_failure, &spillable_skipped ) );
+                 &pickup_failure, &spillable_skipped ) );
 }
 
 // Activity must terminate even when every destination is count-full.
@@ -1004,7 +1006,7 @@ TEST_CASE( "zone_sorting_cart_on_source_full_inventory",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     // Run the sort activity
     dummy.assign_activity( zone_sort_activity_actor() );
@@ -1066,7 +1068,7 @@ TEST_CASE( "zone_sorting_virtual_pickup_from_cart",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
@@ -1129,7 +1131,7 @@ TEST_CASE( "zone_sorting_virtual_pickup_full_inventory",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
@@ -1185,7 +1187,7 @@ TEST_CASE( "zone_sorting_direct_delivery_to_cart",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
@@ -1426,7 +1428,7 @@ TEST_CASE( "zone_sorting_virtual_pickup_walled_dest_preserves_item",
 
     const int at_source = count_items_or_charges( src_pos, itype_test_apple, cargo );
     const int at_destination = count_items_or_charges( dest_pos, itype_test_apple,
-        std::nullopt );
+                               std::nullopt );
     CHECK( at_source + at_destination == 1 );
     CHECK( !dummy.activity );
 }
@@ -2437,7 +2439,7 @@ TEST_CASE( "zone_sorting_fast_delivery_preserves_heavy_items_with_cart",
         REQUIRE( worst.has_value() );
         if( worst ) {
             int req_at_worst = cart->drag_str_req_at( here, *worst,
-                cart->total_mass( here ) + 200_kilogram );
+                               cart->total_mass( here ) + 200_kilogram );
             CAPTURE( req_at_worst );
             CAPTURE( worst->x() );
             CAPTURE( worst->y() );
@@ -3295,7 +3297,7 @@ TEST_CASE( "has_items_to_sort_returns_false_for_spillable_only_source",
     bool pickup_failure = false;
 
     bool result = zone_sorting::has_items_to_sort( dummy, start_abs, zone_unload_options,
-        other_activity_items, items, &pickup_failure );
+                  other_activity_items, items, &pickup_failure );
 
     CHECK_FALSE( result );
 }
@@ -3786,10 +3788,10 @@ TEST_CASE( "avatar_zone_sorting_multi_tile_personal_zones",
 
     // Place 3 apples on each orthogonal source tile (skip the player's own tile).
     const std::vector<tripoint_bub_ms> source_positions = {
-        player_pos + tripoint( 1, 0, 0 ),
-        player_pos + tripoint( -1, 0, 0 ),
-        player_pos + tripoint( 0, 1, 0 ),
-        player_pos + tripoint( 0, -1, 0 )
+        player_pos + tripoint::east,
+        player_pos + tripoint::west,
+        player_pos + tripoint::south,
+        player_pos + tripoint::north
     };
     constexpr int apples_per_tile = 3;
     for( const tripoint_bub_ms &src : source_positions ) {
@@ -4130,7 +4132,7 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         dummy.activity.do_turn( dummy );
 
         const int at_source = count_items_or_charges( src_pos, itype_test_heavy_boulder,
-            std::nullopt );
+                              std::nullopt );
         const int carried = count_carried( dummy, itype_test_heavy_boulder );
         CAPTURE( at_source );
         CAPTURE( carried );
@@ -4152,7 +4154,7 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         dummy.activity.do_turn( dummy );
 
         const int at_source = count_items_or_charges( src_pos, itype_test_heavy_boulder,
-            std::nullopt );
+                              std::nullopt );
         CAPTURE( at_source );
         CHECK( at_source < boulders - 1 );
     }

@@ -2,6 +2,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -14,10 +15,12 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "effect.h"
+#include "enums.h"
 #include "game.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "map_iterator.h"
 #include "mattack_common.h"
 #include "messages.h"
 #include "monster.h"
@@ -29,8 +32,8 @@
 #include "test_statistics.h"
 #include "type_id.h"
 #include "units.h"
-#include "veh_type.h"
 #include "vehicle.h"
+#include "vpart_position.h"
 #include "weather.h"
 #include "weather_type.h"
 
@@ -371,6 +374,7 @@ TEST_CASE( "Ranged_pull_tests", "[mattack][grab]" )
         // Reduce weight
         you.set_stored_kcal( 5000 );
         REQUIRE( units::to_gram<int>( you.get_weight() ) < 50000 );
+        test_monster.set_moves( 100 );
         // Attack succeeds
         REQUIRE( attack.call( test_monster ) );
         REQUIRE( you.pos_bub() == attacker_location + tripoint::east );
@@ -410,6 +414,7 @@ TEST_CASE( "Ranged_pull_tests", "[mattack][grab]" )
         int counter = 0;
         // Pull until the grabber lets go, it should eventually do so
         while( you.pos_bub() == target_location && counter < 101 ) {
+            test_monster.set_moves( 100 );
             REQUIRE( pull.call( test_monster ) );
             counter++;
         }
@@ -499,6 +504,7 @@ TEST_CASE( "Grab_drag_tests", "[mattack][grab][drag]" )
     CHECK( you.pos_bub() == target_location - tripoint{ 3, 0, 0 } );
     test_monster.set_dest( you.pos_abs() );
     // And then we get followup-dragged (also testing movecost mod)
+    test_monster.set_moves( 100 );
     REQUIRE( !attack_1.call( test_monster ) );
     REQUIRE( attack_2.call( test_monster ) );
     CHECK( you.pos_bub() == target_location - tripoint{ 6, 0, 0 } );
@@ -641,6 +647,7 @@ TEST_CASE( "Unified_grab_break_test", "[mattack][grab]" )
                 you.clear_effects();
                 you.set_stamina( you.get_stamina_max() );
                 test_monster_1.clear_effects();
+                test_monster_1.set_moves( 100 );
                 REQUIRE( attack_1.call( test_monster_1 ) );
             }
         }
@@ -670,6 +677,9 @@ TEST_CASE( "Unified_grab_break_test", "[mattack][grab]" )
             test_monster_2.clear_effects();
             test_monster_3.clear_effects();
             you.set_stamina( you.get_stamina_max() );
+            test_monster_1.set_moves( 100 );
+            test_monster_2.set_moves( 100 );
+            test_monster_3.set_moves( 100 );
             REQUIRE( attack_1.call( test_monster_1 ) );
             REQUIRE( attack_2.call( test_monster_2 ) );
             REQUIRE( attack_3.call( test_monster_3 ) );

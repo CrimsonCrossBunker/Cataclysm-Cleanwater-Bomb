@@ -7,7 +7,10 @@
       "items": [
         { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
         { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 },
-        { "item": "fcl_bio_railgun", "prob": 10 }
+        { "item": "fcl_bio_railgun", "prob": 10 },
+        { "item": "fcl_bio_missiles", "prob": 10 },
+        { "item": "fcl_bio_linguistic_coprocessor", "prob": 10 },
+        { "item": "fcl_bio_dopamine_stimulators", "prob": 10 }
       ]
     }
   },
@@ -19,9 +22,19 @@
       "items": [
         { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
         { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 },
-        { "item": "fcl_bio_railgun", "prob": 10 }
+        { "item": "fcl_bio_railgun", "prob": 10 },
+        { "item": "fcl_bio_melee_counteraction", "prob": 10 },
+        { "item": "fcl_bio_melee_optimization_unit", "prob": 10 },
+        { "item": "fcl_bio_monowhip", "prob": 10 },
+        { "item": "fcl_bio_blood_brain", "prob": 10 }
       ]
     }
+  },
+  {
+    "id": "bionics_common",
+    "type": "item_group",
+    "copy-from": "bionics_common",
+    "extend": { "items": [ [ "fcl_bio_linguistic_coprocessor", 8 ] ] }
   },
   {
     "type": "item_group",
@@ -54,5 +67,21 @@
     "id": "fcl_bionics_power",
     "type": "item_group",
     "items": [ [ "bio_power_storage_mkII", 1 ], [ "bio_power_storage", 14 ], [ "bio_betavoltaic", 5 ] ]
+  },
+  {
+    "id": "bionics_op",
+    "type": "item_group",
+    "subtype": "distribution",
+    "items": [
+      [ "bio_betavoltaic", 10 ],
+      [ "bio_claws", 10 ],
+      [ "fcl_bio_missiles", 10 ],
+      [ "fcl_bio_melee_counteraction", 10 ],
+      [ "fcl_bio_monowhip", 10 ],
+      [ "fcl_bio_melee_optimization_unit", 10 ],
+      [ "fcl_bio_neurosoft_aeronautics", 10 ],
+      [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ],
+      [ "fcl_bio_dopamine_stimulators", 10 ]
+    ]
   }
 ]

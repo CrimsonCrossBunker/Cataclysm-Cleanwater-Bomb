@@ -3,6 +3,7 @@ local content = {}
 function content.register(ccb)
     local fac = ccb.content.MonsterFaction {
         id = "fac_lua_first_drone",
+        base = "passive_machine",
     }
     fac:attitude("friendly", "fac_lua_first_drone")
     fac:attitude("friendly", "bot")
