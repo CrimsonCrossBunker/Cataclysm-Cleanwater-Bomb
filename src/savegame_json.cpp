@@ -5084,11 +5084,17 @@ void addiction::deserialize( const JsonObject &jo )
 
 void serialize( const recipe_subset &value, JsonOut &jsout )
 {
-    jsout.start_array();
+    // The subset is ordered by recipe address, which varies across processes.
+    // Stabilize only the save representation; preserve runtime iteration order.
+    std::vector<recipe_id> ids;
+    ids.reserve( value.size() );
     for( const recipe * const &entry : value ) {
-        jsout.write( entry->ident() );
+        ids.push_back( entry->ident() );
     }
-    jsout.end_array();
+    std::sort( ids.begin(), ids.end(), []( const recipe_id &lhs, const recipe_id &rhs ) {
+        return lhs.str() < rhs.str();
+    } );
+    jsout.write( ids );
 }
 
 void deserialize( recipe_subset &value, const JsonArray &ja )
