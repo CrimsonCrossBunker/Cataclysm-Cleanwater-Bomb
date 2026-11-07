@@ -310,13 +310,13 @@ std::vector<row> slot_rows( item_location gun, const item &preview,
         }
         rows.push_back( { title, item_location::nowhere, slot.location,
                           slot.preview_used > slot.preview_capacity ? c_light_red :
-                          ( changed ? c_light_blue : c_white ) } );
+                          ( changed ? c_light_blue : c_white ), {} } );
         for( const item *mod : gun->gunmods() ) {
             const auto supplied = mod->type->gunmod->add_mod.find( slot.location );
             if( supplied != mod->type->gunmod->add_mod.end() && supplied->second > 0 ) {
                 rows.push_back( { string_format( _( "    Capacity from %1$s: +%2$d" ),
                                                  mod->tname(), supplied->second ), item_location::nowhere,
-                                  slot.location, c_dark_gray } );
+                                  slot.location, c_dark_gray, {} } );
             }
         }
         for( item *mod : gun->gunmods() ) {
@@ -326,21 +326,21 @@ std::vector<row> slot_rows( item_location gun, const item &preview,
             const bool removing = !installing && selected == mod;
             rows.push_back( { std::string( removing ? "  - " : "    " ) + mod->tname() +
                               ( mod->is_irremovable() ? _( " [permanent]" ) : "" ),
-                              item_location( gun, mod ), slot.location, removing ? c_light_red : c_light_gray } );
+                              item_location( gun, mod ), slot.location, removing ? c_light_red : c_light_gray, {} } );
         }
         if( selected && installing && selected->type->gunmod->location == slot.location ) {
             rows.push_back( { string_format( _( "  + %s [preview]" ), selected->tname() ),
-                              item_location::nowhere, slot.location, c_light_green } );
+                              item_location::nowhere, slot.location, c_light_green, {} } );
         }
         if( slot.preview_capacity > slot.capacity ) {
             rows.push_back( { string_format( _( "  + %1$d slots from %2$s" ),
                                              slot.preview_capacity - slot.capacity, selected ? selected->tname() : "" ),
-                              item_location::nowhere, slot.location, c_light_blue } );
+                              item_location::nowhere, slot.location, c_light_blue, {} } );
         }
         const int free = slot.preview_capacity - slot.preview_used;
         if( free > 0 ) {
             rows.push_back( { string_format( _( "    Empty: %d" ), free ), item_location::nowhere,
-                              slot.location, c_dark_gray } );
+                              slot.location, c_dark_gray, {} } );
         }
     }
     return rows;
