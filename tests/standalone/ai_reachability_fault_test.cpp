@@ -1,6 +1,6 @@
 // Actual AI kernel and cata_thread_pool, with owner-allocation failures.
-// Link their production .cpp files with --gc-sections. Only unrelated startup
-// crash-handler/worker-RNG hooks are replaced; native acceptance uses real hooks.
+// The pool facade uses an expiring test owner to repeat lazy initialization
+// failures. Production frame/barrier/kernel and allocator code are unchanged.
 #include <atomic>
 #include <cassert>
 #include <cstdio>
@@ -9,8 +9,7 @@
 #include <new>
 
 #include "ai_reachability.h"
-#include "crash.h"
-#include "rng.h"
+#include "compute_budget.h"
 #include "thread_pool.h"
 
 namespace
@@ -136,11 +135,21 @@ void operator delete[]( void *p, std::size_t, std::align_val_t ) noexcept
 {
     std::free( p );
 }
-void init_crash_handlers()
+static void initialize_test_worker()
 {
     static thread_local worker_lifetime lifetime;
 }
-void rng_set_worker_seed( unsigned int ) {}
+
+std::shared_ptr<cata_thread_pool> get_compute_pool()
+{
+    static std::weak_ptr<cata_thread_pool> weak;
+    auto pool = weak.lock();
+    if( !pool ) {
+        pool = std::make_shared<cata_thread_pool>( 4, 64, initialize_test_worker );
+        weak = pool;
+    }
+    return pool;
+}
 
 int main()
 {
@@ -165,6 +174,10 @@ int main()
         }
         assert( live_workers.load() == 0 );
     }
+    // Keep the shared executor alive after each frame is destroyed. This is
+    // the production lifetime; accepted tasks must have drained at prepare's
+    // barrier, not merely at a private pool's destructor.
+    auto shared = get_compute_pool();
     for( unsigned nth = 1; nth <= 8; ++nth ) {
         ai_reachability::frame frame( 4 );
         {
@@ -198,11 +211,13 @@ int main()
         }
         recover( frame, nth + 1 );
     }
+    shared.reset();
     assert( constructor_failures > 0 );
     assert( partial_start_failures > 0 );
     assert( preparation_failures > 0 );
     assert( partial_submission_failures > 0 );
     assert( live_workers.load() == 0 );
+    assert( compute_byte_budget().used() == 0 );
     std::printf( "{\"constructor_failures\":%u,\"partial_start_failures\":%u,"
                  "\"snapshot_allocation_failures\":8,\"preparation_failures\":%u,"
                  "\"partial_submission_failures\":%u,\"recovery_matches_serial\":true,"

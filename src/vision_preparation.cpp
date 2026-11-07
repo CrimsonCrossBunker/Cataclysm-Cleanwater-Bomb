@@ -43,7 +43,8 @@ frame::frame( unsigned workers ) : owner_thread_( std::this_thread::get_id() )
         return;
     }
     try {
-        pool_ = std::make_unique<cata_thread_pool>( std::min( workers, 4U ) );
+        pool_ = get_compute_pool();
+        workers_ = std::min( { workers, 4U, pool_->num_workers() } );
     } catch( const std::system_error & ) {
         // cata_thread_pool joins partially started workers before throwing.
     } catch( const std::bad_alloc & ) {
@@ -71,7 +72,7 @@ snapshot &frame::capture()
     assert_owner();
     cata_assert( leased_ && ready_generation_ == 0 );
     if( !snapshot_ ) {
-        snapshot_ = std::make_unique<snapshot>();
+        snapshot_ = make_compute<snapshot>();
     }
     return *snapshot_;
 }
@@ -94,7 +95,7 @@ bool frame::prepare()
         // Allocation precedes dispatch; block addresses remain stable until all
         // futures are drained, including partial-enqueue/worker exceptions.
         while( outputs_.size() < chunks ) {
-            outputs_.push_back( std::make_unique<output>() );
+            outputs_.push_back( make_compute<output>() );
         }
         CATA_PROFILE_SCOPE_NAMED( "vision.queue" );
         for( unsigned chunk = 0; chunk < chunks; ++chunk ) {
@@ -186,7 +187,7 @@ void frame::cancel() noexcept
 }
 unsigned frame::worker_count() const
 {
-    return pool_ ? pool_->num_workers() : 0;
+    return workers_;
 }
 bool frame::used_workers() const
 {
