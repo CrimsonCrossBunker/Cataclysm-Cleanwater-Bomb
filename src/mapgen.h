@@ -558,7 +558,7 @@ class update_mapgen_function_json : public mapgen_function_json_base
 {
     public:
         update_mapgen_function_json( JsonObject &&jsobj, const std::string &context );
-        ~update_mapgen_function_json() override = default;
+        ~update_mapgen_function_json() override;
 
         void setup();
         bool setup_update( const JsonObject &jo );
