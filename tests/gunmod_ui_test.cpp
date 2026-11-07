@@ -1,14 +1,20 @@
 #include <algorithm>
+#include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "clone_ptr.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "gunmod_ui.h"
 #include "item.h"
 #include "item_location.h"

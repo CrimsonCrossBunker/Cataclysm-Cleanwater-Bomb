@@ -2,19 +2,22 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
+#include <functional>
+#include <initializer_list>
 #include <iterator>
-#include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <utility>
 #include <vector>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "calendar.h"
 #include "catacharset.h"
 #include "character.h"
+#include "clone_ptr.h"
 #include "color.h"
 #include "cursesdef.h"
 #include "damage.h"
@@ -25,22 +28,23 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_search.h"
+#include "itype.h"
 #include "localized_comparator.h"
-#include "output.h"
 #include "options.h"
+#include "output.h"
 #include "player_activity.h"
-#include "point.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "ret_val.h"
 #include "skill.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "translations.h"
+#include "type_id.h"
 #include "ui_manager.h"
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"
-#include "visitable.h"
 
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 static const itype_id itype_large_repairkit( "large_repairkit" );
