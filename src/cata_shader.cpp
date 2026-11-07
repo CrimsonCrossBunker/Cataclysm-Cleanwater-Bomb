@@ -19,6 +19,7 @@
 #include "debug.h"
 #include "map_scale_constants.h"
 #include "path_info.h"
+#include "sdl_renderer_recovery.h"
 #include "smooth_lighting.h"
 #include "tile_tint.h"
 
@@ -115,8 +116,28 @@ std::vector<unsigned char> read_file_bytes( const std::string &path )
 
 } // namespace
 
+struct fragment_shader_cache {
+    struct entry {
+        SDL_GPUDevice *device;
+        SDL_GPUShaderFormat format;
+        unsigned int samplers;
+        unsigned int uniforms;
+        std::vector<unsigned char> code;
+        shader program;
+    };
+    std::vector<entry> entries;
+
+    void abandon() {
+        for( entry &cached : entries ) {
+            cached.program.abandon();
+        }
+        entries.clear();
+    }
+};
+
 shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename,
-                              unsigned int num_samplers, unsigned int num_uniform_buffers )
+                              unsigned int num_samplers, unsigned int num_uniform_buffers,
+                              fragment_shader_cache *cache )
 {
     if( !device ) {
         return shader{};
@@ -126,7 +147,7 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
     if( available == SDL_GPU_SHADERFORMAT_INVALID ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: SDL_GetGPUShaderFormats returned INVALID; "
-                "no shader formats supported by GPU device";
+           "no shader formats supported by GPU device";
         return shader{};
     }
 
@@ -141,7 +162,7 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
     if( !chosen ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: no shipped shader artifact matches GPU "
-                "device's supported formats (mask=" << static_cast<unsigned>( available ) << ")";
+           "device's supported formats (mask=" << static_cast<unsigned>( available ) << ")";
         return shader{};
     }
 
@@ -152,6 +173,16 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: failed to read shader artifact at " << artifact_path;
         return shader{};
+    }
+
+    if( cache ) {
+        for( const fragment_shader_cache::entry &cached : cache->entries ) {
+            if( cached.device == device && cached.format == chosen->shader_format &&
+                cached.samplers == num_samplers && cached.uniforms == num_uniform_buffers &&
+                cached.code == bytes ) {
+                return shader( device, cached.program.get(), false );
+            }
+        }
     }
 
     SDL_GPUShaderCreateInfo info{};
@@ -171,18 +202,22 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
                 << "cata_shader: SDL_CreateGPUShader failed: " << SDL_GetError();
         return shader{};
     }
-    return shader( device, raw );
+    if( cache ) {
+        cache->entries.push_back( { device, chosen->shader_format, num_samplers,
+                                    num_uniform_buffers, std::move( bytes ), shader( device, raw ) } );
+    }
+    return shader( device, raw, cache == nullptr );
 }
 
 shader::~shader()
 {
-    if( ptr_ && device_ ) {
+    if( ptr_ && device_ && owned_ ) {
         SDL_ReleaseGPUShader( device_, ptr_ );
     }
 }
 
 shader::shader( shader &&other ) noexcept
-    : device_( other.device_ ), ptr_( other.ptr_ )
+    : device_( other.device_ ), ptr_( other.ptr_ ), owned_( other.owned_ )
 {
     other.device_ = nullptr;
     other.ptr_ = nullptr;
@@ -191,11 +226,12 @@ shader::shader( shader &&other ) noexcept
 shader &shader::operator=( shader &&other ) noexcept
 {
     if( this != &other ) {
-        if( ptr_ && device_ ) {
+        if( ptr_ && device_ && owned_ ) {
             SDL_ReleaseGPUShader( device_, ptr_ );
         }
         device_ = other.device_;
         ptr_ = other.ptr_;
+        owned_ = other.owned_;
         other.device_ = nullptr;
         other.ptr_ = nullptr;
     }
@@ -420,7 +456,8 @@ static uint32_t next_resource_generation()
 }
 
 variant_pass::variant_pass( SDL_Renderer *renderer )
-    : renderer_( renderer ), resource_generation_( next_resource_generation() )
+    : renderer_( renderer ), shader_cache_( std::make_unique<fragment_shader_cache>() ),
+      resource_generation_( next_resource_generation() )
 {
 }
 
@@ -750,6 +787,9 @@ variant_pass::~variant_pass()
     // On flush failure the handles may still be referenced; abandon rather
     // than have RAII teardown call SDL on a still-bound resource.
     clear_state_arrays( !flushed );
+    if( !flushed ) {
+        shader_cache_->abandon();
+    }
 }
 
 namespace
@@ -920,9 +960,10 @@ enum class load_outcome {
 load_outcome load_and_probe( SDL_GPUDevice *device, SDL_Renderer *renderer,
                              const char *basename, probe_predicate pred,
                              shader &out_shader, render_state &out_state,
+                             fragment_shader_cache *cache,
                              const std::optional<tint_texture_mod> &mod = std::nullopt )
 {
-    shader frag = shader::load_fragment( device, basename, 1, 0 );
+    shader frag = shader::load_fragment( device, basename, 1, 0, cache );
     if( !frag.is_valid() ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader::variant_pass: shader load failed for "
@@ -940,8 +981,8 @@ load_outcome load_and_probe( SDL_GPUDevice *device, SDL_Renderer *renderer,
     if( !res.boundary_safe ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader::variant_pass: probe left renderer in undefined "
-                "state for " << basename << "; abandoning shader + render_state "
-                "to avoid destroying a bound resource";
+           "state for " << basename << "; abandoning shader + render_state "
+           "to avoid destroying a bound resource";
         state.abandon();
         frag.abandon();
         return load_outcome::failed_unsafe;
@@ -950,7 +991,7 @@ load_outcome load_and_probe( SDL_GPUDevice *device, SDL_Renderer *renderer,
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader::variant_pass: textured-draw probe failed for "
                 << basename << " (silent miswire?  readback did not match "
-                "expected variant transform); shader variant path disabled";
+                       "expected variant transform); shader variant path disabled";
         return load_outcome::failed_clean;
     }
     out_shader = std::move( frag );
@@ -1072,7 +1113,7 @@ void variant_pass::probe()
     if( std::getenv( "CATA_DISABLE_SPRITE_SHADERS" ) ) {
         DebugLog( D_INFO, DC_ALL )
                 << "cata_shader::variant_pass: CATA_DISABLE_SPRITE_SHADERS set; "
-                "shader variant path disabled";
+           "shader variant path disabled";
         return;
     }
     if( test_probe_unsafe_countdown > 0 ) {
@@ -1085,7 +1126,7 @@ void variant_pass::probe()
     if( !device ) {
         DebugLog( D_INFO, DC_ALL )
                 << "cata_shader::variant_pass: SDL_GetGPURendererDevice "
-                "returned NULL (renderer is not gpu); shader variant path disabled";
+           "returned NULL (renderer is not gpu); shader variant path disabled";
         return;
     }
     for( int i = 0; i < static_cast<int>( variant_kind::count ); ++i ) {
@@ -1095,7 +1136,7 @@ void variant_pass::probe()
             continue;
         }
         const load_outcome o = load_and_probe( device, renderer_, basename,
-                                               predicate_for( v ), shaders_[i], states_[i] );
+                                               predicate_for( v ), shaders_[i], states_[i], shader_cache_.get() );
         if( o == load_outcome::failed_unsafe ) {
             mark_probe_unsafe();
             return;
@@ -1111,7 +1152,7 @@ void variant_pass::probe()
             continue;
         }
         const load_outcome o = load_and_probe( device, renderer_, basename,
-                                               predicate_for( p ), memory_shaders_[i], memory_states_[i] );
+                                               predicate_for( p ), memory_shaders_[i], memory_states_[i], shader_cache_.get() );
         if( o == load_outcome::failed_unsafe ) {
             mark_probe_unsafe();
             return;
@@ -1121,7 +1162,7 @@ void variant_pass::probe()
         }
     }
     const load_outcome tint = load_and_probe( device, renderer_, "tint.frag", tint_predicate,
-                              tint_shader_, tint_state_, tint_probe_mod );
+                              tint_shader_, tint_state_, shader_cache_.get(), tint_probe_mod );
     if( tint == load_outcome::failed_unsafe ) {
         mark_probe_unsafe();
         return;
@@ -1340,8 +1381,9 @@ lit_begin_result variant_pass::begin_lit( const lit_frame &frame )
             return failed( lit_failure::sampler_create );
         }
         lit_device_ = device;
-        lit_shader_ = shader::load_fragment( device, "lit.frag", 2, 1 );
-        nv_lit_shader_ = shader::load_fragment( device, "nightvision_lit.frag", 2, 1 );
+        lit_shader_ = shader::load_fragment( device, "lit.frag", 2, 1, shader_cache_.get() );
+        nv_lit_shader_ = shader::load_fragment( device, "nightvision_lit.frag", 2, 1,
+                                                shader_cache_.get() );
         if( !lit_shader_.is_valid() || !nv_lit_shader_.is_valid() ) {
             release_lit( false );
             return failed( lit_failure::shader_load );
@@ -1470,7 +1512,7 @@ variant_pass::lit_probe_outcome variant_pass::probe_lit()
             DebugLog( D_ERROR, DC_ALL ) << "cata_shader::variant_pass: lit shader probe failed: " << c.name;
             for( size_t i = 0; i < want.size() && i < got.size(); ++i ) {
                 DebugLog( D_ERROR, DC_ALL ) << "  pixel " << i << " want " << want[i].r << "," << want[i].g <<
-                                            "," << want[i].b << " got " << got[i].r << "," << got[i].g << "," << got[i].b;
+                                               "," << want[i].b << " got " << got[i].r << "," << got[i].g << "," << got[i].b;
             }
             return lit_probe_outcome::mismatch;
         }
@@ -1494,7 +1536,7 @@ void variant_pass::drop_lit()
     release_lit( !flushed );
 }
 
-void variant_pass::release_gpu_resources()
+void variant_pass::release_gpu_resources( const bool retiring_renderer )
 {
     if( abandoned_pending_rebind_ ) {
         // Embargo already raised; nothing to do until rebind.
@@ -1507,6 +1549,11 @@ void variant_pass::release_gpu_resources()
         flushed = flush();
     }
     clear_state_arrays( !flushed );
+    if( !flushed ) {
+        shader_cache_->abandon();
+    } else if( retiring_renderer ) {
+        shader_cache_->entries.clear();
+    }
     bound_state_ = nullptr;
     probe_attempted_ = false;
     probed_ok_ = false;
@@ -1523,6 +1570,7 @@ void variant_pass::release_gpu_resources()
 void variant_pass::force_abandon_gpu_resources()
 {
     clear_state_arrays( true );
+    shader_cache_->abandon();
     bound_state_ = nullptr;
     probe_attempted_ = false;
     probed_ok_ = false;
@@ -1537,6 +1585,9 @@ void variant_pass::rebind_renderer( SDL_Renderer *renderer )
     // renderer_, already destroyed on a LOST recovery. Callers release against
     // the OLD renderer first, so the arrays are already empty by now.
     clear_state_arrays( true );
+    if( renderer != renderer_ ) {
+        shader_cache_->abandon();
+    }
     bound_state_ = nullptr;
     unbind_required_ = false;
     probe_attempted_ = false;
@@ -1548,6 +1599,12 @@ void variant_pass::rebind_renderer( SDL_Renderer *renderer )
 }
 
 } // namespace cata_shader
+
+std::size_t renderer_recovery_test_support::variant_shader_count(
+    const cata_shader::variant_pass &pass )
+{
+    return pass.shader_cache_->entries.size();
+}
 
 
 #endif // TILES

@@ -1207,7 +1207,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     }
 
     const half_open_rectangle<point> light_fill_area = smooth_lighting::lightmap_fill_area(
-                min_visible, max_visible, screen_min, screen_max );
+            min_visible, max_visible, screen_min, screen_max );
     const bool lit_this_frame = begin_smooth_lighting( cache, light_fill_area, draw_min_z,
                                 center.z() );
     // lit states must not reach the overmap or UI sprites drawn after the map
@@ -1507,7 +1507,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         std::vector<tinted_tile_scratch> row_tinted;
         while( cur_zlevel <= center.z() && !draw_aborted ) {
             const half_open_rectangle<point> &cur_any_tile_range = is_isometric()
-                    ? z_any_tile_range[center.z() - cur_zlevel] : top_any_tile_range;
+                ? z_any_tile_range[center.z() - cur_zlevel] : top_any_tile_range;
             // For each row
             const bool iso = is_isometric();
             const level_cache &zlev_cache = here.access_cache( cur_zlevel );
@@ -1547,8 +1547,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     tile_render_info &p = row_points[index];
                     p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
                     const tile_preparation::result prepared = captured_frame ?
-                            preparation_->results()[preparation_index + index] :
-                            tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
+                        preparation_->results()[preparation_index + index] :
+                        tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
                     row_sprites.push_back( { &p, nullptr, prepared.layers } );
                     if( prepared.tint[3] == 0 ) {
                         continue;
@@ -1835,15 +1835,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
                             // Simple: all recorded sprites fit inside the tile rect,
                             // so a flat colored rect matches the sprite extent exactly.
-                            // On the SDL3 gpu/D3D12 backend, ALSO force the simple path:
-                            // the complex silhouette-mask path switches render target
-                            // mid-frame (scoped_render_target), whose command-queue flush
-                            // SIGSEGVs in D3D12_PushFragmentUniformData. The flat rect
-                            // tint is a minor visual downgrade for oversized sprites
-                            // (boxy glow instead of outline-hugging) but avoids the crash;
-                            // other backends keep the precise silhouette mask.
-                            const bool simple = gpu_d3d12_mode ||
-                                                !tint.bounds.valid ||
+                            const bool simple = !tint.bounds.valid ||
                                                 tint.sprites.empty() ||
                                                 ( tint.bounds.x >= tile_rect.x &&
                                                   tint.bounds.y >= tile_rect.y &&
@@ -2328,7 +2320,7 @@ bool cata_tiles::begin_smooth_lighting( const visibility_variables &cache,
     settings.tint = !tint_overlay_disabled();
     settings.masks = mode == "smooth_filtered";
     if( const std::optional<smooth_lighting::lit_failure> f = lightmap->fill( get_map(), settings,
-            std::max( min_z, -OVERMAP_DEPTH ), std::min( max_z, OVERMAP_HEIGHT ) ) ) {
+        std::max( min_z, -OVERMAP_DEPTH ), std::min( max_z, OVERMAP_HEIGHT ) ) ) {
         // stale texels would shade wrong, so this frame draws classic
         vp->end_lit();
         return fail_frame( *f );
@@ -2880,10 +2872,10 @@ point_bub_ms cata_tiles::screen_to_player(
         const point colrow( divide_round_down( scr_pos.x * 2, tile_size.x ) + 1,
                             divide_round_down( scr_pos.y * 4, tile_size.x ) + 1 );
         const std::optional<point_bub_ms> player_1 = tile_to_player(
-                    colrow, center, base_tile, iso );
+                colrow, center, base_tile, iso );
         const std::optional<point_bub_ms> player_2 = tile_to_player(
-                    //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
-                    colrow + point( 1, 0 ), center, base_tile, iso );
+                //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
+                colrow + point( 1, 0 ), center, base_tile, iso );
         // We do not know the precise shape of the base tile, assuming rhombuses.
         // TODO: maybe let tilesets provide the exact shape of the base tile.
         if( player_1.has_value() ) {
@@ -3104,7 +3096,7 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
 {
     restore_on_out_of_scope<bool> restore_decided( m_anchor_decided );
     restore_on_out_of_scope<std::optional<smooth_lighting::light_anchor>> restore_anchor(
-                m_shown_anchor );
+        m_shown_anchor );
     if( !m_anchor_decided ) {
         m_anchor_decided = true;
         // filtered lighting needs it, and the test seam records it
@@ -3438,7 +3430,7 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
         bool available = false;
         if( lookup_frame_ && res ) {
             const tile_lookup_frame::subtile_result child = lookup_frame_->find_subtile( *res, category,
-                    subtile );
+                subtile );
             available = child.available;
             if( child.resolved ) {
                 // A successfully resolved child skips the duplicate draw preamble.
@@ -3668,7 +3660,7 @@ bool cata_tiles::draw_sprite_at(
 
     // Painted parts use a CPU-recolored texture instead of the base atlas.
     const cata_shader::variant_kind variant = rp.tint ? cata_shader::variant_kind::NORMAL
-            : compute_variant_kind( rp.ll, rp.use_night_vision_tiles );
+        : compute_variant_kind( rp.ll, rp.use_night_vision_tiles );
     bool shader_bound = false;
     // Try the GPU shader variant first. On success the main atlas drives
     // the render and the variant transform happens per-pixel in the
@@ -3773,9 +3765,9 @@ bool cata_tiles::draw_sprite_at(
                                          ( geometry.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
                                          ( geometry.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
     const smooth_lighting::quarter_turn render_turn = render_angle == 90.0
-            ? smooth_lighting::quarter_turn::clockwise
-            : render_angle == -90.0 ? smooth_lighting::quarter_turn::counterclockwise
-            : smooth_lighting::quarter_turn::none;
+        ? smooth_lighting::quarter_turn::clockwise
+        : render_angle == -90.0 ? smooth_lighting::quarter_turn::counterclockwise
+        : smooth_lighting::quarter_turn::none;
     if( geometry.opaque_bounds ) {
         const sprite_rectangle &bounds = *geometry.opaque_bounds;
         m_cur_bounds->expand( bounds.origin.x, bounds.origin.y, bounds.size.x, bounds.size.y );
@@ -3912,7 +3904,7 @@ bool cata_tiles::apply_vision_effects( const tripoint_bub_ms &pos,
     return true;
 }
 
-const memorized_tile &cata_tiles::get_terrain_memory_at( const tripoint_abs_ms &p ) const
+const memorized_tile & cata_tiles::get_terrain_memory_at( const tripoint_abs_ms &p ) const
 {
     const memorized_tile &mt = get_avatar().get_memorized_tile( p );
     if( !mt.get_ter_id().empty() ) {
@@ -3921,7 +3913,7 @@ const memorized_tile &cata_tiles::get_terrain_memory_at( const tripoint_abs_ms &
     return mm_submap::default_tile;
 }
 
-const memorized_tile &cata_tiles::get_furniture_memory_at( const tripoint_abs_ms &p ) const
+const memorized_tile & cata_tiles::get_furniture_memory_at( const tripoint_abs_ms &p ) const
 {
     const memorized_tile &mt = get_avatar().get_memorized_tile( p );
     if( string_starts_with( mt.get_dec_id(), "f_" ) ) {
@@ -3930,7 +3922,7 @@ const memorized_tile &cata_tiles::get_furniture_memory_at( const tripoint_abs_ms
     return mm_submap::default_tile;
 }
 
-const memorized_tile &cata_tiles::get_trap_memory_at( const tripoint_abs_ms &p ) const
+const memorized_tile & cata_tiles::get_trap_memory_at( const tripoint_abs_ms &p ) const
 {
     const memorized_tile &mt = get_avatar().get_memorized_tile( p );
     if( string_starts_with( mt.get_dec_id(), "tr_" ) ) {
@@ -3939,7 +3931,7 @@ const memorized_tile &cata_tiles::get_trap_memory_at( const tripoint_abs_ms &p )
     return mm_submap::default_tile;
 }
 
-const memorized_tile &cata_tiles::get_vpart_memory_at( const tripoint_abs_ms &p ) const
+const memorized_tile & cata_tiles::get_vpart_memory_at( const tripoint_abs_ms &p ) const
 {
     const memorized_tile &mt = get_avatar().get_memorized_tile( p );
     if( string_starts_with( mt.get_dec_id(), "vp_" ) ) {
@@ -6425,7 +6417,7 @@ void cata_tiles::lr_generic( Iter begin, Iter end, Func id_func, TILE_CATEGORY c
     const std::string &category_name = TILE_CATEGORY_IDS[static_cast<size_t>( category )];
     DebugLog( D_INFO, DC_ALL ) << "Missing " << category_name << ": " << missing_list;
     DebugLog( D_INFO, DC_ALL ) << "Missing " << category_name <<
-                               " (but looks_like tile exists): " << missing_with_looks_like_list;
+                                  " (but looks_like tile exists): " << missing_with_looks_like_list;
 }
 
 template <typename maptype>

@@ -2,27 +2,16 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_shader.h"
+#include "debug.h"
 #include "sdl_renderer_policy.h"
 #include "sdl_wrappers.h"
-
-TEST_CASE( "renderer_fallback_is_limited_to_gpu_direct3d12",
-           "[nogame][tiles][sdl3][renderer_policy]" )
-{
-    REQUIRE( renderer_fallback_drivers( "gpu", "direct3d12" ) );
-    CHECK( std::string( renderer_fallback_drivers( "gpu", "direct3d12" ) ) ==
-           "direct3d11,opengl" );
-    CHECK_FALSE( renderer_fallback_drivers( "gpu", "vulkan" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "gpu", "metal" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "gpu", "" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "direct3d12", "" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "direct3d11", "" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "opengl", "" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "software", "" ) );
-    CHECK_FALSE( renderer_fallback_drivers( "", "" ) );
-}
+#include "sdltiles.h"
+#include "smooth_lighting.h"
 
 TEST_CASE( "compatible_renderer_preserves_software_surface_rendering",
            "[nogame][tiles][sdl3][renderer_policy]" )
@@ -81,6 +70,60 @@ TEST_CASE( "compatible_renderer_preserves_creation_errors_and_properties",
     SDL_ClearError();
 }
 
+TEST_CASE( "render_target_scope_refuses_failed_shader_pass_before_flushing_draws",
+           "[nogame][tiles][sdl3][renderer_policy]" )
+{
+    SDL_Surface_Ptr surface( SDL_CreateSurface( 4, 4, SDL_PIXELFORMAT_RGBA32 ) );
+    REQUIRE( surface );
+    REQUIRE( SDL_FillSurfaceRect( surface.get(), nullptr,
+                                  SDL_MapSurfaceRGBA( surface.get(), 0, 0, 0, 255 ) ) );
+    SDL_Renderer_Ptr renderer( SDL_CreateSoftwareRenderer( surface.get() ) );
+    REQUIRE( renderer );
+    cata_shader::variant_pass variants( renderer.get() );
+    on_out_of_scope reset_boundary( [] {
+        display_buffer_scope_clear_recovery_required();
+        cata_shader::test_reset_seams();
+    } );
+    SDL_Texture_Ptr target( SDL_CreateTexture( renderer.get(), SDL_PIXELFORMAT_RGBA32,
+                            SDL_TEXTUREACCESS_TARGET, 4, 4 ) );
+    REQUIRE( target );
+    REQUIRE( SDL_SetRenderDrawColor( renderer.get(), 32, 96, 160, 255 ) );
+    REQUIRE( SDL_RenderFillRect( renderer.get(), nullptr ) );
+    SECTION( "entering a target" ) {
+        cata_shader::test_arm_flush_failure();
+        scoped_render_target scope( renderer, target.get(), &variants );
+        CHECK_FALSE( scope.is_valid() );
+    }
+    SECTION( "restoring a target" ) {
+        REQUIRE( SDL_FlushRenderer( renderer.get() ) );
+        REQUIRE( SDL_FillSurfaceRect( surface.get(), nullptr,
+                                      SDL_MapSurfaceRGBA( surface.get(), 0, 0, 0, 255 ) ) );
+        scoped_render_target scope( renderer, nullptr, &variants );
+        REQUIRE( scope.is_valid() );
+        REQUIRE( SDL_RenderFillRect( renderer.get(), nullptr ) );
+        cata_shader::test_arm_flush_failure();
+        REQUIRE_FALSE( debug_has_error_been_observed() );
+        CHECK_FALSE( scope.restore() );
+        CHECK( debug_has_error_been_observed() );
+        debug_reset_error_observed();
+    }
+    SECTION( "recovery already pending" ) {
+        renderer_boundary_signal_recovery_required();
+        CHECK( permanent_render_target_bind( renderer, target.get(), &variants ) ==
+               bind_result::refused_pre_switch );
+    }
+    CHECK( SDL_GetRenderTarget( renderer.get() ) == nullptr );
+    Uint8 red = 255;
+    Uint8 green = 255;
+    Uint8 blue = 255;
+    Uint8 alpha = 0;
+    REQUIRE( SDL_ReadSurfacePixel( surface.get(), 0, 0, &red, &green, &blue, &alpha ) );
+    CHECK( red == 0 );
+    CHECK( green == 0 );
+    CHECK( blue == 0 );
+    CHECK( alpha == 255 );
+}
+
 #if defined(_WIN32)
 
 TEST_CASE( "compatible_renderer_keeps_gpu_vulkan_available",
@@ -112,8 +155,8 @@ TEST_CASE( "compatible_renderer_keeps_gpu_vulkan_available",
     CHECK( std::string( SDL_GetGPUDeviceDriver( device.get() ) ) == "vulkan" );
 }
 
-TEST_CASE( "gpu_direct3d12_creation_falls_back_before_render_target_switches",
-           "[.][nogame][tiles][sdl3][renderer_backend]" )
+TEST_CASE( "gpu_direct3d12_survives_shader_uniform_rollover_and_render_target_switches",
+           "[.][tiles][sdl3][renderer_backend]" )
 {
     REQUIRE( SDL_InitSubSystem( SDL_INIT_VIDEO ) );
     on_out_of_scope quit_video( [] { SDL_QuitSubSystem( SDL_INIT_VIDEO ); } );
@@ -142,14 +185,21 @@ TEST_CASE( "gpu_direct3d12_creation_falls_back_before_render_target_switches",
     REQUIRE( SDL_GetGPURendererDevice( candidate.get() ) == device.get() );
     candidate.reset();
 
+    REQUIRE( SDL_SetBooleanProperty( properties, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_DXIL_BOOLEAN,
+                                     true ) );
+
     SDL_Renderer_Ptr renderer( create_compatible_renderer( properties ) );
     REQUIRE( renderer );
     const std::string renderer_name = SDL_GetRendererName( renderer.get() );
     CAPTURE( renderer_name );
-    REQUIRE( ( renderer_name == "direct3d11" || renderer_name == "opengl" ) );
+    REQUIRE( renderer_name == "gpu" );
+    REQUIRE( SDL_GetGPURendererDevice( renderer.get() ) == device.get() );
     CHECK( std::string( SDL_GetStringProperty( properties,
                         SDL_PROP_RENDERER_CREATE_NAME_STRING, "" ) ) == "gpu" );
     CHECK( std::string( SDL_GetGPUDeviceDriver( device.get() ) ) == "direct3d12" );
+
+    cata_shader::variant_pass variants( renderer.get() );
+    REQUIRE( variants.ensure_probed() == cata_shader::probe_state::available );
 
     SDL_Texture_Ptr minimap( SDL_CreateTexture( renderer.get(), SDL_PIXELFORMAT_RGBA32,
                              SDL_TEXTUREACCESS_TARGET, 4, 4 ) );
@@ -157,16 +207,47 @@ TEST_CASE( "gpu_direct3d12_creation_falls_back_before_render_target_switches",
                                SDL_TEXTUREACCESS_TARGET, 4, 4 ) );
     REQUIRE( minimap );
     REQUIRE( composite );
+    SDL_Surface_Ptr atlas_pixels( SDL_CreateSurface( 4, 4, SDL_PIXELFORMAT_RGBA32 ) );
+    REQUIRE( atlas_pixels );
+    REQUIRE( SDL_FillSurfaceRect( atlas_pixels.get(), nullptr,
+                                  SDL_MapSurfaceRGBA( atlas_pixels.get(), 32, 96, 160, 255 ) ) );
+    SDL_Texture_Ptr atlas( SDL_CreateTextureFromSurface( renderer.get(), atlas_pixels.get() ) );
+    REQUIRE( atlas );
+    SDL_Texture_Ptr lightmap( SDL_CreateTexture( renderer.get(), SDL_PIXELFORMAT_RGBA32,
+                              SDL_TEXTUREACCESS_STATIC, smooth_lighting::lightmap_width,
+                              smooth_lighting::lightmap_height ) );
+    REQUIRE( lightmap );
+    on_out_of_scope release_lit( [&variants] { variants.drop_lit(); } );
+    const std::vector<smooth_lighting::lightmap_texel> light_pixels(
+        smooth_lighting::lightmap_width * smooth_lighting::lightmap_height );
+    REQUIRE( SDL_UpdateTexture( lightmap.get(), nullptr, light_pixels.data(),
+                                smooth_lighting::lightmap_width * 4 ) );
+    cata_shader::lit_frame light;
+    light.lightmap = lightmap.get();
+    REQUIRE( variants.begin_lit( light ).outcome == cata_shader::lit_begin_outcome::active );
     for( int frame = 0; frame < 128; ++frame ) {
         CAPTURE( frame );
-        REQUIRE( SDL_SetRenderTarget( renderer.get(), minimap.get() ) );
-        REQUIRE( SDL_SetRenderDrawColor( renderer.get(), 32, 96, 160, 255 ) );
-        REQUIRE( SDL_RenderClear( renderer.get() ) );
-        REQUIRE( SDL_FlushRenderer( renderer.get() ) );
-        REQUIRE( SDL_SetRenderTarget( renderer.get(), composite.get() ) );
-        REQUIRE( SDL_RenderTexture( renderer.get(), minimap.get(), nullptr, nullptr ) );
-        REQUIRE( SDL_FlushRenderer( renderer.get() ) );
-        REQUIRE( SDL_SetRenderTarget( renderer.get(), nullptr ) );
+        REQUIRE( variants.try_begin( cata_shader::variant_kind::NORMAL ) ==
+                 cata_shader::variant_pass::begin_result::bound );
+        for( int draw = 0; draw < 300; ++draw ) {
+            REQUIRE( SDL_RenderTexture( renderer.get(), atlas.get(), nullptr, nullptr ) );
+            if( draw < 299 ) {
+                REQUIRE( SDL_FlushRenderer( renderer.get() ) );
+            }
+        }
+        {
+            scoped_render_target minimap_scope( renderer, minimap.get(), &variants );
+            REQUIRE( minimap_scope.is_valid() );
+            REQUIRE( SDL_SetRenderDrawColor( renderer.get(), 32, 96, 160, 255 ) );
+            REQUIRE( SDL_RenderClear( renderer.get() ) );
+            REQUIRE( minimap_scope.restore() );
+        }
+        {
+            scoped_render_target composite_scope( renderer, composite.get(), &variants );
+            REQUIRE( composite_scope.is_valid() );
+            REQUIRE( SDL_RenderTexture( renderer.get(), minimap.get(), nullptr, nullptr ) );
+            REQUIRE( composite_scope.restore() );
+        }
         REQUIRE( SDL_RenderTexture( renderer.get(), composite.get(), nullptr, nullptr ) );
         REQUIRE( SDL_RenderPresent( renderer.get() ) );
     }
@@ -204,10 +285,7 @@ TEST_CASE( "game_renderer_wrapper_survives_backend_recreation_and_nested_targets
             return;
         }
         REQUIRE( renderer );
-        SDL_GPUDevice *device = SDL_GetGPURendererDevice( renderer.get() );
-        const char *gpu_driver = device ? SDL_GetGPUDeviceDriver( device ) : nullptr;
-        CHECK_FALSE( renderer_fallback_drivers( SDL_GetRendererName( renderer.get() ),
-                                                gpu_driver ? gpu_driver : "" ) );
+        CHECK( std::string( SDL_GetRendererName( renderer.get() ) ) == driver );
         CHECK( SDL_GetRenderTarget( renderer.get() ) == nullptr );
         int vsync = -1;
         REQUIRE( SDL_GetRenderVSync( renderer.get(), &vsync ) );
