@@ -7,7 +7,9 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).with_name("assign_mission_target_needs_om_special.bash")
+SCRIPT = Path(__file__).with_name(
+    "assign_mission_target_needs_om_special.bash"
+)
 BASH = shutil.which("bash")
 
 
@@ -26,7 +28,8 @@ class MissionTargetCheckTest(unittest.TestCase):
             wrapper.write_text(
                 "#!/usr/bin/env bash\n"
                 "case \"$1\" in\n"
-                "  --suffix=-special-of-terrain.json|--suffix=-missing-om-special.json) ;;\n"
+                "  --suffix=-special-of-terrain.json|"
+                "--suffix=-missing-om-special.json) ;;\n"
                 "  *) exit 64 ;;\n"
                 "esac\n"
                 "printf '%s/%s\\n' \"$TMPDIR\" \"${1#--suffix=}\"\n",
@@ -34,7 +37,9 @@ class MissionTargetCheckTest(unittest.TestCase):
             )
             wrapper.chmod(0o755)
             environment = os.environ.copy()
-            environment["PATH"] = str(root / "bin") + os.pathsep + environment["PATH"]
+            environment["PATH"] = (
+                str(root / "bin") + os.pathsep + environment["PATH"]
+            )
             environment["TMPDIR"] = (root / "tmp").as_posix()
             return subprocess.run(
                 [BASH, SCRIPT.as_posix()], cwd=root, env=environment,
@@ -71,4 +76,3 @@ class MissionTargetCheckTest(unittest.TestCase):
         result = self.run_check(objects)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, "")
-
