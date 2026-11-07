@@ -142,7 +142,7 @@ bool cleanup_at_end()
         }
         // if player has "hunted" trait, remove their nemesis monster on death
         if( u.has_trait( trait_HAS_NEMESIS ) ) {
-            overmap_buffer.remove_nemesis();
+            overmap_buffer.remove_nemesis( u.getID() );
         }
         // Reset NPC factions and disposition
         g->reset_npc_dispositions();
@@ -661,7 +661,7 @@ void overmap_npc_move()
         }
     }
     bool npcs_need_reload = false;
-    for( npc *&elem : travelling_npcs ) {
+    for( npc*&elem : travelling_npcs ) {
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->pos_abs_omt() ) > 2 ) {
@@ -955,10 +955,9 @@ void game::simulate_turn_prefix()
 
     // Move hordes every turn, move_hordes has its own rate limiting
     overmap_buffer.move_hordes();
-    if( calendar::once_every( time_duration::from_minutes( 2.5 ) ) ) {
-        if( u.has_trait( trait_HAS_NEMESIS ) ) {
-            overmap_buffer.move_nemesis();
-        }
+    if( !cata_mp::is_client_mode() &&
+        calendar::once_every( time_duration::from_minutes( 2.5 ) ) ) {
+        overmap_buffer.move_nemesis();
     }
 
     debug_hour_timer.print_time();

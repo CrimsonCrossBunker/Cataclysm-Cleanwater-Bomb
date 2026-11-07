@@ -1,13 +1,25 @@
 #include "bionic_activation.h"
 
+#include <utility>
+
+#include "calendar.h"
+
 #include "action.h"
 #include "bionics.h"
 #include "bionic_water_activity.h"
+#include "remote_vehicle_activity.h"
+#include "iuse.h"
+#include "rng.h"
+#include "uilist.h"
+#include "units.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
 #include "field_type.h"
+#include "flag.h"
 #include "item.h"
+#include "item_location.h"
+#include "string_formatter.h"
 #include "line.h"
 #include "map.h"
 #include "player_activity.h"
@@ -23,22 +35,11 @@ bool bionic_requires_adjacent_target( const bionic_id &id )
 bool supports_owned_bionic_action( const bionic &bio, bionic_action action )
 {
     if( action == bionic_action::deactivate ) {
-        // Remote control still owns a global vehicle/controller handle.
-        return bio.id != bionic_id( "bio_remote" );
+        return true;
     }
-    if( !bio.info().activated || bio.info().spell_on_activate || bio.info().activate_remove_cbm ||
-        bio.info().has_flag( json_character_flag( "BIONIC_WEAPON" ) ) ||
+    if( ( !bio.info().activated && !bio.info().activate_remove_cbm ) ||
         bio.info().has_flag( json_character_flag( "BIONIC_GUN" ) ) ) {
         return false;
-    }
-    // These native branches need additional choices, an owner-specific report,
-    // or a world/position result beyond an ordinary character-state reply.
-    for( const char *id : {
-             "bio_remote", "bio_teleport"
-         } ) {
-        if( bio.id == bionic_id( id ) ) {
-            return false;
-        }
     }
     return true;
 }
@@ -46,6 +47,34 @@ bool supports_owned_bionic_action( const bionic &bio, bionic_action action )
 bool valid_bionic_activation_choices( Character &who, const bionic &bio,
                                       const bionic_activation_choices &choices )
 {
+    if( bio.id == bionic_id( "bio_remote" ) ) {
+        if( choices.target || choices.martial_style || choices.water_corpse || choices.weapon ||
+            choices.unwield ) {
+            return false;
+        }
+        return choices.remote_vehicle ? !choices.radio &&
+               valid_bionic_remote_vehicle_access( who, bio.get_uid(), *choices.remote_vehicle ) :
+               choices.radio && *choices.radio >= 0 && *choices.radio <= 3 && who.get_power_level() >= 1_kJ;
+    }
+    if( choices.remote_vehicle || choices.radio ) {
+        return false;
+    }
+
+    if( bio.info().has_flag( json_character_flag( "BIONIC_WEAPON" ) ) ) {
+        if( choices.target || choices.martial_style || choices.water_corpse ) {
+            return false;
+        }
+        item_location held = who.get_wielded_item();
+        if( !held || ( held->has_flag( flag_NO_UNWIELD ) && who.is_using_bionic_weapon() ) ) {
+            return choices.weapon == 0 && !choices.unwield;
+        }
+        return !held->has_flag( flag_NO_UNWIELD ) && choices.unwield &&
+               held->uid().get_value() == choices.weapon &&
+               valid_item_disposition( who, held, *choices.unwield );
+    }
+    if( choices.weapon != 0 || choices.unwield ) {
+        return false;
+    }
     if( bio.id == bionic_id( "bio_water_extractor" ) ) {
         return !choices.target && !choices.martial_style && choices.water_corpse &&
                resolve_bionic_water_source( who, *choices.water_corpse );
@@ -81,6 +110,47 @@ bool valid_bionic_activation_choices( Character &who, const bionic &bio,
 std::optional<bionic_activation_choices> query_bionic_activation_choices(
     Character &who, const bionic &bio )
 {
+    if( bio.id == bionic_id( "bio_remote" ) ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        const int function = uilist( _( "Perform which function:" ), {
+            _( "Control vehicle" ), _( "RC radio" )
+        } );
+        if( function < 0 || function > 1 ) {
+            return std::nullopt;
+        }
+        bionic_activation_choices result;
+        item controller( itype_id( function == 0 ? "remotevehcontrol" : "radiocontrol" ),
+                         calendar::turn_zero );
+        controller.charges = units::to_kilojoule( who.get_power_level() );
+        if( function == 0 ) {
+            item_activation_choices choice;
+            if( !query_remote_vehicle_choices( who, controller, choice ) ) {
+                return std::nullopt;
+            }
+            result.remote_vehicle = std::move( choice );
+        } else {
+            const int choice = iuse::query_radiocontrol( controller );
+            if( choice < 0 ) {
+                return std::nullopt;
+            }
+            result.radio = choice;
+        }
+        return result;
+    }
+
+    if( bio.info().has_flag( json_character_flag( "BIONIC_WEAPON" ) ) ) {
+        bionic_activation_choices result;
+        item_location held = who.get_wielded_item();
+        if( held && !held->has_flag( flag_NO_UNWIELD ) ) {
+            result.weapon = held->uid().get_value();
+            result.unwield = query_item_disposition( who, held,
+                             string_format( _( "Stop wielding %s?" ), held->tname() ) );
+            if( !result.unwield ) {
+                return std::nullopt;
+            }
+        }
+        return result;
+    }
     if( bio.id == bionic_id( "bio_water_extractor" ) ) {
         bionic_activation_choices result;
         result.water_corpse = query_bionic_water_source( who );
@@ -117,7 +187,8 @@ bool execute_owned_bionic_action( Character &who, unsigned int uid,
         ( *bio )->id != expected_type || !supports_owned_bionic_action( **bio, action ) ||
         ( action == bionic_action::activate ? !valid_bionic_activation_choices( who, **bio, choices ) :
           ( choices.target.has_value() || choices.martial_style.has_value() ||
-            choices.water_corpse.has_value() ) ) ) {
+            choices.water_corpse.has_value() || choices.weapon != 0 || choices.unwield.has_value() ||
+            choices.remote_vehicle.has_value() || choices.radio.has_value() ) ) ) {
         return false;
     }
     const activity_execution previous = who.activity.execution();
@@ -129,6 +200,35 @@ bool execute_owned_bionic_action( Character &who, unsigned int uid,
     } );
     return action == bionic_action::activate ? who.activate_bionic( **bio, false, nullptr,
             ( bionic_requires_adjacent_target( ( *bio )->id ) ||
-              choices.martial_style || choices.water_corpse ) ? &choices : nullptr ) :
+              choices.martial_style || choices.water_corpse || choices.remote_vehicle || choices.radio ||
+              ( *bio )->info().has_flag( json_character_flag( "BIONIC_WEAPON" ) ) ) ? &choices : nullptr ) :
            who.deactivate_bionic( **bio );
+}
+
+bool execute_bionic_remote_choices( Character &who, unsigned int uid,
+                                    const bionic_activation_choices &choices )
+{
+    if( choices.remote_vehicle ) {
+        return begin_bionic_remote_vehicle_access( who, uid, *choices.remote_vehicle );
+    }
+    if( !choices.radio ) {
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    item controller( itype_id( "radiocontrol" ), calendar::turn_zero );
+    controller.charges = units::to_kilojoule( who.get_power_level() );
+    controller.set_flag( flag_USES_BIONIC_POWER );
+    const auto result = iuse::radiocontrol_action( &who, &controller, *choices.radio );
+    if( !lifetime ) {
+        return false;
+    }
+    const auto bio = who.find_bionic_by_uid( uid );
+    if( !bio || ( *bio )->id != bionic_id( "bio_remote" ) ) {
+        return false;
+    }
+    if( result && *result > 0 ) {
+        who.mod_power_level( -1_kJ );
+    }
+    ( *bio )->powered = controller.active;
+    return result.has_value();
 }

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <deque>
+#include <functional>
 #include <list>
 #include <memory>
 #include <optional>
@@ -28,7 +29,11 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
+#include "chopping_activity.h"
 #include "clzones.h"
+#include "zone_work.h"
+#include "vehicle_uid.h"
 #include "construction.h"
 #include "coordinates.h"
 #include "craft_command.h"
@@ -183,60 +188,113 @@ faction_id _fac_id( Character &you )
 }
 } // namespace
 
-static bool is_valid_study_book( const item &it, const Character &you,
-                                 const std::set<skill_id> *skill_prefs )
+static bool is_valid_study_book( const item_location &book, const Character &you,
+                                 const std::set<skill_id> *skill_prefs, bool ignore_darkness = false )
 {
-    if( it.has_var( "activity_var" ) && it.get_var( "activity_var" ) != you.name ) {
+    if( !book || !book->is_book() || book->get_use( "learn_spell" ) ||
+        activity_handlers::activity_item_reserved_for_other( *book, you ) ) {
         return false;
     }
-    if( you.check_read_condition( it ) != read_condition_result::SUCCESS ) {
+    // Automatic study stops once the operator can no longer learn from this book.
+    if( you.has_identified( book->typeId() ) &&
+        you.get_book_mastery( *book ) != book_mastery::LEARNING ) {
         return false;
     }
-    // if zone has skill preferences, filter by them
-    if( skill_prefs && it.is_book() && it.type->book ) {
-        const skill_id &book_skill = it.type->book->skill;
-        if( book_skill == skill_id::NULL_ID() ) {
-            return false;
-        }
-        if( skill_prefs->count( book_skill ) == 0 ) {
+    if( skill_prefs && skill_prefs->count( book->type->book->skill ) == 0 ) {
+        return false;
+    }
+    if( book.is_efile() ) {
+        const item_location device = book.parent_item();
+        if( !device->ammo_sufficient( &you ) ||
+            activity_handlers::activity_item_reserved_for_other( *device, you ) ) {
             return false;
         }
     }
-    return true;
+    if( ignore_darkness && you.check_read_condition( *book ) == read_condition_result::TOO_DARK ) {
+        return true;
+    }
+    std::vector<std::string> reasons;
+    return you.get_book_reader( *book, reasons ) != nullptr;
+}
+
+static item_location find_study_book_in( item_location location, const Character &you,
+        const std::set<skill_id> *skills, bool ignore_darkness = false )
+{
+    if( !location || activity_handlers::activity_item_reserved_for_other( *location, you ) ) {
+        return {};
+    }
+    if( is_valid_study_book( location, you, skills, ignore_darkness ) ) {
+        return location;
+    }
+    for( const pocket_type pocket : {
+             pocket_type::CONTAINER, pocket_type::E_FILE_STORAGE
+         } ) {
+        for( item *child : location->all_items_top( pocket ) ) {
+            if( item_location found = find_study_book_in( item_location( location, child ), you, skills,
+                                      ignore_darkness ) ) {
+                return found;
+            }
+        }
+    }
+    return {};
+}
+
+static item_location carried_study_book( Character &you, bool ignore_darkness = false )
+{
+    if( item_location book = find_study_book_in( you.get_wielded_item(), you, nullptr,
+                             ignore_darkness ) ) {
+        return book;
+    }
+    for( const item_location &root : you.top_items_loc() ) {
+        if( item_location book = find_study_book_in( root, you, nullptr, ignore_darkness ) ) {
+            return book;
+        }
+    }
+    return {};
 }
 
 static item_location find_study_book( const tripoint_abs_ms &zone_pos, Character &you )
 {
+    const auto query = active_zone_query( you );
     map &here = get_map();
-    zone_manager &mgr = zone_manager::get_manager();
-    const zone_data *zone = mgr.get_zone_at( zone_pos, zone_type_STUDY_ZONE, _fac_id( you ) );
-    const std::set<skill_id> *skill_prefs = nullptr;
-    if( zone && zone->has_options() ) {
-        const study_zone_options *options = dynamic_cast<const study_zone_options *>
-                                            ( &zone->get_options() );
-        if( options ) {
-            skill_prefs = options->get_skill_preferences( you.name );
-        }
+    const zone_data *zone = zone_manager::get_manager().get_zone_at(
+                                zone_pos, zone_type_STUDY_ZONE, _fac_id( you ), &query );
+    if( !zone || !zone->get_enabled() || !here.inbounds( zone_pos ) ) {
+        return {};
     }
+    const auto *options = dynamic_cast<const study_zone_options *>( &zone->get_options() );
+    const std::set<skill_id> *skill_prefs = options ? options->get_skill_preferences( you ) : nullptr;
     const tripoint_bub_ms zone_loc = here.get_bub( zone_pos );
-
-    // items on the ground
-    for( item &it : here.i_at( zone_loc ) ) {
-        if( is_valid_study_book( it, you, skill_prefs ) ) {
-            return item_location( map_cursor( zone_loc ), &it );
-        }
-
-        // books in containers
-        if( it.has_pocket_type( pocket_type::CONTAINER ) ) {
-            for( item *contained : it.all_items_container_top() ) {
-                if( is_valid_study_book( *contained, you, skill_prefs ) ) {
-                    item_location container_loc( map_cursor( zone_loc ), &it );
-                    return item_location( container_loc, contained );
-                }
-            }
+    for( item &root : here.i_at( zone_loc ) ) {
+        if( item_location found = find_study_book_in( item_location( map_cursor( zone_loc ), &root ), you,
+                                  skill_prefs ) ) {
+            return found;
         }
     }
-    return item_location();
+    return {};
+}
+
+static bool start_automatic_reading( Character &you, item_location book )
+{
+    if( !is_valid_study_book( book, you, nullptr ) ) {
+        return false;
+    }
+    std::vector<std::string> reasons;
+    const Character *reader = you.get_book_reader( *book, reasons );
+    if( !reader ) {
+        return false;
+    }
+    item_location ereader = book.is_efile() ? book.parent_item() : item_location();
+    if( you.is_avatar() &&
+        cata_mp::client_start_read( book, ereader, true, you.getID().get_value() ) ) {
+        return true;
+    }
+    activity_handlers::reserve_activity_item( you, book );
+    player_activity activity( read_activity_actor( you.time_to_read( *book, *reader ), book, ereader,
+                              true, you.getID().get_value() ) );
+    activity.set_execution( you.activity.execution() );
+    you.assign_activity( activity );
+    return true;
 }
 
 namespace
@@ -261,7 +319,7 @@ namespace multi_activity_actor
 {
 void check_npc_revert( Character &you )
 {
-    if( you.is_npc() ) {
+    if( you.is_npc() && !you.is_player_controlled() ) {
         npc *guy = dynamic_cast<npc *>( &you );
         if( guy ) {
             guy->revert_after_activity();
@@ -438,8 +496,9 @@ static std::vector<item_location> try_to_put_into_vehicle( Character &c, item_dr
 
 static itype_id get_first_fertilizer_itype( Character &you, const tripoint_abs_ms &src )
 {
+    const auto query = active_zone_query( you );
     const zone_manager &mgr = zone_manager::get_manager();
-    std::vector<zone_data> zones = mgr.get_zones( zone_type_FARM_PLOT, src, _fac_id( you ) );
+    std::vector<zone_data> zones = mgr.get_zones( zone_type_FARM_PLOT, src, _fac_id( you ), &query );
     for( const zone_data &zone : zones ) {
         const itype_id fertilizer =
             dynamic_cast<const plot_options &>( zone.get_options() ).get_fertilizer();
@@ -640,7 +699,8 @@ static double get_capacity_fraction( int capacity, int volume )
     return fr;
 }
 
-int activity_handlers::move_cost_inv( const item &it, const tripoint_bub_ms &src,
+int activity_handlers::move_cost_inv( const Character &who, const item &it,
+                                      const tripoint_bub_ms &src,
                                       const tripoint_bub_ms &dest )
 {
     // to prevent potentially ridiculous number
@@ -659,9 +719,8 @@ int activity_handlers::move_cost_inv( const item &it, const tripoint_bub_ms &src
     // typical flat ground move cost
     const int mc_per_tile = 100;
 
-    Character &player_character = get_player_character();
-    // only free inventory capacity
-    const int inventory_capacity = units::to_milliliter( player_character.free_space() );
+    // Only the operator's free inventory capacity affects their work cost.
+    const int inventory_capacity = units::to_milliliter( who.free_space() );
 
     const int item_volume = units::to_milliliter( it.volume() );
 
@@ -674,14 +733,14 @@ int activity_handlers::move_cost_inv( const item &it, const tripoint_bub_ms &src
 }
 
 int activity_handlers::move_cost_cart(
-    const item &it, const tripoint_bub_ms &src, const tripoint_bub_ms &dest,
+    const Character &who, const item &it, const tripoint_bub_ms &src, const tripoint_bub_ms &dest,
     const units::volume &capacity )
 {
     // to prevent potentially ridiculous number
     const int MAX_COST = 500;
 
     // cost to move item into the cart
-    const int pickup_cost = Pickup::cost_to_move_item( get_player_character(), it );
+    const int pickup_cost = Pickup::cost_to_move_item( who, it );
 
     // cost to move item out of the cart
     const int drop_cost = pickup_cost;
@@ -702,19 +761,16 @@ int activity_handlers::move_cost_cart(
     return std::min( pickup_cost + drop_cost + move_cost, MAX_COST );
 }
 
-int activity_handlers::move_cost( const item &it, const tripoint_bub_ms &src,
-                                  const tripoint_bub_ms &dest )
+int activity_handlers::move_cost( const Character &who, const item &it,
+                                  const tripoint_bub_ms &src, const tripoint_bub_ms &dest )
 {
-    // ?!??!?! This always checks the player regardless of who's doing the activity
-    avatar &player_character = get_avatar();
-    if( player_character.get_grab_type() == object_type::VEHICLE ) {
-        const tripoint_bub_ms cart_position = player_character.pos_bub() + player_character.grab_point;
+    if( zone_sorting::grabbed_cart( who, get_map() ) ) {
+        const tripoint_bub_ms cart_position = who.pos_bub() + who.grab_point;
         if( const std::optional<vpart_reference> ovp = get_map().veh_at( cart_position ).cargo() ) {
-            return move_cost_cart( it, src, dest, ovp->items().free_volume() );
+            return move_cost_cart( who, it, src, dest, ovp->items().free_volume() );
         }
     }
-
-    return move_cost_inv( it, src, dest );
+    return move_cost_inv( who, it, src, dest );
 }
 
 // return true if activity was assigned.
@@ -724,7 +780,7 @@ static bool vehicle_activity( Character &you, const tripoint_bub_ms &src_loc, in
 {
     map &here = get_map();
     vehicle *veh = veh_pointer_or_null( here.veh_at( src_loc ) );
-    if( !veh ) {
+    if( !veh || vpindex < 0 ) {
         return false;
     }
     time_duration time_to_take = 0_seconds;
@@ -776,9 +832,9 @@ static void move_item( Character &you, item &it, const int quantity, const tripo
     map &here = get_map();
     // Check that we can pick it up.
     if( !it.made_of_from_type( phase_id::LIQUID ) ) {
-        you.mod_moves( -activity_handlers::move_cost( it, src, dest ) );
+        you.mod_moves( -activity_handlers::move_cost( you, it, src, dest ) );
         if( activity_to_restore == ACT_FETCH_REQUIRED ) {
-            it.set_var( "activity_var", you.name );
+            activity_handlers::mark_activity_item( it, you );
         }
         const std::vector<item_location> moved = put_into_vehicle_or_drop_ret_locs(
                     you, item_drop_reason::deliberate, { it }, &here, dest );
@@ -810,6 +866,15 @@ static void move_item( Character &you, item &it, const int quantity, const tripo
 namespace zone_sorting
 {
 
+vehicle *grabbed_cart( const Character &who, const map &here )
+{
+    if( who.get_grab_type() != object_type::VEHICLE || !who.grab_matches( here ) ) {
+        return nullptr;
+    }
+    const auto vp = here.veh_at( who.pos_bub( here ) + who.grab_point );
+    return vp ? &vp->vehicle() : nullptr;
+}
+
 // Cache routes computed by route_length() for reuse by route_to_destination().
 // Avoids recomputing the same A* when the sorter probes route distance and
 // then immediately routes to the same destination.
@@ -818,6 +883,7 @@ namespace
 struct zone_route_cache {
     static constexpr size_t max_entries = 200;
 
+    character_id owner;
     tripoint_bub_ms start;
     object_type grab_type = object_type::NONE;
     tripoint_rel_ms grab_point;
@@ -828,27 +894,32 @@ struct zone_route_cache {
     // FIFO eviction order -- front is oldest.
     std::deque<tripoint_bub_ms> insertion_order;
     bool initialized = false;
+    safe_reference<map> context;
+    time_point turn = calendar::before_time_starts;
+    uint64_t map_revision = 0;
+    uint64_t grab_generation = 0;
+    int64_t vehicle_id = 0;
 
     void ensure_valid( const Character &who ) {
-        object_type gt = object_type::NONE;
-        tripoint_rel_ms gp;
+        map &here = get_map();
+        const object_type gt = who.get_grab_type();
+        const tripoint_rel_ms gp = who.grab_point;
         int cur_arm_str = 0;
         units::mass cur_veh_mass = 0_gram;
-        if( who.is_avatar() ) {
-            gt = who.as_avatar()->get_grab_type();
-            gp = who.as_avatar()->grab_point;
-            if( gt == object_type::VEHICLE ) {
-                map &here = get_map();
-                const tripoint_bub_ms veh_pos = who.pos_bub() + gp;
-                const optional_vpart_position ovp = here.veh_at( veh_pos );
-                if( ovp && ovp->vehicle().get_points().size() == 1 ) {
-                    cur_arm_str = who.get_arm_str();
-                    cur_veh_mass = ovp->vehicle().total_mass( here );
-                }
+        const vehicle *cart = grabbed_cart( who, here );
+        const int64_t current_vehicle = cart ? cart->uid().get_value() : 0;
+        if( cart ) {
+            if( cart->get_points().size() == 1 ) {
+                cur_arm_str = who.get_arm_str();
+                cur_veh_mass = cart->total_mass( here );
             }
         }
-        if( !initialized || start != who.pos_bub() || grab_type != gt ||
+        if( !initialized || context.get() != &here || turn != calendar::turn ||
+            map_revision != here.pathfinding_cache_revision() || grab_generation != who.grab_generation() ||
+            vehicle_id != current_vehicle || owner != who.getID() || start != who.pos_bub() ||
+            grab_type != gt ||
             grab_point != gp || arm_str != cur_arm_str || veh_mass != cur_veh_mass ) {
+            owner = who.getID();
             start = who.pos_bub();
             grab_type = gt;
             grab_point = gp;
@@ -857,6 +928,11 @@ struct zone_route_cache {
             entries.clear();
             insertion_order.clear();
             initialized = true;
+            context = here.get_context_reference();
+            turn = calendar::turn;
+            map_revision = here.pathfinding_cache_revision();
+            grab_generation = who.grab_generation();
+            vehicle_id = current_vehicle;
         }
     }
 
@@ -900,8 +976,7 @@ bool route_to_destination( Character &you, player_activity &act,
         if( !cached->empty() ) {
             route = *cached;
             from_cache = true;
-            used_grab_routing = ( you.is_avatar() &&
-                                  you.as_avatar()->get_grab_type() == object_type::VEHICLE );
+            used_grab_routing = ( you.get_grab_type() == object_type::VEHICLE );
         }
     }
 
@@ -945,7 +1020,7 @@ bool sort_skip_item( Character &you, const item *it,
                      const std::vector<item_location> &other_activity_items,
                      bool ignore_favorite, const tripoint_abs_ms &src,
                      const float base_spoil_multiplier,
-                     bool *spillable_skipped )
+                     bool *spillable_skipped, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
 
@@ -994,18 +1069,18 @@ bool sort_skip_item( Character &you, const item *it,
 
     const faction_id fac_id = _fac_id( you );
     const zone_type_id zt_id = mgr.get_near_zone_type_for_item( *it, you.pos_abs(),
-                               MAX_VIEW_DISTANCE, fac_id, base_spoil_multiplier );
+                               MAX_VIEW_DISTANCE, fac_id, base_spoil_multiplier, query );
     // Skip items already at their destination regardless of whether the zone
     // is bound to terrain or vehicle cargo. Delivery tries cargo first, so
     // items often land in vehicle storage even at terrain-bound zones (e.g.,
     // a fridge appliance on a LOOT_FOOD tile). Binding-agnostic check
     // prevents infinite re-sort loops in that situation.
     if( zt_id != zone_type_LOOT_CUSTOM && zt_id != zone_type_LOOT_ITEM_GROUP &&
-        mgr.has( zt_id, src, fac_id ) ) {
+        mgr.has( zt_id, src, fac_id, query ) ) {
         return true;
     }
     if( ( zt_id == zone_type_LOOT_CUSTOM || zt_id == zone_type_LOOT_ITEM_GROUP ) &&
-        mgr.custom_loot_has( src, it, zt_id, fac_id ) ) {
+        mgr.custom_loot_has( src, it, zt_id, fac_id, std::nullopt, nullptr, query ) ) {
         return true;
     }
 
@@ -1013,13 +1088,13 @@ bool sort_skip_item( Character &you, const item *it,
 }
 
 unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &src,
-                                        bool use_zone_type )
+                                        bool use_zone_type, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     unload_sort_options zone_sort_options;
 
     std::vector<zone_data const *> const zones = mgr.get_zones_at( src, zone_type_UNLOAD_ALL,
-            _fac_id( you ) );
+            _fac_id( you ), query );
 
     // set rules from all zones in stack
     for( zone_data const *zone : zones ) {
@@ -1045,8 +1120,8 @@ unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &s
 
     if( use_zone_type ) {
         const faction_id fac = _fac_id( you );
-        zone_sort_options.ignore_favorite = mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac );
-        zone_sort_options.unload_corpses = mgr.has( zone_type_STRIP_CORPSES, src, fac );
+        zone_sort_options.ignore_favorite = mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac, query );
+        zone_sort_options.unload_corpses = mgr.has( zone_type_STRIP_CORPSES, src, fac, query );
     }
 
     return zone_sort_options;
@@ -1102,13 +1177,13 @@ zone_items populate_items( const tripoint_bub_ms &src_bub )
     return items;
 }
 
-bool ignore_contents( Character &you, const tripoint_abs_ms &src )
+bool ignore_contents( Character &you, const tripoint_abs_ms &src, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     // check ignorable zones for ignore_contents enabled
     for( const auto &zone_type : ignorable_zone_types ) {
         // add zones using mgr.get_zones_at
-        for( zone_data const *zone : mgr.get_zones_at( src, zone_type, _fac_id( you ) ) ) {
+        for( zone_data const *zone : mgr.get_zones_at( src, zone_type, _fac_id( you ), query ) ) {
             ignorable_options const &options = dynamic_cast<const ignorable_options &>( zone->get_options() );
             if( options.get_ignore_contents() ) {
                 return true;
@@ -1119,13 +1194,13 @@ bool ignore_contents( Character &you, const tripoint_abs_ms &src )
 }
 
 bool ignore_zone_position( Character &you, const tripoint_abs_ms &src,
-                           bool ignore_contents )
+                           bool ignore_contents, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     map &here = get_map();
     const tripoint_bub_ms src_bub = here.get_bub( src );
 
-    return mgr.has( zone_type_LOOT_IGNORE, src, _fac_id( you ) ) ||
+    return mgr.has( zone_type_LOOT_IGNORE, src, _fac_id( you ), query ) ||
            ignore_contents ||
            here.get_field( src_bub, fd_fire ) != nullptr ||
            !here.can_put_items_ter_furn( src_bub ) ||
@@ -1154,13 +1229,13 @@ carry_gate_result carry_gate_check( Character &you, const item &it,
 // vehicle::add_item and map::add_item_or_charges silently fail at the count
 // limits even when volume fits, so sort must pre-check to avoid bounce loops.
 bool dest_has_capacity( const tripoint_abs_ms &dest, const zone_type_id &ztype,
-                        const item &sample, const faction_id &fac )
+                        const item &sample, const faction_id &fac, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     map &here = get_map();
     const tripoint_bub_ms dest_bub = here.get_bub( dest );
-    const bool has_veh_zone = mgr.has_vehicle( ztype, dest, fac );
-    const bool has_ter_zone = mgr.has_terrain( ztype, dest, fac );
+    const bool has_veh_zone = mgr.has_vehicle( ztype, dest, fac, query );
+    const bool has_ter_zone = mgr.has_terrain( ztype, dest, fac, query );
     if( has_veh_zone ) {
         for( const vpart_reference &vp_dest : cargo_parts_at( dest_bub ) ) {
             if( vp_dest.items().amount_can_fit( sample ) > 0 ) {
@@ -1177,10 +1252,10 @@ bool dest_has_capacity( const tripoint_abs_ms &dest, const zone_type_id &ztype,
 
 static bool any_dest_has_capacity( const std::unordered_set<tripoint_abs_ms> &dests,
                                    const zone_type_id &ztype, const item &sample,
-                                   const faction_id &fac )
+                                   const faction_id &fac, const zone_query_context *query )
 {
     for( const tripoint_abs_ms &dest : dests ) {
-        if( dest_has_capacity( dest, ztype, sample, fac ) ) {
+        if( dest_has_capacity( dest, ztype, sample, fac, query ) ) {
             return true;
         }
     }
@@ -1191,7 +1266,7 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
                         unload_sort_options zone_unload_options,
                         const std::vector<item_location> &other_activity_items,
                         const zone_items &items, bool *pickup_failure,
-                        bool *spillable_skipped )
+                        bool *spillable_skipped, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     const faction_id fac_id = _fac_id( you );
@@ -1202,14 +1277,15 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
     // Any UNSORTED zone at src (terrain or vehicle) makes all items at that
     // tile eligible for sorting. The terrain/vehicle distinction only matters
     // at the destination (where items get placed), not at the source.
-    const bool src_has_unsorted = mgr.has( zone_type_LOOT_UNSORTED, src, fac_id );
-    const bool src_has_vehicle_unsorted = mgr.has_vehicle( zone_type_LOOT_UNSORTED, src, fac_id );
+    const bool src_has_unsorted = mgr.has( zone_type_LOOT_UNSORTED, src, fac_id, query );
+    const bool src_has_vehicle_unsorted = mgr.has_vehicle( zone_type_LOOT_UNSORTED, src, fac_id,
+                                          query );
 
     // When grabbed cart sits on the source tile, items stay in cart cargo
     // (virtual pickup) so the player carry capacity check doesn't apply.
     bool virtual_pickup_available = false;
-    if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
-        const tripoint_bub_ms cart_pos = you.pos_bub() + you.as_avatar()->grab_point;
+    if( grabbed_cart( you, get_map() ) ) {
+        const tripoint_bub_ms cart_pos = you.pos_bub() + you.grab_point;
         if( get_map().get_abs( cart_pos ) == src ) {
             virtual_pickup_available = get_map().veh_at( cart_pos ).cargo().has_value();
         }
@@ -1239,7 +1315,7 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
             }
         }
         const zone_type_id dest_zone_type_id = mgr.get_near_zone_type_for_item( *it, abspos,
-                                               MAX_VIEW_DISTANCE, fac_id, spoil_multiplier );
+                                               MAX_VIEW_DISTANCE, fac_id, spoil_multiplier, query );
 
         if( dest_zone_type_id == zone_type_id::NULL_ID() ) {
             continue;
@@ -1248,8 +1324,8 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
         // Virtual pickup only applies to vehicle items
         if( !( virtual_pickup_available && it_pair.second ) && !you.can_add( *it ) ) {
             bool vehicle_can_hold = false;
-            if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
-                const tripoint_bub_ms cart_pos = you.pos_bub() + you.as_avatar()->grab_point;
+            if( grabbed_cart( you, get_map() ) ) {
+                const tripoint_bub_ms cart_pos = you.pos_bub() + you.grab_point;
                 if( std::optional<vpart_reference> ovp = get_map().veh_at( cart_pos ).cargo() ) {
                     // Approximation: only checks volume, not weight or other cargo constraints.
                     // If this over-reports, the empty-pickup guard in stage_do handles it.
@@ -1264,12 +1340,12 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
 
         if( sort_skip_item( you, it, other_activity_items,
                             zone_unload_options.ignore_favorite, src, spoil_multiplier,
-                            spillable_skipped ) ) {
+                            spillable_skipped, query ) ) {
             continue;
         }
 
         const std::unordered_set<tripoint_abs_ms> dest_set =
-            mgr.get_near( dest_zone_type_id, abspos, MAX_VIEW_DISTANCE, it, fac_id );
+            mgr.get_near( dest_zone_type_id, abspos, MAX_VIEW_DISTANCE, it, fac_id, query );
 
         //if we're unloading all or a corpse
         if( zone_unload_options.unload_all || ( zone_unload_options.unload_corpses && it->is_corpse() ) ) {
@@ -1300,7 +1376,7 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
             }
         }
         if( !dest_set.empty() &&
-            any_dest_has_capacity( dest_set, dest_zone_type_id, *it, fac_id ) ) {
+            any_dest_has_capacity( dest_set, dest_zone_type_id, *it, fac_id, query ) ) {
             return true;
         }
     }
@@ -1339,7 +1415,7 @@ void remove_item( const std::optional<vpart_reference> &vp,
 std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
                                  unload_sort_options zone_unload_options, const std::optional<vpart_reference> &vpr_src,
                                  item *it, const std::unordered_set<tripoint_abs_ms> &dest_set,
-                                 int &num_processed )
+                                 int &num_processed, const zone_query_context *query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     const faction_id fac_id = _fac_id( you );
@@ -1352,8 +1428,8 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
     bool move_and_reset = false;
     bool moved_something = false;
 
-    if( mgr.has_near( zone_type_UNLOAD_ALL, abspos, 1, fac_id ) ||
-        ( mgr.has_near( zone_type_STRIP_CORPSES, abspos, 1, fac_id ) && it->is_corpse() ) ) {
+    if( mgr.has_near( zone_type_UNLOAD_ALL, abspos, 1, fac_id, query ) ||
+        ( mgr.has_near( zone_type_STRIP_CORPSES, abspos, 1, fac_id, query ) && it->is_corpse() ) ) {
         if( dest_set.empty() || zone_unload_options.unload_always ) {
 
             if( you.rate_action_unload( *it ) == hint_rating::good &&
@@ -1564,12 +1640,11 @@ int route_length( const Character &you, const tripoint_bub_ms &dest )
 std::optional<tripoint_bub_ms> worst_drag_tile_on_route(
     const Character &who, const std::vector<tripoint_abs_ms> &dropoff_coords )
 {
-    if( !who.is_avatar() ||
-        who.as_avatar()->get_grab_type() != object_type::VEHICLE ) {
+    if( !grabbed_cart( who, get_map() ) ) {
         return std::nullopt;
     }
     map &here = get_map();
-    const tripoint_bub_ms veh_pos = who.pos_bub() + who.as_avatar()->grab_point;
+    const tripoint_bub_ms veh_pos = who.pos_bub() + who.grab_point;
     const optional_vpart_position ovp = here.veh_at( veh_pos );
     if( !ovp || ovp->vehicle().get_points().size() != 1 ) {
         return std::nullopt;
@@ -1958,6 +2033,7 @@ bool are_requirements_nearby(
     Character &you, const activity_id &activity_to_restore, const bool in_loot_zones,
     const tripoint_bub_ms &src_loc )
 {
+    const auto query = active_zone_query( you );
     zone_manager &mgr = zone_manager::get_manager();
     temp_crafting_inventory temp_inv;
     units::volume volume_allowed;
@@ -2001,7 +2077,7 @@ bool are_requirements_nearby(
             // skip tiles in IGNORE zone and tiles on fire
             // (to prevent taking out wood off the lit brazier)
             // and inaccessible furniture, like filled charcoal kiln
-            if( mgr.has( zone_type_LOOT_IGNORE, here.get_abs( elem ), _fac_id( you ) ) ||
+            if( mgr.has( zone_type_LOOT_IGNORE, here.get_abs( elem ), _fac_id( you ), &query ) ||
                 here.dangerous_field_at( elem ) ||
                 !here.can_put_items_ter_furn( elem ) ) {
                 continue;
@@ -2069,47 +2145,51 @@ static activity_reason_info vehicle_work_can_do( const activity_id &, Character 
         const tripoint_bub_ms &src_loc, std::vector<int> &already_working_indexes,
         vehicle *veh )
 {
-
-    Character &player_character = get_player_character();
     map &here = get_map();
-
-    if( !veh || veh->is_appliance() ) {
+    if( !veh || veh->is_appliance() || std::abs( veh->velocity ) > 100 ) {
         return activity_reason_info::fail( do_activity_reason::NO_VEHICLE );
     }
-    // if the vehicle is moving or player is controlling it.
-    if( std::abs( veh->velocity ) > 100 || veh->player_in_control( here, player_character ) ) {
-        return activity_reason_info::fail( do_activity_reason::NO_VEHICLE );
-    }
-    do_activity_reason result = do_activity_reason::NO_ZONE;
-    for( const npc &guy : g->all_npcs() ) {
-        if( &guy == &you ) {
-            continue;
+    const auto check_character = [&]( const Character & other ) -> std::optional<do_activity_reason> {
+        if( veh->player_in_control( here, other ) )
+        {
+            return do_activity_reason::NO_VEHICLE;
         }
-        // If the NPC has an activity - make sure they're not duplicating work.
-        tripoint_bub_ms guy_work_spot;
-        if( guy.has_player_activity() &&
-            guy.activity.placement != player_activity::invalid_place ) {
-            guy_work_spot = here.get_bub( guy.activity.placement );
+        if( &other == &you )
+        {
+            return std::nullopt;
         }
-        // If their position or intended position or player position/intended position
-        // then discount, don't need to move each other out of the way.
-        if( here.get_bub( player_character.activity.placement ) == src_loc ||
-            guy_work_spot == src_loc || guy.pos_bub() == src_loc ||
-            ( you.is_npc() && player_character.pos_bub() == src_loc ) ) {
-            return activity_reason_info::fail( do_activity_reason::ALREADY_WORKING );
+        if( other.pos_bub() == src_loc )
+        {
+            return do_activity_reason::ALREADY_WORKING;
         }
-        if( guy_work_spot != tripoint_bub_ms::zero ) {
-            vehicle *other_veh = veh_pointer_or_null( here.veh_at( guy_work_spot ) );
-            // working on same vehicle - store the index to check later.
-            if( other_veh && other_veh == veh && guy.activity_vehicle_part_index != -1 ) {
-                already_working_indexes.push_back( guy.activity_vehicle_part_index );
+        if( const auto *work = dynamic_cast<const vehicle_activity_actor *>( other.activity.actor.get() ) )
+        {
+            if( const auto index = work->target_part_index( *veh ) ) {
+                already_working_indexes.push_back( *index );
             }
         }
+        if( other.activity && other.activity.placement != player_activity::invalid_place )
+        {
+            const auto work_spot = here.get_bub( other.activity.placement );
+            if( work_spot == src_loc ) {
+                return do_activity_reason::ALREADY_WORKING;
+            }
+            const vehicle *other_vehicle = veh_pointer_or_null( here.veh_at( work_spot ) );
+            if( other_vehicle == veh && other.activity_vehicle_part_index >= 0 ) {
+                already_working_indexes.push_back( other.activity_vehicle_part_index );
+            }
+        }
+        return std::nullopt;
+    };
+    if( const auto blocked = check_character( get_avatar() ) ) {
+        return activity_reason_info::fail( *blocked );
     }
-    if( you.is_npc() && player_character.activity_vehicle_part_index != -1 ) {
-        already_working_indexes.push_back( player_character.activity_vehicle_part_index );
+    for( const npc &other : g->all_npcs() ) {
+        if( const auto blocked = check_character( other ) ) {
+            return activity_reason_info::fail( *blocked );
+        }
     }
-    return activity_reason_info::ok( result );
+    return activity_reason_info::ok( do_activity_reason::NO_ZONE );
 }
 
 activity_reason_info multi_vehicle_deconstruct_activity_actor::multi_activity_can_do(
@@ -2117,7 +2197,6 @@ activity_reason_info multi_vehicle_deconstruct_activity_actor::multi_activity_ca
     const tripoint_bub_ms &src_loc )
 {
     const activity_id act = get_type();
-    Character &player_character = get_player_character();
     map &here = get_map();
 
     std::vector<int> already_working_indexes;
@@ -2145,7 +2224,7 @@ activity_reason_info multi_vehicle_deconstruct_activity_actor::multi_activity_ca
         }
         const vpart_info &vpinfo = part_elem->info();
         // If removing this part would make the vehicle non-flyable, avoid it
-        if( veh->would_removal_prevent_flyable( *part_elem, player_character ) ) {
+        if( veh->would_removal_prevent_flyable( *part_elem, you ) ) {
             return activity_reason_info::fail( do_activity_reason::WOULD_PREVENT_VEH_FLYING );
         }
         // this is the same part that somebody else wants to work on, or already is.
@@ -2189,7 +2268,6 @@ activity_reason_info multi_vehicle_repair_activity_actor::multi_activity_can_do(
         const tripoint_bub_ms &src_loc )
 {
     const activity_id act = get_type();
-    Character &player_character = get_player_character();
     map &here = get_map();
 
     std::vector<int> already_working_indexes;
@@ -2212,7 +2290,7 @@ activity_reason_info multi_vehicle_repair_activity_actor::multi_activity_can_do(
             continue;
         }
         // If repairing this part would make the vehicle non-flyable, avoid it
-        if( veh->would_repair_prevent_flyable( *part_elem, player_character ) ) {
+        if( veh->would_repair_prevent_flyable( *part_elem, you ) ) {
             return activity_reason_info::fail( do_activity_reason::WOULD_PREVENT_VEH_FLYING );
         }
         if( std::find( already_working_indexes.begin(), already_working_indexes.end(),
@@ -2338,7 +2416,7 @@ activity_reason_info multi_butchery_activity_actor::multi_activity_can_do( Chara
     for( const item &i : here.i_at( src_loc ) ) {
         // make sure nobody else is working on that corpse right now
         if( i.is_corpse() &&
-            ( !i.has_var( "activity_var" ) || i.get_var( "activity_var" ) == you.name ) ) {
+            !activity_handlers::activity_item_reserved_for_other( i, you ) ) {
             const mtype corpse = *i.get_mtype();
             if( corpse.size > creature_size::medium ) {
                 big_count += 1;
@@ -2391,26 +2469,20 @@ activity_reason_info multi_butchery_activity_actor::multi_activity_can_do( Chara
 activity_reason_info multi_read_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms & )
 {
-    const item_filter filter = [&you]( const item & i ) {
-        // Check well lit after
-        read_condition_result condition = you.check_read_condition( i );
-        return condition == read_condition_result::SUCCESS ||
-               condition == read_condition_result::TOO_DARK;
-    };
-    if( !you.items_with( filter ).empty() ) {
+    if( carried_study_book( you, true ) ) {
         return activity_reason_info::ok( do_activity_reason::NEEDS_BOOK_TO_LEARN );
     }
-    // TODO: find books from zone?
     return activity_reason_info::fail( do_activity_reason::ALREADY_DONE );
 }
 
 activity_reason_info multi_study_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms &src_loc )
 {
+    const auto query = query_for( you );
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
     const tripoint_abs_ms abspos = here.get_abs( src_loc );
-    if( !mgr.has( zone_type_STUDY_ZONE, abspos, _fac_id( you ) ) ) {
+    if( !mgr.has( zone_type_STUDY_ZONE, abspos, _fac_id( you ), &query ) ) {
         return activity_reason_info::fail( do_activity_reason::NO_ZONE );
     }
 
@@ -2445,13 +2517,14 @@ activity_reason_info multi_chop_planks_activity_actor::multi_activity_can_do( Ch
 activity_reason_info multi_build_construction_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms &src_loc )
 {
+    const auto query = query_for( you );
 
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
     std::vector<zone_data> zones;
 
     zones = mgr.get_zones( zone_type_CONSTRUCTION_BLUEPRINT,
-                           here.get_abs( src_loc ), _fac_id( you ) );
+                           here.get_abs( src_loc ), _fac_id( you ), &query );
     const partial_con *part_con = here.partial_con_at( src_loc );
     std::optional<construction_id> part_con_idx;
     if( part_con ) {
@@ -2480,6 +2553,7 @@ activity_reason_info multi_build_construction_activity_actor::multi_activity_can
 activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms &src_loc )
 {
+    const auto query = query_for( you );
 
     map &here = get_map();
 
@@ -2490,7 +2564,7 @@ activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character
     zone_manager &mgr = zone_manager::get_manager();
     std::vector<zone_data> zones;
 
-    zones = mgr.get_zones( zone_type_FARM_PLOT, here.get_abs( src_loc ), _fac_id( you ) );
+    zones = mgr.get_zones( zone_type_FARM_PLOT, here.get_abs( src_loc ), _fac_id( you ), &query );
     for( const zone_data &zone : zones ) {
         const plot_options &options = dynamic_cast<const plot_options &>( zone.get_options() );
         const itype_id seed = options.get_seed();
@@ -2638,11 +2712,11 @@ activity_reason_info multi_disassemble_activity_actor::multi_activity_can_do( Ch
     requirement_data req;
     for( item &i : here.i_at( src_loc ) ) {
         // Skip items marked by other ppl.
-        if( i.has_var( "activity_var" ) && i.get_var( "activity_var" ) != you.name ) {
+        if( activity_handlers::activity_item_reserved_for_other( i, you ) ) {
             continue;
         }
         //unmark the item before check
-        i.erase_var( "activity_var" );
+        activity_handlers::clear_activity_item( i );
         if( i.is_disassemblable() ) {
             // Are the requirements fulfilled?
             const recipe &r = recipe_dictionary::get_uncraft( ( i.typeId() == itype_disassembly ) ?
@@ -3023,14 +3097,15 @@ void add_basecamp_storage_to_loot_zone_list(
     zone_manager &mgr, const tripoint_bub_ms &src_loc, Character &you,
     std::vector<tripoint_bub_ms> &loot_zone_spots, std::vector<tripoint_bub_ms> &combined_spots )
 {
-    if( npc *const guy = dynamic_cast<npc *>( &you ) ) {
+    const auto query = active_zone_query( you );
+    if( npc *const guy = you.is_player_controlled() ? nullptr : dynamic_cast<npc *>( &you ) ) {
         map &here = get_map();
         if( guy->assigned_camp &&
             mgr.has_near( zone_type_CAMP_STORAGE, here.get_abs( src_loc ), MAX_VIEW_DISTANCE,
-                          _fac_id( you ) ) ) {
+                          _fac_id( you ), &query ) ) {
             std::unordered_set<tripoint_abs_ms> bc_storage_set =
                 mgr.get_near( zone_type_CAMP_STORAGE, here.get_abs( src_loc ),
-                              MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
+                              MAX_VIEW_DISTANCE, nullptr, _fac_id( you ), &query );
             for( const tripoint_abs_ms &elem : bc_storage_set ) {
                 tripoint_bub_ms here_local = here.get_bub( elem );
 
@@ -3052,6 +3127,7 @@ std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
         fetch_required_activity_actor::requirements_map( Character &you,
                 const int distance )
 {
+    const auto query = query_for( you );
     std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirement_map;
     if( !fetch_activity_valid( you ) ) {
         return requirement_map;
@@ -3079,7 +3155,7 @@ std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
         combined_spots.push_back( elem );
     }
     for( const tripoint_bub_ms &elem : mgr.get_point_set_loot(
-             you.pos_abs(), distance, you.is_npc(), _fac_id( you ) ) ) {
+             you.pos_abs(), distance, you.is_npc() && !you.is_player_controlled(), _fac_id( you ), &query ) ) {
         // if there is a loot zone that's already near the work spot, we don't want it to be added twice.
         if( std::find( already_there_spots.begin(), already_there_spots.end(),
                        elem ) != already_there_spots.end() ) {
@@ -3334,8 +3410,7 @@ std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
 
 static bool construction_activity( Character &you, const zone_data * /*zone*/,
                                    const tripoint_bub_ms &src_loc,
-                                   const activity_reason_info &act_info,
-                                   const activity_id &activity_to_restore )
+                                   const activity_reason_info &act_info )
 {
     // the actual desired construction
     if( !act_info.con_idx ) {
@@ -3354,30 +3429,9 @@ static bool construction_activity( Character &you, const zone_data * /*zone*/,
         // materials and advances the site. assign_activity preserves the planner.
         return cata_mp::client_start_blueprint_construction( built_chosen.id, site );
     }
-    std::list<item> used;
-    // create the partial construction struct
-    partial_con pc;
-    pc.id = built_chosen.id;
-    map &here = get_map();
-    // Set the trap that has the examine function
-    // Use up the components
-    for( const std::vector<item_comp> &it : built_chosen.requirements->get_components() ) {
-        for( const item_comp &comp : it ) {
-            comp_selection<item_comp> sel;
-            sel.use_from = usage_from::both;
-            sel.comp = comp;
-            std::list<item> consumed = you.consume_items( sel, 1, is_crafting_component );
-            used.splice( used.end(), consumed );
-        }
-    }
-    pc.components = used;
-    here.partial_con_set( src_loc, pc );
-    for( const std::vector<tool_comp> &it : built_chosen.requirements->get_tools() ) {
-        you.consume_tools( it );
-    }
-    you.backlog.emplace_front( activity_to_restore );
-    you.assign_activity( build_construction_activity_actor( here.get_abs( src_loc ) ) );
-    return true;
+    const auto selected = construction_selection::prepare( you, built_chosen, site, true );
+    return selected && selected->start( you,
+                                        !you.is_avatar() && you.activity.execution() == activity_execution::authoritative );
 }
 
 bool fetch_required_activity_actor::fetch_activity(
@@ -3453,7 +3507,7 @@ bool fetch_required_activity_actor::fetch_activity(
                     } else {
                         leftovers.charges = 0;
                     }
-                    it.set_var( "activity_var", you.name );
+                    activity_handlers::mark_activity_item( it, you );
                     activity_handlers::reserve_activity_item( you, you.i_add( it ) );
                     if( you.is_npc() ) {
                         if( pickup_count == 1 ) {
@@ -3490,13 +3544,12 @@ static bool butcher_corpse_activity( Character &you, const tripoint_bub_ms &src_
     std::vector<butchery_data> bd;
     for( item &elem : items ) {
         if( elem.is_corpse() &&
-            ( !elem.has_var( "activity_var" ) || elem.get_var( "activity_var" ) == you.name ) ) {
+            !activity_handlers::activity_item_reserved_for_other( elem, you ) ) {
             const mtype corpse = *elem.get_mtype();
             if( corpse.size > creature_size::medium && reason != do_activity_reason::NEEDS_BIG_BUTCHERING ) {
                 continue;
             }
             item_location corpse_loc = item_location( map_cursor( src_loc ), &elem );
-            activity_handlers::reserve_activity_item( you, corpse_loc );
             bd.emplace_back( corpse_loc, butcher_type::FULL );
         }
     }
@@ -3509,39 +3562,28 @@ static bool butcher_corpse_activity( Character &you, const tripoint_bub_ms &src_
 
 static bool chop_plank_activity( Character &you, const tripoint_bub_ms &src_loc )
 {
-    item &best_qual = you.best_unreserved_item_with_quality( qual_AXE );
-    if( best_qual.is_null() ) {
+    item &best = you.best_unreserved_item_with_quality( qual_AXE );
+    if( best.is_null() ) {
         return false;
     }
-    if( best_qual.type->can_have_charges() ) {
-        best_qual.consume_tool_uses( 1, get_map(), you.pos_bub(), &you );
-    }
+    item_location tool( you, &best );
     map &here = get_map();
-    for( item &i : here.i_at( src_loc ) ) {
-        if( i.typeId() == itype_log ) {
-            here.i_rem( src_loc, &i );
-            int moves = to_moves<int>( 20_minutes );
-            you.add_msg_if_player( _( "You cut the log into planks." ) );
-            you.assign_activity( chop_planks_activity_actor( moves ) );
-            you.activity.placement = here.get_abs( src_loc );
-            return true;
+    for( item &value : here.i_at( src_loc ) ) {
+        if( value.typeId() != itype_log || !craft_reservation::usable_by_automation( value ) ) {
+            continue;
         }
+        const lumber_selection selected{ capture_item_source( you,
+                                         item_location( map_cursor( src_loc ), &value ) ), false };
+        const character_action_guard lifetime( you );
+        if( !start_plank_work( you, tool, selected, here.get_abs( src_loc ), true ) ) {
+            return false;
+        }
+        if( lifetime && tool && tool->type->can_have_charges() ) {
+            tool->consume_tool_uses( 1, get_map(), you.pos_bub(), &you );
+        }
+        return true;
     }
     return false;
-}
-
-static int chop_moves( Character &you, item &it )
-{
-    // quality of tool
-    const int quality = it.get_quality( qual_AXE );
-
-    // attribute; regular tools - based on STR, powered tools - based on DEX
-    const int attr = it.has_flag( flag_POWERED ) ? you.get_dex() : you.get_arm_str();
-
-    int moves = to_moves<int>( time_duration::from_minutes( 60 - attr ) / std::pow( 2, quality - 1 ) );
-    const int helpersize = you.get_num_crafting_helpers( 3 );
-    moves *= ( 1.0f - ( helpersize / 10.0f ) );
-    return moves;
 }
 
 static bool mine_activity( Character &you, const tripoint_bub_ms &src_loc )
@@ -3604,33 +3646,26 @@ static bool mop_activity( Character &you, const tripoint_bub_ms &src_loc )
 
 static bool chop_tree_activity( Character &you, const tripoint_bub_ms &src_loc )
 {
-    item &best_qual = you.best_unreserved_item_with_quality( qual_AXE );
-    if( best_qual.is_null() ) {
+    item &best = you.best_unreserved_item_with_quality( qual_AXE );
+    if( best.is_null() ) {
         return false;
     }
-    int moves = chop_moves( you, best_qual );
-    if( best_qual.type->can_have_charges() ) {
-        best_qual.consume_tool_uses( 1, get_map(), you.pos_bub(), &you );
+    item_location tool( you, &best );
+    const character_action_guard lifetime( you );
+    if( !start_chopping_work( you, tool, get_map().get_abs( src_loc ), true ) ) {
+        return false;
     }
-    map &here = get_map();
-    const ter_id &ter = here.ter( src_loc );
-    if( here.has_flag( ter_furn_flag::TFLAG_TREE, src_loc ) ) {
-        you.assign_activity( chop_tree_activity_actor( moves, item_location( you, &best_qual ) ) );
-        you.activity.placement = here.get_abs( src_loc );
-        return true;
-    } else if( ter == ter_t_trunk || ter == ter_t_stump ) {
-        you.assign_activity( chop_logs_activity_actor( moves, item_location( you, &best_qual ) ) );
-        you.activity.placement = here.get_abs( src_loc );
-        return true;
+    if( lifetime && tool && tool->type->can_have_charges() ) {
+        tool->consume_tool_uses( 1, get_map(), you.pos_bub(), &you );
     }
-    return false;
+    return true;
 }
 
 namespace multi_activity_actor
 {
 
 zone_type_id get_zone_for_act( const tripoint_bub_ms &src_loc, const zone_manager &mgr,
-                               const activity_id &act_id, const faction_id &fac_id )
+                               const activity_id &act_id, const faction_id &fac_id, const zone_query_context *query )
 {
     zone_type_id ret = zone_type_;
     if( act_id == ACT_VEHICLE_DECONSTRUCTION ) {
@@ -3670,7 +3705,7 @@ zone_type_id get_zone_for_act( const tripoint_bub_ms &src_loc, const zone_manage
         ret = zone_type_STUDY_ZONE;
     }
     if( src_loc != tripoint_bub_ms() && act_id == ACT_FETCH_REQUIRED ) {
-        const zone_data *zd = mgr.get_zone_at( get_map().get_abs( src_loc ), false, fac_id );
+        const zone_data *zd = mgr.get_zone_at( get_map().get_abs( src_loc ), false, fac_id, query );
         if( zd ) {
             ret = zd->get_type();
         }
@@ -3739,14 +3774,20 @@ void prune_dangerous_field_locations( std::unordered_set<tripoint_abs_ms> &src_s
     }
 }
 
-std::unordered_set<tripoint_abs_ms> generic_locations( Character &you, const activity_id &act_id )
+std::unordered_set<tripoint_abs_ms> generic_locations( Character &you, const activity_id &act_id,
+        const zone_query_context *query )
 {
+    const auto owned_query = active_zone_query( you );
+    if( !query ) {
+        query = &owned_query;
+    }
     zone_manager &mgr = zone_manager::get_manager();
     std::unordered_set<tripoint_abs_ms> src_set;
 
     zone_type_id zone_type = multi_activity_actor::get_zone_for_act( tripoint_bub_ms::zero, mgr, act_id,
-                             _fac_id( you ) );
-    src_set = mgr.get_near( zone_type, you.pos_abs(), MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
+                             _fac_id( you ), query );
+    src_set = mgr.get_near( zone_type, you.pos_abs(), MAX_VIEW_DISTANCE, nullptr, _fac_id( you ),
+                            query );
 
     // prune the set to remove tiles that are never gonna work out.
     multi_activity_actor::prune_dangerous_field_locations( src_set );
@@ -3757,10 +3798,10 @@ std::unordered_set<tripoint_abs_ms> generic_locations( Character &you, const act
 }
 
 std::unordered_set<tripoint_abs_ms> no_same_tile_locations( Character &you,
-        const activity_id &act_id )
+        const activity_id &act_id, const zone_query_context *query )
 {
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-            act_id );
+            act_id, query );
     multi_activity_actor::prune_same_tile_locations( you, src_set );
 
     return src_set;
@@ -3772,12 +3813,13 @@ std::unordered_set<tripoint_abs_ms>
 multi_build_construction_activity_actor::multi_activity_locations(
     Character &you )
 {
+    const auto query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
 
     // multiple construction will form a list of targets based on blueprint zones and unfinished constructions
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-            act_id );
+            act_id, &query );
     for( const tripoint_bub_ms &elem : here.points_in_radius( you.pos_bub(), MAX_VIEW_DISTANCE ) ) {
         partial_con *pc = here.partial_con_at( elem );
         if( pc ) {
@@ -3811,6 +3853,7 @@ std::unordered_set<tripoint_abs_ms> multi_read_activity_actor::multi_activity_lo
 std::unordered_set<tripoint_abs_ms> multi_study_activity_actor::multi_activity_locations(
     Character &you )
 {
+    const auto query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
@@ -3818,7 +3861,7 @@ std::unordered_set<tripoint_abs_ms> multi_study_activity_actor::multi_activity_l
     std::unordered_set<tripoint_abs_ms> src_set;
 
     std::unordered_set<tripoint_abs_ms> all_zone_tiles = mgr.get_near( zone_type_STUDY_ZONE, abspos,
-            MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
+            MAX_VIEW_DISTANCE, nullptr, _fac_id( you ), &query );
     for( const tripoint_abs_ms &zone_pos : all_zone_tiles ) {
         if( find_study_book( zone_pos, you ) ) {
             src_set.insert( zone_pos );
@@ -3849,10 +3892,11 @@ std::unordered_set<tripoint_abs_ms> multi_craft_activity_actor::multi_activity_l
 std::unordered_set<tripoint_abs_ms> multi_fish_activity_actor::multi_activity_locations(
     Character &you )
 {
+    const auto query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-            act_id );
+            act_id, &query );
 
     for( auto src_set_iter = src_set.begin(); src_set_iter != src_set.end(); ) {
         const tripoint_bub_ms set_pt = here.get_bub( *src_set_iter );
@@ -3869,10 +3913,11 @@ std::unordered_set<tripoint_abs_ms> multi_fish_activity_actor::multi_activity_lo
 std::unordered_set<tripoint_abs_ms> multi_mop_activity_actor::multi_activity_locations(
     Character &you )
 {
+    const auto query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-            act_id );
+            act_id, &query );
     for( auto src_set_iter = src_set.begin(); src_set_iter != src_set.end(); ) {
         const tripoint_bub_ms set_pt = here.get_bub( *src_set_iter );
         if( !here.mopsafe_field_at( set_pt ) ) {
@@ -3888,6 +3933,7 @@ bool multi_farm_activity_actor::multi_activity_do( Character &you,
         const activity_reason_info &act_info,
         const tripoint_abs_ms &src, const tripoint_bub_ms &src_loc )
 {
+    const auto query = query_for( you );
 
     map &here = get_map();
     const zone_manager &mgr = zone_manager::get_manager();
@@ -3909,11 +3955,10 @@ bool multi_farm_activity_actor::multi_activity_do( Character &you,
     } else if( reason == do_activity_reason::NEEDS_TILLING &&
                here.has_flag( ter_furn_flag::TFLAG_PLOWABLE, src_loc ) &&
                you.has_unreserved_quality( qual_DIG, 1 ) && !here.has_furn( src_loc ) ) {
-        you.assign_activity( churn_activity_actor( 18000, item_location() ) );
-        you.activity.placement = src;
+        start_tilling_work( you, item_location(), src, true );
         return false;
     } else if( reason == do_activity_reason::NEEDS_PLANTING ) {
-        std::vector<zone_data> zones = mgr.get_zones( zone_type_FARM_PLOT, src, _fac_id( you ) );
+        std::vector<zone_data> zones = mgr.get_zones( zone_type_FARM_PLOT, src, _fac_id( you ), &query );
         for( const zone_data &zone : zones ) {
             const itype_id seed =
                 dynamic_cast<const plot_options &>( zone.get_options() ).get_seed();
@@ -3982,19 +4027,8 @@ bool multi_read_activity_actor::multi_activity_do( Character &you,
         const activity_reason_info &act_info,
         const tripoint_abs_ms &, const tripoint_bub_ms & )
 {
-    const do_activity_reason &reason = act_info.reason;
-
-    if( reason == do_activity_reason::NEEDS_BOOK_TO_LEARN ) {
-        const item_filter filter = [&you]( const item & i ) {
-            read_condition_result condition = you.check_read_condition( i );
-            return condition == read_condition_result::SUCCESS;
-        };
-        std::vector<item *> books = you.items_with( filter );
-        if( !books.empty() && books[0] ) {
-            const time_duration time_taken = you.time_to_read( *books[0], you );
-            item_location book = item_location( you, books[0] );
-            item_location ereader;
-            you.assign_activity( read_activity_actor( time_taken, book, ereader, true ) );
+    if( act_info.reason == do_activity_reason::NEEDS_BOOK_TO_LEARN ) {
+        if( start_automatic_reading( you, carried_study_book( you ) ) ) {
             return false;
         }
     }
@@ -4005,21 +4039,14 @@ bool multi_study_activity_actor::multi_activity_do( Character &you,
         const activity_reason_info &act_info,
         const tripoint_abs_ms &src, const tripoint_bub_ms & )
 {
-    const do_activity_reason &reason = act_info.reason;
-
-    if( reason == do_activity_reason::NEEDS_BOOK_TO_LEARN ) {
-        item_location book_loc = find_study_book( src, you );
-        if( book_loc ) {
-            activity_handlers::reserve_activity_item( you, book_loc );
-            const time_duration time_taken = you.time_to_read( *book_loc, you );
-            item_location ereader;
-            you.assign_activity( read_activity_actor( time_taken, book_loc, ereader, true ) );
+    if( act_info.reason == do_activity_reason::NEEDS_BOOK_TO_LEARN ) {
+        // Recheck ownership, zone edits and physical book/reader before handing off.
+        item_location book = find_study_book( src, you );
+        if( book && start_automatic_reading( you, book ) ) {
             return false;
         }
-        if( !book_loc && you.is_npc() ) {
-            add_msg_if_player_sees( you, m_info, _( "%s found no readable books at this location." ),
-                                    you.disp_name() );
-        }
+        you.add_msg_player_or_npc( m_info, _( "You found no readable books at this location." ),
+                                   _( "%s found no readable books at this location." ), you.disp_name() );
     }
     return true;
 }
@@ -4028,23 +4055,26 @@ bool multi_build_construction_activity_actor::multi_activity_do( Character &you,
         const activity_reason_info &act_info,
         const tripoint_abs_ms &src, const tripoint_bub_ms &src_loc )
 {
+    const auto query = query_for( you );
     map &here = get_map();
     const do_activity_reason &reason = act_info.reason;
     const zone_manager &mgr = zone_manager::get_manager();
     const zone_data *zone =
         mgr.get_zone_at( src, multi_activity_actor::get_zone_for_act( src_loc, mgr,
-                         ACT_MULTIPLE_CONSTRUCTION, _fac_id( you ) ),
-                         _fac_id( you ) );
+                         ACT_MULTIPLE_CONSTRUCTION, _fac_id( you ), &query ),
+                         _fac_id( you ), &query );
 
     if( reason == do_activity_reason::CAN_DO_CONSTRUCTION ) {
         if( const partial_con *site = here.partial_con_at( src_loc ) ) {
             if( you.is_avatar() && cata_mp::is_client_mode() ) {
                 return !cata_mp::client_change_construction( src, site->uid, false );
             }
-            you.assign_activity( build_construction_activity_actor( src ) );
+            you.assign_activity( build_construction_activity_actor( src,
+                                 !you.is_avatar() &&
+                                 you.activity.execution() == activity_execution::authoritative ? &you : nullptr ) );
             return false;
         }
-        if( construction_activity( you, zone, src_loc, act_info, ACT_MULTIPLE_CONSTRUCTION ) ) {
+        if( construction_activity( you, zone, src_loc, act_info ) ) {
             return false;
         }
     }
@@ -4187,7 +4217,7 @@ bool multi_disassemble_activity_actor::multi_activity_do( Character &you,
         for( item &elem : items ) {
             if( elem.is_disassemblable() ) {
                 // Disassemble the checked one.
-                if( elem.get_var( "activity_var" ) == you.name ) {
+                if( activity_handlers::activity_item_owned_by( elem, you ) ) {
                     const recipe &r = ( elem.typeId() == itype_disassembly ) ? elem.get_making() :
                                       recipe_dictionary::get_uncraft( elem.typeId() );
                     int const qty = std::max( 1, elem.typeId() == itype_disassembly ? elem.get_making_batch_size() :
@@ -4395,14 +4425,14 @@ static bool has_clear_path_to_pickup_items(
 }
 
 static std::optional<tripoint_bub_ms> find_refuel_spot_zone( const tripoint_bub_ms &center,
-        const faction_id &fac )
+        const faction_id &fac, const zone_query_context &query )
 {
     const zone_manager &mgr = zone_manager::get_manager();
     map &here = get_map();
     const tripoint_abs_ms center_abs = here.get_abs( center );
 
     const std::unordered_set<tripoint_abs_ms> tiles_abs_unordered =
-        mgr.get_near( zone_type_SOURCE_FIREWOOD, center_abs, pickup_range, nullptr, fac );
+        mgr.get_near( zone_type_SOURCE_FIREWOOD, center_abs, pickup_range, nullptr, fac, &query );
     const std::vector<tripoint_abs_ms> &tiles_abs =
         get_sorted_tiles_by_distance( center_abs, tiles_abs_unordered );
 
@@ -4513,6 +4543,7 @@ static bool comestible_sort_compare( Character &you, const item_location &lhs,
 
 int get_auto_consume_moves( Character &you, const bool food )
 {
+    const auto query = active_zone_query( you );
     if( you.is_npc() ) {
         return 0;
     }
@@ -4528,7 +4559,7 @@ int get_auto_consume_moves( Character &you, const bool food )
     map &here = get_map();
     const std::unordered_set<tripoint_abs_ms> &dest_set =
         mgr.get_near( consume_type_zone, here.get_abs( pos ), MAX_VIEW_DISTANCE, nullptr,
-                      _fac_id( you ) );
+                      _fac_id( you ), &query );
     if( dest_set.empty() ) {
         return 0;
     }
@@ -4647,7 +4678,8 @@ bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
         return false;
     }
 
-    std::optional<tripoint_bub_ms> refuel_spot = find_refuel_spot_zone( pos, _fac_id( you ) );
+    std::optional<tripoint_bub_ms> refuel_spot = find_refuel_spot_zone( pos, _fac_id( you ),
+            active_zone_query( you ) );
     if( !refuel_spot ) {
         refuel_spot = find_refuel_spot_trap( adjacent, pos );
         if( !refuel_spot ) {
@@ -4701,12 +4733,45 @@ bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
     return true;
 }
 
+bool activity_handlers::activity_item_owned_by( const item &it, const Character &who )
+{
+    if( it.has_var( "activity_owner_id" ) ) {
+        return activity_item_owned_by( it, who.getID() );
+    }
+    // Old saves stored only a display name. New claims always record identity.
+    return it.has_var( "activity_var" ) && it.get_var( "activity_var" ) == who.name;
+}
+
+bool activity_handlers::activity_item_owned_by( const item &it, character_id owner )
+{
+    return owner.is_valid() && it.has_var( "activity_owner_id" ) &&
+           it.get_var( "activity_owner_id" ) == std::to_string( owner.get_value() );
+}
+
+bool activity_handlers::activity_item_reserved_for_other( const item &it, const Character &who )
+{
+    return ( it.has_var( "activity_owner_id" ) || it.has_var( "activity_var" ) ) &&
+           !activity_item_owned_by( it, who );
+}
+
+void activity_handlers::mark_activity_item( item &it, const Character &who )
+{
+    it.set_var( "activity_var", who.name );
+    it.set_var( "activity_owner_id", std::to_string( who.getID().get_value() ) );
+}
+
+void activity_handlers::clear_activity_item( item &it )
+{
+    it.erase_var( "activity_var" );
+    it.erase_var( "activity_owner_id" );
+}
+
 void activity_handlers::reserve_activity_item( Character &you, item_location loc )
 {
-    if( !loc ) {
+    if( !loc || activity_item_reserved_for_other( *loc, you ) ) {
         return;
     }
-    loc.get_item()->set_var( "activity_var", you.name );
+    mark_activity_item( *loc, you );
     auto &reserved = you.may_activity_occupancy_after_end_items_loc;
     if( std::find( reserved.begin(), reserved.end(), loc ) == reserved.end() ) {
         reserved.push_back( loc );
@@ -4716,21 +4781,16 @@ void activity_handlers::reserve_activity_item( Character &you, item_location loc
 void activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now(
     Character &you )
 {
-    if( you.is_avatar() && ( !you.activity )  && ( !you.get_destination_activity() ) ) {
+    if( you.is_player_controlled() && !you.activity && !you.get_destination_activity() &&
+        ( you.backlog.empty() || !you.backlog.front().auto_resume ) ) {
         clean_may_activity_occupancy_items_var( you );
     }
 }
 void activity_handlers::clean_may_activity_occupancy_items_var( Character &you )
 {
-    std::string character_name = you.name;
-    const std::function<bool( const item *const )> activity_var_checker = [character_name](
-    const item * const it )->bool{
-        return it->has_var( "activity_var" )
-        && it->get_var( "activity_var", "" ) == character_name;
-    };
     for( item_location &loc : you.may_activity_occupancy_after_end_items_loc ) {
-        if( loc && activity_var_checker( loc.get_item() ) ) {
-            loc.get_item()->erase_var( "activity_var" );
+        if( loc && activity_item_owned_by( *loc, you ) ) {
+            clear_activity_item( *loc );
         }
     }
     you.may_activity_occupancy_after_end_items_loc.clear();

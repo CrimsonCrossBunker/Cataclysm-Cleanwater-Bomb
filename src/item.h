@@ -899,9 +899,10 @@ class item : public visitable
          * This function can change the item.
          * @param pos Where is the item being placed. Note: the item isn't there yet.
          * @param map A map object associated with that position.
+         * @param dropper The acting character; nullptr retains the legacy avatar fallback.
          * @return true if the item was destroyed during placement.
          */
-        bool on_drop( const tripoint_bub_ms &pos, map &map );
+        bool on_drop( const tripoint_bub_ms &pos, map &map, Character *dropper = nullptr );
 
         /**
          * Consume a specific amount of items of a specific type.
@@ -2160,14 +2161,15 @@ class item : public visitable
         /*@{*/
         bool has_flag( const flag_id &flag ) const;
 
-        template<typename Container, typename T = std::decay_t<decltype( *std::declval<const Container &>().begin() )>>
+        template<typename Container, typename T = std::decay_t<decltype( *std::declval<const Container &>().begin() ) >>
         bool has_any_flag( const Container &flags ) const {
             return std::any_of( flags.begin(), flags.end(), [&]( const T & flag ) {
                 return has_flag( flag );
             } );
         }
 
-        template<typename Container, typename T = std::decay_t<decltype( *std::declval<const Container &>().begin() )>>
+        template<typename Container, typename T = std::decay_t<decltype( *std::declval<const Container &>().begin() )
+                 >>
         bool has_any_vitamin( const Container &vitamins ) const {
             return std::any_of( vitamins.begin(), vitamins.end(), [&]( const T & vitamin ) {
                 return has_vitamin( vitamin );
@@ -3105,7 +3107,7 @@ class item : public visitable
         gun_type_type gun_type() const;
 
         /** Get mod locations, including those added by other mods */
-        std::map<gunmod_location, int> get_mod_locations() const;
+        std::map < gunmod_location, int > get_mod_locations() const;
         /**
          * Number of mods that can still be installed into the given mod location,
          * for non-guns it always returns 0.
@@ -3163,7 +3165,7 @@ class item : public visitable
         static const itype *find_type( const itype_id &type );
         // Ammotype of id's ammo slot, or nullopt when it has none. Null-safe for
         // NULL-ammo guns and pocket-defined magazines.
-        static std::optional<ammotype> ammotype_of( const itype_id &id );
+        static std::optional < ammotype > ammotype_of( const itype_id &id );
         /**
          * Whether the item is counted by charges, this is a static wrapper
          * around @ref count_by_charges, that does not need an items instance.
@@ -3219,7 +3221,7 @@ class item : public visitable
         /**
         * Traits contained for interaction with a genemill furniture.
         */
-        std::vector<trait_id> template_traits;
+        std::vector < trait_id > template_traits;
 
         /**
          * Get gun energy drain. Includes modifiers from gunmods.
@@ -3250,7 +3252,7 @@ class item : public visitable
         std::string get_owner_name() const;
         int get_min_str() const;
 
-        const cata::value_ptr<islot_comestible> &get_comestible() const;
+        const cata::value_ptr < islot_comestible > &get_comestible() const;
 
         /**
          * Get the stored recipe for in progress crafts.
@@ -3309,8 +3311,8 @@ class item : public visitable
         bool has_tools_to_continue() const;
         // Per-step tool allocations, indexed by recipe step (single entry for
         // stepless recipes).
-        void set_step_tool_allocs( const std::vector<std::vector<step_tool_alloc>> &allocs );
-        const std::vector<std::vector<step_tool_alloc>> &get_step_tool_allocs() const;
+        void set_step_tool_allocs( const std::vector < std::vector < step_tool_alloc>> &allocs );
+        const std::vector < std::vector < step_tool_alloc>> &get_step_tool_allocs() const;
 
         // Step iteration state for step recipes.
         // get_current_step clamps to valid range as a defensive measure.
@@ -3321,8 +3323,8 @@ class item : public visitable
         void mod_step_progress( double delta );
 
         // Per-step plan from the craft planning modal.
-        const std::vector<attention_plan> &get_step_plans() const;
-        void set_step_plans( std::vector<attention_plan> plans );
+        const std::vector < attention_plan > &get_step_plans() const;
+        void set_step_plans( std::vector < attention_plan > plans );
 
         // Calendar tracking for the active passive step.
         time_point get_passive_started_at() const;
@@ -3357,10 +3359,10 @@ class item : public visitable
         bool is_awaiting_collection() const;
         void set_awaiting_collection( bool v );
 
-        const std::vector<craft_reservation::binding> &get_reservations() const;
-        void set_reservations( std::vector<craft_reservation::binding> b );
-        std::optional<tripoint_abs_ms> get_reserved_tile() const;
-        void set_reserved_tile( std::optional<tripoint_abs_ms> tile );
+        const std::vector < craft_reservation::binding > &get_reservations() const;
+        void set_reservations( std::vector < craft_reservation::binding > b );
+        std::optional < tripoint_abs_ms > get_reserved_tile() const;
+        void set_reserved_tile( std::optional < tripoint_abs_ms > tile );
         // Allocates on first call.
         int64_t reservation_owner_token();
         int64_t peek_reservation_owner_token() const;
@@ -3373,8 +3375,8 @@ class item : public visitable
         uint8_t get_reservation_pause_reason() const;
         void set_reservation_pause_reason( uint8_t r );
 
-        std::vector<enchant_cache> get_proc_enchantments() const;
-        std::vector<enchantment> get_defined_enchantments() const;
+        std::vector < enchant_cache > get_proc_enchantments() const;
+        std::vector < enchantment > get_defined_enchantments() const;
         // calculates the enchantment value as if this item were wielded.
         double calculate_by_enchantment_wield( const Character &owner, double modify,
                                                enchant_vals::mod value,
@@ -3388,34 +3390,34 @@ class item : public visitable
         int get_recursive_disassemble_moves( const Character &guy ) const;
 
         // inherited from visitable
-        VisitResponse visit_items( const std::function<VisitResponse( item *, item * )> &func ) const
+        VisitResponse visit_items( const std::function < VisitResponse( item *, item * ) > &func ) const
         override;
         /**
          * @relates visitable
          * NOTE: upon expansion, this may need to be filtered by type enum depending on accessibility
          */
-        VisitResponse visit_contents( const std::function<VisitResponse( item *, item * )> &func,
+        VisitResponse visit_contents( const std::function < VisitResponse( item *, item * ) > &func,
                                       item *parent = nullptr );
-        void remove_internal( const std::function<bool( item & )> &filter,
-                              int &count, std::list<item> &res );
-        std::list<item> remove_items_with( const std::function<bool( const item & )> &filter,
-                                           int count = INT_MAX ) override;
+        void remove_internal( const std::function < bool( item & ) > &filter,
+                              int &count, std::list < item > &res );
+        std::list < item > remove_items_with( const std::function < bool( const item & ) > &filter,
+                                              int count = INT_MAX ) override;
 
         /** returns a list of pointers to all top-level items in standard pockets */
-        std::list<const item *> all_items_top() const;
+        std::list < const item * > all_items_top() const;
         /** returns a list of pointers to all top-level items in standard pockets */
-        std::list<item *> all_items_top();
+        std::list < item * > all_items_top();
         /** returns a list of pointers to all top-level items in container-like pockets */
-        std::list<const item *> all_items_container_top() const;
+        std::list < const item * > all_items_container_top() const;
         /** returns a list of pointers to all top-level items in container-like pockets */
-        std::list<item *> all_items_container_top();
+        std::list < item * > all_items_container_top();
         /** returns a list of pointers to all top-level items in pk_type pockets only */
-        std::list<const item *> all_items_top( pocket_type pk_type ) const;
+        std::list < const item * > all_items_top( pocket_type pk_type ) const;
         /**
          * Return a list of pointers to all top-level items in pk_type pockets only
          * If unloading is true ignore items in pockets flagged not to be unloaded.
          */
-        std::list<item *> all_items_top( pocket_type pk_type, bool unloading = false );
+        std::list < item * > all_items_top( pocket_type pk_type, bool unloading = false );
 
         item const *this_or_single_content() const;
         bool contents_only_one_type() const;
@@ -3440,23 +3442,23 @@ class item : public visitable
          * returns a list of pointers to *all items in all pockets* inside recursively
          * includes mods.  used for item_location::unpack()
          */
-        std::list<const item *> all_items_ptr() const;
-        std::list<item *> all_items_ptr();
+        std::list < const item * > all_items_ptr() const;
+        std::list < item * > all_items_ptr();
         /** returns a list of pointers to all items inside recursively */
-        std::list<const item *> all_items_ptr( pocket_type pk_type ) const;
+        std::list < const item * > all_items_ptr( pocket_type pk_type ) const;
         /** returns a list of pointers to all items inside recursively */
-        std::list<item *> all_items_ptr( pocket_type pk_type );
+        std::list < item * > all_items_ptr( pocket_type pk_type );
 
         /** returns a list of pointers to all visible or remembered
         * top-level items in standard pockets */
-        std::list<item *> all_known_contents();
-        std::list<const item *> all_known_contents() const;
+        std::list < item * > all_known_contents();
+        std::list < const item * > all_known_contents() const;
 
-        std::list<item *> all_holstered_items();
-        std::list<const item *> all_holstered_items() const;
+        std::list < item * > all_holstered_items();
+        std::list < const item * > all_holstered_items() const;
 
-        std::list<item *> all_ablative_armor();
-        std::list<const item *> all_ablative_armor() const;
+        std::list < item * > all_ablative_armor();
+        std::list < const item * > all_ablative_armor() const;
 
         void clear_items();
         /** Engage bulk-fill mode on this container's pockets. See item_pocket::begin_bulk_fill. */
@@ -3469,8 +3471,8 @@ class item : public visitable
         /** Get the item contained IFF one item is contained in CONTAINER pocket, otherwise a null item reference. */
         item &only_item();
         const item &only_item() const;
-        item *get_item_with( const std::function<bool( const item & )> &filter );
-        const item *get_item_with( const std::function<bool( const item & )> &filter ) const;
+        item *get_item_with( const std::function < bool( const item & ) > &filter );
+        const item *get_item_with( const std::function < bool( const item & ) > &filter ) const;
 
         /**
          * returns the number of items stacks in contents
@@ -3499,18 +3501,18 @@ class item : public visitable
         /** migrates an item into this item. */
         void migrate_content_item( const item &contained );
 
-        bool use_amount_internal( const itype_id &it, int &quantity, std::list<item> &used,
-                                  const std::function<bool( const item & )> &filter = return_true<item> );
+        bool use_amount_internal( const itype_id &it, int &quantity, std::list < item > &used,
+                                  const std::function < bool( const item & ) > &filter = return_true < item > );
         const use_function *get_use_internal( const std::string &use_name ) const;
-        template<typename Item>
+        template < typename Item >
         static Item *get_usable_item_helper( Item &self, const std::string &use_name );
         bool process_internal( map &here, Character *carrier, const tripoint_bub_ms &pos, float insulation,
                                temperature_flag flag, float spoil_modifier, bool watertight_container );
         void iterate_covered_body_parts_internal( side s,
-                const std::function<void( const bodypart_str_id & )> &cb,
+                const std::function < void( const bodypart_str_id & ) > &cb,
                 bool check_ablative_armor = true ) const;
         void iterate_covered_sub_body_parts_internal( side s,
-                const std::function<void( const sub_bodypart_str_id & )> &cb,
+                const std::function < void( const sub_bodypart_str_id & ) > &cb,
                 bool check_ablative_armor = true ) const;
         /**
          * Calculate the thermal energy and temperature change of the item
@@ -3528,11 +3530,12 @@ class item : public visitable
         /** Update flags associated with temperature */
         void set_temp_flags( units::temperature new_temperature, float freeze_percentage );
 
-        std::list<item *> all_items_top_recursive( pocket_type pk_type );
-        std::list<const item *> all_items_top_recursive( pocket_type pk_type ) const;
+        std::list < item * > all_items_top_recursive( pocket_type pk_type );
+        std::list < const item * > all_items_top_recursive( pocket_type pk_type ) const;
 
         /** Returns true if protection info was printed as well */
-        bool armor_full_protection_info( std::vector<iteminfo> &info, const iteminfo_query *parts ) const;
+        bool armor_full_protection_info( std::vector < iteminfo > &info,
+                                         const iteminfo_query *parts ) const;
 
         void update_inherited_flags();
         /**
@@ -3589,7 +3592,7 @@ class item : public visitable
         const itype *type;
         item_components components;
         /** What faults (if any) currently apply to this item */
-        cata::heap<std::set<fault_id>> faults;
+        cata::heap < std::set < fault_id>> faults;
         const mtype *get_corpse_mon() const;
 
     private:
@@ -3608,12 +3611,12 @@ class item : public visitable
             return hot_flags_own;
         }
     private:
-        cata::heap<FlagsSetType> item_tags; // generic item specific flags
-        cata::heap<FlagsSetType> inherited_tags_cache;
-        cata::heap<FlagsSetType> prefix_tags_cache; // flags that will add prefixes to this item
-        cata::heap<FlagsSetType> suffix_tags_cache; // flags that will add suffixes to this item
-        lazy<safe_reference_anchor> anchor;
-        cata::heap<global_variables::impl_t> item_vars;
+        cata::heap < FlagsSetType > item_tags; // generic item specific flags
+        cata::heap < FlagsSetType > inherited_tags_cache;
+        cata::heap < FlagsSetType > prefix_tags_cache; // flags that will add prefixes to this item
+        cata::heap < FlagsSetType > suffix_tags_cache; // flags that will add suffixes to this item
+        lazy < safe_reference_anchor > anchor;
+        cata::heap < global_variables::impl_t > item_vars;
         // True iff item_vars is non-empty. cata::heap wraps a unique_ptr, so
         // reading item_vars through it costs an extra indirection; this cached
         // bool lets the hot var accessors (get_value/maybe_get_value/has_var)
@@ -3622,7 +3625,7 @@ class item : public visitable
         bool has_item_vars_ = false;
         const mtype *corpse = nullptr;
         std::string corpse_name;       // Name of the late lamented
-        cata::heap<std::set<matec_id>> techniques; // item specific techniques
+        cata::heap < std::set < matec_id>> techniques; // item specific techniques
 
         /**
          * Select a random variant from the possibilities.
@@ -3646,14 +3649,14 @@ class item : public visitable
             public:
                 const recipe *making = nullptr;
                 int next_failure_point = -1;
-                std::vector<item_comp> comps_used;
+                std::vector < item_comp > comps_used;
                 // If the crafter has insufficient tools to continue to the next 5% progress step
                 bool tools_to_continue = false;
                 int batch_size = -1;
-                std::vector<std::vector<step_tool_alloc>> step_tool_allocs;
+                std::vector < std::vector < step_tool_alloc>> step_tool_allocs;
                 craft_result_state completion;
-                std::optional<units::mass> cached_weight; // NOLINT(cata-serialize)
-                std::optional<units::volume> cached_volume; // NOLINT(cata-serialize)
+                std::optional < units::mass > cached_weight; // NOLINT(cata-serialize)
+                std::optional < units::volume > cached_volume; // NOLINT(cata-serialize)
 
                 // Step iteration state for step recipes.
                 // Authoritative: advanced by tracking consumed work against step budgets.
@@ -3661,7 +3664,7 @@ class item : public visitable
                 double step_progress = 0.0; // base-speed moves consumed within current step
 
                 // Per-step plan from the planning modal.  Aligned with recipe steps_.
-                std::vector<attention_plan> step_plans;
+                std::vector < attention_plan > step_plans;
 
                 // Calendar tracking for the active passive step.
                 // before_time_starts when no passive step is in flight.
@@ -3691,10 +3694,10 @@ class item : public visitable
                 // until the player explicitly collects (pours) it.
                 bool awaiting_collection = false;
 
-                std::vector<craft_reservation::binding> reservations;
+                std::vector < craft_reservation::binding > reservations;
                 // Empty while the craft is ultimately character-held.  Derived, not
                 // owned: a craft can change tile without changing uid.
-                std::optional<tripoint_abs_ms> reserved_tile;
+                std::optional < tripoint_abs_ms > reserved_tile;
                 // Not an item_uid, so it survives the copy that picking a craft up
                 // performs.
                 int64_t reservation_owner = 0;
@@ -3720,10 +3723,10 @@ class item : public visitable
                 void deserialize( const JsonObject &obj );
         };
 
-        cata::value_ptr<craft_data> craft_data_;
+        cata::value_ptr < craft_data > craft_data_;
     public:
         // any relic data specific to this item
-        cata::value_ptr<relic> relic_data;
+        cata::value_ptr < relic > relic_data;
         int charges = 0;
         units::energy energy = 0_mJ; // Amount of energy currently stored in a battery
 
@@ -3785,7 +3788,7 @@ class item : public visitable
          * cast to avoid importing the entire enums.h header here, zero is
          * PNULL.
          */
-        phase_id current_phase = static_cast<phase_id>( 0 );
+        phase_id current_phase = static_cast < phase_id >( 0 );
         /** The faction that owns this item. */
         mutable faction_id owner = faction_id::NULL_ID();
         /** The faction that previously owned this item. */
@@ -3793,8 +3796,8 @@ class item : public visitable
         int damage_ = 0;
         int degradation_ = 0;
         light_emission light = nolight;
-        mutable std::optional<float> cached_relative_encumbrance;
-        mutable cata::value_ptr<link_data> link_;
+        mutable std::optional < float > cached_relative_encumbrance;
+        mutable cata::value_ptr < link_data > link_;
 
         struct cat_cache {
             item_category_id id;
@@ -3822,16 +3825,16 @@ class item : public visitable
         void update_clothing_mod_val();
 };
 
-extern template float item::resist<bodypart_id>( const damage_type_id &dmg_type, bool to_self,
+extern template float item::resist < bodypart_id > ( const damage_type_id &dmg_type, bool to_self,
         const bodypart_id &bp,
         int resist_value ) const;
-extern template float item::resist<sub_bodypart_id>( const damage_type_id &dmg_type,
+extern template float item::resist < sub_bodypart_id > ( const damage_type_id &dmg_type,
         bool to_self,
         const sub_bodypart_id &bp,
         int resist_value ) const;
 
-template<>
-struct enum_traits<item::encumber_flags> {
+template < >
+struct enum_traits < item::encumber_flags > {
     static constexpr bool is_flag_enum = true;
 };
 
@@ -3896,7 +3899,7 @@ struct disp_mod_by_barrel {
  * was encountered.
  * For display purposes only.
  */
-std::vector<std::pair<const item *, int>> get_item_duplicate_counts(
-        const std::list<const item *> &items );
+std::vector < std::pair < const item *, int>> get_item_duplicate_counts(
+            const std::list < const item * > &items );
 
 #endif // CATA_SRC_ITEM_H

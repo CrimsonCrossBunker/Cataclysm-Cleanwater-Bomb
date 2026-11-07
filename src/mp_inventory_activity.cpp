@@ -1,4 +1,12 @@
+#include "vertical_movement.h"
+#include "deployed_furniture.h"
+#include "mp_firearm.h"
+#include "radio_car_control.h"
+#include "grab.h"
+#include "hauling.h"
+#include "walking.h"
 #include "mp_inventory_activity.h"
+#include "iuse_actor.h"
 
 #include <algorithm>
 #include <functional>
@@ -7,8 +15,11 @@
 #include <sstream>
 #include <set>
 #include <vector>
+#include <utility>
 
 #include "activity_actor_definitions.h"
+#include "butchery.h"
+#include "disassembly.h"
 #include "avatar.h"
 #include "avatar_action.h"
 #include "bionics.h"
@@ -19,16 +30,32 @@
 #include "remote_vehicle_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
+#include "character_martial_arts.h"
+#include "martialarts.h"
+#include "help.h"
+#include "activity_handlers.h"
+#include "clzones.h"
+#include "zone_edit.h"
+#include "zone_work.h"
+#include "farming.h"
 #include "character_action_guard.h"
 #include "cata_scope_helpers.h"
+#include "color.h"
 #include "craft_command.h"
 #include "crafting.h"
 #include "construction.h"
+#include "dialogue.h"
+#include "dialogue_win.h"
+#include "input.h"
+#include "input_context.h"
 #include "input_popup.h"
 #include "line.h"
 #include "creature_tracker.h"
 #include "flag.h"
+#include "event.h"
+#include "event_bus.h"
 #include "game.h"
+#include "cached_options.h"
 #include "game_inventory.h"
 #include "item.h"
 #include "item_activation.h"
@@ -46,6 +73,13 @@
 #include "json.h"
 #include "map.h"
 #include "mapdata.h"
+#include "magic.h"
+#include "monster.h"
+#include "mtype.h"
+#include "npc.h"
+#include "npctalk.h"
+#include "output.h"
+#include "spell_casting_choice.h"
 #include "messages.h"
 #include "options.h"
 #include "mp_client_conn.h"
@@ -53,6 +87,7 @@
 #include "mp_gamestate.h"
 #include "mp_item_source.h"
 #include "mp_pickup.h"
+#include "mp_player_view.h"
 #include "mp_unload.h"
 #include "mp_world_session.h"
 #include "player_activity.h"
@@ -60,7 +95,9 @@
 #include "rng.h"
 #include "safe_reference.h"
 #include "string_formatter.h"
+#include "talker.h"
 #include "translations.h"
+#include "ui_manager.h"
 #include "uilist.h"
 #include "uistate.h"
 #include "vehicle.h"
@@ -69,6 +106,300 @@
 
 namespace cata_mp
 {
+void dialogue_view_option::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "text", text );
+    out.member( "color", color );
+    out.member( "selectable", selectable );
+    out.member( "confirm_hostile", confirm_hostile );
+    out.member( "confirm_helpless", confirm_helpless );
+    out.member( "quit_candidate", quit_candidate );
+    out.end_object();
+}
+
+void dialogue_view_option::deserialize( const JsonObject &data )
+{
+    data.allow_omitted_members();
+    data.read( "text", text, true );
+    data.read( "color", color, true );
+    data.read( "selectable", selectable, true );
+    data.read( "confirm_hostile", confirm_hostile, true );
+    data.read( "confirm_helpless", confirm_helpless, true );
+    data.read( "quit_candidate", quit_candidate, true );
+}
+
+void dialogue_view_prompt::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "session_id", session_id );
+    out.member( "response_revision", response_revision );
+    out.member( "speaker_name", speaker_name );
+    out.member( "speaker_color", speaker_color );
+    out.member( "challenge", challenge );
+    out.member( "player_response", player_response );
+    out.member( "remote_name", remote_name );
+    out.member( "is_computer", is_computer );
+    out.member( "is_not_conversation", is_not_conversation );
+    out.member( "is_remote", is_remote );
+    out.member( "append_challenge", append_challenge );
+    out.member( "options", options );
+    out.end_object();
+}
+
+void dialogue_view_prompt::deserialize( const JsonObject &data )
+{
+    data.allow_omitted_members();
+    data.read( "session_id", session_id, true );
+    data.read( "response_revision", response_revision, true );
+    data.read( "speaker_name", speaker_name, true );
+    data.read( "speaker_color", speaker_color, true );
+    data.read( "challenge", challenge, true );
+    data.read( "player_response", player_response, true );
+    data.read( "remote_name", remote_name, true );
+    data.read( "is_computer", is_computer, true );
+    data.read( "is_not_conversation", is_not_conversation, true );
+    data.read( "is_remote", is_remote, true );
+    data.read( "append_challenge", append_challenge, true );
+    data.read( "options", options, true );
+}
+
+struct owned_dialogue_session {
+    uint64_t session_id = 0;
+    bool radio_contact = false;
+    std::string remote_name;
+    dialogue session;
+    dialogue_window window;
+    dialogue_view_prompt current_prompt;
+
+    owned_dialogue_session( uint64_t id, std::unique_ptr<talker> alpha,
+                            std::unique_ptr<talker> beta, bool radio, bool is_computer,
+                            bool is_not_conversation, std::string remote )
+        : session_id( id ), radio_contact( radio ), remote_name( std::move( remote ) ),
+          session( std::move( alpha ), std::move( beta ), {} ) {
+        window.is_computer = is_computer;
+        window.is_not_conversation = is_not_conversation;
+        if( !remote_name.empty() ) {
+            window.is_remote = true;
+            window.remote_name = remote_name;
+        }
+    }
+
+    ~owned_dialogue_session() {
+        cancel();
+    }
+
+    std::string activity_id() const {
+        return "dialogue:" + std::to_string( session_id );
+    }
+
+    const dialogue_view_prompt &prompt() const {
+        return current_prompt;
+    }
+
+    bool participants_alive() const {
+        const Character *alpha = session.actor( false ) ?
+                                 session.actor( false )->get_const_character() : nullptr;
+        const Creature *beta = session.actor( true ) ?
+                               session.actor( true )->get_const_creature() : nullptr;
+        return alpha != nullptr && !alpha->is_dead_state() && beta != nullptr &&
+               !beta->is_dead_state();
+    }
+
+    void snapshot_prompt( const std::string &player_response, bool append_challenge ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        current_prompt = {};
+        current_prompt.session_id = session_id;
+        current_prompt.response_revision = session.response_revision();
+        current_prompt.speaker_name = session.speaker_name( window );
+        npc *npc_actor = session.actor( true ) ? session.actor( true )->get_npc() : nullptr;
+        current_prompt.speaker_color = string_from_color(
+                                           npc_actor ? npc_actor->basic_symbol_color() : c_red );
+        current_prompt.challenge = session.prepared_challenge();
+        current_prompt.player_response = player_response;
+        current_prompt.remote_name = window.remote_name;
+        current_prompt.is_computer = window.is_computer;
+        current_prompt.is_not_conversation = window.is_not_conversation;
+        current_prompt.is_remote = window.is_remote;
+        current_prompt.append_challenge = append_challenge;
+        current_prompt.options.reserve( session.responses.size() );
+        for( std::size_t i = 0; i < session.responses.size(); ++i ) {
+            talk_response &response = session.responses[i];
+            const talk_data line = response.create_option_line(
+                                       session, input_event(), window.is_computer );
+            const std::set<dialogue_consequence> consequences =
+                response.get_consequences( session );
+            dialogue_view_option option;
+            option.text = line.text;
+            option.color = string_from_color( line.color );
+            option.selectable = !( i < session.response_condition_exists.size() &&
+                                   i < session.response_condition_eval.size() &&
+                                   session.response_condition_exists[i] &&
+                                   !session.response_condition_eval[i] );
+            option.confirm_hostile = consequences.count( dialogue_consequence::hostile ) > 0;
+            option.confirm_helpless = consequences.count( dialogue_consequence::helpless ) > 0;
+            option.quit_candidate = option.selectable &&
+                                    response.trial.calc_chance( session ) >= 100 &&
+                                    response.success.effects.empty() &&
+                                    response.success.next_topic.id == "TALK_DONE";
+            current_prompt.options.push_back( std::move( option ) );
+        }
+    }
+
+    void finish( Character &who ) {
+        const character_action_guard actor( who );
+        const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
+        const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
+        get_avatar().dialogue_by_radio = radio_contact;
+        get_avatar().dialogue_remote_name = remote_name;
+        const activity_execution previous = who.activity.execution();
+        who.activity.set_execution( activity_execution::authoritative );
+        const on_out_of_scope restore_execution( [&]() {
+            if( actor ) {
+                who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+            }
+        } );
+        session.finish_conversation();
+        if( actor && who.activity.id() == ::activity_id( "ACT_AIM" ) && !who.has_weapon() ) {
+            who.cancel_activity();
+        }
+    }
+
+    void cancel() {
+        if( session.conversation_active() ) {
+            const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
+            const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
+            get_avatar().dialogue_by_radio = radio_contact;
+            get_avatar().dialogue_remote_name = remote_name;
+            if( session.reason.empty() ) {
+                session.reason = "cancelled";
+            }
+            session.finish_conversation();
+        }
+    }
+
+    bool start( Character &who ) {
+        const character_action_guard actor( who );
+        const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
+        const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
+        get_avatar().dialogue_by_radio = radio_contact;
+        get_avatar().dialogue_remote_name = remote_name;
+        const activity_execution previous = who.activity.execution();
+        who.activity.set_execution( activity_execution::authoritative );
+        const on_out_of_scope restore_execution( [&]() {
+            if( actor ) {
+                who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+            }
+        } );
+        if( session.begin_conversation( radio_contact, "", false ) !=
+            dialogue_start_result::started ) {
+            return false;
+        }
+        if( !actor || session.done || !session.prepare_topic() ) {
+            if( actor ) {
+                finish( who );
+            } else {
+                cancel();
+            }
+            return false;
+        }
+        snapshot_prompt( {}, true );
+        return true;
+    }
+
+    bool choose( Character &who, const JsonObject &request ) {
+        if( request.has_member( "debug" ) || request.has_member( "debug_topic" ) ||
+            request.has_member( "force_debug_topic" ) ||
+            request.has_member( "debug_allow_unavailable" ) ||
+            request.has_member( "topic" ) || request.has_member( "effect" ) ) {
+            return true;
+        }
+        if( !participants_alive() ) {
+            finish( who );
+            return false;
+        }
+        const int64_t raw_session = ( request.has_member( "dialogue_session" ) ?
+                                      request.get_int64( "dialogue_session" ) : 0 );
+        const int64_t raw_revision = ( request.has_member( "response_revision" ) ?
+                                       request.get_int64( "response_revision" ) : 0 );
+        if( raw_session <= 0 || static_cast<uint64_t>( raw_session ) != session_id ||
+            raw_revision <= 0 ) {
+            return true;
+        }
+        const uint64_t revision = static_cast<uint64_t>( raw_revision );
+        const character_action_guard actor( who );
+        const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
+        const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
+        get_avatar().dialogue_by_radio = radio_contact;
+        get_avatar().dialogue_remote_name = remote_name;
+        const activity_execution previous = who.activity.execution();
+        who.activity.set_execution( activity_execution::authoritative );
+        const on_out_of_scope restore_execution( [&]() {
+            if( actor ) {
+                who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+            }
+        } );
+
+        std::optional<talk_topic> selected;
+        std::string chosen_text;
+        if( request.has_string( "special_action" ) ) {
+            selected = session.select_special_talk(
+                           request.get_string( "special_action" ), revision, window );
+            if( !selected ) {
+                return true;
+            }
+        } else if( request.has_int( "response_index" ) ) {
+            const int raw_index = request.get_int( "response_index", -1 );
+            if( raw_index < 0 ) {
+                return true;
+            }
+            const std::size_t index = static_cast<std::size_t>( raw_index );
+            if( revision == session.response_revision() &&
+                index < current_prompt.options.size() ) {
+                chosen_text = current_prompt.options[index].text;
+            }
+            selected = session.select_response( index, revision, false );
+            if( !selected ) {
+                if( !actor || !participants_alive() || session.done ) {
+                    if( actor ) {
+                        finish( who );
+                    } else {
+                        cancel();
+                    }
+                    return false;
+                }
+                if( !session.responses_pending() ) {
+                    if( session.topic_stack.empty() ) {
+                        finish( who );
+                        return false;
+                    }
+                    session.gen_responses( session.topic_stack.back() );
+                    if( session.responses.empty() ) {
+                        finish( who );
+                        return false;
+                    }
+                    snapshot_prompt( {}, false );
+                }
+                return true;
+            }
+        } else {
+            return true;
+        }
+
+        if( !actor || !session.advance_conversation( *selected ) || session.done ||
+            !session.prepare_topic() ) {
+            if( actor ) {
+                finish( who );
+            } else {
+                cancel();
+            }
+            return false;
+        }
+        snapshot_prompt( chosen_text, true );
+        return true;
+    }
+};
+
 void craft_notice::serialize( JsonOut &out ) const
 {
     out.start_object();
@@ -281,6 +612,80 @@ bool resume_craft( Character &who, map &here, const JsonObject &request )
     return true;
 }
 
+bool start_read( Character &who, map &here, const JsonObject &request )
+{
+    if( who.activity || who.is_dead_state() || who.get_moves() <= 0 ) {
+        return false;
+    }
+    item_source identity;
+    request.read( "book", identity, true );
+    item_location book = resolve_item_source( who, here, identity );
+    if( !book || !book->is_book() || book->get_use( "learn_spell" ) ||
+        activity_handlers::activity_item_reserved_for_other( *book, who ) ) {
+        return false;
+    }
+    item_location ereader;
+    if( request.has_member( "ereader" ) ) {
+        request.read( "ereader", identity, true );
+        ereader = resolve_item_source( who, here, identity );
+        if( !ereader || !ereader->ammo_sufficient( &who ) ||
+            activity_handlers::activity_item_reserved_for_other( *ereader, who ) ||
+            !ereader->has_item( *book ) ) {
+            return false;
+        }
+    }
+    if( book.is_efile() && !ereader ) {
+        return false;
+    }
+    std::vector<std::string> reasons;
+    const Character *reader = who.get_book_reader( *book, reasons );
+    if( !reader ) {
+        for( const std::string &reason : reasons ) {
+            who.add_msg_if_player( m_bad, reason );
+        }
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    const bool identified = who.has_identified( book->typeId() );
+    if( identified && book->typeId() == itype_id( "guidebook" ) ) {
+        who.add_msg_if_player( m_info, get_hint() );
+        get_event_bus().send<event_type::reads_book>( who.getID(), book->typeId() );
+        if( lifetime ) {
+            who.mod_moves( -100 );
+        }
+        return true;
+    }
+    const bool martial = book->type->use_methods.count( "MA_MANUAL" ) != 0;
+    if( identified && martial && ( who.get_stamina() < who.get_stamina_max() / 10 ||
+                                   who.has_martialart( martial_art_learned_from( *book->type ) ) ) ) {
+        return false;
+    }
+    const bool continuous = identified && request.get_bool( "continuous", false );
+    int learner_id = -1;
+    if( continuous && !martial ) {
+        const int selected = request.get_bool( "self", false ) ? who.getID().get_value() :
+                             request.get_int( "learner", -1 );
+        const Character *learner = selected == who.getID().get_value() ? &who : nullptr;
+        for( Character *helper : who.get_crafting_helpers() ) {
+            if( helper->getID().get_value() == selected ) {
+                learner = helper;
+                break;
+            }
+        }
+        if( !learner || learner->get_book_mastery( *book ) != book_mastery::LEARNING ||
+            ( learner != reader && learner->is_deaf() ) ||
+            ( !learner->fun_to_read( *book ) && !learner->has_morale_to_read() ) ) {
+            return false;
+        }
+        learner_id = selected;
+    }
+    player_activity activity( read_activity_actor( who.time_to_read( *book, *reader ), book,
+                              ereader, continuous, learner_id ) );
+    activity.set_execution( activity_execution::authoritative );
+    who.assign_activity( activity );
+    return lifetime && owns_inventory_activity( who );
+}
+
 bool start_firstaid( Character &who, map &here, const JsonObject &request )
 {
     item_source identity;
@@ -336,13 +741,26 @@ bool begin_client_inventory_activity( const player_activity &activity )
     view.item_use_progress.clear();
     view.liquid_source_uid = 0;
     view.remote_security_prompt = false;
+    view.tree_direction_prompt = false;
     view.repair_prompt.reset();
+    view.disassembly_prompt.reset();
+    view.spell_prompt.reset();
+    view.zone_editor.reset();
+    view.peek.reset();
+    view.pending_automove.reset();
+    view.automatic_mining = false;
+    view.automatic_mining_succeeded = false;
+    view.spellbook_ready = false;
+    view.spellbook_recast = false;
     view.remote_vehicle_target = 0;
     view.remote_controller = {};
+    view.remote_controller_preview.reset();
     view.craft_decision.clear();
     view.construction_decision.clear();
     view.construction_prompt.clear();
     view.construction_text = false;
+    view.dialogue_prompt.reset();
+    view.dialogue_ui.reset();
     view.activity.clear();
     get_avatar().assign_activity( activity );
     return true;
@@ -363,6 +781,19 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     bionic_activation_choices choices;
     request.read( "martial_style", choices.martial_style );
     request.read( "water_corpse", choices.water_corpse );
+    request.read( "weapon", choices.weapon );
+    request.read( "radio", choices.radio );
+    if( request.has_member( "remote_vehicle_action" ) || request.has_member( "remote_vehicle_uid" ) ) {
+        item_activation_choices remote;
+        request.read( "remote_vehicle_action", remote.remote_vehicle_action );
+        request.read( "remote_vehicle_uid", remote.remote_vehicle_uid );
+        choices.remote_vehicle = std::move( remote );
+    }
+    if( request.has_object( "unwield" ) ) {
+        const JsonObject choice = request.get_object( "unwield" );
+        choices.unwield = item_disposition{ choice.get_string( "action" ),
+                                            choice.get_int64( "container" ), choice.get_int64( "pocket" ) };
+    }
     tripoint_abs_ms target;
     if( request.read( "target", target ) ) {
         choices.target = target;
@@ -373,8 +804,43 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     refresh_observers = action == bionic_action::activate &&
                         ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) ||
                           type == bionic_id( "bio_resonator" ) || type == bionic_id( "bio_magnet" ) ||
-                          type == bionic_id( "bio_water_extractor" ) );
+                          type == bionic_id( "bio_water_extractor" ) || type == bionic_id( "bio_teleport" ) ||
+                          type == bionic_id( "bio_remote" ) );
     return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ), type, choices, action );
+}
+
+bool start_spell( Character &who, const JsonObject &request )
+{
+    const character_action_guard lifetime( who );
+    const spell_id id( request.get_string( "spell" ) );
+    if( !lifetime || who.activity || who.get_moves() <= 0 || !id.is_valid() ||
+        !who.magic->knows_spell( id ) || who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ) {
+        return false;
+    }
+    std::optional<tripoint_abs_ms> target;
+    request.read( "target", target );
+    spell selected = who.magic->get_spell( id );
+    if( target ) {
+        spell_casting_choice choice;
+        choice.target = target;
+        if( !spell_needs_target_choice( selected, who ) ||
+            !valid_spell_casting_choice( who, selected, choice, true, false ) ) {
+            return false;
+        }
+    }
+    const activity_execution previous = who.activity.execution();
+    who.activity.set_execution( activity_execution::authoritative );
+    const on_out_of_scope restore_execution( [&]() {
+        if( lifetime ) {
+            who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+        }
+    } );
+    const bool started = who.cast_spell( selected, false,
+                                         target ? std::make_optional( get_map().get_bub( *target ) ) : std::nullopt );
+    if( lifetime && started ) {
+        who.magic->last_spell = id;
+    }
+    return started;
 }
 
 bool start_item_use( Character &who, map &here, const JsonObject &request,
@@ -392,8 +858,14 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     if( request.has_member( "timer_seconds" ) ) {
         choices.timer_seconds = request.get_int( "timer_seconds" );
     }
+    request.read( "radio", choices.radio );
     request.read( "remote_vehicle_action", choices.remote_vehicle_action );
     request.read( "remote_vehicle_uid", choices.remote_vehicle_uid );
+    request.read( "fire_target", choices.fire_target );
+    request.read( "fire_tinder", choices.fire_tinder );
+    request.read( "lumber", choices.lumber );
+    request.read( "salvage", choices.salvage );
+    request.read( "salvage_batch", choices.salvage_batch );
     if( kind == "examine_pry" ) {
         return execute_owned_prying( who, source, target,
                                      request.get_bool( "allow_theft", false ),
@@ -401,7 +873,16 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     }
     const bool automatic = kind == "auto_mine";
     const std::string method = request.get_string( "method" );
-    state.refresh_observers = state.refresh_observers || method == "REMOTEVEH";
+    state.refresh_observers = state.refresh_observers || method == "REMOTEVEH" ||
+                              method == "firestarter" || method == "salvage" || method == "LUMBER";
+    if( method == "firestarter" ) {
+        if( here.inbounds( target ) ) {
+            state.changed_tiles.push_back( target );
+        }
+        if( choices.fire_target && here.inbounds( choices.fire_target->position ) ) {
+            state.changed_tiles.push_back( choices.fire_target->position );
+        }
+    }
     if( automatic && ( source != who.get_wielded_item() || method.empty() ||
                        method != automatic_mining_method( who, here, target ) ) ) {
         return false;
@@ -618,6 +1099,141 @@ bool inventory_activity_view( const player_activity &activity )
            ( insert && insert->is_client_view() ) || ( consume && consume->is_client_view() );
 }
 
+static void start_movement( Character &who, map &here, const JsonObject &request, bool vertical )
+{
+    if( who.activity || who.get_moves() <= 0 ) {
+        return;
+    }
+    tripoint_abs_ms origin;
+    tripoint_rel_ms direction;
+    walk_move_choices choices;
+    vertical_move_selection vertical_choice;
+    if( vertical ) {
+        request.read( "vertical", vertical_choice, true );
+        origin = vertical_choice.origin;
+        if( ( vertical_choice.direction != -1 && vertical_choice.direction != 1 ) ||
+            ( vertical_choice.action != "stairs" && vertical_choice.action != "ladder" &&
+              vertical_choice.action != "climb" && vertical_choice.action != "ledge_jump" &&
+              vertical_choice.action != "ledge_fall" && vertical_choice.action != "ledge_glide" ) ) {
+            return;
+        }
+    } else {
+        request.read( "origin", origin, true );
+        request.read( "direction", direction, true );
+        request.read( "choices", choices, true );
+        if( direction.z() != 0 || std::abs( direction.x() ) > 1 || std::abs( direction.y() ) > 1 ||
+            direction == tripoint_rel_ms::zero || !choices.destination ) {
+            return;
+        }
+    }
+    const move_mode_id mode( request.get_string( "mode" ) );
+    if( origin != who.pos_abs() || !mode.is_valid() ) {
+        return;
+    }
+    const character_action_guard lifetime( who );
+    if( mode != who.current_movement_mode() && who.can_switch_to( mode ) ) {
+        const int cost = who.move_mode_switch_cost( who.current_movement_mode(), mode );
+        who.set_movement_mode( mode );
+        if( lifetime && who.current_movement_mode() == mode ) {
+            who.mod_moves( -cost );
+        }
+    }
+    if( !lifetime || who.pos_abs() != origin ) {
+        return;
+    }
+    const activity_execution previous = who.activity.execution();
+    who.activity.set_execution( activity_execution::authoritative );
+    const on_out_of_scope restore_execution( [&]() {
+        if( lifetime && !who.activity ) {
+            who.activity.set_execution( previous );
+        }
+    } );
+    if( vertical ) {
+        execute_vertical_move( who, here, vertical_choice );
+    } else {
+        avatar_action::move( who, here, direction, &choices );
+    }
+}
+
+static void start_owned_dialogue( Character &who, map &here, const JsonObject &request,
+                                  inventory_activity_host_state &state )
+{
+    if( who.activity || state.dialogue_session || who.is_dead_state() || who.get_moves() <= 0 ||
+        state.next_dialogue_session == std::numeric_limits<uint64_t>::max() ) {
+        return;
+    }
+    if( request.has_member( "debug" ) || request.has_member( "debug_topic" ) ||
+        request.has_member( "force_debug_topic" ) ||
+        request.has_member( "debug_allow_unavailable" ) ||
+        request.has_member( "topic" ) || request.has_member( "effect" ) ) {
+        return;
+    }
+    if( who.has_trait( trait_id( "PROF_FOODP" ) ) &&
+        !( who.is_wearing( itype_id( "foodperson_mask" ) ) ||
+           who.is_wearing( itype_id( "foodperson_mask_on" ) ) ) ) {
+        who.add_msg_if_player( m_warning, _( "You can't speak without your face!" ) );
+        return;
+    }
+    const bool radio_contact = request.get_bool( "radio_contact", false );
+    const bool is_computer = request.get_bool( "is_computer", false );
+    const bool is_not_conversation = request.get_bool( "is_not_conversation", false );
+    const std::string remote_name = request.get_string( "remote_name", "" );
+
+    std::unique_ptr<talker> beta;
+    if( request.has_int( "target_npc" ) ) {
+        const int raw_id = request.get_int( "target_npc", -1 );
+        if( raw_id <= 0 ) {
+            return;
+        }
+        const character_id target_id( raw_id );
+        npc *guy = radio_contact ? g->find_npc( target_id ) : g->critter_by_id<npc>( target_id );
+        if( !guy || guy == &who || guy->is_dead() || guy->is_hallucination() ||
+            is_player_proxy( *guy ) ) {
+            return;
+        }
+        if( !radio_contact &&
+            ( who.posz() != guy->posz() || !who.sees( here, guy->pos_bub( here ) ) ||
+              rl_dist( who.pos_abs(), guy->pos_abs() ) > SEEX * 2 ) ) {
+            return;
+        }
+        beta = get_talker_for( *guy );
+    } else if( request.has_member( "target" ) && !radio_contact ) {
+        tripoint_abs_ms target_pos;
+        request.read( "target", target_pos, true );
+        if( !here.inbounds( target_pos ) ) {
+            return;
+        }
+        Creature *critter = get_creature_tracker().creature_at( here.get_bub( target_pos ) );
+        if( npc *guy = critter ? critter->as_npc() : nullptr ) {
+            if( guy == &who || guy->is_dead() || guy->is_hallucination() ||
+                is_player_proxy( *guy ) || who.posz() != guy->posz() ||
+                !who.sees( here, guy->pos_bub( here ) ) ||
+                rl_dist( who.pos_abs(), guy->pos_abs() ) > SEEX * 2 ) {
+                return;
+            }
+            beta = get_talker_for( *guy );
+        } else if( monster *mon = critter ? critter->as_monster() : nullptr ) {
+            if( mon->is_dead() || !mon->has_flag( mon_flag_CONVERSATION ) ||
+                mon->type->chat_topics.empty() || who.posz() != mon->posz() ||
+                !who.sees( here, mon->pos_bub( here ) ) ||
+                rl_dist( who.pos_abs(), mon->pos_abs() ) > SEEX * 2 ) {
+                return;
+            }
+            beta = get_talker_for( *mon );
+        }
+    }
+    if( !beta ) {
+        return;
+    }
+
+    auto session = std::make_shared<owned_dialogue_session>(
+                       ++state.next_dialogue_session, get_talker_for( who ), std::move( beta ),
+                       radio_contact, is_computer, is_not_conversation, remote_name );
+    if( session->start( who ) ) {
+        state.dialogue_session = std::move( session );
+    }
+}
+
 std::string execute_inventory_activity_request( Character &who, map &here,
         const JsonObject &request,
         inventory_activity_host_state &state, pickup_host_state &inventory, bool authorized )
@@ -625,6 +1241,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     const int64_t sequence = request.get_int64( "request" );
     const std::string operation = request.get_string( "operation" );
     state.refresh_observers = false;
+    state.changed_tiles.clear();
+    bool zone_editor_requested = false;
+    std::optional<vertical_move_prompt> vertical_prompt;
+    bool zone_action_menu = false;
     const character_action_guard lifetime( who );
     if( !lifetime ) {
         return {};
@@ -639,14 +1259,46 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( native_craft( who ) ) {
         state.tracks_crafting = state.tracks_body = state.tracks_needs = true;
     }
+    if( state.dialogue_session ) {
+        state.tracks_dialogue = state.tracks_body = state.tracks_needs = true;
+        if( !state.dialogue_session->participants_alive() ) {
+            state.dialogue_session->finish( who );
+            state.dialogue_session.reset();
+        }
+    }
     if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
         state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
+                                  who.activity.id() == activity_id( "ACT_START_FIRE" ) ||
+                                  who.activity.id() == activity_id( "ACT_CHOP_TREE" ) ||
+                                  who.activity.id() == activity_id( "ACT_CHOP_LOGS" ) ||
+                                  who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) ||
+                                  who.activity.id() == activity_id( "ACT_CHURN" ) ||
+                                  who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) ||
+                                  who.activity.id() == activity_id( "ACT_VEHICLE_FOLD" ) ||
+                                  who.activity.id() == activity_id( "ACT_VEHICLE_UNFOLD" ) ||
                                   who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
                                   who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) ||
                                   who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) ||
+                                  who.activity.id() == activity_id( "ACT_SPELLCASTING" ) ||
+                                  who.activity.id() == activity_id( "ACT_MOVE_LOOT" ) ||
+                                  who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) ||
+                                  who.activity.id() == activity_id( "ACT_MOVE_ITEMS" ) ||
+                                  who.activity.id() == activity_id( "ACT_GLIDE" ) ||
+                                  who.activity.id() == activity_id( "ACT_TRAIN" ) ||
+                                  who.activity.id() == activity_id( "ACT_WAIT_NPC" ) ||
+                                  who.activity.id() == activity_id( "ACT_SOCIALIZE" ) ||
+                                  dynamic_cast<const butchery_activity_actor *>( who.activity.actor.get() ) ||
+                                  dynamic_cast<const disassemble_activity_actor *>( who.activity.actor.get() ) ||
+                                  dynamic_cast<const zone_activity_actor *>( who.activity.actor.get() ) ||
+                                  dynamic_cast<const multi_zone_activity_actor *>( who.activity.actor.get() ) ||
                                   is_vehicle_heating( who.activity ) ||
                                   dynamic_cast<repair_activity_actor *>( who.activity.actor.get() );
+        if( who.activity.id() == activity_id( "ACT_START_FIRE" ) ) {
+            for( const tripoint_bub_ms &p : here.points_in_radius( who.pos_bub( here ), 1 ) ) {
+                state.changed_tiles.push_back( here.get_abs( p ) );
+            }
+        }
     }
     if( const auto *consume = native_consume( who ) ) {
         state.refresh_observers = state.refresh_observers || consume->consumes_vehicle_water();
@@ -654,22 +1306,151 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
         state.last_request = sequence;
-        if( operation == "start" ) {
+        state.peek.reset();
+        state.spellbook_ready = false;
+        if( operation == "start" && !state.dialogue_session ) {
             state.needs_placement = false;
             const std::string kind = request.get_string( "kind", "reload" );
+            state.tracks_dialogue = kind == "dialogue";
+            state.tracks_walking = kind == "walk" || kind == "vertical_move" || kind == "vertical_query" ||
+                                   kind == "ledge_peek" || kind == "peek";
             state.tracks_crafting = kind == "craft" || kind == "craft_resume";
             state.tracks_item_use = kind == "item_use" || kind == "auto_mine" || kind == "examine_pry" ||
-                                    kind == "bionic_activation" || kind == "bionic_deactivation";
+                                    kind == "bionic_activation" || kind == "bionic_deactivation" ||
+                                    kind == "spell" || kind == "spellbook" || kind == "read" || kind == "butcher" ||
+                                    kind == "disassemble" || kind == "farming";
             if( !who.activity ) {
                 state.automatic_mining_target.reset();
             }
             const bool construction_request = kind == "construction" || kind == "construction_auto" ||
                                               kind == "construction_resume" || kind == "construction_cancel";
             state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request ||
-                                state.tracks_item_use || kind == "martial_style" || kind == "vehicle_control";
-            state.tracks_needs = state.tracks_needs || construction_request;
+                                state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ||
+                                kind == "martial_style" || kind == "vehicle_control" ||
+                                kind == "radio_car_drive" || kind == "zone_sort" || kind == "grab" || kind == "haul";
+            state.tracks_needs = state.tracks_needs || construction_request || state.tracks_dialogue;
             state.healing_patient = character_id();
-            if( kind == "vehicle_control" ) {
+            if( kind == "zone_query" ) {
+                zone_editor_requested = !who.activity;
+                zone_action_menu = request.get_bool( "zone_actions", false );
+            } else if( kind == "farming" ) {
+                farming_command command;
+                request.read( "farm", command, true );
+                state.refresh_observers = true;
+                if( here.inbounds( command.target.position ) ) {
+                    state.changed_tiles.push_back( command.target.position );
+                }
+                state.changed_tiles.push_back( who.pos_abs() );
+                // Selected supplies and sap destinations may be on another
+                // nearby tile. Resolve their real positions before moving them.
+                for( const auto *source : {
+                         &command.tap, &command.container
+                     } ) {
+                    if( *source ) {
+                        const item_location value = ::resolve_item_source( who, here, **source,
+                                                    pickup_range );
+                        if( value ) {
+                            state.changed_tiles.push_back( value.pos_abs() );
+                        }
+                    }
+                }
+                if( command.sap_destination && command.container ) {
+                    const item_location source = ::resolve_item_source( who, here, *command.container,
+                                                 pickup_range );
+                    liquid_dest_opt destination;
+                    std::optional<int> tank;
+                    if( source && resolve_liquid_destination( who, *command.sap_destination, *source,
+                            destination, tank ) ) {
+                        const tripoint_abs_ms target = destination.dest_opt == LD_ITEM ?
+                                                       destination.item_loc.pos_abs() :
+                                                       here.get_abs( destination.dest_opt == LD_VEH ?
+                                                               destination.veh->bub_part_pos( here, *tank ) : destination.pos );
+                        if( here.inbounds( target ) ) {
+                            state.changed_tiles.push_back( target );
+                        }
+                    }
+                }
+                execute_farming_command( who, command );
+            } else if( kind == "zone_work" ) {
+                state.tracks_body = state.tracks_needs = state.refresh_observers = true;
+                start_owned_zone_work( who, request.get_string( "zone_action" ) );
+            } else if( kind == "zone_edit" ) {
+                zone_edit_batch batch;
+                request.read( "zones", batch, true );
+                state.refresh_observers = zone_edit_session::apply( who, zone_manager::get_manager(), batch );
+                if( !state.refresh_observers ) {
+                    who.add_msg_if_player( m_warning,
+                                           _( "The zones could not be changed. Reopen the zone manager to refresh them." ) );
+                }
+            } else if( kind == "zone_sort" ) {
+                const int scope = request.get_int( "scope", -1 );
+                state.tracks_needs = true;
+                state.refresh_observers = true;
+                if( scope >= 0 && scope <= static_cast<int>( zone_scope::personal_only ) ) {
+                    start_owned_zone_sort( who, static_cast<zone_scope>( scope ) );
+                }
+            } else if( kind == "peek" ) {
+                tripoint_abs_ms origin;
+                tripoint_abs_ms target;
+                request.read( "origin", origin, true );
+                request.read( "target", target, true );
+                state.peek = authorize_peek( who, here, origin, target,
+                                             request.get_int( "direction" ), sequence );
+            } else if( kind == "ledge_peek" ) {
+                tripoint_abs_ms origin;
+                tripoint_abs_ms ledge;
+                request.read( "origin", origin, true );
+                request.read( "ledge", ledge, true );
+                state.peek = authorize_ledge_peek( who, here, origin, ledge, sequence );
+            } else if( kind == "vertical_query" ) {
+                tripoint_abs_ms origin;
+                request.read( "origin", origin, true );
+                const int direction = request.get_int( "direction" );
+                if( !who.activity && who.get_moves() > 0 && origin == who.pos_abs() &&
+                    ( direction == -1 || direction == 1 ) ) {
+                    if( request.get_bool( "peeking", false ) ) {
+                        vertical_prompt = make_peek_prompt( who, here, direction );
+                    } else if( request.has_member( "ledge" ) ) {
+                        tripoint_abs_ms ledge;
+                        request.read( "ledge", ledge, true );
+                        if( direction == -1 && here.inbounds( ledge ) ) {
+                            vertical_prompt = request.get_bool( "ledge_menu", false ) ?
+                                              make_ledge_move_prompt( who, here, here.get_bub( ledge ) ) :
+                                              make_climb_down_prompt( who, here, here.get_bub( ledge ) );
+                        }
+                    } else {
+                        vertical_prompt = make_vertical_move_prompt( who, here, direction );
+                    }
+                }
+            } else if( kind == "walk" || kind == "vertical_move" ) {
+                state.refresh_observers = true;
+                start_movement( who, here, request, kind == "vertical_move" );
+            } else if( kind == "take_down_furniture" ) {
+                deployed_furniture_selection choice;
+                request.read( "furniture", choice, true );
+                if( !who.activity && who.get_moves() > 0 ) {
+                    state.refresh_observers = take_down_deployed_furniture( who, here, choice );
+                    if( state.refresh_observers ) {
+                        state.changed_tiles.push_back( choice.target );
+                    }
+                }
+            } else if( kind == "grab" ) {
+                grab_selection choice;
+                request.read( "grab", choice, true );
+                state.refresh_observers = execute_grab( who, here, choice );
+            } else if( kind == "haul" ) {
+                hauling_selection choice;
+                request.read( "haul", choice, true );
+                state.refresh_observers = execute_hauling( who, here, choice );
+            } else if( kind == "radio_car_drive" ) {
+                radio_car_binding expected;
+                point_rel_ms direction;
+                request.read( "car", expected.car, true );
+                request.read( "position", expected.position, true );
+                request.read( "direction", direction, true );
+                state.refresh_observers = true;
+                drive_radio_car( who, here, direction, expected );
+            } else if( kind == "vehicle_control" ) {
                 vehicle_control_selection selection;
                 request.read( "vehicle_control", selection, true );
                 state.refresh_observers = true;
@@ -692,6 +1473,45 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             } else if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
                 start_bionic_action( who, request, kind == "bionic_activation" ?
                                      bionic_action::activate : bionic_action::deactivate, state.refresh_observers );
+            } else if( kind == "spellbook" ) {
+                if( !who.activity && who.get_moves() > 0 ) {
+                    state.refresh_observers = true;
+                    who.magic->clear_opens_spellbook_data();
+                    get_event_bus().send<event_type::opens_spellbook>( who.getID() );
+                    if( lifetime && !who.activity ) {
+                        who.magic->evaluate_opens_spellbook_data( who );
+                        state.spellbook_ready = true;
+                        state.spellbook_recast = request.get_bool( "recast", false );
+                    }
+                }
+            } else if( kind == "spell" ) {
+                start_spell( who, request );
+            } else if( kind == "read" ) {
+                start_read( who, here, request );
+            } else if( kind == "butcher" ) {
+                std::vector<butchery_selection> selected;
+                request.read( "corpses", selected, true );
+                state.refresh_observers = true;
+                const activity_execution previous = who.activity.execution();
+                who.activity.set_execution( activity_execution::authoritative );
+                const on_out_of_scope restore_execution( [&]() {
+                    if( lifetime ) {
+                        who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+                    }
+                } );
+                start_owned_butchery( who, selected );
+            } else if( kind == "disassemble" ) {
+                std::vector<disassembly_selection> selected;
+                request.read( "disassembly", selected, true );
+                state.refresh_observers = true;
+                const activity_execution previous = who.activity.execution();
+                who.activity.set_execution( activity_execution::authoritative );
+                const on_out_of_scope restore_execution( [&]() {
+                    if( lifetime ) {
+                        who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+                    }
+                } );
+                start_owned_disassembly( who, selected, request.get_bool( "recursive", false ) );
             } else if( state.tracks_item_use ) {
                 start_item_use( who, here, request, state, kind );
             } else if( kind == "reload" ) {
@@ -713,12 +1533,27 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 if( const auto *firstaid = native_firstaid( who ) ) {
                     state.healing_patient = firstaid->patient_id();
                 }
+            } else if( kind == "dialogue" ) {
+                state.refresh_observers = true;
+                start_owned_dialogue( who, here, request, state );
             }
             if( !lifetime ) {
                 return {};
             }
-            state.tracks_needs = kind == "consume" || state.tracks_crafting ||
-                                 state.tracks_item_use || construction_request || native_consume( who );
+            state.tracks_needs = kind == "consume" || state.tracks_crafting || state.tracks_dialogue ||
+                                 state.tracks_item_use || state.tracks_walking || construction_request || kind == "grab" ||
+                                 native_consume( who );
+        } else if( state.dialogue_session &&
+                   request.get_string( "activity" ) == state.dialogue_session->activity_id() ) {
+            if( operation == "cancel" ) {
+                state.dialogue_session->cancel();
+                state.dialogue_session.reset();
+            } else if( operation == "choose" && who.get_moves() > 0 ) {
+                state.refresh_observers = true;
+                if( !state.dialogue_session->choose( who, request ) ) {
+                    state.dialogue_session.reset();
+                }
+            }
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
             if( operation == "cancel" ) {
@@ -736,12 +1571,56 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     request.read( "vehicle_control", selection, true );
                     remote->apply_action( who, selection );
                 }
+            } else if( auto *casting = dynamic_cast<spellcasting_activity_actor *>
+                                       ( who.activity.actor.get() ) ) {
+                if( operation == "choose" && who.get_moves() > 0 && request.has_object( "spell_choice" ) ) {
+                    spell_casting_choice choice;
+                    request.read( "spell_choice", choice, true );
+                    casting->apply_choice( who, std::move( choice ) );
+                } else if( operation == "step" && who.get_moves() > 0 && !casting->pending_choice() ) {
+                    who.activity.do_turn( who );
+                }
+            } else if( auto *tree = dynamic_cast<chop_tree_activity_actor *>( who.activity.actor.get() ) ) {
+                if( operation == "choose" && who.get_moves() > 0 && request.has_member( "tree_direction" ) ) {
+                    tripoint_rel_ms direction;
+                    request.read( "tree_direction", direction, true );
+                    if( tree->apply_direction( who, direction ) ) {
+                        who.activity.do_turn( who );
+                    }
+                } else if( operation == "step" && who.get_moves() > 0 && !tree->pending_direction() ) {
+                    who.activity.do_turn( who );
+                }
             } else if( auto *repair = dynamic_cast<repair_activity_actor *>( who.activity.actor.get() ) ) {
                 if( operation == "choose" && who.get_moves() > 0 && request.has_object( "repair_choice" ) ) {
                     repair_activity_choice choice;
                     request.read( "repair_choice", choice, true );
                     repair->apply_choice( who, choice );
                 } else if( operation == "step" && who.get_moves() > 0 && !repair->waiting ) {
+                    who.activity.do_turn( who );
+                }
+            } else if( auto *disassemble = dynamic_cast<disassemble_activity_actor *>
+                                           ( who.activity.actor.get() ) ) {
+                if( operation == "choose" && who.get_moves() > 0 && request.has_object( "disassembly_choice" ) ) {
+                    disassembly_preparation choice;
+                    request.read( "disassembly_choice", choice, true );
+                    state.refresh_observers = true;
+                    disassemble->apply_preparation( who, std::move( choice ) );
+                } else if( operation == "choose" && who.get_moves() > 0 && request.has_object( "liquid" ) ) {
+                    unload_liquid_choice choice;
+                    request.read( "liquid", choice, true );
+                    state.refresh_observers = true;
+                    disassemble->apply_liquid_choice( who, choice, request.get_bool( "allow_consequences", false ) );
+                } else if( operation == "step" && who.get_moves() > 0 &&
+                           !disassemble->pending_preparation( who ) && !disassemble->pending_liquid( who ) ) {
+                    who.activity.do_turn( who );
+                }
+            } else if( auto *butcher = dynamic_cast<butchery_activity_actor *>( who.activity.actor.get() ) ) {
+                if( operation == "choose" && who.get_moves() > 0 && request.has_object( "liquid" ) ) {
+                    unload_liquid_choice choice;
+                    request.read( "liquid", choice, true );
+                    state.refresh_observers = true;
+                    butcher->apply_liquid_choice( who, choice, request.get_bool( "allow_consequences", false ) );
+                } else if( operation == "step" && who.get_moves() > 0 && !butcher->pending_liquid( who ) ) {
                     who.activity.do_turn( who );
                 }
             } else if( is_vehicle_heating( who.activity ) ) {
@@ -868,12 +1747,28 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( !actor ) {
         state.needs_placement = false;
     }
+    if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
+        state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
+    }
     const std::string combat = make_combat_result( who, inventory );
     std::ostringstream stream;
     JsonOut out( stream );
     out.start_object();
     out.member( "type", "inventory_activity_result" );
     out.member( "request", sequence );
+    if( zone_editor_requested ) {
+        out.member( "zone_actions", zone_action_menu );
+        out.member( "zone_editor" );
+        zone_edit_session( who, zone_manager::get_manager() ).write_view( out );
+    }
+    if( vertical_prompt ) {
+        out.member( "vertical_prompt", *vertical_prompt );
+    }
+    if( state.peek && state.peek->request == sequence ) {
+        out.member( "peek", *state.peek );
+    }
+    out.member( "spellbook_ready", state.spellbook_ready );
+    out.member( "spellbook_recast", state.spellbook_recast );
     const bool active = owns_inventory_activity( who );
     if( !active && state.automatic_mining_target ) {
         const tripoint_abs_ms destination = *state.automatic_mining_target;
@@ -893,15 +1788,36 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     const bool craft_progress = craft && craft->target();
     const bool explicit_progress = craft_progress || site;
     const int progress = craft_progress ? craft->target()->item_counter : site ? site->counter : 0;
-    out.member( "activity", active ? std::to_string( who.activity.identity_generation() ) : "" );
+    out.member( "activity", state.dialogue_session ? state.dialogue_session->activity_id() :
+                active ? std::to_string( who.activity.identity_generation() ) : "" );
     out.member( "moves_total", explicit_progress ? 10000000 : active ? who.activity.moves_total : 0 );
     out.member( "moves_left", explicit_progress ? 10000000 - std::clamp( progress, 0, 10000000 ) :
                 active ? who.activity.moves_left : 0 );
+    if( state.dialogue_session ) {
+        out.member( "dialogue_prompt", state.dialogue_session->prompt() );
+    }
     if( build ) {
         out.member( "construction_progress", build->get_progress_message( who.activity ) );
         out.member( "construction_decision", build->waiting_for() );
         out.member( "construction_prompt", build->choice_prompt() );
         out.member( "construction_text", build->choice_is_text() );
+    }
+    if( const auto *disassemble = dynamic_cast<const disassemble_activity_actor *>
+                                  ( who.activity.actor.get() ) ) {
+        if( const auto selection = disassemble->pending_preparation( who ) ) {
+            out.member( "disassembly_prompt", *selection );
+        }
+        if( const item *liquid = disassemble->pending_liquid( who ) ) {
+            out.member( "liquid_source_uid", liquid->uid().get_value() );
+            out.member( "liquid_preview", *liquid );
+        }
+    }
+    if( const auto *butcher = dynamic_cast<const butchery_activity_actor *>
+                              ( who.activity.actor.get() ) ) {
+        if( const item *liquid = butcher->pending_liquid( who ) ) {
+            out.member( "liquid_source_uid", liquid->uid().get_value() );
+            out.member( "liquid_preview", *liquid );
+        }
     }
     if( auto *water = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() ) ) {
         const auto preview = water->preview( who );
@@ -909,6 +1825,16 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             out.member( "liquid_source_uid", water->source_uid() );
             out.member( "liquid_preview", *preview );
         }
+    }
+    if( const auto *casting = dynamic_cast<const spellcasting_activity_actor *>
+                              ( who.activity.actor.get() ) ) {
+        if( casting->pending_choice() ) {
+            out.member( "spell_prompt", *casting->pending_choice() );
+        }
+    }
+    if( const auto *tree = dynamic_cast<const chop_tree_activity_actor *>
+                           ( who.activity.actor.get() ) ) {
+        out.member( "tree_direction_prompt", tree->pending_direction() );
     }
     if( const auto *repair = dynamic_cast<const repair_activity_actor *>( who.activity.actor.get() ) ) {
         if( repair->waiting ) {
@@ -926,8 +1852,16 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                              ( who.activity.actor.get() ) ) {
         out.member( "remote_security_prompt", remote->waiting_for_security() );
         out.member( "remote_vehicle_target", remote->waiting_for_action() ? remote->target_id() : 0 );
-        out.member( "remote_controller", capture_item_source( who, remote->source( who ) ) );
+        if( remote->uses_bionic() ) {
+            if( const item_location source = remote->source( who ) ) {
+                out.member( "remote_controller_preview", *source );
+            }
+        } else {
+            out.member( "remote_controller", capture_item_source( who, remote->source( who ) ) );
+        }
     }
+    out.member( "radio_car" );
+    write_radio_car_binding( who, here, out );
     out.member( "remote_vehicle" );
     write_remote_vehicle_binding( who, here, out );
     out.member( "controlling_vehicle", who.controlling_vehicle );
@@ -960,13 +1894,21 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         out.member( "body" );
         who.store_turn_state( out );
         out.member( "practice" );
-        const bool learned = state.tracks_item_use || ( state.tracks_crafting && ( !craft ||
-                             craft->waiting_for() == "repeat" || ( craft->target() &&
-                                     craft->target()->get_craft_results().stage >= craft_completion_stage::byproducts ) ) );
+        const bool learned = state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ||
+                             ( state.tracks_crafting &&
+                               ( !craft ||
+                                 craft->waiting_for() == "repeat" || ( craft->target() &&
+                                         craft->target()->get_craft_results().stage >= craft_completion_stage::byproducts ) ) );
         who.store_practice_state( out, learned );
+        out.member( "missions" );
+        write_mission_view( out, who );
     }
-    if( state.tracks_item_use ) {
+    if( state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ) {
         out.member( "lua_character_state", who.lua_character_state );
+    }
+    if( state.tracks_dialogue || state.tracks_item_use ) {
+        out.member( "casting_state" );
+        who.magic->store_casting_state( out );
     }
     out.member( "combat" );
     *out.get_stream() << combat;
@@ -989,10 +1931,16 @@ bool apply_inventory_activity_result( const JsonObject &response )
     if( !apply_combat_result( get_avatar(), combat, session.client_pickup ) ) {
         return true;
     }
+    if( response.has_object( "casting_state" ) ) {
+        get_avatar().magic->load_casting_state( response.get_object( "casting_state" ) );
+    }
     if( response.read( "controlling_vehicle", get_avatar().controlling_vehicle ) ) {
         set_client_ctrl_veh( get_avatar().controlling_vehicle );
     }
     response.read( "in_vehicle", get_avatar().in_vehicle );
+    if( response.has_object( "radio_car" ) ) {
+        apply_radio_car_binding( get_avatar(), response.get_object( "radio_car" ) );
+    }
     if( response.has_object( "remote_vehicle" ) ) {
         apply_remote_vehicle_binding( get_avatar(), response.get_object( "remote_vehicle" ) );
     }
@@ -1006,17 +1954,61 @@ bool apply_inventory_activity_result( const JsonObject &response )
         get_avatar().load_turn_state( response.get_object( "body" ) );
         get_avatar().load_practice_state( response.get_object( "practice" ) );
     }
+    if( response.has_object( "missions" ) ) {
+        apply_mission_view( response.get_object( "missions" ), get_avatar() );
+    }
     if( view.active && response.get_int64( "request" ) == view.pending_request ) {
         view.pending_request = 0;
+        if( response.has_object( "dialogue_prompt" ) ) {
+            auto prompt = std::make_shared<dialogue_view_prompt>();
+            response.read( "dialogue_prompt", *prompt, true );
+            if( !view.dialogue_ui || !view.dialogue_prompt ||
+                view.dialogue_prompt->session_id != prompt->session_id ) {
+                view.dialogue_ui = std::make_shared<dialogue_window>();
+            }
+            view.dialogue_ui->is_computer = prompt->is_computer;
+            view.dialogue_ui->is_not_conversation = prompt->is_not_conversation;
+            view.dialogue_ui->is_remote = prompt->is_remote;
+            view.dialogue_ui->remote_name = prompt->remote_name;
+            if( !prompt->player_response.empty() ) {
+                view.dialogue_ui->add_history_separator();
+                view.dialogue_ui->add_to_history( prompt->player_response, _( "You" ), c_light_blue );
+            }
+            if( prompt->append_challenge ) {
+                view.dialogue_ui->add_history_separator();
+                std::string challenge = prompt->challenge;
+                if( challenge.empty() || ( challenge.front() != '*' && challenge.front() != '&' ) ) {
+                    challenge = string_format( _( "\"%s\"" ), challenge );
+                }
+                challenge = uppercase_first_letter( challenge );
+                view.dialogue_ui->clear_history_highlights();
+                if( !challenge.empty() && challenge.front() == '&' ) {
+                    view.dialogue_ui->add_to_history( challenge.substr( 1 ) );
+                } else if( !challenge.empty() && challenge.front() == '*' ) {
+                    view.dialogue_ui->add_to_history(
+                        string_format( pgettext( "npc does something", "%s %s" ),
+                                       prompt->speaker_name, challenge.substr( 1 ) ) );
+                } else {
+                    view.dialogue_ui->add_to_history(
+                        challenge, prompt->speaker_name,
+                        color_from_string( prompt->speaker_color, report_color_error::no ) );
+                }
+            }
+            view.dialogue_prompt = std::move( prompt );
+        } else {
+            view.dialogue_prompt.reset();
+            view.dialogue_ui.reset();
+        }
+        view.zone_action_menu = response.get_bool( "zone_actions", false );
+        view.zone_editor = response.has_object( "zone_editor" ) ?
+                           zone_edit_session::read_view( get_avatar(), response.get_object( "zone_editor" ) ) : nullptr;
         const std::string next_activity = response.get_string( "activity" );
         view.finished = next_activity.empty();
-        if( view.finished && !view.cancel_requested &&
+        if( view.finished && view.automatic_mining && view.pending_automove && !view.cancel_requested &&
             response.has_member( "automatic_mining_destination" ) ) {
             tripoint_abs_ms destination;
             response.read( "automatic_mining_destination", destination, true );
-            if( get_map().inbounds( destination ) ) {
-                get_avatar().defer_move( get_map().get_bub( destination ) );
-            }
+            view.automatic_mining_succeeded = destination == view.pending_automove->target;
         }
         const auto *construction_view = dynamic_cast<const build_construction_activity_actor *>(
                                             get_avatar().activity.actor.get() );
@@ -1032,7 +2024,30 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.liquid_source_uid = 0;
         response.read( "liquid_source_uid", view.liquid_source_uid );
         view.remote_security_prompt = response.get_bool( "remote_security_prompt", false );
+        view.tree_direction_prompt = response.get_bool( "tree_direction_prompt", false );
         view.repair_prompt.reset();
+        view.disassembly_prompt.reset();
+        if( response.has_object( "disassembly_prompt" ) ) {
+            view.disassembly_prompt = std::make_shared<disassembly_selection>();
+            response.read( "disassembly_prompt", *view.disassembly_prompt, true );
+        }
+        view.spellbook_ready = response.get_bool( "spellbook_ready", false );
+        view.spellbook_recast = response.get_bool( "spellbook_recast", false );
+        view.peek.reset();
+        if( response.has_object( "peek" ) ) {
+            view.peek.emplace();
+            response.read( "peek", *view.peek, true );
+        }
+        view.vertical_prompt.reset();
+        if( response.has_object( "vertical_prompt" ) ) {
+            view.vertical_prompt = std::make_shared<vertical_move_prompt>();
+            response.read( "vertical_prompt", *view.vertical_prompt, true );
+        }
+        view.spell_prompt.reset();
+        if( response.has_object( "spell_prompt" ) ) {
+            view.spell_prompt = std::make_shared<spell_casting_prompt>();
+            response.read( "spell_prompt", *view.spell_prompt, true );
+        }
         if( response.has_object( "repair_prompt" ) ) {
             view.repair_prompt = std::make_shared<repair_activity_actor>();
             view.repair_prompt->read( response.get_object( "repair_prompt" ) );
@@ -1041,6 +2056,11 @@ bool apply_inventory_activity_result( const JsonObject &response )
         response.read( "remote_vehicle_target", view.remote_vehicle_target );
         view.remote_controller = {};
         response.read( "remote_controller", view.remote_controller );
+        view.remote_controller_preview.reset();
+        if( response.has_object( "remote_controller_preview" ) ) {
+            view.remote_controller_preview = std::make_shared<item>();
+            response.read( "remote_controller_preview", *view.remote_controller_preview, true );
+        }
         view.craft_decision = response.get_string( "craft_decision", "" );
         view.construction_decision = response.get_string( "construction_decision", "" );
         view.construction_prompt = response.get_string( "construction_prompt", "" );
@@ -1073,6 +2093,199 @@ bool apply_inventory_activity_result( const JsonObject &response )
                 craft->update_view_progress( response.get_string( "craft_progress", "" ) );
             }
         }
+    }
+    return true;
+}
+
+bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &choices )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        g->multiplayer_session().client_inventory_activity.pending_automove =
+            capture_automove_step( get_avatar(), get_map(), get_avatar().pos_abs() + direction );
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", get_avatar().pos_abs() );
+            out.member( "direction", direction );
+            out.member( "mode", get_avatar().get_desired_move_mode().str() );
+            out.member( "choices", choices );
+        } );
+    }
+    return true;
+}
+
+static bool query_vertical_choices( int direction, const std::optional<tripoint_abs_ms> &ledge,
+                                    bool ledge_menu, bool peeking = false )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    if( !peeking && !g->check_safe_mode_allowed() ) {
+        return true;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "vertical_query" );
+            out.member( "origin", get_avatar().pos_abs() );
+            out.member( "direction", direction );
+            out.member( "ledge_menu", ledge_menu );
+            out.member( "peeking", peeking );
+            if( ledge ) {
+                out.member( "ledge", *ledge );
+            }
+        } );
+    }
+    return true;
+}
+
+bool client_query_vertical_move( int direction, const std::optional<tripoint_abs_ms> &ledge )
+{
+    return query_vertical_choices( direction, ledge, false );
+}
+
+bool client_query_peek( int direction )
+{
+    return query_vertical_choices( direction, std::nullopt, false, true );
+}
+
+bool client_query_ledge_move( const tripoint_abs_ms &ledge )
+{
+    return query_vertical_choices( -1, ledge, true );
+}
+
+std::optional<peek_authorization> client_peek_authorization()
+{
+    return is_client_mode() ? g->multiplayer_session().client_inventory_activity.peek : std::nullopt;
+}
+
+bool client_peek_over_ledge( const tripoint_abs_ms &origin, const tripoint_abs_ms &ledge )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "ledge_peek" );
+            out.member( "origin", origin );
+            out.member( "ledge", ledge );
+        } );
+    }
+    return true;
+}
+
+bool client_peek( const tripoint_abs_ms &origin, const tripoint_abs_ms &target, int direction )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "peek" );
+            out.member( "origin", origin );
+            out.member( "target", target );
+            out.member( "direction", direction );
+        } );
+    }
+    return true;
+}
+
+bool client_vertical_move( const vertical_move_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        g->multiplayer_session().client_inventory_activity.pending_automove =
+            capture_automove_step( get_avatar(), get_map(), choice.choices.landing.value_or(
+                                       choice.origin + tripoint_rel_ms( 0, 0, choice.direction ) ) );
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "vertical_move" );
+            out.member( "vertical", choice );
+            out.member( "mode", get_avatar().get_desired_move_mode().str() );
+        } );
+    }
+    return true;
+}
+
+bool client_take_down_furniture( const deployed_furniture_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "take_down_furniture" );
+            out.member( "furniture", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_grab( const grab_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "grab" );
+            out.member( "grab", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_hauling( const hauling_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "haul" );
+            out.member( "haul", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_start_read( const item_location &book, const item_location &ereader,
+                        bool continuous, int learner_id )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "read" );
+            out.member( "book", capture_item_source( get_avatar(), book ) );
+            if( ereader ) {
+                out.member( "ereader", capture_item_source( get_avatar(), ereader ) );
+            }
+            out.member( "continuous", continuous );
+            out.member( "self", learner_id == get_avatar().getID().get_value() );
+            out.member( "learner", learner_id );
+        } );
     }
     return true;
 }
@@ -1236,7 +2449,8 @@ void client_start_consume( const item_location &source, bool allow_consequences,
 }
 
 static bool client_activate_item_impl( const item_location &source, std::string &method,
-                                       std::optional<tripoint_abs_ms> explicit_target, const std::string &kind )
+                                       std::optional<tripoint_abs_ms> explicit_target, const std::string &kind,
+                                       const item_activation_choices *selected_choices = nullptr )
 {
     if( !is_client_mode() || !source ||
         ( kind == "item_use" && source->has_relic_activation() ) ) {
@@ -1279,15 +2493,32 @@ static bool client_activate_item_impl( const item_location &source, std::string 
         !who.query_yn( _( "This item is still wet and it will break if you turn it on.  Proceed?" ) ) ) {
         return true;
     }
-    item_activation_choices choices;
-    if( !examine_pry && !query_item_activation_choices( *source, method, choices ) ) {
+    item_activation_choices choices = selected_choices ? *selected_choices : item_activation_choices{};
+    if( selected_choices && !valid_item_activation_choices( *source, method, choices ) ) {
+        return true;
+    }
+    const bool starting_fire = method == "firestarter";
+    if( !selected_choices && !examine_pry && !starting_fire &&
+        !query_item_activation_choices( *source, method, choices ) ) {
         return true;
     }
     const item_source identity = capture_item_source( who, source );
     const itype_id type = source->typeId();
-    const bool allow_theft = !source->is_owned_by( who, true );
+    bool allow_theft = !source->is_owned_by( who, true );
     tripoint_abs_ms target = source->has_flag( flag_ALLOWS_REMOTE_USE ) ? source.pos_abs() :
                              who.pos_abs();
+    if( starting_fire && selected_choices ) {
+        target = choices.fire_target->position;
+    } else if( starting_fire ) {
+        const item *tool = source->get_usable_item( method );
+        const use_function *use = tool ? tool->type->get_use( method ) : nullptr;
+        const auto *fire = use ? dynamic_cast<const firestarter_actor *>( use->get_actor_ptr() ) : nullptr;
+        tripoint_bub_ms position = get_map().get_bub( explicit_target.value_or( target ) );
+        if( !fire || !fire->query_fire_choices( who, *tool, get_map(), position, choices ) || !source ) {
+            return true;
+        }
+        target = get_map().get_abs( position );
+    }
     const adjacent_tool_action action = adjacent_tool_method( method );
     if( action != adjacent_tool_action::none ) {
         const item *tool = examine_pry ? source.get_item() : source->get_usable_item( method );
@@ -1303,6 +2534,19 @@ static bool client_activate_item_impl( const item_location &source, std::string 
         if( action == adjacent_tool_action::saw && !explicit_target &&
             !query_hacksaw_work( who, *tool, target ) ) {
             return true;
+        }
+        if( action == adjacent_tool_action::torch && !explicit_target &&
+            !query_oxytorch_work( who, *tool, target ) ) {
+            return true;
+        }
+    }
+    if( action == adjacent_tool_action::tree ) {
+        const std::string warning = g->local_faction_action_warning( who );
+        if( !warning.empty() ) {
+            if( !who.query_yn( warning ) ) {
+                return true;
+            }
+            allow_theft = true;
         }
     }
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
@@ -1321,10 +2565,18 @@ static bool client_activate_item_impl( const item_location &source, std::string 
         if( choices.timer_seconds ) {
             out.member( "timer_seconds", *choices.timer_seconds );
         }
+        if( choices.radio ) {
+            out.member( "radio", *choices.radio );
+        }
         if( !choices.remote_vehicle_action.empty() ) {
             out.member( "remote_vehicle_action", choices.remote_vehicle_action );
             out.member( "remote_vehicle_uid", choices.remote_vehicle_uid );
         }
+        out.member( "fire_target", choices.fire_target );
+        out.member( "fire_tinder", choices.fire_tinder );
+        out.member( "lumber", choices.lumber );
+        out.member( "salvage", choices.salvage );
+        out.member( "salvage_batch", choices.salvage_batch );
     } );
     return true;
 }
@@ -1341,6 +2593,17 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
     const character_action_guard lifetime( who );
     if( is_client_waiting_for_ack() || who.get_moves() <= 0 ||
         g->multiplayer_session().client_inventory_activity.active ) {
+        return true;
+    }
+    if( action == bionic_action::activate &&
+        bio.info().has_flag( json_character_flag( "BIONIC_GUN" ) ) ) {
+        const item *gun = bionic_firearm_source( who, bio.get_uid() );
+        if( who.activity || !gun || gun->get_gun_bionic_drain() > who.get_power_level() ||
+            ( choices && !valid_bionic_activation_choices( who, bio, *choices ) ) ) {
+            return false;
+        }
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        avatar_action::fire_ranged_bionic( who, *gun, bio.get_uid() );
         return true;
     }
     if( !supports_owned_bionic_action( bio, action ) ) {
@@ -1380,10 +2643,193 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
         if( selected->water_corpse ) {
             out.member( "water_corpse", *selected->water_corpse );
         }
+        out.member( "weapon", selected->weapon );
+        if( selected->remote_vehicle ) {
+            out.member( "remote_vehicle_action", selected->remote_vehicle->remote_vehicle_action );
+            out.member( "remote_vehicle_uid", selected->remote_vehicle->remote_vehicle_uid );
+        }
+        if( selected->radio ) {
+            out.member( "radio", *selected->radio );
+        }
+        if( selected->unwield ) {
+            out.member( "unwield" );
+            out.start_object();
+            out.member( "action", selected->unwield->action );
+            out.member( "container", selected->unwield->container );
+            out.member( "pocket", selected->unwield->pocket );
+            out.end_object();
+        }
     } );
     return true;
 }
 } // namespace
+
+bool client_query_spellbook( bool recast )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity presentation{ invoke_item_activity_actor( item_location(), std::string() ) };
+    presentation.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( presentation ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "spellbook" );
+            out.member( "recast", recast );
+        } );
+    }
+    return true;
+}
+
+std::optional<bool> client_cast_spell( const spell_id &id,
+                                       const std::optional<tripoint_abs_ms> &target )
+{
+    if( !is_client_mode() ) {
+        return std::nullopt;
+    }
+    player_activity presentation{ invoke_item_activity_actor( item_location(), std::string() ) };
+    presentation.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( presentation ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "spell" );
+            out.member( "spell", id );
+            out.member( "target", target );
+        } );
+    }
+    return true;
+}
+
+bool client_query_zones( bool actions )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "zone_query" );
+            out.member( "zone_actions", actions );
+        } );
+    }
+    return true;
+}
+
+bool client_submit_zone_edits( const zone_edit_batch &batch )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !begin_client_inventory_activity( view ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "zone_edit" );
+        out.member( "zones", batch );
+    } );
+    return true;
+}
+
+bool client_start_butchery( const std::vector<butchery_selection> &selected )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !selected.empty() && begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "butcher" );
+            out.member( "corpses", selected );
+        } );
+    }
+    return true;
+}
+
+bool client_start_disassembly( const std::vector<disassembly_selection> &selected, bool recursive )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !selected.empty() && begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "disassemble" );
+            out.member( "disassembly", selected );
+            out.member( "recursive", recursive );
+        } );
+    }
+    return true;
+}
+
+bool client_farming_command( const farming_command &command )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "farming" );
+            out.member( "farm", command );
+        } );
+    }
+    return true;
+}
+
+bool client_start_zone_work( const std::string &action )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "zone_work" );
+            out.member( "zone_action", action );
+        } );
+    }
+    return true;
+}
+
+bool client_zone_sort( zone_scope scope )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ zone_sort_activity_actor( scope ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "zone_sort" );
+            out.member( "scope", static_cast<int>( scope ) );
+        } );
+    }
+    return true;
+}
+
+bool client_drive_radio_car( const point_rel_ms &direction )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    const auto binding = read_radio_car_binding( get_avatar(), get_map() );
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( binding && begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "radio_car_drive" );
+            out.member( "car", binding->car );
+            out.member( "position", binding->position );
+            out.member( "direction", direction );
+        } );
+    }
+    return true;
+}
 
 bool client_vehicle_control( const vehicle_control_selection &choice )
 {
@@ -1456,9 +2902,9 @@ std::optional<bool> client_deactivate_bionic( const bionic &bio )
 }
 
 bool client_activate_item( const item_location &source, std::string &method,
-                           std::optional<tripoint_abs_ms> target )
+                           std::optional<tripoint_abs_ms> target, const item_activation_choices *choices )
 {
-    return client_activate_item_impl( source, method, target, "item_use" );
+    return client_activate_item_impl( source, method, target, "item_use", choices );
 }
 
 bool client_examine_pry( const item_location &tool, const tripoint_abs_ms &target )
@@ -1475,8 +2921,22 @@ bool client_auto_mine( const tripoint_abs_ms &target )
     }
     avatar &who = get_avatar();
     std::string method = automatic_mining_method( who, get_map(), target );
-    return !method.empty() &&
-           client_activate_item_impl( who.get_wielded_item(), method, target, "auto_mine" );
+    if( method.empty() ) {
+        return false;
+    }
+    const auto automove = capture_automove_step( who, get_map(), target, true );
+    const int64_t sequence = g->multiplayer_session().client_inventory_activity.next_request;
+    if( !client_activate_item_impl( who.get_wielded_item(), method, target, "auto_mine" ) ) {
+        return false;
+    }
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    if( view.active && view.next_request != sequence && view.pending_request != 0 ) {
+        view.pending_automove = automove;
+        view.automatic_mining = true;
+    } else if( automove ) {
+        automove->finish( who, get_map(), true );
+    }
+    return true;
 }
 
 void client_start_firstaid( const item_location &source, Character &patient,
@@ -1497,6 +2957,213 @@ void client_start_firstaid( const item_location &source, Character &patient,
     } );
 }
 
+std::optional<bool> client_start_dialogue( const talker &target, bool radio_contact,
+        bool is_computer, bool is_not_conversation, const std::string &remote_name )
+{
+    if( !is_client_mode() ) {
+        return std::nullopt;
+    }
+    const npc *guy = target.get_const_npc();
+    const monster *mon = target.get_const_monster();
+    if( !guy && !mon ) {
+        return std::nullopt;
+    }
+    avatar &who = get_avatar();
+    if( is_client_waiting_for_ack() || who.get_moves() <= 0 ||
+        g->multiplayer_session().client_inventory_activity.active ) {
+        return false;
+    }
+    if( guy && ( guy->is_dead() || guy->is_hallucination() ||
+                 is_player_proxy( *guy ) ) ) {
+        return false;
+    }
+    if( mon && ( mon->is_dead() || !mon->has_flag( mon_flag_CONVERSATION ) ||
+                 mon->type->chat_topics.empty() || radio_contact ) ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !begin_client_inventory_activity( view ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "dialogue" );
+        out.member( "radio_contact", radio_contact );
+        out.member( "is_computer", is_computer );
+        out.member( "is_not_conversation", is_not_conversation );
+        out.member( "remote_name", remote_name );
+        if( guy ) {
+            out.member( "target_npc", host_npc_identity( *guy ) );
+            out.member( "target", guy->pos_abs() );
+        } else if( mon ) {
+            out.member( "target", mon->pos_abs() );
+        }
+    } );
+    return true;
+}
+
+bool client_choose_dialogue_response( std::size_t index )
+{
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    if( !is_client_mode() || !view.active || view.pending_request != 0 ||
+        !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        index >= view.dialogue_prompt->options.size() ||
+        !view.dialogue_prompt->options[index].selectable ) {
+        return false;
+    }
+    const uint64_t session_id = view.dialogue_prompt->session_id;
+    const uint64_t revision = view.dialogue_prompt->response_revision;
+    send_inventory_activity( "choose", [&]( JsonOut & out ) {
+        out.member( "dialogue_session", static_cast<int64_t>( session_id ) );
+        out.member( "response_revision", static_cast<int64_t>( revision ) );
+        out.member( "response_index", static_cast<int>( index ) );
+    } );
+    return view.pending_request != 0;
+}
+
+bool client_dialogue_special_action( const std::string &action )
+{
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    if( !is_client_mode() || !view.active || view.pending_request != 0 ||
+        !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        action.empty() ) {
+        return false;
+    }
+    const uint64_t session_id = view.dialogue_prompt->session_id;
+    const uint64_t revision = view.dialogue_prompt->response_revision;
+    send_inventory_activity( "choose", [&]( JsonOut & out ) {
+        out.member( "dialogue_session", static_cast<int64_t>( session_id ) );
+        out.member( "response_revision", static_cast<int64_t>( revision ) );
+        out.member( "special_action", action );
+    } );
+    return view.pending_request != 0;
+}
+
+static void query_client_dialogue_prompt( dialogue_window &d_win,
+        const dialogue_view_prompt &prompt )
+{
+    if( prompt.options.empty() ) {
+        auto &view = g->multiplayer_session().client_inventory_activity;
+        view.cancel_requested = true;
+        send_inventory_activity( "cancel" );
+        return;
+    }
+
+    ui_adaptor ui;
+    const auto resize_cb = [&]( ui_adaptor & ui ) {
+        d_win.resize( ui );
+    };
+    ui.on_screen_resize( resize_cb );
+    resize_cb( ui );
+
+    input_context ctxt( "DIALOGUE_CHOOSE_RESPONSE" );
+    d_win.set_up_scrolling( ctxt );
+    ctxt.register_action( "HELP_KEYBINDINGS" );
+    ctxt.register_action( "CONFIRM" );
+    ctxt.register_action( "ANY_INPUT" );
+    ctxt.register_action( "QUIT" );
+
+    std::vector<talk_data> response_lines;
+    std::vector<input_event> response_hotkeys;
+    const auto generate_response_lines = [&]() {
+#if defined(__ANDROID__)
+        ctxt.get_registered_manual_keys().clear();
+#endif
+        const hotkey_queue &queue = hotkey_queue::alphabets();
+        response_lines.clear();
+        response_hotkeys.clear();
+        input_event evt = ctxt.first_unassigned_hotkey( queue );
+        for( const dialogue_view_option &opt : prompt.options ) {
+            talk_data td;
+            td.color = color_from_string( opt.color, report_color_error::no );
+            td.hotkey_desc = evt.short_description();
+            td.text = opt.text;
+            response_lines.push_back( td );
+            response_hotkeys.push_back( evt );
+#if defined(__ANDROID__)
+            ctxt.register_manual_key( evt.get_first_input(), td.text );
+#endif
+            evt = ctxt.next_unassigned_hotkey( queue, evt );
+        }
+        d_win.set_responses( response_lines );
+    };
+    generate_response_lines();
+
+    ui.on_redraw( [&]( const ui_adaptor & ) {
+        d_win.draw( prompt.speaker_name );
+    } );
+
+    const auto best_quit_response = [&]() -> std::size_t {
+        if( prompt.options.size() == 1 && prompt.options[0].selectable )
+        {
+            return 0;
+        }
+        for( std::size_t i = 0; i < prompt.options.size(); ++i )
+        {
+            if( prompt.options[i].selectable && prompt.options[i].quit_candidate ) {
+                return i;
+            }
+        }
+        return prompt.options.size();
+    };
+
+    std::size_t response_ind = response_hotkeys.size();
+    bool okay = false;
+    do {
+        std::string action;
+        do {
+            ui_manager::redraw();
+            action = ctxt.handle_input();
+            if( get_avatar().is_dead_state() ) {
+                auto &view = g->multiplayer_session().client_inventory_activity;
+                view.cancel_requested = true;
+                send_inventory_activity( "cancel" );
+                return;
+            }
+            const input_event evt = ctxt.get_raw_input();
+            if( evt.type == input_event_t::error || evt.type == input_event_t::timeout ) {
+                continue;
+            }
+            d_win.handle_scrolling( action, ctxt );
+            if( !d_win.is_computer && !d_win.is_not_conversation && !d_win.is_remote &&
+                ( action == "LOOK_AT" || action == "SIZE_UP_STATS" ||
+                  action == "ASSESS_PERSONALITY" || action == "YELL" ||
+                  action == "CHECK_OPINION" ) ) {
+                client_dialogue_special_action( action );
+                return;
+            }
+            if( action == "HELP_KEYBINDINGS" ) {
+                generate_response_lines();
+            } else if( action == "CONFIRM" ) {
+                response_ind = d_win.sel_response;
+                if( response_ind >= prompt.options.size() ||
+                    !prompt.options[response_ind].selectable ) {
+                    action = "NONE";
+                }
+            } else if( action == "ANY_INPUT" ) {
+                const auto hotkey_it = std::find( response_hotkeys.begin(),
+                                                  response_hotkeys.end(), evt );
+                response_ind = std::distance( response_hotkeys.begin(), hotkey_it );
+                if( response_ind >= prompt.options.size() ||
+                    !prompt.options[response_ind].selectable ) {
+                    action = "NONE";
+                }
+            } else if( action == "QUIT" ) {
+                response_ind = best_quit_response();
+            }
+        } while( response_ind >= response_hotkeys.size() ||
+                 ( action != "ANY_INPUT" && action != "QUIT" && action != "CONFIRM" ) );
+        okay = true;
+        if( prompt.options[response_ind].confirm_hostile ) {
+            okay = query_yn( _( "You may be attacked!  Proceed?" ) );
+        } else if( prompt.options[response_ind].confirm_helpless ) {
+            okay = query_yn( _( "You'll be helpless!  Proceed?" ) );
+        }
+    } while( !okay );
+
+    client_choose_dialogue_response( response_ind );
+}
+
 void client_step_inventory_activity()
 {
     const auto &view = g->multiplayer_session().client_inventory_activity;
@@ -1505,7 +3172,9 @@ void client_step_inventory_activity()
         return;
     }
     if( view.cancel_requested || view.needs_placement || view.finished || view.liquid_source_uid > 0 ||
-        view.remote_security_prompt || view.repair_prompt || view.remote_vehicle_target > 0 ||
+        view.remote_security_prompt || view.tree_direction_prompt || view.repair_prompt ||
+        view.disassembly_prompt || view.spell_prompt || view.dialogue_prompt ||
+        view.remote_vehicle_target > 0 ||
         !view.craft_decision.empty() || !view.construction_decision.empty() ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
@@ -1543,6 +3212,21 @@ void client_update_inventory_activity_view()
         return;
     }
     if( view.finished ) {
+        // A prompt result can arrive before the free AP grant in the following
+        // player-state message. Keep it until its selected command can be sent.
+        if( ( view.vertical_prompt || view.peek || view.pending_automove ) && !view.cancel_requested &&
+            ( is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ) ) {
+            return;
+        }
+        const auto peek = view.peek;
+        const auto automove = view.pending_automove;
+        const bool cancelled = view.cancel_requested;
+        const bool mining_failed = view.automatic_mining && !view.automatic_mining_succeeded;
+        const auto vertical_prompt = view.cancel_requested ? nullptr : view.vertical_prompt;
+        const auto zone_editor = view.cancel_requested ? nullptr : view.zone_editor;
+        const bool zone_action_menu = view.zone_action_menu;
+        const bool spellbook = view.spellbook_ready && !view.cancel_requested;
+        const bool recast = view.spellbook_recast;
         const auto *consume = dynamic_cast<const consume_activity_actor *>(
                                   get_avatar().activity.actor.get() );
         const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>(
@@ -1565,6 +3249,78 @@ void client_update_inventory_activity_view()
         view = {};
         view.next_request = sequence;
         set_client_turn_activity( "" );
+        if( automove ) {
+            automove->finish( get_avatar(), get_map(), cancelled || mining_failed );
+        }
+        if( vertical_prompt ) {
+            if( const auto choice = vertical_prompt->query( get_avatar() ) ) {
+                if( choice->action == "peek" ) {
+                    client_peek( choice->origin, choice->target, choice->direction );
+                } else if( choice->action == "ledge_peek" ) {
+                    client_peek_over_ledge( choice->origin, choice->target );
+                } else if( choice->action == "ledge_reach" ) {
+                    client_take_down_furniture( { choice->origin, choice->target, choice->furniture } );
+                } else {
+                    client_vertical_move( *choice );
+                }
+            } else if( get_avatar().is_auto_moving() ) {
+                get_avatar().abort_automove();
+            }
+            return;
+        }
+        if( peek ) {
+            const on_out_of_scope close_peek( [&]() {
+                client_close_peek( peek->request );
+            } );
+            avatar &who = get_avatar();
+            map &here = get_map();
+            if( !cancelled && who.pos_abs() == peek->origin && here.inbounds( peek->viewpoint ) ) {
+                view.peek = peek;
+                const on_out_of_scope clear_peek( [&]() {
+                    view.peek.reset();
+                } );
+                const auto result = g->look_from( here.get_bub( peek->viewpoint ), peek->standing,
+                                                  peek->z_range );
+                if( view.peek && view.peek->request == peek->request && result.selection ) {
+                    g->apply_view_action( *result.selection );
+                }
+                if( view.peek && view.peek->request == peek->request &&
+                    who.pos_abs() == peek->origin && result.peek_action ) {
+                    if( *result.peek_action == PA_BLIND_THROW ) {
+                        item_location source;
+                        avatar_action::plthrow( who, source, here.get_bub( peek->viewpoint ) );
+                    } else if( *result.peek_action == PA_BLIND_THROW_WIELDED ) {
+                        avatar_action::plthrow_wielded( who, here.get_bub( peek->viewpoint ) );
+                    }
+                }
+            }
+            return;
+        }
+        if( spellbook ) {
+            const restore_on_out_of_scope restore_rng( rng_get_engine() );
+            avatar &who = get_avatar();
+            if( who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ) {
+                add_msg( m_bad, _( "You cannot cast spells at this moment." ) );
+            } else if( !who.magic->knows_spell() ) {
+                add_msg( m_bad, _( "You don't know any spells to cast." ) );
+            } else if( recast && !who.magic->knows_spell( who.magic->last_spell ) ) {
+                add_msg( m_info, _( "Cast a spell first" ) );
+            } else {
+                const spell_id selected = recast ? who.magic->last_spell : who.magic->select_spell( who ).id();
+                if( selected.is_valid() && who.magic->knows_spell( selected ) ) {
+                    who.magic->last_spell = selected;
+                    client_cast_spell( selected );
+                }
+            }
+        }
+        if( zone_editor ) {
+            if( zone_action_menu ) {
+                zone_manager_ui::display_zone_actions( zone_editor );
+            } else {
+                zone_manager_ui::display_zone_manager( zone_editor );
+            }
+            return;
+        }
         if( resume_blueprint ) {
             // Client view actors skip native activity completion. Resume their
             // local blueprint planner explicitly, without running world effects.
@@ -1581,6 +3337,46 @@ void client_update_inventory_activity_view()
         }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
+    } else if( view.dialogue_prompt && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        if( !view.dialogue_ui ) {
+            view.dialogue_ui = std::make_shared<dialogue_window>();
+        }
+        const dialogue_view_prompt prompt = *view.dialogue_prompt;
+        query_client_dialogue_prompt( *view.dialogue_ui, prompt );
+    } else if( view.tree_direction_prompt && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const auto direction = choose_direction( _( "Select a direction for the tree to fall in." ) );
+        if( direction ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "tree_direction", *direction );
+            } );
+        } else {
+            view.cancel_requested = true;
+            send_inventory_activity( "cancel" );
+        }
+    } else if( view.spell_prompt && !is_client_waiting_for_ack() && get_avatar().get_moves() > 0 ) {
+        const auto choice = view.spell_prompt->query( get_avatar() );
+        if( choice ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "spell_choice", *choice );
+            } );
+        } else {
+            view.cancel_requested = true;
+            send_inventory_activity( "cancel" );
+        }
+    } else if( view.disassembly_prompt && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const auto choice = query_disassembly_preparation( get_avatar(), *view.disassembly_prompt );
+        if( choice ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "disassembly_choice", *choice );
+            } );
+        } else {
+            view.cancel_requested = true;
+            send_inventory_activity( "cancel" );
+        }
     } else if( view.repair_prompt && !is_client_waiting_for_ack() && get_avatar().get_moves() > 0 ) {
         const auto choice = view.repair_prompt->query_choice( get_avatar() );
         if( choice ) {
@@ -1604,7 +3400,9 @@ void client_update_inventory_activity_view()
         avatar &who = get_avatar();
         map &here = get_map();
         vehicle *target = vehicle::find_vehicle_by_uid( here, view.remote_vehicle_target );
-        const item_location source = resolve_item_source( who, here, view.remote_controller );
+        const item_location source = view.remote_controller_preview ?
+                                     item_location( who, view.remote_controller_preview.get() ) :
+                                     resolve_item_source( who, here, view.remote_controller );
         std::optional<vehicle_control_selection> selection;
         if( target && source ) {
             const auto controls = target->get_avail_parts( "REMOTE_CONTROLS" );

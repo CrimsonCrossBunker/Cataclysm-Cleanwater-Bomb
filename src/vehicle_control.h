@@ -17,6 +17,7 @@
 #include "vehicle_toolstation.h"
 #include "vehicle_tool_use.h"
 #include "vehicle_turret_control.h"
+#include "vehicle_harness.h"
 
 class JsonObject;
 class JsonOut;
@@ -70,6 +71,7 @@ struct vehicle_control_selection {
     std::optional<vehicle_tool_selection> toolstation;
     std::optional<vehicle_tool_use_selection> tool_use;
     std::optional<vehicle_turret_selection> turret;
+    std::optional<vehicle_harness_selection> harness;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );

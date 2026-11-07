@@ -10539,7 +10539,7 @@ function CcbNpcMissionsApi.state(provider) end
 ---@return CcbResult result `value` is the owner's assigned CcbNpcMissionPage, matching native dialogue mission ownership.
 function CcbNpcMissionsApi.assigned_for_owner(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@return CcbResult result `value` is raw NPC chatbin.missions length, including entries omitted from the filtered live page.
+---@return CcbResult result `value` counts live, unassigned missions offered by this NPC, matching native dialogue filtering.
 function CcbNpcMissionsApi.available_count(provider) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@param owner GameHandle Exact live avatar used by native mission goal completion checks.

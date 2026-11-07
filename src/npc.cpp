@@ -36,6 +36,7 @@
 #include "activity_type.h"
 #include "auto_pickup.h"
 #include "avatar.h"
+#include "cata_assert.h"
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
@@ -754,13 +755,13 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     personality.altruism += myclass->roll_altruism();
 
     personality.aggression = std::clamp<int8_t>( personality.aggression,
-        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+                             NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
     personality.bravery = std::clamp<int8_t>( personality.bravery,
-        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+                          NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
     personality.collector = std::clamp<int8_t>( personality.collector,
-        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+                            NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
     personality.altruism = std::clamp<int8_t>( personality.altruism,
-        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+                           NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
 
     for( Skill &skill : Skill::skills ) {
         int level = myclass->roll_skill( skill.ident() );
@@ -774,7 +775,7 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     int days_since_cata = to_days<int>( calendar::turn - calendar::start_of_cataclysm );
     double time_influence = days_since_cata >= 180 ? 3.0 : 6.0 - 3.0 * days_since_cata / 180.0;
     double weight_percent = std::clamp<double>( chi_squared_roll( time_influence ) / 5.0,
-        0.2, 5.0 );
+                            0.2, 5.0 );
     set_stored_kcal( weight_percent * get_healthy_kcal() );
     if( !needs_food() ) {
         set_stored_kcal( get_healthy_kcal() );
@@ -892,7 +893,7 @@ void npc::randomize_personality()
     personality.collector = rng( -1, NPC_PERSONALITY_MAX );
     // Normal distribution. Mean = 0, stddev = 3, clamp at NPC_PERSONALITY_MIN and NPC_PERSONALITY_MAX. Rounded to return integer value.
     personality.altruism = std::round( std::clamp( normal_roll( 0, 3 ),
-        static_cast<double>( NPC_PERSONALITY_MIN ), static_cast<double>( NPC_PERSONALITY_MAX ) ) );
+                                       static_cast<double>( NPC_PERSONALITY_MIN ), static_cast<double>( NPC_PERSONALITY_MAX ) ) );
 }
 
 void npc::learn_ma_styles_from_traits()
@@ -938,7 +939,7 @@ void npc::set_fac( const faction_id &id )
 
 void npc::apply_ownership_to_inv()
 {
-    for( item *&e : inv_dump() ) {
+    for( item*&e : inv_dump() ) {
         e->set_owner( *this );
     }
 }
@@ -1184,7 +1185,7 @@ void npc::starting_inv_passtime()
     //extra items if storage allows
     int items_added = 0;
     int items_limit = 2 + rng_normal( 4 * ( static_cast<double>( std::min( days_since_cata,
-        max_time ) ) / static_cast<double>( max_time ) ) );
+                                            max_time ) ) / static_cast<double>( max_time ) ) );
     if( one_in( 16 ) ) {
         items_limit += rng( 8, 12 );
     } else if( one_in( 16 ) ) {
@@ -1789,27 +1790,60 @@ void npc::invalidate_range_cache()
         confident_range_cache = 1;
     } else if( weapon->is_gun() ) {
         confident_range_cache = confident_shoot_range( *weapon,
-            most_accurate_aiming_method_limit( *weapon ) );
+                                most_accurate_aiming_method_limit( *weapon ) );
     } else {
         confident_range_cache = weapon->reach_range( *this ).first;
     }
 }
 
+character_id npc::opinion_owner() const
+{
+    // Old saves have only op_of_u. Bind that slot to the world owner, never to
+    // whichever remote participant happens to speak to the NPC first.
+    return legacy_opinion_owner.is_valid() ? legacy_opinion_owner : get_avatar().getID();
+}
+
+const npc_opinion &npc::opinion_of( const character_id who ) const
+{
+    if( who == opinion_owner() ) {
+        return op_of_u;
+    }
+    const auto found = opinions.find( who );
+    if( found != opinions.end() ) {
+        return found->second;
+    }
+    static const npc_opinion neutral;
+    return neutral;
+}
+
+npc_opinion &npc::opinion_of( const character_id who )
+{
+    cata_assert( who.is_valid() );
+    if( !legacy_opinion_owner.is_valid() ) {
+        legacy_opinion_owner = opinion_owner();
+    }
+    if( who == legacy_opinion_owner ) {
+        return op_of_u;
+    }
+    return opinions[who];
+}
+
 void npc::form_opinion( const Character &you )
 {
-    op_of_u = get_opinion_values( you );
+    npc_opinion &opinion = opinion_of( you.getID() );
+    opinion = get_opinion_values( you );
 
     decide_needs();
     for( const npc_need &i : needs ) {
         if( i == need_food || i == need_drink ) {
-            op_of_u.value += 2;
+            opinion.value += 2;
         }
     }
 
-    if( op_of_u.fear < personality.bravery + 10 &&
-        op_of_u.fear - personality.aggression > -10 && op_of_u.trust > -8 ) {
+    if( opinion.fear < personality.bravery + 10 &&
+        opinion.fear - personality.aggression > -10 && opinion.trust > -8 ) {
         set_attitude( NPCATT_TALK );
-    } else if( op_of_u.fear - 2 * personality.aggression - personality.bravery < -30 ) {
+    } else if( opinion.fear - 2 * personality.aggression - personality.bravery < -30 ) {
         set_attitude( NPCATT_KILL );
     } else if( my_fac && my_fac->likes_u < -10 ) {
         if( is_player_ally() ) {
@@ -1826,7 +1860,7 @@ void npc::form_opinion( const Character &you )
 
 npc_opinion npc::get_opinion_values( const Character &you ) const
 {
-    npc_opinion npc_values = op_of_u;
+    npc_opinion npc_values = opinion_of( you.getID() );
 
     const item_location weapon = you.get_wielded_item();
     // FEAR
@@ -1991,12 +2025,22 @@ float npc::vehicle_danger( int radius ) const
 
 bool npc::turned_hostile() const
 {
-    return op_of_u.anger >= hostile_anger_level();
+    return turned_hostile( opinion_owner() );
+}
+
+bool npc::turned_hostile( const character_id who ) const
+{
+    return opinion_of( who ).anger >= hostile_anger_level( who );
 }
 
 int npc::hostile_anger_level() const
 {
-    return 20 + op_of_u.fear - personality.aggression;
+    return hostile_anger_level( opinion_owner() );
+}
+
+int npc::hostile_anger_level( const character_id who ) const
+{
+    return 20 + opinion_of( who ).fear - personality.aggression;
 }
 
 void npc::make_angry()
@@ -3194,80 +3238,86 @@ int npc::print_info( const catacurses::window &w, int line, int vLines, int colu
 
 std::string npc::opinion_text() const
 {
+    return opinion_text( opinion_owner() );
+}
+
+std::string npc::opinion_text( const character_id who ) const
+{
+    const npc_opinion &opinion = opinion_of( who );
     std::string ret;
     std::string desc;
 
-    if( op_of_u.trust <= -10 ) {
+    if( opinion.trust <= -10 ) {
         desc = _( "Completely untrusting" );
-    } else if( op_of_u.trust <= -6 ) {
+    } else if( opinion.trust <= -6 ) {
         desc = _( "Very untrusting" );
-    } else if( op_of_u.trust <= -3 ) {
+    } else if( opinion.trust <= -3 ) {
         desc = _( "Untrusting" );
-    } else if( op_of_u.trust <= 2 ) {
+    } else if( opinion.trust <= 2 ) {
         desc = _( "Uneasy" );
-    } else if( op_of_u.trust <= 4 ) {
+    } else if( opinion.trust <= 4 ) {
         desc = _( "Trusting" );
-    } else if( op_of_u.trust < 10 ) {
+    } else if( opinion.trust < 10 ) {
         desc = _( "Very trusting" );
     } else {
         desc = _( "Completely trusting" );
     }
 
-    ret += string_format( _( "Trust: %d (%s);\n" ), op_of_u.trust, desc );
+    ret += string_format( _( "Trust: %d (%s);\n" ), opinion.trust, desc );
 
-    if( op_of_u.fear <= -10 ) {
+    if( opinion.fear <= -10 ) {
         desc = _( "Thinks you're laughably harmless" );
-    } else if( op_of_u.fear <= -6 ) {
+    } else if( opinion.fear <= -6 ) {
         desc = _( "Thinks you're harmless" );
-    } else if( op_of_u.fear <= -3 ) {
+    } else if( opinion.fear <= -3 ) {
         desc = _( "Unafraid" );
-    } else if( op_of_u.fear <= 2 ) {
+    } else if( opinion.fear <= 2 ) {
         desc = _( "Wary" );
-    } else if( op_of_u.fear <= 5 ) {
+    } else if( opinion.fear <= 5 ) {
         desc = _( "Afraid" );
-    } else if( op_of_u.fear < 10 ) {
+    } else if( opinion.fear < 10 ) {
         desc = _( "Very afraid" );
     } else {
         desc = _( "Terrified" );
     }
 
-    ret += string_format( _( "Fear: %d (%s);\n" ), op_of_u.fear, desc );
+    ret += string_format( _( "Fear: %d (%s);\n" ), opinion.fear, desc );
 
-    if( op_of_u.value <= -10 ) {
+    if( opinion.value <= -10 ) {
         desc = _( "Considers you a major liability" );
-    } else if( op_of_u.value <= -6 ) {
+    } else if( opinion.value <= -6 ) {
         desc = _( "Considers you a burden" );
-    } else if( op_of_u.value <= -3 ) {
+    } else if( opinion.value <= -3 ) {
         desc = _( "Considers you an annoyance" );
-    } else if( op_of_u.value <= 2 ) {
+    } else if( opinion.value <= 2 ) {
         desc = _( "Doesn't care about you" );
-    } else if( op_of_u.value <= 5 ) {
+    } else if( opinion.value <= 5 ) {
         desc = _( "Values your presence" );
-    } else if( op_of_u.value < 10 ) {
+    } else if( opinion.value < 10 ) {
         desc = _( "Treasures you" );
     } else {
         desc = _( "Best Friends Forever!" );
     }
 
-    ret += string_format( _( "Value: %d (%s);\n" ), op_of_u.value, desc );
+    ret += string_format( _( "Value: %d (%s);\n" ), opinion.value, desc );
 
-    if( op_of_u.anger <= -10 ) {
+    if( opinion.anger <= -10 ) {
         desc = _( "You can do no wrong!" );
-    } else if( op_of_u.anger <= -6 ) {
+    } else if( opinion.anger <= -6 ) {
         desc = _( "You're good people" );
-    } else if( op_of_u.anger <= -3 ) {
+    } else if( opinion.anger <= -3 ) {
         desc = _( "Thinks well of you" );
-    } else if( op_of_u.anger <= 2 ) {
+    } else if( opinion.anger <= 2 ) {
         desc = _( "Ambivalent" );
-    } else if( op_of_u.anger <= 5 ) {
+    } else if( opinion.anger <= 5 ) {
         desc = _( "Pissed off" );
-    } else if( op_of_u.anger < 10 ) {
+    } else if( opinion.anger < 10 ) {
         desc = _( "Angry" );
     } else {
         desc = _( "About to kill you" );
     }
 
-    ret += string_format( _( "Anger: %d (%s)." ), op_of_u.anger, desc );
+    ret += string_format( _( "Anger: %d (%s)." ), opinion.anger, desc );
 
     return ret;
 }
@@ -3417,7 +3467,7 @@ void npc::die( map *here, Creature *nkiller )
 
     if( Character *ch = dynamic_cast<Character *>( killer ) ) {
         get_event_bus().send<event_type::character_kills_character>( ch->getID(), getID(), get_name(),
-            myclass.c_str() );
+                myclass.c_str() );
     }
     Character &player_character = get_player_character();
     if( killer == &player_character ) {
@@ -4021,7 +4071,7 @@ std::vector<std::string> npc::extended_description() const
                                      colorize( npc_attitude_name( get_attitude() ), symbol_color() ) ) );
 
     tmp.emplace_back( sees( here, player_character ) ? colorize( _( "Aware of your presence" ),
-            c_yellow ) :
+                      c_yellow ) :
                       colorize( _( "Unaware of you" ), c_green ) );
 
     if( hit_by_player ) {
@@ -4337,13 +4387,13 @@ bool npc_follower_rules::has_override_enable( ally_rule test ) const
 void npc_follower_rules::enable_override( ally_rule setit )
 {
     override_enable = static_cast<ally_rule>( static_cast<int>( override_enable ) |
-        static_cast<int>( setit ) );
+                      static_cast<int>( setit ) );
 }
 
 void npc_follower_rules::disable_override( ally_rule clearit )
 {
     override_enable = static_cast<ally_rule>( static_cast<int>( override_enable ) &
-        ~static_cast<int>( clearit ) );
+                      ~static_cast<int>( clearit ) );
 }
 
 bool npc_follower_rules::has_override( ally_rule test ) const
@@ -4476,16 +4526,6 @@ std::string npc::get_current_status() const
         return _( "Guarding" );
     } else {
         return get_current_activity();
-    }
-}
-
-void npc::update_missions_target( character_id old_character, character_id new_character )
-{
-    for( ::mission *&temp : chatbin.missions_assigned ) {
-        if( temp->get_assigned_player_id() == old_character ||
-            temp->get_assigned_player_id() == character_id( - 1 ) ) {
-            temp->set_assigned_player_id( new_character );
-        }
     }
 }
 

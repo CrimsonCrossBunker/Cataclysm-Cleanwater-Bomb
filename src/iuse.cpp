@@ -1,3 +1,4 @@
+#include "radio_car_control.h"
 #include "talker.h"
 #include "effect_on_condition.h"
 #include "dialogue.h"
@@ -42,6 +43,8 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "chopping_activity.h"
+#include "character_action_guard.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
 #include "city.h"
@@ -351,7 +354,6 @@ static const mtype_id mon_vortex( "mon_vortex" );
 
 static const mutation_category_id mutation_category_CATTLE( "CATTLE" );
 
-static const quality_id qual_AXE( "AXE" );
 static const quality_id qual_GLARE( "GLARE" );
 static const quality_id qual_HOTPLATE( "HOTPLATE" );
 static const quality_id qual_PRY( "PRY" );
@@ -2559,39 +2561,20 @@ std::optional<int> iuse::crowbar( Character *p, item *it, const tripoint_bub_ms 
     return std::nullopt;
 }
 
-std::optional<int> iuse::makemound( Character *p, item *it, const tripoint_bub_ms & )
+std::optional<int> iuse::makemound( Character *who, item *tool, const tripoint_bub_ms &position )
 {
-    if( !p ) {
-        debugmsg( "%s called action makemound that requires character but no character is present",
-                  it->typeId().str() );
+    if( !who || !tool || who->cant_do_mounted() ) {
         return std::nullopt;
     }
-    if( p->cant_do_mounted() ) {
-        return std::nullopt;
-    }
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent( _( "Till soil where?" ) );
-    if( !pnt_ ) {
-        return std::nullopt;
-    }
-    const tripoint_bub_ms pnt = *pnt_;
-
-    if( pnt == p->pos_bub() ) {
-        p->add_msg_if_player( m_info,
-                              _( "You think about jumping on a shovel, but then change your mind." ) );
-        return std::nullopt;
-    }
-
     map &here = get_map();
-    if( here.has_flag( ter_furn_flag::TFLAG_PLOWABLE, pnt ) &&
-        !here.has_flag( ter_furn_flag::TFLAG_PLANT, pnt ) ) {
-        p->add_msg_if_player( _( "You start churning up the earth here." ) );
-        p->assign_activity( churn_activity_actor( 18000, item_location( *p, it ) ) );
-        p->activity.placement = here.get_abs( pnt );
-        return 1;
-    } else {
-        p->add_msg_if_player( _( "You can't churn up this ground." ) );
+    const bool authority = who->activity.execution() == activity_execution::authoritative;
+    if( !authority && !who->is_avatar() ) {
         return std::nullopt;
     }
+    const auto target = authority ? std::make_optional( here.get_abs( position ) ) :
+                        query_adjacent_tool_target( adjacent_tool_action::till, *who, here, *tool );
+    return target && start_tilling_work( *who, locate_cutting_tool( *who, *tool ), *target ) ?
+           std::optional<int>( 1 ) : std::nullopt;
 }
 
 std::optional<int> iuse::dig( Character *p, item *it, const tripoint_bub_ms & )
@@ -4262,213 +4245,73 @@ std::optional<int> iuse::blood_draw( Character *p, item *it, const tripoint_bub_
     return 1;
 }
 
-void iuse::cut_log_into_planks( Character &p )
+std::optional<int> iuse::lumber( Character *who, item *tool, const tripoint_bub_ms & )
 {
-    if( p.cant_do_mounted() ) {
-        return;
-    }
-    const int moves = to_moves<int>( 20_minutes );
-    p.add_msg_if_player( _( "You cut the log into planks." ) );
-
-    p.assign_activity( chop_planks_activity_actor( moves ) );
-    p.activity.placement = get_map().get_abs( p.pos_bub() );
-}
-
-std::optional<int> iuse::lumber( Character *p, item *it, const tripoint_bub_ms & )
-{
-    if( !p ) {
-        debugmsg( "%s called action lumber that requires character but no character is present",
-                  it->typeId().str() );
+    if( !who || !tool || !who->is_avatar() || who->cant_do_mounted() ) {
         return std::nullopt;
     }
-    if( p->cant_do_mounted() ) {
+    const auto reference = tool->get_safe_reference();
+    item_activation_choices choices;
+    if( !query_lumber_choices( *who, choices ) || !reference ) {
+        return std::nullopt;
+    }
+    return start_plank_work( *who, locate_cutting_tool( *who, *reference ), *choices.lumber ) ?
+           std::optional<int>( 1 ) : std::nullopt;
+}
+
+static std::optional<int> use_chopping_tool( Character *who, item *tool,
+        const tripoint_bub_ms &position, adjacent_tool_action action )
+{
+    if( !who || !tool || who->cant_do_mounted() ) {
         return std::nullopt;
     }
     map &here = get_map();
-    // Check if player is standing on any lumber
-    for( item &i : here.i_at( p->pos_bub() ) ) {
-        if( i.typeId() == itype_log ) {
-            here.i_rem( p->pos_bub(), &i );
-            cut_log_into_planks( *p );
-            return 1;
-        }
-    }
-
-    // If the player is not standing on a log, check inventory
-    avatar *you = p->as_avatar();
-    item_location loc;
-    auto filter = []( const item & it ) {
-        return it.typeId() == itype_log;
-    };
-    if( you != nullptr ) {
-        loc = game_menus::inv::titled_filter_menu( filter, *you, _( "Cut up what?" ) );
-    }
-
-    if( !loc ) {
-        p->add_msg_if_player( m_info, _( "You don't have that item!" ) );
+    const bool authority = who->activity.execution() == activity_execution::authoritative;
+    if( !authority && !who->is_avatar() ) {
         return std::nullopt;
     }
-    p->i_rem( &*loc );
-    cut_log_into_planks( *p );
-    return 1;
+    const auto target = authority ? std::make_optional( here.get_abs( position ) ) :
+                        query_adjacent_tool_target( action, *who, here, *tool );
+    if( !target || !valid_adjacent_tool_target( action, *who, here, *tool, *target ) ||
+        ( !authority && action == adjacent_tool_action::tree &&
+          !g->warn_player_maybe_anger_local_faction( true ) ) ) {
+        return std::nullopt;
+    }
+    return start_chopping_work( *who, locate_cutting_tool( *who, *tool ), *target ) ?
+           std::optional<int>( 1 ) : std::nullopt;
 }
 
-static int chop_moves( Character *p, item *it )
+std::optional<int> iuse::chop_tree( Character *who, item *tool, const tripoint_bub_ms &position )
 {
-    // quality of tool
-    const int quality = it->get_quality( qual_AXE );
-
-    // attribute; regular tools - based on STR, powered tools - based on DEX
-    const int attr = it->has_flag( flag_POWERED ) ? p->get_dex() : p->get_arm_str();
-
-    int moves = to_moves<int>( time_duration::from_minutes( 60 - attr ) / std::pow( 2, quality - 1 ) );
-    const int helpersize = p->get_num_crafting_helpers( 3 );
-    moves *= ( 1.0f - ( helpersize / 10.0f ) );
-    return moves;
+    return use_chopping_tool( who, tool, position, adjacent_tool_action::tree );
 }
 
-std::optional<int> iuse::chop_tree( Character *p, item *it, const tripoint_bub_ms & )
+std::optional<int> iuse::chop_logs( Character *who, item *tool, const tripoint_bub_ms &position )
 {
-    if( !p ) {
-        debugmsg( "%s called action chop_tree that requires character but no character is present",
-                  it->typeId().str() );
-        return std::nullopt;
-    }
-    if( p->cant_do_mounted() ) {
-        return std::nullopt;
-    }
-    map &here = get_map();
-    const std::function<bool( const tripoint_bub_ms & )> f = [&here, p]( const tripoint_bub_ms & pnt ) {
-        if( pnt == p->pos_bub() ) {
-            return false;
-        }
-        return here.has_flag( ter_furn_flag::TFLAG_TREE, pnt );
-    };
-
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, _( "Chop down which tree?" ), _( "There is no tree to chop down nearby." ), f, false );
-    if( !pnt_ ) {
-        return std::nullopt;
-    }
-    const tripoint_bub_ms &pnt = *pnt_;
-    if( !f( pnt ) ) {
-        if( pnt == p->pos_bub( here ) ) {
-            p->add_msg_if_player( m_info, _( "You're not stern enough to shave yourself with THIS." ) );
-        } else {
-            p->add_msg_if_player( m_info, _( "You can't chop down that." ) );
-        }
-        return std::nullopt;
-    }
-    if( p->is_avatar() && !g->warn_player_maybe_anger_local_faction( true ) ) {
-        return std::nullopt; // player declined to anger locals
-    }
-    int moves = chop_moves( p, it );
-    const std::vector<Character *> helpers = p->get_crafting_helpers();
-    for( std::size_t i = 0; i < helpers.size() && i < 3; i++ ) {
-        add_msg( m_info, _( "%s helps with this task…" ), helpers[i]->get_name() );
-    }
-    p->assign_activity( chop_tree_activity_actor( moves, item_location( *p, it ) ) );
-    p->activity.placement = here.get_abs( pnt );
-
-    return 1;
+    return use_chopping_tool( who, tool, position, adjacent_tool_action::logs );
 }
 
-std::optional<int> iuse::chop_logs( Character *p, item *it, const tripoint_bub_ms & )
+std::optional<int> iuse::oxytorch( Character *p, item *it, const tripoint_bub_ms &position )
 {
-    if( !p ) {
-        debugmsg( "%s called action chop_logs that requires character but no character is present",
-                  it->typeId().str() );
-        return std::nullopt;
-    }
-    if( p->cant_do_mounted() ) {
-        return std::nullopt;
-    }
-
-    const std::set<ter_str_id> allowed_ter_id {
-        ter_t_trunk,
-        ter_t_stump
-    };
-    map &here = get_map();
-    const std::function<bool( const tripoint_bub_ms & )> f = [&allowed_ter_id,
-    &here]( const tripoint_bub_ms & pnt ) {
-        const ter_id &type = here.ter( pnt );
-        const bool is_allowed_terrain = allowed_ter_id.find( type.id() ) != allowed_ter_id.end();
-        return is_allowed_terrain;
-    };
-
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, _( "Chop which tree trunk?" ), _( "There is no tree trunk to chop nearby." ), f, false );
-    if( !pnt_ ) {
-        return std::nullopt;
-    }
-    const tripoint_bub_ms &pnt = *pnt_;
-    if( !f( pnt ) ) {
-        p->add_msg_if_player( m_info, _( "You can't chop that." ) );
-        return std::nullopt;
-    }
-
-    int moves = chop_moves( p, it );
-    const std::vector<Character *> helpers = p->get_crafting_helpers();
-    for( std::size_t i = 0; i < helpers.size() && i < 3; i++ ) {
-        add_msg( m_info, _( "%s helps with this task…" ), helpers[i]->get_name() );
-    }
-    p->assign_activity( chop_logs_activity_actor( moves, item_location( *p, it ) ) );
-    p->activity.placement = here.get_abs( pnt );
-
-    return 1;
-}
-
-std::optional<int> iuse::oxytorch( Character *p, item *it, const tripoint_bub_ms & )
-{
-    if( p->is_npc() ) {
-        // Long action
-        return std::nullopt;
-    }
-    if( p->cant_do_mounted() ) {
+    if( !p || !it || p->cant_do_mounted() ) {
         return std::nullopt;
     }
     if( !p->has_quality( qual_GLARE, 1 ) ) {
         p->add_msg_if_player( m_info, _( "You need welding goggles to do that." ) );
         return std::nullopt;
     }
-
     map &here = get_map();
-    const std::function<bool( const tripoint_bub_ms & )> f =
-    [&here, p]( const tripoint_bub_ms & pnt ) {
-        if( pnt == p->pos_bub( here ) ) {
-            return false;
-        } else if( here.has_furn( pnt ) ) {
-            return here.furn( pnt )->oxytorch->valid();
-        } else if( const ter_id &t = here.ter( pnt ); !t->is_null() ) {
-            return t->oxytorch->valid();
-        }
-        return false;
-    };
-
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
-    if( !pnt_ ) {
+    const bool authority = p->activity.execution() == activity_execution::authoritative;
+    if( !authority && !p->is_avatar() ) {
         return std::nullopt;
     }
-
-    if( !it->activation_success() ) {
-        p->add_msg_if_player( m_bad, _( "You try to light your %s, but nothing happens." ), it->tname() );
-        return std::nullopt;
+    const auto target = authority ? std::make_optional( here.get_abs( position ) ) :
+                        query_adjacent_tool_target( adjacent_tool_action::torch, *p, here, *it );
+    if( target && ( authority || query_oxytorch_work( *p, *it, *target ) ) ) {
+        start_metal_cutting_work( *p, locate_cutting_tool( *p, *it ), adjacent_tool_action::torch,
+                                  *target );
     }
-
-    const tripoint_bub_ms &pnt = *pnt_;
-    if( !f( pnt ) ) {
-        if( pnt == p->pos_bub() ) {
-            p->add_msg_if_player( m_info, _( "Yuck.  Acetylene gas smells weird." ) );
-        } else {
-            p->add_msg_if_player( m_info, _( "You can't cut that." ) );
-        }
-        return std::nullopt;
-    }
-
-    p->assign_activity( oxytorch_activity_actor( pnt, item_location{*p, it} ) );
-
-    return std::nullopt;
+    return std::nullopt; // The activity consumes fuel once per working turn.
 }
 
 std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms &position )
@@ -4490,42 +4333,22 @@ std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms 
     return std::nullopt; // Charges are consumed by the activity, once per turn.
 }
 
-std::optional<int> iuse::boltcutters( Character *p, item *it, const tripoint_bub_ms & )
+std::optional<int> iuse::boltcutters( Character *p, item *it, const tripoint_bub_ms &position )
 {
-    if( p->cant_do_mounted() ) {
+    if( !p || !it || p->cant_do_mounted() ) {
         return std::nullopt;
     }
-
     map &here = get_map();
-    const std::function<bool( const tripoint_bub_ms & )> f =
-    [&here, p]( const tripoint_bub_ms & pnt ) {
-        if( pnt == p->pos_bub( here ) ) {
-            return false;
-        } else if( here.has_furn( pnt ) ) {
-            return here.furn( pnt )->boltcut->valid();
-        } else if( const ter_id &t = here.ter( pnt ); !t->is_null() ) {
-            return t->boltcut->valid();
-        }
-        return false;
-    };
-
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
-    if( !pnt_ ) {
+    const bool authority = p->activity.execution() == activity_execution::authoritative;
+    if( !authority && !p->is_avatar() ) {
         return std::nullopt;
     }
-    const tripoint_bub_ms &pnt = *pnt_;
-    if( !f( pnt ) ) {
-        if( pnt == p->pos_bub() ) {
-            p->add_msg_if_player( m_info,
-                                  _( "You neatly sever all of the veins and arteries in your body.  Oh, wait; never mind." ) );
-        } else {
-            p->add_msg_if_player( m_info, _( "You can't cut that." ) );
-        }
-        return std::nullopt;
+    const auto target = authority ? std::make_optional( here.get_abs( position ) ) :
+                        query_adjacent_tool_target( adjacent_tool_action::boltcut, *p, here, *it );
+    if( target ) {
+        start_metal_cutting_work( *p, locate_cutting_tool( *p, *it ), adjacent_tool_action::boltcut,
+                                  *target );
     }
-
-    p->assign_activity( boltcutting_activity_actor( pnt, item_location{*p, it} ) );
     return std::nullopt;
 }
 
@@ -4766,8 +4589,12 @@ int iuse::towel_common( Character *p, item *it, bool )
 
 std::optional<int> iuse::unfold_generic( Character *p, item *it, const tripoint_bub_ms & )
 {
-    p->assign_activity( vehicle_unfolding_activity_actor( *it ) );
-    p->i_rem( it );
+    if( !p || !it || !p->has_item( *it ) ) {
+        return std::nullopt;
+    }
+    // The activity owns this item before start/cancel events can run.
+    item folded = p->i_rem( it );
+    p->assign_activity( vehicle_unfolding_activity_actor( std::move( folded ) ) );
     return 0;
 }
 
@@ -6775,36 +6602,61 @@ std::optional<int> iuse::radiocar( Character *p, item *it, const tripoint_bub_ms
 static void sendRadioSignal( Character &p, const flag_id &signal )
 {
     map &here = get_map();
-    for( const tripoint_bub_ms &loc : here.points_in_radius( p.pos_bub(), MAX_VIEW_DISTANCE ) ) {
-        for( item &it : here.i_at( loc ) ) {
-            if( it.has_flag( flag_RADIO_ACTIVATION ) && it.has_flag( signal ) ) {
-                sounds::sound( p.pos_bub(), 6, sounds::sound_t::alarm, _( "beep" ), true, "misc", "beep" );
-                if( it.has_flag( flag_RADIO_INVOKE_PROC ) ) {
-                    // Invoke to transform a radio-modded explosive into its active form
-                    // The item activation may have all kinds of requirements. Like requiring item to be wielded.
-                    // We do not care. Call item action directly without checking can_use.
-                    // Items where this can be a problem should not be radio moddable
-                    std::map<std::string, use_function> use_methods = it.type->use_methods;
-                    if( use_methods.find( "transform" ) != use_methods.end() ) {
-                        it.type->get_use( "transform" )->call( &p, it, loc );
-                        item_location itm_loc = item_location( map_cursor( loc ), &it );
-                        here.update_lum( itm_loc, true );
-                    } else {
-                        it.type->get_use( it.type->use_methods.begin()->first )->call( &p, it, loc );
-                    }
+    const character_action_guard lifetime( p );
+    std::vector<item_location> receivers;
+    for( const tripoint_bub_ms &point : here.points_in_radius( p.pos_bub(), MAX_VIEW_DISTANCE ) ) {
+        for( item &it : here.i_at( point ) ) {
+            if( ( it.has_flag( flag_RADIO_ACTIVATION ) && it.has_flag( signal ) ) ||
+            ( !it.empty_container() && it.get_item_with( [&signal]( const item & inside ) {
+            return inside.has_flag( signal );
+            } ) ) ) {
+                receivers.emplace_back( map_cursor( point ), &it );
+            }
+        }
+    }
+    // A receiver can transform, explode, or remove another receiver. Resolve
+    // the initial signal recipients individually rather than retaining map
+    // stack iterators across their native/Lua callbacks.
+    for( item_location &location : receivers ) {
+        if( !lifetime ) {
+            return;
+        }
+        if( !location ) {
+            continue;
+        }
+        const tripoint_bub_ms point = location.pos_bub( here );
+        item &it = *location;
+        if( it.has_flag( flag_RADIO_ACTIVATION ) && it.has_flag( signal ) ) {
+            sounds::sound( p.pos_bub(), 6, sounds::sound_t::alarm, _( "beep" ), true, "misc", "beep" );
+            if( it.has_flag( flag_RADIO_INVOKE_PROC ) ) {
+                const auto methods = it.type->use_methods;
+                const auto transform = methods.find( "transform" );
+                if( transform != methods.end() ) {
+                    transform->second.call( &p, it, point );
+                } else if( !methods.empty() ) {
+                    methods.begin()->second.call( &p, it, point );
                 }
-            } else if( !it.empty_container() ) {
-                item *itm = it.get_item_with( [&signal]( const item & c ) {
-                    return c.has_flag( signal );
-                } );
-
-                if( itm != nullptr ) {
-                    sounds::sound( p.pos_bub(), 6, sounds::sound_t::alarm, _( "beep" ), true, "misc", "beep" );
-                    // Invoke to transform a radio-modded explosive into its active form
-                    if( itm->has_flag( flag_RADIO_INVOKE_PROC ) ) {
-                        itm->type->invoke( &p, *itm, loc );
-                        item_location itm_loc = item_location( map_cursor( loc ), itm );
-                        here.update_lum( itm_loc, true );
+                if( !lifetime ) {
+                    return;
+                }
+                if( location ) {
+                    here.update_lum( location, true );
+                }
+            }
+        } else if( !it.empty_container() ) {
+            item *inside = it.get_item_with( [&signal]( const item & candidate ) {
+                return candidate.has_flag( signal );
+            } );
+            if( inside ) {
+                item_location child( location, inside );
+                sounds::sound( p.pos_bub(), 6, sounds::sound_t::alarm, _( "beep" ), true, "misc", "beep" );
+                if( inside->has_flag( flag_RADIO_INVOKE_PROC ) ) {
+                    inside->type->invoke( &p, *inside, point );
+                    if( !lifetime ) {
+                        return;
+                    }
+                    if( child ) {
+                        here.update_lum( child, true );
                     }
                 }
             }
@@ -6814,70 +6666,71 @@ static void sendRadioSignal( Character &p, const flag_id &signal )
 
 std::optional<int> iuse::radiocontrol_tick( Character *p, item *it, const tripoint_bub_ms & )
 {
+    // A dropped controller has no operator; it must never alter the host avatar.
     if( !p ) {
-        // Player has dropped the controller
-        avatar &player = get_avatar();
         it->active = false;
-        player.remove_value( "remote_controlling" );
         return 0;
     }
-    if( !it->ammo_sufficient( p ) ) {
+    const bool connected = radio_car_uses_controller( *p, get_map(), *it );
+    if( !connected || !has_radio_car_control( *p, get_map() ) ) {
         it->active = false;
-        p->remove_value( "remote_controlling" );
-    } else if( !p->maybe_get_value( "remote_controlling" ) ) {
-        it->active = false;
+        if( connected ) {
+            disconnect_radio_car( *p );
+        }
     }
-
     return 0;
 }
 
-std::optional<int> iuse::radiocontrol( Character *p, item *it, const tripoint_bub_ms & )
+int iuse::query_radiocontrol( const item &controller )
 {
     const char *car_action = nullptr;
 
-    if( !it->active ) {
+    if( !controller.active ) {
         car_action = _( "Take control of RC car" );
     } else {
         car_action = _( "Stop controlling RC car" );
     }
 
-    int choice = uilist( _( "What to do with the radio control?" ), {
+    return uilist( _( "What to do with the radio control?" ), {
         car_action,
         _( "Press red button" ), _( "Press blue button" ), _( "Press green button" )
     } );
 
-    if( !it->activation_success() ) {
+}
+
+std::optional<int> iuse::radiocontrol( Character *p, item *it, const tripoint_bub_ms & )
+{
+    return radiocontrol_action( p, it, query_radiocontrol( *it ) );
+}
+
+std::optional<int> iuse::radiocontrol_action( Character *p, item *it, int choice )
+{
+    if( !p || !it || choice < -1 || choice > 3 ) {
+        return std::nullopt;
+    }
+    const character_action_guard lifetime( *p );
+    if( !lifetime || !it->activation_success() ) {
         add_msg( m_bad, _( "Your action on the %s seems to have no effect." ), it->tname() );
         return std::nullopt;
     }
 
+    const bool carried = p->has_item( *it );
+    const item_location source = carried ? item_location( *p, it ) : item_location();
     map &here = get_map();
     if( choice < 0 ) {
         return 0;
     } else if( choice == 0 ) {
         if( it->active ) {
             it->active = false;
-            p->remove_value( "remote_controlling" );
+            if( radio_car_uses_controller( *p, here, *it ) ) {
+                disconnect_radio_car( *p );
+            }
+        } else if( connect_radio_car( *p, here, *it ) ) {
+            p->add_msg_if_player( m_good, _( "You take control of the RC car." ) );
+            it->active = true;
         } else {
-            std::list<std::pair<tripoint_bub_ms, item *>> rc_pairs = here.get_rc_items();
-            tripoint_bub_ms rc_item_location = tripoint_bub_ms::invalid;
-            // TODO: grab the closest car or similar?
-            for( auto &rc_pairs_rc_pair : rc_pairs ) {
-                if( rc_pairs_rc_pair.second->has_flag( flag_RADIOCAR ) &&
-                    rc_pairs_rc_pair.second->active ) {
-                    rc_item_location = rc_pairs_rc_pair.first;
-                }
-            }
-            if( rc_item_location.is_invalid() ) {
-                p->add_msg_if_player( _( "No active RC cars on ground and in range." ) );
-                return 1;
-            } else {
-                p->add_msg_if_player( m_good, _( "You take control of the RC car." ) );
-
-                // FIXME: migrate to abs
-                p->set_value( "remote_controlling", tripoint_abs_ms{ rc_item_location.raw() } );
-                it->active = true;
-            }
+            p->add_msg_if_player( _( "No active RC cars on ground and in range." ) );
+            return 1;
         }
     } else {
         const flag_id signal( "RADIOSIGNAL_" + std::to_string( choice ) );
@@ -6911,7 +6764,13 @@ std::optional<int> iuse::radiocontrol( Character *p, item *it, const tripoint_bu
 
         p->add_msg_if_player( _( "Click." ) );
         sendRadioSignal( *p, signal );
+        if( !lifetime ) {
+            return std::nullopt;
+        }
         p->mod_moves( -to_moves<int>( 2_seconds ) );
+        if( carried && !source ) {
+            return 0; // The signal destroyed its controller; do not bill a stale pointer.
+        }
     }
 
     return 1;
@@ -8471,17 +8330,11 @@ std::optional<int> iuse::craft( Character *p, item *it, const tripoint_bub_ms & 
 
 std::optional<int> iuse::disassemble( Character *p, item *it, const tripoint_bub_ms & )
 {
-    if( p->cant_do_mounted() ) {
+    if( p->cant_do_mounted() || !p->has_item( *it ) ) {
         return std::nullopt;
     }
-    it = wield_before_use( p, it, _( "Wield the %s and start working?" ) );
-    if( !it ) {
-        return std::nullopt;
-    }
-    if( !p->has_item( *it ) ) {
-        return std::nullopt;
-    }
-
+    // Disassembly owns placement and any wielded-item disposition. Its frontend
+    // must select first, before a client or another player's inventory is mutated.
     p->disassemble( item_location( *p, it ), false );
 
     return 0;

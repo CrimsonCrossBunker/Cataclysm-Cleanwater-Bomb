@@ -967,7 +967,8 @@ stacking_info item::stacks_with( const item &rhs, bool check_components, bool co
     const bool both_empty_vars = item_vars.empty() && rhs.item_vars.empty();
     bits.set( tname::segments::ACTIVITY_OCCUPANCY,
               both_empty_vars ||
-              get_var( "activity_var", "" ) == rhs.get_var( "activity_var", "" ) );
+              ( get_var( "activity_var", "" ) == rhs.get_var( "activity_var", "" ) &&
+                get_var( "activity_owner_id", "" ) == rhs.get_var( "activity_owner_id", "" ) ) );
     bits.set( tname::segments::FILTHY, is_filthy() == rhs.is_filthy() );
     bits.set( tname::segments::WETNESS, _stacks_wetness( *this, rhs, precise ) );
     bits.set( tname::segments::WEAPON_MODS, _stacks_weapon_mods( *this, rhs ) );
@@ -998,7 +999,7 @@ stacking_info item::stacks_with( const item &rhs, bool check_components, bool co
     // Guns that differ only by dirt/shot_counter can still stack,
     // but other item_vars such as label/note will prevent stacking.
     // CAMERA_*_PHOTOS_count and EIPC_RECIPES_count are derived caches; not part of identity.
-    static const std::set<std::string> ignore_keys = { "dirt", "shot_counter", "spawn_location", "ethereal", "last_act_by_char_id", "activity_var", "CAMERA_EXTENDED_PHOTOS_count", "CAMERA_MONSTER_PHOTOS_count", "EIPC_RECIPES_count" };
+    static const std::set<std::string> ignore_keys = { "dirt", "shot_counter", "spawn_location", "ethereal", "last_act_by_char_id", "activity_var", "activity_owner_id", "CAMERA_EXTENDED_PHOTOS_count", "CAMERA_MONSTER_PHOTOS_count", "EIPC_RECIPES_count" };
     bits.set( tname::segments::TRAITS, template_traits == rhs.template_traits );
     bits.set( tname::segments::VARS,
               both_empty_vars ||
@@ -5353,9 +5354,9 @@ bool item::on_drop( const tripoint_bub_ms &pos )
     return on_drop( pos, get_map() );
 }
 
-bool item::on_drop( const tripoint_bub_ms &pos, map &m )
+bool item::on_drop( const tripoint_bub_ms &pos, map &m, Character *dropper )
 {
-    avatar &player_character = get_avatar();
+    Character &player_character = dropper ? *dropper : get_avatar();
 
     // dropping liquids, even currently frozen ones, on the ground makes them
     // dirty

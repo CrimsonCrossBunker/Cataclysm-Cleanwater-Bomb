@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_RANGED_H
 #define CATA_SRC_RANGED_H
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -38,7 +39,8 @@ trajectory mode_select_only( avatar &you, int range );
 trajectory mode_fire( avatar &you, aim_activity_actor &activity );
 
 /** Throwing item */
-trajectory mode_throw( avatar &you, item &relevant, bool blind_throwing );
+trajectory mode_throw( avatar &you, item &relevant,
+                       const std::optional<tripoint_bub_ms> &blind_from = std::nullopt, int z_range = -1 );
 
 
 /** Reach attacking */

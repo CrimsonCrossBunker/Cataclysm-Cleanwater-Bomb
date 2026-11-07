@@ -1,12 +1,16 @@
 #include "vehicle.h"
 #include "vehicle_turret_control.h"
 #include "vehicle_control.h"
+#include "vehicle_harness.h"
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
 #include "vehicle_water.h"
 #include "vehicle_toolstation.h"
 #include "vehicle_tool_use.h"
 #include "character_action_guard.h"
+#include "cata_scope_helpers.h"
+#include "mp_client_conn.h"
+#include "map_selector.h"
 #include "mp_inventory_activity.h"
 
 #include <calendar.h>
@@ -20,12 +24,15 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <initializer_list>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #include "action.h"
 #include "activity_actor_definitions.h"
@@ -94,7 +101,6 @@ static const ammotype ammo_battery( "battery" );
 static const damage_type_id damage_bash( "bash" );
 
 
-static const efftype_id effect_harnessed( "harnessed" );
 static const efftype_id effect_tied( "tied" );
 
 static const fault_id fault_engine_starter( "fault_engine_starter" );
@@ -778,72 +784,180 @@ void vehicle::transform_terrain( map &here )
     }
 }
 
+namespace
+{
+// Part indices and borrowed ranges are invalid after a script removes a part.
+// Snapshot only the original enabled tools; callbacks cannot add another pass.
+struct farm_part_snapshot {
+    int64_t identity;
+    tripoint_abs_ms position;
+
+    int resolve( vehicle &machine, map &here, const std::string &feature ) const {
+        for( const vpart_reference &part : machine.get_enabled_parts( feature ) ) {
+            if( part.part().get_base().uid().get_value() == identity &&
+                here.get_abs( part.pos_bub( here ) ) == position ) {
+                return part.part_index();
+            }
+        }
+        return -1;
+    }
+};
+
+std::vector<farm_part_snapshot> farm_parts( vehicle &machine, map &here,
+        const std::string &feature )
+{
+    std::vector<farm_part_snapshot> result;
+    for( const vpart_reference &part : machine.get_enabled_parts( feature ) ) {
+        result.push_back( { part.part().get_base().uid().get_value(),
+                            here.get_abs( part.pos_bub( here ) ) } );
+    }
+    return result;
+}
+
+class farm_operation_context
+{
+    public:
+        farm_operation_context( vehicle &machine, map &here ) :
+            machine( machine.get_safe_reference() ), terrain( here.get_context_reference() ),
+            origin( machine.pos_abs() ) {
+            if( Character *who = vehicle_operator( machine, here ) ) {
+                driver.emplace( *who );
+            }
+        }
+
+        Character *actor() const {
+            return driver ? driver->get() : nullptr;
+        }
+
+        bool valid() const {
+            return machine && terrain && machine->pos_abs() == origin &&
+                   ( !driver || *driver ) && vehicle_operator( *machine, *terrain ) == actor();
+        }
+
+    private:
+        safe_reference<vehicle> machine;
+        safe_reference<map> terrain;
+        tripoint_abs_ms origin;
+        std::optional<character_action_guard> driver;
+};
+} // namespace
+
 void vehicle::operate_reaper( map &here )
 {
-    for( const vpart_reference &vp : get_enabled_parts( "REAPER" ) ) {
-        const tripoint_bub_ms reaper_pos = vp.pos_bub( here );
-        int plant_produced = std::max( 1, static_cast<int>( rng( 1, vp.info().bonus ) *
-                                       ::get_option<float>( "CROP_HARVEST_MULTIPLIER" ) ) );
-        int seed_produced = rng( 1, 3 );
-        const units::volume max_pickup_volume = vp.info().size / 20;
-        here.grow_plant( reaper_pos );
-        const bool is_overgrown = iexamine::is_plant_overgrown( here, reaper_pos );
-        const bool is_harvestable = iexamine::is_plant_harvestable( here, reaper_pos );
-        if( is_overgrown ) {
-            plant_produced = 0;
-            seed_produced = 0;
-        } else if( !is_harvestable ) {
+    if( cata_mp::is_client_mode() || farming_in_progress ) {
+        return;
+    }
+    const auto lifetime = get_safe_reference();
+    const farm_operation_context operation( *this, here );
+    farming_in_progress = true;
+    const on_out_of_scope finish( [lifetime]() {
+        if( lifetime ) {
+            lifetime->farming_in_progress = false;
+        }
+    } );
+    for( const farm_part_snapshot &tool : farm_parts( *this, here, "REAPER" ) ) {
+        if( !operation.valid() ) {
+            return;
+        }
+        int index = tool.resolve( *this, here, "REAPER" );
+        if( index < 0 ) {
             continue;
         }
-        // Can't use item_stack::only_item() since there might be fertilizer
-        map_stack items = here.i_at( reaper_pos );
-        map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.is_seed();
-        } );
-        if( seed == items.end() || seed->typeId() == itype_fungal_seeds ||
-            seed->typeId() == itype_marloss_seed ) {
-            // Otherworldly plants, the earth-made reaper can not handle those.
+        const tripoint_bub_ms position = here.get_bub( tool.position );
+        const vpart_info &info = part( index ).info();
+        // Retain the native mechanical yield draws, including empty tiles.
+        int plant_count = std::max( 1, static_cast<int>( rng( 1, info.bonus ) *
+                                    ::get_option<float>( "CROP_HARVEST_MULTIPLIER" ) ) );
+        int seed_count = rng( 1, 3 );
+        const units::volume max_pickup_volume = info.size / 20;
+        item *original = iexamine::get_seed_at( here, position );
+        const int64_t seed_identity = original ? original->uid().get_value() : 0;
+        here.grow_plant( position, operation.actor() );
+        if( !operation.valid() ) {
+            return;
+        }
+        index = tool.resolve( *this, here, "REAPER" );
+        item *seed = iexamine::get_seed_at( here, position );
+        if( index < 0 || !seed || seed->uid().get_value() != seed_identity ||
+            seed->typeId() == itype_fungal_seeds || seed->typeId() == itype_marloss_seed ) {
             continue;
         }
-
-        // Secure the seed type before EOCs or i_clear destroy the item.
-        const itype &seed_type = *seed->type;
-
-        const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, reaper_pos );
+        if( iexamine::is_plant_overgrown( here, position ) ) {
+            plant_count = 0;
+            seed_count = 0;
+        } else if( !iexamine::is_plant_harvestable( here, position ) ) {
+            continue;
+        }
+        const item seed_snapshot = *seed;
+        const ter_id terrain = here.ter( position );
+        const furn_str_id furniture = here.furn( position ).id();
+        const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, position );
         const std::string stage = stage_idx >= 0 ?
-                                  seed_type.seed->get_growth_stages()[stage_idx].first.str() : "";
-        const std::map<std::string, double> num_ctx = {
-            { "plant_count", static_cast<double>( plant_produced ) },
-            { "seed_count", static_cast<double>( seed_produced ) },
-            { "actor_is_npc", 0.0 }
-        };
-        get_event_bus().send<event_type::character_harvests_plant>(
-            get_avatar().getID(), here.get_abs( reaper_pos ).raw(),
-            seed_type.get_id(), here.furn( reaper_pos ).id(),
-            plant_produced, seed_produced );
+                                  seed_snapshot.type->seed->get_growth_stages()[stage_idx].first.str() : "";
 
-        iexamine::run_plant_lifecycle_event(
-            "harvest", get_avatar(), here, reaper_pos, *seed,
-            stage, stage, {}, num_ctx );
-
-        here.furn_set( reaper_pos, furn_str_id::NULL_ID() );
-        here.i_clear( reaper_pos );
-        for( item &i : iexamine::get_harvest_items(
-                 seed_type, plant_produced, seed_produced, false ) ) {
-            here.add_item_or_charges( reaper_pos, i );
+        here.furn_set( position, furn_str_id::NULL_ID() );
+        here.i_clear( position );
+        std::vector<item_location> products;
+        for( item &value : iexamine::get_harvest_items(
+                 *seed_snapshot.type, plant_count, seed_count, false ) ) {
+            item &stored = here.add_item_unprocessed( position, std::move( value ) );
+            if( !stored.is_null() ) {
+                products.emplace_back( map_cursor( tool.position ), &stored );
+            }
         }
-        if( &here == &reality_bubble() ) { // TODO: Make sound handling map aware.
-            sounds::sound( reaper_pos, rng( 10, 25 ), sounds::sound_t::combat, _( "Swish" ), false, "vehicle",
-                           "reaper" );
+        // The old crop and its complete yield are settled before any hook.
+        // An unattended vehicle has no character to receive these effects.
+        if( Character *who = operation.actor() ) {
+            get_event_bus().send<event_type::character_harvests_plant>(
+                who->getID(), tool.position.raw(), seed_snapshot.typeId(), furniture,
+                plant_count, seed_count );
+            if( !operation.valid() ) {
+                return;
+            }
+            iexamine::run_plant_lifecycle_event(
+            "harvest", *who, here, position, seed_snapshot, stage, stage, {}, {
+                { "plant_count", static_cast<double>( plant_count ) },
+                { "seed_count", static_cast<double>( seed_count ) },
+                { "actor_is_npc", who->is_npc() ? 1.0 : 0.0 }
+            }, furniture );
         }
-        if( vp.info().has_flag( VPFLAG_CARGO ) ) {
-            for( map_stack::iterator iter = items.begin(); iter != items.end(); ) {
-                if( ( iter->volume() <= max_pickup_volume ) &&
-                    add_item( here, vp.part(), *iter ) ) {
-                    iter = items.erase( iter );
-                } else {
-                    ++iter;
-                }
+        if( !operation.valid() ) {
+            return;
+        }
+        if( &here == &reality_bubble() ) {
+            sounds::sound( position, rng( 10, 25 ), sounds::sound_t::combat,
+                           _( "Swish" ), false, "vehicle", "reaper" );
+        }
+        // Only collect this harvest, never a new crop placed by a callback.
+        for( item_location product : products ) {
+            if( !operation.valid() ) {
+                return;
+            }
+            if( here.furn( position ) != furn_str_id::NULL_ID() ||
+                here.ter( position ) != terrain ) {
+                break;
+            }
+            if( !product || product.where() != item_location::type::map ||
+                product.has_parent() || product.pos_abs() != tool.position ) {
+                continue;
+            }
+            item_location placed;
+            here.settle_item_on_ground( position, product, operation.actor(), &placed );
+            if( !operation.valid() ) {
+                return;
+            }
+            product = placed;
+            index = tool.resolve( *this, here, "REAPER" );
+            if( index < 0 || !product || product.pos_abs() != tool.position ||
+                here.furn( position ) != furn_str_id::NULL_ID() || here.ter( position ) != terrain ) {
+                continue;
+            }
+            // A spilling bucket invokes placement callbacks inside add_item;
+            // leave such custom yields on the ground for an explicit pickup.
+            if( part( index ).info().has_flag( VPFLAG_CARGO ) &&
+                !product->is_bucket_nonempty() && product->volume() <= max_pickup_volume &&
+                add_item( here, part( index ), *product ) ) {
+                product.remove_item();
             }
         }
     }
@@ -851,59 +965,101 @@ void vehicle::operate_reaper( map &here )
 
 void vehicle::operate_planter( map &here )
 {
-    for( const vpart_reference &vp : get_enabled_parts( "PLANTER" ) ) {
-        const size_t planter_id = vp.part_index();
-        const tripoint_bub_ms loc = vp.pos_bub( here );
-        vehicle_stack v = get_items( vp.part() );
-        for( auto i = v.begin(); i != v.end(); i++ ) {
-            if( i->is_seed() ) {
-                const ter_id &t = here.ter( loc );
-                // If it is an "advanced model" then it will avoid damaging itself or becoming damaged. It's a real feature.
-                if( t != ter_t_dirtmound && vp.has_feature( "ADVANCED_PLANTER" ) ) {
-                    //then don't put the item there.
-                    break;
-                } else if( t == ter_t_dirtmound ) {
-                    here.set( loc, ter_t_dirt, furn_f_plant_seed );
-                } else if( !here.has_flag( ter_furn_flag::TFLAG_PLOWABLE, loc ) ) {
-                    //If it isn't plowable terrain, then it will most likely be damaged.
-                    damage( here, planter_id, rng( 1, 10 ), damage_bash, false );
-                    if( &here == &reality_bubble() ) { // TODO: Make sound handling map aware
-                        sounds::sound( loc, rng( 10, 20 ), sounds::sound_t::combat, _( "Clink" ), false, "smash_success",
-                                       "hit_vehicle" );
-                    }
-                }
-                if( !i->count_by_charges() || i->charges == 1 ) {
-                    i->set_age( 0_turns );
-                    here.add_item( loc, *i );
-                    v.erase( i );
-                } else {
-                    item tmp = *i;
-                    tmp.charges = 1;
-                    tmp.set_age( 0_turns );
-                    here.add_item( loc, tmp );
-                    i->charges--;
-                }
-
-                item *planted_seed = iexamine::get_seed_at( here, loc );
-                if( planted_seed != nullptr ) {
-                    const std::string seed_stage( "GROWTH_SEED" );
-                    const furn_t &new_furn = here.furn( loc ).obj();
-
-                    get_event_bus().send<event_type::character_plants_seed>(
-                        get_avatar().getID(), here.get_abs( loc ).raw(),
-                        planted_seed->typeId(), new_furn.id );
-
-                    const std::map<std::string, double> num_ctx = {
-                        { "actor_is_npc", 0.0 }
-                    };
-                    iexamine::run_plant_lifecycle_event(
-                        "plant", get_avatar(), here, loc, *planted_seed,
-                        seed_stage, seed_stage, {}, num_ctx );
-                }
-
-                break;
+    if( cata_mp::is_client_mode() || farming_in_progress ) {
+        return;
+    }
+    const auto lifetime = get_safe_reference();
+    const farm_operation_context operation( *this, here );
+    farming_in_progress = true;
+    const on_out_of_scope finish( [lifetime]() {
+        if( lifetime ) {
+            lifetime->farming_in_progress = false;
+        }
+    } );
+    for( const farm_part_snapshot &tool : farm_parts( *this, here, "PLANTER" ) ) {
+        if( !operation.valid() ) {
+            return;
+        }
+        int index = tool.resolve( *this, here, "PLANTER" );
+        if( index < 0 ) {
+            continue;
+        }
+        const tripoint_bub_ms position = here.get_bub( tool.position );
+        if( here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, position ) ) {
+            continue;
+        }
+        vehicle_stack seeds = get_items( part( index ) );
+        const auto seed = std::find_if( seeds.begin(), seeds.end(), []( const item & value ) {
+            return value.is_seed() && value.count() > 0;
+        } );
+        if( seed == seeds.end() ) {
+            continue;
+        }
+        const bool plant = here.ter( position ) == ter_t_dirtmound &&
+                           here.furn( position ) == furn_str_id::NULL_ID() && here.i_at( position ).empty();
+        if( !plant && part( index ).info().has_flag( "ADVANCED_PLANTER" ) ) {
+            continue;
+        }
+        const bool damage_planter = !plant && !here.has_flag( ter_furn_flag::TFLAG_PLOWABLE,
+                                    position );
+        item planted = *seed;
+        if( planted.count_by_charges() ) {
+            planted.charges = 1;
+        }
+        planted.set_age( 0_turns );
+        // Debit cargo before placement, damage or event callbacks can reenter.
+        if( seed->count_by_charges() && seed->charges > 1 ) {
+            --seed->charges;
+            invalidate_mass();
+        } else {
+            seeds.erase( seed );
+        }
+        if( plant ) {
+            here.set( position, ter_t_dirt, furn_f_plant_seed );
+        }
+        item &stored = here.add_item( position, std::move( planted ) );
+        if( !operation.valid() ) {
+            return;
+        }
+        const item_location planted_seed = stored.is_null() ? item_location() :
+                                           item_location( map_cursor( tool.position ), &stored );
+        index = tool.resolve( *this, here, "PLANTER" );
+        if( index < 0 ) {
+            continue;
+        }
+        if( damage_planter ) {
+            damage( here, index, rng( 1, 10 ), damage_bash, false );
+            if( !operation.valid() ) {
+                return;
+            }
+            if( &here == &reality_bubble() ) {
+                sounds::sound( position, rng( 10, 20 ), sounds::sound_t::combat,
+                               _( "Clink" ), false, "smash_success", "hit_vehicle" );
             }
         }
+        if( !plant || !planted_seed ) {
+            continue; // A basic planter can spill seeds on untilled ground.
+        }
+        Character *who = operation.actor();
+        if( !who ) {
+            continue;
+        }
+        const itype_id seed_type = planted_seed->typeId();
+        get_event_bus().send<event_type::character_plants_seed>(
+            who->getID(), tool.position.raw(), seed_type, furn_f_plant_seed );
+        if( !operation.valid() ) {
+            return;
+        }
+        if( !planted_seed || planted_seed->typeId() != seed_type ||
+            planted_seed.pos_abs() != tool.position ||
+            iexamine::get_seed_at( here, position ) != planted_seed.get_item() ||
+            here.furn( position ) != furn_f_plant_seed ) {
+            continue;
+        }
+        iexamine::run_plant_lifecycle_event(
+        "plant", *who, here, position, *planted_seed, "GROWTH_SEED", "GROWTH_SEED", {}, {
+            { "actor_is_npc", who->is_npc() ? 1.0 : 0.0 }
+        } );
     }
 }
 
@@ -1323,75 +1479,15 @@ void vehicle::use_tiedown_furniture( int part, map *here, const tripoint_bub_ms 
 
 void vehicle::use_harness( int part, map *here, const tripoint_bub_ms &pos )
 {
-    if( here !=
-        &reality_bubble() ) { // TODO: Work needed on used operations for this to be possible to remove.
-        debugmsg( "vehicle::use_harness can only be used with the reality bubble." );
-        return;
-    }
-
-    const vehicle_part &vp = parts[part];
-    const vpart_info &vpi = vp.info();
-
-    if( vp.is_unavailable() || vp.removed ) {
+    if( !here || part < 0 || part >= part_count() ) {
         debugmsg( "use_harness called on invalid part" );
         return;
     }
-    // TODO: Make 'is_empty' map aware.
-    if( !g->is_empty( pos ) ) {
-        add_msg( m_info, _( "The harness is blocked." ) );
-        return;
-    }
-    // TODO: Make 'choose_adjacent_highlight' map aware so 'f' can be too.
-    creature_tracker &creatures = get_creature_tracker();
-    const std::function<bool( const tripoint_bub_ms & )> f = [&creatures](
-    const tripoint_bub_ms & pnt ) {
-        monster *mon_ptr = creatures.creature_at<monster>( pnt );
-        if( mon_ptr == nullptr ) {
-            return false;
-        }
-        monster &f = *mon_ptr;
-        return f.friendly != 0 && ( f.has_flag( mon_flag_PET_MOUNTABLE ) ||
-                                    f.has_flag( mon_flag_PET_HARNESSABLE ) );
-    };
-
-    // TODO: Make 'choose_adjacent_highlight' map aware.
-    const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                *here, _( "Where is the creature to harness?" ), _( "There is no creature to harness nearby." ), f,
-                false );
-    if( !pnt_ ) {
-        add_msg( m_info, _( "Never mind." ) );
-        return;
-    }
-
-    const tripoint_abs_ms &target = here->get_abs( *pnt_ );
-    monster *mon_ptr = creatures.creature_at<monster>( target );
-    if( mon_ptr == nullptr ) {
-        add_msg( m_info, _( "No creature there." ) );
-        return;
-    }
-    monster &m = *mon_ptr;
-    std::string Harness_Bodytype = "HARNESS_" + m.type->bodytype;
-    if( m.friendly == 0 ) {
-        add_msg( m_info, _( "This creature is not friendly!" ) );
-        return;
-    } else if( !m.has_flag( mon_flag_PET_MOUNTABLE ) && !m.has_flag( mon_flag_PET_HARNESSABLE ) ) {
-        add_msg( m_info, _( "This creature cannot be harnessed." ) );
-        return;
-    } else if( !vpi.has_flag( Harness_Bodytype ) && !vpi.has_flag( "HARNESS_any" ) ) {
-        add_msg( m_info, _( "The harness is not adapted for this creature morphology." ) );
-        return;
-    }
-
-    m.add_effect( effect_harnessed, 1_turns, true );
-    m.setpos( here->get_abs( pos ) );
-    //~ %1$s: monster name, %2$s: vehicle name
-    add_msg( m_info, _( "You harness your %1$s to %2$s." ), m.get_name(), disp_name() );
-    if( m.has_effect( effect_tied ) ) {
-        add_msg( m_info, _( "You untie your %s." ), m.get_name() );
-        m.remove_effect( effect_tied );
-        if( m.tied_item ) {
-            get_player_character().i_add( *m.tied_item );
-            m.tied_item.reset();
+    Character &who = get_player_character();
+    if( auto choice = query_vehicle_harness( who, *here, *this, here->get_abs( pos ),
+                      parts[part].get_base().uid().get_value() ) ) {
+        if( !cata_mp::client_vehicle_control( *choice ) ) {
+            execute_vehicle_control( who, *here, *choice );
         }
     }
 }
@@ -2291,7 +2387,8 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         const size_t hn_idx = vp_harness->part_index();
         menu.add( _( "Harness an animal" ) )
         .hotkey( "USE_ANIMAL_CTRL" )
-        .on_submit( [this, hn_idx, here, vppos] { use_harness( hn_idx, here, vppos ); } );
+        .on_submit( [this, hn_idx, here, vppos] { use_harness( hn_idx, here, vppos ); } )
+        .skip_theft_check();
     }
 
     if( vp.avail_part_with_feature( "PLANTER" ) ) {
@@ -2319,10 +2416,9 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     if( is_foldable() && !remote ) {
         menu.add( string_format( _( "Fold %s" ), name ) )
         .hotkey( "FOLD_VEHICLE" )
-        .on_submit( [this] {
-            vehicle_folding_activity_actor folding_act( *this );
-            get_avatar().assign_activity( folding_act );
-        } );
+        .skip_theft_check()
+        .skip_locked_check()
+        .on_submit( [control_action] { control_action( "fold" ); } );
     }
 
     const std::optional<vpart_reference> vp_lockable_door =

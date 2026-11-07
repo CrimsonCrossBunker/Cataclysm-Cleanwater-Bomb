@@ -1,3 +1,4 @@
+#include "radio_car_control.h"
 #include <flat_set.h>
 #include <magic.h>
 #include <translation.h>
@@ -25,6 +26,7 @@
 #include "ballistics.h"
 #include "bionics.h"
 #include "bionic_activation.h"
+#include "item_disposition.h"
 #include "bionic_water_activity.h"
 #include "bionic_world_effects.h"
 #include "character_action_guard.h"
@@ -772,7 +774,8 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         return false;
     }
     if( !choices && ( bionic_requires_adjacent_target( initial_bio.id ) ||
-                      initial_bio.id == bio_water_extractor ) ) {
+                      initial_bio.id == bio_water_extractor ||
+                      ( is_avatar() && initial_bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) ) ) {
         if( !is_avatar() ) {
             return false;
         }
@@ -971,7 +974,14 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         if( close_bionics_ui ) {
             *close_bionics_ui = true;
         }
-        avatar_action::fire_ranged_bionic( player_character, bio.get_weapon() );
+        if( activity.execution() == activity_execution::authoritative ) {
+            // The owned firearm session supplies targeting and retains the fake gun.
+            return finish_activation();
+        }
+        if( !is_avatar() ) {
+            return false;
+        }
+        avatar_action::fire_ranged_bionic( *as_avatar(), bio.get_weapon(), activation_uid );
     } else if( bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
         if( !bio.has_weapon() ) {
             debugmsg( "tried to activate weapon bionic \"%s\" without fake_weapon",
@@ -1004,7 +1014,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
                         // note: deep recursion is not possible, as `deactivate_bionic` won't return true second time
                         return live_character->activate_bionic(
                                    **current_activation, eff_only,
-                                   close_bionics_ui );
+                                   close_bionics_ui, choices );
                     }
 
                     add_msg_if_player( m_info, _( "Deactivate your %s first!" ),
@@ -1030,8 +1040,9 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
 
         if( !weapon.is_null() ) {
             const std::string query = string_format( _( "Stop wielding %s?" ), weapon.tname() );
-            const bool disposed = dispose_item(
-                                      item_location( *this, &weapon ), query );
+            const bool disposed = choices ? execute_item_disposition( *this,
+                                  item_location( *this, &weapon ), *choices->unwield ) :
+                                  dispose_item( item_location( *this, &weapon ), query );
             Creature *live_creature = character_reference.get();
             Character *live_character = live_creature == nullptr ? nullptr :
                                         live_creature->as_character();
@@ -1266,6 +1277,10 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         add_msg_if_player( m_info, _( "Wind Direction: From the %s." ), dirstring );
     } else if( bio.id == bio_remote ) {
         add_msg_activate();
+        if( choices ) {
+            const bool executed = execute_bionic_remote_choices( *this, activation_uid, *choices );
+            return finish_activation() && executed;
+        }
         int choice = uilist( _( "Perform which function:" ), {
             _( "Control vehicle" ), _( "RC radio" )
         } );
@@ -1277,7 +1292,10 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
                 ctr = item( itype_radiocontrol, calendar::turn_zero );
             }
             ctr.charges = units::to_kilojoule( get_power_level() );
-            int power_use = invoke_item( &ctr );
+            // The facade has no physical battery. Let native tool consumption
+            // draw its one charge from this operator's CBM power exactly once.
+            ctr.set_flag( flag_USES_BIONIC_POWER );
+            invoke_item( &ctr, choice == 0 ? "REMOTEVEH" : "RADIOCONTROL" );
             if( !character_reference ) {
                 return false;
             }
@@ -1286,11 +1304,10 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
             if( !current_bionic ) {
                 return false;
             }
-            mod_power_level( units::from_kilojoule( -static_cast<std::int64_t>( power_use ) ) );
             ( **current_bionic ).powered = ctr.active;
         } else {
             bio.powered = get_remote_vehicle( *this, get_map() ) != nullptr ||
-                          maybe_get_value( "remote_controlling" );
+                          has_radio_car_control( *this, get_map() );
         }
     } else if( bio.info().is_remote_fueled ) {
         std::vector<item_location> cables = cache_get_items_with( flag_CABLE_SPOOL );
@@ -1486,9 +1503,9 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
         if( get_remote_vehicle( *this, get_map() ) != nullptr &&
             !has_active_item( itype_remotevehcontrol ) ) {
             set_remote_vehicle( *this, get_map(), nullptr );
-        } else if( maybe_get_value( "remote_controlling" ) &&
-                   !has_active_item( itype_radiocontrol ) ) {
-            remove_value( "remote_controlling" );
+        }
+        if( radio_car_uses_bionic( *this, get_map(), deactivation_uid ) ) {
+            disconnect_radio_car( *this );
         }
     }
 
@@ -1986,7 +2003,7 @@ void Character::process_bionic( bionic &initial_bio )
     // Bionic effects on every turn they are active go here.
     if( bio.id == bio_remote ) {
         if( get_remote_vehicle( *this, get_map() ) == nullptr &&
-            !maybe_get_value( "remote_controlling" ) ) {
+            !has_radio_car_control( *this, get_map() ) ) {
             bio.powered = false;
             add_msg_if_player( m_warning, _( "Your %s has lost connection and is turning off." ),
                                bio.info().name );
@@ -3695,6 +3712,11 @@ bool bionic::can_install_weapon( const item &new_weapon ) const
 }
 
 item bionic::get_weapon() const
+{
+    return weapon;
+}
+
+const item &bionic::weapon_view() const
 {
     return weapon;
 }

@@ -1,4 +1,9 @@
+#include "character_action_guard.h"
+#include "vertical_movement.h"
+#include "deployed_furniture.h"
 #include "iexamine.h"
+
+#include "activity_handlers.h"
 
 #include <ret_val.h>
 #include <type_id.h>
@@ -23,6 +28,12 @@
 #include "bionics.h"
 #include "bionic_activation.h"
 #include "mp_inventory_activity.h"
+#include "mp_client_conn.h"
+#include "item_source.h"
+#include "item_consumption.h"
+#include "item_unload.h"
+#include "farming.h"
+#include "craft_reservation.h"
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
@@ -58,6 +69,7 @@
 #include "game_inventory.h"
 #include "handle_liquid.h"
 #include "harvest.h"
+#include "liquid_transfer.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "input_popup.h"
@@ -122,7 +134,6 @@
 static const activity_id ACT_HARVEST( "ACT_HARVEST" );
 static const activity_id ACT_OPERATION( "ACT_OPERATION" );
 
-static const addiction_id addiction_opiate( "opiate" );
 
 static const bionic_id bio_lighter( "bio_lighter" );
 static const bionic_id bio_lockpick( "bio_lockpick" );
@@ -145,12 +156,10 @@ static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_pblue( "pblue" );
-static const efftype_id effect_pkill2( "pkill2" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_slow_descent( "slow_descent" );
 static const efftype_id effect_strong_antibiotic( "strong_antibiotic" );
 static const efftype_id effect_strong_antibiotic_visible( "strong_antibiotic_visible" );
-static const efftype_id effect_teleglow( "teleglow" );
 static const efftype_id effect_tetanus( "tetanus" );
 static const efftype_id effect_weak_antibiotic( "weak_antibiotic" );
 
@@ -190,12 +199,10 @@ static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_arm_splint( "arm_splint" );
 static const itype_id itype_bot_broken_cyborg( "bot_broken_cyborg" );
 static const itype_id itype_bot_prototype_cyborg( "bot_prototype_cyborg" );
-static const itype_id itype_cactus_pad( "cactus_pad" );
 static const itype_id itype_cash_card( "cash_card" );
 static const itype_id itype_charcoal( "charcoal" );
 static const itype_id itype_chem_carbide( "chem_carbide" );
 static const itype_id itype_corpse( "corpse" );
-static const itype_id itype_dahlia_root( "dahlia_root" );
 static const itype_id itype_disassembly( "disassembly" );
 static const itype_id itype_fake_milling_item( "fake_milling_item" );
 static const itype_id itype_fake_smoke_plume( "fake_smoke_plume" );
@@ -203,24 +210,17 @@ static const itype_id itype_fire( "fire" );
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
 static const itype_id itype_fungal_seeds( "fungal_seeds" );
-static const itype_id itype_hickory_root( "hickory_root" );
 static const itype_id itype_id_science( "id_science" );
 static const itype_id itype_iso_material_disc_ammo( "iso_material_disc_ammo" );
 static const itype_id itype_iso_material_disc_basic( "iso_material_disc_basic" );
 static const itype_id itype_iso_material_disc_quality( "iso_material_disc_quality" );
 static const itype_id itype_leg_splint( "leg_splint" );
 static const itype_id itype_maple_sap( "maple_sap" );
-static const itype_id itype_marloss_berry( "marloss_berry" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
-static const itype_id itype_mycus_fruit( "mycus_fruit" );
 static const itype_id itype_nail( "nail" );
 static const itype_id itype_nanomaterial( "nanomaterial" );
 static const itype_id itype_nectar( "nectar" );
 static const itype_id itype_petrified_eye( "petrified_eye" );
-static const itype_id itype_poppy_bud( "poppy_bud" );
-static const itype_id itype_poppy_nectar( "poppy_nectar" );
-static const itype_id itype_seed_cactus( "seed_cactus" );
-static const itype_id itype_seed_dahlia( "seed_dahlia" );
 static const itype_id itype_sheet( "sheet" );
 static const itype_id itype_stick( "stick" );
 static const itype_id itype_string_36( "string_36" );
@@ -228,7 +228,6 @@ static const itype_id itype_unfinished_cac2( "unfinished_cac2" );
 static const itype_id itype_unfinished_charcoal( "unfinished_charcoal" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
-static const itype_id itype_withered( "withered" );
 
 static const json_character_flag json_flag_GLIDE( "GLIDE" );
 static const json_character_flag json_flag_LEVITATION( "LEVITATION" );
@@ -297,11 +296,9 @@ static const ter_str_id ter_t_door_metal_o( "t_door_metal_o" );
 static const ter_str_id ter_t_floor_blue( "t_floor_blue" );
 static const ter_str_id ter_t_floor_green( "t_floor_green" );
 static const ter_str_id ter_t_floor_red( "t_floor_red" );
-static const ter_str_id ter_t_fungus( "t_fungus" );
 static const ter_str_id ter_t_gas_pump( "t_gas_pump" );
 static const ter_str_id ter_t_gas_pump_a( "t_gas_pump_a" );
 static const ter_str_id ter_t_marloss( "t_marloss" );
-static const ter_str_id ter_t_marloss_tree( "t_marloss_tree" );
 static const ter_str_id ter_t_orifice( "t_orifice" );
 static const ter_str_id ter_t_pit( "t_pit" );
 static const ter_str_id ter_t_pit_covered( "t_pit_covered" );
@@ -313,14 +310,10 @@ static const ter_str_id ter_t_rock_blue( "t_rock_blue" );
 static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 static const ter_str_id ter_t_rock_green( "t_rock_green" );
 static const ter_str_id ter_t_rock_red( "t_rock_red" );
-static const ter_str_id ter_t_shrub_fungal( "t_shrub_fungal" );
 static const ter_str_id ter_t_switch_even( "t_switch_even" );
 static const ter_str_id ter_t_switch_gb( "t_switch_gb" );
 static const ter_str_id ter_t_switch_rb( "t_switch_rb" );
 static const ter_str_id ter_t_switch_rg( "t_switch_rg" );
-static const ter_str_id ter_t_tree_fungal( "t_tree_fungal" );
-static const ter_str_id ter_t_tree_hickory_dead( "t_tree_hickory_dead" );
-static const ter_str_id ter_t_tree_maple( "t_tree_maple" );
 static const ter_str_id ter_t_tree_maple_tapped( "t_tree_maple_tapped" );
 
 static const trait_id trait_AMORPHOUS( "AMORPHOUS" );
@@ -1795,7 +1788,7 @@ void iexamine::chainfence( Character &you, const tripoint_bub_ms &examp )
         move_cost = 100;
     } else {
         move_cost = you.has_trait( trait_BADKNEES ) ? 800 : 400;
-        if( g->slip_down( game::climb_maneuver::over_obstacle, climbing_aid_furn_CLIMBABLE ) ) {
+        if( g->slip_down( you, game::climb_maneuver::over_obstacle, climbing_aid_furn_CLIMBABLE ) ) {
             you.mod_moves( -move_cost );
             return;
         }
@@ -1853,28 +1846,19 @@ void iexamine::deployed_furniture( Character &you, const tripoint_bub_ms &pos )
 {
     map &here = get_map();
 
-    tripoint_bub_ms drop_pos = pos;
-
-    const furn_t &fo = here.furn( pos ).obj();
-    const std::string &name = fo.name();
-    if( you.posz() != pos.z() ) {
-        drop_pos = you.pos_bub();
-        if( !you.query_yn( _( "Pull up the %s?" ), name ) ) {
-            return;
-        }
-        you.add_msg_if_player( m_info, _( "You pull up the %s." ),
-                               name );
-    } else {
-        if( !you.query_yn( _( "Take down the %s?" ), name ) ) {
-            return;
-        }
-        you.add_msg_if_player( m_info, _( "You take down the %s." ),
-                               name );
+    const deployed_furniture_selection choice{ you.pos_abs(), here.get_abs( pos ), here.furn( pos ).id() };
+    const character_action_guard lifetime( you );
+    if( !you.is_avatar() || !can_take_down_deployed_furniture( you, here, choice ) ) {
+        return;
     }
-
-    const itype_id &furn_item = fo.deployed_item;
-    here.add_item_or_charges( drop_pos, item( furn_item, calendar::turn ) );
-    here.furn_set( pos, furn_str_id::NULL_ID() );
+    const std::string name = choice.furniture.obj().name();
+    if( !you.query_yn( you.posz() != pos.z() ? _( "Pull up the %s?" ) :
+                       _( "Take down the %s?" ), name ) || !lifetime ) {
+        return;
+    }
+    if( !cata_mp::client_take_down_furniture( choice ) ) {
+        take_down_deployed_furniture( you, here, choice );
+    }
 }
 
 static std::pair<itype_id, const deploy_tent_actor *> find_tent_itype( const furn_str_id &id )
@@ -2457,6 +2441,17 @@ void iexamine::fswitch( Character &you, const tripoint_bub_ms &examp )
     get_timed_events().add( timed_event_type::TEMPLE_SPAWN, calendar::turn + 3_turns );
 }
 
+namespace
+{
+void submit_farming_choice( Character &who, const farming_command &command )
+{
+    if( who.is_avatar() && cata_mp::client_farming_command( command ) ) {
+        return;
+    }
+    execute_farming_command( who, command );
+}
+} // namespace
+
 /**
  * If it's winter: show msg and return true. Otherwise return false
  */
@@ -2464,9 +2459,9 @@ static bool dead_plant( bool flower, Character &you, const tripoint_bub_ms &exam
 {
     if( season_of_year( calendar::turn ) == WINTER ) {
         if( flower ) {
-            add_msg( m_info, _( "This flower is dead.  You can't get it." ) );
+            you.add_msg_if_player( m_info, _( "This flower is dead.  You can't get it." ) );
         } else {
-            add_msg( m_info, _( "This plant is dead.  You can't get it." ) );
+            you.add_msg_if_player( m_info, _( "This plant is dead.  You can't get it." ) );
         }
 
         iexamine::none( you, examp );
@@ -2479,7 +2474,7 @@ static bool dead_plant( bool flower, Character &you, const tripoint_bub_ms &exam
 /**
  * Helper method to see if player has traits, hunger and mouthwear for drinking nectar.
  */
-static bool can_drink_nectar( const Character &you )
+bool iexamine_helper::can_drink_nectar( const Character &you )
 {
     return ( you.has_active_mutation( trait_PROBOSCIS )  ||
              you.has_active_mutation( trait_BEAK_HUM ) ) &&
@@ -2492,7 +2487,7 @@ static bool can_drink_nectar( const Character &you )
 bool iexamine_helper::drink_nectar( Character &you )
 {
     if( can_drink_nectar( you ) ) {
-        add_msg( _( "You drink some nectar." ) );
+        you.add_msg_if_player( _( "You drink some nectar." ) );
         item nectar( itype_nectar, calendar::turn, 1 );
         you.assign_activity( consume_activity_actor( nectar ) );
         return true;
@@ -2506,175 +2501,144 @@ bool iexamine_helper::drink_nectar( Character &you )
  */
 void iexamine_helper::handle_harvest( Character &you, const itype_id &itemid, bool force_drop )
 {
-    item harvest( itemid );
-    if( harvest.has_temperature() ) {
-        harvest.set_item_temperature( get_weather().get_temperature( you.pos_bub() ) );
+    map &here = get_map();
+    item value( itemid );
+    if( value.has_temperature() ) {
+        value.set_item_temperature( get_weather().get_temperature( you.pos_bub() ) );
     }
-    // Only auto-eat when the NPC is actively seeking food or water
-    // (self-care need execution). Generic harvest jobs (farming zones,
-    // player-assigned tasks) should collect, not consume.
-    bool npc_self_care = false;
-    if( you.is_npc() ) {
-        const npc &n = dynamic_cast<const npc &>( you );
-        const std::string &goal = n.get_committed_goal();
-        npc_self_care = ( goal == "eat_food" || goal == "drink_water" );
+    item &stored = here.add_item_unprocessed( you.pos_bub(), std::move( value ) );
+    if( !stored.is_null() ) {
+        handle_harvest( you, item_location( map_cursor( you.pos_abs() ), &stored ), force_drop );
     }
-    if( npc_self_care && harvest.is_food() &&
+}
+
+void iexamine_helper::handle_harvest( Character &you, item_location source, bool force_drop )
+{
+    map &here = get_map();
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = you.pos_abs();
+    const auto generation = you.activity.identity_generation();
+    if( !source || source.where() != item_location::type::map || source.has_parent() ||
+        source.pos_abs() != origin ) {
+        return;
+    }
+    bool self_care = false;
+    if( const npc *worker = you.as_npc() ) {
+        self_care = worker->get_committed_goal() == "eat_food" ||
+                    worker->get_committed_goal() == "drink_water";
+    }
+    if( self_care && source->is_food() &&
         ( you.get_hunger() > 0 || you.has_calorie_deficit() ) &&
-        you.will_eat( harvest ).success() ) {
-        const time_duration consume_time = you.get_consume_time( harvest );
-        trinary result = you.consume( harvest );
-        if( result != trinary::NONE ) {
-            you.mod_moves( -to_moves<int>( consume_time ) );
-        }
-        if( result == trinary::SOME ) {
-            // Partial consumption: stash or drop the remainder.
-            if( !force_drop && you.can_pickVolume( harvest, true ) &&
-                you.can_pickWeight( harvest, true ) ) {
-                you.i_add( harvest );
-            } else {
-                get_map().add_item_or_charges( you.pos_bub(), harvest );
+        you.will_eat( *source ).success() ) {
+        // Consume a detached native value after debiting the published item.
+        // Reentrant eating cannot rediscover the same portion on the ground.
+        item portion( *source );
+        const time_duration cost = you.get_consume_time( portion );
+        source.remove_item();
+        const trinary result = you.consume( portion );
+        source = item_location();
+        if( context && result != trinary::ALL ) {
+            item &rest = here.add_item_unprocessed( here.get_bub( origin ), std::move( portion ) );
+            if( !rest.is_null() ) {
+                source = item_location( map_cursor( origin ), &rest );
             }
         }
-    } else if( !force_drop && you.can_pickVolume( harvest, true ) &&
-               you.can_pickWeight( harvest, false ) ) {
-        you.i_add( harvest );
-        you.add_msg_if_player( _( "You harvest: %s." ), harvest.tname() );
-        you.add_msg_if_npc( _( "<npcname> harvests: %s." ), harvest.tname() );
+        if( !lifetime || !context ) {
+            return;
+        }
+        if( result != trinary::NONE ) {
+            you.mod_moves( -to_moves<int>( cost ) );
+        }
+    }
+    if( !lifetime || !context || !source || you.pos_abs() != origin ||
+        you.activity.identity_generation() != generation ) {
+        return;
+    }
+    const std::string name = source->tname();
+    const bool collect = !force_drop && you.can_pickVolume( *source, true ) &&
+                         you.can_pickWeight( *source, self_care );
+    if( collect ) {
+        you.transfer_item_to_inventory( source, item( *source ) );
+    }
+    if( !lifetime || !context || you.pos_abs() != origin ||
+        you.activity.identity_generation() != generation ) {
+        return;
+    }
+    if( source ) {
+        here.settle_item_on_ground( here.get_bub( origin ), source, &you );
+        if( lifetime && context ) {
+            you.add_msg_if_player( _( "You harvest and drop: %s." ), name );
+            you.add_msg_if_npc( _( "<npcname> harvests and drops: %s." ), name );
+        }
     } else {
-        get_map().add_item_or_charges( you.pos_bub(), harvest );
-        you.add_msg_if_player( _( "You harvest and drop: %s." ), harvest.tname() );
-        you.add_msg_if_npc( _( "<npcname> harvests and drops: %s." ), harvest.tname() );
+        you.add_msg_if_player( _( "You harvest: %s." ), name );
+        you.add_msg_if_npc( _( "<npcname> harvests: %s." ), name );
     }
 }
 
-/**
- * Prompt pick (or drink nectar if able) poppy bud. Not safe for player.
- *
- * Drinking causes: -25 hunger, +20 sleepiness, pkill2-70 effect and, 1 in 20 pkiller-1 addiction.
- * Picking w/ env_resist < 5 causes 1 in 3  sleep for 12 min and 4 dmg to each leg
- */
+namespace
+{
+void query_special_flower( Character &who, const tripoint_bub_ms &position )
+{
+    map &here = get_map();
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    farming_command choice = capture_farming_command( who, here, here.get_abs( position ),
+                             farming_action::flower );
+    const furn_t &flower = here.furn( position ).obj();
+    const bool marloss = flower.has_examine( iexamine::flower_marloss );
+    const bool dahlia = flower.has_examine( iexamine::flower_dahlia );
+    if( !marloss && dead_plant( true, who, position ) ) {
+        return;
+    }
+    if( marloss && season_of_year( calendar::turn ) == WINTER ) {
+        who.add_msg_if_player( m_info, _( "This flower is still alive, despite the harsh conditions…" ) );
+    }
+    const std::string name = here.furnname( position );
+    choice.drink = !flower.has_examine( iexamine::flower_cactus ) &&
+                   iexamine_helper::can_drink_nectar( who );
+    if( choice.drink && !dahlia && who.is_avatar() &&
+        !query_yn( marloss ? _( "You feel out of place as you explore the %s. Drink?" ) :
+                   _( "You feel woozy as you explore the %s. Drink?" ), name ) ) {
+        return;
+    }
+    if( !lifetime || !context ) {
+        return;
+    }
+    if( dahlia && choice.drink ) {
+        choice.pick = false;
+    } else if( who.is_avatar() ) {
+        const bool missing_roots = dahlia && !who.has_quality( qual_DIG ) &&
+                                   !who.has_trait( trait_BURROW ) && !who.has_trait( trait_BURROWLARGE );
+        choice.pick = query_yn( missing_roots ?
+                                _( "You don't have a digging tool to dig up roots.  Pick %s anyway?" ) :
+                                _( "Pick %s?" ), name );
+    }
+    if( !lifetime || !context ) {
+        return;
+    }
+    if( choice.pick || choice.drink ) {
+        submit_farming_choice( who, choice );
+    } else {
+        iexamine::none( who, position );
+    }
+}
+} // namespace
+
 void iexamine::flower_poppy( Character &you, const tripoint_bub_ms &examp )
 {
-    if( dead_plant( true, you, examp ) ) {
-        return;
-    }
-    map &here = get_map();
-    // TODO: Get rid of this section and move it to eating
-    // Two y/n prompts is just too much
-    if( can_drink_nectar( you ) ) {
-        if( !query_yn( _( "You feel woozy as you explore the %s. Drink?" ),
-                       here.furnname( examp ) ) ) {
-            return;
-        }
-        add_msg( _( "You slowly suck up the nectar." ) );
-        item poppy( itype_poppy_nectar, calendar::turn, 1 );
-        you.assign_activity( consume_activity_actor( poppy ) );
-        you.mod_sleepiness( 20 );
-        you.add_effect( effect_pkill2, 7_minutes );
-        // Please drink poppy nectar responsibly.
-        if( one_in( 20 ) ) {
-            you.add_addiction( addiction_opiate, 1 );
-        }
-    }
-    if( !query_yn( _( "Pick %s?" ), here.furnname( examp ) ) ) {
-        none( you, examp );
-        return;
-    }
-
-    int resist = you.get_env_resist( bodypart_id( "mouth" ) );
-
-    if( resist < 10 ) {
-        // Can't smell the flowers with a gas mask on!
-        add_msg( m_warning, _( "This flower has a heady aroma." ) );
-    }
-
-    weather_sum recentWeather = sum_conditions( calendar::turn - 10_minutes, calendar::turn,
-                                you.pos_abs() );
-
-    // If it has been raining recently, then this event is twice less likely.
-    if( ( ( recentWeather.rain_amount > 1 ) ? one_in( 6 ) : one_in( 3 ) ) && resist < 5 ) {
-        // Should user player::infect, but can't!
-        // player::infect needs to be restructured to return a bool indicating success.
-        add_msg( m_bad, _( "The flower's fragrance makes you extremely drowsy…" ) );
-        you.fall_asleep( 2_hours );
-        add_msg( m_bad, _( "Your legs are covered in the poppy's roots!" ) );
-        you.apply_damage( nullptr, bodypart_id( "leg_l" ), 4 );
-        you.apply_damage( nullptr, bodypart_id( "leg_r" ), 4 );
-        you.mod_moves( -to_moves<int>( 1_seconds ) * 0.5 );
-    }
-
-    here.furn_set( examp, furn_str_id::NULL_ID() );
-
-    iexamine_helper::handle_harvest( you, itype_poppy_bud, false );
-    iexamine_helper::handle_harvest( you, itype_withered, false );
+    query_special_flower( you, examp );
 }
 
-/**
- * Prompt pick cactus pad. Not safe for player.
- */
 void iexamine::flower_cactus( Character &you, const tripoint_bub_ms &examp )
 {
-    if( dead_plant( true, you, examp ) ) {
-        return;
-    }
-
-    map &here = get_map();
-    if( !query_yn( _( "Pick %s?" ), here.furnname( examp ) ) ) {
-        none( you, examp );
-        return;
-    }
-
-    if( one_in( 6 ) ) {
-        add_msg( m_bad, _( "The cactus' nettles sting you!" ) );
-        you.apply_damage( nullptr, bodypart_id( "arm_l" ), 4 );
-        you.apply_damage( nullptr, bodypart_id( "arm_r" ), 4 );
-    }
-
-    here.furn_set( examp, furn_str_id::NULL_ID() );
-
-    iexamine_helper::handle_harvest( you, itype_cactus_pad, false );
-    iexamine_helper::handle_harvest( you, itype_seed_cactus, false );
+    query_special_flower( you, examp );
 }
 
-/**
- * Dig up its roots or drink its nectar if you can.
- */
 void iexamine::flower_dahlia( Character &you, const tripoint_bub_ms &examp )
 {
-    if( dead_plant( true, you, examp ) ) {
-        return;
-    }
-
-    if( iexamine_helper::drink_nectar( you ) ) {
-        return;
-    }
-
-    map &here = get_map();
-    bool can_get_root = you.has_quality( qual_DIG ) || you.has_trait( trait_BURROW ) ||
-                        you.has_trait( trait_BURROWLARGE );
-    if( can_get_root ) {
-        if( !query_yn( _( "Pick %s?" ), here.furnname( examp ) ) ) {
-            none( you, examp );
-            return;
-        }
-    } else {
-        if( !query_yn( _( "You don't have a digging tool to dig up roots.  Pick %s anyway?" ),
-                       here.furnname( examp ) ) ) {
-            none( you, examp );
-            return;
-        }
-    }
-
-    here.furn_set( examp, furn_str_id::NULL_ID() );
-
-    if( can_get_root ) {
-        iexamine_helper::handle_harvest( you, itype_dahlia_root, false );
-    }
-    iexamine_helper::handle_harvest( you, itype_seed_dahlia, false );
-    iexamine_helper::handle_harvest( you, itype_withered, false );
-    // There was a bud and flower spawn here
-    // But those were useless, don't re-add until they get useful
+    query_special_flower( you, examp );
 }
 
 static bool query_pick( Character &who, const tripoint_bub_ms &target )
@@ -2708,24 +2672,36 @@ static bool query_pick( Character &who, const tripoint_bub_ms &target )
     return true;
 }
 
+namespace
+{
+void query_gathering( Character &who, const tripoint_bub_ms &position, bool automatic )
+{
+    map &here = get_map();
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const farming_command choice = capture_farming_command( who, here,
+                                   here.get_abs( position ), farming_action::gather );
+    if( !automatic && !query_pick( who, position ) ) {
+        return;
+    }
+    if( lifetime && context ) {
+        submit_farming_choice( who, choice );
+    }
+}
+} // namespace
+
 void iexamine::harvest_furn_nectar( Character &you, const tripoint_bub_ms &examp )
 {
     bool auto_forage = get_option<bool>( "AUTO_FEATURES" ) &&
                        get_option<std::string>( "AUTO_FORAGING" ) == "all";
-    if( !auto_forage && !query_pick( you, examp ) ) {
-        return;
-    }
-    you.assign_activity( harvest_activity_actor( examp, auto_forage ) );
+    query_gathering( you, examp, auto_forage );
 }
 
 void iexamine::harvest_furn( Character &you, const tripoint_bub_ms &examp )
 {
     bool auto_forage = get_option<bool>( "AUTO_FEATURES" ) &&
                        get_option<std::string>( "AUTO_FORAGING" ) == "all";
-    if( !auto_forage && !query_pick( you, examp ) ) {
-        return;
-    }
-    you.assign_activity( harvest_activity_actor( examp, auto_forage ) );
+    query_gathering( you, examp, auto_forage );
 }
 
 void iexamine::harvest_ter_nectar( Character &you, const tripoint_bub_ms &examp )
@@ -2734,10 +2710,7 @@ void iexamine::harvest_ter_nectar( Character &you, const tripoint_bub_ms &examp 
                        ( get_option<std::string>( "AUTO_FORAGING" ) == "all" ||
                          get_option<std::string>( "AUTO_FORAGING" ) == "bushes" ||
                          get_option<std::string>( "AUTO_FORAGING" ) == "trees" );
-    if( !auto_forage && !query_pick( you, examp ) ) {
-        return;
-    }
-    you.assign_activity( harvest_activity_actor( examp, auto_forage ) );
+    query_gathering( you, examp, auto_forage );
 }
 
 void iexamine::harvest_ter( Character &you, const tripoint_bub_ms &examp )
@@ -2745,33 +2718,36 @@ void iexamine::harvest_ter( Character &you, const tripoint_bub_ms &examp )
     bool auto_forage = get_option<bool>( "AUTO_FEATURES" ) &&
                        ( get_option<std::string>( "AUTO_FORAGING" ) == "all" ||
                          get_option<std::string>( "AUTO_FORAGING" ) == "trees" );
-    if( !auto_forage && !query_pick( you, examp ) ) {
-        return;
-    }
-    you.assign_activity( harvest_activity_actor( examp, auto_forage ) );
+    query_gathering( you, examp, auto_forage );
 }
 
 void iexamine::fertilize_terrain( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    const ter_t &terrain = here.ter( examp ).obj();
-    if( !terrain.terrain_growth ) {
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    if( !here.ter( examp )->terrain_growth ) {
         return;
     }
-    const ret_val<void> can_fert = multi_farm_activity_actor::can_fertilize( you, examp );
-    if( !can_fert.success() ) {
-        add_msg( m_info, can_fert.str() );
-        return;
+    if( !cata_mp::is_client_mode() ) {
+        const auto generation = you.activity.identity_generation();
+        const ret_val<void> eligible = multi_farm_activity_actor::can_fertilize( you, examp );
+        if( !lifetime || !context || you.activity.identity_generation() != generation ) {
+            return;
+        }
+        if( !eligible.success() ) {
+            you.add_msg_if_player( m_info, eligible.str() );
+            return;
+        }
     }
-    itype_id fertilizer = choose_fertilizer( you, terrain.name(), true );
-    if( !fertilizer.is_empty() ) {
-        fertilize_plant( you, examp, fertilizer );
+    farming_command choice = capture_farming_command( you, here, here.get_abs( examp ),
+                             farming_action::fertilize );
+    choice.material = choose_fertilizer( you, here.ter( examp )->name(), true );
+    if( lifetime && context && !choice.material.is_empty() ) {
+        submit_farming_choice( you, choice );
     }
 }
 
-/**
- * Only harvest a plant once per season.  Display message and call iexamine::none.
- */
 void iexamine::harvested_plant( Character &you, const tripoint_bub_ms &examp )
 {
     you.add_msg_if_player( m_info, _( "Nothing can be harvested from this plant in current season." ) );
@@ -2780,32 +2756,7 @@ void iexamine::harvested_plant( Character &you, const tripoint_bub_ms &examp )
 
 void iexamine::flower_marloss( Character &you, const tripoint_bub_ms &examp )
 {
-    if( season_of_year( calendar::turn ) == WINTER ) {
-        add_msg( m_info, _( "This flower is still alive, despite the harsh conditions…" ) );
-    }
-    map &here = get_map();
-    if( can_drink_nectar( you ) ) {
-        if( !query_yn( _( "You feel out of place as you explore the %s. Drink?" ),
-                       here.furnname( examp ) ) ) {
-            return;
-        }
-        you.mod_moves( -to_moves<int>
-                       ( 30_seconds ) ); // Takes 30 seconds, more or less if faster/slower than 100 speed
-        add_msg( m_bad, _( "This flower tastes very wrong…" ) );
-        // If you can drink flowers, you're post-thresh and the Mycus does not want you.
-        you.add_effect( effect_teleglow, 10_minutes );
-    }
-    if( !query_yn( _( "Pick %s?" ), here.furnname( examp ) ) ) {
-        none( you, examp );
-        return;
-    }
-
-    get_event_bus().send<event_type::character_harvests_plant>(
-        you.getID(), here.get_abs( examp ).raw(), itype_marloss_seed, here.furn( examp ).id(), 0, 0 );
-
-    here.furn_set( examp, furn_str_id::NULL_ID() );
-    here.spawn_item( you.pos_bub(), itype_marloss_seed, 1, 3, calendar::turn );
-    iexamine_helper::handle_harvest( you, itype_withered, false );
+    query_special_flower( you, examp );
 }
 
 /**
@@ -2814,10 +2765,8 @@ void iexamine::flower_marloss( Character &you, const tripoint_bub_ms &examp )
 void iexamine::fungus( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    add_msg( _( "The %s crumbles into spores!" ), here.furnname( examp ) );
-    fungal_effects().create_spores( examp, &you );
-    here.furn_set( examp, furn_str_id::NULL_ID() );
-    you.mod_moves( -to_moves<int>( 1_seconds ) * 0.5 );
+    submit_farming_choice( you, capture_farming_command( you, here, here.get_abs( examp ),
+                           farming_action::fungus ) );
 }
 
 /**
@@ -2889,12 +2838,15 @@ void iexamine::plant_seed( Character &you, const tripoint_bub_ms &examp, const i
 void iexamine::dirtmound( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    /* ambient_light_at() not working?
-    if (here.ambient_light_at(examp) < LIGHT_AMBIENT_LOW) {
-        add_msg(m_info, _("It is too dark to plant anything now."));
-        return;
-    }*/
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    farming_command choice = capture_farming_command( you, here, here.get_abs( examp ),
+                             farming_action::plant );
     std::vector<item_location> seed_inv = you.cache_get_items_with( "is_seed", &item::is_seed );
+    seed_inv.erase( std::remove_if( seed_inv.begin(), seed_inv.end(),
+    []( const item_location & value ) {
+        return !value || !craft_reservation::usable_by_automation( *value );
+    } ), seed_inv.end() );
     if( seed_inv.empty() ) {
         add_msg( m_info, _( "You have no seeds to plant." ) );
         return;
@@ -2907,6 +2859,9 @@ void iexamine::dirtmound( Character &you, const tripoint_bub_ms &examp )
     auto seed_entries = get_seed_entries( seed_inv );
 
     int seed_index = query_seed( seed_entries );
+    if( !lifetime || !context ) {
+        return;
+    }
 
     // Did we cancel?
     if( seed_index < 0 || seed_index >= static_cast<int>( seed_entries.size() ) ) {
@@ -2926,7 +2881,8 @@ void iexamine::dirtmound( Character &you, const tripoint_bub_ms &examp )
         return;
     }
 
-    plant_seed( you, examp, seed_id );
+    choice.material = seed_id;
+    submit_farming_choice( you, choice );
 }
 
 /**
@@ -2972,152 +2928,191 @@ std::list<item> iexamine::get_harvest_items( const itype &type, const int plant_
     return result;
 }
 
-// Cleaning up plants that have decayed and overgrown
+namespace
+{
+bool reachable_crop( const Character &who, map &here, const tripoint_bub_ms &position )
+{
+    return !cata_mp::is_client_mode() && !who.is_dead_state() && here.inbounds( position ) &&
+           position.z() == who.pos_bub().z() && rl_dist( who.pos_bub(), position ) <= 1;
+}
+} // namespace
+
+// Cleaning up plants that have decayed and overgrown.
 void iexamine::clear_overgrown( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-
-    // Synchronize furniture flag with effective growth time before clearing.
-    here.grow_plant( examp );
-
-    if( !is_plant_overgrown( here, examp ) ) {
-        debugmsg( "clear_overgrown called on tile which is not an overgrown crop!" );
+    if( you.is_avatar() && cata_mp::is_client_mode() ) {
+        cata_mp::client_farming_command( capture_farming_command( you, here,
+                                         here.get_abs( examp ), farming_action::clear ) );
         return;
     }
-
-    player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
-    you.assign_activity( act );
+    if( !reachable_crop( you, here, examp ) ) {
+        return;
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const auto generation = you.activity.identity_generation();
+    here.grow_plant( examp, &you );
+    if( !lifetime || !context || you.activity.identity_generation() != generation ||
+        !is_plant_overgrown( here, examp ) || !here.furn( examp )->plant ) {
+        return;
+    }
+    const furn_str_id base = here.furn( examp )->plant->base;
     here.i_clear( examp );
-    here.furn_set( examp, here.furn( examp )->plant->base );
-    you.add_msg_if_player( m_neutral,
-                           _( "You pull up what's left of the planted crop and trample the rest." ) );
+    here.furn_set( examp, base );
+    player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
+    act.set_execution( activity_execution::authoritative );
+    you.assign_activity( act );
+    if( lifetime && context ) {
+        you.add_msg_if_player( m_neutral,
+                               _( "You pull up what's left of the planted crop and trample the rest." ) );
+    }
 }
 
-// Only harvest, used for autoforaging
+// Only harvest, used for autoforaging.
 void iexamine::harvest_plant_ex( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-
-    // Synchronize furniture flag with effective growth time before harvesting.
-    here.grow_plant( examp );
-
-    // Can't use item_stack::only_item() since there might be fertilizer
-    map_stack items = here.i_at( examp );
-    const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-        return it.is_seed();
-    } );
-
-    if( seed == items.end() ) {
-        debugmsg( "Missing seed for plant at %s", examp.to_string() );
-        here.i_clear( examp );
-        here.furn_set( examp, furn_str_id::NULL_ID() );
+    if( you.is_avatar() && cata_mp::is_client_mode() ) {
+        cata_mp::client_farming_command( capture_farming_command( you, here,
+                                         here.get_abs( examp ), farming_action::harvest ) );
         return;
     }
-
-    if( is_plant_harvestable( here, examp ) ) {
+    if( !reachable_crop( you, here, examp ) ) {
+        return;
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const auto generation = you.activity.identity_generation();
+    here.grow_plant( examp, &you );
+    if( lifetime && context && you.activity.identity_generation() == generation &&
+        is_plant_harvestable( here, examp ) ) {
         harvest_plant( you, examp, false );
     }
 }
 
-/**
- * Actual harvesting of selected plant
- */
 void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool from_activity )
 {
     map &here = get_map();
-    // Can't use item_stack::only_item() since there might be fertilizer
-    map_stack items = here.i_at( examp );
-    const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-        return it.is_seed();
-    } );
-
-    if( seed == items.end() ) {
-        debugmsg( "Missing seed for plant at %s", examp.to_string() );
-        here.i_clear( examp );
-        here.furn_set( examp, furn_str_id::NULL_ID() );
+    if( !reachable_crop( you, here, examp ) || !here.furn( examp )->plant ) {
         return;
     }
-
-    const itype_id &seedType = seed->typeId();
-    const furn_str_id old_furn_id = here.furn( examp ).id();
-    if( seedType == itype_fungal_seeds ) {
-        get_event_bus().send<event_type::character_harvests_plant>(
-            you.getID(), here.get_abs( examp ).raw(), seedType, old_furn_id, 0, 0 );
-        fungus( you, examp );
+    item *seed = get_seed_at( here, examp );
+    if( !seed ) {
+        return;
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms plot = here.get_abs( examp );
+    const tripoint_abs_ms origin = you.pos_abs();
+    const item seed_snapshot = *seed;
+    const itype_id seed_type = seed_snapshot.typeId();
+    const furn_str_id furniture = here.furn( examp ).id();
+    if( seed_type == itype_fungal_seeds || seed_type == itype_marloss_seed ) {
+        const bool marloss = seed_type == itype_marloss_seed;
+        const std::string name = here.furnname( examp );
+        // Claim the crop before either global events or spore effects run scripts.
         here.i_clear( examp );
-    } else if( seedType == itype_marloss_seed ) {
+        here.furn_set( examp, furn_str_id::NULL_ID() );
+        you.mod_moves( -to_moves<int>( 1_seconds ) * 0.5 );
+        you.add_msg_if_player( _( "The %s crumbles into spores!" ), name );
         get_event_bus().send<event_type::character_harvests_plant>(
-            you.getID(), here.get_abs( examp ).raw(), seedType, old_furn_id, 0, 0 );
-        fungus( you, examp );
-        here.i_clear( examp );
+            you.getID(), plot.raw(), seed_type, furniture, 0, 0 );
+        if( !lifetime || !context ) {
+            return;
+        }
+        fungal_effects().create_spores( examp, &you );
+        if( !marloss || !lifetime || !context || get_seed_at( here, examp ) ||
+            here.has_furn( examp ) ) {
+            return;
+        }
         if( you.has_trait( trait_M_DEPENDENT ) && ( you.get_kcal_percent() < 0.8f ||
                 you.get_thirst() > 300 ) ) {
             here.ter_set( examp, ter_t_marloss );
-            add_msg( m_info,
-                     _( "We have altered this unit's configuration to extract and provide local nutriment.  The Mycus provides." ) );
+            you.add_msg_if_player( m_info,
+                                   _( "We have altered this unit's configuration to extract and provide local nutriment.  The Mycus provides." ) );
         } else if( you.has_trait( trait_M_DEFENDER ) || ( ( you.has_trait( trait_M_SPORES ) ||
-                   you.has_trait( trait_M_FERTILE ) ) &&
-                   one_in( 2 ) ) ) {
+                   you.has_trait( trait_M_FERTILE ) ) && one_in( 2 ) ) ) {
             g->place_critter_at( mon_fungal_blossom, examp );
-            add_msg( m_info, _( "The seed blooms forth!  We have brought true beauty to this world." ) );
+            if( lifetime && context ) {
+                you.add_msg_if_player( m_info,
+                                       _( "The seed blooms forth!  We have brought true beauty to this world." ) );
+            }
         } else if( you.has_trait( trait_THRESH_MYCUS ) || one_in( 4 ) ) {
             here.furn_set( examp, furn_f_flower_marloss );
-            add_msg( m_info, _( "The seed blossoms rather rapidly…" ) );
+            you.add_msg_if_player( m_info, _( "The seed blossoms rather rapidly…" ) );
         } else {
             here.furn_set( examp, furn_f_flower_fungal );
-            add_msg( m_info, _( "The seed blossoms into a flower-looking fungus." ) );
+            you.add_msg_if_player( m_info, _( "The seed blossoms into a flower-looking fungus." ) );
         }
-    } else { // Generic seed, use the seed item data
-        const temp_crafting_inventory &crafting_inv = you.crafting_inventory();
-        if( seed->has_flag( flag_CUT_HARVEST ) && !crafting_inv.has_quality( qual_GRASS_CUT ) ) {
-            you.add_msg_if_player( m_info, _( "You will need a grass-cutting tool to harvest this plant." ) );
-            return;
-        } else {
-            const itype &type = *seed->type;
+        return;
+    }
 
-            int skillLevel = round( you.get_skill_level( skill_survival ) );
-            ///\EFFECT_SURVIVAL increases number of plants harvested from a seed
-            int plant_count = rng( skillLevel / 2, skillLevel );
-            const auto &fp = here.furn( examp )->plant;
-            plant_count *= fp->harvest_multiplier *
-                           ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
-            plant_count = std::max( plant_count, 1 );
-            int seedCount = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
+    const temp_crafting_inventory &crafting_inv = you.crafting_inventory();
+    if( seed_snapshot.has_flag( flag_CUT_HARVEST ) && !crafting_inv.has_quality( qual_GRASS_CUT ) ) {
+        you.add_msg_if_player( m_info, _( "You will need a grass-cutting tool to harvest this plant." ) );
+        return;
+    }
+    const int skill_level = round( you.get_skill_level( skill_survival ) );
+    ///\EFFECT_SURVIVAL increases number of plants harvested from a seed
+    int plant_count = rng( skill_level / 2, skill_level );
+    const auto &fp = here.furn( examp )->plant;
+    plant_count *= fp->harvest_multiplier * ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
+    plant_count = std::max( plant_count, 1 );
+    const int seed_count = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
+    const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
+    const std::string stage = stage_idx >= 0 ?
+                              seed_type->seed->get_growth_stages()[stage_idx].first.str() : "";
+    const furn_str_id base = fp->base;
+    here.i_clear( examp );
+    here.furn_set( examp, base );
 
-            // Send global event before per-seed/per-furniture hooks.
-            get_event_bus().send<event_type::character_harvests_plant>(
-                you.getID(), here.get_abs( examp ).raw(), type.get_id(), here.furn( examp ).id(),
-                plant_count, seedCount );
-
-            const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
-            const std::string stage = stage_idx >= 0 ? type.seed->get_growth_stages()[stage_idx].first.str() :
-                                      "";
-            const std::map<std::string, std::string> string_ctx;
-            const std::map<std::string, double> num_ctx = {
-                { "plant_count", static_cast<double>( plant_count ) },
-                { "seed_count", static_cast<double>( seedCount ) },
-                { "actor_is_npc", you.is_npc() ? 1.0 : 0.0 }
-            };
-            run_plant_lifecycle_event(
-                "harvest", you, here, examp, *seed, stage, stage, string_ctx, num_ctx );
-
-            player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
-            you.assign_activity( act );
-            here.i_clear( examp );
-
-            for( item &i : get_harvest_items( type, plant_count, seedCount, true ) ) {
-                if( from_activity ) {
-                    i.set_var( "activity_var", you.name );
-                    item_location loc = here.add_item_or_charges_ret_loc( you.pos_bub(), i );
-                    if( loc ) {
-                        you.may_activity_occupancy_after_end_items_loc.push_back( loc );
-                    }
-                } else {
-                    here.add_item_or_charges( you.pos_bub(), i );
-                }
+    // Materialize the entire native yield before any callback. A callback that
+    // removes the farmer or changes their activity cannot lose the remaining yield.
+    std::vector<item_location> products;
+    for( item &value : get_harvest_items( seed_type.obj(), plant_count, seed_count, true ) ) {
+        if( from_activity ) {
+            activity_handlers::mark_activity_item( value, you );
+        }
+        item &stored = here.add_item_unprocessed( here.get_bub( origin ), std::move( value ) );
+        if( !stored.is_null() ) {
+            products.emplace_back( map_cursor( origin ), &stored );
+            if( from_activity ) {
+                activity_handlers::reserve_activity_item( you, products.back() );
             }
-            here.furn_set( examp, furn_str_id( fp->base ) );
-            you.add_msg_if_player( m_neutral, _( "You harvest the plant." ) );
+        }
+    }
+    player_activity work( ACT_HARVEST, to_moves<int>( 60_seconds ) );
+    work.set_execution( activity_execution::authoritative );
+    you.assign_activity( work );
+    if( !lifetime || !context ) {
+        return;
+    }
+    const auto generation = you.activity.identity_generation();
+    you.add_msg_if_player( m_neutral, _( "You harvest the plant." ) );
+    get_event_bus().send<event_type::character_harvests_plant>(
+        you.getID(), plot.raw(), seed_type, furniture, plant_count, seed_count );
+    if( !lifetime || !context ) {
+        return;
+    }
+    run_plant_lifecycle_event( "harvest", you, here, here.get_bub( plot ), seed_snapshot,
+    stage, stage, {}, {
+        { "plant_count", static_cast<double>( plant_count ) },
+        { "seed_count", static_cast<double>( seed_count ) },
+        { "actor_is_npc", you.is_npc() ? 1.0 : 0.0 }
+    }, furniture );
+    for( const item_location &product : products ) {
+        if( !lifetime || !context || you.pos_abs() != origin ||
+            you.activity.identity_generation() != generation ) {
+            return;
+        }
+        if( product ) {
+            item_location placed;
+            here.transfer_item_or_charges( here.get_bub( origin ), product, item( *product ),
+                                           you, 1, true, &placed );
+            if( from_activity && lifetime && context && placed ) {
+                activity_handlers::reserve_activity_item( you, placed );
+            }
         }
     }
 }
@@ -3125,7 +3120,15 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
 ret_val<void> iexamine::can_fertilize( Character &you, const tripoint_bub_ms &tile,
                                        const itype_id &fertilizer )
 {
+    const character_action_guard lifetime( you );
+    const auto context = get_map().get_context_reference();
+    if( !fertilizer.is_valid() || !fertilizer->has_flag( flag_FERTILIZER ) ) {
+        return ret_val<void>::make_failure( _( "That item is not fertilizer." ) );
+    }
     ret_val<void> fertilize_check = multi_farm_activity_actor::can_fertilize( you, tile );
+    if( !lifetime || !context ) {
+        return ret_val<void>::make_failure( _( "The plant is no longer available." ) );
+    }
     if( !fertilize_check.success() ) {
         return fertilize_check;
     }
@@ -3144,9 +3147,15 @@ ret_val<void> iexamine::can_fertilize( Character &you, const tripoint_bub_ms &ti
 void iexamine::fertilize_plant( Character &you, const tripoint_bub_ms &tile,
                                 const itype_id &fertilizer )
 {
+    const character_action_guard lifetime( you );
+    const auto context = get_map().get_context_reference();
+    const auto generation = you.activity.identity_generation();
     ret_val<void> can_fert = can_fertilize( you, tile, fertilizer );
+    if( !lifetime || !context || you.activity.identity_generation() != generation ) {
+        return;
+    }
     if( !can_fert.success() ) {
-        debugmsg( can_fert.str() );
+        you.add_msg_if_player( m_info, can_fert.str() );
         return;
     }
 
@@ -3173,62 +3182,57 @@ itype_id iexamine::choose_fertilizer( Character &you, const std::string &pname,
 void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-
-    // Synchronize furniture flag with effective growth time before presenting options.
-    here.grow_plant( examp );
-
-    item *seed = get_seed_at( here, examp );
-
-    if( seed == nullptr ) {
-        debugmsg( "Missing seed for plant at %s", examp.to_string() );
-        here.i_clear( examp );
-        here.furn_set( examp, furn_str_id::NULL_ID() );
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const auto generation = you.activity.identity_generation();
+    if( !cata_mp::is_client_mode() ) {
+        here.grow_plant( examp, &you );
+    }
+    if( !lifetime || !context || you.activity.identity_generation() != generation ) {
         return;
     }
-
+    item *seed = get_seed_at( here, examp );
+    if( !seed || !here.furn( examp )->plant ) {
+        return;
+    }
     const std::string pname = seed->get_plant_name();
     const bool can_harvest = is_plant_harvestable( here, examp );
-    const bool can_fertilize = multi_farm_activity_actor::can_fertilize( you, examp ).success();
+    const bool can_fertilize = !is_plant_mature( here, examp ) &&
+                               !is_plant_harvestable( here, examp ) &&
+                               !is_plant_overgrown( here, examp ) && !is_plant_fertilized( *seed );
     const bool can_water = get_plant_max_water( here.furn( examp ).obj() ) > 0;
-
-    uilist smenu;
-    smenu.text = string_format( _( "What to do with the %s?" ), pname );
-
+    farming_command choice = capture_farming_command( you, here, here.get_abs( examp ),
+                             farming_action::harvest );
+    uilist menu;
+    menu.text = string_format( _( "What to do with the %s?" ), pname );
     if( can_harvest ) {
-        smenu.addentry( 0, true, 'h', _( "Harvest" ) );
+        menu.addentry( 0, true, 'h', _( "Harvest" ) );
     }
     if( can_fertilize ) {
-        smenu.addentry( 1, true, 'f', _( "Fertilize" ) );
+        menu.addentry( 1, true, 'f', _( "Fertilize" ) );
     }
     if( can_water ) {
-        smenu.addentry( 2, true, 'w', _( "Pour water" ) );
+        menu.addentry( 2, true, 'w', _( "Pour water" ) );
     }
-    smenu.addentry( 3, true, 'q', _( "Cancel" ) );
-
-    smenu.query();
-
-    switch( smenu.ret ) {
-        case 0:
-            if( can_harvest ) {
-                harvest_plant( you, examp, false );
-            }
-            break;
-        case 1:
-            if( can_fertilize ) {
-                itype_id fertilizer = choose_fertilizer( you, pname, true );
-                if( !fertilizer.is_empty() ) {
-                    fertilize_plant( you, examp, fertilizer );
-                }
-            }
-            break;
-        case 2:
-            if( can_water ) {
-                water_plant( you, examp );
-            }
-            break;
-        default:
-            break;
+    menu.addentry( 3, true, 'q', _( "Cancel" ) );
+    menu.query();
+    if( !lifetime || !context ) {
+        return;
     }
+    if( menu.ret == 0 && can_harvest ) {
+        choice.action = farming_action::harvest;
+    } else if( menu.ret == 1 && can_fertilize ) {
+        choice.action = farming_action::fertilize;
+        choice.material = choose_fertilizer( you, pname, true );
+        if( !lifetime || !context || choice.material.is_empty() ) {
+            return;
+        }
+    } else if( menu.ret == 2 && can_water ) {
+        choice.action = farming_action::water;
+    } else {
+        return;
+    }
+    submit_farming_choice( you, choice );
 }
 
 int iexamine::get_plant_max_water( const furn_t &furn )
@@ -3345,63 +3349,66 @@ void iexamine::set_plant_effective_growth_time( item &seed, time_duration effect
 void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
+    if( !reachable_crop( you, here, examp ) ) {
+        return;
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const tool_activity_target plot = tool_activity_target::capture( here, here.get_abs( examp ) );
     const furn_t &furn = here.furn( examp ).obj();
     const int max_water = get_plant_max_water( furn );
     if( max_water <= 0 ) {
         you.add_msg_if_player( m_info, _( "This %s cannot hold water." ), furn.name() );
         return;
     }
-
     item *seed = get_seed_at( here, examp );
-    if( seed == nullptr ) {
+    if( !seed ) {
         you.add_msg_if_player( m_info, _( "There is no plant here to water." ) );
         return;
     }
-
-    const itype_id *water_type = nullptr;
-    if( you.charges_of( itype_water_clean ) > 0 ) {
-        water_type = &itype_water_clean;
-    } else if( you.charges_of( itype_water ) > 0 ) {
-        water_type = &itype_water;
-    }
-
-    if( water_type == nullptr ) {
-        you.add_msg_if_player( m_info, _( "You have no water to pour." ) );
-        return;
-    }
-
+    const item_source original = capture_item_source( you,
+                                 item_location( map_cursor( plot.position ), seed ) );
     const int current_water = get_plant_water( *seed );
     if( current_water >= max_water ) {
         you.add_msg_if_player( m_info, _( "The %s is already fully watered." ),
                                seed->get_plant_name() );
         return;
     }
-
-    if( you.use_charges( *water_type, 1, -1 ).empty() ) {
-        you.add_msg_if_player( m_info, _( "You have no water to pour." ) );
+    const itype_id water_type = you.has_charges( itype_water_clean, 1,
+                                craft_reservation::usable_by_automation ) ? itype_water_clean : itype_water;
+    if( you.use_charges( water_type, 1, craft_reservation::usable_by_automation ).empty() ) {
+        if( lifetime ) {
+            you.add_msg_if_player( m_info, _( "You have no water to pour." ) );
+        }
         return;
     }
-
-    if( !seed->has_var( "seed_last_water_check" ) ) {
-        set_plant_last_water_check( *seed, calendar::turn );
+    if( !lifetime || !context || !plot.matches( here ) ) {
+        return;
     }
-    set_plant_water( *seed, std::min( max_water, current_water + irrigation::WATER_PER_POUR ) );
-
-    // Send global event before per-seed/per-furniture hooks.
-    get_event_bus().send<event_type::character_waters_plant>(
-        you.getID(), here.get_abs( examp ).raw(), seed->typeId(), furn.id,
-        irrigation::WATER_PER_POUR );
-
+    item_location watered = resolve_item_source( you, here, original );
+    if( !watered || !watered->is_seed() ) {
+        return;
+    }
+    if( !watered->has_var( "seed_last_water_check" ) ) {
+        set_plant_last_water_check( *watered, calendar::turn );
+    }
+    set_plant_water( *watered, std::min( max_water, current_water + irrigation::WATER_PER_POUR ) );
+    const itype_id seed_type = watered->typeId();
     const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
     const std::string stage = stage_idx >= 0 ?
-                              seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
-    const std::map<std::string, double> water_context = {
-        { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) }
-    };
-    run_plant_lifecycle_event(
-        "water", you, here, examp, *seed, stage, stage, {}, water_context );
-
-    you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), seed->get_plant_name() );
+                              seed_type->seed->get_growth_stages()[stage_idx].first.str() : "";
+    you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), watered->get_plant_name() );
+    get_event_bus().send<event_type::character_waters_plant>(
+        you.getID(), plot.position.raw(), seed_type, plot.furniture, irrigation::WATER_PER_POUR );
+    if( !lifetime || !context || !plot.matches( here ) ) {
+        return;
+    }
+    const item_location current = resolve_item_source( you, here, original );
+    if( current && current->typeId() == seed_type ) {
+        run_plant_lifecycle_event( "water", you, here, here.get_bub( plot.position ), *current,
+        stage, stage, {},
+        { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
+    }
 }
 
 bool iexamine::can_water_plant( Character &you, const tripoint_bub_ms &examp )
@@ -3422,7 +3429,8 @@ bool iexamine::can_water_plant( Character &you, const tripoint_bub_ms &examp )
         return false;
     }
 
-    return you.charges_of( itype_water_clean ) > 0 || you.charges_of( itype_water ) > 0;
+    return you.has_charges( itype_water_clean, 1, craft_reservation::usable_by_automation ) ||
+           you.has_charges( itype_water, 1, craft_reservation::usable_by_automation );
 }
 
 int iexamine::rain_water_for_weather( const weather_type_id &weather )
@@ -3650,6 +3658,11 @@ void iexamine::run_plant_eocs(
         return;
     }
 
+    const character_action_guard lifetime( alpha );
+    const auto context = here.get_context_reference();
+    if( !lifetime || !context ) {
+        return;
+    }
     const tripoint_abs_ms abs_pos = here.get_abs( plant_pos );
     dialogue d( get_talker_for( alpha ), nullptr );
 
@@ -3674,6 +3687,9 @@ void iexamine::run_plant_eocs(
     }
 
     for( const effect_on_condition_id &eoc : eocs ) {
+        if( !lifetime || !context ) {
+            return;
+        }
         eoc->activate_activation_only( d, "a plant lifecycle event", "plant event", "plant" );
     }
 }
@@ -3687,7 +3703,8 @@ void iexamine::run_plant_lifecycle_event(
     const std::string &old_stage,
     const std::string &new_stage,
     const std::map<std::string, std::string> &string_context,
-    const std::map<std::string, double> &num_context )
+    const std::map<std::string, double> &num_context,
+    const std::optional<furn_str_id> source_furniture )
 {
     using eoc_collection = std::vector<effect_on_condition_id>;
     const auto select_eocs = [phase]( const auto & source ) -> const eoc_collection * {
@@ -3731,19 +3748,37 @@ void iexamine::run_plant_lifecycle_event(
         debugmsg( "unknown plant lifecycle phase '%s'", phase );
         return;
     }
-    const std::string seed_id = seed.typeId().str();
-    const int effective_growth_turns = get_plant_effective_growth_turns( seed );
-    const int water = get_plant_water( seed );
-    const furn_t &furniture = here.furn( plant_pos ).obj();
-    if( furniture.plant ) {
-        run_plant_eocs( *select_eocs( *furniture.plant ), alpha, here, plant_pos,
-                        seed, old_stage, new_stage, string_context, num_context );
+    const character_action_guard lifetime( alpha );
+    const auto context = here.get_context_reference();
+    if( !lifetime || !context ) {
+        return;
     }
-    run_plant_eocs( *seed_eocs, alpha, here, plant_pos, seed,
-                    old_stage, new_stage, string_context, num_context );
+    // Lifecycle handlers can erase the plant and actor. All payload and hook
+    // selection belongs to this phase, not references into the mutable map.
+    const item snapshot = seed;
+    const eoc_collection seed_hooks = *seed_eocs;
+    const furn_t &furniture = source_furniture ? source_furniture->obj() :
+                              here.furn( plant_pos ).obj();
+    const eoc_collection furniture_hooks = furniture.plant ?
+                                           *select_eocs( *furniture.plant ) : eoc_collection{};
+    auto strings = string_context;
+    strings["furniture_id"] = furniture.id.str();
+    const std::string seed_id = snapshot.typeId().str();
+    const int effective_growth_turns = get_plant_effective_growth_turns( snapshot );
+    const int water = get_plant_water( snapshot );
+    run_plant_eocs( furniture_hooks, alpha, here, plant_pos,
+                    snapshot, old_stage, new_stage, strings, num_context );
+    if( !lifetime || !context ) {
+        return;
+    }
+    run_plant_eocs( seed_hooks, alpha, here, plant_pos, snapshot,
+                    old_stage, new_stage, strings, num_context );
+    if( !lifetime || !context ) {
+        return;
+    }
     cata::lua_platform::invoke_plant_lifecycle_handlers(
         phase, alpha, here, plant_pos, seed_id, old_stage, new_stage,
-        effective_growth_turns, water, string_context, num_context );
+        effective_growth_turns, water, strings, num_context );
 }
 
 static void add_firestarter( item *it, std::multimap<int, item *> &firestarters, Character &you,
@@ -5049,7 +5084,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         std::vector<std::string> drink_names;
         std::vector<double> drink_rot;
         std::vector<time_point> drink_bday;
-        for( item *&drink : drinks_inv ) {
+        for( item*&drink : drinks_inv ) {
             auto found_drink = std::find( drink_types.begin(), drink_types.end(), drink->typeId() );
             if( found_drink == drink_types.end() ) {
                 drink_types.push_back( drink->typeId() );
@@ -5215,291 +5250,247 @@ bool iexamine::pour_into_keg( const tripoint_bub_ms &pos, item &liquid, bool sil
     return true;
 }
 
-static void pick_plant( Character &you, const tripoint_bub_ms &examp,
-                        const itype_id &itemType, ter_id new_ter, bool seeds = false )
+namespace
+{
+void query_marloss_harvest( Character &who, const tripoint_bub_ms &position )
 {
     map &here = get_map();
-    bool auto_forage = get_option<bool>( "AUTO_FEATURES" ) &&
-                       get_option<std::string>( "AUTO_FORAGING" ) != "off";
-    if( you.is_avatar() && !auto_forage &&
-        !query_yn( _( "Harvest the %s?" ), here.tername( examp ) ) ) {
-        iexamine::none( you, examp );
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const farming_command choice = capture_farming_command( who, here, here.get_abs( position ),
+                                   farming_action::marloss );
+    const bool offering = !who.has_trait( trait_THRESH_MYCUS ) &&
+                          who.has_trait( trait_THRESH_MARLOSS );
+    const bool automatic = get_option<bool>( "AUTO_FEATURES" ) &&
+                           get_option<std::string>( "AUTO_FORAGING" ) != "off";
+    if( who.is_avatar() && !offering && !automatic &&
+        !query_yn( _( "Harvest the %s?" ), here.tername( position ) ) ) {
+        if( lifetime && context ) {
+            iexamine::none( who, position );
+        }
         return;
     }
-
-    const float survival = you.get_skill_level( skill_survival );
-    you.practice( skill_survival, 6 );
-
-    int plantBase = rng( 2, 5 );
-    ///\EFFECT_SURVIVAL increases number of plants harvested
-    int plantCount = rng( plantBase, round( plantBase + survival / 2 ) );
-    plantCount = std::min( plantCount, 12 );
-
-    here.spawn_item( you.pos_bub(), itemType, plantCount, 0, calendar::turn );
-
-    if( seeds ) {
-        // FIXME: shouldn't derive seed type by string manipulation
-        here.spawn_item( you.pos_bub(), itype_id( "seed_" + itemType.str() ), 1,
-                         rng( plantCount / 4, plantCount / 2 ), calendar::turn );
+    if( lifetime && context ) {
+        submit_farming_choice( who, choice );
     }
-
-    here.ter_set( examp, new_ter );
 }
+} // namespace
 
 void iexamine::tree_hickory( Character &you, const tripoint_bub_ms &examp )
 {
-    bool auto_forage = get_option<bool>( "AUTO_FEATURES" ) &&
-                       ( get_option<std::string>( "AUTO_FORAGING" ) == "all" ||
-                         get_option<std::string>( "AUTO_FORAGING" ) == "trees" );
-
-    bool digging_up = false;
-
+    const bool automatic = get_option<bool>( "AUTO_FEATURES" ) &&
+                           ( get_option<std::string>( "AUTO_FORAGING" ) == "all" ||
+                             get_option<std::string>( "AUTO_FORAGING" ) == "trees" );
     map &here = get_map();
-    if( !auto_forage && you.is_avatar() && you.has_quality( qual_DIG ) &&
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    farming_command choice = capture_farming_command( you, here, here.get_abs( examp ),
+                             farming_action::gather );
+    if( !automatic && you.is_avatar() && you.has_quality( qual_DIG ) &&
         query_yn( _( "Dig up %s?  This kills the tree!" ), here.tername( examp ) ) ) {
-        digging_up = true;
-        /** @EFFECT_SURVIVAL increases hickory root number per tree */
-        here.spawn_item( you.pos_bub(), itype_hickory_root, rng( 1,
-                         round( 3 + you.get_skill_level( skill_survival ) ) ),
-                         0,
-                         calendar::turn );
-        here.ter_set( examp, ter_t_tree_hickory_dead );
-        /** @EFFECT_SURVIVAL speeds up hickory root digging */
-        you.mod_moves( -to_moves<int>( 20_seconds ) / ( you.get_skill_level( skill_survival ) + 1 ) + 100 );
-    }
-
-    if( !auto_forage && !digging_up && you.is_avatar() ) {
-        you.add_msg_if_player( _( "You could dig this tree up for roots…" ) );
-    }
-
-    if( !auto_forage && !query_pick( you, examp ) ) {
+        choice.action = farming_action::hickory_roots;
+        if( lifetime && context ) {
+            submit_farming_choice( you, choice );
+        }
         return;
     }
-
-    you.assign_activity( harvest_activity_actor( examp, auto_forage ) );
+    if( !lifetime || !context ) {
+        return;
+    }
+    if( !automatic ) {
+        you.add_msg_if_player( _( "You could dig this tree up for roots…" ) );
+        if( !query_pick( you, examp ) ) {
+            return;
+        }
+    }
+    if( lifetime && context ) {
+        submit_farming_choice( you, choice );
+    }
 }
 
-static item_location maple_tree_sap_container()
+namespace
 {
-    const item maple_sap = item( itype_maple_sap, calendar::turn_zero );
+item_location maple_tree_sap_container()
+{
+    const item maple_sap( itype_maple_sap, calendar::turn_zero );
     return g->inv_map_splice( [&]( const item & it ) {
         return it.get_remaining_capacity_for_liquid( maple_sap, true ) > 0;
     }, _( "Use which container to collect sap?" ), pickup_range,
     _( "You don't have a container at hand." ) );
 }
 
+std::optional<farming_command> query_maple_work( Character &who,
+        const tripoint_bub_ms &position, bool installing )
+{
+    if( !who.is_avatar() ) {
+        return std::nullopt;
+    }
+    // All previews and menus are display work; the caller executes only after
+    // this scope has restored gameplay RNG.
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const character_action_guard lifetime( who );
+    map &here = get_map();
+    const auto context = here.get_context_reference();
+    const auto origin = who.pos_abs();
+    const auto generation = who.activity.identity_generation();
+    farming_command choice = capture_farming_command( who, here, here.get_abs( position ),
+                             farming_action::maple_tap );
+    const auto valid = [&]() {
+        return lifetime && context && who.pos_abs() == origin &&
+               who.activity.identity_generation() == generation && choice.target.matches( here );
+    };
+    if( installing ) {
+        if( !who.crafting_inventory().has_quality( qual_DRILL ) ) {
+            who.add_msg_if_player( m_info, _( "You need a tool to drill the crust to tap this maple tree." ) );
+            return std::nullopt;
+        }
+        if( !who.crafting_inventory().has_quality( qual_HAMMER ) ) {
+            who.add_msg_if_player( m_info,
+                                   _( "You need a tool to hammer the spile into the crust to tap this maple tree." ) );
+            return std::nullopt;
+        }
+        item_location tap = g->inv_map_splice( [&here]( const item_location & it ) {
+            return it->get_quality_nonrecursive( qual_TREE_TAP ) > 0 &&
+                   !( here.ter( it.pos_bub( here ) ) == ter_t_tree_maple_tapped );
+        }, _( "Use which tapping tool?" ), pickup_range,
+        _( "You don't have a tapping tool at hand." ) );
+        if( !valid() || !tap ) {
+            return std::nullopt;
+        }
+        choice.tap = capture_item_source( who, tap );
+        const item_location container = maple_tree_sap_container();
+        if( !valid() ) {
+            return std::nullopt;
+        }
+        if( container ) {
+            choice.container = capture_item_source( who, container );
+        }
+        return choice;
+    }
+    const maple_tree_items items = inspect_maple_tree( here, choice.target.position );
+    if( !items.tap ) {
+        return std::nullopt;
+    }
+    choice.tap = capture_item_source( who, items.tap );
+    if( items.container ) {
+        choice.container = capture_item_source( who, items.container );
+    }
+    const std::string sap_name = item::nname( itype_maple_sap );
+    uilist menu;
+    menu.addentry( static_cast<int>( farming_action::maple_untap ), true, MENU_AUTOASSIGN,
+                   _( "Remove tap" ) );
+    menu.addentry( static_cast<int>( farming_action::maple_add_container ), !items.container,
+                   MENU_AUTOASSIGN, _( "Add a container to receive the %s" ), sap_name );
+    menu.addentry( static_cast<int>( farming_action::maple_sap ), static_cast<bool>( items.sap ),
+                   MENU_AUTOASSIGN, _( "Harvest current %s (%d)" ), sap_name,
+                   items.sap ? items.sap->charges : 0 );
+    menu.addentry( static_cast<int>( farming_action::maple_remove_container ),
+                   static_cast<bool>( items.container ), MENU_AUTOASSIGN, _( "Remove container" ) );
+    menu.text = _( "Select an action" );
+    menu.query();
+    if( !valid() ) {
+        return std::nullopt;
+    }
+    choice.action = static_cast<farming_action>( menu.ret );
+    switch( choice.action ) {
+        case farming_action::maple_untap:
+            if( !items.tap ) {
+                return std::nullopt;
+            }
+            if( !who.crafting_inventory().has_quality( qual_HAMMER ) ) {
+                who.add_msg_if_player( m_info, _( "You need a hammer to remove the spile." ) );
+                return std::nullopt;
+            }
+            break;
+        case farming_action::maple_add_container: {
+            const item_location container = maple_tree_sap_container();
+            if( !valid() || !container ) {
+                return std::nullopt;
+            }
+            choice.container = capture_item_source( who, container );
+            break;
+        }
+        case farming_action::maple_remove_container:
+            if( !items.container ) {
+                return std::nullopt;
+            }
+            break;
+        case farming_action::maple_sap:
+            if( !items.sap || !items.container || !liquid_handler::can_handle_liquid( *items.sap ) ) {
+                return std::nullopt;
+            }
+            choice.sap_destination = query_liquid_destination( *items.sap, &*items.container,
+                                     items.sap->uid().get_value(), true );
+            if( !valid() || choice.sap_destination->kind == LD_NULL ) {
+                return std::nullopt;
+            }
+            break;
+        default:
+            return std::nullopt;
+    }
+    return choice;
+}
+
+void examine_maple( Character &who, const tripoint_bub_ms &position, bool installing )
+{
+    const auto choice = query_maple_work( who, position, installing );
+    if( !choice ) {
+        return;
+    }
+    if( choice->sap_destination && choice->sap_destination->kind == LD_CONSUME ) {
+        // Drinking sap uses the existing owned consumption command/activity.
+        // The farming transfer command never executes an unconfirmed meal.
+        const maple_tree_items current = inspect_maple_tree( get_map(), choice->target.position );
+        if( current.sap && current.sap->uid().get_value() == choice->sap_destination->source ) {
+            start_item_consumption( who, current.sap );
+        }
+    } else {
+        submit_farming_choice( who, *choice );
+    }
+}
+} // namespace
+
 void iexamine::tree_maple( Character &you, const tripoint_bub_ms &examp )
 {
-    const temp_crafting_inventory &crafting_inv = you.crafting_inventory();
-    if( !crafting_inv.has_quality( qual_DRILL ) ) {
-        add_msg( m_info, _( "You need a tool to drill the crust to tap this maple tree." ) );
-        return;
-    }
-
-    if( !crafting_inv.has_quality( qual_HAMMER ) ) {
-        add_msg( m_info,
-                 _( "You need a tool to hammer the spile into the crust to tap this maple tree." ) );
-        return;
-    }
-
-    map &here = get_map();
-    item_location spile_loc = g->inv_map_splice( [&here]( const item_location & it ) {
-        return it->get_quality_nonrecursive( qual_TREE_TAP ) > 0 &&
-               !( here.ter( it.pos_bub( here ) ) == ter_t_tree_maple_tapped );
-    }, _( "Use which tapping tool?" ), pickup_range,
-    _( "You don't have a tapping tool at hand." ) );
-
-    item *spile = spile_loc.get_item();
-    if( !spile ) {
-        return;
-    }
-    std::string spile_name = spile->tname();
-
-    you.mod_moves( -to_moves<int>( 20_seconds ) );
-    here.ter_set( examp, ter_t_tree_maple_tapped );
-    here.add_item_or_charges( examp, *spile, false );
-    spile_loc.remove_item();
-    add_msg( m_info, _( "You drill the maple tree crust and tap a %s into the prepared hole." ),
-             spile_name );
-
-    item_location cont_loc = maple_tree_sap_container();
-
-    item *container = cont_loc.get_item();
-    if( container ) {
-        here.add_item_or_charges( examp, *container, false );
-        add_msg( m_info, _( "You hang the %s under the %s to collect sap." ), container->tname(),
-                 spile_name );
-        cont_loc.remove_item();
-    } else {
-        add_msg( m_info, _( "No container added.  The sap will just spill on the ground." ) );
-    }
+    examine_maple( you, examp, true );
 }
 
 void iexamine::tree_maple_tapped( Character &you, const tripoint_bub_ms &examp )
 {
-    bool has_sap = false;
-    item *container = nullptr;
-    item *spile = nullptr;
-    int charges = 0;
-
-    const std::string maple_sap_name = item::nname( itype_maple_sap );
-
-    map &here = get_map();
-    map_stack items = here.i_at( examp );
-    for( item &it : items ) {
-        if( it.will_spill() || it.is_watertight_container() ) {
-            container = &it;
-
-            it.visit_items( [&charges, &has_sap]( const item * it, item * ) {
-                if( it->typeId() == itype_maple_sap ) {
-                    has_sap = true;
-                    charges = it->charges;
-                    return VisitResponse::ABORT;
-                }
-                return VisitResponse::NEXT;
-            } );
-        }
-        if( it.get_quality_nonrecursive( qual_TREE_TAP ) > 0 ) {
-            spile = &it;
-        }
-    }
-
-    if( !spile ) {
-        return;
-    }
-
-    enum options {
-        REMOVE_TAP,
-        ADD_CONTAINER,
-        HARVEST_SAP,
-        REMOVE_CONTAINER,
-    };
-    uilist selectmenu;
-    selectmenu.addentry( REMOVE_TAP, true, MENU_AUTOASSIGN, _( "Remove tap" ) );
-    selectmenu.addentry( ADD_CONTAINER, !container, MENU_AUTOASSIGN,
-                         _( "Add a container to receive the %s" ), maple_sap_name );
-    selectmenu.addentry( HARVEST_SAP, has_sap, MENU_AUTOASSIGN, _( "Harvest current %s (%d)" ),
-                         maple_sap_name, charges );
-    selectmenu.addentry( REMOVE_CONTAINER, container, MENU_AUTOASSIGN, _( "Remove container" ) );
-
-    selectmenu.text = _( "Select an action" );
-    selectmenu.query();
-
-    switch( selectmenu.ret ) {
-        case REMOVE_TAP: {
-            if( !you.crafting_inventory().has_quality( qual_HAMMER ) ) {
-                add_msg( m_info, _( "You need a hammering tool to remove the %s from the crust." ),
-                         spile->tname() );
-                return;
-            }
-
-            add_msg( _( "You remove the %s." ), spile->tname() );
-            here.add_item_or_charges( you.pos_bub(), *spile );
-
-            if( container ) {
-                here.add_item_or_charges( you.pos_bub(), *container );
-            }
-            here.i_clear( examp );
-
-            you.mod_moves( -to_moves<int>( 20_seconds ) );
-            here.ter_set( examp, ter_t_tree_maple );
-
-            return;
-        }
-
-        case ADD_CONTAINER: {
-            item_location cont_loc = maple_tree_sap_container();
-
-            container = cont_loc.get_item();
-            if( container ) {
-                here.add_item_or_charges( examp, *container, false );
-                you.mod_moves( -you.item_handling_cost( *container ) );
-                add_msg( m_info, _( "You hang the %s under the spile to collect sap." ), container->tname() );
-                cont_loc.remove_item();
-            } else {
-                add_msg( m_info, _( "No container added.  The sap will just spill on the ground." ) );
-            }
-
-            return;
-        }
-
-        case HARVEST_SAP: {
-            item_location loc( map_cursor( examp ), container );
-            liquid_handler::handle_all_liquids_from_container( loc, pickup_range );
-            return;
-        }
-
-        case REMOVE_CONTAINER: {
-            here.add_item_or_charges( you.pos_bub(), *container );
-            you.mod_moves( -you.item_handling_cost( *container ) );
-            here.i_rem( examp, container );
-            return;
-        }
-
-        default:
-            return;
-    }
+    examine_maple( you, examp, false );
 }
 
 void iexamine::shrub_marloss( Character &you, const tripoint_bub_ms &examp )
 {
-    if( you.has_trait( trait_THRESH_MYCUS ) ) {
-        pick_plant( you, examp, itype_mycus_fruit, ter_t_shrub_fungal );
-    } else if( you.has_trait( trait_THRESH_MARLOSS ) ) {
-        map &here = get_map();
-        here.spawn_item( you.pos_bub(), itype_mycus_fruit, 1, 0, calendar::turn );
-        here.ter_set( examp, ter_t_fungus );
-        add_msg( m_info, _( "The shrub offers up a fruit, then crumbles into a fungal bed." ) );
-    } else {
-        pick_plant( you, examp, itype_marloss_berry, ter_t_shrub_fungal );
-    }
+    query_marloss_harvest( you, examp );
 }
 
 void iexamine::tree_marloss( Character &you, const tripoint_bub_ms &examp )
 {
-    map &here = get_map();
-    if( you.has_trait( trait_THRESH_MYCUS ) ) {
-        pick_plant( you, examp, itype_mycus_fruit, ter_t_tree_fungal );
-        if( you.has_trait( trait_M_DEPENDENT ) && one_in( 3 ) ) {
-            // Folks have a better shot at keeping fed.
-            add_msg( m_info,
-                     _( "We have located a particularly vital nutrient deposit underneath this location." ) );
-            add_msg( m_good, _( "Additional nourishment is available." ) );
-            here.ter_set( examp, ter_t_marloss_tree );
-        }
-    } else if( you.has_trait( trait_THRESH_MARLOSS ) ) {
-        here.spawn_item( you.pos_bub(), itype_mycus_fruit, 1, 0, calendar::turn );
-        here.ter_set( examp, ter_t_tree_fungal );
-        add_msg( m_info, _( "The tree offers up a fruit, then shrivels into a fungal tree." ) );
-    } else {
-        pick_plant( you, examp, itype_marloss_berry, ter_t_tree_fungal );
-    }
+    query_marloss_harvest( you, examp );
 }
 
 void iexamine::shrub_wildveggies( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    // Ask if there's something possibly more interesting than this shrub here.
-    // NPCs skip the prompt - they already decided to forage via address_needs.
-    if( !you.is_npc() &&
-        ( !here.i_at( examp ).empty() ||
-          here.veh_at( examp ) ||
-          here.can_see_trap_at( examp, you ) ||
-          get_creature_tracker().creature_at( examp ) != nullptr ) &&
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const farming_command choice = capture_farming_command( you, here,
+                                   here.get_abs( examp ), farming_action::forage );
+    // NPCs already chose to forage via address_needs; the local frontend owns prompts.
+    if( you.is_avatar() &&
+        ( !here.i_at( examp ).empty() || here.veh_at( examp ) ||
+          here.can_see_trap_at( examp, you ) || get_creature_tracker().creature_at( examp ) ) &&
         !query_yn( _( "Forage through %s?" ), here.tername( examp ) ) ) {
         none( you, examp );
         return;
     }
-
+    if( !lifetime || !context ) {
+        return;
+    }
     you.add_msg_if_player( _( "You forage through the %s." ), here.tername( examp ) );
     you.add_msg_if_npc( _( "<npcname> forages through the %s." ), here.tername( examp ) );
-    ///\EFFECT_SURVIVAL speeds up foraging
-    int move_cost = 100000 / ( 2 * you.get_skill_level( skill_survival ) + 5 );
-    ///\EFFECT_PER randomly speeds up foraging
-    move_cost /= rng( std::max( 4, you.get_per() ), 4 + you.get_per() * 2 );
-    you.assign_activity( forage_activity_actor( move_cost ) );
-    you.activity.placement = here.get_abs( examp );
-    you.activity.auto_resume = true;
+    submit_farming_choice( you, choice );
 }
 
 void trap::examine( const tripoint_bub_ms &examp ) const
@@ -6310,33 +6301,18 @@ void iexamine::ledge( Character &you, const tripoint_bub_ms &examp )
     };
 
     map &here = get_map();
+    if( !you.is_avatar() || cata_mp::client_query_ledge_move( here.get_abs( examp ) ) ) {
+        return;
+    }
+    const character_action_guard lifetime( you );
+    const auto origin = you.pos_abs();
+    const auto ledge_position = here.get_abs( examp );
     const tripoint_bub_ms pos = you.pos_bub( here );
 
     tripoint_bub_ms jump_target( pos.x() + 2 * sgn( examp.x() - pos.x() ),
                                  pos.y() + 2 * sgn( examp.y() - pos.y() ),
                                  pos.z() );
     bool jump_target_valid = !here.is_open_air( jump_target );
-    point_rel_ms jd( examp.xy() - pos.xy() );
-    int jump_direction = 0;
-
-    if( jd.y() > 0 && jd.x() == 0 ) {
-        jump_direction = 0; //south
-    } else if( jd.y() > 0 && jd.x() < 0 ) {
-        jump_direction = 1; //southwest
-    } else if( jd.y() == 0 && jd.x() < 0 ) {
-        jump_direction = 2; //west
-    } else if( jd.y() < 0 && jd.x() < 0 ) {
-        jump_direction = 3; //northwest
-    } else if( jd.y() < 0 && jd.x() == 0 ) {
-        jump_direction = 4; //north
-    } else if( jd.y() < 0 && jd.x() > 0 ) {
-        jump_direction = 5; //northeast
-    } else if( jd.y() == 0 && jd.x() > 0 ) {
-        jump_direction = 6; //east
-    } else if( jd.y() > 0 && jd.x() > 0 ) {
-        jump_direction = 7; //southeast
-    }
-
     tripoint_bub_ms just_below = examp + tripoint::below;
 
     uilist cmenu;
@@ -6344,7 +6320,7 @@ void iexamine::ledge( Character &you, const tripoint_bub_ms &examp )
 
     // NOTE this menu is merged with the climb down menu, manage keys carefully.
     cmenu.addentry( ledge_peek_down, true, 'p', _( "Peek down." ) );
-    g->climb_down_menu_gen( examp, cmenu );
+    g->climb_down_menu_gen( you, examp, cmenu );
     if( here.has_flag_furn( "EXAMINE_FROM_ABOVE", just_below ) ) {
         cmenu.addentry( ledge_examine_furniture_below, true, 'e',
                         _( "Reach for the %s below." ), here.furn( just_below ).obj().name() );
@@ -6354,61 +6330,40 @@ void iexamine::ledge( Character &you, const tripoint_bub_ms &examp )
     cmenu.addentry( ledge_fall_down, true, 'f', _( "Fall down." ) );
     if( you.has_flag( json_flag_GLIDE ) || you.has_flag( json_flag_WING_GLIDE ) ||
         you.has_bodypart_with_flag( json_flag_WING_ARMS ) ) {
-        cmenu.addentry( ledge_glide, you.can_fly(), 'g',
-                        ( you.can_fly() ? _( "Glide away." ) : _( "You can't glide in your current state" ) ) );
+        cmenu.addentry( ledge_glide, you.can_glide(), 'g',
+                        ( you.can_glide() ? _( "Glide away." ) : _( "You can't glide in your current state" ) ) );
     }
     cmenu.query();
 
 
-    creature_tracker &creatures = get_creature_tracker();
+    if( !lifetime || you.pos_abs() != origin || !here.inbounds( ledge_position ) ||
+        here.get_abs( examp ) != ledge_position ) {
+        return;
+    }
+    vertical_move_selection choice;
+    choice.origin = origin;
+    choice.target = ledge_position;
+    choice.direction = -1;
     if( g->climb_down_menu_pick( examp, cmenu.ret ) ) {
         // This branch means the player chose some option generated by the climb menu.
         return;
     }
     switch( cmenu.ret ) {
-        case ledge_jump_across: {
-            // If player is grabbed, trapped, or somehow otherwise movement-impeded, first try to break free
-            if( !you.move_effects( false ) ) {
-                you.mod_moves( -to_moves<int>( 1_seconds ) );
-                return;
-            }
-
-            if( you.get_str() < 4 ) {
-                add_msg( m_warning, _( "You are too weak to jump over an obstacle." ) );
-            } else if( 100 * you.weight_carried() / you.weight_capacity() > 25 ) {
-                add_msg( m_warning, _( "You are too burdened to jump over an obstacle." ) );
-            } else if( !here.valid_move( examp, jump_target, false, true ) ) {
-                add_msg( m_warning, _( "You cannot jump over an obstacle - something is blocking the way." ) );
-            } else if( creatures.creature_at( jump_target ) ) {
-                add_msg( m_warning, _( "You cannot jump over an obstacle - there is %s blocking the way." ),
-                         creatures.creature_at( jump_target )->disp_name() );
-            } else if( !jump_target_valid ) {
-                add_msg( m_warning, _( "You are not going to jump over an obstacle only to fall down." ) );
-            } else {
-                add_msg( m_info, _( "You jump over an obstacle." ) );
-                you.set_activity_level( BRISK_EXERCISE );
-                g->place_player( jump_target );
-            }
+        case ledge_jump_across:
+            choice.action = "ledge_jump";
+            choice.choices.landing = here.get_abs( jump_target );
+            execute_vertical_move( you, here, choice );
             break;
-        }
         case ledge_peek_down: {
-            // Peek
-            tripoint_bub_ms where = examp;
-            tripoint_bub_ms below = examp + tripoint::below;
-            while( here.valid_move( where, below, false, true ) ) {
-                where += tripoint::below;
-                below += tripoint::below;
-            }
-
-            const int height = examp.z() - where.z();
-            add_msg_debug( debugmode::DF_IEXAMINE, "Ledge height %d", height );
-            if( height == 0 ) {
+            const auto where = ledge_peek_position( you, here, ledge_position );
+            if( !where ) {
                 you.add_msg_if_player( _( "You can't peek down there." ) );
                 return;
             }
-
-            g->peek( where );
-            you.add_msg_if_player( _( "You peek over the ledge." ) );
+            g->peek( here.get_bub( *where ) );
+            if( lifetime ) {
+                you.add_msg_if_player( _( "You peek over the ledge." ) );
+            }
             break;
         }
         case ledge_examine_furniture_below: {
@@ -6416,52 +6371,18 @@ void iexamine::ledge( Character &you, const tripoint_bub_ms &examp )
             here.furn( just_below ).obj().examine( you, just_below );
             break;
         }
-        case ledge_glide: {
-            int glide_distance = 5;
-            const weather_manager &weather = get_weather();
-            add_msg( m_info, _( "You soar away from the ledge." ) );
-            int angledifference = std::abs( weather.winddirection - jump_direction * 45 );
-            // Handle cases where the difference wraps around due to compass directions
-            angledifference = std::min( angledifference, 360 - angledifference );
-            if( angledifference <= 45 && weather.windspeed >= 12 ) {
-                add_msg( m_warning, _( "Your glide is aided by a tailwind." ) );
-                glide_distance += 1;
-            }
-            // Check if the directions are greater than 135 degrees apart
-            else if( angledifference >= 135 && weather.windspeed >= 12 ) {
-                add_msg( m_warning, _( "Your glide is hindered by a headwind." ) );
-                glide_distance -= 1;
-            }
-            if( jump_direction == 1 || jump_direction == 3 || jump_direction == 5 || jump_direction == 7 ) {
-                glide_distance = std::round( 0.7 * glide_distance );
-            }
-            you.as_avatar()->grab( object_type::NONE );
-            glide_activity_actor glide( &you, jump_direction, glide_distance );
-            you.remove_effect( effect_bouldering );
-            you.assign_activity( glide );
-            you.add_effect( effect_gliding, 1_turns, true );
-            you.setpos( here, examp );
+        case ledge_glide:
+            choice.action = "ledge_glide";
+            execute_vertical_move( you, here, choice );
             break;
-        }
-        case ledge_fall_down: {
-            if( query_yn( _( "Climbing might be safer.  Really fall from the ledge?" ) ) ) {
-                you.mod_moves( -to_moves<int>( 1_seconds ) );
-                // If player is grabbed, trapped, or somehow otherwise movement-impeded, first try to break free
-                if( !you.move_effects( false ) ) {
-                    return;
-                }
-                // Step into open air, then fall...
-                if( you.has_effect_with_flag( json_flag_LEVITATION ) ) {
-                    you.add_effect( effect_slow_descent, 1_seconds, false );
-                }
-                you.setpos( here, examp );
-                you.gravity_check();
-            } else {
-                // Just to highlight the trepidation
-                popup( _( "You decided to step back from the ledge." ) );
+        case ledge_fall_down:
+            choice.action = "ledge_fall";
+            choice.choices.allow_one_way = you.query_yn(
+                                               _( "Climbing might be safer.  Really fall from the ledge?" ) );
+            if( lifetime ) {
+                execute_vertical_move( you, here, choice );
             }
             break;
-        }
         default:
             popup( _( "You decided to step back from the ledge." ) );
             break;
@@ -7229,10 +7150,14 @@ bool iexamine::smoker_prep( Character &you, const tripoint_bub_ms &examp )
         if( it.typeId() != itype_charcoal && !it.is_smokable() ) {
             add_msg( m_bad, _( "This rack contains %s, which can't be smoked!" ), it.tname( 1,
                      false ) );
-            add_msg( _( "You remove %s from the rack." ), it.tname() );
-            here.add_item_or_charges( you.pos_bub(), it );
-            you.mod_moves( -you.item_handling_cost( it ) );
-            here.i_rem( examp, &it );
+            const std::string name = it.tname();
+            const int cost = you.item_handling_cost( it );
+            const character_action_guard lifetime( you );
+            item_location source( map_cursor( examp ), &it );
+            if( here.transfer_item_or_charges( you.pos_bub(), source, item( it ), you ) > 0 && lifetime ) {
+                you.add_msg_if_player( _( "You remove %s from the rack." ), name );
+                you.mod_moves( -cost );
+            }
             return false;
         }
         if( it.has_flag( flag_SMOKED ) && it.is_smokable() ) {

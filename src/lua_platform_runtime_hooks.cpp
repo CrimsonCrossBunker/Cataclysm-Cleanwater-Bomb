@@ -2181,17 +2181,30 @@ void invoke_plant_lifecycle_handlers(
     const std::map<std::string, std::string> &string_context,
     const std::map<std::string, double> &number_context )
 {
+    const character_action_guard lifetime( character );
+    const auto context = here.get_context_reference();
+    if( !lifetime || !context ) {
+        return;
+    }
     const std::string seed_id( seed_id_value );
-    const std::string furniture_id = here.furn( position ).id().str();
+    const auto captured_furniture = string_context.find( "furniture_id" );
+    const std::string furniture_id = captured_furniture != string_context.end() ?
+                                     captured_furniture->second : here.furn( position ).id().str();
     const tripoint_abs_ms absolute = here.get_abs( position );
-    for( auto iterator = detail::active_runtime_values().rbegin();
-         iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    const auto runtimes = detail::active_runtime_values();
+    for( auto iterator = runtimes.rbegin(); iterator != runtimes.rend(); ++iterator ) {
+        if( !lifetime || !context ) {
+            return;
+        }
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner || !owner->world_is_ready ) {
             continue;
         }
         const auto dispatch_target = [&]( const std::string_view target,
         const std::string & target_id ) {
+            if( !lifetime || !context || !owner->world_is_ready ) {
+                return;
+            }
             std::string handler_id;
             if( !owner->content.find_plant_lifecycle_handler(
                     target, target_id, phase, handler_id ) || handler_id.empty() ) {

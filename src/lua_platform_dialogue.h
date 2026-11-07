@@ -64,6 +64,7 @@ class dialogue_session
             const game_handle_runtime &runtime_identity,
             std::size_t world_generation );
         friend void end_session( ::dialogue &d ) noexcept;
+        friend void clear_response_callbacks( ::dialogue &d );
         friend void retire_sessions_for_runtime(
             const game_handle_runtime &runtime_identity ) noexcept;
         friend void retire_sessions_for_world( std::size_t world_generation ) noexcept;
@@ -189,6 +190,8 @@ std::uint64_t register_response_action_callback( response_callback_origin origin
         std::string topic = {} );
 void clear_response_callbacks();
 void clear_response_callbacks( response_callback_origin origin );
+// Refresh only this conversation's responses; other players keep their choices.
+void clear_response_callbacks( ::dialogue &d );
 talk_topic apply_response_callback( ::dialogue &d, std::uint64_t response_id,
                                     const talk_topic &fallback, bool trial_success );
 void apply_response_action_callback( ::dialogue &d, std::uint64_t response_id,

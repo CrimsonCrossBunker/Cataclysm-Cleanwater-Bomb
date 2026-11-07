@@ -544,7 +544,8 @@ class firestarter_actor : public iuse_actor
             KILN,
         };
 
-        static start_type prep_firestarter_use( Character &p, map *here, tripoint_bub_ms &pos );
+        static start_type prep_firestarter_use( Character &p, map *here, tripoint_bub_ms &pos,
+                                                bool preview = false, bool confirmed = false );
         /** Player here isn't const because pyromaniacs gain a mood boost from it */
         static void resolve_firestarter_use( Character *p, map *here, const tripoint_bub_ms &pos,
                                              start_type st );
@@ -557,6 +558,16 @@ class firestarter_actor : public iuse_actor
         int moves_cost_by_fuel( const tripoint_bub_ms &pos ) const;
 
         explicit firestarter_actor( const std::string &type = "firestarter" ) : iuse_actor( type ) {}
+
+        bool supports_owned_activation() const override {
+            return true;
+        }
+        bool valid_activation_choices( const item_activation_choices &choices ) const override;
+        bool query_fire_choices( Character &who, const item &tool, map &here,
+                                 tripoint_bub_ms &position, item_activation_choices &choices ) const;
+        std::optional<int> use_with_choices( Character *who, item &tool, map *here,
+                                             const tripoint_bub_ms &position,
+                                             const item_activation_choices &choices ) const override;
 
         ~firestarter_actor() override = default;
         void load( const JsonObject &obj, const std::string & ) override;
@@ -585,7 +596,8 @@ class salvage_actor : public iuse_actor
         /** Moves used per unit of volume of cut item */
         int moves_per_part = 25;
 
-        std::optional<int> try_to_cut_up( Character &p, item &cutter, item_location &cut ) const;
+        std::optional<int> try_to_cut_up( Character &p, item &cutter, item_location &cut,
+                                          bool confirmed = false ) const;
         int time_to_cut_up( const item &it ) const;
         bool valid_to_cut_up( const Character *p, const item &it ) const;
 
@@ -598,12 +610,25 @@ class salvage_actor : public iuse_actor
 
         explicit salvage_actor( const std::string &type = "salvage" ) : iuse_actor( type ) {}
 
+        bool supports_owned_activation() const override {
+            return true;
+        }
+        bool valid_activation_choices( const item_activation_choices &choices ) const override;
+        bool query_salvage_choices( Character &who, const item &tool,
+                                    item_activation_choices &choices ) const;
+        bool confirm_salvage_choices( Character &who, const item &tool,
+                                      const std::vector<item_location> &targets, bool bulk,
+                                      item_activation_choices &choices ) const;
+        std::optional<int> use_with_choices( Character *who, item &tool, map *here,
+                                             const tripoint_bub_ms &position,
+                                             const item_activation_choices &choices ) const override;
+
         ~salvage_actor() override = default;
         void load( const JsonObject &obj, const std::string & ) override;
         std::optional<int> use( Character *, item &, map *here, const tripoint_bub_ms & ) const override;
         std::unique_ptr<iuse_actor> clone() const override;
     private:
-        void cut_up( Character &p, item_location &cut ) const;
+        bool cut_up( Character &p, item &cutter, item_location &cut ) const;
 };
 
 /**
@@ -813,6 +838,9 @@ class cast_spell_actor : public iuse_actor
         explicit cast_spell_actor( const std::string &type = "cast_spell" ) : iuse_actor( type ) {}
 
         ~cast_spell_actor() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map * /*here*/,

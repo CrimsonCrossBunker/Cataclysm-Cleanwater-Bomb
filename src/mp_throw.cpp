@@ -1,4 +1,5 @@
 #include "mp_throw.h"
+#include "mp_peek.h"
 
 #include "character.h"
 #include "creature_tracker.h"
@@ -65,9 +66,16 @@ bool can_prepare_throw( Character &who, const item_location &source )
     return throw_keeps_wielded( who, source ) || who.can_wield( *source ).success();
 }
 
-bool execute_throw_intent( Character &who, map &here, const throw_intent &intent )
+bool execute_throw_intent( Character &who, map &here, const throw_intent &intent,
+                           const peek_authorization *peek )
 {
     if( who.is_dead_state() || who.get_moves() <= 0 || who.pos_abs() != intent.origin ) {
+        return false;
+    }
+    const bool paid_peek = intent.peek_request > 0 && peek &&
+                           intent.peek_request == peek->request && peek->valid_for( who, here ) &&
+                           intent.blind_from && *intent.blind_from == peek->viewpoint;
+    if( intent.peek_request < 0 || ( intent.peek_request > 0 && !paid_peek ) ) {
         return false;
     }
     item_location source = resolve_item_source( who, here, intent.item );
@@ -106,9 +114,9 @@ bool execute_throw_intent( Character &who, map &here, const throw_intent &intent
     std::optional<tripoint_bub_ms> blind;
     if( intent.blind_from ) {
         if( !here.inbounds( *intent.blind_from ) ||
-            rl_dist( intent.origin, *intent.blind_from ) > 1 ||
+            ( !paid_peek && rl_dist( intent.origin, *intent.blind_from ) > 1 ) ||
             here.impassable( here.get_bub( *intent.blind_from ) ) ||
-            ( *intent.blind_from != intent.origin &&
+            ( !paid_peek && *intent.blind_from != intent.origin &&
               !here.valid_move( who.pos_bub(), here.get_bub( *intent.blind_from ), false, true ) ) ) {
             return false;
         }
@@ -125,7 +133,7 @@ bool execute_throw_intent( Character &who, map &here, const throw_intent &intent
     }
     const safe_reference<Creature> actor = who.get_safe_reference();
     item thrown = *source;
-    if( blind ) {
+    if( blind && !paid_peek ) {
         who.mod_moves( -who.get_speed() * 2 );
     }
     if( !who.try_break_relax_gas( _( "You concentrate mightily, and your body obeys!" ),

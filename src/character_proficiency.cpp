@@ -156,6 +156,8 @@ void Character::store_practice_state( JsonOut &out, bool include_recipes ) const
     out.member( "proficiencies", *_proficiencies );
     if( include_recipes ) {
         out.member( "recipes", *learned_recipes );
+        out.member( "items_identified", items_identified );
+        out.member( "book_chapters", book_chapters );
     }
     out.end_object();
 }
@@ -175,4 +177,6 @@ void Character::load_practice_state( const JsonObject &data )
     *_skills = std::move( skills );
     *_proficiencies = std::move( proficiencies );
     data.read( "recipes", *learned_recipes );
+    data.read( "items_identified", items_identified );
+    data.read( "book_chapters", book_chapters );
 }

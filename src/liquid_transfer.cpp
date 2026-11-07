@@ -3,6 +3,7 @@
 #include <cstddef>
 
 #include "character.h"
+#include "character_action_guard.h"
 #include "finite_water.h"
 #include "handle_liquid.h"
 #include "iexamine.h"
@@ -20,6 +21,8 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
     if( !liquid.made_of( phase_id::LIQUID ) || liquid.charges <= 0 ) {
         return false;
     }
+    const character_action_guard lifetime( who );
+    const auto context = get_map().get_context_reference();
     switch( target.dest_opt ) {
         case LD_ITEM:
             if( !target.item_loc || target.item_loc.get_item() == &liquid ||
@@ -27,8 +30,10 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
                 !who.pour_into( target.item_loc, liquid, true, silent ) ) {
                 return false;
             }
-            target.item_loc.make_active();
-            if( charge_moves ) {
+            if( context && target.item_loc ) {
+                target.item_loc.make_active();
+            }
+            if( charge_moves && lifetime && context ) {
                 who.mod_moves( -100 );
             }
             return true;
@@ -44,7 +49,7 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
                     if( !who.pour_into( part, liquid ) ) {
                         return false;
                     }
-                    if( charge_moves ) {
+                    if( charge_moves && lifetime && context ) {
                         who.mod_moves( -1000 );
                     }
                     return true;
@@ -64,10 +69,10 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
             } else if( finite_water::can_pour_into( here.get_abs( target.pos ) ) ) {
                 finite_water::pour_into_finite_water( here.get_abs( target.pos ), liquid );
             } else {
-                here.add_item_or_charges( target.pos, liquid );
+                here.add_item_or_charges( target.pos, liquid, true, &who );
                 liquid.charges = 0;
             }
-            if( charge_moves ) {
+            if( charge_moves && lifetime && context ) {
                 who.mod_moves( -100 );
             }
             return true;

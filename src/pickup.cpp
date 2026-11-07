@@ -1,5 +1,7 @@
 #include "pickup.h"
 
+#include "activity_handlers.h"
+
 #include <coordinates.h>
 #include <algorithm>
 #include <array>
@@ -215,7 +217,7 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
     // The picked-up copy no longer belongs to the reservation at this location.
     // Also release orphaned marks from older activities, including our own.
     // Leave the source unchanged if pickup is cancelled or only takes a portion.
-    newit.erase_var( "activity_var" );
+    activity_handlers::clear_activity_item( newit );
     if( !newit.is_owned_by( player_character, true ) ) {
         const std::string thief_mode = player_character.get_value( "THIEF_MODE" ).str();
         if( thief_mode == "THIEF_HONEST" ) {

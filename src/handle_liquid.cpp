@@ -18,6 +18,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "coordinates.h"
 #include "debug.h"
@@ -134,8 +135,9 @@ void handle_all_liquid( item liquid, const int radius, const item *const avoid )
     }
 }
 
-void handle_npc_liquid( item liquid, Character &who )
+static void handle_npc_liquid_impl( item &liquid, Character &who, item_location *source )
 {
+    const character_action_guard lifetime( who );
     if( !liquid.count_by_charges() ) {
         debugmsg( "Attempted to run handle_npc_liquid on an item that doesn't have count_by_charges: %s",
                   liquid.type_name() );
@@ -224,16 +226,44 @@ void handle_npc_liquid( item liquid, Character &who )
         }
         if( best_idx < 0 ) {
             // No suitable container, spill on the ground
-            here.add_item_or_charges( char_pos, liquid );
+            if( source ) {
+                here.transfer_item_or_charges( char_pos, *source, item( liquid ), who, 1, true );
+                if( lifetime ) {
+                    who.invalidate_weight_carried_cache();
+                }
+                return;
+            }
+            here.add_item_or_charges( char_pos, liquid, true, &who );
             liquid.charges = 0;
             break;
         }
         const int amount = std::min( liquid.charges, capacities[best_idx] );
-        liquid.charges -= container_locs[best_idx]->fill_with( liquid, amount, false, false, false,
-                          /*into_bottom=*/false, /*allow_nested=*/false );
+        const int filled = container_locs[best_idx]->fill_with( liquid, amount, false, false, false,
+                           /*into_bottom=*/false, /*allow_nested=*/false );
+        if( !lifetime || ( source && !*source ) ) {
+            return;
+        }
+        liquid.charges -= filled;
         capacities[best_idx] = 0;
     }
-    who.invalidate_weight_carried_cache();
+    if( source && *source && liquid.charges <= 0 ) {
+        source->remove_item();
+    }
+    if( lifetime ) {
+        who.invalidate_weight_carried_cache();
+    }
+}
+
+void handle_npc_liquid( item liquid, Character &who )
+{
+    handle_npc_liquid_impl( liquid, who, nullptr );
+}
+
+void handle_npc_liquid( item_location liquid, Character &who )
+{
+    if( liquid ) {
+        handle_npc_liquid_impl( *liquid, who, &liquid );
+    }
 }
 
 void handle_all_or_npc_liquid( Character &p, item &newit, int radius, const item *avoid )

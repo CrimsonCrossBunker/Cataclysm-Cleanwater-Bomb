@@ -5,6 +5,7 @@
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "bionics.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
@@ -254,7 +255,7 @@ TEST_CASE( "sling_preparation_pacification_and_cancel_use_server_state",
     CHECK( rng_get_engine() == expected_rng );
     peer.turn.remote_moves = actor.get_moves();
     const std::string cancel = "{\"action\":\"firearm_cancel\",\"weapon\":" +
-                               std::to_string( intent.weapon ) + ",\"unload_ras\":false}";
+                               std::to_string( intent.weapon ) + ",\"request\":1,\"unload_ras\":false}";
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", cancel, peer.admission } ) );
     cata_mp::process_mp_events();
     CHECK( peer.firearm.weapon == 0 );
@@ -334,11 +335,13 @@ TEST_CASE( "firearm_queue_rejects_wrong_weapon_and_duplicate_shots", "[multiplay
     npc &actor = fixture.remote();
     auto &peer = only_test_remote( g->multiplayer_session() );
     const auto weapon = actor.get_wielded_item()->uid().get_value();
+    int64_t sequence = 0;
     const auto packet = [&]( const std::string & action, uint64_t id ) {
         std::ostringstream text;
         JsonOut out( text );
         out.start_object();
         out.member( "action", "firearm" );
+        out.member( "request", ++sequence );
         out.member( "operation", action );
         out.member( "weapon", id );
         out.member( "mode", actor.get_wielded_item()->gun_get_mode_id() );
@@ -425,7 +428,7 @@ TEST_CASE( "client_firearm_result_finishes_view_without_firing_again", "[multipl
     cata_mp::pickup_host_state inventory;
     const std::string combat = cata_mp::make_combat_result( host, inventory );
     const std::string wire = "{\"type\":\"firearm_result\",\"weapon\":" + std::to_string( id ) +
-                             ",\"outcome\":2,\"inventory_revision\":1,\"recoil\":500,\"combat\":" + combat + "}";
+                             ",\"request\":1,\"outcome\":2,\"inventory_revision\":1,\"recoil\":500,\"combat\":" + combat + "}";
     const auto before_apply = rng_get_engine();
     REQUIRE( cata_mp::client_apply_message( wire ) );
     CHECK( actor.get_wielded_item()->ammo_remaining() == 14 );
@@ -461,3 +464,255 @@ TEST_CASE( "client_firearm_cancellation_does_not_replay_gameplay_events",
     CHECK( rng_get_engine() == before );
     CHECK( actor.get_wielded_item()->ammo_remaining() == 15 );
 }
+
+namespace
+{
+cata_mp::firearm_intent prepare_laser_intent( Character &who )
+{
+    who.add_bionic( bionic_id( "bio_power_storage" ) );
+    const unsigned int uid = who.add_bionic( bionic_id( "bio_laser" ) );
+    who.set_max_power_level( 200_kJ );
+    who.set_power_level( 200_kJ );
+    who.set_moves( 1000 );
+    const item *gun = cata_mp::bionic_firearm_source( who, uid );
+    REQUIRE( gun );
+    cata_mp::firearm_intent intent;
+    intent.bionic = uid;
+    intent.weapon = gun->uid().get_value();
+    intent.mode = gun->gun_get_mode_id();
+    intent.origin = who.pos_abs();
+    intent.target = who.pos_abs() + point_rel_ms( 5, 0 );
+    intent.action = "prepare";
+    intent.request = 1;
+    return intent;
+}
+} // namespace
+
+TEST_CASE( "bionic_firearm_aim_fire_and_repeat_keep_operator_gun_and_power",
+           "[multiplayer][firearm][bionic]" )
+{
+    firearm_fixture fixture;
+    npc &who = fixture.remote();
+    auto intent = prepare_laser_intent( who );
+    const int64_t held = who.get_wielded_item()->uid().get_value();
+    const int ammo = who.get_wielded_item()->ammo_remaining();
+    const auto power = who.get_power_level();
+    const auto host_power = get_avatar().get_power_level();
+    const int host_moves = get_avatar().get_moves();
+    cata_mp::firearm_state state;
+    firearm_events events;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    REQUIRE( state.bionic_weapon );
+    CHECK( state.bionic == intent.bionic );
+    CHECK( who.get_power_level() == power );
+    CHECK_FALSE( who.activity );
+    CHECK_FALSE( get_avatar().activity );
+    CHECK( events.starts == 1 );
+    const int moves = who.get_moves();
+    const auto prepared_rng = rng_get_engine();
+    CHECK( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+           cata_mp::firearm_outcome::rejected );
+    CHECK( who.get_moves() == moves );
+    CHECK( rng_get_engine() == prepared_rng );
+    CHECK( events.starts == 1 );
+    intent.action = "AIM";
+    intent.request = 2;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    CHECK( who.get_moves() < moves );
+    CHECK( who.get_power_level() == power );
+    const auto session_gun = state.bionic_weapon;
+    intent.action = "FIRE";
+    intent.request = 3;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::finished );
+    CHECK( who.get_power_level() == power - 30_kJ );
+    CHECK( who.get_wielded_item()->uid().get_value() == held );
+    CHECK( who.get_wielded_item()->ammo_remaining() == ammo );
+    CHECK( get_avatar().get_power_level() == host_power );
+    CHECK( get_avatar().get_moves() == host_moves );
+    CHECK_FALSE( get_avatar().activity );
+    CHECK( events.finishes == 1 );
+    const auto fired_rng = rng_get_engine();
+    CHECK( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+           cata_mp::firearm_outcome::rejected );
+    CHECK( who.get_power_level() == power - 30_kJ );
+    CHECK( rng_get_engine() == fired_rng );
+    intent.action = "prepare";
+    intent.request = 4;
+    who.set_moves( 1000 );
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    CHECK( state.bionic_weapon == session_gun );
+    CHECK( events.starts == 2 );
+    cata_mp::finish_firearm_activity( who, state, true );
+    CHECK_FALSE( state.bionic_weapon );
+    CHECK( state.bionic == 0 );
+    CHECK( state.last_request == 4 );
+    CHECK( events.finishes == 2 );
+    CHECK( who.get_power_level() == power - 30_kJ );
+}
+
+TEST_CASE( "bionic_firearm_revalidates_installed_identity_before_effects",
+           "[multiplayer][firearm][bionic]" )
+{
+    firearm_fixture fixture;
+    npc &who = fixture.remote();
+    auto intent = prepare_laser_intent( who );
+    cata_mp::firearm_state state;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    SECTION( "bionic removed" ) {
+        who.remove_bionic( **who.find_bionic_by_uid( intent.bionic ) );
+    }
+    SECTION( "bionic shorted" ) {
+        ( *who.find_bionic_by_uid( intent.bionic ) )->incapacitated_time = 1_minutes;
+    }
+    SECTION( "wrong installed identity" ) {
+        intent.bionic += 100;
+    }
+    SECTION( "weapon replaced on the same bionic" ) {
+        ( *who.find_bionic_by_uid( intent.bionic ) )->set_weapon( item( itype_id( "bio_laser_gun" ) ) );
+    }
+    SECTION( "insufficient operator energy" ) {
+        who.set_power_level( 0_kJ );
+    }
+    const auto power = who.get_power_level();
+    const int ammo = who.get_wielded_item()->ammo_remaining();
+    const int moves = who.get_moves();
+    const auto rng = rng_get_engine();
+    intent.action = "FIRE";
+    intent.request = 2;
+    CHECK( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+           cata_mp::firearm_outcome::rejected );
+    CHECK( who.get_power_level() == power );
+    CHECK( who.get_wielded_item()->ammo_remaining() == ammo );
+    CHECK( who.get_moves() == moves );
+    // A native cancellation may run its completion hook; rejection must still
+    // never fire or spend power. Pure identity failures have no hook to run.
+    if( state.weapon != 0 ) {
+        CHECK( rng_get_engine() == rng );
+    }
+}
+
+TEST_CASE( "bionic_firearm_client_activation_only_opens_an_owned_aim_view",
+           "[multiplayer][firearm][bionic]" )
+{
+    firearm_fixture fixture;
+    avatar &who = get_avatar();
+    arm_firearm_shooter( who, tripoint_bub_ms( 60, 60, 0 ) );
+    const auto intent = prepare_laser_intent( who );
+    const auto power = who.get_power_level();
+    const auto held = who.get_wielded_item()->uid().get_value();
+    const auto rng = rng_get_engine();
+    cata_mp::set_client_mode( true );
+    bool close_ui = false;
+    REQUIRE( who.activate_bionic( **who.find_bionic_by_uid( intent.bionic ), false, &close_ui ) );
+    CHECK( close_ui );
+    auto *aim = dynamic_cast<aim_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( aim );
+    CHECK( aim->bionic_source() == intent.bionic );
+    REQUIRE( aim->get_weapon( who ) );
+    CHECK( aim->get_weapon( who )->typeId() == itype_id( "bio_laser_gun" ) );
+    CHECK( cata_mp::bionic_firearm_source( who, intent.bionic )->uid().get_value() == intent.weapon );
+    CHECK( cata_mp::client_firearm_phase() == cata_mp::firearm_view_phase::pending );
+    CHECK( g->multiplayer_session().client_firearm.bionic == intent.bionic );
+    CHECK( who.get_wielded_item()->uid().get_value() == held );
+    CHECK( who.get_power_level() == power );
+    CHECK( rng_get_engine() == rng );
+    who.cancel_activity();
+    CHECK( cata_mp::client_firearm_phase() == cata_mp::firearm_view_phase::inactive );
+    CHECK( who.get_power_level() == power );
+    CHECK( g->multiplayer_session().client_firearm.next_request > 1 );
+}
+
+TEST_CASE( "saved_bionic_aim_resolves_its_operator_instead_of_the_avatar",
+           "[multiplayer][firearm][bionic]" )
+{
+    firearm_fixture fixture;
+    npc &who = fixture.remote();
+    const auto intent = prepare_laser_intent( who );
+    const item *gun = cata_mp::bionic_firearm_source( who, intent.bionic );
+    REQUIRE( gun );
+    player_activity activity( aim_activity_actor::use_bionic( *gun, intent.bionic ) );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    activity.serialize( out );
+    player_activity restored;
+    restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
+    auto *aim = dynamic_cast<aim_activity_actor *>( restored.actor.get() );
+    REQUIRE( aim );
+    CHECK( aim->bionic_source() == intent.bionic );
+    REQUIRE( aim->get_weapon( who ) );
+    REQUIRE( aim->get_weapon( who ) );
+    CHECK( aim->get_weapon( who )->typeId() == itype_id( "bio_laser_gun" ) );
+    CHECK( cata_mp::bionic_firearm_source( who, intent.bionic )->uid().get_value() == intent.weapon );
+    CHECK_FALSE( aim->get_weapon( get_avatar() ) );
+    who.remove_bionic( **who.find_bionic_by_uid( intent.bionic ) );
+    CHECK_FALSE( aim->get_weapon( who ) );
+}
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "lua_platform_runtime_internal.h"
+#include "lua_platform_test_support.h"
+
+TEST_CASE( "bionic_firearm_activation_hook_runs_once_per_aiming_session",
+           "[multiplayer][firearm][bionic][lua][platform]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    firearm_fixture fixture;
+    npc &who = fixture.remote();
+    auto intent = prepare_laser_intent( who );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const auto runtime = platform::make_runtime( "owned_bionic_gun", 4112, lua );
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    platform::runtime_world_ready( true );
+    lua["ccb"] = ccb;
+    int activations = 0;
+    const bool remove_during_hook = GENERATE( false, true );
+    lua.set_function( "activated", [&]() {
+        ++activations;
+        if( remove_during_hook ) {
+            who.remove_bionic( **who.find_bionic_by_uid( intent.bionic ) );
+        }
+    } );
+    REQUIRE( lua.safe_script( R"lua(
+ccb.runtime.handler("activated", function(context) activated() end)
+ccb.runtime.hook("on_bionic_activated", "activated")
+)lua", sol::script_pass_on_error ).valid() );
+    cata_mp::firearm_state state;
+    const auto outcome = cata_mp::execute_firearm_intent( who, get_map(), state, intent );
+    CHECK( activations == 1 );
+    if( remove_during_hook ) {
+        CHECK( outcome == cata_mp::firearm_outcome::rejected );
+        CHECK_FALSE( state.bionic_weapon );
+        CHECK_FALSE( get_avatar().activity );
+        CHECK( who.get_power_level() == 200_kJ );
+        return;
+    }
+    REQUIRE( outcome == cata_mp::firearm_outcome::aiming );
+    intent.action = "FIRE";
+    intent.request = 2;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::finished );
+    who.set_moves( 1000 );
+    intent.action = "prepare";
+    intent.request = 3;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    CHECK( activations == 1 );
+    cata_mp::finish_firearm_activity( who, state, true );
+    intent.request = 4;
+    REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+    CHECK( activations == 2 );
+}
+#endif
