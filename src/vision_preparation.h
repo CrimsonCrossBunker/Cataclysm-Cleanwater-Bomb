@@ -92,7 +92,7 @@ class frame
         void assert_owner() const;
         const std::thread::id owner_thread_;
         compute_ptr<snapshot> snapshot_;
-        std::vector<compute_ptr<output>, compute_allocator<compute_ptr<output>>> outputs_;
+        std::vector<compute_ptr<output>, compute_allocator<compute_ptr<output >>> outputs_;
         std::atomic<bool> cancelled_{ false };
         std::uint64_t generation_ = 0;
         std::uint64_t ready_generation_ = 0;
