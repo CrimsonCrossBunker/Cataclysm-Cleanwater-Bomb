@@ -1,5 +1,12 @@
 #define MP_ENABLED
+#include "map_viewpoint.h"
 #include "game.h"
+#include "walking.h"
+#include "vertical_movement.h"
+#include "item_disposition.h"
+#include "character_action_guard.h"
+#include "item_uid.h"
+#include "vehicle_uid.h"
 #include "map_memory.h"
 #include "render_backend.h"
 #include "mp_world_session.h"
@@ -178,11 +185,13 @@
 #include "monstergenerator.h"
 #include "move_mode.h"
 #include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
+#include "item_activation.h"
+#include "tool_activity_target.h"
 #include "thread_pool.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
     #include "mp_unload.h"
-    #include "mp_inventory_activity.h"
     #include "mp_equipment.h"
 #endif
 #include "mtype.h"
@@ -810,7 +819,7 @@ void game::reset_game_state()
 
     stats().clear();
     // reset kill counts
-    kill_tracker_ptr->clear();
+    u.get_kill_statistics().clear();
     achievements_tracker_ptr->clear();
     eoc_events_ptr->clear();
     // reset follower list
@@ -1163,7 +1172,7 @@ bool game::start_game()
             }
         }
     }
-    for( item *&e : u.inv_dump() ) {
+    for( item*&e : u.inv_dump() ) {
         e->set_owner( get_player_character() );
     }
     // Now that we're done handling coordinates, ensure the player's submap is in the center of the map
@@ -1475,9 +1484,9 @@ void game::reload_npcs()
     load_npcs();
 }
 
-const kill_tracker &game::get_kill_tracker() const
+const kill_statistics &game::get_kill_tracker() const
 {
-    return *kill_tracker_ptr;
+    return u.get_kill_statistics();
 }
 
 void game::create_starting_npcs()
@@ -4147,7 +4156,7 @@ Creature *game::is_hostile_very_close( bool dangerous )
 
 Creature *game::is_hostile_within( int distance, bool dangerous )
 {
-    for( Creature *&critter : u.get_visible_creatures( distance ) ) {
+    for( Creature*&critter : u.get_visible_creatures( distance ) ) {
         if( u.attitude_to( *critter ) == Creature::Attitude::HOSTILE ) {
             if( dangerous ) {
                 if( critter->is_ranged_attacker() ) {
@@ -5580,9 +5589,18 @@ void game::open_gate( const tripoint_bub_ms &p )
 
 void game::moving_vehicle_dismount( const tripoint_bub_ms &dest_loc )
 {
+    moving_vehicle_dismount( get_avatar(), dest_loc );
+}
+
+void game::moving_vehicle_dismount( Character &who, const tripoint_bub_ms &dest_loc )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return;
+    }
     map &here = get_map();
 
-    const tripoint_bub_ms pos = u.pos_bub( );
+    const tripoint_bub_ms pos = who.pos_bub( );
 
     const optional_vpart_position vp = here.veh_at( pos );
     if( !vp ) {
@@ -5597,18 +5615,23 @@ void game::moving_vehicle_dismount( const tripoint_bub_ms &dest_loc )
     tileray ray( dest_loc.xy() - pos.xy() );
     // TODO:: make dir() const correct!
     const units::angle d = ray.dir();
-    add_msg( _( "You dive from the %s." ), veh->name );
+    who.add_msg_if_player( _( "You dive from the %s." ), veh->name );
+    const int velocity = veh->velocity;
+    const units::angle facing = veh->face.dir();
     here.unboard_vehicle( pos );
-    u.mod_moves( -to_moves<int>( 2_seconds ) );
+    who.mod_moves( -to_moves<int>( 2_seconds ) );
     // Dive three tiles in the direction of tox and toy
-    fling_creature( &u, d, 30, true, true );
+    fling_creature( &who, d, 30, true, true );
+    if( !lifetime ) {
+        return;
+    }
     // Hit the ground according to vehicle speed
     if( !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos ) ) {
-        if( veh->velocity > 0 ) {
-            fling_creature( &u, veh->face.dir(), veh->velocity / static_cast<float>( 100 ), false, true );
+        if( velocity > 0 ) {
+            fling_creature( &who, facing, velocity / static_cast<float>( 100 ), false, true );
         } else {
-            fling_creature( &u, veh->face.dir() + 180_degrees,
-                            -( veh->velocity ) / static_cast<float>( 100 ), false, true );
+            fling_creature( &who, facing + 180_degrees,
+                            -velocity / static_cast<float>( 100 ), false, true );
         }
     }
 }
@@ -6256,47 +6279,55 @@ void game::examine( const tripoint_bub_ms &examp, bool with_pickup )
     }
 }
 
+namespace
+{
+faction *forbidden_local_faction( Character &who, bool public_goods )
+{
+    if( !get_option<bool>( "FACTION_TERRITORY_CHECKS" ) ) {
+        return nullptr;
+    }
+    const auto camp = overmap_buffer.find_camp( who.pos_abs_omt().xy() );
+    if( !camp ) {
+        return nullptr;
+    }
+    basecamp &base = **camp;
+    if( ( base.get_owner()->limited_area_claim && who.pos_abs_omt() != base.camp_omt_pos() ) ||
+        base.allowed_access_by( who, public_goods ) || base.get_owner()->likes_u < -10 ) {
+        return nullptr;
+    }
+    return g->faction_manager_ptr->get( base.get_owner() );
+}
+} // namespace
+
+std::string game::local_faction_action_warning( Character &who, bool public_goods ) const
+{
+    const faction *owner = forbidden_local_faction( who, public_goods );
+    return owner ? string_format(
+               _( "You're in the territory of %s, they probably won't appreciate your actions.  Continue anyway?" ),
+               owner->get_name() ) : std::string();
+}
+
+bool game::warn_character_maybe_anger_local_faction( Character &who, bool really_bad_offense,
+        bool public_goods, std::optional<bool> consent )
+{
+    faction *owner = forbidden_local_faction( who, public_goods );
+    if( !owner ) {
+        return true;
+    }
+    if( !( consent ? *consent : who.query_yn( local_faction_action_warning( who, public_goods ) ) ) ) {
+        return false;
+    }
+    owner->likes_u -= really_bad_offense ? 20 : 5;
+    owner->trusts_u -= really_bad_offense ? 20 : 5;
+    owner->respects_u -= really_bad_offense ? 20 : 5;
+    return true;
+}
+
 bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
         bool asking_for_public_goods )
 {
-    if( !get_option<bool>( "FACTION_TERRITORY_CHECKS" ) ) {
-        return true;
-    }
-
-    Character &player_character = get_player_character();
-    std::optional<basecamp *> bcp = overmap_buffer.find_camp(
-                                        player_character.pos_abs_omt().xy() );
-    if( !bcp ) {
-        return true; // Nobody to piss off
-    }
-    basecamp *actual_camp = *bcp;
-    if( actual_camp->get_owner()->limited_area_claim &&
-        player_character.pos_abs_omt() != actual_camp->camp_omt_pos() ) {
-        return true; // outside of claimed area
-    }
-    if( actual_camp->allowed_access_by( player_character, asking_for_public_goods ) ) {
-        return true; // You're allowed to do this anyway
-    }
-
-    // The threshold for guaranteed hostility. Don't bother query/modifying relationship if they already hate us
-    // TODO: Make this magic number into a constant
-    if( actual_camp->get_owner()->likes_u < -10 ) {
-        return true;
-    }
-
-    // Else there's a camp, and we're doing something we're not supposed to! Time to warn the player.
-    if( !query_yn(
-            _( "You're in the territory of %s, they probably won't appreciate your actions.  Continue anyway?" ),
-            actual_camp->get_owner()->get_name() ) ) {
-        return false;
-    } else {
-        faction *owner_fac_pointer = g->faction_manager_ptr->get( actual_camp->get_owner() );
-        // really_bad_offense loses 20 points of fac rep, otherwise 5
-        owner_fac_pointer->likes_u -= really_bad_offense ? 20 : 5;
-        owner_fac_pointer->trusts_u -= really_bad_offense ? 20 : 5;
-        owner_fac_pointer->respects_u -= really_bad_offense ? 20 : 5;
-        return true;
-    }
+    return warn_character_maybe_anger_local_faction( get_player_character(), really_bad_offense,
+            asking_for_public_goods, std::nullopt );
 }
 
 static void apply_pickup_selection( avatar &who, const drop_locations &items )
@@ -6351,72 +6382,75 @@ void game::pickup( const tripoint_bub_ms &p )
     apply_pickup_selection( u, game_menus::inv::pickup( {p} ) );
 }
 
-//Shift player by one tile, look_around(), then restore previous position.
-//represents carefully peeking around a corner, hence the large move cost.
+// Derive a presentation viewpoint without executing movement, callbacks or gravity.
 void game::peek()
 {
     map &here = get_map();
-
+    const auto origin = u.pos_abs();
     const std::optional<tripoint_rel_ms> p = choose_direction( _( "Peek where?" ), true );
-    if( !p ) {
+    if( !p || u.pos_abs() != origin ) {
         return;
     }
-    tripoint_bub_ms new_pos = u.pos_bub() + *p;
     if( p->z() != 0 ) {
-        // Character might peek to a different submap; ensures return location is accurate.
-        const tripoint_abs_ms old_loc = u.pos_abs();
-        vertical_move( p->z(), false, true );
-
-        if( old_loc != u.pos_abs() ) {
-            new_pos = u.pos_bub();
-            u.move_to( old_loc );
-            here.vertical_shift( old_loc.z() );
-        } else {
+        if( cata_mp::client_query_peek( p->z() ) ) {
             return;
         }
-    }
-
-    if( here.impassable( new_pos ) ) {
+        const auto prompt = make_peek_prompt( u, here, p->z() );
+        if( const auto choice = prompt.query( u ) ) {
+            const auto current = peek_destinations( u, here, p->z() );
+            if( std::find( current.begin(), current.end(), choice->target ) != current.end() ) {
+                peek( here.get_bub( choice->target ) );
+            }
+        }
         return;
     }
+    const auto target = u.pos_bub( here ) + *p;
+    if( cata_mp::is_client_mode() || ( here.inbounds( target ) && here.passable( target ) ) ) {
+        peek( target );
+    }
+}
 
-    peek( new_pos );
+look_around_result game::look_from( const tripoint_bub_ms &p, bool standing, int z_range )
+{
+    map &here = get_map();
+    if( !here.inbounds( p ) ) {
+        return {};
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const scoped_map_viewpoint view( here, u, here.get_abs( p ), standing, z_range );
+    tripoint_bub_ms center = p;
+    here.build_map_cache( p.z() );
+    here.update_visibility_cache( p.z() );
+    return look_around( { true, center, center, false, false, true, true } );
 }
 
 void game::peek( const tripoint_bub_ms &p )
 {
     map &here = get_map();
-
-    u.mod_moves( -u.get_speed() * 2 );
-    tripoint_bub_ms prev = u.pos_bub();
-    u.setpos( here, p, false );
-    const bool is_same_pos = u.pos_bub() == prev;
-    const bool is_standup_peek = is_same_pos && u.is_crouching();
-    tripoint_bub_ms center = p;
-    here.build_map_cache( p.z() );
-    here.update_visibility_cache( p.z() );
-
-    look_around_result result;
-    const look_around_params looka_params = { true, center, center, false, false, true, true};
-    if( is_standup_peek ) {   // Non moving peek from crouch is a standup peek
-        u.reset_move_mode();
-        result = look_around( looka_params );
-        u.activate_crouch_mode();
-    } else {                // Else is normal peek
-        result = look_around( looka_params );
-        u.setpos( here, prev, false );
+    if( cata_mp::client_peek( u.pos_abs(), here.get_abs( p ) ) ) {
+        return;
     }
-
+    if( !here.inbounds( p ) ) {
+        return;
+    }
+    const auto origin = u.pos_abs();
+    const auto peek_position = here.get_abs( p );
+    u.mod_moves( -u.get_speed() * 2 );
+    const look_around_result result = look_from( p, p == u.pos_bub( here ) && u.is_crouching() );
+    if( u.pos_abs() != origin || !here.inbounds( peek_position ) ) {
+        return;
+    }
+    if( result.selection ) {
+        apply_view_action( *result.selection );
+    }
     if( result.peek_action ) {
         if( *result.peek_action == PA_BLIND_THROW ) {
             item_location loc;
-            avatar_action::plthrow( u, loc, p );
+            avatar_action::plthrow( u, loc, here.get_bub( peek_position ) );
         } else if( *result.peek_action == PA_BLIND_THROW_WIELDED ) {
-            avatar_action::plthrow_wielded( u, p );
+            avatar_action::plthrow_wielded( u, here.get_bub( peek_position ) );
         }
     }
-    here.invalidate_map_cache( p.z() );
-    here.invalidate_visibility_cache();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -6505,10 +6539,10 @@ bool game::is_zones_manager_open() const
 
 std::optional<std::vector<tripoint_bub_ms>> game::safe_route_to( Character &who,
         const tripoint_bub_ms &target, int threshold,
-        const std::function<void( const std::string &msg )> &report ) const
+        const std::function<void( const std::string &msg )> &report, bool observed_destination ) const
 {
     map &here = get_map();
-    if( !who.sees( here, target ) ) {
+    if( !observed_destination && !who.sees( here, target ) ) {
         report( _( "You can't see the destination." ) );
         return std::nullopt;
     }
@@ -6576,6 +6610,7 @@ look_around_result game::look_around(
     bool change_lv )
 {
     map &here = get_map();
+    const int view_z_range = here.observer_z_range( u );
 
     bVMonsterLookFire = false;
 
@@ -6636,7 +6671,7 @@ look_around_result game::look_around(
     ctxt.set_iso( true );
     ctxt.register_directions();
     ctxt.register_action( "COORDINATE" );
-    if( change_lv && fov_3d_z_range > 0 ) {
+    if( change_lv && view_z_range > 0 ) {
         ctxt.register_action( "LEVEL_UP" );
         ctxt.register_action( "LEVEL_DOWN" );
     }
@@ -6672,9 +6707,9 @@ look_around_result game::look_around(
     ctxt.register_action( "zoom_in" );
     ctxt.register_action( "toggle_pixel_minimap" );
 
-    const int old_levz = here.get_abs_sub().z();
-    const int min_levz = std::max( old_levz - fov_3d_z_range, -OVERMAP_DEPTH );
-    const int max_levz = std::min( old_levz + fov_3d_z_range, OVERMAP_HEIGHT );
+    const int old_levz = peeking ? here.observer_position( u ).z() : here.get_abs_sub().z();
+    const int min_levz = std::max( old_levz - view_z_range, -OVERMAP_DEPTH );
+    const int max_levz = std::min( old_levz + view_z_range, OVERMAP_HEIGHT );
 
     here.update_visibility_cache( old_levz );
     const visibility_variables &cache = here.get_visibility_variables_cache();
@@ -6804,7 +6839,10 @@ look_around_result game::look_around(
             blink = !blink;
         }
         if( action == "LIST_ITEMS" ) {
-            list_surroundings();
+            result.selection = list_surroundings( peeking );
+            if( result.selection ) {
+                break;
+            }
         } else if( action == "TOGGLE_FAST_SCROLL" ) {
             fast_scroll = !fast_scroll;
         } else if( action == "map" ) {
@@ -6828,8 +6866,11 @@ look_around_result game::look_around(
             u.view_offset.z() = center.z() - u.posz();
             here.invalidate_map_cache( center.z() );
             // Fix player character not visible from above
-            here.build_map_cache( u.posz() );
+            here.build_map_cache( here.observer_position( u ).z() );
             here.invalidate_visibility_cache();
+        } else if( action == "TRAVEL_TO" && peeking ) {
+            result.selection = select_view_action( view_action::kind::travel, u, here, lp );
+            break;
         } else if( action == "TRAVEL_TO" ) {
             const std::optional<std::vector<tripoint_bub_ms>> try_route = safe_route_to( u, lp,
             0,  []( const std::string & msg ) {
@@ -6847,15 +6888,21 @@ look_around_result game::look_around(
         } else if( action == "CHANGE_MONSTER_NAME" ) {
             creature_tracker &creatures = get_creature_tracker();
             monster *const mon = creatures.creature_at<monster>( lp, true );
-            if( mon ) {
+            if( mon && u.sees( here, *mon ) ) {
+                auto selected = select_view_action( view_action::kind::rename, u, here, lp, mon );
                 string_input_popup_imgui popup( 50, mon->nickname );
                 popup.set_label( _( "Nickname:" ) );
-                mon->nickname = popup.query();
+                selected.name = popup.query();
+                if( peeking ) {
+                    result.selection = std::move( selected );
+                    break;
+                }
+                apply_view_action( selected );
             }
         } else if( action == "CENTER" ) {
-            center = u.pos_bub();
-            lp = u.pos_bub();
-            u.view_offset.z() = 0;
+            center = peeking ? here.observer_position( u ) : u.pos_bub();
+            lp = center;
+            u.view_offset.z() = center.z() - u.posz();
         } else if( action == "MOUSE_MOVE" || action == "TIMEOUT" ) {
             // This block is structured this way so that edge scroll can work
             // whether the mouse is moving at the edge or simply stationary
@@ -7173,16 +7220,69 @@ bool game::take_screenshot() const
 }
 #endif
 
-void game::list_surroundings()
+std::optional<view_action> game::list_surroundings( bool defer_action )
 {
+    defer_action = defer_action || m.observer_viewpoint( u ).has_value();
     temp_exit_fullscreen();
-    std::optional<tripoint_bub_ms> path_start = u.pos_bub();
+    std::optional<tripoint_bub_ms> path_start = m.observer_position( u );
     std::optional<tripoint_bub_ms> path_end = std::nullopt;
     surroundings_menu vmenu( u, m, path_end, 55 );
     shared_ptr_fast<draw_callback_t> trail_cb = create_trail_callback( path_start, path_end, true );
     add_draw_callback( trail_cb );
-    vmenu.execute();
+    auto selection = vmenu.execute( defer_action );
     reenter_fullscreen();
+    return selection;
+}
+
+bool game::apply_view_action( const view_action &selection )
+{
+    map &here = get_map();
+    if( here.observer_viewpoint( u ) || !selection.visible_to( u, here ) ) {
+        return false;
+    }
+    // visibility was queried through the copied observation; all gameplay below
+    // uses the real actor and restored sight caches.
+    here.build_map_cache( u.posz() );
+    here.update_visibility_cache( u.posz() );
+    if( selection.action == view_action::kind::travel ) {
+        const auto route = safe_route_to( u, here.get_bub( selection.target ), selection.distance,
+        []( const std::string & msg ) {
+            add_msg( msg );
+        }, true );
+        if( route && !route->empty() ) {
+            u.set_destination( *route );
+            return true;
+        }
+    } else if( selection.action == view_action::kind::fire ) {
+        if( selection.subject && u.sees( here, *selection.subject ) ) {
+            u.last_target = shared_from( *selection.subject );
+            u.recoil = MAX_RECOIL;
+            avatar_action::fire_wielded_weapon( u );
+            return true;
+        }
+    } else if( selection.action == view_action::kind::blind_throw ||
+               selection.action == view_action::kind::blind_throw_wielded ) {
+        if( selection.observation ) {
+            const auto from = here.get_bub( selection.observation->position );
+            if( selection.action == view_action::kind::blind_throw_wielded ) {
+                avatar_action::plthrow_wielded( u, from );
+            } else {
+                item_location source;
+                avatar_action::plthrow( u, source, from );
+            }
+            return true;
+        }
+    } else if( selection.action == view_action::kind::rename ) {
+        if( monster *mon = selection.subject ? selection.subject->as_monster() : nullptr ) {
+            if( cata_mp::is_client_mode() ) {
+                return cata_mp::client_name_monster( *mon, selection.origin, selection.name,
+                                                     selection.observation );
+            }
+            mon->nickname = selection.name;
+            return true;
+        }
+    }
+    return false;
 }
 
 void game::insert_item( drop_locations &targets )
@@ -7388,13 +7488,11 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
     };
 
     std::vector< item * > salvage_tools = u.items_with( salvage_filter );
-    int salvage_tool_index = INT_MIN;
-    item *salvage_tool = nullptr;
+    item_location salvage_source;
     const salvage_actor *salvage_iuse = nullptr;
     if( !salvage_tools.empty() ) {
-        salvage_tool = salvage_tools.front();
-        salvage_tool_index = u.get_item_position( salvage_tool );
-        item *usable = salvage_tool->get_usable_item( salvage_string );
+        item *usable = salvage_tools.front()->get_usable_item( salvage_string );
+        salvage_source = locate_cutting_tool( u, *usable );
         salvage_iuse = dynamic_cast<const salvage_actor *>(
                            usable->get_use( salvage_string )->get_actor_ptr() );
     }
@@ -7412,7 +7510,7 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
         if( it->is_corpse() ) {
             corpses.push_back( it );
         } else {
-            if( ( salvage_tool_index != INT_MIN ) && salvage_iuse->valid_to_cut_up( nullptr, *it ) ) {
+            if( salvage_source && salvage_iuse && salvage_iuse->valid_to_cut_up( nullptr, *it ) ) {
                 salvageables.push_back( it );
             }
             if( u.can_disassemble( *it, crafting_inv ).success() ) {
@@ -7573,24 +7671,45 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
     for( std::size_t i = 0; i < helpers.size() && i < 3; i++ ) {
         add_msg( m_info, _( "%s helps with this task…" ), helpers[i]->get_name() );
     }
+    const auto butcher_selected = [&]( const std::vector<item_location> &targets,
+    butcher_type action ) {
+        std::vector<butchery_selection> selected;
+        if( query_butchery_selection( u, targets, action, selected ) &&
+            !cata_mp::client_start_butchery( selected ) ) {
+            start_owned_butchery( u, selected );
+        }
+    };
+    const auto salvage_selected = [&]( const std::vector<item_location> &targets, bool bulk ) {
+        if( !salvage_iuse || !salvage_source ) {
+            return;
+        }
+        item_activation_choices choices;
+        if( !salvage_iuse->confirm_salvage_choices( u, *salvage_source, targets, bulk, choices ) ||
+            !salvage_source ) {
+            return;
+        }
+        std::string method = "salvage";
+        if( !cata_mp::client_activate_item( salvage_source, method, std::nullopt, &choices ) ) {
+            u.invoke_item( salvage_source.get_item(), method, u.pos_bub(), u.get_moves(), &choices );
+        }
+    };
     switch( butcher_select ) {
         case BUTCHER_OTHER:
             if( indexer_index == MULTISALVAGE ) {
-                u.assign_activity( longsalvage_activity_actor( salvage_tool_index ) );
+                std::vector<item_location> targets;
+                targets.reserve( salvageables.size() );
+                for( const map_stack::iterator &target : salvageables ) {
+                    targets.emplace_back( map_cursor( pos ), &*target );
+                }
+                salvage_selected( targets, true );
             } else if( indexer_index == MULTIBUTCHER ) {
                 const std::optional<butcher_type> bt = butcher_submenu( corpses );
                 if( bt.has_value() ) {
-                    std::vector<butchery_data> bd;
-                    for( map_stack::iterator &it : corpses ) {
-                        if( !butcher_action_applicable( u, *it, bt.value() ) ) {
-                            continue;
-                        }
-                        item_location corpse_loc = item_location( map_cursor( pos ), &*it );
-                        bd.emplace_back( corpse_loc, bt.value() );
+                    std::vector<item_location> targets;
+                    for( const map_stack::iterator &it : corpses ) {
+                        targets.emplace_back( map_cursor( pos ), &*it );
                     }
-                    if( !bd.empty() ) {
-                        u.assign_activity( butchery_activity_actor( bd ) );
-                    }
+                    butcher_selected( targets, *bt );
                 }
             } else if( indexer_index == MULTIDISASSEMBLE_ONE ) {
                 u.disassemble_all( true );
@@ -7604,9 +7723,8 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
         case BUTCHER_CORPSE: {
             const std::optional<butcher_type> bt = butcher_submenu( corpses, indexer_index );
             if( bt.has_value() ) {
-                item_location corpse_loc = item_location( map_cursor( pos ), &*corpses[indexer_index] );
-                butchery_data bd( corpse_loc, bt.value() );
-                u.assign_activity( butchery_activity_actor( bd ) );
+                item_location corpse_loc( map_cursor( pos ), &*corpses[indexer_index] );
+                butcher_selected( { corpse_loc }, *bt );
             }
         }
         break;
@@ -7617,14 +7735,9 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
         }
         break;
         case BUTCHER_SALVAGE: {
-            if( !salvage_iuse || !salvage_tool ) {
-                debugmsg( "null salvage_iuse or salvage_tool" );
-            } else {
-                // Pick index of first item in the salvage stack
-                item *const target = &*salvage_stacks[indexer_index].first;
-                item_location item_loc( map_cursor( pos ), target );
-                salvage_iuse->try_to_cut_up( u, *salvage_tool, item_loc );
-            }
+            // Pick the first original item in the selected display stack.
+            item *const target = &*salvage_stacks[indexer_index].first;
+            salvage_selected( { item_location( map_cursor( pos ), target ) }, false );
         }
         break;
     }
@@ -8057,14 +8170,27 @@ bool game::is_dangerous_tile( const tripoint_bub_ms &dest_loc ) const
 bool game::prompt_dangerous_tile( const tripoint_bub_ms &dest_loc,
                                   std::vector<std::string> *harmful_stuff ) const
 {
+    return prompt_dangerous_tile( get_avatar(), dest_loc, harmful_stuff );
+}
+
+std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_loc,
+        const size_t max ) const
+{
+    return get_dangerous_tile( get_avatar(), dest_loc, max );
+}
+
+bool game::prompt_dangerous_tile( Character &who, const tripoint_bub_ms &dest_loc,
+                                  std::vector<std::string> *harmful_stuff ) const
+{
     map &here = get_map();
 
-    if( u.has_effect( effect_stunned ) || u.has_effect( effect_psi_stunned ) ) {
+    if( who.has_effect( effect_stunned ) || who.has_effect( effect_psi_stunned ) ) {
         return true;
     }
 
+    std::vector<std::string> dangerous_tile;
     if( harmful_stuff == nullptr ) {
-        auto dangerous_tile = get_dangerous_tile( dest_loc );
+        dangerous_tile = get_dangerous_tile( who, dest_loc );
         harmful_stuff = &dangerous_tile;
     }
 
@@ -8076,36 +8202,37 @@ bool game::prompt_dangerous_tile( const tripoint_bub_ms &dest_loc,
     }
 
     if( !harmful_stuff->empty() && !skip_confirmation &&
-        !query_yn( _( "Really step into %s?" ), enumerate_as_string( *harmful_stuff ) ) ) {
+        !who.query_yn( _( "Really step into %s?" ), enumerate_as_string( *harmful_stuff ) ) ) {
         return false;
     }
-    if( !harmful_stuff->empty() && u.is_mounted() && here.is_open_air( dest_loc ) ) {
-        add_msg( m_warning, _( "Your %s refuses to move over that ledge!" ),
-                 u.mounted_creature->get_name() );
+    if( !harmful_stuff->empty() && who.is_mounted() && here.is_open_air( dest_loc ) ) {
+        who.add_msg_if_player( m_warning, _( "Your %s refuses to move over that ledge!" ),
+                               who.mounted_creature->get_name() );
         return false;
     }
     return true;
 }
 
-std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_loc,
+std::vector<std::string> game::get_dangerous_tile( const Character &who,
+        const tripoint_bub_ms &dest_loc,
         const size_t max ) const
 {
     map &here = get_map();
 
-    if( u.is_blind() ) {
+    if( who.is_blind() ) {
         return {}; // blinded players don't see dangerous tiles
     }
 
     std::vector<std::string> harmful_stuff;
-    const field fields_here = here.field_at( u.pos_bub() );
-    const auto veh_here = here.veh_at( u.pos_bub() ).part_with_feature( "BOARDABLE", true );
+    const field fields_here = here.field_at( who.pos_bub() );
+    const auto veh_here = here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true );
     const auto veh_dest = here.veh_at( dest_loc ).part_with_feature( "BOARDABLE", true );
     const bool veh_here_inside = veh_here && veh_here->is_inside();
     const bool veh_dest_inside = veh_dest && veh_dest->is_inside();
 
     for( const std::pair<const field_type_id, field_entry> &e : here.field_at( dest_loc ) ) {
         if( ( e.first.obj().has_acid && !get_option<bool>( "ACID_DANGER_WARNING" ) ) ||
-            !u.is_dangerous_field( e.second ) ) {
+            !who.is_dangerous_field( e.second ) ) {
             continue;
         }
 
@@ -8125,7 +8252,7 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
                     danger_dest = false;
                 } else if( fe.immune_outside_vehicle && !veh_dest_inside ) {
                     danger_dest = false;
-                } else if( u.is_immune_effect( fe.id ) || u.check_immunity_data( fe.immunity_data ) ) {
+                } else if( who.is_immune_effect( fe.id ) || who.check_immunity_data( fe.immunity_data ) ) {
                     danger_dest = false;
                 }
             }
@@ -8137,7 +8264,7 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
                     danger_here = false;
                 } else if( fe.immune_outside_vehicle && !veh_here_inside ) {
                     danger_here = false;
-                } else if( u.is_immune_effect( fe.id ) || u.check_immunity_data( fe.immunity_data ) ) {
+                } else if( who.is_immune_effect( fe.id ) || who.check_immunity_data( fe.immunity_data ) ) {
                     danger_here = false;
                 }
             }
@@ -8155,7 +8282,7 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
     }
 
     if( here.is_open_air( dest_loc ) ) {
-        if( !veh_dest && !u.has_effect_with_flag( json_flag_LEVITATION ) ) {
+        if( !veh_dest && !who.has_effect_with_flag( json_flag_LEVITATION ) ) {
             harmful_stuff.emplace_back( "ledge" );
             if( harmful_stuff.size() == max ) {
                 return harmful_stuff;
@@ -8165,7 +8292,7 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
 
     const trap &tr = here.tr_at( dest_loc );
 
-    if( tr.can_see( dest_loc, u ) && !tr.is_benign() && !veh_dest ) {
+    if( tr.can_see( dest_loc, who ) && !tr.is_benign() && !veh_dest ) {
         harmful_stuff.push_back( tr.name() );
         if( harmful_stuff.size() == max ) {
             return harmful_stuff;
@@ -8179,29 +8306,30 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
         body_part_hand_l, body_part_hand_r, body_part_torso
     };
 
-    const auto sharp_bp_check = [this]( bodypart_id bp ) {
-        return u.immune_to( bp, { damage_cut, 10 } );
+    const auto sharp_bp_check = [&who]( bodypart_id bp ) {
+        return who.immune_to( bp, { damage_cut, 10 } );
     };
 
     // For future reference... It turns out that 78 is exactly the dex required to avoid all damage at the function call used elsewhere.
     // That function call is:
-    // x_in_y(1+u.get_dex()/2, 40)
+    // x_in_y(1+who.get_dex()/2, 40)
     const int magic_number_78 = 78;
 
     if( here.has_flag( ter_furn_flag::TFLAG_ROUGH, dest_loc ) &&
-        !here.has_flag( ter_furn_flag::TFLAG_ROUGH, u.pos_bub() ) &&
-        !u.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) &&
+        !here.has_flag( ter_furn_flag::TFLAG_ROUGH, who.pos_bub() ) &&
+        !who.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) &&
         !veh_dest &&
-        ( u.get_armor_type( damage_bash, bodypart_id( "foot_l" ) ) < 5 ||
-          u.get_armor_type( damage_bash, bodypart_id( "foot_r" ) ) < 5 ) ) { // NOLINT(bugprone-branch-clone)
+        ( who.get_armor_type( damage_bash, bodypart_id( "foot_l" ) ) < 5 ||
+          who.get_armor_type( damage_bash,
+                              bodypart_id( "foot_r" ) ) < 5 ) ) { // NOLINT(bugprone-branch-clone)
         harmful_stuff.emplace_back( here.name( dest_loc ) );
     } else if( here.has_flag( ter_furn_flag::TFLAG_SHARP, dest_loc ) &&
-               !here.has_flag( ter_furn_flag::TFLAG_SHARP, u.pos_bub() ) &&
-               !u.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) &&
-               !( u.in_vehicle || here.veh_at( dest_loc ) ) &&
-               u.get_dex() < magic_number_78 &&
-               !( u.is_mounted() &&
-                  u.mounted_creature->get_armor_type( damage_cut, bodypart_id( "torso" ) ) >= 10 ) &&
+               !here.has_flag( ter_furn_flag::TFLAG_SHARP, who.pos_bub() ) &&
+               !who.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) &&
+               !( who.in_vehicle || here.veh_at( dest_loc ) ) &&
+               who.get_dex() < magic_number_78 &&
+               !( who.is_mounted() &&
+                  who.mounted_creature->get_armor_type( damage_cut, bodypart_id( "torso" ) ) >= 10 ) &&
                !std::all_of( sharp_bps.begin(), sharp_bps.end(), sharp_bp_check ) ) {
         harmful_stuff.push_back( here.name( dest_loc ) );
     }
@@ -8212,24 +8340,57 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
 bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
                       const bool furniture_move )
 {
-    if( u.has_flag( json_flag_PHASE_MOVEMENT ) ) {
-        place_player( dest_loc );
+    return walk_move( get_avatar(), dest_loc, via_ramp, furniture_move );
+}
+
+bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const bool via_ramp,
+                      const bool furniture_move, const walk_move_choices *choices )
+{
+    map &here = get_map();
+    const character_action_guard lifetime( who );
+    if( !lifetime || !here.inbounds( dest_loc ) ) {
+        return false;
+    }
+    if( !furniture_move && who.get_grab_type() != object_type::NONE &&
+        !who.validate_grab( here ) ) {
+        who.grab( object_type::NONE );
+    }
+    if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
+        if( occupant != &who ) {
+            return false;
+        }
+    }
+    const tripoint_abs_ms original_position = who.pos_abs();
+    const auto still_at_origin = [&]() {
+        return lifetime && who.pos_abs() == original_position;
+    };
+    const auto permitted_vehicle = [&]( vehicle & target ) {
+        if( choices || !who.is_avatar() ) {
+            if( target.has_owner() && !target.is_owned_by( who ) &&
+                ( !choices || !choices->permits_theft( target ) ) ) {
+                return false;
+            }
+            return target.handle_potential_theft( who, false, false ) && still_at_origin();
+        }
+        return target.handle_potential_theft( who ) && still_at_origin();
+    };
+    if( who.has_flag( json_flag_PHASE_MOVEMENT ) ) {
+        place_character( who, dest_loc );
         return true; // debug trait immunity to gravity, walls etc
     }
-    map &here = get_map();
-    const tripoint_bub_ms pos = u.pos_bub( here );
+    const tripoint_bub_ms pos = who.pos_bub( here );
 
     const tripoint_abs_ms dest_loc_abs = here.get_abs( dest_loc );
 
     if( here.has_flag_ter( ter_furn_flag::TFLAG_SMALL_PASSAGE, dest_loc ) ) {
-        if( u.get_size() > creature_size::medium ) {
-            add_msg( m_warning, _( "You can't fit there." ) );
+        if( who.get_size() > creature_size::medium ) {
+            who.add_msg_if_player( m_warning, _( "You can't fit there." ) );
             return false; // character too large to fit through a tight passage
         }
-        if( u.is_mounted() ) {
-            monster *mount = u.mounted_creature.get();
+        if( who.is_mounted() ) {
+            monster *mount = who.mounted_creature.get();
             if( mount->get_size() > creature_size::medium ) {
-                add_msg( m_warning, _( "Your mount can't fit there." ) );
+                who.add_msg_if_player( m_warning, _( "Your mount can't fit there." ) );
                 return false; // char's mount is too large for tight passages
             }
         }
@@ -8243,56 +8404,63 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
     const float nyctophobia_threshold = LIGHT_AMBIENT_LIT - 3.0f;
 
     // Forbid players from moving through very dark tiles, unless they are running or took xanax
-    if( u.has_flag( json_flag_NYCTOPHOBIA ) && !u.has_effect( effect_took_xanax ) && !u.is_running() &&
+    if( who.has_flag( json_flag_NYCTOPHOBIA ) && !who.has_effect( effect_took_xanax ) &&
+        !who.is_running() &&
         dest_light_level < nyctophobia_threshold ) {
-        add_msg( m_bad,
-                 _( "It's so dark and scary in there!  You can't force yourself to walk into this tile.  Switch to running movement mode to move there." ) );
+        who.add_msg_if_player( m_bad,
+                               _( "It's so dark and scary in there!  You can't force yourself to walk into this tile.  Switch to running movement mode to move there." ) );
         return false;
     }
 
-    if( u.is_mounted() ) {
-        monster *mons = u.mounted_creature.get();
+    if( who.is_mounted() ) {
+        monster *mons = who.mounted_creature.get();
         if( mons->has_flag( mon_flag_RIDEABLE_MECH ) ) {
             if( !mons->check_mech_powered() ) {
-                add_msg( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
-                         mons->get_name() );
+                who.add_msg_if_player( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
+                                       mons->get_name() );
                 return false;
             }
         }
         if( !mons->move_effects( false ) ) {
-            add_msg( m_bad, _( "You cannot move as your %s isn't able to move." ), mons->get_name() );
+            who.add_msg_if_player( m_bad, _( "You cannot move as your %s isn't able to move." ),
+                                   mons->get_name() );
             return false;
         }
     }
-    const optional_vpart_position &vp_here = here.veh_at( pos );
-    const optional_vpart_position &vp_there = here.veh_at( dest_loc );
-    const optional_vpart_position &vp_grab = here.veh_at( pos + u.grab_point );
+    optional_vpart_position vp_here = here.veh_at( pos );
+    optional_vpart_position vp_there = here.veh_at( dest_loc );
+    optional_vpart_position vp_grab = here.veh_at( pos + who.grab_point );
     const vehicle *grabbed_vehicle = veh_pointer_or_null( vp_grab );
+    const int64_t expected_grab_vehicle = grabbed_vehicle ? grabbed_vehicle->uid().get_value() : 0;
+    const auto expected_grab_type = who.get_grab_type();
+    const auto expected_grab_generation = who.grab_generation();
+    const auto expected_grab_point = who.grab_point;
+    const auto expected_grab_furniture = here.furn( pos + who.grab_point );
 
     bool pushing = false; // moving -into- grabbed tile; skip check for move_cost > 0
     bool pulling = false; // moving -away- from grabbed tile; check for move_cost > 0
     bool shifting_furniture = false; // moving furniture and staying still; skip check for move_cost > 0
 
-    const tripoint_bub_ms furn_pos = pos + u.grab_point;
-    const tripoint_bub_ms furn_dest = dest_loc + u.grab_point.xy();
+    const tripoint_bub_ms furn_pos = pos + who.grab_point;
+    const tripoint_bub_ms furn_dest = dest_loc + who.grab_point.xy();
 
-    bool grabbed = u.get_grab_type() != object_type::NONE;
+    bool grabbed = who.get_grab_type() != object_type::NONE;
     if( grabbed ) {
         const tripoint_rel_ms dp = dest_loc - pos;
-        pushing = dp.xy() == u.grab_point.xy();
-        pulling = dp.xy() == -u.grab_point.xy();
+        pushing = dp.xy() == who.grab_point.xy();
+        pulling = dp.xy() == -who.grab_point.xy();
     }
 
     // Now make sure we're actually holding something
-    if( grabbed && u.get_grab_type() == object_type::FURNITURE ) {
+    if( grabbed && who.get_grab_type() == object_type::FURNITURE ) {
         // We only care about shifting, because it's the only one that can change our destination
-        if( here.has_furn( pos + u.grab_point ) ) {
+        if( here.has_furn( pos + who.grab_point ) ) {
             shifting_furniture = !pushing && !pulling;
         } else {
             // We were grabbing a furniture that isn't there
             grabbed = false;
         }
-    } else if( grabbed && u.get_grab_type() == object_type::VEHICLE ) {
+    } else if( grabbed && who.get_grab_type() == object_type::VEHICLE ) {
         if( !vp_grab ) {
             // We were grabbing a vehicle that isn't there anymore
             grabbed = false;
@@ -8301,25 +8469,27 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
         else if( vp_there && !pushing && !here.impassable( dest_loc ) &&
                  !empty( grabbed_vehicle->get_avail_parts( VPFLAG_OBSTACLE ) ) &&
                  &vp_there->vehicle() == grabbed_vehicle ) {
-            add_msg( m_warning, _( "You move into the %s, releasing it." ), grabbed_vehicle->name );
-            u.grab( object_type::NONE );
+            who.add_msg_if_player( m_warning, _( "You move into the %s, releasing it." ),
+                                   grabbed_vehicle->name );
+            who.grab( object_type::NONE );
+            grabbed = false;
         }
-    } else if( grabbed && u.get_grab_type() != object_type::FURNITURE_ON_VEHICLE ) {
+    } else if( grabbed && who.get_grab_type() != object_type::FURNITURE_ON_VEHICLE ) {
         // We were grabbing something WEIRD, let's pretend we weren't
         grabbed = false;
     }
-    if( u.grab_point != tripoint_rel_ms::zero && !grabbed && !furniture_move ) {
+    if( who.grab_point != tripoint_rel_ms::zero && !grabbed && !furniture_move ) {
         debugmsg( "Can't find grabbed object." );
-        u.grab( object_type::NONE );
+        who.grab( object_type::NONE );
     }
 
-    const std::vector<field_type_id> impassable_field_ids = here.get_impassable_field_type_ids_at(
+    std::vector<field_type_id> impassable_field_ids = here.get_impassable_field_type_ids_at(
                 dest_loc );
 
     if( ( !here.passable_skip_fields( dest_loc ) || ( !impassable_field_ids.empty() &&
-            !u.is_immune_fields( impassable_field_ids ) ) ) && !pushing && !shifting_furniture ) {
-        if( vp_there && u.mounted_creature && u.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) &&
-            vp_there->vehicle().handle_potential_theft( u ) ) {
+            !who.is_immune_fields( impassable_field_ids ) ) ) && !pushing && !shifting_furniture ) {
+        if( vp_there && who.mounted_creature && who.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) &&
+            permitted_vehicle( vp_there->vehicle() ) ) {
             tripoint_rel_ms diff = dest_loc - pos;
             if( diff.x() < 0 ) {
                 diff.x() -= 2;
@@ -8331,36 +8501,48 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
             } else if( diff.y() > 0 ) {
                 diff.y() += 2;
             }
-            u.mounted_creature->shove_vehicle( dest_loc + diff.xy(),
-                                               dest_loc );
-        } else if( vp_there && vp_there->vehicle().part_has_lock( vp_there->part_index() ) ) {
+            who.mounted_creature->shove_vehicle( dest_loc + diff.xy(),
+                                                 dest_loc );
+        } else if( who.is_avatar() && vp_there &&
+                   vp_there->vehicle().part_has_lock( vp_there->part_index() ) ) {
             // Automatically try to open locked door. Prints appropriate messages to log, etc.
-            if( doors::can_unlock_door( here, u, dest_loc ) ) {
-                doors::unlock_door( here, u, dest_loc );
-            } else {
-                iexamine::locked_object( u, dest_loc );
+            if( doors::can_unlock_door( here, who, dest_loc ) ) {
+                doors::unlock_door( here, who, dest_loc );
+            } else if( who.is_avatar() ) {
+                iexamine::locked_object( who, dest_loc );
             }
         }
         return false;
     }
-    if( vp_there && !vp_there->vehicle().handle_potential_theft( u ) ) {
+    if( choices && vp_grab && who.get_grab_type() == object_type::VEHICLE &&
+        vp_grab->vehicle().has_owner() && !vp_grab->vehicle().is_owned_by( who ) &&
+        !choices->permits_theft( vp_grab->vehicle() ) ) {
         return false;
     }
-    if( u.is_mounted() && !pushing && vp_there ) {
-        add_msg( m_warning, _( "You cannot board a vehicle whilst riding." ) );
+    if( vp_there && !permitted_vehicle( vp_there->vehicle() ) ) {
         return false;
     }
-    u.set_underwater( false );
+    if( !still_at_origin() ) {
+        return false;
+    }
+    vp_here = here.veh_at( pos );
+    vp_there = here.veh_at( dest_loc );
+    vp_grab = here.veh_at( pos + who.grab_point );
+    grabbed_vehicle = veh_pointer_or_null( vp_grab );
+    if( who.is_mounted() && !pushing && vp_there ) {
+        who.add_msg_if_player( m_warning, _( "You cannot board a vehicle whilst riding." ) );
+        return false;
+    }
+    who.set_underwater( false );
 
     const bool has_player_try_move =
         cata::lua_platform::has_native_hook( "on_player_try_move" );
     const bool has_character_try_move =
         cata::lua_platform::has_native_hook( "on_character_try_move" );
     if( has_player_try_move || has_character_try_move ) {
-        const monster *const mount =
-            u.is_mounted() ? u.mounted_creature.get() : nullptr;
+        const auto mount = who.is_mounted() ? who.mounted_creature : shared_ptr_fast<monster>();
         cata::lua_platform::native_callback_arguments payload = {
-            { "player", static_cast<const Character *>( &u ) },
+            { "player", static_cast<const Character *>( &who ) },
             {
                 "from", cata::lua_platform::native_callback_point {
                     "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
@@ -8371,10 +8553,10 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
                     "bub_ms", tripoint_rel_ms( dest_loc.x(), dest_loc.y(), dest_loc.z() )
                 }
             },
-            { "movement_mode", u.current_movement_mode().str() },
+            { "movement_mode", who.current_movement_mode().str() },
             { "via_ramp", via_ramp },
             { "mounted", mount != nullptr },
-            { "mount", static_cast<const Creature *>( mount ) }
+            { "mount", static_cast<const Creature *>( mount.get() ) }
         };
         bool allowed = true;
         if( has_player_try_move ) {
@@ -8383,6 +8565,9 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
                     "on_player_try_move", payload );
             allowed = player_allowed && allowed;
         }
+        if( !still_at_origin() || who.mounted_creature != mount ) {
+            return false;
+        }
         if( has_character_try_move ) {
             payload.front().name = "character";
             const bool character_allowed =
@@ -8390,136 +8575,208 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
                     "on_character_try_move", payload );
             allowed = character_allowed && allowed;
         }
-        if( !allowed ) {
+        if( !allowed || !still_at_origin() || who.mounted_creature != mount ) {
             return false;
         }
     }
+    if( !still_at_origin() ) {
+        return false;
+    }
+    vp_here = here.veh_at( pos );
+    vp_there = here.veh_at( dest_loc );
+    vp_grab = here.veh_at( pos + who.grab_point );
+    grabbed_vehicle = veh_pointer_or_null( vp_grab );
+    // A movement hook may replace the destination or held object. Recheck the
+    // live map before any collision, cost or assignment uses the earlier view.
+    impassable_field_ids = here.get_impassable_field_type_ids_at( dest_loc );
+    if( !still_at_origin() ||
+        ( !pushing && !shifting_furniture &&
+          ( !here.passable_skip_fields( dest_loc ) ||
+            ( !impassable_field_ids.empty() && !who.is_immune_fields( impassable_field_ids ) ) ) ) ) {
+        return false;
+    }
+    if( grabbed && ( ( !furniture_move && !who.grab_matches( here ) ) ||
+                     who.grab_generation() != expected_grab_generation ||
+                     who.get_grab_type() != expected_grab_type ||
+                     who.grab_point != expected_grab_point ||
+                     ( expected_grab_type == object_type::VEHICLE &&
+                       ( !grabbed_vehicle || grabbed_vehicle->uid().get_value() != expected_grab_vehicle ) ) ||
+                     ( expected_grab_type == object_type::FURNITURE &&
+                       here.furn( pos + who.grab_point ) != expected_grab_furniture ) ) ) {
+        return false;
+    }
 
-    std::vector<std::string> harmful_stuff = get_dangerous_tile( dest_loc );
+    std::vector<std::string> harmful_stuff = get_dangerous_tile( who, dest_loc );
     if( !shifting_furniture && !pushing && !harmful_stuff.empty() ) {
-        if( harmful_stuff.size() == 1 && harmful_stuff[0] == "ledge" ) {
-            iexamine::ledge( u, tripoint_bub_ms( dest_loc ) );
+        // A stale walking confirmation cannot silently become a fall. The owner
+        // must choose climb/jump/fall/glide through the ledge command instead.
+        if( choices && harmful_stuff.size() == 1 && harmful_stuff.front() == "ledge" ) {
+            return false;
+        }
+        if( choices || !who.is_avatar() ) {
+            if( !choices || !choices->allow_danger || !choices->confirms( dest_loc_abs ) ||
+                ( who.is_mounted() && here.is_open_air( dest_loc ) ) ) {
+                return false;
+            }
+        } else if( harmful_stuff.size() == 1 && harmful_stuff[0] == "ledge" ) {
+            iexamine::ledge( who, tripoint_bub_ms( dest_loc ) );
             return true;
         } else if( get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" ) == "ALWAYS" &&
-                   !prompt_dangerous_tile( dest_loc, &harmful_stuff ) ) {
+                   !prompt_dangerous_tile( who, dest_loc, &harmful_stuff ) ) {
             return true;
         } else if( get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" ) == "RUNNING" &&
-                   ( !u.is_running() || !prompt_dangerous_tile( dest_loc, &harmful_stuff ) ) ) {
-            add_msg( m_warning,
-                     _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
-                     enumerate_as_string( harmful_stuff ) );
+                   ( !who.is_running() || !prompt_dangerous_tile( who, dest_loc, &harmful_stuff ) ) ) {
+            who.add_msg_if_player( m_warning,
+                                   _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
+                                   enumerate_as_string( harmful_stuff ) );
             return true;
         } else if( get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" ) == "CROUCHING" &&
-                   ( !u.is_crouching() || !prompt_dangerous_tile( dest_loc, &harmful_stuff ) ) ) {
-            add_msg( m_warning,
-                     _( "Stepping into that %1$s looks risky.  Crouch and move into it if you wish to enter anyway." ),
-                     enumerate_as_string( harmful_stuff ) );
+                   ( !who.is_crouching() || !prompt_dangerous_tile( who, dest_loc, &harmful_stuff ) ) ) {
+            who.add_msg_if_player( m_warning,
+                                   _( "Stepping into that %1$s looks risky.  Crouch and move into it if you wish to enter anyway." ),
+                                   enumerate_as_string( harmful_stuff ) );
             return true;
         } else if( get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" ) == "NEVER" &&
-                   !u.is_running() ) {
-            add_msg( m_warning,
-                     _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
-                     enumerate_as_string( harmful_stuff ) );
+                   !who.is_running() ) {
+            who.add_msg_if_player( m_warning,
+                                   _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
+                                   enumerate_as_string( harmful_stuff ) );
             return true;
+        }
+    }
+    if( !still_at_origin() ) {
+        return false;
+    }
+    if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
+        if( occupant != &who ) {
+            return false;
         }
     }
     // Used to decide whether to print a 'moving is slow message
     const int mcost_from = here.move_cost( pos ); //calculate this _before_ calling grabbed_move
 
     int modifier = 0;
-    if( grabbed && u.get_grab_type() == object_type::FURNITURE &&
-        ( pos + u.grab_point ) == dest_loc ) {
+    if( grabbed && who.get_grab_type() == object_type::FURNITURE &&
+        ( pos + who.grab_point ) == dest_loc ) {
         modifier = -here.furn( dest_loc ).obj().movecost;
     }
 
+    if( !still_at_origin() ) {
+        return false;
+    }
+    const bool grabbed_has_wheels = grabbed && who.get_grab_type() == object_type::VEHICLE &&
+                                    grabbed_vehicle && !grabbed_vehicle->wheelcache.empty();
+    const int64_t grabbed_vehicle_id = grabbed_vehicle ? grabbed_vehicle->uid().get_value() : 0;
+    const int64_t grabbed_part_id = vp_grab ?
+                                    vp_grab->vehicle().part( vp_grab->part_index() ).get_base().uid().get_value() : 0;
     const int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
                       modifier,
-                      via_ramp, false, !impassable_field_ids.empty() && u.is_immune_fields( impassable_field_ids ) );
+                      via_ramp, false, !impassable_field_ids.empty() && who.is_immune_fields( impassable_field_ids ) );
 
-    if( !furniture_move && grabbed_move( dest_loc - pos, via_ramp ) ) {
+    if( !furniture_move && grabbed_move( who, dest_loc - pos, via_ramp, false, choices ) ) {
         return true;
     } else if( mcost == 0 ) {
         return false;
     }
+    if( !still_at_origin() ) {
+        return true;
+    }
+    vp_here = here.veh_at( pos );
+    vp_there = here.veh_at( dest_loc );
     bool diag = trigdist && pos.x() != dest_loc.x() && pos.y() != dest_loc.y();
-    const int previous_moves = u.get_moves();
-    if( u.is_mounted() ) {
-        auto *crit = u.mounted_creature.get();
+    const int previous_moves = who.get_moves();
+    if( who.is_mounted() ) {
+        auto *crit = who.mounted_creature.get();
         if( !crit->has_flag( mon_flag_RIDEABLE_MECH ) &&
             ( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_MOUNTABLE, dest_loc ) ||
               here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_BARRICADABLE_DOOR, dest_loc ) ||
               here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_OPENCLOSE_INSIDE, dest_loc ) ||
               here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_DAMAGED, dest_loc ) ||
               here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_REINFORCED, dest_loc ) ) ) {
-            add_msg( m_warning, _( "You cannot pass obstacles whilst mounted." ) );
+            who.add_msg_if_player( m_warning, _( "You cannot pass obstacles whilst mounted." ) );
             return false;
         }
-        const double crit_speed = u.mount_speed();
-        const double base_moves = u.run_cost( mcost, diag ) * 100.0 / crit_speed;
-        const double encumb_moves = u.get_weight() / 4800.0_gram;
-        u.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
-        crit->use_mech_power( u.current_movement_mode()->mech_power_use() );
+        const double crit_speed = who.mount_speed();
+        const double base_moves = who.run_cost( mcost, diag ) * 100.0 / crit_speed;
+        const double encumb_moves = who.get_weight() / 4800.0_gram;
+        who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
+        crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        u.mod_moves( -u.run_cost( mcost, diag ) );
+        who.mod_moves( -who.run_cost( mcost, diag ) );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.
         Monsters don't currently have stamina however.
         For the time being just don't burn players stamina when mounted.
         */
-        if( grabbed_vehicle == nullptr || grabbed_vehicle->wheelcache.empty() ) {
+        if( !grabbed_has_wheels ) {
             //Burn normal amount of stamina if no vehicle grabbed or vehicle lacks wheels
-            u.burn_move_stamina( previous_moves - u.get_moves() );
+            who.burn_move_stamina( previous_moves - who.get_moves() );
         } else {
             //Burn half as much stamina if vehicle has wheels, without changing move time
-            u.burn_move_stamina( 0.50 * ( previous_moves - u.get_moves() ) );
+            who.burn_move_stamina( 0.50 * ( previous_moves - who.get_moves() ) );
         }
     }
+    if( !still_at_origin() ) {
+        return true;
+    }
     // Max out recoil & reset aim point
-    u.recoil = MAX_RECOIL;
-    u.last_target_pos = std::nullopt;
+    who.recoil = MAX_RECOIL;
+    who.last_target_pos = std::nullopt;
 
     // Print a message if movement is slow
     const int mcost_to = here.move_cost( dest_loc ); //calculate this _after_ calling grabbed_move
     const bool fungus = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_FUNGUS, pos ) ||
                         here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_FUNGUS,
                                 dest_loc ); //fungal furniture has no slowing effect on Mycus characters
-    const bool slowed = ( ( !u.has_proficiency( proficiency_prof_parkour ) && ( mcost_to > 2 ||
+    const bool slowed = ( ( !who.has_proficiency( proficiency_prof_parkour ) && ( mcost_to > 2 ||
                             mcost_from > 2 ) ) ||
                           mcost_to > 4 || mcost_from > 4 ) ||
-                        ( !u.has_trait( trait_M_IMMUNE ) && fungus );
-    if( slowed && !u.is_mounted() ) {
-        // Unless u.pos() has a higher movecost than dest_loc, state that dest_loc is the cause
+                        ( !who.has_trait( trait_M_IMMUNE ) && fungus );
+    if( slowed && !who.is_mounted() ) {
+        // Unless who.pos() has a higher movecost than dest_loc, state that dest_loc is the cause
         if( mcost_to >= mcost_from ) {
             if( auto displayed_part = vp_there.part_displayed() ) {
-                add_msg( m_warning, _( "Moving onto this %s is slow!" ),
-                         displayed_part->part().name() );
-                sfx::do_obstacle( displayed_part->part().info().id.str() );
+                who.add_msg_if_player( m_warning, _( "Moving onto this %s is slow!" ),
+                                       displayed_part->part().name() );
+                if( who.is_avatar() ) {
+                    sfx::do_obstacle( displayed_part->part().info().id.str() );
+                }
             } else {
-                add_msg( m_warning, _( "Moving onto this %s is slow!" ), here.name( dest_loc ) );
+                who.add_msg_if_player( m_warning, _( "Moving onto this %s is slow!" ), here.name( dest_loc ) );
                 if( here.has_furn( dest_loc ) ) {
-                    sfx::do_obstacle( here.furn( dest_loc ).id().str() );
+                    if( who.is_avatar() ) {
+                        sfx::do_obstacle( here.furn( dest_loc ).id().str() );
+                    }
                 } else {
-                    sfx::do_obstacle( here.ter( dest_loc ).id().str() );
+                    if( who.is_avatar() ) {
+                        sfx::do_obstacle( here.ter( dest_loc ).id().str() );
+                    }
                 }
             }
         } else {
             if( auto displayed_part = vp_here.part_displayed() ) {
-                add_msg( m_warning, _( "Moving off of this %s is slow!" ),
-                         displayed_part->part().name() );
-                sfx::do_obstacle( displayed_part->part().info().id.str() );
+                who.add_msg_if_player( m_warning, _( "Moving off of this %s is slow!" ),
+                                       displayed_part->part().name() );
+                if( who.is_avatar() ) {
+                    sfx::do_obstacle( displayed_part->part().info().id.str() );
+                }
             } else {
-                add_msg( m_warning, _( "Moving off of this %s is slow!" ), here.name( pos ) );
+                who.add_msg_if_player( m_warning, _( "Moving off of this %s is slow!" ), here.name( pos ) );
                 if( here.has_furn( pos ) ) {
-                    sfx::do_obstacle( here.furn( pos ).id().str() );
+                    if( who.is_avatar() ) {
+                        sfx::do_obstacle( here.furn( pos ).id().str() );
+                    }
                 } else {
-                    sfx::do_obstacle( here.ter( pos ).id().str() );
+                    if( who.is_avatar() ) {
+                        sfx::do_obstacle( here.ter( pos ).id().str() );
+                    }
                 }
             }
         }
     }
-    if( !u.is_mounted() && u.has_trait( trait_LEG_TENT_BRACE ) &&
-        u.is_barefoot() ) {
+    if( !who.is_mounted() && who.has_trait( trait_LEG_TENT_BRACE ) &&
+        who.is_barefoot() ) {
         // DX and IN are long suits for Cephalopods,
         // so this shouldn't cause too much hardship
         // Presumed that if it's swimmable, they're
@@ -8528,23 +8785,23 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
 
         ///\EFFECT_INT decreases chance of tentacles getting stuck to the ground
         if( !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest_loc ) &&
-            one_in( 80 + u.get_dex() + u.get_int() ) ) {
-            add_msg( _( "Your tentacles stick to the ground, but you pull them free." ) );
-            u.mod_sleepiness( 1 );
+            one_in( 80 + who.get_dex() + who.get_int() ) ) {
+            who.add_msg_if_player( _( "Your tentacles stick to the ground, but you pull them free." ) );
+            who.mod_sleepiness( 1 );
         }
     }
 
-    u.make_footstep_noise();
+    who.make_footstep_noise();
 
     //only clatter items every so often based on activity level
-    if( to_turns<int>( calendar::turn - u.last_pocket_noise ) > std::max( static_cast<int>
-            ( 10 - u.activity_level() ), 1 ) ) {
-        u.make_clatter_sound();
-        u.last_pocket_noise = calendar::turn;
+    if( to_turns<int>( calendar::turn - who.last_pocket_noise ) > std::max( static_cast<int>
+            ( 10 - who.activity_level() ), 1 ) ) {
+        who.make_clatter_sound();
+        who.last_pocket_noise = calendar::turn;
     }
 
     if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_HIDE_PLACE, dest_loc ) ) {
-        add_msg( m_good, _( "You are hiding in the %s." ), here.name( dest_loc ) );
+        who.add_msg_if_player( m_good, _( "You are hiding in the %s." ), here.name( dest_loc ) );
     }
 
     tripoint_bub_ms oldpos = pos;
@@ -8552,15 +8809,21 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
 
     bool moving = dest_loc != oldpos;
 
-    point_rel_sm submap_shift = place_player( dest_loc );
+    point_rel_sm submap_shift = place_character( who, dest_loc );
     point_rel_ms ms_shift = coords::project_to<coords::ms>( submap_shift );
     oldpos = oldpos - ms_shift.raw();
 
-    if( moving ) {
-        cata_event_dispatch::avatar_moves( old_abs_pos, u, here );
+    if( !lifetime ) {
+        return true;
+    }
+    if( moving && who.pos_abs() != old_abs_pos ) {
+        cata_event_dispatch::character_moves( old_abs_pos, who, here );
+        if( !lifetime ) {
+            return true;
+        }
 
         // Add trail animation when sprinting
-        if( get_option<bool>( "ANIMATIONS" ) && u.is_running() ) {
+        if( who.is_avatar() && get_option<bool>( "ANIMATIONS" ) && who.is_running() ) {
             if( pos.y() < oldpos.y() ) {
                 if( pos.x() < oldpos.x() ) {
                     draw_async_anim( oldpos, "run_nw", "\\", c_light_gray );
@@ -8589,12 +8852,24 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
 
     if( furniture_move ) {
         // Adjust the grab_point if player has changed z level.
-        u.grab_point.z() -= pos.z() - oldpos.z();
+        who.grab_point.z() -= pos.z() - oldpos.z();
     }
 
-    if( grabbed_vehicle ) {
-        // Vehicle might be at different z level than the grabbed part.
-        u.grab_point.z() = vp_grab->pos_abs().z() - pos.z();
+    if( grabbed_vehicle_id != 0 && who.get_grab_type() == object_type::VEHICLE ) {
+        vehicle *live = vehicle::find_vehicle_by_uid( here, grabbed_vehicle_id );
+        bool found = false;
+        if( live ) {
+            for( const vpart_reference &part : live->get_all_parts() ) {
+                if( part.part().get_base().uid().get_value() == grabbed_part_id ) {
+                    who.grab_point.z() = part.pos_abs().z() - who.posz();
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if( !found ) {
+            who.grab( object_type::NONE );
+        }
     }
 
     if( pulling ) {
@@ -8607,21 +8882,21 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
         here.set_field_age( shifted_furn_dest, fd_fire, fire_age );
     }
 
-    if( u.is_hauling() ) {
-        start_hauling( oldpos );
+    if( who.is_hauling() ) {
+        start_hauling( who, oldpos );
     }
 
-    if( u.will_be_cramped_in_vehicle_tile( here, dest_loc_abs ) ) {
-        if( u.get_size() == creature_size::huge ) {
-            add_msg( m_warning, _( "You barely fit in this tiny human vehicle." ) );
-        } else if( u.get_total_volume() > u.get_base_volume() ) {
-            add_msg( m_warning,
-                     _( "All the stuff you're carrying isn't making it any easier to move in here." ) );
+    if( who.will_be_cramped_in_vehicle_tile( here, dest_loc_abs ) ) {
+        if( who.get_size() == creature_size::huge ) {
+            who.add_msg_if_player( m_warning, _( "You barely fit in this tiny human vehicle." ) );
+        } else if( who.get_total_volume() > who.get_base_volume() ) {
+            who.add_msg_if_player( m_warning,
+                                   _( "All the stuff you're carrying isn't making it any easier to move in here." ) );
         }
-        u.add_effect( effect_cramped_space, 2_turns, true );
+        who.add_effect( effect_cramped_space, 2_turns, true );
     }
 
-    on_move_effects();
+    on_move_effects( who );
 
     return true;
 }
@@ -8780,103 +9055,146 @@ static void autopulp_or_butcher( avatar &u )
 
 point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
 {
+    return place_character( get_avatar(), dest_loc, quick );
+}
+
+point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_loc, bool quick )
+{
     map &here = get_map();
+    const character_action_guard lifetime( who );
+    if( !here.inbounds( dest_loc ) || !lifetime ) {
+        return point_rel_sm::zero;
+    }
+    if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
+        if( occupant != &who ) {
+            return point_rel_sm::zero;
+        }
+    }
+    const auto original_position = who.pos_abs();
+    const auto still_at_origin = [&]() {
+        return lifetime && who.pos_abs() == original_position;
+    };
     const optional_vpart_position vp1 = here.veh_at( dest_loc );
     if( const std::optional<std::string> label = vp1.get_label() ) {
-        add_msg( m_info, _( "Label here: %s" ), *label );
+        who.add_msg_if_player( m_info, _( "Label here: %s" ), *label );
     }
     std::string signage = here.get_signage( dest_loc );
     if( !signage.empty() ) {
-        if( !u.has_trait( trait_ILLITERATE ) ) {
-            add_msg( m_info, _( "The sign says: %s" ), signage );
+        if( !who.has_trait( trait_ILLITERATE ) ) {
+            who.add_msg_if_player( m_info, _( "The sign says: %s" ), signage );
         } else {
-            add_msg( m_info, _( "There is a sign here, but you are unable to read it." ) );
+            who.add_msg_if_player( m_info, _( "There is a sign here, but you are unable to read it." ) );
         }
     }
     if( here.has_graffiti_at( dest_loc ) ) {
-        if( !u.has_trait( trait_ILLITERATE ) ) {
-            add_msg( m_info, _( "Written here: %s" ), here.graffiti_at( dest_loc ) );
+        if( !who.has_trait( trait_ILLITERATE ) ) {
+            who.add_msg_if_player( m_info, _( "Written here: %s" ), here.graffiti_at( dest_loc ) );
         } else {
-            add_msg( m_info, _( "Something is written here, but you are unable to read it." ) );
+            who.add_msg_if_player( m_info, _( "Something is written here, but you are unable to read it." ) );
         }
     }
-    // TODO: Move the stuff below to a Character method so that NPCs can reuse it
-    if( here.has_flag( ter_furn_flag::TFLAG_ROUGH, dest_loc ) && ( !u.in_vehicle ) &&
-        ( !u.is_mounted() ) && !u.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) ) {
-        if( one_in( 5 ) && u.get_armor_type( damage_bash, bodypart_id( "foot_l" ) ) < rng( 2, 5 ) ) {
-            add_msg( m_bad, _( "You hurt your left foot on the %s!" ),
-                     here.has_flag_ter( ter_furn_flag::TFLAG_ROUGH,
-                                        dest_loc ) ? here.tername( dest_loc ) : here.furnname(
-                         dest_loc ) );
-            u.deal_damage( nullptr, bodypart_id( "foot_l" ), damage_instance( damage_cut, 1 ) );
+    // Environmental effects belong to the body being placed.
+    if( here.has_flag( ter_furn_flag::TFLAG_ROUGH, dest_loc ) && ( !who.in_vehicle ) &&
+        ( !who.is_mounted() ) && !who.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) ) {
+        if( one_in( 5 ) && who.get_armor_type( damage_bash, bodypart_id( "foot_l" ) ) < rng( 2, 5 ) ) {
+            who.add_msg_if_player( m_bad, _( "You hurt your left foot on the %s!" ),
+                                   here.has_flag_ter( ter_furn_flag::TFLAG_ROUGH,
+                                           dest_loc ) ? here.tername( dest_loc ) : here.furnname(
+                                       dest_loc ) );
+            who.deal_damage( nullptr, bodypart_id( "foot_l" ), damage_instance( damage_cut, 1 ) );
+            if( !still_at_origin() ) {
+                return point_rel_sm::zero;
+            }
         }
-        if( one_in( 5 ) && u.get_armor_type( damage_bash, bodypart_id( "foot_r" ) ) < rng( 2, 5 ) ) {
-            add_msg( m_bad, _( "You hurt your right foot on the %s!" ),
-                     here.has_flag_ter( ter_furn_flag::TFLAG_ROUGH,
-                                        dest_loc ) ? here.tername( dest_loc ) : here.furnname(
-                         dest_loc ) );
-            u.deal_damage( nullptr, bodypart_id( "foot_l" ), damage_instance( damage_cut, 1 ) );
+        if( one_in( 5 ) && who.get_armor_type( damage_bash, bodypart_id( "foot_r" ) ) < rng( 2, 5 ) ) {
+            who.add_msg_if_player( m_bad, _( "You hurt your right foot on the %s!" ),
+                                   here.has_flag_ter( ter_furn_flag::TFLAG_ROUGH,
+                                           dest_loc ) ? here.tername( dest_loc ) : here.furnname(
+                                       dest_loc ) );
+            who.deal_damage( nullptr, bodypart_id( "foot_r" ), damage_instance( damage_cut, 1 ) );
+            if( !still_at_origin() ) {
+                return point_rel_sm::zero;
+            }
         }
+    }
+    if( !still_at_origin() ) {
+        return point_rel_sm::zero;
     }
     ///\EFFECT_DEX increases chance of avoiding cuts on sharp terrain
     if( here.has_flag( ter_furn_flag::TFLAG_SHARP, dest_loc ) && !one_in( 3 ) &&
-        !u.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) &&
-        !x_in_y( 1 + u.get_dex() / 2.0, 40 ) &&
-        ( !u.in_vehicle && !here.veh_at( dest_loc ) ) && ( !u.has_proficiency( proficiency_prof_parkour ) ||
-                one_in( 4 ) ) && ( u.has_trait( trait_THICKSKIN ) ? !one_in( 8 ) : true ) ) {
+        !who.has_flag( json_flag_ALL_TERRAIN_NAVIGATION ) &&
+        !x_in_y( 1 + who.get_dex() / 2.0, 40 ) &&
+        ( !who.in_vehicle && !here.veh_at( dest_loc ) ) &&
+        ( !who.has_proficiency( proficiency_prof_parkour ) ||
+          one_in( 4 ) ) && ( who.has_trait( trait_THICKSKIN ) ? !one_in( 8 ) : true ) ) {
         const int sharp_damage = rng( 1, 10 );
-        if( u.is_mounted() ) {
-            if( u.mounted_creature->get_armor_type( damage_cut, bodypart_id( "torso" ) ) < sharp_damage &&
-                u.mounted_creature->get_hp() > sharp_damage ) {
-                add_msg( _( "Your %s gets cut!" ), u.mounted_creature->get_name() );
-                u.mounted_creature->apply_damage( nullptr, bodypart_id( "torso" ), sharp_damage );
+        if( who.is_mounted() ) {
+            if( who.mounted_creature->get_armor_type( damage_cut, bodypart_id( "torso" ) ) < sharp_damage &&
+                who.mounted_creature->get_hp() > sharp_damage ) {
+                who.add_msg_if_player( _( "Your %s gets cut!" ), who.mounted_creature->get_name() );
+                who.mounted_creature->apply_damage( nullptr, bodypart_id( "torso" ), sharp_damage );
             }
         } else {
-            if( u.get_hp() > sharp_damage ) {
-                const bodypart_id bp = u.get_random_body_part();
-                if( u.deal_damage( nullptr, bp,
-                                   damage_instance( damage_cut, sharp_damage ) ).total_damage() > 0 ) {
+            if( who.get_hp() > sharp_damage ) {
+                const bodypart_id bp = who.get_random_body_part();
+                if( who.deal_damage( nullptr, bp,
+                                     damage_instance( damage_cut, sharp_damage ) ).total_damage() > 0 ) {
+                    if( !still_at_origin() ) {
+                        return point_rel_sm::zero;
+                    }
                     //~ 1$s - bodypart name in accusative, 2$s is terrain name.
-                    add_msg( m_bad, _( "You cut your %1$s on the %2$s!" ),
-                             body_part_name_accusative( bp ),
-                             here.has_flag_ter( ter_furn_flag::TFLAG_SHARP,
-                                                dest_loc ) ? here.tername( dest_loc ) : here.furnname(
-                                 dest_loc ) );
-                    if( !u.has_flag( json_flag_INFECTION_IMMUNE ) ) {
-                        const int chance_in = u.has_trait( trait_INFRESIST ) ? 1024 : 256;
+                    who.add_msg_if_player( m_bad, _( "You cut your %1$s on the %2$s!" ),
+                                           body_part_name_accusative( bp ),
+                                           here.has_flag_ter( ter_furn_flag::TFLAG_SHARP,
+                                                   dest_loc ) ? here.tername( dest_loc ) : here.furnname(
+                                               dest_loc ) );
+                    if( !who.has_flag( json_flag_INFECTION_IMMUNE ) ) {
+                        const int chance_in = who.has_trait( trait_INFRESIST ) ? 1024 : 256;
                         if( one_in( chance_in ) ) {
-                            u.add_effect( effect_tetanus, 1_turns, true );
+                            who.add_effect( effect_tetanus, 1_turns, true );
                         }
                     }
                 }
             }
         }
     }
+    if( !still_at_origin() ) {
+        return point_rel_sm::zero;
+    }
     if( here.has_flag( ter_furn_flag::TFLAG_UNSTABLE, dest_loc ) &&
-        !u.is_mounted() && !here.has_vehicle_floor( dest_loc ) ) {
-        u.add_effect( effect_bouldering, 1_turns, true );
-    } else if( u.has_effect( effect_bouldering ) ) {
-        u.remove_effect( effect_bouldering );
+        !who.is_mounted() && !here.has_vehicle_floor( dest_loc ) ) {
+        who.add_effect( effect_bouldering, 1_turns, true );
+    } else if( who.has_effect( effect_bouldering ) ) {
+        who.remove_effect( effect_bouldering );
+    }
+    if( !still_at_origin() ) {
+        return point_rel_sm::zero;
     }
     if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_SIGHT, dest_loc ) ) {
-        u.add_effect( effect_no_sight, 1_turns, true );
-    } else if( u.has_effect( effect_no_sight ) ) {
-        u.remove_effect( effect_no_sight );
+        who.add_effect( effect_no_sight, 1_turns, true );
+    } else if( who.has_effect( effect_no_sight ) ) {
+        who.remove_effect( effect_no_sight );
     }
 
+    if( !still_at_origin() ) {
+        return point_rel_sm::zero;
+    }
     // If we moved out of the nonant, we need update our map data
-    if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest_loc ) && u.has_effect( effect_onfire ) ) {
-        add_msg( _( "The water puts out the flames!" ) );
-        u.remove_effect( effect_onfire );
-        if( u.is_mounted() ) {
-            monster *mon = u.mounted_creature.get();
+    if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest_loc ) && who.has_effect( effect_onfire ) ) {
+        who.add_msg_if_player( _( "The water puts out the flames!" ) );
+        who.remove_effect( effect_onfire );
+        if( who.is_mounted() ) {
+            monster *mon = who.mounted_creature.get();
             if( mon->has_effect( effect_onfire ) ) {
                 mon->remove_effect( effect_onfire );
             }
         }
     }
 
-    if( monster *const mon_ptr = get_creature_tracker().creature_at<monster>( dest_loc ) ) {
+    if( !still_at_origin() ) {
+        return point_rel_sm::zero;
+    }
+    if( const auto mon_ptr = get_creature_tracker().find( here.get_abs( dest_loc ) ) ) {
         monster &critter = *mon_ptr;
         // Creatures under a solid surface coexist with the player on the tile
         if( critter.is_underwater() &&
@@ -8887,7 +9205,7 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
             // Immobile monsters can't be displaced.
             // TODO: handling for ridden creatures other than players mount.
             if( !critter.has_effect( effect_ridden ) ) {
-                if( u.is_mounted() ) {
+                if( who.is_mounted() ) {
                     std::vector<tripoint_bub_ms> maybe_valid;
                     for( const tripoint_bub_ms &jk : here.points_in_radius( critter.pos_bub(), 1 ) ) {
                         if( is_empty( jk ) ) {
@@ -8897,72 +9215,91 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
                     bool moved = false;
                     while( !maybe_valid.empty() ) {
                         if( critter.move_to( random_entry_removed( maybe_valid ) ) ) {
-                            add_msg( _( "You push the %s out of the way." ), critter.name() );
+                            who.add_msg_if_player( _( "You push the %s out of the way." ), critter.name() );
                             moved = true;
                         }
                     }
                     if( !moved ) {
-                        add_msg( _( "There is no room to push the %s out of the way." ), critter.name() );
+                        who.add_msg_if_player( _( "There is no room to push the %s out of the way." ), critter.name() );
                         return point_rel_sm::zero;
                     }
                 } else {
                     // Force the movement even though the player is there right now.
-                    const bool moved = critter.move_to( u.pos_bub(), /*force=*/false, /*step_on_critter=*/true );
+                    const bool moved = critter.move_to( who.pos_bub(), /*force=*/false, /*step_on_critter=*/true );
                     if( moved ) {
-                        add_msg( _( "You displace the %s." ), critter.name() );
+                        who.add_msg_if_player( _( "You displace the %s." ), critter.name() );
                     } else {
-                        add_msg( _( "You cannot move the %s out of the way." ), critter.name() );
+                        who.add_msg_if_player( _( "You cannot move the %s out of the way." ), critter.name() );
                         return point_rel_sm::zero;
                     }
                 }
-            } else if( !u.has_effect( effect_riding ) ) {
-                add_msg( _( "You cannot move the %s out of the way." ), critter.name() );
+            } else if( !who.has_effect( effect_riding ) ) {
+                who.add_msg_if_player( _( "You cannot move the %s out of the way." ), critter.name() );
                 return point_rel_sm::zero;
             }
         }
     }
 
+    if( !still_at_origin() ) {
+        return point_rel_sm::zero;
+    }
     // If the player is in a vehicle, unboard them from the current part
     bool was_in_control_same_pos = false;
-    if( u.in_vehicle ) {
-        if( u.pos_bub() == dest_loc ) {
+    if( who.in_vehicle ) {
+        if( who.pos_bub() == dest_loc ) {
             was_in_control_same_pos = true;
         } else {
-            here.unboard_vehicle( u.pos_bub() );
+            if( here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+                here.unboard_vehicle( who.pos_bub() );
+            } else {
+                who.in_vehicle = false;
+                who.controlling_vehicle = false;
+            }
         }
     }
     // Move the player
     // Start with z-level, to make it less likely that old functions (2D ones) freak out
     bool z_level_changed = false;
-    if( dest_loc.z() != here.get_abs_sub().z() ) {
+    if( who.is_avatar() && dest_loc.z() != here.get_abs_sub().z() ) {
         z_level_changed = vertical_shift( dest_loc.z() );
     }
 
-    if( u.is_hauling() && ( !here.can_put_items( dest_loc ) ||
-                            here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, dest_loc ) ||
-                            vp1 ) ) {
+    if( who.is_hauling() && ( !here.can_put_items( dest_loc ) ||
+                              here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, dest_loc ) ||
+                              vp1 ) ) {
         // returns false if not automoving in the first place
-        if( cancel_auto_move( *u.as_character(), _( "You're about to stop hauling!" ) ) ) {
+        if( who.is_avatar() && cancel_auto_move( who, _( "You're about to stop hauling!" ) ) ) {
             return point_rel_sm::zero;
         } else {
-            u.stop_hauling();
+            who.stop_hauling();
         }
     }
-    u.setpos( here, dest_loc );
-    if( u.is_mounted() ) {
-        monster *mon = u.mounted_creature.get();
-        mon->setpos( here, dest_loc );
+    who.setpos( here, dest_loc );
+    if( !lifetime ) {
+        return point_rel_sm::zero;
+    }
+    if( who.is_mounted() ) {
+        monster *mon = who.mounted_creature.get();
+        mon->setpos( here, who.pos_bub() );
         mon->process_triggers();
         here.creature_in_field( *mon );
     }
-    point_rel_sm submap_shift = update_map( u, z_level_changed );
+    if( !lifetime ) {
+        return point_rel_sm::zero;
+    }
+    const point_rel_sm submap_shift = who.is_avatar() ?
+                                      update_map( *who.as_avatar(), z_level_changed ) : point_rel_sm::zero;
     // Important: don't use dest_loc after this line. `update_map` may have shifted the map
     // and dest_loc was not adjusted and therefore is still in the un-shifted system and probably wrong.
     // If you must use it you can calculate the position in the new, shifted system with
     // adjusted_pos = ( old_pos.x - submap_shift.x * SEEX, old_pos.y - submap_shift.y * SEEY, old_pos.z )
 
+    if( !lifetime ) {
+        return point_rel_sm::zero;
+    }
     //Auto pulp or butcher and Auto foraging
-    if( !quick && get_option<bool>( "AUTO_FEATURES" )  && mostseen == 0 && !u.is_mounted() ) {
+    if( who.is_avatar() && !quick && get_option<bool>( "AUTO_FEATURES" )  && mostseen == 0 &&
+        !who.is_mounted() ) {
         static constexpr std::array<direction, 8> adjacentDir = {
             direction::NORTH, direction::NORTHEAST, direction::EAST, direction::SOUTHEAST,
             direction::SOUTH, direction::SOUTHWEST, direction::WEST, direction::NORTHWEST
@@ -8987,61 +9324,76 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
                            ( forage_trees && xter_t.has_examine( iexamine::harvest_ter_nectar ) ) ||
                            ( forage_crops && xter_t.has_examine( iexamine::harvest_plant_ex ) )
                          ) {
-                    xter_t.examine( u, pos );
+                    xter_t.examine( who, pos );
                 } else if( ( forage_everything && xfurn_t.has_examine( iexamine::harvest_furn ) ) ||
                            ( forage_everything && xfurn_t.has_examine( iexamine::harvest_furn_nectar ) ) ||
                            ( forage_crops && xfurn_t.has_examine( iexamine::harvest_plant_ex ) )
                          ) {
-                    xfurn_t.examine( u, pos );
+                    xfurn_t.examine( who, pos );
                 }
             };
 
             for( const direction &elem : adjacentDir ) {
-                forage( u.pos_bub() + displace_XY( elem ) );
+                forage( who.pos_bub() + displace_XY( elem ) );
             }
         }
 
-        autopulp_or_butcher( u );
+        autopulp_or_butcher( *who.as_avatar() );
     }
 
+    if( !lifetime ) {
+        return point_rel_sm::zero;
+    }
     // Auto pickup
-    if( !quick && !u.is_mounted() && get_option<bool>( "AUTO_PICKUP" ) && !u.is_hauling() &&
+    if( who.is_avatar() && !quick && !who.is_mounted() && get_option<bool>( "AUTO_PICKUP" ) &&
+        !who.is_hauling() &&
         ( !get_option<bool>( "AUTO_PICKUP_SAFEMODE" ) ||
-          !u.get_mon_visible().has_dangerous_creature_in_proximity ) &&
-        ( here.has_items( u.pos_bub() ) || get_option<bool>( "AUTO_PICKUP_ADJACENT" ) ) ) {
-        Pickup::autopickup( u.pos_bub() );
+          !who.as_avatar()->get_mon_visible().has_dangerous_creature_in_proximity ) &&
+        ( here.has_items( who.pos_bub() ) || get_option<bool>( "AUTO_PICKUP_ADJACENT" ) ) ) {
+        Pickup::autopickup( who.pos_bub() );
     }
 
+    if( !lifetime ) {
+        return point_rel_sm::zero;
+    }
     // If the new tile is a boardable part, board it
-    if( !was_in_control_same_pos && vp1.part_with_feature( "BOARDABLE", true ) && !u.is_mounted() ) {
-        here.board_vehicle( u.pos_bub(), &u );
+    if( !was_in_control_same_pos &&
+        here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true ) && !who.is_mounted() ) {
+        here.board_vehicle( who.pos_bub(), &who );
     }
 
     // Traps!
     // Try to detect.
-    u.search_surroundings();
-    if( u.is_mounted() ) {
-        here.creature_on_trap( *u.mounted_creature );
+    who.search_surroundings();
+    if( who.is_mounted() ) {
+        here.creature_on_trap( *who.mounted_creature );
     } else {
-        here.creature_on_trap( u );
+        here.creature_on_trap( who );
+    }
+    if( !lifetime ) {
+        return point_rel_sm::zero;
     }
     // Drench the player if swimmable
-    if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, u.pos_bub() ) &&
-        !here.has_flag_furn( "BRIDGE", u.pos_bub() ) &&
-        !( u.is_mounted() || ( u.in_vehicle && vp1->vehicle().can_float( here ) ) ) &&
-        !u.has_flag( json_flag_WATERWALKING ) ) {
-        u.drench( 80, u.get_drenching_body_parts( false, false ),
-                  false );
+    if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, who.pos_bub() ) &&
+        !here.has_flag_furn( "BRIDGE", who.pos_bub() ) &&
+        !( who.is_mounted() || ( who.in_vehicle && here.veh_at( who.pos_bub() ) &&
+                                 here.veh_at( who.pos_bub() )->vehicle().can_float( here ) ) ) &&
+        !who.has_flag( json_flag_WATERWALKING ) ) {
+        who.drench( 80, who.get_drenching_body_parts( false, false ),
+                    false );
     }
 
+    if( !lifetime ) {
+        return point_rel_sm::zero;
+    }
     // List items here
-    if( !quick && !here.has_flag( ter_furn_flag::TFLAG_SEALED, u.pos_bub() ) ) {
+    if( who.is_avatar() && !quick && !here.has_flag( ter_furn_flag::TFLAG_SEALED, who.pos_bub() ) ) {
         if( get_option<bool>( "NO_AUTO_PICKUP_ZONES_LIST_ITEMS" ) ||
-            !check_zone( zone_type_NO_AUTO_PICKUP, u.pos_bub() ) ) {
-            const map_stack &ms = here.i_at( u.pos_bub() );
-            if( u.is_blind() && !ms.empty() ) {
-                add_msg( _( "There's something here, but you can't see what it is." ) );
-            } else if( here.has_items( u.pos_bub() ) ) {
+            !check_zone( zone_type_NO_AUTO_PICKUP, who.pos_bub() ) ) {
+            const map_stack &ms = here.i_at( who.pos_bub() );
+            if( who.is_blind() && !ms.empty() ) {
+                who.add_msg_if_player( _( "There's something here, but you can't see what it is." ) );
+            } else if( here.has_items( who.pos_bub() ) ) {
                 std::vector<std::string> names;
                 std::vector<size_t> counts;
                 std::vector<item> items;
@@ -9096,18 +9448,18 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
 
                 if( get_option<bool>( "LOG_ITEMS_ON_THE_GROUND" ) ) {
                     if( names.size() == 1 ) {
-                        add_msg( _( "You see here %s." ), names[0] );
+                        who.add_msg_if_player( _( "You see here %s." ), names[0] );
                     } else if( names.size() == 2 ) {
-                        add_msg( _( "You see here %s and %s." ), names[0], names[1] );
+                        who.add_msg_if_player( _( "You see here %s and %s." ), names[0], names[1] );
                     } else if( names.size() == 3 ) {
-                        add_msg( _( "You see here %s, %s, and %s." ), names[0], names[1], names[2] );
+                        who.add_msg_if_player( _( "You see here %s, %s, and %s." ), names[0], names[1], names[2] );
                     } else if( and_the_rest < 7 ) {
-                        add_msg( n_gettext( "You see here %s, %s and %d more item.",
-                                            "You see here %s, %s and %d more items.",
-                                            and_the_rest ),
-                                 names[0], names[1], and_the_rest );
+                        who.add_msg_if_player( n_gettext( "You see here %s, %s and %d more item.",
+                                                          "You see here %s, %s and %d more items.",
+                                                          and_the_rest ),
+                                               names[0], names[1], and_the_rest );
                     } else {
-                        add_msg( _( "You see here %s and many more items." ), names[0] );
+                        who.add_msg_if_player( _( "You see here %s and many more items." ), names[0] );
                     }
                 }
             }
@@ -9115,15 +9467,17 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
     }
 
     if( !was_in_control_same_pos &&
-        ( vp1.part_with_feature( "CONTROL_ANIMAL", true ) ||
-          vp1.part_with_feature( "CONTROLS", true ) ) && u.in_vehicle && !u.is_mounted() ) {
-        add_msg( _( "There are vehicle controls here." ) );
-        if( !u.has_trait( trait_WAYFARER ) ) {
-            add_msg( m_info, _( "%s to drive." ), press_x( ACTION_CONTROL_VEHICLE ) );
+        ( here.veh_at( who.pos_bub() ).part_with_feature( "CONTROL_ANIMAL", true ) ||
+          here.veh_at( who.pos_bub() ).part_with_feature( "CONTROLS", true ) ) && who.in_vehicle &&
+        !who.is_mounted() ) {
+        who.add_msg_if_player( _( "There are vehicle controls here." ) );
+        if( !who.has_trait( trait_WAYFARER ) ) {
+            who.add_msg_if_player( m_info, _( "%s to drive." ), press_x( ACTION_CONTROL_VEHICLE ) );
         }
-    } else if( vp1.part_with_feature( "CONTROLS", true ) && u.in_vehicle &&
-               u.is_mounted() ) {
-        add_msg( _( "There are vehicle controls here but you cannot reach them whilst mounted." ) );
+    } else if( here.veh_at( who.pos_bub() ).part_with_feature( "CONTROLS", true ) && who.in_vehicle &&
+               who.is_mounted() ) {
+        who.add_msg_if_player(
+            _( "There are vehicle controls here but you cannot reach them whilst mounted." ) );
     }
     return submap_shift;
 }
@@ -9170,13 +9524,25 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
 
 bool game::phasing_move( const tripoint_bub_ms &dest_loc, const bool via_ramp )
 {
+    return phasing_move( get_avatar(), dest_loc, via_ramp );
+}
+
+bool game::phasing_move( Character &who, const tripoint_bub_ms &dest_loc, const bool via_ramp )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return false;
+    }
     map &here = get_map();
-    const tripoint_bub_ms pos = u.pos_bub( here );
+    const tripoint_bub_ms pos = who.pos_bub( here );
+    if( !here.inbounds( dest_loc ) || dest_loc == pos ) {
+        return false;
+    }
 
     const units::energy trigger_cost = bio_probability_travel->power_trigger;
 
-    if( !u.has_active_bionic( bio_probability_travel ) ||
-        u.get_power_level() < trigger_cost ) {
+    if( !who.has_active_bionic( bio_probability_travel ) ||
+        who.get_power_level() < trigger_cost ) {
         return false;
     }
 
@@ -9191,50 +9557,63 @@ bool game::phasing_move( const tripoint_bub_ms &dest_loc, const bool via_ramp )
     int tunneldist = 0;
     const point_rel_ms d( sgn( dest.x() - pos.x() ), sgn( dest.y() - pos.y() ) );
     creature_tracker &creatures = get_creature_tracker();
-    while( here.impassable( dest ) ||
-           ( creatures.creature_at( dest ) != nullptr && tunneldist > 0 ) ) {
+    while( here.inbounds( dest ) && ( here.impassable( dest ) ||
+                                      ( creatures.creature_at( dest ) != nullptr && tunneldist > 0 ) ) ) {
         //add 1 to tunnel distance for each impassable tile in the line
         tunneldist += 1;
         //Being dimensionally anchored prevents quantum shenanigans.
-        if( u.worn_with_flag( flag_DIMENSIONAL_ANCHOR ) ||
-            u.has_flag( flag_DIMENSIONAL_ANCHOR ) ) {
-            u.add_msg_if_player( m_info, _( "You are repelled by the barrier!" ) );
-            u.mod_power_level( -trigger_cost ); //cost of tunneling one tile.
+        if( who.worn_with_flag( flag_DIMENSIONAL_ANCHOR ) ||
+            who.has_flag( flag_DIMENSIONAL_ANCHOR ) ) {
+            who.add_msg_if_player( m_info, _( "You are repelled by the barrier!" ) );
+            who.mod_power_level( -trigger_cost ); //cost of tunneling one tile.
             return false;
         }
         if( tunneldist * trigger_cost >
-            u.get_power_level() ) { //oops, not enough energy! Tunneling costs 250 bionic power per impassable tile
-            add_msg( _( "You try to quantum tunnel through the barrier but are reflected!  Try again with more energy!" ) );
-            u.mod_power_level( -trigger_cost );
+            who.get_power_level() ) { //oops, not enough energy! Tunneling costs 250 bionic power per impassable tile
+            who.add_msg_if_player(
+                _( "You try to quantum tunnel through the barrier but are reflected!  Try again with more energy!" ) );
+            who.mod_power_level( -trigger_cost );
             return false;
         }
         if( tunneldist > 24 ) {
-            add_msg( m_info, _( "It's too dangerous to tunnel that far!" ) );
-            u.mod_power_level( -trigger_cost );
+            who.add_msg_if_player( m_info, _( "It's too dangerous to tunnel that far!" ) );
+            who.mod_power_level( -trigger_cost );
             return false;
         }
         dest.raw() += d.raw(); // TODO: Make += etc. work with relative coordinates.
     }
 
+    if( !here.inbounds( dest ) ) {
+        return false;
+    }
+
     if( tunneldist != 0 ) {
-        if( u.in_vehicle ) {
+        if( who.in_vehicle ) {
             here.unboard_vehicle( pos );
         }
 
-        add_msg( _( "You quantum tunnel through the %d-tile wide barrier!" ), tunneldist );
+        who.add_msg_if_player( _( "You quantum tunnel through the %d-tile wide barrier!" ), tunneldist );
         //tunneling costs 250 bionic power per impassable tile
-        u.mod_power_level( -( tunneldist * trigger_cost ) );
-        u.mod_moves( -to_moves<int>( 1_seconds ) ); //tunneling takes exactly one second
-        u.setpos( here, dest );
-
-        if( here.veh_at( pos ).part_with_feature( "BOARDABLE", true ) ) {
-            here.board_vehicle( pos, &u );
+        who.mod_power_level( -( tunneldist * trigger_cost ) );
+        who.mod_moves( -to_moves<int>( 1_seconds ) ); //tunneling takes exactly one second
+        who.setpos( here, dest );
+        if( !lifetime ) {
+            return true;
         }
 
-        u.grab( object_type::NONE );
-        on_move_effects();
-        here.creature_on_trap( u );
-        get_event_bus().send<event_type::phase_move>( tunneldist, true );
+        if( here.veh_at( who.pos_bub( here ) ).part_with_feature( "BOARDABLE", true ) ) {
+            here.board_vehicle( who.pos_bub( here ), &who );
+        }
+
+        who.grab( object_type::NONE );
+        on_move_effects( who );
+        if( !lifetime ) {
+            return true;
+        }
+        here.creature_on_trap( who );
+        if( lifetime && who.is_avatar() ) {
+            get_event_bus().send<event_type::phase_move>( tunneldist, true );
+        }
         return true;
     }
 
@@ -9243,8 +9622,21 @@ bool game::phasing_move( const tripoint_bub_ms &dest_loc, const bool via_ramp )
 
 bool game::phasing_move_enchant( const tripoint_bub_ms &dest_loc, const int phase_distance )
 {
+    return phasing_move_enchant( get_avatar(), dest_loc, phase_distance );
+}
+
+bool game::phasing_move_enchant( Character &who, const tripoint_bub_ms &dest_loc,
+                                 const int phase_distance )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return false;
+    }
     map &here = get_map();
-    const tripoint_bub_ms pos = u.pos_bub( here );
+    const tripoint_bub_ms pos = who.pos_bub( here );
+    if( !here.inbounds( dest_loc ) || dest_loc == pos ) {
+        return false;
+    }
 
     if( phase_distance < 1 ) {
         return false;
@@ -9259,8 +9651,8 @@ bool game::phasing_move_enchant( const tripoint_bub_ms &dest_loc, const int phas
                              sgn( dest.z() - pos.z() ) );
     creature_tracker &creatures = get_creature_tracker();
 
-    while( here.impassable( dest ) ||
-           ( creatures.creature_at( dest ) != nullptr && tunneldist > 0 ) ) {
+    while( here.inbounds( dest ) && ( here.impassable( dest ) ||
+                                      ( creatures.creature_at( dest ) != nullptr && tunneldist > 0 ) ) ) {
         tunneldist += d.z() != 0 ? z_level_height : 1;
         if( tunneldist > phase_distance ) {
             return false;
@@ -9276,31 +9668,43 @@ bool game::phasing_move_enchant( const tripoint_bub_ms &dest_loc, const int phas
         tunneldist += z_level_height;
     }
 
+    if( !here.inbounds( dest ) ) {
+        return false;
+    }
+
     if( tunneldist != 0 && tunneldist <= phase_distance ) {
-        if( u.in_vehicle ) {
+        if( who.in_vehicle ) {
             here.unboard_vehicle( pos );
         }
 
-        if( dest.z() != pos.z() ) {
+        if( who.is_avatar() && dest.z() != pos.z() ) {
             // calling vertical_shift here doesn't actually move the character for some reason, but it does perform other necessary tasks for vertical movement
             vertical_shift( dest.z() );
         }
 
         const bool is_diagonal = d.x() != 0 && d.y() != 0;
-        const int phase_move_cost = u.run_cost( 100, is_diagonal );
-        u.mod_moves( -phase_move_cost );
-        u.burn_move_stamina( phase_move_cost );
-        u.setpos( here, dest );
-
-        if( here.veh_at( pos ).part_with_feature( "BOARDABLE", true ) ) {
-            here.board_vehicle( pos, &u );
+        const int phase_move_cost = who.run_cost( 100, is_diagonal );
+        who.mod_moves( -phase_move_cost );
+        who.burn_move_stamina( phase_move_cost );
+        who.setpos( here, dest );
+        if( !lifetime ) {
+            return true;
         }
 
-        u.grab( object_type::NONE );
-        on_move_effects();
-        here.creature_on_trap( u );
+        if( here.veh_at( who.pos_bub( here ) ).part_with_feature( "BOARDABLE", true ) ) {
+            here.board_vehicle( who.pos_bub( here ), &who );
+        }
 
-        get_event_bus().send<event_type::phase_move>( tunneldist, false );
+        who.grab( object_type::NONE );
+        on_move_effects( who );
+        if( !lifetime ) {
+            return true;
+        }
+        here.creature_on_trap( who );
+
+        if( lifetime && who.is_avatar() ) {
+            get_event_bus().send<event_type::phase_move>( tunneldist, false );
+        }
         return true;
     }
 
@@ -9309,9 +9713,24 @@ bool game::phasing_move_enchant( const tripoint_bub_ms &dest_loc, const int phas
 
 bool game::can_move_furniture( tripoint_bub_ms fdest, const tripoint_rel_ms &dp )
 {
+    return can_move_furniture( get_avatar(), fdest, dp );
+}
+
+int game::grabbed_furn_move_time( const tripoint_rel_ms &dp )
+{
+    return grabbed_furn_move_time( get_avatar(), dp );
+}
+
+bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
+{
+    return grabbed_furn_move( get_avatar(), dp );
+}
+
+bool game::can_move_furniture( Character &who, tripoint_bub_ms fdest, const tripoint_rel_ms &dp )
+{
     map &here = get_map();
 
-    const bool pulling_furniture = dp.xy() == -u.grab_point.xy();
+    const bool pulling_furniture = dp.xy() == -who.grab_point.xy();
     const bool has_floor = here.has_floor_or_water( fdest );
     creature_tracker &creatures = get_creature_tracker();
     bool is_ramp_or_road = here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, fdest ) ||
@@ -9320,11 +9739,12 @@ bool game::can_move_furniture( tripoint_bub_ms fdest, const tripoint_rel_ms &dp 
     if( !here.passable( fdest ) ) {
         return false;
     }
-    if( creatures.creature_at<npc>( fdest ) != nullptr ||
-        creatures.creature_at<monster>( fdest ) != nullptr ) {
-        return false;
+    if( const Creature *occupant = creatures.creature_at( fdest ) ) {
+        if( occupant != &who || !pulling_furniture ) {
+            return false;
+        }
     }
-    if( !( !pulling_furniture || is_empty( u.pos_bub() + dp ) ) &&
+    if( !( !pulling_furniture || is_empty( who.pos_bub() + dp ) ) &&
         ( !has_floor || here.has_flag( ter_furn_flag::TFLAG_FLAT, fdest ) ||
           is_ramp_or_road ) ) {
         return false;
@@ -9343,13 +9763,16 @@ bool game::can_move_furniture( tripoint_bub_ms fdest, const tripoint_rel_ms &dp 
     return true;
 }
 
-int game::grabbed_furn_move_time( const tripoint_rel_ms &dp )
+int game::grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp )
 {
+    if( !who.validate_grab( get_map() ) ) {
+        return 0;
+    }
     map &here = get_map();
 
     // Furniture: pull, push, or standing still and nudging object around.
     // Can push furniture out of reach.
-    tripoint_bub_ms fpos = u.pos_bub() + u.grab_point;
+    tripoint_bub_ms fpos = who.pos_bub() + who.grab_point;
     // supposed position of grabbed furniture
     if( !here.has_furn( fpos ) ) {
         return 0;
@@ -9357,7 +9780,7 @@ int game::grabbed_furn_move_time( const tripoint_rel_ms &dp )
 
     tripoint_bub_ms fdest = fpos + tripoint_rel_ms( dp.xy(), 0 ); // intended destination of furniture.
 
-    const bool canmove = can_move_furniture( fdest, dp );
+    const bool canmove = can_move_furniture( who, fdest, dp );
     const furn_t &furntype = here.furn( fpos ).obj();
     const map_stack &ms = here.i_at( fdest );
     const int dst_items = ms.size();
@@ -9384,9 +9807,9 @@ int game::grabbed_furn_move_time( const tripoint_rel_ms &dp )
     }
     str_req += furniture_contents_weight / 4_kilogram;
     //ARM_STR affects dragging furniture
-    int str = u.get_arm_str();
+    int str = who.get_arm_str();
 
-    const float weary_mult = 1.0f / u.exertion_adjusted_move_multiplier();
+    const float weary_mult = 1.0f / who.exertion_adjusted_move_multiplier();
     if( !canmove ) { // NOLINT(bugprone-branch-clone)
         return 50 * weary_mult;
     } else if( str_req > str &&
@@ -9413,22 +9836,26 @@ int game::grabbed_furn_move_time( const tripoint_rel_ms &dp )
     return moves_total;
 }
 
-bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
+bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
 {
     map &here = get_map();
+    if( !who.validate_grab( here ) ) {
+        who.grab( object_type::NONE );
+        return false;
+    }
     // Furniture: pull, push, or standing still and nudging object around.
     // Can push furniture out of reach.
-    tripoint_bub_ms fpos = ( u.pos_bub() + u.grab_point );
+    tripoint_bub_ms fpos = ( who.pos_bub() + who.grab_point );
     // supposed position of grabbed furniture
     if( !here.has_furn( fpos ) ) {
         // Where did it go? We're grabbing thin air so reset.
-        add_msg( m_info, _( "No furniture at grabbed point." ) );
-        u.grab( object_type::NONE );
+        who.add_msg_if_player( m_info, _( "No furniture at grabbed point." ) );
+        who.grab( object_type::NONE );
         return false;
     }
 
-    const bool pushing_furniture = dp.xy() ==  u.grab_point.xy();
-    const bool pulling_furniture = dp.xy() == -u.grab_point.xy();
+    const bool pushing_furniture = dp.xy() ==  who.grab_point.xy();
+    const bool pulling_furniture = dp.xy() == -who.grab_point.xy();
     const bool shifting_furniture = !pushing_furniture && !pulling_furniture;
 
     // Intended destination of furniture.
@@ -9436,7 +9863,7 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
 
     // Unfortunately, game::is_empty fails for tiles we're standing on,
     // which will forbid pulling, so:
-    const bool canmove = can_move_furniture( fdest, dp );
+    const bool canmove = can_move_furniture( who, fdest, dp );
     // @TODO: it should be possible to move over invisible traps. This should probably
     // trigger the trap.
     // The current check (no move if trap) allows a player to detect invisible traps by
@@ -9471,35 +9898,35 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
         furniture_contents_weight += contained_item.weight();
     }
     str_req += furniture_contents_weight / 4_kilogram;
-    int str = u.get_arm_str();
+    int str = who.get_arm_str();
 
     if( !canmove ) {
         // TODO: What is something?
-        add_msg( _( "The %s collides with something." ), furntype.name() );
+        who.add_msg_if_player( _( "The %s collides with something." ), furntype.name() );
         return true;
-    } else if( str_req > str && u.get_perceived_pain() > 40 &&
-               !u.has_trait( trait_CENOBITE ) && !u.has_trait( trait_MASOCHIST ) &&
-               !u.has_trait( trait_MASOCHIST_MED ) ) {
-        add_msg( m_bad, _( "You are in too much pain to try moving the heavy %s!" ),
-                 furntype.name() );
+    } else if( str_req > str && who.get_perceived_pain() > 40 &&
+               !who.has_trait( trait_CENOBITE ) && !who.has_trait( trait_MASOCHIST ) &&
+               !who.has_trait( trait_MASOCHIST_MED ) ) {
+        who.add_msg_if_player( m_bad, _( "You are in too much pain to try moving the heavy %s!" ),
+                               furntype.name() );
         return true;
 
-    } else if( str_req > str && u.get_perceived_pain() > 50 &&
-               ( u.has_trait( trait_MASOCHIST ) || u.has_trait( trait_MASOCHIST_MED ) ) ) {
-        add_msg( m_bad,
-                 _( "Even with your appetite for pain, you are in too much pain to try moving the heavy %s!" ),
-                 furntype.name() );
+    } else if( str_req > str && who.get_perceived_pain() > 50 &&
+               ( who.has_trait( trait_MASOCHIST ) || who.has_trait( trait_MASOCHIST_MED ) ) ) {
+        who.add_msg_if_player( m_bad,
+                               _( "Even with your appetite for pain, you are in too much pain to try moving the heavy %s!" ),
+                               furntype.name() );
         return true;
 
         ///\EFFECT_STR determines ability to drag furniture
     } else if( str_req > str &&
                one_in( std::max( 20 - str_req - str, 2 ) ) ) {
-        add_msg( m_bad, _( "You strain yourself trying to move the heavy %s!" ),
-                 furntype.name() );
-        u.mod_pain( 1 ); // Hurt ourselves.
+        who.add_msg_if_player( m_bad, _( "You strain yourself trying to move the heavy %s!" ),
+                               furntype.name() );
+        who.mod_pain( 1 ); // Hurt ourselves.
         return true; // furniture and or obstacle wins.
     } else if( !src_item_ok && !only_liquid_items && dst_items > 0 ) {
-        add_msg( _( "There's stuff in the way." ) );
+        who.add_msg_if_player( _( "There's stuff in the way." ) );
         return true;
     }
 
@@ -9508,23 +9935,23 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
         int move_penalty = std::pow( str_req, 2.0 ) + 100.0;
         if( move_penalty <= 1000 ) {
             if( str >= str_req - 3 ) {
-                add_msg( m_bad, _( "The %s is really heavy!" ), furntype.name() );
+                who.add_msg_if_player( m_bad, _( "The %s is really heavy!" ), furntype.name() );
                 if( one_in( 3 ) ) {
-                    add_msg( m_bad, _( "You fail to move the %s." ), furntype.name() );
+                    who.add_msg_if_player( m_bad, _( "You fail to move the %s." ), furntype.name() );
                     return true;
                 }
             } else {
-                add_msg( m_bad, _( "The %s is too heavy for you to budge." ), furntype.name() );
+                who.add_msg_if_player( m_bad, _( "The %s is too heavy for you to budge." ), furntype.name() );
                 return true;
             }
         }
         if( move_penalty > 500 ) {
-            add_msg( _( "Moving the heavy %s is taking a lot of time!" ),
-                     furntype.name() );
+            who.add_msg_if_player( _( "Moving the heavy %s is taking a lot of time!" ),
+                                   furntype.name() );
         } else if( move_penalty > 200 ) {
             if( one_in( 3 ) ) { // Nag only occasionally.
-                add_msg( _( "It takes some time to move the heavy %s." ),
-                         furntype.name() );
+                who.add_msg_if_player( _( "It takes some time to move the heavy %s." ),
+                                       furntype.name() );
             }
         }
     }
@@ -9532,16 +9959,17 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
                    _( "a scraping noise." ), true, "misc", "scraping" );
 
     if( here.veh_at( fdest ) ) {
-        u.grab( object_type::NONE );
+        who.grab( object_type::NONE );
         here.veh_at( fdest )->part_with_feature( "FURNITURE_TIEDOWN", true )->part().load_furniture( here,
                 fpos );
         here.furn_set( fpos, furn_str_id::NULL_ID(), true );
         here.veh_at( fdest )->vehicle().invalidate_mass();
-        add_msg( _( "You load the furniture onto the vehicle." ) );
-        tripoint_rel_ms new_grab_pt( fdest - ( u.pos_bub() +
+        who.add_msg_if_player( _( "You load the furniture onto the vehicle." ) );
+        tripoint_rel_ms new_grab_pt( fdest - ( who.pos_bub() +
                                                ( shifting_furniture ? tripoint_rel_ms::zero : dp ) ) );
         if( std::abs( new_grab_pt.x() ) < 2 && std::abs( new_grab_pt.y() ) < 2 ) {
-            u.grab( object_type::FURNITURE_ON_VEHICLE, new_grab_pt );
+            who.grab( object_type::FURNITURE_ON_VEHICLE, new_grab_pt );
+            who.rebind_grab( here, fdest );
         }
         return shifting_furniture;
     } else {
@@ -9549,6 +9977,8 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
         here.furn_set( fdest, here.furn( fpos ), false, false, true );
         here.furn_set( fpos, furn_str_id::NULL_ID(), true );
     }
+
+    who.rebind_grab( here, fdest );
 
     if( fire_intensity == 1 && !pulling_furniture ) {
         here.remove_field( fpos, fd_fire );
@@ -9569,43 +9999,40 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
             std::move( ms.begin(), ms.end(),
                        std::back_inserter( temp ) );
             here.i_clear( fpos );
-            for( auto item_iter = ms.begin();
-                 item_iter != ms.end(); ++item_iter ) {
-                ms.insert( *item_iter );
-            }
-            here.i_clear( fdest );
+            map_stack destination = here.i_at( fdest );
             for( item &cur_item : temp ) {
-                ms.insert( cur_item );
+                destination.insert( cur_item );
             }
         } else {
-            add_msg( _( "Stuff spills from the %s!" ), furntype.name() );
+            who.add_msg_if_player( _( "Stuff spills from the %s!" ), furntype.name() );
         }
     }
 
     if( !here.has_floor_or_water( fdest ) && !here.has_flag( ter_furn_flag::TFLAG_FLAT, fdest ) ) {
         std::string danger_tile = enumerate_as_string( get_dangerous_tile( fdest ) );
-        add_msg( _( "You let go of the %1$s as it falls down the %2$s." ), furntype.name(), danger_tile );
-        u.grab( object_type::NONE );
+        who.add_msg_if_player( _( "You let go of the %1$s as it falls down the %2$s." ), furntype.name(),
+                               danger_tile );
+        who.grab( object_type::NONE );
         return true;
     }
 
     if( shifting_furniture ) {
         // We didn't move
-        tripoint_rel_ms d_sum = u.grab_point + dp;
+        tripoint_rel_ms d_sum = who.grab_point + dp;
         if( std::abs( d_sum.x() ) < 2 && std::abs( d_sum.y() ) < 2 ) {
-            u.grab_point = d_sum; // furniture moved relative to us
+            who.grab_point = d_sum; // furniture moved relative to us
         } else { // we pushed furniture out of reach
-            add_msg( _( "You let go of the %s." ), furntype.name() );
-            u.grab( object_type::NONE );
+            who.add_msg_if_player( _( "You let go of the %s." ), furntype.name() );
+            who.grab( object_type::NONE );
         }
         return true; // We moved furniture but stayed still.
     }
 
     if( pushing_furniture && here.impassable( fpos ) ) {
         // Not sure how that chair got into a wall, but don't let player follow.
-        add_msg( _( "You let go of the %1$s as it slides past %2$s." ),
-                 furntype.name(), here.tername( fdest ) );
-        u.grab( object_type::NONE );
+        who.add_msg_if_player( _( "You let go of the %1$s as it slides past %2$s." ),
+                               furntype.name(), here.tername( fdest ) );
+        who.grab( object_type::NONE );
         return true;
     }
 
@@ -9614,74 +10041,109 @@ bool game::grabbed_furn_move( const tripoint_rel_ms &dp )
 
 bool game::grabbed_move( const tripoint_rel_ms &dp, const bool via_ramp, bool stairs_move )
 {
-    if( u.get_grab_type() == object_type::NONE ) {
+    return grabbed_move( get_avatar(), dp, via_ramp, stairs_move );
+}
+
+bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool via_ramp,
+                         bool stairs_move, const walk_move_choices *choices )
+{
+    if( who.get_grab_type() == object_type::NONE ) {
         return false;
     }
 
     // vehicle: pulling, pushing, or moving around the grabbed object.
-    if( u.get_grab_type() == object_type::VEHICLE ) {
-        return grabbed_veh_move_helper( dp, stairs_move );
+    if( who.get_grab_type() == object_type::VEHICLE ) {
+        return grabbed_veh_move_helper( who, dp, stairs_move );
     }
 
-    if( u.get_grab_type() == object_type::FURNITURE ) {
-        u.assign_activity( move_furniture_activity_actor( dp, via_ramp ) );
+    if( who.get_grab_type() == object_type::FURNITURE ||
+        who.get_grab_type() == object_type::FURNITURE_ON_VEHICLE ) {
+        const activity_execution execution = who.activity.execution();
+        const character_action_guard lifetime( who );
+        who.assign_activity( move_furniture_activity_actor( dp, via_ramp,
+                             choices ? std::make_optional( *choices ) : std::nullopt ) );
+        if( lifetime ) {
+            who.activity.set_execution( execution );
+        }
         return true;
     }
 
-    if( u.get_grab_type() == object_type::FURNITURE_ON_VEHICLE ) {
-        u.assign_activity( move_furniture_on_vehicle_activity_actor( dp, via_ramp ) );
-        return true;
-    }
-
-    add_msg( m_info, _( "Nothing at grabbed point %d,%d,%d or bad grabbed object type." ),
-             u.grab_point.x(), u.grab_point.y(), u.grab_point.z() );
-    u.grab( object_type::NONE );
+    who.add_msg_if_player( m_info, _( "Nothing at grabbed point %d,%d,%d or bad grabbed object type." ),
+                           who.grab_point.x(), who.grab_point.y(), who.grab_point.z() );
+    who.grab( object_type::NONE );
     return false;
 }
 
 void game::on_move_effects()
 {
-    // TODO: Move this to a character method
-    if( !u.is_mounted() ) {
+    on_move_effects( get_avatar() );
+}
+
+void game::on_move_effects( Character &who )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return;
+    }
+    if( !who.is_mounted() ) {
         // FIXME: stop initializing new items every time this runs.
         // Can't make it static, itype can change if we quit to menu and load a different set of mods...
         const item muscle( fuel_type_muscle );
-        for( const bionic_id &bid : u.get_bionic_fueled_with_muscle() ) {
-            if( u.has_active_bionic( bid ) ) {// active power gen
-                u.mod_power_level( muscle.fuel_energy() * bid->fuel_efficiency );
+        for( const bionic_id &bid : who.get_bionic_fueled_with_muscle() ) {
+            if( who.has_active_bionic( bid ) ) {// active power gen
+                who.mod_power_level( muscle.fuel_energy() * bid->fuel_efficiency );
             } else {// passive power gen
-                u.mod_power_level( muscle.fuel_energy() * bid->passive_fuel_efficiency );
+                who.mod_power_level( muscle.fuel_energy() * bid->passive_fuel_efficiency );
             }
         }
-        if( u.has_active_bionic( bio_jointservo ) ) {
-            if( u.is_running() ) {
-                u.mod_power_level( -bio_jointservo->power_trigger * 1.55 );
+        if( !lifetime ) {
+            return;
+        }
+        if( who.has_active_bionic( bio_jointservo ) ) {
+            if( who.is_running() ) {
+                who.mod_power_level( -bio_jointservo->power_trigger * 1.55 );
             } else {
-                u.mod_power_level( -bio_jointservo->power_trigger );
+                who.mod_power_level( -bio_jointservo->power_trigger );
             }
 
+            if( !lifetime ) {
+                return;
+            }
             // If there's not enough power to run Joint Servo, forcefully turn it off
-            if( u.get_power_level() <= 0_mJ ) {
-                u.force_bionic_deactivation( **u.find_bionic_by_type( bio_jointservo ) );
-                u.add_msg_if_player( m_bad, _( "Your Joint Servo bionic powers down." ) );
+            if( who.get_power_level() <= 0_mJ ) {
+                if( const auto servo = who.find_bionic_by_type( bio_jointservo ) ) {
+                    who.force_bionic_deactivation( **servo );
+                }
+                if( !lifetime ) {
+                    return;
+                }
+                who.add_msg_if_player( m_bad, _( "Your Joint Servo bionic powers down." ) );
             }
         }
     }
 
-    if( u.is_running() ) {
+    if( who.is_running() ) {
         // If mounted, don't break trot
-        if( !u.is_mounted() && !u.can_run() ) {
-            u.reset_move_mode();
+        if( !who.is_mounted() && !who.can_run() ) {
+            who.set_movement_mode( move_mode_id( "walk" ) );
         }
-        if( u.get_stamina() <= 0 ) {
-            u.add_effect( effect_winded, 10_turns );
+        if( !lifetime ) {
+            return;
+        }
+        if( who.get_stamina() <= 0 ) {
+            who.add_effect( effect_winded, 10_turns );
         }
     }
 
+    if( !lifetime ) {
+        return;
+    }
     // apply martial art move bonuses
-    u.martial_arts_data->ma_onmove_effects( u );
+    who.martial_arts_data->ma_onmove_effects( who );
 
-    sfx::do_ambient();
+    if( lifetime && who.is_avatar() ) {
+        sfx::do_ambient();
+    }
 }
 
 void game::on_options_changed()
@@ -9973,34 +10435,55 @@ static std::optional<tripoint_bub_ms> find_empty_spot_nearby( const tripoint_bub
 
 void game::vertical_move( int movez, bool force, bool peeking )
 {
-    if( u.has_flag( json_flag_CANNOT_MOVE ) ) {
+    vertical_move( get_avatar(), movez, force, peeking );
+}
+
+void game::vertical_move( Character &who, int movez, bool force, bool peeking,
+                          const vertical_move_choices *choices )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return;
+    }
+    const bool local_input = who.is_avatar() && !choices;
+    const tripoint_abs_ms origin = who.pos_abs();
+    const auto mount = who.mounted_creature;
+    const auto at_origin = [&]() {
+        return lifetime && who.pos_abs() == origin && who.mounted_creature == mount;
+    };
+    const int64_t requested_z = static_cast<int64_t>( who.posz() ) + movez;
+    if( requested_z < -OVERMAP_DEPTH || requested_z > OVERMAP_HEIGHT ) {
+        who.add_msg_if_player( _( "The way is blocked off." ) );
+        return;
+    }
+    if( who.has_flag( json_flag_CANNOT_MOVE ) ) {
         return;
     }
 
-    if( u.is_mounted() ) {
-        monster *mons = u.mounted_creature.get();
+    if( who.is_mounted() ) {
+        monster *mons = who.mounted_creature.get();
         if( mons->has_flag( mon_flag_RIDEABLE_MECH ) ) {
             if( !mons->check_mech_powered() ) {
-                add_msg( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
-                         mons->get_name() );
+                who.add_msg_if_player( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
+                                       mons->get_name() );
                 return;
             }
         }
     }
 
     map &here = get_map();
-    tripoint_bub_ms pos = u.pos_bub( here );
+    tripoint_bub_ms pos = who.pos_bub( here );
 
     // Force means we're going down, even if there's no staircase, etc.
     bool climbing = false;
     climbing_aid_id climbing_aid = climbing_aid_default;
     int move_cost = 100;
     tripoint_bub_ms stairs( pos.xy(), pos.z() + movez );
-    bool wall_cling = u.has_flag( json_flag_WALL_CLING );
+    bool wall_cling = who.has_flag( json_flag_WALL_CLING );
     bool adjacent_climb = false;
-    bool climb_flying = u.has_flag( json_flag_CLIMB_FLYING );
+    bool climb_flying = who.has_flag( json_flag_CLIMB_FLYING );
     if( !force && movez == 1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) &&
-        !u.is_underwater() ) {
+        !who.is_underwater() ) {
         // Climbing
 
         for( const tripoint_bub_ms &p : here.points_in_radius( pos, 2 ) ) {
@@ -10011,37 +10494,45 @@ void game::vertical_move( int movez, bool force, bool peeking )
         if( here.has_floor_or_support( stairs ) ) {
             tripoint_bub_ms dest_phase = pos;
             dest_phase.z() += 1;
-            if( phasing_move_enchant( dest_phase, u.calculate_by_enchantment( 0,
+            if( phasing_move_enchant( who, dest_phase, who.calculate_by_enchantment( 0,
                                       enchant_vals::mod::PHASE_DISTANCE ) ) ) {
                 return;
             } else {
-                add_msg( m_info, _( "You can't climb here - there's a ceiling above your head." ) );
+                who.add_msg_if_player( m_info, _( "You can't climb here - there's a ceiling above your head." ) );
                 return;
             }
         }
 
-        if( !climb_flying && ( u.get_working_arm_count() < 1 &&
+        if( !climb_flying && ( who.get_working_arm_count() < 1 &&
                                !here.has_flag( ter_furn_flag::TFLAG_LADDER, pos ) ) ) {
-            add_msg( m_info, _( "You can't climb because your arms are too damaged or encumbered." ) );
+            who.add_msg_if_player( m_info,
+                                   _( "You can't climb because your arms are too damaged or encumbered." ) );
             return;
         }
 
-        const int cost = u.climbing_cost( pos, stairs );
+        const int cost = who.climbing_cost( pos, stairs );
         add_msg_debug( debugmode::DF_GAME, "Climb cost %d", cost );
         const bool can_climb_here = cost > 0 ||
-                                    u.has_flag( json_flag_CLIMB_NO_LADDER ) || wall_cling || climb_flying;
+                                    who.has_flag( json_flag_CLIMB_NO_LADDER ) || wall_cling || climb_flying;
         if( !can_climb_here && !adjacent_climb ) {
-            add_msg( m_info, _( "You can't climb here - you need walls and/or furniture to brace against." ) );
+            who.add_msg_if_player( m_info,
+                                   _( "You can't climb here - you need walls and/or furniture to brace against." ) );
             return;
         }
 
-        const item_location weapon = u.get_wielded_item();
+        const item_location weapon = who.get_wielded_item();
         if( !climb_flying && !here.has_flag( ter_furn_flag::TFLAG_LADDER, pos ) && weapon &&
-            weapon->is_two_handed( u ) ) {
-            if( query_yn(
-                    _( "You can't climb because you have to wield a %s with both hands.\n\nPut it away?" ),
-                    weapon->tname() ) ) {
-                if( !u.unwield() ) {
+            weapon->is_two_handed( who ) ) {
+            if( choices ) {
+                if( !choices->unwield || weapon->uid().get_value() != choices->wielded_uid ||
+                    !execute_item_disposition( who, weapon, *choices->unwield ) || !at_origin() ||
+                    who.get_wielded_item() ) {
+                    return;
+                }
+            } else if( local_input && query_yn(
+                           _( "You can't climb because you have to wield a %s with both hands.\n\nPut it away?" ),
+                           weapon->tname() ) ) {
+                if( !who.unwield() ) {
                     return;
                 }
             } else {
@@ -10049,23 +10540,11 @@ void game::vertical_move( int movez, bool force, bool peeking )
             }
         }
 
-        std::vector<tripoint_bub_ms> pts;
-        if( climb_flying ) {
-            pts.push_back( stairs );
-        } else {
-            for( const tripoint_bub_ms &pt : here.points_in_radius( stairs, 1 ) ) {
-                if( here.passable_through( pt ) ) {
-                    pts.push_back( pt );
-                }
-            }
-            if( wall_cling && here.is_wall_adjacent( stairs ) ) {
-                pts.push_back( stairs );
-            }
-        }
+        const auto pts = climb_up_destinations( who, here, stairs );
 
         if( pts.empty() ) {
-            add_msg( m_info,
-                     _( "You can't climb here - there is no terrain above you that would support your weight." ) );
+            who.add_msg_if_player( m_info,
+                                   _( "You can't climb here - there is no terrain above you that would support your weight." ) );
             return;
         } else {
             // TODO: Make it an extended action
@@ -10073,20 +10552,24 @@ void game::vertical_move( int movez, bool force, bool peeking )
             climbing_aid = climbing_aid_furn_CLIMBABLE;
 
             if( climb_flying ) {
-                u.set_activity_level( MODERATE_EXERCISE );
+                who.set_activity_level( MODERATE_EXERCISE );
                 move_cost = 100;
             } else {
-                u.set_activity_level( EXTRA_EXERCISE );
+                who.set_activity_level( EXTRA_EXERCISE );
                 move_cost = cost == 0 ? 1000 : cost + 500;
             }
 
             // climbing up, select which tile to climb to
-            const std::optional<tripoint_bub_ms> pnt = point_selection_menu( pts );
-            if( !pnt ) {
+            const std::optional<tripoint_bub_ms> pnt = choices ?
+                    ( choices->landing && here.inbounds( *choices->landing ) ?
+                      std::make_optional( here.get_bub( *choices->landing ) ) : std::nullopt ) :
+                    local_input ? point_selection_menu( pts ) : std::nullopt;
+            if( !at_origin() || !pnt || std::find( pts.begin(), pts.end(), *pnt ) == pts.end() ) {
                 return;
             }
             if( here.dangerous_field_at( *pnt ) &&
-                !query_yn( _( "There appears to be a dangerous field at your destination.  Continue?" ) ) ) {
+                !( choices ? choices->allow_danger : local_input &&
+                   query_yn( _( "There appears to be a dangerous field at your destination.  Continue?" ) ) ) ) {
                 return;
             }
             stairs = *pnt;
@@ -10094,53 +10577,57 @@ void game::vertical_move( int movez, bool force, bool peeking )
     }
 
     if( !force && movez == -1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos ) &&
-        !u.is_underwater() && !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR_WATER, pos ) &&
-        !u.has_effect( effect_gliding ) ) {
+        !who.is_underwater() && !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR_WATER, pos ) &&
+        !who.has_effect( effect_gliding ) ) {
         tripoint_bub_ms dest_phase = pos;
         dest_phase.z() -= 1;
 
         if( wall_cling && !here.has_floor_or_support( pos ) ) {
             climbing = true;
             climbing_aid = climbing_aid_ability_WALL_CLING;
-            u.set_activity_level( EXTRA_EXERCISE );
-            u.burn_energy_all( -750 );
+            who.set_activity_level( EXTRA_EXERCISE );
+            who.burn_energy_all( -750 );
             move_cost += 500;
-        } else if( phasing_move_enchant( dest_phase, u.calculate_by_enchantment( 0,
+        } else if( phasing_move_enchant( who, dest_phase, who.calculate_by_enchantment( 0,
                                          enchant_vals::mod::PHASE_DISTANCE ) ) ) {
             return;
         } else {
-            add_msg( m_info, _( "You can't go down here!" ) );
+            who.add_msg_if_player( m_info, _( "You can't go down here!" ) );
             return;
         }
     } else if( !climbing && !force && movez == 1 &&
-               !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) && !u.is_underwater() ) {
-        add_msg( m_info, _( "You can't go up here!" ) );
+               !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) && !who.is_underwater() ) {
+        who.add_msg_if_player( m_info, _( "You can't go up here!" ) );
         return;
     }
 
     if( force ) {
         // Let go of a grabbed cart.
-        u.grab( object_type::NONE );
+        who.grab( object_type::NONE );
     }
 
-    // TODO: Use u.posz() instead of m.abs_sub
-    const int z_after = here.get_abs_sub().z() + movez;
+    const int z_after = static_cast<int>( requested_z );
     if( z_after < -OVERMAP_DEPTH ) {
-        add_msg( m_info, _( "Halfway down, the way down becomes blocked off." ) );
+        who.add_msg_if_player( m_info, _( "Halfway down, the way down becomes blocked off." ) );
         return;
     } else if( z_after > OVERMAP_HEIGHT ) {
-        add_msg( m_info, _( "Halfway up, the way up becomes blocked off." ) );
+        who.add_msg_if_player( m_info, _( "Halfway up, the way up becomes blocked off." ) );
         return;
     }
 
-    if( !u.move_effects( false ) && !force ) {
+    if( !who.move_effects( false ) && !force ) {
         // move_effects determined we could not move, waste all moves
-        u.set_moves( 0 );
+        if( lifetime ) {
+            who.set_moves( 0 );
+        }
         return;
     }
 
+    if( !at_origin() ) {
+        return;
+    }
     if( climbing &&
-        slip_down( ( ( movez > 1 ) ? climb_maneuver::up : climb_maneuver::down ), climbing_aid ) ) {
+        slip_down( who, movez > 0 ? climb_maneuver::up : climb_maneuver::down, climbing_aid ) ) {
         return;
     }
 
@@ -10149,7 +10636,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
     bool submerging = false;
     // > and < are used for diving underwater.
     if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos ) ) {
-        if( !u.has_flag( json_flag_WATERWALKING ) ) {
+        if( !who.has_flag( json_flag_WATERWALKING ) ) {
             swimming = true;
         }
         const ter_id &target_ter = here.ter( pos + tripoint( 0, 0, movez ) );
@@ -10160,46 +10647,46 @@ void game::vertical_move( int movez, bool force, bool peeking )
             // ...and we're trying to swim down
             if( movez == -1 ) {
                 // ...and we're already submerged
-                if( u.is_underwater() ) {
+                if( who.is_underwater() ) {
                     // ...and there's more water beneath us.
                     if( target_ter->has_flag( ter_furn_flag::TFLAG_WATER_CUBE ) ) {
                         // Then go ahead and move down.
-                        add_msg( _( "You swim down." ) );
+                        who.add_msg_if_player( _( "You swim down." ) );
                     } else {
                         // There's no more water beneath us.
-                        add_msg( m_info,
-                                 _( "You are already underwater and there is no more water beneath you to swim down!" ) );
+                        who.add_msg_if_player( m_info,
+                                               _( "You are already underwater and there is no more water beneath you to swim down!" ) );
                         return;
                     }
                 }
                 // ...and we're not already submerged.
                 else {
                     // Check for a flotation device or the WATERWALKING flag first before allowing us to submerge.
-                    if( u.worn_with_flag( flag_FLOTATION ) ) {
-                        add_msg( m_info, _( "You can't dive while wearing a flotation device." ) );
+                    if( who.worn_with_flag( flag_FLOTATION ) ) {
+                        who.add_msg_if_player( m_info, _( "You can't dive while wearing a flotation device." ) );
                         return;
                     }
-                    if( u.has_flag( json_flag_WATERWALKING ) ) {
-                        add_msg( m_info, _( "You can't dive while walking on water." ) );
+                    if( who.has_flag( json_flag_WATERWALKING ) ) {
+                        who.add_msg_if_player( m_info, _( "You can't dive while walking on water." ) );
                         return;
                     }
 
                     // Then dive under the surface.
-                    u.set_underwater( true );
-                    add_msg( _( "You dive underwater!" ) );
+                    who.set_underwater( true );
+                    who.add_msg_if_player( _( "You dive underwater!" ) );
                     submerging = true;
                 }
             }
             // ...and we're trying to surface
             else if( movez == 1 ) {
                 // ... and we're already submerged
-                if( u.is_underwater() ) {
-                    if( u.swim_speed() < 500 || u.shoe_type_count( itype_swim_fins ) ) {
-                        u.set_underwater( false );
-                        add_msg( _( "You surface." ) );
+                if( who.is_underwater() ) {
+                    if( who.swim_speed() < 500 || who.shoe_type_count( itype_swim_fins ) ) {
+                        who.set_underwater( false );
+                        who.add_msg_if_player( _( "You surface." ) );
                         surfacing = true;
                     } else {
-                        add_msg( m_info, _( "You try to surface but can't!" ) );
+                        who.add_msg_if_player( m_info, _( "You try to surface but can't!" ) );
                         return;
                     }
                 }
@@ -10208,8 +10695,8 @@ void game::vertical_move( int movez, bool force, bool peeking )
         // If we're in a water tile that is entirely water
         else if( here.has_flag( ter_furn_flag::TFLAG_WATER_CUBE, pos ) ) {
             // If you're at this point, you should already be underwater, but force that to be the case.
-            if( !u.is_underwater() ) {
-                u.set_underwater( true );
+            if( !who.is_underwater() ) {
+                who.set_underwater( true );
             }
 
             // ...and we're trying to swim down
@@ -10217,10 +10704,10 @@ void game::vertical_move( int movez, bool force, bool peeking )
                 // ...and there's more water beneath us.
                 if( target_ter->has_flag( ter_furn_flag::TFLAG_WATER_CUBE ) ) {
                     // Then go ahead and move down.
-                    add_msg( _( "You swim down." ) );
+                    who.add_msg_if_player( _( "You swim down." ) );
                 } else {
-                    add_msg( m_info,
-                             _( "You are already underwater and there is no more water beneath you to swim down!" ) );
+                    who.add_msg_if_player( m_info,
+                                           _( "You are already underwater and there is no more water beneath you to swim down!" ) );
                     return;
                 }
             }
@@ -10230,9 +10717,10 @@ void game::vertical_move( int movez, bool force, bool peeking )
                 if( target_ter->has_flag( ter_furn_flag::TFLAG_WATER_CUBE ) ||
                     target_ter->has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
                     // Then go ahead and move up.
-                    add_msg( _( "You swim up." ) );
+                    who.add_msg_if_player( _( "You swim up." ) );
                 } else {
-                    add_msg( m_info, _( "You are already underwater and there is no water above you to swim up!" ) );
+                    who.add_msg_if_player( m_info,
+                                           _( "You are already underwater and there is no water above you to swim up!" ) );
                     return;
                 }
             }
@@ -10243,8 +10731,9 @@ void game::vertical_move( int movez, bool force, bool peeking )
     bool rope_ladder = false;
     // TODO: Remove the stairfinding, make the mapgen gen aligned maps
     if( !force && !climbing && !swimming ) {
-        const std::optional<tripoint_bub_ms> pnt = find_or_make_stairs( here, z_after, rope_ladder, peeking,
-                pos );
+        const std::optional<tripoint_bub_ms> pnt = find_or_make_stairs( who, here, z_after, rope_ladder,
+                peeking,
+                pos, choices );
         if( !pnt ) {
             return;
         }
@@ -10252,13 +10741,23 @@ void game::vertical_move( int movez, bool force, bool peeking )
     }
 
     if( !force && !climbing && here.dangerous_field_at( stairs ) &&
-        !query_yn( _( "There appears to be a dangerous field at your destination.  Continue?" ) ) ) {
+        !( choices ? choices->allow_danger : local_input &&
+           query_yn( _( "There appears to be a dangerous field at your destination.  Continue?" ) ) ) ) {
         return;
     }
 
+    if( !at_origin() || !here.inbounds( stairs ) ) {
+        return;
+    }
+    if( const Character *other = get_creature_tracker().creature_at<Character>( stairs ) ) {
+        if( other != &who && other->is_player_controlled() ) {
+            who.add_msg_if_player( _( "Another player is blocking the stairs." ) );
+            return;
+        }
+    }
     // LAST CHANCE TO ABORT! Everything past here assumes the movement is going ahead.
 
-    std::vector<monster *> monsters_following;
+    std::vector<shared_ptr_fast<monster>> monsters_following;
     if( std::abs( movez ) == 1 ) {
         bool ladder = here.has_flag( ter_furn_flag::TFLAG_DIFFICULT_Z, pos );
         for( monster &critter : all_monsters() ) {
@@ -10267,22 +10766,22 @@ void game::vertical_move( int movez, bool force, bool peeking )
             }
             // TODO: just check if it's going for the avatar's location, it's simpler
             Creature *target = critter.attack_target();
-            if( ( target && target->is_avatar() ) || ( !critter.has_effect( effect_ridden ) &&
-                    ( critter.is_pet_follow() || critter.has_effect( effect_led_by_leash ) ) &&
-                    !critter.has_effect( effect_tied ) && critter.sees( here, u ) ) ) {
-                monsters_following.push_back( &critter );
+            if( ( target == &who ) || ( !critter.has_effect( effect_ridden ) &&
+                                        ( critter.is_pet_follow() || critter.has_effect( effect_led_by_leash ) ) &&
+                                        !critter.has_effect( effect_tied ) && critter.sees( here, who ) ) ) {
+                monsters_following.push_back( get_creature_tracker().find( critter.pos_abs() ) );
             }
         }
     }
 
-    if( u.is_mounted() ) {
-        monster *crit = u.mounted_creature.get();
+    if( who.is_mounted() ) {
+        monster *crit = who.mounted_creature.get();
         if( crit->has_flag( mon_flag_RIDEABLE_MECH ) ) {
-            crit->use_mech_power( u.current_movement_mode()->mech_power_use() + 1_kJ );
+            crit->use_mech_power( who.current_movement_mode()->mech_power_use() + 1_kJ );
         }
-    } else if( !u.in_vehicle ) {
-        u.mod_moves( -move_cost );
-        u.burn_energy_all( -move_cost );
+    } else if( !who.in_vehicle ) {
+        who.mod_moves( -move_cost );
+        who.burn_energy_all( -move_cost );
     }
 
     if( surfacing || submerging ) {
@@ -10293,54 +10792,44 @@ void game::vertical_move( int movez, bool force, bool peeking )
 
     tripoint_bub_ms old_pos = pos;
     const tripoint_abs_ms old_abs_pos = here.get_abs( old_pos );
-    const bool z_level_changed = vertical_shift( z_after );
-    if( !force ) {
-        const point_rel_sm submap_shift = update_map( stairs.x(), stairs.y(), z_level_changed );
-        // Adjust all bubble coordinates used according to the submap shift.
-        const point_rel_ms ms_shift = coords::project_to<coords::ms>( submap_shift );
-        pos = pos - ms_shift;
-        old_pos = old_pos - ms_shift;
-        stairs = stairs - ms_shift;
-    }
-
-    if( u.grab_point != tripoint_rel_ms::zero ) {
-        u.grab_point.z() = u.grab_point.z() - movez;
-        const std::optional<tripoint_rel_ms> dir = choose_direction(
-                    _( "Select a direction to push grabbed object towards." ) );
-        if( !dir ) {
-            u.grab( object_type::NONE );
-        } else { // Try to vertically move whatever we're grabbing.
-            const tripoint_rel_ms new_rel = pos - old_pos - u.grab_point;
-            grabbed_move( new_rel + *dir, false, true );
-        }
-    }
-
     // if an NPC or monster is on the stairs when player ascends/descends
     // they may end up merged on the same tile, do some displacement to resolve that.
     creature_tracker &creatures = get_creature_tracker();
-    if( creatures.creature_at<npc>( pos, true ) ||
-        creatures.creature_at<monster>( pos, true ) ) {
+    npc *blocking_npc = creatures.creature_at<npc>( stairs, true );
+    if( blocking_npc == &who ) {
+        blocking_npc = nullptr;
+    }
+    if( blocking_npc || creatures.creature_at<monster>( stairs, true ) ) {
         std::string crit_name;
         bool player_displace = false;
-        std::optional<tripoint_bub_ms> displace = find_empty_spot_nearby( pos );
+        std::optional<tripoint_bub_ms> displace = find_empty_spot_nearby( stairs );
         if( !displace.has_value() ) {
             // They can always move to the previous location of the player.
             displace = old_pos;
         }
-        npc *guy = creatures.creature_at<npc>( pos, true );
+        npc *guy = blocking_npc;
         if( guy ) {
+            const character_action_guard blocker_lifetime( *guy );
             crit_name = guy->get_name();
             tripoint_bub_ms old_pos = guy->pos_bub( here );
             if( !guy->is_enemy() ) {
-                guy->move_away_from( pos, true );
-                if( old_pos != guy->pos_bub( here ) ) {
-                    add_msg( _( "%s moves out of the way for you." ), guy->get_name() );
+                guy->move_away_from( stairs, true );
+                if( !at_origin() ) {
+                    return;
+                }
+                if( !blocker_lifetime ) {
+                    guy = nullptr;
+                } else if( old_pos == guy->pos_bub( here ) ) {
+                    player_displace = true;
+                } else {
+                    who.add_msg_if_player( _( "%s moves out of the way for you." ), guy->get_name() );
                 }
             } else {
                 player_displace = true;
             }
         }
-        monster *mon = creatures.creature_at<monster>( pos, true );
+        const auto blocking_monster = creatures.find( here.get_abs( stairs ) );
+        monster *mon = blocking_monster.get();
         // if the monster is ridden by the player or an NPC:
         // Dont displace them. If they are mounted by a friendly NPC,
         // then the NPC will already have been displaced just above.
@@ -10349,36 +10838,80 @@ void game::vertical_move( int movez, bool force, bool peeking )
             crit_name = mon->get_name();
             if( mon->friendly == -1 ) {
                 mon->setpos( here, *displace );
-                add_msg( _( "Your %s moves out of the way for you." ), mon->get_name() );
+                who.add_msg_if_player( _( "Your %s moves out of the way for you." ), mon->get_name() );
             } else {
                 player_displace = true;
             }
         }
         if( player_displace ) {
-            u.setpos( here, *displace );
-            u.mod_moves( -to_moves<int>( 1_seconds ) * 0.2 );
-            add_msg( _( "You push past %s blocking the way." ), crit_name );
+            stairs = *displace;
+            who.mod_moves( -to_moves<int>( 1_seconds ) * 0.2 );
+            who.add_msg_if_player( _( "You push past %s blocking the way." ), crit_name );
         }
-        pos = u.pos_bub( here );
+        if( !at_origin() ) {
+            return;
+        }
     }
 
+    if( !at_origin() ) {
+        return;
+    }
+    const tripoint_abs_ms destination = here.get_abs( stairs );
+    const bool z_level_changed = who.is_avatar() ? vertical_shift( destination.z() ) :
+                                 destination.z() != origin.z();
+    who.setpos( destination, false );
+    if( !lifetime ) {
+        return;
+    }
+    if( who.is_avatar() && !force ) {
+        update_map( who, z_level_changed );
+    }
+    pos = who.pos_bub( here );
+    old_pos = here.get_bub( old_abs_pos );
+    stairs = here.get_bub( destination );
+
+    if( who.grab_point != tripoint_rel_ms::zero ) {
+        who.grab_point.z() = who.grab_point.z() - movez;
+        const std::optional<tripoint_rel_ms> dir = choices ? choices->drag_direction :
+                local_input ? choose_direction( _( "Select a direction to push grabbed object towards." ) ) :
+                std::nullopt;
+        if( !dir ) {
+            who.grab( object_type::NONE );
+        } else { // Try to vertically move whatever we're grabbing.
+            const tripoint_rel_ms new_rel = pos - old_pos - who.grab_point;
+            if( dir->z() == 0 && std::abs( dir->x() ) <= 1 && std::abs( dir->y() ) <= 1 &&
+                *dir != tripoint_rel_ms::zero ) {
+                grabbed_move( who, new_rel + *dir, false, true );
+            }
+        }
+    }
+
+    if( !lifetime ) {
+        return;
+    }
     // Now that we know the player's destination position, we can move their mount as well
-    if( u.is_mounted() ) {
-        u.mounted_creature->setpos( here, pos );
+    if( who.is_mounted() ) {
+        who.mounted_creature->setpos( here, pos );
     }
 
     // This ugly check is here because of stair teleport bullshit
     // TODO: Remove stair teleport bullshit
     if( rl_dist( pos, old_pos ) <= 1 ) {
-        for( monster *m : monsters_following ) {
-            m->set_dest( u.pos_abs() );
+        for( const auto &follower : monsters_following ) {
+            if( follower && !follower->is_dead() &&
+                get_creature_tracker().find( follower->pos_abs() ) == follower ) {
+                follower->set_dest( who.pos_abs() );
+            }
         }
     }
 
+    if( !lifetime ) {
+        return;
+    }
     if( rope_ladder ) {
-        if( u.has_flag( json_flag_WEB_RAPPEL ) ) {
+        if( who.has_flag( json_flag_WEB_RAPPEL ) ) {
             here.furn_set( pos, furn_f_web_up );
-        } else if( u.has_flag( json_flag_VINE_RAPPEL ) ) {
+        } else if( who.has_flag( json_flag_VINE_RAPPEL ) ) {
             here.furn_set( pos, furn_f_vine_up );
         } else {
             here.furn_set( pos, furn_f_rope_up );
@@ -10390,17 +10923,26 @@ void game::vertical_move( int movez, bool force, bool peeking )
         here.ter_set( stairs, ter_t_manhole );
     }
 
-    if( u.is_hauling() ) {
-        start_hauling( old_pos );
+    if( !lifetime ) {
+        return;
+    }
+    if( who.is_hauling() ) {
+        start_hauling( who, old_pos );
     }
 
-    here.invalidate_map_cache( here.get_abs_sub().z() );
-    here.build_map_cache( here.get_abs_sub().z() );
-    u.gravity_check();
+    if( !lifetime ) {
+        return;
+    }
+    here.invalidate_map_cache( who.posz() );
+    here.build_map_cache( who.posz() );
+    who.gravity_check();
 
-    u.recoil = MAX_RECOIL;
+    if( !lifetime ) {
+        return;
+    }
+    who.recoil = MAX_RECOIL;
 
-    cata_event_dispatch::avatar_moves( old_abs_pos, u, here );
+    cata_event_dispatch::character_moves( old_abs_pos, who, here );
 }
 
 bool game::travel_to_dimension( dimension_id dimension_destination,
@@ -10549,22 +11091,31 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
 
 void game::start_hauling( const tripoint_bub_ms &pos )
 {
+    start_hauling( u, pos );
+}
+
+void game::start_hauling( Character &who, const tripoint_bub_ms &pos )
+{
     map &here = get_map();
 
     std::vector<item_location> candidate_items = here.get_haulable_items( pos );
+    candidate_items.erase( std::remove_if( candidate_items.begin(), candidate_items.end(),
+    [&]( const item_location & candidate ) {
+        return activity_handlers::activity_item_reserved_for_other( *candidate, who );
+    } ), candidate_items.end() );
     // Find target items and quantities thereof for the new activity
-    u.trim_haul_list( candidate_items );
-    std::vector<item_location> target_items = u.haul_list;
+    who.trim_haul_list( candidate_items );
+    std::vector<item_location> target_items = who.haul_list;
 
-    if( u.is_autohauling() && !u.suppress_autohaul ) {
-        for( const item_location &item : u.haul_list ) {
+    if( who.is_autohauling() && !who.suppress_autohaul ) {
+        for( const item_location &item : who.haul_list ) {
             candidate_items.erase( std::remove( candidate_items.begin(), candidate_items.end(), item ),
                                    candidate_items.end() );
         }
-        if( u.hauling_filter.empty() ) {
+        if( who.hauling_filter.empty() ) {
             target_items.insert( target_items.end(), candidate_items.begin(), candidate_items.end() );
         } else {
-            std::function<bool( const item & )> filter = item_filter_from_string( u.hauling_filter );
+            std::function<bool( const item & )> filter = item_filter_from_string( who.hauling_filter );
             std::copy_if( candidate_items.begin(), candidate_items.end(), std::back_inserter( target_items ),
             [&filter]( const item_location & item ) {
                 return filter( *item );
@@ -10572,16 +11123,16 @@ void game::start_hauling( const tripoint_bub_ms &pos )
         }
     }
 
-    u.suppress_autohaul = false;
-    u.haul_list.clear();
+    who.suppress_autohaul = false;
+    who.haul_list.clear();
 
     // Quantity of 0 means move all
     const std::vector<int> quantities( target_items.size(), 0 );
 
     if( target_items.empty() ) {
         // Nothing to haul
-        if( !u.is_autohauling() ) {
-            u.stop_hauling();
+        if( !who.is_autohauling() ) {
+            who.stop_hauling();
         }
         return;
     }
@@ -10593,12 +11144,17 @@ void game::start_hauling( const tripoint_bub_ms &pos )
 
     const move_items_activity_actor actor( target_items, quantities, to_vehicle, relative_destination,
                                            true );
-    u.assign_activity( actor );
+    player_activity activity( actor );
+    activity.set_execution( who.activity.execution() );
+    who.assign_activity( activity );
 }
 
 std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
         const tripoint_bub_ms &pos )
 {
+    if( !mp.inbounds( pos ) || !mp.inbounds_z( z_after ) ) {
+        return std::nullopt;
+    }
     const int movez = z_after - pos.z();
     const bool going_down_1 = movez == -1;
     const bool going_up_1 = movez == 1;
@@ -10622,16 +11178,16 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
                                         z_after ) ) );
     tripoint_bub_ms omtile_align_end( omtile_align_start + point( omtilesz, omtilesz ) );
 
-    if( !mp.is_open_air( u.pos_bub( mp ) ) ) {
+    if( !mp.is_open_air( pos ) ) {
         for( const tripoint_bub_ms &dest : mp.points_in_rectangle( omtile_align_start,
                 omtile_align_end ) ) {
-            if( rl_dist( u.pos_bub( mp ), dest ) <= best &&
+            if( rl_dist( pos, dest ) <= best &&
                 ( ( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, dest ) ) ||
                   ( going_up_1 && ( mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, dest ) ||
                                     mp.ter( dest ) == ter_t_manhole_cover ) ) ||
                   ( ( movez == 2 || movez == -2 ) && mp.ter( dest ) == ter_t_elevator ) ) ) {
                 stairs.emplace( dest );
-                best = rl_dist( u.pos_bub( mp ), dest );
+                best = rl_dist( pos, dest );
             }
         }
     }
@@ -10640,10 +11196,22 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
 }
 
 std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_after,
-        bool &rope_ladder,
-        bool peeking, const tripoint_bub_ms &pos )
+        bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos )
 {
-    const bool is_avatar = u.pos_bub( mp ) == pos;
+    return find_or_make_stairs( get_avatar(), mp, z_after, rope_ladder, peeking, pos, nullptr );
+}
+
+std::optional<tripoint_bub_ms> game::find_or_make_stairs( Character &who, map &mp,
+        const int z_after, bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos,
+        const vertical_move_choices *choices )
+{
+    const bool is_actor = who.pos_bub( mp ) == pos;
+    const bool local_input = who.is_avatar() && !choices;
+    const auto origin = who.pos_abs();
+    const character_action_guard lifetime( who );
+    if( !lifetime || !mp.inbounds_z( z_after ) ) {
+        return std::nullopt;
+    }
     const int movez = z_after - pos.z();
 
     // Try to find the stairs.
@@ -10651,12 +11219,23 @@ std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_a
 
     creature_tracker &creatures = get_creature_tracker();
     if( stairs.has_value() ) {
-        if( !is_avatar ) {
+        if( choices && choices->landing && mp.get_abs( *stairs ) != *choices->landing ) {
+            return std::nullopt;
+        }
+        if( !is_actor ) {
+            if( !lifetime || who.pos_abs() != origin ) {
+                return std::nullopt;
+            }
             return stairs;
         }
         if( Creature *blocking_creature = creatures.creature_at( stairs.value() ) ) {
             npc *guy = dynamic_cast<npc *>( blocking_creature );
             monster *mon = dynamic_cast<monster *>( blocking_creature );
+            if( blocking_creature != &who && blocking_creature->as_character() &&
+                blocking_creature->as_character()->is_player_controlled() ) {
+                who.add_msg_if_player( _( "Another player is blocking the stairs." ) );
+                return std::nullopt;
+            }
             bool would_move = ( guy && !guy->is_enemy() ) || ( mon && mon->friendly == -1 );
             std::string cr_name = blocking_creature->get_name();
             std::string msg;
@@ -10669,47 +11248,60 @@ std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_a
             }
 
             if( ( peeking && !would_move )
-                || ( !would_move && !query_yn(
-                         //~ %s is a warning about monster/hostile NPC in the way, e.g. "There's a zombie in the way!"
-                         _( "%s  Attempt to push past?  You may have to fight your way back up." ), msg ) ) ) {
-                add_msg( msg );
+                || ( !would_move && !( choices ? choices->allow_blocker : local_input && query_yn(
+                                           //~ %s is a warning about monster/hostile NPC in the way, e.g. "There's a zombie in the way!"
+                                           _( "%s  Attempt to push past?  You may have to fight your way back up." ), msg ) ) ) ) {
+                who.add_msg_if_player( msg );
                 return std::nullopt;
             }
+        }
+        if( !lifetime || who.pos_abs() != origin ) {
+            return std::nullopt;
         }
         return stairs;
     }
 
-    if( !is_avatar || peeking ) {
+    if( !is_actor || peeking ) {
         return std::nullopt;
     }
     // No stairs found! Try to make some
     rope_ladder = false;
     stairs.emplace( pos );
     stairs->z() = z_after;
+    if( movez < 0 && choices && choices->landing && mp.get_abs( *stairs ) != *choices->landing ) {
+        return std::nullopt;
+    }
     // Check the destination area for lava.
     if( mp.ter( *stairs ) == ter_t_lava ) {
         if( movez < 0 &&
-            !query_yn(
-                _( "There is a LOT of heat coming out of there, even the stairs have melted away.  Jump down?  You won't be able to get back up." ) ) ) {
+            !( choices ? choices->allow_one_way : local_input && query_yn(
+                   _( "There is a LOT of heat coming out of there, even the stairs have melted away.  Jump down?  You won't be able to get back up." ) ) ) ) {
             return std::nullopt;
         }
         if( movez > 0 &&
-            !query_yn(
-                _( "There is a LOT of heat coming out of there.  Push through the half-molten rocks and ascend?  You will not be able to get back down." ) ) ) {
+            !( choices ? choices->allow_one_way : local_input && query_yn(
+                   _( "There is a LOT of heat coming out of there.  Push through the half-molten rocks and ascend?  You will not be able to get back down." ) ) ) ) {
             return std::nullopt;
         }
 
+        if( !lifetime || who.pos_abs() != origin ) {
+            return std::nullopt;
+        }
         return stairs;
     }
 
-    if( u.has_effect( effect_gliding ) && mp.is_open_air( u.pos_bub( mp ) ) ) {
+    if( who.has_effect( effect_gliding ) && mp.is_open_air( who.pos_bub( mp ) ) ) {
+        if( !lifetime || who.pos_abs() != origin ) {
+            return std::nullopt;
+        }
         return stairs;
     }
 
     if( movez > 0 ) {
         if( !mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, *stairs ) ) {
             if( mp.has_floor_or_support( *stairs ) ) {
-                if( !query_yn( _( "You may be unable to return back down these stairs.  Continue up?" ) ) ) {
+                if( !( choices ? choices->allow_one_way : local_input &&
+                       query_yn( _( "You may be unable to return back down these stairs.  Continue up?" ) ) ) ) {
                     return std::nullopt;
                 }
             } else {
@@ -10723,12 +11315,15 @@ std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_a
                 }
 
                 if( pts.empty() ) {
-                    add_msg( m_info,
-                             _( "You can't climb here - there is no terrain above you that would support your weight." ) );
+                    who.add_msg_if_player( m_info,
+                                           _( "You can't climb here - there is no terrain above you that would support your weight." ) );
                     return std::nullopt;
                 } else {
-                    const std::optional<tripoint_bub_ms> pnt = point_selection_menu( pts );
-                    if( !pnt ) {
+                    const std::optional<tripoint_bub_ms> pnt = choices ?
+                            ( choices->landing && mp.inbounds( *choices->landing ) ?
+                              std::make_optional( mp.get_bub( *choices->landing ) ) : std::nullopt ) :
+                            local_input ? point_selection_menu( pts ) : std::nullopt;
+                    if( !pnt || std::find( pts.begin(), pts.end(), *pnt ) == pts.end() ) {
                         return std::nullopt;
                     }
                     stairs = pnt;
@@ -10738,69 +11333,88 @@ std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_a
         }
         // Manhole covers need this to work
         // Maybe require manhole cover here and fail otherwise?
+        if( !lifetime || who.pos_abs() != origin ) {
+            return std::nullopt;
+        }
         return stairs;
     }
 
     if( mp.impassable( *stairs ) ) {
-        popup( _( "Halfway down, the way down becomes blocked off." ) );
+        who.add_msg_if_player( _( "Halfway down, the way down becomes blocked off." ) );
         return std::nullopt;
     }
 
-    if( u.has_flag( json_flag_WEB_RAPPEL ) ) {
-        if( query_yn( _( "There is a sheer drop halfway down.  Web-descend?" ) ) ) {
+    if( who.has_flag( json_flag_WEB_RAPPEL ) ) {
+        if( choices ? choices->drop_aid == "web" : local_input &&
+            query_yn( _( "There is a sheer drop halfway down.  Web-descend?" ) ) ) {
             rope_ladder = true;
-            if( rng( 4, 8 ) < u.get_skill_level( skill_dodge ) ) {
-                add_msg( _( "You attach a web and dive down headfirst, flipping upright and landing on your feet." ) );
+            if( rng( 4, 8 ) < who.get_skill_level( skill_dodge ) ) {
+                who.add_msg_if_player(
+                    _( "You attach a web and dive down headfirst, flipping upright and landing on your feet." ) );
             } else {
-                add_msg( _( "You securely web up and work your way down, lowering yourself safely." ) );
+                who.add_msg_if_player(
+                    _( "You securely web up and work your way down, lowering yourself safely." ) );
             }
         } else {
             return std::nullopt;
         }
-    } else if( u.has_trait( trait_VINES2 ) || u.has_trait( trait_VINES3 ) ) {
-        if( query_yn( _( "There is a sheer drop halfway down.  Use your vines to descend?" ) ) ) {
-            if( u.has_trait( trait_VINES2 ) ) {
-                if( query_yn( _( "Detach a vine?  It'll hurt, but you'll be able to climb back up…" ) ) ) {
+    } else if( who.has_trait( trait_VINES2 ) || who.has_trait( trait_VINES3 ) ) {
+        if( choices ? choices->drop_aid == "vines" : local_input &&
+            query_yn( _( "There is a sheer drop halfway down.  Use your vines to descend?" ) ) ) {
+            if( who.has_trait( trait_VINES2 ) ) {
+                if( choices ? choices->detach_vine : local_input &&
+                    query_yn( _( "Detach a vine?  It'll hurt, but you'll be able to climb back up…" ) ) ) {
                     rope_ladder = true;
-                    add_msg( m_bad, _( "You descend on your vines, though leaving a part of you behind stings." ) );
-                    u.mod_pain( 5 );
-                    u.apply_damage( nullptr, bodypart_id( "torso" ), 5 );
-                    u.mod_stored_kcal( -87 );
-                    u.mod_thirst( 10 );
+                    who.add_msg_if_player( m_bad,
+                                           _( "You descend on your vines, though leaving a part of you behind stings." ) );
+                    who.mod_pain( 5 );
+                    who.apply_damage( nullptr, bodypart_id( "torso" ), 5 );
+                    if( !lifetime ) {
+                        return std::nullopt;
+                    }
+                    who.mod_stored_kcal( -87 );
+                    who.mod_thirst( 10 );
                 } else {
-                    add_msg( _( "You gingerly descend using your vines." ) );
+                    who.add_msg_if_player( _( "You gingerly descend using your vines." ) );
                 }
             } else {
-                add_msg( _( "You effortlessly lower yourself and leave a vine rooted for future use." ) );
+                who.add_msg_if_player(
+                    _( "You effortlessly lower yourself and leave a vine rooted for future use." ) );
                 rope_ladder = true;
-                u.mod_stored_kcal( -87 );
-                u.mod_thirst( 10 );
+                who.mod_stored_kcal( -87 );
+                who.mod_thirst( 10 );
             }
         } else {
             return std::nullopt;
         }
-    } else if( u.has_amount( itype_grapnel, 1 ) ) {
-        if( query_yn( _( "There is a sheer drop halfway down.  Climb your grappling hook down?" ) ) ) {
+    } else if( who.has_amount( itype_grapnel, 1 ) ) {
+        if( choices ? choices->drop_aid == "grapnel" : local_input &&
+            query_yn( _( "There is a sheer drop halfway down.  Climb your grappling hook down?" ) ) ) {
             rope_ladder = true;
-            for( item &used_item : u.use_amount( itype_grapnel, 1 ) ) {
-                used_item.spill_contents( u );
+            for( item &used_item : who.use_amount( itype_grapnel, 1 ) ) {
+                used_item.spill_contents( who );
             }
         } else {
             return std::nullopt;
         }
-    } else if( u.has_amount( itype_rope_30, 1 ) ) {
-        if( query_yn( _( "There is a sheer drop halfway down.  Climb your rope down?" ) ) ) {
+    } else if( who.has_amount( itype_rope_30, 1 ) ) {
+        if( choices ? choices->drop_aid == "rope" : local_input &&
+            query_yn( _( "There is a sheer drop halfway down.  Climb your rope down?" ) ) ) {
             rope_ladder = true;
-            for( item &used_item : u.use_amount( itype_rope_30, 1 ) ) {
-                used_item.spill_contents( u );
+            for( item &used_item : who.use_amount( itype_rope_30, 1 ) ) {
+                used_item.spill_contents( who );
             }
         } else {
             return std::nullopt;
         }
-    } else if( !query_yn( _( "There is a sheer drop halfway down.  Jump?" ) ) ) {
+    } else if( !( choices ? choices->drop_aid == "jump" : local_input &&
+                  query_yn( _( "There is a sheer drop halfway down.  Jump?" ) ) ) ) {
         return std::nullopt;
     }
 
+    if( !lifetime || who.pos_abs() != origin ) {
+        return std::nullopt;
+    }
     return stairs;
 }
 
@@ -11558,7 +12172,13 @@ void game::shift_destination_preview( const point_rel_ms &delta )
     }
 }
 
-float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
+float game::slip_down_chance( climb_maneuver maneuver, climbing_aid_id aid_id,
+                              bool show_chance_messages )
+{
+    return slip_down_chance( get_avatar(), maneuver, aid_id, show_chance_messages );
+}
+
+float game::slip_down_chance( const Character &who, climb_maneuver, climbing_aid_id aid_id,
                               bool show_chance_messages )
 {
     if( aid_id.is_null() ) {
@@ -11570,9 +12190,9 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
 
     float slip = 100.0f;
 
-    const bool parkour = u.has_proficiency( proficiency_prof_parkour );
-    const bool badknees = u.has_trait( trait_BADKNEES );
-    bool climb_flying = u.has_flag( json_flag_CLIMB_FLYING );
+    const bool parkour = who.has_proficiency( proficiency_prof_parkour );
+    const bool badknees = who.has_trait( trait_BADKNEES );
+    bool climb_flying = who.has_flag( json_flag_CLIMB_FLYING );
 
     // If you're levitating or flying, there's nothing to slip on
     if( climb_flying ) {
@@ -11581,17 +12201,18 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
 
     if( parkour && badknees ) {
         if( show_chance_messages ) {
-            add_msg( m_info, _( "Your skill in parkour makes up for your bad knees while climbing." ) );
+            who.add_msg_if_player( m_info,
+                                   _( "Your skill in parkour makes up for your bad knees while climbing." ) );
         }
-    } else if( u.has_proficiency( proficiency_prof_parkour ) ) {
+    } else if( who.has_proficiency( proficiency_prof_parkour ) ) {
         slip /= 2;
         if( show_chance_messages ) {
-            add_msg( m_info, _( "Your skill in parkour makes it easier to climb." ) );
+            who.add_msg_if_player( m_info, _( "Your skill in parkour makes it easier to climb." ) );
         }
-    } else if( u.has_trait( trait_BADKNEES ) ) {
+    } else if( who.has_trait( trait_BADKNEES ) ) {
         slip *= 2;
         if( show_chance_messages ) {
-            add_msg( m_info, _( "Your bad knees make it difficult to climb." ) );
+            who.add_msg_if_player( m_info, _( "Your bad knees make it difficult to climb." ) );
         }
     }
 
@@ -11602,32 +12223,32 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
     bool wet_feet = false;
     bool wet_hands = false;
 
-    for( const bodypart_id &bp : u.get_all_body_parts_of_type( bp_type::foot,
+    for( const bodypart_id &bp : who.get_all_body_parts_of_type( bp_type::foot,
             get_body_part_flags::primary_type ) ) {
-        if( u.get_part_wetness( bp ) > 0 && !climb_flying ) {
+        if( who.get_part_wetness( bp ) > 0 && !climb_flying ) {
             add_msg_debug( debugmode::DF_GAME, "Foot %s %.1f wet", body_part_name( bp ),
-                           u.get_part( bp )->get_wetness_percentage() );
+                           who.get_part( bp )->get_wetness_percentage() );
             wet_feet = true;
-            wet_penalty += u.get_part( bp )->get_wetness_percentage() / 2;
+            wet_penalty += who.get_part( bp )->get_wetness_percentage() / 2;
         }
     }
 
-    for( const bodypart_id &bp : u.get_all_body_parts_of_type( bp_type::hand,
+    for( const bodypart_id &bp : who.get_all_body_parts_of_type( bp_type::hand,
             get_body_part_flags::primary_type ) ) {
-        if( u.get_part_wetness( bp ) > 0 && !climb_flying ) {
+        if( who.get_part_wetness( bp ) > 0 && !climb_flying ) {
             add_msg_debug( debugmode::DF_GAME, "Hand %s %.1f wet", body_part_name( bp ),
-                           u.get_part( bp )->get_wetness_percentage() );
+                           who.get_part( bp )->get_wetness_percentage() );
             wet_hands = true;
-            wet_penalty += u.get_part( bp )->get_wetness_percentage() / 2;
+            wet_penalty += who.get_part( bp )->get_wetness_percentage() / 2;
         }
     }
     if( show_chance_messages ) {
         if( wet_feet && wet_hands ) {
-            add_msg( m_info, _( "Your wet hands and feet make it harder to climb." ) );
+            who.add_msg_if_player( m_info, _( "Your wet hands and feet make it harder to climb." ) );
         } else if( wet_feet ) {
-            add_msg( m_info, _( "Your wet feet make it harder to climb." ) );
+            who.add_msg_if_player( m_info, _( "Your wet feet make it harder to climb." ) );
         } else if( wet_hands ) {
-            add_msg( m_info, _( "Your wet hands make it harder to climb." ) );
+            who.add_msg_if_player( m_info, _( "Your wet hands make it harder to climb." ) );
         }
     }
 
@@ -11639,35 +12260,37 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
     ///\EFFECT_DEX decreases chances of slipping while climbing
     ///\EFFECT_STR decreases chances of slipping while climbing
     /// Not using arm strength since lifting score comes into play later
-    slip /= std::max( 1, u.get_dex() + u.get_str() );
+    slip /= std::max( 1, who.get_dex() + who.get_str() );
 
     add_msg_debug( debugmode::DF_GAME, "Slip chance after stat modifiers %.0f%%", slip );
 
     // Apply limb score penalties - grip, arm strength and footing are all relevant
-    slip /= u.get_modifier( character_modifier_slip_prevent_mod );
+    slip /= who.get_modifier( character_modifier_slip_prevent_mod );
     add_msg_debug( debugmode::DF_GAME, "Slipping chance after limb scores %.0f%%", slip );
 
     // Being weighed down makes it easier for you to slip.
-    double weight_ratio = static_cast<double>( units::to_gram( u.weight_carried() ) ) / units::to_gram(
-                              u.weight_capacity() );
+    double weight_ratio = static_cast<double>( units::to_gram( who.weight_carried() ) ) /
+                          units::to_gram(
+                              who.weight_capacity() );
     slip += roll_remainder( 8.0 * weight_ratio );
     add_msg_debug( debugmode::DF_GAME, "Weight ratio %.2f, slip chance %.0f%%", weight_ratio,
                    slip );
 
     // Decreasing stamina makes you slip up more often
-    const float stamina_ratio = static_cast<float>( u.get_stamina() ) / u.get_stamina_max();
+    const float stamina_ratio = static_cast<float>( who.get_stamina() ) / who.get_stamina_max();
     if( stamina_ratio < 0.8 ) {
         slip /= std::max( stamina_ratio, .1f );
 
         if( show_chance_messages ) {
             if( stamina_ratio > 0.6 ) {
-                add_msg( m_info, _( "You are winded, which makes climbing harder." ) );
+                who.add_msg_if_player( m_info, _( "You are winded, which makes climbing harder." ) );
             } else if( stamina_ratio > 0.4 ) {
-                add_msg( m_info, _( "You are out of breath, which makes climbing much harder." ) );
+                who.add_msg_if_player( m_info, _( "You are out of breath, which makes climbing much harder." ) );
             } else if( stamina_ratio > 0.2 ) {
-                add_msg( m_info, _( "You can't catch your breath, which makes it much more difficult to climb." ) );
+                who.add_msg_if_player( m_info,
+                                       _( "You can't catch your breath, which makes it much more difficult to climb." ) );
             } else {
-                add_msg( m_info, _( "You feel faint and can't keep your balance." ) );
+                who.add_msg_if_player( m_info, _( "You feel faint and can't keep your balance." ) );
             }
         }
     }
@@ -11676,13 +12299,14 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
 
     if( show_chance_messages ) {
         if( weight_ratio >= 1 ) {
-            add_msg( m_info, _( "Your carried weight tries to drag you down." ) );
+            who.add_msg_if_player( m_info, _( "Your carried weight tries to drag you down." ) );
         } else if( weight_ratio > .75 ) {
-            add_msg( m_info, _( "You strain to climb with the weight of your possessions." ) );
+            who.add_msg_if_player( m_info, _( "You strain to climb with the weight of your possessions." ) );
         } else if( weight_ratio > .5 ) {
-            add_msg( m_info, _( "You feel the weight of your luggage makes it more difficult to climb." ) );
+            who.add_msg_if_player( m_info,
+                                   _( "You feel the weight of your luggage makes it more difficult to climb." ) );
         } else if( weight_ratio > .25 ) {
-            add_msg( m_info, _( "Your carried weight makes it a little harder to climb." ) );
+            who.add_msg_if_player( m_info, _( "Your carried weight makes it a little harder to climb." ) );
         }
     }
 
@@ -11691,7 +12315,7 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
     if( show_chance_messages ) {
         if( aid.slip_chance_mod >= 0 ) {
             // TODO allow for a message specific to the climbing aid?
-            add_msg( m_info, _( "There's nothing here to help you climb." ) );
+            who.add_msg_if_player( m_info, _( "There's nothing here to help you climb." ) );
         }
     }
 
@@ -11704,19 +12328,31 @@ float game::slip_down_chance( climb_maneuver, climbing_aid_id aid_id,
 bool game::slip_down( climb_maneuver maneuver, climbing_aid_id aid_id,
                       bool show_chance_messages )
 {
+    return slip_down( get_avatar(), maneuver, aid_id, show_chance_messages );
+}
+
+bool game::slip_down( Character &who, climb_maneuver maneuver, climbing_aid_id aid_id,
+                      bool show_chance_messages )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime ) {
+        return true;
+    }
     map &here = get_map();
 
-    float slip = slip_down_chance( maneuver, aid_id, show_chance_messages );
+    float slip = slip_down_chance( who, maneuver, aid_id, show_chance_messages );
 
     if( x_in_y( slip, 100 ) ) {
-        add_msg( m_bad, _( "You slip while climbing and fall down." ) );
+        who.add_msg_if_player( m_bad, _( "You slip while climbing and fall down." ) );
         if( slip >= 100 ) {
-            add_msg( m_bad, _( "Climbing is impossible in your current state." ) );
+            who.add_msg_if_player( m_bad, _( "Climbing is impossible in your current state." ) );
         }
         // Check for traps and gravity if climbing up or down.
         if( maneuver != climb_maneuver::over_obstacle ) {
-            here.creature_on_trap( u );
-            u.gravity_check();
+            here.creature_on_trap( who );
+            if( lifetime ) {
+                who.gravity_check();
+            }
         }
         return true;
     }
@@ -11764,10 +12400,14 @@ static int effective_vehicle_ladder_climb_height( const climbing_aid &aid,
 
 void game::climb_down_menu_gen( const tripoint_bub_ms &examp, uilist &cmenu )
 {
+    climb_down_menu_gen( get_avatar(), examp, cmenu );
+}
+
+void game::climb_down_menu_gen( Character &you, const tripoint_bub_ms &examp, uilist &cmenu )
+{
     // NOTE this menu may be merged with the iexamine::ledge menu, manage keys carefully!
 
     map &here = get_map();
-    Character &you = get_player_character();
 
     if( !here.valid_move( you.pos_bub(), examp, false, true ) ) {
         // Can't move horizontally to the ledge
@@ -11850,52 +12490,60 @@ bool game::climb_down_menu_pick( const tripoint_bub_ms &examp, int retval )
 
 void game::climb_down( const tripoint_bub_ms &examp )
 {
-    uilist cmenu;
-    cmenu.text = _( "How would you prefer to climb down?" );
-
-    climb_down_menu_gen( examp, cmenu );
-
-    // If there would only be one choice, skip the menu.
-    if( cmenu.entries.size() == 1 ) {
-        climb_down_menu_pick( examp, cmenu.entries[0].retval );
-    } else {
-        cmenu.query();
-        climb_down_menu_pick( examp, cmenu.ret );
+    if( cata_mp::client_query_vertical_move( -1, get_map().get_abs( examp ) ) ) {
+        return;
+    }
+    if( const auto choice = query_climb_down( get_avatar(), get_map(), examp ) ) {
+        execute_vertical_move( get_avatar(), get_map(), *choice );
     }
 }
 
 void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_id,
                              bool deploy_affordance )
 {
-    const climbing_aid &aid = aid_id.obj();
+    climb_down_using( get_avatar(), examp, aid_id, deploy_affordance, false );
+}
 
+bool game::can_climb_down_using( Character &who, const tripoint_bub_ms &examp,
+                                 climbing_aid_id aid_id )
+{
     map &here = get_map();
-    Character &you = get_player_character();
-
-    // If player is grabbed, trapped, or somehow otherwise movement-impeded, first try to break free
-    if( !you.move_effects( false ) ) {
-        // move_effects determined we could not move, waste all moves
-        you.set_moves( 0 );
-        return;
+    if( !aid_id.is_valid() || !here.inbounds( examp ) || who.posz() != examp.z() ||
+        square_dist( who.pos_bub().xy(), examp.xy() ) > 1 ||
+        !here.valid_move( who.pos_bub(), examp, false, true ) ) {
+        return false;
     }
-
-    if( !here.valid_move( you.pos_bub(), examp, false, true ) ) {
-        // Can't move horizontally to the ledge
-        return;
+    const climbing_aid &aid = aid_id.obj();
+    const auto conditions = climbing_aid::detect_conditions( who, examp );
+    const auto available = climbing_aid::list_all( conditions );
+    if( std::none_of( available.begin(), available.end(), [&]( const climbing_aid * entry ) {
+    return entry->id == aid_id;
+} ) ) {
+        return false;
     }
-
-    // Scan the height of the drop and what's in the way.
     const climbing_aid::fall_scan fall( examp );
-    const climbing_aid::condition_list conditions = climbing_aid::detect_conditions( you, examp );
+    const int height = effective_vehicle_ladder_climb_height( aid, conditions, aid.down.max_height );
+    return fall.height > 0 && height > 0 &&
+           ( !aid.down.deploys_furniture() ||
+             fall.height_until_furniture >= std::min( fall.height, height ) ) &&
+           ( aid.down.allow_remaining_height || height >= fall.height );
+}
+
+std::optional<std::string> game::climb_down_prompt( Character &you,
+        const tripoint_bub_ms &examp, climbing_aid_id aid_id )
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    if( !can_climb_down_using( you, examp, aid_id ) ) {
+        return std::nullopt;
+    }
+    const climbing_aid &aid = aid_id.obj();
+    map &here = get_map();
+    const climbing_aid::fall_scan fall( examp );
+    const auto conditions = climbing_aid::detect_conditions( you, examp );
     const int effective_max_height = effective_vehicle_ladder_climb_height( aid, conditions,
                                      aid.down.max_height );
     const int effective_easy_climb_back_up = effective_vehicle_ladder_climb_height( aid, conditions,
             aid.down.easy_climb_back_up );
-    if( is_vehicle_ladder_aid( aid ) && effective_max_height <= 0 ) {
-        you.add_msg_if_player( _( "You can't reach that vehicle climbing aid." ) );
-        return;
-    }
-
     int estimated_climb_cost = you.climbing_cost( tripoint_bub_ms( fall.pos_bottom() ), examp );
     const float fall_mod = you.fall_damage_mod();
     add_msg_debug( debugmode::DF_IEXAMINE, "Climb cost %d", estimated_climb_cost );
@@ -11910,7 +12558,7 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     //   Climb down the rope?
 
     // Calculate chance of slipping.  Prints possible causes to log.
-    float slip_chance = slip_down_chance( climb_maneuver::down, aid_id, true );
+    float slip_chance = slip_down_chance( you, climb_maneuver::down, aid_id, false );
 
     // Roughly estimate damage if we should fall.
     int damage_estimate = 10 * fall.height;
@@ -11921,7 +12569,7 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     }
 
     // Rough messaging about safety.  "seems safe" can leave a 1-2% chance unlike "perfectly safe".
-    bool levitating = u.has_flag( json_flag_LEVITATION );
+    bool levitating = you.has_flag( json_flag_LEVITATION );
     bool seems_perfectly_safe = slip_chance < -5 && effective_max_height >= fall.height;
     if( !levitating ) {
         if( seems_perfectly_safe ) {
@@ -12011,61 +12659,165 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     query += query_prompt;
 
     add_msg_debug( debugmode::DF_GAME, "Generated climb_down prompt for the player." );
-    add_msg_debug( debugmode::DF_GAME, "Climbing aid: %s / deploy furniture %d", std::string( aid_id ),
-                   int( deploy_affordance ) );
     add_msg_debug( debugmode::DF_GAME, "Slip chance %d / est damage %d", slip_chance, damage_estimate );
     add_msg_debug( debugmode::DF_GAME, "We can descend %d / total height %d", effective_max_height,
                    fall.height );
 
-    if( !levitating && ( !seems_perfectly_safe || !easy_climb_back_up ) ) {
+    if( levitating || ( seems_perfectly_safe && easy_climb_back_up ) ) {
+        return std::string();
+    }
+    return string_format( query, here.disp_name( fall.pos_furniture_or_floor() ) );
+}
 
-        // This is used to mention object names.  TODO make this more flexible.
-        std::string target_disp_name = here.disp_name( fall.pos_furniture_or_floor() );
+void game::climb_down_using( Character &you, const tripoint_bub_ms &examp,
+                             climbing_aid_id aid_id, bool /*deploy_affordance*/, bool confirmed )
+{
+    const character_action_guard lifetime( you );
+    if( !lifetime || ( !you.is_avatar() && !confirmed ) ||
+        !can_climb_down_using( you, examp, aid_id ) ) {
+        return;
+    }
+    const auto origin = you.pos_abs();
+    const auto at_origin = [&]() {
+        return lifetime && you.pos_abs() == origin;
+    };
+    const climbing_aid &aid = aid_id.obj();
 
-        // Show the risk prompt.
-        if( !query_yn( query.c_str(), target_disp_name ) ) {
+    map &here = get_map();
+
+    // If player is grabbed, trapped, or somehow otherwise movement-impeded, first try to break free
+    if( !you.move_effects( false ) ) {
+        // move_effects determined we could not move, waste all moves
+        if( lifetime ) {
+            you.set_moves( 0 );
+        }
+        return;
+    }
+
+    if( !at_origin() || !can_climb_down_using( you, examp, aid_id ) ) {
+        // Can't move horizontally to the ledge
+        return;
+    }
+
+    // Scan the height of the drop and what's in the way.
+    const climbing_aid::fall_scan fall( examp );
+    const climbing_aid::condition_list conditions = climbing_aid::detect_conditions( you, examp );
+    const int effective_max_height = effective_vehicle_ladder_climb_height( aid, conditions,
+                                     aid.down.max_height );
+    if( is_vehicle_ladder_aid( aid ) && effective_max_height <= 0 ) {
+        you.add_msg_if_player( _( "You can't reach that vehicle climbing aid." ) );
+        return;
+    }
+
+    const float fall_mod = you.fall_damage_mod();
+    if( !confirmed ) {
+        const auto prompt = climb_down_prompt( you, examp, aid_id );
+        if( !prompt || ( !prompt->empty() && !you.query_yn( *prompt ) ) ) {
             return;
         }
     }
-
+    if( !at_origin() || !can_climb_down_using( you, examp, aid_id ) ) {
+        return;
+    }
     you.set_activity_level( ACTIVE_EXERCISE );
     float weary_mult = 1.0f / you.exertion_adjusted_move_multiplier( ACTIVE_EXERCISE );
 
     you.mod_moves( -to_moves<int>( 1_seconds + 1_seconds * fall_mod ) * weary_mult );
     you.setpos( here, examp, false );
 
+    if( !lifetime ) {
+        return;
+    }
     // Pre-descent message.
     if( !aid.down.msg_before.empty() ) {
         you.add_msg_if_player( aid.down.msg_before.translated() );
     }
 
-    // Descent: perform one slip check per level
-    tripoint_bub_ms descent_pos = examp;
+    // Pay for a deployed aid before publishing its first furniture tile. A later
+    // slip must not leave both a usable rope ladder and its unconsumed item.
+    bool aid_paid = false;
+    const auto ledge_position = you.pos_abs();
+    const auto still_at_ledge = [&]() {
+        return lifetime && you.pos_abs() == ledge_position;
+    };
+    const auto consume_aid = [&]() {
+        if( aid_paid ) {
+            return true;
+        }
+        if( aid.base_condition.cat == climbing_aid::category::item && aid.base_condition.uses_item > 0 ) {
+            const itype_id type( aid.base_condition.flag );
+            const int needed = aid.base_condition.uses_item;
+            if( !you.has_amount( type, needed ) ) {
+                return false;
+            }
+            auto used = you.use_amount( type, needed );
+            const int consumed = std::accumulate( used.begin(), used.end(), 0,
+            []( int count, const item & entry ) {
+                return count + entry.count();
+            } );
+            if( !still_at_ledge() ) {
+                return false;
+            }
+            if( consumed != needed ) {
+                for( item &entry : used ) {
+                    you.i_add_or_drop( entry );
+                    if( !still_at_ledge() ) {
+                        return false;
+                    }
+                }
+                return false;
+            }
+            aid_paid = true;
+            for( item &entry : used ) {
+                entry.spill_contents( you );
+                if( !still_at_ledge() ) {
+                    return false;
+                }
+            }
+        }
+        aid_paid = true;
+        return true;
+    };
+
+    // Descent: perform one slip check per level.
+    tripoint_bub_ms descent_pos = here.get_bub( ledge_position );
     for( int i = 0; i < fall.height && i < effective_max_height; ++i ) {
-        if( g->slip_down( climb_maneuver::down, aid_id, false ) ) {
+        if( g->slip_down( you, climb_maneuver::down, aid_id, false ) ) {
             // The player has slipped and probably fallen.
             return;
-        } else {
-            descent_pos.z()--;
-            if( aid.down.deploys_furniture() ) {
-                here.furn_set( descent_pos, aid.down.deploy_furn );
+        }
+        if( !still_at_ledge() ) {
+            return;
+        }
+        descent_pos = here.get_bub( ledge_position + tripoint_rel_ms( 0, 0, -i - 1 ) );
+        if( !here.inbounds( descent_pos ) ) {
+            return;
+        }
+        if( aid.down.deploys_furniture() ) {
+            if( here.has_furn( descent_pos ) || !consume_aid() ) {
+                return;
+            }
+            // Item callbacks may have changed the map or occupied this tile.
+            descent_pos = here.get_bub( ledge_position + tripoint_rel_ms( 0, 0, -i - 1 ) );
+            if( !here.inbounds( descent_pos ) || here.has_furn( descent_pos ) ) {
+                return;
+            }
+            here.furn_set( descent_pos, aid.down.deploy_furn );
+            if( !still_at_ledge() ) {
+                return;
             }
         }
     }
 
-    int descended_levels = examp.z() - descent_pos.z();
+    const int descended_levels = ledge_position.z() - descent_pos.z();
     add_msg_debug( debugmode::DF_IEXAMINE, "Safe movement down %d Z-levels", descended_levels );
 
     // Post-descent logic...
 
-    // Use up items after successful climb
-    if( aid.base_condition.cat == climbing_aid::category::item && aid.base_condition.uses_item > 0 ) {
-        for( item &used_item : you.use_amount( itype_id( aid.base_condition.flag ),
-                                               aid.base_condition.uses_item ) ) {
-            used_item.spill_contents( you );
-        }
+    // Non-deploying aids retain their successful-climb payment timing.
+    if( !consume_aid() || !still_at_ledge() ) {
+        return;
     }
-
     // Pre-descent message.
     if( !aid.down.msg_after.empty() ) {
         you.add_msg_if_player( aid.down.msg_after.translated() );
@@ -12074,6 +12826,9 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     // You ride the ride, you pay the tithe.
     if( aid.down.cost.damage > 0 ) {
         you.apply_damage( nullptr, bodypart_id( "torso" ), aid.down.cost.damage );
+    }
+    if( !lifetime ) {
+        return;
     }
     if( aid.down.cost.pain > 0 ) {
         you.mod_pain( aid.down.cost.pain );
@@ -12086,7 +12841,10 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     }
 
     // vertical_move with force=true triggers traps at the end of the move.
-    g->vertical_move( -descended_levels, true );
+    g->vertical_move( you, -descended_levels, true );
+    if( !lifetime ) {
+        return;
+    }
 
     if( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, you.pos_bub() ) ) {
         if( you.has_flag( json_flag_WATERWALKING ) ) {
@@ -12293,16 +13051,27 @@ bool game::can_pulp_acid_corpse( const Character &you, const mtype &corpse_mtype
 
 namespace cata_event_dispatch
 {
-void avatar_moves( const tripoint_abs_ms &old_abs_pos, const avatar &u, const map &m )
+void avatar_moves( const tripoint_abs_ms &old_abs_pos, avatar &u, const map &m )
 {
-    const tripoint_bub_ms new_pos = u.pos_bub();
+    character_moves( old_abs_pos, u, m );
+}
+
+void character_moves( const tripoint_abs_ms &old_abs_pos, Character &who, const map &m )
+{
+    const character_action_guard lifetime( who );
+    const tripoint_bub_ms new_pos = who.pos_bub();
     const tripoint_abs_ms new_abs_pos = m.get_abs( new_pos );
     mtype_id mount_type;
-    if( u.is_mounted() ) {
-        mount_type = u.mounted_creature->type->id;
+    if( who.is_mounted() ) {
+        mount_type = who.mounted_creature->type->id;
     }
-    get_event_bus().send<event_type::avatar_moves>( mount_type, m.ter( new_pos ).id(),
-            u.current_movement_mode(), u.is_underwater(), new_pos.z() );
+    if( who.is_avatar() ) {
+        get_event_bus().send<event_type::avatar_moves>( mount_type, m.ter( new_pos ).id(),
+                who.current_movement_mode(), who.is_underwater(), new_pos.z() );
+    }
+    if( !lifetime ) {
+        return;
+    }
 
     const tripoint_abs_omt old_abs_omt( coords::project_to<coords::omt>(
                                             old_abs_pos ) );
@@ -12311,24 +13080,38 @@ void avatar_moves( const tripoint_abs_ms &old_abs_pos, const avatar &u, const ma
     if( old_abs_omt != new_abs_omt ) {
         const oter_id &cur_ter = overmap_buffer.ter( new_abs_omt );
         const oter_id &past_ter = overmap_buffer.ter( old_abs_omt );
-        get_event_bus().send<event_type::avatar_enters_omt>( new_abs_omt.raw(), cur_ter );
-        overmap_buffer.add_extra_note( new_abs_omt );
+        if( who.is_avatar() ) {
+            get_event_bus().send<event_type::avatar_enters_omt>( new_abs_omt.raw(), cur_ter );
+            overmap_buffer.add_extra_note( new_abs_omt );
+        }
+        if( !lifetime ) {
+            return;
+        }
         // if the player has moved omt then might trigger an EOC for that OMT
         if( !past_ter->get_exit_EOC().is_null() ) {
-            dialogue d( get_talker_for( get_avatar() ), nullptr );
-            effect_on_condition_id eoc = cur_ter->get_exit_EOC();
+            dialogue d( get_talker_for( who ), nullptr );
+            effect_on_condition_id eoc = past_ter->get_exit_EOC();
             eoc->activate_activation_only( d, "OMT movement" );
         }
+        if( !lifetime ) {
+            return;
+        }
         cata::lua_platform::invoke_overmap_terrain_handler(
-            past_ter->get_type_id().str(), "exit", old_abs_omt, new_abs_omt, u );
+            past_ter->get_type_id().str(), "exit", old_abs_omt, new_abs_omt, who );
 
+        if( !lifetime ) {
+            return;
+        }
         if( !cur_ter->get_entry_EOC().is_null() ) {
-            dialogue d( get_talker_for( get_avatar() ), nullptr );
+            dialogue d( get_talker_for( who ), nullptr );
             effect_on_condition_id eoc = cur_ter->get_entry_EOC();
             eoc->activate_activation_only( d, "OMT movement" );
         }
+        if( !lifetime ) {
+            return;
+        }
         cata::lua_platform::invoke_overmap_terrain_handler(
-            cur_ter->get_type_id().str(), "entry", old_abs_omt, new_abs_omt, u );
+            cur_ter->get_type_id().str(), "entry", old_abs_omt, new_abs_omt, who );
 
     }
 }

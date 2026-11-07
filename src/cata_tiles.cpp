@@ -686,7 +686,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     CATA_PROFILE_PLOT( "tiles.viewport_slots",
                        static_cast<int64_t>( s.x ) * static_cast<int64_t>( s.y ) );
 
-    const int num_ranges = is_isometric() ? 1 + fov_3d_z_range : 1;
+    const int num_ranges = is_isometric() ? 1 + get_map().observer_z_range( get_avatar() ) : 1;
     std::vector<half_open_rectangle<point>> z_any_tile_range( num_ranges );
     for( int z = 0; z < num_ranges; ++z ) {
         z_any_tile_range[z] = get_window_any_tile_range( { width, height }, -z );
@@ -704,11 +704,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     avatar &you = get_avatar();
     //limit the render area to maximum view range (121x121 square centered on player)
-    const tripoint_bub_ms you_pos = you.pos_bub( here );
+    const tripoint_bub_ms you_pos = here.observer_position( you );
     const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
-    const int draw_min_z = std::max( you.posz() - fov_3d_z_range, -OVERMAP_DEPTH );
+    const int draw_min_z = std::max( you_pos.z() - here.observer_z_range( you ), -OVERMAP_DEPTH );
 
     // Map memory should be at least the size of the view range
     // so that new tiles can be memorized, and at least the size of the display
@@ -1395,7 +1395,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_deferred_glide_critters.clear();
         m_collecting_glide_critters = !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
                                       !m_creature_attack_anims.empty();
-        int cur_zlevel = std::max( center.z() - fov_3d_z_range, -OVERMAP_DEPTH );
+        int cur_zlevel = std::max( center.z() - get_map().observer_z_range( get_avatar() ),
+                                   -OVERMAP_DEPTH );
         bool draw_aborted = false;
         const cata_shader::variant_pass *const tint_vp = get_shared_variant_pass();
         const bool shader_tint = tint_vp && tint_vp->tint_available();
@@ -4011,7 +4012,7 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
 {
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
-                                          fov_3d_z_range == 0 };
+                                          get_map().observer_z_range( get_avatar() ) == 0 };
     return capture_terrain_layer( get_map(), get_avatar(), input, terrain_override, *layer_capture_ ) &&
            draw_layer_view( *layer_capture_, height_3d );
 }
@@ -4021,7 +4022,7 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
 {
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
-                                          fov_3d_z_range == 0 };
+                                          get_map().observer_z_range( get_avatar() ) == 0 };
     return capture_furniture_layer( get_map(), get_avatar(), input, furniture_override,
                                     *layer_capture_ ) &&
            draw_layer_view( *layer_capture_, height_3d );
@@ -4032,7 +4033,7 @@ bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &h
 {
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
-                                          fov_3d_z_range == 0 };
+                                          get_map().observer_z_range( get_avatar() ) == 0 };
     return capture_trap_layer( get_map(), get_avatar(), input, trap_override, *layer_capture_ ) &&
            draw_layer_view( *layer_capture_, height_3d );
 }
@@ -4819,7 +4820,7 @@ bool cata_tiles::draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int
     // Search for a creature above
     while( pcritter == nullptr && scan_p.z() <= OVERMAP_HEIGHT &&
            !here.dont_draw_lower_floor( scan_p ) &&
-           scan_p.z() - you.posz() <= fov_3d_z_range ) {
+           scan_p.z() - here.observer_position( you ).z() <= here.observer_z_range( you ) ) {
         pcritter = get_creature_tracker().creature_at( scan_p, true );
         scan_p.z()++;
     }
@@ -4843,7 +4844,8 @@ bool cata_tiles::draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int
 
     // Draw shadow
     if( draw_from_id_string( "shadow", TILE_CATEGORY::NONE, empty_string, p,
-                             0, 0, ll, false, height_3d ) && scan_p.z() - 1 > you.posz() && you.sees( here, critter ) ) {
+                             0, 0, ll, false, height_3d ) && scan_p.z() - 1 > here.observer_position( you ).z() &&
+        you.sees( here, critter ) ) {
 
         const std::string disposition = capture_creature_disposition( here, you, critter );
         if( !disposition.empty() && tileset_ptr->find_tile_type( disposition ) ) {

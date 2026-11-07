@@ -38,8 +38,13 @@ struct requirement_failure_reasons {
     bool no_craft_disassembly_location_route_found = false;
 };
 
+struct zone_query_context;
+
 namespace zone_sorting
 {
+// Only the operator's live handhold may supply cart capacity or carried cargo.
+vehicle *grabbed_cart( const Character &who, const map &here );
+
 // The optional part index in this pair indicates which vehicle cargo part the
 // item is stored in; std::nullopt means the item is on the ground.
 using zone_items = std::vector<std::pair<item *, std::optional<int>>>;
@@ -81,7 +86,7 @@ bool sort_skip_item( Character &you, const item *it,
                      const std::vector<item_location> &other_activity_items,
                      bool ignore_favorite, const tripoint_abs_ms &src,
                      float base_spoil_multiplier = 1.0f,
-                     bool *spillable_skipped = nullptr );
+                     bool *spillable_skipped = nullptr, const zone_query_context *query = nullptr );
 
 /**
 * Sets sorting options given nearby UNLOAD_ALL zones
@@ -89,7 +94,7 @@ bool sort_skip_item( Character &you, const item *it,
 * @param unloading - whether to set unload_always
 */
 unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &src,
-                                        bool use_zone_type );
+                                        bool use_zone_type, const zone_query_context *query = nullptr );
 
 // return items at the given location from vehicle cargo and ground
 // TODO: build into map class
@@ -101,12 +106,14 @@ std::vector<vpart_reference> cargo_parts_at( const tripoint_bub_ms &pos );
 std::optional<vpart_reference> cargo_part_from_index( const tripoint_bub_ms &pos, int part_index );
 
 // if one zone is ignored, all will be
-bool ignore_contents( Character &you, const tripoint_abs_ms &src );
+bool ignore_contents( Character &you, const tripoint_abs_ms &src,
+                      const zone_query_context *query = nullptr );
 
 // skip tiles in IGNORE zone or with ignore option,
 // tiles on fire (to prevent taking out wood off the lit brazier)
 // and inaccessible furniture, like filled charcoal kiln
-bool ignore_zone_position( Character &you, const tripoint_abs_ms &src, bool ignore_contents );
+bool ignore_zone_position( Character &you, const tripoint_abs_ms &src, bool ignore_contents,
+                           const zone_query_context *query = nullptr );
 
 // of `items` at `src`, do any need to be sorted?
 // If pickup_failure is true on return, at least one item can't be sorted because it can't be picked up.
@@ -115,9 +122,9 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
                         zone_sorting::unload_sort_options zone_unload_options,
                         const std::vector<item_location> &other_activity_items,
                         const zone_sorting::zone_items &items, bool *pickup_failure,
-                        bool *spillable_skipped = nullptr );
+                        bool *spillable_skipped = nullptr, const zone_query_context *query = nullptr );
 bool dest_has_capacity( const tripoint_abs_ms &dest, const zone_type_id &ztype,
-                        const item &sample, const faction_id &fac );
+                        const item &sample, const faction_id &fac, const zone_query_context *query = nullptr );
 
 // why the carry gate turned an item down. the pickup path reports a knock-down
 // refusal to the player and stays quiet about the others
@@ -144,7 +151,7 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
                                  zone_sorting::unload_sort_options zone_unload_options,
                                  const std::optional<vpart_reference> &vpr_src,
                                  item *it, const std::unordered_set<tripoint_abs_ms> &dest_set,
-                                 int &num_processed );
+                                 int &num_processed, const zone_query_context *query = nullptr );
 void move_item( Character &you, const std::optional<vpart_reference> &vpr_src,
                 const tripoint_bub_ms &src_bub, const std::unordered_set<tripoint_abs_ms> &dest_set,
                 item &it, int &num_processed );
@@ -172,7 +179,7 @@ struct viewport_bbox {
 
 // Compute bounding box around a set of tile coordinates.
 // Returns a default bbox at origin if tiles is empty.
-viewport_bbox calc_zone_bbox( const std::unordered_set<tripoint_abs_ms> &tiles );
+viewport_bbox calc_zone_bbox( const std::unordered_set < tripoint_abs_ms > &tiles );
 
 // Expand bbox to include a new tile. Returns true if bbox actually grew.
 // Updates centroid.
@@ -218,32 +225,33 @@ requirement_id synthesize_requirements(
 // eliminates satisfied requirements from tools/qualities, keeps items
 requirement_id remove_met_requirements( requirement_id base_req_id, Character &you );
 
-std::optional<requirement_id> vehicle_work_requirements( Character &you,
+std::optional < requirement_id > vehicle_work_requirements( Character &you,
         activity_reason_info &act_info, const tripoint_bub_ms &src_loc );
 
 //general function for non-specific multi activities
-std::unordered_set<tripoint_abs_ms> generic_locations( Character &you, const activity_id &act_id );
-void prune_same_tile_locations( Character &you, std::unordered_set<tripoint_abs_ms> &src_set );
-void prune_dark_locations( Character &you, std::unordered_set<tripoint_abs_ms> &src_set,
+std::unordered_set < tripoint_abs_ms > generic_locations( Character &you, const activity_id &act_id,
+        const zone_query_context *query = nullptr );
+void prune_same_tile_locations( Character &you, std::unordered_set < tripoint_abs_ms > &src_set );
+void prune_dark_locations( Character &you, std::unordered_set < tripoint_abs_ms > &src_set,
                            const activity_id &act_id );
-void prune_dangerous_field_locations( std::unordered_set<tripoint_abs_ms> &src_set );
-std::unordered_set<tripoint_abs_ms> no_same_tile_locations( Character &you,
-        const activity_id &act_id );
+void prune_dangerous_field_locations( std::unordered_set < tripoint_abs_ms > &src_set );
+std::unordered_set < tripoint_abs_ms > no_same_tile_locations( Character &you,
+        const activity_id &act_id, const zone_query_context *query = nullptr );
 
 void revert_npc_post_activity( Character &you, activity_id act_id, bool no_locations );
 bool out_of_moves( Character &you );
-std::optional<bool> route( Character &you, player_activity &act, const tripoint_bub_ms &src_bub,
-                           requirement_failure_reasons &fail_reason, bool check_only );
+std::optional < bool > route( Character &you, player_activity &act, const tripoint_bub_ms &src_bub,
+                              requirement_failure_reasons &fail_reason, bool check_only );
 void activity_failure_message( Character &you, activity_id new_activity,
                                const requirement_failure_reasons &fail_reason, bool no_locations );
 
 zone_type_id get_zone_for_act( const tripoint_bub_ms &src_loc, const zone_manager &mgr,
-                               const activity_id &act_id, const faction_id &fac_id );
+                               const activity_id &act_id, const faction_id &fac_id, const zone_query_context *query = nullptr );
 void add_basecamp_storage_to_loot_zone_list(
     zone_manager &mgr, const tripoint_bub_ms &src_loc, Character &you,
-    std::vector<tripoint_bub_ms> &loot_zone_spots, std::vector<tripoint_bub_ms> &combined_spots );
+    std::vector < tripoint_bub_ms > &loot_zone_spots, std::vector < tripoint_bub_ms > &combined_spots );
 bool are_requirements_nearby(
-    const std::vector<tripoint_bub_ms> &loot_spots, const requirement_id &needed_things,
+    const std::vector < tripoint_bub_ms > &loot_spots, const requirement_id &needed_things,
     Character &you, const activity_id &activity_to_restore, bool in_loot_zones,
     const tripoint_bub_ms &src_loc );
 

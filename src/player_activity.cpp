@@ -468,7 +468,7 @@ void player_activity::do_turn( Character &you )
         you.pause();
     }
 
-    if( *this && moves_left <= 0 ) {
+    if( *this && moves_left <= 0 && ( !actor || actor->ready_to_finish() ) ) {
         // Note: For some activities "finish" is a misnomer; that's why we explicitly check if the
         // type is ACT_NULL below.
         const std::uint64_t completion_identity = identity_generation();

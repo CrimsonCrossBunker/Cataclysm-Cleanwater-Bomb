@@ -51,6 +51,8 @@ void handle_all_liquid( item liquid, int radius, const item *avoid = nullptr );
  * produced the liquid).
  */
 void handle_npc_liquid( item liquid, Character &who );
+// Generated liquid already published in the world; debit that exact source.
+void handle_npc_liquid( item_location liquid, Character &who );
 
 /** Call handle_all_liquid for player or handle_npc_liquid for npc */
 void handle_all_or_npc_liquid( Character &p, item &newit, int radius = 0,

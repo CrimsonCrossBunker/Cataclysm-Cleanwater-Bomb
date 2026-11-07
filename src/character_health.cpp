@@ -29,6 +29,7 @@
 #include "cata_utility.h"
 #include "lua_platform_hooks.h"
 #include "character_attire.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -2822,6 +2823,11 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         return;
     }
 
+    // Damage events can unload this character or start unrelated work. Retain
+    // the original body until the callback returns, including a lethal hit.
+    const character_action_guard lifetime( *this, true );
+    const auto activity_generation = activity.identity_generation();
+
     if( hurt == bodypart_str_id::NULL_ID() ) {
         debugmsg( "Wacky body part hurt!" );
         hurt = body_part_torso;
@@ -2860,12 +2866,18 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         get_event_bus().send<event_type::character_takes_damage>( getID(), dam_to_bodypart,
                 part_to_damage.id(), pain );
     }
+    if( !lifetime || activity.identity_generation() != activity_generation ) {
+        return;
+    }
 
     if( !weapon.is_null() && !can_wield( weapon ).success() &&
         can_drop( weapon ).success() ) {
         add_msg_if_player( _( "You are no longer able to wield your %s and drop it!" ),
                            weapon.display_name() );
         put_into_vehicle_or_drop( *this, item_drop_reason::tumbling, { weapon } );
+        if( !lifetime || activity.identity_generation() != activity_generation ) {
+            return;
+        }
         i_rem( &weapon );
     }
     if( has_effect( effect_mending, part_to_damage.id() ) && ( source == nullptr ||
@@ -2877,6 +2889,9 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
 
     if( dam > get_painkiller() ) {
         on_hurt( source );
+        if( !lifetime ) {
+            return;
+        }
     }
 
     if( !bypass_med ) {

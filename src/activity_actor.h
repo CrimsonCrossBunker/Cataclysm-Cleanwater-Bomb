@@ -69,6 +69,12 @@ class activity_actor
          */
         virtual void finish( player_activity &act, Character &who ) = 0;
 
+        // Elapsed work can still require its owner's input. Defer completion
+        // hooks as well as finish(), so waiting/retries never replay callbacks.
+        virtual bool ready_to_finish() const {
+            return true;
+        }
+
         /**
          * Called just before Character::cancel_activity() executes.
          * This may be used to perform cleanup

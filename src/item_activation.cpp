@@ -6,6 +6,7 @@
 
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "chopping_activity.h"
 #include "character_action_guard.h"
 #include "flag.h"
 #include "game_constants.h"
@@ -15,11 +16,45 @@
 #include "item_source.h"
 #include "itype.h"
 #include "iuse.h"
+#include "iuse_actor.h"
 #include "line.h"
 #include "lua_platform_runtime.h"
 #include "map.h"
 #include "player_activity.h"
 #include "ret_val.h"
+#include "json.h"
+
+void salvage_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "target", target );
+    out.member( "type", type );
+    out.member( "allow_equipped", allow_equipped );
+    out.member( "allow_theft", allow_theft );
+    out.end_object();
+}
+
+void salvage_selection::deserialize( const JsonObject &data )
+{
+    data.read( "target", target, true );
+    data.read( "type", type, true );
+    data.read( "allow_equipped", allow_equipped );
+    data.read( "allow_theft", allow_theft );
+}
+
+void lumber_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "log", log );
+    out.member( "allow_theft", allow_theft );
+    out.end_object();
+}
+
+void lumber_selection::deserialize( const JsonObject &data )
+{
+    data.read( "log", log, true );
+    data.read( "allow_theft", allow_theft );
+}
 
 bool supports_owned_item_activation( const item &source, const std::string &method )
 {
@@ -38,11 +73,26 @@ bool query_item_activation_choices( const item &source, const std::string &metho
     if( method.empty() ) {
         return supports_owned_item_activation( source, method );
     }
+    if( method == "LUMBER" ) {
+        return query_lumber_choices( get_avatar(), choices );
+    }
     if( method == "REMOTEVEH" ) {
         return query_remote_vehicle_choices( get_avatar(), source, choices );
     }
+    if( method == "RADIOCONTROL" ) {
+        const int choice = iuse::query_radiocontrol( source );
+        if( choice < 0 ) {
+            return false;
+        }
+        choices.radio = choice;
+        return valid_item_activation_choices( source, method, choices );
+    }
     const item *used = source.get_usable_item( method );
     const use_function *use = used ? used->type->get_use( method ) : nullptr;
+    if( method == "salvage" ) {
+        const auto *actor = use ? dynamic_cast<const salvage_actor *>( use->get_actor_ptr() ) : nullptr;
+        return actor && actor->query_salvage_choices( get_avatar(), source, choices );
+    }
     return use && use->get_actor_ptr() && use->get_actor_ptr()->query_activation_choices( choices );
 }
 
@@ -79,6 +129,10 @@ static bool activate_owned_item( Character &who, item_location source,
         if( !tool || !valid_adjacent_tool_target( action, who, here, *tool, target ) ) {
             return false;
         }
+    }
+    if( action == adjacent_tool_action::tree && !allow_theft &&
+        !g->local_faction_action_warning( who ).empty() ) {
+        return false;
     }
     const bool wet = source->wetness && source->has_flag( flag_WATER_BREAK_ACTIVE );
     if( wet && !allow_wet ) {
@@ -138,6 +192,10 @@ static bool activate_owned_item( Character &who, item_location source,
         if( !carried ) {
             pre_obtain_moves = who.get_moves();
         }
+    }
+    if( action == adjacent_tool_action::tree &&
+        !g->warn_character_maybe_anger_local_faction( who, true, false, allow_theft ) ) {
+        return false;
     }
     const bool map_light = in_place && source.where() == item_location::type::map;
     if( map_light ) {

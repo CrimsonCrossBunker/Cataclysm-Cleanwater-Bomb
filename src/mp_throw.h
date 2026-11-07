@@ -17,6 +17,8 @@ class map;
 
 namespace cata_mp
 {
+struct peek_authorization;
+
 enum class throw_method { hand, sling };
 
 struct throw_intent {
@@ -26,6 +28,7 @@ struct throw_intent {
     std::optional<tripoint_abs_ms> blind_from;
     item_source item;
     int64_t wielded = 0;
+    int64_t peek_request = 0;
     bool allow_theft = false;
     std::optional<item_disposition> disposition;
 };
@@ -34,7 +37,8 @@ struct throw_intent {
 throw_intent make_throw_intent( const Character &who, item_location source );
 bool throw_keeps_wielded( Character &who, const item_location &source );
 bool can_prepare_throw( Character &who, const item_location &source );
-bool execute_throw_intent( Character &who, map &here, const throw_intent &intent );
+bool execute_throw_intent( Character &who, map &here, const throw_intent &intent,
+                           const peek_authorization *peek = nullptr );
 } // namespace cata_mp
 
 #endif // CATA_SRC_MP_THROW_H

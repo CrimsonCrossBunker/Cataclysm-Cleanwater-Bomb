@@ -14,11 +14,14 @@
 #include "character_id.h"
 #include "player_identity.h"
 #include "coordinates.h"
+#include "map_viewpoint.h"
 #include "type_id.h"
 
+class aim_activity_actor;
 class Character;
 class item;
 class npc;
+class monster;
 enum class object_type : int;
 struct WORLD;
 
@@ -30,6 +33,9 @@ struct selection;
 namespace cata_mp
 {
 struct throw_intent;
+void client_close_peek( int64_t request );
+bool client_name_monster( const monster &subject, const tripoint_abs_ms &origin,
+                          const std::string &name, const std::optional<map_viewpoint> &observation );
 
 // Called once per game turn from do_turn() — drains the event queue and
 // processes connect/disconnect/action events from remote players.
@@ -52,7 +58,8 @@ void process_session_turn();
 // Returns a JSON string describing the remote player's current position,
 // HP, and nearby visible tiles. Sent to the client after each action.
 struct remote_player_session;
-std::string serialize_remote_player_state( remote_player_session &recipient );
+std::string serialize_remote_player_state( remote_player_session &recipient,
+        const std::vector<tripoint_abs_ms> &changed_tiles = {} );
 
 // Returns true if the given character_id belongs to a remote player NPC.
 // Used by monmove() to skip AI processing for human-controlled NPCs.
@@ -178,19 +185,6 @@ void client_wait_for_initial_position();
 // (class npc is already forward-declared at global scope above.)
 void mp_tick_proxy_activity( ::npc &guy );
 
-// Client-only: invoke from the wrapper around the SP grab() handler in
-// handle_action.cpp's ACTION_GRAB case.  Snapshot the avatar's grab state
-// before running SP grab(), then call this with the pre-snapshot; we forward
-// the delta to the host so its proxy NPC mirrors the grab.  No-op for the SP
-// case (cancelled prompt → state unchanged) and outside client mode.
-void mp_client_dispatch_grab_if_changed( object_type pre_type,
-        const tripoint_rel_ms &pre_point );
-
-// Client-only: parallel to the grab dispatcher.  Invoke from the wrappers
-// around ACTION_HAUL and ACTION_HAUL_TOGGLE after running the SP handler;
-// forwards a toggle_haul action to the host when is_hauling() actually flipped.
-void mp_client_dispatch_hauling_if_changed( bool pre_hauling );
-
 // Attach local input/activity observations to a request. Body state remains
 // server-owned and is never uploaded by this path.
 std::string client_enrich_action( const std::string &json );
@@ -203,8 +197,9 @@ void finish_remote_character_turn( npc &actor );
 void client_request_melee( const tripoint_bub_ms &target, melee_action action,
                            const matec_id &technique = matec_id() );
 bool client_uses_firearm_intents( const item &weapon );
-void client_start_firearm_activity();
+void client_start_firearm_activity( unsigned int bionic_uid = 0 );
 void client_finish_firearm_activity();
+void client_apply_firearm_preview( aim_activity_actor &aim );
 void client_finish_ready_firearm_activity();
 firearm_view_phase client_firearm_phase();
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action );

@@ -1,14 +1,20 @@
 #include "remote_vehicle_activity.h"
 
 #include <cmath>
+#include <algorithm>
+#include <climits>
 #include <utility>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "bionics.h"
+#include "units.h"
 #include "character_action_guard.h"
 #include "game.h"
+#include "flag.h"
 #include "item.h"
 #include "item_activation.h"
 #include "itype.h"
@@ -37,6 +43,7 @@ bool reachable_vehicle( Character &who, map &here, const vehicle &target, bool o
 bool settle_security( Character &who, item &controller, vehicle &target, int roll, bool advanced )
 {
     const character_action_guard lifetime( who );
+    const auto generation = who.activity.identity_generation();
     const int64_t target_id = target.uid().get_value();
     const bool carried = who.has_item( controller );
     const item_location source = carried ? item_location( who, &controller ) : item_location();
@@ -52,7 +59,8 @@ bool settle_security( Character &who, item &controller, vehicle &target, int rol
         success = true;
     }
     who.practice( skill_id( "computer" ), advanced ? 10 : 3 );
-    if( !lifetime || vehicle::find_vehicle_by_uid( get_map(), target_id ) != &target ||
+    if( !lifetime || who.activity.identity_generation() != generation ||
+        vehicle::find_vehicle_by_uid( get_map(), target_id ) != &target ||
         ( carried && ( !source || source.get_item() != &controller ) ) ) {
         return false;
     }
@@ -157,7 +165,9 @@ void local_vehicle_action( Character &who, item &controller, vehicle &target )
 
 bool valid_remote_vehicle_choices( const item_activation_choices &choices )
 {
-    return !choices.timer_seconds &&
+    return !choices.lumber && !choices.timer_seconds && !choices.radio && !choices.fire_target &&
+           !choices.fire_tinder &&
+           choices.salvage_batch.empty() && !choices.salvage &&
            ( ( choices.remote_vehicle_action == "stop" && !choices.remote_vehicle_uid ) ||
              ( ( choices.remote_vehicle_action == "control" || choices.remote_vehicle_action == "action" ) &&
                choices.remote_vehicle_uid && *choices.remote_vehicle_uid > 0 ) );
@@ -213,6 +223,34 @@ bool query_remote_vehicle_choices( Character &who, const item &controller,
     return true;
 }
 
+namespace
+{
+void settle_bionic_controller( Character &who, unsigned int uid, bool used, bool active )
+{
+    const auto bio = who.find_bionic_by_uid( uid );
+    if( !who.is_dead_state() && bio && ( *bio )->id == bionic_id( "bio_remote" ) ) {
+        // A successful controller operation costs one charge. Security effort
+        // drains the temporary controller only, not the operator's CBM power.
+        if( used ) {
+            who.mod_power_level( -1_kJ );
+        }
+        ( *bio )->powered = active;
+    }
+}
+} // namespace
+
+remote_vehicle_activity_actor remote_vehicle_activity_actor::use_bionic(
+    const Character &who, unsigned int uid, int64_t vehicle_id, bool one_action )
+{
+    remote_vehicle_activity_actor result( {}, vehicle_id, one_action );
+    result.bionic_uid = uid;
+    result.bionic_controller.emplace( itype_id( "remotevehcontrol" ), calendar::turn_zero );
+    result.bionic_controller->set_flag( flag_USES_BIONIC_POWER );
+    result.bionic_controller->charges = static_cast<int>( std::clamp<int64_t>(
+                                            units::to_kilojoule( who.get_power_level() ), 0, INT_MAX ) );
+    return result;
+}
+
 remote_vehicle_activity_actor::remote_vehicle_activity_actor( item_source source,
         int64_t uid, bool single ) : controller( std::move( source ) ), vehicle_id( uid ),
     one_action( single ) {}
@@ -258,9 +296,16 @@ void remote_vehicle_activity_actor::start( player_activity &act, Character &who 
     }
     const character_action_guard lifetime( who );
     const auto generation = act.identity_generation();
-    const security_scan scanned = scan_security( who, *source( who ), *target( who ) );
+    // Practice hooks may cancel/replace the activity; its virtual controller
+    // must survive that callback without borrowing storage from this actor.
+    std::optional<item> facade = bionic_controller;
+    const security_scan scanned = scan_security( who, facade ? *facade : *source( who ),
+                                  *target( who ) );
     if( !lifetime || who.activity.identity_generation() != generation ) {
         return;
+    }
+    if( facade ) {
+        bionic_controller = std::move( facade );
     }
     authorized = scanned.authorized;
     advanced_security = scanned.advanced;
@@ -298,6 +343,16 @@ int64_t remote_vehicle_activity_actor::target_id() const
 
 item_location remote_vehicle_activity_actor::source( Character &who ) const
 {
+    if( bionic_uid ) {
+        const auto bio = who.find_bionic_by_uid( bionic_uid );
+        if( !bio || ( *bio )->id != bionic_id( "bio_remote" ) ||
+            ( *bio )->incapacitated_time > 0_turns || !bionic_controller ) {
+            return item_location();
+        }
+        bionic_controller->charges = static_cast<int>( std::min<int64_t>( bionic_controller->charges,
+                                     std::clamp<int64_t>( units::to_kilojoule( who.get_power_level() ), 0, INT_MAX ) ) );
+        return item_location( who, &*bionic_controller );
+    }
     return resolve_item_source( who, get_map(), controller );
 }
 
@@ -314,10 +369,14 @@ void remote_vehicle_activity_actor::answer_security( Character &who, bool consen
     security_roll.reset();
     const character_action_guard lifetime( who );
     const auto generation = who.activity.identity_generation();
-    const bool granted = settle_security( who, *source( who ), *target( who ), roll,
-                                          advanced_security );
+    std::optional<item> facade = bionic_controller;
+    const bool granted = settle_security( who, facade ? *facade : *source( who ), *target( who ),
+                                          roll, advanced_security );
     if( !lifetime || who.activity.identity_generation() != generation ) {
         return;
+    }
+    if( facade ) {
+        bionic_controller = std::move( facade );
     }
     authorized = granted;
     if( vehicle *candidate = target( who ) ) {
@@ -337,6 +396,12 @@ void remote_vehicle_activity_actor::complete_control( Character &who )
     // Native startup can replace this activity. Keep no borrowed actor members
     // across the handoff, and charge the completed access exactly once.
     item_location source = this->source( who );
+    const unsigned int uid = bionic_uid;
+    std::optional<item> facade;
+    if( uid && source ) {
+        facade = *source;
+        source = item_location( who, &*facade );
+    }
     vehicle *candidate = target( who );
     const int64_t target_id = vehicle_id;
     const character_action_guard lifetime( who );
@@ -351,15 +416,25 @@ void remote_vehicle_activity_actor::complete_control( Character &who )
     if( !source || !candidate ) {
         return;
     }
-    source->activation_consume( 1, who.pos_bub(), &who );
+    if( uid ) {
+        settle_bionic_controller( who, uid, true, true );
+    } else {
+        source->activation_consume( 1, who.pos_bub(), &who );
+    }
     if( !lifetime || !source ) {
         return;
     }
     candidate = vehicle::find_vehicle_by_uid( get_map(), target_id );
     if( !candidate || !reachable_vehicle( who, get_map(), *candidate, false ) ) {
+        if( uid ) {
+            settle_bionic_controller( who, uid, false, false );
+        }
         return;
     }
     take_remote_control( who, *source, *candidate );
+    if( uid && lifetime ) {
+        settle_bionic_controller( who, uid, false, source->active );
+    }
 }
 
 bool remote_vehicle_activity_actor::apply_action( Character &who,
@@ -370,6 +445,12 @@ bool remote_vehicle_activity_actor::apply_action( Character &who,
         !vehicle_control_accessible( who, get_map(), *target( who ), selection.position,
                                      selection.action, &source ) ) {
         return false;
+    }
+    const unsigned int uid = bionic_uid;
+    std::optional<item> facade;
+    if( uid ) {
+        facade = *source;
+        source = item_location( who, &*facade );
     }
     const character_action_guard lifetime( who );
     const activity_execution execution = who.activity.execution();
@@ -382,7 +463,12 @@ bool remote_vehicle_activity_actor::apply_action( Character &who,
         }
     } );
     const bool result = execute_vehicle_control( who, get_map(), selection, &source );
-    if( lifetime && source ) {
+    if( lifetime && uid ) {
+        if( auto *startup = dynamic_cast<start_engines_activity_actor *>( who.activity.actor.get() ) ) {
+            startup->allow_bionic_remote_start( uid, selection.vehicle_id );
+        }
+        settle_bionic_controller( who, uid, true, false );
+    } else if( lifetime && source ) {
         source->activation_consume( 1, who.pos_bub(), &who );
     }
     return result;
@@ -443,11 +529,12 @@ void remote_vehicle_activity_actor::canceled( player_activity &, Character &who 
             source->charges -= 1;
         }
     }
-    if( authorized && one_action ) {
-        authorized = false;
-        if( source && source.held_by( who ) ) {
-            source->activation_consume( 1, who.pos_bub(), &who );
-        }
+    const bool used = authorized && one_action;
+    authorized = false;
+    if( bionic_uid ) {
+        settle_bionic_controller( who, bionic_uid, used, false );
+    } else if( used && source && source.held_by( who ) ) {
+        source->activation_consume( 1, who.pos_bub(), &who );
     }
 }
 
@@ -460,6 +547,8 @@ void remote_vehicle_activity_actor::serialize( JsonOut &out ) const
 {
     out.start_object();
     out.member( "controller", controller );
+    out.member( "bionic_uid", bionic_uid );
+    out.member( "bionic_controller", bionic_controller );
     out.member( "vehicle_id", vehicle_id );
     out.member( "one_action", one_action );
     out.member( "advanced_security", advanced_security );
@@ -474,6 +563,8 @@ std::unique_ptr<activity_actor> remote_vehicle_activity_actor::deserialize( Json
     const JsonObject data = input.get_object();
     remote_vehicle_activity_actor actor( {}, 0, false );
     data.read( "controller", actor.controller, true );
+    data.read( "bionic_uid", actor.bionic_uid );
+    data.read( "bionic_controller", actor.bionic_controller );
     data.read( "vehicle_id", actor.vehicle_id, true );
     data.read( "one_action", actor.one_action, true );
     data.read( "advanced_security", actor.advanced_security, true );
@@ -558,4 +649,48 @@ std::optional<int> begin_remote_vehicle_access( Character &who, item &controller
                          item_location( who, &controller ) ),
                          *choices.remote_vehicle_uid, choices.remote_vehicle_action == "action" ) );
     return 0;
+}
+
+bool valid_bionic_remote_vehicle_access( Character &who, unsigned int uid,
+        const item_activation_choices &choices )
+{
+    const auto bio = who.find_bionic_by_uid( uid );
+    if( who.activity || !bio || ( *bio )->id != bionic_id( "bio_remote" ) ||
+        who.get_power_level() < 1_kJ || !valid_remote_vehicle_choices( choices ) ) {
+        return false;
+    }
+    if( choices.remote_vehicle_action == "stop" ) {
+        return true;
+    }
+    vehicle *candidate = vehicle::find_vehicle_by_uid( get_map(), *choices.remote_vehicle_uid );
+    const bool single = choices.remote_vehicle_action == "action";
+    Character *other = candidate ? vehicle_operator( *candidate, get_map() ) : nullptr;
+    if( !candidate || !reachable_vehicle( who, get_map(), *candidate, single ) ||
+        ( other && other != &who ) ) {
+        return false;
+    }
+    return true;
+}
+
+bool begin_bionic_remote_vehicle_access( Character &who, unsigned int uid,
+        const item_activation_choices &choices )
+{
+    if( !valid_bionic_remote_vehicle_access( who, uid, choices ) ) {
+        return false;
+    }
+    if( choices.remote_vehicle_action == "stop" ) {
+        set_remote_vehicle( who, get_map(), nullptr );
+        settle_bionic_controller( who, uid, false, false );
+        return true;
+    }
+    auto actor = remote_vehicle_activity_actor::use_bionic(
+                     who, uid, *choices.remote_vehicle_uid, choices.remote_vehicle_action == "action" );
+    if( !actor.source( who )->activation_success() ) {
+        settle_bionic_controller( who, uid, false, false );
+        return false;
+    }
+    // While a prompt is pending there is no active radio link to maintain.
+    settle_bionic_controller( who, uid, false, false );
+    who.assign_activity( actor );
+    return true;
 }

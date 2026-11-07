@@ -1,4 +1,5 @@
-﻿// Associated headers here are the ones for which their only non-inline
+#include "radio_car_control.h"
+// Associated headers here are the ones for which their only non-inline
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
@@ -80,6 +81,7 @@
 #include "game_constants.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_source.h"
 #include "item_contents.h"
 #include "item_factory.h"
 #include "item_location.h"
@@ -106,6 +108,7 @@
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "pathfinding.h"
 #include "player_identity.h"
 #include "point.h"
 #include "profession.h"
@@ -769,9 +772,89 @@ void activity_tracker::deserialize( const JsonObject &jo )
 /**
  * Gather variables for saving. These variables are common to both the avatar and NPCs.
  */
+void Character::store_grab_state( JsonOut &out ) const
+{
+    out.member( "grab_point", grab_point );
+    out.member( "grab_type", obj_type_name[static_cast<int>( grab_type )] );
+    out.member( "grab_generation", grab_generation_ );
+    out.member( "grab_target", grab_target );
+}
+
+void Character::load_grab_state( const JsonObject &data )
+{
+    tripoint_rel_ms point = tripoint_rel_ms::zero;
+    data.read( "grab_point", point );
+    const std::string type = data.get_string( "grab_type",
+                             point == tripoint_rel_ms::zero ? "OBJECT_NONE" : "OBJECT_VEHICLE" );
+    const auto found = std::find( obj_type_name.begin(), obj_type_name.end(), type );
+    // Projection/save restoration must not invoke local view or gameplay callbacks.
+    grab_type = point == tripoint_rel_ms::zero || found == obj_type_name.end() ? object_type::NONE :
+                static_cast<object_type>( std::distance( obj_type_name.begin(), found ) );
+    grab_point = grab_type == object_type::NONE ? tripoint_rel_ms::zero : point;
+    path_settings->avoid_rough_terrain = grab_type != object_type::NONE;
+    grab_generation_ = 0;
+    data.read( "grab_generation", grab_generation_ );
+    grab_target.reset();
+    data.read( "grab_target", grab_target );
+}
+
+void Character::store_mission_state( JsonOut &out ) const
+{
+    out.member( "active_mission", active_mission ? active_mission->get_id() : -1 );
+    out.member( "active_missions", mission::to_uid_vector( active_missions ) );
+    out.member( "completed_missions", mission::to_uid_vector( completed_missions ) );
+    out.member( "failed_missions", mission::to_uid_vector( failed_missions ) );
+}
+
+void Character::load_mission_state( const JsonObject &data )
+{
+    reset_all_missions();
+    const auto read_list = [&]( const char *key, std::vector<mission *> &result ) {
+        std::vector<int> ids;
+        data.read( key, ids );
+        for( mission *entry : mission::to_ptr_vector( ids ) ) {
+            if( std::find( result.begin(), result.end(), entry ) == result.end() ) {
+                result.push_back( entry );
+            }
+        }
+    };
+    read_list( "active_missions", active_missions );
+    read_list( "completed_missions", completed_missions );
+    read_list( "failed_missions", failed_missions );
+    const int selected = data.get_int( "active_mission", -1 );
+    const auto selected_it = std::find_if( active_missions.begin(), active_missions.end(),
+    [selected]( const mission * entry ) {
+        return entry->get_id() == selected;
+    } );
+    active_mission = selected_it == active_missions.end() ? nullptr : *selected_it;
+
+    // A disconnected character's mission can finish while its ledger is saved.
+    // Reconcile without replaying completion rewards, dialogue or Lua callbacks.
+    for( auto it = active_missions.begin(); it != active_missions.end(); ) {
+        mission *entry = *it;
+        if( !entry->has_failed() && !entry->has_succeeded() ) {
+            ++it;
+            continue;
+        }
+        if( !entry->get_type().invisible_on_complete ) {
+            auto &finished = entry->has_failed() ? failed_missions : completed_missions;
+            if( std::find( finished.begin(), finished.end(), entry ) == finished.end() ) {
+                finished.push_back( entry );
+            }
+        }
+        it = active_missions.erase( it );
+    }
+    if( active_mission && std::find( active_missions.begin(), active_missions.end(),
+                                     active_mission ) == active_missions.end() ) {
+        update_active_mission();
+    }
+}
+
 void Character::load( const JsonObject &data )
 {
     data.allow_omitted_members();
+    kill_statistics_.clear();
+    data.read( "kill_tracker", kill_statistics_ );
     Creature::load( data );
 
     // stats
@@ -1271,6 +1354,9 @@ void Character::load( const JsonObject &data )
     data.read( "cash", cash );
     data.read( "recoil", recoil );
     data.read( "book_chapters", book_chapters );
+    load_grab_state( data );
+    items_identified.clear();
+    data.read( "items_identified", items_identified );
     data.read( "in_vehicle", in_vehicle );
     data.read( "last_sleep_check", last_sleep_check );
     if( data.read( "id", tmpid ) && tmpid.is_valid() ) {
@@ -1279,6 +1365,7 @@ void Character::load( const JsonObject &data )
         // present.
         setID( tmpid );
     }
+    load_mission_state( data );
 
     data.read( "activity", activity );
     if( data.has_array( "backlog" ) ) {
@@ -1654,6 +1741,10 @@ void Character::store( JsonOut &json ) const
     json.member( "cash", cash );
     json.member( "recoil", recoil );
     json.member( "book_chapters", book_chapters );
+    store_grab_state( json );
+    store_mission_state( json );
+    json.member( "kill_tracker", kill_statistics_ );
+    json.member( "items_identified", items_identified );
     json.member( "in_vehicle", in_vehicle );
     json.member( "id", getID() );
 
@@ -1736,6 +1827,37 @@ void Character::store( JsonOut &json ) const
 // Current character state crosses a player boundary; savegame world links do not.
 // Keep the native writer, but deliberately avoid the save loader's migrations,
 // activity restoration, wear/mutation hooks and world-identity rebinding.
+namespace
+{
+bionic_uid read_bionic_weapon_binding( const JsonObject &data, const item &weapon,
+                                       const bionic_collection &bionics, bool includes_inventory = true )
+{
+    bionic_uid identity = 0;
+    if( data.read( "weapon_bionic_uid", identity ) ) {
+        if( identity == 0 ) {
+            return 0;
+        }
+        for( const bionic &bio : bionics ) {
+            if( bio.get_uid() == identity && bio.powered && bio.has_weapon() &&
+                ( !includes_inventory || bio.get_weapon().typeId() == weapon.typeId() ) ) {
+                return identity;
+            }
+        }
+        data.throw_error_at( "weapon_bionic_uid", "Bionic weapon identity does not match" );
+    }
+    // Older snapshots used the same native migration as ordinary saved characters.
+    if( weapon.has_flag( flag_NO_UNWIELD ) && !weapon.ethereal &&
+        ( weapon.has_flag( flag_BIONIC_WEAPON ) || weapon.has_flag( flag_BIONIC_GUN ) ) ) {
+        for( const bionic &bio : bionics ) {
+            if( bio.powered && bio.has_weapon() && bio.get_weapon().typeId() == weapon.typeId() ) {
+                return bio.get_uid();
+            }
+        }
+    }
+    return 0;
+}
+} // namespace
+
 void Character::store_player_state( JsonOut &out ) const
 {
     out.start_object();
@@ -1743,6 +1865,7 @@ void Character::store_player_state( JsonOut &out ) const
     out.member( "character" );
     out.start_object();
     store( out );
+    out.member( "weapon_bionic_uid", weapon_bionic_uid );
     out.end_object();
     out.end_object();
 }
@@ -1751,6 +1874,19 @@ void Character::store_turn_state( JsonOut &out ) const
 {
     out.start_object();
     out.member( "schema", 1 );
+    out.member( "kill_xp", kill_xp );
+    store_grab_state( out );
+    out.member( "hauling", hauling );
+    out.member( "autohaul", autohaul );
+    out.member( "suppress_autohaul", suppress_autohaul );
+    out.member( "hauling_filter", hauling_filter );
+    std::vector<item_source> haul_sources;
+    for( const item_location &loc : haul_list ) {
+        if( loc ) {
+            haul_sources.push_back( capture_item_source( *this, loc ) );
+        }
+    }
+    out.member( "haul_sources", haul_sources );
     out.member( "needs" );
     store_needs_state( out );
     out.member( "mana", magic->available_mana() );
@@ -1799,6 +1935,9 @@ void Character::store_turn_state( JsonOut &out ) const
     out.member( "mutations", my_mutations );
     out.member( "cached_mutations", cached_mutations );
     out.member( "bionics", *my_bionics );
+    out.member( "weapon_bionic_uid", weapon_bionic_uid );
+    out.member( "radio_car" );
+    write_radio_car_binding( *this, get_map(), out );
     out.member( "next_bionic_uid", next_bionic_uid );
     out.member( "martial_arts_data", martial_arts_data );
     out.member( "effects", *effects );
@@ -1865,10 +2004,31 @@ void Character::load_turn_state( const JsonObject &snapshot )
         read( "throw_resist", throw_resist );
         read( "archery_aim_counter", archery_aim_counter );
         read( "underwater", underwater );
+        if( data.has_member( "grab_type" ) ) {
+            load_grab_state( data );
+        }
+        read( "hauling", hauling );
+        read( "autohaul", autohaul );
+        read( "suppress_autohaul", suppress_autohaul );
+        read( "hauling_filter", hauling_filter );
+        if( data.has_array( "haul_sources" ) ) {
+            haul_list.clear();
+            std::vector<item_source> sources;
+            data.read( "haul_sources", sources, true );
+            for( const item_source &source : sources ) {
+                if( const item_location loc = resolve_item_source( *this, get_map(), source, 2 ) ) {
+                    haul_list.push_back( loc );
+                }
+            }
+        }
         read( "traits", my_traits );
         read( "mutations", my_mutations );
         read( "cached_mutations", cached_mutations );
         read( "bionics", *my_bionics );
+        weapon_bionic_uid = read_bionic_weapon_binding( data, weapon, *my_bionics, false );
+        if( data.has_object( "radio_car" ) ) {
+            apply_radio_car_binding( *this, data.get_object( "radio_car" ) );
+        }
         // Older turn projections omit martial preferences; keep their existing value.
         data.read( "martial_arts_data", martial_arts_data );
         if( !martial_arts_data->selected_style().is_valid() ) {
@@ -1897,6 +2057,7 @@ void Character::load_turn_state( const JsonObject &snapshot )
         data.read( "next_bionic_uid", next_bionic_uid );
         update_last_bionic_uid();
         *morale = player_morale();
+        kill_xp = data.get_int( "kill_xp", kill_xp );
         const JsonObject needs = data.get_object( "needs" );
         load_needs_state( needs );
         for( const trait_id &mut : get_functioning_mutations() ) {
@@ -2003,6 +2164,9 @@ void Character::load_player_state( const JsonObject &snapshot )
         read( "type_of_scent", type_of_scent );
         read( "focus_pool", focus_pool );
         read( "kill_xp", kill_xp );
+        // Personal history travels with an initially imported character. This
+        // loader is not an in-session client authority update path.
+        read( "kill_tracker", kill_statistics_ );
         read( "oxygen", oxygen );
         read( "traits", my_traits );
         read( "mutations", my_mutations );
@@ -2026,6 +2190,12 @@ void Character::load_player_state( const JsonObject &snapshot )
         read( "cash", cash );
         read( "recoil", recoil );
         read( "book_chapters", book_chapters );
+        load_grab_state( data );
+        items_identified.clear();
+        // Old schema-1 projections predate per-player book discovery.
+        if( data.has_member( "items_identified" ) ) {
+            read( "items_identified", items_identified );
+        }
         read( "addictions", addictions );
         read( "death_eocs", death_eocs );
         read( "lua_character_state", lua_character_state );
@@ -2115,6 +2285,7 @@ void Character::load_player_state( const JsonObject &snapshot )
         worn = std::move( restored_outfit );
         *inv = std::move( restored_inventory );
         weapon = std::move( restored_weapon );
+        weapon_bionic_uid = read_bionic_weapon_binding( data, weapon, *my_bionics );
         invalidate_pseudo_items();
         invalidate_leak_level_cache();
         invalidate_weight_carried_cache();
@@ -2185,15 +2356,8 @@ void avatar::store( JsonOut &json ) const
     // someday, npcs may drive
     json.member( "controlling_vehicle", controlling_vehicle );
 
-    // shopping carts, furniture etc
-    json.member( "grab_point", grab_point );
-    json.member( "grab_type", obj_type_name[static_cast<int>( grab_type ) ] );
-
     // npc: unimplemented, potentially useful
 
-
-    // Player only, books they have read at least once.
-    json.member( "items_identified", items_identified );
 
     // Player only, snippets they have read at least once.
     json.member( "snippets_read", snippets_read );
@@ -2201,14 +2365,10 @@ void avatar::store( JsonOut &json ) const
     json.member( "translocators", translocators );
 
     // mission stuff
-    json.member( "active_mission", active_mission == nullptr ? -1 : active_mission->get_id() );
     json.member( "active_point_of_interest_pos", active_point_of_interest.pos );
     json.member( "active_point_of_interest_text",
                  active_point_of_interest.pos == tripoint_abs_omt::invalid ? "" : active_point_of_interest.text );
 
-    json.member( "active_missions", mission::to_uid_vector( active_missions ) );
-    json.member( "completed_missions", mission::to_uid_vector( completed_missions ) );
-    json.member( "failed_missions", mission::to_uid_vector( failed_missions ) );
 
     json.member( "points_of_interest" );
     json.start_array();
@@ -2287,25 +2447,9 @@ void avatar::load( const JsonObject &data )
     data.read( "faction_representatives", faction_representatives );
     data.read( "controlling_vehicle", controlling_vehicle );
 
-    data.read( "grab_point", grab_point );
-    std::string grab_typestr = "OBJECT_NONE";
-    if( grab_point.x() != 0 || grab_point.y() != 0 ) {
-        grab_typestr = "OBJECT_VEHICLE";
-        data.read( "grab_type", grab_typestr );
-    } else {
-        // we just want to read, but ignore grab_type
-        std::string fake;
-        data.read( "grab_type", fake );
-    }
-
-    // On Visual Studio array iterators are not pointers, so prevent clang-tidy
-    // from converting this to a pointer type.
-    // NOLINTNEXTLINE(readability-qualified-auto)
-    const auto iter = std::find( obj_type_name.begin(), obj_type_name.end(), grab_typestr );
-    grab( iter == obj_type_name.end() ?
-          object_type::NONE : static_cast<object_type>(
-              std::distance( obj_type_name.begin(), iter ) ),
-          grab_point );
+    // Preserve the shared loader's identity. Re-grabbing here could bind a
+    // different object before the saved map is loaded.
+    refresh_grab_memory();
 
     calc_mutation_levels();
     drench_mut_calc();
@@ -2327,21 +2471,7 @@ void avatar::load( const JsonObject &data )
 
     valid_autolearn_skills->clear(); // Invalidates the cache
 
-    items_identified.clear();
-    data.read( "items_identified", items_identified );
-
     data.read( "translocators", translocators );
-
-    std::vector<int> tmpmissions;
-    if( data.read( "active_missions", tmpmissions ) ) {
-        active_missions = mission::to_ptr_vector( tmpmissions );
-    }
-    if( data.read( "failed_missions", tmpmissions ) ) {
-        failed_missions = mission::to_ptr_vector( tmpmissions );
-    }
-    if( data.read( "completed_missions", tmpmissions ) ) {
-        completed_missions = mission::to_ptr_vector( tmpmissions );
-    }
 
     for( JsonObject object : data.get_array( "points_of_interest" ) ) {
         point_of_interest poi;
@@ -2350,31 +2480,11 @@ void avatar::load( const JsonObject &data )
         points_of_interest.push_back( poi );
     }
 
-    int tmpactive_mission = 0;
-    if( data.read( "active_mission", tmpactive_mission ) ) {
-        if( tmpactive_mission != -1 ) {
-            active_mission = mission::find( tmpactive_mission );
-        }
-    }
     if( !data.read( "active_point_of_interest_pos", active_point_of_interest.pos ) ) {
         active_point_of_interest.pos = tripoint_abs_omt::invalid;
         active_point_of_interest.text = "";
     } else {
         data.read( "active_point_of_interest_text", active_point_of_interest.text );
-    }
-
-    // Normally there is only one player character loaded, so if a mission that is assigned to
-    // another character (not the current one) fails, the other character(s) are not informed.
-    // We must inform them when they get loaded the next time.
-    // Only active missions need checking, failed/complete will not change anymore.
-    const auto last = std::remove_if( active_missions.begin(),
-    active_missions.end(), []( mission const * m ) {
-        return m->has_failed();
-    } );
-    std::copy( last, active_missions.end(), std::back_inserter( failed_missions ) );
-    active_missions.erase( last, active_missions.end() );
-    if( active_mission && active_mission->has_failed() ) {
-        update_active_mission();
     }
 
     for( JsonArray pair : data.get_array( "assigned_invlet" ) ) {
@@ -2863,6 +2973,18 @@ void npc::load( const JsonObject &data )
     }
 
     data.read( "op_of_u", op_of_u );
+    legacy_opinion_owner = character_id();
+    data.read( "op_of_u_owner", legacy_opinion_owner );
+    opinions.clear();
+    for( const JsonObject entry : data.get_array( "opinions" ) ) {
+        character_id who;
+        entry.read( "character", who );
+        npc_opinion opinion;
+        entry.read( "opinion", opinion );
+        if( who.is_valid() && who != opinion_owner() ) {
+            opinions.emplace( who, opinion );
+        }
+    }
     data.read( "faction_representative", faction_representative );
     data.read( "chatbin", chatbin );
     if( !data.read( "rules", rules ) ) {
@@ -2940,6 +3062,16 @@ void npc::store( JsonOut &json ) const
     json.member( "attitude", static_cast<int>( attitude ) );
     json.member( "previous_attitude", static_cast<int>( previous_attitude ) );
     json.member( "op_of_u", op_of_u );
+    json.member( "op_of_u_owner", opinion_owner() );
+    json.member( "opinions" );
+    json.start_array();
+    for( const auto &entry : opinions ) {
+        json.start_object();
+        json.member( "character", entry.first );
+        json.member( "opinion", entry.second );
+        json.end_object();
+    }
+    json.end_array();
     json.member( "faction_representative", faction_representative );
     json.member( "chatbin", chatbin );
     json.member( "rules", rules );
@@ -3607,7 +3739,7 @@ static bool bindings_fit_recipe( const recipe &making, int step_index,
     const std::vector<std::vector<quality_requirement>> &quals = step_reqs.get_qualities();
     const std::vector<std::vector<tool_comp>> &tools = step_reqs.get_tools();
 
-    std::map<std::pair<int, int>, std::set<int>> slots_by_group;
+    std::map<std::pair<int, int>, std::set<int >> slots_by_group;
 
     for( const craft_reservation::binding &b : bindings ) {
         if( b.group_index < 0 || b.alternative_index < 0 ) {
@@ -5037,6 +5169,10 @@ void mission::deserialize( const JsonObject &jo )
         status = mission_status::in_progress;
     }
 
+    failure_effects_pending = has_failed() && jo.get_bool( "failure_effects_pending", false );
+    nemesis_respawn_pending = in_progress() && type->goal == MGOAL_KILL_NEMESIS &&
+                              jo.get_bool( "nemesis_respawn_pending", false );
+
     jo.read( "value", value );
     jo.read( "kill_count_to_reach", kill_count_to_reach );
     jo.read( "reward", reward );
@@ -5094,6 +5230,8 @@ void mission::serialize( JsonOut &json ) const
 
     json.member( "type_id", type->id );
     json.member( "status", status_to_string( status ) );
+    json.member( "failure_effects_pending", failure_effects_pending );
+    json.member( "nemesis_respawn_pending", nemesis_respawn_pending );
     json.member( "value", value );
     json.member( "kill_count_to_reach", kill_count_to_reach );
     json.member( "reward", reward );
@@ -6888,7 +7026,7 @@ void basecamp::deserialize( const JsonObject &data )
     }
 }
 
-void kill_tracker::serialize( JsonOut &jsout ) const
+void kill_statistics::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
     jsout.member( "kills" );
@@ -6907,16 +7045,22 @@ void kill_tracker::serialize( JsonOut &jsout ) const
     jsout.end_object();
 }
 
-void kill_tracker::deserialize( const JsonObject &data )
+void kill_statistics::deserialize( const JsonObject &data )
 {
     data.allow_omitted_members();
+    std::map<mtype_id, int> restored_monsters;
+    std::vector<std::string> restored_characters;
     for( const JsonMember member : data.get_object( "kills" ) ) {
-        kills[mtype_id( member.name() )] = member.get_int();
+        const int count = member.get_int();
+        if( count < 0 ) {
+            data.throw_error_at( "kills", "Kill counts must be nonnegative" );
+        }
+        restored_monsters[mtype_id( member.name() )] = count;
     }
-
-    for( const std::string npc_name : data.get_array( "npc_kills" ) ) {
-        npc_kills.push_back( npc_name );
+    for( const std::string name : data.get_array( "npc_kills" ) ) {
+        restored_characters.push_back( name );
     }
+    reset( restored_monsters, restored_characters );
 }
 
 void cata_variant::serialize( JsonOut &jsout ) const

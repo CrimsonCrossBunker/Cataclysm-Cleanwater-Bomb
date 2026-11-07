@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "avatar.h"
 #include "activity_actor_definitions.h"
@@ -14,6 +15,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "monster.h"
+#include "mission.h"
 #include "creature_tracker.h"
 #include "mp_gamestate.h"
 #include "mp_world_session.h"
@@ -388,4 +390,62 @@ TEST_CASE( "remote_player_body_and_combat_effects_advance_without_npc_ai",
     CHECK( actor.get_stamina() == after_body );
     CHECK( peer.turn.remote_moves == -200 );
     CHECK_FALSE( peer.turn.granted_this_turn );
+}
+
+TEST_CASE( "local_takeover_transfers_only_the_players_mission_ledger",
+           "[avatar][control][mission]" )
+{
+    control_fixture fixture;
+    npc &follower = fixture.follower();
+    const character_id original = fixture.local.getID();
+    const character_id target = follower.getID();
+    const mission_type_id type( "TEST_MISSION_GENERIC_REWARD" );
+    const mtype_id killed( "mon_zombie" );
+    fixture.local.get_kill_statistics().reset( { { killed, 8 } }, {} );
+    follower.get_kill_statistics().reset( { { killed, 3 } }, {} );
+    npc &giver = spawn_npc( point_bub_ms( 63, 60 ), "test_talker" );
+    mission *owned = mission::reserve_new( type, giver.getID() );
+    mission *unassigned = mission::reserve_new( type, giver.getID() );
+    mission *other = mission::reserve_new( type, giver.getID() );
+    giver.chatbin.missions_assigned = { owned, unassigned, other };
+    owned->assign( fixture.local );
+    unassigned->assign( fixture.local );
+    other->assign( fixture.local );
+    fixture.local.reset_all_missions();
+    fixture.local.on_mission_assignment( *owned );
+    unassigned->set_assigned_player_id( character_id() );
+    const character_id other_player( 700011 );
+    other->set_assigned_player_id( other_player );
+    const on_out_of_scope cleanup( [&]() {
+        giver.chatbin.missions_assigned.clear();
+        fixture.local.reset_all_missions();
+        follower.reset_all_missions();
+        owned->remove_active_world_mission( *owned );
+        unassigned->remove_active_world_mission( *unassigned );
+        other->remove_active_world_mission( *other );
+    } );
+
+    if( GENERATE( false, true ) ) {
+        mission::on_creature_death( fixture.local );
+        REQUIRE_FALSE( owned->is_assigned() );
+    }
+    fixture.local.control_npc( follower );
+    CHECK( fixture.local.get_active_mission() == owned );
+    CHECK( fixture.local.get_active_missions() == std::vector<mission *> { owned } );
+    CHECK( owned->get_assigned_player_id() == target );
+    CHECK( fixture.local.get_kill_statistics().kill_count( killed ) == 8 );
+    CHECK( follower.get_kill_statistics().monster_kill_count() == 0 );
+    CHECK( follower.get_active_missions().empty() );
+    CHECK_FALSE( unassigned->is_assigned() );
+    CHECK( other->get_assigned_player_id() == other_player );
+    CHECK( giver.chatbin.missions_assigned == std::vector<mission *> { owned, unassigned, other } );
+    fixture.local.control_npc( follower );
+    CHECK( owned->get_assigned_player_id() == original );
+    CHECK( fixture.local.get_kill_statistics().kill_count( killed ) == 8 );
+    CHECK( follower.get_kill_statistics().monster_kill_count() == 0 );
+    CHECK( fixture.local.get_active_mission() == owned );
+    CHECK( follower.get_active_missions().empty() );
+    CHECK_FALSE( unassigned->is_assigned() );
+    CHECK( other->get_assigned_player_id() == other_player );
+    CHECK( giver.chatbin.missions_assigned == std::vector<mission *> { owned, unassigned, other } );
 }

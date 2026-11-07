@@ -132,7 +132,7 @@ struct construction_selection {
     std::vector<comp_selection<tool_comp>> tools;
 
     static std::optional<construction_selection> prepare( Character &who,
-            const construction &con, const tripoint_abs_ms &position );
+            const construction &con, const tripoint_abs_ms &position, bool automatic = false );
     static std::optional<construction_selection> from_selection( Character &who,
             const JsonObject &data );
     void serialize( JsonOut &out ) const;

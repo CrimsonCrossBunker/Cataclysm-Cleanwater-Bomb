@@ -6,6 +6,7 @@
 #include <climits>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -61,6 +62,7 @@ struct pending_omsync_t {
 
 struct host_replication_baselines {
     std::unordered_map<std::string, std::string> player_appearance;
+    std::unordered_map<int, std::string> npc_appearance;
     // Server: nids for which the full vehicle save-format snapshot has already been
     // broadcast to the current client.  First broadcast of a previously-unknown
     // vehicle includes the "snapshot" payload so the client can mirror the SP
@@ -194,6 +196,7 @@ struct world_replication_state {
 
 struct host_turn_state {
     int64_t character_revision = 0;
+    std::optional<std::uint64_t> last_kill_statistics_revision;
     std::vector<MPSfxEvent> host_sfx_queue{};
     // Server: cumulative AP for the remote player (replaces the NPC's own moves which
     // are skipped by monmove since is_remote_player() returns true).

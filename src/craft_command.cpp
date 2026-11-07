@@ -568,7 +568,7 @@ static bool should_add_crafting_faults( Character *who, const recipe *rec )
 }
 static std::vector<std::vector<step_tool_alloc>> allocate_step_tools(
             Character &crafter, const recipe &rec, int batch,
-            const std::function<comp_selection<tool_comp>( const std::vector<tool_comp> & )> &select_group,
+            const std::function<comp_selection<tool_comp>( const std::vector<tool_comp> & ) > &select_group,
             bool &cancelled, int reselect_step )
 {
     cancelled = false;
@@ -774,15 +774,25 @@ bool validate_requirement_selection( Character &who, const requirement_data &req
                                      std::vector<comp_selection<item_comp>> &components,
                                      std::vector<comp_selection<tool_comp>> &tools )
 {
+    return validate_requirement_selection( who, requirements, components, tools,
+                                           pickup_range, is_crafting_component );
+}
+
+bool validate_requirement_selection( Character &who, const requirement_data &requirements,
+                                     std::vector<comp_selection<item_comp>> &components,
+                                     std::vector<comp_selection<tool_comp>> &tools, int radius,
+                                     const std::function<bool( const item & )> &filter, bool clear_path )
+{
     if( !canonical_selections( components, requirements.get_components(), 1, false ) ||
         !canonical_selections( tools, requirements.get_tools(), 1, true ) ||
-        !requirements.can_make_with_inventory( &who, who.crafting_inventory(),
-                is_crafting_component, 1, craft_flags::none, false ) ||
-        !who.preview_crafting_components( components, 1, is_crafting_component ) ) {
+        !requirements.can_make_with_inventory( &who, who.crafting_inventory( who.pos_bub(), radius,
+                clear_path ),
+                filter, 1, craft_flags::none, false ) ||
+        !who.preview_crafting_components( components, 1, filter, radius ) ) {
         return false;
     }
     temp_crafting_inventory nearby;
-    nearby.form_from_map( who.pos_bub(), pickup_range, &who );
+    nearby.form_from_map( who.pos_bub(), radius, &who, clear_path );
     struct charge_budget {
         int64_t map = 0;
         int64_t player = 0;
@@ -813,7 +823,7 @@ bool validate_requirement_selection( Character &who, const requirement_data &req
         if( ( budget.map && !nearby.has_charges( type, budget.map ) ) ||
             ( budget.player &&
               !who.crafting_inventory( who.pos_bub(), -1 ).has_charges( type, budget.player ) ) ||
-            !who.crafting_inventory().has_charges( type, budget.total ) ) {
+            !who.crafting_inventory( who.pos_bub(), radius, clear_path ).has_charges( type, budget.total ) ) {
             return false;
         }
     }

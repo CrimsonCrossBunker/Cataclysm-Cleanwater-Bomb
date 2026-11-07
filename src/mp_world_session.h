@@ -74,6 +74,7 @@ struct world_session {
         actor_binding client_host_actor;
         player_id client_host_player_id;
         std::map<player_id, std::unique_ptr<player_view>> client_player_views;
+        std::map<character_id, std::unique_ptr<npc_view>> client_npc_views;
         bool client_host_spawned = false;
         bool stale_proxy_cleanup_done = false;
 

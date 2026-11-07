@@ -24,11 +24,13 @@
 #include "mp_queue.h"
 #include "mp_test_helpers.h"
 #include "mp_throw.h"
+#include "mp_peek.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "projectile.h"
 #include "ranged_actions.h"
+#include "ranged.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "skill.h"
@@ -447,5 +449,132 @@ TEST_CASE( "authoritative_sling_rejections_do_not_light_or_consume_ammo",
     CHECK( rng_get_engine() == before );
     if( lighter ) {
         CHECK( lighter->ammo_remaining() == fuel );
+    }
+}
+
+TEST_CASE( "paid_ledge_throw_uses_the_owners_view_and_only_charges_peeking_once",
+           "[multiplayer][throw][peek_owned]" )
+{
+    throw_fixture fixture;
+    npc &who = fixture.remote();
+    map &here = get_map();
+    const tripoint_bub_ms ledge( 61, 60, 0 );
+    const tripoint_bub_ms bottom( 61, 60, -2 );
+    here.ter_set( ledge, ter_id( "t_open_air" ) );
+    here.ter_set( ledge + tripoint::below, ter_id( "t_open_air" ) );
+    here.ter_set( bottom, ter_id( "t_floor" ) );
+    here.ter_set( bottom + tripoint::east, ter_id( "t_floor" ) );
+    const auto origin = who.pos_abs();
+    const int moves = who.get_moves();
+    const int host_moves = get_avatar().get_moves();
+    const auto rng = rng_get_engine();
+    const auto peek = cata_mp::authorize_ledge_peek( who, here, origin, here.get_abs( ledge ), 17 );
+    REQUIRE( peek );
+    CHECK( peek->viewpoint == here.get_abs( bottom ) );
+    CHECK( who.pos_abs() == origin );
+    CHECK( who.get_moves() == moves - who.get_speed() * 2 );
+    CHECK( rng_get_engine() == rng );
+    auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    intent.blind_from = peek->viewpoint;
+    intent.peek_request = peek->request;
+    intent.target = here.get_abs( bottom + tripoint::east );
+    item projectile = *who.get_wielded_item();
+    projectile.charges = 1;
+    const int cost = throw_cost( who, projectile );
+    SECTION( "paid_deep_view" ) {
+        REQUIRE( cata_mp::execute_throw_intent( who, here, intent, &*peek ) );
+        CHECK( who.get_moves() == moves - who.get_speed() * 2 - cost );
+        CHECK( who.get_wielded_item()->charges == 9 );
+    }
+    SECTION( "permission_cannot_be_borrowed_or_redirected" ) {
+        const int invalid = GENERATE( 0, 1, 2, 3, 4 );
+        auto changed = *peek;
+        if( invalid == 0 ) {
+            ++intent.peek_request;
+        } else if( invalid == 1 ) {
+            changed.owner = get_avatar().getID();
+        } else if( invalid == 2 ) {
+            intent.blind_from = here.get_abs( bottom + tripoint::east );
+        } else if( invalid == 3 ) {
+            here.ter_set( ledge, ter_id( "t_floor" ) );
+        } else {
+            intent.peek_request = 0; // A distant throw origin needs the paid permission.
+        }
+        CHECK_FALSE( cata_mp::execute_throw_intent( who, here, intent, &changed ) );
+        CHECK( who.get_moves() == moves - who.get_speed() * 2 );
+        CHECK( who.get_wielded_item()->charges == 10 );
+        CHECK( rng_get_engine() == rng );
+    }
+    CHECK( who.pos_abs() == origin );
+    CHECK( get_avatar().get_moves() == host_moves );
+}
+
+TEST_CASE( "peek_permission_is_consumed_by_throw_and_released_without_spending_an_action",
+           "[multiplayer][throw][peek_owned]" )
+{
+    throw_fixture fixture;
+    npc &who = fixture.remote();
+    map &here = get_map();
+    auto &peer = only_test_remote( g->multiplayer_session() );
+    const tripoint_bub_ms ledge( 61, 60, 0 );
+    const auto bottom = ledge + tripoint::below;
+    here.ter_set( ledge, ter_id( "t_open_air" ) );
+    here.ter_set( bottom, ter_id( "t_floor" ) );
+    here.ter_set( bottom + tripoint::east, ter_id( "t_floor" ) );
+    peer.inventory_activity.peek = cata_mp::authorize_ledge_peek( who, here, who.pos_abs(),
+                                   here.get_abs( ledge ), 29 );
+    REQUIRE( peer.inventory_activity.peek );
+    peer.turn.remote_moves = who.get_moves();
+    const auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    const auto send = [&]( const std::string & wire ) {
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", wire, peer.admission } ) );
+        cata_mp::process_mp_events();
+    };
+    const auto packet = [&]() {
+        std::ostringstream text;
+        JsonOut out( text );
+        out.start_object();
+        out.member( "type", "action" );
+        out.member( "action", "throw" );
+        out.member( "origin", intent.origin );
+        out.member( "target", here.get_abs( bottom + tripoint::east ) );
+        out.member( "blind_from", here.get_abs( bottom ) );
+        out.member( "peek_request", 29 );
+        out.member( "source", intent.item.kind );
+        out.member( "source_position", intent.item.position );
+        out.member( "path", intent.item.path );
+        out.member( "wielded", intent.wielded );
+        out.member( "inventory_revision", peer.pickup.revision );
+        out.member( "grant_seq", peer.turn.grant_seq );
+        out.end_object();
+        return text.str();
+    };
+    SECTION( "replay_cannot_reuse_a_paid_view_even_with_a_fresh_grant_and_revision" ) {
+        send( packet() );
+        CHECK_FALSE( peer.inventory_activity.peek );
+        REQUIRE( who.get_wielded_item() );
+        CHECK( who.get_wielded_item()->charges == 9 );
+        next_test_remote_turn( peer );
+        who.set_moves( peer.turn.remote_moves );
+        const auto rng = rng_get_engine();
+        send( packet() );
+        CHECK( who.get_wielded_item()->charges == 9 );
+        CHECK( who.get_moves() == 100 );
+        CHECK( rng_get_engine() == rng );
+    }
+    SECTION( "closed_view_cannot_be_used_and_a_stale_close_keeps_a_new_view" ) {
+        const int moves = who.get_moves();
+        peer.turn.granted_this_turn = false;
+        send( R"({"type":"action","action":"peek_close","request":28})" );
+        REQUIRE( peer.inventory_activity.peek );
+        send( R"({"type":"action","action":"peek_close","request":29})" );
+        CHECK_FALSE( peer.inventory_activity.peek );
+        CHECK( who.get_moves() == moves );
+        CHECK( peer.turn.remote_moves == moves );
+        CHECK( who.get_wielded_item()->charges == 10 );
+        peer.turn.granted_this_turn = true;
+        send( packet() );
+        CHECK( who.get_wielded_item()->charges == 10 );
+        CHECK( who.get_moves() == moves );
     }
 }

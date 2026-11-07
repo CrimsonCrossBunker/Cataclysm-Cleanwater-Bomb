@@ -202,6 +202,8 @@ std::optional<int> calories_intake_tracker( Character *p, item *, const tripoint
 
 std::optional<int> radiocar( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> radiocontrol( Character *, item *, const tripoint_bub_ms & );
+int query_radiocontrol( const item &controller );
+std::optional<int> radiocontrol_action( Character *who, item *controller, int choice );
 std::optional<int> radiocontrol_tick( Character *, item *, const tripoint_bub_ms & );
 
 std::optional<int> multicooker( Character *, item *, const tripoint_bub_ms & );
@@ -217,7 +219,6 @@ std::optional<int> disassemble( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> post_up( Character *, item *, const tripoint_bub_ms & );
 
 // Helper functions for other iuse functions
-void cut_log_into_planks( Character & );
 void play_music( Character *p, const tripoint_bub_ms &source, int volume, int max_morale,
                  bool play_sounds = true );
 void make_music( Character *p, const tripoint_bub_ms &source, int volume, int max_morale,

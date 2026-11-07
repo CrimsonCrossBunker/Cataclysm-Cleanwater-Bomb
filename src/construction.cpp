@@ -15,6 +15,7 @@
 
 #include "action.h"
 #include "activity_actor_definitions.h"
+#include "character_action_guard.h"
 #include "avatar.h"
 #include "build_reqs.h"
 #include "calendar.h"
@@ -89,7 +90,6 @@
     #include "sdltiles.h"          // for tilecontext
 #endif
 
-static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
 
 static const construction_category_id construction_category_ALL( "ALL" );
 static const construction_category_id construction_category_APPLIANCE( "APPLIANCE" );
@@ -474,7 +474,7 @@ static std::string furniture_qualities_string( const furn_id &fid )
     return ret;
 }
 
-static std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
+static std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction * >>
         valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
                 const temp_crafting_inventory &total_inv, avatar &player_character );
 
@@ -1183,7 +1183,7 @@ std::vector<const construction *> player_can_build_valid_constructions( Characte
     // check all with the same group to see if player can build any
     // if so, it will be added to the result
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction *&con : cons ) {
+    for( const construction*&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             result.push_back( con );
         }
@@ -1196,7 +1196,7 @@ bool player_can_build( Character &you, const temp_crafting_inventory &inv,
 {
     // check all with the same group to see if player can build any
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction *&con : cons ) {
+    for( const construction*&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             return true;
         }
@@ -1227,7 +1227,7 @@ bool player_can_see_to_build( Character &you, const construction_group_str_id &g
         return true;
     }
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction *&con : cons ) {
+    for( const construction*&con : cons ) {
         if( con->dark_craftable ) {
             return true;
         }
@@ -1356,11 +1356,11 @@ bool can_construct( const construction &con )
     return false;
 }
 
-std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
+std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction * >>
         valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
                 const temp_crafting_inventory &total_inv, avatar &player_character )
 {
-    std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>> ret;
+    std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction * >> ret;
     std::map<tripoint_bub_ms, const construction *> &valid = ret.first;
     std::vector<const construction *> &cons = ret.second;
     map &here = get_map();
@@ -1410,7 +1410,7 @@ bool construction_selection::valid( Character &who ) const
 }
 
 std::optional<construction_selection> construction_selection::prepare( Character &who,
-        const construction &con, const tripoint_abs_ms &position )
+        const construction &con, const tripoint_abs_ms &position, bool automatic )
 {
     construction_selection selected;
     selected.id = con.id;
@@ -1428,14 +1428,18 @@ std::optional<construction_selection> construction_selection::prepare( Character
         temp_crafting_inventory nearby;
         nearby.form_from_map( who.pos_bub(), pickup_range, &who );
         for( const auto &group : con.requirements->get_components() ) {
-            auto choice = who.select_item_component( group, 1, nearby, true, is_crafting_component );
+            auto choice = who.select_item_component( group, 1, nearby, true, is_crafting_component,
+                          true, false, nullptr, automatic );
             if( choice.use_from == usage_from::cancel ) {
                 return std::nullopt;
             }
             selected.components.push_back( choice );
         }
         for( const auto &group : con.requirements->get_tools() ) {
-            auto choice = who.select_tool_component( group, 1, nearby, true );
+            auto choice = who.select_tool_component( group, 1, nearby, true, true, false,
+            []( int charges ) {
+                return charges;
+            }, automatic );
             if( choice.use_from == usage_from::cancel ) {
                 return std::nullopt;
             }
@@ -1479,7 +1483,12 @@ void construction_selection::serialize( JsonOut &out ) const
 
 bool construction_selection::start( Character &who, bool server_owned ) const
 {
-    if( who.activity || !valid( who ) ) {
+    // Zone work replaces its real parent through assign_activity, which keeps
+    // that parent's origin and progress in the backlog. Other activities must
+    // still finish or be canceled before starting a construction.
+    if( ( who.activity &&
+          !dynamic_cast<const multi_build_construction_activity_actor *>( who.activity.actor.get() ) ) ||
+        !valid( who ) ) {
         return false;
     }
     partial_con site;
@@ -1607,7 +1616,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
     avatar &player_character = get_avatar();
     const temp_crafting_inventory &total_inv = player_character.crafting_inventory();
 
-    std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
+    std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction * >>
             valid_pair = valid_constructions_near_player( groups, total_inv, player_character );
     std::map<tripoint_bub_ms, const construction *> &valid = valid_pair.first;
     std::vector<const construction *> &cons = valid_pair.second;
@@ -1797,12 +1806,8 @@ void build_construction_activity_actor::complete_construction( player_activity &
             special( terp, you );
         }
     }
-    // Players will not automatically resume backlog, other Characters will.
-    if( you.is_avatar() && !you.backlog.empty() &&
-        you.backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION ) {
-        you.backlog.clear();
-        you.assign_activity( multi_build_construction_activity_actor() );
-    }
+    // player_activity resumes the saved parent for both local and remote players.
+    // Recreating it here would discard the personal-zone origin and scan progress.
 }
 
 bool construct::check_channel( const tripoint_bub_ms &p )
@@ -2059,9 +2064,16 @@ bool construct::check_matching_down_above( const tripoint_bub_ms &p )
 
 void construct::done_trunk_plank( const tripoint_bub_ms &/*p*/, Character &player_character )
 {
+    const character_action_guard lifetime( player_character );
     int num_logs = rng( 2, 3 );
     for( int i = 0; i < num_logs; ++i ) {
-        iuse::cut_log_into_planks( player_character );
+        if( !lifetime || player_character.cant_do_mounted() ) {
+            return;
+        }
+        player_character.add_msg_if_player( _( "You cut the log into planks." ) );
+        player_activity work( chop_planks_activity_actor( to_moves<int>( 20_minutes ) ) );
+        work.placement = player_character.pos_abs();
+        player_character.assign_activity( work );
     }
 }
 
@@ -2637,9 +2649,9 @@ void construct::failure_deconstruct( const tripoint_bub_ms & )
 namespace
 {
 template <typename Fn>
-struct construction_special_reader : generic_typed_reader<construction_special_reader<Fn>> {
-    const std::map<std::string, Fn> &possible;
-    explicit construction_special_reader( const std::map<std::string, Fn> &lookup ) : possible(
+struct construction_special_reader : generic_typed_reader < construction_special_reader < Fn>> {
+    const std::map < std::string, Fn > &possible;
+    explicit construction_special_reader( const std::map < std::string, Fn > &lookup ) : possible(
             lookup ) {}
 
     Fn get_next( const JsonValue &jv ) const {
@@ -2649,7 +2661,7 @@ struct construction_special_reader : generic_typed_reader<construction_special_r
             return iter->second;
         } else {
             const std::string list_available = enumerate_as_string( possible.begin(), possible.end(),
-            []( const std::pair<std::string, Fn> &pr ) {
+            []( const std::pair < std::string, Fn > &pr ) {
                 return pr.first;
             } );
             jv.throw_error( string_format( "Unknown function: %s, available values are %s", fun_id.c_str(),
@@ -2668,7 +2680,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
 {
     mandatory( jo, was_loaded, "group", group );
     if( jo.has_member( "required_skills" ) ) {
-        mandatory( jo, was_loaded, "required_skills", required_skills, pair_reader<skill_id, int> {} );
+        mandatory( jo, was_loaded, "required_skills", required_skills, pair_reader < skill_id, int > {} );
     } else if( !was_loaded ) {
         skill_id legacy_skill;
         int legacy_diff;
@@ -2693,7 +2705,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
     }
 
     optional( jo, was_loaded, "pre_note", pre_note );
-    optional( jo, was_loaded, "pre_terrain", pre_terrain, auto_flags_reader<> {} );
+    optional( jo, was_loaded, "pre_terrain", pre_terrain, auto_flags_reader < > {} );
     if( !pre_terrain.empty() ) {
         const std::string &first_pre_terrain = *pre_terrain.begin();
         if( first_pre_terrain.size() > 1
@@ -2713,15 +2725,15 @@ void construction::load( const JsonObject &jo, const std::string_view )
     optional( jo, was_loaded, "activity_level", activity_level,
               activity_level_reader{}, MODERATE_EXERCISE );
 
-    optional( jo, was_loaded, "pre_flags", pre_flags, named_pair_reader<std::string, bool> { "flag", "force_terrain", false } );
-    optional( jo, was_loaded, "post_flags", post_flags, auto_flags_reader<> {} );
+    optional( jo, was_loaded, "pre_flags", pre_flags, named_pair_reader < std::string, bool > { "flag", "force_terrain", false } );
+    optional( jo, was_loaded, "post_flags", post_flags, auto_flags_reader < > {} );
 
     if( jo.has_member( "byproducts" ) ) {
         byproduct_item_group = item_group::load_item_group( jo.get_member( "byproducts" ),
                                "collection", "byproducts of construction " + id.str() );
     }
 
-    static const std::map<std::string, bool( * )( const tripoint_bub_ms & )> pre_special_map = {{
+    static const std::map < std::string, bool( * )( const tripoint_bub_ms & ) > pre_special_map = {{
             { "", construct::check_nothing },
             { "check_channel", construct::check_channel },
             { "check_empty_lite", construct::check_empty_lite },
@@ -2743,7 +2755,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "check_matching_down_above", construct::check_matching_down_above }
         }
     };
-    static const std::map<std::string, void( * )( const tripoint_bub_ms &, Character & )>
+    static const std::map < std::string, void( * )( const tripoint_bub_ms &, Character & ) >
     post_special_map = {{
             { "", construct::done_nothing },
             { "done_trunk_plank", construct::done_trunk_plank },
@@ -2773,7 +2785,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
 
         }
     };
-    static const std::map<std::string, void( * )( const tripoint_bub_ms &, Character & )>
+    static const std::map < std::string, void( * )( const tripoint_bub_ms &, Character & ) >
     do_turn_special_map = {{
             { "", construct::done_nothing },
             { "do_turn_deconstruct", construct::do_turn_deconstruct },
@@ -2781,7 +2793,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "do_turn_exhume", construct::do_turn_exhume },
         }
     };
-    static const std::map<std::string, void( * )( const tripoint_bub_ms & )>
+    static const std::map < std::string, void( * )( const tripoint_bub_ms & ) >
     explain_fail_map = {{
             { "standard", construct::failure_standard },
             { "deconstruct", construct::failure_deconstruct },
@@ -2863,10 +2875,10 @@ int construction::print_time( const catacurses::window &w, const point &p, int w
 float construction::time_scale() const
 {
     //incorporate construction time scaling
-    if( get_option<int>( "CONSTRUCTION_SCALING" ) == 0 ) {
+    if( get_option < int > ( "CONSTRUCTION_SCALING" ) == 0 ) {
         return calendar::season_ratio();
     } else {
-        return get_option<int>( "CONSTRUCTION_SCALING" ) / 100.0;
+        return get_option < int > ( "CONSTRUCTION_SCALING" ) / 100.0;
     }
 }
 
@@ -2903,14 +2915,14 @@ std::string construction::get_time_string() const
     return _( "Time to complete: " ) + colorize( to_string( turns ), color_data );
 }
 
-std::vector<std::string> construction::get_folded_time_string( int width ) const
+std::vector < std::string > construction::get_folded_time_string( int width ) const
 {
     std::string time_text = get_time_string();
-    std::vector<std::string> folded_time = foldstring( time_text, width );
+    std::vector < std::string > folded_time = foldstring( time_text, width );
     return folded_time;
 }
 
-static std::vector<item_comp> frame_items;
+static std::vector < item_comp > frame_items;
 
 void finalize_constructions()
 {
@@ -2996,7 +3008,7 @@ void construction::finalize()
                   group.str(), id.str() );
     }
     if( vehicle_start ) {
-        const_cast<requirement_data &>( requirements.obj() ).get_components().push_back( frame_items );
+        const_cast < requirement_data & >( requirements.obj() ).get_components().push_back( frame_items );
     }
     bool is_valid_construction_category = false;
     for( const construction_category &cc : construction_categories::get_all() ) {
@@ -3023,12 +3035,12 @@ bool construction::is_blacklisted() const
 }
 
 // Using BFS to find the shortest route to create target terrain from empty or base terrain,
-std::vector<construction_id> find_build_sequence( const std::string &target_id,
-        std::function<bool( construction const & )> const &filter,
-        std::function<bool( construction const & )> const &can_build )
+std::vector < construction_id > find_build_sequence( const std::string &target_id,
+        std::function < bool( construction const & ) > const &filter,
+        std::function < bool( construction const & ) > const &can_build )
 {
     // make a post_terrain->construction multimap for speedy search
-    std::unordered_multimap<std::string, const construction *> construction_map;
+    std::unordered_multimap < std::string, const construction * > construction_map;
     for( construction const &cons : get_constructions() ) {
         if( !filter( cons ) || cons.is_blacklisted() ) {
             continue;
@@ -3036,10 +3048,10 @@ std::vector<construction_id> find_build_sequence( const std::string &target_id,
         construction_map.insert( { cons.post_terrain, &cons } );
     }
 
-    std::queue<std::string> terrain_queue;
-    std::unordered_map<std::string, std::pair<const construction *, std::string>>
+    std::queue < std::string > terrain_queue;
+    std::unordered_map < std::string, std::pair < const construction *, std::string>>
             parent; // pre, cons , post
-    std::unordered_set<std::string> visited;
+    std::unordered_set < std::string > visited;
 
     terrain_queue.push( target_id );
     visited.insert( target_id );
@@ -3089,7 +3101,7 @@ std::vector<construction_id> find_build_sequence( const std::string &target_id,
     if( !found ) {
         return {};
     }
-    std::vector<construction_id> ret;
+    std::vector < construction_id > ret;
     // go through the parent chain until we find target_terrain
     while( current_terrain != target_id ) {
         auto it = parent.find( current_terrain );
@@ -3101,18 +3113,18 @@ std::vector<construction_id> find_build_sequence( const std::string &target_id,
 }
 
 build_reqs get_build_reqs_for_furn_ter_ids(
-    const std::pair<std::map<ter_id, int>, std::map<furn_id, int>> &changed_ids )
+    const std::pair < std::map < ter_id, int>, std::map<furn_id, int >> &changed_ids )
 {
     ter_id const &base_ter = ter_t_dirt.id();
     build_reqs total_reqs;
 
-    std::map<construction_id, int> total_builds;
+    std::map < construction_id, int > total_builds;
 
     // find the shortest route to create target terrain from empty or base terrain,
     // adding the constructions to the total_builds map
     const auto add_builds = [&total_builds, &base_ter]( const std::string & target_id, int count ) {
 
-        std::vector<construction_id> construction_chain = find_build_sequence( target_id, [](
+        std::vector < construction_id > construction_chain = find_build_sequence( target_id, [](
         construction const & cons ) {
             return !( cons.post_terrain.empty() || cons.pre_terrain.size() > 1 ||
                       cons.category == construction_category_REPAIR ||

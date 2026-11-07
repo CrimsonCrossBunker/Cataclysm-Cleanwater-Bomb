@@ -23,6 +23,8 @@ struct item_disposition {
 
 std::optional<item_disposition> query_item_disposition( Character &who, item_location object,
         const std::string &prompt = "" );
+bool valid_item_disposition( Character &who, item_location object,
+                             const item_disposition &choice );
 bool execute_item_disposition( Character &who, item_location object,
                                const item_disposition &choice );
 

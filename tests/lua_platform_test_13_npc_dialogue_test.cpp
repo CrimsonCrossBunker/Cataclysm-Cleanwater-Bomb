@@ -52,6 +52,7 @@
 #include "faction.h"
 #include "item.h"
 #include "item_location.h"
+#include "math_parser_diag_value.h"
 #include "json_loader.h"
 #include "lua_platform_dialogue.h"
 #include "lua_platform_runtime_internal.h"
@@ -1056,6 +1057,76 @@ TEST_CASE( "lua_platform_dialogue_response_callbacks_reject_stale_topics",
     cata::lua_platform::dialogue::clear_response_callbacks();
 }
 
+TEST_CASE( "lua_platform_dialogue_choices_are_owned_by_each_conversation",
+           "[lua][platform][dialogue][ownership]" )
+{
+    namespace callbacks = cata::lua_platform::dialogue;
+    callbacks::clear_response_callbacks();
+    const on_out_of_scope cleanup( []() {
+        callbacks::clear_response_callbacks();
+    } );
+    monster participant{ mon_zombie };
+    participant.set_hp( 1 );
+    dialogue first( std::make_unique<talker_monster>( &participant ),
+                    std::make_unique<talker_topic>() );
+    dialogue second( std::make_unique<talker_monster>( &participant ),
+                     std::make_unique<talker_topic>() );
+    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 1 );
+    callbacks::begin_session( first, runtime, 1 );
+    callbacks::begin_session( second, runtime, 1 );
+    const auto first_session = callbacks::session_for( first, "TALK_DONE", runtime, 1 );
+    const auto second_session = callbacks::session_for( second, "TALK_DONE", runtime, 1 );
+    auto first_payload = std::make_shared<int>( 0 );
+    const std::weak_ptr<int> released_payload = first_payload;
+    const auto first_id = callbacks::register_response_callback(
+                              callbacks::response_callback_origin::platform,
+    [first_payload]( dialogue &, const talk_topic & fallback, bool ) {
+        ++*first_payload;
+        return fallback;
+    }, first_session, "TALK_DONE" );
+    first_payload.reset();
+    int second_calls = 0;
+    int second_actions = 0;
+    const auto second_id = callbacks::register_response_callback(
+                               callbacks::response_callback_origin::platform,
+    [&]( dialogue &, const talk_topic &, bool ) {
+        ++second_calls;
+        return talk_topic( "SECOND_PLAYER" );
+    }, second_session, "TALK_DONE" );
+    const auto second_action = callbacks::register_response_action_callback(
+                                   callbacks::response_callback_origin::platform,
+    [&]( dialogue &, bool ) {
+        ++second_actions;
+    }, second_session, "TALK_DONE" );
+    const talk_topic fallback( "FALLBACK" );
+    CHECK( callbacks::apply_response_callback( first, second_id, fallback, true ).id == "FALLBACK" );
+    callbacks::apply_response_action_callback( first, second_action, true );
+    CHECK( second_calls == 0 );
+    CHECK( second_actions == 0 );
+
+    SECTION( "refresh_does_not_erase_other_players_choices" ) {
+        first.gen_responses( talk_topic( "TALK_DONE" ) );
+    }
+    SECTION( "close_releases_only_own_callbacks" ) {
+        callbacks::end_session( first );
+    }
+    SECTION( "topic_change_releases_obsolete_callbacks" ) {
+        callbacks::session_for( first, "TALK_NONE", runtime, 1 );
+    }
+    CHECK( released_payload.expired() );
+    CHECK( callbacks::apply_response_callback( first, first_id, fallback, true ).id == "FALLBACK" );
+    CHECK( callbacks::apply_response_callback( second, second_id, fallback,
+            true ).id == "SECOND_PLAYER" );
+    callbacks::apply_response_action_callback( second, second_action, true );
+    CHECK( second_calls == 1 );
+    CHECK( second_actions == 1 );
+    CHECK( callbacks::apply_response_callback( second, second_id, fallback, true ).id == "FALLBACK" );
+    callbacks::apply_response_action_callback( second, second_action, true );
+    CHECK( second_calls == 1 );
+    CHECK( second_actions == 1 );
+}
+
 TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_sessions",
            "[lua][platform][dialogue]" )
 {
@@ -1123,6 +1194,116 @@ TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_session
         conversation, cleared_action, false );
     CHECK( callback_calls == 0 );
     cata::lua_platform::dialogue::end_session( conversation );
+}
+
+TEST_CASE( "lua_platform_native_conversation_lifecycle_is_reusable_without_a_menu",
+           "[lua][platform][dialogue][ownership]" )
+{
+    clear_avatar();
+    cata::lua_platform::clear_active_runtimes();
+    sol::state owner_lua;
+    owner_lua.open_libraries( sol::lib::base );
+    sol::table ccb = owner_lua.create_table();
+    const auto runtime = cata::lua_platform::make_runtime( "dialogue_lifecycle", 303, owner_lua );
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::install_runtime_api( runtime, owner_lua, ccb );
+    owner_lua["ccb"] = ccb;
+    npc first_speaker;
+    first_speaker.normalize();
+    first_speaker.setID( character_id( 87435 ), true );
+    npc second_speaker;
+    second_speaker.normalize();
+    second_speaker.setID( character_id( 87436 ), true );
+    auto provider = std::make_unique<npc>();
+    provider->normalize();
+    provider->setID( character_id( 87437 ), true );
+    bool remove_provider_on_enter = false;
+    int entries = 0;
+    int later_entries = 0;
+    owner_lua.set_function( "native_enter", [&]() {
+        ++entries;
+        rng( 1, 100 );
+        if( remove_provider_on_enter ) {
+            provider.reset();
+        }
+    } );
+    owner_lua.set_function( "native_later_enter", [&]() {
+        ++later_entries;
+    } );
+    const auto setup = owner_lua.safe_script( R"(
+        ccb.dialogue.register_topic({
+            id = "TALK_CCB_NATIVE_LIFECYCLE",
+            dynamic_line = "A shared native conversation.",
+            speaker_effects = {
+                function(context)
+                    context:set("entered", (context:get("entered") or 0) + 1)
+                    native_enter()
+                end,
+                function(context) native_later_enter() end
+            },
+            responses = {
+                {
+                    text = "Finish this conversation.",
+                    topic = "TALK_DONE",
+                    on_action = function(context)
+                        context:set("chosen", "yes")
+                    end
+                }
+            }
+        })
+    )", sol::script_pass_on_error );
+    REQUIRE( setup.valid() );
+    cata::lua_platform::set_active_runtimes( { runtime } );
+    cata::lua_platform::runtime_world_ready( true );
+    dialogue first( get_talker_for( first_speaker ), get_talker_for( *provider ) );
+    dialogue second( get_talker_for( second_speaker ), get_talker_for( *provider ) );
+    REQUIRE( first.begin_conversation( false, "TALK_CCB_NATIVE_LIFECYCLE", true ) ==
+             dialogue_start_result::started );
+    REQUIRE( second.begin_conversation( false, "TALK_CCB_NATIVE_LIFECYCLE", true ) ==
+             dialogue_start_result::started );
+    SECTION( "retirement_in_speaker_effect_stops_remaining_callbacks" ) {
+        remove_provider_on_enter = true;
+        CHECK_FALSE( first.prepare_topic() );
+        CHECK( first.done );
+        CHECK_FALSE( first.prepare_topic() );
+        CHECK( entries == 1 );
+        CHECK( later_entries == 0 );
+        CHECK_FALSE( second.prepare_topic() );
+    }
+    SECTION( "two_players_enter_choose_and_close_independently" ) {
+        const auto before = rng_get_engine();
+        REQUIRE( first.prepare_topic() );
+        CHECK( rng_get_engine() != before );
+        CHECK( first.get_value( "entered" ).dbl() == 1 );
+        const auto first_revision = first.response_revision();
+        const auto after_enter = rng_get_engine();
+        REQUIRE( first.prepare_topic() );
+        CHECK( first.response_revision() == first_revision );
+        CHECK( rng_get_engine() == after_enter );
+        CHECK( entries == 1 );
+        CHECK( later_entries == 1 );
+        REQUIRE( second.prepare_topic() );
+        CHECK( second.get_value( "entered" ).dbl() == 1 );
+        CHECK( entries == 2 );
+        CHECK( later_entries == 2 );
+        auto next = first.select_response( 0, first_revision );
+        REQUIRE( next );
+        CHECK( first.get_value( "chosen" ).str() == "yes" );
+        CHECK( second.maybe_get_value( "chosen" ) == nullptr );
+        REQUIRE( first.advance_conversation( *next ) );
+        first.finish_conversation();
+        CHECK_FALSE( first.select_response( 0, first_revision ) );
+        next = second.select_response( 0, second.response_revision() );
+        REQUIRE( next );
+        CHECK( second.get_value( "chosen" ).str() == "yes" );
+        REQUIRE( second.advance_conversation( *next ) );
+    }
+    first.finish_conversation();
+    second.finish_conversation();
+    CHECK_FALSE( first.prepare_topic() );
+    CHECK_FALSE( second.prepare_topic() );
 }
 
 TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_select",
@@ -2085,14 +2266,13 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
     CHECK_FALSE( native_selected->has_follow_up() );
     CHECK_FALSE( platform_selected->has_follow_up() );
     native_interlocutor.chatbin.missions_assigned = { native_first, native_selected };
-    native_interlocutor.chatbin.mission_selected = native_selected;
     platform_interlocutor.chatbin.missions_assigned = {
         platform_first, platform_selected
     };
-    platform_interlocutor.chatbin.mission_selected = platform_selected;
 
     dialogue native_conversation(
         get_talker_for( native_speaker ), get_talker_for( native_interlocutor ) );
+    native_conversation.actor( true )->select_mission( native_selected );
     const JsonValue native_effect_json = json_loader::from_string(
             R"({"effect":"clear_mission"})" );
     talk_effect_t native_effect(
@@ -2142,6 +2322,7 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
         cata::lua_platform::runtime_world_generation();
     dialogue platform_conversation(
         get_talker_for( platform_speaker ), get_talker_for( platform_interlocutor ) );
+    platform_conversation.actor( true )->select_mission( platform_selected );
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
         cata::lua_platform::dialogue::begin_session(
             platform_conversation, runtime_identity, world_generation );
@@ -2153,15 +2334,15 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
         "dialogue context is stale", {}, session, runtime_identity,
         world_generation );
     CHECK_THROWS( outside_action.clear_selected_mission() );
-    CHECK( platform_interlocutor.chatbin.mission_selected == platform_selected );
+    CHECK( platform_conversation.const_actor( true )->selected_mission() == platform_selected );
     platform_conversation.responses.front().success.apply( platform_conversation );
 
     CHECK( native_interlocutor.chatbin.missions_assigned ==
            std::vector<mission *>( { native_first } ) );
-    CHECK( native_interlocutor.chatbin.mission_selected == native_first );
+    CHECK( native_conversation.const_actor( true )->selected_mission() == native_first );
     CHECK( platform_interlocutor.chatbin.missions_assigned ==
            std::vector<mission *>( { platform_first } ) );
-    CHECK( platform_interlocutor.chatbin.mission_selected == platform_first );
+    CHECK( platform_conversation.const_actor( true )->selected_mission() == platform_first );
     CHECK( native_interlocutor.chatbin.missions.empty() );
     CHECK( platform_interlocutor.chatbin.missions.empty() );
     const sol::protected_function context_valid =
@@ -2224,12 +2405,11 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
     owner.on_mission_assignment( *native_mission );
     owner.on_mission_assignment( *platform_mission );
     native_interlocutor.chatbin.missions_assigned = { native_mission };
-    native_interlocutor.chatbin.mission_selected = native_mission;
     platform_interlocutor.chatbin.missions_assigned = { platform_mission };
-    platform_interlocutor.chatbin.mission_selected = platform_mission;
 
     dialogue native_conversation(
         get_talker_for( owner ), get_talker_for( native_interlocutor ) );
+    native_conversation.actor( true )->select_mission( native_mission );
     const JsonValue native_effect_json = json_loader::from_string(
             R"({"effect":"mission_success"})" );
     talk_effect_t native_effect(
@@ -2309,6 +2489,7 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
         cata::lua_platform::runtime_world_generation();
     dialogue platform_conversation(
         get_talker_for( owner ), get_talker_for( platform_interlocutor ) );
+    platform_conversation.actor( true )->select_mission( platform_mission );
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
         cata::lua_platform::dialogue::begin_session(
             platform_conversation, runtime_identity, world_generation );
@@ -2402,12 +2583,11 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
     owner.on_mission_assignment( *native_mission );
     owner.on_mission_assignment( *platform_mission );
     native_interlocutor.chatbin.missions_assigned = { native_mission };
-    native_interlocutor.chatbin.mission_selected = native_mission;
     platform_interlocutor.chatbin.missions_assigned = { platform_mission };
-    platform_interlocutor.chatbin.mission_selected = platform_mission;
 
     dialogue native_conversation(
         get_talker_for( owner ), get_talker_for( native_interlocutor ) );
+    native_conversation.actor( true )->select_mission( native_mission );
     const JsonValue native_failure_json = json_loader::from_string(
             R"({"effect":"mission_failure"})" );
     talk_effect_t native_failure(
@@ -2419,7 +2599,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
     CHECK( native_interlocutor.op_of_u.anger == 3 );
     CHECK( native_interlocutor.chatbin.missions_assigned ==
            std::vector<mission *>( { native_mission } ) );
-    CHECK( native_interlocutor.chatbin.mission_selected == native_mission );
+    CHECK( native_conversation.const_actor( true )->selected_mission() == native_mission );
 
     const JsonValue native_clear_json = json_loader::from_string(
                                             R"({"effect":"clear_mission"})" );
@@ -2427,7 +2607,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
         native_clear_json.get_object(), "effect", "dialogue_mission_failure_test" );
     native_clear.apply( native_conversation );
     CHECK( native_interlocutor.chatbin.missions_assigned.empty() );
-    CHECK( native_interlocutor.chatbin.mission_selected == nullptr );
+    CHECK( native_conversation.const_actor( true )->selected_mission() == nullptr );
     CHECK( native_interlocutor.chatbin.first_topic == "TALK_BEFORE_FAILURE" );
 
     const JsonValue native_end_json = json_loader::from_string(
@@ -2484,6 +2664,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
         cata::lua_platform::runtime_world_generation();
     dialogue platform_conversation(
         get_talker_for( owner ), get_talker_for( platform_interlocutor ) );
+    platform_conversation.actor( true )->select_mission( platform_mission );
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
         cata::lua_platform::dialogue::begin_session(
             platform_conversation, runtime_identity, world_generation );
@@ -2497,7 +2678,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
         world_generation );
     CHECK_THROWS( outside_action.fail_selected_mission() );
     CHECK_FALSE( platform_mission->has_failed() );
-    CHECK( platform_interlocutor.chatbin.mission_selected == platform_mission );
+    CHECK( platform_conversation.const_actor( true )->selected_mission() == platform_mission );
     platform_conversation.responses.front().success.apply( platform_conversation );
 
     CHECK( platform_mission->has_failed() );
@@ -2505,7 +2686,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
     CHECK( platform_interlocutor.op_of_u.value == 3 );
     CHECK( platform_interlocutor.op_of_u.anger == 3 );
     CHECK( platform_interlocutor.chatbin.missions_assigned.empty() );
-    CHECK( platform_interlocutor.chatbin.mission_selected == nullptr );
+    CHECK( platform_conversation.const_actor( true )->selected_mission() == nullptr );
     CHECK( platform_interlocutor.chatbin.first_topic == "TALK_DONE" );
     const sol::protected_function context_valid =
         owner_lua["mission_failure_context_is_valid"];

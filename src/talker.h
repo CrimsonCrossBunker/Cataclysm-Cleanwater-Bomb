@@ -53,6 +53,14 @@ class const_talker
         virtual std::unique_ptr<const_talker> const_clone() const {
             return std::make_unique<const_talker>();
         }
+        // Bind relationship queries to the other Character in this dialogue.
+        // Non-character participants and talkers without relationships need no binding.
+        // Retired or replaced character instances must not continue a dialogue.
+        virtual bool is_valid() const {
+            return true;
+        }
+
+        virtual void bind_interlocutor( character_id, Character * = nullptr ) {}
         // virtual member accessor functions
         virtual Character const *get_const_character() const {
             return nullptr;
@@ -304,6 +312,21 @@ class const_talker
         virtual std::string proficiency_training_text( const_talker const &,
                 const proficiency_id & ) const {
             return {};
+        }
+        virtual bool has_chosen_training() const {
+            return false;
+        }
+        virtual skill_id chosen_training_skill() const {
+            return skill_id();
+        }
+        virtual matype_id chosen_training_style() const {
+            return matype_id();
+        }
+        virtual spell_id chosen_training_spell() const {
+            return spell_id();
+        }
+        virtual proficiency_id chosen_training_proficiency() const {
+            return proficiency_id();
         }
         virtual std::vector<matype_id> styles_teacheable() const {
             return {};
