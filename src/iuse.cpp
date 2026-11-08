@@ -269,6 +269,7 @@ static const furn_str_id furn_f_translocator_buoy( "f_translocator_buoy" );
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 
 static const itype_id itype_advanced_ecig( "advanced_ecig" );
+static const itype_id itype_afs_atompot( "afs_atompot" );
 static const itype_id itype_apparatus( "apparatus" );
 static const itype_id itype_arcade_machine( "arcade_machine" );
 static const itype_id itype_atomic_coffeepot( "atomic_coffeepot" );
@@ -286,6 +287,8 @@ static const itype_id itype_detergent( "detergent" );
 static const itype_id itype_ecig( "ecig" );
 static const itype_id itype_efile_map( "efile_map" );
 static const itype_id itype_efile_photos( "efile_photos" );
+static const itype_id itype_fcl_atomic_coffeemaker( "fcl_atomic_coffeemaker" );
+static const itype_id itype_fcl_atompot( "fcl_atompot" );
 static const itype_id itype_fire( "fire" );
 static const itype_id itype_geiger_on( "geiger_on" );
 static const itype_id itype_hammer( "hammer" );
@@ -4505,7 +4508,7 @@ std::optional<int> iuse::hotplate_atomic( Character *p, item *it, const tripoint
     if( p->cant_do_mounted() ) {
         return std::nullopt;
     }
-    if( it->typeId() == itype_atomic_coffeepot ) {
+    if( it->typeId() == itype_atomic_coffeepot || it->typeId() == itype_afs_atompot || it->typeId() == itype_fcl_atomic_coffeemaker || it->typeId() == itype_fcl_atompot ) {
         heat_solid_items( p, it, p->pos_bub() );
     }
 
