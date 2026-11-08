@@ -8,6 +8,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <mutex>
 
 /** Simple C++17-compatible latch (replaces std::latch from C++20). */
 class simple_latch
@@ -76,7 +77,8 @@ class simple_latch
 class cata_thread_pool
 {
     public:
-        explicit cata_thread_pool( unsigned int num_workers );
+        explicit cata_thread_pool( unsigned int num_workers, std::size_t queue_limit = 64,
+                                   void ( *worker_init )() = nullptr );
         ~cata_thread_pool();
 
         cata_thread_pool( const cata_thread_pool & ) = delete;
@@ -91,7 +93,10 @@ class cata_thread_pool
             return queue_.size();
         }
 
-        /** Enqueue a callable for execution on a worker thread. */
+        /** Queue work up to the bound; execute inline when full, nested or serial.
+         * Raw callables must contain their exceptions. Accepted tasks are drained
+         * at teardown; callers must drain their own tasks before freeing inputs.
+         */
         void submit( std::function<void()> task );
 
         /**
@@ -132,9 +137,14 @@ class cata_thread_pool
         mutable std::mutex mutex_;
         std::condition_variable cv_;
         bool stop_ = false;
+        const std::size_t queue_limit_;
+        void ( *const worker_init_ )();
 };
 
-/** Returns the process-lifetime thread pool (lazy-initialized, thread-safe). */
+/** Shared bounded executor for owner-captured, deterministic compute domains. */
+std::shared_ptr<cata_thread_pool> get_compute_pool();
+
+/** Legacy generic entry point; disabled option returns a zero-worker executor. */
 cata_thread_pool &get_thread_pool();
 
 /**
@@ -177,7 +187,7 @@ void parallel_for( int begin, int end, F &&f )
     const int nw = static_cast<int>( pool.num_workers() );
 
     // Serial fallback on single-core machines.
-    if( nw == 0 ) {
+    if( nw == 0 || is_pool_worker_thread() ) {
         for( int i = begin; i < end; ++i ) {
             f( i );
         }
@@ -252,7 +262,7 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
     const int n = end - begin;
     const int num_chunks = ( n + chunk_size - 1 ) / chunk_size;
 
-    if( nw == 0 || num_chunks <= 1 ) {
+    if( nw == 0 || is_pool_worker_thread() || num_chunks <= 1 ) {
         for( int i = begin; i < end; ++i ) {
             f( i );
         }

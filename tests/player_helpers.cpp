@@ -117,7 +117,7 @@ void clear_character( Character &dummy, bool skip_nutrition )
     dummy.prof = profession::generic();
     dummy.hobbies.clear();
     dummy._skills->clear();
-    dummy.martial_arts_data->clear_styles();
+    *dummy.martial_arts_data = character_martial_arts();
     dummy.clear_morale();
     dummy.activity.set_to_null();
     dummy.backlog.clear();

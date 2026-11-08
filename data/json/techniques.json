@@ -228,6 +228,7 @@
     "name": "Mounted Charge",
     "description": "Charge forward while mounted and strike the first creature in your path.",
     "manual_activation": true,
+    "cooldown": "10 s",
     "melee_allowed": true,
     "messages": [ "You charge into %s", "<npcname> charges into %s" ],
     "attack_vectors": [ "vector_null" ]

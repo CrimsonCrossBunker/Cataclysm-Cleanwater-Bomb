@@ -29,7 +29,7 @@
     "style": "layout",
     "label": "Weapon/Style",
     "arrange": "rows",
-    "widgets": [ "wielding_desc", "style_desc" ]
+    "widgets": [ "wielding_desc", "style_desc", "technique_cooldowns" ]
   },
   {
     "id": "needs_desc_layout_label",
