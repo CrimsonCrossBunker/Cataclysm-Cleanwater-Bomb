@@ -1,5 +1,6 @@
 #include "mp_gamestate.h"
 #include "mp_combat_result.h"
+#include "mp_throw.h"
 
 #include <stdexcept>
 #include <limits>
@@ -2247,6 +2248,50 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                 server->post_reject( recipient.admission, "Invalid inventory request; reconnect to synchronize." );
             }
         }
+        return;
+    }
+    if( action == "throw" ) {
+        remote->set_moves( recipient.turn.remote_moves );
+        const auto messages = Messages::size();
+        try {
+            throw_intent intent;
+            jo.read( "origin", intent.origin, true );
+            jo.read( "target", intent.target, true );
+            jo.read( "blind_from", intent.blind_from, true );
+            intent.source = jo.get_string( "source" );
+            jo.read( "source_position", intent.source_position, true );
+            jo.read( "path", intent.path, true );
+            intent.wielded = jo.get_int64( "wielded" );
+            intent.allow_theft = jo.get_bool( "allow_theft", false );
+            if( jo.has_object( "disposition" ) ) {
+                const JsonObject choice = jo.get_object( "disposition" );
+                intent.disposition = item_disposition{ choice.get_string( "action" ),
+                                                       choice.get_int64( "container" ), choice.get_int64( "pocket" ) };
+            }
+            if( pickup_inventory_revision_matches( jo, recipient.pickup ) ) {
+                execute_throw_intent( *remote, get_map(), intent );
+            }
+        } catch( const JsonError &error ) {
+            mp_log( std::string( "[ccb-mp] rejected throw intent: " ) + error.what() );
+        }
+        remote = mp_remote_actor( recipient );
+        if( !remote ) {
+            return;
+        }
+        recipient.turn.remote_moves = remote->get_moves();
+        recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
+        flush_action_msgs( recipient, messages, remote->name );
+        const std::string result = make_combat_result( *remote, recipient.pickup );
+        g->cleanup_dead();
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, result + "\n" );
+            std::string state = serialize_remote_player_state( recipient );
+            if( !recipient.turn.client_acted_this_turn && !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
+        }
+        g->invalidate_main_ui_adaptor();
         return;
     }
     if( action == "firearm" ) {
@@ -8194,6 +8239,42 @@ void client_request_firearm( const tripoint_bub_ms &target, const std::string &a
     out.member( "grant_seq", mp_session().client_turn.client_last_grant_seq );
     out.end_object();
     view.phase = firearm_view_phase::pending;
+    client_send( encoded.str() );
+    who.set_moves( 0 );
+    client_mark_action_sent();
+}
+
+void client_request_throw( const throw_intent &intent )
+{
+    avatar &who = get_avatar();
+    if( !is_client_mode() || ( who.get_moves() <= 0 && !intent.blind_from ) ||
+        is_client_waiting_for_ack() ) {
+        return;
+    }
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", "throw" );
+    out.member( "origin", intent.origin );
+    out.member( "target", intent.target );
+    out.member( "blind_from", intent.blind_from );
+    out.member( "source", intent.source );
+    out.member( "source_position", intent.source_position );
+    out.member( "path", intent.path );
+    out.member( "wielded", intent.wielded );
+    out.member( "allow_theft", intent.allow_theft );
+    if( intent.disposition ) {
+        out.member( "disposition" );
+        out.start_object();
+        out.member( "action", intent.disposition->action );
+        out.member( "container", intent.disposition->container );
+        out.member( "pocket", intent.disposition->pocket );
+        out.end_object();
+    }
+    out.member( "inventory_revision", mp_session().client_pickup.revision );
+    out.member( "grant_seq", mp_session().client_turn.client_last_grant_seq );
+    out.end_object();
     client_send( encoded.str() );
     who.set_moves( 0 );
     client_mark_action_sent();

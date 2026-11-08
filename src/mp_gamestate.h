@@ -29,6 +29,7 @@ struct selection;
 
 namespace cata_mp
 {
+struct throw_intent;
 
 // Called once per game turn from do_turn() — drains the event queue and
 // processes connect/disconnect/action events from remote players.
@@ -205,6 +206,7 @@ void client_finish_firearm_activity();
 void client_finish_ready_firearm_activity();
 firearm_view_phase client_firearm_phase();
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action );
+void client_request_throw( const throw_intent &intent );
 
 // Client only: call immediately after client_send() to suppress stale moves>0
 // state packets until the server sends moves=0 (its action acknowledgement).

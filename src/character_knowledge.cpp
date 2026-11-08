@@ -81,8 +81,9 @@ bool Character::has_martialart( const matype_id &m ) const
 
 void Character::handle_skill_warning( const skill_id &id, bool force_warning )
 {
-    //remind the player intermittently that no skill gain takes place
-    if( is_avatar() && ( force_warning || one_in( 5 ) ) ) {
+    // Reminder frequency must not alter the authoritative gameplay RNG.
+    if( ( is_avatar() || has_native_player_control() ) &&
+        ( force_warning || rng_visual( 1, 5 ) == 1 ) ) {
         SkillLevel &level = get_skill_level_object( id );
 
         const Skill &skill = id.obj();

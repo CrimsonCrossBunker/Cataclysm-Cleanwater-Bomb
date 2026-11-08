@@ -45,6 +45,8 @@
 #include "handle_liquid.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_disposition.h"
+#include "item_uid.h"
 #include "item_contents.h"
 #include "item_location.h"
 #include "item_pocket.h"
@@ -839,13 +841,28 @@ void Character::drop_invalid_inventory()
     cache_inventory_is_valid = true;
 }
 
-void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj, Character &guy )
+namespace
+{
+struct native_disposition {
+    item_disposition choice;
+    dispose_option option;
+};
+
+void append_disposition( std::vector<native_disposition> &options,
+                         item_disposition choice, dispose_option option )
+{
+    options.push_back( { std::move( choice ), std::move( option ) } );
+}
+
+static void append_holster_dispositions( std::vector<native_disposition> &opts,
+        const std::vector<item *> &worn_items, item_location obj, Character &guy )
 {
 
-    for( item &e : worn ) {
+    for( item *entry : worn_items ) {
+        item &e = *entry;
         // check for attachable subpockets first (the parent item may be defined as a holster)
         if( e.get_contents().has_additional_pockets() && e.can_contain( *obj ).success() ) {
-            opts.emplace_back( dispose_option{
+            append_disposition( opts, item_disposition{ "container", e.uid().get_value(), 0 }, dispose_option{
                 string_format( _( "Store in %s" ), e.tname() ), true, e.invlet,
                 guy.item_store_cost( *obj, e, false, e.insert_cost( *obj ) ),
                 [&guy, &e, obj] {
@@ -860,7 +877,8 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
                 if( !con || !con->can_contain( *obj ).success() ) {
                     continue;
                 }
-                opts.emplace_back( dispose_option{
+                append_disposition( opts, item_disposition{ "pocket", e.uid().get_value(), it->uid().get_value() },
+                dispose_option{
                     string_format( "  >%s", it->tname() ), true, it->invlet,
                     guy.item_store_cost( *obj, *it, false, it->insert_cost( *obj ) ),
                     [&guy, it, con, obj] {
@@ -873,7 +891,7 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
         } else if( e.can_holster( *obj ) ) {
             const holster_actor *ptr = dynamic_cast<const holster_actor *>
                                        ( e.type->get_use( "holster" )->get_actor_ptr() );
-            opts.emplace_back( dispose_option{
+            append_disposition( opts, item_disposition{ "holster", e.uid().get_value(), 0 }, dispose_option{
                 string_format( _( "Store in %s" ), e.tname() ), true, e.invlet,
                 guy.item_store_cost( *obj, e, false, e.insert_cost( *obj ) ),
                 [&guy, ptr, &e, obj] {
@@ -886,70 +904,102 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
     }
 }
 
-bool Character::dispose_item( item_location &&obj, const std::string &prompt )
+
+std::vector<native_disposition> item_disposition_options( Character &who, item_location obj )
 {
-    if( test_mode ) {
-        return false;
+    std::vector<native_disposition> opts;
+    if( !obj ) {
+        return opts;
     }
-
-    uilist menu;
-    menu.text = prompt.empty() ? string_format( _( "Dispose of %s" ), obj->tname() ) : prompt;
-    std::vector<dispose_option> opts;
-
+    Character *owner = &who;
     const bool bucket = obj->will_spill() && !obj->is_container_empty();
 
-    opts.emplace_back( dispose_option{
+    append_disposition( opts, item_disposition{ "inventory", 0, 0 }, dispose_option{
         bucket ? _( "Spill contents and store in inventory" ) : _( "Store in inventory" ),
-        can_stash( *obj ), '1',
-        item_handling_cost( *obj ),
-        [this, bucket, &obj] {
-            if( bucket && !obj->spill_open_pockets( *this, obj.get_item() ) )
-        {
-            return false;
-        }
+        owner->can_stash( *obj ), '1',
+        owner->item_handling_cost( *obj ),
+        [owner, bucket, obj]() mutable {
+            if( bucket && !obj->spill_open_pockets( *owner, obj.get_item() ) )
+            {
+                return false;
+            }
 
-        mod_moves( -item_handling_cost( *obj ) );
-        craft_relocated( this->i_add( *obj, true, &*obj, &*obj ) );
-        obj.remove_item();
-        return true;
-    }
-} );
-
-    opts.emplace_back( dispose_option{
-        _( "Drop item" ), true, '2', 0, [this, &obj] {
-            put_into_vehicle_or_drop( *this, item_drop_reason::deliberate, { *obj } );
+            owner->mod_moves( -owner->item_handling_cost( *obj ) );
+            craft_relocated( owner->i_add( *obj, true, &*obj, &*obj ) );
             obj.remove_item();
             return true;
         }
     } );
 
-    opts.emplace_back( dispose_option{
-        bucket ? _( "Spill contents and wear item" ) : _( "Wear item" ),
-        can_wear( *obj ).success(), '3', item_wear_cost( *obj ),
-        [this, bucket, &obj] {
-            if( bucket && !obj->spill_contents( *this ) )
-        {
-            return false;
+    append_disposition( opts, item_disposition{ "drop", 0, 0 }, dispose_option{
+        _( "Drop item" ), true, '2', 0, [owner, obj]() mutable {
+            put_into_vehicle_or_drop( *owner, item_drop_reason::deliberate, { *obj } );
+            obj.remove_item();
+            return true;
         }
+    } );
 
-        item it = *obj;
-        obj.remove_item();
-        const std::optional<std::list<item>::iterator> worn_it = wear_item( it );
-        if( worn_it )
-        {
-            craft_relocated( item_location( *this, & **worn_it ) );
+    append_disposition( opts, item_disposition{ "wear", 0, 0 }, dispose_option{
+        bucket ? _( "Spill contents and wear item" ) : _( "Wear item" ),
+        owner->can_wear( *obj ).success(), '3', owner->item_wear_cost( *obj ),
+        [owner, bucket, obj]() mutable {
+            if( bucket && !obj->spill_contents( *owner ) )
+            {
+                return false;
+            }
+
+            item it = *obj;
+            obj.remove_item();
+            const std::optional<std::list<item>::iterator> worn_it = owner->wear_item( it );
+            if( worn_it )
+            {
+                craft_relocated( item_location( *owner, & **worn_it ) );
             }
             return !!worn_it;
         }
     } );
 
-    worn.holster_opts( opts, obj, *this );
 
+    std::vector<item *> worn_items;
+    for( item_location candidate : who.top_items_loc() ) {
+        if( who.is_worn( *candidate ) ) {
+            worn_items.push_back( candidate.get_item() );
+        }
+    }
+    append_holster_dispositions( opts, worn_items, obj, who );
+    return opts;
+}
+} // namespace
+
+void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj, Character &guy )
+{
+    std::vector<item *> worn_items;
+    for( item &entry : worn ) {
+        worn_items.push_back( &entry );
+    }
+    std::vector<native_disposition> choices;
+    append_holster_dispositions( choices, worn_items, obj, guy );
+    for( auto &choice : choices ) {
+        opts.push_back( std::move( choice.option ) );
+    }
+}
+
+std::optional<item_disposition> query_item_disposition( Character &who, item_location obj,
+        const std::string &prompt )
+{
+    if( test_mode || !obj ) {
+        return std::nullopt;
+    }
+    uilist menu;
+    menu.text = prompt.empty() ? string_format( _( "Dispose of %s" ), obj->tname() ) : prompt;
+    auto opts = item_disposition_options( who, obj );
     int w = utf8_width( menu.text, true ) + 4;
-    for( const dispose_option &e : opts ) {
+    for( const native_disposition &candidate : opts ) {
+        const dispose_option &e = candidate.option;
         w = std::max( w, utf8_width( e.prompt, true ) + 4 );
     }
-    for( dispose_option &e : opts ) {
+    for( native_disposition &candidate : opts ) {
+        dispose_option &e = candidate.option;
         e.prompt += std::string( w - utf8_width( e.prompt, true ), ' ' );
     }
 
@@ -960,23 +1010,42 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
     int min_moves = INT_MAX;
     int min_moves_i = 0;
     int index = 0;
-    for( const dispose_option &e : opts ) {
+    for( const native_disposition &candidate : opts ) {
+        const dispose_option &e = candidate.option;
         if( e.moves > 0 && e.moves < min_moves ) {
             min_moves = e.moves;
             min_moves_i = index;
         }
         menu.addentry( -1, e.enabled, e.invlet, string_format( e.enabled ? "%s | %-7d" : "%s |",
-                e.prompt, e.moves ) );
+                       e.prompt, e.moves ) );
         index++;
     }
 
     menu.set_selected( min_moves_i );
 
+
     menu.query();
-    if( menu.ret >= 0 ) {
-        return opts[menu.ret].action();
+    if( menu.ret >= 0 && static_cast<size_t>( menu.ret ) < opts.size() ) {
+        return opts[menu.ret].choice;
+    }
+    return std::nullopt;
+}
+
+bool execute_item_disposition( Character &who, item_location object,
+                               const item_disposition &choice )
+{
+    for( const native_disposition &candidate : item_disposition_options( who, object ) ) {
+        if( candidate.choice == choice && candidate.option.enabled ) {
+            return candidate.option.action();
+        }
     }
     return false;
+}
+
+bool Character::dispose_item( item_location &&obj, const std::string &prompt )
+{
+    const auto choice = query_item_disposition( *this, obj, prompt );
+    return choice && execute_item_disposition( *this, obj, *choice );
 }
 
 item_location Character::get_wielded_item() const
