@@ -3,6 +3,7 @@
 #define CATA_TESTS_OVERMAP_TEST_HELPERS_H
 
 #include <array>
+#include <bitset>
 #include <map>
 #include <vector>
 
@@ -25,6 +26,12 @@ class overmap_test_helper
         static const std::array<tripoint_om_omt, 4> &get_highway_connections(
             const overmap &om ) {
             return om.highway_connections;
+        }
+        static bool select_highway_end_points( overmap &om,
+                                               const std::vector<const overmap *> &neighbors,
+                                               std::array<tripoint_om_omt, 4> &end_points,
+                                               std::bitset<4> &connections ) {
+            return om.highway_select_end_points( neighbors, end_points, connections, {}, 0 );
         }
         static void place_nemesis( overmap &om, const tripoint_abs_omt &p, int mission_id = -1 ) {
             om.place_nemesis( p, mission_id );

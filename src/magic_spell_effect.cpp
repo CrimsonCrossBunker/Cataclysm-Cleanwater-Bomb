@@ -90,13 +90,13 @@ static const itype_id itype_fertilizer( "fertilizer" );
 
 static const json_character_flag
 json_flag_BLOCK_SUPERNATURAL_HEALING( "BLOCK_SUPERNATURAL_HEALING" );
+static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_NUMB( "NUMB" );
 static const json_character_flag json_flag_PRED1( "PRED1" );
 static const json_character_flag json_flag_PRED2( "PRED2" );
 static const json_character_flag json_flag_PRED3( "PRED3" );
 static const json_character_flag json_flag_PRED4( "PRED4" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
-static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 
 static const morale_type morale_killed_monster( "morale_killed_monster" );
 
@@ -1417,8 +1417,6 @@ void spell_effect::spawn_summoned_monster( const spell &sp, Creature &caster,
         if( add_summoned_mon( *iter, summon_time, sp, caster ) ) {
             num_mons--;
             sp.make_sound( *iter, caster );
-        } else {
-            debugmsg( "failed to place monster" );
         }
         // whether or not we succeed in spawning a monster, we don't want to try this tripoint again
         area.erase( iter );

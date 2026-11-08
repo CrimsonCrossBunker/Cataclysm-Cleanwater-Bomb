@@ -118,7 +118,7 @@ void clear_character( Character &dummy, bool skip_nutrition )
     dummy.prof = profession::generic();
     dummy.hobbies.clear();
     dummy._skills->clear();
-    dummy.martial_arts_data->clear_styles();
+    *dummy.martial_arts_data = character_martial_arts();
     dummy.clear_morale();
     dummy.activity.set_to_null();
     dummy.backlog.clear();
@@ -206,7 +206,7 @@ void arm_shooter( Character &shooter, const itype_id &gun_type,
     const ammotype &type_of_ammo = item::find_type( ammo_id )->ammo->type;
     if( gun->magazine_integral() ) {
         item_location ammo = shooter.i_add( item( ammo_id, calendar::turn,
-            gun->ammo_capacity( type_of_ammo ) ) );
+                                            gun->ammo_capacity( type_of_ammo ) ) );
         REQUIRE( gun.can_reload_with( ammo, true ) );
         REQUIRE( shooter.can_reload( *gun, &*ammo ) );
         gun->reload( shooter, ammo, gun->ammo_capacity( type_of_ammo ) );
@@ -214,7 +214,7 @@ void arm_shooter( Character &shooter, const itype_id &gun_type,
         const itype_id magazine_id = gun->magazine_default();
         item_location magazine = shooter.i_add( item( magazine_id ) );
         item_location ammo = shooter.i_add( item( ammo_id, calendar::turn,
-            magazine->ammo_capacity( type_of_ammo ) ) );
+                                            magazine->ammo_capacity( type_of_ammo ) ) );
         REQUIRE( magazine.can_reload_with( ammo,  true ) );
         REQUIRE( shooter.can_reload( *magazine, &*ammo ) );
         magazine->reload( shooter, ammo, magazine->ammo_capacity( type_of_ammo ) );
@@ -231,6 +231,7 @@ void clear_avatar()
     avatar &avatar = get_avatar();
     clear_character( avatar );
     avatar.grab( object_type::NONE );
+    avatar.clear_destination();
     avatar.clear_identified();
     avatar.clear_nutrition();
     avatar.reset_all_missions();

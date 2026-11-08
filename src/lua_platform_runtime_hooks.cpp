@@ -2406,6 +2406,44 @@ std::optional<bool> invoke_technique_condition_handler(
     return result.get<bool>();
 }
 
+std::optional<double> invoke_technique_cooldown_handler(
+    const std::string_view technique_id, const std::string_view mod_id,
+    const std::string_view handler_id, const Character &character,
+    const double base_cooldown_seconds )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        return std::nullopt;
+    }
+    const item_location weapon = character.used_weapon();
+    sol::table payload = owner->lua->create_table();
+    payload["technique_id"] = std::string( technique_id );
+    payload["character"] = platform_creature_handle( *owner, character );
+    payload["weapon_id"] = weapon ? weapon->typeId().str() : std::string();
+    payload["base_cooldown_seconds"] = base_cooldown_seconds;
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::number ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique cooldown must return one number";
+        return std::nullopt;
+    }
+    const double seconds = result.get<double>();
+    if( !std::isfinite( seconds ) || seconds < 0.0 || seconds > to_seconds<double>( 1_days ) ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique cooldown must be within zero and one day";
+        return std::nullopt;
+    }
+    return seconds;
+}
+
 std::optional<double> invoke_mounted_charge_damage_handler(
     const std::string_view technique_id, const std::string_view mod_id,
     const std::string_view handler_id, const Character &character,

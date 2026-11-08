@@ -52,7 +52,7 @@ std::shared_ptr<cata_thread_pool> get_compute_pool()
     // One process-lifetime executor; frames retain only their own input/output
     // buffers. Every domain drains its accepted tasks before releasing a lease.
     static auto pool = std::make_shared<cata_thread_pool>( compute_workers(), 64,
-        initialize_game_worker );
+                       initialize_game_worker );
     return pool;
 }
 

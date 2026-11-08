@@ -17,14 +17,18 @@
 #include "units.h"
 #include "vehicle.h"
 
+static const itype_id itype_battery( "battery" );
 static const itype_id itype_charcoal( "charcoal" );
 static const itype_id itype_coal_lump( "coal_lump" );
 static const itype_id itype_fuel_bunker( "fuel_bunker" );
+
 static const vpart_id vpart_engine_steam_makeshift( "engine_steam_makeshift" );
 static const vpart_id vpart_engine_steam_medium( "engine_steam_medium" );
 static const vpart_id vpart_engine_steam_small( "engine_steam_small" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_fuel_bunker( "fuel_bunker" );
+static const vpart_id vpart_small_storage_battery( "small_storage_battery" );
+
 static const vproto_id vehicle_prototype_none( "none" );
 
 TEST_CASE( "solid_fuel_bunker_uses_actual_fuel_volume", "[vehicle][fuel]" )
@@ -55,6 +59,9 @@ TEST_CASE( "steam_engines_do_not_collect_unserved_fuel_demand", "[vehicle][fuel]
                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
     REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int battery = veh->install_part( here, point_rel_ms::zero, vpart_small_storage_battery );
+    REQUIRE( battery >= 0 );
+    REQUIRE( veh->part( battery ).ammo_set( itype_battery, 1000 ) > 0 );
     const int engine = veh->install_part( here, point_rel_ms::zero, engine_type );
     REQUIRE( engine >= 0 );
     REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );

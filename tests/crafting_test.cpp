@@ -77,10 +77,10 @@ static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 
 static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
+static const faction_id faction_free_merchants( "free_merchants" );
+
 static const flag_id json_flag_ITEM_BROKEN( "ITEM_BROKEN" );
 static const flag_id json_flag_USE_UPS( "USE_UPS" );
-
-static const faction_id faction_free_merchants( "free_merchants" );
 
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
 static const furn_str_id furn_f_solar_cooker( "f_solar_cooker" );
@@ -200,15 +200,17 @@ static const recipe_id recipe_macaroni_cooked( "macaroni_cooked" );
 static const recipe_id recipe_magazine_battery_light_mod( "magazine_battery_light_mod" );
 static const recipe_id recipe_makeshift_funnel( "makeshift_funnel" );
 static const recipe_id recipe_sushi_rice( "sushi_rice" );
+static const recipe_id
+recipe_test_rot_result_raw_rot_auto_raw( "test_rot_result_raw_rot_auto_raw" );
 static const recipe_id recipe_test_rot_result_rot_auto_blend( "test_rot_result_rot_auto_blend" );
-static const recipe_id recipe_test_rot_result_rot_auto_gate( "test_rot_result_rot_auto_gate" );
-static const recipe_id recipe_test_rot_result_rot_auto_raw( "test_rot_result_rot_auto_raw" );
 static const recipe_id recipe_test_rot_result_rot_fresh( "test_rot_result_rot_fresh" );
 static const recipe_id recipe_test_rot_result_rot_max( "test_rot_result_rot_max" );
 static const recipe_id
 recipe_test_rot_result_rot_preserve_blend( "test_rot_result_rot_preserve_blend" );
 static const recipe_id recipe_test_rot_result_rot_shortest( "test_rot_result_rot_shortest" );
 static const recipe_id recipe_test_rot_result_rot_weighted( "test_rot_result_rot_weighted" );
+static const recipe_id
+recipe_test_rot_result_short_rot_auto_gate( "test_rot_result_short_rot_auto_gate" );
 static const recipe_id recipe_test_tallow( "test_tallow" );
 static const recipe_id recipe_test_tallow2( "test_tallow2" );
 static const recipe_id recipe_test_waist_apron_long( "test_waist_apron_long" );
@@ -605,10 +607,13 @@ static void setup_test_craft( const recipe_id &rid )
 // This tries to actually run the whole craft activity, which is more thorough,
 // but slow
 static int actually_test_craft( const recipe_id &rid, int interrupt_after_turns,
-                                int skill_level = -1 )
+                                int skill_level = -1, const std::function<void( item & )> &after_start = {} )
 {
     setup_test_craft( rid );
     avatar &player_character = get_avatar();
+    if( after_start ) {
+        after_start( *player_character.get_wielded_item() );
+    }
 
     int turns = 0;
     while( player_character.activity.id() == ACT_CRAFT ) {
@@ -3066,7 +3071,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_result_rot_auto_raw, 1, comps,
+        item craft( &*recipe_test_rot_result_raw_rot_auto_raw, 1, comps,
                     std::vector<item_comp> {}, false );
 
         THEN( "the most rotten component wins without dilution" ) {
@@ -3100,7 +3105,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
         item_components comps;
         comps.add( comp_a );
         comps.add( comp_b );
-        item craft( &*recipe_test_rot_result_rot_auto_gate, 1, comps,
+        item craft( &*recipe_test_rot_result_short_rot_auto_gate, 1, comps,
                     std::vector<item_comp> {}, false );
 
         THEN( "the shortest remaining lifespan is inherited" ) {
@@ -3147,7 +3152,7 @@ TEST_CASE( "craft_rot_inherit_modes", "[crafting][rot]" )
 
         THEN( "the floor stays below the weighted blend once the batch is mostly rotten" ) {
             const double expected = ( 10 * 0.91 * mg_per_b + 10 * 2.0 * mg_per_a ) /
-                                    ( seed_mult * ( 10 * mg_per_b + 10 * mg_per_a ) );
+                                    ( 10 * mg_per_b + 10 * mg_per_a );
             CHECK( craft.get_relative_rot() == approx_rot( expected ) );
         }
     }
@@ -3241,16 +3246,27 @@ TEST_CASE( "craft_rot_inherit_end_to_end", "[crafting][rot]" )
         }
     }
 
-    GIVEN( "a fresh mode recipe with a rotten component" ) {
+    GIVEN( "a fresh mode recipe whose component rots while crafting" ) {
         item comp_a( itype_test_rot_a, calendar::turn, 1 );
         item comp_b( itype_test_rot_b, calendar::turn, 1 );
-        comp_a.set_relative_rot( 1.5 );
         tools.insert( tools.end(), 1, comp_a );
         tools.insert( tools.end(), 1, comp_b );
 
         WHEN( "crafting the test recipe" ) {
             prep_craft( recipe_test_rot_result_rot_fresh, tools, true );
-            actually_test_craft( recipe_test_rot_result_rot_fresh, INT_MAX, 10 );
+            actually_test_craft( recipe_test_rot_result_rot_fresh, INT_MAX, 10, []( item & craft ) {
+                bool component_rotted = false;
+                for( auto &component_group : craft.components ) {
+                    if( component_group.first == itype_test_rot_a ) {
+                        for( item &component : component_group.second ) {
+                            component.set_relative_rot( 1.5 );
+                            REQUIRE( component.rotten() );
+                            component_rotted = true;
+                        }
+                    }
+                }
+                REQUIRE( component_rotted );
+            } );
 
             THEN( "the result stays fresh" ) {
                 item_location result = player_character.get_wielded_item();

@@ -30,5 +30,13 @@
     "name": { "str_sp": "riot control bot schematics" },
     "description": "Assembly plans, design specs, and technical drawings for the riot control bot.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts.",
     "copy-from": "schematics_generic"
+  },
+  {
+    "id": "schematics_tripod",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "name": { "str_sp": "tripod schematics" },
+    "description": "Bearing the logo of Honda, those are assembly plans, design specs, and technical drawings for the tripod.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts.",
+    "copy-from": "schematics_generic"
   }
 ]

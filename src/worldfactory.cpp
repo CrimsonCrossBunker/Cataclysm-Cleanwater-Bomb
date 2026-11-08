@@ -31,6 +31,7 @@
 #include "debug.h"
 #include "enums.h"
 #include "filesystem.h"
+#include "native_file_path.h"
 #include "input.h"
 #include "input_context.h"
 #include "input_popup.h"
@@ -3806,10 +3807,11 @@ static bool remove_world_directory( const std::filesystem::path &worldpath,
                                     std::error_code &result_error )
 {
     std::error_code remove_error;
-    std::filesystem::remove_all( worldpath, remove_error );
+    const std::filesystem::path native_path = native_file_path( worldpath, true );
+    std::filesystem::remove_all( native_path, remove_error );
 
     std::error_code exists_error;
-    bool directory_remains = std::filesystem::exists( worldpath, exists_error );
+    bool directory_remains = std::filesystem::exists( native_path, exists_error );
     if( !directory_remains && !exists_error ) {
         return true;
     }
@@ -3817,12 +3819,12 @@ static bool remove_world_directory( const std::filesystem::path &worldpath,
     // Windows refuses to delete read-only files.  A failed remove_all may also
     // leave only the now-empty world directory behind, so make any remaining
     // entries writable and retry the complete operation.
-    make_world_tree_writable( worldpath );
+    make_world_tree_writable( native_path );
     remove_error.clear();
-    std::filesystem::remove_all( worldpath, remove_error );
+    std::filesystem::remove_all( native_path, remove_error );
 
     exists_error.clear();
-    directory_remains = std::filesystem::exists( worldpath, exists_error );
+    directory_remains = std::filesystem::exists( native_path, exists_error );
     if( !directory_remains && !exists_error ) {
         return true;
     }

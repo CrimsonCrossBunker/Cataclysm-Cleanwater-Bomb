@@ -7808,6 +7808,7 @@ void map::process_items()
         if( current_submap == nullptr ) {
             debugmsg( "Tried to process items at %s but the submap is not loaded",
                       local_pos.to_string() );
+            ++iter;
             continue;
         }
         // TODO: fix point types

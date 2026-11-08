@@ -19,6 +19,7 @@ class TracyConfigureTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="ccb-tracy-configure-")
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)
+        self.compiler = shutil.which("c++")
         self.sdk = self.path / "include"
         (self.sdk / "tracy").mkdir(parents=True)
         (self.sdk / "tracy/Tracy.hpp").write_text(
@@ -69,7 +70,7 @@ ccb_check_tracy_client()
         archive = self.path / ("lib" + name + ".a")
         cpp.write_text(source)
         subprocess.run(
-            ["c++", "-c", str(cpp), "-o", str(obj)],
+            [self.compiler, "-c", str(cpp), "-o", str(obj)],
             check=True,
             capture_output=True,
             text=True,
@@ -90,6 +91,7 @@ ccb_check_tracy_client()
                 str(self.project),
                 "-B",
                 str(self.path / "build"),
+                "-DCMAKE_CXX_COMPILER=" + self.compiler,
                 "-DTRACY_INCLUDE_DIR=" + str(self.sdk),
                 "-DTRACY_LIBRARY=" + str(library),
             ] +

@@ -1501,9 +1501,11 @@ TEST_CASE( "npc_find_nearby_water_sources", "[npc][needs]" )
         CHECK( sources[0].dist <= sources[1].dist );
     }
 
-    SECTION( "ignores finite water sources" ) {
+    SECTION( "finds finite water sources" ) {
         here.ter_set( adj, ter_t_water_dispenser );
-        CHECK( guy.find_nearby_water_sources().empty() );
+        const std::vector<npc::scored_water_source> sources = guy.find_nearby_water_sources();
+        REQUIRE( sources.size() == 1 );
+        CHECK( sources.front().pos == adj );
     }
 
     SECTION( "ignores water behind walls (no LOS)" ) {
@@ -4550,6 +4552,7 @@ TEST_CASE( "camp_resident_guard_transitions", "[npc][camp]" )
     guy.set_fac( faction_your_followers );
     guy.set_mission( NPC_MISSION_CAMP_RESIDENT );
     const tripoint_abs_omt camp_pos = project_to<coords::omt>( guy.pos_abs() );
+    overmap_buffer.clear_camps( camp_pos.xy() );
     guy.assigned_camp = camp_pos;
     guy.guard_pos = std::nullopt;
     guy.clear_ai_guard_pos();
@@ -4570,7 +4573,7 @@ TEST_CASE( "camp_resident_guard_transitions", "[npc][camp]" )
         CHECK( guy.omt_path.empty() );
     }
     SECTION( "return_to_camp_duties away from camp: sets goal" ) {
-        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 2, 50, 0 ) );
+        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 4, 50, 0 ) );
         REQUIRE( guy.pos_abs_omt() != camp_pos );
         talk_function::assign_guard( guy );
         talk_function::return_to_camp_duties( guy );

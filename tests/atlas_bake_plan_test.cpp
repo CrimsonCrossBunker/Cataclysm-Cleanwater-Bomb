@@ -518,6 +518,9 @@ TEST_CASE( "present_gate_holds_frames_until_a_stale_bundle_is_repaired",
     renderer_coordinator.notify_lifecycle( lifecycle_state::resumed_pending_rebuild );
     renderer_coordinator.drain_pending();
     CHECK( bundle->get_memory_map_mode_at_upload() == "color_pixel_blue_dark" );
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    REQUIRE( renderer_recovery_redraw_pending() );
+    renderer_recovery_redraw_complete();
     renderer_recovery_test_support::set_needupdate( false );
     CHECK( renderer_recovery_test_support::run_present_gate() );
     CHECK_FALSE( renderer_recovery_test_support::needupdate_armed() );
@@ -692,7 +695,9 @@ TEST_CASE( "draw_bind_failure_recovers_once_to_a_full_bake", "[tiles][renderer_r
     CHECK_FALSE( vp->boundary_lost() );
     CHECK( renderer_coordinator.pending() == renderer_recovery_severity::none );
 
-    // nothing to request: present gate sees no skipped bundle
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    REQUIRE( renderer_recovery_redraw_pending() );
+    renderer_recovery_redraw_complete();
     CHECK( renderer_recovery_test_support::run_present_gate() );
     CHECK( renderer_coordinator.pending() == renderer_recovery_severity::none );
     renderer_recovery_test_support::override_shader_variants_available( std::nullopt );
@@ -734,6 +739,9 @@ TEST_CASE( "draw_flush_failure_recovers_once_to_a_full_bake", "[tiles][renderer_
     CHECK( vp->shader_fault() );
     CHECK_FALSE( vp->boundary_lost() );
     CHECK( renderer_coordinator.pending() == renderer_recovery_severity::none );
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    REQUIRE( renderer_recovery_redraw_pending() );
+    renderer_recovery_redraw_complete();
     CHECK( renderer_recovery_test_support::run_present_gate() );
     CHECK( renderer_coordinator.pending() == renderer_recovery_severity::none );
     renderer_recovery_test_support::override_shader_variants_available( std::nullopt );
@@ -770,6 +778,9 @@ TEST_CASE( "present_gate_requests_device_reset_and_suppresses_presentation",
 
     renderer_coordinator.drain_pending();
     CHECK( bundle->get_bake_plan_at_upload().all_baked() );
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    REQUIRE( renderer_recovery_redraw_pending() );
+    renderer_recovery_redraw_complete();
     renderer_recovery_test_support::set_needupdate( false );
     CHECK( renderer_recovery_test_support::run_present_gate() );
     CHECK_FALSE( renderer_recovery_test_support::needupdate_armed() );
@@ -817,6 +828,9 @@ TEST_CASE( "skipped_memory_bundle_is_never_presented_under_custom_until_repaired
     CHECK( bundle->get_memory_map_mode_at_upload() == "color_pixel_custom" );
     CHECK( bundle->get_memory_tile( 0 ) != nullptr );
     CHECK( bundle->get_shadow_tile( 0 ) == nullptr );
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    REQUIRE( renderer_recovery_redraw_pending() );
+    renderer_recovery_redraw_complete();
     renderer_recovery_test_support::set_needupdate( false );
     CHECK( renderer_recovery_test_support::run_present_gate() );
     renderer_recovery_test_support::override_shader_variants_available( std::nullopt );
@@ -892,7 +906,7 @@ TEST_CASE( "sprites_in_every_chunk_of_a_split_atlas_keep_their_opaque_bounds", "
     // software renderer makes one chunk per sprite; each 4x4 sprite has one
     // opaque pixel
     const std::shared_ptr<const tileset> ts = renderer_recovery_test_support::install_atlas_bundle(
-            "opaque_bounds_ts", "tests/data/opaque_bounds_atlas.png", point( 4, 4 ), 16 );
+                "opaque_bounds_ts", "tests/data/opaque_bounds_atlas.png", point( 4, 4 ), 16 );
     REQUIRE( ts );
     for( int i = 0; i < 16; ++i ) {
         CAPTURE( i );

@@ -2867,7 +2867,7 @@ bool Character::practice( const skill_id &id, int amount, int cap, bool suppress
             // Base reduction on the larger of 1% of total, or practice amount.
             // The latter kicks in when long actions like crafting
             // apply many turns of gains at once.
-            double focus_drain = std::max( focus_pool / 100.0, static_cast<double>( amount ) );
+            double focus_drain = std::max( focus_pool / 100, amount );
 
             // Low sensitivity speeds focus burnout by up to +50%,
             // high sensitivity slows it down to -50%.
@@ -2882,9 +2882,9 @@ bool Character::practice( const skill_id &id, int amount, int cap, bool suppress
             // as it approaches zero. As such, the square function would not be used if the drain is
             // larger or equal to 1000 to avoid the runaway, and the original drain gets applied instead.
             if( focus_drain >= 1000 ) {
-                focus_pool -= focus_drain;
+                focus_pool -= static_cast<int>( focus_drain );
             } else {
-                focus_pool -= ( focus_drain * focus_drain ) / 1000;
+                focus_pool -= static_cast<int>( ( focus_drain * focus_drain ) / 1000 );
             }
         }
         focus_pool = std::max( focus_pool, 0 );

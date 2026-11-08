@@ -19202,6 +19202,8 @@ void mounted_charge_activity_actor::start( player_activity &act, Character &who 
 {
     const item *weapon = nullptr;
     if( !valid_state( who, weapon ) ||
+        ( !cooldown_started &&
+          who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ) ||
         !tec_mounted_charge->activation_allowed( who, "start" ) ) {
         stop( act );
         return;
@@ -19235,6 +19237,8 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
 {
     const item *weapon = nullptr;
     if( !valid_state( who, weapon ) ||
+        ( !cooldown_started &&
+          who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ) ||
         !tec_mounted_charge->activation_allowed( who, "continue" ) ) {
         stop( act );
         return;
@@ -19269,6 +19273,8 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
         return;
     }
 
+    const time_duration cooldown = cooldown_started ? 0_turns :
+                                   tec_mounted_charge->activation_cooldown( who );
     Creature *const target = get_creature_tracker().creature_at( next, true );
     if( target != nullptr ) {
         if( !player->try_break_relax_gas( _( "Your mount surges forward!" ),
@@ -19296,8 +19302,12 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
 
         who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
                 tec_mounted_charge->charge_damage_multiplier( who, profile, completed_steps ) );
-        who.melee_attack( *target, false );
+        const bool attacked = who.melee_attack( *target, false );
         who.clear_mounted_charge_stab_multiplier();
+        if( attacked && !cooldown_started ) {
+            who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
+            cooldown_started = true;
+        }
         if( npc *const person = target->as_npc() ) {
             person->make_angry();
         }
@@ -19328,6 +19338,10 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
     const int moves_before = who.get_moves();
     const tripoint_rel_ms direction = next - current;
     avatar_action::move( *player, here, direction );
+    if( who.get_moves() < moves_before && !cooldown_started ) {
+        who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
+        cooldown_started = true;
+    }
     const tripoint_abs_ms expected_after = next_abs;
     if( who.pos_abs() != expected_after || !who.is_mounted() || !who.mounted_creature ||
         who.mounted_creature->uid().get_value() != mount_uid ||
@@ -19377,6 +19391,7 @@ void mounted_charge_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "origin", origin );
     jsout.member( "charge_item_type", charge_item_type );
     jsout.member( "completed_steps", completed_steps );
+    jsout.member( "cooldown_started", cooldown_started );
     jsout.end_object();
 }
 
@@ -19389,6 +19404,8 @@ std::unique_ptr<activity_actor> mounted_charge_activity_actor::deserialize( Json
     data.read( "origin", actor.origin );
     data.read( "charge_item_type", actor.charge_item_type );
     data.read( "completed_steps", actor.completed_steps );
+    actor.cooldown_started = actor.completed_steps > 0;
+    data.read( "cooldown_started", actor.cooldown_started );
     if( data.has_member( "destination" ) ) {
         data.read( "destination", actor.destination );
     } else {
