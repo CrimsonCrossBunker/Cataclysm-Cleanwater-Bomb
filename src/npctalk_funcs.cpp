@@ -2564,7 +2564,7 @@ void talk_function::drop_stolen_item( npc &p )
 void talk_function::drop_stolen_item( npc &p, Character &player_character )
 {
     bool dropped = false;
-    for( item*&elem : player_character.inv_dump() ) {
+    for( item *&elem : player_character.inv_dump() ) {
         dropped |= drop_stolen_item( *elem, p, player_character );
     }
     if( dropped ) {
