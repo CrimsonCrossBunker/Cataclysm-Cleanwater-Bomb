@@ -327,11 +327,23 @@ void item_contents::serialize( JsonOut &json ) const
     }
 }
 
-void item_contents::deserialize( const JsonObject &data )
+void item_contents::deserialize( const JsonObject &data, item_load_context context )
 {
     data.allow_omitted_members();
-    data.read( "contents", contents );
-    data.read( "additional_pockets", additional_pockets );
+    if( context == item_load_context::current_state ) {
+        contents.clear();
+        for( JsonObject entry : data.get_array( "contents" ) ) {
+            contents.emplace_back();
+            contents.back().deserialize( entry, context );
+        }
+        additional_pockets.clear();
+        for( JsonObject entry : data.get_array( "additional_pockets" ) ) {
+            additional_pockets.emplace_back( item::from_current_state( entry ) );
+        }
+    } else {
+        data.read( "contents", contents );
+        data.read( "additional_pockets", additional_pockets );
+    }
 
 }
 
@@ -348,11 +360,18 @@ void item_pocket::serialize( JsonOut &json ) const
     json.end_object();
 }
 
-void item_pocket::deserialize( const JsonObject &data )
+void item_pocket::deserialize( const JsonObject &data, item_load_context context )
 {
     data.allow_omitted_members();
-    data.read( "contents", contents );
-    split_loaded_stackable_container_contents( contents );
+    if( context == item_load_context::current_state ) {
+        contents.clear();
+        for( JsonObject entry : data.get_array( "contents" ) ) {
+            contents.emplace_back( item::from_current_state( entry ) );
+        }
+    } else {
+        data.read( "contents", contents );
+        split_loaded_stackable_container_contents( contents );
+    }
     int saved_type_int;
     data.read( "pocket_type", saved_type_int );
     _saved_type = static_cast<pocket_type>( saved_type_int );
@@ -2973,6 +2992,16 @@ void inventory::json_save_items( JsonOut &json ) const
     json.end_array();
 }
 
+void inventory::load_current_items( const JsonArray &data )
+{
+    // Do not restack current identities or run old-save migrations.
+    clear();
+    for( JsonObject entry : data ) {
+        items.emplace_back();
+        items.back().emplace_back( item::from_current_state( entry ) );
+    }
+}
+
 void inventory::json_load_items( const JsonArray &ja )
 {
     std::vector<item> batch;
@@ -3962,13 +3991,18 @@ void cata::lua_platform::detail::erase_platform_savegame_blacklist(
 }
 
 template<typename Archive>
-void item::io( Archive &archive )
+void item::io( Archive &archive, item_load_context context )
 {
 
     itype_id orig; // original ID as loaded from JSON
     const auto load_type = [&]( const std::string & id ) {
         orig = itype_id( id );
-        convert( item_controller->migrate_id( orig ) );
+        if( context == item_load_context::current_state ) {
+            type = find_type( orig );
+            contents = item_contents( type->pockets );
+        } else {
+            convert( item_controller->migrate_id( orig ) );
+        }
     };
 
     const auto load_corpse = [this]( const std::string & id ) {
@@ -3986,14 +4020,18 @@ void item::io( Archive &archive )
     // Persistent unique identifier for item instances
     archive.io( "uid", uid_, item_uid() );
     if constexpr( Archive::is_input::value ) {
-        if( !uid_.is_valid() ) {
+        if( context == item_load_context::saved_game && !uid_.is_valid() ) {
             uid_ = item_uid( generate_next_item_uid() );
         }
     }
 
     // normalize legacy saves to always have charges >= 0
     archive.io( "charges", charges, 0 );
-    charges = std::max( charges, 0 );
+    if constexpr( Archive::is_input::value ) {
+        if( context == item_load_context::saved_game ) {
+            charges = std::max( charges, 0 );
+        }
+    }
 
     archive.io( "energy", energy, 0_mJ );
 
@@ -4012,12 +4050,15 @@ void item::io( Archive &archive )
     // archive.io fills item_vars without touching has_item_vars_; set it now so
     // the var accessors are correct for the load-time migrations that run below.
     // (The final resync near the end of this function fixes the post-erase state.)
-    has_item_vars_ = !item_vars.empty();
+    if constexpr( Archive::is_input::value ) {
+        has_item_vars_ = !item_vars.empty();
+    }
 
     // game::legacy_migrate_npctalk_var_prefix( item_vars );
     // doesn't work here, because item_vars is cata::heap<std::map<>>, not std::unordered_map<>
     // remove after 0.J
-    if( savegame_loading_version < 36 ) {
+    if( Archive::is_input::value && context == item_load_context::saved_game &&
+        savegame_loading_version < 36 ) {
         const std::string prefix = "npctalk_var_";
         for( auto i = item_vars.begin(); i != item_vars.end(); ) {
             if( i->first.rfind( prefix, 0 ) == 0 ) {
@@ -4031,10 +4072,12 @@ void item::io( Archive &archive )
         }
     }
 
-    if( auto var = item_vars.find( TIED_DOWN_FURNITURE ); var != item_vars.end() ) {
-        const furn_str_id furnstr( var->second.str() );
-        if( auto it = furn_migrations.find( furnstr ); it != furn_migrations.end() ) {
-            set_var( TIED_DOWN_FURNITURE, it->second.second.str() );
+    if( Archive::is_input::value && context == item_load_context::saved_game ) {
+        if( auto var = item_vars.find( TIED_DOWN_FURNITURE ); var != item_vars.end() ) {
+            const furn_str_id furnstr( var->second.str() );
+            if( auto it = furn_migrations.find( furnstr ); it != furn_migrations.end() ) {
+                set_var( TIED_DOWN_FURNITURE, it->second.second.str() );
+            }
         }
     }
 
@@ -4058,7 +4101,18 @@ void item::io( Archive &archive )
     archive.io( "faults", faults, io::empty_default_tag() );
     archive.io( "item_tags", item_tags, io::empty_default_tag() );
     if( !has_flag( flag_NUTRIENT_OVERRIDE ) ) {
-        archive.io( "components", components, io::empty_default_tag() );
+        if constexpr( Archive::is_input::value ) {
+            if( context == item_load_context::current_state ) {
+                components.clear();
+                if( archive.has_member( "components" ) ) {
+                    components.deserialize( archive.get_member( "components" ), context );
+                }
+            } else {
+                archive.io( "components", components, io::empty_default_tag() );
+            }
+        } else {
+            archive.io( "components", components, io::empty_default_tag() );
+        }
     }
     archive.io( "specific_energy", specific_energy, units::from_joule_per_gram( -10.f ) );
     archive.io( "temperature", temperature, units::from_kelvin( 0.f ) );
@@ -4066,16 +4120,18 @@ void item::io( Archive &archive )
     archive.io( "template_traits", template_traits );
     // Legacy: remove flag check/unset after 0.F
     archive.io( "ethereal", ethereal, has_flag( flag_ETHEREAL_ITEM ) );
-    unset_flag( flag_ETHEREAL_ITEM );
+    if( Archive::is_input::value && context == item_load_context::saved_game ) {
+        unset_flag( flag_ETHEREAL_ITEM );
+    }
     archive.template io<const mtype>( "corpse", corpse, load_corpse,
     []( const mtype & i ) {
         return i.id.str();
     } );
     archive.io( "craft_data", craft_data_, decltype( craft_data_ )() );
-    const auto ivload = [this]( const std::string & variant ) {
+    const auto ivload = [this, context]( const std::string & variant ) {
         if( possible_itype_variant( variant ) ) {
             set_itype_variant( variant );
-        } else {
+        } else if( context == item_load_context::saved_game ) {
             item_controller->migrate_item_from_variant( *this, variant );
         }
     };
@@ -4091,16 +4147,23 @@ void item::io( Archive &archive )
     archive.io( "relic_data", relic_data, null_relic_ptr );
     static const cata::value_ptr<link_data> null_link_ptr = nullptr;
     archive.io( "link_data", link_, null_link_ptr );
-    if( has_link_data() ) {
+    if( Archive::is_input::value && has_link_data() ) {
         const optional_vpart_position vp = get_map().veh_at( link().t_abs_pos );
         if( vp ) {
             link().t_veh = vp.value().vehicle().get_safe_reference();
         }
     }
 
-    item_controller->migrate_item( orig, *this );
+    if( Archive::is_input::value && context == item_load_context::saved_game ) {
+        item_controller->migrate_item( orig, *this );
+    }
 
     if( !Archive::is_input::value ) {
+        return;
+    }
+    if( context == item_load_context::current_state ) {
+        current_phase = static_cast<phase_id>( cur_phase );
+        requires_tags_processing = true;
         return;
     }
     /* Loading has finished, following code is to ensure consistency and fixes bugs in saves. */
@@ -4291,42 +4354,44 @@ void item::migrate_content_item( const item &contained )
     }
 }
 
-void item::deserialize( const JsonObject &data )
+void item::deserialize( const JsonObject &data, item_load_context context )
 {
     data.allow_omitted_members();
     // Since deserialization is handled by the archive, don't check it here.
     // CATA_DO_NOT_CHECK_SERIALIZE
     io::JsonObjectInputArchive archive( data );
-    io( archive );
+    io( archive, context );
     archive.allow_omitted_members();
     data.copy_visited_members( archive );
 
     //*** ITEM MIGRATION (remove in O.I) ***
     if( data.has_object( "contents" ) ) {
         item_contents read_contents;
-        data.read( "contents", read_contents );
+        read_contents.deserialize( data.get_object( "contents" ), context );
         contents.read_mods( read_contents );
         update_modified_pockets();
         contents.combine( std::move( read_contents ), false, true, false, true );
 
-        //migrate SOFTWARE pocket
-        auto pockets_e_legacy = []( item_pocket const & pocket ) {
-            return pocket.is_type( pocket_type::SOFTWARE );
-        };
-        auto pockets_new_efile = []( item_pocket const & pocket ) {
-            return pocket.is_type( pocket_type::E_FILE_STORAGE );
-        };
-        std::vector<item_pocket *> pockets = contents.get_pockets( pockets_new_efile );
-        item_pocket *new_efile_storage = !pockets.empty() ? pockets.front() : nullptr;
+        if( context == item_load_context::saved_game ) {
+            //migrate SOFTWARE pocket
+            auto pockets_e_legacy = []( item_pocket const & pocket ) {
+                return pocket.is_type( pocket_type::SOFTWARE );
+            };
+            auto pockets_new_efile = []( item_pocket const & pocket ) {
+                return pocket.is_type( pocket_type::E_FILE_STORAGE );
+            };
+            std::vector<item_pocket *> pockets = contents.get_pockets( pockets_new_efile );
+            item_pocket *new_efile_storage = !pockets.empty() ? pockets.front() : nullptr;
 
-        for( item_pocket *pocket : contents.get_pockets( pockets_e_legacy ) ) {
-            for( const item *it : pocket->all_items_top() ) {
-                if( new_efile_storage == nullptr ) {
-                    debugmsg( "efile storage pocket needed for item: %s", tname() );
-                } else {
-                    std::optional<item> removed_item = pocket->remove_item( *it );
-                    if( removed_item ) {
-                        new_efile_storage->add( *removed_item );
+            for( item_pocket *pocket : contents.get_pockets( pockets_e_legacy ) ) {
+                for( const item *it : pocket->all_items_top() ) {
+                    if( new_efile_storage == nullptr ) {
+                        debugmsg( "efile storage pocket needed for item: %s", tname() );
+                    } else {
+                        std::optional<item> removed_item = pocket->remove_item( *it );
+                        if( removed_item ) {
+                            new_efile_storage->add( *removed_item );
+                        }
                     }
                 }
             }
@@ -4334,6 +4399,12 @@ void item::deserialize( const JsonObject &data )
         // contents may not be empty if other migration happened in item::io
     } else if( contents.empty() ) { // empty contents was not serialized, recreate pockets from the type
         contents = item_contents( type->pockets );
+    }
+
+    if( context == item_load_context::current_state ) {
+        update_inherited_flags();
+        update_prefix_suffix_flags();
+        return;
     }
 
     // Restore the separate second tube in saves from the combined-magazine KSG.
@@ -4386,6 +4457,55 @@ void item::deserialize( const JsonObject &data )
         }
     }
     update_inherited_flags();
+}
+
+item item::from_current_state( const JsonObject &data )
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const itype_id id( data.get_string( "typeid" ) );
+    if( !id.is_valid() ) {
+        data.throw_error_at( "typeid", "Unknown current item type" );
+    }
+    int64_t stored_uid = 0;
+    if( !data.read( "uid", stored_uid ) || stored_uid <= 0 ) {
+        data.throw_error_at( "uid", "Current item state requires a valid identity" );
+    }
+    item restored;
+    restored.deserialize( data, item_load_context::current_state );
+    return restored;
+}
+
+void item::apply_current_state( item &&state, bool include_contents )
+{
+    // safe_reference_anchor intentionally invalidates references even on move.
+    // Apply the archive fields in place instead of assigning the C++ object:
+    // the lifetime/anchor stays untouched and new serialized fields are covered.
+    std::ostringstream encoded;
+    {
+        JsonOut out( encoded );
+        state.store_current_state( out );
+    }
+    const JsonObject data = json_loader::from_string( encoded.str() ).get_object();
+    if( include_contents ) {
+        contents.apply_current_state( std::move( state.contents ) );
+    }
+    auto retained_contents = std::move( contents );
+    components.clear();
+    io::JsonObjectInputArchive archive( data );
+    io( archive, item_load_context::current_state );
+    archive.allow_omitted_members();
+    data.allow_omitted_members();
+    contents = std::move( retained_contents );
+    on_contents_changed();
+    update_prefix_suffix_flags();
+}
+
+void item::store_current_state( JsonOut &json ) const
+{
+    // Scalar state only. Contents are replicated independently unless their
+    // topology changes, so a running tool does not serialize its whole backpack.
+    io::JsonObjectOutputArchive archive( json );
+    const_cast<item *>( this )->io( archive, item_load_context::current_state );
 }
 
 void item::serialize( JsonOut &json ) const

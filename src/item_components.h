@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "item_load_context.h"
 #include "type_id.h"
 #include "value_ptr.h"
 
@@ -52,7 +53,8 @@ class item_components
         item_components split( int batch_size, size_t offset, bool is_cooked = false );
 
         void serialize( JsonOut &jsout ) const;
-        void deserialize( const JsonValue &jv );
+        void deserialize( const JsonValue &jv,
+                          item_load_context context = item_load_context::saved_game );
 };
 
 #endif // CATA_SRC_ITEM_COMPONENTS_H
