@@ -57,7 +57,8 @@ event_queue &get_mp_queue()
 
 server_welcome welcome_data()
 {
-    return { "测试世界\"\\\n", "主机角色", 12345, std::array<int, 3>{ 1, 2, 0 } };
+    return { "测试世界\"\\\n", "主机角色", 12345, std::array<int, 3>{ 1, 2, 0 },
+             world_id( std::string( 32, 'a' ) ) };
 }
 void mp_set_client_host_world_name( const std::string & ) {}
 void mp_set_client_host_player_name( const std::string & ) {}
@@ -78,6 +79,11 @@ static void require( bool condition, const char *message )
 static void protocol_tests()
 {
     std::map<std::string, std::string> fields;
+    require( read_handshake( R"({"type":"welcome","world_id":"11111111111111111111111111111111"})",
+                             fields ) &&
+             fields["world_id"] == std::string( 32, '1' ), "world identity survives handshake decoding" );
+    require( !read_handshake( R"({"type":"welcome","world_id":42})", fields ),
+             "world identity must be a string" );
     require( read_handshake( "{\"type\":\"join\",\"name\":\"\\u4e2d\\u6587😀\"}", fields ),
              "Unicode JSON" );
     require( fields["name"] == "中文😀", "Unicode preserved" );

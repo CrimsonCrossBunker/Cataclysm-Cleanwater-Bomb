@@ -1,4 +1,5 @@
 #include "worldfactory.h"
+#include "world_identity_store.h"
 
 #include <algorithm>
 #include <array>
@@ -881,6 +882,7 @@ WORLD::WORLD( const std::string &name )
 
 void WORLD::COPY_WORLD( const WORLD *world_to_copy )
 {
+    identity_ = {};
     world_name = world_to_copy->world_name + "_copy";
     WORLD_OPTIONS = world_to_copy->WORLD_OPTIONS;
     active_mod_order = world_to_copy->active_mod_order;
@@ -1167,6 +1169,13 @@ bool WORLD::save() const
         return false;
     }
 
+    try {
+        identity();
+    } catch( const std::exception &error ) {
+        debugmsg( "Unable to persist world identity: %s", error.what() );
+        return false;
+    }
+
     if( !save_timestamp() ) {
         return false;
     }
@@ -1199,6 +1208,14 @@ bool WORLD::save() const
 
     world_generator->get_mod_manager().save_mods_list( this );
     return true;
+}
+
+const world_id &WORLD::identity() const
+{
+    if( !identity_.valid() ) {
+        identity_ = load_or_create_world_identity( folder_path() );
+    }
+    return identity_;
 }
 
 void worldfactory::init()
