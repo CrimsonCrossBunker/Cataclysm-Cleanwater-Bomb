@@ -27,6 +27,7 @@ void unload_intent::serialize( JsonOut &out ) const
     out.start_object();
     out.member( "root", root );
     out.member( "target", target );
+    out.member( "destination", destination );
     out.member( "sources", sources );
     out.member( "liquids", liquids );
     out.end_object();
@@ -36,6 +37,7 @@ void unload_intent::deserialize( const JsonObject &object )
 {
     object.read( "root", root, true );
     object.read( "target", target, true );
+    object.read( "destination", destination );
     object.read( "sources", sources, true );
     object.read( "liquids", liquids, true );
 }
@@ -85,7 +87,14 @@ bool start_owned_unload( Character &who, map &here, const JsonObject &request )
         }
         choices.push_back( choice );
     }
-    return start_item_unload( who, root, selection, false, item_location::nowhere, choices );
+    item_location destination;
+    if( !intent.destination.path.empty() ) {
+        destination = resolve_item_source( who, here, intent.destination );
+        if( !destination || !root->is_container() ) {
+            return false;
+        }
+    }
+    return start_item_unload( who, root, selection, false, destination, choices );
 }
 
 void client_select_unload( const item_location &root, const item_location &new_container )
@@ -94,8 +103,9 @@ void client_select_unload( const item_location &root, const item_location &new_c
         return;
     }
     if( new_container ) {
-        add_msg( m_info,
-                 _( "Manual placement of unloaded contents is not available in multiplayer yet." ) );
+        unload_intent intent = make_unload_intent( get_avatar(), root, { root, {} }, {} );
+        intent.destination = capture_item_source( get_avatar(), new_container );
+        client_start_unload( intent );
         return;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );

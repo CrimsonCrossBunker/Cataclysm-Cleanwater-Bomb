@@ -14,26 +14,27 @@
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "game.h"
+#include "handle_liquid.h"
 #include "item.h"
+#include "item_insert.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_reload.h"
+#include "item_uid.h"
+#include "item_unload.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_selector.h"
 #include "messages.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
 #include "mp_item_source.h"
 #include "mp_pickup.h"
 #include "mp_queue.h"
-#include "mp_inventory_activity.h"
 #include "mp_unload.h"
-#include "handle_liquid.h"
-#include "item_unload.h"
-#include "item_uid.h"
-#include "map_selector.h"
 #include "mp_world_session.h"
 #include "npc.h"
 #include "player_helpers.h"
@@ -343,6 +344,9 @@ TEST_CASE( "client_inventory_activity_view_does_not_advance_native_or_emit_lifec
     }
     SECTION( "unload" ) {
         who.assign_activity( unload_activity_actor::client_view() );
+    }
+    SECTION( "insert" ) {
+        who.assign_activity( insert_item_activity_actor::client_view() );
     }
     who.activity.moves_left = 500;
     auto &view = g->multiplayer_session().client_inventory_activity;
@@ -691,6 +695,223 @@ TEST_CASE( "owned_unload_wire_applies_without_client_gameplay_hooks_or_rng",
     CHECK_FALSE( local.activity );
     REQUIRE( cata_mp::client_apply_message( finished ) );
     CHECK( local.get_wielded_item()->ammo_remaining() == 0 );
+    CHECK( events.starts == 0 );
+    CHECK( events.finishes == 0 );
+    CHECK( rng_get_engine() == rng );
+}
+
+namespace
+{
+std::string insert_request( reload_fixture &fixture, Character &who,
+                            const item_location &destination, const drop_locations &items )
+{
+    const insert_selection selection = capture_insert_selection( who, destination, items, true );
+    return fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "insert" );
+        out.member( "insert", selection );
+    } );
+}
+
+int container_quantity( const item_location &container, const itype_id &type )
+{
+    int total = 0;
+    for( const item *inside : container->all_items_top( pocket_type::CONTAINER ) ) {
+        if( inside->typeId() == type ) {
+            total += inside->count();
+        }
+    }
+    return total;
+}
+} // namespace
+
+TEST_CASE( "owned_insert_advances_native_list_and_saves_between_items",
+           "[multiplayer][insert_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "backpack" ) ) );
+    const item_location destination = who.get_wielded_item();
+    const item_location first = loose_ammo( who, 5 );
+    const item_location second = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
+                                 item( itype_id( "9mm" ), calendar::turn, 7 ) );
+    reload_events events;
+    const std::string start = insert_request( fixture, who, destination, {{first, 5}, {second, 7}} );
+    fixture.run( who, start );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK( events.starts == 1 );
+    CHECK( container_quantity( destination, itype_id( "556" ) ) == 0 );
+    const int initial_moves = who.activity.moves_left;
+    cata_mp::mp_tick_proxy_activity( who );
+    CHECK( who.activity.moves_left == initial_moves );
+    who.set_moves( 100000 );
+    const std::string step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    REQUIRE( who.activity );
+    CHECK_FALSE( first );
+    CHECK( container_quantity( destination, itype_id( "556" ) ) == 5 );
+    const int remaining = who.activity.moves_left;
+    const int ap = who.get_moves();
+    fixture.run( who, step );
+    CHECK( who.activity.moves_left == remaining );
+    CHECK( who.get_moves() == ap );
+    save_reload_activity( who );
+    SECTION( "finish remaining item after save" ) {
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK_FALSE( second );
+        CHECK( container_quantity( destination, itype_id( "9mm" ) ) == 7 );
+        CHECK( events.finishes == 2 );
+    }
+    SECTION( "cancel keeps earlier insert and remaining source" ) {
+        who.set_moves( -10 );
+        fixture.run( who, fixture.request( who, "cancel" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( who.get_moves() == -10 );
+        REQUIRE( second );
+        CHECK( second->charges == 7 );
+        CHECK( container_quantity( destination, itype_id( "9mm" ) ) == 0 );
+    }
+    CHECK( container_quantity( destination, itype_id( "556" ) ) == 5 );
+}
+
+TEST_CASE( "owned_insert_caps_changed_stack_and_preserves_partial_remainder",
+           "[multiplayer][insert_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    item_location destination = who.get_wielded_item();
+    item jug( itype_id( "jug_plastic" ) );
+    REQUIRE( jug.put_in( item( itype_id( "water_clean" ), calendar::turn, 10 ),
+                         pocket_type::CONTAINER ).success() );
+    item_location root = get_map().add_item_or_charges_ret_loc( who.pos_bub(), jug );
+    item_location water( root, root->all_items_top().front() );
+    const std::string start = insert_request( fixture, who, destination, {{water, 10}} );
+    fixture.run( who, start );
+    REQUIRE( who.activity );
+    water->charges = 3;
+    save_reload_activity( who );
+    who.set_moves( 100000 );
+    const std::string step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    CHECK_FALSE( who.activity );
+    CHECK( container_quantity( destination, itype_id( "water_clean" ) ) == 2 );
+    CHECK( container_quantity( root, itype_id( "water_clean" ) ) == 1 );
+    fixture.run( who, step );
+    CHECK( container_quantity( destination, itype_id( "water_clean" ) ) == 2 );
+    CHECK( container_quantity( root, itype_id( "water_clean" ) ) == 1 );
+}
+
+TEST_CASE( "owned_insert_rejects_invalid_selection_and_lost_targets",
+           "[multiplayer][insert_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "backpack" ) ) );
+    item_location destination = who.get_wielded_item();
+    item_location source = loose_ammo( who, 5 );
+    SECTION( "duplicate source" ) {
+        fixture.run( who, insert_request( fixture, who, destination, {{source, 5}, {source, 5}} ) );
+    }
+    SECTION( "quantity exceeds source" ) {
+        fixture.run( who, insert_request( fixture, who, destination, {{source, 6}} ) );
+    }
+    SECTION( "other player inventory" ) {
+        get_avatar().set_wielded_item( item( itype_id( "556" ), calendar::turn, 5 ) );
+        fixture.run( who, insert_request( fixture, who, destination,
+        {{get_avatar().get_wielded_item(), 5}} ) );
+        CHECK( get_avatar().get_wielded_item()->charges == 5 );
+    }
+    SECTION( "loose liquid cannot be picked up through insertion" ) {
+        item_location liquid = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
+                               item( itype_id( "water_clean" ), calendar::turn, 5 ) );
+        REQUIRE( liquid );
+        fixture.run( who, insert_request( fixture, who, destination, {{liquid, 5}} ) );
+        CHECK( liquid->charges == 5 );
+    }
+    SECTION( "self containment" ) {
+        fixture.run( who, insert_request( fixture, who, destination, {{destination, 1}} ) );
+    }
+    SECTION( "source removed after save" ) {
+        fixture.run( who, insert_request( fixture, who, destination, {{source, 5}} ) );
+        REQUIRE( who.activity );
+        save_reload_activity( who );
+        source.remove_item();
+        fixture.run( who, fixture.request( who, "step" ) );
+    }
+    SECTION( "destination removed after save" ) {
+        fixture.run( who, insert_request( fixture, who, destination, {{source, 5}} ) );
+        REQUIRE( who.activity );
+        save_reload_activity( who );
+        destination.remove_item();
+        fixture.run( who, fixture.request( who, "step" ) );
+    }
+    CHECK_FALSE( who.activity );
+    CHECK( who.get_moves() == 100 );
+    if( source ) {
+        CHECK( source->charges == 5 );
+    }
+    if( destination ) {
+        CHECK( destination->is_container_empty() );
+    }
+}
+
+TEST_CASE( "owned_unload_to_selected_container_uses_insert_activity",
+           "[multiplayer][insert_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "backpack" ) ) );
+    item_location destination = who.get_wielded_item();
+    item bag( itype_id( "backpack" ) );
+    REQUIRE( bag.put_in( item( itype_id( "556" ), calendar::turn, 5 ),
+                         pocket_type::CONTAINER ).success() );
+    item_location root = get_map().add_item_or_charges_ret_loc( who.pos_bub(), bag );
+    auto intent = cata_mp::make_unload_intent( who, root, {root, {}}, {} );
+    intent.destination = capture_item_source( who, destination );
+    fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "unload" );
+        out.member( "unload", intent );
+    } ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK( who.activity.id() == activity_id( "ACT_INSERT_ITEM" ) );
+    who.set_moves( 100000 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( root->is_container_empty() );
+    CHECK( container_quantity( destination, itype_id( "556" ) ) == 5 );
+}
+
+TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
+           "[multiplayer][insert_owned]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    remote.set_wielded_item( item( itype_id( "backpack" ) ) );
+    const item_location source = loose_ammo( remote, 5 );
+    const std::string started = fixture.run( remote, insert_request( fixture, remote,
+    remote.get_wielded_item(), {{source, 5}} ) );
+    REQUIRE( remote.activity );
+    remote.set_moves( 100000 );
+    const std::string finished = fixture.run( remote, fixture.request( remote, "step" ) );
+    REQUIRE_FALSE( remote.activity );
+    avatar &local = get_avatar();
+    cata_mp::set_client_mode( true );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.active = true;
+    view.pending_request = 1;
+    reload_events events;
+    local.assign_activity( insert_item_activity_actor::client_view() );
+    const auto rng = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( started ) );
+    CHECK( local.get_wielded_item()->is_container_empty() );
+    view.pending_request = 2;
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( local.activity );
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    CHECK( container_quantity( local.get_wielded_item(), itype_id( "556" ) ) == 5 );
     CHECK( events.starts == 0 );
     CHECK( events.finishes == 0 );
     CHECK( rng_get_engine() == rng );

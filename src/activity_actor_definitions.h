@@ -11,10 +11,10 @@
 #include <utility>
 #include <vector>
 
+#include "action.h"
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
 #include "activity_type.h"
-#include "action.h"
 #include "butchery.h"
 #include "calendar.h"
 #include "character.h"
@@ -24,9 +24,10 @@
 #include "gates.h"
 #include "handle_liquid.h"
 #include "item.h"
-#include "itype.h"
+#include "item_insert.h"
 #include "item_location.h"
 #include "item_unload.h"
+#include "itype.h"
 #include "memory_fast.h"
 #include "npctalk.h"
 #include "pickup.h"
@@ -37,8 +38,8 @@
 #include "uistate.h"
 #include "units.h"
 #include "units_fwd.h"
-#include "vehicle.h"
 #include "veh_interact.h"
+#include "vehicle.h"
 
 #include "activity_actor.h"
 
@@ -2614,18 +2615,24 @@ class insert_item_activity_actor : public activity_actor
         drop_locations items;
         contents_change_handler handler;
         bool all_pockets_rigid = false;
-        bool reopen_menu;
+        bool reopen_menu = false;
         // allow put charge items into holster's nested pocket
-        bool allow_fill_count_by_charge_item_nested;
+        bool allow_fill_count_by_charge_item_nested = true;
+        bool server_owned = false;
+        bool view_only = false;
+        insert_selection owned_selection;
+        std::vector<item_source> owned_unsealed;
+        void remember_owned_locations( const Character &who );
 
     public:
 
         insert_item_activity_actor() = default;
         insert_item_activity_actor( const item_location &holster, const drop_locations &holstered_list,
-                                    bool reopen_menu = false, bool allow_fill_count_by_charge_item_nested = true ) : holster( holster ),
+                                    bool reopen_menu = false, bool allow_fill_count_by_charge_item_nested = true,
+                                    bool owned = false ) : holster( holster ),
             items( holstered_list ),
             reopen_menu( reopen_menu ), allow_fill_count_by_charge_item_nested(
-                allow_fill_count_by_charge_item_nested ) {}
+                allow_fill_count_by_charge_item_nested ), server_owned( owned ) {}
 
         const activity_id &get_type() const override {
             static const activity_id ACT_INSERT_ITEM( "ACT_INSERT_ITEM" );
@@ -2633,7 +2640,15 @@ class insert_item_activity_actor : public activity_actor
         }
 
         void start( player_activity &act, Character &who ) override;
-        void do_turn( player_activity &/*act*/, Character &/*who*/ ) override {};
+        void do_turn( player_activity &act, Character &who ) override;
+        static insert_item_activity_actor client_view();
+        bool is_server_owned() const {
+            return server_owned;
+        }
+        bool is_client_view() const {
+            return view_only;
+        }
+        bool prepare_owned_turn( Character &who );
         void finish( player_activity &act, Character &who ) override;
         void canceled( player_activity &/*act*/, Character &who ) override;
 

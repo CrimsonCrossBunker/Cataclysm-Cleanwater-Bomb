@@ -4,6 +4,7 @@
 #include <functional>
 #include <limits>
 #include <sstream>
+#include <set>
 #include <vector>
 
 #include "activity_actor_definitions.h"
@@ -13,6 +14,7 @@
 #include "game.h"
 #include "item.h"
 #include "item_disposition.h"
+#include "item_insert.h"
 #include "item_location.h"
 #include "item_reload.h"
 #include "item_uid.h"
@@ -46,6 +48,38 @@ unload_activity_actor *native_unload( Character &who )
 {
     auto *actor = dynamic_cast<unload_activity_actor *>( who.activity.actor.get() );
     return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+insert_item_activity_actor *native_insert( Character &who )
+{
+    auto *actor = dynamic_cast<insert_item_activity_actor *>( who.activity.actor.get() );
+    return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+bool start_insert( Character &who, map &here, const JsonObject &request )
+{
+    if( who.activity || who.is_dead_state() || who.get_moves() <= 0 ) {
+        return false;
+    }
+    insert_selection selection;
+    request.read( "insert", selection, true );
+    item_location destination = resolve_item_source( who, here, selection.destination );
+    drop_locations items;
+    std::set<int64_t> seen;
+    for( const auto &selected : selection.items ) {
+        item_location source = resolve_item_source( who, here, selected.first );
+        if( !valid_insert_item( who, destination, source ) ||
+            !seen.insert( source->uid().get_value() ).second || selected.second < 0 ||
+            ( source->count_by_charges() && ( selected.second == 0 || selected.second > source->charges ) ) ) {
+            return false;
+        }
+        items.emplace_back( source, selected.second );
+    }
+    if( items.empty() ) {
+        return false;
+    }
+    start_item_insert( who, destination, items, false, selection.allow_nested, true );
+    return owns_inventory_activity( who );
 }
 
 bool reload_locations_accessible( Character &who, map &here, const reload_activity_actor &actor )
@@ -184,15 +218,19 @@ bool owns_inventory_activity( const Character &who )
 {
     const auto *actor = dynamic_cast<const reload_activity_actor *>( who.activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( who.activity.actor.get() );
+    const auto *insert = dynamic_cast<const insert_item_activity_actor *>( who.activity.actor.get() );
     return ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
-           ( unload && unload->is_server_owned() && !unload->is_client_view() );
+           ( unload && unload->is_server_owned() && !unload->is_client_view() ) ||
+           ( insert && insert->is_server_owned() && !insert->is_client_view() );
 }
 
 bool inventory_activity_view( const player_activity &activity )
 {
     const auto *actor = dynamic_cast<const reload_activity_actor *>( activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( activity.actor.get() );
-    return ( actor && actor->is_client_view() ) || ( unload && unload->is_client_view() );
+    const auto *insert = dynamic_cast<const insert_item_activity_actor *>( activity.actor.get() );
+    return ( actor && actor->is_client_view() ) || ( unload && unload->is_client_view() ) ||
+           ( insert && insert->is_client_view() );
 }
 
 std::string execute_inventory_activity_request( Character &who, map &here,
@@ -212,6 +250,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 start_reload( who, here, request );
             } else if( kind == "unload" ) {
                 start_owned_unload( who, here, request );
+            } else if( kind == "insert" ) {
+                start_insert( who, here, request );
             }
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
@@ -220,6 +260,12 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( insert_item_activity_actor *insert = native_insert( who ) ) {
+                if( !insert->prepare_owned_turn( who ) ) {
+                    who.cancel_activity();
+                } else if( who.get_moves() > 0 && operation == "step" ) {
+                    who.activity.do_turn( who );
+                }
             } else if( unload_activity_actor *unload = native_unload( who ) ) {
                 const item_location target = unload->unload_target( who );
                 if( !target || resolve_item_source( who, here,
@@ -370,10 +416,33 @@ void client_start_unload( const unload_intent &intent )
     view.cancel_requested = false;
     view.needs_placement = false;
     view.activity.clear();
-    get_avatar().assign_activity( unload_activity_actor::client_view() );
+    if( intent.destination.path.empty() ) {
+        get_avatar().assign_activity( unload_activity_actor::client_view() );
+    } else {
+        get_avatar().assign_activity( insert_item_activity_actor::client_view() );
+    }
     send_inventory_activity( "start", [&]( JsonOut & out ) {
         out.member( "kind", "unload" );
         out.member( "unload", intent );
+    } );
+}
+
+void client_start_insert( const insert_selection &selection )
+{
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
+        get_avatar().get_moves() <= 0 ) {
+        return;
+    }
+    view.active = true;
+    view.finished = false;
+    view.cancel_requested = false;
+    view.needs_placement = false;
+    view.activity.clear();
+    get_avatar().assign_activity( insert_item_activity_actor::client_view() );
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "insert" );
+        out.member( "insert", selection );
     } );
 }
 
