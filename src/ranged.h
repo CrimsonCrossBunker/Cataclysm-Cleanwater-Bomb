@@ -47,8 +47,8 @@ trajectory mode_reach( avatar &you, item_location weapon );
 /** Unarmed reach attacking */
 trajectory mode_unarmed_reach( avatar &you );
 
-/** Manually firing vehicle turret */
-trajectory mode_turret_manual( avatar &you, turret_data &turret );
+/** Select a manual turret shot using an owned preview gun and resource view. */
+trajectory mode_turret_manual( avatar &you, turret_data &turret, item &preview );
 
 /** Selecting target for turrets (when using vehicle controls) */
 trajectory mode_turrets( avatar &you, vehicle &veh, const std::vector<vehicle_part *> &turrets );
