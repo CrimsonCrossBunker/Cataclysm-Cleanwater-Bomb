@@ -95,6 +95,9 @@ constexpr float PANEL_THICK = 0.1f;
 constexpr float FENCE_HEIGHT = 1.5f;
 constexpr float FENCE_THICK = 0.15f;
 constexpr float CREATURE_BASE_HEIGHT = 1.8f;
+// Human paper dolls include many equipment layers; keep the whole doll slightly
+// smaller than medium monsters without changing the monster size curve.
+constexpr float CHARACTER_SIZE_SCALE = 0.85f;
 constexpr float ITEM_HEIGHT = 0.5f;
 // fields: liquid/solid traces (blood, bile, acid, web...) draw as thin decals
 // just above the floor; gas/plasma effects (smoke, fire, gas...) draw as
@@ -1539,6 +1542,22 @@ bool upright_equipment_terrain( const ter_t &t )
     return std::find( ids.begin(), ids.end(), std::string_view( t.id.str() ) ) != ids.end();
 }
 
+// Furniture that is genuinely a ground covering or horizontal walking surface.
+// Do not infer this from FLAT_SURF or looks_like: tables and beds have height,
+// and cardboard roofs use the same FLAT flag as cardboard floors.
+bool flat_furniture( const furn_t &f )
+{
+    static constexpr std::array<std::string_view, 13> ids = {{
+            "f_tatami",
+            "f_groundsheet", "f_large_groundsheet", "f_center_groundsheet", "f_fema_groundsheet",
+            "f_skin_groundsheet", "f_large_skin_groundsheet", "f_skin_center_groundsheet",
+            "f_fiber_mat", "f_leather_tarp", "f_plastic_groundsheet",
+            "f_cardboard_floor", "f_scrap_bridge"
+        }
+    };
+    return std::find( ids.begin(), ids.end(), std::string_view( f.id.str() ) ) != ids.end();
+}
+
 // 2D composites a tile's bg under its fg. for a few locked/alarmed objects the
 // tileset splits the sprite into bg = the body and fg = a small indicator icon
 // (UC: key 1778, alarm 8855), so 3D must draw both layers or only the icon
@@ -2248,6 +2267,7 @@ struct orientation_cache_hash {
 };
 
 struct orientation_cache_entry {
+    uint64_t draw_cache_revision = 0;
     uint64_t visibility_generation = 0;
     bool memory_visible = false;
     int rota = 0;
@@ -2274,15 +2294,16 @@ const orientation_cache_entry &cached_orientation( map &here, const avatar &you,
         const tripoint_bub_ms &p, const int query, Compute &&compute )
 {
     const orientation_cache_key key{ here.get_abs( p ), query };
+    const uint64_t draw_cache_revision = here.draw_cache_revision();
     const level_cache &level = here.get_cache_ref( p.z() );
     const bool memory_visible = you.should_show_map_memory();
     orientation_cache_map &cache = orientation_cache();
     auto it = cache.find( key );
-    // CCB does not have the source branch's geometry/sight revisions. The
-    // whole cache is cleared by the turn/position/memory/visibility
-    // invalidation below; this per-level generation also catches visibility
-    // rebuilds between invalidations.
+    // Map revisions cover geometry and decoration changes; the per-level
+    // generation separately catches visibility rebuilds between invalidations.
     if( it != cache.end() &&
+        draw_cache_revision != std::numeric_limits<uint64_t>::max() &&
+        it->second.draw_cache_revision == draw_cache_revision &&
         it->second.visibility_generation == level.visibility_generation &&
         it->second.memory_visible == memory_visible ) {
         ++g_profile.orientation_cache_hits;
@@ -2296,6 +2317,7 @@ const orientation_cache_entry &cached_orientation( map &here, const avatar &you,
         it = cache.emplace( key, orientation_cache_entry{} ).first;
     }
     it->second = orientation_cache_entry{};
+    it->second.draw_cache_revision = draw_cache_revision;
     it->second.visibility_generation = level.visibility_generation;
     it->second.memory_visible = memory_visible;
     compute( it->second );
@@ -2533,14 +2555,23 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 terrain_color( furn_id( fid ).to_i() * 31 + 7, fr, fg, fb );
             }
             const float fw = FURN_QUAD_HEIGHT * std::clamp( fspr.aspect, 0.5f, 2.0f );
-            std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
-                                                ftex ? fspr.atlas : nullptr );
-            push_instance( v, dx + 0.5f, dy + 0.5f,
-                           wz - FURN_QUAD_HEIGHT * fspr.base_drop,
-                           fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
-                           false, 0, false, -1.0f, false, 1.0f, true );
+            const bool flat = flat_furniture( fid.obj() );
+            if( flat ) {
+                std::vector<float> &v = bucket_for( MODE_FLATQUAD_DECAL,
+                                                    ftex ? fspr.atlas : nullptr );
+                push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                               wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, fr, fg, fb,
+                               false, fl.fg_rot4, false, -1.0f, false, 1.0f, true );
+            } else {
+                std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
+                                                    ftex ? fspr.atlas : nullptr );
+                push_instance( v, dx + 0.5f, dy + 0.5f,
+                               wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                               fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
+                               false, 0, false, -1.0f, false, 1.0f, true );
+            }
             ++count;
-            if( layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+            if( !flat && layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
                 // the indicator rides the body's exact quad, a hair toward the
                 // camera so the strict depth test never drops it
                 std::vector<float> &vo = bucket_for( MODE_BILLBOARD_SNAP, fl.fg.atlas );
@@ -3612,14 +3643,23 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     // furniture is a billboard snapped to 90-degree steps: always
                     // roughly facing the camera without continuously rotating
                     const float fw = FURN_QUAD_HEIGHT * std::clamp( fspr.aspect, 0.5f, 2.0f );
-                    std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
-                                                        ftex ? fspr.atlas : nullptr );
-                    push_instance( v, dx + 0.5f, dy + 0.5f,
-                                   wz - FURN_QUAD_HEIGHT * fspr.base_drop,
-                                   fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
-                                   false, 0, false, -1.0f, ghost, tone.sat );
+                    const bool flat = flat_furniture( f.obj() );
+                    if( flat ) {
+                        std::vector<float> &v = bucket_for( MODE_FLATQUAD_DECAL,
+                                                            ftex ? fspr.atlas : nullptr );
+                        push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                                       wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, fr, fg, fb,
+                                       false, fl.fg_rot4, false, -1.0f, ghost, tone.sat );
+                    } else {
+                        std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
+                                                            ftex ? fspr.atlas : nullptr );
+                        push_instance( v, dx + 0.5f, dy + 0.5f,
+                                       wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                                       fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
+                                       false, 0, false, -1.0f, ghost, tone.sat );
+                    }
                     ++count;
-                    if( layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                    if( !flat && layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
                         // the indicator rides the body's exact quad, a hair
                         // toward the camera so the strict depth test never
                         // drops it
@@ -4262,13 +4302,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                          0, false, rl, vd.variant.id );
                                 if( rl.bg_tex ) {
                                     push_panel( rl.bg, rear_dir, rear_swap,
-                                                wz + VEH_PANEL_BASE_Z,
+                                                wz + VEH_PANEL_BASE_Z + 0.30f,
                                                 rl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE,
                                                 false );
                                 }
                                 if( rl.fg_tex ) {
                                     push_panel( rl.fg, rear_dir, rear_swap,
-                                                wz + VEH_PANEL_BASE_Z,
+                                                wz + VEH_PANEL_BASE_Z + 0.30f,
                                                 rl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE,
                                                 false );
                                 }
@@ -4377,8 +4417,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 sprite_info rspr; // untextured -> white fallback x color
                                 std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
                                 push_instance( v, static_cast<float>( dx ),
-                                               static_cast<float>( dy ), wz + VEH_PANEL_BASE_Z,
-                                               1.0f, 1.0f, box_top - VEH_PANEL_BASE_Z, rspr,
+                                               static_cast<float>( dy ), wz + VEH_PANEL_BASE_Z + 0.30f,
+                                               1.0f, 1.0f, box_top - VEH_PANEL_BASE_Z - 0.30f, rspr,
                                                0.6f * tone.shade, 0.6f * tone.shade,
                                                0.6f * tone.shade,
                                                false, 0, false, -1.0f, ghost, tone.sat );
@@ -4489,6 +4529,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             size_scale = creature_size_scale( m->get_size() );
             overlays = m->get_overlay_ids();
         } else if( const Character *ch = critter.as_character() ) {
+            size_scale = CHARACTER_SIZE_SCALE;
             male = ch->male;
             const std::vector<trait_id> look_muts = ch->get_functioning_mutations( true, false,
             []( const mutation_branch & mut ) {
@@ -4888,13 +4929,18 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         const level_cache &mem_level = here.get_cache_ref( upos.z() );
         static tripoint_bub_ms last_sweep_pos = tripoint_bub_ms( -1, -1, -1 );
         static time_point last_sweep_turn = calendar::turn_zero;
+        static uint64_t last_draw_cache_revision = 0;
         static uint64_t last_visibility_generation = 0;
+        const uint64_t draw_cache_revision = here.draw_cache_revision();
         if( mem_level.map_memory_sweep_pending || upos != last_sweep_pos ||
             calendar::turn != last_sweep_turn ||
+            draw_cache_revision == std::numeric_limits<uint64_t>::max() ||
+            draw_cache_revision != last_draw_cache_revision ||
             mem_level.visibility_generation != last_visibility_generation ) {
             clear_orientation_cache();
             last_sweep_pos = upos;
             last_sweep_turn = calendar::turn;
+            last_draw_cache_revision = draw_cache_revision;
             last_visibility_generation = mem_level.visibility_generation;
         }
     }
