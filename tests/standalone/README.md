@@ -62,13 +62,29 @@ python3 tools/replay_ab.py --bin /build/base/cataclysm-tiles \
 ```
 
 `--expected-turns` counts completed `game::do_turn()` calls, not keys or calendar
-seconds. The native report also records calendar advancement and positions.
+seconds. Native report v2 also records calendar advancement and the absolute
+player position after each completed call, excluding the final save call. This
+distinguishes a real out-and-back route from waiting or hitting an obstacle even
+when both end at the starting position. Recording happens outside the measured
+`do_turn` interval; whole-process measurements still include that reporting cost.
 An exhausted log inside a menu, missing report, failed save, or unexpected
 number of completed calls fails acceptance. Failed runs retain their logs and
 save copies. Success requires changed player saves and matching full save bytes;
-it does not establish visual parity, complete semantic equivalence or a speedup.
+v2 comparisons additionally require identical trajectories. The reader still
+accepts v1 reports as evidence without intermediate positions, but comparisons
+reject mixed versions instead of silently dropping the trace. Neither version
+establishes visual parity, complete semantic equivalence or a speedup.
 Startup/save wall times and replay turn timings are diagnostic measurements;
 hotspot attribution still uses the engine's `CATA_PROFILE_*` instrumentation.
+
+To check that the recording overrides the launch seed, add
+`--invocation-seeds first second` to the command above. Use a recording with
+`SEED 0` as well as a nonzero seed; zero is a valid replay seed, even though
+normal gameplay's RNG helper treats zero as “leave the current engine alone”.
+The comparison still requires exact save bytes and native completion. The Python
+tests exercise the wrapper, so this RNG regression also requires actual games.
+Old zero-seed recordings did not reliably pin their original RNG and cannot
+recover that missing initial state retroactively.
 
 ## Bounded compute resources
 
@@ -89,12 +105,34 @@ nested submissions execute synchronously without holding the queue lock.
 These domains share a 64 MiB allocation budget for retained snapshots, outputs
 and their dynamic buffers. Old and replacement allocations count together during
 growth. Exhaustion uses the owner's existing serial fallback. This is not a cap
-on authoritative world data, GPU textures or prefetch I/O. Prefetch needs its own
-bounded-byte integration before overall resource acceptance. Pool shutdown and
+on authoritative world data, GPU textures or prefetch I/O. Pool shutdown and
 per-domain barriers must complete before captured data is destroyed. On Unix,
 `ai_reachability_fault_test` also injects failures into lazy pool creation,
 snapshot/output allocation and partial task submission, then checks recovery
 against the serial kernel with an executor that outlives each frame.
+
+## Bounded map prefetch I/O
+
+The prefetch service uses one separate blocking I/O worker, up to 128 pending or
+ready entries and a shared 32 MiB allowance. Queue/result nodes, decoded buffers,
+their ownership blocks and private ZSTD allocations count against that allowance.
+At most two archive mappings and one private decoder are retained; a save pause
+releases them and invalidates ready bytes before the owner writes map data.
+Path storage, stream internals and mapped archive pages are not fully covered by
+the byte allowance, so this is not a bound on total process RSS.
+
+Workers publish immutable owned bytes. Parsing and map mutation remain on the
+owner thread; parser diagnostics retain the source without an extra normal-path
+copy. Cancelled request tickets cannot complete a newer request for the same
+quad. Admission, reading, decoding and publication failures become cache misses
+and use the existing synchronous load path.
+
+Select `submap_prefetch_test.cpp;zzip_test.cpp;compute_resources_test.cpp` in the
+focused engine build below, then run `[prefetch],[zzip],[compute_resources]`.
+These tests use real temporary plain files and compressed archives, including
+quota pressure, publication failure, cancel/reissue, nested save pauses and
+clear/restart. They supplement full-game movement and save/reload acceptance;
+they do not establish exploration speed or long-session memory behavior.
 
 ## Focused tests with the complete engine
 

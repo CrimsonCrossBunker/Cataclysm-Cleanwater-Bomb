@@ -183,11 +183,12 @@ void parallel_for( int begin, int end, F &&f )
         return;
     }
 
-    cata_thread_pool &pool = get_thread_pool();
-    const int nw = static_cast<int>( pool.num_workers() );
+    // Nested work stays serial before touching the facade, whose first call
+    // reads owner-thread game options and may initialize the shared executor.
+    cata_thread_pool *const pool = is_pool_worker_thread() ? nullptr : &get_thread_pool();
+    const int nw = pool ? static_cast<int>( pool->num_workers() ) : 0;
 
-    // Serial fallback on single-core machines.
-    if( nw == 0 || is_pool_worker_thread() ) {
+    if( nw == 0 ) {
         for( int i = begin; i < end; ++i ) {
             f( i );
         }
@@ -205,7 +206,7 @@ void parallel_for( int begin, int end, F &&f )
             const int c = submitted;
             const int chunk_begin = begin + ( n * c / chunks );
             const int chunk_end   = begin + ( n * ( c + 1 ) / chunks );
-            pool.submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
+            pool->submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
                 try {
                     for( int i = chunk_begin; i < chunk_end; ++i ) {
                         f( i );
@@ -256,13 +257,14 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
         return;
     }
 
-    cata_thread_pool &pool = get_thread_pool();
-    const int nw = static_cast<int>( pool.num_workers() );
+    // Do not initialize owner-thread game configuration from a nested worker.
+    cata_thread_pool *const pool = is_pool_worker_thread() ? nullptr : &get_thread_pool();
+    const int nw = pool ? static_cast<int>( pool->num_workers() ) : 0;
 
     const int n = end - begin;
     const int num_chunks = ( n + chunk_size - 1 ) / chunk_size;
 
-    if( nw == 0 || is_pool_worker_thread() || num_chunks <= 1 ) {
+    if( nw == 0 || num_chunks <= 1 ) {
         for( int i = begin; i < end; ++i ) {
             f( i );
         }
@@ -279,7 +281,7 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
             const int c = submitted;
             const int chunk_begin = begin + c * chunk_size;
             const int chunk_end   = std::min( chunk_begin + chunk_size, end );
-            pool.submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
+            pool->submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
                 try {
                     for( int i = chunk_begin; i < chunk_end; ++i ) {
                         f( i );

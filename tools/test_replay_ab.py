@@ -12,11 +12,12 @@ import replay_ab
 
 def native_summary(**changes):
     result = {
-        "schema_version": 1, "status": "complete", "seed": 123,
+        "schema_version": 2, "status": "complete", "seed": 123,
         "events_total": 1, "events_remaining": 0, "input_failed": False,
         "game_started": True, "quit_saved": True, "completed_turn_calls": 2,
         "turn_start": 100, "turn_end": 101,
         "initial_position": [1, 2, 0], "final_position": [1, 2, 0],
+        "turn_positions": [[1, 2, 0], [1, 2, 0]],
         "initial_monsters": 759, "final_monsters": 759,
         "turn_wall_ns": [1000, 2000], "completion_wall_ns": 500,
     }
@@ -33,6 +34,7 @@ class NativeCompletionTest(unittest.TestCase):
                              native_summary())
             bad = [
                 {"status": "incomplete"}, {"schema_version": True},
+                {"schema_version": 0}, {"schema_version": 3},
                 {"seed": 124}, {"events_remaining": 1}, {"events_total": 2},
                 {"input_failed": True}, {"game_started": False},
                 {"quit_saved": False}, {"completed_turn_calls": 1},
@@ -41,12 +43,40 @@ class NativeCompletionTest(unittest.TestCase):
                 {"turn_end": 99}, {"turn_start": 100.0},
                 {"initial_position": [0, 0]}, {"final_position": [0, 0, True]},
                 {"initial_monsters": False}, {"final_monsters": -1},
+                {"turn_positions": None}, {"turn_positions": []},
+                {"turn_positions": [[1, 2, 0]]},
+                {"turn_positions": [[1, 2], [1, 2, 0]]},
+                {"turn_positions": [[True, 2, 0], [1, 2, 0]]},
+                {"turn_positions": [[1, 2, 0], [2, 2, 0]]},
             ]
             for change in bad:
                 with self.subTest(change=change):
                     path.write_text(json.dumps(native_summary(**change)))
                     with self.assertRaises(ValueError):
                         replay_ab.read_native_completion(path, replay, 2)
+
+    def test_trace_is_required_in_v2_but_legacy_reports_remain_readable(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "result.json"
+            replay = {"seed": 123, "recorded_events": 1}
+            missing = native_summary()
+            del missing["turn_positions"]
+            path.write_text(json.dumps(missing))
+            with self.assertRaises(ValueError):
+                replay_ab.read_native_completion(path, replay, 2)
+            missing["schema_version"] = 1
+            path.write_text(json.dumps(missing))
+            self.assertEqual(replay_ab.read_native_completion(path, replay, 2),
+                             missing)
+
+    def test_empty_trace_can_describe_zero_completed_turns(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "result.json"
+            report = native_summary(completed_turn_calls=0, turn_positions=[],
+                                    turn_wall_ns=[], turn_end=100)
+            path.write_text(json.dumps(report))
+            self.assertEqual(replay_ab.read_native_completion(
+                path, {"seed": 123, "recorded_events": 1}, 0), report)
 
 
 class SaveComparisonTest(unittest.TestCase):
@@ -216,15 +246,63 @@ class ReplayProcessTest(unittest.TestCase):
         self.assertEqual(
             report["runs"][0]["native_completion"], native_summary())
 
+    def test_recorded_zero_overrides_distinct_invocation_seeds(self):
+        self.replay.write_text(self.replay.read_text().replace("SEED 123", "SEED 0"))
+        self.binary = self.native_executable("native", native_summary(seed=0))
+        code, report = self.execute([
+            "--expected-turns", "2", "--invocation-seeds", "first", "second",
+        ])
+        self.assertEqual(code, 0)
+        for run, seed in zip(report["runs"], ("first", "second")):
+            command = run["command"]
+            self.assertEqual(command[command.index("--seed") + 1], seed)
+            self.assertEqual(run["native_completion"]["seed"], 0)
+
+    def test_invocation_seed_leaking_into_save_fails_comparison(self):
+        self.binary = self.executable(
+            "seed_leak",
+            "player.write_text(sys.argv[sys.argv.index('--seed') + 1])",
+        )
+        code, report = self.execute(["--invocation-seeds", "first", "second"])
+        self.assertEqual(code, 1)
+        self.assertEqual(report["differences"], ["differs:   world/player.sav"])
+
+    def test_conflicting_invocation_seeds_fail_before_copying(self):
+        for extra in (["--seed", "shared"], ["--seed=shared"]):
+            self.assert_invalid(["--invocation-seeds", "first", "second", "--", *extra])
+
     def test_different_native_positions_fail_even_with_equal_save_bytes(self):
         self.binary = self.native_executable("native", native_summary())
         candidate = self.native_executable(
-            "candidate", native_summary(final_position=[2, 2, 0]))
+            "candidate", native_summary(final_position=[2, 2, 0],
+                                        turn_positions=[[1, 2, 0], [2, 2, 0]]))
         code, report = self.execute([
             "--expected-turns", "2", "--candidate-bin", str(candidate),
         ])
         self.assertEqual(code, 1)
         self.assertIn("native differs: final_position", report["differences"])
+
+    def test_different_routes_fail_even_with_equal_final_positions_and_saves(self):
+        self.binary = self.native_executable("native", native_summary())
+        candidate = self.native_executable(
+            "candidate", native_summary(turn_positions=[[2, 2, 0], [1, 2, 0]]))
+        code, report = self.execute([
+            "--expected-turns", "2", "--candidate-bin", str(candidate),
+        ])
+        self.assertEqual(code, 1)
+        self.assertEqual(report["differences"],
+                         ["native differs: turn_positions"])
+
+    def test_mixed_report_versions_cannot_claim_matching_trajectories(self):
+        legacy = native_summary(schema_version=1)
+        del legacy["turn_positions"]
+        self.binary = self.native_executable("native", legacy)
+        candidate = self.native_executable("candidate", native_summary())
+        code, report = self.execute([
+            "--expected-turns", "2", "--candidate-bin", str(candidate),
+        ])
+        self.assertEqual(code, 1)
+        self.assertIn("native differs: schema_version", report["differences"])
 
     def test_incomplete_native_run_cannot_pass_with_matching_saves(self):
         self.binary = self.native_executable(
