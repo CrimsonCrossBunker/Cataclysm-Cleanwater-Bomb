@@ -2984,17 +2984,46 @@ class build_construction_activity_actor : public activity_actor
 {
     public:
         build_construction_activity_actor() = default;
-        explicit build_construction_activity_actor( const tripoint_abs_ms &construction_location ) :
-            construction_location( construction_location ) {};
+        explicit build_construction_activity_actor( const tripoint_abs_ms &construction_location,
+                Character *owner = nullptr );
+        static build_construction_activity_actor client_view();
+        bool is_server_owned() const {
+            return server_owned;
+        }
+        bool is_client_view() const {
+            return view_only;
+        }
+        const tripoint_abs_ms &location() const {
+            return construction_location;
+        }
+        int64_t site_identity() const {
+            return site_uid;
+        }
+        bool prepare_owned_turn( Character &who );
+        bool apply_owned_choice( Character &who, const JsonObject &data );
+        const std::string &waiting_for() const {
+            return decision;
+        }
+        const std::string &choice_prompt() const {
+            return prompt;
+        }
+        bool choice_is_text() const {
+            return text_choice;
+        }
+        bool confirmed( const std::string &key ) const;
+        void set_view_progress( std::string progress ) {
+            view_progress = std::move( progress );
+        }
 
         const activity_id &get_type() const override {
             static const activity_id ACT_BUILD( "ACT_BUILD" );
             return ACT_BUILD;
         }
 
-        void start( player_activity &, Character & ) override {};
+        void start( player_activity &, Character &who ) override;
         void do_turn( player_activity &act, Character &you ) override;
         void finish( player_activity &, Character & ) override {};
+        void canceled( player_activity &, Character & ) override;
 
         void complete_construction( player_activity &act, Character &you );
         std::string get_progress_message( const player_activity & ) const override;
@@ -3008,7 +3037,17 @@ class build_construction_activity_actor : public activity_actor
 
     private:
         tripoint_abs_ms construction_location;
-
+        bool server_owned = false;
+        bool view_only = false;
+        character_id owner_id;
+        int64_t site_uid = 0;
+        construction_str_id construction_type;
+        std::map<std::string, std::string> answers;
+        std::string decision;
+        std::string prompt;
+        bool text_choice = false;
+        std::string view_progress;
+        bool need_choice( const std::string &key, const std::string &message, bool text = false );
 };
 
 class reel_cable_activity_actor : public activity_actor

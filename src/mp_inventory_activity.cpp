@@ -14,6 +14,8 @@
 #include "cata_scope_helpers.h"
 #include "craft_command.h"
 #include "crafting.h"
+#include "construction.h"
+#include "input_popup.h"
 #include "line.h"
 #include "creature_tracker.h"
 #include "flag.h"
@@ -122,6 +124,55 @@ craft_activity_actor *native_craft( Character &who )
 {
     auto *actor = dynamic_cast<craft_activity_actor *>( who.activity.actor.get() );
     return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+build_construction_activity_actor *native_construction( Character &who )
+{
+    auto *actor = dynamic_cast<build_construction_activity_actor *>( who.activity.actor.get() );
+    return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+bool start_construction( Character &who, map &here, const JsonObject &request,
+                         const std::string &kind )
+{
+    if( who.activity || who.is_dead_state() || who.get_moves() <= 0 ) {
+        return false;
+    }
+    if( kind == "construction" ) {
+        const auto selected = construction_selection::from_selection( who,
+                              request.get_object( "selection" ) );
+        return selected && selected->start( who, true );
+    }
+    tripoint_abs_ms position;
+    request.read( "position", position, true );
+    if( kind == "construction_auto" ) {
+        const construction_str_id id( request.get_string( "construction" ) );
+        if( !id.is_valid() || !who.is_npc() ) {
+            return false;
+        }
+        // The client chooses a blueprint, never its costs or resulting terrain.
+        // Native NPC selection is automatic and uses this player's resources.
+        const auto selected = construction_selection::prepare( who, id.obj(), position );
+        return selected && selected->start( who, true );
+    }
+    if( !here.inbounds( position ) ) {
+        return false;
+    }
+    const tripoint_bub_ms at = here.get_bub( position );
+    partial_con *site = here.partial_con_at( at );
+    if( !site || site->uid <= 0 || site->uid != request.get_int64( "site" ) ||
+        !construction_accessible( who, site->id.obj(), position ) ) {
+        return false;
+    }
+    if( kind == "construction_cancel" ) {
+        for( const item &component : site->components ) {
+            here.add_item_or_charges( who.pos_bub(), component );
+        }
+        here.partial_con_remove( at );
+    } else {
+        who.assign_activity( build_construction_activity_actor( position, &who ) );
+    }
+    return true;
 }
 
 bool start_craft( Character &who, const JsonObject &request, bool repeat = false )
@@ -264,6 +315,9 @@ bool begin_client_inventory_activity( const activity_actor &actor )
     view.cancel_requested = false;
     view.needs_placement = false;
     view.craft_decision.clear();
+    view.construction_decision.clear();
+    view.construction_prompt.clear();
+    view.construction_text = false;
     view.activity.clear();
     get_avatar().assign_activity( actor );
     return true;
@@ -429,13 +483,16 @@ void send_inventory_activity( const std::string &operation,
 
 bool owns_inventory_activity( const Character &who )
 {
+    const auto *build = dynamic_cast<const build_construction_activity_actor *>
+                        ( who.activity.actor.get() );
     const auto *craft = dynamic_cast<const craft_activity_actor *>( who.activity.actor.get() );
     const auto *actor = dynamic_cast<const reload_activity_actor *>( who.activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( who.activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( who.activity.actor.get() );
     const auto *consume = dynamic_cast<const consume_activity_actor *>( who.activity.actor.get() );
     const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>( who.activity.actor.get() );
-    return ( craft && craft->is_server_owned() && !craft->is_client_view() ) ||
+    return ( build && build->is_server_owned() && !build->is_client_view() ) ||
+           ( craft && craft->is_server_owned() && !craft->is_client_view() ) ||
            ( firstaid && firstaid->is_server_owned() && !firstaid->is_client_view() ) ||
            ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
            ( unload && unload->is_server_owned() && !unload->is_client_view() ) ||
@@ -445,13 +502,14 @@ bool owns_inventory_activity( const Character &who )
 
 bool inventory_activity_view( const player_activity &activity )
 {
+    const auto *build = dynamic_cast<const build_construction_activity_actor *>( activity.actor.get() );
     const auto *craft = dynamic_cast<const craft_activity_actor *>( activity.actor.get() );
     const auto *actor = dynamic_cast<const reload_activity_actor *>( activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( activity.actor.get() );
     const auto *consume = dynamic_cast<const consume_activity_actor *>( activity.actor.get() );
     const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>( activity.actor.get() );
-    return ( craft && craft->is_client_view() ) ||
+    return ( build && build->is_client_view() ) || ( craft && craft->is_client_view() ) ||
            ( firstaid && firstaid->is_client_view() ) || ( actor && actor->is_client_view() ) ||
            ( unload && unload->is_client_view() ) ||
            ( insert && insert->is_client_view() ) || ( consume && consume->is_client_view() );
@@ -468,6 +526,9 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         state.tracks_body = true;
         state.healing_patient = firstaid->patient_id();
     }
+    if( native_construction( who ) ) {
+        state.tracks_body = state.tracks_needs = true;
+    }
     if( native_craft( who ) ) {
         state.tracks_crafting = state.tracks_body = state.tracks_needs = true;
     }
@@ -478,7 +539,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             state.needs_placement = false;
             const std::string kind = request.get_string( "kind", "reload" );
             state.tracks_crafting = kind == "craft" || kind == "craft_resume";
-            state.tracks_body = kind == "firstaid" || state.tracks_crafting;
+            const bool construction_request = kind == "construction" || kind == "construction_auto" ||
+                                              kind == "construction_resume" || kind == "construction_cancel";
+            state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request;
+            state.tracks_needs = state.tracks_needs || construction_request;
             state.healing_patient = character_id();
             if( kind == "reload" ) {
                 start_reload( who, here, request );
@@ -488,6 +552,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 start_insert( who, here, request );
             } else if( kind == "consume" ) {
                 start_consume( who, here, request );
+            } else if( construction_request ) {
+                start_construction( who, here, request, kind );
             } else if( kind == "craft" ) {
                 start_craft( who, request );
             } else if( kind == "craft_resume" ) {
@@ -506,6 +572,14 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( auto *build = native_construction( who ) ) {
+                if( !build->prepare_owned_turn( who ) ) {
+                    who.cancel_activity();
+                } else if( operation == "choose" ) {
+                    build->apply_owned_choice( who, request );
+                } else if( operation == "step" && who.get_moves() > 0 && build->waiting_for().empty() ) {
+                    who.activity.do_turn( who );
+                }
             } else if( craft_activity_actor *craft = native_craft( who ) ) {
                 if( operation == "restart" ) {
                     start_craft( who, request, true );
@@ -610,12 +684,22 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     out.member( "request", sequence );
     const bool active = owns_inventory_activity( who );
     const auto *craft = native_craft( who );
+    const auto *build = native_construction( who );
+    const partial_con *site = build ? here.partial_con_at( here.get_bub( build->location() ) ) :
+                              nullptr;
     const bool craft_progress = craft && craft->target();
+    const bool explicit_progress = craft_progress || site;
+    const int progress = craft_progress ? craft->target()->item_counter : site ? site->counter : 0;
     out.member( "activity", active ? std::to_string( who.activity.identity_generation() ) : "" );
-    out.member( "moves_total", craft_progress ? 10000000 : active ? who.activity.moves_total : 0 );
-    out.member( "moves_left", craft_progress ?
-                10000000 - std::clamp( craft->target()->item_counter, 0,
-                                       10000000 ) : active ? who.activity.moves_left : 0 );
+    out.member( "moves_total", explicit_progress ? 10000000 : active ? who.activity.moves_total : 0 );
+    out.member( "moves_left", explicit_progress ? 10000000 - std::clamp( progress, 0, 10000000 ) :
+                active ? who.activity.moves_left : 0 );
+    if( build ) {
+        out.member( "construction_progress", build->get_progress_message( who.activity ) );
+        out.member( "construction_decision", build->waiting_for() );
+        out.member( "construction_prompt", build->choice_prompt() );
+        out.member( "construction_text", build->choice_is_text() );
+    }
     out.member( "needs_placement", state.needs_placement );
     if( craft ) {
         out.member( "craft_progress", craft->get_progress_message( who.activity ) );
@@ -678,12 +762,26 @@ bool apply_inventory_activity_result( const JsonObject &response )
     }
     if( view.active && response.get_int64( "request" ) == view.pending_request ) {
         view.pending_request = 0;
-        view.activity = response.get_string( "activity" );
-        view.finished = view.activity.empty();
+        const std::string next_activity = response.get_string( "activity" );
+        view.finished = next_activity.empty();
+        const auto *construction_view = dynamic_cast<const build_construction_activity_actor *>(
+                                            get_avatar().activity.actor.get() );
+        // Keep the accepted construction generation until the view is cleared:
+        // an empty first reply rejects a start, while an empty later reply ends work.
+        if( !view.finished || !construction_view ) {
+            view.activity = next_activity;
+        }
         view.needs_placement = response.get_bool( "needs_placement" );
         view.can_wield = response.get_bool( "can_wield", false );
         view.preview.reset();
         view.craft_decision = response.get_string( "craft_decision", "" );
+        view.construction_decision = response.get_string( "construction_decision", "" );
+        view.construction_prompt = response.get_string( "construction_prompt", "" );
+        view.construction_text = response.get_bool( "construction_text", false );
+        if( auto *build = dynamic_cast<build_construction_activity_actor *>
+                          ( get_avatar().activity.actor.get() ) ) {
+            build->set_view_progress( response.get_string( "construction_progress", "" ) );
+        }
         if( response.has_object( "preview" ) ) {
             view.preview = std::make_shared<item>();
             response.read( "preview", *view.preview, true );
@@ -753,6 +851,44 @@ void client_start_insert( const insert_selection &selection )
         out.member( "kind", "insert" );
         out.member( "insert", selection );
     } );
+}
+
+void client_start_construction( const construction_selection &selected )
+{
+    if( !begin_client_inventory_activity( build_construction_activity_actor::client_view() ) ) {
+        return;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "construction" );
+        out.member( "selection", selected );
+    } );
+}
+
+bool client_start_blueprint_construction( const construction_str_id &id,
+        const tripoint_abs_ms &position )
+{
+    if( !begin_client_inventory_activity( build_construction_activity_actor::client_view() ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "construction_auto" );
+        out.member( "construction", id );
+        out.member( "position", position );
+    } );
+    return true;
+}
+
+bool client_change_construction( const tripoint_abs_ms &position, int64_t uid, bool remove )
+{
+    if( !begin_client_inventory_activity( build_construction_activity_actor::client_view() ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", remove ? "construction_cancel" : "construction_resume" );
+        out.member( "position", position );
+        out.member( "site", uid );
+    } );
+    return true;
 }
 
 void client_start_craft( const craft_command &command )
@@ -854,7 +990,7 @@ void client_step_inventory_activity()
         return;
     }
     if( view.cancel_requested || view.needs_placement || view.finished ||
-        !view.craft_decision.empty() ) {
+        !view.craft_decision.empty() || !view.construction_decision.empty() ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
         send_inventory_activity( "step" );
@@ -898,6 +1034,14 @@ void client_update_inventory_activity_view()
         const bool reprompt = !view.cancel_requested &&
                               ( ( consume && consume->is_client_view() && consume->should_reprompt() ) ||
                                 ( firstaid && firstaid->is_client_view() && firstaid->should_reprompt() ) );
+        const auto *build = dynamic_cast<const build_construction_activity_actor *>(
+                                get_avatar().activity.actor.get() );
+        const bool blueprint = build && build->is_client_view() && !get_avatar().backlog.empty() &&
+                               get_avatar().backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" );
+        const bool resume_blueprint = blueprint && !view.cancel_requested && !view.activity.empty();
+        if( blueprint && !resume_blueprint ) {
+            get_avatar().backlog.front().auto_resume = false;
+        }
         if( inventory_activity_view( get_avatar().activity ) ) {
             get_avatar().activity.set_to_null();
         }
@@ -905,6 +1049,11 @@ void client_update_inventory_activity_view()
         view = {};
         view.next_request = sequence;
         set_client_turn_activity( "" );
+        if( resume_blueprint ) {
+            // Client view actors skip native activity completion. Resume their
+            // local blueprint planner explicitly, without running world effects.
+            get_avatar().resume_backlog_activity();
+        }
         if( reprompt && !uistate.open_menu ) {
             // The result has already replaced the carried items. Keep the menu's
             // filter/cursor, but discard locations into the previous replica.
@@ -916,6 +1065,32 @@ void client_update_inventory_activity_view()
         }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
+    } else if( !view.construction_decision.empty() && !is_client_waiting_for_ack() ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        std::string text;
+        bool answer = false;
+        if( view.construction_text ) {
+            string_input_popup_imgui popup( 60 );
+            popup.set_label( view.construction_prompt );
+            text = popup.query();
+        } else {
+            answer = get_avatar().query_yn( "%s", view.construction_prompt );
+        }
+        if( !answer && ( view.construction_decision == "deconstruct" ||
+                         view.construction_decision == "exhume" ) &&
+            !get_avatar().backlog.empty() &&
+            get_avatar().backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) ) {
+            // These choices cancel native work; do not immediately ask again.
+            get_avatar().backlog.front().auto_resume = false;
+        }
+        send_inventory_activity( "choose", [&]( JsonOut & out ) {
+            out.member( "decision", view.construction_decision );
+            if( view.construction_text ) {
+                out.member( "text", text );
+            } else {
+                out.member( "answer", answer );
+            }
+        } );
     } else if( !view.craft_decision.empty() && !is_client_waiting_for_ack() ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         if( view.craft_decision == "repeat" ) {

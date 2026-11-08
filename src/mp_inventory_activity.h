@@ -13,6 +13,7 @@
 #include "type_id.h"
 
 struct insert_selection;
+struct construction_selection;
 class Character;
 class craft_command;
 class item;
@@ -55,6 +56,9 @@ struct inventory_activity_client_state {
     recipe_id craft_recipe;
     int craft_batch = 0;
     std::optional<tripoint_abs_ms> craft_location;
+    std::string construction_decision;
+    std::string construction_prompt;
+    bool construction_text = false;
     std::vector<craft_notice> notices;
 };
 
@@ -78,6 +82,10 @@ void client_start_consume( const item_location &source, bool allow_consequences,
 void client_start_firstaid( const item_location &source, Character &patient,
                             const bodypart_str_id &part, bool allow_theft, bool reprompt = false );
 void client_start_craft( const craft_command &command );
+void client_start_construction( const construction_selection &selected );
+bool client_start_blueprint_construction( const construction_str_id &id,
+        const tripoint_abs_ms &position );
+bool client_change_construction( const tripoint_abs_ms &position, int64_t uid, bool remove );
 void client_resume_craft( const item_location &source );
 void client_step_inventory_activity();
 void client_cancel_inventory_activity();

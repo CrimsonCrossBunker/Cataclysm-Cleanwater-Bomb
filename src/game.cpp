@@ -784,6 +784,7 @@ void game::reset_game_state()
     next_item_uid = 1;
     next_monster_uid = 1;
     next_vehicle_uid = 1;
+    next_construction_uid = 1;
     uquit = QUIT_NO;   // We haven't quit the game
     bVMonsterLookFire = true;
 
@@ -4151,6 +4152,23 @@ void game::observe_vehicle_uid( const int64_t uid )
         next_vehicle_uid = max_uid;
     } else {
         next_vehicle_uid = std::max( next_vehicle_uid, uid + 1 );
+    }
+}
+
+int64_t game::assign_construction_uid()
+{
+    next_construction_uid = std::max<int64_t>( next_construction_uid, 1 );
+    if( next_construction_uid == std::numeric_limits<int64_t>::max() ) {
+        return 0;
+    }
+    return next_construction_uid++;
+}
+
+void game::observe_construction_uid( int64_t uid )
+{
+    if( uid > 0 ) {
+        next_construction_uid = std::max( next_construction_uid,
+                                          uid == std::numeric_limits<int64_t>::max() ? uid : uid + 1 );
     }
 }
 

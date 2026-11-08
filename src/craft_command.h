@@ -59,6 +59,13 @@ struct comp_selection {
     void deserialize( const JsonObject &data );
 };
 
+// Shared construction/crafting requirement validation. Canonicalize client
+// choices against native requirements and validate the whole material/tool
+// selection before either is consumed. Tools use their full charge cost here.
+bool validate_requirement_selection( Character &who, const requirement_data &requirements,
+                                     std::vector<comp_selection<item_comp>> &components,
+                                     std::vector<comp_selection<tool_comp>> &tools );
+
 /** One recipe step's allocation of a single chosen tool. */
 struct step_tool_alloc {
     comp_selection<tool_comp> sel;
