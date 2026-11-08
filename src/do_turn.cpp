@@ -28,6 +28,8 @@
 #include "bionics.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "character_turn.h"
+#include "player_control.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_loader.h"
 #ifdef TILES
@@ -844,7 +846,11 @@ void game::simulate_turn_prefix()
 
     // Per-turn body update. In SP this is one turn; in MP-client it must catch
     // up the host-driven calendar's jumps.
-    cata_mp::mp_do_turn_update_body( u );
+    if( cata_mp::is_client_mode() ) {
+        cata_mp::client_character_turn_driver( u ).update_body();
+    } else {
+        local_player_controller().update_body();
+    }
 
     // Auto-save if autosave is enabled (suppressed in client mode — server owns saves)
     if( !cata_mp::is_client_mode() &&
@@ -891,7 +897,7 @@ void game::simulate_turn_prefix()
     // Client-only: tick effects/needs once per elapsed host turn, without granting
     // local moves. SP/host process_turn() still runs in simulate_turn_suffix().
     if( cata_mp::is_client_mode() ) {
-        cata_mp::mp_do_turn_process_turn( u );
+        cata_mp::client_character_turn_driver( u ).process_turn();
     }
     // Client: if a wait activity consumed the server-granted moves this turn,
     // dispatch "wait" so the server advances its timeline in sync.
@@ -1133,8 +1139,8 @@ void game::simulate_turn_suffix()
     // required after monsters move and fields emit
     mon_info_update();
 
-    // replenish avatar moves
-    u.process_turn();
+    // Replenish moves through the current local character assignment.
+    local_player_controller().process_turn();
 
     // Update player map memory from the current field of view.  This used to
     // happen lazily inside the tiles draw path; running it here in the sim loop

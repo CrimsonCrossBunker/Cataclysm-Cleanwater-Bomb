@@ -221,6 +221,9 @@ class game
         player_control_registry &player_controls() {
             return *player_controls_ptr;
         }
+        player_control &local_player_controller() {
+            return *local_player_control_ptr;
+        }
         // Called after a local profile is loaded/created or changes character.
         void bind_local_player_control();
 

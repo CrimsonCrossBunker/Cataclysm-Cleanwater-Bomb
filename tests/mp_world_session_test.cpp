@@ -605,13 +605,13 @@ TEST_CASE( "mp_client_body_updates_restart_in_a_new_world_at_the_same_time",
         return player.get_stamina();
     };
     const int first_initial = start_world();
-    cata_mp::mp_do_turn_update_body( get_avatar() );
+    cata_mp::client_character_turn_driver( get_avatar() ).update_body();
     const int first_updated = get_avatar().get_stamina();
     REQUIRE( first_updated > first_initial );
-    cata_mp::mp_do_turn_update_body( get_avatar() );
+    cata_mp::client_character_turn_driver( get_avatar() ).update_body();
     CHECK( get_avatar().get_stamina() == first_updated );
 
     const int second_initial = start_world();
-    cata_mp::mp_do_turn_update_body( get_avatar() );
+    cata_mp::client_character_turn_driver( get_avatar() ).update_body();
     CHECK( get_avatar().get_stamina() > second_initial );
 }

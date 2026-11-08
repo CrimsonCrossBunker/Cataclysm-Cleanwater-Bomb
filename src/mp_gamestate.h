@@ -14,6 +14,7 @@
 #include "type_id.h"
 
 class Character;
+class character_turn_driver;
 class item;
 class npc;
 enum class object_type : int;
@@ -480,16 +481,10 @@ void mp_log( const std::string &msg );
 // distance / safe_mode change) so it never floods the log during 200-turn/sec FF.
 void mp_log_safemode_check( int newseen, int mostseen, int safe_mode );
 
-// Per-turn callouts invoked from do_turn.cpp (an SP file) so the MP per-turn
-// catch-up/gating logic lives here, not inline in the SP loop (rule 4, minimize
-// upstream merge conflicts). Non-client (SP/host) process_turn() still happens
-// in the normal SP suffix path.
-// mp_do_turn_update_body: catches up the host-driven calendar's jumps (stamina
-//   regen, suffers, cravings). mp_do_turn_process_turn: ticks effects/needs once
-//   per elapsed game-turn (skip on locked spin, capped catch-up on jumps) and
-//   discards process_turn's move regen (client moves come from server grants).
-void mp_do_turn_update_body( Character &u );
-void mp_do_turn_process_turn( Character &u );
+// Current client compatibility driver, bound to the exact local character.
+// Its observed-clock timing resets with the session. SP/host use their native
+// player control driver instead. Does not make client body state authoritative.
+character_turn_driver &client_character_turn_driver( Character &actor );
 
 // Client only: re-send the client's current worn-item list, skin tone, hair,
 // and wielded weapon to the server so the remote NPC proxy stays in sync.

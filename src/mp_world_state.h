@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "character_turn.h"
 #include "color.h"
 #include "coordinates.h"
 #include "type_id.h"
@@ -256,8 +257,7 @@ struct host_turn_state {
 };
 
 struct client_turn_state {
-    time_point last_update_body = calendar::before_time_starts;
-    time_point last_proc = calendar::before_time_starts;
+    character_turn_driver character_turns;
     // Client: "keep smashing" continuation state.
     // When set, auto-re-fire the smash action after each partial bash until the
     // target is destroyed or the bash fails to make progress.

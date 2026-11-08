@@ -34,6 +34,10 @@ class player_control
         // Exact retained actor, including death while a final save is pending.
         Character *get() const;
         player_id player() const;
+        // Native body/effect phases, driven by this assignment. Does not run
+        // input or NPC AI, and rejects revoked world/actor assignments.
+        void update_body();
+        void process_turn();
         void reset();
     private:
         friend class player_control_registry;
