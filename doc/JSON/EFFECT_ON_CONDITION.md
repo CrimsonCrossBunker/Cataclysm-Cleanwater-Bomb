@@ -4755,9 +4755,10 @@ NPC or character will start an activity
 
 ##### Examples
 
-You assign activity `ACT_GAME` for 45 minutes
+Start a tabletop game for 45 minutes.  `ACT_GENERIC_GAME` uses the tabletop game
+activity actor and includes the other dialogue participant when it is a character.
 ```jsonc
-{ "u_assign_activity": "ACT_GAME", "duration": "45 minutes" }
+{ "u_assign_activity": "ACT_GENERIC_GAME", "duration": "45 minutes" }
 ```
 
 #### `u_cancel_activity`, `npc_cancel_activity`

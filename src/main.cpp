@@ -9,6 +9,7 @@
 // IWYU pragma: no_include <sys/signal.h>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
@@ -22,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 #include <thread>
@@ -35,16 +37,21 @@
 #include <flatbuffers/util.h>
 
 #include "cached_options.h"
+#include "avatar.h"
+#include "calendar.h"
 #include "cata_allocator.h"
 #include "cata_path.h"
 #include "lua_platform_loader.h"
 #if defined(__ANDROID__)
     #include "android_hud.h"
+    #include "android_storage.h"
     #include "android_ui_mode.h"
 #endif
 #include "color.h"
 #include "compatibility.h"
+#include "coordinates.h"
 #include "crash.h"
+#include "creature_tracker.h"
 #include "cursesdef.h"
 #include "debug.h"
 #include "do_turn.h"
@@ -58,6 +65,7 @@
 #include "help.h"
 #include "input.h"
 #include "input_replay.h"
+#include "json.h"
 #include "main_menu.h"
 #include "mapsharing.h"
 #include "memory_fast.h"
@@ -156,34 +164,43 @@ namespace
     // Used only if AttachConsole() works
     FILE *CONOUT;
 #endif
+[[noreturn]] void close_game( int exit_status )
+{
+    // exit() below runs static destructors without unwinding main()'s stack,
+    // so the json_member_reporting_guard RAII object never fires. Disable the
+    // report here so leftover deferred JsonObjects don't crash in DebugLog
+    // during static destruction.
+    Json::globally_report_unvisited_members( false );
+    deinitDebug();
+
+    // Flush & close any open input replay log before the process tears down.
+    input_replay::finish();
+
+    g.reset();
+
+    catacurses::endwin();
+
+#if defined(__ANDROID__)
+    // Avoid capturing SIGABRT on exit on Android in crash report
+    // Can be removed once the SIGABRT on exit problem is fixed
+    signal( SIGABRT, SIG_DFL );
+#endif
+
+    imclient.reset();
+    exit( exit_status );
+}
+
 void exit_handler( int s )
 {
+    // A signal or an early exit is not successful replay completion. In
+    // particular, do not consume recorded inputs in an interruption dialog.
+    if( input_replay::is_replaying() ) {
+        close_game( EXIT_FAILURE );
+    }
     const int old_timeout = inp_mngr.get_timeout();
     inp_mngr.reset_timeout();
     if( s != 2 || query_yn( _( "Really Quit?  All unsaved changes will be lost." ) ) ) {
-        // exit() below runs static destructors without unwinding main()'s stack,
-        // so the json_member_reporting_guard RAII object never fires. Disable the
-        // report here so leftover deferred JsonObjects don't crash in DebugLog
-        // during static destruction.
-        Json::globally_report_unvisited_members( false );
-        deinitDebug();
-
-        // Flush & close any open input replay log before the process tears down.
-        input_replay::finish();
-
-        int exit_status = 0;
-        g.reset();
-
-        catacurses::endwin();
-
-#if defined(__ANDROID__)
-        // Avoid capturing SIGABRT on exit on Android in crash report
-        // Can be removed once the SIGABRT on exit problem is fixed
-        signal( SIGABRT, SIG_DFL );
-#endif
-
-        imclient.reset();
-        exit( exit_status );
+        close_game( EXIT_SUCCESS );
     }
     inp_mngr.set_timeout( old_timeout );
     ui_manager::redraw_invalidated();
@@ -303,6 +320,7 @@ struct cli_opts {
     bool disable_ascii_art = false;
     std::string replay_record;
     std::string replay_play;
+    std::string replay_report;
     bool server_mode = false;
     bool host_mode = false;
     bool client_mode = false;
@@ -384,6 +402,16 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 [&result]( int, const char **params ) -> int {
                     result.replay_play = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--replay-report", "<path>",
+                "Write replay completion and per-turn timings to a JSON file",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.replay_report = params[0];
                     return 1;
                 }
             },
@@ -683,214 +711,6 @@ bool assure_essential_dirs_exist()
     return true;
 }
 
-#if defined(__ANDROID__)
-static bool remove_android_migration_cache( const std::filesystem::path &cache_path )
-{
-    std::error_code error;
-    std::filesystem::remove_all( cache_path, error );
-    if( error ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to remove generated Android cache " <<
-                                    cache_path.u8string() << ": " << error.message();
-        return false;
-    }
-    return true;
-}
-
-static bool copy_legacy_android_directory( const std::filesystem::path &source,
-        const std::filesystem::path &destination, bool skip_generated_cache )
-{
-    std::error_code error;
-    std::filesystem::create_directories( destination, error );
-    if( error ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to create Android migration directory " <<
-                                    destination.u8string() << ": " << error.message();
-        return false;
-    }
-
-    bool success = true;
-    std::filesystem::directory_iterator entry( source,
-            std::filesystem::directory_options::skip_permission_denied, error );
-    const std::filesystem::directory_iterator end;
-    if( error ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to scan legacy Android directory " <<
-                                    source.u8string() << ": " << error.message();
-        return false;
-    }
-
-    while( entry != end ) {
-        const std::filesystem::path source_entry = entry->path();
-        if( !skip_generated_cache || source_entry.filename() != "cache" ) {
-            const std::filesystem::path destination_entry = destination / source_entry.filename();
-            error.clear();
-            std::filesystem::copy( source_entry, destination_entry,
-                                   std::filesystem::copy_options::recursive |
-                                   std::filesystem::copy_options::skip_existing |
-                                   std::filesystem::copy_options::skip_symlinks, error );
-            if( error ) {
-                DebugLog( D_ERROR, D_MAIN ) << "Unable to migrate Android path " <<
-                                            source_entry.u8string() << ": " << error.message();
-                success = false;
-            }
-        }
-
-        error.clear();
-        entry.increment( error );
-        if( error ) {
-            DebugLog( D_ERROR, D_MAIN ) << "Unable to continue scanning legacy Android directory " <<
-                                        source.u8string() << ": " << error.message();
-            success = false;
-            break;
-        }
-    }
-    return success;
-}
-
-static bool copy_legacy_android_saves( const std::filesystem::path &source,
-                                       const std::filesystem::path &destination )
-{
-    std::error_code error;
-    std::filesystem::create_directories( destination, error );
-    if( error ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to create Android save migration directory " <<
-                                    destination.u8string() << ": " << error.message();
-        return false;
-    }
-
-    bool success = true;
-    std::filesystem::directory_iterator entry( source,
-            std::filesystem::directory_options::skip_permission_denied, error );
-    const std::filesystem::directory_iterator end;
-    if( error ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to scan legacy Android save directory " <<
-                                    source.u8string() << ": " << error.message();
-        return false;
-    }
-
-    while( entry != end ) {
-        const std::filesystem::path source_entry = entry->path();
-        const std::filesystem::path destination_entry = destination / source_entry.filename();
-        error.clear();
-        const bool destination_exists = std::filesystem::exists( destination_entry, error );
-        if( error ) {
-            DebugLog( D_ERROR, D_MAIN ) << "Unable to inspect Android save destination " <<
-                                        destination_entry.u8string() << ": " << error.message();
-            success = false;
-        } else if( destination_exists ) {
-            DebugLog( D_INFO, D_MAIN ) << "Keeping existing Documents save entry " <<
-                                       destination_entry.u8string();
-        } else {
-            const std::filesystem::path temporary_entry = destination /
-                ( ".migration-" + source_entry.filename().u8string() + ".tmp" );
-            error.clear();
-            std::filesystem::remove_all( temporary_entry, error );
-            if( !error ) {
-                std::filesystem::copy( source_entry, temporary_entry,
-                                       std::filesystem::copy_options::recursive |
-                                       std::filesystem::copy_options::skip_symlinks, error );
-            }
-            if( !error ) {
-                std::filesystem::rename( temporary_entry, destination_entry, error );
-            }
-            if( error ) {
-                DebugLog( D_ERROR, D_MAIN ) << "Unable to migrate Android save entry " <<
-                                            source_entry.u8string() << ": " << error.message();
-                std::error_code cleanup_error;
-                std::filesystem::remove_all( temporary_entry, cleanup_error );
-                success = false;
-            }
-        }
-
-        error.clear();
-        entry.increment( error );
-        if( error ) {
-            DebugLog( D_ERROR, D_MAIN ) << "Unable to continue scanning legacy Android save directory " <<
-                                        source.u8string() << ": " << error.message();
-            success = false;
-            break;
-        }
-    }
-    return success;
-}
-
-static void migrate_legacy_android_user_data( const std::string &legacy_user_dir )
-{
-    const std::filesystem::path source = std::filesystem::u8path( legacy_user_dir ).lexically_normal();
-    const std::filesystem::path destination =
-        std::filesystem::u8path( PATH_INFO::user_dir() ).lexically_normal();
-    std::error_code error;
-    if( std::filesystem::equivalent( source, destination, error ) ) {
-        return;
-    }
-    if( error ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to compare Android storage directories; "
-                                       "migration will not run: " << error.message();
-        return;
-    }
-
-    const std::filesystem::path completion_marker =
-        destination / ".legacy-android-migration-v1.complete";
-    if( std::filesystem::is_regular_file( completion_marker, error ) ) {
-        return;
-    }
-    if( error ) {
-        DebugLog( D_WARNING, D_MAIN ) << "Unable to inspect Android migration marker: " <<
-                                      error.message();
-    }
-
-    DebugLog( D_INFO, D_MAIN ) << "Migrating missing Android user data from " <<
-                               source.u8string() << " to " << destination.u8string();
-
-    bool success = true;
-    // The legacy gfx directory mixes bundled and custom tilesets.  It remains a normal resource
-    // search path, so copying it would only make old bundled tilesets shadow future APK updates.
-    constexpr std::array<const char *, 9> user_directories = {{
-            "config", "font", "save", "sound", "templates", "mods", "memorial",
-            "achievements", "graveyard"
-        }
-    };
-    for( const char *directory : user_directories ) {
-        const std::filesystem::path source_directory = source / directory;
-        error.clear();
-        if( !std::filesystem::is_directory( source_directory, error ) ) {
-            if( error ) {
-                DebugLog( D_ERROR, D_MAIN ) << "Unable to inspect legacy Android directory " <<
-                                            source_directory.u8string() << ": " << error.message();
-                success = false;
-            }
-            continue;
-        }
-        if( std::string( directory ) == "save" ) {
-            success = copy_legacy_android_saves( source_directory,
-                                                 destination / directory ) && success;
-        } else {
-            const bool skip_generated_cache = std::string( directory ) == "config" ||
-                                              std::string( directory ) == "memorial";
-            success = copy_legacy_android_directory( source_directory,
-                destination / directory, skip_generated_cache ) && success;
-        }
-    }
-
-    success = remove_android_migration_cache( destination / "cache" ) && success;
-    success = remove_android_migration_cache( destination / "config" / "cache" ) && success;
-    success = remove_android_migration_cache( destination / "memorial" / "cache" ) && success;
-
-    if( !success ) {
-        DebugLog( D_ERROR, D_MAIN ) <<
-        "Android user-data migration was incomplete and will be retried next launch.";
-        return;
-    }
-
-    std::ofstream marker( completion_marker, std::ios::out | std::ios::trunc );
-    marker << "Legacy Android user data copied without overwriting Documents files.\n";
-    marker.close();
-    if( !marker ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Unable to write Android migration marker " <<
-                                    completion_marker.u8string() << "; migration will be retried.";
-        return;
-    }
-    DebugLog( D_INFO, D_MAIN ) << "Android user-data migration completed.";
-}
-#endif
 
 }  // namespace
 
@@ -1022,7 +842,7 @@ void initialize_debugging()
     setupDebug( DebugOutput::file );
 #endif
 #if defined(__ANDROID__)
-    migrate_legacy_android_user_data( GetAndroidExternalStoragePath() );
+    migrate_legacy_android_user_data( GetAndroidExternalStoragePath(), PATH_INFO::user_dir() );
 #endif
     // NOLINTNEXTLINE(cata-tests-must-restore-global-state)
     json_error_output_colors = json_error_output_colors_t::color_tags;
@@ -1195,7 +1015,90 @@ void select_initial_language()
 #endif
 }
 
-void run_game_loop( cli_opts &cli )
+struct replay_run_result {
+    bool started = false;
+    bool quit_saved = false;
+    int start_turn = 0;
+    int end_turn = 0;
+    std::array<int, 3> initial_position{};
+    std::array<int, 3> final_position{};
+    std::size_t initial_monsters = 0;
+    std::size_t final_monsters = 0;
+    std::vector<long long> turn_wall_ns;
+    std::vector<std::array<int, 3>> turn_positions;
+    long long completion_wall_ns = 0;
+};
+
+void run_replay_turns( replay_run_result &result )
+{
+    result.started = true;
+    result.start_turn = to_turn<int>( calendar::turn );
+    const tripoint_abs_ms initial = get_avatar().pos_abs();
+    result.initial_position = {{ initial.x(), initial.y(), initial.z() }};
+    result.initial_monsters = get_creature_tracker().size();
+    result.final_monsters = result.initial_monsters;
+    result.turn_wall_ns.reserve( std::min<std::size_t>( input_replay::total_events(), 4096 ) );
+    result.turn_positions.reserve( result.turn_wall_ns.capacity() );
+    while( true ) {
+        const auto started = std::chrono::steady_clock::now();
+        const bool ended = g->do_turn();
+        const long long elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                      std::chrono::steady_clock::now() - started ).count();
+        result.end_turn = to_turn<int>( calendar::turn );
+        const tripoint_abs_ms position = get_avatar().pos_abs();
+        result.final_position = {{ position.x(), position.y(), position.z() }};
+        if( ended ) {
+            result.completion_wall_ns = elapsed;
+            result.quit_saved = g->uquit == QUIT_SAVED;
+            return;
+        }
+        result.final_monsters = get_creature_tracker().size();
+        result.turn_wall_ns.push_back( elapsed );
+        result.turn_positions.push_back( result.final_position );
+    }
+}
+
+bool write_replay_report( const std::string &path, const replay_run_result &result,
+                          bool complete )
+{
+    if( path.empty() ) {
+        return true;
+    }
+    try {
+        std::ofstream output( path, std::ios::binary | std::ios::trunc );
+        if( !output ) {
+            return false;
+        }
+        JsonOut report( output, true );
+        report.start_object();
+        report.member( "schema_version", 2 );
+        report.member( "status", complete ? "complete" : "incomplete" );
+        report.member( "seed", input_replay::recorded_seed() );
+        report.member( "events_total", input_replay::total_events() );
+        report.member( "events_remaining", input_replay::replay_remaining() );
+        report.member( "input_failed", input_replay::had_input_failure() );
+        report.member( "game_started", result.started );
+        report.member( "quit_saved", result.quit_saved );
+        report.member( "completed_turn_calls", result.turn_wall_ns.size() );
+        report.member( "turn_start", result.start_turn );
+        report.member( "turn_end", result.end_turn );
+        report.member( "initial_position", result.initial_position );
+        report.member( "final_position", result.final_position );
+        report.member( "initial_monsters", result.initial_monsters );
+        report.member( "final_monsters", result.final_monsters );
+        report.member( "turn_wall_ns", result.turn_wall_ns );
+        report.member( "turn_positions", result.turn_positions );
+        report.member( "completion_wall_ns", result.completion_wall_ns );
+        report.end_object();
+        output.flush();
+        return output.good();
+    } catch( const std::exception &error ) {
+        std::cerr << "Unable to write replay report: " << error.what() << '\n';
+        return false;
+    }
+}
+
+void run_game_loop( cli_opts &cli, replay_run_result &replay_result )
 {
     main_menu::queued_world_to_load = std::move( cli.world );
 
@@ -1207,7 +1110,11 @@ void run_game_loop( cli_opts &cli )
 
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
         get_event_bus().send<event_type::game_begin>( getVersionString() );
-        while( !g->do_turn() ) {}
+        if( input_replay::is_replaying() ) {
+            run_replay_turns( replay_result );
+        } else {
+            while( !g->do_turn() ) {}
+        }
 #if defined(__ANDROID__)
         if( android_ui_mode::is_new_ui_build() ) {
             android_hud::clear_snapshot();
@@ -1219,7 +1126,7 @@ void run_game_loop( cli_opts &cli )
         // main menu, so exit instead of looping back into opening_screen() and
         // hanging on input.
         if( input_replay::is_replaying() ) {
-            exit_handler( 0 );
+            return;
         }
     }
 }
@@ -1268,21 +1175,48 @@ int main( int argc, const char *argv[] )
 
     set_language_from_options();
     rng_set_engine_seed( cli.seed );
+    if( !cli.replay_record.empty() && cli.seed == 0 ) {
+        // Recording must pin zero too; normal gameplay keeps its no-op convention.
+        // NOLINTNEXTLINE(cata-determinism)
+        rng_get_engine().seed( 0 );
+    }
 
     // Deterministic input replay harness (phase 0.5). Record captures the active
     // seed into the log; replay re-applies the recorded seed so the run is
     // byte-for-byte reproducible regardless of --seed on the replay invocation.
     if( !cli.replay_record.empty() && !cli.replay_play.empty() ) {
-        debugmsg( "--replay-record and --replay-play are mutually exclusive" );
-        exit_handler( -1 );
+        std::cerr << "--replay-record and --replay-play are mutually exclusive\n";
+        close_game( EXIT_FAILURE );
     }
+    if( !cli.replay_report.empty() && cli.replay_play.empty() ) {
+        std::cerr << "--replay-report requires --replay-play\n";
+        close_game( EXIT_FAILURE );
+    }
+    if( !cli.replay_report.empty() ) {
+        std::error_code report_error;
+        std::error_code input_error;
+        const auto report_path = std::filesystem::weakly_canonical( cli.replay_report, report_error );
+        const auto input_path = std::filesystem::weakly_canonical( cli.replay_play, input_error );
+        if( report_error || input_error || report_path == input_path ) {
+            std::cerr << "Replay report must not overwrite the recording\n";
+            close_game( EXIT_FAILURE );
+        }
+    }
+    std::string replay_error;
     if( !cli.replay_record.empty() ) {
         input_replay::set_record_seed( static_cast<unsigned int>( cli.seed ) );
-        input_replay::begin_record( cli.replay_record );
-    } else if( !cli.replay_play.empty() ) {
-        if( input_replay::begin_replay( cli.replay_play ) ) {
-            rng_set_engine_seed( input_replay::recorded_seed() );
+        if( !input_replay::begin_record( cli.replay_record, &replay_error ) ) {
+            std::cerr << replay_error << '\n';
+            close_game( EXIT_FAILURE );
         }
+    } else if( !cli.replay_play.empty() ) {
+        if( !input_replay::begin_replay( cli.replay_play, &replay_error ) ) {
+            std::cerr << replay_error << '\n';
+            close_game( EXIT_FAILURE );
+        }
+        // A recorded zero is a seed, not a request to keep the invocation's RNG.
+        // NOLINTNEXTLINE(cata-determinism)
+        rng_get_engine().seed( input_replay::recorded_seed() );
     }
 
     game_ui::init_ui();
@@ -1325,10 +1259,22 @@ int main( int argc, const char *argv[] )
         return 0;
     }
 
-    select_initial_language();
-    replay_buffered_debugmsg_prompts();
-
-    run_game_loop( cli );
+    replay_run_result replay_result;
+    try {
+        select_initial_language();
+        replay_buffered_debugmsg_prompts();
+        run_game_loop( cli, replay_result );
+    } catch( const input_replay::replay_error &error ) {
+        std::cerr << error.what() << '\n';
+        write_replay_report( cli.replay_report, replay_result, false );
+        close_game( EXIT_FAILURE );
+    }
+    if( input_replay::is_replaying() ) {
+        const bool complete = replay_result.started && replay_result.quit_saved &&
+                              input_replay::replay_remaining() == 0 && !input_replay::had_input_failure();
+        const bool report_written = write_replay_report( cli.replay_report, replay_result, complete );
+        close_game( complete && report_written ? EXIT_SUCCESS : EXIT_FAILURE );
+    }
 
     exit_handler( -999 );
     return 0;

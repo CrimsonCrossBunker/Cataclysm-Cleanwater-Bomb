@@ -1201,7 +1201,9 @@ class Character : public Creature, public visitable
                                     bool crit = false, bool dodge_counter = false, bool block_counter = false,
                                     bool manual_activation = false ) const;
         /** Lists offensive non-counter techniques granted by the current weapon, style, and body. */
-        std::vector<matec_id> active_techniques() const;
+        std::vector<matec_id> active_techniques( bool include_unavailable = false ) const;
+        ret_val<void> active_technique_availability( const matec_id &technique ) const;
+        std::string active_technique_cooldowns_text() const;
         /** Maximum target distance for a selected technique with the current weapon. */
         int active_technique_range( const matec_id &technique ) const;
         /** Executes one selected technique after checking its current target requirements. */
