@@ -153,7 +153,6 @@ static const efftype_id effect_pkill1_generic( "pkill1_generic" );
 static const efftype_id effect_pkill1_nsaid( "pkill1_nsaid" );
 static const efftype_id effect_pkill2( "pkill2" );
 static const efftype_id effect_pkill3( "pkill3" );
-static const efftype_id effect_recently_coughed( "recently_coughed" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_slept_through_alarm( "slept_through_alarm" );
 static const efftype_id effect_took_thorazine( "took_thorazine" );
@@ -873,7 +872,7 @@ int Character::kcal_speed_penalty() const
     }
     static const std::vector<std::pair<float, float>> starv_thresholds = { {
             std::make_pair( 0.0f, -90.0f ),
-            std::make_pair( character_weight_category::emaciated, -50.f ),
+            std::make_pair( character_weight_category::emaciated, -50.0f ),
             std::make_pair( character_weight_category::underweight, -25.0f ),
             std::make_pair( character_weight_category::normal, 0.0f )
         }
@@ -1571,35 +1570,65 @@ void Character::update_needs( int rate_multiplier )
     } else if( asleep ) {
         if( rates.recovery > 0.0f ) {
             int recovered = roll_remainder( rates.recovery * rate_multiplier );
-            if( get_sleepiness() - recovered < -20 ) {
+            if( get_sleepiness() - recovered < 10 ) {
                 // Should be wake up, but that could prevent some retroactive regeneration
                 sleep.set_duration( 1_turns );
                 mod_sleepiness( -25 );
             } else {
-                if( has_effect( effect_disrupted_sleep ) || has_effect( effect_recently_coughed ) ) {
-                    recovered *= .5;
+                if( has_effect( effect_disrupted_sleep ) ) {
+                    if( recovered > 0 ) {
+                        recovered = static_cast<int>( recovered * 0.5f );
+                    }
                 }
-                if( has_effect( effect_melatonin ) ) {
-                    recovered *= .8;
-                }
-                mod_sleepiness( -recovered );
-
-                // Sleeping on the ground, no bionic = 1x rest_modifier
-                // Sleeping on a bed, no bionic      = 2x rest_modifier
-                // Sleeping on a comfy bed, no bionic= 3x rest_modifier
-
-                // Sleeping on the ground, bionic    = 3x rest_modifier
-                // Sleeping on a bed, bionic         = 6x rest_modifier
-                // Sleeping on a comfy bed, bionic   = 9x rest_modifier
-                float rest_modifier = ( has_flag( json_flag_STOP_SLEEP_DEPRIVATION ) ? 3 : 1 );
-
+                // REDUCE SLEEPINESS
+                // A full night's sleep should always leave it at or close to 0, because even if
+                // you slept badly, you can't just immediately knock out for 8 more hours when you wake up.
+                float sleepiness_multiplier = 1.0f;
+                // rest_modifier is for sleep deprivation.
+                float rest_modifier = 1.0f;
                 const int comfort = get_comfort_at( pos_bub() ).comfort;
                 if( comfort >= comfort_data::COMFORT_VERY_COMFORTABLE ) {
                     rest_modifier *= 3;
+                    if( one_in( 8 ) ) {
+                        sleepiness_multiplier += 0.75f;
+                    }
                 } else if( comfort >= comfort_data::COMFORT_COMFORTABLE ) {
                     rest_modifier *= 2.5;
+                    if( one_in( 16 ) ) {
+                        sleepiness_multiplier += 0.75f;
+                    }
                 } else if( comfort >= comfort_data::COMFORT_SLIGHTLY_COMFORTABLE ) {
                     rest_modifier *= 2;
+                    if( one_in( 32 ) ) {
+                        sleepiness_multiplier += 0.75f;
+                    }
+                }
+                sleepiness_multiplier += comfort * 0.05f;
+                int current_sleepiness = get_sleepiness();
+                if( current_sleepiness >= sleepiness_levels::TIRED ) {
+                    if( current_sleepiness >= sleepiness_levels::EXHAUSTED ) {
+                        sleepiness_multiplier += 8.0f;
+                    } else if( current_sleepiness >= sleepiness_levels::DEAD_TIRED ) {
+                        sleepiness_multiplier += 4.0f;
+                    } else {
+                        sleepiness_multiplier += 1.0f;
+                    }
+                }
+                int sleepiness_recovered =
+                    static_cast<int>( std::round( recovered * sleepiness_multiplier ) );
+                mod_sleepiness( -sleepiness_recovered );
+
+                // REDUCE SLEEP DEPRIVATION
+                // Sleep deprivation represents our sleep hygiene. This is more heavily affected by sleep
+                // conditions, and we should not expect it to be nearly zero after a full night's sleep
+                // if we did not sleep well or we are not sleeping consistently.
+
+                if( has_flag( json_flag_STOP_SLEEP_DEPRIVATION ) ) {
+                    rest_modifier *= 3.0f;
+                }
+                // Melatonin supplements also add a flat bonus to recovery speed.
+                if( has_effect( effect_melatonin ) ) {
+                    rest_modifier += 1;
                 }
 
                 // If we're just tired, we'll get a decent boost to our sleep quality.
@@ -2046,7 +2075,7 @@ float Character::rest_quality() const
         // Beds should normally have a maximum of 2C warmth, rest == 1.0 on a pristine bed. Less comfortable beds provide less rest quality.
         // Cannot be lower than 0, even though some beds(like *the bare ground*) have negative floor_bedding_warmth. Maybe this should change?
         rest += ( std::max( units::to_kelvin_delta( floor_bedding_warmth( your_pos ) ),
-                            0.f ) / 2.0f ) ;
+                            0.0f ) / 2.0f ) ;
         return std::max( rest, 0.0f );
     }
     const optional_vpart_position veh_part = here.veh_at( your_pos );
@@ -2351,7 +2380,7 @@ void Character::calculate_leak_level()
         const item *it = item_loc.get_item();
         if( it->has_flag( flag_RADIOACTIVE ) ) {
             if( it->has_flag( flag_LEAK_ALWAYS ) ) {
-                ret += to_gram( it->weight() ) / 250.f;
+                ret += to_gram( it->weight() ) / 250.0f;
             } else if( it->has_flag( flag_LEAK_DAM ) ) {
                 ret += it->damage_level();
             }

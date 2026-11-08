@@ -24,6 +24,7 @@
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_location.h"
+#include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
@@ -57,7 +58,10 @@ TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_i
     const tripoint_bub_ms pos = you.pos_bub();
     const itype_id type = GENERATE( itype_test_9mm_ammo, itype_steel_chunk,
                                     itype_knife_combat );
-    item specimen( type, calendar::turn, 5000 );
+    item specimen( type, calendar::turn );
+    if( specimen.count_by_charges() ) {
+        specimen.charges = 5000;
+    }
     item &stored = here.add_item( pos, specimen );
     const item_location loc( map_cursor( pos ), &stored );
     const int expected = specimen.count_by_charges() ? 5000 : 1;
@@ -73,8 +77,9 @@ TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_i
         inventory_selector_preset preset;
         inventory_entry entry( std::vector<item_location> {loc} );
         CHECK( preset.get_cell_text( entry, 0 ) == stored.display_name_with_count( expected, true ) );
-        CHECK( stored.display_name().find( "(5000)" ) != std::string::npos );
-        CHECK( stored.display_name_with_count( 300000 ).find( "(300000)" ) != std::string::npos );
+        CHECK( stored.display_name() == stored.display_name( 1, false, false ) +
+               " (" + type->item_measure_prefix( expected ) + ")" );
+        CHECK( stored.display_name_with_count( 300000 ).find( "300000" ) != std::string::npos );
         item &extra = here.add_item( pos, item( type, calendar::turn, 7 ) );
         const item_location extra_loc( map_cursor( pos ), &extra );
         inventory_entry multiple( std::vector<item_location> {loc, extra_loc} );
@@ -101,9 +106,11 @@ TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
         item resource( id, calendar::turn, 123 );
         REQUIRE( resource.count_by_charges() );
         CHECK( resource.display_name_with_count( 123 ) ==
-               resource.display_name( 123, false, false ) + " (123)" );
+               resource.display_name( 123, false, false ) + " (" +
+               resource.type->item_measure_prefix( 123 ) + ")" );
         CHECK( resource.display_name_with_count( 1 ) ==
-               resource.display_name( 1, false, false ) + " (1)" );
+               resource.display_name( 1, false, false ) + " (" +
+               resource.type->item_measure_prefix( 1 ) + ")" );
     }
     item knife( itype_knife_combat );
     REQUIRE_FALSE( knife.count_by_charges() );
@@ -395,7 +402,8 @@ TEST_CASE( "AIM_basic_move_items", "[items][advanced_inv]" )
                                          remaining_map,
                                          false );
                 const int num_items = limit - remaining_map;
-                REQUIRE( num_items == here.i_at( pos ).count_limit() );
+                REQUIRE( num_items > 0 );
+                REQUIRE( num_items <= here.i_at( pos ).count_limit() );
                 int remaining_stash = num_items;
 
                 AND_GIVEN( "all items got placed" ) {

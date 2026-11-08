@@ -78,7 +78,9 @@ void throwErrorIf( bool condition, const char *message );
  * @ref load_image throws if the loading fails. Its input must be a valid C-String.
  */
 /**@{*/
-void RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
+// Returns false if the source cannot be copied, so a final present can retain
+// the previous window frame instead of showing its freshly cleared target.
+bool RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
                  const SDL_Rect *srcrect, const SDL_Rect *dstrect );
 // Draw a white-tinted textured triangle mesh (used for the shockwave warp blit).
 // xy and uv are interleaved float pairs (length num_vertices*2); uv is in

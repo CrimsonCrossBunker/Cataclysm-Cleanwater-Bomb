@@ -1,14 +1,19 @@
 #include "input_replay.h"
 
 #include <fstream>
+#include <limits>
 #include <locale>
 #include <memory>
 #include <queue>
+#include <set>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "cached_options.h"
-#include "debug.h"
+#include "input_enums.h"
+#include "point.h"
 
 // Replay log format (line-based, intentionally human-diffable):
 //
@@ -36,6 +41,8 @@ unsigned int header_seed = 0;
 unsigned int pending_record_seed = 0;
 bool replay_had_events = false;   // queue was non-empty when replay began
 bool replay_finish_signaled = false; // one-shot guard for replay_just_finished()
+bool replay_input_failed = false;
+std::size_t loaded_event_count = 0;
 
 constexpr int replay_format_version = 1;
 
@@ -108,26 +115,38 @@ int hex_val( char c )
     return -1;
 }
 
-std::string unescape_field( const std::string &s )
+bool unescape_field( const std::string &s, std::string &out )
 {
+    out.clear();
     if( s == "-" ) {
-        return std::string();
+        return true;
     }
-    std::string out;
     out.reserve( s.size() );
     for( size_t i = 0; i < s.size(); ++i ) {
-        if( s[i] == '%' && i + 2 < s.size() ) {
+        if( s[i] == '%' ) {
+            if( i + 2 >= s.size() ) {
+                return false;
+            }
             const int hi = hex_val( s[i + 1] );
             const int lo = hex_val( s[i + 2] );
-            if( hi >= 0 && lo >= 0 ) {
-                out += static_cast<char>( ( hi << 4 ) | lo );
-                i += 2;
-                continue;
+            if( hi < 0 || lo < 0 ) {
+                return false;
             }
+            out += static_cast<char>( ( hi << 4 ) | lo );
+            i += 2;
+        } else {
+            out += s[i];
         }
-        out += s[i];
     }
-    return out;
+    return true;
+}
+
+bool fail( std::string *error, const std::string &message )
+{
+    if( error ) {
+        *error = message;
+    }
+    return false;
 }
 
 } // namespace
@@ -140,13 +159,18 @@ void set_record_seed( unsigned int seed )
     pending_record_seed = seed;
 }
 
-bool begin_record( const std::string &path )
+bool begin_record( const std::string &path, std::string *error )
 {
+    if( error ) {
+        error->clear();
+    }
+    if( replay_mode != replay_mode_t::off ) {
+        return fail( error, "An input recording or replay is already active" );
+    }
     record_stream = std::make_unique<std::ofstream>( path, std::ios::binary | std::ios::trunc );
     if( !record_stream->good() ) {
         record_stream.reset();
-        debugmsg( "input_replay: failed to open record log '%s'", path );
-        return false;
+        return fail( error, "Failed to open replay recording: " + path );
     }
     // Force the classic locale: the game sets a CJK locale at startup, whose
     // numeric facet inserts thousands separators ("3,102,551,058"), which then
@@ -155,38 +179,53 @@ bool begin_record( const std::string &path )
     *record_stream << "CATA_REPLAY " << replay_format_version << '\n';
     *record_stream << "SEED " << pending_record_seed << '\n';
     record_stream->flush();
+    if( !record_stream->good() ) {
+        record_stream.reset();
+        return fail( error, "Failed to write replay recording: " + path );
+    }
     replay_mode = replay_mode_t::record;
     return true;
 }
 
-bool begin_replay( const std::string &path )
+bool begin_replay( const std::string &path, std::string *error )
 {
+    if( error ) {
+        error->clear();
+    }
+    if( is_recording() ) {
+        return fail( error, "Cannot replay while recording input" );
+    }
     std::ifstream in( path, std::ios::binary );
     if( !in.good() ) {
-        debugmsg( "input_replay: failed to open replay log '%s'", path );
-        return false;
+        return fail( error, "Failed to open replay: " + path );
     }
     in.imbue( std::locale::classic() );
 
     std::string token;
     int version = 0;
-    in >> token >> version;
-    if( token != "CATA_REPLAY" || version != replay_format_version ) {
-        debugmsg( "input_replay: bad replay header in '%s' (token=%s version=%d)",
-                  path, token, version );
-        return false;
+    std::string line;
+    std::getline( in, line );
+    std::istringstream header( line );
+    header.imbue( std::locale::classic() );
+    if( !( header >> token >> version ) || token != "CATA_REPLAY" ||
+        version != replay_format_version || !( header >> std::ws ).eof() ) {
+        return fail( error, "Invalid replay format header" );
     }
-    in >> token >> header_seed;
-    if( token != "SEED" ) {
-        debugmsg( "input_replay: missing SEED in replay log '%s'", path );
-        return false;
+    std::getline( in, line );
+    std::istringstream seed_header( line );
+    seed_header.imbue( std::locale::classic() );
+    long long parsed_seed = -1;
+    if( !( seed_header >> token >> parsed_seed ) || token != "SEED" ||
+        parsed_seed < 0 || parsed_seed > std::numeric_limits<unsigned int>::max() ||
+        !( seed_header >> std::ws ).eof() ) {
+        return fail( error, "Invalid replay seed header" );
     }
 
     std::queue<input_event> loaded;
-    std::string line;
-    std::getline( in, line ); // consume rest of SEED line
+    std::size_t line_number = 2;
     while( std::getline( in, line ) ) {
-        if( line.empty() ) {
+        ++line_number;
+        if( line.find_first_not_of( " \t\r" ) == std::string::npos ) {
             continue;
         }
         std::istringstream ls( line );
@@ -194,32 +233,46 @@ bool begin_replay( const std::string &path )
         std::string tag;
         ls >> tag;
         if( tag != "EV" ) {
-            continue;
+            return fail( error, "Unknown replay record on line " + std::to_string( line_number ) );
         }
         input_event ev;
         int type_i = 0;
         int mods_bits = 0;
         int n = 0;
-        ls >> type_i >> mods_bits >> n;
+        if( !( ls >> type_i >> mods_bits >> n ) ||
+            type_i < static_cast<int>( input_event_t::error ) ||
+            type_i > static_cast<int>( input_event_t::mouse ) ||
+            mods_bits < 0 || mods_bits > 7 || n < 0 ) {
+            return fail( error, "Invalid event header on line " + std::to_string( line_number ) );
+        }
         ev.type = static_cast<input_event_t>( type_i );
         ev.modifiers = bits_to_mods( mods_bits );
         for( int i = 0; i < n; ++i ) {
             int k = 0;
-            ls >> k;
+            if( !( ls >> k ) ) {
+                return fail( error, "Truncated event keys on line " + std::to_string( line_number ) );
+            }
             ev.sequence.push_back( k );
         }
-        ls >> ev.mouse_pos.x >> ev.mouse_pos.y;
         std::string text_tok;
         std::string edit_tok;
-        ls >> text_tok >> edit_tok;
-        ev.text = unescape_field( text_tok );
-        ev.edit = unescape_field( edit_tok );
+        if( !( ls >> ev.mouse_pos.x >> ev.mouse_pos.y >> text_tok >> edit_tok ) ||
+            !( ls >> std::ws ).eof() || !unescape_field( text_tok, ev.text ) ||
+            !unescape_field( edit_tok, ev.edit ) ) {
+            return fail( error, "Invalid event data on line " + std::to_string( line_number ) );
+        }
         loaded.push( ev );
     }
+    if( in.bad() || loaded.empty() ) {
+        return fail( error, "Replay is unreadable or contains no events" );
+    }
 
+    header_seed = static_cast<unsigned int>( parsed_seed );
     replay_queue = std::move( loaded );
+    loaded_event_count = replay_queue.size();
     replay_had_events = !replay_queue.empty();
     replay_finish_signaled = false;
+    replay_input_failed = false;
     replay_mode = replay_mode_t::replay;
     return true;
 }
@@ -234,6 +287,8 @@ void finish()
     std::swap( replay_queue, empty );
     replay_had_events = false;
     replay_finish_signaled = false;
+    replay_input_failed = false;
+    loaded_event_count = 0;
     replay_mode = replay_mode_t::off;
 }
 
@@ -255,8 +310,8 @@ void on_record( const input_event &ev )
     // Only record events that carry real player intent. error/timeout are poll
     // artifacts whose counts depend on wall-clock timing (non-deterministic), and
     // raw mouse-move spam is likewise timing-dependent noise. Recording them would
-    // make the log both huge and non-reproducible; on replay the engine generates
-    // its own timeouts when the queue yields nothing.
+    // make the log both huge and non-reproducible. Exhaustion during an input
+    // request is an error; successful completion is checked at a turn boundary.
     if( ev.type == input_event_t::error || ev.type == input_event_t::timeout ) {
         return;
     }
@@ -287,6 +342,26 @@ bool try_replay( input_event &out )
     out = replay_queue.front();
     replay_queue.pop();
     return true;
+}
+
+input_event next_event()
+{
+    input_event out;
+    if( !try_replay( out ) ) {
+        replay_input_failed = true;
+        throw replay_error( "Replay exhausted inside an input request" );
+    }
+    return out;
+}
+
+bool had_input_failure()
+{
+    return replay_input_failed;
+}
+
+std::size_t total_events()
+{
+    return loaded_event_count;
 }
 
 bool replay_just_finished()

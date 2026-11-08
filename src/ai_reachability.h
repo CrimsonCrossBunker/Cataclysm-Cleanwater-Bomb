@@ -14,6 +14,8 @@
 #include "coordinates.h"
 #include "map_scale_constants.h"
 
+#include "compute_budget.h"
+
 class cata_thread_pool;
 
 namespace ai_reachability
@@ -41,8 +43,8 @@ struct snapshot {
     grid transparent;
     // Owner-resolved complete map::passable for opaque, potentially movable cells.
     grid opaque_passable;
-    std::vector<unsigned char> terrain;
-    std::vector<unsigned char> furniture_nonblocking;
+    std::vector<unsigned char, compute_allocator<unsigned char>> terrain;
+    std::vector<unsigned char, compute_allocator<unsigned char>> furniture_nonblocking;
     const cell &at( int z, int x, int y ) const;
 };
 struct output {
@@ -57,7 +59,7 @@ void prepare_columns( const snapshot &values, output &result, int begin_x, int e
 bool should_prepare( std::size_t population, double preceding_flood_ms,
                      bool owner_allows_workers );
 
-// One tracker owns its executor, snapshot and reusable result. prepare joins
+// One tracker owns its snapshot and reusable result, sharing the executor. prepare joins
 // every accepted task on all exits; mutations invalidate the cached result.
 class frame
 {
@@ -93,15 +95,16 @@ class frame
     private:
         void assert_owner() const;
         const std::thread::id owner_thread_;
-        std::unique_ptr<snapshot> snapshot_;
-        std::unique_ptr<output> output_;
+        compute_ptr<snapshot> snapshot_;
+        compute_ptr<output> output_;
         std::atomic<bool> cancelled_{ false };
         std::uint64_t generation_ = 0;
         std::uint64_t ready_generation_ = 0;
         bool leased_ = false;
         bool used_workers_ = false;
-        // Join workers before any of their inputs or outputs are destroyed.
-        std::unique_ptr<cata_thread_pool> pool_;
+        // prepare drains all accepted tasks before any owner buffer can change.
+        std::shared_ptr<cata_thread_pool> pool_;
+        unsigned workers_ = 0;
 };
 } // namespace ai_reachability
 #endif // CATA_SRC_AI_REACHABILITY_H

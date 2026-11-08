@@ -1262,7 +1262,13 @@ $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
 endif
 
 $(TARGET): $(OBJS) $(SHADERS_STAMP) $(LUA_PLATFORM_LINK_MODE_STAMP)
+ifeq ($(TARGETSYSTEM),WINDOWS)
+	# Keep the object list out of the Windows process command line.
+	$(file >$(ODIR)/link-objects.rsp,$(OBJS))
+	+$(LD) $(W32FLAGS) -o $(TARGET) @$(ODIR)/link-objects.rsp $(LDFLAGS)
+else
 	+$(LD) $(W32FLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+endif
 ifeq ($(RELEASE), 1)
   ifndef DEBUG_SYMBOLS
     ifneq ($(BACKTRACE),1)

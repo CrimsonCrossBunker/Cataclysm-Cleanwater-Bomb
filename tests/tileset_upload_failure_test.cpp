@@ -8,6 +8,7 @@
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_tiles.h"
+#include "debug.h"
 #include "options.h"
 #include "sdl_renderer_recovery.h"
 #include "sdl_wrappers.h"
@@ -57,8 +58,13 @@ TEST_CASE( "failed_atlas_allocation_keeps_the_previous_tileset",
         }
         return atlas_upload_interrupt::none;
     };
-    CHECK_THROWS_WITH( load( true, reject_texture ),
-                       Catch::Matchers::Contains( "Failed to create tileset atlas texture" ) );
+    const bool error_observed_before_failure = debug_has_error_been_observed();
+    REQUIRE_THROWS_WITH( load( true, reject_texture ),
+                         Catch::Matchers::Contains( "Failed to create tileset atlas texture" ) );
+    CHECK( debug_has_error_been_observed() );
+    if( !error_observed_before_failure ) {
+        debug_reset_error_observed();
+    }
     CHECK( polls == fail_on_poll );
     REQUIRE( SDL_SetNumberProperty( properties, SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER,
                                     original_limit ) );

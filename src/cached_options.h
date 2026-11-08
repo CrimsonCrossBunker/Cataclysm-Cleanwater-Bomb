@@ -49,8 +49,9 @@ extern struct mouse_t {
 extern bool test_mode;
 
 // replay_mode controls the deterministic input record/replay harness (phase 0.5
-// of the sim/render decoupling plan). Unlike test_mode, get_input_event must NOT
-// throw under replay_mode: instead events are sourced from / logged to a file.
+// of the sim/render decoupling plan). Input is sourced from / logged to a file.
+// An exhausted replay throws input_replay::replay_error instead of polling live
+// input; the executable unwinds the session and reports failure.
 //   off     - normal interactive play (default)
 //   record  - real input is captured and written to the replay log
 //   replay  - input is fed from the replay log; the platform poll is bypassed
