@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "character_id.h"
+#include "mp_apply_watchdog.h"
 #include "mp_server.h"
 
 namespace cata_mp
@@ -14,6 +15,7 @@ namespace cata_mp
 // workers publish value events and never hold a pointer to this state.
 struct world_session {
     host_session hosting;
+    apply_watchdog client_apply_watchdog;
     character_id remote_actor_id;
     bool remote_connected = false;
     uint64_t remote_peer_id = 0;
@@ -26,6 +28,7 @@ struct world_session {
     }
 
     void reset() {
+        client_apply_watchdog.stop();
         hosting.stop();
         remote_actor_id = character_id();
         remote_connected = false;

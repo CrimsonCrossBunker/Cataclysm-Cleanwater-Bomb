@@ -45,8 +45,11 @@ TEST_CASE( "mp_world_reset_clears_bindings_before_character_ids_are_reused",
     session.client_host_spawned = true;
     session.stale_proxy_cleanup_done = true;
 
+    session.client_apply_watchdog.begin( "world reset" );
+    REQUIRE( session.client_apply_watchdog.running() );
     REQUIRE( cata_mp::is_remote_player( character_id( 1 ) ) );
     g->reset_game_state();
+    CHECK_FALSE( session.client_apply_watchdog.running() );
     CHECK_FALSE( cata_mp::is_remote_player( character_id( 1 ) ) );
     CHECK_FALSE( session.remote_connected );
     CHECK_FALSE( session.remote_actor_id.is_valid() );
@@ -108,10 +111,13 @@ TEST_CASE( "mp_return_to_menu_closes_modes_bindings_and_pending_events",
     cata_mp::mp_set_host_world_name( "world being closed" );
     cata_mp::mp_set_host_player_name( "old host" );
     g->uquit = QUIT_SAVED;
+    session.client_apply_watchdog.begin( "world exit" );
+    REQUIRE( session.client_apply_watchdog.running() );
 
     // Exercise the actual gameplay -> main menu boundary, not the unconnected
     // exit helper directly. No socket is needed to expose the leaked mode.
     REQUIRE( turn_handler::cleanup_at_end() );
+    CHECK_FALSE( session.client_apply_watchdog.running() );
     CHECK_FALSE( cata_mp::is_session_active() );
     CHECK_FALSE( session.client_host_spawned );
     CHECK_FALSE( session.client_host_actor_id.is_valid() );

@@ -226,91 +226,25 @@ void mp_log( const std::string &msg )
 
 // ----------------------------------------------------------------------------
 // Client main-thread apply watchdog + breadcrumbs.
-//
-// A host "state" broadcast is applied on the client's MAIN thread (parse →
-// teleport → host-NPC → monster → tile → vehicle → bodyparts).  A bug that
-// spins or blocks in any of those steps hard-hangs the whole client — Windows
-// shows "not responding" — and until now left NO trace: the old breadcrumbs
-// went to std::cout, which never reaches the log file, so the log simply
-// stopped mid-apply with nothing naming the step (the 2026-06-26 Parallels
-// hang).  mp_apply_step records the active step + a heartbeat and logs a
-// START/DONE pair through mp_log (which flushes every line, so the START
-// survives a hang).  A background watchdog — started lazily on the first apply
-// step — reads the heartbeat and, if any step stays active past a threshold,
-// logs a line NAMING the stalled step.  That converts a silent beachball into a
-// labeled, attributable event, for this bug and any future one.  Critical
-// sections are tiny (label assignment only); the apply work runs with no lock
-// held, so the watchdog can always read and log even while the main thread
-// spins on a separate core.
-static std::mutex g_apply_step_mtx;
-static std::string g_apply_step_label;       // active step, "" when idle
-static std::chrono::steady_clock::time_point g_apply_step_started;
-
-static void mp_start_apply_watchdog()
-{
-    static std::once_flag once;
-    std::call_once( once, [] {
-        std::thread( [] {
-            std::chrono::steady_clock::time_point warned_for{};
-            int last_warned_s = 0;
-            for( ;; )
-            {
-                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
-                std::string label;
-                std::chrono::steady_clock::time_point started;
-                {
-                    std::scoped_lock lk( g_apply_step_mtx );
-                    label = g_apply_step_label;
-                    started = g_apply_step_started;
-                }
-                if( label.empty() ) {
-                    warned_for = {};
-                    last_warned_s = 0;
-                    continue;
-                }
-                if( started != warned_for ) {
-                    // A new step began since the last warning — reset.
-                    warned_for = {};
-                    last_warned_s = 0;
-                }
-                const int active_s = static_cast<int>(
-                                         std::chrono::duration_cast<std::chrono::seconds>(
-                                             std::chrono::steady_clock::now() - started ).count() );
-                // Warn first at >=3s, then re-warn every 5s so the log shows the
-                // stall never recovered.
-                if( active_s >= 3 && active_s - last_warned_s >= ( last_warned_s ? 5 : 1 ) ) {
-                    mp_log( "[cdda-mp] WATCHDOG: main thread stalled " +
-                            std::to_string( active_s ) + "s in apply-step=" + label +
-                            " (client likely hung — Windows 'not responding')" );
-                    last_warned_s = active_s;
-                    warned_for = started;
-                }
-            }
-        } ).detach();
-    } );
-}
-
-// RAII breadcrumb: marks one client apply step active for its lifetime.
+// Record apply phases through the world's owned diagnostic worker. It receives
+// only labels/timestamps and is joined before world/session teardown.
 struct mp_apply_step {
     std::string label_;
     std::chrono::steady_clock::time_point t0_;
+    apply_watchdog &watchdog_;
+    apply_watchdog::token token_;
     explicit mp_apply_step( std::string label )
-        : label_( std::move( label ) ), t0_( std::chrono::steady_clock::now() ) {
-        mp_start_apply_watchdog();
-        {
-            std::scoped_lock lk( g_apply_step_mtx );
-            g_apply_step_label = label_;
-            g_apply_step_started = t0_;
-        }
+        : label_( std::move( label ) ), t0_( std::chrono::steady_clock::now() ),
+          watchdog_( g->multiplayer_session().client_apply_watchdog ),
+          token_( watchdog_.begin( label_, t0_ ) ) {
         mp_log( "[cdda-mp] STATE-APPLY: " + label_ + " start" );
     }
+    mp_apply_step( const mp_apply_step & ) = delete;
+    mp_apply_step &operator=( const mp_apply_step & ) = delete;
     ~mp_apply_step() {
-        const long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - t0_ ).count();
-        {
-            std::scoped_lock lk( g_apply_step_mtx );
-            g_apply_step_label.clear();
-        }
+        watchdog_.end( token_ );
         mp_log( "[cdda-mp] STATE-APPLY: " + label_ + " done dur=" + std::to_string( ms ) + "ms" );
     }
 };
@@ -1836,7 +1770,8 @@ static void mp_cull_local_npcs()
 // rollback and application shutdown. Calls after normal save/quit are harmless.
 void mp_on_world_exit()
 {
-    // Join before clearing modes, queues, metadata or UI used by the worker.
+    // Join before clearing modes, queues, metadata or UI used by workers.
+    mp_session().client_apply_watchdog.stop();
     mp_session().hosting.stop();
     set_client_mode( false );
     set_host_mode( false );
