@@ -8,12 +8,15 @@
 
 // IWYU pragma: no_include <sys/signal.h>
 #include <algorithm>
+#include <array>
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <map>
