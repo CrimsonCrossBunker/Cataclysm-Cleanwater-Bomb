@@ -183,7 +183,7 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
                                        R"(,"client_tile_changes":[])" : "";
     auto &queue = cata_mp::get_mp_queue();
     const auto push = [&]( const std::string & data, const cata_mp::peer_admission & admission ) {
-        queue.push( { cata_mp::mp_event::type::action, "nickname", data, admission } );
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname", data, admission } ) );
     };
     push( R"({"action":"wait","client_stamina":100)" + attached_delta + "}",
           session.remote_admission );
@@ -206,6 +206,77 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
     CHECK( remote.get_stamina() == 200 );
     CHECK( remote.name == "after second" );
     CHECK( queue.empty() );
+}
+
+TEST_CASE( "mp_bookkeeping_backlog_yields_without_losing_order_or_large_messages",
+           "[multiplayer][world_session][inbound_budget][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        cata_mp::get_mp_queue().clear();
+    } );
+    npc &remote = bind_test_player( session );
+    session.remote_connected = true;
+    session.remote_admission = cata_mp::peer_admission::create( 701 );
+    auto &queue = cata_mp::get_mp_queue();
+    const auto push_sync = [&]( int index, size_t padding ) {
+        const std::string data = R"({"action":"worn_sync","char_stats":{"name":"sync-)" +
+                                 std::to_string( index ) + R"("},"padding":")" +
+                                 std::string( padding, 'x' ) + R"("})";
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname", data,
+                               session.remote_admission } ) );
+    };
+
+    SECTION( "a flood of small syncs yields before the final update" ) {
+        for( int i = 0; i < 65; ++i ) {
+            push_sync( i, 0 );
+        }
+        cata_mp::process_mp_events();
+        CHECK( remote.name == "sync-63" );
+        CHECK( queue.current_usage().queued == 1 );
+        cata_mp::process_mp_events();
+        CHECK( remote.name == "sync-64" );
+        CHECK( queue.empty() );
+    }
+    SECTION( "large syncs share a byte budget" ) {
+        push_sync( 0, 600 * 1024 );
+        push_sync( 1, 600 * 1024 );
+        cata_mp::process_mp_events();
+        CHECK( remote.name == "sync-0" );
+        CHECK( queue.current_usage().queued == 1 );
+        cata_mp::process_mp_events();
+        CHECK( remote.name == "sync-1" );
+        CHECK( queue.empty() );
+    }
+    SECTION( "one oversized sync progresses without starving the queue" ) {
+        push_sync( 0, 1024 * 1024 + 64 );
+        push_sync( 1, 0 );
+        cata_mp::process_mp_events();
+        CHECK( remote.name == "sync-0" );
+        CHECK( queue.current_usage().queued == 1 );
+        cata_mp::process_mp_events();
+        CHECK( remote.name == "sync-1" );
+        CHECK( queue.empty() );
+    }
+    SECTION( "discarding stale events also yields" ) {
+        const auto stale = cata_mp::peer_admission::create( 702 );
+        const std::string original_name = remote.name;
+        for( int i = 0; i < 65; ++i ) {
+            REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname",
+                                   R"({"action":"worn_sync","char_stats":{"name":"stale"}})", stale } ) );
+        }
+        cata_mp::process_mp_events();
+        CHECK( remote.name == original_name );
+        CHECK( queue.current_usage().queued == 1 );
+        cata_mp::process_mp_events();
+        CHECK( remote.name == original_name );
+        CHECK( queue.empty() );
+    }
 }
 
 TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
@@ -235,9 +306,9 @@ TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
     REQUIRE( session.replication.entity_ids.known_id( *copied ) == 0 );
     REQUIRE( get_creature_tracker().add( copied ) );
     const auto hit = [&]( uint32_t id ) {
-        cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
-                                        R"({"action":"wait","client_monster_hits":[{"nid":)" +
-                                        std::to_string( id ) + R"(,"hp":1}]})", session.remote_admission } );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                               R"({"action":"wait","client_monster_hits":[{"nid":)" +
+                                               std::to_string( id ) + R"(,"hp":1}]})", session.remote_admission } ) );
         cata_mp::process_mp_events();
     };
     const int initial_hp = copied->get_hp();
@@ -278,7 +349,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     std::map<uint64_t, cata_mp::peer_admission> admissions;
     const auto connect = [&]( uint64_t peer, const cata_mp::player_credentials & identity ) {
         admissions[peer] = cata_mp::peer_admission::create( peer );
-        cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect, "connection nickname", "", admissions[peer], identity } );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect, "connection nickname", "", admissions[peer], identity } ) );
         cata_mp::process_mp_events();
     };
     connect( 101, profile );
@@ -303,11 +374,11 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     std::filesystem::create_directory( record.get_unrelative_path() );
     // The worker accepted this final action before observing disconnect. Its
     // retirement must not reorder the owner stream or lose the saved update.
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
-                                    R"({"action":"worn_sync","char_stats":{"name":"Rosalee Blanco"}})",
-                                    admissions.at( 101 ) } );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                           R"({"action":"worn_sync","char_stats":{"name":"Rosalee Blanco"}})",
+                                           admissions.at( 101 ) } ) );
     admissions.at( 101 ).retire();
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 101 ) } );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 101 ) } ) );
     cata_mp::process_mp_events();
     CHECK( session.remote_detach_pending );
     CHECK( session.remote_admission.peer_id() == 0 );
@@ -328,12 +399,12 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     REQUIRE( actor );
     CHECK( actor->name == "Rosalee Blanco" );
     CHECK( actor->get_value( "identity_regression" ).str() == "retained" );
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 101 ) } );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 101 ) } ) );
     cata_mp::process_mp_events();
     CHECK( session.remote_connected );
     CHECK( session.remote_admission.peer_id() == 202 );
     admissions.at( 202 ).retire();
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 202 ) } );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 202 ) } ) );
     cata_mp::process_mp_events();
     CHECK_FALSE( session.remote_connected );
     CHECK_FALSE( session.remote_detach_pending );
@@ -378,8 +449,8 @@ TEST_CASE( "mp_dispatch_never_controls_an_unloaded_or_replaced_actor",
     session.remote_connected = true;
     session.remote_admission = cata_mp::peer_admission::create( 701 );
     const auto rename = [&]() {
-        cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
-                                        R"({"action":"worn_sync","char_stats":{"name":"accepted owner"}})", session.remote_admission } );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                               R"({"action":"worn_sync","char_stats":{"name":"accepted owner"}})", session.remote_admission } ) );
         cata_mp::process_mp_events();
     };
     rename();
@@ -534,19 +605,19 @@ TEST_CASE( "mp_late_disconnect_cannot_remove_another_peers_actor",
     session.remote_admission = cata_mp::peer_admission::create( 202 );
     const auto previous = cata_mp::peer_admission::create( 202 );
     previous.retire();
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "player", "", previous } );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "player", "", previous } ) );
     npc *actor = g->critter_by_id<npc>( actor_id );
     REQUIRE( actor );
     actor->name = "current owner";
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                    R"({"action":"worn_sync","char_stats":{"name":"foreign live admission"}})",
-                                    cata_mp::peer_admission::create( 202 ) } );
-    cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                    R"({"action":"worn_sync","char_stats":{"name":"stale action"}})", previous } );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
+                                           R"({"action":"worn_sync","char_stats":{"name":"foreign live admission"}})",
+                                           cata_mp::peer_admission::create( 202 ) } ) );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
+                                           R"({"action":"worn_sync","char_stats":{"name":"stale action"}})", previous } ) );
     // Same display name, different transport peer. Exercise the real dispatch
     // path, not just the predicate: the disconnect must never reach despawn.
-    cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 101 )} );
-    cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 0 )} );
+    REQUIRE( cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 101 )} ) );
+    REQUIRE( cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 0 )} ) );
     cata_mp::process_mp_events();
     CHECK( cata_mp::get_mp_queue().empty() );
     CHECK( session.remote_connected );
@@ -580,7 +651,7 @@ TEST_CASE( "mp_return_to_menu_closes_modes_bindings_and_pending_events",
     bind_test_view( session );
     session.client_host_spawned = true;
     session.stale_proxy_cleanup_done = true;
-    cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 101 )} );
+    REQUIRE( cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 101 )} ) );
     cata_mp::mp_set_host_world_name( "world being closed" );
     cata_mp::mp_set_host_player_name( "old host" );
     g->uquit = QUIT_SAVED;
@@ -660,9 +731,9 @@ TEST_CASE( "mp_host_metadata_and_events_belong_to_the_owning_world",
     other.host_info = { "other world", "other host", 22, std::array<int, 3>{ 4, 5, 6 },
                         world_id( std::string( 32, '2' ) )
                       };
-    cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::action, "", "current", cata_mp::peer_admission::create( 1 )} );
+    REQUIRE( cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::action, "", "current", cata_mp::peer_admission::create( 1 )} ) );
     CHECK( other.hosting.events().empty() );
-    other.hosting.events().push( {cata_mp::mp_event::type::action, "", "other", cata_mp::peer_admission::create( 2 )} );
+    REQUIRE( other.hosting.events().push( {cata_mp::mp_event::type::action, "", "other", cata_mp::peer_admission::create( 2 )} ) );
 
     other.reset();
     CHECK( other.hosting.events().empty() );
@@ -678,8 +749,8 @@ TEST_CASE( "mp_host_metadata_and_events_belong_to_the_owning_world",
     CHECK( event.data == "current" );
     CHECK( cata_mp::get_mp_queue().empty() );
 
-    other.hosting.events().push( {cata_mp::mp_event::type::action, "", "survivor", cata_mp::peer_admission::create( 2 )} );
-    current.hosting.events().push( {cata_mp::mp_event::type::action, "", "retired", cata_mp::peer_admission::create( 1 )} );
+    REQUIRE( other.hosting.events().push( {cata_mp::mp_event::type::action, "", "survivor", cata_mp::peer_admission::create( 2 )} ) );
+    REQUIRE( current.hosting.events().push( {cata_mp::mp_event::type::action, "", "retired", cata_mp::peer_admission::create( 1 )} ) );
     current.reset();
     CHECK( cata_mp::get_mp_queue().empty() );
     CHECK( cata_mp::mp_get_host_world_name().empty() );

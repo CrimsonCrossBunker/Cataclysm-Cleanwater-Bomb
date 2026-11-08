@@ -68,6 +68,8 @@ void mp_store_pending_welcome( const std::string & ) {}
 using namespace cata_mp;
 
 void exercise_context_ownership( uint16_t first_port, uint16_t second_port );
+void exercise_queue_limits();
+void exercise_inbound_overload( uint16_t port );
 
 static void require( bool condition, const char *message )
 {
@@ -117,6 +119,7 @@ int main( int argc, char **argv )
         harness_client = &owned_client;
         if( argc == 2 && std::string( argv[1] ) == "unit" ) {
             protocol_tests();
+            exercise_queue_limits();
             return 0;
         }
         require( argc >= 3, "mode port required" );
@@ -125,6 +128,7 @@ int main( int argc, char **argv )
         if( mode == "contexts" ) {
             require( argc == 4, "two context ports required" );
             exercise_context_ownership( port, static_cast<uint16_t>( std::stoi( argv[3] ) ) );
+            exercise_inbound_overload( port );
             std::cout << "PASS contexts" << std::endl;
             return 0;
         }

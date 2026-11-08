@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -74,6 +75,7 @@ class host_session
 {
     public:
         host_session() = default;
+        host_session( size_t event_limit, size_t byte_limit );
         ~host_session();
         host_session( const host_session & ) = delete;
         host_session &operator=( const host_session & ) = delete;
