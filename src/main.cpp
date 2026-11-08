@@ -1232,6 +1232,7 @@ struct replay_run_result {
     std::size_t initial_monsters = 0;
     std::size_t final_monsters = 0;
     std::vector<long long> turn_wall_ns;
+    std::vector<std::array<int, 3>> turn_positions;
     long long completion_wall_ns = 0;
 };
 
@@ -1244,6 +1245,7 @@ void run_replay_turns( replay_run_result &result )
     result.initial_monsters = get_creature_tracker().size();
     result.final_monsters = result.initial_monsters;
     result.turn_wall_ns.reserve( std::min<std::size_t>( input_replay::total_events(), 4096 ) );
+    result.turn_positions.reserve( result.turn_wall_ns.capacity() );
     while( true ) {
         const auto started = std::chrono::steady_clock::now();
         const bool ended = g->do_turn();
@@ -1259,6 +1261,7 @@ void run_replay_turns( replay_run_result &result )
         }
         result.final_monsters = get_creature_tracker().size();
         result.turn_wall_ns.push_back( elapsed );
+        result.turn_positions.push_back( result.final_position );
     }
 }
 
@@ -1275,7 +1278,7 @@ bool write_replay_report( const std::string &path, const replay_run_result &resu
         }
         JsonOut report( output, true );
         report.start_object();
-        report.member( "schema_version", 1 );
+        report.member( "schema_version", 2 );
         report.member( "status", complete ? "complete" : "incomplete" );
         report.member( "seed", input_replay::recorded_seed() );
         report.member( "events_total", input_replay::total_events() );
@@ -1291,6 +1294,7 @@ bool write_replay_report( const std::string &path, const replay_run_result &resu
         report.member( "initial_monsters", result.initial_monsters );
         report.member( "final_monsters", result.final_monsters );
         report.member( "turn_wall_ns", result.turn_wall_ns );
+        report.member( "turn_positions", result.turn_positions );
         report.member( "completion_wall_ns", result.completion_wall_ns );
         report.end_object();
         output.flush();
