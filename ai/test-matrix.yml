@@ -40,6 +40,11 @@ entries:
     command: python3 tools/test_replay_ab.py
     workdir: .
     cost: fast
+  - id: replay-save-comparison
+    paths: [tools/replay_save_compare.py, tools/test_replay_save_compare.py]
+    command: python3 tools/test_replay_save_compare.py
+    workdir: .
+    cost: fast
   - id: cmake-version
     paths: [CMakeLists.txt, src/version.cmake, tools/test_cmake_version.py]
     command: python3 tools/test_cmake_version.py
