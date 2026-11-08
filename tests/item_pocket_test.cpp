@@ -1788,6 +1788,65 @@ TEST_CASE( "pocket_default_disabling_only_affects_player_inventory", "[pocket][f
     CHECK_FALSE( follower.can_stash( rock ) );
 }
 
+TEST_CASE( "stacked_pickup_respects_default_pocket_disabling", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    const auto disabled_pack = player.wear_item( item( itype_test_backpack ), false, false );
+    const auto enabled_pack = player.wear_item( item( itype_test_mini_backpack ), false, false );
+    REQUIRE( disabled_pack );
+    REQUIRE( enabled_pack );
+    item_pocket *const disabled_pocket =
+        ( **disabled_pack ).get_contents().get_standard_pockets().front();
+    item_pocket *const enabled_pocket =
+        ( **enabled_pack ).get_contents().get_standard_pockets().front();
+    REQUIRE( disabled_pocket->settings.is_disabled() );
+    disabled_pocket->settings.set_priority( 10 );
+    enabled_pocket->settings.set_disabled( false );
+
+    item ammo( itype_test_9mm_ammo, calendar::turn_zero, 10 );
+    REQUIRE( player.can_stash_partial( ammo ) );
+    REQUIRE( player.i_add_or_fill( ammo, true, nullptr, nullptr, false, false, false ).success() );
+    CHECK( ammo.charges == 0 );
+    CHECK( ( **disabled_pack ).is_container_empty() );
+    REQUIRE_FALSE( ( **enabled_pack ).is_container_empty() );
+    CHECK( ( **enabled_pack ).only_item().charges == 10 );
+}
+
+TEST_CASE( "pocket_charge_filling_only_applies_default_to_player", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    standard_npc follower( "Follower", player.pos_bub() + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    item backpack( itype_test_backpack );
+    item_pocket *const pocket = backpack.get_contents().get_standard_pockets().front();
+    const item ammo( itype_test_9mm_ammo, calendar::turn_zero, 10 );
+    REQUIRE( pocket->settings.is_disabled() );
+
+    SECTION( "player_default_disabled" ) {
+        CHECK( pocket->fill_with( ammo, player, 10, false, false ) == 0 );
+        CHECK( backpack.is_container_empty() );
+    }
+    SECTION( "player_explicitly_enabled" ) {
+        pocket->settings.set_disabled( false );
+        CHECK( pocket->fill_with( ammo, player, 10, false, false ) == 10 );
+    }
+    SECTION( "player_ignores_settings" ) {
+        pocket->settings.set_disabled( true );
+        CHECK( pocket->fill_with( ammo, player, 10, false, true ) == 10 );
+    }
+    SECTION( "npc_ignores_player_default" ) {
+        CHECK( pocket->fill_with( ammo, follower, 10, false, false ) == 10 );
+    }
+    SECTION( "npc_respects_explicit_disabling" ) {
+        pocket->settings.set_disabled( true );
+        CHECK( pocket->fill_with( ammo, follower, 10, false, false ) == 0 );
+        CHECK( backpack.is_container_empty() );
+    }
+}
+
 TEST_CASE( "pocket_default_disabling_preserves_generated_contents", "[pocket][favorite][item]" )
 {
     const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
