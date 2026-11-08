@@ -2266,7 +2266,7 @@ int item_pocket::fill_with( const item &contained, Character &guy, int amount,
         return 0;
     }
     if( !ignore_settings && ( !settings.accepts_item( contained ) ||
-                             ( guy.is_avatar() && settings.is_disabled() ) ) ) {
+                              ( guy.is_avatar() && settings.is_disabled() ) ) ) {
         return 0;
     }
     if( !allow_unseal && sealed() ) {
