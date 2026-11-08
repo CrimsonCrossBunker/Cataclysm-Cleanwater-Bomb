@@ -1,5 +1,8 @@
 #include "ranged.h"
+#include "ranged_actions.h"
 #include "sling.h"
+#include "mp_gamestate.h"
+#include "fault.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1179,6 +1182,52 @@ void npc::pretend_fire( npc *source, int shots, item &gun )
     }
 }
 
+bool prepare_gun_to_fire( Character &who, item &it )
+{
+
+    if( it.has_fault_flag( "RUINED_GUN" ) ) {
+        who.add_msg_if_player( m_bad, _( "Your %s is little more than an awkward club now." ), it.tname() );
+        return false;
+    }
+
+    // if it's a simple fault, character can try to fix it on the fly
+    if( faults::random_of_type_item_has( it, gun_mechanical_simple ) != fault_id::NULL_ID() ) {
+        // fixing fault should cost more than 1 second
+        // but until game running the next activity actor without ever verifying
+        // was the previous one successful or not will be resolved,
+        // it would be safer to limit it somewhat
+        who.mod_moves( -who.get_speed() );
+        who.recoil = MAX_RECOIL;
+        if( it.has_fault( fault_fail_to_feed ) ) {
+            who.add_msg_if_player( m_good,
+                                   _( "You manually cycle your %s, and load a new round." ),
+                                   it.tname() );
+            it.remove_fault( fault_fail_to_feed );
+            it.set_var( "u_know_round_in_chamber", true );
+        } else if( one_in( std::max( 7.0f,
+                                     ( 15.0f - ( 4.0f * who.get_skill_level( skill_gun ) ) ) ) ) ) {
+            who.add_msg_if_player( m_good,
+                                   _( "Your %s has some mechanical malfunction.  You tried to quickly fix it, and it works now!" ),
+                                   it.tname() );
+            it.remove_single_fault_of_type( gun_mechanical_simple );
+            it.set_var( "u_know_round_in_chamber", true );
+        } else {
+            who.add_msg_if_player( m_bad,
+                                   _( "Your %s has some mechanical malfunction.  You tried to quickly fix it, but failed!" ),
+                                   it.tname() );
+            return false;
+        }
+    }
+
+    if( it.has_fault_flag( "OVERHEATED_GUN" ) ) {
+        who.add_msg_if_player( m_warning,
+                               _( "Your %s status screen indicates the gun is venting." ), it.tname() );
+        return false;
+    }
+
+    return true;
+}
+
 int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 {
     map &here = get_map();
@@ -2102,6 +2151,16 @@ static void do_aim( Character &you, const item &relevant, const Target_attribute
     } else {
         // If aim is already maxed, we're just waiting, so pass the turn.
         you.set_moves( 0 );
+    }
+}
+
+void aim_gun_for_moves( Character &you, const item &weapon,
+                        const tripoint_bub_ms &target_pos, int moves )
+{
+    const Target_attributes target( you.pos_bub(), target_pos );
+    const double minimum = calculate_aim_cap( you, target_pos );
+    for( int i = 0; i < moves; ++i ) {
+        do_aim( you, weapon, target, minimum );
     }
 }
 
@@ -3363,6 +3422,12 @@ target_handler::trajectory target_ui::run()
                 continue;
             }
             set_last_target();
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                cata_mp::client_request_firearm( dst, "FIRE" );
+                timed_out_action = "AIM";
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             loop_exit_code = ExitCode::Fire;
             break;
         } else if( action == "AIM" ) {
@@ -3373,6 +3438,13 @@ target_handler::trajectory target_ui::run()
             // No confirm_non_enemy_target here because we have not initiated the firing.
             // Aiming can be stopped / aborted at any time.
 
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                set_last_target();
+                cata_mp::client_request_firearm( dst, "AIM" );
+                timed_out_action = "AIM";
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             if( !action_aim() ) {
                 timed_out_action = "AIM";
                 loop_exit_code = ExitCode::Timeout;
@@ -3393,6 +3465,12 @@ target_handler::trajectory target_ui::run()
                 continue;
             }
 
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                cata_mp::client_request_firearm( dst, "DROP_AIM" );
+                timed_out_action = "AIM";
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             action_drop_aim();
         } else if( action == "AIMED_SHOT" || action == "CAREFUL_SHOT" || action == "PRECISE_SHOT" ) {
             if( status != Status::Good ) {
@@ -3405,6 +3483,13 @@ target_handler::trajectory target_ui::run()
                 continue;
             }
 
+            if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
+                set_last_target();
+                cata_mp::client_request_firearm( dst, action );
+                timed_out_action = action;
+                loop_exit_code = ExitCode::Timeout;
+                break;
+            }
             if( action_aim_and_shoot( action ) ) {
                 loop_exit_code = ExitCode::Fire;
             } else {
@@ -4098,32 +4183,25 @@ void target_ui::update_turrets_in_range()
     }
 }
 
-void target_ui::recalc_aim_turning_penalty()
+double aim_turning_recoil( const Character &you, const tripoint_bub_ms &src,
+                           const std::optional<tripoint_bub_ms> &last_aim_pos,
+                           const tripoint_bub_ms &dst )
 {
-    // since we are recalcing recoil dirty the aimm cache
-    you->mark_aim_cache_dirty();
-
-    if( status != Status::Good ) {
-        // We don't care about invalid situations
-        predicted_recoil = MAX_RECOIL;
-        return;
-    }
-
-    const double curr_recoil = you->recoil;
+    const double curr_recoil = you.recoil;
     const tripoint_bub_ms curr_recoil_pos = last_aim_pos.value_or( src );
 
     if( curr_recoil_pos == dst ) {
         // We're aiming at that point right now, no penalty
-        predicted_recoil = curr_recoil;
+        return curr_recoil;
     } else if( curr_recoil_pos == src ) {
         // The player wasn't aiming anywhere, max it out
-        predicted_recoil = MAX_RECOIL;
+        return MAX_RECOIL;
     } else {
         // Raise it proportionally to how much
         // the player has to turn from previous aiming point
         // the player loses their aim more quickly if less skilled, normalizing at 5 skill.
         /** @EFFECT_GUN increases the penalty for reorienting aim while below 5 */
-        const double skill_penalty = std::max( 0.0, 5.0 - you->get_skill_level( skill_gun ) );
+        const double skill_penalty = std::max( 0.0, 5.0 - you.get_skill_level( skill_gun ) );
         const double recoil_per_degree = skill_penalty * MAX_RECOIL / 180.0;
         const units::angle angle_curr = coord_to_angle( src, curr_recoil_pos );
         const units::angle angle_desired = coord_to_angle( src, dst );
@@ -4157,8 +4235,15 @@ void target_ui::recalc_aim_turning_penalty()
         const double raw_predicted_recoil = curr_recoil + angle_penalty + displacement_penalty;
         const double reset_factor = 0.5 + 0.4 * angle_ratio;
         const double recoil_cap = curr_recoil + ( MAX_RECOIL - curr_recoil ) * reset_factor;
-        predicted_recoil = std::min( { MAX_RECOIL, raw_predicted_recoil, recoil_cap } );
+        return std::min( { MAX_RECOIL, raw_predicted_recoil, recoil_cap } );
     }
+}
+
+void target_ui::recalc_aim_turning_penalty()
+{
+    you->mark_aim_cache_dirty();
+    predicted_recoil = status == Status::Good ?
+                       aim_turning_recoil( *you, src, last_aim_pos, dst ) : MAX_RECOIL;
 }
 
 void target_ui::apply_aim_turning_penalty() const
@@ -4328,12 +4413,8 @@ bool target_ui::action_switch_ammo()
 bool target_ui::action_aim()
 {
     apply_aim_turning_penalty();
-    const Target_attributes target( src, dst );
-    const double min_recoil = calculate_aim_cap( *you, dst );
-    double hold_recoil = you->recoil;
-    for( int i = 0; i < 10; ++i ) {
-        do_aim( *you, *relevant, target, min_recoil );
-    }
+    const double hold_recoil = you->recoil;
+    aim_gun_for_moves( *you, *relevant, dst, 10 );
     add_msg_debug( debugmode::debug_filter::DF_RANGED,
                    "you reduced recoil from %f to %f in 10 moves",
                    hold_recoil, you->recoil );
@@ -4355,9 +4436,11 @@ bool target_ui::action_drop_aim()
     return true;
 }
 
-bool target_ui::action_aim_and_shoot( const std::string &action )
+bool aim_gun_until_threshold( Character &you, const item &weapon,
+                              const tripoint_bub_ms &dst, const std::string &action )
 {
-    std::vector<aim_type>::iterator it;
+    const auto aim_types = you.get_aim_types( weapon );
+    auto it = aim_types.begin();
     for( it = aim_types.begin(); it != aim_types.end(); it++ ) {
         if( action == it->action ) {
             break;
@@ -4365,26 +4448,32 @@ bool target_ui::action_aim_and_shoot( const std::string &action )
     }
     if( it == aim_types.end() ) {
         debugmsg( "Could not find a valid aim_type for %s", action.c_str() );
-        aim_mode = aim_types.begin();
+        return false;
     }
-    int aim_threshold = it->threshold;
-    apply_aim_turning_penalty();
-    set_last_target();
-    last_aim_pos = dst;
-    const Target_attributes target( src, dst );
-    const double min_recoil = calculate_aim_cap( *you, dst );
+    const int aim_threshold = it->threshold;
+    const double sight_dispersion = you.most_accurate_aiming_method_limit( weapon );
+    const Target_attributes target( you.pos_bub(), dst );
+    const double min_recoil = calculate_aim_cap( you, dst );
     do {
-        do_aim( *you, relevant ? *relevant : null_item_reference(), target, min_recoil );
-    } while( you->get_moves() > 0 && you->recoil > aim_threshold &&
-             you->recoil - sight_dispersion > min_recoil );
+        do_aim( you, weapon, target, min_recoil );
+    } while( you.get_moves() > 0 && you.recoil > aim_threshold &&
+             you.recoil - sight_dispersion > min_recoil );
 
     // If we made it under the aim threshold, go ahead and fire.
     // Also fire if we're at our best aim level already.
     // If no critter is at dst then sight dispersion does not apply,
     // so it would lock into an infinite loop.
-    bool done_aiming = you->recoil <= aim_threshold || you->recoil - sight_dispersion <= min_recoil ||
-                       ( !get_creature_tracker().creature_at( dst ) && you->recoil <= min_recoil );
+    bool done_aiming = you.recoil <= aim_threshold || you.recoil - sight_dispersion <= min_recoil ||
+                       ( !get_creature_tracker().creature_at( dst ) && you.recoil <= min_recoil );
     return done_aiming;
+}
+
+bool target_ui::action_aim_and_shoot( const std::string &action )
+{
+    apply_aim_turning_penalty();
+    set_last_target();
+    last_aim_pos = dst;
+    return aim_gun_until_threshold( *you, *relevant, dst, action );
 }
 
 void target_ui::draw_terrain_overlay()
@@ -4952,10 +5041,10 @@ void target_ui::panel_turret_list( int &text_y )
     }
 }
 
-void target_ui::on_target_accepted( bool harmful ) const
+void mark_ranged_target( Character &you, bool harmful )
 {
     // TODO: all of this should be moved into on-hit code
-    const auto lt_ptr = you->last_target.lock();
+    const auto lt_ptr = you.last_target.lock();
     if( npc *const guy = dynamic_cast<npc *>( lt_ptr.get() ) ) {
         if( harmful ) {
             if( !guy->guaranteed_hostile() ) {
@@ -4968,7 +5057,24 @@ void target_ui::on_target_accepted( bool harmful ) const
     }
 }
 
+void target_ui::on_target_accepted( bool harmful ) const
+{
+    mark_ranged_target( *you, harmful );
+}
+
 bool gunmode_checks_common( avatar &you, const map &m, std::vector<std::string> &messages,
+                            const gun_mode &gmode )
+{
+    return gunmode_checks_common( static_cast<Character &>( you ), m, messages, gmode );
+}
+
+bool gunmode_checks_weapon( avatar &you, const map &m, std::vector<std::string> &messages,
+                            const gun_mode &gmode )
+{
+    return gunmode_checks_weapon( static_cast<Character &>( you ), m, messages, gmode );
+}
+
+bool gunmode_checks_common( Character &you, const map &m, std::vector<std::string> &messages,
                             const gun_mode &gmode )
 {
     bool result = true;
@@ -5008,7 +5114,7 @@ bool gunmode_checks_common( avatar &you, const map &m, std::vector<std::string> 
     return result;
 }
 
-bool gunmode_checks_weapon( avatar &you, const map &m, std::vector<std::string> &messages,
+bool gunmode_checks_weapon( Character &you, const map &m, std::vector<std::string> &messages,
                             const gun_mode &gmode )
 {
     bool result = true;

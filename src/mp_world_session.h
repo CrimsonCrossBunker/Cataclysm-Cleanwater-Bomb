@@ -10,6 +10,7 @@
 #include "mp_apply_watchdog.h"
 #include "mp_client_conn.h"
 #include "mp_pickup.h"
+#include "mp_firearm.h"
 #include "mp_server.h"
 #include "mp_player_store.h"
 #include "mp_player_view.h"
@@ -27,6 +28,7 @@ struct remote_player_session {
     bool detach_pending = false;
     host_turn_state turn;
     pickup_host_state pickup;
+    firearm_state firearm;
     host_replication_baselines replication;
     peer_observation observation;
 };
@@ -54,6 +56,7 @@ struct world_session {
         uint32_t grant_sequence = 0;
         client_turn_state client_turn;
         pickup_client_state client_pickup;
+        firearm_view_state client_firearm;
         peer_observation host_observation;
         client_admission_state admission;
         session_presentation presentation;

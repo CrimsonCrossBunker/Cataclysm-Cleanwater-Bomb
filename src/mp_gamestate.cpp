@@ -1,4 +1,5 @@
 #include "mp_gamestate.h"
+#include "mp_combat_result.h"
 
 #include <stdexcept>
 #include <limits>
@@ -2248,6 +2249,64 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         return;
     }
+    if( action == "firearm" ) {
+        const int budget = recipient.turn.remote_moves;
+        remote->set_moves( budget );
+        const auto messages = Messages::size();
+        firearm_intent intent;
+        firearm_outcome outcome = firearm_outcome::rejected;
+        try {
+            intent.action = jo.get_string( "operation" );
+            intent.weapon = jo.get_int64( "weapon" );
+            intent.mode = gun_mode_id( jo.get_string( "mode" ) );
+            jo.read( "origin", intent.origin, true );
+            jo.read( "target", intent.target, true );
+            if( pickup_inventory_revision_matches( jo, recipient.pickup ) ) {
+                outcome = execute_firearm_intent( *remote, get_map(), recipient.firearm, intent );
+            }
+        } catch( const JsonError &error ) {
+            mp_log( std::string( "[ccb-mp] rejected firearm intent: " ) + error.what() );
+        }
+        remote = mp_remote_actor( recipient );
+        if( !remote ) {
+            return;
+        }
+        recipient.turn.remote_moves = remote->get_moves();
+        recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
+        recipient.observation.partner_activity = outcome == firearm_outcome::aiming ? "ACT_AIM" : "";
+        recipient.observation.partner_sleeping = false;
+        flush_action_msgs( recipient, messages, remote->name );
+        std::ostringstream encoded;
+        JsonOut out( encoded );
+        out.start_object();
+        out.member( "type", "firearm_result" );
+        out.member( "weapon", intent.weapon );
+        out.member( "outcome", static_cast<int>( outcome ) );
+        // Aiming a firearm changes recoil/AP only. Avoid serializing every
+        // carried item on each ten-move aim adjustment.
+        if( outcome != firearm_outcome::aiming || intent.action == "prepare" ) {
+            const std::string combat = make_combat_result( *remote, recipient.pickup );
+            out.member( "combat" );
+            *out.get_stream() << combat;
+            out.set_need_separator();
+        } else {
+            ++recipient.pickup.revision;
+        }
+        out.member( "inventory_revision", recipient.pickup.revision );
+        out.member( "recoil", remote->recoil );
+        out.end_object();
+        g->cleanup_dead();
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, encoded.str() + "\n" );
+            std::string state = serialize_remote_player_state( recipient );
+            if( !recipient.turn.client_acted_this_turn && !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
+        }
+        g->invalidate_main_ui_adaptor();
+        return;
+    }
     if( action == "melee" ) {
         const int budget = recipient.turn.remote_moves;
         remote->set_moves( budget );
@@ -2298,7 +2357,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         const bool turn_ended = recipient.turn.remote_moves <= 0;
         recipient.turn.client_acted_this_turn = turn_ended;
         flush_action_msgs( recipient, messages, remote->name );
-        const std::string result = make_melee_result( *remote, recipient.pickup );
+        const std::string result = make_combat_result( *remote, recipient.pickup );
         // Cleanup may delete an attacker killed by retaliation; do not use it afterward.
         g->cleanup_dead();
         if( const auto server = get_active_server() ) {
@@ -2501,6 +2560,15 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     }
     if( msg.find( R"("action":"activity_end")" ) != std::string::npos ) {
         const std::string id = jo.get_string( "activity_id", "" );
+        if( ( id.empty() || id == "ACT_AIM" ) && recipient.firearm.weapon != 0 ) {
+            finish_firearm_activity( *remote, recipient.firearm, true );
+            if( npc *actor = mp_remote_actor( recipient ) ) {
+                const std::string result = make_combat_result( *actor, recipient.pickup );
+                if( const auto server = get_active_server() ) {
+                    server->post_send( recipient.admission, result + "\n" );
+                }
+            }
+        }
         const std::string prev = recipient.observation.partner_activity;
         recipient.observation.partner_activity.clear();
         recipient.observation.partner_help_target.clear();
@@ -6167,13 +6235,54 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    if( msg.find( "melee_result" ) != std::string::npos ) {
+    if( msg.find( "firearm_result" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
             JsonObject message = value.get_object();
             message.allow_omitted_members();
-            if( message.get_string( "type", "" ) == "melee_result" ) {
-                apply_melee_result( get_avatar(), message, mp_session().client_pickup );
+            if( message.get_string( "type", "" ) == "firearm_result" ) {
+                const int64_t revision = message.get_int64( "inventory_revision" );
+                if( revision <= mp_session().client_pickup.revision ) {
+                    return true;
+                }
+                const int outcome = message.get_int( "outcome" );
+                if( outcome < 0 || outcome > static_cast<int>( firearm_outcome::finished ) ) {
+                    message.throw_error_at( "outcome", "Invalid firearm outcome" );
+                }
+                if( message.has_object( "combat" ) ) {
+                    JsonObject combat = message.get_object( "combat" );
+                    combat.allow_omitted_members();
+                    if( !apply_combat_result( get_avatar(), combat, mp_session().client_pickup ) ) {
+                        return true;
+                    }
+                } else {
+                    mp_session().client_pickup.revision = revision;
+                }
+                get_avatar().recoil = message.get_float( "recoil" );
+                get_avatar().mark_aim_cache_dirty();
+                auto &view = mp_session().client_firearm;
+                if( view.phase == firearm_view_phase::pending && view.weapon ==
+                    message.get_int64( "weapon" ) ) {
+                    view.phase = outcome == static_cast<int>( firearm_outcome::finished ) ?
+                                 firearm_view_phase::finished :
+                                 outcome == static_cast<int>( firearm_outcome::aiming ) ?
+                                 firearm_view_phase::aiming : firearm_view_phase::rejected;
+                }
+                return true;
+            }
+        } catch( const JsonError & ) {
+            set_client_mode( false );
+            add_msg( m_bad, _( "Invalid firearm response.  Reconnect to synchronize your character." ) );
+            return true;
+        }
+    }
+    if( msg.find( "combat_result" ) != std::string::npos ) {
+        try {
+            JsonValue value = json_loader::from_string( msg );
+            JsonObject message = value.get_object();
+            message.allow_omitted_members();
+            if( message.get_string( "type", "" ) == "combat_result" ) {
+                apply_combat_result( get_avatar(), message, mp_session().client_pickup );
                 return true;
             }
         } catch( const JsonError & ) {
@@ -8016,6 +8125,80 @@ std::vector<player_light> player_lights()
     }
     return result;
 }
+bool client_uses_firearm_intents( const item &weapon )
+{
+    const item_location wielded = get_avatar().get_wielded_item();
+    return is_client_mode() && wielded && &*wielded == &weapon &&
+           supports_firearm_intents( weapon );
+}
+
+void client_start_firearm_activity()
+{
+    const item_location weapon = get_avatar().get_wielded_item();
+    if( weapon ) {
+        mp_session().client_firearm = { weapon->uid().get_value(), firearm_view_phase::preparing };
+    }
+}
+
+void client_finish_firearm_activity()
+{
+    mp_session().client_firearm = {};
+}
+
+firearm_view_phase client_firearm_phase()
+{
+    return mp_session().client_firearm.phase;
+}
+
+void client_finish_ready_firearm_activity()
+{
+    avatar &u = get_avatar();
+    if( !is_client_mode() ) {
+        return;
+    }
+    const auto firearm_phase = client_firearm_phase();
+    if( u.activity.id() == activity_id( "ACT_AIM" ) && u.activity.actor &&
+        ( firearm_phase == firearm_view_phase::finished ||
+          firearm_phase == firearm_view_phase::rejected ) ) {
+        // Finalize only the local aiming view, outside packet parsing and
+        // even with no AP. The server has already paid for the shot; this
+        // must not turn into another compatibility wait on the next grant.
+        u.activity.actor->finish( u.activity, u );
+        set_client_turn_activity( u.activity ? u.activity.id().str() : "" );
+    }
+}
+
+void client_request_firearm( const tripoint_bub_ms &target, const std::string &action )
+{
+    avatar &who = get_avatar();
+    const item_location weapon = who.get_wielded_item();
+    if( !is_client_mode() || who.get_moves() <= 0 || is_client_waiting_for_ack() ||
+        !weapon || !client_uses_firearm_intents( *weapon ) ) {
+        return;
+    }
+    auto &view = mp_session().client_firearm;
+    if( view.weapon != weapon->uid().get_value() || view.phase == firearm_view_phase::inactive ) {
+        return;
+    }
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", "firearm" );
+    out.member( "operation", action );
+    out.member( "weapon", view.weapon );
+    out.member( "mode", weapon->gun_get_mode_id() );
+    out.member( "origin", who.pos_abs() );
+    out.member( "target", get_map().get_abs( target ) );
+    out.member( "inventory_revision", mp_session().client_pickup.revision );
+    out.member( "grant_seq", mp_session().client_turn.client_last_grant_seq );
+    out.end_object();
+    view.phase = firearm_view_phase::pending;
+    client_send( encoded.str() );
+    who.set_moves( 0 );
+    client_mark_action_sent();
+}
+
 void client_request_melee( const tripoint_bub_ms &target, melee_action action,
                            const matec_id &technique )
 {

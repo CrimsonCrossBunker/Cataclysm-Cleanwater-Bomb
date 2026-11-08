@@ -33,6 +33,8 @@
 #include "itype.h"
 #include "lua_platform_runtime.h"
 #include "messages.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
 #include "rng.h"
 #include "skill.h"
 #include "sounds.h"
@@ -68,6 +70,12 @@ static const activity_id ACT_WORKOUT_LIGHT( "ACT_WORKOUT_LIGHT" );
 static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
 
 static const efftype_id effect_nausea( "nausea" );
+
+static bool client_firearm_view( const Character &who, const activity_id &type )
+{
+    return who.is_avatar() && type == ACT_AIM && cata_mp::is_client_mode() &&
+           cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive;
+}
 
 std::uint64_t player_activity::identity_token::next_value() noexcept
 {
@@ -221,7 +229,9 @@ void player_activity::start_or_resume( Character &who, bool resuming )
     }
     // last, as start function may have changed the type
     synchronize_type_with_actor();
-    get_event_bus().send<event_type::character_starts_activity>( who.getID(), type, resuming );
+    if( !client_firearm_view( who, type ) ) {
+        get_event_bus().send<event_type::character_starts_activity>( who.getID(), type, resuming );
+    }
 }
 
 void player_activity::do_turn( Character &you )
@@ -438,7 +448,9 @@ void player_activity::do_turn( Character &you )
                            "Setting activity %s to null for %s, no moves left.",
                            type.c_str(), you.name );
             const std::uint64_t finished_identity = identity_generation();
-            get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
+            if( !client_firearm_view( you, type ) ) {
+                get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
+            }
             if( !character_reference ||
                 ( *this && identity_generation() != finished_identity ) ) {
                 return;
@@ -481,11 +493,14 @@ void player_activity::do_turn( Character &you )
 
 void player_activity::canceled( Character &who )
 {
+    const bool view_only = client_firearm_view( who, type );
     if( *this && actor ) {
         actor->canceled( *this, who );
     }
     activity_handlers::clean_may_activity_occupancy_items_var( who );
-    get_event_bus().send<event_type::character_finished_activity>( who.getID(), type, true );
+    if( !view_only ) {
+        get_event_bus().send<event_type::character_finished_activity>( who.getID(), type, true );
+    }
     g->wait_popup_reset();
 }
 
