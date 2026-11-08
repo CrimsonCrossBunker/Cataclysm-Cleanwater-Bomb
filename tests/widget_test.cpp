@@ -1,5 +1,3 @@
-#include <martialarts.h>
-#include <output.h>
 #include <algorithm>
 #include <array>
 #include <clocale>
@@ -37,9 +35,11 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "martialarts.h"
 #include "mission.h"
 #include "monster.h"
 #include "options_helpers.h"
+#include "output.h"
 #include "overmap.h"
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
@@ -118,7 +118,7 @@ static const weather_type_id weather_portal_storm( "portal_storm" );
 static const weather_type_id weather_snowing( "snowing" );
 static const weather_type_id weather_sunny( "sunny" );
 
-// test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
+static const widget_id widget_all_location_info_rows_layout( "all_location_info_rows_layout" );
 static const widget_id widget_focus_num( "focus_num" );
 static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
 static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
@@ -131,6 +131,8 @@ static const widget_id widget_sound_num( "sound_num" );
 static const widget_id widget_speed_num( "speed_num" );
 static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
+
+// test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
 static const widget_id widget_test_3_column_layout( "test_3_column_layout" );
 static const widget_id widget_test_4_column_layout( "test_4_column_layout" );
@@ -2775,9 +2777,17 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
     clear_map_without_vision();
     fill_overmap_area( ava, oter_id( "field" ) );
 
-    widget place = widget_ll_place_layout.obj();
+    const bool nested_columns = GENERATE( false, true );
+    widget place = nested_columns ? widget_ll_place_layout.obj() :
+                   widget_all_location_info_rows_layout.obj();
+    widget_hud_layout layout;
+    layout.mode = widget_hud_layout_mode::custom;
+    layout.columns = 80;
+    layout.node_overrides["ll_place_layout@0/ll_place_info@0"].label_columns = 10;
+    layout.node_overrides["ll_place_layout@0/ll_place_info@0"].width_columns = 40;
     const std::vector<std::string> lines = string_split(
-            remove_color_tags( place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
+            remove_color_tags( nested_columns ? place.layout_for_hud( ava, layout ) :
+                               place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
 
     REQUIRE( lines.size() == 8 );
     for( const std::string &line : lines ) {
@@ -2830,6 +2840,16 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
     for( const bool derive_hud_width : {
              false, true
          } ) {
+        int shared_label_width = 4;
+        if( derive_hud_width ) {
+            shared_label_width = 0;
+            for( const auto &row : fields ) {
+                for( const widget_id &field : row ) {
+                    shared_label_width = std::max( shared_label_width,
+                                                   utf8_width( field->_label.translated(), true ) );
+                }
+            }
+        }
         const std::string formatted = derive_hud_width ?
                                       movement.layout_for_hud( ava, 42 ) :
                                       movement.layout_with_label_width( ava, 42, 4 );
@@ -2863,7 +2883,7 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
                 // Both paths reserve one shared separator slot as well as the
                 // label slot, so a one-cell separator cannot shift a value
                 // left of a sibling using the normal ": " separator.
-                CHECK( value_column == starts[column] + 6 );
+                CHECK( value_column == starts[column] + shared_label_width + 2 );
                 if( row == 0 ) {
                     first_row_values[column] = value_column;
                 } else {
@@ -3118,7 +3138,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
         ava.wear_item( item( itype_ear_plugs ), false );
     }
     SECTION( "temporary_deafness" ) {
-        ava.add_effect( effect_deaf, 1_minutes, false, 3 );
+        ava.add_effect( effect_deaf, 5_minutes, false, 3 );
     }
 
     REQUIRE( ava.is_deaf() );
