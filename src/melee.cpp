@@ -1692,33 +1692,6 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
                          sub_bodypart_str_id::NULL_ID() ) );
 }
 
-std::vector<matec_id> Character::active_techniques() const
-{
-    std::vector<matec_id> available;
-    std::set<matec_id> seen;
-    std::vector<matec_id> candidates = martial_arts_data->get_all_techniques( used_weapon(), *this );
-    const item_location wielded = get_wielded_item();
-    if( wielded && wielded->has_technique( tec_mounted_charge ) ) {
-        candidates.push_back( tec_mounted_charge );
-    }
-    for( const matec_id &id : candidates ) {
-        if( !id.is_valid() || !id->can_activate() || !id->is_valid_character( *this ) ||
-            !id->activation_allowed( *this, "menu" ) || !seen.insert( id ).second ) {
-            continue;
-        }
-        if( id == tec_mounted_charge ) {
-            // Mounted charge is an explicit weapon action; use the actual
-            // wielded item even when the selected style suppresses weapon use.
-            if( !wielded || !wielded->type->mounted_charge ||
-                !wielded->type->mounted_charge->valid() ) {
-                continue;
-            }
-        }
-        available.push_back( id );
-    }
-    return available;
-}
-
 static bool use_grapple_technique( Character &attacker, Creature &target,
                                    const ma_technique &technique )
 {
@@ -1867,6 +1840,33 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     return true;
 }
 
+std::vector<matec_id> Character::active_techniques() const
+{
+    std::vector<matec_id> available;
+    std::set<matec_id> seen;
+    std::vector<matec_id> candidates = martial_arts_data->get_all_techniques( used_weapon(), *this );
+    const item_location wielded = get_wielded_item();
+    if( wielded && wielded->has_technique( tec_mounted_charge ) ) {
+        candidates.push_back( tec_mounted_charge );
+    }
+    for( const matec_id &id : candidates ) {
+        if( !id.is_valid() || !id->can_activate() || !id->is_valid_character( *this ) ||
+            !id->activation_allowed( *this, "menu" ) || !seen.insert( id ).second ) {
+            continue;
+        }
+        if( id == tec_mounted_charge ) {
+            // Mounted charge is an explicit weapon action; use the actual
+            // wielded item even when the selected style suppresses weapon use.
+            if( !wielded || !wielded->type->mounted_charge ||
+                !wielded->type->mounted_charge->valid() ) {
+                continue;
+            }
+        }
+        available.push_back( id );
+    }
+    return available;
+}
+
 int Character::active_technique_range( const matec_id &technique ) const
 {
     if( !technique.is_valid() || !technique->can_activate() ) {
@@ -1919,11 +1919,11 @@ bool Character::use_active_technique( Creature &target, const matec_id &techniqu
     reach_attacking = technique->reach_tec || distance > 1;
     const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>> selected =
                 evaluate_technique( technique, target, weapon, false, false, false, true );
+    if( selected && !technique->grapple_action.empty() ) {
+        return use_grapple_technique( *this, target, *technique );
+    }
     if( !selected || ( distance > 1 && !std::get<1>( *selected )->weapon ) ) {
         return false;
-    }
-    if( !technique->grapple_action.empty() ) {
-        return use_grapple_technique( *this, target, *technique );
     }
     return melee_attack( target, false, technique, true, -1, selected );
 }
