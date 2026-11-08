@@ -685,7 +685,7 @@ void overmapbuffer::set_passable( const tripoint_abs_omt &p,
 
 void overmapbuffer::signal_hordes( const tripoint_abs_sm &center, const int sig_power )
 {
-    for( overmap*&om : get_overmaps_near( center, sig_power ) ) {
+    for( overmap *&om : get_overmaps_near( center, sig_power ) ) {
         om->signal_hordes( project_to<coords::ms>( center ), sig_power );
     }
 }
@@ -735,7 +735,7 @@ void overmapbuffer::process_mongroups()
     // arbitrary radius to include nearby overmaps (aside from the current one)
     const int radius = MAPSIZE * 2;
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap*&om : get_overmaps_near( center, radius ) ) {
+    for( overmap *&om : get_overmaps_near( center, radius ) ) {
         om->process_mongroups();
     }
 }
@@ -745,7 +745,7 @@ void overmapbuffer::move_hordes()
     // arbitrary radius to include nearby overmaps (aside from the current one)
     const int radius = MAPSIZE * 2;
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap*&om : get_overmaps_near( center, radius ) ) {
+    for( overmap *&om : get_overmaps_near( center, radius ) ) {
         om->move_hordes();
     }
 }
@@ -1899,7 +1899,7 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near( const tripoint_a
                                int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
-    for( overmap*&it : get_overmaps_near( p.xy(), radius ) ) {
+    for( overmap *&it : get_overmaps_near( p.xy(), radius ) ) {
         auto temp = it->get_npcs( [&]( const npc & guy ) {
             // Global position of NPC, in submap coordinates
             const tripoint_abs_sm pos = guy.pos_abs_sm();
@@ -1914,7 +1914,7 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near_omt( const tripoi
                                int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
-    for( overmap*&it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
+    for( overmap *&it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
         auto temp = it->get_npcs( [&]( const npc & guy ) {
             // Global position of NPC, in submap coordinates
             tripoint_abs_omt pos = guy.pos_abs_omt();
@@ -1937,7 +1937,7 @@ static radio_tower_reference create_radio_tower_reference( const overmap &om, ra
 radio_tower_reference overmapbuffer::find_radio_station( const int frequency )
 {
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap*&om : get_overmaps_near( center, RADIO_MAX_STRENGTH ) ) {
+    for( overmap *&om : get_overmaps_near( center, RADIO_MAX_STRENGTH ) ) {
         for( radio_tower &tower : om->radios ) {
             const radio_tower_reference rref = create_radio_tower_reference( *om, tower, center );
             if( rref.signal_strength > 0 && tower.frequency == frequency ) {
@@ -1955,7 +1955,7 @@ std::vector<radio_tower_reference> overmapbuffer::find_all_radio_stations()
     // perceived signal strength is distance (in submaps) - signal strength, so towers
     // further than RADIO_MAX_STRENGTH submaps away can never be received at all.
     const int radius = RADIO_MAX_STRENGTH;
-    for( overmap*&om : get_overmaps_near( center, radius ) ) {
+    for( overmap *&om : get_overmaps_near( center, radius ) ) {
         for( radio_tower &tower : om->radios ) {
             const radio_tower_reference rref = create_radio_tower_reference( *om, tower, center );
             if( rref.signal_strength > 0 ) {
@@ -2539,7 +2539,7 @@ overmapbuffer::t_extras_vector overmapbuffer::get_extras( int z, std::string_vie
 
 bool overmapbuffer::is_safe( const tripoint_abs_omt &p )
 {
-    for( mongroup*&mongrp : monsters_at( p ) ) {
+    for( mongroup *&mongrp : monsters_at( p ) ) {
         if( !mongrp->is_safe() ) {
             return false;
         }
