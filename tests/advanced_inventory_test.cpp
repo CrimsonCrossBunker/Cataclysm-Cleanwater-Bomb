@@ -432,13 +432,15 @@ TEST_CASE( "AIM_basic_move_items", "[items][advanced_inv]" )
                                          remaining_map,
                                          false );
                 const int num_items = limit - remaining_map;
-                REQUIRE( num_items == expected_map_count );
+                REQUIRE( num_items > 0 );
+                REQUIRE( num_items <= here.i_at( pos ).count_limit() );
                 int remaining_stash = num_items;
 
                 AND_GIVEN( "all items got placed" ) {
                     REQUIRE( here.i_at( pos ).size() == static_cast<size_t>( num_items ) );
                 }
 
+                REQUIRE( num_items == expected_map_count );
                 recalc_panes( advinv );
 
                 AND_GIVEN( "items are stacked properly" ) {
