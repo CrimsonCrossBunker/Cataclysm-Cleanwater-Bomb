@@ -125,7 +125,7 @@ jobs:
             tileset_dir: .
             precomposed: true
             release_download: true
-            release_zip_glob: 'CCB_UNDEAD_PEOPLE*.zip'
+            release_asset: CCB_UNDEAD_PEOPLE.zip
             release_subdir: UNDEAD_PEOPLE
 
     name: Compose tileset
@@ -174,12 +174,22 @@ jobs:
         if: matrix.release_download == true
         env:
           GH_TOKEN: ${{ github.token }}
-          ZIP_GLOB: ${{ matrix.release_zip_glob }}
+          TILESET_REPOSITORY: ${{ matrix.tileset_repo }}
+          ASSET_NAME: ${{ matrix.release_asset }}
           SUBDIR: ${{ matrix.release_subdir }}
         run: |
-          TAG=$(gh release list -R ${{ matrix.tileset_repo }} --limit 1 --json tagName -q '.[0].tagName')
-          echo "Downloading release $TAG from ${{ matrix.tileset_repo }}"
-          gh release download "$TAG" -R ${{ matrix.tileset_repo }} -p "$ZIP_GLOB" -O tileset.zip
+          TAG=$(gh release list -R "$TILESET_REPOSITORY" --limit 1 --json tagName -q '.[0].tagName')
+          test -n "$TAG"
+          test -n "$ASSET_NAME"
+          echo "Downloading release $TAG from $TILESET_REPOSITORY"
+          # Public assets do not need an authenticated API download, which
+          # shares the installation's much smaller API rate-limit budget.
+          curl --fail --location --show-error --silent \
+            --retry 3 --retry-delay 2 --retry-connrefused \
+            --connect-timeout 30 --max-time 300 \
+            --output tileset.zip \
+            "https://github.com/$TILESET_REPOSITORY/releases/download/$TAG/$ASSET_NAME"
+          unzip -tq tileset.zip
           unzip -q tileset.zip
           mkdir -p precomposed-tileset
           cp -r "$SUBDIR"/* precomposed-tileset/
