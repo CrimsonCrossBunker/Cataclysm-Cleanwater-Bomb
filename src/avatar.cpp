@@ -66,6 +66,7 @@
 #include "messages.h"
 #include "mission.h"
 #include "move_mode.h"
+#include "mp_actor_binding.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "output.h"
@@ -167,6 +168,13 @@ avatar &avatar::operator=( avatar && ) = default;
 
 void avatar::control_npc( npc &np, const bool debug )
 {
+    // Ally status also covers remote players and the client's host view.
+    // Their ownership survives disconnect; local takeover must not exchange
+    // their identities, inventories or missions with the local avatar.
+    if( cata_mp::is_player_proxy( np ) ) {
+        debugmsg( "control_npc() called on multiplayer actor %s", np.name );
+        return;
+    }
     if( !np.is_player_ally() ) {
         debugmsg( "control_npc() called on non-allied npc %s", np.name );
         return;
@@ -218,7 +226,7 @@ void avatar::control_npc_menu( const bool debug )
     int charnum = 0;
     for( const character_id &elem : g->get_follower_list() ) {
         shared_ptr_fast<npc> follower = overmap_buffer.find_npc( elem );
-        if( follower ) {
+        if( follower && !cata_mp::is_player_proxy( *follower ) ) {
             followers.emplace_back( follower );
             charmenu.addentry( charnum++, true, MENU_AUTOASSIGN, follower->get_name() );
         }
