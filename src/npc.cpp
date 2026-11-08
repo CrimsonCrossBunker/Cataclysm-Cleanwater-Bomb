@@ -83,6 +83,8 @@
 #include "map_iterator.h"
 #include "mapdata.h"
 #include "messages.h"
+#include "message_routing.h"
+#include "mp_player_feedback.h"
 #include "mission.h"
 #include "monster.h"
 #include "mtype.h"
@@ -3529,18 +3531,25 @@ std::string npc_attitude_name( npc_attitude att )
     return _( "Unknown attitude" );
 }
 
-//message related stuff
+void npc::add_msg_if_player( const std::string &msg ) const
+{
+    add_msg_if_player( m_neutral, msg );
+}
 
-//message related stuff
+void npc::add_msg_if_player( const game_message_params &params, const std::string &msg ) const
+{
+    cata_mp::queue_player_feedback( *this, params, msg );
+}
+
 void npc::add_msg_if_npc( const std::string &msg ) const
 {
     add_msg( replace_with_npc_name( msg ) );
 }
 
-void npc::add_msg_player_or_npc( const std::string &/*player_msg*/,
+void npc::add_msg_player_or_npc( const std::string &player_msg,
                                  const std::string &npc_msg ) const
 {
-    add_msg_if_player_sees( *this, replace_with_npc_name( npc_msg ) );
+    add_msg_player_or_npc( m_neutral, player_msg, npc_msg );
 }
 
 void npc::add_msg_if_npc( const game_message_params &params, const std::string &msg ) const
@@ -3549,26 +3558,27 @@ void npc::add_msg_if_npc( const game_message_params &params, const std::string &
 }
 
 void npc::add_msg_player_or_npc( const game_message_params &params,
-                                 const std::string &/*player_msg*/,
+                                 const std::string &player_msg,
                                  const std::string &npc_msg ) const
 {
-    const map &here = get_map();
-
-    if( get_player_view().sees( here, *this ) ) {
-        add_msg( params, replace_with_npc_name( npc_msg ) );
+    const auto owner = cata_mp::queue_player_feedback( *this, params, player_msg );
+    if( get_player_view().sees( get_map(), *this ) ) {
+        Messages::add_observer_msg( params, replace_with_npc_name( npc_msg ), owner );
     }
 }
 
-void npc::add_msg_player_or_say( const std::string &/*player_msg*/,
+void npc::add_msg_player_or_say( const std::string &player_msg,
                                  const std::string &npc_speech ) const
 {
-    say( npc_speech );
+    add_msg_player_or_say( m_neutral, player_msg, npc_speech );
 }
 
-void npc::add_msg_player_or_say( const game_message_params &/*params*/,
-                                 const std::string &/*player_msg*/, const std::string &npc_speech ) const
+void npc::add_msg_player_or_say( const game_message_params &params,
+                                 const std::string &player_msg, const std::string &npc_speech ) const
 {
-    say( npc_speech );
+    if( !cata_mp::queue_player_feedback( *this, params, player_msg ) ) {
+        say( npc_speech );
+    }
 }
 
 void npc::add_new_mission( class mission *miss )

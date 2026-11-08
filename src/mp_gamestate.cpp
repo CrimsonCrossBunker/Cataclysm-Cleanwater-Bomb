@@ -54,6 +54,8 @@
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "messages.h"
+#include "message_routing.h"
+#include "mp_player_feedback.h"
 #include "mod_manager.h"
 #include "monster.h"
 #include "mp_actor_binding.h"
@@ -1127,6 +1129,7 @@ void mp_store_pending_welcome( const std::string &msg )
     // Called once after a successful connection probe, not for each queued
     // welcome. Never import a previous host's wire IDs or delta baselines.
     mp_session().replication.client = {};
+    mp_session().client_feedback_sequence = 0;
     mp_session().admission = {};
     mp_session().admission.host_world = host_world;
     mp_session().admission.pending_welcome = msg;
@@ -1903,7 +1906,7 @@ static void flush_action_msgs( remote_player_session &recipient,  unsigned long 
     }
     const size_t count = static_cast<size_t>( cur - pre_msg );
     recipient.turn.last_forwarded_msg_count = cur;  // advance watermark to avoid double-forward
-    const auto new_msgs = Messages::recent_messages( count );
+    const auto new_msgs = Messages::recent_messages_for_player( count, recipient.credentials.id );
     for( const auto &[time_str, text] : new_msgs ) {
         ( void )time_str;
         // Partner swap/push/tap/join messages are host-POV (either the host's
@@ -1974,15 +1977,13 @@ void host_capture_vehmove_msgs( unsigned long long pre_msg )
     if( cur <= pre_msg ) {
         return;
     }
-    const auto new_msgs = Messages::recent_messages( static_cast<size_t>( cur - pre_msg ) );
-    for( const auto &[time_str, text] : new_msgs ) {
-        ( void )time_str;
-        mp_log( "[veh-move] capture queuing: " + text );
-        for( const auto &entry : mp_session().remote_players ) {
-            auto &recipient = *entry.second;
-            const npc *actor = mp_remote_actor( recipient );
-            if( actor && actor->controlling_vehicle ) {
-                recipient.turn.action_msgs_pending.push_back( text );
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &recipient = *entry.second;
+        const npc *actor = mp_remote_actor( recipient );
+        if( actor && actor->controlling_vehicle ) {
+            for( const auto &message : Messages::recent_messages_for_player(
+                     static_cast<size_t>( cur - pre_msg ), recipient.credentials.id ) ) {
+                recipient.turn.action_msgs_pending.push_back( message.second );
             }
         }
     }
@@ -2069,30 +2070,31 @@ void host_capture_avatar_msgs( unsigned long long pre_msg )
         return;
     }
     const std::string host_name = get_avatar().name;
-    const auto new_msgs = Messages::recent_messages( static_cast<size_t>( cur - pre_msg ) );
-    for( const auto &[time_str, text] : new_msgs ) {
-        ( void )time_str;
-        // Only forward messages that look like avatar combat ("You " prefix).
-        // Inventory, UI, and ambient messages are excluded.
-        if( text.rfind( "You ", 0 ) != 0 ) {
-            continue;
-        }
-        // Swap/push are delivered to the client as semantic flags
-        // (partner_swapped / partner_pushed) and rendered there locally; never
-        // relay their rendered text (that path produced "you pushes you").
-        if( text.find( "swap places" ) != std::string::npos ||
-            text.rfind( "You push ", 0 ) == 0 ) {
-            continue;
-        }
-        std::string out = text;
-        // Convert first-person to third-person properly: subject substitution,
-        // verb conjugation ("drop" → "drops"), AND possessive substitution
-        // ("your X" → "<name>'s X").  Without the possessive pass the client
-        // sees "<host> drops your X" and reads "your" as referring to itself
-        // — wrong subject.
-        mp_rewrite_first_to_third( out, host_name );
-        for( const auto &entry : mp_session().remote_players ) {
-            auto &recipient = *entry.second;
+    for( const auto &entry : mp_session().remote_players ) {
+        auto &recipient = *entry.second;
+        const auto new_msgs = Messages::recent_messages_for_player(
+                                  static_cast<size_t>( cur - pre_msg ), recipient.credentials.id );
+        for( const auto &[time_str, text] : new_msgs ) {
+            ( void )time_str;
+            // Only forward messages that look like avatar combat ("You " prefix).
+            // Inventory, UI, and ambient messages are excluded.
+            if( text.rfind( "You ", 0 ) != 0 ) {
+                continue;
+            }
+            // Swap/push are delivered to the client as semantic flags
+            // (partner_swapped / partner_pushed) and rendered there locally; never
+            // relay their rendered text (that path produced "you pushes you").
+            if( text.find( "swap places" ) != std::string::npos ||
+                text.rfind( "You push ", 0 ) == 0 ) {
+                continue;
+            }
+            std::string out = text;
+            // Convert first-person to third-person properly: subject substitution,
+            // verb conjugation ("drop" → "drops"), AND possessive substitution
+            // ("your X" → "<name>'s X").  Without the possessive pass the client
+            // sees "<host> drops your X" and reads "your" as referring to itself
+            // — wrong subject.
+            mp_rewrite_first_to_third( out, host_name );
             std::string addressed = out;
             mp_addressee_to_you( addressed, host_name, recipient.observation.partner_name_cached );
             recipient.turn.host_action_msgs_pending.push_back( std::move( addressed ) );
@@ -7586,6 +7588,7 @@ bool client_apply_message( const std::string &msg )
         }
         // Display forwarded combat messages from the host (hits, misses, kills).
         apply_craft_notifications( jo );
+        apply_player_feedback( jo );
         if( jo.has_array( "msgs" ) ) {
             for( const JsonValue &mv : jo.get_array( "msgs" ) ) {
                 const std::string txt = mv.get_string();
@@ -10860,7 +10863,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
                                  recipient.turn.last_forwarded_msg_count );
         recipient.turn.last_forwarded_msg_count = current_msg_count;
         const std::vector<std::pair<std::string, std::string>> new_msgs =
-                    Messages::recent_messages( new_count );
+                    Messages::recent_messages_for_player( new_count, recipient.credentials.id );
         for( const auto &[time_str, text] : new_msgs ) {
             ( void )time_str;
             // Swap/push messages are rendered on the client via semantic flags
@@ -11231,6 +11234,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
     ",\"vehicles\":" + vehicles_json +
     ",\"removed_vehicles\":" + removed_vehicles_json +
     ",\"msgs\":" + msgs_json +
+    ",\"player_feedback\":" + take_player_feedback( recipient ) +
     ",\"craft_notices\":" + take_craft_notifications( recipient.inventory_activity ) +
     ",\"group_fast_forward\":" + ( should_fast_forward() ? std::string( "true" ) :
                                    std::string( "false" ) ) +
