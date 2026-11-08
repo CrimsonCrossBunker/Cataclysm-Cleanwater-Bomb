@@ -905,16 +905,20 @@ void avatar_action::active_technique( avatar &you, map &m )
     menu.desc_enabled = true;
     menu.hilight_disabled = true;
     for( size_t i = 0; i < available.size(); ++i ) {
-        const bool enabled = ( available[i] != tec_mounted_charge || mounted_charge_available( you ) ) &&
-                             ( available[i]->grapple_action.empty() || available[i]->activation_allowed( you, "start" ) );
-        std::string description = available[i]->get_description();
-        if( !available[i]->grapple_action.empty() &&
-            you.has_effect( available[i]->grapple_cooldown_effect() ) ) {
-            description += string_format( _( "\nRecovering: %s remaining.\n" ),
-                                          to_string( you.get_effect( available[i]->grapple_cooldown_effect() ).get_duration() ) );
-        }
+        const bool enabled = available[i] != tec_mounted_charge || mounted_charge_available( you );
         menu.addentry_desc( i, enabled, MENU_AUTOASSIGN, available[i]->name.translated(),
-                            description );
+                            available[i]->get_description() );
+    }
+    for( size_t i = 0; i < available.size(); ++i ) {
+        if( available[i]->grapple_action.empty() ) {
+            continue;
+        }
+        uilist_entry &entry = menu.entries[i];
+        entry.enabled = entry.enabled && available[i]->activation_allowed( you, "start" );
+        if( you.has_effect( available[i]->grapple_cooldown_effect() ) ) {
+            entry.desc += string_format( _( "\nRecovering: %s remaining.\n" ),
+                                         to_string( you.get_effect( available[i]->grapple_cooldown_effect() ).get_duration() ) );
+        }
     }
     menu.query( true, 50, true );
     if( menu.ret < 0 ) {
