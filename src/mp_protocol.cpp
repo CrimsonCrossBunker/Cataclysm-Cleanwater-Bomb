@@ -77,7 +77,9 @@ bool is_state_sync_message( const std::string &wire )
             return false;
         }
         if( !action.empty() ) {
-            return ( type.empty() || type == "action" ) && action == "worn_sync";
+            return ( type.empty() || type == "action" ) &&
+                   ( action == "worn_sync" || action == "activity_start" || action == "activity_end" ||
+                     action == "save_request" || action == "session_ending" );
         }
         return type == "note_sync" || type == "chat" ||
                type == "templates_list" || type == "resync_request";

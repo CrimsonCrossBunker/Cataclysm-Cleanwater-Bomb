@@ -249,6 +249,10 @@ struct host_turn_state {
 };
 
 struct client_turn_state {
+    // Socket reads may refresh a view many times in one host turn. Only the
+    // main loop consumes a new clock value and advances the local character.
+    time_point observed_host_turn = calendar::before_time_starts;
+    time_point processed_host_turn = calendar::before_time_starts;
     bool group_fast_forward = false;
     character_turn_driver character_turns;
     // Client: "keep smashing" continuation state.
@@ -265,10 +269,8 @@ struct client_turn_state {
     // Client: set when the host sends host_died or the socket drops.
     // Suppresses further processing and the lost-connection spam.
     bool server_died = false;
-    // Client: set after sending an action, cleared when the server sends moves=0.
-    // While true, incoming state packets with moves>0 are stale pre-ack broadcasts
-    // and must be ignored — otherwise TCP-buffered grants re-unlock the client
-    // before the server has processed the action.
+    // Client: an action is pending until a matching response or a newer grant.
+    // Repeated positive-budget snapshots never restore spent moves.
     bool client_waiting_for_ack = false;
     // Client: true when the server's proxy NPC is at vehicle controls.
     // Set by apply_state_packet() from the "client_ctrl_veh" field.
@@ -277,8 +279,7 @@ struct client_turn_state {
     // Client: absolute position of the controlled vehicle (root tile).
     // Set alongside g_client_ctrl_veh from "client_veh_pos" in the state packet.
     tripoint_abs_ms client_ctrl_veh_abs{ 0, 0, 0 };
-    // Timestamp of when the ack guard was set. Used to break deadlocks where the
-    // server never sends moves<=0 (e.g. after reconnect with a stale ack flag).
+    // Diagnostic timestamp; elapsed wall time never unlocks an action grant.
     std::chrono::steady_clock::time_point ack_set_time{};
     // Timestamp of when the server last granted moves (moves > 0 packet received).
     // Used by ms_since_last_grant() to auto-send "wait" when the player is idle.
@@ -316,6 +317,7 @@ struct peer_observation {
     std::string partner_activity{};
     // Stable identity of the player this helper committed to.
     std::string partner_help_target{};
+    bool partner_sleeping = false;
     // Progress % (0-100) of the partner's current activity.  Forwarded each
     // action/state packet alongside g_partner_activity.  Read by the Co-op panel.
     int partner_activity_pct = 0;

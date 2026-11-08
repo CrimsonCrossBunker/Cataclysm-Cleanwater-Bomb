@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "avatar.h"
+#include "activity_actor_definitions.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "debug.h"
@@ -12,6 +13,11 @@
 #include "json.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "monster.h"
+#include "creature_tracker.h"
+#include "mp_gamestate.h"
+#include "mp_world_session.h"
+#include "player_activity.h"
 #include "mp_actor_binding.h"
 #include "npc.h"
 #include "options_helpers.h"
@@ -302,4 +308,35 @@ TEST_CASE( "native_control_excludes_automatic_overmap_travel",
     g->simulate_turn_suffix();
     CHECK( second.pos_abs_omt() == next );
     CHECK( second.pos_abs() != position );
+}
+
+// Requires the co-op runtime adjacent to the test executable, as for the game.
+TEST_CASE( "host_wait_activity_keeps_monsters_advancing",
+           "[.multiplayer_runtime][turn_coordination]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    calendar::turn = calendar::turn_zero + 11_hours;
+    control_fixture fixture;
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        get_creature_tracker().clear();
+    } );
+    const bool started = session.hosting.start( 0, "", "turn-regression" );
+    INFO( session.hosting.error() );
+    REQUIRE( started );
+    REQUIRE( cata_mp::is_hosting() );
+    fixture.local.assign_activity( wait_activity_actor( 100_seconds ) );
+    REQUIRE( cata_mp::host_is_in_wait_activity() );
+    auto zombie = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+                  tripoint_bub_ms( 65, 60, 0 ) );
+    const efftype_id stunned( "stunned" );
+    zombie->add_effect( stunned, 10_turns );
+    REQUIRE( get_creature_tracker().add( zombie ) );
+    calendar::turn += 1_turns;
+    g->simulate_turn_suffix();
+    CHECK( zombie->get_effect_dur( stunned ) == 9_turns );
+    CHECK( fixture.local.activity.id() == activity_id( "ACT_WAIT" ) );
 }
