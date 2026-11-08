@@ -629,7 +629,7 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--port", "<port>",
-                "TCP port for multiplayer server (default 8080)",
+                "UDP port for multiplayer server (default 8080)",
                 section_default,
                 1,
                 [&result]( int, const char **params ) -> int {
