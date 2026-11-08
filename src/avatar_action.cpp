@@ -916,8 +916,9 @@ void avatar_action::active_technique( avatar &you, map &m )
         uilist_entry &entry = menu.entries[i];
         entry.enabled = entry.enabled && available[i]->activation_allowed( you, "start" );
         if( you.has_effect( available[i]->grapple_cooldown_effect() ) ) {
+            const effect &cooldown = you.get_effect( available[i]->grapple_cooldown_effect() );
             entry.desc += string_format( _( "\nRecovering: %s remaining.\n" ),
-                                         to_string( you.get_effect( available[i]->grapple_cooldown_effect() ).get_duration() ) );
+                                         to_string( cooldown.get_duration() ) );
         }
     }
     menu.query( true, 50, true );
