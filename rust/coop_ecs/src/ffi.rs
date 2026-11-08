@@ -175,7 +175,7 @@ pub struct CcbCoopActivityDeltaFlags {
 
 #[no_mangle]
 pub extern "C" fn ccb_coop_abi_version() -> u32 {
-    1
+    2
 }
 
 #[no_mangle]

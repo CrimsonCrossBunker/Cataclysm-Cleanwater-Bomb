@@ -10,6 +10,7 @@
 #include <string>
 #include <utility>
 
+#include "mp_admission.h"
 #include "mp_player_identity.h"
 
 namespace cata_mp
@@ -24,7 +25,7 @@ struct mp_event {
     type evt_type;
     std::string display_name;
     std::string data;  // JSON action string for type::action
-    uint64_t peer_id = 0; // Transport identity; display names are not unique IDs.
+    peer_admission admission; // Exact server admission, not a reusable numeric peer ID.
     player_credentials player{}; // Connect only; never included in gameplay logs.
 };
 

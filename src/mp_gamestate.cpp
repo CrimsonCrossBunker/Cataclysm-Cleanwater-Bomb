@@ -987,7 +987,7 @@ void mp_open_chat()
                            R"(","host":)" + ( host ? "true" : "false" ) + "}";
     if( host ) {
         if( auto srv = get_active_server() ) {
-            srv->post_broadcast( js + "\n" );
+            srv->post_send( mp_session().remote_admission, js + "\n" );
         }
     } else {
         client_send( js );
@@ -1415,7 +1415,7 @@ static std::optional<std::string> restore_player( const player_credentials &play
     return saved;
 }
 
-static void spawn_remote_player( const std::string &name, uint64_t peer_id,
+static void spawn_remote_player( const std::string &name, const peer_admission &admission,
                                  const player_credentials &player )
 {
     if( mp_session().remote_connected ) {
@@ -1512,7 +1512,7 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id,
         g->add_npc_follower( rn->getID() );
     }
     mp_session().begin_remote_peer();
-    mp_session().remote_peer_id = peer_id;
+    mp_session().remote_admission = admission;
     mp_session().remote_connected = true;
     mp_session().host_turn.remote_moves = rn ? rn->get_speed() : 100;  // grant first turn immediately
     mp_session().host_turn.client_acted_this_turn = false;
@@ -1533,8 +1533,8 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id,
     // fresh NPC gets the correct appearance even after a respawn.
     auto srv = get_active_server();
     if( srv ) {
-        srv->post_broadcast( serialize_remote_player_state() + "\n" );
-        srv->post_broadcast( "{\"type\":\"resync_request\"}\n" );
+        srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
+        srv->post_send( mp_session().remote_admission, "{\"type\":\"resync_request\"}\n" );
     }
 
     // Templates wire-sync: send host's local template list so the client can
@@ -1568,7 +1568,7 @@ static void release_remote_player()
     }
 
     mp_session().remote_connected = false;
-    mp_session().remote_peer_id = 0;
+    mp_session().remote_admission = {};
     mp_session().remote_player = {};
     mp_session().remote_detach_pending = false;
     mp_session().remote_actor.reset();
@@ -1593,7 +1593,7 @@ static void remove_remote_player()
     if( !mp_save_remote_player() ) {
         // Retain ownership and freeze NPC AI until an explicit world-save retry
         // succeeds. The departed peer must no longer receive turns or actions.
-        mp_session().remote_peer_id = 0;
+        mp_session().remote_admission = {};
         mp_session().remote_detach_pending = true;
         return;
     }
@@ -1898,7 +1898,8 @@ void host_broadcast_vehicle_step()
         return;
     }
     mp_session().replication.host.last_vehicle_step_payload = vehicles_json;
-    srv->post_broadcast( R"({"type":"vehicle_step","vehicles":)" + vehicles_json + "}\n" );
+    srv->post_send( mp_session().remote_admission,
+                    R"({"type":"vehicle_step","vehicles":)" + vehicles_json + "}\n" );
 }
 
 // A relayed line is shown to the PARTNER, so a mention of the partner by name
@@ -1969,7 +1970,7 @@ void host_broadcast_post_action()
     }
     mp_log( "[cdda-mp] HOST-ACK: post-action broadcast grant_seq="
             + std::to_string( mp_session().host_turn.grant_seq ) );
-    srv->post_broadcast( serialize_remote_player_state() + "\n" );
+    srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
 }
 
 // Standard turn-ending broadcast for handlers in handle_remote_action.
@@ -1994,7 +1995,7 @@ static void srv_emit_ack( const char *action_name )
             + ") grant_seq=" + std::to_string( mp_session().host_turn.grant_seq ) );
     auto srv = get_active_server();
     if( srv ) {
-        srv->post_broadcast( serialize_remote_player_state() + "\n" );
+        srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
     }
     // The handler just mutated authoritative world state (positions, items,
     // doors, vehicle flags, etc.) but the host may be sitting in a blocking
@@ -2182,7 +2183,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         g->quicksave();
         add_msg( m_info, _( "Your partner saved — the shared world was saved too." ) );
         if( auto srv = get_active_server() ) {
-            srv->post_broadcast( "{\"type\":\"save_done\"}\n" );
+            srv->post_send( mp_session().remote_admission, "{\"type\":\"save_done\"}\n" );
         }
         return;
     }
@@ -3043,7 +3044,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     + ",\"smash_x\":" + std::to_string( smash_target_abs.x() )
                     + ",\"smash_y\":" + std::to_string( smash_target_abs.y() )
                     + ",\"smash_z\":" + std::to_string( smash_target_abs.z() ) + "}";
-            srv->post_broadcast( state + "\n" );
+            srv->post_send( mp_session().remote_admission, state + "\n" );
         }
         // See NPC-MOVE invalidate for rationale.
         g->invalidate_main_ui_adaptor();
@@ -3244,7 +3245,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             if( !turn_ended ) {
                 state = state.substr( 0, state.size() - 1 ) + ",\"free\":true}";
             }
-            srv->post_broadcast( state + "\n" );
+            srv->post_send( mp_session().remote_admission, state + "\n" );
         }
         // See NPC-MOVE invalidate for rationale.
         g->invalidate_main_ui_adaptor();
@@ -3272,7 +3273,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         // Free action: do NOT deduct g_remote_moves.  Broadcast updated state.
         auto srv = get_active_server();
         if( srv ) {
-            srv->post_broadcast( serialize_remote_player_state() + "\n" );
+            srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
         }
         // See NPC-MOVE invalidate for rationale.
         g->invalidate_main_ui_adaptor();
@@ -3741,7 +3742,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             }
             const std::string zmap = build_map_sync_z( next.z() );
             if( !zmap.empty() ) {
-                srv->post_broadcast( zmap + "\n" );
+                srv->post_send( mp_session().remote_admission, zmap + "\n" );
                 mp_log( "[cdda-mp] RAMP-ZMAP: pre-teleport z=" + std::to_string( next.z() ) +
                         " bytes=" + std::to_string( zmap.size() ) );
             }
@@ -3750,7 +3751,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         if( !acted ) {
             state = state.substr( 0, state.size() - 1 ) + ",\"free\":true}";
         }
-        srv->post_broadcast( state + "\n" );
+        srv->post_send( mp_session().remote_admission, state + "\n" );
     }
 
     // Mirror srv_emit_ack's UI invalidation — the move handler inlines its own
@@ -4195,7 +4196,7 @@ void grant_client_turn()
         if( mp_session().host_turn.proxy_was_alive ) {
             mp_log( "[cdda-mp] PROXY-DIED: notifying client and disconnecting" );
             if( auto srv = get_active_server() ) {
-                srv->post_broadcast( "{\"type\":\"you_died\"}\n" );
+                srv->post_send( mp_session().remote_admission, "{\"type\":\"you_died\"}\n" );
                 // Brief flush window so the packet leaves before the socket
                 // is torn down — same pattern as notify_client_host_died.
                 std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
@@ -4248,23 +4249,26 @@ void grant_client_turn()
         // (t_open_air) first, gravity_check fires, and the client falls.
         const std::string mapm = build_map_sync();
         if( !mapm.empty() ) {
-            srv->post_broadcast( mapm + "\n" );
+            srv->post_send( mp_session().remote_admission, mapm + "\n" );
         }
-        srv->post_broadcast( serialize_remote_player_state() + "\n" );
+        srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
         // Stream the host's overmap region so the client's far-map (cities/
         // roads/biomes) matches instead of its own non-deterministic regen.
         // Returns "" unless this is the first sync or the host moved a step,
         // so it's cheap on the steady-state path.
         const std::string om = build_overmap_sync();
         if( !om.empty() ) {
-            srv->post_broadcast( om + "\n" );
+            srv->post_send( mp_session().remote_admission, om + "\n" );
         }
     }
 }
 
 void wait_for_client_action()
 {
-    if( !mp_session().remote_connected || mp_session().remote_peer_id == 0 ) {
+    // Network retirement prevents delivery, but the owner still drains the
+    // admitted stream through its ordered disconnect. Skipping this wait based
+    // on worker liveness changes input consumption and advances an extra turn.
+    if( !mp_session().remote_connected || mp_session().remote_admission.peer_id() == 0 ) {
         return;
     }
 
@@ -4408,7 +4412,7 @@ void wait_for_client_action()
                     prev_wait_host_act + " -> " + cur_host_act +
                     ", broadcasting state" );
             if( auto srv = get_active_server() ) {
-                srv->post_broadcast( serialize_remote_player_state() + "\n" );
+                srv->post_send( mp_session().remote_admission, serialize_remote_player_state() + "\n" );
             }
             prev_wait_host_act = cur_host_act;
         }
@@ -4995,7 +4999,7 @@ void notify_client_host_died()
     if( !srv ) {
         return;
     }
-    srv->post_broadcast( "{\"type\":\"host_died\"}\n" );
+    srv->post_send( mp_session().remote_admission, "{\"type\":\"host_died\"}\n" );
     // Brief pause so the packet flushes before the death screen takes focus.
     std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
 }
@@ -5022,7 +5026,8 @@ void mp_notify_session_ending()
     if( is_host_mode() ) {
         auto srv = get_active_server();
         if( srv ) {
-            srv->post_broadcast( "{\"type\":\"session_ending\",\"from\":\"host\"}\n" );
+            srv->post_send( mp_session().remote_admission,
+                            "{\"type\":\"session_ending\",\"from\":\"host\"}\n" );
             mp_log( "[cdda-mp] SESSION-END: host notified client" );
         }
     } else if( is_client_mode() ) {
@@ -5069,7 +5074,7 @@ static void mp_send_payload( const std::string &payload )
     if( is_host_mode() ) {
         auto srv = get_active_server();
         if( srv ) {
-            srv->post_broadcast( payload + "\n" );
+            srv->post_send( mp_session().remote_admission, payload + "\n" );
         }
     } else if( is_client_mode() ) {
         client_send( payload );
@@ -5786,10 +5791,13 @@ void process_mp_events()
         // A late disconnect/action from a former transport peer must not act on
         // the currently bound character. Display names are not connection IDs.
         if( event.evt_type != mp_event::type::connect &&
-            !mp_session().accepts_remote_event( event.peer_id ) ) {
+            !mp_session().accepts_remote_event( event.admission ) ) {
             continue;
         }
         if( event.evt_type == mp_event::type::action ) {
+            // Already admitted actions precede the disconnect in this queue.
+            // Preserve that order even after transport retirement; exact
+            // admission matching rejects them after detach or replacement.
             const bool sync = is_state_sync( event.data );
             if( !sync && turn_action_processed ) {
                 mp_log( "[cdda-mp] process_mp_events: unexpected queued turn-action dropped: " +
@@ -5800,12 +5808,12 @@ void process_mp_events()
         }
         switch( event.evt_type ) {
             case mp_event::type::connect:
-                if( event.peer_id != 0 ) {
+                if( event.admission.active() ) {
                     try {
-                        spawn_remote_player( event.display_name, event.peer_id, event.player );
+                        spawn_remote_player( event.display_name, event.admission, event.player );
                     } catch( const std::exception & ) {
                         if( const auto server = get_active_server() ) {
-                            server->post_reject( event.peer_id,
+                            server->post_reject( event.admission,
                                                  "Could not restore player identity; host must check the saved character" );
                         }
                         add_msg( m_bad,
@@ -9687,7 +9695,7 @@ void mp_post_trade( npc &np, const std::list<item> &items_given,
     if( host_side ) {
         auto s = get_active_server();
         if( s ) {
-            s->post_broadcast( payload + "\n" );
+            s->post_send( mp_session().remote_admission, payload + "\n" );
         }
     } else {
         client_send( payload );
@@ -9813,7 +9821,7 @@ void mp_high_five()
                                 av.get_name() + "\"}";
     if( is_hosting() || is_server_mode() ) {
         if( auto s = get_active_server() ) {
-            s->post_broadcast( payload + "\n" );
+            s->post_send( mp_session().remote_admission, payload + "\n" );
         }
     } else if( is_client_mode() ) {
         client_send( payload );
@@ -9901,7 +9909,7 @@ static void mp_send_note_msg( const std::string &payload )
     if( is_server_mode() || is_hosting() ) {
         auto s = get_active_server();
         if( s ) {
-            s->post_broadcast( payload + "\n" );
+            s->post_send( mp_session().remote_admission, payload + "\n" );
         }
     } else if( is_client_mode() ) {
         client_send( payload );
