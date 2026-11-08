@@ -20,6 +20,7 @@
 #include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_firearm.h"
 #include "mp_queue.h"
 #include "mp_test_helpers.h"
 #include "mp_throw.h"
@@ -202,7 +203,7 @@ TEST_CASE( "sling_throw_resolves_nested_projectile_without_stowing_the_aid",
     const auto aid = who.get_wielded_item()->uid().get_value();
     item_location source = add_projectile_to_backpack( who );
     auto intent = cata_mp::make_throw_intent( who, source );
-    REQUIRE( intent.path.size() == 2 );
+    REQUIRE( intent.item.path.size() == 2 );
     intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     REQUIRE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
     CHECK( who.get_wielded_item()->uid().get_value() == aid );
@@ -260,8 +261,8 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
         out.member( "target", target );
         out.member( "blind_from", std::optional<tripoint_abs_ms>() );
         out.member( "source", "carried" );
-        out.member( "source_position", intent.source_position );
-        auto path = intent.path;
+        out.member( "source_position", intent.item.position );
+        auto path = intent.item.path;
         path.back() = uid;
         out.member( "path", path );
         out.member( "wielded", intent.wielded );
@@ -278,11 +279,19 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", wire, peer.admission } ) );
         cata_mp::process_mp_events();
     };
+    if( sling ) {
+        cata_mp::firearm_intent prepare;
+        prepare.action = "prepare";
+        prepare.weapon = intent.wielded;
+        prepare.origin = who.pos_abs();
+        REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), peer.firearm, prepare ) ==
+                 cata_mp::firearm_outcome::aiming );
+    }
     const auto before = rng_get_engine();
-    send( packet( intent.path.back() + 100 ) );
+    send( packet( intent.item.path.back() + 100 ) );
     CHECK( ammo->charges == count );
     CHECK( rng_get_engine() == before );
-    const std::string wire = packet( intent.path.back() );
+    const std::string wire = packet( intent.item.path.back() );
     send( wire );
     REQUIRE( ammo->charges == count - 1 );
     CHECK( who.get_str_base() == 8 );

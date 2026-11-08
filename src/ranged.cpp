@@ -274,7 +274,6 @@ static constexpr int AIF_DURATION_LIMIT = 10;
 
 static projectile make_gun_projectile( const item &gun, Character &guy );
 static int time_to_attack( const Character &p, const itype &firing );
-static int RAS_time( const Character &p, const item_location &loc );
 /**
 * Handle spent ammo casings and linkages.
 * @param weap   Weapon.
@@ -1317,7 +1316,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
 
     itype_id gun_id = gun.typeId();
     int attack_moves = time_to_attack( *this, *gun_id ) +
-                       RAS_time( *this, ammo ) + action_time( *this, *gun_id ) ;
+                       reload_and_shoot_time( *this, ammo ) + action_time( *this, *gun_id ) ;
     skill_id gun_skill = gun.gun_skill();
     add_msg_debug( debugmode::DF_RANGED, "Gun skill (%s) %g", gun_skill.c_str(),
                    get_skill_level( gun_skill ) ) ;
@@ -1334,10 +1333,11 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         // Special handling for weapons where we supply the ammo separately (i.e. ammo is populated)
         // instead of it being loaded into the weapon, reload right before firing.
         if( !!ammo && !gun.ammo_remaining( ) ) {
-            Character &you = get_avatar();
-            gun.reload( you, ammo, 1 );
-            you.burn_energy_arms( - gun.get_min_str() * static_cast<int>( 0.006f *
-                                  get_option<int>( "PLAYER_MAX_STAMINA_BASE" ) ) );
+            if( !gun.reload( *this, ammo, 1 ) ) {
+                break;
+            }
+            burn_energy_arms( - gun.get_min_str() * static_cast<int>( 0.006f *
+                              get_option<int>( "PLAYER_MAX_STAMINA_BASE" ) ) );
         }
 
         if( !handle_gun_damage( gun ) ) {
@@ -2376,7 +2376,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         } else {
             prediction.moves = predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type,
                                                start_recoil ).moves + time_to_attack( you, *weapon.type )
-                               + RAS_time( you, load_loc ) + action_time( you, *weapon.type );
+                               + reload_and_shoot_time( you, load_loc ) + action_time( you, *weapon.type );
         }
 
         // if the default method is "behind" the selected; e.g. you are in immediate
@@ -2643,7 +2643,7 @@ static int print_aim( const target_ui &ui, Character &you, const catacurses::win
             target_ui::TargetMode::Fire, ctxt, weapon, dispersion, confidence_config,
             Target_attributes( you.pos_bub(), pos ), pos, load_loc );
 
-    int time = RAS_time( you, load_loc );
+    int time = reload_and_shoot_time( you, load_loc );
 
     return print_ranged_chance( w, line_number, aim_chances, time, target_ui::TargetMode::Fire );
 }
@@ -2800,7 +2800,7 @@ int time_to_attack( const Character &p, const itype &firing )
     return ret;
 }
 
-int RAS_time( const Character &p, const item_location &loc )
+int reload_and_shoot_time( const Character &p, const item_location &loc )
 {
     int time = 0;
     if( loc ) {
@@ -2813,6 +2813,38 @@ int RAS_time( const Character &p, const item_location &loc )
         time += opt.moves();
     }
     return time;
+}
+
+bool ready_ranged_ammo( Character &who, item &gun, item_location ammo )
+{
+    const int moves = reload_and_shoot_time( who, ammo );
+    if( !ammo || !gun.reload( who, ammo, 1 ) ) {
+        return false;
+    }
+    who.mod_moves( -moves );
+    who.burn_energy_arms( -gun.get_min_str() * static_cast<int>( 0.006f *
+                          get_option<int>( "PLAYER_MAX_STAMINA_BASE" ) ) );
+    return true;
+}
+
+bool unload_ready_ranged_ammo( Character &who, item &gun )
+{
+    if( !gun.has_flag( flag_RELOAD_AND_SHOOT ) || !gun.ammo_remaining() ) {
+        return false;
+    }
+    item ammo( gun.ammo_current(), calendar::turn, gun.ammo_remaining() );
+    if( gun.is_filthy() ) {
+        ammo.set_flag( flag_FILTHY );
+    }
+    const int before = ammo.charges;
+    const int cost = who.item_reload_cost( gun, ammo, before ) / 2;
+    if( !who.add_or_drop_with_msg( ammo, before > 1 ) ) {
+        return false;
+    }
+    who.mod_moves( -cost );
+    gun.ammo_set( gun.ammo_current(), gun.ammo_remaining() - before );
+    who.invalidate_weight_carried_cache();
+    return true;
 }
 
 static void cycle_action( item &weap, const itype_id &ammo, map *here, const tripoint_bub_ms &pos )
@@ -3427,7 +3459,7 @@ target_handler::trajectory target_ui::run()
             }
             set_last_target();
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
-                cata_mp::client_request_firearm( dst, "FIRE" );
+                cata_mp::client_request_firearm( dst, "FIRE", activity->reload_loc );
                 timed_out_action = "AIM";
                 loop_exit_code = ExitCode::Timeout;
                 break;
@@ -3444,7 +3476,7 @@ target_handler::trajectory target_ui::run()
 
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
                 set_last_target();
-                cata_mp::client_request_firearm( dst, "AIM" );
+                cata_mp::client_request_firearm( dst, "AIM", activity->reload_loc );
                 timed_out_action = "AIM";
                 loop_exit_code = ExitCode::Timeout;
                 break;
@@ -3457,10 +3489,7 @@ target_handler::trajectory target_ui::run()
 
             if( relevant->has_flag( flag_RELOAD_AND_SHOOT ) ) {
                 if( !relevant->ammo_remaining( ) && activity->reload_loc ) {
-                    you->mod_moves( -RAS_time( *you, activity->reload_loc ) );
-                    relevant->reload( get_avatar(), activity->reload_loc, 1 );
-                    you->burn_energy_arms( - relevant->get_min_str() * static_cast<int>( 0.006f *
-                                           get_option<int>( "PLAYER_MAX_STAMINA_BASE" ) ) );
+                    ready_ranged_ammo( *you, *relevant, activity->reload_loc );
                     activity->reload_loc = item_location();
                 }
             }
@@ -3470,7 +3499,7 @@ target_handler::trajectory target_ui::run()
             }
 
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
-                cata_mp::client_request_firearm( dst, "DROP_AIM" );
+                cata_mp::client_request_firearm( dst, "DROP_AIM", activity->reload_loc );
                 timed_out_action = "AIM";
                 loop_exit_code = ExitCode::Timeout;
                 break;
@@ -3489,7 +3518,7 @@ target_handler::trajectory target_ui::run()
 
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
                 set_last_target();
-                cata_mp::client_request_firearm( dst, action );
+                cata_mp::client_request_firearm( dst, action, activity->reload_loc );
                 timed_out_action = action;
                 loop_exit_code = ExitCode::Timeout;
                 break;

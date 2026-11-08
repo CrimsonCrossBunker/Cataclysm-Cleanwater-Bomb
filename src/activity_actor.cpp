@@ -614,7 +614,7 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
     }
     if( remote ) {
         if( aborted ) {
-            cata_mp::client_send_activity_end( "ACT_AIM" );
+            cata_mp::client_cancel_firearm_activity( should_unload_RAS );
         }
         cata_mp::client_finish_firearm_activity();
     }
@@ -625,7 +625,9 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
     if( aborted ) {
-        unload_RAS_weapon();
+        if( !remote ) {
+            unload_RAS_weapon();
+        }
         if( reload_requested ) {
             // Reload the gun / select different arrows
             // May assign ACT_RELOAD
@@ -664,11 +666,13 @@ void aim_activity_actor::canceled( player_activity &/*act*/, Character &/*who*/ 
 {
     if( cata_mp::is_client_mode() ) {
         if( cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive ) {
-            cata_mp::client_send_activity_end( "ACT_AIM" );
+            cata_mp::client_cancel_firearm_activity( should_unload_RAS );
         }
         cata_mp::client_finish_firearm_activity();
     }
-    unload_RAS_weapon();
+    if( !cata_mp::is_client_mode() ) {
+        unload_RAS_weapon();
+    }
     restore_view();
 }
 
@@ -787,8 +791,7 @@ void aim_activity_actor::unload_RAS_weapon()
     gun_mode gun = weapon->gun_current_mode();
     if( gun->has_flag( flag_RELOAD_AND_SHOOT ) ) {
         if( gun->ammo_remaining( ) ) {
-            item_location loc = item_location( you, gun.target );
-            you.unload( loc, true );
+            unload_ready_ranged_ammo( you, *gun );
         }
     }
 }

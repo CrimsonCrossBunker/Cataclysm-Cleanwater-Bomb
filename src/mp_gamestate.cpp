@@ -1,6 +1,7 @@
 #include "mp_gamestate.h"
 #include "mp_combat_result.h"
 #include "mp_throw.h"
+#include "sling.h"
 
 #include <stdexcept>
 #include <limits>
@@ -2190,7 +2191,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     jo.allow_omitted_members();
 
     const std::string action = jo.get_string( "action", "" );
-    if( !action.empty() && !is_state_sync_message( msg ) &&
+    if( !action.empty() && action != "firearm_cancel" && !is_state_sync_message( msg ) &&
         ( !jo.has_int( "grant_seq" ) || jo.get_int64( "grant_seq" ) != recipient.turn.grant_seq ||
           !recipient.turn.granted_this_turn || recipient.turn.client_acted_this_turn ||
           recipient.turn.remote_moves <= 0 ) ) {
@@ -2198,6 +2199,36 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         // world turn. Never apply its attached inventory/terrain mutations.
         if( const auto server = get_active_server() ) {
             server->post_send( recipient.admission, serialize_remote_player_state( recipient ) );
+        }
+        return;
+    }
+    if( action == "firearm_cancel" ) {
+        // Cancellation can arrive while AP is exhausted; the owned preparation
+        // identity makes retries harmless, without accepting client mutations.
+        if( recipient.firearm.weapon != 0 && jo.has_int( "weapon" ) &&
+            recipient.firearm.weapon == jo.get_int64( "weapon" ) ) {
+            remote->set_moves( recipient.turn.remote_moves );
+            const auto messages = Messages::size();
+            finish_firearm_activity( *remote, recipient.firearm, true,
+                                     jo.get_bool( "unload_ras", false ) );
+            remote = mp_remote_actor( recipient );
+            if( !remote ) {
+                return;
+            }
+            recipient.turn.remote_moves = remote->get_moves();
+            recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
+            recipient.observation.partner_activity.clear();
+            flush_action_msgs( recipient, messages, remote->name );
+        }
+        const std::string result = make_combat_result( *remote, recipient.pickup );
+        if( const auto server = get_active_server() ) {
+            server->post_send( recipient.admission, result + "\n" );
+            std::string state = serialize_remote_player_state( recipient );
+            if( !recipient.turn.client_acted_this_turn && recipient.turn.granted_this_turn &&
+                !state.empty() && state.back() == '}' ) {
+                state.insert( state.size() - 1, ",\"free\":true" );
+            }
+            server->post_send( recipient.admission, state + "\n" );
         }
         return;
     }
@@ -2263,9 +2294,9 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             jo.read( "origin", intent.origin, true );
             jo.read( "target", intent.target, true );
             jo.read( "blind_from", intent.blind_from, true );
-            intent.source = jo.get_string( "source" );
-            jo.read( "source_position", intent.source_position, true );
-            jo.read( "path", intent.path, true );
+            intent.item.kind = jo.get_string( "source" );
+            jo.read( "source_position", intent.item.position, true );
+            jo.read( "path", intent.item.path, true );
             intent.wielded = jo.get_int64( "wielded" );
             intent.allow_theft = jo.get_bool( "allow_theft", false );
             if( jo.has_object( "disposition" ) ) {
@@ -2274,7 +2305,15 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                                                        choice.get_int64( "container" ), choice.get_int64( "pocket" ) };
             }
             if( pickup_inventory_revision_matches( jo, recipient.pickup ) ) {
-                execute_throw_intent( *remote, get_map(), intent );
+                const bool prepared = intent.method != throw_method::sling ||
+                                      ( recipient.firearm.weapon == intent.wielded &&
+                                        !recipient.firearm.activity_started );
+                if( prepared ) {
+                    if( execute_throw_intent( *remote, get_map(), intent ) &&
+                        intent.method == throw_method::sling ) {
+                        recipient.firearm = {};
+                    }
+                }
             }
         } catch( const JsonError &error ) {
             mp_log( std::string( "[ccb-mp] rejected throw intent: " ) + error.what() );
@@ -2309,6 +2348,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             intent.action = jo.get_string( "operation" );
             intent.weapon = jo.get_int64( "weapon" );
             intent.mode = gun_mode_id( jo.get_string( "mode" ) );
+            jo.read( "ammo", intent.ammo, false );
             jo.read( "origin", intent.origin, true );
             jo.read( "target", intent.target, true );
             if( pickup_inventory_revision_matches( jo, recipient.pickup ) ) {
@@ -2334,7 +2374,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         out.member( "outcome", static_cast<int>( outcome ) );
         // Aiming a firearm changes recoil/AP only. Avoid serializing every
         // carried item on each ten-move aim adjustment.
-        if( outcome != firearm_outcome::aiming || intent.action == "prepare" ) {
+        if( outcome != firearm_outcome::aiming || intent.action == "prepare" || intent.ammo ) {
             const std::string combat = make_combat_result( *remote, recipient.pickup );
             out.member( "combat" );
             *out.get_stream() << combat;
@@ -8207,6 +8247,21 @@ void client_finish_ready_firearm_activity()
         return;
     }
     const auto firearm_phase = client_firearm_phase();
+    const item_location weapon = u.get_wielded_item();
+    if( weapon && is_sling_launcher( *weapon ) &&
+        mp_session().client_firearm.weapon == weapon->uid().get_value() ) {
+        if( firearm_phase == firearm_view_phase::finished ||
+            firearm_phase == firearm_view_phase::rejected ) {
+            client_finish_firearm_activity();
+        } else if( !is_client_waiting_for_ack() && u.get_moves() > 0 ) {
+            if( firearm_phase == firearm_view_phase::preparing ) {
+                client_request_firearm( u.pos_bub(), "prepare" );
+            } else if( firearm_phase == firearm_view_phase::aiming ) {
+                aim_sling( u );
+            }
+        }
+        return;
+    }
     if( u.activity.id() == activity_id( "ACT_AIM" ) && u.activity.actor &&
         ( firearm_phase == firearm_view_phase::finished ||
           firearm_phase == firearm_view_phase::rejected ) ) {
@@ -8219,6 +8274,31 @@ void client_finish_ready_firearm_activity()
 }
 
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action )
+{
+    client_request_firearm( target, action, item_location() );
+}
+
+void client_cancel_firearm_activity( bool unload_ras )
+{
+    const int64_t weapon = mp_session().client_firearm.weapon;
+    if( !is_client_mode() || weapon == 0 ) {
+        return;
+    }
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", "firearm_cancel" );
+    out.member( "weapon", weapon );
+    out.member( "unload_ras", unload_ras );
+    out.end_object();
+    client_send( encoded.str() );
+    get_avatar().set_moves( 0 );
+    client_mark_action_sent();
+}
+
+void client_request_firearm( const tripoint_bub_ms &target, const std::string &action,
+                             const item_location &ammo )
 {
     avatar &who = get_avatar();
     const item_location weapon = who.get_wielded_item();
@@ -8238,6 +8318,9 @@ void client_request_firearm( const tripoint_bub_ms &target, const std::string &a
     out.member( "operation", action );
     out.member( "weapon", view.weapon );
     out.member( "mode", weapon->gun_get_mode_id() );
+    if( ammo ) {
+        out.member( "ammo", capture_item_source( who, ammo ) );
+    }
     out.member( "origin", who.pos_abs() );
     out.member( "target", get_map().get_abs( target ) );
     out.member( "inventory_revision", mp_session().client_pickup.revision );
@@ -8265,9 +8348,9 @@ void client_request_throw( const throw_intent &intent )
     out.member( "origin", intent.origin );
     out.member( "target", intent.target );
     out.member( "blind_from", intent.blind_from );
-    out.member( "source", intent.source );
-    out.member( "source_position", intent.source_position );
-    out.member( "path", intent.path );
+    out.member( "source", intent.item.kind );
+    out.member( "source_position", intent.item.position );
+    out.member( "path", intent.item.path );
     out.member( "wielded", intent.wielded );
     out.member( "allow_theft", intent.allow_theft );
     if( intent.disposition ) {

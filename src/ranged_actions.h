@@ -11,6 +11,7 @@
 class Character;
 class gun_mode;
 class item;
+class item_location;
 class map;
 
 // Gameplay operations take an explicit actor. Keep these out of ranged.h,
@@ -22,6 +23,9 @@ bool gunmode_checks_weapon( Character &who, const map &here,
 
 // Native firearm operations shared by local UI and authoritative remote input.
 bool prepare_gun_to_fire( Character &who, item &gun );
+int reload_and_shoot_time( const Character &who, const item_location &ammo );
+bool ready_ranged_ammo( Character &who, item &gun, item_location ammo );
+bool unload_ready_ranged_ammo( Character &who, item &gun );
 void mark_ranged_target( Character &who, bool harmful );
 double aim_turning_recoil( const Character &who, const tripoint_bub_ms &origin,
                            const std::optional<tripoint_bub_ms> &previous,

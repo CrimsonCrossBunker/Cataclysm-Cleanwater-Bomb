@@ -1,7 +1,5 @@
 #include "mp_throw.h"
 
-#include <algorithm>
-
 #include "character.h"
 #include "creature_tracker.h"
 #include "flag.h"
@@ -10,7 +8,6 @@
 #include "item_location.h"
 #include "item_uid.h"
 #include "map.h"
-#include "map_selector.h"
 #include "monster.h"
 #include "mtype.h"
 #include "projectile.h"
@@ -19,8 +16,6 @@
 #include "safe_reference.h"
 #include "sling.h"
 #include "translations.h"
-#include "vehicle_selector.h"
-#include "visitable.h"
 
 namespace cata_mp
 {
@@ -32,54 +27,7 @@ bool throwing_in_mech( Character &who )
            who.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH );
 }
 
-item_location resolve_throw_source( Character &who, map &here, const throw_intent &intent )
-{
-    if( intent.path.empty() || intent.path.size() > 64 ) {
-        return item_location();
-    }
-    const auto root_matches = [&]( const item & candidate ) {
-        return candidate.uid().get_value() == intent.path.front();
-    };
-    item_location root;
-    if( intent.source == "carried" ) {
-        const auto items = who.items_with( root_matches );
-        if( items.size() == 1 && !who.find_parent( *items.front() ) ) {
-            root = item_location( who, items.front() );
-        }
-    } else if( intent.source == "map" ) {
-        for( map_cursor &cursor : map_selector( who.pos_bub(), 1 ) ) {
-            if( cursor.pos_abs() == intent.source_position ) {
-                const auto items = cursor.items_with( root_matches );
-                if( items.size() == 1 && !cursor.find_parent( *items.front() ) ) {
-                    root = item_location( cursor, items.front() );
-                }
-            }
-        }
-    } else if( intent.source == "vehicle" ) {
-        for( vehicle_cursor &cursor : vehicle_selector( here, who.pos_bub(), 1 ) ) {
-            const auto items = cursor.items_with( root_matches );
-            if( items.size() == 1 && !cursor.find_parent( *items.front() ) ) {
-                item_location candidate( cursor, items.front() );
-                if( here.get_abs( candidate.pos_bub( here ) ) == intent.source_position ) {
-                    root = candidate;
-                }
-            }
-        }
-    }
-    for( size_t index = 1; root && index < intent.path.size(); ++index ) {
-        item *child = nullptr;
-        for( item *candidate : root->all_items_top() ) {
-            if( candidate->uid().get_value() == intent.path[index] ) {
-                if( child ) {
-                    return item_location();
-                }
-                child = candidate;
-            }
-        }
-        root = child ? item_location( root, child ) : item_location();
-    }
-    return root;
-}
+
 } // namespace
 
 throw_intent make_throw_intent( const Character &who, item_location source )
@@ -88,20 +36,7 @@ throw_intent make_throw_intent( const Character &who, item_location source )
     intent.origin = who.pos_abs();
     const item_location wielded = who.get_wielded_item();
     intent.wielded = wielded ? wielded->uid().get_value() : 0;
-    while( source ) {
-        intent.path.push_back( source->uid().get_value() );
-        if( !source.has_parent() ) {
-            break;
-        }
-        source = source.parent_item();
-    }
-    std::reverse( intent.path.begin(), intent.path.end() );
-    if( source ) {
-        intent.source = source.held_by( who ) ? "carried" :
-                        source.where() == item_location::type::map ? "map" :
-                        source.where() == item_location::type::vehicle ? "vehicle" : "invalid";
-        intent.source_position = get_map().get_abs( source.pos_bub( get_map() ) );
-    }
+    intent.item = capture_item_source( who, source );
     return intent;
 }
 
@@ -135,7 +70,7 @@ bool execute_throw_intent( Character &who, map &here, const throw_intent &intent
     if( who.is_dead_state() || who.get_moves() <= 0 || who.pos_abs() != intent.origin ) {
         return false;
     }
-    item_location source = resolve_throw_source( who, here, intent );
+    item_location source = resolve_item_source( who, here, intent.item );
     item_location wielded = who.get_wielded_item();
     if( !source ||
         intent.wielded != ( wielded ? wielded->uid().get_value() : 0 ) ) {
@@ -154,9 +89,7 @@ bool execute_throw_intent( Character &who, map &here, const throw_intent &intent
         if( round.count_by_charges() ) {
             round.charges = 1;
         }
-        if( rl_dist( intent.origin, *intent.target ) > who.throw_range( round ) ||
-            !who.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
-                                      _( "You're too pacified to strike anything…" ) ) ) {
+        if( rl_dist( intent.origin, *intent.target ) > who.throw_range( round ) ) {
             return false;
         }
         const tripoint_bub_ms target = here.get_bub( *intent.target );
@@ -209,7 +142,7 @@ bool execute_throw_intent( Character &who, map &here, const throw_intent &intent
             if( !disposed || !actor ) {
                 return false;
             }
-            source = resolve_throw_source( who, here, intent );
+            source = resolve_item_source( who, here, intent.item );
             if( !source ) {
                 return false;
             }
