@@ -162,6 +162,7 @@
 #include "veh_utils.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_water.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -17717,6 +17718,7 @@ deserialize_functions = {
     { ACT_FERTILIZE_PLANT, &fertilize_plant_activity_actor::deserialize },
     { ACT_FETCH_REQUIRED, &fetch_required_activity_actor::deserialize },
     { ACT_FIELD_DRESS, &butchery_activity_actor::deserialize },
+    { activity_id( "ACT_FILL_LIQUID" ), &deserialize_vehicle_water_activity },
     { ACT_FIND_MOUNT, &find_mount_activity_actor::deserialize },
     { ACT_FIRSTAID, &firstaid_activity_actor::deserialize },
     { ACT_FISH, &fish_activity_actor::deserialize },

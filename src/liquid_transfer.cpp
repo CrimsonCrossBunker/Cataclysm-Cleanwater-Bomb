@@ -15,7 +15,7 @@
 namespace liquid_handler
 {
 bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
-                      std::optional<int> tank_part, bool silent )
+                      std::optional<int> tank_part, bool silent, bool charge_moves )
 {
     if( !liquid.made_of( phase_id::LIQUID ) || liquid.charges <= 0 ) {
         return false;
@@ -28,7 +28,9 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
                 return false;
             }
             target.item_loc.make_active();
-            who.mod_moves( -100 );
+            if( charge_moves ) {
+                who.mod_moves( -100 );
+            }
             return true;
         case LD_VEH:
             if( !target.veh || !tank_part || *tank_part < 0 ) {
@@ -42,7 +44,9 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
                     if( !who.pour_into( part, liquid ) ) {
                         return false;
                     }
-                    who.mod_moves( -1000 );
+                    if( charge_moves ) {
+                        who.mod_moves( -1000 );
+                    }
                     return true;
                 }
             }
@@ -63,7 +67,9 @@ bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
                 here.add_item_or_charges( target.pos, liquid );
                 liquid.charges = 0;
             }
-            who.mod_moves( -100 );
+            if( charge_moves ) {
+                who.mod_moves( -100 );
+            }
             return true;
         }
         case LD_NULL:

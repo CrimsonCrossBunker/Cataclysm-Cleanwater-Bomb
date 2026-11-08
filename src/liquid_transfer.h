@@ -17,8 +17,9 @@ namespace liquid_handler
  * Consumption is a separate action and is not accepted by this transfer operation.
  * As with the native handler, true means the destination was handled; inspect the
  * remaining charges for partial/full transfers (a full keg can consume an attempt).
+ * Timed activities own movement costs and pass charge_moves=false.
  */
 bool transfer_liquid( Character &who, item &liquid, liquid_dest_opt target,
-                      std::optional<int> tank_part = std::nullopt, bool silent = true );
+                      std::optional<int> tank_part = std::nullopt, bool silent = true, bool charge_moves = true );
 } // namespace liquid_handler
 #endif // CATA_SRC_LIQUID_TRANSFER_H

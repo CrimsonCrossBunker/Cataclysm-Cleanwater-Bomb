@@ -11,6 +11,7 @@
 #include "item_disposition.h"
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
+#include "vehicle_water.h"
 
 class JsonObject;
 class JsonOut;
@@ -58,6 +59,7 @@ struct vehicle_control_selection {
     std::vector<vehicle_engine_selection> engines;
     std::optional<vehicle_electronics_selection> electronics;
     std::optional<vehicle_appliance_selection> appliance;
+    std::optional<vehicle_water_selection> water;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );

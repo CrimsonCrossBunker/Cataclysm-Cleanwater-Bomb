@@ -1007,6 +1007,13 @@ item_location::item_location( Character &ch, item *which )
 item_location::item_location( const vehicle_cursor &vc, item *which )
     : ptr( new impl::item_on_vehicle( vc, which ) ) {}
 
+item_location item_location::from_vehicle_part( const vehicle_cursor &vc )
+{
+    item_location result;
+    result.ptr.reset( new impl::item_on_vehicle( vc, -1 ) );
+    return result;
+}
+
 item_location::item_location( const item_location &container, item *which )
     : ptr( new impl::item_in_container( container, which ) ) {}
 

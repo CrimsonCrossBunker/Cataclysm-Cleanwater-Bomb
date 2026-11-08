@@ -54,6 +54,10 @@ void visit_unload_liquids( const unload_selection &selection,
 
 // Nullopt keeps local liquid UI; an explicit (possibly empty) list never opens it.
 using unload_liquid_choices = std::optional<std::vector<unload_liquid_choice>>;
+// Resolve only: shared by immediate unloading and timed vehicle transfer.
+bool resolve_liquid_destination( Character &who, const unload_liquid_choice &choice,
+                                 const item &source, liquid_dest_opt &destination,
+                                 std::optional<int> &tank );
 bool receive_unloaded_item( Character &who, item &output, const item &target,
                             const item *original, const unload_liquid_choices &choices );
 bool start_item_unload( Character &who, item_location root, const unload_selection &selection,

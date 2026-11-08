@@ -86,6 +86,7 @@
 #include "uistate.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_selector.h"
 #include "vehicle_electronics.h"
 #include "level_cache.h"
 #include "veh_utils.h"
@@ -979,6 +980,7 @@ TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
 namespace
 {
 struct consumption_fixture : reload_fixture {
+    restore_on_out_of_scope<time_point> restore_turn{ calendar::turn };
     player_control_registry controls;
     std::optional<player_control> control;
     npc &remote() {
@@ -1027,6 +1029,30 @@ std::string consume_request( reload_fixture &fixture, Character &who,
     } );
 }
 
+struct consumption_completion {
+    std::string request;
+    std::string response;
+};
+
+consumption_completion finish_consumption( Character &who, reload_fixture *fixture = nullptr )
+{
+    REQUIRE( who.activity.id() == activity_id( "ACT_CONSUME" ) );
+    consumption_completion result;
+    // Player-controlled bodies advance time-based activities once per world turn.
+    for( int turn = 0; who.activity && turn < 1000; ++turn ) {
+        calendar::turn += 1_seconds;
+        who.set_moves( 100 );
+        if( fixture ) {
+            result.request = fixture->request( who, "step" );
+            result.response = fixture->run( who, result.request );
+        } else {
+            who.activity.do_turn( who );
+        }
+    }
+    REQUIRE_FALSE( who.activity );
+    return result;
+}
+
 std::string needs_state( const Character &who )
 {
     std::ostringstream text;
@@ -1047,8 +1073,7 @@ TEST_CASE( "native_consumption_uses_the_activity_owner_not_the_global_avatar",
     consumption_events events;
     who.assign_activity( consume_activity_actor( source ) );
     REQUIRE( who.activity.moves_left > 0 );
-    who.set_moves( 100000 );
-    who.activity.do_turn( who );
+    finish_consumption( who );
     CHECK_FALSE( who.activity );
     CHECK( source->charges == 1 );
     CHECK( who.stomach.get_water() > 0_ml );
@@ -1075,13 +1100,11 @@ TEST_CASE( "owned_consumption_progress_cancel_and_saved_source",
     CHECK( source->charges == 2 );
     save_reload_activity( who );
     SECTION( "finish once" ) {
-        who.set_moves( 100000 );
-        const std::string step = fixture.request( who, "step" );
-        fixture.run( who, step );
+        const auto finished = finish_consumption( who, &fixture );
         REQUIRE_FALSE( who.activity );
         CHECK( source->charges == 1 );
         const std::string after = needs_state( who );
-        fixture.run( who, step );
+        fixture.run( who, finished.request );
         CHECK( needs_state( who ) == after );
         CHECK( events.actors.size() == 1 );
     }
@@ -1145,8 +1168,7 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     const std::string started = fixture.run( remote, consume_request( fixture, remote,
                                 remote.get_wielded_item() ) );
     REQUIRE( remote.activity );
-    remote.set_moves( 100000 );
-    const std::string finished = fixture.run( remote, fixture.request( remote, "step" ) );
+    const std::string finished = finish_consumption( remote, &fixture ).response;
     REQUIRE_FALSE( remote.activity );
     const std::string expected = needs_state( remote );
     const int expected_morale = remote.get_morale_level();
@@ -1160,7 +1182,7 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     consumption_events events;
     REQUIRE( cata_mp::client_apply_message( started ) );
     local.get_morale_level(); // Populate the cache before restoring changed morale.
-    view.pending_request = 2;
+    view.pending_request = fixture.sequence;
     REQUIRE( cata_mp::client_apply_message( finished ) );
     CHECK( local.get_wielded_item()->charges == 1 );
     CHECK( needs_state( local ) == expected );
@@ -1614,9 +1636,9 @@ TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_clie
             CHECK( source->charges == 2 );
             CHECK_FALSE( owner.has_effect( effect ) );
             save_reload_activity( owner );
-            owner.set_moves( 100000 );
-            const std::string step = fixture.request( owner, "step" );
-            const std::string finished = fixture.run( owner, step );
+            const auto completed = finish_consumption( owner, &fixture );
+            const std::string &step = completed.request;
+            const std::string &finished = completed.response;
             REQUIRE_FALSE( owner.activity );
             REQUIRE( owner.has_effect( effect ) );
             CHECK( source->charges == 1 );
@@ -1639,7 +1661,7 @@ TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_clie
             replica.assign_activity( consume_activity_actor::client_view( false ) );
             const auto before_restore = rng_get_engine();
             REQUIRE( cata_mp::client_apply_message( started ) );
-            view.pending_request = 2;
+            view.pending_request = fixture.sequence;
             REQUIRE( cata_mp::client_apply_message( finished ) );
             REQUIRE( replica.has_effect( effect ) );
             CHECK( replica.get_effect_dur( effect ) == duration );
@@ -1689,8 +1711,7 @@ TEST_CASE( "owned_injection_requires_the_actors_tool_through_completion",
         item_location( bag, tools.front() ).remove_item();
         removed = true;
     }
-    owner.set_moves( 100000 );
-    fixture.run( owner, fixture.request( owner, "step" ) );
+    finish_consumption( owner, &fixture );
     CHECK_FALSE( owner.activity );
     CHECK( drug->charges == ( removed ? 2 : 1 ) );
     CHECK( owner.has_effect( efftype_id( "pkill3" ) ) == !removed );
@@ -6740,4 +6761,297 @@ TEST_CASE( "native_appliance_callback_uses_owned_command_and_stable_hardware_ide
     entries.front()._on_submit();
     CHECK( who.charges_of( itype_id( "detergent" ) ) == ( removed ? 10 : 5 ) );
     CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == ( removed ? 100 : 76 ) );
+}
+
+namespace
+{
+int test_water_tank( vehicle &target, const itype_id &type = itype_id( "water_clean" ), int amount = 4 )
+{
+    for( const vpart_reference &part : target.get_all_parts() ) {
+        if( part.part().is_tank() ) {
+            part.part().ammo_set( type, amount );
+            REQUIRE( part.part().ammo_remaining() == amount );
+            return part.part_index();
+        }
+    }
+    FAIL( "water fixture needs a tank" );
+    return -1;
+}
+
+vehicle_control_selection water_choice( Character &who, vehicle &target, int tool, int tank,
+                                        const std::string &operation )
+{
+    auto selected = control_choice( who, target, "water" );
+    selected.position = target.abs_part_pos( target.part( tool ) );
+    selected.water.emplace();
+    selected.water->operation = operation;
+    selected.water->tool = target.part( tool ).get_base().uid().get_value();
+    selected.water->tank = target.part( tank ).get_base().uid().get_value();
+    selected.water->liquid = target.part( tank ).get_base().only_item().uid().get_value();
+    return selected;
+}
+
+vehicle_control_selection fill_water_choice( Character &who, vehicle &target, int tool, int tank,
+        const item_location &container )
+{
+    auto selected = water_choice( who, target, tool, tank, "fill" );
+    selected.water->destination.emplace();
+    selected.water->destination->kind = LD_ITEM;
+    selected.water->destination->source = selected.water->liquid;
+    selected.water->destination->container = capture_item_source( who, container );
+    return selected;
+}
+}
+
+TEST_CASE( "owned_faucet_transfer_keeps_native_rate_save_and_exact_resource_counts",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int tap = install_test_appliance( who, target, "water_faucet" );
+    const int tank = test_water_tank( target );
+    const item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    REQUIRE( bottle );
+    who.set_moves( 100 );
+    const auto choice = fill_water_choice( who, target, tap, tank, bottle );
+    const auto rng = rng_get_engine();
+    REQUIRE( valid_vehicle_water_selection( who, get_map(), target, choice.position, *choice.water ) );
+    CHECK( rng_get_engine() == rng );
+    const auto request = control_request( fixture, who, choice );
+    fixture.run( who, request );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK( who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+    CHECK( bottle->empty() );
+    fixture.run( who, request );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+    const std::string step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    REQUIRE_FALSE( bottle->empty() );
+    CHECK( bottle->only_item().charges == 1 );
+    CHECK( target.part( tank ).ammo_remaining() == 3 );
+    CHECK( who.get_moves() == 0 );
+    CHECK( fixture.reload.refresh_observers );
+    fixture.run( who, step );
+    CHECK( target.part( tank ).ammo_remaining() == 3 );
+    save_reload_activity( who );
+    who.set_moves( 100000 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( target.part( tank ).ammo_remaining() == 2 );
+    CHECK( bottle->only_item().charges == 2 );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( target.part( tank ).ammo_remaining() == 2 );
+    CHECK( bottle->only_item().charges == 2 );
+    CHECK_FALSE( get_avatar().activity );
+}
+
+TEST_CASE( "owned_faucet_transfer_revalidates_access_and_source_each_turn",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &target = electronic_vehicle( who );
+    const int tap = install_test_appliance( who, target, "water_faucet" );
+    const int tank = test_water_tank( target );
+    item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, fill_water_choice( who, target, tap, tank, bottle ) ) );
+    REQUIRE( who.activity );
+    SECTION( "faucet removed" ) {
+        target.remove_part( target.part( tap ) );
+    }
+    SECTION( "liquid replaced in same tank" ) {
+        target.part( tank ).ammo_unset();
+        target.part( tank ).ammo_set( itype_id( "water_clean" ), 4 );
+    }
+    SECTION( "operator left" ) {
+        who.setpos( get_map(), tripoint_bub_ms( 100, 100, 0 ) );
+    }
+    SECTION( "destination no longer belongs to operator" ) {
+        get_avatar().i_add( *bottle );
+        bottle.remove_item();
+    }
+    SECTION( "cancel without moves" ) {
+        who.set_moves( -5 );
+        fixture.run( who, fixture.request( who, "cancel" ) );
+    }
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+    if( bottle ) {
+        CHECK( bottle->empty() );
+    }
+}
+
+TEST_CASE( "owned_faucet_drinking_uses_remote_tank_and_only_operator_needs",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int tap = install_test_appliance( who, target, "water_faucet" );
+    const int tank = test_water_tank( target );
+    who.set_thirst( 100 );
+    target.is_locked = true; // Native faucets remain accessible on a locked car.
+    const std::string host = needs_state( get_avatar() );
+    auto choice = water_choice( who, target, tap, tank, "drink" );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    CHECK( who.activity.id() == activity_id( "ACT_CONSUME" ) );
+    REQUIRE( who.activity.moves_left > 0 );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+    save_reload_activity( who );
+    const bool removed = GENERATE( false, true );
+    if( removed ) {
+        target.remove_part( target.part( tap ) );
+    }
+    const auto completed = finish_consumption( who, &fixture );
+    const auto &step = completed.request;
+    REQUIRE_FALSE( who.activity );
+    CHECK( target.part( tank ).ammo_remaining() == ( removed ? 4 : 3 ) );
+    CHECK( fixture.reload.refresh_observers );
+    CHECK( needs_state( get_avatar() ) == host );
+    const std::string after = needs_state( who );
+    fixture.run( who, step );
+    CHECK( needs_state( who ) == after );
+    CHECK( target.part( tank ).ammo_remaining() == ( removed ? 4 : 3 ) );
+}
+
+TEST_CASE( "owned_vehicle_purification_is_atomic_and_replays_without_power_loss",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = electronic_vehicle( who );
+    const int tool = install_test_appliance( who, target, "water_purifier" );
+    const int tank = test_water_tank( target, itype_id( "water" ), 100 );
+    const bool frozen = GENERATE( false, true );
+    if( frozen ) {
+        item_location base = item_location::from_vehicle_part( vehicle_cursor( target, tank ) );
+        base->only_item().set_item_temperature( units::from_kelvin( 250 ) );
+        REQUIRE( base->only_item().made_of( phase_id::SOLID ) );
+    }
+    const int cost = 100 * itype_id( "water_purifier" )->charges_to_use();
+    target.discharge_battery( get_map(), INT_MAX );
+    const bool enough = GENERATE( false, true );
+    target.charge_battery( get_map(), enough ? cost : cost - 1 );
+    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    REQUIRE( battery == ( enough ? cost : cost - 1 ) );
+    const auto choice = water_choice( who, target, tool, tank, "purify" );
+    const auto request = control_request( fixture, who, choice );
+    fixture.run( who, request );
+    CHECK( target.part( tank ).ammo_current() == itype_id( enough ? "water_clean" : "water" ) );
+    CHECK( target.part( tank ).ammo_remaining() == 100 );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == ( enough ? 0 : battery ) );
+    fixture.run( who, request );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == ( enough ? 0 : battery ) );
+    CHECK( target.part( tank ).ammo_remaining() == 100 );
+}
+
+TEST_CASE( "owned_vehicle_water_rejects_forged_hardware_sources_and_destinations",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &target = electronic_vehicle( who );
+    const int tap = install_test_appliance( who, target, "water_faucet" );
+    const int tank = test_water_tank( target );
+    const item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    who.set_moves( 100 );
+    auto choice = fill_water_choice( who, target, tap, tank, bottle );
+    SECTION( "missing hardware identity" ) {
+        choice.water->tool = 0;
+    }
+    SECTION( "wrong liquid identity" ) {
+        choice.water->liquid++;
+    }
+    SECTION( "tank is not faucet" ) {
+        choice.water->tool = choice.water->tank;
+    }
+    SECTION( "no purifier" ) {
+        choice.water->operation = "purify";
+        choice.water->destination.reset();
+    }
+    SECTION( "different fuel in tank" ) {
+        target.part( tank ).ammo_set( itype_id( "gasoline" ), 4 );
+    }
+    SECTION( "destination is source tank" ) {
+        auto &to = *choice.water->destination;
+        to.kind = LD_VEH;
+        to.vehicle = target.uid().get_value();
+        to.tank = choice.water->tank;
+    }
+    SECTION( "destination outside reach" ) {
+        choice.water->destination->kind = LD_GROUND;
+        choice.water->destination->position = who.pos_abs() + tripoint_rel_ms( 10, 10, 0 );
+    }
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK_FALSE( who.activity );
+    CHECK( bottle->empty() );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+}
+
+TEST_CASE( "native_faucet_menu_uses_readonly_queries_and_owned_drinking",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &target = electronic_vehicle( who );
+    const int tap = install_test_appliance( who, target, "water_faucet" );
+    const int tank = test_water_tank( target );
+    who.set_thirst( 100 );
+    const auto rng = rng_get_engine();
+    veh_menu menu( target, "water" );
+    add_vehicle_water_menu( menu, get_map(), target, target.abs_part_pos( target.part( tap ) ) );
+    const auto entries = menu.get_items();
+    REQUIRE( entries.size() == 2 );
+    CHECK( rng_get_engine() == rng );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+    const bool removed = GENERATE( false, true );
+    if( removed ) {
+        target.remove_part( target.part( tap ) );
+    }
+    entries[1]._on_submit();
+    CHECK( static_cast<bool>( who.activity ) == !removed );
+    CHECK( target.part( tank ).ammo_remaining() == 4 );
+}
+
+TEST_CASE( "legacy_actorless_liquid_save_still_executes_its_native_transfer",
+           "[multiplayer][vehicle_water_owned]" )
+{
+    appliance_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &target = electronic_vehicle( who );
+    install_test_appliance( who, target, "water_faucet" );
+    const int tank = test_water_tank( target );
+    item_location base = item_location::from_vehicle_part( vehicle_cursor( target, tank ) );
+    const item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    who.set_moves( 100 );
+    liquid_dest_opt destination;
+    destination.dest_opt = LD_ITEM;
+    destination.item_loc = bottle;
+    REQUIRE( liquid_handler::perform_liquid_transfer( base->only_item(), nullptr, &target,
+             tank, nullptr, destination, true ) );
+    REQUIRE_FALSE( who.activity.actor );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    who.activity.serialize( out );
+    JsonValue value = json_loader::from_string( encoded.str() );
+    player_activity restored;
+    restored.deserialize( value.get_object() );
+    who.activity = std::move( restored );
+    REQUIRE( who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) );
+    REQUIRE_FALSE( who.activity.actor );
+    CHECK( who.activity.execution() == activity_execution::local );
+    who.activity.do_turn( who );
+    REQUIRE_FALSE( bottle->empty() );
+    CHECK( bottle->only_item().charges == 1 );
+    CHECK( target.part( tank ).ammo_remaining() == 3 );
 }

@@ -318,6 +318,9 @@ void vehicle_control_selection::serialize( JsonOut &out ) const
     if( appliance ) {
         out.member( "appliance", *appliance );
     }
+    if( water ) {
+        out.member( "water", *water );
+    }
     if( unwield ) {
         out.member( "unwield" );
         out.start_object();
@@ -341,6 +344,8 @@ void vehicle_control_selection::deserialize( const JsonObject &data )
     data.read( "electronics", electronics );
     appliance.reset();
     data.read( "appliance", appliance );
+    water.reset();
+    data.read( "water", water );
     unwield.reset();
     if( data.has_object( "unwield" ) ) {
         const JsonObject choice = data.get_object( "unwield" );
@@ -386,17 +391,25 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const bool security = hotwire || alarm || smash_alarm;
     const bool electronics = action == "electronics";
     const bool appliance = action == "appliance";
+    const bool water = action == "water";
     if( remote_source &&
         ( !remote_vehicle_accessible( who, here, target, *remote_source ) || security ||
-          taking || releasing || appliance || action == "stop_driving" ) ) {
+          taking || releasing || appliance || water || action == "stop_driving" ) ) {
         return false;
     }
     if( !releasing && !stopping && !taking && action != "start" &&
-        action != "engines" && !security && !electronics && !appliance && !autopilot_action( action ) ) {
+        action != "engines" && !security && !electronics && !appliance && !water &&
+        !autopilot_action( action ) ) {
         return false;
     }
     if( releasing ) {
         return target.player_in_control( here, who );
+    }
+    if( water ) {
+        // A faucet stays usable on a locked vehicle; purification checks its lock
+        // with the resolved operation. Neither is a radio-control action.
+        return who.pos_abs().z() == position.z() && rl_dist( who.pos_abs(), position ) <= 1 &&
+               has_vehicle_water_tool( target, position );
     }
     if( ( target.is_locked && !security ) ||
         ( action == "stop_driving" && !target.player_in_control( here, who ) ) ) {
@@ -478,6 +491,7 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     selection.action = action;
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
                              action == "alarm" || action == "smash_alarm" || action == "electronics" || action == "appliance" ||
+                             action == "water" ||
                              autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
         selection.allow_theft = who.query_yn(
@@ -579,7 +593,8 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
         { "smash_alarm", _( "Try to smash alarm" ) },
         { "autopilot", _( "Control autopilot" ) },
         { "electronics", _( "Vehicle electronics" ) },
-        { "appliance", _( "Use installed appliance" ) }
+        { "appliance", _( "Use installed appliance" ) },
+        { "water", _( "Use vehicle water" ) }
     };
     for( size_t i = 0; i < options.size(); ++i ) {
         const auto &action = options[i].first;
@@ -599,6 +614,7 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
            action == "engines" ? query_vehicle_engines( who, here, target, position, remote_source ) :
            action == "electronics" ? query_vehicle_electronics( who, here, target, position, remote_source ) :
            action == "appliance" ? query_vehicle_appliance( who, here, target, position ) :
+           action == "water" ? query_vehicle_water( who, here, target, position ) :
            query_vehicle_control( who, here, target, position, action, remote_source );
 }
 
@@ -716,11 +732,16 @@ bool execute_vehicle_control( Character &who, map &here,
                 selection.position, *selection.appliance ) ) ) {
         return false;
     }
+    if( ( selection.action == "water" ) != selection.water.has_value() ||
+        ( selection.water && !valid_vehicle_water_selection( who, here, *target,
+                selection.position, *selection.water ) ) ) {
+        return false;
+    }
     const bool taking = selection.action == "take";
     const bool theft_check = taking || selection.action == "engines" || selection.action == "hotwire" ||
                              selection.action == "alarm" || selection.action == "smash_alarm" ||
                              selection.action == "electronics" ||
-                             selection.action == "appliance" ||
+                             selection.action == "appliance" || selection.action == "water" ||
                              autopilot_action( selection.action );
     if( theft_check && target->has_owner() && !target->is_owned_by( who ) && !selection.allow_theft ) {
         return false;
@@ -772,6 +793,10 @@ bool execute_vehicle_control( Character &who, map &here,
     }
     if( selection.appliance ) {
         return execute_vehicle_appliance( who, here, *target, selection.position, *selection.appliance );
+    }
+    if( selection.water ) {
+        return execute_vehicle_water( who, here, *target, selection.position, *selection.water,
+                                      selection.allow_theft );
     }
     if( selection.action == "autopilot_patrol" ) {
         if( !zone_manager::get_manager().has_near( zone_type_id( "VEHICLE_PATROL" ), target->pos_abs(),

@@ -2,6 +2,7 @@
 #include "vehicle_control.h"
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
+#include "vehicle_water.h"
 #include "character_action_guard.h"
 #include "mp_inventory_activity.h"
 
@@ -118,7 +119,6 @@ static const itype_id itype_soldering_iron( "soldering_iron" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_water_faucet( "water_faucet" );
-static const itype_id itype_water_purifier( "water_purifier" );
 static const itype_id itype_welder( "welder" );
 static const itype_id itype_welder_crude( "welder_crude" );
 static const itype_id itype_welding_kit( "welding_kit" );
@@ -2267,90 +2267,7 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
         } );
     }
 
-    if( vp.part_with_tool( *here, itype_water_faucet ) ) {
-        int vp_tank_idx = -1;
-        item *water_item = nullptr;
-        // Prefer clean water over standard
-        for( const itype_id &preferred : {
-                 itype_water_clean, itype_water
-             } ) {
-            for( const int i : fuel_containers ) {
-                vehicle_part &part = parts[i];
-                if( part.ammo_current() == preferred &&
-                    part.base.only_item().made_of( phase_id::LIQUID ) ) {
-                    vp_tank_idx = i;
-                    water_item = &part.base.only_item();
-                    break;
-                }
-            }
-            if( vp_tank_idx != -1 ) {
-                break;
-            }
-        }
-
-        if( vp_tank_idx != -1 && water_item != nullptr ) {
-            menu.add( _( "Fill a container with water" ) )
-                .hotkey( "FAUCET_FILL" )
-                .skip_locked_check()
-            .on_submit( [this, vp_tank_idx] {
-                item &vp_tank_item = parts[vp_tank_idx].base;
-                item &water = vp_tank_item.only_item();
-                liquid_dest_opt liquid_target;
-                liquid_handler::handle_liquid( water, liquid_target, &vp_tank_item, 1, nullptr, this, vp_tank_idx );
-            } );
-
-            menu.add( _( "Have a drink" ) )
-                .enable( get_player_character().will_eat( *water_item ).success() )
-                .hotkey( "FAUCET_DRINK" )
-                .skip_locked_check()
-            .on_submit( [this, vp_tank_idx] {
-                vehicle_part &vp_tank = parts[vp_tank_idx];
-                // this is not "proper" use of vehicle_cursor, but should be good enough for reducing
-                // charges and deleting the liquid on last charge drained, for more details see #61164
-                item_location base_loc( vehicle_cursor( *this, vp_tank_idx ), &vp_tank.base );
-                item_location water_loc( base_loc, &vp_tank.base.only_item() );
-                const consume_activity_actor consume_act( water_loc );
-                get_player_character().assign_activity( consume_act );
-            } );
-        }
-    }
-
-    if( vp.part_with_tool( *here, itype_water_purifier ) ) {
-        menu.add( _( "Purify water in vehicle tank" ) )
-            .enable( fuel_left( *here, itype_water ) &&
-                     fuel_left( *here, itype_battery ) >= itype_water_purifier->charges_to_use() )
-            .hotkey( "PURIFY_WATER" )
-        .on_submit( [this, here] {
-            const auto sel = []( const map &, const vehicle_part & pt )
-            {
-                return pt.is_tank() && pt.ammo_current() == itype_water;
-            };
-            std::string title = string_format( _( "Purify <color_%s>water</color> in tank" ),
-                                               get_all_colors().get_name( itype_water->color ) );
-            const std::optional<vpart_reference> vpr = veh_interact::select_part( *here, *this, sel, title );
-            if( !vpr )
-            {
-                return;
-            }
-            vehicle_part &tank = vpr->part();
-            const int charges = tank.ammo_remaining();
-            const int64_t per_use = itype_water_purifier->charges_to_use();
-            // All-or-nothing: refuse without burning power if the full batch
-            // does not fit. int64 prevents overflow on large tanks.
-            if( fuel_left( *here, itype_battery ) < static_cast<int64_t>( charges ) * per_use )
-            {
-                //~ $1 - vehicle name, $2 - part name
-                add_msg( m_bad, _( "Insufficient power to purify the contents of the %1$s's %2$s" ),
-                         name, tank.name() );
-            } else
-            {
-                run_legacy_charge_tool_uses( *here, itype_water_purifier, charges );
-                //~ $1 - vehicle name, $2 - part name
-                add_msg( m_good, _( "You purify the contents of the %1$s's %2$s" ), name, tank.name() );
-                tank.ammo_set( itype_water_clean, charges );
-            }
-        } );
-    }
+    add_vehicle_water_menu( menu, *here, *this, here->get_abs( vppos ) );
 
     const std::optional<vpart_reference> vp_monster_capture =
         vp.avail_part_with_feature( "CAPTURE_MONSTER_VEH" );
