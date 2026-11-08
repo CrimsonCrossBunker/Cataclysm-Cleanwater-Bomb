@@ -1796,6 +1796,7 @@ void Character::store_turn_state( JsonOut &out ) const
     out.member( "cached_mutations", cached_mutations );
     out.member( "bionics", *my_bionics );
     out.member( "next_bionic_uid", next_bionic_uid );
+    out.member( "martial_arts_data", martial_arts_data );
     out.member( "effects", *effects );
     out.member( "damage_over_time", damage_over_time_map );
     out.member( "body", body );
@@ -1864,6 +1865,16 @@ void Character::load_turn_state( const JsonObject &snapshot )
         read( "mutations", my_mutations );
         read( "cached_mutations", cached_mutations );
         read( "bionics", *my_bionics );
+        // Older turn projections omit martial preferences; keep their existing value.
+        data.read( "martial_arts_data", martial_arts_data );
+        if( !martial_arts_data->selected_style().is_valid() ) {
+            data.throw_error_at( "martial_arts_data", "Unknown selected martial style" );
+        }
+        for( const matype_id &style : martial_arts_data->get_known_styles( false ) ) {
+            if( !style.is_valid() ) {
+                data.throw_error_at( "martial_arts_data", "Unknown learned martial style" );
+            }
+        }
         read( "effects", *effects );
         read( "damage_over_time", damage_over_time_map );
         read( "body", body );

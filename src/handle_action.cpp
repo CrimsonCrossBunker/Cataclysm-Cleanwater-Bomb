@@ -3123,9 +3123,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             return true;
         }
 
-        if( act == ACTION_PICK_STYLE ) {
-            cata_mp::mp_log( "[cdda-mp] client local-only action: pick_style" );
-        }
     }
 
     // Host waiting for client action: allow pure UI actions, block everything else.
@@ -3753,9 +3750,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_PICK_STYLE:
             player_character.martial_arts_data->pick_style( player_character );
-#ifdef MP_ENABLED
-            cata_mp::client_resync_worn();
-#endif
             break;
 
         case ACTION_ACTIVE_TECHNIQUE:
