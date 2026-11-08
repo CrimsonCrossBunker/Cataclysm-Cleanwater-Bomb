@@ -592,12 +592,12 @@ struct renderer_recovery_test_support {
 };
 
 // RAII wrapper around setup/teardown for use as a Catch2 fixture local.
-class software_render_fixture {
+class software_render_fixture
+{
     public:
         software_render_fixture()
             : available_( renderer_recovery_test_support::setup_software_renderer() ) {}
-        ~software_render_fixture()
-        {
+        ~software_render_fixture() {
             if( available_ ) {
                 renderer_recovery_test_support::teardown_software_renderer();
             }

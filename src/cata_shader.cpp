@@ -147,7 +147,7 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
     if( available == SDL_GPU_SHADERFORMAT_INVALID ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: SDL_GetGPUShaderFormats returned INVALID; "
-           "no shader formats supported by GPU device";
+                "no shader formats supported by GPU device";
         return shader{};
     }
 
@@ -162,7 +162,7 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
     if( !chosen ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: no shipped shader artifact matches GPU "
-           "device's supported formats (mask=" << static_cast<unsigned>( available ) << ")";
+                "device's supported formats (mask=" << static_cast<unsigned>( available ) << ")";
         return shader{};
     }
 
@@ -981,8 +981,8 @@ load_outcome load_and_probe( SDL_GPUDevice *device, SDL_Renderer *renderer,
     if( !res.boundary_safe ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader::variant_pass: probe left renderer in undefined "
-           "state for " << basename << "; abandoning shader + render_state "
-           "to avoid destroying a bound resource";
+                "state for " << basename << "; abandoning shader + render_state "
+                "to avoid destroying a bound resource";
         state.abandon();
         frag.abandon();
         return load_outcome::failed_unsafe;
@@ -991,7 +991,7 @@ load_outcome load_and_probe( SDL_GPUDevice *device, SDL_Renderer *renderer,
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader::variant_pass: textured-draw probe failed for "
                 << basename << " (silent miswire?  readback did not match "
-                       "expected variant transform); shader variant path disabled";
+                "expected variant transform); shader variant path disabled";
         return load_outcome::failed_clean;
     }
     out_shader = std::move( frag );
@@ -1113,7 +1113,7 @@ void variant_pass::probe()
     if( std::getenv( "CATA_DISABLE_SPRITE_SHADERS" ) ) {
         DebugLog( D_INFO, DC_ALL )
                 << "cata_shader::variant_pass: CATA_DISABLE_SPRITE_SHADERS set; "
-           "shader variant path disabled";
+                "shader variant path disabled";
         return;
     }
     if( test_probe_unsafe_countdown > 0 ) {
@@ -1126,7 +1126,7 @@ void variant_pass::probe()
     if( !device ) {
         DebugLog( D_INFO, DC_ALL )
                 << "cata_shader::variant_pass: SDL_GetGPURendererDevice "
-           "returned NULL (renderer is not gpu); shader variant path disabled";
+                "returned NULL (renderer is not gpu); shader variant path disabled";
         return;
     }
     for( int i = 0; i < static_cast<int>( variant_kind::count ); ++i ) {
@@ -1512,7 +1512,7 @@ variant_pass::lit_probe_outcome variant_pass::probe_lit()
             DebugLog( D_ERROR, DC_ALL ) << "cata_shader::variant_pass: lit shader probe failed: " << c.name;
             for( size_t i = 0; i < want.size() && i < got.size(); ++i ) {
                 DebugLog( D_ERROR, DC_ALL ) << "  pixel " << i << " want " << want[i].r << "," << want[i].g <<
-                                               "," << want[i].b << " got " << got[i].r << "," << got[i].g << "," << got[i].b;
+                                            "," << want[i].b << " got " << got[i].r << "," << got[i].g << "," << got[i].b;
             }
             return lit_probe_outcome::mismatch;
         }
