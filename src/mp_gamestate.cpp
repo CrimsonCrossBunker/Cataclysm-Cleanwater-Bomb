@@ -391,6 +391,25 @@ static world_session &mp_session()
     return g->multiplayer_session();
 }
 
+static npc *mp_loaded_actor( actor_binding &binding )
+{
+    npc *actor = binding.retained( g->npc_lifetimes() );
+    // critter_by_id also finds unloaded overmap NPCs. Control and presentation
+    // require the exact object to still be in this world's active tracker.
+    return actor && g->shared_from( *actor ) ?
+           binding.resolve_loaded( actor, g->npc_lifetimes() ) : nullptr;
+}
+
+static npc *mp_remote_actor()
+{
+    return mp_loaded_actor( mp_session().remote_actor );
+}
+
+static npc *mp_host_view_actor()
+{
+    return mp_loaded_actor( mp_session().client_host_actor );
+}
+
 client_connection *current_client_connection()
 {
     return g ? &mp_session().client : nullptr;
@@ -465,13 +484,9 @@ static std::string mp_format_activity( const std::string &act_id )
 // source of truth for any MP message that needs to address the other player.
 static std::string mp_partner_display_name()
 {
-    const character_id &id = is_hosting() ? mp_session().remote_actor_id :
-                             mp_session().client_host_actor_id;
-    if( id.is_valid() ) {
-        if( npc *n = g->critter_by_id<npc>( id ) ) {
-            if( !n->name.empty() ) {
-                return n->name;
-            }
+    if( const npc *partner = is_hosting() ? mp_remote_actor() : mp_host_view_actor() ) {
+        if( !partner->name.empty() ) {
+            return partner->name;
         }
     }
     return _( "Partner" );
@@ -622,23 +637,7 @@ struct mp_hud_t {
         // wire-state apply path keeps fresh (HP, move_mode, position), plus
         // the latest g_partner_activity / g_partner_activity_pct received
         // from the wire.
-        const character_id &partner_id = is_hosting()
-                                         ? mp_session().remote_actor_id
-                                         : mp_session().client_host_actor_id;
-        npc *partner = partner_id.is_valid()
-                       ? g->critter_by_id<npc>( partner_id )
-                       : nullptr;
-        // Fallback: id may be stale or invalid after a reconnect/respawn but
-        // a matching NPC still exists in the active world.  Scan by cached
-        // name so we can still pull HP / move_mode for the panel.
-        if( !partner && !mp_session().peer.partner_name_cached.empty() ) {
-            for( npc &candidate : g->all_npcs() ) {
-                if( candidate.name == mp_session().peer.partner_name_cached ) {
-                    partner = &candidate;
-                    break;
-                }
-            }
-        }
+        npc *partner = is_hosting() ? mp_remote_actor() : mp_host_view_actor();
 
         if( !mp_session().remote_connected && is_hosting() ) {
             mvwprintz( win, point( 2, crow ), c_dark_gray, "%s",
@@ -1200,15 +1199,15 @@ static void mp_save_npc_ids()
 {
     std::vector<int> ids;
     std::vector<std::string> names;
-    if( mp_session().remote_actor_id.is_valid() ) {
-        ids.push_back( mp_session().remote_actor_id.get_value() );
-        npc *rn = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    if( mp_session().remote_actor.id().is_valid() ) {
+        ids.push_back( mp_session().remote_actor.id().get_value() );
+        npc *rn = mp_remote_actor();
         if( rn && !rn->name.empty() ) {
             names.push_back( rn->name );
         }
     }
-    if( mp_session().client_host_actor_id.is_valid() ) {
-        ids.push_back( mp_session().client_host_actor_id.get_value() );
+    if( mp_session().client_host_actor.id().is_valid() ) {
+        ids.push_back( mp_session().client_host_actor.id().get_value() );
     }
     if( ids.empty() && names.empty() ) {
         remove_file( mp_npc_cleanup_path() );
@@ -1308,7 +1307,7 @@ static void mp_cull_local_npcs()
     }
     std::vector<character_id> to_remove;
     for( npc &n : g->all_npcs() ) {
-        if( n.getID() == mp_session().client_host_actor_id ) {
+        if( mp_session().client_host_actor.owns_instance( &n, g->npc_lifetimes() ) ) {
             continue;   // the host's proxy — the one NPC we keep
         }
         to_remove.push_back( n.getID() );
@@ -1362,7 +1361,7 @@ bool mp_save_remote_player()
     if( !mp_session().remote_connected ) {
         return true;
     }
-    const npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    const npc *remote = mp_session().remote_actor.retained( g->npc_lifetimes() );
     if( !remote ) {
         return false;
     }
@@ -1491,19 +1490,19 @@ static void spawn_remote_player( const std::string &name, uint64_t peer_id,
     overmap_buffer.insert_npc( remote );
     g->load_npcs();
 
-    mp_session().remote_actor_id = remote->getID();
+    mp_session().remote_actor.bind_player( *remote, player.id, g->npc_lifetimes() );
     // Tag the proxy so a load-time sweep can find and remove orphans from
     // sessions where the cleanup file went missing (e.g. host saved while
     // connected, then quit — the proxy ends up in the world save).
     remote->set_value( "mp_proxy", std::string( "1" ) );
     mp_log( "[cdda-mp] spawn: remote_player_npc_id=" +
-            std::to_string( mp_session().remote_actor_id.get_value() ) +
-            " valid=" + std::to_string( mp_session().remote_actor_id.is_valid() ) +
+            std::to_string( mp_session().remote_actor.id().get_value() ) +
+            " valid=" + std::to_string( mp_session().remote_actor.id().is_valid() ) +
             " tagged mp_proxy=1" );
 
     // Co-op partner: apply ally status AFTER load_npcs so the NPC pointer is
     // fully wired into the game state (faction manager, critter tracker, etc.).
-    npc *rn = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *rn = mp_remote_actor();
     if( rn ) {
         rn->set_attitude( NPCATT_FOLLOW );
         rn->set_fac( faction_id( "your_followers" ) );
@@ -1549,11 +1548,11 @@ static void release_remote_player()
     if( !mp_session().remote_connected ) {
         return;
     }
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *remote = mp_remote_actor();
     if( remote ) {
         // Clean despawn — the partner quit/disconnected, they are NOT dead.
         // die() drops a corpse carrying all their gear (a pickup-able loot dupe).
-        g->remove_npc( mp_session().remote_actor_id );
+        g->remove_npc( mp_session().remote_actor.id() );
     }
     // Remove from overmap buffer so the NPC doesn't get written back into the
     // world save, which would cause a stale NPC to appear on next load.
@@ -1563,16 +1562,16 @@ static void release_remote_player()
     // found" debugmsg — a BLOCKING modal popup on the host EVERY time the client
     // disconnects ("client quit drags the host down", 2026-06-21). find_npc()
     // returns null without complaint, so we only remove when it's actually there.
-    if( mp_session().remote_actor_id.is_valid() &&
-        overmap_buffer.find_npc( mp_session().remote_actor_id ) ) {
-        overmap_buffer.remove_npc( mp_session().remote_actor_id );
+    const auto retained = overmap_buffer.find_npc( mp_session().remote_actor.id() );
+    if( mp_session().remote_actor.owns_instance( retained.get(), g->npc_lifetimes() ) ) {
+        overmap_buffer.remove_npc( mp_session().remote_actor.id() );
     }
 
     mp_session().remote_connected = false;
     mp_session().remote_peer_id = 0;
     mp_session().remote_player = {};
     mp_session().remote_detach_pending = false;
-    mp_session().remote_actor_id = character_id();
+    mp_session().remote_actor.reset();
     mp_session().host_turn.proxy_was_alive = false;
     mp_session().presentation.separation_tier = 0;
     mp_session().presentation.separation_settled = false;
@@ -2017,7 +2016,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         return;
     }
 
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *remote = mp_remote_actor();
     if( !remote ) {
         return;
     }
@@ -3957,7 +3956,7 @@ static std::string build_overmap_sync()
     const tripoint_abs_omt center = get_avatar().pos_abs_omt();
     const int host_z = center.z();
     int client_z = host_z;
-    const npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    const npc *remote = mp_remote_actor();
     if( remote ) {
         client_z = remote->pos_abs_omt().z();
     }
@@ -4122,7 +4121,7 @@ static std::string build_map_sync()
     // is on a different one.
     const int host_z = get_avatar().posz();
     int client_z = host_z;
-    const npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    const npc *remote = mp_remote_actor();
     if( remote ) {
         client_z = remote->posz();
     }
@@ -4178,8 +4177,16 @@ void grant_client_turn()
     if( !mp_session().remote_connected ) {
         return;
     }
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *remote = mp_remote_actor();
     if( !remote ) {
+        mp_session().host_turn.granted_this_turn = false;
+        const npc *retained = mp_session().remote_actor.retained( g->npc_lifetimes() );
+        if( retained && !retained->is_dead_state() ) {
+            // Temporary unload or removal from the tracker is not death. Do
+            // not grant actions until native loading restores this same actor.
+            return;
+        }
+
         // If we previously had a live proxy and it's now gone, treat it as a
         // death (monsters on the host's side killed the NPC representing the
         // client).  Notify the client cleanly so they get a "You died." flow
@@ -4584,7 +4591,7 @@ void wait_for_client_action()
     // collision for any character with in_vehicle==true, so without this the vehicle
     // rams into its own passenger each time it moves.
     if( mp_session().remote_connected ) {
-        npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+        npc *remote = mp_remote_actor();
         if( remote ) {
             const optional_vpart_position ovp = get_map().veh_at( remote->pos_bub() );
             remote->in_vehicle = static_cast<bool>( ovp );
@@ -4741,7 +4748,8 @@ void set_last_host_action_label( const std::string &label )
 
 bool is_remote_player( character_id id )
 {
-    return mp_session().remote_connected && id == mp_session().remote_actor_id;
+    return mp_session().remote_connected && id == mp_session().remote_actor.id() &&
+           mp_session().remote_actor.owns_instance( g->critter_by_id<npc>( id ), g->npc_lifetimes() );
 }
 
 bool is_host_waiting_for_client()
@@ -4938,26 +4946,12 @@ int get_separation_tier()
 
 npc *get_partner_npc()
 {
-    // Host POV: client's proxy. Client POV: host's proxy.
-    // Gate each branch on the live-session flag, mirroring is_remote_player().
-    // The id alone is not safe: the cleared/default sentinel is
-    // character_id() == -1, which collides with the id of an orphaned proxy
-    // left in a world save (proxies that lose their assigned id on reload also
-    // land at -1). Without the connection gate, a host with no client resolves
-    // that ghost and draws the off-screen partner arrow at its tile.
-    npc *result = nullptr;
-    if( ( is_hosting() || is_server_mode() ) && mp_session().remote_connected &&
-        mp_session().remote_actor_id.get_value() != 0 ) {
-        if( npc *n = g->critter_by_id<npc>( mp_session().remote_actor_id ) ) {
-            result = n;
+    if( ( is_hosting() || is_server_mode() ) && mp_session().remote_connected ) {
+        if( npc *remote = mp_remote_actor() ) {
+            return remote;
         }
     }
-    if( !result && is_client_mode() && mp_session().client_host_actor_id.get_value() != 0 ) {
-        if( npc *n = g->critter_by_id<npc>( mp_session().client_host_actor_id ) ) {
-            result = n;
-        }
-    }
-    return result;
+    return is_client_mode() && mp_session().client_host_spawned ? mp_host_view_actor() : nullptr;
 }
 
 bool is_partner_npc( character_id id )
@@ -4966,22 +4960,17 @@ bool is_partner_npc( character_id id )
     if( is_remote_player( id ) ) {
         return true;
     }
-    // Client side: the host's proxy is client_host_npc_id.  Don't use
-    // character_id::is_valid() — it checks value > 0, but the MP-spawned
-    // proxy NPCs end up with negative IDs (e.g. -1) which is_valid() rejects
-    // even though the NPC is real and findable.  Just guard against the
-    // default-uninitialized id (value 0) and compare directly.
-    return is_client_mode() &&
-           mp_session().client_host_actor_id.get_value() != 0 &&
-           id == mp_session().client_host_actor_id;
+    return is_client_mode() && id == mp_session().client_host_actor.id() &&
+           mp_session().client_host_actor.owns_instance( g->critter_by_id<npc>( id ),
+                   g->npc_lifetimes() );
 }
 
 bool is_client_host_at( const tripoint_abs_ms &abs )
 {
-    if( !mp_session().client_host_spawned || !mp_session().client_host_actor_id.is_valid() ) {
+    if( !mp_session().client_host_spawned || !mp_session().client_host_actor.id().is_valid() ) {
         return false;
     }
-    npc *hnpc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+    npc *hnpc = mp_host_view_actor();
     return hnpc && get_map().get_abs( hnpc->pos_bub() ) == abs;
 }
 
@@ -5944,15 +5933,16 @@ static void remove_client_host_npc()
     // Clean despawn — the host left, they are NOT dead. die() would drop a
     // corpse carrying all their gear (a pickup-able loot dupe). Remove the
     // active copy and the overmap copy without a death.
-    npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+    npc *host_npc = mp_host_view_actor();
     if( host_npc ) {
-        g->remove_npc( mp_session().client_host_actor_id );
+        g->remove_npc( mp_session().client_host_actor.id() );
     }
-    if( mp_session().client_host_actor_id.is_valid() ) {
-        overmap_buffer.remove_npc( mp_session().client_host_actor_id );
+    const auto retained = overmap_buffer.find_npc( mp_session().client_host_actor.id() );
+    if( mp_session().client_host_actor.owns_instance( retained.get(), g->npc_lifetimes() ) ) {
+        overmap_buffer.remove_npc( mp_session().client_host_actor.id() );
     }
     mp_session().client_host_spawned = false;
-    mp_session().client_host_actor_id = character_id();
+    mp_session().client_host_actor.reset();
     mp_session().replication.client.client_host_worn_sig.clear();
     mp_save_npc_ids();
 }
@@ -5965,19 +5955,19 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
     if( !mp_session().client_host_spawned ) {
         shared_ptr_fast<npc> host_npc = make_shared_fast<npc>();
         host_npc->normalize();
+        host_npc->setID( g->assign_npc_id() );
+        host_npc->set_value( "mp_proxy", std::string( "1" ) );
         host_npc->name = name.empty() ? "host" : name;
         host_npc->spawn_at_precise( abs_pos );
         overmap_buffer.insert_npc( host_npc );
         g->load_npcs();
-        mp_session().client_host_actor_id = host_npc->getID();
+        mp_session().client_host_actor.bind_view( *host_npc, g->npc_lifetimes() );
         mp_session().client_host_spawned = true;
-        // Same orphan-resistance tag as the host's remote_player proxy.
-        host_npc->set_value( "mp_proxy", std::string( "1" ) );
         mp_save_npc_ids();  // persist ID so next session can clean it up
 
         // Apply ally status AFTER load_npcs so the NPC is fully wired into the
         // game state (faction manager, critter tracker, etc.).
-        npc *hn = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+        npc *hn = mp_host_view_actor();
         if( hn ) {
             hn->set_attitude( NPCATT_FOLLOW );
             hn->set_fac( faction_id( "your_followers" ) );
@@ -5991,14 +5981,16 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
         return;
     }
 
-    npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+    npc *host_npc = mp_host_view_actor();
     if( !host_npc ) {
         // NPC left the reality bubble — still in overmap buffer, just not loaded.
         // Don't reset spawned state or we'll create a duplicate on the next tick.
         // If they're far enough to load, request a map reload in their direction.
         if( m.inbounds( abs_pos ) ) {
-            // Back in bounds — the game will load_npcs() on the next do_turn pass.
-            g->load_npcs();
+            if( npc *retained = mp_session().client_host_actor.retained( g->npc_lifetimes() ) ) {
+                retained->spawn_at_precise( abs_pos );
+                g->load_npcs();
+            }
         }
         return;
     }
@@ -6600,8 +6592,8 @@ static bool apply_one_state_message( const std::string &msg )
             if( was_waiting ) {
                 u.cancel_activity();
                 std::string host_name = _( "Your partner" );
-                if( mp_session().client_host_actor_id.is_valid() ) {
-                    if( npc *hnpc = g->critter_by_id<npc>( mp_session().client_host_actor_id ) ) {
+                if( mp_session().client_host_actor.id().is_valid() ) {
+                    if( npc *hnpc = mp_host_view_actor() ) {
                         host_name = hnpc->get_name();
                     }
                 }
@@ -6617,8 +6609,8 @@ static bool apply_one_state_message( const std::string &msg )
         if( ( jo.has_bool( "partner_swapped" ) && jo.get_bool( "partner_swapped" ) ) ||
             ( jo.has_bool( "partner_pushed" ) && jo.get_bool( "partner_pushed" ) ) ) {
             std::string host_name = _( "Your partner" );
-            if( mp_session().client_host_actor_id.is_valid() ) {
-                if( npc *hnpc = g->critter_by_id<npc>( mp_session().client_host_actor_id ) ) {
+            if( mp_session().client_host_actor.id().is_valid() ) {
+                if( npc *hnpc = mp_host_view_actor() ) {
                     host_name = hnpc->get_name();
                 }
             }
@@ -6666,7 +6658,7 @@ static bool apply_one_state_message( const std::string &msg )
                 mp_session().client_host_spawned ) {
                 mp_apply_step _dress( "dress-host-npc" );
                 mp_session().replication.client.client_host_worn_sig = sig;
-                npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+                npc *host_npc = mp_host_view_actor();
                 if( host_npc ) {
                     if( jo.has_bool( "host_male" ) ) {
                         host_npc->male = jo.get_bool( "host_male" );
@@ -6788,7 +6780,7 @@ static bool apply_one_state_message( const std::string &msg )
 
         // Apply host's move_mode to the host NPC proxy every tick (changes per-action).
         if( jo.has_string( "host_move_mode" ) && mp_session().client_host_spawned ) {
-            npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+            npc *host_npc = mp_host_view_actor();
             if( host_npc ) {
                 const move_mode_id mode_id( jo.get_string( "host_move_mode" ) );
                 if( mode_id.is_valid() ) {
@@ -6799,7 +6791,7 @@ static bool apply_one_state_message( const std::string &msg )
 
         // Sync host facing direction for correct sprite flip.
         if( jo.has_int( "host_facing" ) && mp_session().client_host_spawned ) {
-            npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+            npc *host_npc = mp_host_view_actor();
             if( host_npc ) {
                 host_npc->facing = jo.get_int( "host_facing" ) == 0
                                    ? FacingDirection::LEFT : FacingDirection::RIGHT;
@@ -6811,7 +6803,7 @@ static bool apply_one_state_message( const std::string &msg )
         // change every turn. Full-state: clear then re-add the host's current set
         // (empty array correctly clears, e.g. host stopped bleeding).
         if( jo.has_array( "host_effects" ) && mp_session().client_host_spawned ) {
-            npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+            npc *host_npc = mp_host_view_actor();
             if( host_npc ) {
                 host_npc->clear_effects();
                 for( const JsonValue &ev : jo.get_array( "host_effects" ) ) {
@@ -6842,7 +6834,7 @@ static bool apply_one_state_message( const std::string &msg )
         // Apply the host's per-bodypart HP so the co-op partner-HP HUD reflects
         // the host's real health (the bar reads partner->get_hp() off the proxy).
         if( jo.has_array( "host_hp" ) && mp_session().client_host_spawned ) {
-            npc *host_npc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+            npc *host_npc = mp_host_view_actor();
             if( host_npc ) {
                 for( const JsonValue &hv : jo.get_array( "host_hp" ) ) {
                     JsonObject ho = hv.get_object();
@@ -7330,10 +7322,8 @@ void client_process_incoming()
         mp_session().client_turn.ack_set_time = std::chrono::steady_clock::now();
     }
     // Warn if the client is drifting too far from the host's reality bubble center.
-    // is_valid() rejects negative IDs but MP proxy NPCs have negative IDs — check
-    // the raw value instead so the client-side warning actually fires.
-    if( mp_session().client_host_actor_id.get_value() != 0 ) {
-        npc *hnpc = g->critter_by_id<npc>( mp_session().client_host_actor_id );
+    if( mp_session().client_host_actor.id().is_valid() ) {
+        npc *hnpc = mp_host_view_actor();
         if( hnpc ) {
             check_separation_warning( get_avatar().pos_abs(), hnpc->pos_abs() );
         }
@@ -7990,12 +7980,12 @@ float get_remote_player_luminance()
 
 character_id get_host_npc_character_id()
 {
-    return mp_session().client_host_actor_id;
+    return mp_session().client_host_actor.id();
 }
 
 character_id get_remote_player_npc_character_id()
 {
-    return mp_session().remote_actor_id;
+    return mp_session().remote_actor.id();
 }
 
 void client_resync_worn()
@@ -9595,7 +9585,7 @@ static std::string build_viewport( const tripoint_bub_ms &center )
 
     map &m = get_map();
     avatar &u = get_avatar();
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *remote = mp_remote_actor();
 
     tripoint_bub_ms avatar_pos = u.pos_bub();
 
@@ -9854,7 +9844,7 @@ void mp_relay_shout( int vol, bool order )
 
 static void mp_handle_shout_recv( const std::string &msg )
 {
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *remote = mp_remote_actor();
     if( !remote ) {
         return;
     }
@@ -10023,7 +10013,7 @@ std::string serialize_remote_player_state()
         return R"({"type":"state","connected":false})";
     }
 
-    npc *remote = g->critter_by_id<npc>( mp_session().remote_actor_id );
+    npc *remote = mp_remote_actor();
     if( !remote ) {
         return R"({"type":"state","connected":false})";
     }

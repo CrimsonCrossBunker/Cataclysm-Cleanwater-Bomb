@@ -52,14 +52,14 @@ void world_session::reset_state( bool preserve_pending_client )
     peer = {};
     presentation = session_presentation();
     last_marked_world.clear();
-    remote_actor_id = character_id();
+    remote_actor.reset();
     remote_connected = false;
     remote_peer_id = 0;
     remote_player = {};
     remote_detach_pending = false;
     local_player.reset();
     players.reset();
-    client_host_actor_id = character_id();
+    client_host_actor.reset();
     client_host_spawned = false;
     stale_proxy_cleanup_done = false;
 }

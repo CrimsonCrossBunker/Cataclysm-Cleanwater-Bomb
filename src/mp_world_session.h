@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "character_id.h"
+#include "mp_actor_binding.h"
 #include "mp_apply_watchdog.h"
 #include "mp_client_conn.h"
 #include "mp_server.h"
@@ -34,14 +34,14 @@ struct world_session {
         peer_observation peer;
         client_admission_state admission;
         session_presentation presentation;
-        character_id remote_actor_id;
+        actor_binding remote_actor;
         bool remote_connected = false;
         uint64_t remote_peer_id = 0;
         player_credentials remote_player;
         bool remote_detach_pending = false;
         std::optional<player_credentials> local_player;
         std::unique_ptr<player_store> players;
-        character_id client_host_actor_id;
+        actor_binding client_host_actor;
         bool client_host_spawned = false;
         bool stale_proxy_cleanup_done = false;
 
