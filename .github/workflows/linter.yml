@@ -21,6 +21,7 @@ jobs:
   style-code:
     if: ${{ github.event.pull_request.draft == false }}
 
+    # Keep the established AStyle 3.1 output stable across runner image upgrades.
     runs-on: ubuntu-24.04
 
     steps:
@@ -62,8 +63,8 @@ jobs:
     - name: install astyle
       if: ${{ steps.changed-files.outputs.has_cpp == 'true' }}
       run: |
-        sudo apt-get install -y astyle
-        astyle --version
+        sudo apt-get install astyle
+        astyle --version | grep -Fx "Artistic Style Version 3.1"
 
     - name: run astyle
       if: ${{ steps.changed-files.outputs.has_cpp == 'true' }}
