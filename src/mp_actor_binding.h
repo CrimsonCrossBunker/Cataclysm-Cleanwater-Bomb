@@ -5,6 +5,7 @@
 #include "character_id.h"
 #include "mp_player_identity.h"
 #include "npc_lifetime.h"
+#include "player_control.h"
 #include "safe_reference.h"
 
 class Creature;
@@ -26,7 +27,8 @@ class actor_binding
         actor_binding() = default;
         actor_binding( const actor_binding & ) = delete;
         actor_binding &operator=( const actor_binding & ) = delete;
-        void bind_player( npc &actor, const player_id &player, npc_lifetime_registry &world );
+        void bind_player( npc &actor, const player_id &player, npc_lifetime_registry &world,
+                          player_control control );
         void bind_view( npc &actor, npc_lifetime_registry &world );
         void reset();
         character_id id() const {
@@ -43,6 +45,7 @@ class actor_binding
         player_id player_;
         safe_reference<Creature> instance_;
         npc_lifetime active_;
+        player_control control_;
         void bind( npc &actor, const player_id &player, npc_lifetime_registry &world );
 };
 } // namespace cata_mp

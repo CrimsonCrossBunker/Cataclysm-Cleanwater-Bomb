@@ -30,7 +30,8 @@ npc &bind_test_player( cata_mp::world_session &session )
     npc &actor = spawn_npc( { 60, 60 }, "test_talker" );
     actor.set_value( "mp_proxy", std::string( "1" ) );
     actor.set_value( "mp_player_id", test_player().str() );
-    session.remote_actor.bind_player( actor, test_player(), g->npc_lifetimes() );
+    session.remote_actor.bind_player( actor, test_player(), g->npc_lifetimes(),
+                                      g->player_controls().claim( test_player(), actor ) );
     return actor;
 }
 
@@ -285,10 +286,14 @@ TEST_CASE( "mp_proxy_bindings_belong_to_one_world", "[multiplayer][world_session
     second_actor.set_value( "mp_player_id", test_player().str() );
     npc_lifetime_registry first_world;
     npc_lifetime_registry second_world;
-    first.remote_actor.bind_player( first_actor, test_player(), first_world );
+    player_control_registry first_controls;
+    player_control_registry second_controls;
+    first.remote_actor.bind_player( first_actor, test_player(), first_world,
+                                    first_controls.claim( test_player(), first_actor ) );
     first.remote_connected = true;
     first.remote_admission = cata_mp::peer_admission::create( 101 );
-    second.remote_actor.bind_player( second_actor, test_player(), second_world );
+    second.remote_actor.bind_player( second_actor, test_player(), second_world,
+                                     second_controls.claim( test_player(), second_actor ) );
     second.remote_connected = true;
     second.remote_admission = cata_mp::peer_admission::create( 101 );
 

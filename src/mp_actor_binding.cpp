@@ -1,6 +1,7 @@
 #include "mp_actor_binding.h"
 
 #include <stdexcept>
+#include <utility>
 
 #include "creature.h"
 #include "npc.h"
@@ -26,21 +27,25 @@ void actor_binding::bind( npc &actor, const player_id &player, npc_lifetime_regi
     active_ = world.acquire( actor );
 }
 
-void actor_binding::bind_player( npc &actor, const player_id &player, npc_lifetime_registry &world )
+void actor_binding::bind_player( npc &actor, const player_id &player, npc_lifetime_registry &world,
+                                 player_control control )
 {
-    if( !player.valid() ) {
-        throw std::runtime_error( "Missing multiplayer player identity" );
+    if( !player.valid() || !( control.player() == player ) || control.get() != &actor ) {
+        throw std::runtime_error( "Missing multiplayer player control assignment" );
     }
     bind( actor, player, world );
+    control_ = std::move( control );
 }
 
 void actor_binding::bind_view( npc &actor, npc_lifetime_registry &world )
 {
     bind( actor, player_id(), world );
+    control_.reset();
 }
 
 void actor_binding::reset()
 {
+    control_.reset();
     id_ = character_id();
     player_ = player_id();
     instance_ = {};
@@ -51,7 +56,8 @@ bool actor_binding::owns_instance( const npc *actor, const npc_lifetime_registry
 {
     return actor && active_.belongs_to( world ) && instance_.get() == actor &&
            id_.is_valid() && actor->getID() == id_ && is_player_proxy( *actor ) &&
-           ( !player_.valid() || actor->get_value( "mp_player_id" ).str() == player_.str() );
+           ( !player_.valid() || ( actor->get_value( "mp_player_id" ).str() == player_.str() &&
+                                   control_.get() == actor ) );
 }
 
 npc *actor_binding::resolve_loaded( npc *candidate, const npc_lifetime_registry &world )
