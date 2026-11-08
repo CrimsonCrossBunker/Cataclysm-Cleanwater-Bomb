@@ -11,6 +11,7 @@ import tarfile
 import tempfile
 import threading
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -65,9 +66,9 @@ sys.exit(code)
         self.assertEqual(attempts, 1)
 
 
-def translation_install_script():
-    workflow = (ROOT / ".github/workflows/build-translations.yml").read_text()
-    start = workflow.index("      - name: Install Transifex CLI\n")
+def workflow_script(path, name):
+    workflow = (ROOT / path).read_text()
+    start = workflow.index("      - name: " + name + "\n")
     start = workflow.index("        run: |\n", start) + len("        run: |\n")
     lines = []
     for line in workflow[start:].splitlines():
@@ -75,6 +76,11 @@ def translation_install_script():
             break
         lines.append(line[10:] if line else "")
     return "\n".join(lines)
+
+
+def translation_install_script():
+    return workflow_script(".github/workflows/build-translations.yml",
+                           "Install Transifex CLI")
 
 
 @unittest.skipUnless(shutil.which("curl") and shutil.which("tar"),
@@ -192,6 +198,66 @@ class FormatterCheckoutTest(unittest.TestCase):
                 cwd=root, capture_output=True, text=True,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
+
+
+@unittest.skipUnless(shutil.which("unzip"), "unzip is required")
+class TilesetDownloadTest(unittest.TestCase):
+    def download(self, valid_archive=True, tag="undead-test"):
+        with tempfile.TemporaryDirectory(prefix="ccb tileset ") as directory:
+            root = Path(directory)
+            archive = root / "fixture.zip"
+            with zipfile.ZipFile(archive, "w") as output:
+                output.writestr("UNDEAD_PEOPLE/tileset.txt", "tileset fixture")
+            if not valid_archive:
+                archive.write_text("not a zip archive")
+            binary_dir = root / "bin"
+            binary_dir.mkdir()
+            (binary_dir / "gh").write_text("""#!/usr/bin/env python3
+import os, sys
+assert sys.argv[1:3] == ["release", "list"], "REST asset API is rate limited"
+print(os.environ["TEST_TAG"])
+""")
+            (binary_dir / "curl").write_text("""#!/usr/bin/env python3
+import os, shutil, sys
+args = sys.argv[1:]
+assert "--fail" in args and "--retry" in args
+assert "--header" not in args and "--user" not in args
+expected = ("https://github.com/CrimsonCrossBunker/CCB_UNDEAD_PEOPLE/"
+            "releases/download/undead-test/CCB_UNDEAD_PEOPLE.zip")
+assert args[-1] == expected
+shutil.copyfile(os.environ["TEST_ARCHIVE"], args[args.index("--output") + 1])
+""")
+            for executable in binary_dir.iterdir():
+                executable.chmod(0o755)
+            env = dict(os.environ)
+            env.update(
+                PATH=str(binary_dir) + os.pathsep + os.environ["PATH"],
+                TEST_ARCHIVE=str(archive), TEST_TAG=tag,
+                TILESET_REPOSITORY="CrimsonCrossBunker/CCB_UNDEAD_PEOPLE",
+                ASSET_NAME="CCB_UNDEAD_PEOPLE.zip", SUBDIR="UNDEAD_PEOPLE",
+            )
+            result = subprocess.run(
+                ["bash", "-e", "-o", "pipefail", "-c", workflow_script(
+                    ".github/workflows/compose-tilesets.yml",
+                    "Download ${{ matrix.name }} from latest release")],
+                cwd=root, env=env, capture_output=True, text=True,
+            )
+            return result, (root / "precomposed-tileset/tileset.txt").exists()
+
+    def test_downloads_public_asset_without_rest_asset_api(self):
+        result, installed = self.download()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(installed)
+
+    def test_rejects_invalid_archive_before_copying(self):
+        result, installed = self.download(valid_archive=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(installed)
+
+    def test_missing_release_does_not_download(self):
+        result, installed = self.download(tag="")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(installed)
 
 
 if __name__ == "__main__":
