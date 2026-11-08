@@ -15,7 +15,9 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "cata_path.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "coordinates.h"
 #include "debug.h"
@@ -25,8 +27,11 @@
 #include "input.h"
 #include "json.h"
 #include "json_loader.h"
+#include "json_loader_buffer.h"
 #include "map.h"
+#include "map_storage_context.h"
 #include "output.h"
+#include "overmap_types.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "point.h"
@@ -50,28 +55,63 @@ static std::string quad_file_name( const tripoint_abs_omt &om_addr )
     return string_format( "%d.%d.%d.map", om_addr.x(), om_addr.y(), om_addr.z() );
 }
 
-static cata_path find_dirname( const tripoint_abs_omt &om_addr )
+cata_path mapbuffer::find_dirname( const tripoint_abs_omt &om_addr )
 {
     const tripoint_abs_seg segment_addr = project_to<coords::seg>( om_addr );
     std::string segment = string_format( "%d.%d.%d",
                                          segment_addr.x(),
                                          segment_addr.y(), segment_addr.z() );
-    return PATH_INFO::current_dimension_save_path() / "maps" / segment;
+    return storage().directory() / "maps" / segment;
 }
 
 mapbuffer MAPBUFFER;
 
-mapbuffer::mapbuffer() = default;
+mapbuffer::mapbuffer() : active_world_adapter_( true )
+{
+    uniform_terrain_ = [this]( const tripoint_abs_omt & p ) {
+        const map_storage_context &context = storage();
+        if( !world_generator || !world_generator->active_world || !g ||
+            world_generator->active_world->identity() != context.world() ||
+            g->get_dimension_prefix() != context.dimension() ) {
+            throw std::logic_error( "Map buffer uniform terrain belongs to another world or dimension" );
+        }
+        return overmap_buffer.ter( p );
+    };
+}
+
+mapbuffer::mapbuffer( map_storage_context context, uniform_terrain_lookup uniform ) :
+    active_world_adapter_( false ),
+    storage_( std::make_unique<const map_storage_context>( std::move( context ) ) ),
+    uniform_terrain_( std::move( uniform ) )
+{
+}
+
 mapbuffer::~mapbuffer() = default;
+
+const map_storage_context &mapbuffer::storage()
+{
+    if( !storage_ ) {
+        if( !world_generator || !world_generator->active_world || !g ) {
+            throw std::logic_error( "Cannot bind map storage without an active world" );
+        }
+        const WORLD &world = *world_generator->active_world;
+        storage_ = std::make_unique<const map_storage_context>( world.identity(),
+                   g->get_dimension_prefix(), world.folder_path(), world.has_compression_enabled() );
+    }
+    return *storage_;
+}
 
 void mapbuffer::clear()
 {
     // Drop any pending/completed background reads first: their captured paths
     // belong to the world being torn down and must not be consumed afterward.
-    g_submap_prefetcher.clear();
+    prefetcher_.clear();
     submaps.clear();
     // The listing cache is keyed by archive path and belongs to the old world.
     zzip_listing_cache.clear();
+    if( active_world_adapter_ ) {
+        storage_.reset();
+    }
 }
 
 void mapbuffer::clear_outside_reality_bubble()
@@ -90,6 +130,7 @@ void mapbuffer::clear_outside_reality_bubble()
 bool mapbuffer::add_submap( const tripoint_abs_sm &p, std::unique_ptr<submap> &sm )
 {
     std::scoped_lock lk( submaps_mutex_ );
+    storage();
     if( submaps.count( p ) ) {
         return false;
     }
@@ -107,6 +148,8 @@ bool mapbuffer::add_submap( const tripoint_abs_sm &p, std::unique_ptr<submap> &s
 
 bool mapbuffer::add_submap( const tripoint_abs_sm &p, submap *sm )
 {
+    // Binding can fail; do not adopt the caller's raw pointer before that check.
+    storage();
     // FIXME: get rid of this overload and make submap ownership semantics sane.
     std::unique_ptr<submap> temp( sm );
     bool result = add_submap( p, temp );
@@ -130,6 +173,7 @@ void mapbuffer::remove_submap( const tripoint_abs_sm &addr )
 
 submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )
 {
+    storage();
     dbg( D_INFO ) << "mapbuffer::lookup_submap( x[" << p.x() << "], y[" << p.y() << "], z["
                   << p.z() << "])";
 
@@ -148,6 +192,7 @@ submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )
 
 bool mapbuffer::submap_exists( const tripoint_abs_sm &p )
 {
+    storage();
     // Could so with a second check against a std::unordered_set<tripoint_abs_sm> of already checked existing but not loaded submaps before resorting to unserializing?
     const auto iter = submaps.find( p );
     if( iter == submaps.end() ) {
@@ -164,6 +209,7 @@ bool mapbuffer::submap_exists( const tripoint_abs_sm &p )
 
 bool mapbuffer::submap_exists_approx( const tripoint_abs_sm &p )
 {
+    storage();
     const auto iter = submaps.find( p );
     if( iter == submaps.end() ) {
         try {
@@ -171,7 +217,7 @@ bool mapbuffer::submap_exists_approx( const tripoint_abs_sm &p )
             const cata_path dirname = find_dirname( om_addr );
             std::string file_name = quad_file_name( om_addr );
 
-            if( world_generator->active_world->has_compression_enabled() ) {
+            if( storage().compressed() ) {
                 cata_path zzip_name = dirname;
                 zzip_name += zzip_suffix;
                 // Route through the cached entry listing instead of a fresh
@@ -194,8 +240,9 @@ bool mapbuffer::submap_exists_approx( const tripoint_abs_sm &p )
 
 void mapbuffer::prefetch_quad( const tripoint_abs_omt &om_addr, int priority )
 {
-    // Resolve all paths/flags on the main thread (touches world_generator/PATH_INFO),
-    // then hand a self-contained request to the worker. The worker only reads bytes.
+    // Bind on the owner thread, then hand a self-contained request to the worker.
+    // Explicitly owned buffers never resolve paths through the active world.
+    storage();
     // An OMT ".map" file holds the 2x2 submap quad for a single z-level.
     const tripoint_abs_sm sm_base = project_to<coords::sm>( om_addr );
     bool any_missing = false;
@@ -217,37 +264,48 @@ void mapbuffer::prefetch_quad( const tripoint_abs_omt &om_addr, int priority )
     req.om = om_addr;
     req.entry_name = std::filesystem::u8path( file_name );
 
-    if( world_generator->active_world->has_compression_enabled() ) {
+    if( storage().compressed() ) {
         cata_path zzip_name = dirname;
         zzip_name += zzip_suffix;
         req.compressed = true;
         req.zzip_path = zzip_name.get_unrelative_path();
-        req.dict_path = ( PATH_INFO::world_base_save_path() / "maps.dict" ).get_unrelative_path();
+        req.dict_path = storage().dictionary().get_unrelative_path();
     } else {
         req.compressed = false;
         req.quad_path = ( dirname / file_name ).get_unrelative_path();
     }
 
-    g_submap_prefetcher.request( req, priority );
+    prefetcher_.request( req, priority );
 }
 
 void mapbuffer::prefetch_evict_beyond( const tripoint_abs_omt &center, int max_dist )
 {
-    g_submap_prefetcher.evict_beyond( center, max_dist );
+    prefetcher_.evict_beyond( center, max_dist );
 }
 
-void mapbuffer::save( bool delete_after_save )
+submap_prefetcher::status mapbuffer::prefetch_status() const
 {
+    return prefetcher_.inspect();
+}
+
+void mapbuffer::save( bool delete_after_save, const map *resident_map )
+{
+    storage();
     // The prefetch worker reads the same zzip archives this loop rewrites. Park it
     // (and force it to drop any cached archive handle) for the duration of the save
     // so the save path is the sole writer. Resumes on scope exit, even on throw.
-    scoped_prefetch_pause prefetch_pause;
+    scoped_prefetch_pause prefetch_pause( prefetcher_ );
+    // A failed save may already have rewritten earlier quads. Cached listings
+    // must be invalidated on both success and failure; buffered maps stay owned.
+    on_out_of_scope invalidate_listings( [this]() {
+        zzip_listing_cache.clear();
+    } );
 
-    assure_dir_exist( PATH_INFO::current_dimension_save_path() / "maps" );
+    if( !assure_dir_exist( storage().directory() / "maps" ) ) {
+        throw std::runtime_error( "Cannot create map storage directory" );
+    }
     int num_saved_submaps = 0;
     int num_total_submaps = submaps.size();
-
-    map &here = get_map();
 
     static_popup popup;
 
@@ -284,20 +342,16 @@ void mapbuffer::save( bool delete_after_save )
         const cata_path dirname = find_dirname( om_addr );
         const cata_path quad_path = dirname / quad_file_name( om_addr );
 
-        bool inside_reality_bubble = here.inbounds( om_addr );
+        const bool outside_resident_map = resident_map && !resident_map->inbounds( om_addr );
         // delete_on_save deletes everything, otherwise delete submaps
         // outside the current map.
         save_quad( dirname, quad_path, om_addr, submaps_to_delete,
-                   delete_after_save || !inside_reality_bubble );
+                   delete_after_save || outside_resident_map );
         num_saved_submaps += 4;
     }
     for( auto &elem : submaps_to_delete ) {
         remove_submap( elem );
     }
-    // save_quad rewrote these archives (add_file / delete_files / compact_to +
-    // rename), so any cached entry listing is now stale. Drop the whole cache;
-    // the next existence probe repopulates the touched archives lazily.
-    zzip_listing_cache.clear();
 }
 
 void mapbuffer::save_quad(
@@ -323,9 +377,9 @@ void mapbuffer::save_quad(
     // The number of uniform submaps is so enormous that the filesystem overhead
     // for this step of just checking if the quad exists approaches 70% of the
     // total cost of saving the mapbuffer, in one test save I had.
-    if( world_generator->active_world->has_compression_enabled() ) {
+    if( storage().compressed() ) {
         z = zzip::load( zzip_name.get_unrelative_path(),
-                        ( PATH_INFO::world_base_save_path() / "maps.dict" ).get_unrelative_path() );
+                        storage().dictionary().get_unrelative_path() );
         if( !z ) {
             throw std::runtime_error( "Failed opening compressed save file " +
                                       zzip_name.get_unrelative_path().generic_u8string() );
@@ -339,7 +393,8 @@ void mapbuffer::save_quad(
         tripoint_abs_sm submap_addr = project_to<coords::sm>( om_addr );
         submap_addr += offsets_offset.raw(); // TODO: Make += etc. available to relative parameters as well.
         submap_addrs.push_back( submap_addr );
-        submap *sm = submaps[submap_addr].get();
+        const auto existing = submaps.find( submap_addr );
+        submap *sm = existing == submaps.end() ? nullptr : existing->second.get();
         if( sm != nullptr ) {
             if( !sm->is_uniform() ) {
                 all_uniform = false;
@@ -349,7 +404,11 @@ void mapbuffer::save_quad(
         }
     }
 
-    if( all_uniform ) {
+    // An explicit storage owner may have no overmap terrain resolver. In that
+    // case even uniform submaps must be persisted, because they cannot be
+    // reconstructed after eviction or reload.
+    const bool regenerable_uniform = all_uniform && static_cast<bool>( uniform_terrain_ );
+    if( regenerable_uniform ) {
         // Nothing to save - this quad will be regenerated faster than it would be re-read
         if( delete_after_save ) {
             for( auto &submap_addr : submap_addrs ) {
@@ -405,18 +464,24 @@ void mapbuffer::save_quad(
     std::string s = std::move( stringout ).str();
 
     if( z ) {
-        z->add_file( filename.get_relative_path().filename(), s );
+        if( !z->add_file( filename.get_relative_path().filename(), s ) ) {
+            throw std::runtime_error( "Failed writing map archive " + zzip_name.generic_u8string() );
+        }
     } else {
         // Don't create the directory if it would be empty
-        assure_dir_exist( dirname );
+        if( !assure_dir_exist( dirname ) ) {
+            throw std::runtime_error( "Failed writing map quad " + filename.generic_u8string() );
+        }
         write_to_file( filename, [&]( std::ostream & fout ) {
             fout << s;
         } );
     }
 
-    if( all_uniform && reverted_to_uniform ) {
+    if( regenerable_uniform && reverted_to_uniform ) {
         if( z ) {
-            z->delete_files( { filename.get_relative_path().filename() } );
+            if( !z->delete_files( { filename.get_relative_path().filename() } ) ) {
+                throw std::runtime_error( "Failed removing uniform quad from map archive" );
+            }
         } else {
             std::filesystem::remove( filename.get_unrelative_path() );
         }
@@ -425,7 +490,9 @@ void mapbuffer::save_quad(
         cata_path tmp_path = zzip_name + ".tmp";
         if( z->compact_to( tmp_path.get_unrelative_path(), 2.0 ) ) {
             z.reset();
-            rename_file( tmp_path, zzip_name );
+            if( !rename_file( tmp_path, zzip_name ) ) {
+                throw std::runtime_error( "Failed replacing compacted map archive" );
+            }
         }
     }
 }
@@ -441,7 +508,7 @@ const std::unordered_set<std::string> *mapbuffer::zzip_listing( const cata_path 
         return nullptr;
     }
     std::optional<zzip> z = zzip::load( zzip_path.get_unrelative_path(),
-                                        ( PATH_INFO::world_base_save_path() / "maps.dict" ).get_unrelative_path() );
+                                        storage().dictionary().get_unrelative_path() );
     if( !z ) {
         return nullptr;
     }
@@ -471,11 +538,11 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
         // this quad's bytes off the main thread. Parsing (deserialize) still happens
         // here on the main thread, because it builds submap/string_id state that is
         // not safe to touch from the worker.
-        std::optional<std::string> prefetched = g_submap_prefetcher.take( om_addr );
+        auto prefetched = prefetcher_.take( om_addr );
         if( prefetched )
         {
             try {
-                JsonValue jsin = json_loader::from_string( std::move( *prefetched ) );
+                JsonValue jsin = json_from_owned_buffer( std::move( prefetched->bytes ) );
                 deserialize( jsin );
                 return true;
             } catch( std::exception &err ) {
@@ -485,7 +552,7 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
             }
         }
 
-        if( world_generator->active_world->has_compression_enabled() )
+        if( storage().compressed() )
         {
             cata_path zzip_name = dirname;
             zzip_name += zzip_suffix;
@@ -498,7 +565,7 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
             }
 
             std::optional<zzip> z = zzip::load( zzip_name.get_unrelative_path(),
-                                                ( PATH_INFO::world_base_save_path() / "maps.dict" ).get_unrelative_path() );
+                                                storage().dictionary().get_unrelative_path() );
             if( !z ) {
                 debugmsg( _fmt( "Failed to load submaps from {0}, could not open zzip.", zzip_name ) );
                 return false;
@@ -531,14 +598,68 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
 
     // fill in uniform submaps that were not serialized. Note that failure as a result of it
     // not being uniform is OK and results in any missing uniform submaps being generated.
-    oter_id const oid = overmap_buffer.ter( om_addr );
-    generate_uniform_omt( project_to<coords::sm>( om_addr ), oid );
+    if( uniform_terrain_ ) {
+        const std::optional<ter_str_id> terrain = uniform_terrain_( om_addr )->get_uniform_terrain();
+        if( terrain ) {
+            for( int x = 0; x <= 1; ++x ) {
+                for( int y = 0; y <= 1; ++y ) {
+                    const tripoint_abs_sm missing = project_to<coords::sm>( om_addr ) + point_rel_sm( x, y );
+                    if( submaps.count( missing ) == 0 ) {
+                        // This quad was just read. Probing disk again here would
+                        // recursively reload the same partial quad.
+                        add_uniform_submap( missing, *terrain );
+                    }
+                }
+            }
+        }
+    }
     if( submaps.count( p ) == 0 ) {
-        debugmsg( "file %s did not contain the expected submap %s for non-uniform terrain %s",
-                  quad_path.generic_u8string(), p.to_string(), oid.id().str() );
+        debugmsg( "file %s did not contain the expected submap %s",
+                  quad_path.generic_u8string(), p.to_string() );
+        return nullptr;
     }
 
     return submaps[ p ].get();
+}
+
+// Optimized mapgen function that only works properly for very simple overmap types
+// Does not create or require a temporary map and does its own saving.
+// Note that it assumes the map doesn't exist: it's an error to call this when it does.
+bool mapbuffer::generate_uniform( const tripoint_abs_sm &p, const ter_str_id &ter )
+{
+    if( submap_exists( p ) ) {
+        return false;
+    }
+
+    return add_uniform_submap( p, ter );
+}
+
+bool mapbuffer::add_uniform_submap( const tripoint_abs_sm &p, const ter_str_id &ter )
+{
+    std::unique_ptr<submap> sm = std::make_unique<submap>();
+    sm->set_all_ter( ter, true );
+    sm->last_touched = calendar::turn;
+    return add_submap( p, sm );
+}
+
+bool mapbuffer::generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &terrain_type )
+{
+    dbg( D_INFO ) << "generate_uniform p: " << p
+                  << "  terrain_type: " << terrain_type.id().str();
+
+    const std::optional<ter_str_id> ter = terrain_type->get_uniform_terrain();
+
+    if( !ter ) {
+        return false;
+    }
+
+    bool ret = true;
+    for( int xd = 0; xd <= 1; xd++ ) {
+        for( int yd = 0; yd <= 1; yd++ ) {
+            ret &= generate_uniform( p + point_rel_sm( xd, yd ), *ter );
+        }
+    }
+    return ret;
 }
 
 void mapbuffer::deserialize( const JsonArray &ja )

@@ -1,8 +1,10 @@
+#include "character_action_guard.h"
 #include "map.h"
 #include "vision_preparation.h"
 
 #define MP_ENABLED
 #include <algorithm>
+#include <limits>
 #include <array>
 #include <climits>
 #include <cmath>
@@ -62,6 +64,7 @@
 #include "item_factory.h"
 #include "item_group.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "item_wakeup.h"
 #include "itype.h"
 #include "iuse.h"
@@ -457,11 +460,11 @@ void map::set_seen_cache_dirty( const int zlevel )
 
 void map::set_draw_points_cache_dirty()
 {
-#if defined(TILES)
-    if( !test_mode && g != nullptr && this == &reality_bubble() ) {
-        draw_points_cache_dirty = true;
+    // Saturation keeps all observers dirty instead of wrapping to a version
+    // they may have already acknowledged.
+    if( draw_cache_revision_ != std::numeric_limits<uint64_t>::max() ) {
+        ++draw_cache_revision_;
     }
-#endif
 }
 
 void map::set_outside_cache_dirty( const int zlev )
@@ -1197,7 +1200,6 @@ void map::vehmove()
     VehicleList vehicle_list;
     int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
-    const tripoint_abs_ms player_pos = get_player_character().pos_abs();
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
         level_cache *cache_lazy = get_cache_lazy( zlev );
         if( !cache_lazy ) {
@@ -1206,7 +1208,7 @@ void map::vehmove()
         level_cache &cache = *cache_lazy;
         for( vehicle *veh : cache.vehicle_list ) {
             if( veh->is_following ) {
-                veh->drive_to_local_target( this, player_pos, true );
+                veh->autopilot_follow( *this );
             } else if( veh->is_patrolling ) {
                 veh->autopilot_patrol( this );
             }
@@ -1508,7 +1510,16 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
             veh.skidding = true;
             veh.turn( coll_turn );
         }
+        const auto moving_vehicle = veh.get_safe_reference();
+        const auto movement_context = get_context_reference();
+        const tripoint_abs_ms movement_origin = veh.pos_abs();
         veh.on_move( *this );
+        if( !movement_context || !moving_vehicle ) {
+            return nullptr;
+        }
+        if( veh.pos_abs() != movement_origin ) {
+            return &veh;
+        }
         // Actually change position
         displace_vehicle( veh, dp1 );
         level_vehicle( veh );
@@ -2378,7 +2389,7 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
     }
     const furn_id &new_target_furniture = new_furniture == furn_f_clear ? furn_str_id::NULL_ID() :
                                           new_furniture;
-    const furn_id &old_id = current_submap->get_furn( l );
+    const furn_id old_id = current_submap->get_furn( l );
     if( old_id == new_target_furniture ) {
         // Nothing changed
         return true;
@@ -2415,13 +2426,24 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
         }
     }
 
-    avatar &player_character = get_avatar();
-    // If player has grabbed this furniture and it's no longer grabbable, release the grab.
-    if( player_character.get_grab_type() == object_type::FURNITURE &&
-        !furn_reset &&
-        player_character.pos_bub() + player_character.grab_point == p && !new_f.is_movable() ) {
-        add_msg( _( "The %s you were grabbing is destroyed!" ), old_f.name() );
-        player_character.grab( object_type::NONE );
+    // A removed/replaced cell is no longer the held object, even if a later
+    // operation puts the same furniture type back. Native dragging explicitly
+    // transfers only its operator's hold to the destination after the move.
+    if( !mapgen_in_progress && this == &get_map() ) {
+        const auto invalidate = [&]( Character & who ) {
+            if( who.get_grab_type() != object_type::FURNITURE ) {
+                return;
+            }
+            who.invalidate_grabbed_furniture( get_abs( p ) );
+            if( !furn_reset && who.pos_bub() + who.grab_point == p && !new_f.is_movable() ) {
+                who.add_msg_if_player( _( "The %s you were grabbing is destroyed!" ), old_f.name() );
+                who.grab( object_type::NONE );
+            }
+        };
+        invalidate( get_avatar() );
+        for( npc &who : g->all_npcs() ) {
+            invalidate( who );
+        }
     }
     // If a creature was crushed under a rubble -> free it
     if( old_id == furn_f_rubble && new_target_furniture == furn_str_id::NULL_ID() ) {
@@ -2465,6 +2487,7 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
     invalidate_max_populated_zlev( p.z() );
 
     memory_cache_dec_set_dirty( p, true );
+    avatar &player_character = get_avatar();
     if( player_character.sees( *this, p ) ) {
         player_character.memorize_clear_decoration( get_abs( p ), "f_" );
     }
@@ -6737,6 +6760,19 @@ void map::spawn_item( const tripoint_bub_ms &p, const itype_id &type_id, const u
     for( size_t i = 1; i < quantity; i++ ) {
         spawn_item( p, type_id, 1, charges, birthday, damlevel, flags, variant, faction );
     }
+    if( auto prepared = prepare_spawn_item( p, type_id, charges, birthday, damlevel, flags, variant,
+                                            faction ) ) {
+        add_item_or_charges( p, *prepared );
+    }
+}
+
+std::optional<item> map::prepare_spawn_item( const tripoint_bub_ms &p, const itype_id &type_id,
+        const int charges, const time_point &birthday, const int damlevel, const std::set<flag_id> &flags,
+        const std::string &variant, const std::string &faction )
+{
+    if( type_id.is_null() || item_is_blacklisted( type_id ) ) {
+        return std::nullopt;
+    }
     // migrate and spawn the item
     itype_id mig_type_id = item_controller->migrate_id( type_id );
     item new_item( mig_type_id, birthday );
@@ -6754,7 +6790,7 @@ void map::spawn_item( const tripoint_bub_ms &p, const itype_id &type_id, const u
     new_item.set_owner( faction_id( faction ) ); // Set faction to the container as well
     if( ( new_item.made_of( phase_id::LIQUID ) && has_flag( ter_furn_flag::TFLAG_SWIMMABLE, p ) ) ||
         has_flag( ter_furn_flag::TFLAG_DESTROY_ITEM, p ) ) {
-        return;
+        return std::nullopt;
     }
 
     new_item.set_damage( damlevel );
@@ -6763,7 +6799,7 @@ void map::spawn_item( const tripoint_bub_ms &p, const itype_id &type_id, const u
         new_item.set_flag( flag );
     }
 
-    add_item_or_charges( p, new_item );
+    return new_item;
 }
 
 units::volume map::max_volume( const tripoint_bub_ms &p )
@@ -6784,11 +6820,11 @@ units::volume map::free_volume( const tripoint_bub_ms &p )
 }
 
 item_location map::add_item_or_charges_ret_loc( const tripoint_bub_ms &pos, item obj,
-        bool overflow )
+        bool overflow, Character *dropper )
 {
     int copies = 1;
     std::pair<item *, tripoint_bub_ms> ret = _add_item_or_charges( pos, std::move( obj ), copies,
-            overflow );
+            overflow, dropper );
     if( ret.first != nullptr && !ret.first->is_null() ) {
         return item_location{ map_cursor{ get_abs( ret.second ) }, ret.first };
     }
@@ -6796,18 +6832,143 @@ item_location map::add_item_or_charges_ret_loc( const tripoint_bub_ms &pos, item
     return {};
 }
 
-item &map::add_item_or_charges( const tripoint_bub_ms &pos, item obj, bool overflow )
+int map::transfer_item_or_charges( const tripoint_bub_ms &pos, item_location source,
+                                   item prepared, Character &dropper, int source_range, bool overflow, item_location *placed )
+{
+    return transfer_item_or_charges_impl( pos, source, std::move( prepared ), &dropper,
+                                          source_range, overflow, placed, false );
+}
+
+int map::settle_item_on_ground( const tripoint_bub_ms &pos, item_location source,
+                                Character *dropper, item_location *placed )
+{
+    if( placed ) {
+        *placed = item_location::nowhere;
+    }
+    if( !inbounds( pos ) || !source || source.where() != item_location::type::map ||
+        source.has_parent() || source.pos_abs() != get_abs( pos ) ) {
+        return 0;
+    }
+    if( !dropper && source->type->drop_action ) {
+        if( placed ) {
+            *placed = source;
+        }
+        return 0;
+    }
+    return transfer_item_or_charges_impl( pos, source, item( *source ), dropper,
+                                          0, true, placed, true );
+}
+
+int map::transfer_item_or_charges_impl( const tripoint_bub_ms &pos, item_location source,
+                                        item prepared, Character *dropper, int source_range, bool overflow,
+                                        item_location *placed, bool at_target )
+{
+    if( placed ) {
+        *placed = item_location::nowhere;
+    }
+    if( !source || prepared.count() <= 0 || prepared.typeId() != source->typeId() ||
+        prepared.count() != source->count() ) {
+        return 0;
+    }
+    const auto context = get_context_reference();
+    std::optional<character_action_guard> lifetime;
+    if( dropper ) {
+        lifetime.emplace( *dropper );
+    }
+    const item_source origin = !at_target ? capture_item_source( *dropper, source ) : item_source{};
+    const tripoint_abs_ms target = get_abs( pos );
+    const itype_id type = source->typeId();
+    const int original_count = source->count();
+    // Only actual drop actions need a snapshot to reject changes to the stack
+    // or its contents before publishing the prepared payload.
+    const std::optional<item> expected = prepared.type->drop_action ?
+                                         std::make_optional( *source ) : std::nullopt;
+    int handled = 0;
+    const auto take_source = [&]( int quantity ) {
+        if( !context || ( lifetime && !*lifetime ) || quantity <= 0 ) {
+            return false;
+        }
+        item_location current;
+        if( at_target ) {
+            if( source && source.where() == item_location::type::map &&
+                !source.has_parent() && source.pos_abs() == target ) {
+                current = source;
+            }
+        } else {
+            current = resolve_item_source( *dropper, *this, origin, source_range );
+        }
+        if( !current || current != source || source->typeId() != type ||
+            source->count() != original_count - handled ||
+            source->count() < quantity ) {
+            return false;
+        }
+        if( expected ) {
+            // Canceling the activity releases its claim, but does not change
+            // the item being placed by the already dispatched operation.
+            item observed( *source );
+            if( !observed.has_var( "activity_var" ) ) {
+                for( const char *key : {
+                         "activity_var", "activity_owner_id"
+                     } ) {
+                    if( expected->has_var( key ) ) {
+                        observed.set_var( key, expected->get_var( key, "" ) );
+                    }
+                }
+            }
+            if( !observed.stacks_with( *expected, true, false, false, 0, 999, true ) ) {
+                return false;
+            }
+        }
+        if( source->count_by_charges() && source->charges > quantity ) {
+            source->charges -= quantity;
+            current.on_contents_changed();
+        } else {
+            current.remove_item();
+        }
+        handled += quantity;
+        return true;
+    };
+    int copies = 1;
+    const auto result = _add_item_or_charges( pos, std::move( prepared ), copies, overflow, dropper,
+                        take_source );
+    if( placed && context && result.first && !result.first->is_null() ) {
+        *placed = item_location( map_cursor( get_abs( result.second ) ), result.first );
+    }
+    return handled;
+}
+
+item &map::add_item_or_charges( const tripoint_bub_ms &pos, item obj, bool overflow,
+                                Character *dropper )
 {
     int copies = 1;
-    return *_add_item_or_charges( pos, std::move( obj ), copies, overflow ).first;
+    return *_add_item_or_charges( pos, std::move( obj ), copies, overflow, dropper ).first;
 }
 
 // clang-tidy is confused and thinks obj can be made into a const reference, but it can't
 // on_drop is not a const function
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
 std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub_ms &pos, item obj,
-        int &copies_remaining, bool overflow )
+        int &copies_remaining, bool overflow, Character *dropper,
+        const std::function<bool( int )> &take_source )
 {
+    const auto context = get_context_reference();
+    std::optional<character_action_guard> dropper_lifetime;
+    if( dropper ) {
+        dropper_lifetime.emplace( *dropper );
+    }
+    const auto on_drop = [&]( item & value, const tripoint_bub_ms & tile ) {
+        if( dropper_lifetime && !*dropper_lifetime ) {
+            return true;
+        }
+        const int quantity = value.count();
+        const bool consumed = value.on_drop( tile, *this, dropper );
+        if( consumed && take_source ) {
+            take_source( quantity );
+        }
+        return consumed || !context ||
+               ( dropper_lifetime && !*dropper_lifetime );
+    };
+
     // Checks if item would not be destroyed if added to this tile
     auto valid_tile = [&]( const tripoint_bub_ms & e ) {
         if( !inbounds( e ) ) {
@@ -6840,6 +7001,12 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
     // Performs the actual insertion of the object onto the map
     auto place_item = [&]( const tripoint_bub_ms & tile, int &copies ) -> item& {
         support_dirty( tile );
+        // After the final placement no overflow path needs the original.
+        // Transfer its identity; only additional copies get fresh IDs.
+        if( copies_remaining == 0 )
+        {
+            return add_item( tile, std::move( obj ), copies );
+        }
         return add_item( tile, obj, copies );
     };
 
@@ -6899,12 +7066,20 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
             }
             item slice = obj;
             slice.charges = qty;
-            if( drop_action_applies( slice ) && slice.on_drop( e, *this ) ) {
+            if( drop_action_applies( slice ) && on_drop( slice, e ) ) {
                 obj.charges -= qty;
                 return true;
             }
             if( !room_for_stack( e, slice ) ) {
                 return false;
+            }
+            // Drop actions may replace the destination or remove the original
+            // source. Commit its debit only after those callbacks have returned.
+            if( take_source && ( !valid_tile( e ) ||
+                                 ( has_flag( ter_furn_flag::TFLAG_NOITEM, e ) &&
+                                   !( has_flag( ter_furn_flag::TFLAG_LIQUIDCONT, e ) && slice.made_of( phase_id::LIQUID ) ) ) ||
+                                 i_at( e ).amount_can_fit( slice ) < slice.count() || !take_source( qty ) ) ) {
+                return true;
             }
             item *placed = nullptr;
             for( item &it : i_at( e ) ) {
@@ -6995,11 +7170,17 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
         copies_to_add_here > 0 ) {
         // Pass map into on_drop, because this map may not be the global map object (in mapgen, for instance).
         if( obj.made_of( phase_id::LIQUID ) || !obj.has_flag( flag_DROP_ACTION_ONLY_IF_LIQUID ) ) {
-            if( obj.on_drop( pos, *this ) ) {
+            if( on_drop( obj, pos ) ) {
                 return { &null_item_reference(), tripoint_bub_ms::invalid };
             }
         }
         // If tile can contain items place here...
+        if( take_source && ( !valid_tile( pos ) || how_many_copies_fit( pos ) < copies_to_add_here ||
+                             ( has_flag( ter_furn_flag::TFLAG_NOITEM, pos ) &&
+                               !( has_flag( ter_furn_flag::TFLAG_LIQUIDCONT, pos ) && obj.made_of( phase_id::LIQUID ) ) ) ||
+                             !take_source( copies_to_add_here ) ) ) {
+            return { &null_item_reference(), tripoint_bub_ms::invalid };
+        }
         copies_remaining -= copies_to_add_here;
         first_added = first_added ? first_added : std::make_pair( &place_item( pos, copies_to_add_here ),
                       pos );
@@ -7023,7 +7204,7 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
                 continue;
             }
             if( obj.made_of( phase_id::LIQUID ) || !obj.has_flag( flag_DROP_ACTION_ONLY_IF_LIQUID ) ) {
-                if( obj.on_drop( e, *this ) ) {
+                if( on_drop( obj, e ) ) {
                     return first_added ? first_added.value() : std::make_pair( &null_item_reference(),
                             tripoint_bub_ms::invalid );
                 }
@@ -7070,8 +7251,13 @@ item &map::add_item( const tripoint_bub_ms &p, item new_item, int copies )
     return add_item_impl( p, std::move( new_item ), copies, false );
 }
 
+item &map::add_item_unprocessed( const tripoint_bub_ms &p, item new_item, bool retain_liquid )
+{
+    return add_item_impl( p, std::move( new_item ), 1, retain_liquid, false );
+}
+
 item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
-                          bool allow_liquid_on_swimmable )
+                          bool allow_liquid_on_swimmable, bool process_item )
 {
     if( item_is_blacklisted( new_item.typeId() ) ) {
         return null_item_reference();
@@ -7094,8 +7280,12 @@ item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
 
     // Process foods and temperature tracked items when they are added to the map, here instead of add_item_at()
     // to avoid double processing food during active item processing.
-    if( new_item.has_temperature() && !new_item.is_corpse() ) {
+    if( process_item && new_item.has_temperature() && !new_item.is_corpse() ) {
+        const auto context = get_context_reference();
         new_item.process( *this, nullptr, p );
+        if( !context ) {
+            return null_item_reference();
+        }
     }
 
     if( !allow_liquid_on_swimmable &&
@@ -7107,7 +7297,7 @@ item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
         return null_item_reference();
     }
 
-    if( new_item.has_flag( flag_ACT_IN_FIRE ) && get_field( p, fd_fire ) != nullptr ) {
+    if( process_item && new_item.has_flag( flag_ACT_IN_FIRE ) && get_field( p, fd_fire ) != nullptr ) {
         if( new_item.has_flag( flag_BOMB ) && new_item.is_transformable() ) {
             //Convert a bomb item into its transformable version, e.g. incendiary grenade -> active incendiary grenade
             new_item.convert( dynamic_cast<const iuse_transform *>
@@ -7118,7 +7308,7 @@ item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
 
     new_item.preserve_location( get_abs( p ) );
 
-    if( new_item.has_flag( flag_ACTIVATE_ON_PLACE ) ) {
+    if( process_item && new_item.has_flag( flag_ACTIVATE_ON_PLACE ) ) {
         new_item.activate();
     }
 
@@ -7130,9 +7320,10 @@ item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
         set_lightmap_cache_dirty( p.z() );
     }
 
-    const map_stack::iterator new_pos = current_submap->get_items( l ).insert( new_item );
+    // Transfer the original identity into the map; only additional copies are new items.
+    const map_stack::iterator new_pos = current_submap->get_items( l ).insert( std::move( new_item ) );
     while( --copies > 0 ) {
-        current_submap->get_items( l ).insert( new_item );
+        current_submap->get_items( l ).insert( *new_pos );
     }
 
     if( current_submap->active_items.add( *new_pos, l ) ) {
@@ -7817,7 +8008,7 @@ void map::process_items_in_vehicle( vehicle &cur_veh, submap &current_submap )
 bool map::sees_some_items( const tripoint_bub_ms &p, const Creature &who ) const
 {
     // Can only see items if there are any items.
-    return has_items( p ) && could_see_items( p, who.pos_bub() );
+    return has_items( p ) && could_see_items( p, observer_position( who ) );
 }
 
 bool map::sees_some_items( const tripoint_bub_ms &p, const tripoint_bub_ms &from ) const
@@ -7827,7 +8018,7 @@ bool map::sees_some_items( const tripoint_bub_ms &p, const tripoint_bub_ms &from
 
 bool map::could_see_items( const tripoint_bub_ms &p, const Creature &who ) const
 {
-    return could_see_items( p, who.pos_bub() );
+    return could_see_items( p, observer_position( who ) );
 }
 
 bool map::could_see_items( const tripoint_bub_ms &p, const tripoint_bub_ms &from ) const
@@ -8296,8 +8487,14 @@ void map::partial_con_set( const tripoint_bub_ms &p, const partial_con &con )
         debugmsg( "Tried to set construction at %s but the submap is not loaded", l.to_string() );
         return;
     }
-    if( !current_submap->partial_constructions.emplace( tripoint_sm_ms( l, p.z() ), con ).second ) {
+    const auto inserted = current_submap->partial_constructions.emplace( tripoint_sm_ms( l, p.z() ),
+                          con );
+    if( !inserted.second ) {
         debugmsg( "set partial con on top of terrain which already has a partial con" );
+    } else if( inserted.first->second.uid <= 0 ) {
+        inserted.first->second.uid = g->assign_construction_uid();
+    } else {
+        g->observe_construction_uid( inserted.first->second.uid );
     }
     set_draw_points_cache_dirty();
 }
@@ -8810,7 +9007,7 @@ void map::update_visibility_cache( const int zlev )
 {
     CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
-    const tripoint_bub_ms pos = player_character.pos_bub( *this );
+    const tripoint_bub_ms pos = observer_position( player_character );
 
     const float vision_threshold = player_character.get_vision_threshold(
                                        get_cache_ref( pos.z() ).lm[pos.x()][pos.y()].max() );
@@ -8838,7 +9035,8 @@ void map::update_visibility_cache( const int zlev )
         visibility_variables_cache.cached_levels.reset();
     }
     const bool rebuild_level = !visibility_variables_cache.cached_levels[zlev + OVERMAP_DEPTH];
-    if( rebuild_level && pos.z() - zlev < fov_3d_z_range && zlev > -OVERMAP_DEPTH ) {
+    if( rebuild_level && pos.z() - zlev < observer_z_range( player_character ) &&
+        zlev > -OVERMAP_DEPTH ) {
         update_visibility_cache( zlev - 1 );
     }
     // Common variables describe the requested level even when its grid is reused.
@@ -8891,12 +9089,7 @@ void map::update_visibility_cache( const int zlev )
         visibility_variables_cache.cached_levels.set( zlev + OVERMAP_DEPTH );
     }
 
-#if defined(TILES)
-    if( !test_mode ) {
-        // Mark cata_tiles draw caches as dirty
-        tilecontext->set_draw_cache_dirty();
-    }
-#endif
+    set_draw_points_cache_dirty();
 
     visibility_variables_cache.last_pos = pos;
     visibility_variables_cache.last_zlev = zlev;
@@ -9551,7 +9744,7 @@ int map::obstacle_coverage( const tripoint_bub_ms &loc1, const tripoint_bub_ms &
 
 int map::ledge_coverage( const Creature &viewer, const tripoint_bub_ms &target_p ) const
 {
-    tripoint_bub_ms viewer_p = viewer.pos_bub();
+    tripoint_bub_ms viewer_p = observer_position( viewer );
     creature_size viewer_size = viewer.get_size();
 
     // Viewer eye level from ground in grids
@@ -9577,7 +9770,7 @@ int map::ledge_coverage( const Creature &viewer, const tripoint_bub_ms &target_p
     }
     // Viewer eye level crouch / prone multipliers
     const Character *viewer_ch = viewer.as_character();
-    if( viewer_ch ) {
+    if( viewer_ch && !observer_standing( *viewer_ch ) ) {
         if( viewer_ch->is_crouching() ) {
             eye_level *= 0.5;
         } else if( viewer_ch->is_prone() ) {
@@ -10005,6 +10198,9 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
                 const bool pump_events )
 {
     context_lifetime_.reset();
+    viewpoint_.reset();
+    previous_visibility_observer.reset();
+    invalidate_visibility_cache();
     map &main_map = get_map();
     // It used to be unsafe to load a map that overlaps with the primary map;
     // Show an info line in tests to help track new errors
@@ -10286,8 +10482,6 @@ void map::shift( const point_rel_sm &sp )
 
     shift_traps( sp );
 
-    vehicle *remoteveh = g->remoteveh();
-
     for( int gridz = zmin; gridz <= zmax; gridz++ ) {
         level_cache *cache = get_cache_lazy( gridz );
         if( !cache ) {
@@ -10341,8 +10535,6 @@ void map::shift( const point_rel_sm &sp )
     }
 
     rebuild_vehicle_level_caches();
-
-    g->setremoteveh( remoteveh );
 
     if( !support_cache_dirty.empty() ) {
         std::set<tripoint_bub_ms> old_cache = std::move( support_cache_dirty );
@@ -10417,39 +10609,15 @@ void map::saven( const tripoint_bub_sm &grid )
     MAPBUFFER.add_submap( abs, submap_to_save );
 }
 
-// Optimized mapgen function that only works properly for very simple overmap types
-// Does not create or require a temporary map and does its own saving.
-// Note that it assumes the map doesn't exist: it's an error to call this when it does.
+// Legacy active-world entry points. Explicit map owners use their buffer directly.
 bool generate_uniform( const tripoint_abs_sm &p, const ter_str_id &ter )
 {
-    if( MAPBUFFER.submap_exists( p ) ) {
-        return false;
-    }
-
-    std::unique_ptr<submap> sm = std::make_unique<submap>();
-    sm->set_all_ter( ter, true );
-    sm->last_touched = calendar::turn;
-    return MAPBUFFER.add_submap( p, sm );
+    return MAPBUFFER.generate_uniform( p, ter );
 }
 
 bool generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &terrain_type )
 {
-    dbg( D_INFO ) << "generate_uniform p: " << p
-                  << "  terrain_type: " << terrain_type.id().str();
-
-    const std::optional<ter_str_id> ter = terrain_type->get_uniform_terrain();
-
-    if( !ter ) {
-        return false;
-    }
-
-    bool ret = true;
-    for( int xd = 0; xd <= 1; xd++ ) {
-        for( int yd = 0; yd <= 1; yd++ ) {
-            ret &= generate_uniform( p + point_rel_sm( xd, yd ), *ter );
-        }
-    }
-    return ret;
+    return MAPBUFFER.generate_uniform_omt( p, terrain_type );
 }
 
 void map::loadn( const point_bub_sm &grid, bool update_vehicles )
@@ -10700,6 +10868,11 @@ void map::grow_terrain_plant( const tripoint_bub_ms &p )
 
 void map::grow_plant( const tripoint_bub_ms &p )
 {
+    grow_plant( p, &get_avatar() );
+}
+
+void map::grow_plant( const tripoint_bub_ms &p, Character *grower )
+{
     const furn_t &initial_furn = this->furn( p ).obj();
     if( !initial_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
         return;
@@ -10940,7 +11113,22 @@ void map::grow_plant( const tripoint_bub_ms &p )
         return;
     }
 
-    Character &alpha = get_avatar();
+    std::optional<character_action_guard> lifetime;
+    if( grower ) {
+        lifetime.emplace( *grower );
+    }
+    const auto context = get_context_reference();
+    const int64_t original_seed = seed->uid().get_value();
+    const itype_id original_type = seed->typeId();
+    const auto current_original_seed = [&]() -> item * {
+        if( ( lifetime && !*lifetime ) || !context )
+        {
+            return nullptr;
+        }
+        item *current = iexamine::get_seed_at( *this, p );
+        return current && current->uid().get_value() == original_seed &&
+        current->typeId() == original_type ? current : nullptr;
+    };
 
     for( int i = 0; i < stages_to_advance; i++ ) {
         const int old_stage_idx = start_stage_idx + i;
@@ -10950,7 +11138,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
         }
 
         // EOCs from the previous iteration may have modified the tile; refresh the seed.
-        item *current_seed = iexamine::get_seed_at( *this, p );
+        item *current_seed = current_original_seed();
         if( current_seed == nullptr ) {
             break;
         }
@@ -10967,12 +11155,16 @@ void map::grow_plant( const tripoint_bub_ms &p )
         }
         // spawn appropriate amount of rot_spawn, equivalent to number of times we iterate this loop
         rotten_item_spawn( *current_seed, tripoint_bub_ms( p ) );
+        current_seed = current_original_seed();
+        if( !current_seed || !furn( p )->plant ) {
+            break;
+        }
         // Get an updated reference to the furniture each time we go through this loop, to make sure we transform each step in turn
         const furn_t &current_furn = this->furn( p ).obj();
         furn_set( p, furn_str_id( current_furn.plant->transform ) );
 
         // EOCs may move or remove the seed; refresh it after the furniture transform.
-        current_seed = iexamine::get_seed_at( *this, p );
+        current_seed = current_original_seed();
         if( current_seed == nullptr ) {
             break;
         }
@@ -10980,19 +11172,30 @@ void map::grow_plant( const tripoint_bub_ms &p )
         const std::string old_stage = growth_stages[old_stage_idx].first.str();
         const std::string new_stage = growth_stages[new_stage_idx].first.str();
 
-        iexamine::run_plant_lifecycle_event(
-            "grow", alpha, *this, p, *current_seed, old_stage, new_stage );
-
-        if( mature_stage_idx >= 0 && old_stage_idx < mature_stage_idx &&
-            new_stage_idx >= mature_stage_idx ) {
+        const furn_id advanced_furniture = furn( p );
+        if( grower ) {
             iexamine::run_plant_lifecycle_event(
-                "mature", alpha, *this, p, *current_seed, old_stage, new_stage );
+                "grow", *grower, *this, p, *current_seed, old_stage, new_stage );
+        }
+        current_seed = current_original_seed();
+        if( !current_seed || furn( p ) != advanced_furniture ) {
+            break;
         }
 
-        if( overgrown_stage_idx >= 0 && old_stage_idx < overgrown_stage_idx &&
+        if( grower && mature_stage_idx >= 0 && old_stage_idx < mature_stage_idx &&
+            new_stage_idx >= mature_stage_idx ) {
+            iexamine::run_plant_lifecycle_event(
+                "mature", *grower, *this, p, *current_seed, old_stage, new_stage );
+            current_seed = current_original_seed();
+            if( !current_seed || furn( p ) != advanced_furniture ) {
+                break;
+            }
+        }
+
+        if( grower && overgrown_stage_idx >= 0 && old_stage_idx < overgrown_stage_idx &&
             new_stage_idx >= overgrown_stage_idx ) {
             iexamine::run_plant_lifecycle_event(
-                "overgrow", alpha, *this, p, *current_seed, old_stage, new_stage );
+                "overgrow", *grower, *this, p, *current_seed, old_stage, new_stage );
         }
     }
 }
@@ -11435,6 +11638,10 @@ void map::copy_grid( const tripoint_rel_sm &to, const tripoint_rel_sm &from )
 void map::spawn_monsters_submap_group( const tripoint_rel_sm &gp, mongroup &group,
                                        bool ignore_sight )
 {
+    if( group.nemesis_orphaned() ) {
+        group.clear();
+        return;
+    }
     Character &player_character = get_player_character();
     const int s_range = std::min( HALF_MAPSIZE_X,
                                   player_character.sight_range( g->light_level( player_character.posz() ) ) );
@@ -11549,6 +11756,9 @@ void map::spawn_monsters_submap_group( const tripoint_rel_sm &gp, mongroup &grou
 
     // Find horde's target submap
     for( monster &tmp : group.monsters ) {
+        if( tmp.is_nemesis() && group.nemesis_mission_id >= 0 ) {
+            tmp.mission_ids.insert( group.nemesis_mission_id );
+        }
         for( int tries = 0; tries < 10 && !locations.empty(); tries++ ) {
             const tripoint_bub_ms local_pos = random_entry_removed( locations );
             const tripoint_abs_ms abs_pos = get_abs( local_pos );
@@ -12265,7 +12475,7 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     std::set_symmetric_difference( u.moncam_cache.begin(), u.moncam_cache.end(), mcache.begin(),
                                    mcache.end(), std::inserter( diff, diff.end() ) );
     camera_cache_dirty |= !diff.empty();
-    const tripoint_abs_ms p = get_player_character().pos_abs();
+    const tripoint_abs_ms p = get_abs( observer_position( get_player_character() ) );
     int const sr = u.unimpaired_range();
     const auto observer = std::make_pair( p, sr );
     seen_cache_dirty |= !previous_visibility_observer ||
@@ -12276,12 +12486,7 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
         }
         previous_visibility_observer = observer;
         camera_cache_dirty = true;
-#if defined(TILES)
-        if( !test_mode ) {
-            // Mark cata_tiles draw caches as dirty
-            tilecontext->set_draw_cache_dirty();
-        }
-#endif
+        set_draw_points_cache_dirty();
     }
     if( camera_cache_dirty ) {
         u.moncam_cache = mcache;
@@ -12350,6 +12555,9 @@ tripoint_bub_ms map::get_bub( const tripoint_abs_ms &p ) const
 void map::set_abs_sub( const tripoint_abs_sm &p )
 {
     context_lifetime_.reset();
+    viewpoint_.reset();
+    previous_visibility_observer.reset();
+    invalidate_visibility_cache();
     abs_sub = p;
     abs_ms = point_abs_ms{ project_to<coords::ms>( abs_sub.xy() ) };
 }
@@ -12703,8 +12911,8 @@ bool map::try_fall( const tripoint_bub_ms &p, Creature *c )
         height++;
     }
 
-    if( height == 0 && c->is_avatar() ) {
-        // For now just special case player, NPCs don't "zedwalk"
+    if( height == 0 && c->as_character() && c->as_character()->is_player_controlled() ) {
+        // Only player-controlled characters can land on and displace a zombie.
         Creature *critter = creatures.creature_at( below, true );
         if( critter == nullptr || !critter->is_monster() ) {
             return false;
@@ -12747,18 +12955,28 @@ bool map::try_fall( const tripoint_bub_ms &p, Creature *c )
         return true;
     }
 
+    const character_action_guard lifetime( *you );
+    if( !lifetime ) {
+        return false;
+    }
+    const auto landing = get_abs( where );
     if( you->has_flag( json_flag_WALL_CLING ) &&  this->is_wall_adjacent( p ) ) {
         you->add_msg_player_or_npc( _( "You attach yourself to the nearby wall." ),
                                     _( "<npcname> clings to the wall." ) );
         return false;
     }
 
-    if( you->is_avatar() ) {
-        add_msg( m_bad, n_gettext( "You fall down %d story!", "You fall down %d stories!", height ),
-                 height );
-        g->vertical_move( -height, true );
+    if( you->is_player_controlled() ) {
+        you->add_msg_if_player( m_bad, n_gettext( "You fall down %d story!", "You fall down %d stories!",
+                                height ),
+                                height );
+        // Remote players use the same vertical costs and move hooks as the host.
+        g->vertical_move( *you, -height, true );
     } else {
         you->setpos( *this, where );
+    }
+    if( !lifetime || you->pos_abs() != landing ) {
+        return true;
     }
 
     if( you->get_size() == creature_size::tiny ) {
@@ -12777,7 +12995,11 @@ bool map::try_fall( const tripoint_bub_ms &p, Creature *c )
         height += 1;
     }
 
-    if( you->can_fly() ) {
+    const bool can_slow_fall = you->can_fly();
+    if( !lifetime || you->pos_abs() != landing ) {
+        return true;
+    }
+    if( can_slow_fall ) {
         you->add_msg_player_or_npc( _( "You spread your wings to slow your fall." ),
                                     _( "<npcname> spreads their wings to slow their fall." ) );
         height = std::max( 0, height - 2 );
@@ -12803,9 +13025,16 @@ bool map::try_fall( const tripoint_bub_ms &p, Creature *c )
         you->impact( height * 30, where );
     }
 
+    if( !lifetime || you->pos_abs() != landing ) {
+        return true;
+    }
+    where = get_bub( landing );
     if( has_flag( ter_furn_flag::TFLAG_DEEP_WATER, where ) ) {
         you->set_underwater( true );
         g->water_affect_items( *you );
+        if( !lifetime ) {
+            return true;
+        }
         you->add_msg_player_or_npc( _( "You dive into water." ), _( "<npcname> dives into water." ) );
     }
 
@@ -13146,6 +13375,7 @@ pathfinding_cache &map::get_pathfinding_cache( int zlev ) const
 void map::set_pathfinding_cache_dirty( const int zlev )
 {
     if( inbounds_z( zlev ) ) {
+        ++pathfinding_cache_revision_;
         get_pathfinding_cache( zlev ).dirty = true;
     }
 }
@@ -13153,6 +13383,7 @@ void map::set_pathfinding_cache_dirty( const int zlev )
 void map::set_pathfinding_cache_dirty( const tripoint_bub_ms &p )
 {
     if( inbounds( p ) ) {
+        ++pathfinding_cache_revision_;
         get_pathfinding_cache( p.z() ).dirty_points.insert( p.xy() );
     }
 }

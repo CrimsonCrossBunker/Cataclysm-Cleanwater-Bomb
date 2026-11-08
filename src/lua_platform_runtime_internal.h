@@ -69,6 +69,7 @@ struct persistent_task {
     std::int64_t interval_turns = 0;
     std::string owner = "world";
     std::string owner_mod_id;
+    std::optional<character_id> state_character_id;
     std::optional<character_id> actor_character_id;
     std::optional<std::int64_t> actor_item_uid;
     std::optional<game_handle_locator> actor_item_hint;
@@ -190,7 +191,9 @@ class runtime : public std::enable_shared_from_this<runtime>
         std::map<std::string, declarative_mapgen_palette> mapgen_palettes;
         std::vector<declarative_mapgen_definition> declarative_mapgens;
         std::uint64_t next_mapgen_registration_id = 1;
+        // Legacy sidecar staging only; live state belongs to Character.
         script_persistent_state character_state;
+        std::optional<game_handle> callback_character;
         script_persistent_state world_state;
         std::vector<persistent_task> tasks;
         std::uint64_t next_task_id = 1;
@@ -238,19 +241,24 @@ std::size_t checked_dense_array( const sol::table &values,
 class callback_scope
 {
     public:
-        explicit callback_scope( runtime &owner ) : owner_( owner ) {
+        explicit callback_scope( runtime &owner ) : owner_( owner ),
+            previous_character_( owner.callback_character ) {
             ++owner_.callback_depth;
         }
+        callback_scope( runtime &owner, Character *character );
+        callback_scope( runtime &owner, const game_handle &character );
 
         callback_scope( const callback_scope & ) = delete;
         callback_scope &operator=( const callback_scope & ) = delete;
 
         ~callback_scope() {
+            owner_.callback_character = previous_character_;
             --owner_.callback_depth;
         }
 
     private:
         runtime &owner_;
+        std::optional<game_handle> previous_character_;
 };
 
 void require_live_runtime( const std::weak_ptr<runtime> &weak,

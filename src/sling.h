@@ -20,7 +20,7 @@ ret_val<void> can_launch_sling( const Character &who, const item_location &ammo 
 int sling_launch_moves( const Character &who, const item_location &ammo );
 
 /** A missing target means aiming was cancelled: no activation, cost or consumption. */
-std::optional<dealt_projectile_attack> launch_sling( avatar &who, item_location ammo,
+std::optional<dealt_projectile_attack> launch_sling( Character &who, item_location ammo,
         const std::optional<tripoint_bub_ms> &target );
 
 void aim_sling( avatar &who );

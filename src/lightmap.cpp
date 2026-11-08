@@ -273,14 +273,15 @@ bool map::build_vision_transparency_cache( int zlev )
     CATA_PROFILE_SCOPE();
     level_cache &map_cache = get_cache( zlev );
     const Character &player_character = get_player_character();
-    const tripoint_bub_ms p = player_character.pos_bub();
+    const tripoint_bub_ms p = observer_position( player_character );
     const bool is_player_z = p.z() == zlev;
-    const bool low_profile = is_player_z && ( player_character.is_crouching() ||
-        player_character.is_prone() ||
-        ( player_character.has_effect( effect_quadruped_full ) &&
-          player_character.is_running() ) );
+    const bool low_profile = is_player_z && !observer_standing( player_character ) &&
+                             ( player_character.is_crouching() ||
+                               player_character.is_prone() ||
+                               ( player_character.has_effect( effect_quadruped_full ) &&
+                                 player_character.is_running() ) );
     const std::optional<tripoint_bub_ms> override_origin = is_player_z ?
-        std::make_optional( p ) : std::nullopt;
+            std::make_optional( p ) : std::nullopt;
     const bool observer_changed = override_origin != map_cache.vision_transparency_override_origin ||
                                   low_profile != map_cache.vision_transparency_low_profile;
     if( map_cache.transparency_cache_dirty.none() && !observer_changed ) {
@@ -698,30 +699,15 @@ void map::generate_lightmap( const int zlev )
             // TODO: [lightmap] Allow creatures to have light attacks (i.e.: eyebot)
             // TODO: [lightmap] Allow creatures to have facing and arc lights
             float critter_luminance = critter.calculate_by_enchantment( critter.type->luminance,
-                enchant_vals::mod::LUMINATION, true );
+                                      enchant_vals::mod::LUMINATION, true );
             if( critter_luminance > 0 ) {
                 apply_light_source( mp, critter_luminance );
             }
         }
     }
 
-    // MP: inject partner luminance as a light source at their proxy NPC position.
-    if( cata_mp::is_client_mode() ) {
-        npc *host_npc = g->critter_by_id<npc>( cata_mp::get_host_npc_character_id() );
-        if( host_npc ) {
-            float host_lum = cata_mp::get_host_luminance();
-            if( host_lum > 0 ) {
-                apply_light_source( host_npc->pos_bub(), host_lum );
-            }
-        }
-    } else if( cata_mp::is_hosting() ) {
-        npc *remote_npc = g->critter_by_id<npc>( cata_mp::get_remote_player_npc_character_id() );
-        if( remote_npc ) {
-            float remote_lum = cata_mp::get_remote_player_luminance();
-            if( remote_lum > 0 ) {
-                apply_light_source( remote_npc->pos_bub(), remote_lum );
-            }
-        }
+    for( const cata_mp::player_light &light : cata_mp::player_lights() ) {
+        apply_light_source( light.position, light.luminance );
     }
 
     // Apply any vehicle light sources
@@ -962,8 +948,8 @@ struct light_observer {
     const tripoint_bub_ms position;
     const int unimpaired_range;
 
-    explicit light_observer( const avatar &u ) :
-        character( u ), position( u.pos_bub() ), unimpaired_range( u.unimpaired_range() ) {}
+    light_observer( const map &here, const avatar &u ) :
+        character( u ), position( here.observer_position( u ) ), unimpaired_range( u.unimpaired_range() ) {}
 };
 
 map::apparent_light_info apparent_light_helper( const level_cache &map_cache,
@@ -1063,6 +1049,16 @@ lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms
                              const visibility_variables &cache, const light_observer &observer,
                              const int dist )
 {
+    if( map_cache.seen_cache[p.x()][p.y()] == 0.0f &&
+        map_cache.camera_cache[p.x()][p.y()] == 0.0f ) {
+        // With neither visibility path, both obstruction flags are true and
+        // lighting cannot make this cell visible. Clairvoyance was handled by
+        // the caller. Preserve the helper's lazy aiming-cache side effect.
+        if( observer.character.recoil < MAX_RECOIL ) {
+            static_cast<void>( observer.character.cant_see( p ) );
+        }
+        return lit_level::BLANK;
+    }
     const map::apparent_light_info a = apparent_light_helper( map_cache, p, observer, dist );
 
     // Unimpaired range is an override to strictly limit vision range based on various conditions,
@@ -1103,14 +1099,14 @@ lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms
 map::apparent_light_info map::apparent_light_helper( const level_cache &map_cache,
         const tripoint_bub_ms &p )
 {
-    const light_observer observer( get_avatar() );
+    const light_observer observer( get_map(), get_avatar() );
     return ::apparent_light_helper( map_cache, p, observer, rl_dist( observer.position, p ) );
 }
 
 lit_level map::apparent_light_at( const tripoint_bub_ms &p,
                                   const visibility_variables &cache ) const
 {
-    const light_observer observer( get_avatar() );
+    const light_observer observer( *this, get_avatar() );
     const int dist = rl_dist( observer.position, p );
     // Preserve the override's early return, including avoiding a lazy cache
     // allocation for a clairvoyant query on an otherwise uncached level.
@@ -1126,7 +1122,7 @@ void rebuild_visibility_cache_grid( const map &here, level_cache &map_cache, con
                                     cata::mdarray<int, point_bub_sm> &sm_squares_seen )
 {
     CATA_PROFILE_SCOPE();
-    const light_observer observer( get_avatar() );
+    const light_observer observer( here, get_avatar() );
     const auto has_clairvoyant_field = [&]( const tripoint_bub_ms & p ) {
         const submap *const sm = field_submaps[p.x() / SEEX][p.y() / SEEY];
         // Preserve the point-query fallback for small maps and unloaded cells,
@@ -1159,14 +1155,17 @@ bool map::pl_sees( const tripoint_bub_ms &t, const int max_range ) const
 
     const level_cache &map_cache = get_cache_ref( t.z() );
     Character &player_character = get_player_character();
-    if( max_range >= 0 && square_dist( get_abs( t ), player_character.pos_abs() ) > max_range &&
+    if( max_range >= 0 && square_dist( t, observer_position( player_character ) ) > max_range &&
         map_cache.camera_cache[t.x()][t.y()] == 0 ) {
         return false;    // Out of range!
     }
 
-    const apparent_light_info a = apparent_light_helper( map_cache, t );
+    const light_observer observer( *this, get_avatar() );
+    const apparent_light_info a = ::apparent_light_helper( map_cache, t, observer,
+                                  rl_dist( observer.position, t ) );
     // avatar might not be on *this* map
-    const float light_at_player = get_map().ambient_light_at( player_character.pos_bub() );
+    const float light_at_player = get_map().ambient_light_at( get_map().observer_position(
+                                      player_character ) );
     return !a.obstructed &&
            ( a.apparent_light >= player_character.get_vision_threshold( light_at_player ) ||
              map_cache.sm[t.x()][t.y()] > 0.0 );
@@ -1247,7 +1246,7 @@ void castLight( cata::mdarray<Out, point_bub_ms> &output_cache,
         bool started_row = false;
         T current_transparency( 0.0 );
         float away = start - ( -distance + 0.5f ) / ( -distance -
-            0.5f ); //The distance between our first leadingEdge and start
+                     0.5f ); //The distance between our first leadingEdge and start
 
         //We initialize delta.x to -distance adjusted so that the commented start < leadingEdge condition below is never false
         delta.x = -distance + std::max( static_cast<int>( std::ceil( away * ( -distance - 0.5f ) ) ), 0 );
@@ -1547,8 +1546,8 @@ void map::seen_cache_process_ledges( array_of_grids_of<float> &seen_caches,
 {
     Character &player_character = get_player_character();
     // If override is not given, use player character for calculations
-    const tripoint_bub_ms origin = override_p.value_or( player_character.pos_bub() );
-    const int min_z = std::max( origin.z() - fov_3d_z_range, -OVERMAP_DEPTH );
+    const tripoint_bub_ms origin = override_p.value_or( observer_position( player_character ) );
+    const int min_z = std::max( origin.z() - observer_z_range( player_character ), -OVERMAP_DEPTH );
     // For each tile
     for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
         for( int smy = 0; smy < my_MAPSIZE; ++smy ) {

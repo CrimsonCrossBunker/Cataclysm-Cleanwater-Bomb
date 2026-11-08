@@ -97,7 +97,8 @@ bool snapshot_exists( const cata_path &world_dir, const std::string &slot_name )
 
 /**
  * Replace the world files at @p world_dir with the snapshot's copy
- * (preserving the snapshots/ folder). Does NOT reload the running game.
+ * (preserving the snapshots/ folder and current persistent world identity).
+ * Does NOT reload the running game.
  * @return true on success.
  */
 bool restore_snapshot( const cata_path &world_dir, const std::string &dir_name );

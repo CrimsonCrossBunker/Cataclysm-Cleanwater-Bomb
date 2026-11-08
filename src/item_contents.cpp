@@ -3161,3 +3161,17 @@ void pocket_management_menu( const std::string &title,
 
     pocket_selector.query();
 }
+
+void item_contents::apply_current_state( item_contents &&state )
+{
+    // Pool nodes across pockets of this container so pocket changes do not
+    // invalidate surviving item locations. Additional pocket modules are values.
+    std::list<item> existing;
+    for( item_pocket &pocket : contents ) {
+        pocket.release_current_nodes( existing );
+    }
+    for( item_pocket &pocket : state.contents ) {
+        pocket.reuse_current_nodes( existing );
+    }
+    *this = std::move( state );
+}

@@ -46,6 +46,8 @@
 #include "item_factory.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_reload.h"
+#include "item_uid.h"
 #include "item_transformation.h"
 #include "itype.h"
 #include "iuse.h"
@@ -3528,7 +3530,12 @@ void item::casings_handle( const std::function<bool( item & )> &func )
     contents.casings_handle( func );
 }
 
-bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
+namespace
+{
+// A null actor applies only the item contents transition to caller-owned copies.
+// Character, map and source-location effects stay in the authoritative path.
+bool reload_contents( item &target, Character *who, item_location ammo, int qty, int pocket_index,
+                      item *preview_ammo, int64_t *removed_preview = nullptr )
 {
     if( qty <= 0 ) {
         debugmsg( "Tried to reload zero or less charges" );
@@ -3539,184 +3546,331 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         debugmsg( "Tried to reload using non-existent ammo" );
         return false;
     }
-    const auto reload_finished = [&]() {
-        return true;
+    const auto source = [&]() -> item & {
+        return preview_ammo ? *preview_ammo :*ammo;
+    };
+    const auto remove_ammo = [&]() {
+        if( who ) {
+            ammo.remove_item();
+        } else if( removed_preview ) {
+            *removed_preview = source().uid().get_value();
+        }
+    };
+    const auto unwrap_speedloader = [&]() {
+        if( source().has_flag( flag_SPEEDLOADER ) || source().has_flag( flag_SPEEDLOADER_CLIP ) ) {
+            if( preview_ammo ) {
+                preview_ammo = &preview_ammo->first_ammo();
+            } else {
+                ammo = item_location( ammo, &ammo->first_ammo() );
+            }
+        }
     };
 
     // Targeted reload: MAGAZINE_WELL swap, or loose ammo into integral MAGAZINE.
     if( pocket_index >= 0 ) {
-        std::vector<item_pocket *> all_pockets = get_pockets(
+        std::vector<item_pocket *> all_pockets = target.get_pockets(
         []( const item_pocket & ) {
             return true;
         } );
         if( pocket_index >= static_cast<int>( all_pockets.size() ) ) {
-            debugmsg( "reload: pocket_index %d out of range on %s", pocket_index, tname() );
+            if( who ) {
+                debugmsg( "reload: pocket_index %d out of range on %s", pocket_index, target.tname() );
+            }
             return false;
         }
         item_pocket *target_pocket = all_pockets[pocket_index];
         const bool integral_magazine = target_pocket->is_type( pocket_type::MAGAZINE );
         if( !target_pocket->is_type( pocket_type::MAGAZINE_WELL ) && !integral_magazine ) {
-            debugmsg( "reload: pocket_index %d on %s is not a MAGAZINE_WELL or MAGAZINE",
-                      pocket_index, tname() );
+            if( who ) {
+                debugmsg( "reload: pocket_index %d on %s is not a MAGAZINE_WELL or MAGAZINE",
+                          pocket_index, target.tname() );
+            }
             return false;
         }
         if( integral_magazine ) {
             // Eject casings before the compatibility gate; a spent shell
             // fills the pocket and would make can_reload_with refuse.
-            casings_handle( [&u]( item & e ) {
-                return u.i_add_or_drop( e );
+            target.casings_handle( [who]( item & e ) {
+                return !who || who->i_add_or_drop( e );
             } );
         }
-        if( !target_pocket->can_reload_with( *ammo.get_item(), true ) ) {
+        if( !target_pocket->can_reload_with( source(), true ) ) {
             return false;
         }
-        const bool ammo_from_map = !ammo.held_by( u );
-        if( ammo->has_flag( flag_SPEEDLOADER ) || ammo->has_flag( flag_SPEEDLOADER_CLIP ) ) {
-            ammo = item_location( ammo, &ammo->first_ammo() );
-        }
+        const bool ammo_from_map = who && !ammo.held_by( *who );
+        unwrap_speedloader();
 
         if( integral_magazine ) {
-            const ammotype loose_type = ammo->ammo_type();
+            const ammotype loose_type = source().ammo_type();
             const int limit = target_pocket->remaining_ammo_capacity( loose_type );
             if( limit <= 0 ) {
                 return false;
             }
-            const int take = std::min( { qty, ammo->charges, limit } );
+            const int take = std::min( { qty, source().charges, limit } );
             if( take <= 0 ) {
                 return false;
             }
-            item item_copy( *ammo );
+            item item_copy( source() );
             item_copy.charges = take;
             ret_val<item *> ins = target_pocket->insert_item( item_copy );
             if( !ins.success() ) {
                 return false;
             }
-            ammo->charges -= take;
-            if( ammo->charges == 0 ) {
-                ammo.remove_item();
+            source().charges -= take;
+            if( source().charges == 0 ) {
+                remove_ammo();
             }
             if( ammo_from_map ) {
-                u.invalidate_weight_carried_cache();
+                who->invalidate_weight_carried_cache();
             }
-            return reload_finished();
+            return true;
         }
 
-        item magazine_removed;
+        std::optional<item> magazine_removed;
         bool allow_wield = false;
         if( !target_pocket->empty() ) {
             item *existing = target_pocket->magazine_current();
             if( existing != nullptr ) {
-                allow_wield = ( !u.is_wielding( *ammo ) && !u.is_wielding( *this ) );
+                allow_wield = ( who && !who->is_wielding( source() ) && !who->is_wielding( target ) );
                 magazine_removed = *existing;
                 target_pocket->remove_item( *existing );
             }
         }
 
-        ret_val<item *> ins = target_pocket->insert_item( *ammo );
+        ret_val<item *> ins = target_pocket->insert_item( source() );
         if( !ins.success() ) {
             // Restore the ejected magazine on failure.
-            if( !magazine_removed.is_null() ) {
-                target_pocket->insert_item( magazine_removed );
+            if( magazine_removed.has_value() ) {
+                target_pocket->insert_item( *magazine_removed );
             }
             return false;
         }
-        ammo.remove_item();
+        remove_ammo();
         if( ammo_from_map ) {
-            u.invalidate_weight_carried_cache();
+            who->invalidate_weight_carried_cache();
         }
-        if( !magazine_removed.is_null() ) {
-            u.i_add( magazine_removed, true, nullptr, nullptr, true, allow_wield );
+        if( who && magazine_removed.has_value() ) {
+            who->i_add( *magazine_removed, true, nullptr, nullptr, true, allow_wield );
         }
-        return reload_finished();
+        return true;
     }
 
-    if( !can_reload_with( *ammo.get_item(), true ) ) {
+    if( !target.can_reload_with( source(), true ) ) {
         return false;
     }
-    bool ammo_from_map = !ammo.held_by( u );
-    if( ammo->has_flag( flag_SPEEDLOADER ) || ammo->has_flag( flag_SPEEDLOADER_CLIP ) ) {
-        // if the thing passed in is a speed loader, we want the ammo
-        ammo = item_location( ammo, &ammo->first_ammo() );
-    }
+    bool ammo_from_map = who && !ammo.held_by( *who );
+    unwrap_speedloader();
 
     // limit quantity of ammo loaded to remaining capacity
     int limit = 0;
-    if( is_watertight_container() && ammo->made_of_from_type( phase_id::LIQUID ) ) {
-        limit = get_remaining_capacity_for_liquid( *ammo );
-    } else if( ammo->is_ammo() ) {
-        limit = ammo_capacity( ammo->ammo_type() ) - ammo_remaining( );
+    if( target.is_watertight_container() && source().made_of_from_type( phase_id::LIQUID ) ) {
+        limit = target.get_remaining_capacity_for_liquid( source() );
+    } else if( source().is_ammo() ) {
+        limit = target.ammo_capacity( source().ammo_type() ) - target.ammo_remaining( );
     }
 
-    if( ammo->ammo_type() == ammo_plutonium ) {
+    if( source().ammo_type() == ammo_plutonium ) {
         limit = limit / PLUTONIUM_CHARGES + ( limit % PLUTONIUM_CHARGES != 0 );
     }
 
     qty = std::min( qty, limit );
 
-    casings_handle( [&u]( item & e ) {
-        return u.i_add_or_drop( e );
+    target.casings_handle( [who]( item & e ) {
+        return !who || who->i_add_or_drop( e );
     } );
 
-    if( is_magazine() ) {
-        qty = std::min( qty, ammo->charges );
+    if( target.is_magazine() ) {
+        qty = std::min( qty, source().charges );
 
-        if( is_ammo_belt() && type->magazine->linkage ) {
-            if( !u.use_charges_if_avail( *type->magazine->linkage, qty ) ) {
+        if( who && target.is_ammo_belt() && target.type->magazine->linkage ) {
+            if( !who->use_charges_if_avail( *target.type->magazine->linkage, qty ) ) {
                 debugmsg( "insufficient linkages available when reloading ammo belt" );
             }
         }
 
-        item item_copy( *ammo );
-        ammo->charges -= qty;
+        item item_copy( source() );
+        source().charges -= qty;
 
-        if( ammo->ammo_type() == ammo_plutonium ) {
+        if( source().ammo_type() == ammo_plutonium ) {
             // any excess is wasted rather than overfilling the item
-            item_copy.charges = std::min( qty * PLUTONIUM_CHARGES, ammo_capacity( ammo_plutonium ) );
+            item_copy.charges = std::min( qty * PLUTONIUM_CHARGES, target.ammo_capacity( ammo_plutonium ) );
             item_copy.mark_internal_plutonium_fuel();
         } else {
             item_copy.charges = qty;
         }
 
-        put_in( item_copy, pocket_type::MAGAZINE );
+        target.put_in( item_copy, pocket_type::MAGAZINE );
 
-    } else if( is_watertight_container() && ammo->made_of_from_type( phase_id::LIQUID ) ) {
-        item contents( *ammo );
-        fill_with( contents, qty );
-        if( ammo.has_parent() ) {
-            ammo.parent_item()->contained_where( *ammo.get_item() )->on_contents_changed();
+    } else if( target.is_watertight_container() && source().made_of_from_type( phase_id::LIQUID ) ) {
+        item contents( source() );
+        target.fill_with( contents, qty );
+        if( who && ammo.has_parent() ) {
+            ammo.parent_item()->contained_where( source() )->on_contents_changed();
         }
-        ammo->charges -= qty;
+        source().charges -= qty;
     } else {
-        item magazine_removed;
+        std::optional<item> magazine_removed;
         bool allow_wield = false;
         // if we already have a magazine loaded prompt to eject it
-        if( magazine_current() ) {
+        if( target.magazine_current() ) {
             // we don't want to replace wielded `ammo` with ejected magazine
             // as it will invalidate `ammo`. Also keep wielding the item being reloaded.
-            allow_wield = ( !u.is_wielding( *ammo ) && !u.is_wielding( *this ) );
+            allow_wield = ( who && !who->is_wielding( source() ) && !who->is_wielding( target ) );
             // Defer placing the magazine into inventory until new magazine is installed.
-            magazine_removed = *magazine_current();
-            remove_item( *magazine_current() );
+            magazine_removed = *target.magazine_current();
+            target.remove_item( *target.magazine_current() );
         }
 
-        put_in( *ammo, pocket_type::MAGAZINE_WELL );
-        ammo.remove_item();
+        target.put_in( source(), pocket_type::MAGAZINE_WELL );
+        remove_ammo();
         if( ammo_from_map ) {
-            u.invalidate_weight_carried_cache();
+            who->invalidate_weight_carried_cache();
         }
-        if( !magazine_removed.is_null() ) {
-            u.i_add( magazine_removed, true, nullptr, nullptr, true, allow_wield );
+        if( who && magazine_removed.has_value() ) {
+            who->i_add( *magazine_removed, true, nullptr, nullptr, true, allow_wield );
         }
-        return reload_finished();
+        return true;
     }
 
-    if( ammo->charges == 0 ) {
-        ammo.remove_item();
+    if( source().charges == 0 ) {
+        remove_ammo();
     }
     if( ammo_from_map ) {
-        u.invalidate_weight_carried_cache();
+        who->invalidate_weight_carried_cache();
     }
-    return reload_finished();
+    return true;
+}
+
+item *reload_copy_item( const item &original, item &copy, const item &wanted )
+{
+    if( &original == &wanted ) {
+        return &copy;
+    }
+    const auto source_children = original.all_items_top();
+    const auto copy_children = copy.all_items_top();
+    auto to = copy_children.begin();
+    for( const item *from : source_children ) {
+        if( to == copy_children.end() ) {
+            return nullptr;
+        }
+        if( item *found = reload_copy_item( *from, **to, wanted ) ) {
+            return found;
+        }
+        ++to;
+    }
+    return nullptr;
+}
+
+void update_reload_copy( item &root, int64_t removed )
+{
+    for( item *child : root.all_items_top() ) {
+        if( child->uid().get_value() == removed ) {
+            root.remove_item( *child );
+        } else {
+            update_reload_copy( *child, removed );
+        }
+    }
+    root.on_contents_changed();
+}
+
+// nullopt means the target is not in this subtree.
+std::optional<bool> reload_copy_capacity( const item &root, int64_t target )
+{
+    if( root.uid().get_value() == target ) {
+        return true;
+    }
+    for( const item_pocket *pocket : root.get_pockets( []( const item_pocket & ) {
+    return true;
+} ) ) {
+        for( const item *child : pocket->all_items_top() ) {
+            if( const auto capacity = reload_copy_capacity( *child, target ) ) {
+                return *capacity && pocket->remaining_volume() >= 0_ml &&
+                       pocket->remaining_weight() >= 0_gram;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
+bool item::reload( Character &who, item_location ammo, int qty, int pocket_index )
+{
+    return reload_contents( *this, &who, std::move( ammo ), qty, pocket_index, nullptr );
+}
+
+std::optional<item> preview_reload( const item &target, item_location ammo, int qty,
+                                    int pocket_index )
+{
+    if( !ammo || qty <= 0 ) {
+        return std::nullopt;
+    }
+    item loaded = target;
+    item source = *ammo;
+    if( !reload_contents( loaded, nullptr, std::move( ammo ), qty, pocket_index, &source ) ) {
+        return std::nullopt;
+    }
+    return loaded;
+}
+
+bool reload_would_fit( const item_location &target, item_location ammo, int qty,
+                       int pocket_index )
+{
+    if( !target || !ammo || qty <= 0 ) {
+        return false;
+    }
+    if( !target.has_parent() ) {
+        return true;
+    }
+    item_location ancestor = target;
+    while( ancestor.has_parent() ) {
+        ancestor = ancestor.parent_item();
+    }
+    item contents = *ancestor;
+    item *loaded = reload_copy_item( *ancestor, contents, *target );
+    item external_ammo = *ammo;
+    item *source = reload_copy_item( *ancestor, contents, *ammo );
+    if( !source ) {
+        source = &external_ammo;
+    }
+    const int64_t target_uid = loaded ? loaded->uid().get_value() : 0;
+    int64_t removed = 0;
+    if( !loaded || !reload_contents( *loaded, nullptr, ammo, qty, pocket_index, source, &removed ) ) {
+        return false;
+    }
+    update_reload_copy( contents, removed );
+    return reload_copy_capacity( contents, target_uid ).value_or( false );
+}
+
+std::optional<std::vector<size_t>> reload_item_path( const item &root, const item &child )
+{
+    if( &root == &child ) {
+        return std::vector<size_t> {};
+    }
+    size_t index = 0;
+    for( const item *candidate : root.all_items_top() ) {
+        if( auto path = reload_item_path( *candidate, child ) ) {
+            path->insert( path->begin(), index );
+            return path;
+        }
+        ++index;
+    }
+    return std::nullopt;
+}
+
+item_location reload_item_at( item_location root, const std::vector<size_t> &path )
+{
+    for( size_t index : path ) {
+        if( !root ) {
+            return {};
+        }
+        const auto children = root->all_items_top();
+        if( index >= children.size() ) {
+            return {};
+        }
+        root = item_location( root, *std::next( children.begin(), index ) );
+    }
+    return root;
 }
 
 bool item::detonate( const tripoint_bub_ms &p, std::vector<item> &drops )

@@ -1,4 +1,5 @@
 #include "vehicle.h" // IWYU pragma: associated
+#include "vehicle_turret_control.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -34,10 +35,6 @@ static const efftype_id effect_on_roof( "on_roof" );
 static const itype_id fuel_type_battery( "battery" );
 
 static const skill_id skill_gun( "gun" );
-
-static const trait_id trait_BRAWLER( "BRAWLER" );
-
-static const trait_id trait_GUNSHY( "GUNSHY" );
 
 std::vector<vehicle_part *> vehicle::turrets()
 {
@@ -502,236 +499,32 @@ int turret_data::fire( Character &c, map *here, const tripoint_bub_ms &target )
 
 void vehicle::turrets_aim_and_fire_single()
 {
-    std::vector<std::string> option_names;
-    std::vector<vehicle_part *> options;
-
-    // Find all turrets that are ready to fire
-    for( vehicle_part *&t : turrets() ) {
-        turret_data data = turret_query( *t );
-        if( data.query() == turret_data::status::ready ) {
-            option_names.push_back( t->name() );
-            options.push_back( t );
-        }
-    }
-
-    // Select one
-    if( options.empty() ) {
-        add_msg( m_warning, _( "None of the turrets are ready to fire." ) );
-        return;
-    }
-    const int idx = uilist( _( "Aim which turret?" ), option_names );
-    if( idx < 0 ) {
-        return;
-    }
-    vehicle_part *turret = options[idx];
-
-    std::vector<vehicle_part *> turrets;
-    turrets.push_back( turret );
-    turrets_aim_and_fire( turrets );
+    avatar &who = get_avatar();
+    use_vehicle_turrets( who, get_map(), *this, who.pos_abs(), "aim_single" );
 }
 
 bool vehicle::turrets_aim_and_fire_all_manual( bool show_msg )
 {
-    std::vector<vehicle_part *> turrets = find_all_ready_turrets( true, false );
-
-    if( turrets.empty() ) {
-        if( show_msg ) {
-            add_msg( m_warning,
-                     _( "Can't aim turrets: all turrets are offline or set to automatic targeting mode." ) );
-        }
-        return false;
-    }
-
-    turrets_aim_and_fire( turrets );
-    return true;
+    avatar &who = get_avatar();
+    return use_vehicle_turrets( who, get_map(), *this, who.pos_abs(), "aim_manual", show_msg );
 }
 
 void vehicle::turrets_override_automatic_aim()
 {
-    std::vector<vehicle_part *> turrets = find_all_ready_turrets( false, true );
-
-    if( turrets.empty() ) {
-        add_msg( m_warning,
-                 _( "Can't aim turrets: all turrets are offline or set to manual targeting mode." ) );
-        return;
-    }
-
-    turrets_aim( turrets );
-}
-
-int vehicle::turrets_aim_and_fire( std::vector<vehicle_part *> &turrets )
-{
-    map &here = get_map();
-
-    int shots = 0;
-    if( turrets_aim( turrets ) ) {
-        for( vehicle_part *t : turrets ) {
-            bool has_target = t->target.first != t->target.second;
-            if( has_target ) {
-                turret_data turret = turret_query( *t );
-                npc &cpu = t->get_targeting_npc( *this );
-                shots += turret.fire( cpu, &here, here.get_bub( t->target.second ) );
-                t->reset_target( abs_part_pos( *t ) );
-            }
-        }
-    }
-    return shots;
-}
-
-bool vehicle::turrets_aim( std::vector<vehicle_part *> &turrets )
-{
-    map &here = get_map();
-
-    // Clear existing targets
-    for( vehicle_part *t : turrets ) {
-        if( !turret_query( *t ) ) {
-            debugmsg( "Expected a valid vehicle turret" );
-            return false;
-        }
-        t->reset_target( abs_part_pos( *t ) );
-    }
-
-    avatar &player_character = get_avatar();
-    if( player_character.has_trait( trait_BRAWLER ) ) {
-        player_character.add_msg_if_player(
-            _( "Pfft.  You are a brawler; using turrets is beneath you." ) );
-        return false;
-    }
-    if( player_character.has_trait( trait_GUNSHY ) ) {
-        player_character.add_msg_if_player(
-            _( "You refuse to use a firearm even when it's mounted." ) );
-        return false;
-    }
-
-    // Get target
-    target_handler::trajectory trajectory = target_handler::mode_turrets( player_character, *this,
-                                            turrets );
-
-    bool got_target = !trajectory.empty();
-    if( got_target ) {
-        tripoint_bub_ms target = trajectory.back();
-        // Set target for any turret in range
-        const tripoint_abs_ms abs_target = here.get_abs( target );
-
-        for( vehicle_part *t : turrets ) {
-            if( turret_query( *t ).in_range( abs_target ) ) {
-                t->target.second = abs_target;
-            }
-        }
-
-        ///\EFFECT_INT speeds up aiming of vehicle turrets
-        player_character.set_moves( std::min( 0,
-                                              player_character.get_moves() - 100 + ( 5 * player_character.get_int() ) ) );
-    }
-    return got_target;
-}
-
-std::vector<vehicle_part *> vehicle::find_all_ready_turrets( bool manual, bool automatic )
-{
-    std::vector<vehicle_part *> res;
-    for( vehicle_part *t : turrets() ) {
-        if( ( t->enabled && automatic ) || ( !t->enabled && manual ) ) {
-            if( turret_query( *t ).query() == turret_data::status::ready ) {
-                res.push_back( t );
-            }
-        }
-    }
-    return res;
+    avatar &who = get_avatar();
+    use_vehicle_turrets( who, get_map(), *this, who.pos_abs(), "aim_auto" );
 }
 
 void vehicle::turrets_set_targeting()
 {
-    map &here = get_map();
-
-    std::vector<vehicle_part *> turrets;
-    std::vector<tripoint_bub_ms> locations;
-
-    for( vehicle_part &p : parts ) {
-        if( p.is_turret() ) {
-            turrets.push_back( &p );
-            locations.push_back( bub_part_pos( here, p ) );
-        }
-    }
-
-    pointmenu_cb callback( locations );
-
-    int sel = 0;
-    while( true ) {
-        uilist menu;
-        menu.text = _( "Set turret targeting" );
-        menu.callback = &callback;
-        menu.selected = sel;
-        menu.fselected = sel;
-
-        for( vehicle_part *&p : turrets ) {
-            menu.addentry( -1, has_part( abs_part_pos( *p ), "TURRET_CONTROLS" ), MENU_AUTOASSIGN,
-                           "%s [%s]", p->name(), p->enabled ?
-                           _( "auto -> manual" ) : has_part( abs_part_pos( *p ), "TURRET_CONTROLS" ) ?
-                           _( "manual -> auto" ) :
-                           _( "manual (turret control unit required for auto mode)" ) );
-        }
-
-        menu.query();
-        if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= turrets.size() ) {
-            break;
-        }
-
-        sel = menu.ret;
-        if( has_part( &here, locations[ sel ], "TURRET_CONTROLS" ) ) {
-            turrets[sel]->enabled = !turrets[sel]->enabled;
-        } else {
-            turrets[sel]->enabled = false;
-        }
-
-        for( const vpart_reference &vp : get_avail_parts( "TURRET_CONTROLS" ) ) {
-            vehicle_part &e = vp.part();
-            if( e.mount == turrets[sel]->mount ) {
-                e.enabled = turrets[sel]->enabled;
-            }
-        }
-
-        // clear the turret's current targets to prevent unwanted auto-firing
-        tripoint_bub_ms pos = locations[ sel ];
-        turrets[ sel ]->reset_target( here.get_abs( pos ) );
-    }
+    avatar &who = get_avatar();
+    use_vehicle_turrets( who, get_map(), *this, who.pos_abs(), "targeting" );
 }
 
 void vehicle::turrets_set_mode()
 {
-    map &here = get_map();
-    std::vector<vehicle_part *> turrets;
-    std::vector<tripoint_bub_ms> locations;
-
-    for( vehicle_part &p : parts ) {
-        if( p.base.is_gun() ) {
-            turrets.push_back( &p );
-            locations.push_back( bub_part_pos( here, p ) );
-        }
-    }
-
-    pointmenu_cb callback( locations );
-
-    int sel = 0;
-    while( true ) {
-        uilist menu;
-        menu.text = _( "Set turret firing modes" );
-        menu.callback = &callback;
-        menu.selected = sel;
-        menu.fselected = sel;
-
-        for( vehicle_part *&p : turrets ) {
-            menu.addentry( -1, true, MENU_AUTOASSIGN, "%s [%s]",
-                           p->name(), p->base.gun_current_mode().tname() );
-        }
-
-        menu.query();
-        if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= turrets.size() ) {
-            break;
-        }
-
-        sel = menu.ret;
-        turrets[ sel ]->base.gun_cycle_mode();
-    }
+    avatar &who = get_avatar();
+    use_vehicle_turrets( who, get_map(), *this, who.pos_abs(), "mode" );
 }
 
 npc &vehicle_part::get_targeting_npc( vehicle &veh )

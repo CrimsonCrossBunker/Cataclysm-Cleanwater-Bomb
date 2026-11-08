@@ -310,6 +310,8 @@ std::string enum_to_string<widget_var>( widget_var data )
             return "safe_mode_classic_text";
         case widget_var::style_text:
             return "style_text";
+        case widget_var::technique_cooldowns_text:
+            return "technique_cooldowns_text";
         case widget_var::sundial_text:
             return "sundial_text";
         case widget_var::sundial_time_text:
@@ -1285,6 +1287,7 @@ bool widget::uses_text_function() const
         case widget_var::safe_mode_classic_text:
         case widget_var::style_text:
         case widget_var::sundial_text:
+        case widget_var::technique_cooldowns_text:
         case widget_var::sundial_time_text:
         case widget_var::time_text:
         case widget_var::veh_azimuth_text:
@@ -1426,6 +1429,10 @@ std::string widget::color_text_function_string( const avatar &ava, unsigned int 
             break;
         case widget_var::style_text:
             desc.first = ava.martial_arts_data->selected_style_name( ava );
+            break;
+        case widget_var::technique_cooldowns_text:
+            desc.first = ava.active_technique_cooldowns_text();
+            desc.second = c_yellow;
             break;
         case widget_var::sundial_text:
             desc.first = display::sundial_text_color( ava, _width == 0 ? max_width : _width );

@@ -15,6 +15,7 @@
 #include "options.h"
 #include "pimpl.h"
 #include "type_id.h"
+#include "world_identity.h"
 
 enum class special_game_type;
 
@@ -81,6 +82,10 @@ struct WORLD {
 
         bool save() const;
 
+        // Lazily read/migrate durable identity at a checked load/save boundary.
+        // May throw on persistence failure. Never infer this from name or seed.
+        const world_id &identity() const;
+
         void load_options( const JsonArray &options_json );
         bool load_options();
 
@@ -95,6 +100,7 @@ struct WORLD {
         // replaced underneath a loaded WORLD (e.g. snapshot restore).
         void invalidate_compression_cache();
     private:
+        mutable world_id identity_;
         mutable std::optional<bool> is_compressed;
 
 };

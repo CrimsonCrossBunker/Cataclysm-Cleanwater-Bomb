@@ -551,8 +551,8 @@ void diary::new_page()
     std::unique_ptr<diary_page> page = std::make_unique<diary_page>();
     page -> m_text = std::string();
     page -> turn = calendar::turn;
-    page -> kills = g ->get_kill_tracker().kills;
-    page -> npc_kills = g->get_kill_tracker().npc_kills;
+    page -> kills = g ->get_kill_tracker().monster_kills();
+    page -> npc_kills = g->get_kill_tracker().character_kills();
     avatar *u = &get_avatar();
     page -> time_acc = time_acc();
     page -> mission_completed = mission::to_uid_vector( u->get_completed_missions() );

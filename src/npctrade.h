@@ -46,6 +46,7 @@ class item_pricing
 namespace npc_trading
 {
 bool pay_npc( npc &np, int cost );
+bool pay_npc( npc &np, Character &payer, int cost );
 
 int bionic_install_price( Character &installer, Character &patient, item_location const &bionic );
 int adjusted_price( item const *it, int amount, Character const &buyer, Character const &seller );
