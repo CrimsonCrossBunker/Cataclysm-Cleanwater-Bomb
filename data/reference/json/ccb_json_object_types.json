@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:e904b9f658e71ac9ab9c343e09715736821b8be481c7fc3cb9e33352e49114da",
+    "source_fingerprint": "sha256:bc45b19eb51d00f10a6e3a6ee8109cfc521edba6dc6820d11df90aa5aa22cd52",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6820,
-    "top_level_objects": 95298,
+    "tracked_json_files": 6840,
+    "top_level_objects": 95406,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15192,
+        "occurrences": 15220,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -457,7 +457,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4180,
+        "occurrences": 4189,
         "examples": [
           {
             "path": "data/json/monsters/LIXA_monsters.json",
@@ -796,7 +796,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2354,
+        "occurrences": 2356,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -1248,7 +1248,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 229,
+        "occurrences": 230,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -1602,7 +1602,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 237,
+        "occurrences": 245,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -3047,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5638,
+        "occurrences": 5639,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1684,
+        "occurrences": 1688,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3334,7 +3334,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 280,
+        "occurrences": 282,
         "examples": [
           {
             "path": "data/json/artifact/legacy_artifact_passive.json",
@@ -4273,7 +4273,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 625,
+        "occurrences": 627,
         "examples": [
           {
             "path": "data/json/harvest.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7812,
+        "occurrences": 7816,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4971,7 +4971,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9619,
+        "occurrences": 9640,
         "examples": [
           {
             "path": "data/json/effects_on_condition/npc_eocs/ref_center_exodii_updater.json",
@@ -5030,7 +5030,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 59,
+        "occurrences": 58,
         "examples": [
           {
             "path": "data/json/martialarts.json",
@@ -5396,7 +5396,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 134,
+        "occurrences": 135,
         "examples": [
           {
             "path": "data/json/monster_special_attacks/feral_weapon_attacks.json",
@@ -5514,7 +5514,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1106,
+        "occurrences": 1109,
         "examples": [
           {
             "path": "data/json/mapgen/animalpound.json",
@@ -6615,7 +6615,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 534,
+        "occurrences": 535,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2723,
+        "occurrences": 2724,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8214,
+        "occurrences": 8216,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -8483,7 +8483,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 762,
+        "occurrences": 763,
         "examples": [
           {
             "path": "data/json/recipes/basecamps/components.json",
@@ -9284,7 +9284,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 965,
+        "occurrences": 975,
         "examples": [
           {
             "path": "data/json/speech.json",
@@ -9633,7 +9633,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 353,
+        "occurrences": 352,
         "examples": [
           {
             "path": "data/json/martialarts_fictional.json",
@@ -9928,7 +9928,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 47,
+        "occurrences": 48,
         "examples": [
           {
             "path": "data/mods/TEST_DATA/container_spawn_test.json",
@@ -10213,7 +10213,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1611,
+        "occurrences": 1618,
         "examples": [
           {
             "path": "data/json/recipes/armor/mutant_clothing.json",
@@ -10331,7 +10331,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 385,
+        "occurrences": 386,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
@@ -10503,7 +10503,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 606,
+        "occurrences": 607,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
@@ -11147,7 +11147,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1470,
+        "occurrences": 1469,
         "examples": [
           {
             "path": "data/json/ui/activity.json",
