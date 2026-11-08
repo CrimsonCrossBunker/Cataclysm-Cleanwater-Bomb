@@ -120,7 +120,8 @@ std::string removal_denial( const item &gun, const item &mod )
         return _( "Unload the gun and remove its magazine first." );
     }
     for( const auto &added : mod.type->gunmod->add_mod ) {
-        if( added.second > 0 && gun.get_free_mod_locations( added.first ) < added.second ) {
+        const int freed = mod.type->gunmod->location == added.first ? 1 : 0;
+        if( added.second > 0 && gun.get_free_mod_locations( added.first ) + freed < added.second ) {
             return string_format( _( "Remove modifications using the %s slots first." ),
                                   added.first.name() );
         }

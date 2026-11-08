@@ -30,6 +30,7 @@
 
 static const activity_id ACT_GUNMOD_ADD( "ACT_GUNMOD_ADD" );
 static const itype_id itype_223( "223" );
+static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_battery( "battery" );
 static const itype_id itype_bow_sight( "bow_sight" );
 static const itype_id itype_match_trigger( "match_trigger" );
@@ -41,6 +42,7 @@ static const itype_id itype_shoulder_strap( "shoulder_strap" );
 static const itype_id itype_sl8( "sl8" );
 static const itype_id itype_small_repairkit( "small_repairkit" );
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
+static const gunmod_location location_mechanism( "mechanism" );
 static const gunmod_location location_rail( "rail" );
 static const gunmod_location location_sights( "sights" );
 
@@ -144,6 +146,25 @@ TEST_CASE( "gunmod_removal_blocks_permanent_and_loaded_modifications", "[gunmod]
     CHECK_FALSE( gunmod_ui::removal_denial( gun, trigger ).empty() );
 }
 
+TEST_CASE( "gunmod_removal_frees_its_own_added_slot_type", "[gunmod][ui]" )
+{
+    std::unique_ptr<itype> gun_type = std::make_unique<itype>( *itype_sl8 );
+    gun_type->gun->valid_mod_locations[location_mechanism] = 2;
+    std::unique_ptr<itype> adapter_type = std::make_unique<itype>( *itype_offset_sight_rail );
+    adapter_type->gunmod->location = location_mechanism;
+    adapter_type->gunmod->add_mod.clear();
+    adapter_type->gunmod->add_mod[location_mechanism] = 2;
+    item gun( gun_type.get(), calendar::turn );
+    REQUIRE( gun.put_in( item( adapter_type.get(), calendar::turn ), pocket_type::MOD ).success() );
+    const int other_mods = GENERATE( 1, 2, 3 );
+    for( int index = 0; index < other_mods; ++index ) {
+        REQUIRE( gun.put_in( item( itype_match_trigger ), pocket_type::MOD ).success() );
+    }
+    const item *adapter = gun.gunmod_find( itype_offset_sight_rail );
+    REQUIRE( adapter );
+    CHECK( gunmod_ui::removal_denial( gun, *adapter ).empty() == ( other_mods <= 2 ) );
+}
+
 TEST_CASE( "gunmod_menu_uses_authoritative_compatibility_reason", "[gunmod][ui]" )
 {
     clear_avatar();
@@ -219,6 +240,7 @@ TEST_CASE( "gunmod_installation_keeps_selected_item_instance", "[gunmod][activit
     clear_avatar();
     avatar &you = get_avatar();
     arm_shooter( you, itype_sl8 );
+    REQUIRE( you.wear_item( item( itype_backpack ), false, false ) );
     you.set_mutation( trait_DEBUG_HS );
     item first( itype_shoulder_strap );
     first.set_damage( 1000 );
@@ -227,12 +249,23 @@ TEST_CASE( "gunmod_installation_keeps_selected_item_instance", "[gunmod][activit
     second.set_damage( 2000 );
     item_location selected = you.i_add( second );
     item_location gun = you.get_wielded_item();
+    const bool wielded_mod = GENERATE( false, true );
+    if( wielded_mod ) {
+        selected.remove_item();
+        gun = you.i_add( you.remove_weapon() );
+        REQUIRE( gun );
+        REQUIRE( you.wield( second ) );
+        selected = you.get_wielded_item();
+    }
     you.gunmod_add( *gun, *selected, itype_id::NULL_ID() );
     REQUIRE( you.activity.id() == ACT_GUNMOD_ADD );
     REQUIRE( you.activity.targets.size() == 2 );
-    CHECK( you.activity.targets[1] == selected );
+    if( !wielded_mod ) {
+        CHECK( you.activity.targets[1] == selected );
+    }
+    CHECK( you.activity.targets[1]->damage() == 2000 );
     you.activity.actor->finish( you.activity, you );
-    const item *installed = gun->gunmod_find( itype_shoulder_strap );
+    const item *installed = you.get_wielded_item()->gunmod_find( itype_shoulder_strap );
     REQUIRE( installed );
     CHECK( installed->damage() == 2000 );
 }

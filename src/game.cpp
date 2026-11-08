@@ -2411,9 +2411,9 @@ int game::inventory_item_menu( item_location locThisItem,
                 case 'a': {
                     contents_change_handler handler;
                     handler.unseal_pocket_containing( locThisItem );
-                    if( locThisItem.get_item()->type->has_use() &&
-                        !locThisItem.get_item()->item_has_uses_recursive( true ) ) { // NOLINT(bugprone-branch-clone)
-                        // Item has uses and none of its contents (if any) has uses.
+                    if( ( locThisItem->is_gun() && !locThisItem->is_gunmod() ) ||
+                        ( locThisItem.get_item()->type->has_use() &&
+                          !locThisItem.get_item()->item_has_uses_recursive( true ) ) ) { // NOLINT(bugprone-branch-clone)
                         avatar_action::use_item( u, locThisItem );
                     } else if( locThisItem.get_item()->item_has_uses_recursive() ) {
                         game::item_action_menu( locThisItem );

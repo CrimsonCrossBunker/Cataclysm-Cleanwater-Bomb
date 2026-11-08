@@ -206,6 +206,22 @@ void Character::gunmod_add( item &gun, item &mod, const std::optional<itype_id> 
     item_location selected_mod( *this, &mod );
     std::string mod_name = mod.tname();
 
+    if( is_wielding( mod ) ) {
+        const ret_val<void> can_stow = can_unwield( mod );
+        if( !can_stow.success() ) {
+            add_msg_if_player( m_info, "%s", can_stow.c_str() );
+            return;
+        }
+        const item_location stowed_mod = try_add( mod, &gun, &mod, false );
+        if( !stowed_mod ) {
+            add_msg_if_player( _( "You have no room to store the %s." ), mod_name );
+            return;
+        }
+        mod_moves( -item_handling_cost( mod ) );
+        remove_weapon();
+        selected_mod = stowed_mod;
+    }
+
     if( !is_wielding( gun ) && !wield( gun ) ) {
         add_msg_if_player( _( "You can't wield the %1$s." ), gun.tname() );
         return;
