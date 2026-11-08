@@ -3952,6 +3952,9 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     if( moved ) {
         make_footstep_noise();
         const tripoint_bub_ms old_pos = pos;
+        if( in_vehicle ) {
+            here.unboard_vehicle( old_pos );
+        }
         setpos( here, p );
         if( old_pos.x() - p.x() < 0 ) {
             facing = FacingDirection::RIGHT;
@@ -3978,10 +3981,6 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
             add_effect( effect_no_sight, 1_turns, true );
         } else if( has_effect( effect_no_sight ) ) {
             remove_effect( effect_no_sight );
-        }
-
-        if( in_vehicle ) {
-            here.unboard_vehicle( old_pos );
         }
 
         // Close doors behind self (if you can)
