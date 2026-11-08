@@ -1227,7 +1227,8 @@ void SetWindowTitle( SDL_Window *window, const char *title )
 
 
 SDL_Renderer_Ptr CreateRenderer( const SDL_Window_Ptr &window, const char *driver_name,
-                                 const bool software, const bool vsync )
+                                 const bool software, const bool vsync,
+                                 const bool allow_gpu_d3d12 )
 {
     if( !window ) {
         dbg( D_ERROR ) << "Tried to create renderer with a null window";
@@ -1259,7 +1260,7 @@ SDL_Renderer_Ptr CreateRenderer( const SDL_Window_Ptr &window, const char *drive
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_SPIRV_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_DXIL_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_MSL_BOOLEAN, true );
-    SDL_Renderer_Ptr result( create_compatible_renderer( props ) );
+    SDL_Renderer_Ptr result( create_compatible_renderer( props, allow_gpu_d3d12 ) );
     SDL_DestroyProperties( props );
     printErrorIf( !result, "SDL_CreateRendererWithProperties failed" );
     return result;

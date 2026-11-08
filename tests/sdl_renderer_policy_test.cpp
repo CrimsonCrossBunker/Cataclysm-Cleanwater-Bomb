@@ -22,6 +22,11 @@ TEST_CASE( "renderer_fallback_is_limited_to_gpu_direct3d12",
     CHECK_FALSE( renderer_fallback_drivers( "opengl", "" ) );
     CHECK_FALSE( renderer_fallback_drivers( "software", "" ) );
     CHECK_FALSE( renderer_fallback_drivers( "", "" ) );
+
+    CHECK_FALSE( renderer_fallback_drivers( "gpu", "direct3d12", true ) );
+    CHECK_FALSE( renderer_fallback_drivers( "gpu", "vulkan", true ) );
+    CHECK_FALSE( renderer_fallback_drivers( "direct3d11", "", true ) );
+    CHECK_FALSE( renderer_fallback_drivers( "software", "", true ) );
 }
 
 TEST_CASE( "compatible_renderer_preserves_software_surface_rendering",

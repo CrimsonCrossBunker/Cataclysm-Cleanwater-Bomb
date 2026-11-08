@@ -4,7 +4,8 @@
 
 #include "debug.h"
 
-SDL_Renderer *create_compatible_renderer( SDL_PropertiesID properties )
+SDL_Renderer *create_compatible_renderer( SDL_PropertiesID properties,
+        const bool allow_gpu_d3d12 )
 {
     SDL_Renderer *renderer = SDL_CreateRendererWithProperties( properties );
     if( !renderer ) {
@@ -17,7 +18,7 @@ SDL_Renderer *create_compatible_renderer( SDL_PropertiesID properties )
     const char *renderer_name = SDL_GetRendererName( renderer );
     const char *gpu_driver = device ? SDL_GetGPUDeviceDriver( device ) : nullptr;
     const char *fallback = renderer_fallback_drivers( renderer_name ? renderer_name : "",
-                           gpu_driver ? gpu_driver : "" );
+                           gpu_driver ? gpu_driver : "", allow_gpu_d3d12 );
     if( !fallback ) {
         return renderer;
     }

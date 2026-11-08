@@ -475,7 +475,8 @@ static SDL_Renderer_Ptr create_game_renderer( const std::string &renderer_name, 
     if( software ) {
         return CreateRenderer( ::window, nullptr, true, false );
     }
-    return CreateRenderer( ::window, renderer_name.c_str(), false, true );
+    return CreateRenderer( ::window, renderer_name.c_str(), false, true,
+                           get_option<bool>( "RENDER3D_EXPERIMENTAL" ) );
 }
 
 // Derive renderer-dependent backend state from the live renderer. Re-run
