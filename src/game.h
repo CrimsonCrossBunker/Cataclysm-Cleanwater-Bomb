@@ -90,6 +90,7 @@ class map;
 class memorial_logger;
 class monster;
 class npc;
+class npc_lifetime_registry;
 class npc_template;
 class overmap;
 class power_network_manager;
@@ -209,6 +210,10 @@ class game
 
         cata_mp::world_session &multiplayer_session() {
             return *multiplayer_session_ptr;
+        }
+
+        npc_lifetime_registry &npc_lifetimes() {
+            return *npc_lifetimes_ptr;
         }
 
         /*
@@ -1254,6 +1259,7 @@ class game
         pimpl<eoc_events> eoc_events_ptr; // NOLINT(cata-serialize)
         pimpl<power_network_manager> power_networks_ptr;
         pimpl<cata_mp::world_session> multiplayer_session_ptr; // NOLINT(cata-serialize)
+        pimpl<npc_lifetime_registry> npc_lifetimes_ptr; // NOLINT(cata-serialize)
 
         map &m; // NOLINT(cata-serialize)
         // 'current_map' will be identical to 'm' as you can save only at the top of the main loop.

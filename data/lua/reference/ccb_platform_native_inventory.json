@@ -1025,7 +1025,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_handle.cpp",
-          "line": 1132
+          "line": 1042
         },
         "direct_roots": [
           "GameHandle"
@@ -9473,7 +9473,7 @@
       "registration_name": "GameHandle",
       "registration": {
         "path": "src/lua_platform_handle.cpp",
-        "line": 1138,
+        "line": 1048,
         "installer": "shared.install_game_handle_api",
         "namespace": "global"
       },
@@ -9517,7 +9517,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.cpp",
-                "line": 1142
+                "line": 1052
               }
             ]
           },
@@ -9534,7 +9534,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.cpp",
-                "line": 1146
+                "line": 1056
               }
             ]
           },
@@ -9551,7 +9551,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.cpp",
-                "line": 1140
+                "line": 1050
               }
             ]
           },
@@ -9568,7 +9568,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.cpp",
-                "line": 1143
+                "line": 1053
               }
             ]
           },
@@ -9707,7 +9707,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.cpp",
-                "line": 1151
+                "line": 1061
               }
             ]
           },
@@ -9724,7 +9724,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.cpp",
-                "line": 1141
+                "line": 1051
               }
             ]
           }
