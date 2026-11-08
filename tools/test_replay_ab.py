@@ -392,6 +392,29 @@ class ReplayProcessTest(unittest.TestCase):
         self.replay.write_text("CATA_REPLAY 1\nSEED 123\n")
         self.assert_invalid([])
 
+    def test_profile_seed_is_recorded_without_changing_legacy_metadata(self):
+        legacy = replay_ab.replay_metadata(self.replay)
+        self.assertNotIn("profile_seed", legacy)
+        seed = "0123456789abcdef0123456789abcdef"
+        self.replay.write_text(
+            f"CATA_REPLAY 2\nSEED 123\nPROFILE_SEED {seed}\nEV 1 0 1 46 0 0 - -\n"
+        )
+        current = replay_ab.replay_metadata(self.replay)
+        self.assertEqual(current["profile_seed"], seed)
+        self.assertEqual(current["seed"], legacy["seed"])
+        self.assertEqual(current["recorded_events"], legacy["recorded_events"])
+        self.assertNotEqual(current["sha256"], legacy["sha256"])
+
+    def test_malformed_profile_seeds_are_rejected_before_launch(self):
+        for header in ["", "PROFILE_SEED", "PROFILE_SEED " + "A" * 32,
+                       "PROFILE_SEED " + "a" * 31,
+                       "PROFILE_SEED " + "a" * 32 + " extra"]:
+            with self.subTest(header=header):
+                self.replay.write_text(
+                    f"CATA_REPLAY 2\nSEED 123\n{header}\nEV 1 0 1 46 0 0 - -\n"
+                )
+                self.assert_invalid([])
+
     def test_directory_overrides_are_rejected_before_launch(self):
         for option in ["--userdir", "--configdir", "--world", "--replay-play",
                        "--replay-report"]:

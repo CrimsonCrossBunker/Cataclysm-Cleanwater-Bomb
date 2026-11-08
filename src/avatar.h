@@ -26,6 +26,7 @@
 #include "magic_teleporter_list.h"
 #include "mdarray.h"
 #include "memory_fast.h"
+#include "player_identity.h"
 #include "point.h"
 #include "type_id.h"
 #include "units.h"
@@ -148,6 +149,13 @@ class avatar : public Character
         void set_save_id( const std::string &id ) {
             save_id = id;
         }
+        // This world's local save profile; independent of Character swaps and
+        // of the endpoint-scoped credentials used to join a remote server.
+        const player_id &get_player_id() const {
+            return local_player_id;
+        }
+        void assign_new_player_id();
+        void ensure_player_id();
         /**
          * Makes the avatar "take over" the given NPC, while the current avatar character
          * becomes an NPC.
@@ -453,6 +461,7 @@ class avatar : public Character
 
         // The name used to generate save filenames for this avatar. Not serialized in json.
         std::string save_id;
+        player_id local_player_id;
 
         std::unique_ptr<map_memory> player_map_memory;
 

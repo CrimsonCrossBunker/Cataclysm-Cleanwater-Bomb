@@ -4,29 +4,12 @@
 
 #include <string>
 
+#include "player_identity.h"
+
 namespace cata_mp
 {
-// Persistent identity is neither a display name nor a transport connection ID.
-class player_id
-{
-    public:
-        player_id() = default;
-        explicit player_id( const std::string &value );
-        bool valid() const {
-            return !value_.empty();
-        }
-        const std::string &str() const {
-            return value_;
-        }
-        bool operator==( const player_id &other ) const {
-            return value_ == other.value_;
-        }
-        bool operator<( const player_id &other ) const {
-            return value_ < other.value_;
-        }
-    private:
-        std::string value_;
-};
+// Local profiles and remote principals use the same native identity type.
+using ::player_id;
 
 // A local profile owns this bearer capability. Never log it or include it in
 // replicated character data. The authoritative host stores it privately.

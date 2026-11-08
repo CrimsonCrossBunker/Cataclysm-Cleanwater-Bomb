@@ -26,6 +26,7 @@
 #include <set>
 #include <sstream>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -104,6 +105,7 @@
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "player_identity.h"
 #include "point.h"
 #include "profession.h"
 #include "proficiency.h"
@@ -1708,6 +1710,10 @@ void avatar::store( JsonOut &json ) const
 {
     Character::store( json );
 
+    if( local_player_id.valid() ) {
+        json.member( "local_player_id", local_player_id.str() );
+    }
+
     // player-specific specifics
     if( prof != nullptr ) {
         json.member( "profession", prof->ident() );
@@ -1799,7 +1805,18 @@ void avatar::deserialize( const JsonObject &data )
 
 void avatar::load( const JsonObject &data )
 {
+    // Validate before mutating the Character. A corrupt identity must not
+    // silently become a new player, and an old save must clear any prior ID.
+    player_id restored_player;
+    if( data.has_member( "local_player_id" ) ) {
+        try {
+            restored_player = player_id( data.get_string( "local_player_id" ) );
+        } catch( const std::invalid_argument & ) {
+            data.throw_error_at( "local_player_id", "Invalid local player identity" );
+        }
+    }
     Character::load( data );
+    local_player_id = restored_player;
 
     std::string prof_ident = "(null)";
     if( data.read( "profession", prof_ident ) && string_id<profession>( prof_ident ).is_valid() ) {
