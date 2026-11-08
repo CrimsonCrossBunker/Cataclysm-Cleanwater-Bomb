@@ -88,6 +88,9 @@
     ],
     "techniques": [
       "tec_aikido_break",
+      "tec_grapple_hold",
+      "tec_grapple_drag",
+      "tec_aikido_projection",
       "tec_aikido_dodgedisarm",
       "tec_aikido_blockdisarm",
       "tec_aikido_dodgethrow",
@@ -692,7 +695,15 @@
         ]
       }
     ],
-    "techniques": [ "tec_judo_backthrow", "tec_judo_disarm", "tec_judo_break", "tec_judo_throw" ]
+    "techniques": [
+      "tec_judo_backthrow",
+      "tec_judo_disarm",
+      "tec_judo_break",
+      "tec_judo_throw",
+      "tec_grapple_hold",
+      "tec_grapple_drag",
+      "tec_judo_hip_throw"
+    ]
   },
   {
     "type": "martial_art",
@@ -793,6 +804,9 @@
     ],
     "techniques": [
       "tec_krav_maga_rapid",
+      "tec_grapple_hold",
+      "tec_grapple_drag",
+      "tec_krav_grapple_takedown",
       "tec_krav_maga_disarm_simple",
       "tec_krav_maga_crit",
       "tec_krav_maga_takedown",
@@ -939,6 +953,8 @@
       "tec_muay_thai_rapid",
       "tec_muay_thai_cross",
       "tec_muay_thai_elbow",
+      "tec_grapple_hold",
+      "tec_grapple_drag",
       "tec_muay_thai_push",
       "tec_muay_thai_roundhouse",
       "tec_muay_thai_knee",
@@ -1140,6 +1156,9 @@
     ],
     "techniques": [
       "tec_pankration_cross",
+      "tec_grapple_hold",
+      "tec_grapple_drag",
+      "tec_pankration_slam",
       "tec_pankration_kick",
       "tec_pankration_break",
       "tec_pankration_grabknee",
@@ -1391,7 +1410,15 @@
         "flat_bonuses": [ { "stat": "block_effectiveness", "scale": 2.0 }, { "stat": "block", "scaling-stat": "per", "scale": 0.5 } ]
       }
     ],
-    "techniques": [ "tec_taichi_disarm", "tec_taichi_palm", "tec_taichi_counter", "tec_taichi_precise" ]
+    "techniques": [
+      "tec_taichi_disarm",
+      "tec_taichi_palm",
+      "tec_taichi_counter",
+      "tec_taichi_precise",
+      "tec_grapple_hold",
+      "tec_grapple_drag",
+      "tec_taichi_unbalance"
+    ]
   },
   {
     "type": "martial_art",

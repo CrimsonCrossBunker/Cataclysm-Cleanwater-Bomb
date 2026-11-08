@@ -58,6 +58,10 @@
 #include "weather_type.h"
 #include "worldfactory.h"
 
+#if defined(TILES)
+    #include "sdl_wrappers.h"
+#endif
+
 static const mod_id MOD_INFORMATION_ccb( "ccb" );
 
 using name_value_pair_t = std::pair<std::string, std::string>;
@@ -358,6 +362,10 @@ int main( int argc, const char *argv[] )
             Json::globally_report_unvisited_members( false );
             // Destroy the game before function-local Lua registries are torn down.
             g.reset();
+#if defined(TILES)
+            // Options query SDL even without a window; release its error/TLS state.
+            SDL_Quit();
+#endif
             deinitDebug();
         } };
     Catch::Session session;
@@ -546,6 +554,9 @@ int main( int argc, const char *argv[] )
     test_shutdown_guard.cancel();
     Json::globally_report_unvisited_members( false );
     g.reset();
+#if defined(TILES)
+    SDL_Quit();
+#endif
     deinitDebug();
     std::cout.flush();
     std::cerr.flush();

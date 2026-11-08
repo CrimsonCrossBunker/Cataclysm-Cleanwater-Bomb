@@ -44,11 +44,13 @@
 #include "mapgendata.h"
 #include "memory_fast.h"
 #include "messages.h"
+#include "mission.h"
 #include "mod_manager.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
+#include "npc_lifetime.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_connection.h"
@@ -215,8 +217,6 @@ void overmapbuffer::fix_nemesis( overmap &new_overmap )
         overmap &om = get( omp );
         om.spawn_mon_group( mg, 1 );
         new_overmap.zg.erase( it++ );
-        //there should only be one nemesis, so we can break after finding it
-        break;
     }
 }
 
@@ -685,7 +685,7 @@ void overmapbuffer::set_passable( const tripoint_abs_omt &p,
 
 void overmapbuffer::signal_hordes( const tripoint_abs_sm &center, const int sig_power )
 {
-    for( overmap *&om : get_overmaps_near( center, sig_power ) ) {
+    for( overmap*&om : get_overmaps_near( center, sig_power ) ) {
         om->signal_hordes( project_to<coords::ms>( center ), sig_power );
     }
 }
@@ -703,22 +703,22 @@ void overmapbuffer:: alert_entity( const tripoint_abs_ms &location,
     om->alert_entity( offset, destination, intensity );
 }
 
-void overmapbuffer::signal_nemesis( const tripoint_abs_sm &p )
+void overmapbuffer::signal_nemesis( const tripoint_abs_sm &p, const character_id who )
 {
 
     for( std::pair<const point_abs_om, std::unique_ptr<overmap>> &omp : overmaps ) {
-        omp.second->signal_nemesis( p );
+        omp.second->signal_nemesis( p, who );
     }
 
 }
 
-void overmapbuffer::add_nemesis( const tripoint_abs_omt &p )
+void overmapbuffer::add_nemesis( const tripoint_abs_omt &p, const int mission_id )
 {
     //takes location from kill_nemesis mission and adds a nemesis monstergroup into the overmap
 
     const tripoint_abs_om loc = project_to<coords::om>( p );
-    overmap *om = get_existing( loc.xy() );
-    om->place_nemesis( p );
+    overmap &om = get( loc.xy() );
+    om.place_nemesis( p, mission_id );
 
 }
 
@@ -735,7 +735,7 @@ void overmapbuffer::process_mongroups()
     // arbitrary radius to include nearby overmaps (aside from the current one)
     const int radius = MAPSIZE * 2;
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap *&om : get_overmaps_near( center, radius ) ) {
+    for( overmap*&om : get_overmaps_near( center, radius ) ) {
         om->process_mongroups();
     }
 }
@@ -745,26 +745,32 @@ void overmapbuffer::move_hordes()
     // arbitrary radius to include nearby overmaps (aside from the current one)
     const int radius = MAPSIZE * 2;
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap *&om : get_overmaps_near( center, radius ) ) {
+    for( overmap*&om : get_overmaps_near( center, radius ) ) {
         om->move_hordes();
     }
 }
 
 void overmapbuffer::move_nemesis()
 {
-    for( std::pair<const point_abs_om, std::unique_ptr<overmap>> &omp : overmaps ) {
-        omp.second->move_nemesis();
-        fix_nemesis( *omp.second );
+    // Do not advance a group again when it crosses into an overmap visited
+    // later in this pass. Relocation can also load new overmaps.
+    std::vector<point_abs_om> loaded;
+    loaded.reserve( overmaps.size() );
+    for( const auto &entry : overmaps ) {
+        loaded.push_back( entry.first );
+    }
+    for( const point_abs_om &position : loaded ) {
+        overmaps.at( position )->move_nemesis();
+    }
+    for( const point_abs_om &position : loaded ) {
+        fix_nemesis( *overmaps.at( position ) );
     }
 }
 
-void overmapbuffer::remove_nemesis()
+void overmapbuffer::remove_nemesis( const character_id who )
 {
-    for( std::pair<const point_abs_om, std::unique_ptr<overmap>> &omp : overmaps ) {
-        bool nemesis_removed = omp.second->remove_nemesis();
-        if( nemesis_removed ) {
-            break;
-        }
+    for( auto &entry : overmaps ) {
+        entry.second->remove_nemesis( who );
     }
 }
 
@@ -1816,9 +1822,7 @@ void overmapbuffer::insert_npc( const shared_ptr_fast<npc> &who )
                 foreach_loaded_camp( [&existing]( basecamp & camp ) {
                     camp.platform_retire_tasks_for_worker( *existing );
                 } );
-#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-                cata::lua_platform::retire_npc_handle_identity( *existing );
-#endif
+                retire_npc_lifetime( *existing );
             }
         }
     }
@@ -1895,7 +1899,7 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near( const tripoint_a
                                int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
-    for( overmap *&it : get_overmaps_near( p.xy(), radius ) ) {
+    for( overmap*&it : get_overmaps_near( p.xy(), radius ) ) {
         auto temp = it->get_npcs( [&]( const npc & guy ) {
             // Global position of NPC, in submap coordinates
             const tripoint_abs_sm pos = guy.pos_abs_sm();
@@ -1910,7 +1914,7 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near_omt( const tripoi
                                int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
-    for( overmap *&it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
+    for( overmap*&it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
         auto temp = it->get_npcs( [&]( const npc & guy ) {
             // Global position of NPC, in submap coordinates
             tripoint_abs_omt pos = guy.pos_abs_omt();
@@ -1933,7 +1937,7 @@ static radio_tower_reference create_radio_tower_reference( const overmap &om, ra
 radio_tower_reference overmapbuffer::find_radio_station( const int frequency )
 {
     const tripoint_abs_sm center = get_player_character().pos_abs_sm();
-    for( overmap *&om : get_overmaps_near( center, RADIO_MAX_STRENGTH ) ) {
+    for( overmap*&om : get_overmaps_near( center, RADIO_MAX_STRENGTH ) ) {
         for( radio_tower &tower : om->radios ) {
             const radio_tower_reference rref = create_radio_tower_reference( *om, tower, center );
             if( rref.signal_strength > 0 && tower.frequency == frequency ) {
@@ -1951,7 +1955,7 @@ std::vector<radio_tower_reference> overmapbuffer::find_all_radio_stations()
     // perceived signal strength is distance (in submaps) - signal strength, so towers
     // further than RADIO_MAX_STRENGTH submaps away can never be received at all.
     const int radius = RADIO_MAX_STRENGTH;
-    for( overmap *&om : get_overmaps_near( center, radius ) ) {
+    for( overmap*&om : get_overmaps_near( center, radius ) ) {
         for( radio_tower &tower : om->radios ) {
             const radio_tower_reference rref = create_radio_tower_reference( *om, tower, center );
             if( rref.signal_strength > 0 ) {
@@ -2429,8 +2433,23 @@ void overmapbuffer::despawn_monster( const monster &critter )
     // Store the monster using coordinates local to the overmap
 
     if( critter.is_nemesis() ) {
-        //if the monster is the 'hunted' trait's nemesis, it becomes an overmap horde
-        om.place_nemesis( critter.pos_abs_omt() );
+        // Keep the quest association through unload/reload. A released quest
+        // must not turn back into an unbound pursuer for the local avatar.
+        int quest_id = -1;
+        for( const int id : critter.mission_ids ) {
+            const mission *task = mission::find( id, true );
+            if( task && task->get_type().goal == MGOAL_KILL_NEMESIS ) {
+                if( !task->is_assigned() ) {
+                    return;
+                }
+                quest_id = id;
+                break;
+            }
+        }
+        if( quest_id < 0 && !critter.mission_ids.empty() ) {
+            return;
+        }
+        om.place_nemesis( critter.pos_abs_omt(), quest_id );
     } else {
         om.hordes.spawn_entity( critter.pos_abs(), critter );
     }
@@ -2520,7 +2539,7 @@ overmapbuffer::t_extras_vector overmapbuffer::get_extras( int z, std::string_vie
 
 bool overmapbuffer::is_safe( const tripoint_abs_omt &p )
 {
-    for( mongroup *&mongrp : monsters_at( p ) ) {
+    for( mongroup*&mongrp : monsters_at( p ) ) {
         if( !mongrp->is_safe() ) {
             return false;
         }

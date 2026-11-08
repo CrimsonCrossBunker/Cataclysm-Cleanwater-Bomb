@@ -9,22 +9,41 @@
 #include <string_view>
 #include <vector>
 
+#include "mp_melee.h"
+#include "mp_firearm.h"
 #include "character_id.h"
+#include "player_identity.h"
 #include "coordinates.h"
+#include "map_viewpoint.h"
 #include "type_id.h"
 
+class aim_activity_actor;
 class Character;
 class item;
 class npc;
+class monster;
 enum class object_type : int;
 struct WORLD;
 
+namespace Pickup
+{
+struct selection;
+}
+
 namespace cata_mp
 {
+struct throw_intent;
+void client_close_peek( int64_t request );
+bool client_name_monster( const monster &subject, const tripoint_abs_ms &origin,
+                          const std::string &name, const std::optional<map_viewpoint> &observation );
 
 // Called once per game turn from do_turn() — drains the event queue and
 // processes connect/disconnect/action events from remote players.
 void process_mp_events();
+
+player_id partner_identity( character_id actor );
+
+std::string client_partner_action( const std::string &action, character_id target );
 
 // Cheap outer gate for the game loop.  Single-player code should test this
 // before calling any per-turn multiplayer work so queues, cleanup, logging and
@@ -38,7 +57,9 @@ void process_session_turn();
 
 // Returns a JSON string describing the remote player's current position,
 // HP, and nearby visible tiles. Sent to the client after each action.
-std::string serialize_remote_player_state();
+struct remote_player_session;
+std::string serialize_remote_player_state( remote_player_session &recipient,
+        const std::vector<tripoint_abs_ms> &changed_tiles = {} );
 
 // Returns true if the given character_id belongs to a remote player NPC.
 // Used by monmove() to skip AI processing for human-controlled NPCs.
@@ -52,7 +73,7 @@ bool is_partner_npc( character_id id );
 // in an interruptible "wait several minutes" activity.  Reads the activity
 // id last broadcast over the wire — works in either direction (client sees
 // host's wait; host sees client's wait).
-bool is_partner_in_wait_activity();
+bool is_partner_in_wait_activity( character_id target = character_id() );
 
 // Minimum moves_total for the partner's activity to surface the "Help with
 // task" bump-menu entry.  Below this threshold the activity is short enough
@@ -64,18 +85,20 @@ constexpr int HELPER_MIN_MOVES_TOTAL = 10000;
 // committed to helping with our long task.  Read by Character::get_crafting_helpers()
 // to decide whether to include the partner proxy NPC in the SP helper list
 // (which feeds skill / proficiency / time-bonus math).
-bool is_partner_helping_us();
+bool is_partner_helping( character_id helper, character_id worker );
+// Persist the selected player identity in the native activity.
+bool start_helping_partner( character_id target );
 
 // True when the partner's current activity is one that SP's helper system
 // supports (crafting, construction, vehicle, butchery, disassembly).  Reading
 // is intentionally excluded — its "learn alongside" semantics need separate
 // design.  Used by the bump-menu gate.
-bool partner_activity_accepts_help();
+bool partner_activity_accepts_help( character_id target = character_id() );
 
 // Total moves required by the partner's current activity (act.moves_total),
 // snapshotted by the partner's actor::start() and propagated each tick.  Read
 // by the bump-menu predicate.  Zero when partner is idle.
-int partner_activity_moves_total();
+int partner_activity_moves_total( character_id target = character_id() );
 
 // Last progress percent (0-100) the partner reported for their current
 // activity.  Used by the helper's local wait popup to mirror the lead's
@@ -95,15 +118,15 @@ bool mp_in_burst_mode();
 // next serialize_remote_player_state broadcast.  Client consumes it and
 // cancels its own wait activity.  Used by the host's tap-on-shoulder
 // dispatch when the host is interrupting the client's wait.
-void mark_wake_client_pending();
+void mark_wake_client_pending( character_id target );
 
 // Host-only: queue a one-shot signal that the host swapped with / pushed the
 // client this turn (host-initiated, performed locally on the host).  The next
 // state broadcast carries the flag; the client renders the observer message
 // ("<host> swaps places with you.") locally from the proxy's real name, so no
 // rendered text crosses the wire.
-void mark_partner_swap_pending();
-void mark_partner_push_pending();
+void mark_partner_swap_pending( character_id target );
+void mark_partner_push_pending( character_id target );
 
 // Current partner-separation tier (0 = close, 1 = mild warn, 2 = urgent
 // warn / leeway, 3 = pause).  Read by do_turn to auto-pause the calendar
@@ -114,7 +137,7 @@ int get_separation_tier();
 // or nullptr if not connected. On the host that's the client's proxy; on
 // the client that's the host's proxy. Used by the tile renderer to draw a
 // direction indicator when the partner is off-screen.
-::npc *get_partner_npc();
+::npc *get_partner_npc( character_id target = character_id() );
 
 // Host: true while wait_for_client_action() is blocking — i.e. the host has
 // no moves and is waiting for the client to ack the current turn.  Used to
@@ -138,6 +161,11 @@ bool partner_in_interactive_activity();
 // Called once per game turn from do_turn() when in client mode.
 void client_process_incoming();
 
+// Simulation-owner entry for a message decoded by the current client transport.
+// The connection owns admission/queue isolation; this never accepts messages
+// while client mode is disabled. UI-capable messages require the normal UI context.
+bool client_apply_message( const std::string &msg );
+
 // Run blocking UI that was deferred out of the network-recv path (e.g. the smash
 // "Keep smashing?" prompt).  Call from do_turn() right after
 // client_process_incoming(), where a top-level UI context is valid.
@@ -157,22 +185,28 @@ void client_wait_for_initial_position();
 // (class npc is already forward-declared at global scope above.)
 void mp_tick_proxy_activity( ::npc &guy );
 
-// Client-only: invoke from the wrapper around the SP grab() handler in
-// handle_action.cpp's ACTION_GRAB case.  Snapshot the avatar's grab state
-// before running SP grab(), then call this with the pre-snapshot; we forward
-// the delta to the host so its proxy NPC mirrors the grab.  No-op for the SP
-// case (cancelled prompt → state unchanged) and outside client mode.
-void mp_client_dispatch_grab_if_changed( object_type pre_type,
-        const tripoint_rel_ms &pre_point );
-
-// Client-only: parallel to the grab dispatcher.  Invoke from the wrappers
-// around ACTION_HAUL and ACTION_HAUL_TOGGLE after running the SP handler;
-// forwards a toggle_haul action to the host when is_hauling() actually flipped.
-void mp_client_dispatch_hauling_if_changed( bool pre_hauling );
-
-// Enrich a client action JSON with the current client_light and client_bleed fields.
-// Call before any direct client_send() to ensure the server always receives light/bleed state.
+// Attach local input/activity observations to a request. Body state remains
+// server-owned and is never uploaded by this path.
 std::string client_enrich_action( const std::string &json );
+// UI selection only: publish a value request, leaving carried items and the
+// map unchanged until the authoritative response arrives.
+void client_request_pickup( const Pickup::selection &selection );
+// Bridge the network action budget through the native owned-character phase.
+bool prepare_remote_character_turn( npc &actor );
+void finish_remote_character_turn( npc &actor );
+void client_request_melee( const tripoint_bub_ms &target, melee_action action,
+                           const matec_id &technique = matec_id() );
+bool client_uses_firearm_intents( const item &weapon );
+void client_start_firearm_activity( unsigned int bionic_uid = 0 );
+void client_finish_firearm_activity();
+void client_apply_firearm_preview( aim_activity_actor &aim );
+void client_finish_ready_firearm_activity();
+firearm_view_phase client_firearm_phase();
+void client_request_firearm( const tripoint_bub_ms &target, const std::string &action );
+void client_request_firearm( const tripoint_bub_ms &target, const std::string &action,
+                             const item_location &ammo );
+void client_cancel_firearm_activity( bool unload_ras );
+void client_request_throw( const throw_intent &intent );
 
 // Client only: call immediately after client_send() to suppress stale moves>0
 // state packets until the server sends moves=0 (its action acknowledgement).
@@ -213,11 +247,9 @@ void set_host_mode( bool enabled );
 // whether it is also a headless dedicated server.
 bool is_hosting();
 
-// Called when a world is unloaded (quit-to-menu). Resets per-world MP state —
-// currently the stale-NPC sweep guard — so re-entering any
-// world in the same process re-runs the orphan-proxy cleanup instead of
-// skipping it (the one-shot guard otherwise leaves phantom proxies from a prior
-// load-in; reproduced 2026-06-03).
+// Called before unloading or replacing a world. Joins the host worker, closes
+// the client, and clears modes, proxy bindings, pending events and handshake
+// metadata. Safe to call again after normal save/quit has stopped the host.
 void mp_on_world_exit();
 
 // Load-time migration for worlds with co-op history.  Removes proxy NPCs left
@@ -234,8 +266,6 @@ std::string mp_get_host_world_name();
 void mp_capture_host_omt( const tripoint_abs_omt &p );
 bool mp_host_omt_valid();
 tripoint_abs_omt mp_host_omt();
-// Welcome JSON field ",\"host_omt\":[x,y,z]" (or "" if not captured). Net-thread safe.
-std::string mp_host_omt_welcome_field();
 // Client: the host's OMT from the welcome — start_game spawns here in client mode
 // instead of the character's scenario start_location (invalid if not a client join).
 tripoint_abs_omt mp_client_spawn_omt();
@@ -257,18 +287,14 @@ std::string mp_get_host_player_name();
 std::string mp_client_host_player_name();
 void mp_set_client_host_player_name( const std::string &name );
 
-// True when hosting and the host avatar has an active wait activity (ACT_WAIT,
-// ACT_WAIT_STAMINA, etc.).  Used by do_turn to skip monmove() so monsters
-// freeze while the host fast-forwards, giving the client time to act freely.
+// True when hosting and the host avatar has an active wait activity.
+// This is observational only: waiting never skips world simulation.
 bool host_is_in_wait_activity();
 
-// True when do_turn() should run `calendar::turn += 1_turns;` this iteration.
-// In SP and host mode, always true.  In client mode, true only when moves > 0
-// (i.e. the host just granted a turn) — otherwise the calendar races forward
-// at ~10 turns/sec while the client sits in its locked input poll.  Named
-// callout so the SP file in do_turn.cpp holds a single boolean check instead
-// of an inline MP block — keeps merge-conflict surface minimal.
+// Single-player and host own world time; clients only observe host timestamps.
 bool should_advance_calendar();
+// Called by the client main loop, never by packet parsing or a modal UI.
+bool client_begin_simulation_turn();
 
 // True when the given activity id (e.g. "ACT_CRAFT", "ACT_READ") is one where
 // the avatar is committed to ticking turns without per-turn user input — i.e.
@@ -316,6 +342,8 @@ void mp_notify_session_ending();
 // the shared world (save_request -> save_done) so the two stores stay in step.
 // No-op outside MP modes.
 void mp_after_quicksave();
+// Part of the world's save gate; a failed actor write must not report success.
+bool mp_save_remote_player();
 
 // Templates wire-sync on join: enumerate the local ~/Library/.../templates/
 // dir, send the list to the partner, then exchange any templates the other
@@ -331,6 +359,10 @@ void mp_templates_sync_on_join();
 // Silent on success (caller drives the next UI step); pops only on error.
 // Returns true if host mode is armed (including the no-op "already armed").
 bool mp_menu_start_host_session();
+
+// CLI and menu share the same deferred start, after the world is loaded.
+bool mp_request_host_session( uint16_t port, const std::string &password,
+                              const std::string &version );
 
 // Main-menu integration: prompts for a host address (with optional :port),
 // probes, connects, sets client mode.  Silent on success; pops an error
@@ -478,17 +510,6 @@ void mp_log( const std::string &msg );
 // distance / safe_mode change) so it never floods the log during 200-turn/sec FF.
 void mp_log_safemode_check( int newseen, int mostseen, int safe_mode );
 
-// Per-turn callouts invoked from do_turn.cpp (an SP file) so the MP per-turn
-// catch-up/gating logic lives here, not inline in the SP loop (rule 4, minimize
-// upstream merge conflicts). Non-client (SP/host) process_turn() still happens
-// in the normal SP suffix path.
-// mp_do_turn_update_body: catches up the host-driven calendar's jumps (stamina
-//   regen, suffers, cravings). mp_do_turn_process_turn: ticks effects/needs once
-//   per elapsed game-turn (skip on locked spin, capped catch-up on jumps) and
-//   discards process_turn's move regen (client moves come from server grants).
-void mp_do_turn_update_body( Character &u );
-void mp_do_turn_process_turn( Character &u );
-
 // Client only: re-send the client's current worn-item list, skin tone, hair,
 // and wielded weapon to the server so the remote NPC proxy stays in sync.
 // Call after any wear/take-off/wield action.
@@ -512,23 +533,13 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id = activity_id(
 void client_send_activity_start( const std::string &activity_id_str );
 void client_send_activity_end( const std::string &activity_id_str );
 
-// Client only: returns the luminance emitted by the host player (flashlight,
-// mutations, etc.) as received in the last state packet.  Used by lightmap.cpp
-// to inject a point light at the host NPC position during build_map_cache().
-float get_host_luminance();
-
-// Host only: returns the luminance emitted by the remote player (client), as
-// received in each action packet.  Used by lightmap.cpp to inject a point light
-// at the remote NPC proxy position during build_map_cache().
-float get_remote_player_luminance();
-
-// Client only: returns the character_id of the host NPC proxy so lightmap.cpp
-// can find the right NPC without knowing internal MP state.
+// Read-only light sources for every remote actor currently loaded in this view.
+struct player_light {
+    tripoint_bub_ms position;
+    float luminance;
+};
+std::vector<player_light> player_lights();
 character_id get_host_npc_character_id();
-
-// Host only: returns the character_id of the remote player NPC proxy so
-// lightmap.cpp can inject the client's light at the correct position.
-character_id get_remote_player_npc_character_id();
 
 // Client only: milliseconds since the server last granted moves to the client.
 // Returns a large value if no grant has been received yet.
@@ -563,20 +574,14 @@ tripoint_abs_ms client_ctrl_veh_abs();
 // client in the next grant.  Silently ignored when not hosting.
 void host_queue_sfx( const std::string &id, const std::string &variant, int vol );
 
-// Called after npc_trading::trade() completes with a remote player proxy.
-// Sends a trade_delta message so the other side's real avatar gains/loses items.
-void mp_post_trade( npc &np, const std::list<item> &items_given,
-                    const std::list<item> &items_taken );
-
-// Pass a single item to the adjacent partner.  Opens the inventory picker,
-// removes the item from the giver, adds it to the partner proxy, and sends
-// a trade_delta so the other side's real avatar gains the item.
-void mp_handle_pass_item();
+// Pass a full owned item through the shared authoritative operation. The
+// client submits an item identity and waits for its carried-inventory result.
+void mp_handle_pass_item( character_id target = character_id() );
 
 // MP: high-five the adjacent partner. Small mutual morale boost (both players),
 // gated on adjacency + the partner being available (idle, not mid-activity).
 // A busy partner is never interrupted — the gesture just whiffs with flavor.
-void mp_high_five();
+void mp_high_five( character_id target = character_id() );
 
 // MP: relay a local yell as authoritative world-noise.  Called from game::chat()
 // right after the avatar shouts.  No-op on the host (its shout already made real

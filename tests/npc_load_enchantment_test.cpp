@@ -20,7 +20,9 @@ TEST_CASE( "npc_deserialization_does_not_require_loaded_terrain", "[npc][regress
     clear_map( -4, 0 );
     npc original;
     original.randomize();
-    original.setpos( get_map(), tripoint_bub_ms( 59, 106, -4 ), false );
+    // This serialization fixture is not registered in an overmap. Initialize
+    // its position without trying to migrate a nonexistent registry entry.
+    original.set_pos_abs_only( get_map().get_abs( tripoint_bub_ms( 59, 106, -4 ) ) );
     // This mutation supplies a passive field emitter, like Magiclysm auras.
     // Rebuilding personality traits must not activate it during deserialization.
     original.personality.aggression = 10;

@@ -21,6 +21,8 @@
 #include "ai_reachability_owner.h"
 #include "avatar.h"
 #include "cata_assert.h"
+#include "cata_compiler_support.h"
+#include "creature_reachability_filter.h"
 #include "debug.h"
 #include "flood_fill.h"
 #include "game.h"
@@ -46,6 +48,13 @@ class Character;
 static const efftype_id effect_ridden( "ridden" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
+
+struct creature_tracker::reachability_state {
+    // Scratch has no world references. Destroy preparation (and drain workers)
+    // before releasing the owner's reusable traversal buffers.
+    ff::flood_fill_10_workspace flood;
+    std::optional<ai_reachability::frame> preparation;
+};
 
 creature_tracker::creature_tracker() = default;
 
@@ -268,7 +277,7 @@ void creature_tracker::clear()
     removed_this_turn_.clear();
     reachability_flood_cost_ms_ = 0.0;
     reachability_bitmap_cost_ms_ = 0.0;
-    reachability_preparation_.reset();
+    reachability_state_.reset();
     creatures_by_zone_and_faction_.clear();
     invalidate_reachability_cache();
 }
@@ -430,8 +439,8 @@ T *creature_tracker::creature_at( const tripoint_abs_ms &p, bool allow_hallucina
 
 void creature_tracker::invalidate_reachability_preparation()
 {
-    if( reachability_preparation_ ) {
-        reachability_preparation_->invalidate();
+    if( reachability_state_ && reachability_state_->preparation ) {
+        reachability_state_->preparation->invalidate();
     }
 }
 void creature_tracker::invalidate_reachability_cache()
@@ -446,8 +455,8 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
     if( workers == 0 || cata_mp::is_session_active() || is_pool_worker_thread() ) {
         return nullptr;
     }
-    if( reachability_preparation_ ) {
-        if( const auto *ready = reachability_preparation_->result() ) {
+    if( reachability_state_ && reachability_state_->preparation ) {
+        if( const ai_reachability::output *ready = reachability_state_->preparation->result() ) {
             // A local owner view validates each input block before its first use
             // during this flood; tiny zones need not scan the entire bubble.
             return ready;
@@ -458,25 +467,29 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
         return nullptr;
     }
     try {
-        if( !reachability_preparation_ ) {
-            reachability_preparation_ = std::make_unique<ai_reachability::frame>( workers == 1 ? 0 : workers );
+        if( !reachability_state_ ) {
+            reachability_state_ = std::make_unique<reachability_state>();
         }
-        ai_reachability::frame::lease request = reachability_preparation_->try_acquire();
+        if( !reachability_state_->preparation ) {
+            reachability_state_->preparation.emplace( workers == 1 ? 0 : workers );
+        }
+        ai_reachability::frame &preparation = *reachability_state_->preparation;
+        ai_reachability::frame::lease request = preparation.try_acquire();
         if( !request ) {
             return nullptr;
         }
         {
             CATA_PROFILE_SCOPE_NAMED( "ai.reachability.capture" );
-            if( !ai_reachability::capture_geometry( get_map(), reachability_preparation_->capture() ) ) {
+            if( !ai_reachability::capture_geometry( get_map(), preparation.capture() ) ) {
                 return nullptr;
             }
         }
-        if( reachability_preparation_->prepare( request ) ) {
-            const auto *values = reachability_preparation_->captured();
+        if( preparation.prepare( request ) ) {
+            const ai_reachability::snapshot *values = preparation.captured();
             if( values && ai_reachability::geometry_matches( get_map(), *values ) ) {
-                return reachability_preparation_->result();
+                return preparation.result();
             }
-            reachability_preparation_->invalidate();
+            preparation.invalidate();
         }
     } catch( const std::bad_alloc & ) {
         // No partial result is published; retain the original owner query.
@@ -493,7 +506,7 @@ void creature_tracker::rebuild_passability_bitmap()
     // from a fresh capture in this owner interval, never a cached ready frame.
     invalidate_reachability_preparation();
     if( const auto *prepared = prepare_reachability_geometry() ) {
-        const auto *values = reachability_preparation_->captured();
+        const ai_reachability::snapshot *values = reachability_state_->preparation->captured();
         if( values && ai_reachability::geometry_matches( here, *values ) ) {
             CATA_PROFILE_SCOPE_NAMED( "ai.reachability.publish_bitmap" );
             passability_bitmap_ = prepared->passable;
@@ -526,7 +539,8 @@ void creature_tracker::rebuild_passability_bitmap()
  * the same zone will have the same zone number assigned, which can be used to have creatures in
  * different zones ignore each other very cheaply.
  */
-void creature_tracker::flood_fill_zone( const Creature &origin )
+void creature_tracker::flood_fill_zone( const Creature &origin,
+                                        const creature_reachability_filter *occupancy )
 {
     if( dirty_ ) {
         creatures_by_zone_and_faction_.clear();
@@ -548,78 +562,103 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
 
     CATA_PROFILE_SCOPE_NAMED( "ai.reachability.flood" );
     const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    if( !reachability_state_ ) {
+        try {
+            reachability_state_ = std::make_unique<reachability_state>();
+        } catch( const std::bad_alloc & ) {
+            // Scratch allocation is optional; the original local algorithm is
+            // still available. Do not catch exceptions from the flood itself.
+        }
+    }
     const ai_reachability::output *prepared = prepare_reachability_geometry();
     map &here = get_map();
     std::optional<ai_reachability::geometry_view> geometry;
     if( prepared ) {
-        geometry.emplace( here, *reachability_preparation_->captured() );
+        geometry.emplace( here, *reachability_state_->preparation->captured() );
     }
-    ff::flood_fill_visit_10_connected( origin.pos_bub(),
-    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) -> bool {
-        if( direction == 0 )
-        {
-            return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-            loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-            loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-            passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
-        }
+    struct reachability_predicate {
+        creature_tracker &owner;
+        map &here;
+        const ai_reachability::output *prepared;
+        std::optional<ai_reachability::geometry_view> &geometry;
 
-        if( prepared && geometry->matches_at( loc, direction ) )
-        {
-            return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
-            prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
-        }
+        // Keep the per-cell check inline even when scratch is passed by reference.
+        CATA_FORCEINLINE bool operator()( const tripoint_bub_ms &loc, int direction ) const {
+            if( direction == 0 ) {
+                return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
+                       loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+                       loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+                       owner.passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            }
 
-        auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter )
-        {
-            return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
-                     here.is_transparent_wo_fields( loc ) ) &&
-            ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
-              ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
-        };
+            if( prepared && geometry->matches_at( loc, direction ) ) {
+                return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
+                       prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            }
 
-        if( direction == 1 )
-        {
-            const maptile &up = here.maptile_at( loc );
-            const ter_t &up_ter = up.get_ter_t();
-            if( up_ter.id.is_null() ) {
-                return false;
+            auto check_location_passable_down = [loc, this]( const maptile & mt, const ter_t & ter ) {
+                return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
+                         here.is_transparent_wo_fields( loc ) ) &&
+                       ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+                         ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
+            };
+
+            if( direction == 1 ) {
+                const maptile &up = here.maptile_at( loc );
+                const ter_t &up_ter = up.get_ter_t();
+                if( up_ter.id.is_null() ) {
+                    return false;
+                }
+                if( check_location_passable_down( up, up_ter ) ) {
+                    return true;
+                }
             }
-            if( check_location_passable_down( up, up_ter ) ) {
-                return true;
+            if( direction == -1 ) {
+                const maptile &up = here.maptile_at( loc + tripoint::above );
+                const ter_t &up_ter = up.get_ter_t();
+                if( up_ter.id.is_null() ) {
+                    return false;
+                }
+                const maptile &down = here.maptile_at( loc );
+                const ter_t &down_ter = up.get_ter_t();
+                if( down_ter.id.is_null() ) {
+                    return false;
+                }
+                if( check_location_passable_down( down, down_ter ) ) {
+                    return true;
+                }
             }
+            return false;
         }
-        if( direction == -1 )
-        {
-            const maptile &up = here.maptile_at( loc + tripoint::above );
-            const ter_t &up_ter = up.get_ter_t();
-            if( up_ter.id.is_null() ) {
-                return false;
-            }
-            const maptile &down = here.maptile_at( loc );
-            const ter_t &down_ter = up.get_ter_t();
-            if( down_ter.id.is_null() ) {
-                return false;
-            }
-            if( check_location_passable_down( down, down_ter ) ) {
-                return true;
-            }
+    };
+    const reachability_predicate passable{ *this, here, prepared, geometry };
+    std::optional<creature_reachability_filter> local_occupancy;
+    if( !occupancy ) {
+        local_occupancy.emplace( creature_locations_for_flood() );
+        occupancy = &*local_occupancy;
+    }
+    const auto visit = [this, occupancy, &here]( const tripoint_bub_ms & loc ) {
+        const tripoint_abs_ms position = here.get_abs( loc );
+        if( !occupancy->may_contain( position ) ) {
+            return;
         }
-        return false;
-    },
-    [this]( const tripoint_bub_ms & loc ) {
-        if( Creature *creature = this->creature_at<Creature>( loc, true ) ) {
+        if( Creature *creature = this->creature_at<Creature>( position, true ) ) {
             if( shared_ptr_fast<Creature> ptr = g->shared_from( *creature ) ) {
                 const int n = zone_number_ * zone_tick_;
                 creatures_by_zone_and_faction_[n][creature->get_monster_faction()].emplace_back( std::move( ptr ) );
                 creature->set_reachable_zone( n );
             }
         }
-    } );
+    };
+    if( reachability_state_ ) {
+        ff::flood_fill_visit_10_connected( origin.pos_bub(), passable, visit, reachability_state_->flood );
+    } else {
+        ff::flood_fill_visit_10_connected( origin.pos_bub(), passable, visit );
+    }
     if( geometry && geometry->stale() ) {
         // Reads already fell back cell-by-cell, so no partial zone rollback is
         // needed. Rebuild the value preparation before its next admitted use.
-        reachability_preparation_->invalidate();
+        reachability_state_->preparation->invalidate();
     }
     reachability_flood_cost_ms_ = std::max( reachability_flood_cost_ms_ * 0.9,
                                             std::chrono::duration<double, std::milli>(
@@ -629,6 +668,21 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
     } else {
         zone_number_++;
     }
+}
+
+creature_reachability_filter creature_tracker::creature_locations_for_flood() const
+{
+    // Traversal coverage is coarser than the point-query index. Keep it local
+    // to this synchronous pass, and use canonical keys rather than current actor positions.
+    creature_reachability_filter result;
+    for( const auto &entry : monsters_by_location ) {
+        result.mark( entry.first );
+    }
+    for( const auto &person : active_npc ) {
+        result.mark( person->pos_abs() );
+    }
+    result.mark( get_avatar().pos_abs() );
+    return result;
 }
 
 void creature_tracker::precompute_all_zones()
@@ -654,8 +708,15 @@ void creature_tracker::precompute_all_zones()
             needs_zone.push_back( n.get() );
         }
     }
+    if( needs_zone.empty() ) {
+        return;
+    }
+    const creature_reachability_filter occupancy = creature_locations_for_flood();
+    // These floods only assign zones; their predicates and visitors invoke no
+    // gameplay callbacks or movement. The captured filter ends with this pass.
+    // Later lazy floods take a new snapshot, including any intervening movement.
     for( Creature *creature : needs_zone ) {
-        flood_fill_zone( *creature );
+        flood_fill_zone( *creature, &occupancy );
     }
 }
 

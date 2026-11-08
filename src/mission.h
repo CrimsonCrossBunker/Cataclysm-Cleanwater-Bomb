@@ -21,6 +21,7 @@
 #include "translation.h"
 #include "type_id.h"
 
+class Character;
 class Creature;
 class JsonArray;
 class JsonObject;
@@ -98,25 +99,27 @@ struct mission_place {
  * initializes the mission's key values, like the target and description.
  */
 struct mission_start {
-    static void standard( mission * );           // Standard for its goal type
-    static void kill_nemesis( mission * );       // Kill the nemesis spawned with the "hunted" trait
-    static void place_npc_software( mission * ); // Put NPC-type-dependent software
-    static void place_deposit_box( mission * );  // Place a safe deposit box in a nearby bank
-    static void find_safety( mission * );        // Goal is set to non-spawn area
-    static void place_book( mission * );         // Place a book to retrieve
-    static void reveal_refugee_center( mission * ); // Find refugee center
+    static void standard( mission *, Character & );           // Standard for its goal type
+    static void kill_nemesis( mission *,
+                              Character & );       // Kill the nemesis spawned with the "hunted" trait
+    static void place_npc_software( mission *, Character & ); // Put NPC-type-dependent software
+    static void place_deposit_box( mission *,
+                                   Character & );  // Place a safe deposit box in a nearby bank
+    static void find_safety( mission *, Character & );        // Goal is set to non-spawn area
+    static void place_book( mission *, Character & );         // Place a book to retrieve
+    static void reveal_refugee_center( mission *, Character & ); // Find refugee center
 };
 
 // These functions are run when a mission ends
 struct mission_end {
     // Nothing special happens
-    static void standard( mission * ) {}
+    static void standard( mission *, Character & ) {}
     // random valuable reward
 };
 
 struct mission_fail {
     // Nothing special happens
-    static void standard( mission * ) {}
+    static void standard( mission *, Character & ) {}
 };
 
 struct mission_target_params {
@@ -144,6 +147,7 @@ struct mission_target_params {
 namespace mission_util
 {
 tripoint_abs_omt random_house_in_closest_city();
+tripoint_abs_omt random_house_in_closest_city( const Character &who );
 bool reveal_road( const tripoint_abs_omt &source, const tripoint_abs_omt &dest,
                   overmapbuffer &omb );
 tripoint_abs_omt reveal_om_ter( tripoint_abs_omt origin, const std::string &omter, int reveal_rad,
@@ -156,18 +160,19 @@ tripoint_abs_omt target_om_ter_random(
     const std::string &omter, int reveal_rad, mission *miss, bool must_see, int range,
     tripoint_abs_omt loc = tripoint_abs_omt::invalid );
 void set_reveal( const std::string &terrain,
-                 std::vector<std::function<void( mission *miss )>> &funcs );
+                 std::vector<std::function<void( mission *, Character & )>> &funcs );
 void set_reveal_any( const JsonArray &ja,
-                     std::vector<std::function<void( mission *miss )>> &funcs );
+                     std::vector<std::function<void( mission *, Character & )>> &funcs );
 mission_target_params parse_mission_om_target( const JsonObject &jo );
 std::optional<tripoint_abs_omt> assign_mission_target( const mission_target_params
         &params, dialogue &d );
 tripoint_abs_omt get_om_terrain_pos( const mission_target_params &params, dialogue &d );
 void set_assign_om_target( const JsonObject &jo,
-                           std::vector<std::function<void( mission *miss )>> &funcs );
+                           std::vector<std::function<void( mission *, Character & )>> &funcs );
 bool set_update_mapgen( const JsonObject &jo,
-                        std::vector<std::function<void( mission *miss )>> &funcs );
-bool load_funcs( const JsonObject &jo, std::vector<std::function<void( mission *miss )>> &funcs );
+                        std::vector<std::function<void( mission *, Character & )>> &funcs );
+bool load_funcs( const JsonObject &jo,
+                 std::vector<std::function<void( mission *, Character & )>> &funcs );
 } // namespace mission_util
 
 struct mission_type {
@@ -217,9 +222,9 @@ struct mission_type {
         mission_type_id follow_up = mission_type_id( "MISSION_NULL" );
 
         std::function<bool( const tripoint_abs_omt & )> place = mission_place::always;
-        std::function<void( mission * )> start = mission_start::standard;
-        std::function<void( mission * )> end = mission_end::standard;
-        std::function<void( mission * )> fail = mission_fail::standard;
+        std::function<void( mission *, Character & )> start = mission_start::standard;
+        std::function<void( mission *, Character & )> end = mission_end::standard;
+        std::function<void( mission *, Character & )> fail = mission_fail::standard;
 
         std::map<std::string, translation> dialogue;
 
@@ -253,7 +258,7 @@ struct mission_type {
         static void check_consistency();
 
         bool parse_funcs( const JsonObject &jo, std::string_view src,
-                          std::function<void( mission * )> &phase_func );
+                          std::function<void( mission *, Character & )> &phase_func );
         bool load( const JsonObject &jo, std::string_view src );
 
         /**
@@ -283,6 +288,10 @@ class mission
 
         const mission_type *type;
         mission_status status;
+        bool failure_effects_pending = false;
+        bool nemesis_respawn_pending = false;
+        Character *assigned_character() const;
+        void finish_failure( Character &who );
         // Cash/Favor value of completing this
         unsigned int value;
         // If there's a special reward for completing it
@@ -299,7 +308,7 @@ class mission
         // The number of above items needed
         int item_count = 0;
         // Destination type to be reached
-        string_id<oter_type_t> target_id;
+        string_id < oter_type_t > target_id;
         // The type of NPC you are to recruit
         npc_class_id recruit_class;
         // The ID of a specific NPC to interact with
@@ -383,29 +392,29 @@ class mission
         void set_target( const tripoint_abs_omt &p );
         void set_target_npc_id( const character_id &npc_id );
         void set_assigned_player_id( const character_id &char_id );
-        void update_world_missions_character( const character_id &old_char_id,
-                                              const character_id &new_char_id );
         /*@}*/
 
         /** Assigns the mission to the player. */
-        void assign( avatar &u );
+        void assign( Character &u );
 
         /** Called when the mission has failed, calls the mission fail callback. */
         void fail();
         /** Explicit-player variant used by generation-safe Platform services. */
-        void fail( avatar &player_character );
+        void fail( Character &player_character );
         /** Handles mission completion tasks (remove given item, etc.). */
         void wrap_up();
         /** Explicit-player variant used by generation-safe Platform services. */
-        void wrap_up( avatar &player_character );
+        void wrap_up( Character &player_character );
         /** Handles partial mission completion (kill complete, now report back!). */
         void step_complete( int step );
         /** Checks if the player has completed the matching mission and returns true if they have. */
         bool is_complete( const character_id &npc_id ) const;
         /** Explicit-player variant used by generation-safe Platform services. */
-        bool is_complete( const character_id &npc_id, avatar &player_character ) const;
+        bool is_complete( const character_id &npc_id, Character &player_character ) const;
         /** Checks if the player has failed the matching mission and returns true if they have. */
         bool has_failed() const;
+        /** Whether completion effects have already committed. */
+        bool has_succeeded() const;
         /** Checks if the mission is started, but not failed and not succeeded. */
         bool in_progress() const;
         /** Generation incremented whenever a native mission instance is inserted. */
@@ -430,6 +439,8 @@ class mission
          * id exists.
          */
         static mission *find( int id, bool ok_missing = false );
+        // Validate a legacy borrowed address before reading its uid/generation.
+        static mission *find_by_address( const mission *candidate );
         /**
          * Remove a reserved mission that has not been assigned.
          * Returns false when the mission is missing or already assigned.
@@ -457,13 +468,15 @@ class mission
         static void serialize_all( JsonOut &json );
         static void unserialize_all( const JsonArray &ja );
         /** Converts a vector mission ids to a vector of mission pointers. Invalid ids are skipped! */
-        static std::vector<mission *> to_ptr_vector( const std::vector<int> &vec, bool ok_missing = false );
-        static std::vector<int> to_uid_vector( const std::vector<mission *> &vec );
+        static std::vector < mission * > to_ptr_vector( const std::vector < int > &vec,
+                bool ok_missing = false );
+        static std::vector < int > to_uid_vector( const std::vector < mission * > &vec );
 
         // For save/load
-        static std::vector<mission *> get_all_active();
+        static std::vector < mission * > get_all_active();
         void remove_active_world_mission( mission &cur_mission );
         static void add_existing( const mission &m );
+        static void sync_replica( const mission &m );
 
         static mission_status status_from_string( const std::string &s );
         static std::string status_to_string( mission_status st );
@@ -473,17 +486,17 @@ class mission
         void set_target_to_mission_giver();
 
         static void get_all_item_group_matches(
-            std::vector<item *> &items,
+            std::vector < item * > &items,
             item_group_id &grp_type,
-            std::map<itype_id, int> &matches,
+            std::map < itype_id, int > &matches,
             const itype_id &required_container,
             const itype_id &actual_container,
             bool &specific_container_required );
 
 };
 
-template<>
-struct enum_traits<mission::mission_status> {
+template < >
+struct enum_traits < mission::mission_status > {
     static constexpr mission::mission_status last = mission::mission_status::num_mission_status;
 };
 

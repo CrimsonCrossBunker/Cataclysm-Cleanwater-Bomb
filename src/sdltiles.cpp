@@ -8078,17 +8078,7 @@ static int input_wait_ms( const std::optional<uint32_t> &input_ms )
 
 input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )
 {
-    // Replay takes precedence over the test_mode guard: a replaying session
-    // sources input from the log instead of polling SDL.
-    if( input_replay::is_replaying() ) {
-        input_event replayed;
-        if( input_replay::try_replay( replayed ) ) {
-            previously_pressed_key = replayed.get_first_input();
-            return replayed;
-        }
-        // Replay log exhausted: fall through to normal polling.
-    }
-    if( test_mode ) {
+    if( test_mode && !input_replay::is_replaying() ) {
         // input should be skipped in caller's code
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
     }
@@ -8135,6 +8125,15 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
         refresh_display();
     } else if( ui_adaptor::has_imgui() ) {
         try_sdl_update();
+    }
+
+    // A replay must present pending UI changes just like interactive input.
+    // Returning before the pre-input refresh left the loading screen visible
+    // and omitted presentation costs from native replay measurements.
+    if( input_replay::is_replaying() ) {
+        const input_event replayed = input_replay::next_event();
+        previously_pressed_key = replayed.get_first_input();
+        return replayed;
     }
 
 #if defined(EMSCRIPTEN)

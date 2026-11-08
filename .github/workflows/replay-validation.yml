@@ -1,0 +1,55 @@
+name: Replay protocol and comparison
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/standalone/**'
+      - 'tools/replay_ab.py'
+      - 'tools/test_replay_ab.py'
+      - 'tools/replay_save_compare.py'
+      - 'tools/test_replay_save_compare.py'
+      - '.github/workflows/replay-validation.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'tests/standalone/**'
+      - 'tools/replay_ab.py'
+      - 'tools/test_replay_ab.py'
+      - 'tools/replay_save_compare.py'
+      - 'tools/test_replay_save_compare.py'
+      - '.github/workflows/replay-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: replay-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare isolated runs, including failed and incomplete runs
+        run: python3 tools/test_replay_ab.py
+      - name: Compare decoded saves without hiding state differences
+        run: python3 tools/test_replay_save_compare.py
+      - name: Configure focused production-code tests with sanitizers
+        run: >-
+          cmake -S tests/standalone -B out/replay-protocol
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+      - name: Build focused production targets without the full game
+        run: cmake --build out/replay-protocol --parallel 2
+      - name: Validate replay and compute resource boundaries
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir out/replay-protocol --output-on-failure

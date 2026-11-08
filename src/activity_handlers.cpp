@@ -42,6 +42,7 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "ret_val.h"
+#include "repair_activity.h"
 #include "skill.h"
 #include "string_formatter.h"
 #include "temp_crafting_inventory.h"
@@ -130,7 +131,7 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
                 break;
             case liquid_source_type::FINITE_MAP:
                 liquid = finite_water::finite_liquid_from( act_ref.coords.at( 0 ),
-                    &finite_body_tiles );
+                         &finite_body_tiles );
                 if( liquid.is_null() ) {
                     act_ref.set_to_null();
                     return;
@@ -322,17 +323,7 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
 
 namespace
 {
-enum class repeat_type : int {
-    // INIT should be zero. In some scenarios (vehicle welder), activity value default to zero.
-    INIT = 0,       // Haven't found repeat value yet.
-    ONCE = 1,       // Attempt repair (and refit if possible) just once
-    // value 2 obsolete - previously used for reinforcement
-    FULL = 3,       // Continue repairing until damage==0 (and until refitted if possible)
-    EVENT = 4,      // Continue repairing (and refit if possible) until something interesting happens
-    REFIT_ONCE = 5, // Try refitting once, but don't repair
-    REFIT_FULL = 6, // Continue refitting until item fits, but don't repair
-    CANCEL = 7,     // Stop repeating
-};
+using repeat_type = repair_repeat;
 
 using I = std::underlying_type_t<repeat_type>;
 constexpr bool operator>=( const I &lhs, const repeat_type &rhs )
@@ -378,6 +369,88 @@ static repeat_type repeat_menu( const std::string &title, repeat_type last_selec
     }
 
     return repeat_type::CANCEL;
+}
+
+repair_repeat query_repair_repeat( Character &who, const item &tool, const item &fix,
+                                   const repair_item_actor &actor, repair_repeat previous )
+{
+    map &here = get_map();
+    const bool can_refit = fix.has_flag( flag_VARSIZE ) && !fix.has_flag( flag_FIT );
+    const int level = who.get_skill_level( actor.used_skill );
+    repair_item_actor::repair_type action_type = actor.default_action( who, fix, level );
+    if( action_type == repair_item_actor::RT_NOTHING ) {
+        who.add_msg_if_player( _( "You won't learn anything more by doing that." ) );
+    }
+
+    const std::pair<float, float> chance = actor.repair_chance( who, fix, action_type );
+    if( chance.first <= 0.0f ) {
+        action_type = repair_item_actor::RT_PRACTICE;
+    }
+
+    std::string title = string_format( _( "%s %s\n" ),
+                                       repair_item_actor::action_description( action_type ),
+                                       fix.tname() );
+    ammotype current_ammo;
+    std::string ammo_name;
+    if( tool.has_flag( flag_USE_UPS ) || tool.has_link_data() ) {
+        ammo_name = _( "battery" );
+        current_ammo = ammo_battery;
+    } else if( tool.has_flag( flag_USES_BIONIC_POWER ) ) {
+        ammo_name = _( "bionic power" );
+
+    } else {
+        const itype_id ammo_id = tool.ammo_current().is_null()
+                                 ? tool.ammo_default() : tool.ammo_current();
+        if( const std::optional<ammotype> at = item::ammotype_of( ammo_id ) ) {
+            current_ammo = *at;
+        }
+        ammo_name = item::nname( tool.ammo_current() );
+    }
+
+    int ammo_remaining = tool.ammo_remaining_linked( here, &who );
+
+    std::set<itype_id> valid_entries = actor.get_valid_repair_materials( fix );
+    const temp_crafting_inventory &crafting_inv = who.crafting_inventory();
+    std::function<bool( const item & )> filter;
+    if( fix.is_filthy() ) {
+        filter = []( const item & component ) {
+            return component.allow_crafting_component();
+        };
+    } else {
+        filter = is_crafting_component;
+    }
+    std::vector<std::string> material_list;
+    for( const auto &component_id : valid_entries ) {
+        if( item::count_by_charges( component_id ) ) {
+            if( crafting_inv.has_charges( component_id, 1 ) ) {
+                material_list.push_back( string_format( _( "%s (%d)" ), item::nname( component_id ),
+                                                        crafting_inv.charges_of( component_id ) ) );
+            }
+        } else if( crafting_inv.has_amount( component_id, 1, false, filter ) ) {
+            material_list.push_back( string_format( _( "%s (%d)" ), item::nname( component_id ),
+                                                    crafting_inv.amount_of( component_id, false ) ) );
+        }
+    }
+
+    const int per_use = tool.expected_cost_per_use();
+    title += tool.is_tool() && tool.has_flag( flag_USES_NEARBY_AMMO )
+             ? string_format( _( "Charges: <color_light_blue>%d</color> %s (%d per use)\n" ),
+                              ammo_remaining,
+                              ammo_name,
+                              per_use )
+             : string_format( _( "Charges: <color_light_blue>%d/%d</color> %s (%d per use)\n" ),
+                              ammo_remaining, tool.ammo_capacity( current_ammo, true ),
+                              ammo_name,
+                              per_use );
+    title += string_format( _( "Materials available: %s\n" ), string_join( material_list, ", " ) );
+    title += string_format( _( "Skill used: <color_light_blue>%s (%d)</color>\n" ),
+                            actor.used_skill.obj().name(), level );
+    title += string_format( _( "Success chance: <color_light_blue>%.1f</color>%%\n" ),
+                            100.0f * chance.first );
+    title += string_format( _( "Damage chance: <color_light_blue>%.1f</color>%%" ),
+                            100.0f * chance.second );
+
+    return repeat_menu( title, previous, can_refit );
 }
 
 // HACK: This is a part of a hack to provide pseudo items for long repair activity
@@ -436,8 +509,8 @@ struct weldrig_hack {
             return null_item_reference();
         }
         pseudo.ammo_set( itype_battery, part->vehicle().drain( here,  itype_battery,
-                pseudo.ammo_capacity( ammo_battery ),
-                return_true< vehicle_part &>, false ) ); // no cable loss since all of this is virtual
+                         pseudo.ammo_capacity( ammo_battery ),
+                         return_true< vehicle_part &>, false ) ); // no cable loss since all of this is virtual
         return pseudo;
     }
 
@@ -468,7 +541,7 @@ void repair_item_finish( player_activity *act, Character *you, bool no_menu )
     map &here = get_map();
     const std::string iuse_name_string = act->get_str_value( 0, "repair_item" );
     repeat_type repeat = static_cast<repeat_type>( act->get_value( 0,
-        static_cast<int>( repeat_type::INIT ) ) );
+                         static_cast<int>( repeat_type::INIT ) ) );
     weldrig_hack w_hack;
     item_location *ploc = nullptr;
 
@@ -513,7 +586,7 @@ void repair_item_finish( player_activity *act, Character *you, bool no_menu )
         // Remember our level: we want to stop retrying on level up
         const int old_level = you->get_skill_level( actor->used_skill );
         const repair_item_actor::attempt_hint attempt = actor->repair( *you, *used_tool,
-            fix_location, repeat == repeat_type::REFIT_ONCE || repeat == repeat_type::REFIT_FULL );
+                fix_location, repeat == repeat_type::REFIT_ONCE || repeat == repeat_type::REFIT_FULL );
         // Warning: The above call to `repair_item_actor::repair` might
         // invalidate the item and the item_location, for example when
         // spilling items from spillable containers. It is therefore
@@ -601,85 +674,12 @@ void repair_item_finish( player_activity *act, Character *you, bool no_menu )
     const item &fix = *act->targets[1];
     const bool can_refit = fix.has_flag( flag_VARSIZE ) && !fix.has_flag( flag_FIT );
     if( repeat == repeat_type::INIT ) {
-        const int level = you->get_skill_level( actor->used_skill );
-        repair_item_actor::repair_type action_type = actor->default_action( fix, level );
-        if( action_type == repair_item_actor::RT_NOTHING ) {
-            you->add_msg_if_player( _( "You won't learn anything more by doing that." ) );
-        }
-
-        const std::pair<float, float> chance = actor->repair_chance( *you, fix, action_type );
-        if( chance.first <= 0.0f ) {
-            action_type = repair_item_actor::RT_PRACTICE;
-        }
-
-        std::string title = string_format( _( "%s %s\n" ),
-                                           repair_item_actor::action_description( action_type ),
-                                           fix.tname() );
-        ammotype current_ammo;
-        std::string ammo_name;
-        if( used_tool->has_flag( flag_USE_UPS ) || used_tool->has_link_data() ) {
-            ammo_name = _( "battery" );
-            current_ammo = ammo_battery;
-        } else if( used_tool->has_flag( flag_USES_BIONIC_POWER ) ) {
-            ammo_name = _( "bionic power" );
-
-        } else {
-            const itype_id ammo_id = used_tool->ammo_current().is_null()
-                                     ? used_tool->ammo_default() : used_tool->ammo_current();
-            if( const std::optional<ammotype> at = item::ammotype_of( ammo_id ) ) {
-                current_ammo = *at;
-            }
-            ammo_name = item::nname( used_tool->ammo_current() );
-        }
-
-        int ammo_remaining = used_tool->ammo_remaining_linked( here, you );
-
-        std::set<itype_id> valid_entries = actor->get_valid_repair_materials( fix );
-        const temp_crafting_inventory &crafting_inv = you->crafting_inventory();
-        std::function<bool( const item & )> filter;
-        if( fix.is_filthy() ) {
-            filter = []( const item & component ) {
-                return component.allow_crafting_component();
-            };
-        } else {
-            filter = is_crafting_component;
-        }
-        std::vector<std::string> material_list;
-        for( const auto &component_id : valid_entries ) {
-            if( item::count_by_charges( component_id ) ) {
-                if( crafting_inv.has_charges( component_id, 1 ) ) {
-                    material_list.push_back( string_format( _( "%s (%d)" ), item::nname( component_id ),
-                                                            crafting_inv.charges_of( component_id ) ) );
-                }
-            } else if( crafting_inv.has_amount( component_id, 1, false, filter ) ) {
-                material_list.push_back( string_format( _( "%s (%d)" ), item::nname( component_id ),
-                                                        crafting_inv.amount_of( component_id, false ) ) );
-            }
-        }
-
-        const int per_use = used_tool->expected_cost_per_use();
-        title += used_tool->is_tool() && used_tool->has_flag( flag_USES_NEARBY_AMMO )
-                 ? string_format( _( "Charges: <color_light_blue>%d</color> %s (%d per use)\n" ),
-                                  ammo_remaining,
-                                  ammo_name,
-                                  per_use )
-                 : string_format( _( "Charges: <color_light_blue>%d/%d</color> %s (%d per use)\n" ),
-                                  ammo_remaining, used_tool->ammo_capacity( current_ammo, true ),
-                                  ammo_name,
-                                  per_use );
-        title += string_format( _( "Materials available: %s\n" ), string_join( material_list, ", " ) );
-        title += string_format( _( "Skill used: <color_light_blue>%s (%d)</color>\n" ),
-                                actor->used_skill.obj().name(), level );
-        title += string_format( _( "Success chance: <color_light_blue>%.1f</color>%%\n" ),
-                                100.0f * chance.first );
-        title += string_format( _( "Damage chance: <color_light_blue>%.1f</color>%%" ),
-                                100.0f * chance.second );
 
         if( act->values.empty() ) {
             act->values.resize( 1 );
         }
         do {
-            repeat = repeat_menu( title, repeat, can_refit );
+            repeat = query_repair_repeat( *you, *used_tool, fix, *actor, repeat );
 
             if( repeat == repeat_type::CANCEL ) {
                 act->set_to_null();
@@ -722,7 +722,7 @@ void activity_handlers::travel_do_turn( player_activity *act, Character *you )
         } else {
             // otherwise target the middle of the edge nearest to our current location
             const tripoint_abs_ms cur_omt_mid = midpoint( project_bounds<coords::ms>
-                ( you->pos_abs_omt() ) );
+                                                ( you->pos_abs_omt() ) );
             waypoint = clamp( cur_omt_mid, project_bounds<coords::ms>( next_omt ) );
         }
         map &here = get_map();
