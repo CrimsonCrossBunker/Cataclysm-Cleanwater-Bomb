@@ -21,6 +21,15 @@ vehicle *resolve_remote_vehicle( const Character &who, map &here );
 vehicle *get_remote_vehicle( Character &who, map &here );
 bool set_remote_vehicle( Character &who, map &here, vehicle *target );
 
+// A physically present driver supplies muscle power; a remote operator can steer and train,
+// but cannot supply another character's body. Neither query invents an operator
+// for unattended or debug-controlled vehicles.
+Character *vehicle_operator( const vehicle &target, map &here );
+vehicle *controlled_vehicle( const Character &who, map &here );
+bool drive_vehicle( Character &who, map &here, const tripoint_rel_ms &input );
+bool adjust_vehicle_cruise( Character &who, map &here, int direction );
+bool brake_vehicle( Character &who, map &here );
+
 // Explicit choices only; the server revalidates access, identity and costs.
 struct vehicle_control_selection {
     int64_t vehicle_id = 0;

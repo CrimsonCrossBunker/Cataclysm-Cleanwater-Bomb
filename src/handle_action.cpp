@@ -1,3 +1,4 @@
+#include "vehicle_control.h"
 #include "game.h" // IWYU pragma: associated
 
 #include <coordinates.h>
@@ -675,82 +676,9 @@ static void rcdrive( const point_rel_ms &d )
 
 static void pldrive( const tripoint_rel_ms &p )
 {
-    if( !g->check_safe_mode_allowed() ) {
-        return;
+    if( g->check_safe_mode_allowed() ) {
+        drive_vehicle( get_avatar(), get_map(), p );
     }
-    vehicle *veh = g->remoteveh();
-    bool remote = true;
-    int part = -1;
-    Character &player_character = get_player_character();
-    map &here = get_map();
-    if( !veh ) {
-        if( const optional_vpart_position vp = here.veh_at( player_character.pos_bub() ) ) {
-            veh = &vp->vehicle();
-            part = vp->part_index();
-        }
-        remote = false;
-    }
-    if( !veh ) {
-        dbg( D_ERROR ) << "game::pldrive: can't find vehicle!  Drive mode is now off.";
-        debugmsg( "game::pldrive error: can't find vehicle!  Drive mode is now off." );
-        player_character.in_vehicle = false;
-        return;
-    }
-    if( veh->is_on_ramp && p.x() != 0 ) {
-        add_msg( m_bad, _( "You can't turn the vehicle while on a ramp." ) );
-        return;
-    }
-    if( !remote ) {
-        const vehicle_part &vp = veh->part( part );
-        const bool has_animal_controls = veh->part_with_feature( vp.mount, "CONTROL_ANIMAL", true ) >= 0;
-        const bool has_controls = veh->part_with_feature( vp.mount, "CONTROLS", true ) >= 0;
-        const bool has_animal = veh->has_engine_type( fuel_type_animal, false ) &&
-                                veh->get_harnessed_animal( here );
-        if( !has_controls && !has_animal_controls ) {
-            add_msg( m_info, _( "You can't drive the vehicle from here.  You need controls!" ) );
-            player_character.controlling_vehicle = false;
-            return;
-        } else if( !has_controls && has_animal_controls && !has_animal ) {
-            add_msg( m_info, _( "You can't drive this vehicle without an animal to pull it." ) );
-            player_character.controlling_vehicle = false;
-            return;
-        }
-    } else {
-        if( empty( veh->get_avail_parts( "REMOTE_CONTROLS" ) ) ) {
-            add_msg( m_info, _( "Can't drive this vehicle remotely.  It has no working controls." ) );
-            return;
-        }
-    }
-    if( p.z() != 0 ) {
-        if( !veh->can_control_in_air( player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle fly." ) );
-            return;
-        }
-        if( !veh->is_flyable() ) {
-            player_character.add_msg_if_player( m_info, _( "This vehicle doesn't look very airworthy." ) );
-            return;
-        }
-    }
-    if( p.z() == -1 ) {
-        if( veh->check_heli_descend( here, player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You steer the vehicle into a descent." ) );
-        } else {
-            return;
-        }
-    } else if( p.z() == 1 ) {
-        if( veh->check_heli_ascend( here,  player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You steer the vehicle into an ascent." ) );
-        } else {
-            return;
-        }
-    }
-    if( !veh->is_flying_in_air() ) {
-        if( !veh->can_control_on_land( player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle move." ) );
-            return;
-        }
-    }
-    veh->pldrive( here, get_avatar(), p.x(), p.y(), p.z() );
 }
 
 static void pldrive( point_rel_ms d )

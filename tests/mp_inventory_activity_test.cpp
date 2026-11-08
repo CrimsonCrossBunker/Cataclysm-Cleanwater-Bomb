@@ -5095,3 +5095,220 @@ TEST_CASE( "vehicle_start_assignment_handles_removed_owner_or_vehicle",
         CHECK_FALSE( who.controlling_vehicle );
     }
 }
+
+TEST_CASE( "vehicle_muscle_power_and_training_belong_to_the_seated_driver",
+           "[multiplayer][vehicle_driving_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    avatar &host = get_avatar();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( host, tripoint_bub_ms( 60, 60, 0 ), "bicycle" );
+    const tripoint_bub_ms controls = host.pos_bub();
+    const proficiency_id driving( "prof_driver" );
+    const float host_training = host.get_proficiency_practice( driving );
+    const int host_stamina = host.get_stamina();
+    // Merely standing over the pedals does not provide a body's fuel or training.
+    CHECK( target.fuel_left( here, itype_id( "muscle" ) ) == 0 );
+    target.consume_fuel( here, 1000, false );
+    CHECK( host.get_proficiency_practice( driving ) == host_training );
+    CHECK( host.get_stamina() == host_stamina );
+
+    host.setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    who.setpos( here, controls );
+    here.board_vehicle( controls, &who );
+    who.controlling_vehicle = true;
+    target.engine_on = true;
+    REQUIRE( target.get_driver( here ) == &who );
+    REQUIRE( vehicle_operator( target, here ) == &who );
+    REQUIRE( target.fuel_left( here, itype_id( "muscle" ) ) > 0 );
+    const float training = who.get_proficiency_practice( driving );
+    const int stamina = who.get_stamina();
+    target.consume_fuel( here, 1000, false );
+    CHECK( who.get_stamina() < stamina );
+    CHECK( who.get_proficiency_practice( driving ) > training );
+    CHECK( host.get_stamina() == host_stamina );
+    CHECK( host.get_proficiency_practice( driving ) == host_training );
+
+    who.controlling_vehicle = false;
+    const int released_stamina = who.get_stamina();
+    const float released_training = who.get_proficiency_practice( driving );
+    target.consume_fuel( here, 1000, false );
+    CHECK( who.get_stamina() == released_stamina );
+    CHECK( who.get_proficiency_practice( driving ) == released_training );
+    CHECK( vehicle_operator( target, here ) == nullptr );
+}
+
+TEST_CASE( "vehicle_cruise_and_idle_recognize_seated_and_remote_players",
+           "[multiplayer][vehicle_driving_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    get_avatar().setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    const bool remote_control = GENERATE( false, true );
+    if( remote_control ) {
+        REQUIRE( target.install_part( here, point_rel_ms::zero,
+                                      vpart_id( "drive_by_wire_controls" ) ) >= 0 );
+        item controller( itype_id( "remotevehcontrol" ) );
+        controller.active = true;
+        who.set_wielded_item( controller );
+        who.setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
+        REQUIRE( set_remote_vehicle( who, here, &target ) );
+        REQUIRE( target.get_driver( here ) == nullptr );
+    } else {
+        here.board_vehicle( who.pos_bub(), &who );
+        who.controlling_vehicle = true;
+    }
+    REQUIRE( controlled_vehicle( who, here ) == &target );
+    target.engine_on = true;
+    REQUIRE( adjust_vehicle_cruise( who, here, -1 ) );
+    REQUIRE( target.cruise_velocity > 0 );
+    const int stamina = who.get_stamina();
+    target.gain_moves( here );
+    CHECK( target.velocity > 0 );
+    REQUIRE_FALSE( target.fuel_used_last_turn.empty() );
+    const auto used = target.fuel_used_last_turn;
+    target.idle( here, true );
+    CHECK( target.fuel_used_last_turn == used );
+    CHECK( who.get_stamina() == stamina );
+    CHECK( who.get_proficiency_practice( proficiency_id( "prof_driver" ) ) > 0.0f );
+    CHECK( get_avatar().get_proficiency_practice( proficiency_id( "prof_driver" ) ) == 0.0f );
+
+    const auto snapshot = json_loader::from_string(
+                              cata_mp::serialize_remote_player_state( only_test_remote( g->multiplayer_session() ) ) );
+    const JsonObject state = snapshot.get_object();
+    state.allow_omitted_members();
+    CHECK( state.get_bool( "client_ctrl_veh" ) );
+    const JsonObject vehicle_position = state.get_object( "client_veh_pos" );
+    vehicle_position.allow_omitted_members();
+    CHECK( vehicle_position.get_int( "x" ) == target.pos_abs().x() );
+}
+
+TEST_CASE( "vehicle_driving_intents_reject_unowned_controls_and_mutation_uploads",
+           "[multiplayer][vehicle_driving_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    g->multiplayer_session().host_mode = true;
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    get_avatar().setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    recipient.turn.granted_this_turn = true;
+    const auto send = [&]( const std::string &action, int dx, int dy ) {
+        std::ostringstream stream;
+        JsonOut out( stream );
+        out.start_object();
+        out.member( "type", "action" );
+        out.member( "action", action );
+        out.member( "dx", dx );
+        out.member( "dy", dy );
+        out.member( "grant_seq", recipient.turn.grant_seq );
+        out.member( "char_stats" );
+        out.start_object();
+        out.member( "str", 999 );
+        out.end_object();
+        out.end_object();
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
+                                                stream.str(), recipient.admission } ) );
+        cata_mp::process_mp_events();
+    };
+    const int strength = who.get_str_base();
+    const auto rng_before = rng_get_engine();
+    send( "cruise", 0, -1 );
+    send( "pldrive", 1, 0 );
+    send( "handbrake", 0, 0 );
+    CHECK( target.cruise_velocity == 0 );
+    CHECK( recipient.turn.remote_moves == 100 );
+    CHECK( rng_get_engine() == rng_before );
+    CHECK( who.get_str_base() == strength );
+
+    here.board_vehicle( who.pos_bub(), &who );
+    who.controlling_vehicle = true;
+    target.engine_on = true;
+    send( "cruise", 0, std::numeric_limits<int>::min() );
+    send( "pldrive", 99, 0 );
+    CHECK( target.cruise_velocity == 0 );
+    CHECK( rng_get_engine() == rng_before );
+    send( "cruise", 0, -1 );
+    REQUIRE( target.cruise_velocity > 0 );
+    CHECK( recipient.turn.remote_moves == 100 );
+    CHECK( who.get_str_base() == strength );
+    target.is_on_ramp = true;
+    send( "pldrive", 1, 0 );
+    CHECK( recipient.turn.remote_moves == 100 );
+    CHECK( rng_get_engine() == rng_before );
+    target.is_on_ramp = false;
+    send( "pldrive", 1, 0 );
+    CHECK( recipient.turn.remote_moves < 100 );
+    CHECK( who.get_moves() == recipient.turn.remote_moves );
+    CHECK( who.get_str_base() == strength );
+    next_test_remote_turn( recipient );
+    target.last_turn = 0_degrees;
+    target.velocity = 2000;
+    send( "handbrake", 0, 0 );
+    CHECK( target.cruise_velocity == 0 );
+    CHECK( target.velocity == 0 );
+    CHECK( recipient.turn.remote_moves == 0 );
+    CHECK( who.get_moves() == 0 );
+    CHECK( recipient.turn.client_acted_this_turn );
+    const auto after_brake = rng_get_engine();
+    send( "cruise", 0, -1 );
+    CHECK( target.cruise_velocity == 0 );
+    CHECK( rng_get_engine() == after_brake );
+}
+
+TEST_CASE( "remote_driving_feedback_and_sinking_do_not_depend_on_the_host",
+           "[multiplayer][vehicle_driving_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    here.board_vehicle( who.pos_bub(), &who );
+    who.controlling_vehicle = true;
+    get_avatar().setpos( here, tripoint_bub_ms( 100, 100, 0 ) );
+    SECTION( "thrust failure reaches its operator" ) {
+        target.engine_on = false;
+        target.cruise_velocity = 400;
+        const auto count = recipient.feedback.pending.size();
+        target.thrust( here, 1 );
+        CHECK( recipient.feedback.pending.size() > count );
+    }
+    SECTION( "standing at controls still permits driving without boarding" ) {
+        here.unboard_vehicle( who.pos_bub() );
+        who.controlling_vehicle = true;
+        REQUIRE_FALSE( who.in_vehicle );
+        CHECK( controlled_vehicle( who, here ) == &target );
+        CHECK( drive_vehicle( who, here, tripoint_rel_ms( 0, -1, 0 ) ) );
+        CHECK( target.cruise_velocity > 0 );
+    }
+    SECTION( "broken driving controls stop accepting input" ) {
+        const int controls = target.avail_part_with_feature( here.veh_at( who.pos_bub() )->part_index(),
+                             VPFLAG_CONTROLS );
+        REQUIRE( controls >= 0 );
+        target.set_hp( target.part( controls ), 0, false );
+        const auto before = rng_get_engine();
+        CHECK_FALSE( drive_vehicle( who, here, tripoint_rel_ms( 1, 0, 0 ) ) );
+        CHECK( rng_get_engine() == before );
+        CHECK_FALSE( who.controlling_vehicle );
+    }
+    SECTION( "sinking unboards remote passengers even after releasing controls" ) {
+        who.controlling_vehicle = false;
+        const int64_t id = target.uid().get_value();
+        for( const tripoint_abs_ms &position : target.get_points() ) {
+            here.ter_set( here.get_bub( position ), ter_id( "t_water_dp" ) );
+        }
+        target.check_falling_or_floating();
+        REQUIRE_FALSE( target.can_float( here ) );
+        CHECK( target.act_on_map( here ) == nullptr );
+        CHECK_FALSE( who.in_vehicle );
+        CHECK_FALSE( who.controlling_vehicle );
+        CHECK( vehicle::find_vehicle_by_uid( here, id ) == nullptr );
+    }
+}
