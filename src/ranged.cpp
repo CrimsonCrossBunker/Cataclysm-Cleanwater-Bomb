@@ -603,6 +603,7 @@ target_handler::trajectory target_handler::mode_sling( avatar &you, item &ammo, 
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = target_ui::TargetMode::Throw;
+    ui.defer_target_effects = cata_mp::is_client_mode();
     ui.relevant = &ammo;
     ui.range = you.throw_range( ammo );
     ui.sling_moves = moves;

@@ -2255,6 +2255,11 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         const auto messages = Messages::size();
         try {
             throw_intent intent;
+            const std::string method = jo.get_string( "method", "hand" );
+            if( method != "hand" && method != "sling" ) {
+                jo.throw_error_at( "method", "Unknown throwing method" );
+            }
+            intent.method = method == "sling" ? throw_method::sling : throw_method::hand;
             jo.read( "origin", intent.origin, true );
             jo.read( "target", intent.target, true );
             jo.read( "blind_from", intent.blind_from, true );
@@ -8256,6 +8261,7 @@ void client_request_throw( const throw_intent &intent )
     out.start_object();
     out.member( "type", "action" );
     out.member( "action", "throw" );
+    out.member( "method", intent.method == throw_method::sling ? "sling" : "hand" );
     out.member( "origin", intent.origin );
     out.member( "target", intent.target );
     out.member( "blind_from", intent.blind_from );
