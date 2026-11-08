@@ -2236,7 +2236,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             const bool step = action == "inventory_activity" && jo.get_string( "operation" ) != "cancel" &&
                               granted;
             result = execute_inventory_activity_request( *remote, get_map(), jo, recipient.inventory_activity,
-                                             recipient.pickup, cancel || ( step && recipient.firearm.weapon == 0 ) );
+                     recipient.pickup, cancel || ( step && recipient.firearm.weapon == 0 ) );
         } catch( const JsonError &error ) {
             if( const auto server = get_active_server() ) {
                 server->post_reject( recipient.admission,
@@ -7598,6 +7598,7 @@ bool client_apply_message( const std::string &msg )
             }
         }
         // Display forwarded combat messages from the host (hits, misses, kills).
+        apply_craft_notifications( jo );
         if( jo.has_array( "msgs" ) ) {
             for( const JsonValue &mv : jo.get_array( "msgs" ) ) {
                 const std::string txt = mv.get_string();
@@ -8815,7 +8816,8 @@ void client_send_activity_start( const std::string &activity_id_str )
 {
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
           activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
-          activity_id_str == "ACT_FIRSTAID" ) &&
+          activity_id_str == "ACT_FIRSTAID" || activity_id_str == "ACT_CRAFT" ||
+          activity_id_str == "ACT_CRAFT_WAIT" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8837,7 +8839,8 @@ void client_send_activity_end( const std::string &activity_id_str )
 {
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
           activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
-          activity_id_str == "ACT_FIRSTAID" ) &&
+          activity_id_str == "ACT_FIRSTAID" || activity_id_str == "ACT_CRAFT" ||
+          activity_id_str == "ACT_CRAFT_WAIT" ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -11255,6 +11258,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
     ",\"vehicles\":" + vehicles_json +
     ",\"removed_vehicles\":" + removed_vehicles_json +
     ",\"msgs\":" + msgs_json +
+    ",\"craft_notices\":" + take_craft_notifications( recipient.inventory_activity ) +
     ",\"group_fast_forward\":" + ( should_fast_forward() ? std::string( "true" ) :
                                    std::string( "false" ) ) +
     ",\"grant_seq\":" + std::to_string( recipient.turn.grant_seq ) +

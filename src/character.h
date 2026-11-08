@@ -3025,7 +3025,7 @@ class Character : public Creature, public visitable
         // Per-turn body/effect projection. Does not replace carried items,
         // identity, position, activities, or execute simulation callbacks.
         // Activity result projection; restore progress without practicing again.
-        void store_practice_state( JsonOut &json ) const;
+        void store_practice_state( JsonOut &json, bool include_recipes = false ) const;
         void load_practice_state( const JsonObject &data );
         void store_turn_state( JsonOut &json ) const;
         void load_turn_state( const JsonObject &data );
@@ -3936,6 +3936,8 @@ class Character : public Creature, public visitable
         craft_roll_data recipe_success_roll_data( const recipe &making ) const;
         craft_roll_data recipe_failure_roll_data( const recipe &making ) const;
         void complete_craft( item &craft, const std::optional<tripoint_bub_ms> &loc );
+        bool advance_craft_completion( item &craft,
+                                       const std::function<bool( std::vector<item> &, bool )> &deliver );
         /**
          * Check if the player meets the requirements to continue the in progress craft and if
          * unable to continue print messages explaining the reason.
@@ -3945,7 +3947,8 @@ class Character : public Creature, public visitable
          * @return if the craft can be continued
          */
         bool can_continue_craft( item &craft );
-        bool can_continue_craft( item &craft, const requirement_data &continue_reqs );
+        bool can_continue_craft( item &craft, const requirement_data &continue_reqs,
+                                 craft_resume_selection *prepared = nullptr );
         /** Return nearby Characters ready and willing to help with crafting. */
         std::vector<Character *> get_crafting_helpers() const;
         /**

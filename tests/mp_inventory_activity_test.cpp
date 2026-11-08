@@ -11,6 +11,8 @@
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "craft_command.h"
+#include "crafting.h"
 #include "bodypart.h"
 #include "effect.h"
 #include "magic.h"
@@ -20,6 +22,7 @@
 #include "game.h"
 #include "handle_liquid.h"
 #include "item.h"
+#include "item_components.h"
 #include "item_healing.h"
 #include "item_insert.h"
 #include "item_consumption.h"
@@ -35,6 +38,7 @@
 #include "map.h"
 #include "skill.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_selector.h"
 #include "messages.h"
 #include "mp_client_conn.h"
@@ -1909,4 +1913,301 @@ TEST_CASE( "firstaid_results_restore_body_and_practice_without_replaying_treatme
     CHECK( replica.get_wielded_item()->charges == 1 );
     CHECK( events.finishes == 0 );
     CHECK( rng_get_engine() == rng );
+}
+
+
+TEST_CASE( "owned_craft_request_completes_for_its_player_once_after_activity_reload",
+           "[multiplayer][craft_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    who.learn_recipe( &recipe.obj() );
+    who.set_wielded_item( item( &recipe.obj(), 1, item_components{}, {}, false ) );
+    item_location workpiece = who.get_wielded_item();
+    workpiece->item_counter = 10000000;
+    who.assign_activity( craft_activity_actor( workpiece, false, &who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    save_reload_activity( who );
+    const std::string step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    CHECK_FALSE( who.activity );
+    CHECK_FALSE( workpiece );
+    REQUIRE( who.get_wielded_item() );
+    CHECK( who.get_wielded_item()->typeId() == itype_id( "cudgel" ) );
+    const int64_t result = who.get_wielded_item()->uid().get_value();
+    const auto completed = rng_get_engine();
+    fixture.run( who, step );
+    CHECK( who.get_wielded_item()->uid().get_value() == result );
+    CHECK( rng_get_engine() == completed );
+    CHECK_FALSE( get_avatar().get_wielded_item() );
+}
+
+TEST_CASE( "owned_craft_pending_outputs_survive_cancel_and_reject_an_old_activity_request",
+           "[multiplayer][craft_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    who.learn_recipe( &recipe.obj() );
+    who.set_wielded_item( item( &recipe.obj(), 1, item_components{}, {}, false ) );
+    item_location workpiece = who.get_wielded_item();
+    workpiece->item_counter = 10000000;
+    auto &completion = workpiece->get_craft_results();
+    completion.stage = craft_completion_stage::primary_results;
+    completion.primary_had_results = true;
+    completion.pending.emplace_back( itype_id( "gasoline" ), calendar::turn, 20 );
+    const int64_t fuel_id = completion.pending.front().uid().get_value();
+    who.assign_activity( craft_activity_actor( workpiece, false, &who ) );
+    const std::string old_activity = std::to_string( who.activity.identity_generation() );
+    fixture.run( who, fixture.request( who, "step" ) );
+    const auto *actor = dynamic_cast<const craft_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( actor );
+    REQUIRE( actor->waiting_for() == "results" );
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    CHECK_FALSE( who.activity );
+    REQUIRE( workpiece );
+    REQUIRE( workpiece->get_craft_results().pending.size() == 1 );
+    CHECK( workpiece->get_craft_results().pending.front().uid().get_value() == fuel_id );
+    who.set_moves( 100 );
+    who.assign_activity( craft_activity_actor( workpiece, false, &who ) );
+    fixture.run( who, fixture.request( who, "cancel", {}, old_activity ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    fixture.run( who, fixture.request( who, "step" ) );
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "bottle_plastic" ) ) );
+    unload_liquid_choice choice;
+    choice.source = fuel_id;
+    choice.kind = LD_ITEM;
+    choice.container = capture_item_source( who, item_location( map_cursor( who.pos_bub() ),
+                                            &bottle ) );
+    const std::string collect = fixture.request( who, "results", [&]( JsonOut & out ) {
+        out.member( "liquids", std::vector<unload_liquid_choice> { choice } );
+    } );
+    fixture.run( who, collect );
+    CHECK_FALSE( who.activity );
+    CHECK_FALSE( workpiece );
+    REQUIRE_FALSE( bottle.empty() );
+    CHECK( bottle.legacy_front().charges == 20 );
+    const auto received = rng_get_engine();
+    fixture.run( who, collect );
+    CHECK( bottle.legacy_front().charges == 20 );
+    CHECK( rng_get_engine() == received );
+}
+
+
+TEST_CASE( "owned_workpiece_cannot_be_claimed_by_two_active_players",
+           "[multiplayer][craft_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    avatar &other = get_avatar();
+    other.setpos( get_map(), who.pos_bub() + tripoint::east );
+    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    item prepared( &recipe.obj(), 1, item_components{}, {}, false );
+    prepared.item_counter = 10000000;
+    item_location workpiece = get_map().add_item_or_charges_ret_loc( who.pos_bub(), prepared );
+    who.assign_activity( craft_activity_actor( workpiece, false, &who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    other.assign_activity( craft_activity_actor( workpiece, false, &other ) );
+    CHECK_FALSE( other.activity );
+    CHECK( workpiece->get_crafter_id() == who.getID() );
+    CHECK( cata_mp::owns_inventory_activity( who ) );
+}
+
+TEST_CASE( "owned_craft_start_resume_and_repeat_consume_each_selection_once",
+           "[multiplayer][craft_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    set_time( calendar::turn_zero + 12_hours );
+    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    who.learn_recipe( &recipe.obj() );
+    who.set_skill_level( recipe->skill_used, recipe->difficulty );
+    who.set_knowledge_level( recipe->skill_used, recipe->difficulty );
+    for( const auto &skill : recipe->required_skills ) {
+        who.set_skill_level( skill.first, skill.second );
+        who.set_knowledge_level( skill.first, skill.second );
+    }
+    map &here = get_map();
+    item_location material = here.add_item_or_charges_ret_loc( who.pos_bub(),
+                             item( itype_id( "2x4" ) ) );
+    item_location tool = here.add_item_or_charges_ret_loc( who.pos_bub(),
+                         tool_with_ammo( itype_id( "soldering_iron_portable" ), 100 ) );
+    who.invalidate_crafting_inventory();
+    craft_command selected( &recipe.obj(), 1, true, &who, who.pos_bub() );
+    REQUIRE( selected.prepare() );
+    REQUIRE( selected.prepare_owned_start() );
+    REQUIRE( material );
+    const int initial_ammo = tool->ammo_remaining();
+    const std::string start = fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "craft" );
+        out.member( "selection" );
+        selected.serialize_selection( out );
+    } );
+    fixture.run( who, start );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    REQUIRE( who.activity.targets.size() == 1 );
+    item_location workpiece = who.activity.targets.front();
+    REQUIRE( workpiece );
+    CHECK_FALSE( material );
+    CHECK( tool->ammo_remaining() < initial_ammo );
+    const int paid_ammo = tool->ammo_remaining();
+    const int paid_buckets = workpiece->get_step_tool_allocs().front().front().consumed_buckets;
+    fixture.run( who, start );
+    CHECK( who.activity.targets.front() == workpiece );
+    CHECK( tool->ammo_remaining() == paid_ammo );
+
+    SECTION( "resume_requires_the_owner_plan_and_keeps_paid_tools" ) {
+        fixture.run( who, fixture.request( who, "cancel" ) );
+        REQUIRE_FALSE( who.activity );
+        REQUIRE( workpiece );
+        const int progress = workpiece->item_counter;
+        who.set_moves( 1000 );
+        const std::string resume = fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "craft_resume" );
+            out.member( "source", capture_item_source( who, workpiece ) );
+        } );
+        fixture.run( who, resume );
+        REQUIRE( cata_mp::owns_inventory_activity( who ) );
+        workpiece = who.get_wielded_item();
+        REQUIRE( workpiece );
+        auto *actor = dynamic_cast<craft_activity_actor *>( who.activity.actor.get() );
+        REQUIRE( actor );
+        REQUIRE( actor->waiting_for() == "resume" );
+        save_reload_activity( who );
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK( workpiece->item_counter == progress );
+        CHECK( who.get_moves() == 100 );
+        auto plan = craft_resume_selection::prepare( who, *workpiece );
+        REQUIRE( plan );
+        const std::string choose = fixture.request( who, "choose", [&]( JsonOut & out ) {
+            out.member( "decision", "resume" );
+            out.member( "selection", *plan );
+            out.member( "plans" );
+            write_craft_plans( out, workpiece->get_step_plans() );
+        } );
+        fixture.run( who, choose );
+        actor = dynamic_cast<craft_activity_actor *>( who.activity.actor.get() );
+        REQUIRE( actor );
+        CHECK( actor->waiting_for().empty() );
+        CHECK( tool->ammo_remaining() == paid_ammo );
+        CHECK( workpiece->get_step_tool_allocs().front().front().consumed_buckets == paid_buckets );
+        fixture.run( who, choose );
+        CHECK( tool->ammo_remaining() == paid_ammo );
+        CHECK( workpiece->item_counter == progress );
+    }
+
+    SECTION( "long_craft_restarts_once_with_fresh_materials" ) {
+        // Existing progress tests cover ticking; exercise completion and the next
+        // command here without a long crafting loop or generated material supply.
+        workpiece->item_counter = 10000000;
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        auto *actor = dynamic_cast<craft_activity_actor *>( who.activity.actor.get() );
+        REQUIRE( actor );
+        REQUIRE( actor->waiting_for() == "repeat" );
+        CHECK_FALSE( workpiece );
+        item_location next_material = here.add_item_or_charges_ret_loc( who.pos_bub(),
+                                      item( itype_id( "2x4" ) ) );
+        who.invalidate_crafting_inventory();
+        craft_command next( &recipe.obj(), 1, true, &who, who.pos_bub() );
+        REQUIRE( next.prepare() );
+        REQUIRE( next.prepare_owned_start() );
+        const auto previous = who.activity.identity_generation();
+        const std::string restart = fixture.request( who, "restart", [&]( JsonOut & out ) {
+            out.member( "selection" );
+            next.serialize_selection( out );
+        } );
+        who.set_moves( 100 );
+        fixture.run( who, restart );
+        REQUIRE( cata_mp::owns_inventory_activity( who ) );
+        CHECK( who.activity.identity_generation() != previous );
+        REQUIRE( who.activity.targets.size() == 1 );
+        workpiece = who.activity.targets.front();
+        REQUIRE( workpiece );
+        CHECK( workpiece->item_counter == 0 );
+        CHECK_FALSE( next_material );
+        const int after_restart = tool->ammo_remaining();
+        fixture.run( who, restart );
+        CHECK( who.activity.targets.front() == workpiece );
+        CHECK( tool->ammo_remaining() == after_restart );
+    }
+    CHECK_FALSE( get_avatar().activity );
+}
+
+TEST_CASE( "owned_craft_keeps_component_liquid_until_its_owner_selects_a_container",
+           "[multiplayer][craft_owned][liquid]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    item container( itype_id( "bottle_plastic" ) );
+    item fuel( itype_id( "gasoline" ), calendar::turn, 20 );
+    REQUIRE( container.fill_with( fuel, 20 ) == 20 );
+    item_components components;
+    components.add( container );
+    who.set_wielded_item( item( &recipe.obj(), 1, components, {}, false ) );
+    item_location workpiece = who.get_wielded_item();
+    workpiece->get_craft_results().components_pending = true;
+    who.assign_activity( craft_activity_actor( workpiece, false, &who ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    const auto *actor = dynamic_cast<const craft_activity_actor *>( who.activity.actor.get() );
+    REQUIRE( actor );
+    CHECK( actor->waiting_for() == "components" );
+    save_reload_activity( who );
+    fixture.run( who, fixture.request( who, "results", [&]( JsonOut & out ) {
+        out.member( "liquids", std::vector<unload_liquid_choice> {} );
+    } ) );
+    REQUIRE( craft_has_pending_components( *workpiece ) );
+    item &remaining = workpiece->components.begin()->second.front().legacy_front();
+    CHECK( remaining.charges == 20 );
+    CHECK( workpiece->item_counter == 0 );
+    item_location destination = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
+                                item( itype_id( "bottle_plastic" ) ) );
+    unload_liquid_choice choice;
+    choice.source = remaining.uid().get_value();
+    choice.kind = LD_ITEM;
+    choice.container = capture_item_source( who, destination );
+    const std::string pour = fixture.request( who, "results", [&]( JsonOut & out ) {
+        out.member( "liquids", std::vector<unload_liquid_choice> { choice } );
+    } );
+    who.set_moves( 100 );
+    fixture.run( who, pour );
+    CHECK_FALSE( craft_has_pending_components( *workpiece ) );
+    REQUIRE_FALSE( destination->empty() );
+    CHECK( destination->legacy_front().charges == 20 );
+    fixture.run( who, pour );
+    CHECK( destination->legacy_front().charges == 20 );
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    REQUIRE( workpiece );
+    CHECK( workpiece->components.size() == 1 );
+}
+
+TEST_CASE( "craft_timers_notify_only_the_owning_player", "[multiplayer][craft_owned]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    auto &session = g->multiplayer_session();
+    const cata_mp::player_id owner( std::string( 32, '7' ) );
+    who.set_value( "mp_player_id", owner.str() );
+    auto peer = std::make_unique<cata_mp::remote_player_session>();
+    peer->actor.bind_player( who, owner, g->npc_lifetimes(),
+                             g->player_controls().claim( owner, who ) );
+    peer->connected = true;
+    session.remote_players.emplace( 7, std::move( peer ) );
+    auto &notices = session.remote_players.at( 7 )->inventory_activity;
+    cata_mp::notify_craft_owner( who.getID(), "timer", true );
+    cata_mp::notify_craft_owner( get_avatar().getID(), "host only" );
+    REQUIRE( notices.notices.size() == 1 );
+    CHECK( notices.notices.front().alarm );
+    const std::string encoded = cata_mp::take_craft_notifications( notices );
+    CHECK( notices.notices.empty() );
+    const JsonValue value = json_loader::from_string( "{\"craft_notices\":" + encoded + "}" );
+    cata_mp::apply_craft_notifications( value.get_object() );
+    const auto &received = session.client_inventory_activity.notices;
+    REQUIRE( received.size() == 1 );
+    CHECK( received.front().message == "timer" );
+    CHECK( received.front().alarm );
+    CHECK( cata_mp::take_craft_notifications( notices ) == "[]" );
 }

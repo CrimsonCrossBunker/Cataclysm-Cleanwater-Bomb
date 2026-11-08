@@ -3408,6 +3408,34 @@ static step_choice step_choice_from_string( const std::string &s )
     return step_choice::do_wait;
 }
 
+void craft_result_state::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "stage", static_cast<int>( stage ) );
+    out.member( "owner_selects_destination", owner_selects_destination );
+    out.member( "components_pending", components_pending );
+    out.member( "inventory_destination", inventory_destination );
+    out.member( "pending", pending );
+    out.member( "primary_had_results", primary_had_results );
+    out.member( "allow_wield", allow_wield );
+    out.end_object();
+}
+
+void craft_result_state::deserialize( const JsonObject &data )
+{
+    const int phase = data.get_int( "stage" );
+    if( phase < 0 || phase > static_cast<int>( craft_completion_stage::done ) ) {
+        data.throw_error_at( "stage", "Unknown craft completion stage" );
+    }
+    stage = static_cast<craft_completion_stage>( phase );
+    owner_selects_destination = data.get_bool( "owner_selects_destination", false );
+    components_pending = data.get_bool( "components_pending", false );
+    inventory_destination = data.get_bool( "inventory_destination", false );
+    data.read( "pending", pending, true );
+    primary_had_results = data.get_bool( "primary_had_results" );
+    allow_wield = data.get_bool( "allow_wield" );
+}
+
 void item::craft_data::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
@@ -3418,6 +3446,10 @@ void item::craft_data::serialize( JsonOut &jsout ) const
     jsout.member( "tools_to_continue", tools_to_continue );
     jsout.member( "batch_size", batch_size );
     jsout.member( "step_tool_allocs", step_tool_allocs );
+    if( completion.stage != craft_completion_stage::not_started ||
+        completion.owner_selects_destination ) {
+        jsout.member( "completion", completion );
+    }
     jsout.member( "current_step", current_step );
     jsout.member( "step_progress", step_progress );
     if( !step_plans.empty() ) {
@@ -3680,6 +3712,8 @@ void item::craft_data::deserialize( const JsonObject &obj )
         }
         making = &rid.obj();
     }
+    completion = {};
+    obj.read( "completion", completion );
     obj.read( "comps_used", comps_used );
     next_failure_point = obj.get_int( "next_failure_point", -1 );
     tools_to_continue = obj.get_bool( "tools_to_continue", false );
@@ -5623,7 +5657,7 @@ void serialize( const recipe_subset &value, JsonOut &jsout )
     for( const recipe * const &entry : value ) {
         ids.push_back( entry->ident() );
     }
-    std::sort( ids.begin(), ids.end(), []( const recipe_id &lhs, const recipe_id &rhs ) {
+    std::sort( ids.begin(), ids.end(), []( const recipe_id & lhs, const recipe_id & rhs ) {
         return lhs.str() < rhs.str();
     } );
     jsout.write( ids );

@@ -21,6 +21,8 @@ unload_intent make_unload_intent( const Character &who, const item_location &roo
                                   const unload_selection &selection,
                                   const std::vector<unload_liquid_choice> &liquids );
 bool start_owned_unload( Character &who, map &here, const JsonObject &request );
+unload_liquid_choice query_owned_liquid_destination( const item &liquid, const item *target,
+        int64_t identity );
 void client_select_unload( const item_location &root,
                            const item_location &new_container = item_location::nowhere );
 } // namespace cata_mp

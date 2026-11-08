@@ -4,16 +4,21 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "character_id.h"
+#include "coordinates.h"
 #include "type_id.h"
 
 struct insert_selection;
 class Character;
+class craft_command;
 class item;
 class item_location;
 class JsonObject;
+class JsonOut;
 class map;
 class player_activity;
 
@@ -21,12 +26,20 @@ namespace cata_mp
 {
 struct pickup_host_state;
 struct unload_intent;
+struct craft_notice {
+    std::string message;
+    bool alarm = false;
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
 struct inventory_activity_host_state {
     int64_t last_request = 0;
     bool needs_placement = false;
     bool tracks_needs = false;
     bool tracks_body = false;
+    bool tracks_crafting = false;
     character_id healing_patient;
+    std::vector<craft_notice> notices;
 };
 struct inventory_activity_client_state {
     int64_t next_request = 0;
@@ -38,7 +51,16 @@ struct inventory_activity_client_state {
     bool needs_placement = false;
     bool can_wield = false;
     std::shared_ptr<item> preview;
+    std::string craft_decision;
+    recipe_id craft_recipe;
+    int craft_batch = 0;
+    std::optional<tripoint_abs_ms> craft_location;
+    std::vector<craft_notice> notices;
 };
+
+void notify_craft_owner( character_id owner, const std::string &message, bool alarm = false );
+std::string take_craft_notifications( inventory_activity_host_state &state );
+void apply_craft_notifications( const JsonObject &state );
 
 bool owns_inventory_activity( const Character &who );
 bool inventory_activity_view( const player_activity &activity );
@@ -55,6 +77,8 @@ void client_start_consume( const item_location &source, bool allow_consequences,
                            bool reprompt = false );
 void client_start_firstaid( const item_location &source, Character &patient,
                             const bodypart_str_id &part, bool allow_theft, bool reprompt = false );
+void client_start_craft( const craft_command &command );
+void client_resume_craft( const item_location &source );
 void client_step_inventory_activity();
 void client_cancel_inventory_activity();
 void client_update_inventory_activity_view();

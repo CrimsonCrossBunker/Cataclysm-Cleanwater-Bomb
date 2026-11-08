@@ -5451,6 +5451,16 @@ void item::set_step_tool_allocs( const std::vector<std::vector<step_tool_alloc>>
     craft_data_->step_tool_allocs = allocs;
 }
 
+craft_result_state &item::get_craft_results()
+{
+    return craft_data_->completion;
+}
+
+const craft_result_state &item::get_craft_results() const
+{
+    return craft_data_->completion;
+}
+
 const std::vector<std::vector<step_tool_alloc>> &item::get_step_tool_allocs() const
 {
     cata_assert( craft_data_ );
@@ -5778,8 +5788,12 @@ size_t item::num_item_stacks() const
 
 bool is_preferred_component( const item &component )
 {
-    const float survival = get_player_character().get_greater_skill_or_knowledge_level(
-                               skill_survival );
+    return is_preferred_component( component, get_player_character() );
+}
+
+bool is_preferred_component( const item &component, const Character &crafter )
+{
+    const float survival = crafter.get_greater_skill_or_knowledge_level( skill_survival );
     return component.is_container_empty() &&
            ( survival < 3 || !component.has_flag( flag_HIDDEN_POISON ) ) &&
            ( survival < 5 || !component.has_flag( flag_HIDDEN_HALLU ) );

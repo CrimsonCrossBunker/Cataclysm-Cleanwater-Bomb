@@ -15,6 +15,7 @@
 #include "json.h"
 #include "skill.h"
 #include "proficiency.h"
+#include "recipe_dictionary.h"
 #include "translations.h"
 #include "type_id.h"
 
@@ -138,7 +139,7 @@ std::vector<proficiency_id> Character::proficiencies_offered_to( const Character
     return ret;
 }
 
-void Character::store_practice_state( JsonOut &out ) const
+void Character::store_practice_state( JsonOut &out, bool include_recipes ) const
 {
     out.start_object();
     out.member( "skills" );
@@ -148,6 +149,9 @@ void Character::store_practice_state( JsonOut &out ) const
     }
     out.end_object();
     out.member( "proficiencies", *_proficiencies );
+    if( include_recipes ) {
+        out.member( "recipes", *learned_recipes );
+    }
     out.end_object();
 }
 
@@ -165,4 +169,5 @@ void Character::load_practice_state( const JsonObject &data )
     proficiencies.deserialize( data.get_object( "proficiencies" ) );
     *_skills = std::move( skills );
     *_proficiencies = std::move( proficiencies );
+    data.read( "recipes", *learned_recipes );
 }

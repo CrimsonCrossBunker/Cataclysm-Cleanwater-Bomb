@@ -11,6 +11,10 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "character.h"
+#include "cata_scope_helpers.h"
+#include "craft_command.h"
+#include "crafting.h"
+#include "line.h"
 #include "creature_tracker.h"
 #include "flag.h"
 #include "game.h"
@@ -26,6 +30,7 @@
 #include "itype.h"
 #include "json.h"
 #include "map.h"
+#include "messages.h"
 #include "mp_client_conn.h"
 #include "mp_combat_result.h"
 #include "mp_gamestate.h"
@@ -35,6 +40,7 @@
 #include "mp_world_session.h"
 #include "player_activity.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "safe_reference.h"
 #include "translations.h"
 #include "uilist.h"
@@ -42,6 +48,44 @@
 
 namespace cata_mp
 {
+void craft_notice::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "message", message );
+    out.member( "alarm", alarm );
+    out.end_object();
+}
+
+void craft_notice::deserialize( const JsonObject &data )
+{
+    data.read( "message", message, true );
+    data.read( "alarm", alarm, true );
+}
+
+void notify_craft_owner( character_id owner, const std::string &message, bool alarm )
+{
+    if( auto *recipient = g->multiplayer_session().find_remote( owner ) ) {
+        recipient->inventory_activity.notices.push_back( { message, alarm } );
+    }
+}
+
+std::string take_craft_notifications( inventory_activity_host_state &state )
+{
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.write( state.notices );
+    state.notices.clear();
+    return encoded.str();
+}
+
+void apply_craft_notifications( const JsonObject &state )
+{
+    std::vector<craft_notice> notices;
+    state.read( "craft_notices", notices );
+    auto &pending = g->multiplayer_session().client_inventory_activity.notices;
+    pending.insert( pending.end(), notices.begin(), notices.end() );
+}
+
 namespace
 {
 reload_activity_actor *native_reload( Character &who )
@@ -72,6 +116,99 @@ firstaid_activity_actor *native_firstaid( Character &who )
 {
     auto *actor = dynamic_cast<firstaid_activity_actor *>( who.activity.actor.get() );
     return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+craft_activity_actor *native_craft( Character &who )
+{
+    auto *actor = dynamic_cast<craft_activity_actor *>( who.activity.actor.get() );
+    return actor && actor->is_server_owned() && !actor->is_client_view() ? actor : nullptr;
+}
+
+bool start_craft( Character &who, const JsonObject &request, bool repeat = false )
+{
+    if( who.is_dead_state() || who.get_moves() <= 0 ) {
+        return false;
+    }
+    const JsonObject selection = request.get_object( "selection" );
+    if( repeat ) {
+        const auto *previous = native_craft( who );
+        if( !previous || previous->waiting_for() != "repeat" ||
+            selection.get_string( "recipe" ) != previous->repeat_recipe().str() ||
+            selection.get_int( "batch" ) != previous->repeat_batch() || !selection.get_bool( "long" ) ) {
+            return false;
+        }
+    } else if( who.activity ) {
+        return false;
+    }
+    auto command = craft_command::from_selection( who, selection );
+    if( !command || !command->is_owned_start() ) {
+        return false;
+    }
+    const safe_reference<Creature> lifetime = who.get_safe_reference();
+    if( repeat ) {
+        who.cancel_activity();
+        if( !lifetime || who.activity ) {
+            return false;
+        }
+    }
+    *who.last_craft = std::move( *command );
+    who.last_craft->execute_prepared();
+    return true;
+}
+
+bool resume_craft( Character &who, map &here, const JsonObject &request )
+{
+    if( who.activity || who.is_dead_state() || who.get_moves() <= 0 || who.cant_do_mounted() ) {
+        return false;
+    }
+    item_source identity;
+    request.read( "source", identity, true );
+    item_location workpiece = resolve_item_source( who, here, identity );
+    if( !workpiece || !workpiece->is_craft() ||
+        square_dist( workpiece.pos_abs(), who.pos_abs() ) > 1 ||
+        !craft_available_to( who, workpiece ) || !who.has_recipe( &workpiece->get_making() ) ||
+        ( !workpiece->is_owned_by( who, true ) && !request.get_bool( "allow_theft", false ) ) ) {
+        return false;
+    }
+    const safe_reference<Creature> lifetime = who.get_safe_reference();
+    if( !who.is_wielding( *workpiece ) ) {
+        if( !who.can_wield( *workpiece ).success() ) {
+            return false;
+        }
+        if( who.has_wield_conflicts( *workpiece ) ) {
+            item_source weapon;
+            request.read( "weapon", weapon, true );
+            const auto wielded = resolve_item_source( who, here, weapon );
+            if( !wielded || wielded != who.get_wielded_item() || wielded.eventually_contains( workpiece ) ||
+                !request.has_object( "disposition" ) ) {
+                return false;
+            }
+            const JsonObject selected = request.get_object( "disposition" );
+            const item_disposition choice{ selected.get_string( "action" ),
+                                           selected.get_int64( "container" ), selected.get_int64( "pocket" ) };
+            if( !execute_item_disposition( who, wielded, choice ) ) {
+                return false;
+            }
+        }
+        if( !lifetime || !workpiece || !who.wield( workpiece ) ) {
+            return false;
+        }
+        if( !lifetime ) {
+            return false;
+        }
+        workpiece = who.get_wielded_item();
+    }
+    if( !workpiece || !workpiece->is_craft() || who.activity ) {
+        return false;
+    }
+    workpiece->set_crafter_id( who.getID() );
+    workpiece->get_craft_results().owner_selects_destination = true;
+    craft_resolve_overdue_passive( *workpiece, calendar::turn, workpiece );
+    if( !lifetime || !workpiece ) {
+        return false;
+    }
+    who.assign_activity( craft_activity_actor( workpiece, false, &who, true ) );
+    return true;
 }
 
 bool start_firstaid( Character &who, map &here, const JsonObject &request )
@@ -126,6 +263,7 @@ bool begin_client_inventory_activity( const activity_actor &actor )
     view.finished = false;
     view.cancel_requested = false;
     view.needs_placement = false;
+    view.craft_decision.clear();
     view.activity.clear();
     get_avatar().assign_activity( actor );
     return true;
@@ -291,12 +429,14 @@ void send_inventory_activity( const std::string &operation,
 
 bool owns_inventory_activity( const Character &who )
 {
+    const auto *craft = dynamic_cast<const craft_activity_actor *>( who.activity.actor.get() );
     const auto *actor = dynamic_cast<const reload_activity_actor *>( who.activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( who.activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( who.activity.actor.get() );
     const auto *consume = dynamic_cast<const consume_activity_actor *>( who.activity.actor.get() );
     const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>( who.activity.actor.get() );
-    return ( firstaid && firstaid->is_server_owned() && !firstaid->is_client_view() ) ||
+    return ( craft && craft->is_server_owned() && !craft->is_client_view() ) ||
+           ( firstaid && firstaid->is_server_owned() && !firstaid->is_client_view() ) ||
            ( actor && actor->is_server_owned() && !actor->is_client_view() ) ||
            ( unload && unload->is_server_owned() && !unload->is_client_view() ) ||
            ( insert && insert->is_server_owned() && !insert->is_client_view() ) ||
@@ -305,12 +445,14 @@ bool owns_inventory_activity( const Character &who )
 
 bool inventory_activity_view( const player_activity &activity )
 {
+    const auto *craft = dynamic_cast<const craft_activity_actor *>( activity.actor.get() );
     const auto *actor = dynamic_cast<const reload_activity_actor *>( activity.actor.get() );
     const auto *unload = dynamic_cast<const unload_activity_actor *>( activity.actor.get() );
     const auto *insert = dynamic_cast<const insert_item_activity_actor *>( activity.actor.get() );
     const auto *consume = dynamic_cast<const consume_activity_actor *>( activity.actor.get() );
     const auto *firstaid = dynamic_cast<const firstaid_activity_actor *>( activity.actor.get() );
-    return ( firstaid && firstaid->is_client_view() ) || ( actor && actor->is_client_view() ) ||
+    return ( craft && craft->is_client_view() ) ||
+           ( firstaid && firstaid->is_client_view() ) || ( actor && actor->is_client_view() ) ||
            ( unload && unload->is_client_view() ) ||
            ( insert && insert->is_client_view() ) || ( consume && consume->is_client_view() );
 }
@@ -326,13 +468,17 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         state.tracks_body = true;
         state.healing_patient = firstaid->patient_id();
     }
+    if( native_craft( who ) ) {
+        state.tracks_crafting = state.tracks_body = state.tracks_needs = true;
+    }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
         state.last_request = sequence;
         if( operation == "start" ) {
             state.needs_placement = false;
             const std::string kind = request.get_string( "kind", "reload" );
-            state.tracks_body = kind == "firstaid";
+            state.tracks_crafting = kind == "craft" || kind == "craft_resume";
+            state.tracks_body = kind == "firstaid" || state.tracks_crafting;
             state.healing_patient = character_id();
             if( kind == "reload" ) {
                 start_reload( who, here, request );
@@ -342,13 +488,17 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 start_insert( who, here, request );
             } else if( kind == "consume" ) {
                 start_consume( who, here, request );
+            } else if( kind == "craft" ) {
+                start_craft( who, request );
+            } else if( kind == "craft_resume" ) {
+                resume_craft( who, here, request );
             } else if( kind == "firstaid" ) {
                 start_firstaid( who, here, request );
                 if( const auto *firstaid = native_firstaid( who ) ) {
                     state.healing_patient = firstaid->patient_id();
                 }
             }
-            state.tracks_needs = kind == "consume" || native_consume( who );
+            state.tracks_needs = kind == "consume" || state.tracks_crafting || native_consume( who );
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
             if( operation == "cancel" ) {
@@ -356,6 +506,29 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 // a replacement activity with a different identity.
                 who.cancel_activity();
                 state.needs_placement = false;
+            } else if( craft_activity_actor *craft = native_craft( who ) ) {
+                if( operation == "restart" ) {
+                    start_craft( who, request, true );
+                } else if( !craft->prepare_owned_turn( who ) ) {
+                    who.cancel_activity();
+                } else if( who.get_moves() > 0 && operation == "step" && craft->waiting_for().empty() ) {
+                    who.activity.do_turn( who );
+                } else if( operation == "choose" ) {
+                    craft->apply_owned_choice( who, request );
+                } else if( who.get_moves() > 0 && operation == "results" &&
+                           ( craft->waiting_for() == "results" || craft->waiting_for() == "components" ) ) {
+                    std::vector<unload_liquid_choice> liquids;
+                    request.read( "liquids", liquids, true );
+                    std::set<int64_t> seen;
+                    const bool valid = std::all_of( liquids.begin(), liquids.end(),
+                    [&]( const unload_liquid_choice & choice ) {
+                        return seen.insert( choice.source ).second && choice.kind >= LD_NULL &&
+                               choice.kind <= LD_GROUND && choice.kind != LD_CONSUME;
+                    } );
+                    if( valid ) {
+                        craft->deliver_owned_results( who, liquids );
+                    }
+                }
             } else if( firstaid_activity_actor *firstaid = native_firstaid( who ) ) {
                 if( !firstaid->prepare_owned_turn( who ) ) {
                     who.cancel_activity();
@@ -436,10 +609,26 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     out.member( "type", "inventory_activity_result" );
     out.member( "request", sequence );
     const bool active = owns_inventory_activity( who );
+    const auto *craft = native_craft( who );
+    const bool craft_progress = craft && craft->target();
     out.member( "activity", active ? std::to_string( who.activity.identity_generation() ) : "" );
-    out.member( "moves_total", active ? who.activity.moves_total : 0 );
-    out.member( "moves_left", active ? who.activity.moves_left : 0 );
+    out.member( "moves_total", craft_progress ? 10000000 : active ? who.activity.moves_total : 0 );
+    out.member( "moves_left", craft_progress ?
+                10000000 - std::clamp( craft->target()->item_counter, 0,
+                                       10000000 ) : active ? who.activity.moves_left : 0 );
     out.member( "needs_placement", state.needs_placement );
+    if( craft ) {
+        out.member( "craft_progress", craft->get_progress_message( who.activity ) );
+        out.member( "craft_decision", craft->waiting_for() );
+        if( !craft->waiting_for().empty() && craft->target() ) {
+            out.member( "craft_preview", *craft->target() );
+        }
+        if( craft->waiting_for() == "repeat" ) {
+            out.member( "craft_recipe", craft->repeat_recipe() );
+            out.member( "craft_batch", craft->repeat_batch() );
+            out.member( "craft_location", craft->repeat_location() );
+        }
+    }
     if( actor && state.needs_placement ) {
         const auto preview = actor->preview_remaining();
         if( preview ) {
@@ -455,7 +644,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         out.member( "body" );
         who.store_turn_state( out );
         out.member( "practice" );
-        who.store_practice_state( out );
+        const bool learned = state.tracks_crafting && ( !craft ||
+                             craft->waiting_for() == "repeat" || ( craft->target() &&
+                                     craft->target()->get_craft_results().stage >= craft_completion_stage::byproducts ) );
+        who.store_practice_state( out, learned );
     }
     out.member( "combat" );
     *out.get_stream() << combat;
@@ -469,6 +661,7 @@ bool apply_inventory_activity_result( const JsonObject &response )
     if( response.get_string( "type", "" ) != "inventory_activity_result" ) {
         return false;
     }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
     auto &session = g->multiplayer_session();
     auto &view = session.client_inventory_activity;
     JsonObject combat = response.get_object( "combat" );
@@ -490,13 +683,26 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.needs_placement = response.get_bool( "needs_placement" );
         view.can_wield = response.get_bool( "can_wield", false );
         view.preview.reset();
+        view.craft_decision = response.get_string( "craft_decision", "" );
         if( response.has_object( "preview" ) ) {
             view.preview = std::make_shared<item>();
             response.read( "preview", *view.preview, true );
         }
+        if( response.has_object( "craft_preview" ) ) {
+            view.preview = std::make_shared<item>();
+            response.read( "craft_preview", *view.preview, true );
+        }
+        if( view.craft_decision == "repeat" ) {
+            response.read( "craft_recipe", view.craft_recipe, true );
+            response.read( "craft_batch", view.craft_batch, true );
+            response.read( "craft_location", view.craft_location );
+        }
         if( inventory_activity_view( get_avatar().activity ) ) {
             get_avatar().activity.moves_total = response.get_int( "moves_total" );
             get_avatar().activity.moves_left = response.get_int( "moves_left" );
+            if( auto *craft = dynamic_cast<craft_activity_actor *>( get_avatar().activity.actor.get() ) ) {
+                craft->update_view_progress( response.get_string( "craft_progress", "" ) );
+            }
         }
     }
     return true;
@@ -549,6 +755,65 @@ void client_start_insert( const insert_selection &selection )
     } );
 }
 
+void client_start_craft( const craft_command &command )
+{
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    const bool repeat = view.active && view.craft_decision == "repeat";
+    if( !repeat && !begin_client_inventory_activity( craft_activity_actor::client_view() ) ) {
+        return;
+    }
+    send_inventory_activity( repeat ? "restart" : "start", [&]( JsonOut & out ) {
+        out.member( "kind", "craft" );
+        out.member( "selection" );
+        command.serialize_selection( out );
+    } );
+}
+
+void client_resume_craft( const item_location &source )
+{
+    avatar &who = get_avatar();
+    if( !source || !source->is_craft() || !is_client_mode() || is_client_waiting_for_ack() ||
+        who.get_moves() <= 0 || who.cant_do_mounted() ) {
+        return;
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    if( !query_consumption_ownership( *source, who ) ) {
+        return;
+    }
+    std::optional<item_disposition> disposition;
+    item_source weapon;
+    if( !who.is_wielding( *source ) ) {
+        if( !who.can_wield( *source ).success() ||
+            ( who.is_armed() && !who.query_yn( _( "Wield the %s and start working?" ), source->tname() ) ) ) {
+            return;
+        }
+        if( who.has_wield_conflicts( *source ) ) {
+            weapon = capture_item_source( who, who.get_wielded_item() );
+            disposition = query_item_disposition( who, who.get_wielded_item() );
+            if( !disposition ) {
+                return;
+            }
+        }
+    }
+    if( !begin_client_inventory_activity( craft_activity_actor::client_view() ) ) {
+        return;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "craft_resume" );
+        out.member( "source", capture_item_source( who, source ) );
+        out.member( "allow_theft", !source->is_owned_by( who, true ) );
+        out.member( "weapon", weapon );
+        if( disposition ) {
+            out.member( "disposition" );
+            out.start_object();
+            out.member( "action", disposition->action );
+            out.member( "container", disposition->container );
+            out.member( "pocket", disposition->pocket );
+            out.end_object();
+        }
+    } );
+}
+
 void client_start_consume( const item_location &source, bool allow_consequences, bool allow_theft,
                            bool reprompt )
 {
@@ -588,7 +853,8 @@ void client_step_inventory_activity()
         get_avatar().activity.set_to_null();
         return;
     }
-    if( view.cancel_requested || view.needs_placement || view.finished ) {
+    if( view.cancel_requested || view.needs_placement || view.finished ||
+        !view.craft_decision.empty() ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
         send_inventory_activity( "step" );
@@ -606,7 +872,22 @@ void client_cancel_inventory_activity()
 void client_update_inventory_activity_view()
 {
     auto &view = g->multiplayer_session().client_inventory_activity;
-    if( !is_client_mode() || !view.active || view.pending_request != 0 ) {
+    if( !is_client_mode() ) {
+        return;
+    }
+    std::vector<craft_notice> notices = std::move( view.notices );
+    view.notices.clear();
+    for( const craft_notice &notice : notices ) {
+        const bool interrupt = notice.alarm || uistate.distraction_craft_step_complete;
+        const auto type = notice.alarm ? distraction_type::noise : distraction_type::craft_step_complete;
+        if( !interrupt || !g->cancel_activity_or_ignore_query( type, notice.message ) ) {
+            add_msg( m_info, notice.message );
+        }
+    }
+    if( !notices.empty() ) {
+        g->multiplayer_session().client_turn.client_msg_watermark = Messages::size();
+    }
+    if( !view.active || view.pending_request != 0 ) {
         return;
     }
     if( view.finished ) {
@@ -635,6 +916,105 @@ void client_update_inventory_activity_view()
         }
     } else if( view.cancel_requested ) {
         send_inventory_activity( "cancel" );
+    } else if( !view.craft_decision.empty() && !is_client_waiting_for_ack() ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        if( view.craft_decision == "repeat" ) {
+            if( get_avatar().get_moves() <= 0 ) {
+                return;
+            }
+            if( view.craft_recipe.is_valid() &&
+                get_avatar().making_would_work( view.craft_recipe, view.craft_batch ) ) {
+                const auto target = view.craft_location ?
+                                    std::make_optional( get_map().get_bub( *view.craft_location ) ) : std::nullopt;
+                craft_command next( &view.craft_recipe.obj(), view.craft_batch, true, &get_avatar(), target );
+                next.execute();
+            }
+            if( view.pending_request == 0 ) {
+                view.cancel_requested = true;
+                send_inventory_activity( "cancel" );
+            }
+        } else if( ( view.craft_decision == "repair" || view.craft_decision == "resume" ) &&
+                   view.preview ) {
+            std::optional<std::vector<attention_plan>> plans;
+            if( view.craft_decision == "resume" ) {
+                const item &craft = *view.preview;
+                plans = craft.get_step_plans();
+                if( craft.get_making().has_remaining_attention_steps( craft.get_current_step() ) ) {
+                    plans = show_craft_planning_modal( craft.get_making(), get_avatar(), craft.get_making_batch_size(),
+                                                       craft.get_current_step(), craft.get_step_plans(), &craft );
+                    if( !plans ) {
+                        view.cancel_requested = true;
+                        send_inventory_activity( "cancel" );
+                        return;
+                    }
+                }
+            }
+            const auto selection = craft_resume_selection::prepare( get_avatar(), *view.preview );
+            if( !selection ) {
+                view.cancel_requested = true;
+                send_inventory_activity( "cancel" );
+            } else {
+                send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                    out.member( "decision", view.craft_decision );
+                    out.member( "selection", *selection );
+                    if( plans ) {
+                        out.member( "plans" );
+                        write_craft_plans( out, *plans );
+                    }
+                } );
+            }
+        } else if( view.craft_decision == "practice_continue" || view.craft_decision == "practice_stop" ) {
+            const bool stopping = view.craft_decision == "practice_stop";
+            const bool answer = get_avatar().query_yn( stopping ?
+                                _( "Your proficiency has increased.  Stop practicing?" ) :
+                                _( "Keep practicing until proficiency increases?" ) );
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "decision", view.craft_decision );
+                out.member( stopping ? "stop" : "repeat", answer );
+            } );
+        } else if( ( view.craft_decision == "results" || view.craft_decision == "components" ) &&
+                   view.preview && get_avatar().get_moves() > 0 ) {
+            std::vector<unload_liquid_choice> liquids;
+            bool canceled = false;
+            const auto select = [&]( const item & result, const item * excluded ) {
+                if( result.made_of( phase_id::LIQUID ) ) {
+                    unload_liquid_choice selected = query_owned_liquid_destination( result, excluded,
+                                                    result.uid().get_value() );
+                    if( selected.kind == LD_NULL ) {
+                        canceled = true;
+                        return;
+                    }
+                    liquids.push_back( selected );
+                }
+            };
+            if( view.craft_decision == "components" ) {
+                for( auto &group : view.preview->components ) {
+                    for( item &component : group.second ) {
+                        if( craft_command::safe_to_unload_comp( component ) ) {
+                            for( const item *contained : component.all_items_top() ) {
+                                if( !canceled ) {
+                                    select( *contained, &component );
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                for( const item &result : view.preview->get_craft_results().pending ) {
+                    if( !canceled ) {
+                        select( result, view.preview.get() );
+                    }
+                }
+            }
+            if( canceled ) {
+                view.cancel_requested = true;
+                send_inventory_activity( "cancel" );
+                return;
+            }
+            send_inventory_activity( "results", [&]( JsonOut & out ) {
+                out.member( "liquids", liquids );
+            } );
+        }
     } else if( view.needs_placement && view.preview && !is_client_waiting_for_ack() &&
                get_avatar().get_moves() > 0 ) {
         uilist choice;
