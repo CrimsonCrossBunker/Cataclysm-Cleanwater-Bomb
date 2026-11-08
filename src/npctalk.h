@@ -13,6 +13,7 @@ class item;
 class JsonOut;
 class JsonValue;
 class json_talk_topic;
+class mission;
 class npc;
 class time_duration;
 class vehicle;
@@ -40,11 +41,17 @@ void clear_mission( npc & );
 void mission_reward( npc & );
 void mission_favor( npc & );
 void give_equipment( npc & );
+void give_equipment( npc &, Character &u );
 void give_equipment_allowance( npc &p, int allowance );
+void give_equipment_allowance( npc &p, Character &u, int allowance );
 void lesser_give_aid( npc & );
+void lesser_give_aid( npc &, Character &u );
 void lesser_give_all_aid( npc & );
+void lesser_give_all_aid( npc &, Character &u );
 void give_aid( npc & );
+void give_aid( npc &, Character &u );
 void give_all_aid( npc & );
+void give_all_aid( npc &, Character &u );
 void buy_horse( npc & );
 void buy_cow( npc & );
 void buy_chicken( npc & );
@@ -55,14 +62,18 @@ void bionic_remove( npc & );
 void bionic_remove( npc &, Character &patient );
 void bionic_remove_allies( npc & );
 void repair_bionic_limbs( npc & );
+void repair_bionic_limbs( npc &, Character &u );
 void dismount( npc & );
 void find_mount( npc & );
 
 void barber_beard( npc & );
 void barber_hair( npc & );
 void buy_haircut( npc & );
+void buy_haircut( npc &, Character &u );
 void buy_shave( npc & );
+void buy_shave( npc &, Character &u );
 void morale_chat_activity( npc & );
+void morale_chat_activity( npc &, Character &u );
 void start_trade( npc & );
 void sort_loot( npc & );
 void do_construction( npc & );
@@ -98,6 +109,7 @@ void insult_combat( npc & );
 void reveal_stats( npc & );
 void drop_items_in_place( npc &p );
 void follow( npc & );                // p becomes a member of your_followers
+void follow( npc &, Character &u );
 void follow_only( npc & );           // p starts following you
 void deny_follow( npc & );           // p gets "asked_to_follow"
 void deny_lead( npc & );             // p gets "asked_to_lead"
@@ -111,6 +123,7 @@ void stop_following( npc & );
 void stranger_neutral( npc & );      // p is now neutral towards you
 
 bool drop_stolen_item( item &cur_item, npc &p );
+bool drop_stolen_item( item &cur_item, npc &p, Character &u );
 
 void start_mugging( npc & );
 void player_leaving( npc & );
@@ -119,15 +132,22 @@ void remove_stolen_status( npc & );
 
 void drop_weapon( npc & );
 void player_weapon_away( npc & );
+void player_weapon_away( npc &, Character &u );
 void player_weapon_drop( npc & );
+void player_weapon_drop( npc &, Character &u );
 void drop_player_weapon( Character &player_character );
 void drop_stolen_item( npc & );
+void drop_stolen_item( npc &, Character &u );
 
 void lead_to_safety( npc & );
+void lead_to_safety( npc &, Character &u );
 void start_training( npc & );
 void start_training_npc( npc & );
 void start_training_seminar( npc &p );
 void start_training_gen( Character &teacher, std::vector<Character *> &students, teach_domain &d );
+// Explicit selection: nullptr means ordinary paid training, without a shared chatbin fallback.
+void start_training_gen( Character &teacher, std::vector<Character *> &students, teach_domain &d,
+                         mission *reward_mission );
 
 // used for NPC camps
 void distribute_food_auto( npc &p );

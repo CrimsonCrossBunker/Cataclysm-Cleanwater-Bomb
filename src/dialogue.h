@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_DIALOGUE_H
 #define CATA_SRC_DIALOGUE_H
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -202,6 +203,8 @@ struct talk_response {
     bool ignore_conditionals = false;
 
     mission *mission_selected = nullptr;
+    int mission_selected_uid = -1;
+    std::size_t mission_selected_generation = 0;
     skill_id skill;
     matype_id style;
     spell_id dialogue_spell;
@@ -225,11 +228,11 @@ struct talk_response {
 * A collection of talk_topics and talk_responses that make up a conversation.
 */
 struct const_dialogue {
-        const_talker *const_actor( bool is_beta ) const;
+        virtual const_talker *const_actor( bool is_beta ) const;
         bool has_actor( bool is_beta ) const;
 
         const_dialogue() = default;
-        ~const_dialogue() = default;
+        virtual ~const_dialogue() = default;
         const_dialogue( const const_dialogue & );
         const_dialogue( const_dialogue && ) = default;
         const_dialogue &operator=( const const_dialogue & ) = delete;
@@ -279,7 +282,14 @@ struct const_dialogue {
         lazy<std::unordered_map<std::string, std::function<bool( const_dialogue const & )>>> conditionals;
 };
 
-struct dialogue: public const_dialogue {
+enum class dialogue_start_result {
+    not_started,
+    rejected,
+    started
+};
+
+struct dialogue:
+    public const_dialogue {
         /**
          * If true, we are done talking and the dialog ends.
          */
@@ -288,15 +298,27 @@ struct dialogue: public const_dialogue {
 
         talk_topic opt( dialogue_window &d_win, const talk_topic &topic );
         dialogue() = default;
-        ~dialogue() noexcept;
+        ~dialogue() noexcept override;
         dialogue( const dialogue &d );
         dialogue( dialogue &&d ) noexcept;
-        dialogue &operator=( const dialogue & );
-        dialogue &operator=( dialogue &&d ) noexcept;
+        dialogue &operator = ( const dialogue & );
+        dialogue &operator = ( dialogue &&d ) noexcept;
         dialogue( std::unique_ptr<talker> alpha_in, std::unique_ptr<talker> beta_in,
                   const std::unordered_map<std::string, std::function<bool( const_dialogue const & )>> &cond = {},
                   global_variables::impl_t const &ctx = {} );
+        const_talker *const_actor( bool is_beta ) const override;
         talker *actor( bool is_beta ) const;
+
+        // Native conversation lifecycle, shared by the local menu and server-owned
+        // remote conversations. Topic/force overrides are trusted caller options.
+        dialogue_start_result begin_conversation( bool radio_contact = false,
+                const std::string &initial_topic = "", bool force_initial_topic = false );
+        bool prepare_topic();
+        const std::string &prepared_challenge() const {
+            return prepared_challenge_;
+        }
+        bool advance_conversation( talk_topic next );
+        void finish_conversation();
 
         std::string dynamic_line( const talk_topic &topic );
         void apply_speaker_effects( const talk_topic &the_topic );
@@ -310,6 +332,22 @@ struct dialogue: public const_dialogue {
          */
         std::vector<talk_response> responses;
         void gen_responses( const talk_topic &topic );
+
+        // A choice refers to one generated response list. Consumed, refreshed or copied
+        // lists cannot execute an old choice. Transport must additionally bind its session.
+        std::uint64_t response_revision() const {
+            return response_revision_;
+        }
+        bool responses_pending() const {
+            return responses_pending_;
+        }
+        bool conversation_active() const {
+            return conversation_active_;
+        }
+        std::optional<talk_topic> select_response( std::size_t index, std::uint64_t revision,
+                bool debug_allow_unavailable = false );
+        std::optional<talk_topic> select_special_talk( const std::string &action,
+                std::uint64_t revision, const dialogue_window &d_win );
 
         // response conditional result cache
         std::vector<bool> response_condition_exists;
@@ -327,6 +365,18 @@ struct dialogue: public const_dialogue {
         bool debug_ignore_conditionals = false;
 
     private:
+        std::uint64_t response_revision_ = 0;
+        bool responses_pending_ = false;
+        bool response_step_in_progress_ = false;
+        bool conversation_active_ = false;
+        bool conversation_step_in_progress_ = false;
+        bool topic_prepared_ = false;
+        std::string prepared_challenge_;
+        std::string last_topic_;
+        // Reports whether the fallback native topic supplied the line, so overridden
+        // Lua/JSON topics do not accidentally run a fallback topic's world action.
+        std::string make_dynamic_line( const talk_topic &topic, bool &native_line );
+
         /**
          * The talker that speaks (almost certainly representing the avatar, ie get_avatar() )
          */
@@ -423,7 +473,7 @@ struct dialogue: public const_dialogue {
  */
 struct dynamic_line_t {
     private:
-        std::function<std::string( dialogue & )> function;
+        std::function < std::string( dialogue & ) > function;
 
     public:
         dynamic_line_t() = default;
@@ -448,7 +498,7 @@ class json_talk_response
 {
     private:
         talk_response actual_response;
-        std::function<bool( const_dialogue const & )> condition;
+        std::function < bool( const_dialogue const & ) > condition;
         bool has_condition_ = false;
         bool is_switch = false;
         bool is_default = false;
@@ -487,22 +537,22 @@ class json_talk_repeat_response
         explicit json_talk_repeat_response( const JsonObject &jo, std::string_view src );
         bool is_npc = false;
         bool include_containers = false;
-        std::vector<itype_id> for_item;
-        std::vector<item_category_id> for_category;
+        std::vector < itype_id > for_item;
+        std::vector < item_category_id > for_category;
         json_talk_response response;
 };
 
 class json_dynamic_line_effect
 {
     private:
-        std::function<bool( dialogue & )> condition;
+        std::function < bool( dialogue & ) > condition;
         talk_effect_t effect;
     public:
         json_dynamic_line_effect( const JsonObject &jo, const std::string &id, std::string_view src );
         bool test_condition( dialogue &d ) const;
         void apply( dialogue &d ) const;
         // debug: conditional / effect
-        std::map<std::string, std::string> debug_info;
+        std::map < std::string, std::string > debug_info;
 
 };
 
@@ -513,10 +563,10 @@ class json_talk_topic
 {
     private:
         bool replace_built_in_responses = false;
-        std::vector<json_talk_response> responses;
+        std::vector < json_talk_response > responses;
         dynamic_line_t dynamic_line;
-        std::vector<json_dynamic_line_effect> speaker_effects;
-        std::vector<json_talk_repeat_response> repeat_responses;
+        std::vector < json_dynamic_line_effect > speaker_effects;
+        std::vector < json_talk_repeat_response > repeat_responses;
 
     public:
         json_talk_topic() = default;
@@ -529,7 +579,7 @@ class json_talk_topic
         void load( const JsonObject &jo, std::string_view src );
 
         std::string get_dynamic_line( dialogue &d ) const;
-        std::vector<json_dynamic_line_effect> get_speaker_effects() const;
+        std::vector < json_dynamic_line_effect > get_speaker_effects() const;
 
         void check_consistency() const;
         /**
@@ -541,13 +591,14 @@ class json_talk_topic
          */
         bool gen_responses( dialogue &d );
 
-        cata::flat_set<std::string> get_directly_reachable_topics( bool only_unconditional ) const;
+        cata::flat_set < std::string > get_directly_reachable_topics( bool only_unconditional ) const;
 
-        std::vector<json_talk_response> get_responses();
+        std::vector < json_talk_response > get_responses();
 };
 
 void unload_talk_topics();
 void load_talk_topic( const JsonObject &jo, std::string_view src );
-void get_raw_debug_fields( const JsonObject &jo, std::map<std::string, std::string> &debug_info );
+void get_raw_debug_fields( const JsonObject &jo, std::map < std::string,
+                           std::string > &debug_info );
 
 #endif // CATA_SRC_DIALOGUE_H

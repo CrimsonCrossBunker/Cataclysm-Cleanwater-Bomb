@@ -12,6 +12,10 @@
 
 #include "cata_imgui.h"
 #include "character_id.h"
+#include "character_action_guard.h"
+#include "avatar.h"
+#include "clzones.h"
+#include "mp_gamestate.h"
 #include "game.h"
 #include "imgui/imgui.h"
 #include "input_context.h"
@@ -40,9 +44,8 @@ namespace
 class study_zone_window : public cataimgui::window
 {
     public:
-        explicit study_zone_window( std::map<std::string, std::set<skill_id>> &npc_skill_preferences ) :
-            cataimgui::window( _( "Study Zone Skill Preferences" ), ImGuiWindowFlags_NoNavInputs ),
-            npc_skill_preferences( npc_skill_preferences ) {
+        explicit study_zone_window( const study_zone_options &options ) :
+            cataimgui::window( _( "Study Zone Skill Preferences" ), ImGuiWindowFlags_NoNavInputs ) {
             ctxt = input_context( "STUDY_ZONE_UI" );
             ctxt.register_action( "CONFIRM" );
             ctxt.register_action( "FILTER" );
@@ -58,32 +61,34 @@ class study_zone_window : public cataimgui::window
                 return localized_compare( a->name(), b->name() );
             } );
 
-            // get followers
-            std::set<character_id> follower_ids = g->get_follower_list();
-            for( const character_id &id : follower_ids ) {
-                shared_ptr_fast<npc> npc_ptr = overmap_buffer.find_npc( id );
-                if( npc_ptr && !npc_ptr->is_hallucination() && npc_ptr->is_player_ally() ) {
-                    npc_names.push_back( npc_ptr->name );
+            const auto add_character = [&]( Character & who ) {
+                const std::string key = study_zone_options::preference_key( who );
+                if( characters.count( key ) ) {
+                    return;
+                }
+                characters.emplace( key, character_action_guard( who ) );
+                labels.emplace( key, who.disp_name() );
+                npc_names.push_back( key );
+                const std::set<skill_id> *selected = options.get_skill_preferences( who );
+                npc_skill_preferences[key] = selected ? *selected :
+                                             std::set<skill_id>( all_skills.begin(), all_skills.end() );
+            };
+            add_character( get_avatar() );
+            // Use the operator's followers and the visible player identities, not names.
+            for( const character_id &id : g->get_follower_list() ) {
+                shared_ptr_fast<npc> follower = overmap_buffer.find_npc( id );
+                if( follower && !follower->is_hallucination() && follower->is_obeying( get_avatar() ) ) {
+                    add_character( *follower );
                 }
             }
-            // include NPCs that are already in preferences but not in follower list
-            for( const auto &pair : npc_skill_preferences ) {
-                if( std::find( npc_names.begin(), npc_names.end(), pair.first ) == npc_names.end() ) {
-                    npc_names.push_back( pair.first );
-                }
+            for( npc *person : g->get_npcs_if( []( const npc & candidate ) {
+            return cata_mp::partner_identity( candidate.getID() ).valid();
+            } ) ) {
+                add_character( *person );
             }
-            std::sort( npc_names.begin(), npc_names.end(), localized_compare );
-
-            // for new NPCs set all checkboxes
-            for( const std::string &npc_name : npc_names ) {
-                if( npc_skill_preferences.find( npc_name ) == npc_skill_preferences.end() ) {
-                    std::set<skill_id> &npc_skills = npc_skill_preferences[npc_name];
-                    for( const skill_id &skill : all_skills ) {
-                        npc_skills.insert( skill );
-                    }
-                    preferences_changed = true;
-                }
-            }
+            std::sort( npc_names.begin(), npc_names.end(), [&]( const std::string & a, const std::string & b ) {
+                return localized_compare( labels.at( a ), labels.at( b ) );
+            } );
 
             max_skill_name_width = 0.0f;
             for( const skill_id &skill : all_skills ) {
@@ -94,10 +99,18 @@ class study_zone_window : public cataimgui::window
 
             max_npc_name_width = 0.0f;
             for( const std::string &npc_name : npc_names ) {
-                ImVec2 text_size = ImGui::CalcTextSize( npc_name.c_str() );
+                ImVec2 text_size = ImGui::CalcTextSize( labels.at( npc_name ).c_str() );
                 float width = text_size.x + ImGui::GetStyle().FramePadding.x * 2.0f;
                 if( width > max_npc_name_width ) {
                     max_npc_name_width = width;
+                }
+            }
+        }
+
+        void apply( study_zone_options &options ) const {
+            for( const auto &entry : characters ) {
+                if( Character *who = entry.second.get() ) {
+                    options.set_skill_preferences( *who, npc_skill_preferences.at( entry.first ) );
                 }
             }
         }
@@ -171,9 +184,6 @@ class study_zone_window : public cataimgui::window
                     } else {
                         npc_skills.erase( skill );
                     }
-                    if( npc_skills.empty() ) {
-                        npc_skill_preferences.erase( npc_name );
-                    }
                 }
             }
         }
@@ -214,9 +224,6 @@ class study_zone_window : public cataimgui::window
                     std::set<skill_id> &npc_skills = npc_skill_preferences[npc_name];
                     for( const skill_id &skill : filtered_skills ) {
                         npc_skills.erase( skill );
-                    }
-                    if( npc_skills.empty() ) {
-                        npc_skill_preferences.erase( npc_name );
                     }
                 }
                 preferences_changed = true;
@@ -262,7 +269,8 @@ class study_zone_window : public cataimgui::window
                     ImGui::TableSetupColumn( "Skill", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHide,
                                              max_skill_name_width );
                     for( const std::string &npc_name : npc_names ) {
-                        ImGui::TableSetupColumn( npc_name.c_str(), ImGuiTableColumnFlags_WidthFixed,
+                        const std::string label = labels.at( npc_name ) + "###" + npc_name;
+                        ImGui::TableSetupColumn( label.c_str(), ImGuiTableColumnFlags_WidthFixed,
                                                  max_npc_name_width );
                     }
                     // freeze skill column horizontally and header vertically
@@ -287,7 +295,9 @@ class study_zone_window : public cataimgui::window
         }
 
     private:
-        std::map<std::string, std::set<skill_id>> &npc_skill_preferences;
+        std::map<std::string, std::set<skill_id>> npc_skill_preferences;
+        std::map<std::string, character_action_guard> characters;
+        std::map<std::string, std::string> labels;
         std::vector<skill_id> all_skills;
         std::vector<std::string> npc_names;
         std::string skill_filter;
@@ -301,10 +311,14 @@ class study_zone_window : public cataimgui::window
 };
 } // namespace
 
-study_zone_ui_result query_study_zone_skills( std::map<std::string, std::set<skill_id>>
-        &npc_skill_preferences )
+study_zone_ui_result query_study_zone_skills( study_zone_options &options )
 {
-    study_zone_window window( npc_skill_preferences );
-    return window.execute();
+    study_zone_window window( options );
+    const study_zone_ui_result result = window.execute();
+    if( result != study_zone_ui_result::canceled ) {
+        // Confirming binds legacy name preferences to current stable identities too.
+        window.apply( options );
+        return study_zone_ui_result::changed;
+    }
+    return result;
 }
-

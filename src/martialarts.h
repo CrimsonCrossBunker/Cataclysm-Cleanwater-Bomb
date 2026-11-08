@@ -208,6 +208,10 @@ class ma_technique
         /** Evaluate the Lua-authored activation policy for this technique, if present. */
         bool activation_allowed( const Character &character, std::string_view phase ) const;
 
+        time_duration activation_cooldown( const Character &character ) const;
+        time_duration cooldown = 0_turns;
+        std::string lua_platform_cooldown_handler;
+
         std::set<std::string> flags;
 
         // message to be displayed when Character or npc uses the technique
@@ -222,6 +226,12 @@ class ma_technique
         bool reach_tec = false; // only possible to use during a reach attack
         bool reach_ok = false; // possible to use during a reach attack
         bool manual_activation = false; // restrict this technique to manual activation
+
+        std::string grapple_action;
+        int grapple_power = 100;
+        int grapple_stamina = 0;
+        time_duration grapple_cooldown = 0_turns;
+        efftype_id grapple_cooldown_effect() const;
 
         ma_requirements reqs;
 

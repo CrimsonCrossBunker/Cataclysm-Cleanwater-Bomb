@@ -9,14 +9,20 @@
 
 #include "calendar.h"
 #include "coordinates.h"
+#include "crafting_enums.h"
 #include "item_wakeup.h"
 
 class Character;
 class item;
 class item_location;
 class recipe;
+class JsonArray;
+class JsonOut;
 struct attention_plan;
+struct unload_liquid_choice;
 template <typename E> struct enum_traits;
+
+inline constexpr int crafting_batch_input_max = 9999;
 
 enum class craft_flags : int {
     none = 0,
@@ -41,11 +47,31 @@ void drop_or_handle( const item &newit, Character &p );
 // checks so non-UI safe-point dispatchers can preserve the same restrictions
 // as Character::craft() and Character::long_craft().
 bool crafting_allowed( const Character &p, const recipe &rec );
+bool craft_available_to( const Character &who, const item_location &workpiece );
 
 // Check the in-progress craft's destination before consuming components or
 // tool charges.  Uses the same workbench selection as actual placement.
 bool can_place_craft( const Character &ch, const item &craft,
                       std::optional<tripoint_bub_ms> target, bool always_start_on_ground );
+bool can_place_selected_craft( const Character &who, const item &craft,
+                               std::optional<tripoint_bub_ms> target, bool on_ground,
+                               craft_placement placement );
+std::optional<craft_placement> query_craft_placement( Character &who, const item &craft,
+        std::optional<tripoint_bub_ms> target, bool on_ground );
+
+// Place already generated and temperature-adjusted results using native rules.
+void place_craft_results( Character &who, std::vector<item> &results,
+                          const std::optional<tripoint_bub_ms> &loc, bool allow_wield );
+
+// Finish as far as the owner's explicit liquid destinations permit. Pending
+// results remain in the workpiece, including after cancellation or save/reload.
+// A completed workpiece is removed and its location cleared.
+bool deliver_owned_craft( Character &who, item_location &workpiece,
+                          const std::vector<unload_liquid_choice> &liquids );
+bool craft_has_pending_components( const item &craft );
+bool unload_craft_components( Character &who, item_location &workpiece );
+bool unload_craft_components( Character &who, item_location &workpiece,
+                              const std::optional<std::vector<unload_liquid_choice>> &liquids );
 
 // Per-choice data for the timer sub-menu when the modal is shown on an
 // in-flight unattended step.  All offsets are step-start anchored
@@ -79,6 +105,9 @@ std::optional<std::vector<attention_plan>> show_craft_planning_modal(
         const recipe &rec, const Character &crafter, int batch, int from_step,
         const std::vector<attention_plan> &existing,
         const item *current_craft = nullptr );
+void write_craft_plans( JsonOut &out, const std::vector<attention_plan> &plans );
+std::optional<std::vector<attention_plan>> read_craft_plans( const Character &who,
+                                        const recipe &rec, int batch, const JsonArray &data, const item *current = nullptr );
 
 // Interrupts the avatar's current activity with a craft_step_complete
 // distraction when the avatar can read time; falls back to a vague flavor

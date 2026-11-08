@@ -154,7 +154,7 @@ constexpr bool native_callback_storage_has_no_pointers(
 {
     return ( ... &&
              !std::is_pointer_v<std::variant_alternative_t<
-             Index, native_callback_value::storage_type>> );
+             Index, native_callback_value::storage_type >> );
 }
 
 static_assert( native_callback_storage_has_no_pointers( std::make_index_sequence <
@@ -165,7 +165,7 @@ struct native_callback_argument {
     native_callback_value value;
 };
 
-using native_callback_arguments = std::vector<native_callback_argument>;
+using native_callback_arguments = std::vector < native_callback_argument >;
 
 struct native_menu_entry {
     std::string id;
@@ -177,9 +177,9 @@ struct native_hook_result {
     bool allowed = true;
     bool handled = false;
     std::string text;
-    std::optional<std::string> result;
-    std::vector<std::string> results;
-    std::vector<native_menu_entry> menu_entries;
+    std::optional < std::string > result;
+    std::vector < std::string > results;
+    std::vector < native_menu_entry > menu_entries;
 };
 
 /** Return whether a named Platform hook is part of the native result contract. */
@@ -198,8 +198,8 @@ bool dispatch_native_hook(
 bool dispatch_avatar_fatal( Character &character, const Creature *killer );
 bool dispatch_npc_fatal( Character &character, const Creature *killer );
 bool has_native_hook( std::string_view name );
-std::vector<std::string> collect_native_mapgen_factory_usages(
-    const std::vector<std::string> &candidates );
+std::vector < std::string > collect_native_mapgen_factory_usages(
+    const std::vector < std::string > &candidates );
 void dispatch_native_monster_spawn(
     const Creature &monster, std::string_view source );
 void dispatch_native_npc_spawn(
@@ -212,13 +212,14 @@ bool dispatch_character_display_skill_action(
 native_hook_result dispatch_native_dialogue_hook(
     std::string_view name, const const_talker &speaker,
     const const_talker &interlocutor, std::string_view topic,
-    std::optional<std::string_view> option = std::nullopt,
+    std::optional < std::string_view > option = std::nullopt,
     bool by_radio = false,
-    std::optional<std::string_view> reason = std::nullopt );
+    std::optional < std::string_view > reason = std::nullopt );
 void clear_dialogue_response_callbacks();
+void clear_dialogue_response_callbacks( ::dialogue &d );
 void begin_dialogue_session( ::dialogue &d );
 void end_dialogue_session( ::dialogue &d ) noexcept;
-std::optional<std::string> dialogue_dynamic_line(
+std::optional < std::string > dialogue_dynamic_line(
     ::dialogue &d, const talk_topic &topic );
 void apply_lua_dialogue_speaker_effects(
     ::dialogue &d, const talk_topic &topic );
@@ -237,7 +238,7 @@ bool allow_native_elevator_use(
     const Character &character,
     const native_callback_point &position,
     const native_callback_point &destination );
-std::vector<native_menu_entry> collect_native_hook_menu_entries(
+std::vector < native_menu_entry > collect_native_hook_menu_entries(
     std::string_view name,
     const native_callback_arguments &arguments = {} );
 
@@ -248,8 +249,8 @@ enum class script_hook_mode : int {
 
 struct script_hook_spec {
     script_hook_spec( std::string_view name_in, script_hook_mode mode_in,
-                      std::vector<std::string_view> payload_fields_in,
-                      std::vector<std::string_view> result_fields_in = {} ) :
+                      std::vector < std::string_view > payload_fields_in,
+                      std::vector < std::string_view > result_fields_in = {} ) :
         name( name_in ),
         mode( mode_in ),
         payload_fields( std::move( payload_fields_in ) ),
@@ -257,11 +258,11 @@ struct script_hook_spec {
 
     std::string_view name;
     script_hook_mode mode = script_hook_mode::observe;
-    std::vector<std::string_view> payload_fields;
-    std::vector<std::string_view> result_fields;
+    std::vector < std::string_view > payload_fields;
+    std::vector < std::string_view > result_fields;
 };
 
-const std::vector<script_hook_spec> &script_hook_specs();
+const std::vector < script_hook_spec > &script_hook_specs();
 const script_hook_spec *find_script_hook_spec( std::string_view name );
 bool script_hook_supports_result( const script_hook_spec &spec,
                                   std::string_view field );

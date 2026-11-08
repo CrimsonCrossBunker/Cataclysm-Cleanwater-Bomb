@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "effect.h"
 #include "faction.h"
+#include "game.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
@@ -38,8 +39,11 @@
 #include "martialarts.h"
 #include "math_parser_diag_value.h"
 #include "messages.h"
+#include "monster.h"
+#include "mtype.h"
 #include "npc.h"
 #include "npctalk.h"
+#include "npctrade.h"
 #include "output.h"
 #include "pimpl.h"
 #include "player_activity.h"
@@ -566,7 +570,7 @@ void talker_character::add_effect( const efftype_id &new_effect, const time_dura
 {
     bodypart_id target_part;
     if( "RANDOM" == bp ) {
-        target_part = get_player_character().random_body_part( true );
+        target_part = me_chr->random_body_part( true );
     } else {
         target_part = bodypart_str_id( bp );
     }
@@ -578,7 +582,7 @@ void talker_character::remove_effect( const efftype_id &old_effect, const std::s
 {
     bodypart_id target_part;
     if( "RANDOM" == bp ) {
-        target_part = get_player_character().random_body_part( true );
+        target_part = me_chr->random_body_part( true );
     } else {
         target_part = bodypart_str_id( bp );
     }
@@ -718,7 +722,7 @@ bool talker_character_const::has_stolen_item( const_talker const &guy ) const
 {
     const Character *owner = guy.get_const_character();
     if( owner ) {
-        for( const item *&elem : me_chr_const->inv_dump() ) {
+        for( const item*&elem : me_chr_const->inv_dump() ) {
             if( elem->is_old_owner( *owner, true ) ) {
                 return true;
             }
@@ -1335,7 +1339,7 @@ std::string talker_character_const::proficiency_training_text( const_talker cons
     const float pct_before = current_time * 100.0f / time_needed;
     const float pct_after = ( current_time + 15_minutes ) * 100.0f / time_needed;
     const std::string after_str = pct_after >= 100.0f ? pgettext( "NPC training: proficiency learned",
-        "done" ) : string_format( "%2.0f%%", pct_after );
+                                  "done" ) : string_format( "%2.0f%%", pct_after );
 
     if( cost > 0 ) {
         //~ Proficiency name: (current_practice) -> (next_practice) (cost in dollars)
@@ -1388,7 +1392,7 @@ std::string talker_character_const::spell_training_text( const_talker const &stu
     const spell &temp_spell = me_chr_const->magic->get_spell( sp );
     const bool knows = pupil->magic->knows_spell( sp );
     const int cost = me_chr_const->calc_spell_training_cost( knows, temp_spell.get_difficulty( *pupil ),
-        temp_spell.get_level() );
+                     temp_spell.get_level() );
     std::string text;
     if( cost == 0 && ( !me_chr_const->is_npc() || me_chr_const->as_npc()->is_ally( *pupil ) ) ) {
         text = temp_spell.name();
@@ -1468,9 +1472,9 @@ matec_id talker_character_const::get_random_technique( Creature const &t, bool c
         bool dodge_counter, bool block_counter, const std::vector<matec_id> &blacklist ) const
 {
     return std::get<0>( me_chr_const->pick_technique( t, me_chr_const->used_weapon(), crit,
-            dodge_counter,
-            block_counter,
-            blacklist ) );
+                        dodge_counter,
+                        block_counter,
+                        blacklist ) );
 }
 
 bool talker_character_const::is_in_vehicle() const
@@ -1502,4 +1506,63 @@ int talker_character_const::climate_control_str_heat() const
 int talker_character_const::climate_control_str_chill() const
 {
     return me_chr_const->climate_control_strength().second;
+}
+
+bool talker_character::buy_monster( talker &seller, const mtype_id &mtype, int cost,
+                                    int count, bool pacified, const translation &name )
+{
+    static const efftype_id effect_pacified( "pacified" );
+    static const efftype_id effect_pet( "pet" );
+
+    if( !is_valid() ) {
+        return false;
+    }
+    const bool local_avatar = me_chr->is_avatar();
+    npc *seller_guy = seller.get_npc();
+    if( !seller_guy ) {
+        if( local_avatar ) {
+            popup( _( "%s can't sell you any %s" ), seller.disp_name(), mtype.obj().nname( 2 ) );
+        }
+        return false;
+    }
+    const bool paid = cost <= 0 ||
+                      ( local_avatar ? npc_trading::pay_npc( *seller_guy, cost )
+                        : npc_trading::pay_npc( *seller_guy, *me_chr, cost ) );
+    if( !paid ) {
+        if( local_avatar ) {
+            popup( _( "You can't afford it!" ) );
+        }
+        return false;
+    }
+
+    for( int i = 0; i < count; i++ ) {
+        monster *const mon_ptr = g->place_critter_around( mtype, me_chr->pos_bub(), 3 );
+        if( !mon_ptr ) {
+            add_msg_debug( debugmode::DF_TALKER,
+                           "Cannot place u_buy_monster, no valid placement locations." );
+            break;
+        }
+        monster &tmp = *mon_ptr;
+        // Our monster is always a pet.
+        tmp.friendly = -1;
+        tmp.add_effect( effect_pet, 1_turns, true );
+
+        if( pacified ) {
+            tmp.add_effect( effect_pacified, 1_turns, true );
+        }
+
+        if( !name.empty() ) {
+            tmp.unique_name = name.translated();
+        }
+    }
+
+    if( local_avatar ) {
+        if( name.empty() ) {
+            popup( _( "%1$s gives you %2$d %3$s." ), seller_guy->get_name(),
+                   count, mtype.obj().nname( count ) );
+        } else {
+            popup( _( "%1$s gives you %2$s." ), seller_guy->get_name(), name );
+        }
+    }
+    return true;
 }

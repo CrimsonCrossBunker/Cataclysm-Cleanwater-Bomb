@@ -1,0 +1,141 @@
+[
+  {
+    "type": "effect_type",
+    "id": "martial_grapple",
+    "name": [ "Grappled" ],
+    "desc": [
+      "Held in a martial artist's grip.  The hold ends when its owner moves away, loses the use of both arms, becomes exhausted or the grip expires."
+    ],
+    "max_intensity": 1,
+    "show_in_info": true
+  },
+  {
+    "type": "effect_type",
+    "id": "martial_grapple_hold_cooldown",
+    "name": [ "Grip Recovery" ],
+    "desc": [ "You need a moment before establishing another grappling grip." ],
+    "max_intensity": 1
+  },
+  {
+    "type": "effect_type",
+    "id": "martial_grapple_throw_cooldown",
+    "name": [ "Throw Recovery" ],
+    "desc": [ "You need to recover your balance before another throw, even if you change martial arts styles." ],
+    "max_intensity": 1
+  },
+  {
+    "type": "effect_type",
+    "id": "martial_grapple_drag_cooldown",
+    "name": [ "Drag Recovery" ],
+    "desc": [ "You need to reset your footing before dragging a grappled opponent again." ],
+    "max_intensity": 1
+  },
+  {
+    "type": "technique",
+    "id": "tec_grapple_hold",
+    "name": "Grappling Grip",
+    "description": "Establish two-handed control of an adjacent opponent without striking.  Strength and Unarmed Combat determine the maximum weight you can control; heavier and larger opponents shorten the hold and increase its action and stamina costs.  A target more than one size category larger cannot be held.  Only one opponent can be held at a time.  The opponent is restrained briefly, not made harmless.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 2 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "hold",
+    "grapple_power": 100,
+    "grapple_stamina": 180,
+    "grapple_cooldown": "3 s"
+  },
+  {
+    "type": "technique",
+    "id": "tec_grapple_drag",
+    "name": "Grapple and Drag",
+    "description": "Keep your own established grip and step one tile directly away from the opponent, pulling them into your previous position.  This does not refresh the hold.  Your retreat must be clear and supported; you cannot pull a ridden, harnessed or tied creature.  Heavier opponents cost more time and stamina.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 2 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "drag",
+    "grapple_power": 120,
+    "grapple_stamina": 120,
+    "grapple_cooldown": "1 s"
+  },
+  {
+    "type": "technique",
+    "id": "tec_judo_hip_throw",
+    "name": "O-goshi Hip Throw",
+    "description": "From your own grip, break the opponent's balance and load them across your hip, throwing them into the clear tile behind you.  Judo's leverage handles more weight than a simple arm projection.  Heavy or larger opponents suffer less impact and spend less time down.  Releases your grip.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 3 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "throw",
+    "grapple_power": 125,
+    "grapple_stamina": 280,
+    "grapple_cooldown": "5 s"
+  },
+  {
+    "type": "technique",
+    "id": "tec_aikido_projection",
+    "name": "Kokyu-nage Projection",
+    "description": "Guide an opponent you already control off balance and down into the clear tile behind you.  Aikido emphasizes redirection and disengagement rather than injury: this projection inflicts little impact damage.  Weight and size still limit leverage; it cannot topple arbitrarily heavy monsters.  Releases your grip.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 3 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "throw",
+    "grapple_power": 100,
+    "grapple_stamina": 180,
+    "grapple_cooldown": "4 s",
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 0.25 } ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_pankration_slam",
+    "name": "Pankration Body Slam",
+    "description": "Use your established wrestling grip to lift and slam the opponent into the clear tile behind you.  This forceful finish does more impact damage but costs more stamina and takes longer to recover than a defensive projection.  Weight and size reduce its effectiveness.  Releases your grip.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 4 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "throw",
+    "grapple_power": 115,
+    "grapple_stamina": 350,
+    "grapple_cooldown": "6 s",
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.5 } ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_taichi_unbalance",
+    "name": "Push-Hands Unbalancing",
+    "description": "Maintain contact with an opponent in your own grip, redirect their center of balance and guide them down behind you.  This controlled push-hands finish favors balance disruption over impact damage.  It is less effective against heavy opponents and requires clear space behind you.  Releases your grip.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 3 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "throw",
+    "grapple_power": 95,
+    "grapple_stamina": 160,
+    "grapple_cooldown": "4 s",
+    "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 0.4 } ]
+  },
+  {
+    "type": "technique",
+    "id": "tec_krav_grapple_takedown",
+    "name": "Controlled Takedown",
+    "description": "Finish your established clinch with a direct takedown into the clear tile behind you, creating an opportunity to escape.  This practical self-defense finish balances impact, stamina use and recovery.  Larger and heavier opponents are harder to put down.  Releases your grip.",
+    "manual_activation": true,
+    "unarmed_allowed": true,
+    "strictly_unarmed": true,
+    "skill_requirements": [ { "name": "unarmed", "level": 3 } ],
+    "attack_vectors": [ "vector_punch" ],
+    "grapple_action": "throw",
+    "grapple_power": 110,
+    "grapple_stamina": 240,
+    "grapple_cooldown": "5 s"
+  }
+]

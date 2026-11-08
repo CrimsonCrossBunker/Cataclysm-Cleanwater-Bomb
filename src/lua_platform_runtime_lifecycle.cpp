@@ -20,10 +20,12 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "creature_tracker.h"
 #include "debug.h"
 #include "filesystem.h"
@@ -155,17 +157,6 @@ persistent_value persistent_from_lua( const sol::object &value,
                                       const std::string &api_name )
 {
     return script_persistent_value_from_lua( value, api_name );
-}
-
-void set_persistent_value( persistent_state &store, const std::string &key,
-                           const sol::object &value, const std::string &api_name )
-{
-    if( value.get_type() == sol::type::nil ) {
-        store.erase( key );
-        return;
-    }
-    cata::lua_platform::assign_persistent_value(
-        store, key, persistent_from_lua( value, api_name ) );
 }
 
 sol::object get_persistent_value( const persistent_state &store,
@@ -366,6 +357,13 @@ void load_scope( const cata_path &path, const std::string &scope,
                     if( task.owner_mod_id != member.name() ) {
                         throw std::runtime_error(
                             "Platform task owner Mod does not match its state record" );
+                    }
+                    if( task_json.has_member( "state_character_id" ) ) {
+                        const std::int64_t id = task_json.get_int64( "state_character_id" );
+                        if( id <= 0 || id > std::numeric_limits<int>::max() ) {
+                            throw std::runtime_error( "Platform task state character id is invalid" );
+                        }
+                        task.state_character_id = character_id( static_cast<int>( id ) );
                     }
                     if( task_json.has_member( "actor_character_id" ) ) {
                         const std::int64_t stored_actor_id =
@@ -574,6 +572,9 @@ void load_scope( const cata_path &path, const std::string &scope,
                         throw std::runtime_error( "Platform task payload version must be positive" );
                     }
                     task.payload = read_typed_values( task_json.get_object( "payload" ) );
+                    if( task.owner == "character" && !task.state_character_id ) {
+                        task.state_character_id = task.actor_character_id.value_or( get_avatar().getID() );
+                    }
                     record.tasks.push_back( std::move( task ) );
                     task_json.allow_omitted_members();
                 }
@@ -645,6 +646,9 @@ void write_scope_record( JsonOut &json, const persistent_state &state,
         json.member( "due_turn", task.due_turn );
         json.member( "interval_turns", task.interval_turns );
         json.member( "owner_mod_id", mod_id );
+        if( task.state_character_id ) {
+            json.member( "state_character_id", task.state_character_id->get_value() );
+        }
         if( task.actor_character_id ) {
             json.member( "actor_character_id",
                          task.actor_character_id->get_value() );
@@ -851,6 +855,54 @@ void detail::clear_orphan_runtime_records()
     orphan_world_records.clear();
 }
 
+detail::callback_scope::callback_scope( runtime &owner, Character *character ) :
+    callback_scope( owner )
+{
+    // Actorless native callbacks inherit their enclosing/lifecycle context.
+    // An explicitly bound actor that later expires remains bound and must fail.
+    if( character ) {
+        owner_.callback_character = platform_creature_handle( owner, *character );
+    }
+}
+
+detail::callback_scope::callback_scope( runtime &owner, const game_handle &character ) :
+    callback_scope( owner )
+{
+    owner_.callback_character = character;
+}
+
+namespace
+{
+Character &state_character( runtime &owner )
+{
+    if( !owner.callback_character ) {
+        return get_avatar();
+    }
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( *owner.callback_character, owner.handle_runtime(),
+                           detail::runtime_world_generation_storage(), error );
+    if( !character ) {
+        throw std::runtime_error( "state.character has no live callback character" );
+    }
+    return *character;
+}
+
+bool task_belongs_to_callback( runtime &owner, const persistent_task &task )
+{
+    if( task.owner != "character" ) {
+        return true;
+    }
+    const auto identity = task.state_character_id ? task.state_character_id : task.actor_character_id;
+    return !identity || *identity == state_character( owner ).getID();
+}
+
+persistent_state &state_values( runtime &owner, persistent_state runtime::*member )
+{
+    return member == &runtime::character_state ?
+           state_character( owner ).lua_character_state.for_mod( owner.mod_id ) : owner.*member;
+}
+} // namespace
+
 void detail::install_runtime_state_task_api(
     const std::shared_ptr<runtime> &value, sol::state &lua, sol::table &ccb )
 {
@@ -864,7 +916,7 @@ void detail::install_runtime_state_task_api(
             if( !owner || !owner->world_is_ready ) {
                 throw std::runtime_error( "state." + name + " is only available after world_ready" );
             }
-            return get_persistent_value( owner.get()->*member, state, key, fallback );
+            return get_persistent_value( state_values( *owner, member ), state, key, fallback );
         } );
         scope.set_function( "set", [weak, member, name]( const std::string & key,
         const sol::object & entry ) {
@@ -872,8 +924,13 @@ void detail::install_runtime_state_task_api(
             if( !owner || !owner->world_is_ready ) {
                 throw std::runtime_error( "state." + name + " is only available after world_ready" );
             }
-            set_persistent_value( owner.get()->*member, key, entry,
-                                  "state." + name + ".set" );
+            if( entry.get_type() == sol::type::nil ) {
+                state_values( *owner, member ).erase( key );
+            } else {
+                // Conversion may run Lua finalizers. Resolve the actor afterwards.
+                const persistent_value converted = persistent_from_lua( entry, "state." + name + ".set" );
+                assign_persistent_value( state_values( *owner, member ), key, converted );
+            }
         } );
         scope.set_function( "keys", [weak, member, name]( sol::this_state state,
         const sol::optional<std::string> &after_key, const sol::optional<std::int64_t> &requested_limit ) {
@@ -885,7 +942,7 @@ void detail::install_runtime_state_task_api(
             if( limit < 1 || limit > 200 ) {
                 throw std::invalid_argument( "state.keys limit must be between 1 and 200" );
             }
-            const persistent_state &values = owner.get()->*member;
+            const persistent_state &values = state_values( *owner, member );
             const std::size_t total = values.size();
             std::size_t matched = 0;
             std::set<std::string> keys;
@@ -1083,6 +1140,11 @@ void detail::install_runtime_state_task_api(
                 throw std::invalid_argument(
                     "persistent task actor must be an exact live Character, Item, Monster, or Vehicle" );
             }
+        }
+        if( task.actor_character_id ) {
+            task.state_character_id = task.actor_character_id;
+        } else if( owner->callback_character || owner_scope == "character" ) {
+            task.state_character_id = state_character( *owner ).getID();
         }
         if( participants ) {
             std::set<std::string> roles;
@@ -1342,8 +1404,8 @@ void detail::install_runtime_state_task_api(
         const std::uint64_t task_id = static_cast<std::uint64_t>( id );
         const std::size_t old_size = owner->tasks.size();
         owner->tasks.erase( std::remove_if( owner->tasks.begin(), owner->tasks.end(),
-        [task_id]( const persistent_task & task ) {
-            return task.id == task_id;
+        [&owner, task_id]( const persistent_task & task ) {
+            return task.id == task_id && task_belongs_to_callback( *owner, task );
         } ), owner->tasks.end() );
         return owner->tasks.size() != old_size;
     } );
@@ -1359,8 +1421,8 @@ void detail::install_runtime_state_task_api(
         const std::uint64_t task_id = static_cast<std::uint64_t>( id );
         const auto found = std::find_if(
                                owner->tasks.begin(), owner->tasks.end(),
-        [task_id]( const persistent_task & task ) {
-            return task.id == task_id;
+        [&owner, task_id]( const persistent_task & task ) {
+            return task.id == task_id && task_belongs_to_callback( *owner, task );
         } );
         sol::state_view lua_state( state );
         if( found == owner->tasks.end() ) {
@@ -1389,7 +1451,7 @@ void detail::install_runtime_state_task_api(
         const persistent_task *next = nullptr;
         for( const persistent_task &task : owner->tasks ) {
             if( task.handler_id != handler_id ||
-                ( scope && task.owner != *scope ) ) {
+                ( scope && task.owner != *scope ) || !task_belongs_to_callback( *owner, task ) ) {
                 continue;
             }
             if( next == nullptr ||
@@ -1429,7 +1491,7 @@ void detail::install_runtime_state_task_api(
         matches.reserve( owner->tasks.size() );
         for( const persistent_task &task : owner->tasks ) {
             if( ( !handler_id || task.handler_id == *handler_id ) &&
-                ( !scope || task.owner == *scope ) ) {
+                ( !scope || task.owner == *scope ) && task_belongs_to_callback( *owner, task ) ) {
                 matches.push_back( &task );
             }
         }
@@ -1502,6 +1564,9 @@ void runtime_world_ready( bool new_game )
     detail::start_runtime_event_bridge();
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( owner ) {
+            get_avatar().lua_character_state.migrate_legacy( owner->mod_id,
+                    std::move( owner->character_state ) );
+            owner->character_state.clear();
             owner->world_is_ready = true;
         }
     }
@@ -1567,6 +1632,10 @@ void runtime_after_save( bool success, std::string_view error )
 
 void runtime_process_character_recurring( Character &character )
 {
+    const character_action_guard lifetime( character );
+    if( !lifetime ) {
+        return;
+    }
     const std::int64_t now = to_turn<std::int64_t>( calendar::turn );
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( !owner || !owner->world_is_ready ) {
@@ -1613,12 +1682,15 @@ void runtime_process_character_recurring( Character &character )
                     continue;
                 }
                 sol::protected_function callback = effect->second.callback;
-                callback_scope scope( *owner );
+                callback_scope scope( *owner, &character );
                 const sol::protected_function_result result = callback( payload );
                 if( !result.valid() ) {
                     report_callback_error(
                         *owner, registration.effect_handler, result );
                 }
+            }
+            if( !lifetime ) {
+                return;
             }
             const auto interval = owner->handlers.find(
                                       registration.interval_handler );
@@ -1626,9 +1698,12 @@ void runtime_process_character_recurring( Character &character )
                 continue;
             }
             sol::protected_function interval_callback = interval->second.callback;
-            callback_scope scope( *owner );
+            callback_scope scope( *owner, &character );
             const sol::protected_function_result interval_result =
                 interval_callback( payload );
+            if( !lifetime ) {
+                return;
+            }
             std::optional<std::int64_t> interval_turns;
             if( interval_result.valid() && interval_result.return_count() == 1 &&
                 interval_result.get_type() == sol::type::number ) {
@@ -1774,6 +1849,25 @@ void runtime_process_tasks()
                                             << task.payload_version << " does not match handler version "
                                             << handler->second.payload_version;
                 continue;
+            }
+            const auto state_id = task.state_character_id ? task.state_character_id :
+                                  task.actor_character_id;
+            Character *state_actor = state_id ? platform_event_character( *state_id ) : nullptr;
+            if( state_id && !state_actor ) {
+                // An unloaded player is not the host. Keep its work pending.
+                if( now <= std::numeric_limits<std::int64_t>::max() - persistent_participant_task_retry_turns ) {
+                    persistent_task retry = task;
+                    retry.due_turn = now + persistent_participant_task_retry_turns;
+                    owner->tasks.push_back( std::move( retry ) );
+                }
+                continue;
+            }
+            callback_scope task_scope( *owner );
+            if( state_actor ) {
+                owner->callback_character = platform_creature_handle( *owner, *state_actor );
+            } else {
+                // A world task does not inherit an incidental caller's actor.
+                owner->callback_character.reset();
             }
             std::optional<cata::lua_platform::game_handle> actor_handle;
             if( task.actor_character_id ) {
@@ -2008,7 +2102,6 @@ void runtime_process_tasks()
             payload["payload_version"] = task.payload_version;
             payload["payload"] = persistent_table( *owner->lua, task.payload );
             sol::protected_function callback = handler->second.callback;
-            callback_scope scope( *owner );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
                 report_callback_error( *owner, task.handler_id, result,
