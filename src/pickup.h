@@ -68,6 +68,10 @@ bool do_pickup( Character &who, std::vector<item_location> &targets,
                 Pickup::pick_info &info, interaction prompts );
 bool query_thief( const item &it );
 
+// Transfer a complete owned item to an adjacent character without a prompt on
+// the receiver's frontend. Uses native obtain/relocation and charges the giver.
+bool give_item( Character &giver, Character &receiver, item_location source );
+
 enum from_where : int {
     from_cargo = 0,
     from_ground,

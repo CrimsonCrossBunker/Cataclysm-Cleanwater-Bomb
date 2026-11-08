@@ -61,6 +61,7 @@ struct pending_omsync_t {
 };
 
 struct host_replication_baselines {
+    std::unordered_map<std::string, std::string> player_appearance;
     // Server: nids for which the full vehicle save-format snapshot has already been
     // broadcast to the current client.  First broadcast of a previously-unknown
     // vehicle includes the "snapshot" payload so the client can mirror the SP
@@ -190,7 +191,6 @@ struct client_replication_state {
 struct world_replication_state {
     entity_registry entity_ids{};
     bool applying_remote_note = false;
-    host_replication_baselines host;
     client_replication_state client;
 };
 
@@ -205,20 +205,20 @@ struct host_turn_state {
     // skips its blocking wait so the host advances monmove() solo while the client
     // stays locked, mirroring SP where an expensive move costs several turns.
     bool granted_this_turn = true;
-    // Server: true while wait_for_client_action() is blocking.  Used by the HUD
-    // strip so it shows red (can't act) even when host moves > 0.
-    bool host_waiting_for_client = false;
     // Host-only one-shot: when set, the next serialize_remote_player_state()
     // broadcast carries "wake_client":true and the flag is cleared.  Drives the
     // host→client direction of the tap-on-shoulder action.
     bool pending_wake_client = false;
+    std::string wake_from;
     // Host-only one-shot signals for host→client partner interactions.  The host
     // performs the swap/push locally (SP path); these flags piggy-back on the next
     // state broadcast so the client can render the observer message ("<host> swaps
     // places with you.") locally from the proxy's real name — no rendered text is
     // shipped, so there is no grammar/POV rewriting to break.
     bool pending_partner_swap = false;
+    std::string swap_from;
     bool pending_partner_push = false;
+    std::string push_from;
     // Server: monotonic message-append watermark at last forward — used to forward
     // only NEW messages.  Uses Messages::size() (never decremented) rather
     // than size(), which is capped at MESSAGE_LIMIT and stalls once the log fills.
@@ -238,10 +238,6 @@ struct host_turn_state {
     // Server: set when the remote player has submitted at least one real action
     // this turn.  Cleared by grant_client_turn(); checked by wait_for_client_action().
     bool client_acted_this_turn = false;
-    // Server: elapsed wait time (ms) in the last wait_for_client_action() call.
-    int wait_elapsed_ms = 0;
-    // Server: duration (ms) of the last monmove() (AI turn) call; set by do_turn.cpp.
-    int last_monmove_ms = 0;
     // Host-side: last client_ping stamp we received, to echo back next broadcast.
     int64_t last_client_ping_stamp = -1;
     // Host-only: tracks whether the proxy NPC was previously resolvable.  Used to
@@ -250,10 +246,10 @@ struct host_turn_state {
     // yet" or "still null after a recent disconnect".  Cleared on disconnect; set
     // to true on the first grant where the proxy resolves.
     bool proxy_was_alive = false;
-    bool ff_was_active = false;
 };
 
 struct client_turn_state {
+    bool group_fast_forward = false;
     character_turn_driver character_turns;
     // Client: "keep smashing" continuation state.
     // When set, auto-re-fire the smash action after each partial bash until the
@@ -318,6 +314,8 @@ struct peer_observation {
     // activity ticks on the side that owns the player.  Used by the Co-op HUD and
     // transition-edge messages.
     std::string partner_activity{};
+    // Stable identity of the player this helper committed to.
+    std::string partner_help_target{};
     // Progress % (0-100) of the partner's current activity.  Forwarded each
     // action/state packet alongside g_partner_activity.  Read by the Co-op panel.
     int partner_activity_pct = 0;

@@ -19,14 +19,31 @@ void world_session::prepare_for_world_load()
     reset_state( true );
 }
 
-void world_session::begin_remote_peer()
+remote_player_session *world_session::find_remote( const peer_admission &admission ) const
 {
-    host_pickup = {};
-    replication.host = {};
-    const uint32_t sequence = host_turn.grant_seq;
-    host_turn = {};
-    host_turn.grant_seq = sequence;
-    peer = {};
+    const auto found = remote_players.find( admission.peer_id() );
+    if( found == remote_players.end() || !found->second->connected ||
+        !found->second->admission.matches( admission ) ) {
+        return nullptr;
+    }
+    // Retirement stops network delivery immediately. Events already queued
+    // before disconnect remain ordered and valid until owner-thread detach.
+    return found->second.get();
+}
+
+remote_player_session *world_session::find_remote( character_id actor ) const
+{
+    for( const auto &entry : remote_players ) {
+        if( entry.second->connected && entry.second->actor.id() == actor ) {
+            return entry.second.get();
+        }
+    }
+    return nullptr;
+}
+
+bool world_session::accepts_remote_event( const peer_admission &admission ) const
+{
+    return find_remote( admission ) != nullptr;
 }
 
 void world_session::reset_state( bool preserve_pending_client )
@@ -48,21 +65,21 @@ void world_session::reset_state( bool preserve_pending_client )
         admission = {};
     }
     replication = {};
-    host_turn = {};
+    remote_players.clear();
+    host_waiting_for_clients = false;
+    last_monmove_ms = 0;
+    host_wait_elapsed_ms = 0;
+    grant_sequence = 0;
     client_turn = {};
-    host_pickup = {};
     client_pickup = {};
-    peer = {};
+    host_observation = {};
     presentation = session_presentation();
     last_marked_world.clear();
-    remote_actor.reset();
-    remote_connected = false;
-    remote_admission = {};
-    remote_player = {};
-    remote_detach_pending = false;
     local_player.reset();
     players.reset();
     client_host_actor.reset();
+    client_host_player_id = {};
+    client_player_views.clear();
     client_host_spawned = false;
     stale_proxy_cleanup_done = false;
 }

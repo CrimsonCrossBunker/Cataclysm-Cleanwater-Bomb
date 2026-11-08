@@ -259,7 +259,6 @@
     #define UNUSED
 #endif
 
-static const activity_id ACT_HELP_PARTNER( "ACT_HELP_PARTNER" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
 
@@ -5803,12 +5802,12 @@ bool game::npc_menu( npc &who )
 #ifdef MP_ENABLED
     if( ( cata_mp::is_client_mode() || cata_mp::is_hosting() ) &&
         cata_mp::is_partner_npc( who.getID() ) &&
-        cata_mp::is_partner_in_wait_activity() ) {
+        cata_mp::is_partner_in_wait_activity( who.getID() ) ) {
         amenu.addentry( tap_shoulder, true, 't', _( "Tap on shoulder" ) );
     }
     if( ( cata_mp::is_client_mode() || cata_mp::is_hosting() ) &&
         cata_mp::is_partner_npc( who.getID() ) &&
-        cata_mp::partner_activity_accepts_help() &&
+        cata_mp::partner_activity_accepts_help( who.getID() ) &&
         !u.activity ) {
         amenu.addentry( help_with_task, true, 'h', _( "Help with task" ) );
     }
@@ -5856,8 +5855,7 @@ bool game::npc_menu( npc &who )
 #ifdef MP_ENABLED
             if( mp_partner ) {
                 add_msg( _( "You swap places with %s." ), who.get_name() );
-                cata_mp::client_send( cata_mp::client_enrich_action(
-                                          R"({"type":"action","action":"swap_with_partner"})" ) );
+                cata_mp::client_send( cata_mp::client_partner_action( "swap_with_partner", who.getID() ) );
                 cata_mp::client_mark_action_sent();
                 u.mod_moves( -200 );
             } else {
@@ -5869,7 +5867,7 @@ bool game::npc_menu( npc &who )
                 u.mod_moves( -200 );
 #ifdef MP_ENABLED
                 if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
-                    cata_mp::mark_partner_swap_pending();
+                    cata_mp::mark_partner_swap_pending( who.getID() );
                 }
             }
 #endif
@@ -5889,8 +5887,7 @@ bool game::npc_menu( npc &who )
 #ifdef MP_ENABLED
         if( mp_partner ) {
             add_msg( _( "You push %s." ), who.get_name() );
-            cata_mp::client_send( cata_mp::client_enrich_action(
-                                      R"({"type":"action","action":"push_partner"})" ) );
+            cata_mp::client_send( cata_mp::client_partner_action( "push_partner", who.getID() ) );
             cata_mp::client_mark_action_sent();
             u.mod_moves( -20 );
         } else {
@@ -5903,7 +5900,7 @@ bool game::npc_menu( npc &who )
                 add_msg( _( "%s moves out of the way." ), who.get_name() );
 #ifdef MP_ENABLED
                 if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
-                    cata_mp::mark_partner_push_pending();
+                    cata_mp::mark_partner_push_pending( who.getID() );
                 }
 #endif
             } else {
@@ -5916,31 +5913,28 @@ bool game::npc_menu( npc &who )
 #ifdef MP_ENABLED
         if( mp_partner ) {
             add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
-            cata_mp::client_send( cata_mp::client_enrich_action(
-                                      R"({"type":"action","action":"tap_partner"})" ) );
+            cata_mp::client_send( cata_mp::client_partner_action( "tap_partner", who.getID() ) );
             cata_mp::client_mark_action_sent();
             u.mod_moves( -10 );
         } else if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
             add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
-            cata_mp::mark_wake_client_pending();
+            cata_mp::mark_wake_client_pending( who.getID() );
             u.mod_moves( -10 );
         }
 #endif
     } else if( choice == help_with_task ) {
 #ifdef MP_ENABLED
-        constexpr int help_fallback_moves = 1'000'000;
-        const int partner_total = cata_mp::partner_activity_moves_total();
-        const int duration = partner_total > 0 ? partner_total : help_fallback_moves;
-        u.assign_activity( ACT_HELP_PARTNER, duration );
-        add_msg( m_info, _( "You join %s to help with their task." ), who.name );
+        if( cata_mp::start_helping_partner( who.getID() ) ) {
+            add_msg( m_info, _( "You join %s to help with their task." ), who.name );
+        }
 #endif
     } else if( choice == pass_item ) {
 #ifdef MP_ENABLED
-        cata_mp::mp_handle_pass_item();
+        cata_mp::mp_handle_pass_item( who.getID() );
 #endif
     } else if( choice == high_five ) {
 #ifdef MP_ENABLED
-        cata_mp::mp_high_five();
+        cata_mp::mp_high_five( who.getID() );
 #endif
     } else if( choice == examine_wounds ) {
         ///\EFFECT_PER slightly increases precision when examining NPCs' wounds

@@ -299,6 +299,16 @@
     "auto_needs": true
   },
   {
+    "id": "ACT_HELP_PARTNER",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "helping your partner",
+    "rooted": true,
+    "based_on": "time",
+    "can_resume": false,
+    "auto_needs": true
+  },
+  {
     "id": "ACT_CRAFT",
     "type": "activity_type",
     "activity_level": "MODERATE_EXERCISE",

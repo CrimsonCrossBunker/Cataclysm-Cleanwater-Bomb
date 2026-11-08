@@ -21,6 +21,7 @@
 #include "mp_gamestate.h"
 #include "mp_queue.h"
 #include "mp_world_session.h"
+#include "mp_test_helpers.h"
 #include "npc.h"
 #include "player_activity.h"
 #include "player_helpers.h"
@@ -476,11 +477,12 @@ TEST_CASE( "door_intents_ignore_attached_client_mutations", "[gates][multiplayer
     const cata_mp::player_id player( std::string( 32, 'd' ) );
     remote.set_value( "mp_proxy", std::string( "1" ) );
     remote.set_value( "mp_player_id", player.str() );
-    session.remote_actor.bind_player( remote, player, g->npc_lifetimes(),
-                                      g->player_controls().claim( player, remote ) );
-    session.remote_connected = true;
-    session.remote_admission = cata_mp::peer_admission::create( 702 );
-    session.host_turn.remote_moves = 100;
+    make_test_remote( session );
+    only_test_remote( session ).actor.bind_player( remote, player, g->npc_lifetimes(),
+            g->player_controls().claim( player, remote ) );
+    only_test_remote( session ).connected = true;
+    set_test_admission( session, cata_mp::peer_admission::create( 702 ) );
+    only_test_remote( session ).turn.remote_moves = 100;
     map &here = get_map();
     const bool opening = GENERATE( true, false );
     const bool reachable = GENERATE( true, false );
@@ -517,12 +519,12 @@ TEST_CASE( "door_intents_ignore_attached_client_mutations", "[gates][multiplayer
     out.end_array();
     out.end_object();
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                           text.str(), session.remote_admission } ) );
+                                           text.str(), only_test_remote( session ).admission } ) );
     cata_mp::process_mp_events();
     const ter_str_id expected = reachable ? ( opening ? ter_t_door_o : ter_t_door_c ) : before;
     CHECK( here.ter( target ) == expected );
     CHECK( remote.name == name );
     CHECK( remote.pos_abs() == position );
-    CHECK( session.host_turn.client_acted_this_turn );
-    CHECK( session.host_turn.remote_moves == 0 );
+    CHECK( only_test_remote( session ).turn.client_acted_this_turn );
+    CHECK( only_test_remote( session ).turn.remote_moves == 0 );
 }

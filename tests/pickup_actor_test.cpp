@@ -23,6 +23,7 @@
 #include "mp_pickup.h"
 #include "mp_queue.h"
 #include "mp_world_session.h"
+#include "mp_test_helpers.h"
 #include "npc.h"
 #include "pickup.h"
 #include "player_activity.h"
@@ -141,7 +142,7 @@ TEST_CASE( "mp_pickup_resolves_identity_after_authoritative_ground_replication",
                                R"(,"items":)" + ground_snapshot( here, pos ) + "}]}";
     here.i_clear( pos );
     cata_mp::set_client_mode( true );
-    session.peer.mp_remote_pos = get_avatar().pos_abs();
+    session.host_observation.mp_remote_pos = get_avatar().pos_abs();
     for( int delivery = 0; delivery < 2; ++delivery ) {
         REQUIRE( cata_mp::client_apply_message( packet ) );
         REQUIRE( here.i_at( pos ).size() == 1 );
@@ -454,6 +455,138 @@ TEST_CASE( "mp_pickup_revalidates_source_reach_identity_and_inventory_version",
     CHECK( ground_snapshot( here, pos ) == ground_before );
 }
 
+TEST_CASE( "mp_give_transfers_only_owned_items_once_and_preserves_recipient_moves",
+           "[pickup][multiplayer][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( []() {
+        clear_npcs();
+    } );
+    npc &giver = spawn_npc( { 60, 60 }, "test_talker" );
+    npc &receiver = spawn_npc( { 61, 60 }, "test_talker" );
+    prepare_pickup_actor( giver );
+    prepare_pickup_actor( receiver );
+    item nails( itype_id( "nail" ) );
+    nails.charges = 7;
+    item_location source = giver.i_add( nails );
+    REQUIRE( source );
+    cata_mp::pickup_client_state client;
+    cata_mp::pickup_host_state host;
+    const auto before = carried_snapshot( giver );
+    const auto request = cata_mp::make_give_request( source, player_id( std::string( 32, '1' ) ),
+                         client );
+    REQUIRE( request );
+    CHECK( carried_snapshot( giver ) == before );
+    JsonValue input = json_loader::from_string( *request );
+    JsonObject message = input.get_object();
+    message.allow_omitted_members();
+    const auto result = cata_mp::execute_give_request( giver, &receiver, message, host );
+    REQUIRE( result.transferred );
+    CHECK( giver.charges_of( itype_id( "nail" ) ) == 0 );
+    CHECK( receiver.charges_of( itype_id( "nail" ) ) == 7 );
+    CHECK( giver.get_moves() == 900 );
+    CHECK( receiver.get_moves() == 1000 );
+    const auto giver_after = carried_snapshot( giver );
+    const auto receiver_after = carried_snapshot( receiver );
+    const auto duplicate = cata_mp::execute_give_request( giver, &receiver, message, host );
+    CHECK_FALSE( duplicate.transferred );
+    CHECK( duplicate.response == result.response );
+    CHECK( carried_snapshot( giver ) == giver_after );
+    CHECK( carried_snapshot( receiver ) == receiver_after );
+    CHECK( giver.get_moves() == 900 );
+}
+
+TEST_CASE( "mp_give_revalidates_owner_capacity_reach_and_inventory_version",
+           "[pickup][multiplayer][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( []() {
+        clear_npcs();
+    } );
+    npc &giver = spawn_npc( { 60, 60 }, "test_talker" );
+    npc &receiver = spawn_npc( { 61, 60 }, "test_talker" );
+    prepare_pickup_actor( giver );
+    prepare_pickup_actor( receiver );
+    item_location source = giver.i_add( item( itype_id( "hammer" ) ) );
+    REQUIRE( source );
+    cata_mp::pickup_client_state client;
+    cata_mp::pickup_host_state host;
+    const auto request = cata_mp::make_give_request( source, player_id( std::string( 32, '1' ) ),
+                         client );
+    REQUIRE( request );
+    Character *target = &receiver;
+    SECTION( "recipient disconnected" ) {
+        target = nullptr;
+    }
+    SECTION( "recipient moved away" ) {
+        receiver.setpos( get_map(), tripoint_bub_ms( 64, 60, 0 ) );
+    }
+    SECTION( "recipient cannot carry or wield it" ) {
+        receiver.clear_worn();
+        receiver.inv->clear();
+        receiver.set_wielded_item( item( itype_id( "hammer" ) ) );
+    }
+    SECTION( "selected item was replaced" ) {
+        source.remove_item();
+        REQUIRE( giver.i_add( item( itype_id( "hammer" ) ) ) );
+    }
+    SECTION( "giver inventory changed" ) {
+        host.revision = 1;
+    }
+    const auto giver_before = carried_snapshot( giver );
+    const auto receiver_before = carried_snapshot( receiver );
+    JsonValue input = json_loader::from_string( *request );
+    JsonObject message = input.get_object();
+    message.allow_omitted_members();
+    const auto result = cata_mp::execute_give_request( giver, target, message, host );
+    CHECK_FALSE( result.transferred );
+    CHECK( carried_snapshot( giver ) == giver_before );
+    CHECK( carried_snapshot( receiver ) == receiver_before );
+    CHECK( giver.get_moves() == 1000 );
+    CHECK( receiver.get_moves() == 1000 );
+}
+
+TEST_CASE( "mp_inventory_update_cannot_be_undone_by_a_delayed_pickup_ack",
+           "[pickup][multiplayer][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( []() {
+        clear_npcs();
+    } );
+    npc &remote = spawn_npc( { 60, 60 }, "test_talker" );
+    prepare_pickup_actor( remote );
+    cata_mp::pickup_client_state client;
+    cata_mp::pickup_host_state host;
+    map &here = get_map();
+    const auto pos = remote.pos_bub( here );
+    item &nails = add_pickup_nails( here, pos, 7, "selected" );
+    Pickup::selection selection;
+    selection.targets.emplace_back( map_cursor( pos ), &nails );
+    selection.quantities.push_back( 7 );
+    const auto request = cata_mp::make_pickup_request( selection, here, client );
+    REQUIRE( request );
+    const auto ack = run_pickup_request( remote, *request, host );
+    REQUIRE( remote.i_add( item( itype_id( "hammer" ) ) ) );
+    const auto expected = carried_snapshot( remote );
+    JsonValue update = json_loader::from_string( cata_mp::make_inventory_update( remote, host ) );
+    JsonObject latest = update.get_object();
+    latest.allow_omitted_members();
+    REQUIRE( cata_mp::apply_inventory_update( get_avatar(), latest, client ) );
+    CHECK( client.pending_request == 1 );
+    CHECK( client.revision == 2 );
+    JsonValue old = json_loader::from_string( ack );
+    JsonObject response = old.get_object();
+    response.allow_omitted_members();
+    REQUIRE( cata_mp::apply_pickup_result( get_avatar(), response, client ) );
+    CHECK( client.pending_request == 0 );
+    CHECK( client.revision == 2 );
+    CHECK( carried_snapshot( get_avatar() ) == expected );
+    CHECK_FALSE( cata_mp::apply_inventory_update( get_avatar(), latest, client ) );
+}
+
 TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes",
            "[pickup][multiplayer][world_session][regression]" )
 {
@@ -471,11 +604,12 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     const cata_mp::player_id player( std::string( 32, '7' ) );
     remote.set_value( "mp_proxy", std::string( "1" ) );
     remote.set_value( "mp_player_id", player.str() );
-    session.remote_actor.bind_player( remote, player, g->npc_lifetimes(),
-                                      g->player_controls().claim( player, remote ) );
-    session.remote_connected = true;
-    session.remote_admission = cata_mp::peer_admission::create( 701 );
-    session.host_turn.remote_moves = 100;
+    make_test_remote( session );
+    only_test_remote( session ).actor.bind_player( remote, player, g->npc_lifetimes(),
+            g->player_controls().claim( player, remote ) );
+    only_test_remote( session ).connected = true;
+    set_test_admission( session, cata_mp::peer_admission::create( 701 ) );
+    only_test_remote( session ).turn.remote_moves = 100;
     map &here = get_map();
     const tripoint_bub_ms pos = remote.pos_bub( here );
     const tripoint_abs_ms abs = here.get_abs( pos );
@@ -497,7 +631,7 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     const auto name = remote.name;
     const auto dispatch = [&]( const std::string & packet ) {
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                               packet, session.remote_admission } ) );
+                                               packet, only_test_remote( session ).admission } ) );
         cata_mp::process_mp_events();
     };
     dispatch( attack );
@@ -505,12 +639,12 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     CHECK( source.charges == 13 );
     CHECK( remote.name == name );
     CHECK( here.ter( pos ) == terrain );
-    CHECK( session.host_turn.client_acted_this_turn );
-    CHECK( session.host_turn.remote_moves == 0 );
+    CHECK( only_test_remote( session ).turn.client_acted_this_turn );
+    CHECK( only_test_remote( session ).turn.remote_moves == 0 );
     const auto after = carried_snapshot( remote );
-    session.host_turn.client_acted_this_turn = false;
+    only_test_remote( session ).turn.client_acted_this_turn = false;
     dispatch( attack );
-    CHECK_FALSE( session.host_turn.client_acted_this_turn );
+    CHECK_FALSE( only_test_remote( session ).turn.client_acted_this_turn );
     CHECK( source.charges == 13 );
     dispatch( R"({"action":"worn_sync","inventory_revision":0,"char_stats":{"name":"old"},"worn":[],"wielded":"","client_inv":[]})" );
     CHECK( carried_snapshot( remote ) == after );
@@ -519,9 +653,10 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     dispatch( R"({"action":"worn_sync","inventory_revision":1,"worn":[],"client_inv":[]})" );
     CHECK( carried_snapshot( remote ) == after );
     session.client_pickup = client;
-    session.begin_remote_peer();
-    CHECK( session.host_pickup.revision == 0 );
-    CHECK( session.host_pickup.last_result.empty() );
+    session.remote_players.clear();
+    make_test_remote( session );
+    CHECK( only_test_remote( session ).pickup.revision == 0 );
+    CHECK( only_test_remote( session ).pickup.last_result.empty() );
     session.reset();
     CHECK( session.client_pickup.pending_request == 0 );
     CHECK( session.client_pickup.revision == 0 );

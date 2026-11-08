@@ -276,11 +276,11 @@ bool map::build_vision_transparency_cache( int zlev )
     const tripoint_bub_ms p = player_character.pos_bub();
     const bool is_player_z = p.z() == zlev;
     const bool low_profile = is_player_z && ( player_character.is_crouching() ||
-        player_character.is_prone() ||
-        ( player_character.has_effect( effect_quadruped_full ) &&
-          player_character.is_running() ) );
+                             player_character.is_prone() ||
+                             ( player_character.has_effect( effect_quadruped_full ) &&
+                               player_character.is_running() ) );
     const std::optional<tripoint_bub_ms> override_origin = is_player_z ?
-        std::make_optional( p ) : std::nullopt;
+            std::make_optional( p ) : std::nullopt;
     const bool observer_changed = override_origin != map_cache.vision_transparency_override_origin ||
                                   low_profile != map_cache.vision_transparency_low_profile;
     if( map_cache.transparency_cache_dirty.none() && !observer_changed ) {
@@ -698,30 +698,15 @@ void map::generate_lightmap( const int zlev )
             // TODO: [lightmap] Allow creatures to have light attacks (i.e.: eyebot)
             // TODO: [lightmap] Allow creatures to have facing and arc lights
             float critter_luminance = critter.calculate_by_enchantment( critter.type->luminance,
-                enchant_vals::mod::LUMINATION, true );
+                                      enchant_vals::mod::LUMINATION, true );
             if( critter_luminance > 0 ) {
                 apply_light_source( mp, critter_luminance );
             }
         }
     }
 
-    // MP: inject partner luminance as a light source at their proxy NPC position.
-    if( cata_mp::is_client_mode() ) {
-        npc *host_npc = g->critter_by_id<npc>( cata_mp::get_host_npc_character_id() );
-        if( host_npc ) {
-            float host_lum = cata_mp::get_host_luminance();
-            if( host_lum > 0 ) {
-                apply_light_source( host_npc->pos_bub(), host_lum );
-            }
-        }
-    } else if( cata_mp::is_hosting() ) {
-        npc *remote_npc = g->critter_by_id<npc>( cata_mp::get_remote_player_npc_character_id() );
-        if( remote_npc ) {
-            float remote_lum = cata_mp::get_remote_player_luminance();
-            if( remote_lum > 0 ) {
-                apply_light_source( remote_npc->pos_bub(), remote_lum );
-            }
-        }
+    for( const cata_mp::player_light &light : cata_mp::player_lights() ) {
+        apply_light_source( light.position, light.luminance );
     }
 
     // Apply any vehicle light sources
@@ -1257,7 +1242,7 @@ void castLight( cata::mdarray<Out, point_bub_ms> &output_cache,
         bool started_row = false;
         T current_transparency( 0.0 );
         float away = start - ( -distance + 0.5f ) / ( -distance -
-            0.5f ); //The distance between our first leadingEdge and start
+                     0.5f ); //The distance between our first leadingEdge and start
 
         //We initialize delta.x to -distance adjusted so that the commented start < leadingEdge condition below is never false
         delta.x = -distance + std::max( static_cast<int>( std::ceil( away * ( -distance - 0.5f ) ) ), 0 );
