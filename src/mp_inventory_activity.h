@@ -64,7 +64,7 @@ struct inventory_activity_client_state {
     bool can_wield = false;
     std::shared_ptr<item> preview;
     std::string item_use_progress;
-    int64_t water_source_uid = 0;
+    int64_t liquid_source_uid = 0;
     bool remote_security_prompt = false;
     int64_t remote_vehicle_target = 0;
     item_source remote_controller;

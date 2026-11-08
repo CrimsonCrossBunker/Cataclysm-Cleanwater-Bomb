@@ -83,7 +83,6 @@
 #include "vpart_range.h"
 #include "weather.h"
 
-static const activity_id ACT_HEATING( "ACT_HEATING" );
 static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 
 static const ammotype ammo_battery( "battery" );
@@ -1845,8 +1844,10 @@ bool vehicle::use_vehicle_tool( vehicle &veh, map *here, const tripoint_bub_ms &
         act.str_values.push_back( tool_type.str() ); // specific tool on the rig
     }
 
-    //Hack for heat_activity_actor.
-    if( act.id() == ACT_HEATING ) {
+
+    // Older heater actors still receive the mounted position here. The owned
+    // heater already retains the vehicle, hardware and tool identities.
+    if( dynamic_cast<heat_activity_actor *>( act.actor.get() ) ) {
         act.coords.push_back( here->get_abs( vp_pos ) );
     }
 
