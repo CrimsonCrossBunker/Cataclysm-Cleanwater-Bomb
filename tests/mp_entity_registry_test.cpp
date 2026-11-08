@@ -19,7 +19,6 @@ TEST_CASE( "mp_entity_ids_share_a_session_sequence_without_changing_native_ident
 {
     cata_mp::entity_registry ids;
     monster first( mon_test_zombie );
-    first.mp_net_id = 97;
     monster copied( first );
     vehicle bike( vehicle_prototype_bicycle );
     REQUIRE( first.uid().is_valid() );
@@ -97,7 +96,6 @@ TEST_CASE( "mp_entity_lookup_requires_loaded_live_native_membership",
     CHECK_FALSE( ids.find_monster( id, tracker ) );
 
     auto replacement = make_shared_fast<monster>( mon_test_zombie, tripoint_bub_ms( 0, 0, 0 ) );
-    replacement->mp_net_id = id;
     REQUIRE( tracker.add( replacement ) );
     CHECK_FALSE( ids.find_monster( id, tracker ) );
     const auto replacement_id = ids.assign( *replacement );
@@ -145,4 +143,79 @@ TEST_CASE( "mp_entity_registry_prunes_destroyed_incarnations_during_churn",
     CHECK( ids.retained_entries() <= 64 );
     CHECK( ids.known_id( live ) == live_id );
     CHECK( ids.assign( live ) == live_id );
+}
+
+TEST_CASE( "mp_monster_mirrors_are_bijective_and_session_owned",
+           "[multiplayer][entity_identity]" )
+{
+    cata_mp::monster_mirrors mirrors;
+    monster first( mon_test_zombie );
+    monster copy( first );
+    const auto rng_before = rng_get_engine();
+    CHECK_FALSE( mirrors.bind( 0, first ) );
+    CHECK_FALSE( mirrors.bind( static_cast<uint32_t>( INT_MAX ) + 1, first ) );
+    REQUIRE( mirrors.bind( 7, first ) );
+    CHECK( mirrors.bind( 7, first ) );
+    CHECK_FALSE( mirrors.bind( 8, first ) );
+    CHECK_FALSE( mirrors.bind( 7, copy ) );
+    CHECK( mirrors.known_id( copy ) == 0 );
+    CHECK( mirrors.bind( 8, copy ) );
+    CHECK( mirrors.find( 7 ) == &first );
+    CHECK( mirrors.find( 8 ) == &copy );
+    cata_mp::monster_mirrors other;
+    CHECK( other.known_id( first ) == 0 );
+    CHECK( other.bind( 7, copy ) );
+    CHECK( other.find( 7 ) == &copy );
+    CHECK( mirrors.find( 7 ) == &first );
+    other = cata_mp::monster_mirrors();
+    CHECK_FALSE( other.find( 7 ) );
+    CHECK( other.known_id( copy ) == 0 );
+    CHECK( rng_get_engine() == rng_before );
+}
+
+TEST_CASE( "mp_monster_mirrors_retire_unloaded_incarnations_but_preserve_pending_death_reports",
+           "[multiplayer][entity_identity]" )
+{
+    creature_tracker tracker;
+    cata_mp::monster_mirrors mirrors;
+    auto original = make_shared_fast<monster>( mon_test_zombie, tripoint_bub_ms( 0, 0, 0 ) );
+    REQUIRE( tracker.add( original ) );
+    REQUIRE( mirrors.bind( 11, *original ) );
+    mirrors.begin_sync( tracker );
+    CHECK( mirrors.find( 11 ) == original.get() );
+    original->set_hp( 0 );
+    REQUIRE( original->is_dead() );
+    mirrors.begin_sync( tracker );
+    CHECK( mirrors.find( 11 ) == original.get() );
+    CHECK( mirrors.known_id( *original ) == 11 );
+    tracker.remove( *original );
+    mirrors.begin_sync( tracker );
+    CHECK_FALSE( mirrors.find( 11 ) );
+    CHECK( mirrors.known_id( *original ) == 0 );
+    auto replacement = make_shared_fast<monster>( mon_test_zombie, tripoint_bub_ms( 0, 0, 0 ) );
+    REQUIRE( tracker.add( replacement ) );
+    REQUIRE( mirrors.bind( 11, *replacement ) );
+    CHECK( mirrors.find( 11 ) == replacement.get() );
+    original.reset();
+    CHECK( mirrors.find( 11 ) == replacement.get() );
+}
+
+TEST_CASE( "mp_monster_mirrors_reject_reused_addresses_and_moved_native_identity",
+           "[multiplayer][entity_identity]" )
+{
+    cata_mp::monster_mirrors mirrors;
+    std::optional<monster> mon( std::in_place, mon_test_zombie );
+    REQUIRE( mirrors.bind( 19, *mon ) );
+    const auto *address = &*mon;
+    mon.reset();
+    CHECK_FALSE( mirrors.find( 19 ) );
+    mon.emplace( mon_test_zombie );
+    REQUIRE( &*mon == address );
+    CHECK( mirrors.known_id( *mon ) == 0 );
+    REQUIRE( mirrors.bind( 19, *mon ) );
+    monster moved( std::move( *mon ) );
+    CHECK_FALSE( mirrors.find( 19 ) );
+    CHECK( mirrors.known_id( moved ) == 0 );
+    REQUIRE( mirrors.bind( 19, moved ) );
+    CHECK( mirrors.find( 19 ) == &moved );
 }
