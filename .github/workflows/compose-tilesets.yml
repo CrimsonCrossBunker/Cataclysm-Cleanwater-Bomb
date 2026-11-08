@@ -15,6 +15,7 @@ jobs:
           sparse-checkout: |
             src
             tools
+            build-scripts
           fetch-depth: 1
           persist-credentials: false
 
