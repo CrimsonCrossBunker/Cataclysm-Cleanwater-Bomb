@@ -2364,7 +2364,8 @@ class plant_seed_activity_actor : public activity_actor
 class reload_activity_actor : public activity_actor
 {
     public:
-        explicit reload_activity_actor( item::reload_option &&opt, int extra_moves = 0 );
+        explicit reload_activity_actor( item::reload_option &&opt, int extra_moves = 0,
+                                        bool server_owned = false );
 
         const activity_id &get_type() const override {
             static const activity_id ACT_RELOAD( "ACT_RELOAD" );
@@ -2375,6 +2376,26 @@ class reload_activity_actor : public activity_actor
         void do_turn( player_activity &/*act*/, Character &/*who*/ ) override;
         void finish( player_activity &act, Character &who ) override;
         void canceled( player_activity &act, Character &who ) override;
+
+        static reload_activity_actor client_view();
+        bool is_client_view() const {
+            return view_only;
+        }
+        bool is_server_owned() const {
+            return server_owned;
+        }
+        bool prepare_owned_turn( Character &who );
+        bool place_target( Character &who, bool wield );
+        std::optional<item> preview_remaining() const;
+        const item_location &target() const {
+            return target_loc;
+        }
+        const item_location &ammunition() const {
+            return ammo_loc;
+        }
+        bool needs_ammunition() const {
+            return already_loaded < quantity;
+        }
 
         void reload_msg( Character &who, bool finished = false );
         void reload( player_activity &act, Character &who, int load_qty = 1 );
@@ -2388,6 +2409,8 @@ class reload_activity_actor : public activity_actor
 
     private:
         explicit reload_activity_actor() = default;
+        bool server_owned = false;
+        bool view_only = false;
         int moves_total = 0;
         int quantity = 0;
         int seconds_per_round = 0;

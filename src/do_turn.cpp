@@ -2,6 +2,7 @@
 
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_reload.h"
 #include "translation.h"
 
 #if defined(EMSCRIPTEN)
@@ -812,6 +813,7 @@ bool game::do_turn()
         cata_mp::process_session_turn();
         avatar &u = get_avatar();
         cata_mp::client_finish_ready_firearm_activity();
+        cata_mp::client_update_reload_view();
         const bool advance_character = cata_mp::client_begin_simulation_turn();
         if( advance_character ) {
             if( new_game ) {
