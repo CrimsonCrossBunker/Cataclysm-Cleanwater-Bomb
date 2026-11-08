@@ -1830,6 +1830,7 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     } else if( technique.grapple_action == "drag" ) {
         const tripoint_bub_ms previous = attacker.pos_bub();
         attacker.setpos( here, retreat );
+        attacker.set_underwater( false );
         victim->setpos( here, previous );
         here.creature_on_trap( attacker );
         here.creature_on_trap( *victim );

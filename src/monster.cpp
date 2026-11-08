@@ -2650,6 +2650,8 @@ bool monster::move_effects( bool )
         if( holder && !holder->is_dead_state() && is_adjacent( holder, false ) &&
             !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
             holder->has_two_arms_lifting() &&
+            !holder->worn_with_flag( flag_RESTRICT_HANDS ) &&
+            !holder->has_effect( efftype_id( "incorporeal" ) ) &&
             !holder->has_effect( effect_downed ) && !holder->in_sleep_state() &&
             holder->get_stamina() >= 100 ) {
             return false;

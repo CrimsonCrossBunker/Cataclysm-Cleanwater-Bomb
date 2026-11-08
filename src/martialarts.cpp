@@ -30,6 +30,7 @@
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "flag.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
@@ -1060,6 +1061,8 @@ bool ma_technique::activation_allowed( const Character &character,
         ( character.has_effect( grapple_cooldown_effect() ) || character.is_mounted() ||
           character.get_wielded_item() || character.get_working_arm_count() < 2 ||
           !character.has_two_arms_lifting() ||
+          character.worn_with_flag( flag_RESTRICT_HANDS ) ||
+          character.has_effect( efftype_id( "incorporeal" ) ) ||
           character.has_effect( effect_downed ) || character.in_sleep_state() ||
           character.get_stamina() < grapple_stamina ) ) {
         return false;

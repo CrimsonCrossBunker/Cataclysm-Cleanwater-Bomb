@@ -164,6 +164,59 @@ TEST_CASE( "active_grappling_drag_and_throw_use_owned_grips",
     CHECK( dude.has_effect( tec_judo_hip_throw->grapple_cooldown_effect() ) );
 }
 
+
+TEST_CASE( "active_grappling_drag_updates_underwater_state",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    map &here = get_map();
+    const bool stays_in_water = GENERATE( false, true );
+    here.ter_set( dude_pos, ter_id( "t_water_dp" ) );
+    if( stays_in_water ) {
+        here.ter_set( dude_pos + tripoint::west, ter_id( "t_water_dp" ) );
+    }
+    dude.set_underwater( true );
+    const tripoint_abs_ms origin = dude.pos_abs();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    if( stays_in_water ) {
+        CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK( dude.pos_abs() == origin );
+    } else {
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK( dude.pos_abs() == origin + tripoint::west );
+    }
+    CHECK( dude.is_underwater() == stays_in_water );
+}
+
+TEST_CASE( "active_grappling_requires_physical_and_unrestricted_hands",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const bool held = GENERATE( false, true );
+    if( held ) {
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    }
+    SECTION( "incorporeal" ) {
+        dude.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+    }
+    SECTION( "restricted_hands" ) {
+        REQUIRE( dude.wear_item( item( itype_id( "bindle" ) ), false, false ) );
+    }
+    const int moves = dude.get_moves();
+    const int stamina = dude.get_stamina();
+    const int health = target.get_hp();
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+    CHECK( dude.get_moves() == moves );
+    CHECK( dude.get_stamina() == stamina );
+    CHECK( dude.pos_bub() == dude_pos );
+    CHECK( target.pos_bub() == dude_pos + tripoint::east );
+    CHECK( target.get_hp() == health );
+}
+
 TEST_CASE( "active_grappling_mass_and_size_change_cost_and_control",
            "[martial_arts][active_technique][grappling]" )
 {
@@ -373,6 +426,12 @@ TEST_CASE( "active_grappling_releases_when_holder_cannot_maintain_control",
     }
     SECTION( "broken_arm" ) {
         dude.set_part_hp_cur( bodypart_id( "arm_l" ), 0 );
+    }
+    SECTION( "incorporeal" ) {
+        dude.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+    }
+    SECTION( "restricted_hands" ) {
+        REQUIRE( dude.wear_item( item( itype_id( "bindle" ) ), false, false ) );
     }
     target.move_effects( false );
     CHECK_FALSE( target.has_effect( effect_martial_grapple ) );
