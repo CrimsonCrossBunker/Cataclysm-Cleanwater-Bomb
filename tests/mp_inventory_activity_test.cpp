@@ -87,6 +87,7 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vehicle_heating.h"
+#include "vehicle_toolstation.h"
 #include "repair_activity.h"
 #include "activity_handlers.h"
 #include "iuse_actor.h"
@@ -7769,4 +7770,205 @@ TEST_CASE( "repair_resize_uses_the_operator_body_instead_of_the_host",
     REQUIRE( native );
     CHECK( native->default_action( who, clothing, 10 ) == repair_item_actor::RT_UPSIZING );
     CHECK( native->default_action( get_avatar(), clothing, 10 ) != repair_item_actor::RT_UPSIZING );
+}
+
+namespace
+{
+item empty_station_tool()
+{
+    item tool( itype_id( "welder" ) );
+    tool.clear_items();
+    tool.set_damage( itype::damage_scale );
+    tool.set_var( "station_test_owner", "remote" );
+    REQUIRE( tool.empty() );
+    REQUIRE( tool.toolmods().empty() );
+    return tool;
+}
+
+vehicle_control_selection station_choice( Character &who, vehicle &target, int part )
+{
+    auto choice = control_choice( who, target, "toolstation" );
+    choice.position = target.abs_part_pos( target.part( part ) );
+    choice.toolstation.emplace();
+    choice.toolstation->part_id = target.part( part ).get_base().uid().get_value();
+    return choice;
+}
+} // namespace
+
+TEST_CASE( "owned_vehicle_tool_transfers_follow_the_operator_and_ignore_repeated_requests",
+           "[multiplayer][vehicle_toolstation_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    vehicle &target = electronic_vehicle( who );
+    const int station = install_test_appliance( who, target, "veh_tools_workshop" );
+    target.is_locked = true; // Native tool attachment does not require the ignition key.
+    const item_location tool = who.i_add( empty_station_tool() );
+    REQUIRE( tool );
+    auto attach = station_choice( who, target, station );
+    attach.toolstation->source = capture_item_source( who, tool );
+    const auto request = control_request( fixture, who, attach );
+    const int moves = who.get_moves();
+    fixture.run( who, request );
+    REQUIRE( target.get_tools( target.part( station ) ).size() == 1 );
+    CHECK( who.amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( who.get_moves() == moves );
+    CHECK_FALSE( resolve_item_source( who, get_map(), *attach.toolstation->source ) );
+    CHECK( target.get_tools( target.part( station ) ).front().damage() == itype::damage_scale );
+    CHECK( target.get_tools( target.part( station ) ).front().get_var( "station_test_owner" ) == "remote" );
+    fixture.run( who, request );
+    fixture.run( who, control_request( fixture, who, attach ) );
+    REQUIRE( target.get_tools( target.part( station ) ).size() == 1 );
+
+    auto detach = station_choice( who, target, station );
+    detach.toolstation->tool_id = target.get_tools( target.part( station ) ).front().uid().get_value();
+    const auto removal = control_request( fixture, who, detach );
+    fixture.run( who, removal );
+    CHECK( target.get_tools( target.part( station ) ).empty() );
+    REQUIRE( who.amount_of( itype_id( "welder" ) ) == 1 );
+    const auto received = who.items_with( []( const item &candidate ) {
+        return candidate.typeId() == itype_id( "welder" );
+    } );
+    REQUIRE( received.size() == 1 );
+    CHECK( received.front()->damage() == itype::damage_scale );
+    CHECK( received.front()->get_var( "station_test_owner" ) == "remote" );
+    fixture.run( who, removal );
+    fixture.run( who, control_request( fixture, who, detach ) );
+    CHECK( who.amount_of( itype_id( "welder" ) ) == 1 );
+    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+}
+
+TEST_CASE( "owned_vehicle_tool_attachment_revalidates_item_rules_and_player_access",
+           "[multiplayer][vehicle_toolstation_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    vehicle &target = electronic_vehicle( who );
+    const int station = install_test_appliance( who, target, "veh_tools_workshop" );
+    item_location tool = who.i_add( empty_station_tool() );
+    REQUIRE( tool );
+    auto choice = station_choice( who, target, station );
+    choice.toolstation->source = capture_item_source( who, tool );
+    REQUIRE( valid_vehicle_tool_selection( who, get_map(), target, choice.position, *choice.toolstation ) );
+    SECTION( "another player's tool" ) {
+        get_avatar().set_wielded_item( empty_station_tool() );
+        choice.toolstation->source = capture_item_source( get_avatar(), get_avatar().get_wielded_item() );
+    }
+    SECTION( "tool is no longer empty" ) {
+        item wrench( itype_id( "cordless_impact_wrench" ) );
+        item battery( itype_id( "heavy_battery_cell" ) );
+        battery.ammo_set( itype_id( "battery" ), 20 );
+        REQUIRE( wrench.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
+        REQUIRE_FALSE( wrench.empty() );
+        const item_location loaded = who.i_add( wrench );
+        REQUIRE( loaded );
+        choice.toolstation->source = capture_item_source( who, loaded );
+    }
+    SECTION( "unsupported item" ) {
+        choice.toolstation->source = capture_item_source( who, who.i_add( item( itype_id( "rock" ) ) ) );
+    }
+    SECTION( "same tool type already attached" ) {
+        target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
+    }
+    SECTION( "owner moved out of reach" ) {
+        who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 6, 0, 0 ) );
+    }
+    SECTION( "station identity changed" ) { ++choice.toolstation->part_id; }
+    SECTION( "station removed" ) { target.remove_part( target.part( station ) ); }
+    SECTION( "attach and detach supplied together" ) { choice.toolstation->tool_id = tool->uid().get_value(); }
+    SECTION( "wrong command action" ) { choice.action = "start"; }
+    SECTION( "vehicle belongs to someone else" ) {
+        who.set_fac( faction_id( "free_merchants" ) );
+        target.set_owner( get_avatar() );
+        REQUIRE_FALSE( target.is_owned_by( who ) );
+    }
+    const size_t installed = target.get_tools( target.part( station ) ).size();
+    const auto random_before = rng_get_engine();
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK( target.get_tools( target.part( station ) ).size() == installed );
+    CHECK( who.amount_of( itype_id( "welder" ) ) == 1 );
+    CHECK( rng_get_engine() == random_before );
+}
+
+TEST_CASE( "owned_vehicle_tool_detachment_rejects_stale_or_foreign_hardware",
+           "[multiplayer][vehicle_toolstation_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &target = electronic_vehicle( who );
+    const int station = install_test_appliance( who, target, "veh_tools_workshop" );
+    target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
+    auto choice = station_choice( who, target, station );
+    choice.toolstation->tool_id = target.get_tools( target.part( station ) ).front().uid().get_value();
+    SECTION( "same type replaced the selected tool" ) {
+        target.get_tools( target.part( station ) ).clear();
+        target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
+        REQUIRE( target.get_tools( target.part( station ) ).front().uid().get_value() != choice.toolstation->tool_id );
+    }
+    SECTION( "tool belongs to another station" ) {
+        const int other = install_test_appliance( who, target, "veh_tools_workshop" );
+        target.get_tools( target.part( other ) ).push_back( empty_station_tool() );
+        choice.toolstation->tool_id = target.get_tools( target.part( other ) ).front().uid().get_value();
+        who.setpos( get_map(), get_map().get_bub( choice.position ) );
+    }
+    SECTION( "no installed identity" ) { choice.toolstation->tool_id = 0; }
+    SECTION( "hardware removed" ) { target.remove_part( target.part( station ) ); }
+    SECTION( "out of reach" ) { who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 6, 0, 0 ) ); }
+    const size_t installed = target.get_tools( target.part( station ) ).size();
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK( target.get_tools( target.part( station ) ).size() == installed );
+    CHECK( who.amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+}
+
+TEST_CASE( "owned_vehicle_tool_detachment_keeps_native_overflow_placement",
+           "[multiplayer][vehicle_toolstation_owned]" )
+{
+    appliance_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "rock" ) ) );
+    vehicle &target = electronic_vehicle( who );
+    const int station = install_test_appliance( who, target, "veh_tools_workshop" );
+    target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
+    REQUIRE_FALSE( who.can_pickVolume( target.get_tools( target.part( station ) ).front(), false ) );
+    auto choice = station_choice( who, target, station );
+    choice.toolstation->tool_id = target.get_tools( target.part( station ) ).front().uid().get_value();
+    const auto request = control_request( fixture, who, choice );
+    fixture.run( who, request );
+    fixture.run( who, request );
+    CHECK( target.get_tools( target.part( station ) ).empty() );
+    int found = 0;
+    for( const item &tool : get_map().i_at( who.pos_bub() ) ) {
+        if( tool.typeId() == itype_id( "welder" ) ) {
+            ++found;
+            CHECK( tool.damage() == itype::damage_scale );
+            CHECK( tool.get_var( "station_test_owner" ) == "remote" );
+        }
+    }
+    CHECK( found == 1 );
+    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+}
+
+TEST_CASE( "vehicle_tool_menu_does_not_eject_items_before_an_explicit_detach",
+           "[multiplayer][vehicle_toolstation_owned]" )
+{
+    appliance_fixture fixture;
+    avatar &who = get_avatar();
+    vehicle &target = electronic_vehicle( who );
+    const int station = install_test_appliance( who, target, "veh_tools_workshop" );
+    target.get_tools( target.part( station ) ).emplace_back( itype_id( "rock" ) );
+    const int64_t identity = target.get_tools( target.part( station ) ).front().uid().get_value();
+    veh_menu menu( target, "toolstation" );
+    target.build_interact_menu( menu, &get_map(), get_map().get_bub( target.abs_part_pos(
+                                   target.part( station ) ) ), false );
+    REQUIRE( target.get_tools( target.part( station ) ).size() == 1 );
+    CHECK( target.get_tools( target.part( station ) ).front().uid().get_value() == identity );
+    CHECK( who.amount_of( itype_id( "rock" ) ) == 0 );
+    auto choice = station_choice( who, target, station );
+    choice.toolstation->tool_id = identity;
+    REQUIRE( execute_vehicle_control( who, get_map(), choice ) );
+    CHECK( target.get_tools( target.part( station ) ).empty() );
 }

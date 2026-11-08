@@ -14,6 +14,7 @@
 #include "vehicle_water.h"
 #include "vehicle_heating.h"
 #include "repair_activity.h"
+#include "vehicle_toolstation.h"
 
 class JsonObject;
 class JsonOut;
@@ -64,6 +65,7 @@ struct vehicle_control_selection {
     std::optional<vehicle_water_selection> water;
     std::optional<vehicle_heating_selection> heating;
     std::optional<repair_tool_source> repair;
+    std::optional<vehicle_tool_selection> toolstation;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
