@@ -40,6 +40,7 @@
 #include "creature_tracker.h"
 #include "debug.h"
 #include "distraction_manager.h"
+#include "effect.h"
 #include "enums.h"
 #include "flag.h"
 #include "game.h"
@@ -81,6 +82,7 @@
 #include "rng.h"
 #include "sling.h"
 #include "sounds.h"
+#include "string_formatter.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -1165,6 +1167,18 @@ void avatar_action::active_technique( avatar &you, map &m )
         const std::string description = technique->get_description() + "\n" + state;
         menu.addentry_desc( i, enabled, MENU_AUTOASSIGN,
                             technique->name.translated() + "  [" + state + "]", description );
+    }
+    for( size_t i = 0; i < available.size(); ++i ) {
+        if( available[i]->grapple_action.empty() ) {
+            continue;
+        }
+        uilist_entry &entry = menu.entries[i];
+        entry.enabled = entry.enabled && available[i]->activation_allowed( you, "start" );
+        if( you.has_effect( available[i]->grapple_cooldown_effect() ) ) {
+            const effect &cooldown = you.get_effect( available[i]->grapple_cooldown_effect() );
+            entry.desc += string_format( _( "\nRecovering: %s remaining.\n" ),
+                                         to_string( cooldown.get_duration() ) );
+        }
     }
     menu.query( true, 50, true );
     if( menu.ret < 0 ) {
