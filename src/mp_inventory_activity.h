@@ -10,6 +10,7 @@
 
 #include "character_id.h"
 #include "coordinates.h"
+#include "item_source.h"
 #include "type_id.h"
 
 struct insert_selection;
@@ -64,6 +65,9 @@ struct inventory_activity_client_state {
     std::shared_ptr<item> preview;
     std::string item_use_progress;
     int64_t water_source_uid = 0;
+    bool remote_security_prompt = false;
+    int64_t remote_vehicle_target = 0;
+    item_source remote_controller;
     std::string craft_decision;
     recipe_id craft_recipe;
     int craft_batch = 0;

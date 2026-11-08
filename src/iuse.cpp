@@ -4,6 +4,7 @@
 #include "iuse.h"
 
 #include "item_activation.h"
+#include "remote_vehicle_activity.h"
 #include "tool_activity_target.h"
 
 #include <clone_ptr.h>
@@ -6998,109 +6999,6 @@ std::optional<int> iuse::radiocontrol( Character *p, item *it, const tripoint_bu
     return 1;
 }
 
-static bool hackveh( Character &p, item &it, vehicle &veh )
-{
-    map &here = get_map();
-
-    if( !veh.is_locked || !veh.has_security_working( here ) ) {
-        return true;
-    }
-    const bool advanced = !empty( veh.get_avail_parts( "REMOTE_CONTROLS" ) );
-    if( advanced && veh.is_alarm_on ) {
-        p.add_msg_if_player( m_bad, _( "This vehicle's security system has locked you out!" ) );
-        return false;
-    }
-
-    /** @EFFECT_INT increases chance of bypassing vehicle security system */
-
-    /** @EFFECT_COMPUTER increases chance of bypassing vehicle security system */
-    int roll = dice( round( p.get_skill_level( skill_computer ) ) + 2,
-                     p.get_int() ) - ( advanced ? 50 : 25 );
-    int effort = 0;
-    bool success = false;
-    if( roll < -20 ) { // Really bad rolls will trigger the alarm before you know it exists
-        effort = 1;
-        p.add_msg_if_player( m_bad, _( "You trigger the alarm!" ) );
-        veh.is_alarm_on = true;
-    } else if( roll >= 20 ) { // Don't bother the player if it's trivial
-        effort = 1;
-        p.add_msg_if_player( m_good, _( "You quickly bypass the security system!" ) );
-        success = true;
-    }
-
-    if( effort == 0 && !query_yn( _( "Try to hack this car's security system?" ) ) ) {
-        // Scanning for security systems isn't free
-        p.mod_moves( -to_moves<int>( 1_seconds ) );
-        it.charges -= 1;
-        return false;
-    }
-
-    p.practice( skill_computer, advanced ? 10 : 3 );
-    if( roll < -10 ) {
-        effort = rng( 4, 8 );
-        p.add_msg_if_player( m_bad, _( "You waste some time, but fail to affect the security system." ) );
-    } else if( roll < 0 ) {
-        effort = 1;
-        p.add_msg_if_player( m_bad, _( "You fail to affect the security system." ) );
-    } else if( roll < 20 ) {
-        effort = rng( 2, 8 );
-        p.add_msg_if_player( m_mixed,
-                             _( "You take some time, but manage to bypass the security system!" ) );
-        success = true;
-    }
-
-    p.mod_moves( -to_moves<int>( time_duration::from_seconds( effort ) ) );
-    it.charges -= effort;
-    if( success && advanced ) { // Unlock controls, but only if they're drive-by-wire
-        veh.is_locked = false;
-    }
-    return success;
-}
-
-static vehicle *pickveh( const tripoint_bub_ms &center, bool advanced )
-{
-    map &here = get_map();
-    static const std::string ctrl = "CTRL_ELECTRONIC";
-    static const std::string advctrl = "REMOTE_CONTROLS";
-    uilist pmenu;
-    pmenu.title = _( "Select vehicle to access" );
-    std::vector< vehicle * > vehs;
-
-    for( wrapped_vehicle &veh : here.get_vehicles() ) {
-        vehicle *&v = veh.v;
-        if( rl_dist( center, v->pos_bub( here ) ) < 40 &&
-            v->fuel_left( here, itype_battery ) > 0 &&
-            ( !empty( v->get_avail_parts( advctrl ) ) ||
-              ( !advanced && !empty( v->get_avail_parts( ctrl ) ) ) ) ) {
-            vehs.push_back( v );
-        }
-    }
-    std::vector<tripoint_bub_ms> locations;
-    for( int i = 0; i < static_cast<int>( vehs.size() ); i++ ) {
-        vehicle *veh = vehs[i];
-        locations.push_back( veh->pos_bub( here ) );
-        pmenu.addentry( i, true, MENU_AUTOASSIGN, veh->name );
-    }
-
-    if( vehs.empty() ) {
-        add_msg( m_bad, _( "No vehicle available." ) );
-        return nullptr;
-    }
-    if( vehs.size() == 1 ) {
-        return vehs[0];
-    }
-
-    pointmenu_cb callback( locations );
-    pmenu.callback = &callback;
-    pmenu.query();
-
-    if( pmenu.ret < 0 || pmenu.ret >= static_cast<int>( vehs.size() ) ) {
-        return nullptr;
-    } else {
-        return vehs[pmenu.ret];
-    }
-}
-
 std::optional<int> iuse::remoteveh_tick( Character *p, item *it, const tripoint_bub_ms & )
 {
     map &here = get_map();
@@ -7135,78 +7033,13 @@ std::optional<int> iuse::remoteveh_tick( Character *p, item *it, const tripoint_
     return 0;
 }
 
-std::optional<int> iuse::remoteveh( Character *p, item *it, const tripoint_bub_ms &pos )
+std::optional<int> iuse::remoteveh( Character *p, item *it, const tripoint_bub_ms & )
 {
-    map &here = get_map();
-
-    if( !p ) {
+    item_activation_choices choices;
+    if( !p || !query_remote_vehicle_choices( *p, *it, choices ) ) {
         return std::nullopt;
     }
-
-    vehicle *remote = p ? get_remote_vehicle( *p, here ) : nullptr;
-
-    bool controlling = it->active && remote != nullptr;
-    int choice = uilist( _( "What to do with the remote vehicle control:" ), {
-        controlling ? _( "Stop controlling the vehicle." ) : _( "Take control of a vehicle." ),
-        _( "Execute one vehicle action" )
-    } );
-
-    if( choice < 0 || choice > 1 ) {
-        return std::nullopt;
-    }
-
-    if( !it->activation_success() ) {
-        add_msg( m_bad,
-                 _( "Your %s doesn't seem to respond to your actions." ), it->tname() );
-        return std::nullopt;
-    }
-
-    if( choice == 0 && controlling ) {
-        it->active = false;
-        if( p ) {
-            set_remote_vehicle( *p, here, nullptr );
-        }
-        return 0;
-    }
-
-    avatar &player_character = get_avatar();
-    tripoint_rel_ms stored_view_offset( player_character.view_offset );
-
-    vehicle *veh = pickveh( pos, choice == 0 );
-
-    if( veh == nullptr ) {
-        return std::nullopt;
-    }
-
-    if( !hackveh( *p, *it, *veh ) ) {
-        return 0;
-    }
-
-    if( choice == 0 ) {
-        if( p->has_trait( trait_WAYFARER ) ) {
-            add_msg( m_info,
-                     _( "Despite using a controller, you still refuse to take control of this vehicle." ) );
-        } else {
-            it->active = true;
-            set_remote_vehicle( *p, here, veh );
-            p->add_msg_if_player( m_good, _( "You take control of the vehicle." ) );
-            if( !veh->engine_on ) {
-                veh->start_engines( here, p );
-            }
-        }
-    } else if( choice == 1 ) {
-        const auto rctrl_parts = veh->get_avail_parts( "REMOTE_CONTROLS" );
-        const auto electronics_parts = veh->get_avail_parts( "CTRL_ELECTRONIC" );
-        // Revert to original behavior if we can't find remote controls.
-        if( empty( rctrl_parts ) ) {
-            veh->interact_with( &here, electronics_parts.begin()->pos_bub( here ) );
-        } else {
-            veh->interact_with( &here, rctrl_parts.begin()->pos_bub( here ) );
-        }
-    }
-
-    player_character.view_offset = stored_view_offset;
-    return 1;
+    return begin_remote_vehicle_access( *p, *it, choices );
 }
 
 static bool multicooker_hallu( Character &p )

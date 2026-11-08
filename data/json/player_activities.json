@@ -997,6 +997,15 @@
     "can_resume": false
   },
   {
+    "id": "ACT_REMOTE_VEHICLE",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "accessing vehicle controls",
+    "rooted": true,
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
     "id": "ACT_INVOKE_ITEM",
     "type": "activity_type",
     "activity_level": "NO_EXERCISE",
