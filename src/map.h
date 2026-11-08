@@ -51,11 +51,6 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "vpart_position.h"
-#include "view_snapshot.h"
-
-#if defined(TILES)
-    #include "cata_tiles.h"
-#endif
 
 struct scent_block;
 struct terrain_growth_state;
@@ -440,15 +435,18 @@ class map
         void set_pathfinding_cache_dirty( const tripoint_bub_ms &p );
         /*@}*/
 
-        // Mark the tiles draw-points cache for rebuild on the next frame.
+        // Advance the map-change revision observed independently by each view.
         // Terrain/furniture changes already trigger this transitively (they
         // dirty the seen cache, which build_map_cache turns into a draw-cache
         // rebuild), but the decoration-class mutators — traps, partial
         // construction, graffiti — change none of the visibility caches, so
         // they must request the rebuild explicitly or the cache would serve a
-        // stale snapshot of that content. No-op outside tiles builds / the
-        // reality bubble.
+        // stale snapshot of that content. This is owner-thread bookkeeping,
+        // independent of the active frontend and of the reality bubble.
         void set_draw_points_cache_dirty();
+        uint64_t draw_cache_revision() const {
+            return draw_cache_revision_;
+        }
 
         void invalidate_map_cache( int zlev );
 
@@ -2360,6 +2358,8 @@ class map
             }
         };
         context_lifetime context_lifetime_;
+        // Not serialized. A reset map context invalidates every old view handle.
+        uint64_t draw_cache_revision_ = 0;
         // Owner-thread capture/merge; workers never retain map/cache references.
         std::unique_ptr<vision_preparation::frame> vision_preparation_;
         double vision_horizontal_cost_ms_ = 0.0;
@@ -2497,15 +2497,6 @@ class map
         bool has_haulable_items( const tripoint_bub_ms &pos );
         std::vector<item_location> get_haulable_items( const tripoint_bub_ms &pos );
 
-#if defined(TILES)
-        bool draw_points_cache_dirty = true;
-        view_snapshot draw_points_cache;
-        point_rel_ms prev_top_left;
-        point_rel_ms prev_bottom_right;
-        point prev_o;
-        std::multimap<point, formatted_text> overlay_strings_cache;
-        color_block_overlay_container color_blocks_cache;
-#endif
 };
 
 // The map the code is currently processing. It is currently (incorrectly) fixed at the

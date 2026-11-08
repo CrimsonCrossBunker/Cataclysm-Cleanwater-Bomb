@@ -46,6 +46,7 @@
 #include "vpart_range.h"
 
 #if defined(TILES)
+    #include "cata_tiles.h"
     #include "sdltiles.h" // To get tile screen positions for draw_appliance_connections()
 #endif
 
