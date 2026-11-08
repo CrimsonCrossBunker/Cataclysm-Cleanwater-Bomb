@@ -2,6 +2,7 @@
 #include "game.h"
 #include "map_memory.h"
 #include "render_backend.h"
+#include "mp_world_session.h"
 
 #include <algorithm>
 #include <array>
@@ -744,6 +745,7 @@ bool game::setup()
 // (quickload / snapshot restore) which deliberately skip JSON/mod reloading.
 void game::reset_game_state()
 {
+    multiplayer_session_ptr->reset();
     new_game = true;
     dimension_checkpoint_pending = false;
 
