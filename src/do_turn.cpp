@@ -343,7 +343,7 @@ void update_avatar_memory( avatar &u )
     }
 }
 
-void update_avatar_environment( avatar &u )
+void update_character_environment( Character &u )
 {
     u.update_bodytemp();
     {
@@ -357,7 +357,7 @@ void update_avatar_environment( avatar &u )
     }
 }
 
-void finish_avatar_turn( avatar &u )
+void finish_character_turn( Character &u )
 {
     if( calendar::once_every( 9_turns ) ) {
         u.check_and_recover_morale();
@@ -365,8 +365,11 @@ void finish_avatar_turn( avatar &u )
 
     // reset player noise
     u.volume = 0;
+}
 
-    // Calculate bionic power balance
+void update_avatar_power_display( avatar &u )
+{
+    // Display-only delta; authoritative power itself arrives in the body frame.
     u.power_balance = u.get_power_level() - u.power_prev_turn;
     u.power_prev_turn = u.get_power_level();
 }
@@ -611,7 +614,8 @@ void monmove()
                     // Updates last_updated as well, so release/unload cannot
                     // replay this interval through NPC catch-up. AI schedules
                     // must not wake or redirect a player-controlled character.
-                    guy.update_bodytemp_and_wetness();
+                    update_character_environment( guy );
+                    finish_character_turn( guy );
                 }
             } else {
                 guy.npc_update_body();
@@ -814,8 +818,8 @@ bool game::do_turn()
         avatar &u = get_avatar();
         cata_mp::client_finish_ready_firearm_activity();
         cata_mp::client_update_inventory_activity_view();
-        const bool advance_character = cata_mp::client_begin_simulation_turn();
-        if( advance_character ) {
+        const bool advance_view = cata_mp::client_begin_simulation_turn();
+        if( advance_view ) {
             if( new_game ) {
                 new_game = false;
                 get_weather().on_game_start();
@@ -826,14 +830,11 @@ bool game::do_turn()
             for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
                 get_map().set_lightmap_cache_dirty( z );
             }
-            auto &driver = cata_mp::client_character_turn_driver( u );
-            driver.update_body();
             const bool sleeping = u.has_effect( effect_sleep );
             const int moves = u.get_moves();
             const activity_id activity = u.activity.id();
             cata_mp::set_client_turn_activity( u.activity ? activity.str() : "" );
             process_avatar_activity( u );
-            driver.process_turn();
             if( moves > 0 && ( sleeping || u.has_effect( effect_sleep ) ) ) {
                 u.set_moves( 0 );
             }
@@ -849,11 +850,13 @@ bool game::do_turn()
             handle_key_blocking_activity( 0 );
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
         }
-        if( advance_character ) {
+        if( advance_view ) {
             update_avatar_memory( u );
             get_map().invalidate_visibility_cache();
-            update_avatar_environment( u );
-            finish_avatar_turn( u );
+            // Body, effects, item processing and recurring scripts belong to
+            // the server. A new view clock only advances presentation/input.
+            u.volume = 0;
+            update_avatar_power_display( u );
             sounds::process_sound_markers( &u );
         }
         present_turn();
@@ -1235,15 +1238,19 @@ void game::simulate_turn_suffix()
 
     m.invalidate_visibility_cache();
 
-    update_avatar_environment( u );
+    update_character_environment( u );
     if( calendar::once_every( 1_minutes ) ) {
         for( npc &guy : all_npcs() ) {
+            if( guy.has_native_player_control() ) {
+                continue; // Already advanced with the owned character above.
+            }
             guy.update_morale();
             guy.check_and_recover_morale();
         }
     }
 
-    finish_avatar_turn( u );
+    finish_character_turn( u );
+    update_avatar_power_display( u );
 }
 
 void game::present_turn()

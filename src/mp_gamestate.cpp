@@ -283,18 +283,6 @@ struct mp_apply_step {
     }
 };
 
-// The session selects the compatibility clock and owns detach/reset. Actual
-// body/effect processing is shared native character code, independent of MP.
-character_turn_driver &client_character_turn_driver( Character &actor )
-{
-    if( !is_client_mode() ) {
-        throw std::runtime_error( "Client character driver requested outside client mode" );
-    }
-    auto &driver = mp_session().client_turn.character_turns;
-    driver.bind( actor, character_turn_policy::observed_clock );
-    return driver;
-}
-
 bool is_server_mode()
 {
     return g && mp_session().server_mode;
@@ -3140,8 +3128,10 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         } catch( const JsonError & ) {}
     }
 
-    // Mirror client's locally-computed stamina onto the proxy so the host sees accurate state.
-    if( msg.find( "\"client_stamina\":" ) != std::string::npos ) {
+    // Only uninitialized legacy proxies accept body uploads. An admitted actor
+    // owns its physiology on the server; stale client views cannot overwrite it.
+    if( !recipient.player_state_initialized &&
+        msg.find( "\"client_stamina\":" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -3167,7 +3157,8 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
 
     // Sync client bleeding effects to the remote NPC proxy so blood appears on
     // the host's map when the proxy moves.
-    if( msg.find( "\"client_bleed\":" ) != std::string::npos ) {
+    if( !recipient.player_state_initialized &&
+        msg.find( "\"client_bleed\":" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -6998,6 +6989,11 @@ bool client_apply_message( const std::string &msg )
             return true;
         }
 
+        if( jo.has_object( "character_turn" ) &&
+            jo.get_int64( "character_revision" ) <= mp_session().client_turn.last_character_revision ) {
+            return true;
+        }
+
         // Sync host's calendar turn so the client sees the correct time, lighting, and weather.
         if( jo.has_int( "calendar_turn" ) ) {
             const time_point host_turn( jo.get_int( "calendar_turn" ) );
@@ -7390,6 +7386,11 @@ bool client_apply_message( const std::string &msg )
             apply_vehicle_sync( jo );
         }
 
+        if( jo.has_object( "character_turn" ) ) {
+            get_avatar().load_turn_state( jo.get_object( "character_turn" ) );
+            mp_session().client_turn.last_character_revision = jo.get_int64( "character_revision" );
+        }
+
         // Apply per-bodypart HP to the client avatar so the sidebar stays accurate.
         // Also synthesise "you were hit" messages from HP deltas.
         if( jo.has_array( "bodyparts" ) ) {
@@ -7660,9 +7661,9 @@ void client_process_incoming()
         // so the server's first move grant isn't silently ignored after reconnect.
         mp_session().client_turn.client_waiting_for_ack = false;
         mp_session().client_turn.client_last_grant_seq = 0;
+        mp_session().client_turn.last_character_revision = 0;
         mp_session().client_turn.observed_host_turn = calendar::before_time_starts;
         mp_session().client_turn.processed_host_turn = calendar::before_time_starts;
-        mp_session().client_turn.character_turns.reset();
         mp_session().client_pickup = {};
         // Immediately follow with our worn-item list and skin tone.
         client_resync_worn();
@@ -8136,21 +8137,6 @@ std::string client_enrich_action( const std::string &json )
     const avatar &av = get_avatar();
     client_capture_avatar_msgs();
 
-    std::string bleed_json = "[";
-    bool bleed_first = true;
-    for( const bodypart_id &bp : av.get_all_body_parts() ) {
-        const int intensity = av.get_effect_int( effect_bleed, bp );
-        if( intensity > 0 ) {
-            if( !bleed_first ) {
-                bleed_json += ',';
-            }
-            bleed_first = false;
-            bleed_json += R"({"bp":")" + bp.id().str() +
-                          R"(","intensity":)" + std::to_string( intensity ) + "}";
-        }
-    }
-    bleed_json += "]";
-
     const float cl = av.active_light();
     const std::string tile_changes = build_client_tile_changes();
     const std::string veh_cargo_changes = build_client_veh_cargo_changes();
@@ -8196,57 +8182,18 @@ std::string client_enrich_action( const std::string &json )
         }
     }
 
-    // Build char_stats block: base stats, all skills, and known proficiencies.
-    // Applied server-side to the NPC proxy so pldrive(), melee, etc. use real values.
-    std::string char_stats = "{";
-    // Carry the client's real character name so the host can rename the proxy
-    // (spawned with the "player2" placeholder, since the client connects from
-    // the main menu before its character exists). Renames the on-map @ and the
-    // sidebar nearby-list; messages already use the real name from packets.
-    char_stats += R"("name":")" + av.get_name() + "\",";
-    char_stats += "\"str\":" + std::to_string( av.get_str_base() );
-    char_stats += ",\"dex\":" + std::to_string( av.get_dex_base() );
-    char_stats += ",\"int\":" + std::to_string( av.get_int_base() );
-    char_stats += ",\"per\":" + std::to_string( av.get_per_base() );
-    char_stats += ",\"skills\":[";
-    bool first_s = true;
-    for( const auto &[sid, slevel] : av.get_all_skills() ) {
-        const int lvl = slevel.level();
-        if( lvl <= 0 ) {
-            continue;
-        }
-        if( !first_s ) {
-            char_stats += ',';
-        }
-        first_s = false;
-        char_stats += "[\"" + sid.str() + "\"," + std::to_string( lvl ) + "]";
-    }
-    char_stats += "],\"profs\":[";
-    bool first_p = true;
-    for( const proficiency_id &pid : av.known_proficiencies() ) {
-        if( !first_p ) {
-            char_stats += ',';
-        }
-        first_p = false;
-        char_stats += "\"" + pid.str() + "\"";
-    }
-    char_stats += "]}";
-
     std::string enriched = json;
     if( !enriched.empty() && enriched.back() == '}' ) {
         enriched.pop_back();
         enriched += ",\"client_light\":" + std::to_string( cl );
-        enriched += ",\"client_bleed\":" + bleed_json;
         enriched += ",\"client_tile_changes\":" + tile_changes;
         if( veh_cargo_changes != "[]" ) {
             enriched += ",\"client_veh_cargo_changes\":" + veh_cargo_changes;
         }
-        enriched += ",\"client_stamina\":" + std::to_string( av.get_stamina() );
         const std::string monster_hits = build_client_monster_hits();
         if( !monster_hits.empty() ) {
             enriched += ",\"client_monster_hits\":" + monster_hits;
         }
-        enriched += ",\"char_stats\":" + char_stats;
         enriched += ",\"client_facing\":" + std::to_string(
                         av.facing == FacingDirection::LEFT ? 0 : 1 );
         // Sync current activity id for HUD/messaging and group pacing.  Primary signals are the explicit
@@ -11138,10 +11085,8 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
     removed_vehicles_json += ']';
     recipient.replication.server_veh_live_nids = std::move( alive_now );
 
-    // Host's active effects (bleeding, poison, splints, buffs…) so the client's
-    // host-proxy shows the same status + overhead markers. The client->host
-    // direction already syncs bleed (client_bleed); this is the missing mirror,
-    // and covers ALL effects, not just bleed.
+    // Host effects for the observing client's partner markers. The local
+    // player receives its complete body/effect projection separately.
     std::string host_effects_json = "[";
     {
         bool ef_first = true;
@@ -11175,6 +11120,10 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
         }
     }
     host_hp_json += "]";
+
+    std::ostringstream character_turn;
+    JsonOut character_out( character_turn );
+    remote->store_turn_state( character_out );
 
     return "{\"type\":\"state\","
            "\"host_player\":\"" + host.get_player_id().str() + "\","
@@ -11240,7 +11189,9 @@ std::string serialize_remote_player_state( remote_player_session &recipient )
         }
         return s;
     }() ) +
-    "\"bodyparts\":" + bparts_json +
+    "\"character_revision\":" + std::to_string( ++recipient.turn.character_revision ) +
+    ",\"character_turn\":" + character_turn.str() +
+    ",\"bodyparts\":" + bparts_json +
     ",\"moves\":" + std::to_string( recipient.turn.remote_moves ) +
     ",\"speed\":" + std::to_string( remote->get_speed() ) +
     R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
