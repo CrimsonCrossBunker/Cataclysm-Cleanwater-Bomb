@@ -1,0 +1,67 @@
+Selected multiplayer spell fixes
+===============================
+
+CCB base: 72a34c6b5fb22defbc9189b058233544d4477047 (master).
+Source: https://github.com/busterbogheart/Cataclysm-DDA-multi
+License: CC BY-SA 3.0, as declared by that repository's LICENSE.txt.
+Original author: Ethan Kemp (busterbogheart).
+Original commits retain the Co-Authored-By attribution to Claude Opus 5.5
+<noreply@anthropic.com>.
+
+Selected commits (not a full upstream synchronization):
+- 9715305886a8c5ed4db120a5a42dceb2a627339a
+  Resolved client charm, polymorph and banishment operations reach the host.
+- 4fd131d614d5f1a3da8a35d221d3306236b0f03c
+  Host-authoritative monster effects, immunity/stacking and effect snapshots.
+- 4ee8c0a7407ebd7b06659d5ef7ccc5a4fc53db6a
+  Client attack spells can hit the real host, through native single-tile
+  damage_targets resolution instead of replaying an entire area/extras.
+
+Why this is an adaptation instead of three cherry-picks:
+CCB has no mp_magic module or support-spell dispatcher at this base. Only the
+three narrow behaviors and necessary hooks were added. Its existing monster
+HP reports are re-baselined after polymorph/banishment (never charm). Monster type,
+friendliness and effects are returned by the existing host snapshot. Deferred
+effect insertion avoids repeating on-add damage in client hit reports.
+
+Intentional CCB differences:
+- New non-idempotent spell packets require a volatile generation and increasing
+  sequence. Reconnect, world exit and detected game-clock rollback invalidate
+  old packets. The current connection's existing player identity is checked.
+  A client reloading on the same connection requests a new magic generation
+  and waits for the host's state response before sending more spell messages.
+  Repeated requests for the retired generation do not rotate it again. This
+  invalidates old packets after the host processes the resync boundary; it
+  does not undo actions the host already accepted before that boundary.
+- CCB's older hit reports are absolute HP, unlike current upstream deltas.
+  Before polymorph, prior_hp preserves pending damage using the lower of the
+  current host HP and the client's pre-polymorph HP. A hit already applied by
+  the host is not subtracted twice, HP is never raised, and a lethal hit is not
+  revived by polymorph. The newer delta-report subsystem is not imported.
+- Friendly fire is restricted to attack spells targeting allies and hostiles,
+  and requires the actual partner proxy; unknown spells and invalid levels fail
+  closed. It cannot fall back to the host as caster.
+- An absent effects field is a legacy record, not permission to clear effects.
+  Explicit empty snapshots clear authoritative effects. Effect expiry uses
+  host absolute game time.
+- This does not add summons, healing forwarding, arbitrary EOC synchronization,
+  HP-cost events, additional players, or distant/other-dimension simulation.
+  Banishment's overflow caster-HP cost remains an upstream known limitation.
+- Mod compatibility labels remain unchanged: Magiclysm, Mind Over Matter and
+  Xedra Evolved are still marked incompatible in CCB. The selective fixes do
+  not establish complete support for any of these mods.
+- No AI companion runtime, permissions, persistent-task, save-format or model
+  budget code is imported. No public Lua/JSON authoring contract is changed.
+
+The --server help describes a reserved mode rather than a working headless
+server. Playable hosting uses --host or the Co-op menu. The menu supplies an
+empty password; a password can be supplied through --host --password. This
+change does not implement a headless server or a new menu password prompt.
+
+Regression filter: [mp_magic] (Catch2, deterministic RNG seed recommended).
+The host tests start the actual listener on an ephemeral local port, then use
+the ordinary game-thread event queue. One additional test uses the real client
+probe/join/send path over TCP loopback and receives the resync state response.
+The existing server port accessor reports the bound port, including port 0's
+ephemeral assignment. No test establishes a WAN connection. See the pull
+request for exact build/test commands and limitations.

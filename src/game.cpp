@@ -173,6 +173,7 @@
 #include "monstergenerator.h"
 #include "move_mode.h"
 #include "mp_client_conn.h"
+#include "mp_magic.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
 #endif
@@ -744,6 +745,7 @@ bool game::setup()
 // (quickload / snapshot restore) which deliberately skip JSON/mod reloading.
 void game::reset_game_state()
 {
+    cata_mp::mp_magic_reset( true );
     new_game = true;
     dimension_checkpoint_pending = false;
 

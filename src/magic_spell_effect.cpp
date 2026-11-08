@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "mp_magic.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "character.h"
@@ -556,6 +557,7 @@ static void add_effect_to_target( const tripoint_bub_ms &target, const spell &sp
     }
     if( !bodypart_effected ) {
         critter->add_effect( spell_effect, dur_td );
+        cata_mp::mp_on_spell_effect_applied( *critter, caster, spell_effect, dur_td );
     }
 }
 
@@ -578,6 +580,10 @@ static void damage_targets( const spell &sp, Creature &caster,
             continue;
         }
         Creature *const cr = creatures.creature_at<Creature>( target );
+
+        if( cr && cata_mp::mp_dispatch_spell_at_partner( sp, caster, *cr ) ) {
+            continue;
+        }
 
         if( sp.has_flag( spell_flag::TOUCH_REQUIRED ) && cr && !touch_required_hit( caster, *cr ) ) {
             caster.add_msg_if_player( m_bad, _( "Your target avoids your attempt to touch them!" ) );
@@ -785,6 +791,7 @@ static void magical_polymorph( monster &victim, Creature &caster, const spell &s
         add_msg_if_player_sees( victim, sp.message(),
                                 victim.type->nname(), new_id->nname() );
     }
+    const int prior_hp = cata_mp::mp_client_monster_prior_hp( victim );
     victim.poly( new_id );
 
     if( sp.has_flag( spell_flag::FRIENDLY_POLY ) ) {
@@ -794,6 +801,7 @@ static void magical_polymorph( monster &victim, Creature &caster, const spell &s
             victim.make_ally( *caster.as_monster() );
         }
     }
+    cata_mp::mp_on_monster_spell_op( victim, caster, "poly", prior_hp );
 }
 
 void spell_effect::targeted_polymorph( const spell &sp, Creature &caster,
@@ -1693,6 +1701,7 @@ void spell_effect::charm_monster( const spell &sp, Creature &caster, const tripo
         }
         if( success ) {
             add_msg_if_player_sees( potential_target, m_good, _( "You charm the %s!" ), mon->name() );
+            cata_mp::mp_on_monster_spell_op( *mon, caster, "charm" );
         } else {
             add_msg_if_player_sees( potential_target, m_bad, _( "The %s resists your charm attempt." ),
                                     mon->name() );
@@ -1986,8 +1995,8 @@ void spell_effect::dash( const spell &sp, Creature &caster, const tripoint_bub_m
     spell_effect::override_parameters params( sp, caster );
     params.range = sp.aoe( caster );
     const std::set<tripoint_bub_ms> hit_area = spell_effect_cone_range_override( params,
-        here.get_bub( source_abs ),
-        far_target );
+            here.get_bub( source_abs ),
+            far_target );
     damage_targets( sp, caster, hit_area );
 }
 
@@ -2063,6 +2072,7 @@ void spell_effect::banishment( const spell &sp, Creature &caster, const tripoint
         // banished monsters take their stuff with them
         mon->death_drops = false;
         mon->die( &here, &caster );
+        cata_mp::mp_on_monster_spell_op( *mon, caster, "banish" );
     }
 }
 
@@ -2193,4 +2203,12 @@ void spell_effect::slime_split_on_death( const spell &sp, Creature &caster,
             }
         }
     }
+}
+
+// One tile's native attack resolution: do not replay an area's other targets
+// or cast_all_effects/extra effects when the client's hit reaches the real host.
+void cata_mp::mp_spell_hit_single_target( const spell &sp, Creature &caster,
+        const tripoint_bub_ms &target )
+{
+    damage_targets( sp, caster, { target } );
 }
