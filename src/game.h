@@ -741,6 +741,8 @@ class game
         unsigned char light_level( int zlev ) const;
         void reset_light_level();
         character_id assign_npc_id();
+        // Reserve a persisted character ID before later allocations can reuse it.
+        void observe_npc_id( character_id id );
         int64_t assign_item_uid();
         int64_t assign_monster_uid();
         void observe_monster_uid( int64_t uid );

@@ -45,6 +45,7 @@ struct server::impl {
     std::atomic<bool> stopping{ false };
     std::mutex mutex;
     std::deque<std::pair<uint64_t, std::string>> outgoing;
+    std::vector<uint64_t> rejected;
     size_t outgoing_bytes = 0;
 };
 
@@ -83,6 +84,18 @@ void server::post_send( uint64_t peer_id, const std::string &msg )
 void server::broadcast( const std::string &msg )
 {
     post_broadcast( msg );
+}
+
+void server::post_reject( uint64_t peer_id, const std::string &reason )
+{
+    if( peer_id == 0 ) {
+        return;
+    }
+    post_send( peer_id, "{\"type\":\"error\",\"message\":" + wire_quote( reason ) + "}" );
+    std::lock_guard<std::mutex> lock( impl_->mutex );
+    if( !impl_->stopping ) {
+        impl_->rejected.push_back( peer_id );
+    }
 }
 
 void server::post_broadcast( const std::string &msg )
@@ -135,7 +148,7 @@ void server::on_message( uint64_t id, const std::string &msg )
             // A duplicate join must not spawn a second proxy or rename a peer.
             return;
         }
-        if( fields["transport"] != "ccb-renet-1" ) {
+        if( fields["transport"] != "ccb-renet-2" ) {
             reject( "Incompatible multiplayer transport" );
             return;
         }
@@ -161,8 +174,20 @@ void server::on_message( uint64_t id, const std::string &msg )
             reject( "Player name is too long" );
             return;
         }
-        send( "{\"type\":\"welcome\",\"transport\":\"ccb-renet-1\",\"player_id\":" +
-              wire_quote( type == "join" ? name : "probe" ) +
+        player_credentials credentials;
+        if( type == "join" ) {
+            try {
+                credentials = { player_id( fields["player_id"] ), fields["resume_secret"] };
+                if( !credentials.valid() ) {
+                    throw std::invalid_argument( "Missing resume capability" );
+                }
+            } catch( const std::invalid_argument & ) {
+                reject( "Persistent player identity required; update the client" );
+                return;
+            }
+        }
+        send( "{\"type\":\"welcome\",\"transport\":\"ccb-renet-2\",\"player_id\":" +
+              wire_quote( type == "join" ? credentials.id.str() : "probe" ) +
               ",\"peer_id\":" + std::to_string( id ) +
               ",\"world\":" + wire_quote( mp_get_host_world_name() ) +
               ",\"host_name\":" + wire_quote( mp_get_host_player_name() ) +
@@ -171,7 +196,7 @@ void server::on_message( uint64_t id, const std::string &msg )
         if( type == "join" ) {
             peer.name = name;
             peer.authenticated = true;
-            get_mp_queue().push( { mp_event::type::connect, name, "", id } );
+            get_mp_queue().push( { mp_event::type::connect, name, "", id, credentials } );
             post_broadcast( "{\"type\":\"player_joined\",\"name\":" + wire_quote( name ) + "}" );
             mp_log( "[ccb-mp] peer joined: " + std::to_string( id ) );
         }
@@ -215,9 +240,11 @@ void server::run()
                 }
             }
             std::deque<std::pair<uint64_t, std::string>> outgoing;
+            std::vector<uint64_t> rejected;
             {
                 std::lock_guard<std::mutex> lock( impl_->mutex );
                 outgoing.swap( impl_->outgoing );
+                rejected.swap( impl_->rejected );
                 impl_->outgoing_bytes = 0;
             }
             for( const auto &message : outgoing ) {
@@ -235,6 +262,12 @@ void server::run()
                             stop();
                         }
                     }
+                }
+            }
+            for( const uint64_t id : rejected ) {
+                const auto found = impl_->peers.find( id );
+                if( found != impl_->peers.end() ) {
+                    found->second.closing = clock::now() + std::chrono::seconds( 1 );
                 }
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );

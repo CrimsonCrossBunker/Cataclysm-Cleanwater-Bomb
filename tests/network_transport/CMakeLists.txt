@@ -7,7 +7,7 @@ find_library(ZSTD_LIBRARY zstd REQUIRED)
 add_executable(network_harness harness.cpp
     ${CCB_ROOT}/src/mp_server.cpp ${CCB_ROOT}/src/mp_client_conn.cpp
     ${CCB_ROOT}/src/mp_renet_transport.cpp ${CCB_ROOT}/src/mp_protocol.cpp
-    ${CCB_ROOT}/src/mp_queue.cpp ${CCB_ROOT}/src/json.cpp ${CCB_ROOT}/src/wcwidth.cpp)
+    ${CCB_ROOT}/src/mp_player_identity.cpp ${CCB_ROOT}/src/mp_queue.cpp ${CCB_ROOT}/src/json.cpp ${CCB_ROOT}/src/wcwidth.cpp)
 target_compile_definitions(network_harness PRIVATE CATA_IN_TOOL)
 target_include_directories(network_harness PRIVATE ${CCB_ROOT}/src)
 target_include_directories(network_harness SYSTEM PRIVATE ${CCB_ROOT}/src/third-party

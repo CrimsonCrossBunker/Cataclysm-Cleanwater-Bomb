@@ -113,6 +113,8 @@ int main( int argc, char **argv )
                 std::cout << "ERROR " << wire_quote( client_connect_error() ) << std::endl;
                 return 0;
             }
+            require( client_identity_scope() == "127.0.0.1:" + std::to_string( port ),
+                     "identity scope comes from the resolved local request" );
         } else if( mode == "raw" ) {
             require( renet_transport_start_client( "127.0.0.1:" + std::to_string( port ), 991 ), "raw start" );
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
@@ -176,8 +178,16 @@ int main( int argc, char **argv )
                 require( !host.running(), "invalid packet ends worker" );
                 require( host.start( port, "口令\"\\", "abc" ), "recover after worker exit" );
                 std::cout << "READY" << std::endl;
+            } else if( command.compare( 0, 7, "reject " ) == 0 && mode == "host" ) {
+                get_active_server()->post_reject( std::stoull( command.substr( 7 ) ),
+                                                  "Owner rejected player identity" );
+                std::cout << "OK" << std::endl;
+            } else if( command == "join-invalid" ) {
+                client_send_join( {} );
+                require( !client_join_is_sent(), "invalid profile must not join" );
+                std::cout << "OK" << std::endl;
             } else if( command == "join" ) {
-                client_send_join();
+                client_send_join( { player_id( std::string( 32, '1' ) ), std::string( 64, 'a' ) } );
                 std::cout << "OK" << std::endl;
             } else if( command.compare( 0, 5, "send " ) == 0 ) {
                 if( mode == "host" ) {
@@ -195,8 +205,10 @@ int main( int argc, char **argv )
                     if( mode == "host" ) {
                         mp_event event;
                         if( get_mp_queue().pop( event ) ) {
+                            require( event.evt_type != mp_event::type::connect || event.player.valid(),
+                                     "connect event owns validated credentials" );
                             std::cout << "EVENT " << static_cast<int>( event.evt_type ) << ' ' << event.peer_id << ' ' <<
-                                      wire_quote( event.session_id ) << ' ' << wire_quote( event.data ) << std::endl;
+                                      wire_quote( event.display_name ) << ' ' << wire_quote( event.data ) << std::endl;
                             found = true;
                         }
                     } else if( mode == "raw" ) {

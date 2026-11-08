@@ -842,7 +842,8 @@ bool game::save()
     }
     events().send<event_type::game_save>( time_since_load, total_time_played );
     try {
-        if( !save_player_data() ||
+        if( !cata_mp::mp_save_remote_player() ||
+            !save_player_data() ||
             !save_achievements() ||
             !save_factions_missions_npcs() ||
             !save_external_options_record() ||
