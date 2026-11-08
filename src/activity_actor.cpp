@@ -79,6 +79,7 @@
 #include "input_popup.h"
 #include "inventory_ui.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_consumption.h"
 #include "item_category.h"
 #include "item_components.h"
@@ -11478,15 +11479,75 @@ std::unique_ptr<activity_actor> clear_rubble_activity_actor::deserialize( JsonVa
     return actor.clone();
 }
 
-void firstaid_activity_actor::start( player_activity &act, Character & )
+firstaid_activity_actor firstaid_activity_actor::client_view( bool reopen )
 {
+    firstaid_activity_actor actor;
+    actor.view_only = true;
+    actor.reprompt = reopen;
+    return actor;
+}
+
+void firstaid_activity_actor::set_owned_target( const item_source &source, const itype_id &type,
+        const bodypart_str_id &part, bool theft )
+{
+    server_owned = true;
+    owned_source = source;
+    source_type = type;
+    selected_part = part;
+    allow_theft = theft;
+}
+
+bool firstaid_activity_actor::prepare_owned_turn( Character &who )
+{
+    item_location source = resolve_item_source( who, get_map(), owned_source );
+    Character *patient = find_healing_patient( who, patientID );
+    if( !source || source->typeId() != source_type || !patient || !selected_part.is_valid() ||
+        !healing_allowed( who, *patient, source, selected_part.id(), allow_theft ) ) {
+        return false;
+    }
+    who.activity.targets = { source };
+    who.activity.str_values = { selected_part.str() };
+    return true;
+}
+
+void firstaid_activity_actor::start( player_activity &act, Character &who )
+{
+    if( view_only ) {
+        act.moves_total = act.moves_left = 1;
+        return;
+    }
+    if( server_owned && !prepare_owned_turn( who ) ) {
+        act.set_to_null();
+        return;
+    }
     act.moves_total = moves;
     act.moves_left = moves;
     act.name = name;
 }
 
+void firstaid_activity_actor::do_turn( player_activity &, Character & )
+{
+    if( view_only ) {
+        cata_mp::client_step_inventory_activity();
+    }
+}
+
 void firstaid_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( view_only ) {
+        return;
+    }
+    if( server_owned && !prepare_owned_turn( who ) ) {
+        who.cancel_activity();
+        return;
+    }
+    if( act.targets.empty() || act.str_values.empty() ) {
+        act.set_to_null();
+        return;
+    }
+    const bool owned = server_owned;
+    const auto identity = act.identity_generation();
+    const safe_reference<Creature> healer_lifetime = who.get_safe_reference();
     map &here = get_map();
 
     static const std::string iuse_name_string( "heal" );
@@ -11512,15 +11573,21 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
 
-    Character *patient = patientID == get_avatar().getID() ? &get_avatar() :
-                         dynamic_cast<Character *>( g->find_npc( patientID ) );
+    Character *patient = find_healing_patient( who, patientID );
     if( !patient ) {
         debugmsg( "Your patient can no longer be found so you stop using the %s.", name );
         act.set_to_null();
         act.values.clear();
         return;
     }
-    const bodypart_id healed = bodypart_id( act.str_values[0] );
+    const bodypart_str_id selected( act.str_values[0] );
+    if( !selected.is_valid() || !patient->has_part( selected.id() ) ) {
+        act.set_to_null();
+        return;
+    }
+    const bodypart_id healed = selected.id();
+    const safe_reference<Creature> patient_lifetime = patient->get_safe_reference();
+    const safe_reference<item> tool_lifetime = used_tool->get_safe_reference();
 
     // Capture pre-heal state so we can reward the player for helping NPCs.
     npc *patient_npc = ( who.is_avatar() && patient->is_npc() ) ?
@@ -11533,25 +11600,30 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
 
     int charges_consumed = actor->finish_using( who, *patient,
                            *used_tool, healed );
-    std::list<item>used;
-    if( used_tool->has_flag( flag_SINGLE_USE ) ) {
-        // A stackable (count_by_charges) single-use item, e.g. a cotton sheet,
-        // consumes a single unit from the stack per use. Removing the whole
-        // item_location here would destroy the entire stack instead of one.
-        if( used_tool->count_by_charges() && used_tool->charges > 1 ) {
-            used_tool->charges -= 1;
-        } else {
-            it.remove_item();
-        }
-    } else if( used_tool->is_medication() ) {
-        if( !it->count_by_charges() ||
-            it->use_charges( it->typeId(), charges_consumed, used, it.pos_bub( here ) ) ) {
-            it.remove_item();
-        }
-    } else if( used_tool->is_tool() ) {
-        if( used_tool->needs_charges_to_use() ) {
+    if( !healer_lifetime || !patient_lifetime ) {
+        return;
+    }
+    std::list<item> used;
+    if( tool_lifetime && it ) {
+        if( used_tool->has_flag( flag_SINGLE_USE ) ) {
+            // A stackable single-use dressing spends one unit, not its stack.
+            if( used_tool->count_by_charges() && used_tool->charges > 1 ) {
+                used_tool->charges -= 1;
+            } else {
+                it.remove_item();
+            }
+        } else if( used_tool->is_medication() ) {
+            if( !it->count_by_charges() ||
+                it->use_charges( it->typeId(), charges_consumed, used, it.pos_bub( here ) ) ) {
+                it.remove_item();
+            }
+        } else if( used_tool->is_tool() && used_tool->needs_charges_to_use() ) {
             it->activation_consume( charges_consumed, it.pos_bub( here ), &who );
         }
+        if( it ) {
+            it.on_contents_changed();
+        }
+        who.invalidate_weight_carried_cache();
     }
 
     // Update NPC opinion when the player heals an NPC.
@@ -11619,11 +11691,14 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
         }
     }
 
-    // Erase activity and values.
-    act.set_to_null();
-    act.values.clear();
+    // A native healing callback may have installed a replacement activity.
+    if( who.activity.identity_generation() != identity ) {
+        return;
+    }
+    who.activity.set_to_null();
+    who.activity.values.clear();
 
-    if( who.is_avatar() && patient->is_avatar() ) {
+    if( !owned && who.is_avatar() && patient->is_avatar() ) {
         uistate.open_menu = []() {
             avatar_action::eat_or_use( get_avatar(),
                                        game_menus::inv::consume( uistate.consume_uistate.consume_menu_comestype ) );
@@ -11633,6 +11708,9 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
 
 void firstaid_activity_actor::canceled( player_activity &, Character &who )
 {
+    if( view_only ) {
+        cata_mp::client_cancel_inventory_activity();
+    }
     if( who.is_avatar() ) {
         uistate.consume_uistate.clear();
     }
@@ -11645,6 +11723,15 @@ void firstaid_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "moves", moves );
     jsout.member( "name", name );
     jsout.member( "patientID", patientID );
+    jsout.member( "server_owned", server_owned );
+    jsout.member( "view_only", view_only );
+    jsout.member( "reprompt", reprompt );
+    jsout.member( "allow_theft", allow_theft );
+    if( server_owned ) {
+        jsout.member( "owned_source", owned_source );
+        jsout.member( "source_type", source_type );
+        jsout.member( "selected_part", selected_part );
+    }
 
     jsout.end_object();
 }
@@ -11658,6 +11745,13 @@ std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue 
     data.read( "moves", actor.moves );
     data.read( "name", actor.name );
     data.read( "patientID", actor.patientID );
+    data.read( "server_owned", actor.server_owned );
+    data.read( "view_only", actor.view_only );
+    data.read( "reprompt", actor.reprompt );
+    data.read( "allow_theft", actor.allow_theft );
+    data.read( "owned_source", actor.owned_source );
+    data.read( "source_type", actor.source_type );
+    data.read( "selected_part", actor.selected_part );
 
     return actor.clone();
 }

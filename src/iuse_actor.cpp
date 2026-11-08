@@ -57,6 +57,7 @@
 #include "iexamine.h"
 #include "input_popup.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_components.h"
 #include "item_contents.h"
 #include "item_location.h"
@@ -67,6 +68,8 @@
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "map_selector.h"
@@ -3898,17 +3901,21 @@ std::optional<int> heal_actor::use( Character *p, item &it, map *here,
     }
 
     Character &patient = get_patient( *p, here, pos );
+    if( p->is_avatar() && cata_mp::is_client_mode() ) {
+        for( const item_location &source : p->all_items_loc() ) {
+            if( source.get_item() == &it ) {
+                select_client_healing( *p, source, &patient );
+                break;
+            }
+        }
+        return 0;
+    }
     const bodypart_str_id hpp = use_healing_item( *p, patient, it, false ).id();
     if( hpp == bodypart_str_id::NULL_ID() ) {
         return std::nullopt;
     }
 
-    // each tier of proficiency cuts required time by half
-    int cost = move_cost;
-    cost = p->has_proficiency( proficiency_prof_wound_care_expert ) ? cost / 2 : cost;
-    cost = p->has_proficiency( proficiency_prof_wound_care ) ? cost / 2 : cost;
-
-    p->assign_activity( firstaid_activity_actor( cost, it.tname(), patient.getID() ) );
+    p->assign_activity( firstaid_activity_actor( healing_cost( *p ), it.tname(), patient.getID() ) );
 
     // Player: Only time this item_location gets used in firstaid::finish() is when activating the item's
     // container from the inventory window, so an item_on_person impl is all that is needed.
@@ -3918,6 +3925,13 @@ std::optional<int> heal_actor::use( Character *p, item &it, map *here,
     p->activity.str_values.emplace_back( hpp.c_str() );
     p->set_moves( 0 );
     return 0;
+}
+
+int heal_actor::healing_cost( const Character &healer ) const
+{
+    int cost = move_cost;
+    cost = healer.has_proficiency( proficiency_prof_wound_care_expert ) ? cost / 2 : cost;
+    return healer.has_proficiency( proficiency_prof_wound_care ) ? cost / 2 : cost;
 }
 
 std::unique_ptr<iuse_actor> heal_actor::clone() const
@@ -4156,6 +4170,25 @@ int heal_actor::finish_using( Character &healer, Character &patient, item &it,
     return 1;
 }
 
+static bool treatable_part( const Character &patient, const bodypart_id &part,
+                            bool bleed, bool bite, bool infect, bool force )
+{
+    if( !part.is_valid() || !patient.has_part( part ) ||
+        part->has_flag( json_flag_NO_LIMB_FIRST_AID ) ) {
+        return false;
+    }
+    return ( infect && patient.has_effect( effect_infected, part ) ) ||
+           ( bite && patient.has_effect( effect_bite, part ) ) ||
+           ( bleed && patient.has_effect( effect_bleed, part ) ) ||
+           ( !patient.is_limb_broken( part ) &&
+             ( force || patient.get_part_hp_cur( part ) < patient.get_part_hp_max( part ) ) );
+}
+
+bool heal_actor::can_treat_part( const Character &patient, const bodypart_id &part ) const
+{
+    return treatable_part( patient, part, bleed > 0, bite > 0.0f, infect > 0.0f, false );
+}
+
 static bodypart_id pick_part_to_heal(
     const Character &healer, const Character &patient,
     const std::string &menu_header,
@@ -4186,9 +4219,7 @@ static bodypart_id pick_part_to_heal(
             continue;
         }
 
-        if( ( infect && patient.has_effect( effect_infected, healed_part ) ) ||
-            ( bite && patient.has_effect( effect_bite, healed_part ) ) ||
-            ( bleed && patient.has_effect( effect_bleed, healed_part ) ) ) {
+        if( treatable_part( patient, healed_part, bleed, bite, infect, force ) ) {
             return healed_part;
         }
 
@@ -4204,9 +4235,6 @@ static bodypart_id pick_part_to_heal(
             continue;
         }
 
-        if( force || patient.get_part_hp_cur( healed_part ) < patient.get_part_hp_max( healed_part ) ) {
-            return healed_part;
-        }
     }
 }
 

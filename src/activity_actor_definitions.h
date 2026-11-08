@@ -3872,8 +3872,25 @@ class firstaid_activity_actor : public activity_actor
             return ACT_FIRSTAID;
         }
 
+        static firstaid_activity_actor client_view( bool reprompt = false );
+        void set_owned_target( const item_source &source, const itype_id &type,
+                               const bodypart_str_id &part, bool allow_theft );
+        bool prepare_owned_turn( Character &who );
+        bool is_server_owned() const {
+            return server_owned;
+        }
+        bool is_client_view() const {
+            return view_only;
+        }
+        bool should_reprompt() const {
+            return reprompt;
+        }
+        character_id patient_id() const {
+            return patientID;
+        }
+
         void start( player_activity &act, Character &who ) override;
-        void do_turn( player_activity &, Character & ) override {};
+        void do_turn( player_activity &act, Character &who ) override;
         void finish( player_activity &act, Character &who ) override;
         void canceled( player_activity &, Character &who ) override;
 
@@ -3885,9 +3902,16 @@ class firstaid_activity_actor : public activity_actor
         static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
 
     private:
-        int moves;
+        int moves = 0;
         std::string name;
         character_id patientID;
+        bool server_owned = false;
+        bool view_only = false;
+        bool reprompt = false;
+        bool allow_theft = false;
+        item_source owned_source;
+        itype_id source_type;
+        bodypart_str_id selected_part;
 };
 
 class forage_activity_actor : public activity_actor

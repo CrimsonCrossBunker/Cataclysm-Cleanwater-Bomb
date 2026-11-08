@@ -20,6 +20,7 @@
 #include "game.h"
 #include "handle_liquid.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_insert.h"
 #include "item_consumption.h"
 #include "player_control.h"
@@ -1696,5 +1697,216 @@ TEST_CASE( "client_medication_activation_submits_without_obtaining_or_consuming"
     CHECK( source->uid().get_value() == uid );
     CHECK( source->charges == 2 );
     CHECK_FALSE( local.has_effect( efftype_id( "pkill1_nsaid" ) ) );
+    CHECK( rng_get_engine() == rng );
+}
+
+namespace
+{
+std::string firstaid_request( reload_fixture &fixture, Character &healer, Character &patient,
+                              const item_location &source, const std::string &part = "arm_l" )
+{
+    return fixture.request( healer, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "firstaid" );
+        out.member( "source", cata_mp::capture_item_source( healer, source ) );
+        out.member( "self", &healer == &patient );
+        out.member( "target", patient.pos_abs() );
+        out.member( "target_player", cata_mp::partner_identity( patient.getID() ).str() );
+        out.member( "target_npc", patient.getID().get_value() );
+        out.member( "bodypart", part );
+    } );
+}
+
+std::string practice_state( const Character &who )
+{
+    std::ostringstream text;
+    JsonOut out( text );
+    who.store_practice_state( out );
+    return text.str();
+}
+}
+
+TEST_CASE( "owned_firstaid_treats_the_selected_patient_and_part_once",
+           "[multiplayer][firstaid_owned]" )
+{
+    for( const bool self : {
+             true, false
+         } ) {
+        for( const char *medicine : {
+                 "bfipowder", "bandages"
+             } ) {
+            DYNAMIC_SECTION( medicine << " self=" << self ) {
+                consumption_fixture fixture;
+                npc &healer = fixture.remote();
+                avatar &host = get_avatar();
+                host.ensure_player_id();
+                host.setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
+                Character &patient = self ? static_cast<Character &>( healer ) : host;
+                const bodypart_id arm( "arm_l" );
+                const bodypart_id torso( "torso" );
+                patient.set_part_hp_cur( arm, patient.get_part_hp_max( arm ) - 10 );
+                patient.set_part_hp_cur( torso, patient.get_part_hp_max( torso ) - 30 );
+                const efftype_id effect( std::string( medicine ) == "bandages" ? "bandaged" :
+                                         "disinfected" );
+                healer.set_wielded_item( item( itype_id( "backpack" ) ) );
+                item_location bag = healer.get_wielded_item();
+                item dressing( itype_id( medicine ), calendar::turn );
+                if( dressing.count_by_charges() ) {
+                    dressing.charges = 2;
+                }
+                REQUIRE( bag->put_in( std::move( dressing ),
+                                      pocket_type::CONTAINER ).success() );
+                item_location source( bag, bag->all_items_top().front() );
+                const bool charged = source->count_by_charges();
+                const std::string untouched_practice = practice_state( host );
+                fixture.run( healer, firstaid_request( fixture, healer, patient, source ) );
+                REQUIRE( cata_mp::owns_inventory_activity( healer ) );
+                CHECK( cata_mp::is_passive_activity( healer.activity.id().str() ) );
+                CHECK( healer.get_moves() == 0 );
+                CHECK_FALSE( patient.has_effect( effect, arm ) );
+                save_reload_activity( healer );
+                healer.set_moves( 100000 );
+                const std::string step = fixture.request( healer, "step" );
+                fixture.run( healer, step );
+                REQUIRE_FALSE( healer.activity );
+                REQUIRE( patient.has_effect( effect, arm ) );
+                CHECK_FALSE( patient.has_effect( effect, torso ) );
+                CHECK( practice_state( host ) == untouched_practice );
+                CHECK( healer.get_proficiency_practiced_time( proficiency_id( "prof_wound_care" ) ) >
+                       0_turns );
+                if( !self ) {
+                    CHECK_FALSE( healer.has_effect( effect, arm ) );
+                }
+                if( charged ) {
+                    REQUIRE( source );
+                    CHECK( source->charges == 1 );
+                } else {
+                    CHECK_FALSE( source );
+                }
+                const auto duration = patient.get_effect_dur( effect, arm );
+                const std::string progress = practice_state( healer );
+                const auto rng = rng_get_engine();
+                fixture.run( healer, step );
+                CHECK( patient.get_effect_dur( effect, arm ) == duration );
+                CHECK( practice_state( healer ) == progress );
+                CHECK( rng_get_engine() == rng );
+            }
+        }
+    }
+}
+
+TEST_CASE( "owned_firstaid_revalidates_tools_patients_and_cancellation",
+           "[multiplayer][firstaid_owned]" )
+{
+    consumption_fixture fixture;
+    npc &healer = fixture.remote();
+    avatar &patient = get_avatar();
+    patient.ensure_player_id();
+    patient.setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
+    const bodypart_id arm( "arm_l" );
+    patient.set_part_hp_cur( arm, patient.get_part_hp_max( arm ) - 10 );
+    healer.set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+    item_location source = healer.get_wielded_item();
+    reload_events events;
+    fixture.run( healer, firstaid_request( fixture, healer, patient, source ) );
+    REQUIRE( cata_mp::owns_inventory_activity( healer ) );
+    std::string operation = "step";
+    SECTION( "patient walks away" ) {
+        patient.setpos( get_map(), tripoint_bub_ms( 64, 60, 0 ) );
+    }
+    SECTION( "tool is removed" ) {
+        source.remove_item();
+    }
+    SECTION( "tool changes type" ) {
+        source->convert( itype_id( "aspirin" ) );
+    }
+    SECTION( "tool becomes filthy" ) {
+        source->set_flag( flag_FILTHY );
+    }
+    SECTION( "cancel without action points" ) {
+        operation = "cancel";
+    }
+    healer.set_moves( operation == "cancel" ? -5 : 100000 );
+    const std::string request = fixture.request( healer, operation );
+    fixture.run( healer, request );
+    CHECK_FALSE( healer.activity );
+    CHECK_FALSE( patient.has_effect( efftype_id( "disinfected" ), arm ) );
+    CHECK( healer.get_proficiency_practiced_time( proficiency_id( "prof_wound_care" ) ) == 0_turns );
+    CHECK( events.finishes == 1 );
+    if( source ) {
+        CHECK( source->charges == 2 );
+    }
+    // Native cancellation emits a gameplay event whose EOCs may use RNG.
+    // A repeated request must not emit it again or advance gameplay RNG.
+    const auto rng = rng_get_engine();
+    fixture.run( healer, request );
+    CHECK( events.finishes == 1 );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "owned_firstaid_rejects_invalid_or_untreatable_body_parts",
+           "[multiplayer][firstaid_owned]" )
+{
+    consumption_fixture fixture;
+    npc &healer = fixture.remote();
+    healer.set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+    item_location source = healer.get_wielded_item();
+    item_location selected = source;
+    std::string part = "arm_l";
+    SECTION( "unknown body part" ) {
+        part = "no_such_part";
+    }
+    SECTION( "undamaged body part" ) {}
+    SECTION( "another actor owns the tool" ) {
+        healer.set_part_hp_cur( bodypart_id( "arm_l" ), 10 );
+        get_avatar().set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+        selected = get_avatar().get_wielded_item();
+    }
+    const auto rng = rng_get_engine();
+    fixture.run( healer, firstaid_request( fixture, healer, healer, selected, part ) );
+    CHECK_FALSE( healer.activity );
+    CHECK( source->charges == 2 );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "firstaid_results_restore_body_and_practice_without_replaying_treatment",
+           "[multiplayer][firstaid_owned]" )
+{
+    consumption_fixture fixture;
+    npc &healer = fixture.remote();
+    const bodypart_id arm( "arm_l" );
+    healer.set_part_hp_cur( arm, healer.get_part_hp_max( arm ) - 10 );
+    healer.set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+    item_location source = healer.get_wielded_item();
+    const std::string started = fixture.run( healer, firstaid_request( fixture, healer, healer,
+                                source ) );
+    REQUIRE( cata_mp::owns_inventory_activity( healer ) );
+    healer.set_moves( 100000 );
+    const std::string finished = fixture.run( healer, fixture.request( healer, "step" ) );
+    REQUIRE_FALSE( healer.activity );
+    REQUIRE( healer.has_effect( efftype_id( "disinfected" ), arm ) );
+    avatar &replica = get_avatar();
+    cata_mp::set_client_mode( true );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.active = true;
+    view.pending_request = 1;
+    replica.assign_activity( firstaid_activity_actor::client_view() );
+    reload_events events;
+    const auto rng = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( started ) );
+    view.pending_request = 2;
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    CHECK( replica.get_part_hp_cur( arm ) == healer.get_part_hp_cur( arm ) );
+    CHECK( replica.get_effect_dur( efftype_id( "disinfected" ), arm ) ==
+           healer.get_effect_dur( efftype_id( "disinfected" ), arm ) );
+    CHECK( practice_state( replica ) == practice_state( healer ) );
+    REQUIRE( replica.get_wielded_item() );
+    CHECK( replica.get_wielded_item()->charges == 1 );
+    cata_mp::client_update_inventory_activity_view();
+    CHECK_FALSE( replica.activity );
+    REQUIRE( cata_mp::client_apply_message( started ) );
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    CHECK( practice_state( replica ) == practice_state( healer ) );
+    CHECK( replica.get_wielded_item()->charges == 1 );
+    CHECK( events.finishes == 0 );
     CHECK( rng_get_engine() == rng );
 }

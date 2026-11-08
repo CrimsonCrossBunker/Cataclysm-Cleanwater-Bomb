@@ -46,6 +46,7 @@
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
@@ -1514,6 +1515,10 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
     // Submit the original source before obtain/overflow can mutate the replica.
     // Native medication use already follows the consumption activity path.
+    if( cata_mp::is_client_mode() && method == "heal" && healing_action( loc ) ) {
+        select_client_healing( you, loc );
+        return;
+    }
     if( cata_mp::is_client_mode() && loc->is_medication() ) {
         start_item_consumption( you, loc );
         return;
