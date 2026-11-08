@@ -2371,7 +2371,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     panels.clear();
     static bucket_index_map bucket_index;
     bucket_index.clear();
-    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float>& {
+    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
         const bucket_key key{ mode, atlas };
         const auto it = bucket_index.find( key );
         if( it != bucket_index.end() )
@@ -3493,7 +3493,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         sprite_info hspr = fspr;
                         hspr.u1 = fspr.u0 + ( fspr.u1 - fspr.u0 ) * 0.5f;
                         const float fcx = dx + 0.5f;
-                const float fcy = dy + 0.5f;
+                        const float fcy = dy + 0.5f;
                         if( cn ) {
                             push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                            or_, og, ob, false, 0, false, 1.0f, ghost, tone.sat );
