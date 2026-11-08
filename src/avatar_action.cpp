@@ -1512,6 +1512,13 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
         }
     }
 
+    // Submit the original source before obtain/overflow can mutate the replica.
+    // Native medication use already follows the consumption activity path.
+    if( cata_mp::is_client_mode() && loc->is_medication() ) {
+        start_item_consumption( you, loc );
+        return;
+    }
+
     if( !avatar_action::check_stealing( get_player_character(), *loc.get_item() ) ) {
         return;
     }

@@ -297,6 +297,7 @@ class consume_drug_iuse : public iuse_actor
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here, const tripoint_bub_ms & ) const override;
+        bool is_immediate_consumption() const override;
         std::unique_ptr<iuse_actor> clone() const override;
         void info( const item &, std::vector<iteminfo> & ) const override;
 

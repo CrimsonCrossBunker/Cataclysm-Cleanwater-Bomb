@@ -7,6 +7,7 @@
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "avatar_action.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
@@ -1538,5 +1539,162 @@ TEST_CASE( "item_delta_rejects_gaps_and_duplicate_ids_before_modifying_items",
                      json_loader::from_string( request( 1, true ) ).get_object(), client ), JsonError );
     CHECK( rounds->charges == 3 );
     CHECK( client.revision == 1 );
+    CHECK( rng_get_engine() == rng );
+}
+
+
+TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_client",
+           "[multiplayer][consume_owned][medication_owned]" )
+{
+    const std::vector<std::pair<std::string, std::string>> medicines = {
+        { "aspirin", "pkill1_nsaid" }, { "antibiotics", "antibiotic" },
+        { "codeine", "pkill2" }, { "adrenaline_injector", "pkill2" },
+        { "flu_shot", "flushot" }
+    };
+    for( const auto &medicine : medicines ) {
+        DYNAMIC_SECTION( medicine.first ) {
+            consumption_fixture fixture;
+            npc &owner = fixture.remote();
+            owner.set_wielded_item( item( itype_id( "backpack" ) ) );
+            item_location bag = owner.get_wielded_item();
+            REQUIRE( bag->put_in( item( itype_id( medicine.first ), calendar::turn, 2 ),
+                                  pocket_type::CONTAINER ).success() );
+            item_location source( bag, bag->all_items_top().front() );
+            const efftype_id effect( medicine.second );
+            const std::string host_before = needs_state( get_avatar() );
+            consumption_events events;
+            const std::string started = fixture.run( owner, consume_request( fixture, owner, source ) );
+            REQUIRE( cata_mp::owns_inventory_activity( owner ) );
+            CHECK( source->charges == 2 );
+            CHECK_FALSE( owner.has_effect( effect ) );
+            save_reload_activity( owner );
+            owner.set_moves( 100000 );
+            const std::string step = fixture.request( owner, "step" );
+            const std::string finished = fixture.run( owner, step );
+            REQUIRE_FALSE( owner.activity );
+            REQUIRE( owner.has_effect( effect ) );
+            CHECK( source->charges == 1 );
+            CHECK( events.actors == std::vector<character_id> { owner.getID() } );
+            CHECK( needs_state( get_avatar() ) == host_before );
+            CHECK_FALSE( get_avatar().has_effect( effect ) );
+            const auto duration = owner.get_effect_dur( effect );
+            const auto after_dose = rng_get_engine();
+            fixture.run( owner, step );
+            CHECK( rng_get_engine() == after_dose );
+            CHECK( source->charges == 1 );
+            CHECK( owner.get_effect_dur( effect ) == duration );
+            CHECK( events.actors.size() == 1 );
+
+            avatar &replica = get_avatar();
+            cata_mp::set_client_mode( true );
+            auto &view = g->multiplayer_session().client_inventory_activity;
+            view.active = true;
+            view.pending_request = 1;
+            replica.assign_activity( consume_activity_actor::client_view( false ) );
+            const auto before_restore = rng_get_engine();
+            REQUIRE( cata_mp::client_apply_message( started ) );
+            view.pending_request = 2;
+            REQUIRE( cata_mp::client_apply_message( finished ) );
+            REQUIRE( replica.has_effect( effect ) );
+            CHECK( replica.get_effect_dur( effect ) == duration );
+            CHECK( replica.get_pain() == owner.get_pain() );
+            CHECK( cata_mp::inventory_activity_view( replica.activity ) );
+            CHECK( needs_state( replica ) == needs_state( owner ) );
+            const auto remaining = replica.items_with( [&]( const item & it ) {
+                return it.typeId() == itype_id( medicine.first );
+            } );
+            REQUIRE( remaining.size() == 1 );
+            CHECK( remaining.front()->charges == 1 );
+            REQUIRE( cata_mp::client_apply_message( finished ) );
+            REQUIRE( cata_mp::client_apply_message( started ) );
+            CHECK( remaining.front()->charges == 1 );
+            CHECK( replica.get_effect_dur( effect ) == duration );
+            CHECK( events.actors.size() == 1 );
+            CHECK( rng_get_engine() == before_restore );
+        }
+    }
+}
+
+TEST_CASE( "owned_injection_requires_the_actors_tool_through_completion",
+           "[multiplayer][consume_owned][medication_owned]" )
+{
+    consumption_fixture fixture;
+    npc &owner = fixture.remote();
+    owner.set_wielded_item( item( itype_id( "backpack" ) ) );
+    item_location bag = owner.get_wielded_item();
+    REQUIRE( bag->put_in( item( itype_id( "morphine" ), calendar::turn, 2 ),
+                          pocket_type::CONTAINER ).success() );
+    item_location drug( bag, bag->all_items_top().front() );
+    get_avatar().set_wielded_item( item( itype_id( "syringe" ) ) );
+    fixture.run( owner, consume_request( fixture, owner, drug ) );
+    CHECK_FALSE( owner.activity );
+    CHECK( drug->charges == 2 );
+    CHECK_FALSE( owner.has_effect( efftype_id( "pkill3" ) ) );
+    REQUIRE( bag->put_in( item( itype_id( "syringe" ) ), pocket_type::CONTAINER ).success() );
+    fixture.run( owner, consume_request( fixture, owner, drug ) );
+    REQUIRE( cata_mp::owns_inventory_activity( owner ) );
+    bool removed = false;
+    SECTION( "tool remains available" ) {}
+    SECTION( "tool removed during activity" ) {
+        const auto tools = owner.items_with( []( const item & it ) {
+            return it.typeId() == itype_id( "syringe" );
+        } );
+        REQUIRE( tools.size() == 1 );
+        item_location( bag, tools.front() ).remove_item();
+        removed = true;
+    }
+    owner.set_moves( 100000 );
+    fixture.run( owner, fixture.request( owner, "step" ) );
+    CHECK_FALSE( owner.activity );
+    CHECK( drug->charges == ( removed ? 2 : 1 ) );
+    CHECK( owner.has_effect( efftype_id( "pkill3" ) ) == !removed );
+    CHECK_FALSE( get_avatar().has_effect( efftype_id( "pkill3" ) ) );
+}
+
+TEST_CASE( "owned_consumption_does_not_invoke_targeted_or_scripted_medicine",
+           "[multiplayer][consume_owned][medication_owned]" )
+{
+    for( const char *id : {
+             "bfipowder", "myopia_contacts_weekly"
+         } ) {
+        DYNAMIC_SECTION( id ) {
+            consumption_fixture fixture;
+            npc &owner = fixture.remote();
+            owner.set_wielded_item( item( itype_id( id ), calendar::turn, 2 ) );
+            const item_location source = owner.get_wielded_item();
+            const auto rng = rng_get_engine();
+            const std::string before = needs_state( owner );
+            fixture.run( owner, consume_request( fixture, owner, source, true ) );
+            CHECK_FALSE( owner.activity );
+            CHECK( source->charges == 2 );
+            CHECK( needs_state( owner ) == before );
+            CHECK( rng_get_engine() == rng );
+        }
+    }
+}
+
+TEST_CASE( "client_medication_activation_submits_without_obtaining_or_consuming",
+           "[multiplayer][consume_owned][medication_owned]" )
+{
+    reload_fixture fixture;
+    avatar &local = get_avatar();
+    local.stomach.empty();
+    local.set_moves( 100 );
+    item_location source = get_map().add_item_or_charges_ret_loc( local.pos_bub(),
+                           item( itype_id( "aspirin" ), calendar::turn, 2 ) );
+    REQUIRE( source );
+    const int64_t uid = source->uid().get_value();
+    const auto rng = rng_get_engine();
+    cata_mp::set_client_mode( true );
+    avatar_action::use_item( local, source );
+    const auto &view = g->multiplayer_session().client_inventory_activity;
+    CHECK( view.active );
+    CHECK( view.pending_request == 1 );
+    CHECK( cata_mp::inventory_activity_view( local.activity ) );
+    REQUIRE( source );
+    CHECK( source.where() == item_location::type::map );
+    CHECK( source->uid().get_value() == uid );
+    CHECK( source->charges == 2 );
+    CHECK_FALSE( local.has_effect( efftype_id( "pkill1_nsaid" ) ) );
     CHECK( rng_get_engine() == rng );
 }
