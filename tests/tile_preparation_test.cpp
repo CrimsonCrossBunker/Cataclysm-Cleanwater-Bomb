@@ -6,6 +6,7 @@
 
 #include "cata_catch.h"
 #include "rng.h"
+#include "thread_pool.h"
 #include "tile_preparation.h"
 
 namespace
@@ -44,6 +45,19 @@ void fill_frame( tile_preparation::frame &frame, std::size_t size )
     }
 }
 } // namespace
+
+TEST_CASE( "tile_preparation_rejects_nested_worker_dispatch", "[tiles][preparation]" )
+{
+    cata_thread_pool outer( 1 );
+    auto nested = outer.submit_returning( []() {
+        tile_preparation::frame frame( 4 );
+        return std::make_pair( frame.worker_count(),
+                               static_cast<bool>( frame.try_acquire( 16384 ) ) );
+    } );
+    const auto result = nested.get();
+    CHECK( result.first == 0 );
+    CHECK_FALSE( result.second );
+}
 
 TEST_CASE( "tile_preparation_preserves_memory_overrides_and_revival",
            "[tiles][preparation]" )

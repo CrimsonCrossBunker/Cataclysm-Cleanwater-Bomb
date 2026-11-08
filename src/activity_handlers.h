@@ -17,6 +17,7 @@
 #include "units_fwd.h"
 
 class Character;
+class character_id;
 class item;
 class item_location;
 class map;
@@ -201,12 +202,20 @@ do_turn_functions;
 /** activity_finish functions: */
 void repair_item_finish( player_activity *act, Character *you );
 
-int move_cost( const item &it, const tripoint_bub_ms &src, const tripoint_bub_ms &dest );
-int move_cost_cart( const item &it, const tripoint_bub_ms &src, const tripoint_bub_ms &dest,
+int move_cost( const Character &who, const item &it, const tripoint_bub_ms &src,
+               const tripoint_bub_ms &dest );
+int move_cost_cart( const Character &who, const item &it, const tripoint_bub_ms &src,
+                    const tripoint_bub_ms &dest,
                     const units::volume &capacity );
-int move_cost_inv( const item &it, const tripoint_bub_ms &src, const tripoint_bub_ms &dest );
+int move_cost_inv( const Character &who, const item &it, const tripoint_bub_ms &src,
+                   const tripoint_bub_ms &dest );
 
 // Reserve the final location so cancellation can release ground, cargo and inventory items.
+bool activity_item_owned_by( const item &it, const Character &who );
+bool activity_item_owned_by( const item &it, character_id owner );
+bool activity_item_reserved_for_other( const item &it, const Character &who );
+void mark_activity_item( item &it, const Character &who );
+void clear_activity_item( item &it );
 void reserve_activity_item( Character &you, item_location loc );
 void clean_may_activity_occupancy_items_var( Character &you );
 void clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( Character &you );

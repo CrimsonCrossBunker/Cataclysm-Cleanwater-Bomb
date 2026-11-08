@@ -1181,7 +1181,7 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
     }
     use_context_lease context_lease( *context );
     sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
+    callback_scope scope( *owner, character );
     const sol::protected_function_result result = callback( context );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );

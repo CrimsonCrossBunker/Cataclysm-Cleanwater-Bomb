@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "character_id.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "io_tags.h"
@@ -157,6 +158,11 @@ struct mongroup {
     point_abs_sm target;
     /** abs target for nemesis hordes. */
     point_abs_sm nemesis_target; //
+    // Persistent quest identity also survives materializing into a monster.
+    // -1 denotes old/unbound groups, which retain local-player behavior.
+    int nemesis_mission_id = -1;
+    bool nemesis_targets( character_id who ) const;
+    bool nemesis_orphaned() const;
     /** interest to target in percents. Used to determine movement speed(overmap::move_hordes), or reaction to signal sources(overmap::signal_hordes), etc.*/
     int interest = 0;
 

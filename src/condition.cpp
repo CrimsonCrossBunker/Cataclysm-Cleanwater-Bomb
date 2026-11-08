@@ -54,6 +54,7 @@
 #include "memory_fast.h"
 #include "messages.h"
 #include "mission.h"
+#include "mission_dialogue.h"
 #include "mod_id_compat.h"
 #include "mtype.h"
 #include "mutation.h"
@@ -586,8 +587,15 @@ conditional_t::func f_u_has_mission( const JsonObject &jo, std::string_view memb
 {
     str_or_var u_mission = get_str_or_var( jo.get_member( member ), member, true );
     return [u_mission]( const_dialogue const & d ) {
-        for( mission *miss_it : get_avatar().get_active_missions() ) {
-            if( miss_it->mission_id() == mission_type_id( u_mission.evaluate( d ) ) ) {
+        Character *owner = mission_dialogue::resolve_dialogue_character( d, false );
+        if( owner == nullptr ) {
+            return false;
+        }
+        const mission_type_id target_mission( u_mission.evaluate( d ) );
+        for( mission *miss_it : owner->get_active_missions() ) {
+            if( mission_dialogue::is_live_mission( miss_it ) &&
+                miss_it->get_assigned_player_id() == owner->getID() &&
+                miss_it->mission_id() == target_mission ) {
                 return true;
             }
         }
@@ -747,7 +755,7 @@ conditional_t::func f_has_items_sum( const JsonObject &jo, std::string_view memb
         double total_present;
         const Character *you = d.const_actor( is_npc )->get_const_character();
         temp_crafting_inventory inventory_and_around = you->crafting_inventory( you->pos_bub(),
-            pickup_range );
+                pickup_range );
 
         // Include cargo from vehicles owned by the actor's faction.  Vehicle
         // inventories are not part of crafting_inventory(), but mission
@@ -1449,7 +1457,15 @@ conditional_t::func f_mission_complete( bool is_npc )
 {
     return [is_npc]( const_dialogue const & d ) {
         mission *miss = d.const_actor( is_npc )->selected_mission();
-        return miss && miss->is_complete( d.const_actor( is_npc )->getID() );
+        if( miss == nullptr ) {
+            return false;
+        }
+        Character *owner = d.has_actor( !is_npc )
+                           ? mission_dialogue::resolve_dialogue_character( d, !is_npc )
+                           : ( get_player_character().is_dead_state()
+                               ? nullptr : &get_player_character() );
+        return owner != nullptr &&
+               miss->is_complete( d.const_actor( is_npc )->getID(), *owner );
     };
 }
 
@@ -1457,7 +1473,15 @@ conditional_t::func f_mission_incomplete( bool is_npc )
 {
     return [is_npc]( const_dialogue const & d ) {
         mission *miss = d.const_actor( is_npc )->selected_mission();
-        return miss && !miss->is_complete( d.const_actor( is_npc )->getID() );
+        if( miss == nullptr ) {
+            return false;
+        }
+        Character *owner = d.has_actor( !is_npc )
+                           ? mission_dialogue::resolve_dialogue_character( d, !is_npc )
+                           : ( get_player_character().is_dead_state()
+                               ? nullptr : &get_player_character() );
+        return owner != nullptr &&
+               !miss->is_complete( d.const_actor( is_npc )->getID(), *owner );
     };
 }
 
@@ -1873,8 +1897,8 @@ conditional_t::func f_test_eoc( const JsonObject &jo, std::string_view member )
     return [eocToTest]( const_dialogue const & d ) -> bool {
         effect_on_condition_id tested( eocToTest.evaluate( d ) );
         if( !tested.is_valid() )
-    {
-        debugmsg( "Invalid eoc id: %s", eocToTest.evaluate( d ) );
+        {
+            debugmsg( "Invalid eoc id: %s", eocToTest.evaluate( d ) );
             return false;
         }
         return tested->condition( d );
@@ -2193,8 +2217,8 @@ static std::function<T( const_dialogue const & )> get_get_str_( const JsonObject
                 bl.emplace_back( sv.evaluate( d ) );
             }
             return ret_func( d.const_actor( false )->get_random_technique( *d.const_actor(
-                        true )->get_const_creature(),
-                    crit, dodge_counter, block_counter, bl ).str() );
+                                 true )->get_const_creature(),
+                             crit, dodge_counter, block_counter, bl ).str() );
         };
     } else if( mutator == "topic_item" ) {
         return [ret_func]( const_dialogue const & d ) {

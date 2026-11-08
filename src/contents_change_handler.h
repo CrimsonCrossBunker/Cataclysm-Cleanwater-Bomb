@@ -37,6 +37,9 @@ class contents_change_handler
          * items in and out of the list of containers. The list is cleared after handling.
          */
         void handle_by( Character &guy );
+        const std::vector<item_location> &pending_containers() const {
+            return unsealed;
+        }
         /**
          * Serialization for activities
          */

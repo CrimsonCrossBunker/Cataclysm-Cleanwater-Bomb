@@ -1,6 +1,21 @@
 [
   {
     "type": "technique",
+    "id": "test_active_cooldown_strike",
+    "copy-from": "test_active_strike",
+    "name": "Test Cooldown Strike",
+    "melee_allowed": true,
+    "cooldown": "8 s"
+  },
+  {
+    "type": "martial_art",
+    "id": "test_style_cooldown",
+    "copy-from": "test_style_ma1",
+    "name": { "str": "Test Cooldown Style" },
+    "techniques": [ "test_active_cooldown_strike" ]
+  },
+  {
+    "type": "technique",
     "id": "test_vector_tech_1",
     "name": "Test Vectors One",
     "//": "Fails because of missing limbs of type other",

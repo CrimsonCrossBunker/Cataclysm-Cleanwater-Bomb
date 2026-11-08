@@ -12,6 +12,8 @@
 #include "coordinates.h"
 #include "shadowcasting.h"
 
+#include "compute_budget.h"
+
 class cata_thread_pool;
 
 namespace vision_preparation
@@ -51,7 +53,7 @@ void cast_vertical( const array_of_grids_of<float> &out,
 bool should_prepare( int radius, double horizontal_cost_ms, unsigned workers = 4,
                      bool owner_allows_workers = true );
 
-// One map owns the executor and reusable buffers. No asynchronous result escapes:
+// One map owns reusable buffers and shares the bounded executor. No asynchronous result escapes:
 // prepare joins every submitted task on success AND failure before returning.
 class frame
 {
@@ -89,8 +91,8 @@ class frame
     private:
         void assert_owner() const;
         const std::thread::id owner_thread_;
-        std::unique_ptr<snapshot> snapshot_;
-        std::vector<std::unique_ptr<output>> outputs_;
+        compute_ptr<snapshot> snapshot_;
+        std::vector<compute_ptr<output>, compute_allocator<compute_ptr<output>>> outputs_;
         std::atomic<bool> cancelled_{ false };
         std::uint64_t generation_ = 0;
         std::uint64_t ready_generation_ = 0;
@@ -98,8 +100,9 @@ class frame
         std::array<double, 4> horizontal_costs_ms_{};
         bool leased_ = false;
         bool used_workers_ = false;
-        // Declared last: shutdown/join precedes destruction of all buffers.
-        std::unique_ptr<cata_thread_pool> pool_;
+        // prepare drains all accepted tasks before any owner buffer can change.
+        std::shared_ptr<cata_thread_pool> pool_;
+        unsigned workers_ = 0;
 };
 } // namespace vision_preparation
 #endif // CATA_SRC_VISION_PREPARATION_H

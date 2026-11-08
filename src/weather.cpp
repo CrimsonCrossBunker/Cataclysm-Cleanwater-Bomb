@@ -908,9 +908,10 @@ static units::temperature highest_temp_on_day( time_point &base_date, const trip
     // Iterate through the search window, checking temp each check_interval. Highest found value in the entire range is what ends up being returned.
     time_point check_date = base_date - search_radius;
     while( check_date <= base_date + search_radius ) {
-        const w_point &w = weather_gen.get_weather( project_to<coords::ms>( pos ), check_date,
-                           g->get_seed() );
-        const units::temperature checked_temp = w.temperature;
+        // A planting forecast needs only temperature. Generating wind also advances
+        // gameplay RNG and changes the global wind direction during menu queries.
+        const units::temperature checked_temp = weather_gen.get_weather_temperature(
+                project_to<coords::ms>( pos ), check_date, g->get_seed() );
         highest_temp = std::max( highest_temp, checked_temp );
         check_date = check_date + check_interval;
     }

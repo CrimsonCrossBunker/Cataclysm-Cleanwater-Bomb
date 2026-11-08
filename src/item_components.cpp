@@ -176,9 +176,18 @@ void item_components::serialize( JsonOut &jsout ) const
     jsout.write( comps );
 }
 
-void item_components::deserialize( const JsonValue &jv )
+void item_components::deserialize( const JsonValue &jv, item_load_context context )
 {
     comps.clear();
+    if( context == item_load_context::current_state ) {
+        for( const JsonMember &entry : jv.get_object() ) {
+            auto &items = comps[itype_id( entry.name() )];
+            for( JsonObject value : entry.get_array() ) {
+                items.emplace_back( item::from_current_state( value ) );
+            }
+        }
+        return;
+    }
     // read legacy arrays
     if( jv.test_array() ) {
         std::list<item> temp;

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -338,6 +339,39 @@ script_persistent_state read_persistent_state( const JsonValue &input )
     }
     root.allow_omitted_members();
     return result;
+}
+
+script_persistent_state &character_script_state::for_mod( const std::string &mod_id )
+{
+    return mods_[mod_id];
+}
+
+void character_script_state::migrate_legacy( const std::string &mod_id,
+        script_persistent_state values )
+{
+    mods_.try_emplace( mod_id, std::move( values ) );
+}
+
+void character_script_state::serialize( JsonOut &json ) const
+{
+    json.start_object();
+    for( const auto &[mod_id, values] : mods_ ) {
+        std::ostringstream encoded;
+        write_persistent_state( encoded, values );
+        json.member( mod_id );
+        *json.get_stream() << encoded.str();
+        json.set_need_separator();
+    }
+    json.end_object();
+}
+
+void character_script_state::deserialize( const JsonObject &json )
+{
+    std::map<std::string, script_persistent_state> candidate;
+    for( const JsonMember member : json ) {
+        candidate.emplace( member.name(), read_persistent_state( member ) );
+    }
+    mods_ = std::move( candidate );
 }
 
 } // namespace cata::lua_platform
