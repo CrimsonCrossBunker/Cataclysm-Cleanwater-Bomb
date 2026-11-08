@@ -4,6 +4,7 @@
 #include "vehicle_appliance.h"
 #include "vehicle_water.h"
 #include "vehicle_toolstation.h"
+#include "vehicle_tool_use.h"
 #include "character_action_guard.h"
 #include "mp_inventory_activity.h"
 
@@ -49,6 +50,7 @@
 #include "handle_liquid.h"
 #include "iexamine.h"
 #include "item.h"
+#include "item_activation.h"
 #include "item_pocket.h"
 #include "itype.h"
 #include "iuse.h"
@@ -1800,9 +1802,18 @@ int vehicle::prepare_tool( map &here, item &tool ) const
 }
 
 bool vehicle::use_vehicle_tool( vehicle &veh, map *here, const tripoint_bub_ms &vp_pos,
-                                const itype_id &tool_type,
-                                bool no_invoke )
+                                const itype_id &tool_type, bool no_invoke )
 {
+    return invoke_vehicle_tool( get_player_character(), veh, *here, vp_pos, tool_type, {}, no_invoke );
+}
+
+bool invoke_vehicle_tool( Character &who, vehicle &veh, map &terrain,
+                          const tripoint_bub_ms &vp_pos, const itype_id &tool_type,
+                          const std::string &method, bool no_invoke )
+{
+    map *here = &terrain;
+    const character_action_guard lifetime( who );
+    const int64_t vehicle_id = veh.uid().get_value();
     item tool( tool_type, calendar::turn );
     const bool is_multimag = !tool_type->firing_requirements.empty();
     std::map<std::string, multimag_pocket_state> mm_bindings;
@@ -1827,11 +1838,20 @@ bool vehicle::use_vehicle_tool( vehicle &veh, map *here, const tripoint_bub_ms &
     const bool is_battery_tool = !ammo_type_id.is_null() && ammo_type_id->ammo->type == ammo_battery;
     if( !no_invoke ) {
         // TODO: pass map or go abs
-        get_player_character().invoke_item( &tool, vp_pos );
+        if( method.empty() ) {
+            who.invoke_item( &tool, vp_pos );
+        } else {
+            const item_activation_choices choices;
+            who.invoke_item( &tool, method, vp_pos, who.get_moves(), &choices );
+        }
+    }
+
+    if( !lifetime || vehicle::find_vehicle_by_uid( terrain, vehicle_id ) != &veh ) {
+        return true;
     }
 
     // HACK: Evil hack incoming
-    player_activity &act = get_player_character().activity;
+    player_activity &act = who.activity;
     if( !act.actor && act.id() == ACT_REPAIR_ITEM &&
         ( tool_type == itype_welder ||
           tool_type == itype_welder_crude ||
@@ -1853,7 +1873,7 @@ bool vehicle::use_vehicle_tool( vehicle &veh, map *here, const tripoint_bub_ms &
     }
 
     if( is_multimag ) {
-        drain_back_multimag( veh, *here, tool, mm_bindings );
+        vehicle::drain_back_multimag( veh, *here, tool, mm_bindings );
     } else {
         const int used_charges = ammo_in_tool - tool.ammo_remaining_linked( *here, nullptr );
         if( used_charges > 0 ) {
@@ -2179,6 +2199,10 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         if( hk == -1 ) {
             continue; // skip old passive tools
         }
+        if( tool_type->use_methods.size() == 1 &&
+            immediate_vehicle_tool_method( tool_type->use_methods.begin()->first ) ) {
+            continue; // Stable owner-aware entries are added below.
+        }
         const auto &[tool_ammo, ammo_amount ] = tool_ammo_available( *here, tool_type );
         bool enabled;
         if( !tool_type->firing_requirements.empty() ) {
@@ -2195,6 +2219,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .on_submit( [this, vppos, tool_type, here] { use_vehicle_tool( *this, here, vppos, tool_type ); } );
     }
 
+    add_vehicle_tool_use_menu( menu, *here, *this, here->get_abs( vppos ) );
     add_vehicle_appliance_menu( menu, *here, *this, here->get_abs( vppos ) );
 
     const std::optional<vpart_reference> vp_cargo = vp.cargo();
