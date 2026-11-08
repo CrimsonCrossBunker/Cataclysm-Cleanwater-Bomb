@@ -2,6 +2,7 @@
 
 #include "action.h"
 #include "bionics.h"
+#include "bionic_water_activity.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
@@ -33,7 +34,7 @@ bool supports_owned_bionic_action( const bionic &bio, bionic_action action )
     // These native branches need additional choices, an owner-specific report,
     // or a world/position result beyond an ordinary character-state reply.
     for( const char *id : {
-             "bio_water_extractor", "bio_remote", "bio_teleport"
+             "bio_remote", "bio_teleport"
          } ) {
         if( bio.id == bionic_id( id ) ) {
             return false;
@@ -42,9 +43,16 @@ bool supports_owned_bionic_action( const bionic &bio, bionic_action action )
     return true;
 }
 
-bool valid_bionic_activation_choices( const Character &who, const bionic &bio,
+bool valid_bionic_activation_choices( Character &who, const bionic &bio,
                                       const bionic_activation_choices &choices )
 {
+    if( bio.id == bionic_id( "bio_water_extractor" ) ) {
+        return !choices.target && !choices.martial_style && choices.water_corpse &&
+               resolve_bionic_water_source( who, *choices.water_corpse );
+    }
+    if( choices.water_corpse ) {
+        return false;
+    }
     if( bio.id == bionic_id( "bio_cqb" ) ) {
         return !choices.target && choices.martial_style &&
                valid_martial_style_choice( who, *choices.martial_style, bio.get_uid() );
@@ -73,6 +81,11 @@ bool valid_bionic_activation_choices( const Character &who, const bionic &bio,
 std::optional<bionic_activation_choices> query_bionic_activation_choices(
     Character &who, const bionic &bio )
 {
+    if( bio.id == bionic_id( "bio_water_extractor" ) ) {
+        bionic_activation_choices result;
+        result.water_corpse = query_bionic_water_source( who );
+        return result.water_corpse ? std::make_optional( result ) : std::nullopt;
+    }
     if( bio.id == bionic_id( "bio_cqb" ) ) {
         bionic_activation_choices result;
         result.martial_style = query_martial_style_choice( who, bio.get_uid() ).value_or(
@@ -103,7 +116,8 @@ bool execute_owned_bionic_action( Character &who, unsigned int uid,
     if( !lifetime || who.activity || who.get_moves() <= 0 || !bio ||
         ( *bio )->id != expected_type || !supports_owned_bionic_action( **bio, action ) ||
         ( action == bionic_action::activate ? !valid_bionic_activation_choices( who, **bio, choices ) :
-          ( choices.target.has_value() || choices.martial_style.has_value() ) ) ) {
+          ( choices.target.has_value() || choices.martial_style.has_value() ||
+            choices.water_corpse.has_value() ) ) ) {
         return false;
     }
     const activity_execution previous = who.activity.execution();
@@ -115,6 +129,6 @@ bool execute_owned_bionic_action( Character &who, unsigned int uid,
     } );
     return action == bionic_action::activate ? who.activate_bionic( **bio, false, nullptr,
             ( bionic_requires_adjacent_target( ( *bio )->id ) ||
-              choices.martial_style ) ? &choices : nullptr ) :
+              choices.martial_style || choices.water_corpse ) ? &choices : nullptr ) :
            who.deactivate_bionic( **bio );
 }

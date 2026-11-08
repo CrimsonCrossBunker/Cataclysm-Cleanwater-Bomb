@@ -62,6 +62,7 @@ struct inventory_activity_client_state {
     bool can_wield = false;
     std::shared_ptr<item> preview;
     std::string item_use_progress;
+    int64_t water_source_uid = 0;
     std::string craft_decision;
     recipe_id craft_recipe;
     int craft_batch = 0;
