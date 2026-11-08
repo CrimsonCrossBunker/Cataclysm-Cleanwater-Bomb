@@ -91,9 +91,10 @@ void client_start_consume( const item_location &source, bool allow_consequences,
 bool client_activate_item( const item_location &source, std::string &method,
                            std::optional<tripoint_abs_ms> target = std::nullopt );
 bool client_auto_mine( const tripoint_abs_ms &target );
-// nullopt means this entry is outside the migrated adjacent-target CBMs.
+// nullopt means a local/server call; a handled client request never runs effects locally.
 std::optional<bool> client_activate_bionic( const bionic &bio,
         const bionic_activation_choices *choices = nullptr );
+std::optional<bool> client_deactivate_bionic( const bionic &bio );
 bool client_examine_pry( const item_location &tool, const tripoint_abs_ms &target );
 void client_start_firstaid( const item_location &source, Character &patient,
                             const bodypart_str_id &part, bool allow_theft, bool reprompt = false );

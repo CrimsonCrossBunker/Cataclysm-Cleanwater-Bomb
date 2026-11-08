@@ -1079,7 +1079,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         get_wielded_item()->invlet = '#';
         weapon_bionic_uid = bio.get_uid();
     } else if( bio.id == bio_evap ) {
-        if( player_character.is_underwater() ) {
+        if( is_underwater() ) {
             add_msg_if_player( m_info,
                                _( "There's a lot of water around you already, no need to use your %s." ), bio.info().name );
             bio.powered = false;
@@ -1089,7 +1089,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         add_msg_activate();
         const w_point weatherPoint = *get_weather().weather_precise;
         int humidity = get_local_humidity( weatherPoint.humidity, get_weather().weather_id,
-                                           g->is_sheltered( player_character.pos_bub() ) );
+                                           g->is_sheltered( pos_bub() ) );
         // thirst units = 5 mL
         int water_available = std::lround( humidity * 3.0 / 100.0 );
         if( water_available == 0 ) {
@@ -1446,6 +1446,15 @@ ret_val<void> Character::can_deactivate_bionic( bionic &bio, bool eff_only ) con
 
 bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
 {
+    const character_action_guard lifetime( *this, eff_only );
+    if( !lifetime ) {
+        return false;
+    }
+    if( !eff_only && is_avatar() ) {
+        if( const auto client = cata_mp::client_deactivate_bionic( initial_bio ) ) {
+            return *client;
+        }
+    }
     const safe_reference<Creature> character_reference = get_safe_reference();
     const map &here = get_map();
 
@@ -1453,7 +1462,7 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
     bio_flag_cache.clear();
     if( !can_deactivate.success() ) {
         if( !can_deactivate.str().empty() ) {
-            add_msg( m_info,  can_deactivate.str() );
+            add_msg_if_player( m_info, can_deactivate.str() );
         }
         return false;
     }
@@ -1479,7 +1488,7 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
         Creature *live_creature = character_reference.get();
         Character *live_character = live_creature == nullptr ? nullptr :
                                     live_creature->as_character();
-        if( live_character == nullptr ) {
+        if( !lifetime || live_character == nullptr ) {
             return false;
         }
         if( !live_character->find_bionic_by_uid( deactivation_uid ) ) {
@@ -1498,7 +1507,7 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
     Creature *live_creature = character_reference.get();
     Character *live_character = live_creature == nullptr ? nullptr :
                                 live_creature->as_character();
-    if( live_character == nullptr ) {
+    if( !lifetime || live_character == nullptr ) {
         return false;
     }
     const std::optional<bionic *> deactivated_bionic =
@@ -1534,14 +1543,22 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
         }
     }
 
+    const bool has_enchantments = !bio.id->enchantments.empty();
+    const bool has_pseudo_items = bio.has_weapon() || !bio.info().passive_pseudo_items.empty() ||
+                                  !bio.info().toggled_pseudo_items.empty();
     calc_encumbrance();
-    if( !bio.id->enchantments.empty() ) {
+    if( !lifetime ) {
+        return false;
+    }
+    if( has_enchantments ) {
         recalculate_enchantment_cache();
+        if( !lifetime ) {
+            return false;
+        }
     }
 
     // Also reset crafting inventory cache if this bionic spawned a fake item
-    if( bio.has_weapon() || !bio.info().passive_pseudo_items.empty() ||
-        !bio.info().toggled_pseudo_items.empty() ) {
+    if( has_pseudo_items ) {
         invalidate_pseudo_items();
         invalidate_crafting_inventory();
     }
