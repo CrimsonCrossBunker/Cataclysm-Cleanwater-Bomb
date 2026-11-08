@@ -1722,7 +1722,9 @@ class Character : public Creature, public visitable
         // recalculates bodyparts based on enchantments modifying them and the default anatomy.
         void recalculate_bodyparts();
         // recalculates enchantment cache by iterating through all held, worn, and wielded items
-        void recalculate_enchantment_cache();
+        // Replica restoration rebuilds derived modifiers without replaying mutations
+        // or recalculating the authoritative body's HP and stamina.
+        void recalculate_enchantment_cache( bool update_body = true );
         // gets add and mult value from enchantment cache
 
         /** Returns true if the player has any martial arts buffs attached */
@@ -3010,6 +3012,11 @@ class Character : public Creature, public visitable
         // hooks. Parse all roots before replacing the current owned items.
         void store_carried_items( JsonOut &json ) const;
         void load_carried_items( const JsonObject &data );
+        // Portable body, abilities and carried state. Identity, position,
+        // activities and other world relationships remain owned by the receiver.
+        void store_player_state( JsonOut &json ) const;
+        void load_player_state( const JsonObject &data );
+
         // Replica-only needs/morale state; no ingestion, digestion or gameplay hooks.
         void store_needs_state( JsonOut &json ) const;
         void load_needs_state( const JsonObject &data );

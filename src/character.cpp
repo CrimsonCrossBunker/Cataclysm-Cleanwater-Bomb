@@ -5373,7 +5373,7 @@ void Character::recalculate_bodyparts()
                    get_cached_organic_size() );
 }
 
-void Character::recalculate_enchantment_cache()
+void Character::recalculate_enchantment_cache( bool update_body )
 {
     enchantment_cache->clear();
 
@@ -5423,8 +5423,10 @@ void Character::recalculate_enchantment_cache()
             }
         }
     }
-    new_mutation_cache->mutations = enchantment_cache->mutations;
-    update_cached_mutations();
+    if( update_body ) {
+        new_mutation_cache->mutations = enchantment_cache->mutations;
+        update_cached_mutations();
+    }
     for( const std::pair<const trait_id, trait_data> &mut_map : cached_mutations ) {
         if( mut_map.second.corrupted == 0 ) {
             const mutation_branch &mut = mut_map.first.obj();
@@ -5437,6 +5439,9 @@ void Character::recalculate_enchantment_cache()
         }
     }
 
+    if( !update_body ) {
+        return;
+    }
     if( enchantment_cache->modifies_bodyparts() ) {
         recalculate_bodyparts();
     }

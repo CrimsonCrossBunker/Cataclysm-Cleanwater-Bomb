@@ -27,6 +27,8 @@ struct remote_player_session {
     peer_admission admission;
     player_credentials credentials;
     bool detach_pending = false;
+    bool awaiting_character = false;
+    bool player_state_initialized = false;
     host_turn_state turn;
     pickup_host_state pickup;
     firearm_state firearm;
