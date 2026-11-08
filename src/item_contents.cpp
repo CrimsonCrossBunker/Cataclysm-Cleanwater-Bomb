@@ -1057,6 +1057,7 @@ std::pair<item_location, item_pocket *> item_contents::best_pocket( const item &
     // @TODO: this could be made better by doing a plain preliminary volume check.
     // if the total volume of the parent is not sufficient, a child won't have enough either.
     std::pair<item_location, item_pocket *> ret = { this_loc, nullptr };
+    const Character *carrier = this_loc ? this_loc.carrier() : nullptr;
     std::vector<item_pocket *> valid_pockets;
     for( item_pocket &pocket : contents ) {
         if( pocket.is_forbidden() ) {
@@ -1079,7 +1080,8 @@ std::pair<item_location, item_pocket *> item_contents::best_pocket( const item &
             //if not allow check nested pockets ,it is no need to save valid pockets
             valid_pockets.emplace_back( &pocket );
         }
-        if( !ignore_settings && !pocket.settings.accepts_item( it ) ) {
+        if( !ignore_settings && ( !pocket.settings.accepts_item( it ) ||
+                                  ( carrier && carrier->is_avatar() && pocket.settings.is_disabled() ) ) ) {
             // Item forbidden by whitelist / blacklist
             continue;
         }

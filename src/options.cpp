@@ -1962,6 +1962,11 @@ void options_manager::add_options_general()
              false
            );
 
+        add( "AUTO_INSERT_POCKETS_DISABLED", page_id,
+             to_translation( "Disable automatic pocket insertion by default" ),
+             to_translation( "If true, pockets without an explicit automatic insertion setting will not accept items automatically.  Enable individual pockets in pocket settings.  Manually inserting items is still allowed." ),
+             false );
+
         add( "AUTO_PICKUP_ADJACENT", page_id, to_translation( "Auto pickup adjacent" ),
              to_translation( "If true, enable auto pickup items one tile around to the player.  You can assign No Auto Pickup zones with the Zones manager for e.g. your homebase." ),
              false
