@@ -6296,9 +6296,9 @@ std::unique_ptr<activity_actor> close_tile_activity_actor::deserialize( JsonValu
     return actor.clone();
 }
 
-consume_activity_actor consume_activity_actor::client_view()
+consume_activity_actor consume_activity_actor::client_view( bool reprompt )
 {
-    consume_activity_actor actor( item_location::nowhere );
+    consume_activity_actor actor( item_location::nowhere, reprompt );
     actor.view_only = true;
     return actor;
 }

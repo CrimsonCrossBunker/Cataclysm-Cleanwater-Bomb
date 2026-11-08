@@ -623,6 +623,15 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     REQUIRE( original_id.is_valid() );
     npc *actor = g->critter_by_id<npc>( original_id );
     REQUIRE( actor );
+    REQUIRE( actor->has_native_player_control() );
+    // Use the world phase's actual prepare/advance/finish path. An admitted
+    // compatibility proxy otherwise keeps negative AP forever after an action.
+    only_test_remote( session ).turn.remote_moves = -5;
+    REQUIRE( cata_mp::prepare_remote_character_turn( *actor ) );
+    REQUIRE( g->player_controls().process_turn( *actor ) );
+    cata_mp::finish_remote_character_turn( *actor );
+    CHECK( only_test_remote( session ).turn.remote_moves > 0 );
+    CHECK( only_test_remote( session ).turn.remote_moves == actor->get_moves() );
     const auto before_unload = g->npc_lifetimes().acquire( *actor );
     actor->on_unload();
     g->remove_npc( actor->getID() );
@@ -651,6 +660,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     CHECK( actor->name == "Rosalee Blanco" );
     CHECK( cata_mp::is_remote_player( original_id ) );
     cata_mp::wait_for_client_action(); // Must not wait for the disconnected peer.
+    actor->set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 3 ) );
     std::filesystem::remove( record.get_unrelative_path() );
     std::filesystem::rename( backup.get_unrelative_path(), record.get_unrelative_path() );
     REQUIRE( cata_mp::mp_save_remote_player() );
@@ -664,6 +674,17 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     REQUIRE( actor );
     CHECK( actor->name == "Rosalee Blanco" );
     CHECK( actor->get_value( "identity_regression" ).str() == "retained" );
+    REQUIRE( actor->get_wielded_item() );
+    CHECK( actor->get_wielded_item()->charges == 3 );
+    CHECK( only_test_remote( session ).pickup.revision > 0 );
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                           R"({"action":"worn_sync","wielded":"","char_stats":{"name":"stale local save"}})",
+                                           admissions.at( 202 ) } ) );
+    cata_mp::process_mp_events();
+    REQUIRE( actor->get_wielded_item() );
+    CHECK( actor->get_wielded_item()->typeId() == itype_id( "chocolate" ) );
+    CHECK( actor->get_wielded_item()->charges == 3 );
+    CHECK( actor->name == "Rosalee Blanco" );
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 101 ) } ) );
     cata_mp::process_mp_events();
     CHECK( only_test_remote( session ).connected );
