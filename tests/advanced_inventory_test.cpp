@@ -97,8 +97,7 @@ TEST_CASE( "quantity_format_preserves_loaded_ammunition", "[items][advanced_inv]
     CHECK( magazine.count() == 1 );
 }
 
-TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
-           "[items][advanced_inv][stacking]" )
+TEST_CASE( "quantity_name_respects_measure_prefix_options", "[items][advanced_inv][stacking]" )
 {
     const std::string prefix_mode = GENERATE( "count", "unit", "both" );
     const override_option measure_prefix( "MEASURE_PREFIX", prefix_mode );
@@ -121,6 +120,24 @@ TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
                        std::to_string( quantity ) + ")" );
             }
         }
+    }
+}
+
+TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
+           "[items][advanced_inv][stacking]" )
+{
+    for( const itype_id &id : {
+             itype_salt, itype_water_clean,
+             itype_steel_chunk, itype_test_9mm_ammo
+         } ) {
+        item resource( id, calendar::turn, 123 );
+        REQUIRE( resource.count_by_charges() );
+        CHECK( resource.display_name_with_count( 123 ) ==
+               resource.display_name( 123, false, false ) + " (" +
+               resource.type->item_measure_prefix( 123 ) + ")" );
+        CHECK( resource.display_name_with_count( 1 ) ==
+               resource.display_name( 1, false, false ) + " (" +
+               resource.type->item_measure_prefix( 1 ) + ")" );
     }
     item knife( itype_knife_combat );
     REQUIRE_FALSE( knife.count_by_charges() );
