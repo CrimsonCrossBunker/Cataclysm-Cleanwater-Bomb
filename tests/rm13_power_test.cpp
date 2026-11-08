@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <initializer_list>
 #include <list>
 #include <optional>
@@ -326,6 +327,43 @@ TEST_CASE( "ups_fuel_sources_keep_charge_based_availability", "[item][battery][u
     REQUIRE( ups.ammo_remaining() == 2 );
     you.i_add( ups );
     CHECK( you.available_ups() == 2_kJ );
+    const units::energy requested = GENERATE( 250_J, 1_kJ, 3_kJ );
+    CHECK( you.consume_ups( requested ) == std::min( requested, 2_kJ ) );
+    CHECK( you.available_ups() == ( requested > 1_kJ ? 0_kJ : 1_kJ ) );
+    CHECK( you.consume_ups( 2_kJ ) == ( requested > 1_kJ ? 0_kJ : 1_kJ ) );
+    CHECK( you.available_ups() == 0_kJ );
+    CHECK( you.consume_ups( 1_kJ ) == 0_kJ );
+}
+
+TEST_CASE( "rm13_hits_exhaust_fuel_ups", "[item][battery][toolmod][rm13][armor][ups]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    you.set_power_level( 0_kJ );
+    REQUIRE( you.wear_item( item( itype_backpack ), false, false ) );
+    item ups( itype_methanol_fuel_cell );
+    item fuel( ups.magazine_default() );
+    fuel.ammo_set( fuel.ammo_default(), 2 );
+    REQUIRE( ups.put_in( fuel, pocket_type::MAGAZINE_WELL ).success() );
+    you.i_add( ups );
+    item armor( itype_rm13_armor_on );
+    REQUIRE( armor.put_in( item( itype_battery_ups ), pocket_type::MOD ).success() );
+    const std::optional<std::list<item>::iterator> worn = you.wear_item( armor, false, false );
+    REQUIRE( worn );
+    item &worn_armor = **worn;
+    const bool subpart = GENERATE( false, true );
+    for( int hit = 0; hit < 3; ++hit ) {
+        damage_unit damage( damage_bash, 1.0f );
+        if( subpart ) {
+            you.armor_absorb( damage, worn_armor, bodypart_id( "torso" ),
+                              sub_body_part_torso_upper.id(), 0, false );
+        } else {
+            you.armor_absorb( damage, worn_armor, bodypart_id( "torso" ), 0, false );
+        }
+        CHECK( you.available_ups() == std::max( 1 - hit, 0 ) * 1_kJ );
+        CHECK( worn_armor.active == ( hit < 2 ) );
+    }
 }
 
 TEST_CASE( "rm13_external_power_activation_does_not_require_a_battery",
