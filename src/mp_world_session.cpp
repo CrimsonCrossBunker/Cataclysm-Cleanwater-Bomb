@@ -73,7 +73,7 @@ void world_session::reset_state( bool preserve_pending_client )
     client_turn = {};
     client_pickup = {};
     client_firearm = {};
-    client_reload = {};
+    client_inventory_activity = {};
     host_observation = {};
     presentation = session_presentation();
     last_marked_world.clear();

@@ -180,7 +180,8 @@
 #include "mp_client_conn.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
-    #include "mp_reload.h"
+    #include "mp_unload.h"
+    #include "mp_inventory_activity.h"
     #include "mp_equipment.h"
 #endif
 #include "mtype.h"
@@ -2527,6 +2528,12 @@ int game::inventory_item_menu( item_location locThisItem,
                     u.drop( locThisItem, u.pos_bub() );
                     break;
                 case 'U':
+#ifdef MP_ENABLED
+                    if( cata_mp::is_client_mode() ) {
+                        cata_mp::client_select_unload( locThisItem );
+                        break;
+                    }
+#endif
                     u.unload( locThisItem );
                     break;
                 case 'r':

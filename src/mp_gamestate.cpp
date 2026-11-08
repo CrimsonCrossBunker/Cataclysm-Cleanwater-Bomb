@@ -2192,7 +2192,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     jo.allow_omitted_members();
 
     const std::string action = jo.get_string( "action", "" );
-    if( action == "reload" || action == "reload_cancel" ) {
+    if( action == "inventory_activity" || action == "inventory_activity_cancel" ) {
         const bool granted = jo.has_int( "grant_seq" ) &&
                              jo.get_int64( "grant_seq" ) == recipient.turn.grant_seq &&
                              recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn &&
@@ -2201,15 +2201,18 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         const auto messages = Messages::size();
         std::string result;
         try {
-            const bool cancel = action == "reload_cancel" && jo.get_string( "operation" ) == "cancel";
-            const bool step = action == "reload" && jo.get_string( "operation" ) != "cancel" && granted;
-            result = execute_reload_request( *remote, get_map(), jo, recipient.reload,
+            const bool cancel = action == "inventory_activity_cancel" &&
+                                jo.get_string( "operation" ) == "cancel";
+            const bool step = action == "inventory_activity" && jo.get_string( "operation" ) != "cancel" &&
+                              granted;
+            result = execute_inventory_activity_request( *remote, get_map(), jo, recipient.inventory_activity,
                                              recipient.pickup, cancel || ( step && recipient.firearm.weapon == 0 ) );
         } catch( const JsonError &error ) {
             if( const auto server = get_active_server() ) {
-                server->post_reject( recipient.admission, "Invalid reload request; reconnect to synchronize." );
+                server->post_reject( recipient.admission,
+                                     "Invalid inventory activity request; reconnect to synchronize." );
             }
-            mp_log( std::string( "[ccb-mp] rejected reload intent: " ) + error.what() );
+            mp_log( std::string( "[ccb-mp] rejected inventory activity intent: " ) + error.what() );
             return;
         }
         remote = mp_remote_actor( recipient );
@@ -2218,7 +2221,8 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         recipient.turn.remote_moves = remote->get_moves();
         recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
-        recipient.observation.partner_activity = owns_reload_activity( *remote ) ? "ACT_RELOAD" : "";
+        recipient.observation.partner_activity = owns_inventory_activity( *remote ) ?
+                remote->activity.id().str() : "";
         recipient.observation.partner_sleeping = false;
         flush_action_msgs( recipient, messages, remote->name );
         if( const auto server = get_active_server() ) {
@@ -2235,7 +2239,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         g->invalidate_main_ui_adaptor();
         return;
     }
-    if( owns_reload_activity( *remote ) ) {
+    if( owns_inventory_activity( *remote ) ) {
         // The owned activity and its inventory cannot be overwritten by a
         // legacy action/state upload while the player is reloading or choosing
         // placement. Cancellation has its own identity-checked operation above.
@@ -5537,7 +5541,7 @@ void mp_menu_cancel_host()
 void mp_tick_proxy_activity( npc &guy )
 {
     // No activity → nothing to do.  Most turns this is the no-op path.
-    if( !guy.activity || owns_reload_activity( guy ) ) {
+    if( !guy.activity || owns_inventory_activity( guy ) ) {
         return;
     }
     // Give the activity a single step's worth of move budget so per-item
@@ -6410,17 +6414,18 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    if( msg.find( "reload_result" ) != std::string::npos ) {
+    if( msg.find( "inventory_activity_result" ) != std::string::npos ) {
         try {
             JsonValue value = json_loader::from_string( msg );
             JsonObject response = value.get_object();
             response.allow_omitted_members();
-            if( apply_reload_result( response ) ) {
+            if( apply_inventory_activity_result( response ) ) {
                 return true;
             }
         } catch( const JsonError & ) {
             set_client_mode( false );
-            add_msg( m_bad, _( "Invalid reload response.  Reconnect to synchronize your character." ) );
+            add_msg( m_bad,
+                     _( "Invalid inventory activity response.  Reconnect to synchronize your character." ) );
             return true;
         }
     }
@@ -8664,7 +8669,8 @@ bool is_client_waiting_for_ack()
 
 void mp_client_post_action( int pre_moves )
 {
-    if( !is_client_mode() || is_client_waiting_for_ack() || mp_session().client_reload.active ) {
+    if( !is_client_mode() || is_client_waiting_for_ack() ||
+        mp_session().client_inventory_activity.active ) {
         // Intent-based actions already sent their request. In particular the
         // fire UI also handles reach attacks; do not follow them with a legacy
         // inventory snapshot and wait action that can overwrite the result.
@@ -8719,7 +8725,7 @@ void client_set_autosmash_json( const std::string &json )
 
 void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_idle )
 {
-    if( mp_session().client_reload.active ) {
+    if( mp_session().client_inventory_activity.active ) {
         // An owned activity sends step/cancel intents, including the frame
         // where its local view has just been canceled. Never append a wait.
         return;
@@ -8747,7 +8753,8 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_id
 // state-machine inputs that flip g_partner_activity.
 void client_send_activity_start( const std::string &activity_id_str )
 {
-    if( activity_id_str == "ACT_RELOAD" && mp_session().client_reload.active ) {
+    if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ) &&
+        mp_session().client_inventory_activity.active ) {
         return;
     }
 
@@ -8766,7 +8773,8 @@ void client_send_activity_start( const std::string &activity_id_str )
 
 void client_send_activity_end( const std::string &activity_id_str )
 {
-    if( activity_id_str == "ACT_RELOAD" && mp_session().client_reload.active ) {
+    if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ) &&
+        mp_session().client_inventory_activity.active ) {
         return;
     }
 

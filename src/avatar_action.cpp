@@ -1,5 +1,6 @@
 #include "avatar_action.h"
 #include "mp_gamestate.h"
+#include "mp_unload.h"
 #include "mp_client_conn.h"
 #include "mp_throw.h"
 
@@ -1600,7 +1601,11 @@ void avatar_action::unload( avatar &you )
 
     if( ret.second || !ret.first->is_container() ) {
         // Auto contain
-        you.unload( ret.first );
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_select_unload( ret.first );
+        } else {
+            you.unload( ret.first );
+        }
     } else {
         // Manual contain
         item_location new_container = g->inv_map_splice( [&you]( const item_location & it ) {
@@ -1611,6 +1616,10 @@ void avatar_action::unload( avatar &you )
             add_msg( _( "Never mind." ) );
             return;
         }
-        you.unload( ret.first, false, new_container );
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_select_unload( ret.first, new_container );
+        } else {
+            you.unload( ret.first, false, new_container );
+        }
     }
 }
