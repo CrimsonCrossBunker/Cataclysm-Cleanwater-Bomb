@@ -3881,22 +3881,29 @@ bool cata_tiles::apply_vision_effects( const tripoint_bub_ms &pos,
     if( !would_apply_vision_effects( visibility ) ) {
         return false;
     }
-    std::string light_name;
+    // These IDs are immutable. Reusing their storage avoids allocating and
+    // freeing a long string for every covered tile on every redraw.
+    static const std::array<std::string, 5> light_names = {{
+            "lighting_hidden", "lighting_lowlight_light", "lighting_boomered_light",
+            "lighting_boomered_dark", "lighting_lowlight_dark"
+        }
+    };
+    const std::string *light_name = &empty_string;
     switch( visibility ) {
         case visibility_type::HIDDEN:
-            light_name = "lighting_hidden";
+            light_name = &light_names[0];
             break;
         case visibility_type::LIT:
-            light_name = "lighting_lowlight_light";
+            light_name = &light_names[1];
             break;
         case visibility_type::BOOMER:
-            light_name = "lighting_boomered_light";
+            light_name = &light_names[2];
             break;
         case visibility_type::BOOMER_DARK:
-            light_name = "lighting_boomered_dark";
+            light_name = &light_names[3];
             break;
         case visibility_type::DARK:
-            light_name = "lighting_lowlight_dark";
+            light_name = &light_names[4];
             break;
         case visibility_type::CLEAR:
             // should never happen
@@ -3906,7 +3913,7 @@ bool cata_tiles::apply_vision_effects( const tripoint_bub_ms &pos,
     // lighting is never rotated, though, could possibly add in random rotation?
     restore_on_out_of_scope<draw_light> restore_light( m_draw_light );
     m_draw_light = draw_light::fixed;
-    draw_from_id_string( light_name, TILE_CATEGORY::LIGHTING, empty_string, pos, 0, 0,
+    draw_from_id_string( *light_name, TILE_CATEGORY::LIGHTING, empty_string, pos, 0, 0,
                          lit_level::LIT, false, height_3d );
 
     return true;
