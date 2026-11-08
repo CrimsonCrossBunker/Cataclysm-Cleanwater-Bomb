@@ -232,8 +232,6 @@ std::string mp_get_host_world_name();
 void mp_capture_host_omt( const tripoint_abs_omt &p );
 bool mp_host_omt_valid();
 tripoint_abs_omt mp_host_omt();
-// Welcome JSON field ",\"host_omt\":[x,y,z]" (or "" if not captured). Net-thread safe.
-std::string mp_host_omt_welcome_field();
 // Client: the host's OMT from the welcome — start_game spawns here in client mode
 // instead of the character's scenario start_location (invalid if not a client join).
 tripoint_abs_omt mp_client_spawn_omt();

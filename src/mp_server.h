@@ -3,17 +3,30 @@
 #define CATA_SRC_MP_SERVER_H
 
 #include <stdint.h>
+#include <array>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 
 namespace cata_mp
 {
+class event_queue;
+
+// Published as one value by the simulation owner. The network worker never
+// reads the game, the current world, or another session's metadata.
+struct server_welcome {
+    std::string world_name;
+    std::string player_name;
+    unsigned int seed = 0;
+    std::optional<std::array<int, 3>> host_omt;
+};
 
 class server
 {
     public:
-        server( uint16_t port, std::string password, std::string version = "" );
+        server( uint16_t port, std::string password, std::string version,
+                std::shared_ptr<event_queue> events, server_welcome welcome );
         ~server();
 
         // Start listening. Blocks until stop() is called.
@@ -21,6 +34,8 @@ class server
 
         // Signal the server to stop accepting connections and shut down.
         void stop();
+        bool running() const;
+        void update_welcome( server_welcome welcome );
 
         // Thread-safe delivery to authenticated peers only (zero means broadcast).
         void post_send( uint64_t peer_id, const std::string &msg );
@@ -58,9 +73,13 @@ class host_session
         host_session( const host_session & ) = delete;
         host_session &operator=( const host_session & ) = delete;
 
-        bool start( uint16_t port, const std::string &password, const std::string &version );
+        bool start( uint16_t port, const std::string &password, const std::string &version,
+                    server_welcome welcome = {} );
         void stop();
         bool running() const;
+        std::shared_ptr<server> active_server() const;
+        event_queue &events();
+        void update_welcome( server_welcome welcome );
         const std::string &error() const {
             return error_;
         }
@@ -68,12 +87,11 @@ class host_session
     private:
         std::shared_ptr<server> instance_;
         std::thread worker_;
-        bool owns_transport_ = false;
+        std::shared_ptr<event_queue> events_;
         std::string error_;
 };
 
-// Returns the active server instance, or nullptr if not running.
-// Shared ownership keeps concurrent game-loop calls valid during shutdown.
+// Current-world owner-thread adapter. Workers keep their explicit session.
 std::shared_ptr<server> get_active_server();
 
 } // namespace cata_mp

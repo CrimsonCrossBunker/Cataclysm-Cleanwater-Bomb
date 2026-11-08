@@ -11,7 +11,7 @@
 
 namespace cata_mp
 {
-void mp_log( const std::string &msg ); // NOLINT(cata-static-declarations)
+void mp_log_client( const std::string &msg ); // NOLINT(cata-static-declarations)
 
 struct apply_watchdog::state {
     struct phase {
@@ -55,9 +55,9 @@ apply_watchdog::apply_watchdog( report_fn report ) : report_( std::move( report 
 {
     if( !report_ ) {
         report_ = []( const std::string & label, std::chrono::seconds elapsed ) {
-            mp_log( "[cdda-mp] WATCHDOG: main thread stalled " +
-                    std::to_string( elapsed.count() ) + "s in apply-step=" + label +
-                    " (client likely hung — Windows 'not responding')" );
+            mp_log_client( "[cdda-mp] WATCHDOG: main thread stalled " +
+                           std::to_string( elapsed.count() ) + "s in apply-step=" + label +
+                           " (client likely hung — Windows 'not responding')" );
         };
     }
 }

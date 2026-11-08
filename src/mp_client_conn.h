@@ -27,6 +27,8 @@ class client_connection
         void reset();
         void prepare_for_world_load();
         bool pending_admission() const;
+        bool transport_running() const;
+        bool connected() const;
         bool connect( const std::string &host, uint16_t port, const std::string &name,
                       const std::string &password, const std::string &version );
         std::string error() const;
