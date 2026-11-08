@@ -2811,7 +2811,7 @@ void item_pocket::favorite_settings::clear_category( const item_category_id &id 
 bool item_pocket::favorite_settings::accepts_item( const item &it ) const
 {
     // if this pocket is disabled it accepts nothing
-    if( is_disabled() ) {
+    if( disabled.value_or( false ) ) {
         return false;
     }
     const itype_id &id = it.typeId();

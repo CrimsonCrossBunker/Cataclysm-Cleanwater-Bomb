@@ -40,6 +40,7 @@
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "mapgen_helpers.h"
+#include "npc.h"
 #include "options_helpers.h"
 #include "player_activity.h"
 #include "player_helpers.h"
@@ -1664,12 +1665,12 @@ TEST_CASE( "pocket_automatic_insertion_defaults", "[pocket][favorite][item]" )
     SECTION( "unconfigured pockets follow the current global default" ) {
         CHECK( settings.is_null() );
         CHECK( settings.is_disabled() == disabled_by_default );
-        CHECK( settings.accepts_item( rock ) == !disabled_by_default );
+        CHECK( settings.accepts_item( rock ) );
 
         const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
                                               disabled_by_default ? "false" : "true" );
         CHECK( settings.is_disabled() == !disabled_by_default );
-        CHECK( settings.accepts_item( rock ) == disabled_by_default );
+        CHECK( settings.accepts_item( rock ) );
     }
 
     SECTION( "individual pockets can override either default" ) {
@@ -1746,8 +1747,8 @@ TEST_CASE( "pocket_automatic_insertion_container_round_trip", "[pocket][favorite
     item_pocket *pocket = backpack.get_contents().get_standard_pockets().front();
     REQUIRE( pocket->settings.is_disabled() );
     REQUIRE( other_backpack.get_contents().get_standard_pockets().front()->settings.is_disabled() );
-    CHECK_FALSE( has_best_pocket( backpack, rock ) );
-    CHECK_FALSE( has_best_pocket( other_backpack, rock ) );
+    CHECK( has_best_pocket( backpack, rock ) );
+    CHECK( has_best_pocket( other_backpack, rock ) );
 
     pocket->settings.set_disabled( false );
     CHECK_FALSE( pocket->settings.is_disabled() );
@@ -1761,6 +1762,43 @@ TEST_CASE( "pocket_automatic_insertion_container_round_trip", "[pocket][favorite
 
     REQUIRE( other_backpack.put_in( rock, pocket_type::CONTAINER ).success() );
     CHECK_FALSE( other_backpack.is_container_empty() );
+}
+
+TEST_CASE( "pocket_default_disabling_only_affects_player_inventory", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    standard_npc follower( "Follower", player.pos_bub() + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    const item rock( itype_test_rock );
+    REQUIRE( player.wear_item( item( itype_test_backpack ), false, false ) );
+    REQUIRE( follower.wear_item( item( itype_test_backpack ), false, false ) );
+    CHECK_FALSE( player.can_stash( rock ) );
+    CHECK( follower.can_stash( rock ) );
+    CHECK( player.best_pocket( rock, nullptr, true ).second );
+
+    item_pocket *const player_pocket = player.best_pocket( rock, nullptr, true ).second;
+    REQUIRE( player_pocket );
+    player_pocket->settings.set_disabled( false );
+    CHECK( player.can_stash( rock ) );
+
+    item_pocket *const npc_pocket = follower.best_pocket( rock ).second;
+    REQUIRE( npc_pocket );
+    npc_pocket->settings.set_disabled( true );
+    CHECK_FALSE( follower.can_stash( rock ) );
+}
+
+TEST_CASE( "pocket_default_disabling_preserves_generated_contents", "[pocket][favorite][item]" )
+{
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    item liquid( itype_test_liquid );
+    liquid.charges = 5;
+    const item filled = liquid.in_container( itype_test_waterskin, 5 );
+    CHECK( filled.typeId() == itype_test_waterskin );
+    const std::list<const item *> contents = filled.all_items_top();
+    REQUIRE( contents.size() == 1 );
+    CHECK( contents.front()->typeId() == liquid.typeId() );
+    CHECK( contents.front()->charges == 5 );
 }
 
 TEST_CASE( "pocket_favorites_allow_or_restrict_items", "[pocket][favorite][item]" )
