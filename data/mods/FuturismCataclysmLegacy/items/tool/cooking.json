@@ -17,7 +17,7 @@
     "flags": [ "LEAK_DAM", "RADIOACTIVE", "DURABLE_MELEE", "WATER_BREAK", "ALLOWS_REMOTE_USE" ],
     "qualities": [ [ "BOIL", 1 ], [ "HOTPLATE", 1 ] ],
     "pocket_data": [ { "max_contains_volume": "1 L", "max_contains_weight": "2400 g", "watertight": true, "rigid": true } ],
-    "use_action": [ "HEAT_LIQUID_ITEMS", { "type": "link_up", "cable_length": 2, "charge_rate": "1 kW" } ],
+    "use_action": [ "HEAT_LIQUID_ITEMS", { "type": "link_up", "cable_length": 2, "charge_rate": "0 W" } ],
     "melee_damage": { "bash": 2 }
   },
   {
