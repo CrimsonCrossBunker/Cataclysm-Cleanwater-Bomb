@@ -1104,7 +1104,6 @@ LUA_PLATFORM_ENABLED_SOURCES := \
   $(SRC_DIR)/lua_platform_snapshots.cpp \
   $(SRC_DIR)/lua_platform_registry.cpp \
   $(SRC_DIR)/lua_platform_services.cpp \
-  $(SRC_DIR)/lua_platform_state.cpp \
   $(SRC_DIR)/lua_platform_values.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)

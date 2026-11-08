@@ -294,6 +294,12 @@ class iuse_actor
         // This use action completes on the supplied actor without local UI or
         // replacing its activity. Unknown/scripted/targeted actions opt out.
         virtual bool is_immediate_consumption() const;
+        // Executes using only the supplied actor, item and target. Methods
+        // needing another player choice must supply that choice before opting in.
+        virtual bool supports_owned_activation() const {
+            return is_immediate_consumption();
+        }
+
         virtual void info( const item &, std::vector<iteminfo> & ) const {}
         /**
          * Returns a deep copy of this object. Example implementation:

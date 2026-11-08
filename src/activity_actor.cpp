@@ -44,6 +44,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
 #include "clzones.h"
@@ -11104,15 +11105,25 @@ std::unique_ptr<activity_actor> wear_activity_actor::deserialize( JsonValue &jsi
 
 void invoke_item_activity_actor::do_turn( player_activity &, Character &who )
 {
-    item_location _item = item;
-    std::string _method = method;
-    if( method.empty() ) {
-        who.cancel_activity();
-        who.invoke_item( _item.get_item() );
+    const character_action_guard lifetime( who );
+    item_location source = item;
+    const std::string selected_method = method;
+    const activity_execution execution = who.activity.execution();
+    who.cancel_activity();
+    if( !lifetime || who.activity || !source ) {
         return;
     }
-    who.cancel_activity();
-    who.invoke_item( _item.get_item(), _method );
+    who.activity.set_execution( execution );
+    const on_out_of_scope clear_finished_execution( [&]() {
+        if( lifetime && !who.activity ) {
+            who.activity.set_execution( activity_execution::local );
+        }
+    } );
+    if( selected_method.empty() ) {
+        who.invoke_item( source.get_item() );
+    } else {
+        who.invoke_item( source.get_item(), selected_method );
+    }
 }
 
 void invoke_item_activity_actor::serialize( JsonOut &jsout ) const

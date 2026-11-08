@@ -2499,3 +2499,253 @@ TEST_CASE( "blueprint_client_only_requests_work_and_preserves_its_planner",
     }
 
 }
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "cata_path.h"
+#include "inventory.h"
+#include "item_activation.h"
+#include "lua_platform_runtime_internal.h"
+#include "lua_platform_test_support.h"
+#include "path_info.h"
+#include "worldfactory.h"
+#include <filesystem>
+#include <variant>
+
+TEST_CASE( "mp_item_activation_keeps_character_state_and_delayed_work_owned",
+           "[mp_inventory_activity][mp_item_activation][lua][platform]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    reload_fixture fixture;
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const platform_lua_test_directory directory;
+    const std::string old_savedir = PATH_INFO::savedir();
+    WORLD *old_world = world_generator->active_world;
+    WORLD isolated_world( "item_activation_ownership" );
+    const on_out_of_scope cleanup( [&]() {
+        platform::shutdown();
+        world_generator->active_world = old_world;
+        PATH_INFO::set_savedir( old_savedir );
+    } );
+    PATH_INFO::set_savedir( directory.root.string() + "/" );
+    world_generator->active_world = &isolated_world;
+    REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
+    directory.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local state = ccb.state.character
+ccb.runtime.handler("start", function(event)
+    if event.data.activity == "ACT_TEST_OWNED_ITEM" then
+        state.set("starts", state.get("starts", 0) + 1)
+    end
+end)
+ccb.runtime.on("game:character_starts_activity", "start")
+ccb.runtime.handler("turn", function(event)
+    state.set("turns", state.get("turns", 0) + 1)
+end)
+ccb.runtime.handler("finish", function(event)
+    state.set("finished", state.get("finished", 0) + 1)
+end)
+ccb.runtime.handler("later", function(event)
+    state.set("later", state.get("later", 0) + 1)
+end)
+ccb.runtime.handler("activate", function(context)
+    if state.get("uses", 0) > 0 then return 0 end
+    local consumed = ccb.services.inventory.consume_by_type(context.character,
+        ccb.services.types.id("item", "apple"), 1, 0)
+    assert(consumed.ok and consumed.value.matched)
+    state.set("uses", 1)
+    if previous_task then
+        assert(ccb.tasks.get(previous_task) == nil)
+        assert(not ccb.tasks.cancel(previous_task))
+    end
+    previous_task = ccb.tasks.after(3, "later", {}, 1, "character")
+    assert(ccb.tasks.list(nil, "character").total == 1)
+    local assigned = ccb.services.activities.assign_timed(context.character,
+        ccb.services.types.id("activity", "ACT_TEST_OWNED_ITEM"),
+        ccb.services.time.duration(2, "second"))
+    assert(assigned.ok)
+    return 0
+end)
+local activity = ccb.content.ActivityType {
+    id = "ACT_TEST_OWNED_ITEM", verb = "using an owned tool", based_on = "time"
+}
+activity:on_turn("turn")
+activity:on_finish("finish")
+ccb.content.add(activity)
+local tool = ccb.content.Item {
+    id = "test_owned_lua_tool", name = "owned tool", description = "ownership regression", symbol = "?"
+}
+tool:mass_grams(1)
+tool:volume_ml(1)
+tool:on_use("activate", "Activate")
+ccb.content.add(tool)
+)lua" );
+    const std::string mod = "item_activation_ownership";
+    std::string error;
+    const bool prepared = platform::prepare_mods(
+    { { mod, directory.root, directory.root / "main.lua" } }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
+    platform::commit_prepared_mods();
+    platform::runtime_world_ready( true );
+    const auto runtime = platform::detail::find_active_runtime( mod );
+    REQUIRE( runtime );
+    avatar &host = get_avatar();
+    npc &remote = fixture.remote();
+    auto controller = g->player_controls().claim(
+                          cata_mp::player_id( std::string( 32, '8' ) ), remote );
+    const itype_id tool( "test_owned_lua_tool" );
+    const itype_id apple( "apple" );
+    for( Character *actor : { static_cast<Character *>( &host ), static_cast<Character *>( &remote ) } ) {
+        actor->lua_character_state = {};
+        actor->set_wielded_item( item( tool ) );
+        actor->inv->add_item( item( apple ), false, false, false );
+        actor->inv->add_item( item( apple ), false, false, false );
+        actor->set_moves( 1000 );
+    }
+    const auto value = [&]( Character &who, const std::string &key ) {
+        const auto &state = who.lua_character_state.for_mod( mod );
+        const auto found = state.find( key );
+        return found == state.end() ? int64_t( 0 ) : std::get<int64_t>( found->second );
+    };
+    const std::string method = "lua_platform:" + mod + ":activate";
+    const auto use_request = [&]( const item_source &source ) {
+        return fixture.request( remote, "start", [&]( JsonOut &out ) {
+            out.member( "kind", "item_use" );
+            out.member( "source", source );
+            out.member( "item_type", tool );
+            out.member( "method", method );
+            out.member( "target", remote.pos_abs() );
+        } );
+    };
+    // An item UID in another player's inventory is not an activation grant.
+    fixture.run( remote, use_request( capture_item_source( host, host.get_wielded_item() ) ) );
+    CHECK( value( host, "uses" ) == 0 );
+    CHECK( value( remote, "uses" ) == 0 );
+    CHECK( remote.amount_of( apple ) == 2 );
+    const std::string denied = use_request( capture_item_source( remote, remote.get_wielded_item() ) );
+    fixture.run( remote, denied, false );
+    CHECK_FALSE( remote.activity );
+    // Even a rejection returns a new inventory revision. Reusing that stale
+    // request must still be rejected before a fresh authorized intent starts.
+    fixture.run( remote, denied );
+    CHECK_FALSE( remote.activity );
+    const std::string request = use_request( capture_item_source( remote, remote.get_wielded_item() ) );
+    fixture.run( remote, request );
+    REQUIRE( remote.activity );
+    CHECK( remote.activity.execution() == activity_execution::authoritative );
+    CHECK( value( remote, "uses" ) == 1 );
+    CHECK( value( remote, "starts" ) == 1 );
+    CHECK( value( host, "uses" ) == 0 );
+    CHECK( remote.amount_of( apple ) == 1 );
+    fixture.run( remote, request );
+    CHECK( remote.amount_of( apple ) == 1 );
+    CHECK( value( remote, "starts" ) == 1 );
+
+    REQUIRE( execute_owned_item_activation( host, host.get_wielded_item(), method,
+                                           host.pos_abs(), false, false ) );
+    CHECK( value( host, "uses" ) == 1 );
+    CHECK( value( host, "starts" ) == 1 );
+    CHECK( host.amount_of( apple ) == 1 );
+    REQUIRE( runtime->tasks.size() == 2 );
+    CHECK( runtime->tasks.front().state_character_id == remote.getID() );
+    CHECK( runtime->tasks.back().state_character_id == host.getID() );
+
+    // Native save data owns the state and activity. The task sidecar owns the
+    // pending callback identity; neither may silently rebind to the host.
+    std::ostringstream saved_actor;
+    JsonOut actor_json( saved_actor );
+    remote.serialize( actor_json );
+    npc loaded;
+    loaded.deserialize( json_loader::from_string( saved_actor.str() ).get_object() );
+    CHECK( value( loaded, "uses" ) == 1 );
+    CHECK( loaded.activity.execution() == activity_execution::authoritative );
+    REQUIRE( platform::runtime_save( error ) );
+    runtime->tasks.clear();
+    platform::runtime_world_ready( false );
+    REQUIRE( runtime->tasks.size() == 2 );
+    calendar::turn += 3_seconds;
+    platform::runtime_process_tasks();
+    CHECK( value( remote, "later" ) == 1 );
+    CHECK( value( host, "later" ) == 1 );
+    CHECK( runtime->tasks.empty() );
+
+    fixture.reload = {}; // Reconnect reconstructs tracking from saved activity ownership.
+    for( int turn = 0; turn < 2; ++turn ) {
+        remote.set_moves( 1000 );
+        host.set_moves( 1000 );
+        fixture.run( remote, fixture.request( remote, "step" ) );
+        host.activity.do_turn( host );
+        CHECK( remote.activity.moves_left == host.activity.moves_left );
+        CHECK( remote.get_moves() == host.get_moves() );
+        CHECK( value( remote, "finished" ) == turn );
+        CHECK( value( host, "finished" ) == turn );
+    }
+    CHECK_FALSE( remote.activity );
+    CHECK_FALSE( host.activity );
+    CHECK( value( host, "finished" ) == 1 );
+    CHECK( value( remote, "finished" ) == 1 );
+
+    // A client progress view must not run the Lua activity a second time.
+    const int64_t host_starts = value( host, "starts" );
+    const int64_t host_turns = value( host, "turns" );
+    player_activity view( activity_id( "ACT_TEST_OWNED_ITEM" ), 100 );
+    view.set_execution( activity_execution::presentation );
+    host.assign_activity( view );
+    host.activity.do_turn( host );
+    CHECK( value( host, "starts" ) == host_starts );
+    CHECK( value( host, "turns" ) == host_turns );
+    CHECK( value( host, "finished" ) == 1 );
+    host.assign_activity( view );
+    host.cancel_activity();
+    CHECK( g->multiplayer_session().client_inventory_activity.cancel_requested );
+    CHECK( value( host, "starts" ) == host_starts );
+
+    // Native state wins over stale sidecar values, including deliberate deletion.
+    host.lua_character_state.for_mod( mod ).clear();
+    host.lua_character_state.migrate_legacy( mod, { { "uses", int64_t( 99 ) } } );
+    CHECK( value( host, "uses" ) == 0 );
+    CHECK( value( remote, "uses" ) == 1 );
+    sol::table ccb = ( *runtime->lua )["package"]["loaded"]["ccb"];
+    const sol::protected_function get_state = ccb["state"]["character"]["get"];
+    {
+        platform::detail::callback_scope actor_scope( *runtime, &remote );
+        platform::detail::callback_scope nested_actorless( *runtime, nullptr );
+        const auto inherited = get_state( "uses", 0 );
+        REQUIRE( inherited.valid() );
+        CHECK( inherited.get<int>() == 1 );
+        g->remove_npc( remote.getID() );
+        // A stale explicit actor must never fall back to the host's state.
+        const auto expired = get_state( "uses", 0 );
+        CHECK_FALSE( expired.valid() );
+    }
+    CHECK( value( host, "uses" ) == 0 );
+}
+#endif
+
+TEST_CASE( "mp_native_item_activation_transforms_once", "[mp_inventory_activity][mp_item_activation]" )
+{
+    reload_fixture fixture;
+    npc &remote = fixture.remote();
+    remote.set_wielded_item( item( itype_id( "grenade" ) ) );
+    remote.set_moves( 1000 );
+    const auto source = capture_item_source( remote, remote.get_wielded_item() );
+    const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", source );
+        out.member( "item_type", "grenade" );
+        out.member( "method", "transform" );
+        out.member( "target", remote.pos_abs() );
+    } );
+    fixture.run( remote, request );
+    REQUIRE( remote.get_wielded_item() );
+    CHECK( remote.get_wielded_item()->typeId() == itype_id( "grenade_act" ) );
+    const int moves = remote.get_moves();
+    const auto countdown = remote.get_wielded_item()->countdown_point;
+    fixture.run( remote, request );
+    CHECK( remote.get_moves() == moves );
+    CHECK( remote.get_wielded_item()->countdown_point == countdown );
+    CHECK_FALSE( remote.activity );
+}
