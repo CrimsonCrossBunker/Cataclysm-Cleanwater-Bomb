@@ -32,6 +32,8 @@
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "game.h"
+#include "game_constants.h"
+#include "clzones.h"
 #include "handle_liquid.h"
 #include "item.h"
 #include "iexamine.h"
@@ -4996,14 +4998,18 @@ TEST_CASE( "vehicle_start_client_view_never_executes_native_start",
     who.set_moves( 100 );
     cata_mp::set_client_mode( true );
     const auto before = rng_get_engine();
-    const bool hotwire = GENERATE( false, true );
+    const std::string action = GENERATE( "take", "hotwire", "autopilot_follow", "autopilot_patrol",
+                                        "precollision_off" );
+    const bool hotwire = action == "hotwire";
     target.is_locked = hotwire;
-    CHECK( cata_mp::client_vehicle_control( control_choice( who, target,
-                                           hotwire ? "hotwire" : "take" ) ) );
+    CHECK( cata_mp::client_vehicle_control( control_choice( who, target, action ) ) );
     REQUIRE( cata_mp::inventory_activity_view( who.activity ) );
     who.activity.do_turn( who );
     CHECK( target.is_locked == hotwire );
     CHECK_FALSE( target.engine_on );
+    CHECK_FALSE( target.is_following );
+    CHECK_FALSE( target.is_patrolling );
+    CHECK( target.precollision_on );
     CHECK_FALSE( who.controlling_vehicle );
     CHECK( rng_get_engine() == before );
 }
@@ -5596,4 +5602,254 @@ TEST_CASE( "legacy_hotwire_save_binds_nearby_controls_to_vehicle_identity",
     CHECK( activity.moves_left == 100 );
     actor->finish( activity, who );
     CHECK_FALSE( target.is_locked );
+}
+
+namespace
+{
+vehicle &owned_autopilot_vehicle( Character &who )
+{
+    map &here = get_map();
+    vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
+    const auto at = here.veh_at( who.pos_bub() );
+    REQUIRE( at );
+    if( target.avail_part_with_feature( at->mount_pos(), "CTRL_ELECTRONIC" ) < 0 ) {
+        REQUIRE( target.install_part( here, at->mount_pos(), vpart_id( "controls_electronic" ) ) >= 0 );
+    }
+    REQUIRE( target.install_part( here, at->mount_pos(), vpart_id( "programmable_autopilot" ) ) >= 0 );
+    return target;
+}
+} // namespace
+
+TEST_CASE( "owned_autopilot_follow_uses_operator_startup_and_persists_target",
+           "[multiplayer][vehicle_autopilot_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_autopilot_vehicle( who );
+    avatar &host = get_avatar();
+    host.setpos( get_map(), tripoint_bub_ms( 40, 40, 0 ) );
+    const int host_moves = host.get_moves();
+    const auto request = control_request( fixture, who, control_choice( who, target, "autopilot_follow" ) );
+    fixture.run( who, request );
+    REQUIRE( target.is_following );
+    CHECK( target.get_follow_target() == &who );
+    CHECK( target.following_character == who.getID() );
+    REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    CHECK( cata_mp::owns_inventory_activity( who ) );
+    CHECK_FALSE( host.activity );
+    CHECK( host.get_moves() == host_moves );
+    const int startup = who.activity.moves_left;
+    const auto rng = rng_get_engine();
+    fixture.run( who, request );
+    CHECK( who.activity.moves_left == startup );
+    CHECK( rng_get_engine() == rng );
+
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    target.serialize( out );
+    vehicle restored( vproto_id( "" ) );
+    restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
+    CHECK( restored.following_character == who.getID() );
+    CHECK( restored.get_follow_target() == &who );
+    save_reload_activity( who );
+    who.set_moves( startup );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( target.engine_on );
+    CHECK( target.get_follow_target() == &who );
+}
+
+TEST_CASE( "autopilot_tracks_remote_player_and_suspends_for_their_boarding",
+           "[multiplayer][vehicle_autopilot_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_autopilot_vehicle( who );
+    target.engine_on = true;
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "autopilot_follow" ) ) );
+    REQUIRE( target.get_follow_target() == &who );
+    avatar &host = get_avatar();
+    owned_test_vehicle( host, tripoint_bub_ms( 30, 30, 0 ) );
+    here.board_vehicle( host.pos_bub(), &host );
+    REQUIRE( host.in_vehicle );
+    who.setpos( here, tripoint_bub_ms( 100, 60, 0 ) );
+    // Actual movement dispatch must ignore the host's boarded state and target.
+    here.vehmove();
+    CHECK( target.is_following );
+    CHECK( target.cruise_velocity > 0 );
+    CHECK( target.get_follow_target() == &who );
+
+    const auto seats = target.get_avail_parts( "BOARDABLE" );
+    REQUIRE_FALSE( empty( seats ) );
+    who.setpos( here, seats.begin()->pos_bub( here ) );
+    here.board_vehicle( who.pos_bub(), &who );
+    REQUIRE( who.in_vehicle );
+    target.autopilot_follow( here );
+    CHECK_FALSE( target.is_following );
+    CHECK_FALSE( target.autopilot_on );
+    CHECK( target.cruise_velocity == 0 );
+}
+
+TEST_CASE( "autopilot_missing_target_never_falls_back_to_host_and_legacy_binds_once",
+           "[multiplayer][vehicle_autopilot_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    vehicle &target = owned_autopilot_vehicle( who );
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    who.setpos( here, tripoint_bub_ms( 100, 60, 0 ) );
+    target.engine_on = target.autopilot_on = target.is_following = true;
+    SECTION( "missing assigned player" ) {
+        target.following_character = character_id( 2000000000 );
+        CHECK( target.get_follow_target() == nullptr );
+        target.autopilot_follow( here );
+        CHECK_FALSE( target.is_following );
+        CHECK( target.cruise_velocity == 0 );
+    }
+    SECTION( "assigned player outside loaded map" ) {
+        target.following_character = who.getID();
+        who.setpos( tripoint_abs_ms( 100000, 100000, 0 ) );
+        target.autopilot_follow( here );
+        CHECK_FALSE( target.is_following );
+    }
+    SECTION( "legacy save without an assigned player" ) {
+        target.following_character.reset();
+        CHECK( target.get_follow_target() == &get_avatar() );
+        target.autopilot_follow( here );
+        CHECK( target.following_character == get_avatar().getID() );
+    }
+}
+
+TEST_CASE( "autopilot_collision_checks_followed_player_and_other_bodies_separately",
+           "[multiplayer][vehicle_autopilot_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    vehicle &target = owned_autopilot_vehicle( who );
+    target.is_following = target.autopilot_on = target.engine_on = true;
+    target.following_character = who.getID();
+    avatar &host = get_avatar();
+    host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    std::optional<tripoint_bub_ms> ahead;
+    for( const point_abs_ms &point : target.immediate_path( &here ) ) {
+        const tripoint_bub_ms p = here.get_bub( tripoint_abs_ms( point, 0 ) );
+        if( !here.veh_at( p ) && here.passable( p ) ) {
+            ahead = p;
+            break;
+        }
+    }
+    REQUIRE( ahead );
+    who.setpos( here, *ahead );
+    units::angle angle = 0_degrees;
+    CHECK_FALSE( target.precollision_check( angle, here, true ) );
+    who.setpos( here, tripoint_bub_ms( 100, 100, 0 ) );
+    host.setpos( here, *ahead );
+    CHECK( target.precollision_check( angle, here, true ) );
+    host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    npc &other = spawn_npc( { ahead->x(), ahead->y() }, "test_talker" );
+    CHECK( target.precollision_check( angle, here, true ) );
+    CHECK( other.pos_bub() == *ahead );
+}
+
+TEST_CASE( "owned_autopilot_settings_validate_parts_access_and_replay",
+           "[multiplayer][vehicle_autopilot_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    npc &who = fixture.remote();
+    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    vehicle &target = owned_autopilot_vehicle( who );
+    target.engine_on = target.autopilot_on = target.is_following = true;
+    target.following_character = who.getID();
+    const auto disable = control_request( fixture, who, control_choice( who, target, "precollision_off" ) );
+    fixture.run( who, disable );
+    REQUIRE_FALSE( target.precollision_on );
+    const auto rng = rng_get_engine();
+    fixture.run( who, disable );
+    CHECK_FALSE( target.precollision_on );
+    CHECK( rng_get_engine() == rng );
+    REQUIRE_FALSE( recipient.feedback.pending.empty() );
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "precollision_on" ) ) );
+    REQUIRE( target.precollision_on );
+    const auto stop = control_choice( who, target, "autopilot_stop" );
+    SECTION( "stopping uses native state and engine shutdown" ) {
+        fixture.run( who, control_request( fixture, who, stop ) );
+        CHECK_FALSE( target.engine_on );
+        CHECK_FALSE( target.is_following );
+        CHECK_FALSE( target.is_patrolling );
+        CHECK_FALSE( target.following_character );
+    }
+    SECTION( "lost access" ) {
+        who.setpos( here, tripoint_bub_ms( 90, 90, 0 ) );
+        fixture.run( who, control_request( fixture, who, stop ) );
+        CHECK( target.engine_on );
+        CHECK( target.is_following );
+    }
+    SECTION( "broken autopilot" ) {
+        const auto parts = target.get_avail_parts( "AUTOPILOT" );
+        REQUIRE_FALSE( empty( parts ) );
+        target.set_hp( parts.begin()->part(), 0, false );
+        CHECK_FALSE( vehicle_control_accessible( who, here, target, who.pos_abs(), "autopilot_follow" ) );
+        fixture.run( who, control_request( fixture, who, stop ) );
+        CHECK_FALSE( target.engine_on );
+        CHECK_FALSE( target.is_following );
+    }
+}
+
+TEST_CASE( "owned_autopilot_patrol_uses_initiating_faction_zones_and_survives_save",
+           "[multiplayer][vehicle_autopilot_owned]" )
+{
+    vehicle_control_fixture fixture;
+    map &here = get_map();
+    zone_manager &zones = zone_manager::get_manager();
+    zones.clear();
+    const on_out_of_scope clear_zones( [&]() { zones.clear(); } );
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    who.set_fac( faction_id( "free_merchants" ) );
+    vehicle &target = owned_autopilot_vehicle( who );
+    target.engine_on = true;
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    const auto start = here.get_abs( tripoint_bub_ms( 80, 70, 0 ) );
+    const auto end = here.get_abs( tripoint_bub_ms( 85, 75, 0 ) );
+    zones.add( "Host patrol", zone_type_id( "VEHICLE_PATROL" ), your_fac, false, true, start, end );
+    zones.cache_data();
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "autopilot_patrol" ) ) );
+    CHECK_FALSE( target.is_patrolling );
+    zones.add( "Operator patrol", zone_type_id( "VEHICLE_PATROL" ), who.get_faction()->id,
+               false, true, start, end );
+    zones.cache_data();
+    fixture.run( who, control_request( fixture, who, control_choice( who, target, "autopilot_patrol" ) ) );
+    REQUIRE( target.is_patrolling );
+    CHECK_FALSE( target.is_following );
+    CHECK( target.patrol_faction == who.get_faction()->id );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    target.serialize( out );
+    vehicle restored( vproto_id( "" ) );
+    restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
+    CHECK( restored.patrol_faction == who.get_faction()->id );
+    target.autopilot_patrol( &here );
+    const auto points = zones.get_near( zone_type_id( "VEHICLE_PATROL" ), target.pos_abs(),
+                                      MAX_VIEW_DISTANCE, nullptr, who.get_faction()->id );
+    std::ostringstream updated;
+    JsonOut waypoint_out( updated );
+    target.serialize( waypoint_out );
+    JsonObject snapshot = json_loader::from_string( updated.str() ).get_object();
+    snapshot.allow_omitted_members();
+    tripoint_abs_ms waypoint;
+    snapshot.read( "autodrive_local_target", waypoint, true );
+    CHECK( points.count( waypoint ) == 1 );
+    target.enable_patrol( here, who );
+    zones.clear();
+    target.cruise_velocity = 400;
+    target.autopilot_patrol( &here );
+    CHECK_FALSE( target.is_patrolling );
+    CHECK_FALSE( target.autopilot_on );
+    CHECK( target.cruise_velocity == 0 );
 }

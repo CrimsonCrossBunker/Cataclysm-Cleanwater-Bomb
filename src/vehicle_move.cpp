@@ -1544,8 +1544,9 @@ monster *vehicle::get_harnessed_animal( const map &here ) const
 
 void vehicle::selfdrive( map &here, const int trn, const int acceleration )
 {
-    if( !is_towed() && !magic && !get_harnessed_animal( here ) && !has_part( "AUTOPILOT" ) ) {
-        is_following = false;
+    if( !is_towed() && !magic && !get_harnessed_animal( here ) &&
+        empty( get_avail_parts( "AUTOPILOT" ) ) ) {
+        stop_autodriving();
         return;
     }
     if( trn != 0 ) {

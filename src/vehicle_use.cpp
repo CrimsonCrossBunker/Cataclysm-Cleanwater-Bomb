@@ -26,6 +26,7 @@
 #include "avatar.h"
 #include "character.h"
 #include "clzones.h"
+#include "faction.h"
 #include "color.h"
 #include "craft_reservation.h"
 #include "creature.h"
@@ -434,62 +435,13 @@ void vehicle::smash_security_system( map &here )
     }
 }
 
-void vehicle::autopilot_patrol_check( map &here )
-{
-    zone_manager &mgr = zone_manager::get_manager();
-    if( mgr.has_near( zone_type_VEHICLE_PATROL, pos_abs(), MAX_VIEW_DISTANCE ) ) {
-        enable_patrol( here );
-    } else {
-        zone_manager_ui::display_zone_manager();
-    }
-}
-
 void vehicle::toggle_autopilot( map &here )
 {
-    veh_menu menu( this, _( "Choose action for the autopilot" ) );
-
-    menu.add( _( "Patrol…" ) )
-        .hotkey( "CONTROL_AUTOPILOT_PATROL" )
-        .desc( _( "Program the autopilot to patrol a nearby vehicle patrol zone.  If no zones are nearby, you will be prompted to create one." ) )
-    .on_submit( [this, &here] {
-        autopilot_patrol_check( here );
-    } );
-
-    menu.add( _( "Follow…" ) )
-        .hotkey( "CONTROL_AUTOPILOT_FOLLOW" )
-        .desc( _( "Program the autopilot to follow you.  It might be a good idea to have a remote control available to tell it to stop, too." ) )
-    .on_submit( [this, &here] {
-        autopilot_on = true;
-        is_following = true;
-        is_patrolling = false;
-        if( !engine_on )
-        {
-            start_engines( here );
-        }
-    } );
-
-    menu.add( _( "Stop…" ) )
-        .hotkey( "CONTROL_AUTOPILOT_STOP" )
-        .desc( _( "Stop all autopilot related activities." ) )
-    .on_submit( [this, &here] {
-        autopilot_on = false;
-        is_patrolling = false;
-        is_following = false;
-        autodrive_local_target = tripoint_abs_ms::zero;
-        add_msg( _( "You turn the engine off." ) );
-        stop_engines( here );
-    } );
-
-    menu.add( precollision_on ? _( "Disable pre-collision system" ) :
-              _( "Enable pre-collision system" ) )
-        .hotkey( "CONTROL_AUTOPILOT_CAS" )
-        .desc( _( "Toggle pre-collision system" ) )
-    .on_submit( [this] {
-        precollision_on = !precollision_on;
-        add_msg( precollision_on ? _( "You turn on pre-collision system." ) : _( "You turn off pre-collision system." ) );
-    } );
-
-    menu.query();
+    Character &who = get_player_character();
+    const auto selection = query_vehicle_autopilot( who, here, *this, who.pos_abs() );
+    if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
+        execute_vehicle_control( who, here, *selection );
+    }
 }
 
 void vehicle::toggle_tracking()
@@ -804,13 +756,16 @@ void vehicle::start_engines( map &here, Character *driver, const bool take_contr
     }
 }
 
-void vehicle::enable_patrol( map &here )
+void vehicle::enable_patrol( map &here, Character &who )
 {
+    is_following = false;
+    following_character.reset();
+    patrol_faction = who.get_faction()->id;
     is_patrolling = true;
     autopilot_on = true;
     autodrive_local_target = tripoint_abs_ms::zero;
     if( !engine_on ) {
-        start_engines( here );
+        start_engines( here, &who );
     }
 }
 
@@ -2391,8 +2346,9 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
                                false;
     const auto control_action = [this, here, vppos]( const std::string & action ) {
         Character &who = get_player_character();
-        const auto selection = action == "engines" ?
-                               query_vehicle_engines( who, *here, *this, here->get_abs( vppos ) ) :
+        const auto selection = action == "autopilot" ?
+                               query_vehicle_autopilot( who, *here, *this, here->get_abs( vppos ) ) :
+                               action == "engines" ? query_vehicle_engines( who, *here, *this, here->get_abs( vppos ) ) :
                                query_vehicle_control( who, *here, *this, here->get_abs( vppos ), action );
         if( selection && !cata_mp::client_vehicle_control( *selection ) ) {
             execute_vehicle_control( who, *here, *selection );
@@ -2547,8 +2503,9 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
 
     if( controls_here && has_part( "AUTOPILOT" ) && has_electronic_controls ) {
         menu.add( _( "Control autopilot" ) )
+        .skip_theft_check()
         .hotkey( "CONTROL_AUTOPILOT" )
-        .on_submit( [this, here] { toggle_autopilot( *here ); } );
+        .on_submit( [control_action] { control_action( "autopilot" ); } );
     }
 
     if( is_appliance() || vp.avail_part_with_feature( "CTRL_ELECTRONIC" ) ) {
