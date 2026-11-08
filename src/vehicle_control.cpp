@@ -312,6 +312,9 @@ void vehicle_control_selection::serialize( JsonOut &out ) const
     out.member( "allow_theft", allow_theft );
     out.member( "weapon", weapon_id );
     out.member( "engines", engines );
+    if( electronics ) {
+        out.member( "electronics", *electronics );
+    }
     if( unwield ) {
         out.member( "unwield" );
         out.start_object();
@@ -331,6 +334,8 @@ void vehicle_control_selection::deserialize( const JsonObject &data )
     data.read( "allow_theft", allow_theft );
     data.read( "weapon", weapon_id );
     data.read( "engines", engines );
+    electronics.reset();
+    data.read( "electronics", electronics );
     unwield.reset();
     if( data.has_object( "unwield" ) ) {
         const JsonObject choice = data.get_object( "unwield" );
@@ -374,13 +379,14 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const bool alarm = action == "alarm";
     const bool smash_alarm = action == "smash_alarm";
     const bool security = hotwire || alarm || smash_alarm;
+    const bool electronics = action == "electronics";
     if( remote_source &&
         ( !remote_vehicle_accessible( who, here, target, *remote_source ) || security ||
           taking || releasing || action == "stop_driving" ) ) {
         return false;
     }
     if( !releasing && !stopping && !taking && action != "start" &&
-        action != "engines" && !security && !autopilot_action( action ) ) {
+        action != "engines" && !security && !electronics && !autopilot_action( action ) ) {
         return false;
     }
     if( releasing ) {
@@ -403,7 +409,10 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
         const bool controls = target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0;
         const bool reins = target.avail_part_with_feature( at->mount_pos(), "CONTROL_ANIMAL" ) >= 0 &&
                            target.has_engine_type( itype_id( "animal" ), false ) && target.get_harnessed_animal( here );
-        if( !controls && ( security || !reins ) ) {
+        if( electronics ? ( !target.is_appliance() &&
+                            target.avail_part_with_feature( at->mount_pos(), "CTRL_ELECTRONIC" ) < 0 &&
+                            target.avail_part_with_feature( at->mount_pos(), "REMOTE_CONTROLS" ) < 0 ) :
+            ( !controls && ( security || !reins ) ) ) {
             return false;
         }
         if( autopilot_action( action ) && action != "autopilot_stop" &&
@@ -456,7 +465,8 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     selection.position = position;
     selection.action = action;
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
-                             action == "alarm" || action == "smash_alarm" || autopilot_action( action );
+                             action == "alarm" || action == "smash_alarm" || action == "electronics" ||
+                             autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
         selection.allow_theft = who.query_yn(
                                     _( "This vehicle belongs to: %s, there may be consequences if you are observed interacting with it, continue?" ),
@@ -555,7 +565,8 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
         { "hotwire", _( "Hotwire" ) },
         { "alarm", _( "Trigger the alarm" ) },
         { "smash_alarm", _( "Try to smash alarm" ) },
-        { "autopilot", _( "Control autopilot" ) }
+        { "autopilot", _( "Control autopilot" ) },
+        { "electronics", _( "Vehicle electronics" ) }
     };
     for( size_t i = 0; i < options.size(); ++i ) {
         const auto &action = options[i].first;
@@ -573,6 +584,7 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
     return action == "autopilot" ? query_vehicle_autopilot( who, here, target,
             position, remote_source ) :
            action == "engines" ? query_vehicle_engines( who, here, target, position, remote_source ) :
+           action == "electronics" ? query_vehicle_electronics( who, here, target, position, remote_source ) :
            query_vehicle_control( who, here, target, position, action, remote_source );
 }
 
@@ -680,9 +692,15 @@ bool execute_vehicle_control( Character &who, map &here,
                                      remote_source ) ) {
         return false;
     }
+    if( ( selection.action == "electronics" ) != selection.electronics.has_value() ||
+        ( selection.electronics &&
+          !valid_vehicle_electronics_selection( who, here, *target, *selection.electronics ) ) ) {
+        return false;
+    }
     const bool taking = selection.action == "take";
     const bool theft_check = taking || selection.action == "engines" || selection.action == "hotwire" ||
                              selection.action == "alarm" || selection.action == "smash_alarm" ||
+                             selection.action == "electronics" ||
                              autopilot_action( selection.action );
     if( theft_check && target->has_owner() && !target->is_owned_by( who ) && !selection.allow_theft ) {
         return false;
@@ -728,6 +746,9 @@ bool execute_vehicle_control( Character &who, map &here,
                                          remote_source ) ) {
             return false;
         }
+    }
+    if( selection.electronics ) {
+        return execute_vehicle_electronics( who, here, *target, *selection.electronics );
     }
     if( selection.action == "autopilot_patrol" ) {
         if( !zone_manager::get_manager().has_near( zone_type_id( "VEHICLE_PATROL" ), target->pos_abs(),

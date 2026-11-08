@@ -9,6 +9,7 @@
 
 #include "coordinates.h"
 #include "item_disposition.h"
+#include "vehicle_electronics.h"
 
 class JsonObject;
 class JsonOut;
@@ -54,6 +55,7 @@ struct vehicle_control_selection {
     int64_t weapon_id = 0;
     std::optional<item_disposition> unwield;
     std::vector<vehicle_engine_selection> engines;
+    std::optional<vehicle_electronics_selection> electronics;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
@@ -69,6 +71,9 @@ std::optional<vehicle_control_selection> query_vehicle_engines( Character &who, 
         vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source = nullptr );
 std::optional<vehicle_control_selection> query_vehicle_autopilot( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source = nullptr );
+std::optional<vehicle_control_selection> query_vehicle_electronics( Character &who, map &here,
+        vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source = nullptr,
+        const std::string &submenu = {} );
 std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position, const item_location *remote_source = nullptr );
 // remote_source is supplied only by a completed native security scan; it is

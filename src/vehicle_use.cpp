@@ -1,5 +1,7 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_electronics.h"
+#include "character_action_guard.h"
 #include "mp_inventory_activity.h"
 
 #include <calendar.h>
@@ -143,248 +145,86 @@ void handbrake( map &here )
     brake_vehicle( get_player_character(), here );
 }
 
-void vehicle::control_doors( map &here )
+namespace
 {
-    const auto open_or_close_all = [this, &here]( bool new_open, const std::string & require_flag ) {
-        for( const vpart_reference &vpr_motor : get_avail_parts( "DOOR_MOTOR" ) ) {
-            const int motorized_idx = new_open
-                                      ? next_part_to_open( vpr_motor.part_index() )
-                                      : next_part_to_close( vpr_motor.part_index() );
-            if( motorized_idx == -1 ) {
-                continue;
-            }
-            vehicle_part &vp = part( motorized_idx );
-            if( !require_flag.empty() && !vp.info().has_flag( require_flag ) ) {
-                continue;
-            }
-            if( new_open || can_close( motorized_idx, get_player_character() ) ) {
-                open_or_close( here, motorized_idx, new_open );
-            }
-        }
-    };
-    const auto lock_or_unlock_all = [this]( bool new_lock, const std::string & require_flag ) {
-        for( const vpart_reference &vpr_motor : get_avail_parts( "DOOR_MOTOR" ) ) {
-            const int motorized_idx = new_lock
-                                      ? next_part_to_lock( vpr_motor.part_index() )
-                                      : next_part_to_unlock( vpr_motor.part_index() );
-            if( motorized_idx == -1 ) {
-                continue;
-            }
-            vehicle_part &vp = part( motorized_idx );
-            if( !require_flag.empty() && !vp.info().has_flag( require_flag ) ) {
-                continue;
-            }
-            lock_or_unlock( motorized_idx, new_lock );
-        }
-    };
-
-    const auto add_openable = [this, &here]( veh_menu & menu, int vp_idx ) {
-        if( vp_idx == -1 ) {
+void run_electronics_menu( map &here, vehicle &target, const std::string &submenu,
+                           const item_location *remote_source = nullptr )
+{
+    Character &who = get_player_character();
+    const character_action_guard lifetime( who );
+    const int64_t id = target.uid().get_value();
+    while( lifetime ) {
+        vehicle *current = vehicle::find_vehicle_by_uid( here, id );
+        if( !current ) {
             return;
         }
-        const vehicle_part &vp = part( vp_idx );
-        const std::string actname = vp.open ? _( "Close" ) : _( "Open" );
-        const bool open = !vp.open;
-        menu.add( string_format( "%s %s", actname, vp.name() ) )
-            .hotkey_auto()
-            .location( bub_part_pos( here, vp ).raw() )
-            .keep_menu_open()
-        .on_submit( [this, vp_idx, open, &here] {
-            if( can_close( vp_idx, get_player_character() ) )
-        {
-            open_or_close( here, vp_idx, open );
-            }
-        } );
-    };
-
-    const auto add_lockable = [this, &here]( veh_menu & menu, int vp_idx ) {
-        if( vp_idx == -1 ) {
+        const auto position = vehicle_electronics_position( who, here, *current, remote_source );
+        if( !position ) {
             return;
         }
-        const vehicle_part &vp = part( vp_idx );
-        const std::string actname = vp.locked ? _( "Unlock" ) : _( "Lock" );
-        const bool lock = !vp.locked;
-        menu.add( string_format( "%s %s", actname, vp.name() ) )
-            .hotkey_auto()
-            .location( bub_part_pos( here, vp ).raw() )
-            .keep_menu_open()
-        .on_submit( [this, vp_idx, lock] {
-            lock_or_unlock( vp_idx, lock );
-        } );
-    };
-
-    veh_menu menu( this, _( "Select door to toggle" ) );
-
-    do {
-        menu.reset( /* keep_last_selected = */ true );
-
-        menu.add( _( "Open all curtains" ) )
-            .hotkey_auto()
-            .location( get_player_character().pos_bub().raw() )
-            .on_submit( [&open_or_close_all] { open_or_close_all( true, "CURTAIN" ); } );
-
-        menu.add( _( "Open all curtains and doors" ) )
-            .hotkey_auto()
-            .location( get_player_character().pos_bub().raw() )
-        .on_submit( [&open_or_close_all, &lock_or_unlock_all] {
-            lock_or_unlock_all( false, "LOCKABLE_DOOR" );
-            open_or_close_all( true, "" );
-        } );
-        menu.add( _( "Close all doors" ) )
-            .hotkey_auto()
-            .location( get_player_character().pos_bub().raw() )
-            .on_submit( [&open_or_close_all] { open_or_close_all( false, "DOOR" ); } );
-
-        menu.add( _( "Close all curtains and doors" ) )
-            .hotkey_auto()
-            .location( get_player_character().pos_bub().raw() )
-            .on_submit( [&open_or_close_all] { open_or_close_all( false, "" ); } );
-
-        for( const vpart_reference &vp_motor : get_avail_parts( "DOOR_MOTOR" ) ) {
-            add_openable( menu, next_part_to_open( vp_motor.part_index() ) );
-            add_openable( menu, next_part_to_close( vp_motor.part_index() ) );
-            add_lockable( menu, next_part_to_unlock( vp_motor.part_index() ) );
-            add_lockable( menu, next_part_to_lock( vp_motor.part_index() ) );
-        }
-
-        if( menu.get_items_size() == 4 ) {
-            debugmsg( "vehicle::control_doors called but no door motors found" );
+        const auto selection = query_vehicle_electronics( who, here, *current, *position,
+                               remote_source, submenu );
+        if( !selection || cata_mp::client_vehicle_control( *selection ) ||
+            !execute_vehicle_control( who, here, *selection, remote_source ) ) {
             return;
         }
-    } while( menu.query() );
+        // Native bulk door actions close their submenu; individual switches stay open.
+        if( submenu == "doors" && selection->electronics->part_id == 0 ) {
+            return;
+        }
+    }
 }
 
-static void add_electronic_toggle( map &here, vehicle &veh, veh_menu &menu, const std::string &name,
-                                   const std::string &action, const std::string &flag )
+void submit_electronic_switch( map &here, int64_t vehicle_id,
+                               const vehicle_electronics_selection &choice,
+                               const item_location *remote_source )
 {
-    // fetch matching parts and abort early if none found
-    const auto found = veh.get_avail_parts( flag );
-    if( empty( found ) ) {
+    Character &who = get_player_character();
+    vehicle *target = vehicle::find_vehicle_by_uid( here, vehicle_id );
+    if( !target ) {
         return;
     }
-
-    // determine target state - currently parts of similar type are all switched concurrently
-    bool state = std::none_of( found.begin(), found.end(), []( const vpart_reference & vp ) {
-        return vp.part().enabled;
-    } );
-
-    // can this menu option be selected by the user?
-    // if toggled part potentially usable check if could be enabled now (sufficient fuel etc.)
-    bool allow = !state ||
-    std::any_of( found.begin(), found.end(), [&here]( const vpart_reference & vp ) {
-        return vp.vehicle().can_enable( here, vp.part() );
-    } );
-
-    const std::string msg = state ? _( "Turn on %s" ) : colorize( _( "Turn off %s" ), c_pink );
-
-    menu.add( string_format( msg, name ) )
-        .enable( allow )
-        .hotkey( action )
-        .keep_menu_open()
-    .on_submit( [found, state] {
-for( const vpart_reference &vp : found )
-    {
-        vehicle_part &e = vp.part();
-            if( e.enabled != state ) {
-                add_msg( state ? _( "Turned on %s." ) : _( "Turned off %s." ), e.name() );
-                e.enabled = state;
-            }
+    const auto position = vehicle_electronics_position( who, here, *target, remote_source );
+    if( !position ) {
+        return;
+    }
+    auto selection = query_vehicle_control( who, here, *target, *position, "electronics",
+                                            remote_source );
+    if( selection ) {
+        selection->electronics = choice;
+        if( !cata_mp::client_vehicle_control( *selection ) ) {
+            execute_vehicle_control( who, here, *selection, remote_source );
         }
-        map &here = get_map();
-for( const vpart_reference &vp : found )
-    {
-        here.set_lightmap_cache_dirty( vp.pos_bub( here ).z() );
-            break;
-        }
-    } );
+    }
+}
+} // namespace
+
+void vehicle::control_doors( map &here )
+{
+    run_electronics_menu( here, *this, "doors" );
 }
 
 void vehicle::build_electronics_menu( map &here, veh_menu &menu )
 {
-    if( has_part( "DOOR_MOTOR" ) ) {
-        menu.add( _( "Control doors and curtains" ) )
-            .hotkey( "TOGGLE_DOORS" )
-            .on_submit( [this, &here] { control_doors( here ); } );
-    }
-
-    if( camera_on || has_parts( {"CAMERA", "CAMERA_CONTROL"} ).all() ) {
-        menu.add( camera_on
-                  ? colorize( _( "Turn off camera system" ), c_pink )
-                  : _( "Turn on camera system" ) )
-        .enable( fuel_left( here, fuel_type_battery ) )
-        .hotkey( "TOGGLE_CAMERA" )
-        .keep_menu_open()
-        .on_submit( [&] {
-            if( camera_on )
-        {
-            add_msg( _( "Camera system disabled" ) );
-            } else
+    const int64_t id = uid().get_value();
+    for( const vehicle_electronics_option &option :
+         vehicle_electronics_options( get_player_character(), here, *this ) ) {
+        menu.add( option.label )
+        .enable( option.enabled )
+        .hotkey( option.hotkey )
+        .skip_theft_check()
+        .skip_locked_check()
+        .keep_menu_open( option.submenu.empty() )
+        .on_submit( [&here, id, option, remote_source = menu.remote_controller] {
+            if( option.submenu.empty() )
             {
-                add_msg( _( "Camera system enabled" ) );
+                submit_electronic_switch( here, id, option.choice, remote_source );
+            } else if( vehicle *current = vehicle::find_vehicle_by_uid( here, id ) )
+            {
+                run_electronics_menu( here, *current, option.submenu, remote_source );
             }
-            camera_on = !camera_on;
         } );
     }
-
-    auto add_toggle = [&here, this, &menu]( const std::string & name, const std::string & action,
-    const std::string & flag ) {
-        add_electronic_toggle( here, *this, menu, name, action, flag );
-    };
-    if( !reactors.empty() ) {
-        menu.add( _( "Control reactors" ) )
-            .hotkey( "TOGGLE_REACTOR" )
-        .on_submit( [this, &here] {
-            control_reactors( here );
-        } );
-    }
-    add_toggle( pgettext( "electronics menu option", "headlights" ),
-                "TOGGLE_HEADLIGHT", "CONE_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "wide angle headlights" ),
-                "TOGGLE_WIDE_HEADLIGHT", "WIDE_CONE_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "directed overhead lights" ),
-                "TOGGLE_HALF_OVERHEAD_LIGHT", "HALF_CIRCLE_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "overhead lights" ),
-                "TOGGLE_OVERHEAD_LIGHT", "CIRCLE_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "aisle lights" ),
-                "TOGGLE_AISLE_LIGHT", "AISLE_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "dome lights" ),
-                "TOGGLE_DOME_LIGHT", "DOME_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "atomic lights" ),
-                "TOGGLE_ATOMIC_LIGHT", "ATOMIC_LIGHT" );
-    add_toggle( pgettext( "electronics menu option", "stereo" ),
-                "TOGGLE_STEREO", "STEREO" );
-    add_toggle( pgettext( "electronics menu option", "chimes" ),
-                "TOGGLE_CHIMES", "CHIMES" );
-    add_toggle( pgettext( "electronics menu option", "fridge" ),
-                "TOGGLE_FRIDGE", "FRIDGE" );
-    add_toggle( pgettext( "electronics menu option", "freezer" ),
-                "TOGGLE_FREEZER", "FREEZER" );
-    add_toggle( pgettext( "electronics menu option", "arcade" ),
-                "TOGGLE_ARCADE", "ARCADE" );
-    add_toggle( pgettext( "electronics menu option", "space heater" ),
-                "TOGGLE_SPACE_HEATER", "SPACE_HEATER" );
-    add_toggle( pgettext( "electronics menu option", "heated tank" ),
-                "TOGGLE_HEATED_TANK", "HEATED_TANK" );
-    add_toggle( pgettext( "electronics menu option", "cooler" ),
-                "TOGGLE_COOLER", "COOLER" );
-    add_toggle( pgettext( "electronics menu option", "recharger" ),
-                "TOGGLE_RECHARGER", "RECHARGE" );
-    add_toggle( pgettext( "electronics menu option", "plow" ),
-                "TOGGLE_PLOW", "PLOW" );
-    add_toggle( pgettext( "electronics menu option", "reaper" ),
-                "TOGGLE_REAPER", "REAPER" );
-    add_toggle( pgettext( "electronics menu option", "planter" ),
-                "TOGGLE_PLANTER", "PLANTER" );
-    add_toggle( pgettext( "electronics menu option", "rockwheel" ),
-                "TOGGLE_PLOW", "ROCKWHEEL" );
-    add_toggle( pgettext( "electronics menu option", "roadheader" ),
-                "TOGGLE_PLOW", "ROADHEAD" );
-    add_toggle( pgettext( "electronics menu option", "scoop" ),
-                "TOGGLE_SCOOP", "SCOOP" );
-    add_toggle( pgettext( "electronics menu option", "water purifier" ),
-                "TOGGLE_WATER_PURIFIER", "WATER_PURIFIER" );
-    add_toggle( pgettext( "electronics menu option", "smart controller" ),
-                "TOGGLE_SMART_ENGINE_CONTROLLER", "SMART_ENGINE_CONTROLLER" );
 
     for( const vpart_reference &arc_vp : get_any_parts( "ARCADE" ) ) {
         if( arc_vp.part().enabled ) {
@@ -401,20 +241,7 @@ void vehicle::build_electronics_menu( map &here, veh_menu &menu )
 
 void vehicle::control_reactors( map &here )
 {
-    veh_menu menu( this, _( "Toggle which?" ) );
-    do {
-        menu.reset();
-        for( const int reactor_idx : reactors ) {
-            const vehicle_part &vp = parts[reactor_idx];
-            menu.add( string_format( "[%s] %s", vp.enabled ? "x" : " ", vp.name() ) )
-                .enable( vp.enabled || can_enable( here, vp ) )
-                .keep_menu_open()
-            .on_submit( [this, reactor_idx] {
-                vehicle_part &vp = parts[reactor_idx];
-                vp.enabled = !vp.enabled;
-            } );
-        }
-    } while( menu.query() );
+    run_electronics_menu( here, *this, "reactors" );
 }
 
 void vehicle::control_engines( map &here )
