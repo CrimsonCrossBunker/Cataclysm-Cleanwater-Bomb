@@ -7,6 +7,7 @@
 #include "mp_actor_binding.h"
 #include "mp_apply_watchdog.h"
 #include "mp_client_conn.h"
+#include "mp_pickup.h"
 #include "mp_server.h"
 #include "mp_player_store.h"
 #include "mp_world_state.h"
@@ -31,6 +32,8 @@ struct world_session {
         world_replication_state replication;
         host_turn_state host_turn;
         client_turn_state client_turn;
+        pickup_host_state host_pickup;
+        pickup_client_state client_pickup;
         peer_observation peer;
         client_admission_state admission;
         session_presentation presentation;

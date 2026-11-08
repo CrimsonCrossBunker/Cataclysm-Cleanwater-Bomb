@@ -2927,7 +2927,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            get_map().open_door( player_character, *doorpos, true, false );
+            // Submit the target; only the server mutates the door and charges
+            // the action. Prediction must not duplicate sounds or gameplay RNG.
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"open","x":)" + std::to_string( abs_target.x() ) +
@@ -2942,7 +2943,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            close_tile_activity_actor::close_immediately( player_character, *doorpos );
+            // Closing, like opening, is settled by the server only.
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"close","x":)" + std::to_string( abs_target.x() ) +
@@ -2968,58 +2969,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         }
 
         if( act == ACTION_PICKUP || act == ACTION_PICKUP_ALL ) {
-            map &phere = get_map();
-            const tripoint_bub_ms ppos = player_character.pos_bub();
-            const tripoint_abs_ms abs_pos = phere.get_abs( ppos );
-            std::vector<std::string> before_types;
-            for( const item &it : phere.i_at( ppos ) ) {
-                before_types.push_back( it.typeId().str() );
-            }
-
             if( act == ACTION_PICKUP_ALL ) {
                 pickup_all();
             } else {
                 pickup();
-            }
-
-            {
-                if( player_character.activity.id() == ACT_PICKUP ) {
-                    const int saved_moves = player_character.get_moves();
-                    player_character.set_moves( 100000 );
-                    while( player_character.activity.id() == ACT_PICKUP ) {
-                        player_character.activity.do_turn( player_character );
-                    }
-                    player_character.set_moves( saved_moves );
-                }
-            }
-
-            std::vector<std::string> after_types;
-            for( const item &it : phere.i_at( ppos ) ) {
-                after_types.push_back( it.typeId().str() );
-            }
-            std::multiset<std::string> remaining( after_types.begin(), after_types.end() );
-            std::string items_json;
-            bool first = true;
-            for( const std::string &t : before_types ) {
-                auto rem_it = remaining.find( t );
-                if( rem_it != remaining.end() ) {
-                    remaining.erase( rem_it );
-                } else {
-                    if( !first ) {
-                        items_json += ',';
-                    }
-                    first = false;
-                    items_json += R"({"t":")" + t + "\"}";
-                }
-            }
-
-            if( !items_json.empty() ) {
-                const std::string json =
-                    R"({"type":"action","action":"pickup","x":)" + std::to_string( abs_pos.x() ) +
-                    ",\"y\":" + std::to_string( abs_pos.y() ) +
-                    ",\"z\":" + std::to_string( abs_pos.z() ) +
-                    ",\"items\":[" + items_json + "]}";
-                mp_dispatch( json );
             }
             return true;
         }

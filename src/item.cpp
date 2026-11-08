@@ -3167,6 +3167,11 @@ bool item::conductive() const
 
 void item::select_itype_variant()
 {
+    // Empty/null items are also reconstruction placeholders. An empty choice
+    // must not consume gameplay RNG merely because a replica is deserialized.
+    if( type->variants.empty() ) {
+        return;
+    }
     weighted_int_list<std::string> variants;
     for( const itype_variant_data &iv : type->variants ) {
         variants.add( iv.id, iv.weight );

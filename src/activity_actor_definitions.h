@@ -21,6 +21,7 @@
 #include "clone_ptr.h"
 #include "contents_change_handler.h"
 #include "game.h"
+#include "gates.h"
 #include "handle_liquid.h"
 #include "item.h"
 #include "itype.h"
@@ -63,13 +64,6 @@ struct enum_traits<zone_activity_stage> {
     static constexpr zone_activity_stage last = LAST;
 };
 
-enum class open_tile_result {
-    OPEN_FAIL,
-    OPEN_DOOR,
-    OPEN_VEHICLE_SINGLE,
-    OPEN_VEHICLE_ALL,
-    OPEN_TILE_RESULT_LAST
-};
 enum class close_tile_result {
     CLOSE_FAIL,
     CLOSE_DOOR,

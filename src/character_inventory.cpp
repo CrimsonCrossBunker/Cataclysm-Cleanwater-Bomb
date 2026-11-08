@@ -24,6 +24,7 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "catacharset.h"
 #include "character.h"
 #include "craft_reservation.h"
@@ -49,6 +50,7 @@
 #include "item_pocket.h"
 #include "item_stack.h"
 #include "item_tname.h"
+#include "json.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -69,6 +71,7 @@
 #include "profession.h"
 #include "requirements.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "string_formatter.h"
 #include "subbodypart.h"
 #include "translation.h"
@@ -993,6 +996,49 @@ void Character::set_wielded_item( const item &to_wield )
 {
     weapon = to_wield;
     martial_arts_data->auto_select_style( *this );
+}
+
+void Character::store_carried_items( JsonOut &json ) const
+{
+    json.start_object();
+    json.member( "outfit", worn );
+    json.member( "inventory" );
+    inv->json_save_items( json );
+    json.member( "has_weapon", !weapon.is_null() );
+    if( !weapon.is_null() ) {
+        json.member( "weapon", weapon );
+    }
+    json.end_object();
+}
+
+void Character::load_carried_items( const JsonObject &data )
+{
+    // Default item construction rolls a display seed. Loading a carried snapshot
+    // must not advance gameplay RNG while reconstructing those items.
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    outfit restored_outfit;
+    inventory restored_inventory;
+    item restored_weapon;
+    const JsonObject outfit_data = data.get_object( "outfit" );
+    if( !outfit_data.has_array( "worn" ) ) {
+        outfit_data.throw_error_at( "worn", "Carried item snapshot requires a worn array" );
+    }
+    restored_outfit.deserialize( outfit_data );
+    restored_inventory.json_load_items( data.get_array( "inventory" ) );
+    if( data.get_bool( "has_weapon" ) ) {
+        restored_weapon.deserialize( data.get_object( "weapon" ) );
+    }
+
+    worn = std::move( restored_outfit );
+    *inv = std::move( restored_inventory );
+    weapon = std::move( restored_weapon );
+    invalidate_leak_level_cache();
+    invalidate_weight_carried_cache();
+    invalidate_inventory_validity_cache();
+    invalidate_crafting_inventory();
+    flag_encumbrance();
+    recalculate_enchantment_cache();
+    recalc_sight_limits();
 }
 
 bool Character::has_alarm_clock() const

@@ -32,6 +32,7 @@
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "gates.h"
 #include "game_inventory.h"
 #include "get_version.h"
 #include "input.h"
@@ -52,10 +53,12 @@
 #include "mp_actor_binding.h"
 #include "mp_client_conn.h"
 #include "mp_mod_compat.h"
+#include "mp_pickup.h"
 #include "mp_protocol.h"
 #include "mp_queue.h"
 #include "mp_server.h"
 #include "mp_world_session.h"
+#include "pickup.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -1991,6 +1994,64 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         return;
     }
 
+    // Parse the full action JSON once here so char_stats and other top-level
+    // fields are accessible without re-parsing inside each action block.
+    JsonValue jv_top = json_loader::from_string( msg );
+    JsonObject jo = jv_top.get_object();
+    jo.allow_omitted_members();
+
+    const std::string action = jo.get_string( "action", "" );
+    if( action == "pickup" ) {
+        // An intent must not first apply client tile/inventory mutations.
+        // Resolve exact source identities against the authoritative map.
+        try {
+            remote->set_moves( mp_session().host_turn.remote_moves );
+            const int64_t previous = mp_session().host_pickup.last_request;
+            const std::string result = execute_pickup_request( *remote, get_map(), jo,
+                                       mp_session().host_pickup );
+            if( const auto srv = get_active_server() ) {
+                srv->post_send( mp_session().remote_admission, result );
+            }
+            if( previous != mp_session().host_pickup.last_request ) {
+                mp_session().presentation.last_client_action_label = "pickup";
+                srv_emit_ack( "pickup" );
+            }
+        } catch( const JsonError & ) {
+            if( const auto srv = get_active_server() ) {
+                srv->post_reject( mp_session().remote_admission,
+                                  "Invalid pickup request; reconnect to resynchronize." );
+            }
+        }
+        return;
+    }
+    if( action == "open" || action == "close" ) {
+        // Door messages are intents. Do not first trust attached client terrain,
+        // inventory, position or character changes, even for a rejected target.
+        try {
+            const tripoint_abs_ms target{ jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" ) };
+            map &here = get_map();
+            const tripoint_abs_ms position = remote->pos_abs();
+            remote->set_moves( mp_session().host_turn.remote_moves );
+            if( here.inbounds( position ) && here.inbounds( target ) &&
+                target.z() == position.z() && square_dist( target.xy(), position.xy() ) <= 1 ) {
+                if( action == "open" ) {
+                    doors::open_immediately( here, *remote, here.get_bub( target ) );
+                } else {
+                    close_tile_activity_actor::close_immediately( *remote, here.get_bub( target ) );
+                }
+            }
+        } catch( const JsonError &e ) {
+            mp_log( std::string( "[cdda-mp] door parse error: " ) + e.what() );
+        }
+        srv_emit_ack( action.c_str() );
+        return;
+    }
+    if( action == "worn_sync" &&
+        ( !pickup_inventory_revision_matches( jo, mp_session().host_pickup ) ||
+          ( mp_session().host_pickup.revision > 0 && !jo.has_object( "carried" ) ) ) ) {
+        return; // A pre-pickup client snapshot cannot undo an accepted transfer.
+    }
+
     // Trade delta from client — client traded with the host's NPC proxy on its
     // side.  Apply item changes to the host's real avatar before anything else.
     if( msg.find( R"("type":"trade_delta")" ) != std::string::npos ) {
@@ -2063,12 +2124,6 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
     // Give the NPC its current move budget before executing any action.
     // (monmove skips remote player NPCs, so we manage AP ourselves.)
     remote->set_moves( mp_session().host_turn.remote_moves );
-
-    // Parse the full action JSON once here so char_stats and other top-level
-    // fields are accessible without re-parsing inside each action block.
-    JsonValue jv_top = json_loader::from_string( msg );
-    JsonObject jo = jv_top.get_object();
-    jo.allow_omitted_members();
 
     // Track the client's current activity for HUD + partner-notice display
     // AND for the lockstep bypass in wait_for_client_action.  Field is empty
@@ -2284,10 +2339,14 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             JsonObject jo = jv.get_object();
             jo.allow_omitted_members();
             // Sync gender so tileset uses the correct overlay prefix.
+            const bool carried_snapshot = jo.has_object( "carried" );
+            if( carried_snapshot ) {
+                remote->load_carried_items( jo.get_object( "carried" ) );
+            }
             if( jo.has_bool( "male" ) ) {
                 remote->male = jo.get_bool( "male" );
             }
-            if( jo.has_array( "worn" ) ) {
+            if( !carried_snapshot && jo.has_array( "worn" ) ) {
                 remote->clear_worn();
                 for( const JsonValue &wv : jo.get_array( "worn" ) ) {
                     JsonObject wo = wv.get_object();
@@ -2340,8 +2399,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             // contents) when present; fall back to typeId-only for legacy.
             std::string wielded_str;
             jo.read( "wielded", wielded_str );
-            bool applied_full = false;
-            if( jo.has_object( "wielded_obj" ) ) {
+            bool applied_full = carried_snapshot;
+            if( !carried_snapshot && jo.has_object( "wielded_obj" ) ) {
                 try {
                     JsonObject wo = jo.get_object( "wielded_obj" );
                     wo.allow_omitted_members();
@@ -2425,7 +2484,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             // client's serialized blob.  This makes tools, books, guns-in-bag,
             // currency, and any other carried items visible in the trade menu and
             // available to host-side skill / activity checks.
-            if( jo.has_array( "client_inv" ) ) {
+            if( !carried_snapshot && jo.has_array( "client_inv" ) ) {
                 try {
                     remote->inv->clear();
                     JsonArray inv_ja = jo.get_array( "client_inv" );
@@ -2824,42 +2883,6 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
         return;
     }
 
-    // Pickup — drain AP and remove the taken items from the server's authoritative tile.
-    if( msg.find( R"("action":"pickup")" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            // Use NPC's server-side position — client coordinates may be out of sync.
-            map &here = get_map();
-            const tripoint_bub_ms bub_pos = remote->pos_bub();
-            if( jo.has_array( "items" ) ) {
-                for( const JsonValue &iv : jo.get_array( "items" ) ) {
-                    JsonObject io = iv.get_object();
-                    io.allow_omitted_members();
-                    const itype_id tid( io.get_string( "t", "" ) );
-                    if( !tid.is_valid() ) {
-                        continue;
-                    }
-                    map_stack stack = here.i_at( bub_pos );
-                    for( item &it : stack ) {
-                        if( it.typeId() == tid ) {
-                            here.i_rem( bub_pos, &it );
-                            mp_log( "[cdda-mp] pickup: removed " + tid.str()
-                                    + " from " + std::to_string( bub_pos.x() ) + ","
-                                    + std::to_string( bub_pos.y() ) );
-                            break;
-                        }
-                    }
-                }
-            }
-        } catch( const JsonError &e ) {
-            mp_log( "[cdda-mp] pickup parse error: " + std::string( e.what() ) );
-        }
-        srv_emit_ack( "pickup" );
-        return;
-    }
-
     // Drop — client dropped items locally; add them to the server's authoritative tile.
     // Always drop at the remote NPC's current server-side position to avoid coordinate
     // desync between the client's local bubble and the server's bubble.
@@ -2907,34 +2930,6 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
             mp_log( "[cdda-mp] drop parse error: " + std::string( e.what() ) );
         }
         srv_emit_ack( "drop" );
-        return;
-    }
-
-    // Door open/close.
-    const bool is_open  = msg.find( R"("action":"open")" ) != std::string::npos;
-    const bool is_close = msg.find( R"("action":"close")" ) != std::string::npos;
-    if( is_open || is_close ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            const tripoint_abs_ms abs_target{
-                jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" )
-            };
-            if( m.inbounds( abs_target ) ) {
-                const tripoint_bub_ms bub = m.get_bub( abs_target );
-                if( is_open ) {
-                    m.open_door( *remote, bub, true, false );
-                } else {
-                    // Reuse the checked actor for terrain and vehicle doors while
-                    // applying the network result before acknowledging it.
-                    close_tile_activity_actor::close_immediately( *remote, bub );
-                }
-            }
-        } catch( const JsonError &e ) {
-            std::cout << "[cdda-mp] door parse error: " << e.what() << std::endl;
-        }
-        srv_emit_ack( is_open ? "open" : "close" );
         return;
     }
 
@@ -6052,6 +6047,24 @@ bool client_apply_message( const std::string &msg )
     if( !is_client_mode() ) {
         return false;
     }
+    if( msg.find( "pickup_result" ) != std::string::npos ) {
+        try {
+            JsonValue value = json_loader::from_string( msg );
+            JsonObject result = value.get_object();
+            result.allow_omitted_members();
+            if( result.get_string( "type", "" ) == "pickup_result" ) {
+                const bool complete = result.get_bool( "complete" );
+                if( apply_pickup_result( get_avatar(), result, mp_session().client_pickup ) && !complete ) {
+                    add_msg( m_info, _( "Some selected items could not be picked up." ) );
+                }
+                return true;
+            }
+        } catch( const JsonError & ) {
+            set_client_mode( false );
+            add_msg( m_bad, _( "Invalid pickup response.  Reconnect to synchronize your inventory." ) );
+            return true;
+        }
+    }
     // Log a preview of every received packet so we can confirm moves=90 packets arrive.
     {
         const size_t preview_len = std::min( msg.size(), static_cast<size_t>( 120 ) );
@@ -7265,6 +7278,7 @@ void client_process_incoming()
         // so the server's first move grant isn't silently ignored after reconnect.
         mp_session().client_turn.client_waiting_for_ack = false;
         mp_session().client_turn.client_last_grant_seq = 0;
+        mp_session().client_pickup = {};
         // Immediately follow with our worn-item list and skin tone.
         client_resync_worn();
         // Templates wire-sync: send local template list so the host can request
@@ -7997,6 +8011,25 @@ character_id get_remote_player_npc_character_id()
     return mp_session().remote_actor.id();
 }
 
+void client_request_pickup( const Pickup::selection &selection )
+{
+    avatar &who = get_avatar();
+    if( !is_client_mode() || who.get_moves() <= 0 || is_client_waiting_for_ack() ) {
+        return;
+    }
+    const auto request = make_pickup_request( selection, get_map(), mp_session().client_pickup );
+    if( !request ) {
+        if( !selection.targets.empty() ) {
+            add_msg( m_info, _( "Pick up loose items on the ground separately." ) );
+        }
+        return;
+    }
+    mp_log( "[cdda-mp] mp_dispatch act=pickup path=SEND" );
+    client_send( client_enrich_action( *request ) );
+    who.set_moves( 0 );
+    client_mark_action_sent();
+}
+
 void client_resync_worn()
 {
     avatar &av = get_avatar();
@@ -8028,6 +8061,18 @@ void client_resync_worn()
         appearance_json += '}';
     }
     appearance_json += ']';
+
+    if( mp_session().client_pickup.revision > 0 ) {
+        std::ostringstream carried;
+        JsonOut out( carried );
+        av.store_carried_items( out );
+        client_send( std::string( R"({"action":"worn_sync","male":)" ) +
+                     ( av.male ? "true" : "false" ) + ",\"appearance\":" + appearance_json +
+                     ",\"ma_style\":" + wire_quote( av.martial_arts_data->selected_style().str() ) +
+                     ",\"inventory_revision\":" + std::to_string( mp_session().client_pickup.revision ) +
+                     ",\"carried\":" + carried.str() + "}" );
+        return;
+    }
 
     std::string worn_json = R"({"action":"worn_sync","worn":[)";
     bool wfirst = true;

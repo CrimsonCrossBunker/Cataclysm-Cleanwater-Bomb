@@ -76,18 +76,23 @@ TEST_CASE( "loading_title_preserves_disabled_alternate_and_seasonal_options", "[
     }
 }
 
-TEST_CASE( "main_menu_title_keeps_its_original_simulation_rng_draw", "[loading_ui][rng]" )
+TEST_CASE( "main_menu_title_does_not_advance_simulation_rng", "[loading_ui][rng]" )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const override_option seasonal( "SEASONAL_TITLE", "false" );
-    const override_option alternate( "ALT_TITLE", "50" );
+    const std::string chance = GENERATE( "0", "50", "100" );
+    const override_option alternate( "ALT_TITLE", chance );
     const std::string enabled = GENERATE( "true", "false" );
     const override_option ascii( "ENABLE_ASCII_TITLE", enabled );
     const auto before = rng_get_engine();
-    const bool expected_alternate = enabled == "true" && x_in_y( 50, 100 );
-    const auto expected_rng = rng_get_engine();
-    const std::string expected_title = PATH_INFO::title( holiday::none, expected_alternate );
-    rng_get_engine() = before;
-    CHECK( PATH_INFO::title( holiday::none ) == expected_title );
-    CHECK( rng_get_engine() == expected_rng );
+    const std::string selected = PATH_INFO::title( holiday::none );
+    if( enabled == "false" || chance == "0" ) {
+        CHECK( selected == PATH_INFO::title( holiday::none, false ) );
+    } else if( chance == "100" ) {
+        CHECK( selected == PATH_INFO::title( holiday::none, true ) );
+    } else {
+        CHECK( ( selected == PATH_INFO::title( holiday::none, false ) ||
+                 selected == PATH_INFO::title( holiday::none, true ) ) );
+    }
+    CHECK( rng_get_engine() == before );
 }
