@@ -4807,6 +4807,8 @@ void update_mapgen_function_json::setup()
     setup_common();
 }
 
+update_mapgen_function_json::~update_mapgen_function_json() = default;
+
 void mapgen_function_json::finalize_parameters()
 {
     finalize_parameters_common();
