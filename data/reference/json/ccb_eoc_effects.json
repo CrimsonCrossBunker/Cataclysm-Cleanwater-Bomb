@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:e904b9f658e71ac9ab9c343e09715736821b8be481c7fc3cb9e33352e49114da",
+    "source_fingerprint": "sha256:bc45b19eb51d00f10a6e3a6ee8109cfc521edba6dc6820d11df90aa5aa22cd52",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -7437,7 +7437,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2551,
+        "occurrences": 2554,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -13205,11 +13205,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 99,
+        "occurrences": 100,
         "examples": [
           {
-            "path": "data/mods/Isolation-Protocol/Player/Perks/perk_eoc.json",
-            "pointer": "/4/effect/2/then/1/npc_message"
+            "path": "data/mods/FuturismCataclysmLegacy/enchantments.json",
+            "pointer": "/0/hit_me_effect/0/npc_message"
           }
         ],
         "confidence": "lexical_only",
@@ -16694,7 +16694,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/22/effect/open_dialogue"
+            "pointer": "/23/effect/open_dialogue"
           }
         ],
         "confidence": "lexical_only",
@@ -18250,7 +18250,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/13/effect/0/run_eoc_selector"
+            "pointer": "/14/effect/0/run_eoc_selector"
           }
         ],
         "confidence": "lexical_only",
@@ -18341,7 +18341,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5575,
+        "occurrences": 5576,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -22111,7 +22111,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1367,
+        "occurrences": 1370,
         "examples": [
           {
             "path": "data/json/effects_on_condition/addictions_eocs.json",
@@ -22490,7 +22490,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/34/effect/0/then/1/u_add_trait"
+            "pointer": "/35/effect/0/then/1/u_add_trait"
           }
         ],
         "confidence": "lexical_only",
@@ -26116,7 +26116,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/23/effect/0/u_lose_trait"
+            "pointer": "/24/effect/0/u_lose_trait"
           }
         ],
         "confidence": "lexical_only",
@@ -26389,7 +26389,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 24,
+        "occurrences": 25,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_active_eocs.json",
@@ -26780,7 +26780,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3318,
+        "occurrences": 3320,
         "examples": [
           {
             "path": "data/json/debug/quick_setup_eoc.json",
@@ -27805,7 +27805,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/18/effect/0/u_remove_item_with"
+            "pointer": "/19/effect/0/u_remove_item_with"
           }
         ],
         "confidence": "lexical_only",
@@ -29491,7 +29491,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/14/effect/0/u_spawn_item"
+            "pointer": "/15/effect/0/u_spawn_item"
           }
         ],
         "confidence": "lexical_only",
