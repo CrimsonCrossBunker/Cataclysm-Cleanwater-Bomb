@@ -2283,7 +2283,7 @@ recipe_result renderer_resource_coordinator::recipe_device_reset()
         return { recipe_outcome::failure };
     }
     if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
-        vp->release_gpu_resources( true );
+        vp->release_gpu_resources();
     }
     if( check_pause_abort() ) {
         return { recipe_outcome::failure };
@@ -2358,6 +2358,9 @@ bool renderer_resource_coordinator::install_renderer_with_fallback()
         }
         if( check_pause_abort() ) {
             return false;
+        }
+        if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
+            vp->release_gpu_resources( true );
         }
         renderer.reset();
         if( check_pause_abort() ) {
