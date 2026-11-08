@@ -5069,7 +5069,8 @@ talk_effect_fun_t::func f_explosion( const JsonObject &jo, std::string_view memb
             explosion_handler::scrambler_blast( target_pos );
         }
         if( flashbang ) {
-            explosion_handler::flashbang( target_pos, flashbang_avatar_is_immune,
+            explosion_handler::flashbang( target_pos,
+                                          flashbang_avatar_is_immune ? &get_player_character() : nullptr,
                                           flashbang_radius.evaluate( d ) );
         }
     };

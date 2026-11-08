@@ -24,6 +24,7 @@
 #include "construction.h"
 #include "bodypart.h"
 #include "effect.h"
+#include "explosion.h"
 #include "magic.h"
 #include "event.h"
 #include "event_bus.h"
@@ -4126,4 +4127,154 @@ TEST_CASE( "martial_turn_projection_rejects_unknown_styles_without_partial_chang
     CHECK( host.martial_arts_data->selected_style() == judo );
     CHECK( host.get_rad() == 73 );
     CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "world_bionics_spare_the_activator_and_project_affected_players", "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATIONS", "false" );
+    map &here = get_map();
+    avatar &host = get_avatar();
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    npc &other = spawn_npc( { 60, 62 }, "test_talker" );
+    clear_character( other, true );
+    auto &observer = bind_feedback_player( other, 'b', 702 );
+    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave" ) );
+    const bool local = GENERATE( false, true );
+    CAPTURE( id, local );
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    host.setpos( here, local ? origin : origin + tripoint( 2, 0, 0 ) );
+    remote.setpos( here, local ? origin + tripoint( 2, 0, 0 ) : origin );
+    other.setpos( here, origin + tripoint( 0, 2, 0 ) );
+    Character &activator = local ? static_cast<Character &>( host ) : remote;
+    Character &bystander = local ? static_cast<Character &>( remote ) : host;
+    const unsigned int uid = prepare_targeted_bionic( activator, id );
+    activator.set_max_power_level( 500_kJ );
+    activator.set_power_level( 500_kJ );
+    here.build_map_cache( 0 );
+    const tripoint_abs_ms other_before = other.pos_abs();
+    const tripoint_abs_ms bystander_before = bystander.pos_abs();
+    const std::string request = bionic_switch_request( fixture, remote, uid, id, true );
+    if( local ) {
+        REQUIRE( activator.activate_bionic( **activator.find_bionic_by_uid( uid ) ) );
+    } else {
+        fixture.run( remote, request );
+        CHECK( fixture.reload.refresh_observers );
+    }
+    CHECK( activator.get_power_level() == 500_kJ - id->power_activate );
+    CHECK( activator.get_moves() == 0 );
+    CHECK( activator.pos_bub() == origin );
+    CHECK_FALSE( activator.has_effect( efftype_id( "deaf" ) ) );
+    CHECK_FALSE( activator.has_effect( efftype_id( "blind" ) ) );
+    CHECK_FALSE( activator.has_effect( efftype_id( "stunned" ) ) );
+    const efftype_id affected( id == bionic_id( "bio_flashbang" ) ? "deaf" : "stunned" );
+    CHECK( bystander.has_effect( affected ) );
+    CHECK( other.has_effect( affected ) );
+    if( id == bionic_id( "bio_shockwave" ) ) {
+        CHECK( other.pos_abs() != other_before );
+        CHECK( bystander.pos_abs() != bystander_before );
+    }
+    if( !local ) {
+        const auto after_rng = rng_get_engine();
+        const auto after_pos = other.pos_abs();
+        fixture.run( remote, request );
+        CHECK_FALSE( fixture.reload.refresh_observers );
+        CHECK( remote.get_power_level() == 500_kJ - id->power_activate );
+        CHECK( other.pos_abs() == after_pos );
+        CHECK( rng_get_engine() == after_rng );
+    }
+
+    // The same per-recipient producer used by observer delivery carries both
+    // knockback coordinates and body effects. Loading its body is effect-free.
+    const std::string state = cata_mp::serialize_remote_player_state( observer );
+    const JsonValue encoded = json_loader::from_string( state );
+    const JsonObject data = encoded.get_object();
+    data.allow_omitted_members();
+    const JsonObject position = data.get_object( "pos" );
+    CHECK( position.get_int( "x" ) == other.pos_abs().x() );
+    CHECK( position.get_int( "y" ) == other.pos_abs().y() );
+    CHECK( position.get_int( "z" ) == other.pos_abs().z() );
+    host.clear_effects();
+    CHECK_FALSE( host.has_effect( affected ) );
+    const auto before_apply = rng_get_engine();
+    host.load_turn_state( data.get_object( "character_turn" ) );
+    CHECK( host.has_effect( affected ) );
+    CHECK( rng_get_engine() == before_apply );
+}
+
+TEST_CASE( "client_world_bionics_do_not_execute_area_effects_locally", "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATIONS", "false" );
+    avatar &host = get_avatar();
+    npc &other = fixture.remote();
+    host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave" ) );
+    const unsigned int uid = prepare_targeted_bionic( host, id );
+    host.set_max_power_level( 500_kJ );
+    host.set_power_level( 500_kJ );
+    const auto position = other.pos_abs();
+    const auto rng = rng_get_engine();
+    cata_mp::set_client_mode( true );
+    REQUIRE( host.activate_bionic( **host.find_bionic_by_uid( uid ) ) );
+    CHECK( g->multiplayer_session().client_inventory_activity.active );
+    CHECK( host.activity.execution() == activity_execution::presentation );
+    CHECK( host.get_power_level() == 500_kJ );
+    CHECK( other.pos_abs() == position );
+    CHECK_FALSE( other.has_effect( efftype_id( "deaf" ) ) );
+    CHECK_FALSE( other.has_effect( efftype_id( "stunned" ) ) );
+    CHECK( rng_get_engine() == rng );
+}
+
+TEST_CASE( "world_bionic_requests_require_ownership_and_native_power", "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATIONS", "false" );
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    avatar &host = get_avatar();
+    host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+    const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave" ) );
+    const unsigned int uid = prepare_targeted_bionic( remote, id );
+    const std::string failure = GENERATE( "unauthorized", "power", "wrong_uid" );
+    CAPTURE( id, failure );
+    remote.set_max_power_level( 500_kJ );
+    remote.set_power_level( failure == "power" ? 0_kJ : 500_kJ );
+    const auto power = remote.get_power_level();
+    const auto position = host.pos_abs();
+    const auto rng = rng_get_engine();
+    fixture.run( remote, bionic_switch_request( fixture, remote,
+                 failure == "wrong_uid" ? uid + 10 : uid, id, true ), failure != "unauthorized" );
+    CHECK( remote.get_power_level() == power );
+    CHECK( remote.get_moves() == 100 );
+    CHECK( host.pos_abs() == position );
+    CHECK_FALSE( host.has_effect( efftype_id( "deaf" ) ) );
+    CHECK_FALSE( host.has_effect( efftype_id( "stunned" ) ) );
+    CHECK( rng_get_engine() == rng );
+    if( failure == "unauthorized" ) {
+        CHECK_FALSE( fixture.reload.refresh_observers );
+    }
+}
+
+TEST_CASE( "remote_player_bracing_protects_from_shockwave_like_local_bracing", "[mp_world_bionic]" )
+{
+    reload_fixture fixture;
+    const override_option animations( "ANIMATIONS", "false" );
+    npc &remote = fixture.remote();
+    bind_feedback_player( remote, 'a', 701 );
+    avatar &host = get_avatar();
+    host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+    const trait_id brace( "LEG_TENT_BRACE" );
+    remote.set_mutation( brace );
+    host.set_mutation( brace );
+    REQUIRE( remote.is_barefoot() );
+    REQUIRE( host.is_barefoot() );
+    const auto host_position = host.pos_abs();
+    const auto remote_position = remote.pos_abs();
+    explosion_handler::shockwave( tripoint_bub_ms( 61, 60, 0 ), 3, 4, 2, 8 );
+    CHECK( host.pos_abs() == host_position );
+    CHECK( remote.pos_abs() == remote_position );
+    CHECK_FALSE( host.has_effect( efftype_id( "stunned" ) ) );
+    CHECK_FALSE( remote.has_effect( efftype_id( "stunned" ) ) );
 }
