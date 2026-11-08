@@ -138,6 +138,7 @@
 #include "value_ptr.h"
 #include "veh_interact.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
 #include "viewer.h"
 #include "vitamin.h"
 #include "vpart_position.h"
@@ -7104,7 +7105,7 @@ std::optional<int> iuse::remoteveh_tick( Character *p, item *it, const tripoint_
 {
     map &here = get_map();
 
-    vehicle *remote = g->remoteveh();
+    vehicle *remote = p ? get_remote_vehicle( *p, here ) : nullptr;
     bool stop = false;
     if( !it->ammo_sufficient( p ) ) {
         if( p != nullptr ) {
@@ -7126,7 +7127,9 @@ std::optional<int> iuse::remoteveh_tick( Character *p, item *it, const tripoint_
     }
     if( stop ) {
         it->active = false;
-        g->setremoteveh( nullptr );
+        if( p ) {
+            set_remote_vehicle( *p, here, nullptr );
+        }
     }
 
     return 0;
@@ -7136,7 +7139,11 @@ std::optional<int> iuse::remoteveh( Character *p, item *it, const tripoint_bub_m
 {
     map &here = get_map();
 
-    vehicle *remote = g->remoteveh();
+    if( !p ) {
+        return std::nullopt;
+    }
+
+    vehicle *remote = p ? get_remote_vehicle( *p, here ) : nullptr;
 
     bool controlling = it->active && remote != nullptr;
     int choice = uilist( _( "What to do with the remote vehicle control:" ), {
@@ -7156,7 +7163,9 @@ std::optional<int> iuse::remoteveh( Character *p, item *it, const tripoint_bub_m
 
     if( choice == 0 && controlling ) {
         it->active = false;
-        g->setremoteveh( nullptr );
+        if( p ) {
+            set_remote_vehicle( *p, here, nullptr );
+        }
         return 0;
     }
 
@@ -7179,7 +7188,7 @@ std::optional<int> iuse::remoteveh( Character *p, item *it, const tripoint_bub_m
                      _( "Despite using a controller, you still refuse to take control of this vehicle." ) );
         } else {
             it->active = true;
-            g->setremoteveh( veh );
+            set_remote_vehicle( *p, here, veh );
             p->add_msg_if_player( m_good, _( "You take control of the vehicle." ) );
             if( !veh->engine_on ) {
                 veh->start_engines( here, p );

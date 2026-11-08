@@ -59,6 +59,9 @@
 #include "translations.h"
 #include "uilist.h"
 #include "uistate.h"
+#include "vehicle.h"
+#include "vehicle_control.h"
+#include "vpart_position.h"
 
 namespace cata_mp
 {
@@ -627,6 +630,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     }
     if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
+        state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" );
     }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
@@ -643,10 +647,24 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             const bool construction_request = kind == "construction" || kind == "construction_auto" ||
                                               kind == "construction_resume" || kind == "construction_cancel";
             state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request ||
-                                state.tracks_item_use || kind == "martial_style";
+                                state.tracks_item_use || kind == "martial_style" || kind == "vehicle_control";
             state.tracks_needs = state.tracks_needs || construction_request;
             state.healing_patient = character_id();
-            if( kind == "martial_style" ) {
+            if( kind == "vehicle_control" ) {
+                vehicle_control_selection selection;
+                request.read( "vehicle_control", selection, true );
+                state.refresh_observers = true;
+                if( !who.activity ) {
+                    const activity_execution previous = who.activity.execution();
+                    who.activity.set_execution( activity_execution::authoritative );
+                    const on_out_of_scope restore_execution( [&]() {
+                        if( lifetime ) {
+                            who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+                        }
+                    } );
+                    execute_vehicle_control( who, here, selection );
+                }
+            } else if( kind == "martial_style" ) {
                 martial_style_choice choice;
                 request.read( "martial_style", choice, true );
                 if( !who.activity ) {
@@ -849,6 +867,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( active && state.tracks_item_use ) {
         out.member( "item_use_progress", who.activity.get_verb().translated() );
     }
+    out.member( "controlling_vehicle", who.controlling_vehicle );
+    out.member( "in_vehicle", who.in_vehicle );
     out.member( "needs_placement", state.needs_placement );
     if( craft ) {
         out.member( "craft_progress", craft->get_progress_message( who.activity ) );
@@ -906,6 +926,10 @@ bool apply_inventory_activity_result( const JsonObject &response )
     if( !apply_combat_result( get_avatar(), combat, session.client_pickup ) ) {
         return true;
     }
+    if( response.read( "controlling_vehicle", get_avatar().controlling_vehicle ) ) {
+        set_client_ctrl_veh( get_avatar().controlling_vehicle );
+    }
+    response.read( "in_vehicle", get_avatar().in_vehicle );
     if( response.has_member( "lua_character_state" ) ) {
         response.read( "lua_character_state", get_avatar().lua_character_state, true );
     }
@@ -1276,6 +1300,51 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
     return true;
 }
 } // namespace
+
+bool client_vehicle_control( const vehicle_control_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ start_engines_activity_actor( 0_seconds, tripoint_rel_ms::zero, false ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "vehicle_control" );
+            out.member( "vehicle_control", choice );
+        } );
+    }
+    return true;
+}
+
+void client_query_vehicle_control()
+{
+    avatar &who = get_avatar();
+    map &here = get_map();
+    const optional_vpart_position at = here.veh_at( who.pos_bub() );
+    if( !at ) {
+        add_msg( _( "No vehicle here to control." ) );
+        return;
+    }
+    vehicle &target = at->vehicle();
+    std::string action = "take";
+    if( client_ctrl_veh() ) {
+        uilist menu;
+        menu.title = _( "Vehicle controls" );
+        menu.addentry( 0, true, 'r', _( "Let go of controls" ) );
+        menu.addentry( 1, true, 's', _( "Stop driving" ) );
+        menu.addentry( 2, !target.engine_on, 'e', _( "Turn on the engine" ) );
+        menu.query();
+        if( menu.ret < 0 || menu.ret > 2 ) {
+            return;
+        }
+        action = menu.ret == 0 ? "release" : menu.ret == 1 ? "stop_driving" : "start";
+    }
+    const auto selection = query_vehicle_control( who, here, target, who.pos_abs(), action );
+    if( selection ) {
+        client_vehicle_control( *selection );
+    }
+}
 
 bool client_select_martial_style( const martial_style_choice &choice )
 {

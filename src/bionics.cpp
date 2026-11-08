@@ -93,6 +93,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
 #include "viewer.h"
 #include "vpart_position.h"
 #include "weather.h"
@@ -1288,7 +1289,8 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
             mod_power_level( units::from_kilojoule( -static_cast<std::int64_t>( power_use ) ) );
             ( **current_bionic ).powered = ctr.active;
         } else {
-            bio.powered = g->remoteveh() != nullptr || maybe_get_value( "remote_controlling" );
+            bio.powered = get_remote_vehicle( *this, get_map() ) != nullptr ||
+                          maybe_get_value( "remote_controlling" );
         }
     } else if( bio.info().is_remote_fueled ) {
         std::vector<item_location> cables = cache_get_items_with( flag_CABLE_SPOOL );
@@ -1481,8 +1483,9 @@ bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
     } else if( bio.id == bio_cqb ) {
         martial_arts_data->selected_style_check();
     } else if( bio.id == bio_remote ) {
-        if( g->remoteveh() != nullptr && !has_active_item( itype_remotevehcontrol ) ) {
-            g->setremoteveh( nullptr );
+        if( get_remote_vehicle( *this, get_map() ) != nullptr &&
+            !has_active_item( itype_remotevehcontrol ) ) {
+            set_remote_vehicle( *this, get_map(), nullptr );
         } else if( maybe_get_value( "remote_controlling" ) &&
                    !has_active_item( itype_radiocontrol ) ) {
             remove_value( "remote_controlling" );
@@ -1982,7 +1985,8 @@ void Character::process_bionic( bionic &initial_bio )
 
     // Bionic effects on every turn they are active go here.
     if( bio.id == bio_remote ) {
-        if( g->remoteveh() == nullptr && !maybe_get_value( "remote_controlling" ) ) {
+        if( get_remote_vehicle( *this, get_map() ) == nullptr &&
+            !maybe_get_value( "remote_controlling" ) ) {
             bio.powered = false;
             add_msg_if_player( m_warning, _( "Your %s has lost connection and is turning off." ),
                                bio.info().name );
