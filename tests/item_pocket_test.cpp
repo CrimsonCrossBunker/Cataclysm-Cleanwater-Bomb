@@ -1847,6 +1847,73 @@ TEST_CASE( "pocket_charge_filling_only_applies_default_to_player", "[pocket][fav
     }
 }
 
+TEST_CASE( "disabled_outer_pockets_allow_enabled_soft_inner_pockets", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    const bool outer_explicitly_disabled = GENERATE( false, true );
+    const bool inner_disabled = GENERATE( false, true );
+    CAPTURE( outer_explicitly_disabled, inner_disabled );
+    item backpack( itype_test_backpack );
+    item mini_backpack( itype_test_mini_backpack );
+    mini_backpack.get_contents().get_standard_pockets().front()->settings.set_disabled(
+        inner_disabled );
+    REQUIRE( backpack.put_in( mini_backpack, pocket_type::CONTAINER ).success() );
+    const auto worn_pack = player.wear_item( backpack, false, false );
+    REQUIRE( worn_pack );
+    item &outer = **worn_pack;
+    item &inner = outer.only_item();
+    item_pocket *const outer_pocket = outer.get_contents().get_standard_pockets().front();
+    item_pocket *const inner_pocket = inner.get_contents().get_standard_pockets().front();
+    REQUIRE_FALSE( outer_pocket->rigid() );
+    REQUIRE_FALSE( inner_pocket->rigid() );
+    if( outer_explicitly_disabled ) {
+        outer_pocket->settings.set_disabled( true );
+    }
+
+    const item rock( itype_test_rock );
+    CHECK( player.can_stash( rock ) == !inner_disabled );
+    CHECK( player.best_pocket( rock, nullptr, true ).second );
+    if( inner_disabled ) {
+        CHECK_FALSE( player.best_pocket( rock ).second );
+    } else {
+        REQUIRE( player.best_pocket( rock ).second == inner_pocket );
+        const item_location stored =
+            player.i_add( rock, true, nullptr, nullptr, false, false, false );
+        REQUIRE( stored );
+        CHECK( stored.parent_item() == item_location( player, &inner ) );
+        CHECK( inner.only_item().typeId() == rock.typeId() );
+    }
+}
+
+TEST_CASE( "nested_pocket_defaults_only_affect_player_carriers", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    standard_npc follower( "Follower", player.pos_bub() + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    const bool inner_explicitly_enabled = GENERATE( false, true );
+    CAPTURE( inner_explicitly_enabled );
+    item backpack( itype_test_backpack );
+    item mini_backpack( itype_test_mini_backpack );
+    backpack.get_contents().get_standard_pockets().front()->settings.set_disabled( true );
+    if( inner_explicitly_enabled ) {
+        mini_backpack.get_contents().get_standard_pockets().front()->settings.set_disabled( false );
+    }
+    REQUIRE( backpack.put_in( mini_backpack, pocket_type::CONTAINER ).success() );
+    REQUIRE( player.wear_item( backpack, false, false ) );
+    const auto npc_pack = follower.wear_item( backpack, false, false );
+    REQUIRE( npc_pack );
+    item_pocket *const npc_inner_pocket =
+        ( **npc_pack ).only_item().get_contents().get_standard_pockets().front();
+
+    const item rock( itype_test_rock );
+    CHECK( player.can_stash( rock ) == inner_explicitly_enabled );
+    CHECK( follower.can_stash( rock ) );
+    CHECK( follower.best_pocket( rock ).second == npc_inner_pocket );
+}
+
 TEST_CASE( "pocket_default_disabling_preserves_generated_contents", "[pocket][favorite][item]" )
 {
     const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );

@@ -2382,10 +2382,12 @@ std::pair<item_location, item_pocket *> item_pocket::best_pocket_in_contents(
     const bool allow_sealed, const bool ignore_settings )
 {
     std::pair<item_location, item_pocket *> ret( this_loc, nullptr );
+    const Character *carrier = this_loc ? this_loc.carrier() : nullptr;
     // If the current pocket has restrictions or blacklists the item or is a holster,
     // try the nested pocket regardless of whether it's soft or rigid.
     const bool ignore_rigidity =
         !settings.accepts_item( it ) ||
+        ( !ignore_settings && carrier && carrier->is_avatar() && settings.is_disabled() ) ||
         !get_pocket_data()->get_flag_restrictions().empty() ||
         settings.priority() > 0 || is_holster();
 
