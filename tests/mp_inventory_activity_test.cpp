@@ -89,6 +89,7 @@
 #include "vehicle_heating.h"
 #include "vehicle_toolstation.h"
 #include "vehicle_tool_use.h"
+#include "hacksaw_activity.h"
 #include "repair_activity.h"
 #include "activity_handlers.h"
 #include "iuse_actor.h"
@@ -8148,4 +8149,358 @@ TEST_CASE( "portable_weather_and_towels_use_the_same_owned_native_callbacks",
     CHECK( execute_owned_item_activation( who, who.get_wielded_item(), "WEATHER_TOOL", who.pos_abs(),
                                          false, false ) );
     CHECK( who.get_moves() == 50 );
+}
+
+namespace
+{
+item_location portable_saw( Character &who )
+{
+    item saw( itype_id( "reciprocating_saw" ) );
+    item battery( itype_id( "heavy_battery_cell" ) );
+    battery.ammo_set( itype_id( "battery" ), 100 );
+    REQUIRE( saw.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
+    who.set_wielded_item( std::move( saw ) );
+    REQUIRE( who.get_wielded_item()->type->get_use( "HACKSAW" ) );
+    return who.get_wielded_item();
+}
+
+std::string saw_request( reload_fixture &fixture, Character &who, const tripoint_abs_ms &target )
+{
+    return fixture.request( who, "start", [&]( JsonOut &out ) {
+        out.member( "kind", "item_use" );
+        out.member( "source", capture_item_source( who, who.get_wielded_item() ) );
+        out.member( "item_type", who.get_wielded_item()->typeId() );
+        out.member( "method", "HACKSAW" );
+        out.member( "target", target );
+    } );
+}
+
+vehicle_control_selection mounted_saw_choice( Character &who, vehicle &car,
+        const std::string &type = "reciprocating_saw" )
+{
+    const int part = install_test_appliance( who, car, "veh_tools_workshop" );
+    car.get_tools( car.part( part ) ).emplace_back( itype_id( type ) );
+    auto choice = control_choice( who, car, "tool_use" );
+    choice.position = car.abs_part_pos( car.part( part ) );
+    const auto source = capture_mounted_tool( car, choice.position, itype_id( type ), "HACKSAW" );
+    REQUIRE( source );
+    choice.tool_use = source->tool;
+    choice.tool_use->target = who.pos_abs() + tripoint( 0, 1, 0 );
+    get_map().furn_set( get_map().get_bub( *choice.tool_use->target ), furn_str_id( "test_f_hacksaw2" ) );
+    REQUIRE( valid_vehicle_tool_use( who, get_map(), car, choice.position, *choice.tool_use ) );
+    return choice;
+}
+} // namespace
+
+TEST_CASE( "owned_sawing_preserves_progress_and_bills_the_selected_source_once",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    const item_location carried = portable_saw( who );
+    vehicle &car = electronic_vehicle( who );
+    const auto choice = mounted_saw_choice( who, car );
+    const bool mounted = GENERATE( false, true );
+    const auto target = *choice.tool_use->target;
+    const int power = car.battery_left( get_map() );
+    const int personal = carried->ammo_remaining();
+    const int host_moves = get_avatar().get_moves();
+    const auto request = mounted ? control_request( fixture, who, choice ) : saw_request( fixture, who, target );
+    fixture.run( who, request );
+    REQUIRE( who.activity.id() == activity_id( "ACT_HACKSAW" ) );
+    CHECK( who.activity.execution() == activity_execution::authoritative );
+    CHECK( who.activity.moves_left == to_moves<int>( 5_minutes ) / 2 );
+    CHECK( who.activity.exertion_level() == LIGHT_EXERCISE );
+    const int progress = who.activity.moves_left;
+    fixture.run( who, request );
+    CHECK( who.activity.moves_left == progress );
+    save_reload_activity( who );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( who.activity.moves_left < progress );
+    CHECK( car.battery_left( get_map() ) == power - ( mounted ? 1 : 0 ) );
+    CHECK( carried->ammo_remaining() == personal - ( mounted ? 0 : 1 ) );
+    save_reload_activity( who );
+    who.activity.moves_left = 1;
+    who.set_moves( 100 );
+    const auto finish = fixture.request( who, "step" );
+    fixture.run( who, finish );
+    CHECK_FALSE( who.activity );
+    CHECK( get_map().furn( get_map().get_bub( target ) ) == furn_str_id( "test_f_hacksaw1" ) );
+    CHECK( car.battery_left( get_map() ) == power - ( mounted ? 2 : 0 ) );
+    CHECK( carried->ammo_remaining() == personal - ( mounted ? 0 : 2 ) );
+    const auto rng = rng_get_engine();
+    fixture.run( who, finish );
+    CHECK( rng_get_engine() == rng );
+    CHECK( get_avatar().get_moves() == host_moves );
+}
+
+TEST_CASE( "owned_sawing_cancels_stale_hardware_and_changed_targets_without_charge",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = electronic_vehicle( who );
+    const auto choice = mounted_saw_choice( who, car );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( who.activity );
+    save_reload_activity( who );
+    const std::string failure = GENERATE( "installed_tool", "part", "target", "range", "locked" );
+    CAPTURE( failure );
+    if( failure == "installed_tool" || failure == "part" ) {
+        for( const vpart_reference &part : car.get_all_parts() ) {
+            if( part.part().get_base().uid().get_value() == choice.tool_use->part ) {
+                if( failure == "part" ) {
+                    car.remove_part( part.part() );
+                } else {
+                    auto &tools = car.get_tools( part.part() );
+                    tools.clear();
+                    tools.emplace_back( itype_id( "reciprocating_saw" ) );
+                }
+                break;
+            }
+        }
+    } else if( failure == "target" ) {
+        get_map().furn_set( get_map().get_bub( *choice.tool_use->target ), furn_str_id( "test_f_hacksaw3" ) );
+    } else if( failure == "range" ) {
+        who.setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
+    } else {
+        car.is_locked = true;
+    }
+    const int power = car.battery_left( get_map() );
+    const auto surface = get_map().furn( get_map().get_bub( *choice.tool_use->target ) );
+    who.activity.moves_left = 1;
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    CHECK( car.battery_left( get_map() ) == power );
+    CHECK( get_map().furn( get_map().get_bub( *choice.tool_use->target ) ) == surface );
+}
+
+TEST_CASE( "owned_sawing_rebinds_resumed_work_between_portable_and_mounted_tools",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = electronic_vehicle( who );
+    const auto choice = mounted_saw_choice( who, car );
+    who.set_wielded_item( item( itype_id( "test_hacksaw" ) ) );
+    const auto target = *choice.tool_use->target;
+    fixture.run( who, saw_request( fixture, who, target ) );
+    REQUIRE( who.activity );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    const int remaining = who.activity.moves_left;
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    REQUIRE_FALSE( who.activity );
+    REQUIRE_FALSE( who.backlog.empty() );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( who.activity );
+    CHECK( who.activity.moves_left == remaining / 2 );
+    save_reload_activity( who );
+    const int power = car.battery_left( get_map() );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( car.battery_left( get_map() ) == power - 1 );
+    const int mounted_remaining = who.activity.moves_left;
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    who.set_moves( 100 );
+    fixture.run( who, saw_request( fixture, who, target ) );
+    REQUIRE( who.activity );
+    CHECK( who.activity.moves_left == mounted_remaining * 2 );
+    const int after = car.battery_left( get_map() );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( car.battery_left( get_map() ) == after );
+}
+
+TEST_CASE( "mounted_sawing_does_not_keep_unpaid_progress_and_bills_all_fuel_pockets",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = electronic_vehicle( who );
+    test_water_tank( car, itype_id( "gasoline" ), 1000 );
+    const auto choice = mounted_saw_choice( who, car, "test_owned_multimag_saw" );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( who.activity );
+    const int battery = car.battery_left( get_map() );
+    const int fuel = car.fuel_left( get_map(), itype_id( "gasoline" ) );
+    who.set_moves( 100 );
+    const auto step = fixture.request( who, "step" );
+    fixture.run( who, step );
+    CHECK( car.battery_left( get_map() ) == battery - 2 );
+    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    const int progress = who.activity.moves_left;
+    fixture.run( who, step );
+    CHECK( who.activity.moves_left == progress );
+    car.discharge_battery( get_map(), car.battery_left( get_map() ) );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK_FALSE( who.activity );
+    REQUIRE_FALSE( who.backlog.empty() );
+    CHECK( who.backlog.front().moves_left == progress );
+    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    car.charge_battery( get_map(), 100 );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    REQUIRE( who.activity );
+    CHECK( who.activity.moves_left == progress );
+}
+
+TEST_CASE( "owned_portable_sawing_rechecks_saved_sources_and_competing_work",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    const auto tool = portable_saw( who );
+    const auto pos = who.pos_bub() + tripoint_rel_ms( 0, 1, 0 );
+    get_map().furn_set( pos, furn_str_id( "test_f_hacksaw2" ) );
+    fixture.run( who, saw_request( fixture, who, get_map().get_abs( pos ) ) );
+    REQUIRE( who.activity );
+    save_reload_activity( who );
+    SECTION( "lost tool after saving" ) {
+        who.remove_weapon();
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( get_map().furn( pos ) == furn_str_id( "test_f_hacksaw2" ) );
+    }
+    SECTION( "another player completes the same surface" ) {
+        avatar &host = get_avatar();
+        host.setpos( get_map(), pos + tripoint_rel_ms( 0, 1, 0 ) );
+        portable_saw( host );
+        REQUIRE( start_hacksaw_work( host, host.get_wielded_item(), get_map().get_abs( pos ) ) );
+        host.activity.moves_left = 1;
+        host.set_moves( 100 );
+        host.activity.do_turn( host );
+        CHECK_FALSE( host.activity );
+        const int personal = tool->ammo_remaining();
+        who.activity.moves_left = 1;
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( get_map().furn( pos ) == furn_str_id( "test_f_hacksaw1" ) );
+        CHECK( tool->ammo_remaining() == personal );
+    }
+}
+
+TEST_CASE( "legacy_saw_saves_acquire_owned_sources_and_resume_saved_progress",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = electronic_vehicle( who );
+    const auto choice = mounted_saw_choice( who, car );
+    const bool mounted = GENERATE( false, true );
+    const bool already_paused = GENERATE( false, true );
+    CAPTURE( mounted, already_paused );
+    const auto portable = mounted ? item_location::nowhere : portable_saw( who );
+    std::ostringstream stream;
+    JsonOut out( stream );
+    out.start_object();
+    out.member( "target", get_map().get_bub( *choice.tool_use->target ) );
+    out.member( "tool", portable );
+    out.member( "type", mounted ? std::make_optional( itype_id( "reciprocating_saw" ) ) :
+                std::nullopt );
+    out.member( "veh_pos", mounted ? std::make_optional( get_map().get_bub( choice.position ) ) :
+                std::nullopt );
+    out.member( "moves_left", 500 );
+    out.end_object();
+    JsonValue value = json_loader::from_string( stream.str() );
+    const auto actor = hacksaw_activity_actor::deserialize( value );
+    who.activity = player_activity( *actor );
+    who.activity.moves_total = 1000;
+    who.activity.moves_left = 500;
+    const int power = car.battery_left( get_map() );
+    if( !already_paused ) {
+        who.set_moves( 100 );
+        who.activity.do_turn( who );
+        REQUIRE( who.activity );
+        CHECK( who.activity.exertion_level() == LIGHT_EXERCISE );
+    }
+    CHECK( car.battery_left( get_map() ) == power - ( mounted && !already_paused ? 1 : 0 ) );
+    const int remaining = who.activity.moves_left;
+    who.cancel_activity();
+    who.set_moves( 100 );
+    if( mounted ) {
+        REQUIRE( execute_vehicle_control( who, get_map(), choice ) );
+    } else {
+        REQUIRE( start_hacksaw_work( who, portable, *choice.tool_use->target ) );
+    }
+    CHECK( who.activity.moves_left == remaining );
+    save_reload_activity( who );
+    CHECK_FALSE( get_avatar().activity );
+}
+
+TEST_CASE( "owned_saw_target_validation_and_client_selection_do_not_apply_gameplay",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    avatar &who = get_avatar();
+    who.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    who.set_moves( 100 );
+    const auto source = portable_saw( who );
+    const auto pos = who.pos_abs() + tripoint( 0, 1, 0 );
+    get_map().furn_set( get_map().get_bub( pos ), furn_str_id( "test_f_hacksaw2" ) );
+    const int ammo = source->ammo_remaining();
+    SECTION( "invalid target" ) {
+        const auto own_position = who.pos_abs();
+        const auto target = GENERATE_COPY( own_position, pos + tripoint( 0, 8, 0 ),
+                                          own_position + tripoint( 1, 0, 0 ) );
+        const auto rng = rng_get_engine();
+        fixture.run( who, saw_request( fixture, who, target ) );
+        CHECK_FALSE( who.activity );
+        CHECK( source->ammo_remaining() == ammo );
+        CHECK( rng_get_engine() == rng );
+    }
+    SECTION( "explicit client target submits without local work" ) {
+        cata_mp::set_client_mode( true );
+        const auto rng = rng_get_engine();
+        std::string method = "HACKSAW";
+        REQUIRE( cata_mp::client_activate_item( source, method, pos ) );
+        CHECK( source->ammo_remaining() == ammo );
+        CHECK( get_map().furn( get_map().get_bub( pos ) ) == furn_str_id( "test_f_hacksaw2" ) );
+        CHECK( rng_get_engine() == rng );
+        CHECK( who.activity.execution() == activity_execution::presentation );
+    }
+}
+
+TEST_CASE( "saw_resume_progress_is_set_before_callbacks_and_does_not_overwrite_replacement_activity",
+           "[multiplayer][hacksaw_owned]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    vehicle &car = electronic_vehicle( who );
+    const auto choice = mounted_saw_choice( who, car );
+    who.set_wielded_item( item( itype_id( "test_hacksaw" ) ) );
+    fixture.run( who, saw_request( fixture, who, *choice.tool_use->target ) );
+    who.set_moves( 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    const int remaining = who.activity.moves_left;
+    fixture.run( who, fixture.request( who, "cancel" ) );
+    class replace_on_resume : public event_subscriber {
+        public:
+            Character &who;
+            int expected;
+            bool fired = false;
+            replace_on_resume( Character &who, int expected ) : who( who ), expected( expected ) {
+                get_event_bus().subscribe( this );
+            }
+            void notify( const cata::event &event ) override {
+                if( event.type() == event_type::character_starts_activity &&
+                    event.get<bool>( "resume" ) && event.get<character_id>( "character" ) == who.getID() ) {
+                    fired = true;
+                    CHECK( who.activity.moves_left == expected );
+                    who.activity = player_activity( activity_id( "ACT_WAIT" ), 777 );
+                }
+            }
+    } replacement( who, remaining / 2 );
+    who.set_moves( 100 );
+    fixture.run( who, control_request( fixture, who, choice ) );
+    CHECK( replacement.fired );
+    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.moves_left == 777 );
 }

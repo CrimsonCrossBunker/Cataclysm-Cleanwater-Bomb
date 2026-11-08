@@ -19,7 +19,7 @@ class item_location;
 class map;
 class player_activity;
 
-enum class adjacent_tool_action { none, pry, mine, drill, lockpick };
+enum class adjacent_tool_action { none, pry, mine, drill, lockpick, saw };
 adjacent_tool_action adjacent_tool_method( const std::string &method );
 // Select the wielded mining action using gameplay conditions shared by local
 // movement and the authority. Auto-feature preferences belong to the frontend.
