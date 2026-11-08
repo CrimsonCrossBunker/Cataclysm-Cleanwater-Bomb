@@ -34,6 +34,12 @@ if (BUILD_TESTING)
         list(REMOVE_DUPLICATES CATACLYSM_DDA_TEST_SOURCES)
     endif ()
 
+    option(CATA_TEST_REAL_MESSAGES "Test the production message log instead of the recording stub" OFF)
+    if (CATA_TEST_REAL_MESSAGES)
+        list(REMOVE_ITEM CATACLYSM_DDA_TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/fake_messages.cpp")
+        list(APPEND CATACLYSM_DDA_TEST_SOURCES "${CMAKE_SOURCE_DIR}/src/messages.cpp")
+    endif ()
+
     # Enabling benchmarks
     add_definitions(-DCATCH_CONFIG_ENABLE_BENCHMARKING)
 
@@ -84,7 +90,7 @@ if (BUILD_TESTING)
         endif ()
     endif ()
 
-    if (CURSES)
+    if (CURSES OR HEADLESS)
         add_executable(cata_test ${CATACLYSM_DDA_TEST_SOURCES})
         if (LOCALIZE)
             add_dependencies(cata_test test_mo)
@@ -105,5 +111,14 @@ if (BUILD_TESTING)
                     COMMAND cata_test ${_test_filter} --rng-seed time --warn NoTests
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
         endif()
+    endif ()
+
+    if (HEADLESS)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        add_test(NAME cata.headless.cli
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/headless_cli_test.py
+                        --binary $<TARGET_FILE:cataclysm> --basepath ${CMAKE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        set_tests_properties(cata.headless.cli PROPERTIES TIMEOUT 420)
     endif ()
 endif ()

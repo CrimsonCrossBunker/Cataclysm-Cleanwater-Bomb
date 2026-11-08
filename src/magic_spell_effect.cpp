@@ -1607,7 +1607,7 @@ void spell_effect::explosion( const spell &sp, Creature &caster, const tripoint_
 void spell_effect::flashbang( const spell &sp, Creature &caster, const tripoint_bub_ms &target )
 {
     explosion_handler::flashbang( target, caster.is_avatar() &&
-                                  !sp.is_valid_target( spell_target::self ), sp.aoe( caster ) );
+                                  !sp.is_valid_target( spell_target::self ) ? &caster : nullptr, sp.aoe( caster ) );
 }
 
 void spell_effect::mod_moves( const spell &sp, Creature &caster, const tripoint_bub_ms &target )
@@ -1779,7 +1779,7 @@ void spell_effect::guilt( const spell &sp, Creature &caster, const tripoint_bub_
         }
         // there used to be a MAX_GUILT_DISTANCE here, but the spell's range will do this instead.
         monster &z = *caster.as_monster();
-        const int kill_count = g->get_kill_tracker().guilt_kill_count( z.type->id );
+        const int kill_count = guilt_target->get_kill_statistics().guilt_kill_count( z.type->id );
         // this is when the player stops caring altogether.
         const int max_kills = sp.damage( caster );
         // this determines how strong the morale penalty will be

@@ -106,24 +106,36 @@ def player_saves(manifest: dict) -> dict:
 
 def replay_metadata(path: Path) -> dict:
     """Record the header and event count; native code parses events."""
+    profile_seed = None
     with path.open(encoding="utf-8") as stream:
-        if stream.readline().strip() != "CATA_REPLAY 1":
-            raise ValueError("replay must have a CATA_REPLAY 1 header")
+        header = stream.readline().strip()
+        if header not in ("CATA_REPLAY 1", "CATA_REPLAY 2"):
+            raise ValueError("replay must have a CATA_REPLAY 1 or 2 header")
         seed_line = stream.readline().split()
         if len(seed_line) != 2 or seed_line[0] != "SEED":
             raise ValueError("replay must have a SEED header")
         seed = int(seed_line[1])
         if not 0 <= seed <= 0xFFFFFFFF:
             raise ValueError("replay seed must fit an unsigned 32-bit integer")
+        if header == "CATA_REPLAY 2":
+            fields = stream.readline().split()
+            if (len(fields) != 2 or fields[0] != "PROFILE_SEED" or
+                    len(fields[1]) != 32 or
+                    any(c not in "0123456789abcdef" for c in fields[1])):
+                raise ValueError("replay must have a valid PROFILE_SEED header")
+            profile_seed = fields[1]
         events = sum(line.startswith("EV ") for line in stream)
     if not events:
         raise ValueError("replay has no input events")
-    return {
+    result = {
         "path": str(path),
         "sha256": sha256(path),
         "seed": seed,
         "recorded_events": events,
     }
+    if profile_seed is not None:
+        result["profile_seed"] = profile_seed
+    return result
 
 
 def read_native_completion(path: Path, replay: dict, turns: int) -> dict:

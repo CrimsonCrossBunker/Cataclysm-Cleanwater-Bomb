@@ -35,7 +35,7 @@ clang++ -std=c++17 -DTILES -DRELEASE -Isrc -isystem src/third-party -O2 -g1 \
 
 ## Input replay protocol
 
-The CMake target below links `src/input_replay.cpp` and cached options directly,
+The CMake target below links `src/input_replay.cpp`, player identity and cached options directly,
 without game-code stubs, engine initialization or a full game build. It checks
 record/replay round trips, malformed input, transactional loading and exhaustion
 inside a nested input loop. Checks remain enabled in Release builds.
@@ -50,6 +50,21 @@ python3 tools/test_replay_ab.py
 Reuse this build directory for incremental checks. The workflow
 `.github/workflows/replay-validation.yml` runs the protocol with ASan/UBSan and
 the Python comparison regressions; it does not build or play the full game.
+
+New recordings use `CATA_REPLAY 2`, followed by `SEED <unsigned>` and
+`PROFILE_SEED <32 lowercase hexadecimal characters>` before the input events.
+The profile seed reproduces public local player IDs without consuming gameplay
+randomness. It is not a password or resume credential. Recording and replay
+must start from the same initial save; existing IDs in that save remain intact.
+The reader also accepts format 1. When a legacy save needs an ID during an old
+recording, it uses a deterministic namespace derived from the recording and the
+legacy save slot. Keep that slot unchanged when comparing old recordings.
+
+The avatar's optional `local_player_id` save field persists across reloads and
+NPC takeover. An old save acquires it on load and writes it on normal save;
+malformed values fail loading rather than silently replacing the identity.
+Starting a new game allocates a new ID even for an imported character template.
+This field does not establish ownership of copied profiles or remote players.
 
 Full-game acceptance is separate. Given an owned copy of a starting user
 directory and a recording that reaches a completed turn boundary:

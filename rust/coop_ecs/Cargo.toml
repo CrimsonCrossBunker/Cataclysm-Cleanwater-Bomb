@@ -1,0 +1,29 @@
+[package]
+name = "ccb_bevy_ecs_coop"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Bevy ECS based co-op runtime core for Cataclysm: Cleanwater Bomb."
+
+[lib]
+name = "ccb_bevy_ecs_coop"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bevy = { version = "0.18", default-features = false, features = ["bevy_state", "multi_threaded", "serialize"] }
+bevy_ecs = { version = "0.18", features = ["multi_threaded"] }
+bevy_replicon = { version = "0.39", default-features = false, features = ["client", "server"] }
+bevy_replicon_renet = { version = "0.15", default-features = false, features = ["client", "server", "renet_netcode"] }
+serde = { version = "1", features = ["derive"] }
+
+# Netcode encryption must keep up with its real-time receive/ACK loop even in
+# debug builds. Unoptimized SIMD crypto can time out concurrent bulk transfers.
+# Keep our own runtime debuggable; optimize only the packet crypto dependencies.
+[profile.dev.package.renetcode]
+opt-level = 3
+[profile.dev.package.chacha20poly1305]
+opt-level = 3
+[profile.dev.package.chacha20]
+opt-level = 3
+[profile.dev.package.poly1305]
+opt-level = 3

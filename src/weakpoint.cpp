@@ -11,6 +11,7 @@
 
 #include "calendar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "condition.h"
 #include "creature.h"
 #include "damage.h"
@@ -142,10 +143,14 @@ void weakpoint_family::load( const JsonValue &jsin )
 
 bool weakpoint_families::practice( Character &learner, const time_duration &amount ) const
 {
+    const character_action_guard lifetime( learner );
     bool learned = false;
     for( const weakpoint_family &family : families ) {
         float before = learner.get_proficiency_practice( family.proficiency );
         learner.practice_proficiency( family.proficiency, amount );
+        if( !lifetime ) {
+            return learned;
+        }
         float after = learner.get_proficiency_practice( family.proficiency );
         if( before < after ) {
             learned = true;
@@ -168,10 +173,14 @@ bool weakpoint_families::practice_dissect( Character &learner ) const
 {
     // Proficiency experience is capped at 1000 seconds (~16 minutes), so we split it into two
     // instances. This should be refactored when butchering becomes an `activity_actor`.
+    const character_action_guard lifetime( learner );
     bool p1 = practice( learner, time_duration::from_minutes( 15 ) );
+    if( !lifetime ) {
+        return p1;
+    }
     bool p2 = practice( learner, time_duration::from_minutes( 15 ) );
     bool learned = p1 || p2;
-    if( learned ) {
+    if( lifetime && learned ) {
         learner.add_msg_if_player(
             m_good, _( "You carefully record the creature's vulnerabilities." ) );
     }

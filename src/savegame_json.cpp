@@ -1,4 +1,5 @@
-﻿// Associated headers here are the ones for which their only non-inline
+#include "radio_car_control.h"
+// Associated headers here are the ones for which their only non-inline
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
@@ -26,6 +27,7 @@
 #include <set>
 #include <sstream>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -46,6 +48,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_io.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "character.h"
@@ -78,6 +81,7 @@
 #include "game_constants.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_source.h"
 #include "item_contents.h"
 #include "item_factory.h"
 #include "item_location.h"
@@ -104,6 +108,8 @@
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "pathfinding.h"
+#include "player_identity.h"
 #include "point.h"
 #include "profession.h"
 #include "proficiency.h"
@@ -324,11 +330,23 @@ void item_contents::serialize( JsonOut &json ) const
     }
 }
 
-void item_contents::deserialize( const JsonObject &data )
+void item_contents::deserialize( const JsonObject &data, item_load_context context )
 {
     data.allow_omitted_members();
-    data.read( "contents", contents );
-    data.read( "additional_pockets", additional_pockets );
+    if( context == item_load_context::current_state ) {
+        contents.clear();
+        for( JsonObject entry : data.get_array( "contents" ) ) {
+            contents.emplace_back();
+            contents.back().deserialize( entry, context );
+        }
+        additional_pockets.clear();
+        for( JsonObject entry : data.get_array( "additional_pockets" ) ) {
+            additional_pockets.emplace_back( item::from_current_state( entry ) );
+        }
+    } else {
+        data.read( "contents", contents );
+        data.read( "additional_pockets", additional_pockets );
+    }
 
 }
 
@@ -345,11 +363,18 @@ void item_pocket::serialize( JsonOut &json ) const
     json.end_object();
 }
 
-void item_pocket::deserialize( const JsonObject &data )
+void item_pocket::deserialize( const JsonObject &data, item_load_context context )
 {
     data.allow_omitted_members();
-    data.read( "contents", contents );
-    split_loaded_stackable_container_contents( contents );
+    if( context == item_load_context::current_state ) {
+        contents.clear();
+        for( JsonObject entry : data.get_array( "contents" ) ) {
+            contents.emplace_back( item::from_current_state( entry ) );
+        }
+    } else {
+        data.read( "contents", contents );
+        split_loaded_stackable_container_contents( contents );
+    }
     int saved_type_int;
     data.read( "pocket_type", saved_type_int );
     _saved_type = static_cast<pocket_type>( saved_type_int );
@@ -444,6 +469,7 @@ void player_activity::serialize( JsonOut &json ) const
     json.member( "type", type );
 
     if( !type.is_null() ) {
+        json.member( "execution", static_cast<int>( execution_ ) );
         json.member( "actor", actor );
         json.member( "moves_total", moves_total );
         json.member( "moves_left", moves_left );
@@ -468,6 +494,11 @@ void player_activity::serialize( JsonOut &json ) const
 void player_activity::deserialize( const JsonObject &data )
 {
     data.allow_omitted_members();
+    const int execution = data.get_int( "execution", 0 );
+    if( execution < 0 || execution > static_cast<int>( activity_execution::presentation ) ) {
+        data.throw_error_at( "execution", "Invalid activity execution owner" );
+    }
+    execution_ = static_cast<activity_execution>( execution );
     std::string tmptype;
     int tmppos = 0;
 
@@ -505,7 +536,11 @@ void player_activity::deserialize( const JsonObject &data )
     // Handle migration of pre-activity_actor activities
     // ACT_MIGRATION_CANCEL will clear the backlog and reset npc state
     // this may cause inconvenience but should avoid any lasting damage to npcs
-    if( is_obsolete || ( has_actor && ( data.has_null( "actor" ) || !data.has_member( "actor" ) ) ) ) {
+    // Vehicle faucets have an actor; other liquid sources retain their legacy handler.
+    const bool legacy_handler = type == activity_id( "ACT_FILL_LIQUID" ) ||
+                                type == activity_id( "ACT_REPAIR_ITEM" );
+    if( is_obsolete || ( has_actor && !legacy_handler &&
+                         ( data.has_null( "actor" ) || !data.has_member( "actor" ) ) ) ) {
         actor = std::make_unique<migration_cancel_activity_actor>( type );
         type = ACT_MIGRATION_CANCEL;
     } else {
@@ -737,9 +772,89 @@ void activity_tracker::deserialize( const JsonObject &jo )
 /**
  * Gather variables for saving. These variables are common to both the avatar and NPCs.
  */
+void Character::store_grab_state( JsonOut &out ) const
+{
+    out.member( "grab_point", grab_point );
+    out.member( "grab_type", obj_type_name[static_cast<int>( grab_type )] );
+    out.member( "grab_generation", grab_generation_ );
+    out.member( "grab_target", grab_target );
+}
+
+void Character::load_grab_state( const JsonObject &data )
+{
+    tripoint_rel_ms point = tripoint_rel_ms::zero;
+    data.read( "grab_point", point );
+    const std::string type = data.get_string( "grab_type",
+                             point == tripoint_rel_ms::zero ? "OBJECT_NONE" : "OBJECT_VEHICLE" );
+    const auto found = std::find( obj_type_name.begin(), obj_type_name.end(), type );
+    // Projection/save restoration must not invoke local view or gameplay callbacks.
+    grab_type = point == tripoint_rel_ms::zero || found == obj_type_name.end() ? object_type::NONE :
+                static_cast<object_type>( std::distance( obj_type_name.begin(), found ) );
+    grab_point = grab_type == object_type::NONE ? tripoint_rel_ms::zero : point;
+    path_settings->avoid_rough_terrain = grab_type != object_type::NONE;
+    grab_generation_ = 0;
+    data.read( "grab_generation", grab_generation_ );
+    grab_target.reset();
+    data.read( "grab_target", grab_target );
+}
+
+void Character::store_mission_state( JsonOut &out ) const
+{
+    out.member( "active_mission", active_mission ? active_mission->get_id() : -1 );
+    out.member( "active_missions", mission::to_uid_vector( active_missions ) );
+    out.member( "completed_missions", mission::to_uid_vector( completed_missions ) );
+    out.member( "failed_missions", mission::to_uid_vector( failed_missions ) );
+}
+
+void Character::load_mission_state( const JsonObject &data )
+{
+    reset_all_missions();
+    const auto read_list = [&]( const char *key, std::vector<mission *> &result ) {
+        std::vector<int> ids;
+        data.read( key, ids );
+        for( mission *entry : mission::to_ptr_vector( ids ) ) {
+            if( std::find( result.begin(), result.end(), entry ) == result.end() ) {
+                result.push_back( entry );
+            }
+        }
+    };
+    read_list( "active_missions", active_missions );
+    read_list( "completed_missions", completed_missions );
+    read_list( "failed_missions", failed_missions );
+    const int selected = data.get_int( "active_mission", -1 );
+    const auto selected_it = std::find_if( active_missions.begin(), active_missions.end(),
+    [selected]( const mission * entry ) {
+        return entry->get_id() == selected;
+    } );
+    active_mission = selected_it == active_missions.end() ? nullptr : *selected_it;
+
+    // A disconnected character's mission can finish while its ledger is saved.
+    // Reconcile without replaying completion rewards, dialogue or Lua callbacks.
+    for( auto it = active_missions.begin(); it != active_missions.end(); ) {
+        mission *entry = *it;
+        if( !entry->has_failed() && !entry->has_succeeded() ) {
+            ++it;
+            continue;
+        }
+        if( !entry->get_type().invisible_on_complete ) {
+            auto &finished = entry->has_failed() ? failed_missions : completed_missions;
+            if( std::find( finished.begin(), finished.end(), entry ) == finished.end() ) {
+                finished.push_back( entry );
+            }
+        }
+        it = active_missions.erase( it );
+    }
+    if( active_mission && std::find( active_missions.begin(), active_missions.end(),
+                                     active_mission ) == active_missions.end() ) {
+        update_active_mission();
+    }
+}
+
 void Character::load( const JsonObject &data )
 {
     data.allow_omitted_members();
+    kill_statistics_.clear();
+    data.read( "kill_tracker", kill_statistics_ );
     Creature::load( data );
 
     // stats
@@ -840,6 +955,7 @@ void Character::load( const JsonObject &data )
     data.read( "sensitive_mod", sensitive_mod );
 
     data.read( "proficiencies", _proficiencies );
+    data.read( "learned_recipes", *learned_recipes );
 
     _proficiencies->migrate_proficiencies();
 
@@ -958,6 +1074,9 @@ void Character::load( const JsonObject &data )
     }
 
     data.read( "my_bionics", *my_bionics );
+    next_bionic_uid = 0;
+    data.read( "next_bionic_uid", next_bionic_uid );
+    update_last_bionic_uid();
     my_bionics->erase( std::remove_if( my_bionics->begin(), my_bionics->end(),
     []( const bionic & it ) {
         return it.id.is_null(); // remove obsoleted bionics
@@ -973,6 +1092,8 @@ void Character::load( const JsonObject &data )
     invalidate_pseudo_items();
     update_bionic_power_capacity();
     data.read( "death_eocs", death_eocs );
+    lua_character_state = {};
+    data.read( "lua_character_state", lua_character_state );
     data.read( "lua_platform_death_mod", lua_platform_death_mod );
     data.read( "lua_platform_death_handler", lua_platform_death_handler );
     worn.on_takeoff( *this );
@@ -1233,6 +1354,9 @@ void Character::load( const JsonObject &data )
     data.read( "cash", cash );
     data.read( "recoil", recoil );
     data.read( "book_chapters", book_chapters );
+    load_grab_state( data );
+    items_identified.clear();
+    data.read( "items_identified", items_identified );
     data.read( "in_vehicle", in_vehicle );
     data.read( "last_sleep_check", last_sleep_check );
     if( data.read( "id", tmpid ) && tmpid.is_valid() ) {
@@ -1241,6 +1365,7 @@ void Character::load( const JsonObject &data )
         // present.
         setID( tmpid );
     }
+    load_mission_state( data );
 
     data.read( "activity", activity );
     if( data.has_array( "backlog" ) ) {
@@ -1549,6 +1674,7 @@ void Character::store( JsonOut &json ) const
     json.member( "martial_arts_data", martial_arts_data );
     // "Fracking Toasters" - Saul Tigh, toaster
     json.member( "my_bionics", *my_bionics );
+    json.member( "next_bionic_uid", next_bionic_uid );
 
     json.member_as_string( "move_mode",  move_mode );
 
@@ -1571,6 +1697,7 @@ void Character::store( JsonOut &json ) const
     json.end_object();
 
     json.member( "proficiencies", _proficiencies );
+    json.member( "learned_recipes", *learned_recipes );
 
     // npc; unimplemented
     json.member( "power_level", power_level );
@@ -1614,12 +1741,17 @@ void Character::store( JsonOut &json ) const
     json.member( "cash", cash );
     json.member( "recoil", recoil );
     json.member( "book_chapters", book_chapters );
+    store_grab_state( json );
+    store_mission_state( json );
+    json.member( "kill_tracker", kill_statistics_ );
+    json.member( "items_identified", items_identified );
     json.member( "in_vehicle", in_vehicle );
     json.member( "id", getID() );
 
     // "Looks like I picked the wrong week to quit smoking." - Steve McCroskey
     json.member( "addictions", addictions );
     json.member( "death_eocs", death_eocs );
+    json.member( "lua_character_state", lua_character_state );
     json.member( "lua_platform_death_mod", lua_platform_death_mod );
     json.member( "lua_platform_death_handler", lua_platform_death_handler );
     json.member( "worn", worn ); // also saves contents
@@ -1692,6 +1824,494 @@ void Character::store( JsonOut &json ) const
     json.member( "inactive_eocs", inactive_effect_on_condition_vector );
 }
 
+// Current character state crosses a player boundary; savegame world links do not.
+// Keep the native writer, but deliberately avoid the save loader's migrations,
+// activity restoration, wear/mutation hooks and world-identity rebinding.
+namespace
+{
+bionic_uid read_bionic_weapon_binding( const JsonObject &data, const item &weapon,
+                                       const bionic_collection &bionics, bool includes_inventory = true )
+{
+    bionic_uid identity = 0;
+    if( data.read( "weapon_bionic_uid", identity ) ) {
+        if( identity == 0 ) {
+            return 0;
+        }
+        for( const bionic &bio : bionics ) {
+            if( bio.get_uid() == identity && bio.powered && bio.has_weapon() &&
+                ( !includes_inventory || bio.get_weapon().typeId() == weapon.typeId() ) ) {
+                return identity;
+            }
+        }
+        data.throw_error_at( "weapon_bionic_uid", "Bionic weapon identity does not match" );
+    }
+    // Older snapshots used the same native migration as ordinary saved characters.
+    if( weapon.has_flag( flag_NO_UNWIELD ) && !weapon.ethereal &&
+        ( weapon.has_flag( flag_BIONIC_WEAPON ) || weapon.has_flag( flag_BIONIC_GUN ) ) ) {
+        for( const bionic &bio : bionics ) {
+            if( bio.powered && bio.has_weapon() && bio.get_weapon().typeId() == weapon.typeId() ) {
+                return bio.get_uid();
+            }
+        }
+    }
+    return 0;
+}
+} // namespace
+
+void Character::store_player_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "schema", 1 );
+    out.member( "character" );
+    out.start_object();
+    store( out );
+    out.member( "weapon_bionic_uid", weapon_bionic_uid );
+    out.end_object();
+    out.end_object();
+}
+
+void Character::store_turn_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "schema", 1 );
+    out.member( "kill_xp", kill_xp );
+    store_grab_state( out );
+    out.member( "hauling", hauling );
+    out.member( "autohaul", autohaul );
+    out.member( "suppress_autohaul", suppress_autohaul );
+    out.member( "hauling_filter", hauling_filter );
+    std::vector<item_source> haul_sources;
+    for( const item_location &loc : haul_list ) {
+        if( loc ) {
+            haul_sources.push_back( capture_item_source( *this, loc ) );
+        }
+    }
+    out.member( "haul_sources", haul_sources );
+    out.member( "needs" );
+    store_needs_state( out );
+    out.member( "mana", magic->available_mana() );
+    out.member( "str_max", str_max );
+    out.member( "dex_max", dex_max );
+    out.member( "int_max", int_max );
+    out.member( "per_max", per_max );
+    out.member( "str_bonus", str_bonus );
+    out.member( "dex_bonus", dex_bonus );
+    out.member( "int_bonus", int_bonus );
+    out.member( "per_bonus", per_bonus );
+    out.member( "stamina", stamina );
+    out.member( "cardio_acc", cardio_acc );
+    out.member( "activity_history", activity_history );
+    out.member( "daily_sleep", daily_sleep );
+    out.member( "continuous_sleep", continuous_sleep );
+    out.member( "radiation", radiation );
+    out.member( "focus_pool", focus_pool );
+    out.member( "oxygen", oxygen );
+    out.member( "scent", scent );
+    out.member( "type_of_scent", type_of_scent );
+    out.member( "recoil", recoil );
+    out.member( "power_level", power_level );
+    out.member( "max_power_level_modifier", max_power_level_modifier );
+    out.member( "pain", get_pain() );
+    out.member( "speed_base", speed_base );
+    out.member( "speed_bonus", speed_bonus );
+    out.member( "num_blocks", num_blocks );
+    out.member( "num_dodges", num_dodges );
+    out.member( "num_blocks_bonus", num_blocks_bonus );
+    out.member( "num_dodges_bonus", num_dodges_bonus );
+    out.member( "free_dodges_left", free_dodges_left );
+    out.member( "armor_bonus", armor_bonus );
+    out.member( "dodge_bonus", dodge_bonus );
+    out.member( "block_bonus", block_bonus );
+    out.member( "hit_bonus", hit_bonus );
+    out.member( "bash_bonus", bash_bonus );
+    out.member( "cut_bonus", cut_bonus );
+    out.member( "bash_mult", bash_mult );
+    out.member( "cut_mult", cut_mult );
+    out.member( "melee_quiet", melee_quiet );
+    out.member( "throw_resist", throw_resist );
+    out.member( "archery_aim_counter", archery_aim_counter );
+    out.member( "underwater", underwater );
+    out.member( "traits", my_traits );
+    out.member( "mutations", my_mutations );
+    out.member( "cached_mutations", cached_mutations );
+    out.member( "bionics", *my_bionics );
+    out.member( "weapon_bionic_uid", weapon_bionic_uid );
+    out.member( "radio_car" );
+    write_radio_car_binding( *this, get_map(), out );
+    out.member( "next_bionic_uid", next_bionic_uid );
+    out.member( "martial_arts_data", martial_arts_data );
+    out.member( "effects", *effects );
+    out.member( "damage_over_time", damage_over_time_map );
+    out.member( "body", body );
+    out.end_object();
+}
+
+void Character::load_turn_state( const JsonObject &snapshot )
+{
+    if( snapshot.get_int( "schema" ) != 1 ) {
+        snapshot.throw_error_at( "schema", "Unsupported character turn state" );
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    // Back up only the projected body state. Carried items, activities and
+    // identity are neither serialized nor replaced by an ordinary turn frame.
+    std::ostringstream previous;
+    JsonOut backup( previous );
+    store_turn_state( backup );
+    const auto restore = [&]( const JsonObject & data ) {
+        data.allow_omitted_members();
+        const auto read = [&]( const char *member, auto & value ) {
+            if( !data.read( member, value, true ) ) {
+                data.throw_error_at( member, "Missing character turn state field" );
+            }
+        };
+        read( "str_max", str_max );
+        read( "dex_max", dex_max );
+        read( "int_max", int_max );
+        read( "per_max", per_max );
+        read( "str_bonus", str_bonus );
+        read( "dex_bonus", dex_bonus );
+        read( "int_bonus", int_bonus );
+        read( "per_bonus", per_bonus );
+        read( "stamina", stamina );
+        read( "cardio_acc", cardio_acc );
+        read( "activity_history", activity_history );
+        read( "daily_sleep", daily_sleep );
+        read( "continuous_sleep", continuous_sleep );
+        read( "radiation", radiation );
+        read( "focus_pool", focus_pool );
+        read( "oxygen", oxygen );
+        read( "scent", scent );
+        read( "type_of_scent", type_of_scent );
+        read( "recoil", recoil );
+        read( "power_level", power_level );
+        read( "max_power_level_modifier", max_power_level_modifier );
+        read( "speed_base", speed_base );
+        read( "speed_bonus", speed_bonus );
+        read( "num_blocks", num_blocks );
+        read( "num_dodges", num_dodges );
+        read( "num_blocks_bonus", num_blocks_bonus );
+        read( "num_dodges_bonus", num_dodges_bonus );
+        read( "free_dodges_left", free_dodges_left );
+        read( "armor_bonus", armor_bonus );
+        read( "dodge_bonus", dodge_bonus );
+        read( "block_bonus", block_bonus );
+        read( "hit_bonus", hit_bonus );
+        read( "bash_bonus", bash_bonus );
+        read( "cut_bonus", cut_bonus );
+        read( "bash_mult", bash_mult );
+        read( "cut_mult", cut_mult );
+        read( "melee_quiet", melee_quiet );
+        read( "throw_resist", throw_resist );
+        read( "archery_aim_counter", archery_aim_counter );
+        read( "underwater", underwater );
+        if( data.has_member( "grab_type" ) ) {
+            load_grab_state( data );
+        }
+        read( "hauling", hauling );
+        read( "autohaul", autohaul );
+        read( "suppress_autohaul", suppress_autohaul );
+        read( "hauling_filter", hauling_filter );
+        if( data.has_array( "haul_sources" ) ) {
+            haul_list.clear();
+            std::vector<item_source> sources;
+            data.read( "haul_sources", sources, true );
+            for( const item_source &source : sources ) {
+                if( const item_location loc = resolve_item_source( *this, get_map(), source, 2 ) ) {
+                    haul_list.push_back( loc );
+                }
+            }
+        }
+        read( "traits", my_traits );
+        read( "mutations", my_mutations );
+        read( "cached_mutations", cached_mutations );
+        read( "bionics", *my_bionics );
+        weapon_bionic_uid = read_bionic_weapon_binding( data, weapon, *my_bionics, false );
+        if( data.has_object( "radio_car" ) ) {
+            apply_radio_car_binding( *this, data.get_object( "radio_car" ) );
+        }
+        // Older turn projections omit martial preferences; keep their existing value.
+        data.read( "martial_arts_data", martial_arts_data );
+        if( !martial_arts_data->selected_style().is_valid() ) {
+            data.throw_error_at( "martial_arts_data", "Unknown selected martial style" );
+        }
+        for( const matype_id &style : martial_arts_data->get_known_styles( false ) ) {
+            if( !style.is_valid() ) {
+                data.throw_error_at( "martial_arts_data", "Unknown learned martial style" );
+            }
+        }
+        read( "effects", *effects );
+        read( "damage_over_time", damage_over_time_map );
+        read( "body", body );
+        if( body.empty() ) {
+            data.throw_error_at( "body", "Character turn state requires a body" );
+        }
+        for( const auto &part : body ) {
+            if( !part.first.is_valid() ) {
+                data.throw_error_at( "body", "Unknown body part in character turn state" );
+            }
+        }
+        // Direct assignment avoids Character::set_pain/add_effect:
+        // those can wake a character, cancel an activity, or run gameplay hooks.
+        trait_flag_cache.clear();
+        next_bionic_uid = 0;
+        data.read( "next_bionic_uid", next_bionic_uid );
+        update_last_bionic_uid();
+        *morale = player_morale();
+        kill_xp = data.get_int( "kill_xp", kill_xp );
+        const JsonObject needs = data.get_object( "needs" );
+        load_needs_state( needs );
+        for( const trait_id &mut : get_functioning_mutations() ) {
+            morale->on_mutation_gain( mut );
+        }
+        for( const effect &eff : get_effects() ) {
+            morale->on_effect_int_change( eff.get_id(), eff.get_intensity(), eff.get_bp() );
+        }
+        Creature::set_pain( data.get_int( "pain" ) );
+        morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+        morale->on_stat_change( "radiation", radiation );
+        // Cache reconstruction can change permanent bonuses. The owner-provided
+        // points are authoritative and must be applied after those callbacks.
+        morale->load( needs );
+        magic->set_mana( data.get_int( "mana" ) );
+        recalculate_enchantment_cache( false );
+        my_mutations_dirty.clear();
+        old_mutation_cache->clear();
+        old_mutation_cache->mutations = enchantment_cache->mutations;
+        new_mutation_cache->clear();
+        recalculate_size();
+        calc_mutation_levels();
+        update_bionic_power_capacity();
+        flag_encumbrance();
+        recalc_sight_limits();
+    };
+    try {
+        restore( snapshot );
+    } catch( const JsonError & ) {
+        restore( json_loader::from_string( previous.str() ).get_object() );
+        throw;
+    }
+}
+
+void Character::load_player_state( const JsonObject &snapshot )
+{
+    if( snapshot.get_int( "schema" ) != 1 ) {
+        snapshot.throw_error_at( "schema", "Unsupported player character state" );
+    }
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    // Restore the old state if an incomplete/invalid packet fails after parsing
+    // some fields. No gameplay callbacks run in either direction.
+    std::ostringstream previous;
+    JsonOut backup( previous );
+    store_player_state( backup );
+    const auto restore = [&]( const JsonObject & data ) {
+        data.allow_omitted_members();
+        for( const char *member : {
+                 "skills", "mental_metrics"
+             } ) {
+            if( !data.has_object( member ) ) {
+                data.throw_error_at( member, "Player character state requires an object" );
+            }
+        }
+        for( const char *member : {
+                 "inv", "queued_effect_on_conditions"
+             } ) {
+            if( !data.has_array( member ) ) {
+                data.throw_error_at( member, "Player character state requires an array" );
+            }
+        }
+        const auto read = [&]( const char *member, auto & value ) {
+            if( !data.read( member, value, true ) ) {
+                data.throw_error_at( member, "Missing player character state field" );
+            }
+        };
+        read( "str_max", str_max );
+        read( "dex_max", dex_max );
+        read( "int_max", int_max );
+        read( "per_max", per_max );
+        read( "str_bonus", str_bonus );
+        read( "dex_bonus", dex_bonus );
+        read( "per_bonus", per_bonus );
+        read( "int_bonus", int_bonus );
+        read( "name", name );
+        read( "play_name", play_name );
+        read( "base_age", init_age );
+        read( "base_height", init_height );
+        read( "blood_type", my_blood_type );
+        read( "blood_rh_factor", blood_rh_factor );
+        read( "avg_nat_bpm", avg_nat_bpm );
+        read( "custom_profession", custom_profession );
+        read( "healthy", lifestyle );
+        read( "healthy_mod", daily_health );
+        read( "health_tally", health_tally );
+        read( "sensitive", sensitive );
+        read( "sensitive_mod", sensitive_mod );
+        read( "daily_sleep", daily_sleep );
+        read( "continuous_sleep", continuous_sleep );
+        read( "thirst", thirst );
+        read( "hunger", hunger );
+        read( "sleepiness", sleepiness );
+        read( "cardio_acc", cardio_acc );
+        read( "activity_history", activity_history );
+        read( "sleep_deprivation", sleep_deprivation );
+        read( "stored_calories", stored_calories );
+        read( "radiation", radiation );
+        read( "stamina", stamina );
+        read( "vitamin_levels", vitamin_levels );
+        read( "daily_vitamins", daily_vitamins );
+        read( "pkill", pkill );
+        read( "consumption_history", consumption_history );
+        read( "stim", stim );
+        read( "type_of_scent", type_of_scent );
+        read( "focus_pool", focus_pool );
+        read( "kill_xp", kill_xp );
+        // Personal history travels with an initially imported character. This
+        // loader is not an in-session client authority update path.
+        read( "kill_tracker", kill_statistics_ );
+        read( "oxygen", oxygen );
+        read( "traits", my_traits );
+        read( "mutations", my_mutations );
+        read( "cached_mutations", cached_mutations );
+        trait_flag_cache.clear();
+        read( "my_bionics", *my_bionics );
+        next_bionic_uid = 0;
+        data.read( "next_bionic_uid", next_bionic_uid );
+        update_last_bionic_uid();
+        read( "move_mode", move_mode );
+        read( "known_monsters", known_monsters );
+        read( "power_level", power_level );
+        read( "max_power_level_modifier", max_power_level_modifier );
+        read( "stomach", stomach );
+        read( "guts", guts );
+        read( "last_sleep_check", last_sleep_check );
+        read( "slow_rad", slow_rad );
+        read( "scent", scent );
+        read( "male", male );
+        read( "free_dodges_left", free_dodges_left );
+        read( "cash", cash );
+        read( "recoil", recoil );
+        read( "book_chapters", book_chapters );
+        load_grab_state( data );
+        items_identified.clear();
+        // Old schema-1 projections predate per-player book discovery.
+        if( data.has_member( "items_identified" ) ) {
+            read( "items_identified", items_identified );
+        }
+        read( "addictions", addictions );
+        read( "death_eocs", death_eocs );
+        read( "lua_character_state", lua_character_state );
+        read( "lua_platform_death_mod", lua_platform_death_mod );
+        read( "lua_platform_death_handler", lua_platform_death_handler );
+        read( "inactive_eocs", inactive_effect_on_condition_vector );
+        read( "effects", *effects );
+        read( "damage_over_time_map", damage_over_time_map );
+        read( "blocks_left", num_blocks );
+        read( "dodges_left", num_dodges );
+        read( "num_blocks_bonus", num_blocks_bonus );
+        read( "num_dodges_bonus", num_dodges_bonus );
+        read( "armor_bonus", armor_bonus );
+        read( "speed", speed_base );
+        read( "speed_bonus", speed_bonus );
+        read( "dodge_bonus", dodge_bonus );
+        read( "block_bonus", block_bonus );
+        read( "hit_bonus", hit_bonus );
+        read( "bash_bonus", bash_bonus );
+        read( "cut_bonus", cut_bonus );
+        read( "bash_mult", bash_mult );
+        read( "cut_mult", cut_mult );
+        read( "melee_quiet", melee_quiet );
+        read( "throw_resist", throw_resist );
+        read( "archery_aim_counter", archery_aim_counter );
+        read( "body", body );
+        if( body.empty() ) {
+            data.throw_error_at( "body", "Player character state requires a body" );
+        }
+        const JsonObject metrics = data.get_object( "mental_metrics" );
+        mental_metric_guilt_kills = metrics.get_int( "guilt_kills" );
+        mental_metric_human_dissections = metrics.get_int( "human_dissections" );
+        mental_metric_cannibalism = metrics.get_int( "cannibalism" );
+        // These loaders have legacy merge behavior; start from empty owners.
+        *magic = known_magic();
+        read( "magic", magic );
+        read( "martial_arts_data", martial_arts_data );
+        read( "proficiencies", _proficiencies );
+        read( "learned_recipes", *learned_recipes );
+        _skills->clear();
+        for( const JsonMember member : data.get_object( "skills" ) ) {
+            const skill_id id( member.name() );
+            if( !id.is_valid() ) {
+                data.throw_error_at( "skills", "Unknown skill in player character state" );
+            }
+            member.read( ( *_skills )[id] );
+        }
+        *morale = player_morale();
+        for( const trait_id &mut : get_functioning_mutations() ) {
+            morale->on_mutation_gain( mut );
+        }
+        for( const effect &eff : get_effects() ) {
+            morale->on_effect_int_change( eff.get_id(), eff.get_intensity(), eff.get_bp() );
+        }
+        Creature::set_pain( data.get_int( "pain" ) );
+        morale->on_stat_change( "perceived_pain", get_perceived_pain() );
+        morale->on_stat_change( "radiation", radiation );
+        morale->load( data );
+
+        auto restored_values = values;
+        read( "values", restored_values );
+        // Session ownership belongs to the destination, never to a snapshot.
+        for( const std::string key : {
+                 "mp_proxy", "mp_player_id"
+             } ) {
+            restored_values.erase( key );
+            const auto owned = values.find( key );
+            if( owned != values.end() ) {
+                restored_values.insert( *owned );
+            }
+        }
+        values = std::move( restored_values );
+        queued_effect_on_conditions = queued_eocs();
+        for( JsonObject entry : data.get_array( "queued_effect_on_conditions" ) ) {
+            queued_eoc value;
+            value.time = time_point( entry.get_int( "time" ) );
+            value.eoc = effect_on_condition_id( entry.get_string( "eoc" ) );
+            entry.read( "context", value.context );
+            queued_effect_on_conditions.push( value );
+        }
+        outfit restored_outfit;
+        read( "worn", restored_outfit );
+        inventory restored_inventory;
+        restored_inventory.json_load_items( data.get_array( "inv" ) );
+        item restored_weapon;
+        data.read( "weapon", restored_weapon );
+        worn = std::move( restored_outfit );
+        *inv = std::move( restored_inventory );
+        weapon = std::move( restored_weapon );
+        weapon_bionic_uid = read_bionic_weapon_binding( data, weapon, *my_bionics );
+        invalidate_pseudo_items();
+        invalidate_leak_level_cache();
+        invalidate_weight_carried_cache();
+        invalidate_inventory_validity_cache();
+        invalidate_crafting_inventory();
+        recalculate_enchantment_cache( false );
+        my_mutations_dirty.clear();
+        old_mutation_cache->clear();
+        old_mutation_cache->mutations = enchantment_cache->mutations;
+        new_mutation_cache->clear();
+        recalculate_size();
+        calc_mutation_levels();
+        update_bionic_power_capacity();
+        flag_encumbrance();
+        recalc_sight_limits();
+    };
+    try {
+        restore( snapshot.get_object( "character" ) );
+    } catch( const JsonError & ) {
+        const JsonObject original = json_loader::from_string( previous.str() ).get_object();
+        original.allow_omitted_members();
+        restore( original.get_object( "character" ) );
+        throw;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///// avatar.h
 
@@ -1707,6 +2327,10 @@ void avatar::serialize( JsonOut &json ) const
 void avatar::store( JsonOut &json ) const
 {
     Character::store( json );
+
+    if( local_player_id.valid() ) {
+        json.member( "local_player_id", local_player_id.str() );
+    }
 
     // player-specific specifics
     if( prof != nullptr ) {
@@ -1732,15 +2356,8 @@ void avatar::store( JsonOut &json ) const
     // someday, npcs may drive
     json.member( "controlling_vehicle", controlling_vehicle );
 
-    // shopping carts, furniture etc
-    json.member( "grab_point", grab_point );
-    json.member( "grab_type", obj_type_name[static_cast<int>( grab_type ) ] );
-
     // npc: unimplemented, potentially useful
-    json.member( "learned_recipes", *learned_recipes );
 
-    // Player only, books they have read at least once.
-    json.member( "items_identified", items_identified );
 
     // Player only, snippets they have read at least once.
     json.member( "snippets_read", snippets_read );
@@ -1748,14 +2365,10 @@ void avatar::store( JsonOut &json ) const
     json.member( "translocators", translocators );
 
     // mission stuff
-    json.member( "active_mission", active_mission == nullptr ? -1 : active_mission->get_id() );
     json.member( "active_point_of_interest_pos", active_point_of_interest.pos );
     json.member( "active_point_of_interest_text",
                  active_point_of_interest.pos == tripoint_abs_omt::invalid ? "" : active_point_of_interest.text );
 
-    json.member( "active_missions", mission::to_uid_vector( active_missions ) );
-    json.member( "completed_missions", mission::to_uid_vector( completed_missions ) );
-    json.member( "failed_missions", mission::to_uid_vector( failed_missions ) );
 
     json.member( "points_of_interest" );
     json.start_array();
@@ -1799,7 +2412,18 @@ void avatar::deserialize( const JsonObject &data )
 
 void avatar::load( const JsonObject &data )
 {
+    // Validate before mutating the Character. A corrupt identity must not
+    // silently become a new player, and an old save must clear any prior ID.
+    player_id restored_player;
+    if( data.has_member( "local_player_id" ) ) {
+        try {
+            restored_player = player_id( data.get_string( "local_player_id" ) );
+        } catch( const std::invalid_argument & ) {
+            data.throw_error_at( "local_player_id", "Invalid local player identity" );
+        }
+    }
     Character::load( data );
+    local_player_id = restored_player;
 
     std::string prof_ident = "(null)";
     if( data.read( "profession", prof_ident ) && string_id<profession>( prof_ident ).is_valid() ) {
@@ -1823,25 +2447,9 @@ void avatar::load( const JsonObject &data )
     data.read( "faction_representatives", faction_representatives );
     data.read( "controlling_vehicle", controlling_vehicle );
 
-    data.read( "grab_point", grab_point );
-    std::string grab_typestr = "OBJECT_NONE";
-    if( grab_point.x() != 0 || grab_point.y() != 0 ) {
-        grab_typestr = "OBJECT_VEHICLE";
-        data.read( "grab_type", grab_typestr );
-    } else {
-        // we just want to read, but ignore grab_type
-        std::string fake;
-        data.read( "grab_type", fake );
-    }
-
-    // On Visual Studio array iterators are not pointers, so prevent clang-tidy
-    // from converting this to a pointer type.
-    // NOLINTNEXTLINE(readability-qualified-auto)
-    const auto iter = std::find( obj_type_name.begin(), obj_type_name.end(), grab_typestr );
-    grab( iter == obj_type_name.end() ?
-          object_type::NONE : static_cast<object_type>(
-              std::distance( obj_type_name.begin(), iter ) ),
-          grab_point );
+    // Preserve the shared loader's identity. Re-grabbing here could bind a
+    // different object before the saved map is loaded.
+    refresh_grab_memory();
 
     calc_mutation_levels();
     drench_mut_calc();
@@ -1860,24 +2468,10 @@ void avatar::load( const JsonObject &data )
         set_scenario( generic_scenario );
     }
 
-    data.read( "learned_recipes", *learned_recipes );
+
     valid_autolearn_skills->clear(); // Invalidates the cache
 
-    items_identified.clear();
-    data.read( "items_identified", items_identified );
-
     data.read( "translocators", translocators );
-
-    std::vector<int> tmpmissions;
-    if( data.read( "active_missions", tmpmissions ) ) {
-        active_missions = mission::to_ptr_vector( tmpmissions );
-    }
-    if( data.read( "failed_missions", tmpmissions ) ) {
-        failed_missions = mission::to_ptr_vector( tmpmissions );
-    }
-    if( data.read( "completed_missions", tmpmissions ) ) {
-        completed_missions = mission::to_ptr_vector( tmpmissions );
-    }
 
     for( JsonObject object : data.get_array( "points_of_interest" ) ) {
         point_of_interest poi;
@@ -1886,31 +2480,11 @@ void avatar::load( const JsonObject &data )
         points_of_interest.push_back( poi );
     }
 
-    int tmpactive_mission = 0;
-    if( data.read( "active_mission", tmpactive_mission ) ) {
-        if( tmpactive_mission != -1 ) {
-            active_mission = mission::find( tmpactive_mission );
-        }
-    }
     if( !data.read( "active_point_of_interest_pos", active_point_of_interest.pos ) ) {
         active_point_of_interest.pos = tripoint_abs_omt::invalid;
         active_point_of_interest.text = "";
     } else {
         data.read( "active_point_of_interest_text", active_point_of_interest.text );
-    }
-
-    // Normally there is only one player character loaded, so if a mission that is assigned to
-    // another character (not the current one) fails, the other character(s) are not informed.
-    // We must inform them when they get loaded the next time.
-    // Only active missions need checking, failed/complete will not change anymore.
-    const auto last = std::remove_if( active_missions.begin(),
-    active_missions.end(), []( mission const * m ) {
-        return m->has_failed();
-    } );
-    std::copy( last, active_missions.end(), std::back_inserter( failed_missions ) );
-    active_missions.erase( last, active_missions.end() );
-    if( active_mission && active_mission->has_failed() ) {
-        update_active_mission();
     }
 
     for( JsonArray pair : data.get_array( "assigned_invlet" ) ) {
@@ -2399,6 +2973,18 @@ void npc::load( const JsonObject &data )
     }
 
     data.read( "op_of_u", op_of_u );
+    legacy_opinion_owner = character_id();
+    data.read( "op_of_u_owner", legacy_opinion_owner );
+    opinions.clear();
+    for( const JsonObject entry : data.get_array( "opinions" ) ) {
+        character_id who;
+        entry.read( "character", who );
+        npc_opinion opinion;
+        entry.read( "opinion", opinion );
+        if( who.is_valid() && who != opinion_owner() ) {
+            opinions.emplace( who, opinion );
+        }
+    }
     data.read( "faction_representative", faction_representative );
     data.read( "chatbin", chatbin );
     if( !data.read( "rules", rules ) ) {
@@ -2476,6 +3062,16 @@ void npc::store( JsonOut &json ) const
     json.member( "attitude", static_cast<int>( attitude ) );
     json.member( "previous_attitude", static_cast<int>( previous_attitude ) );
     json.member( "op_of_u", op_of_u );
+    json.member( "op_of_u_owner", opinion_owner() );
+    json.member( "opinions" );
+    json.start_array();
+    for( const auto &entry : opinions ) {
+        json.start_object();
+        json.member( "character", entry.first );
+        json.member( "opinion", entry.second );
+        json.end_object();
+    }
+    json.end_array();
     json.member( "faction_representative", faction_representative );
     json.member( "chatbin", chatbin );
     json.member( "rules", rules );
@@ -2560,6 +3156,16 @@ void inventory::json_save_items( JsonOut &json ) const
         }
     }
     json.end_array();
+}
+
+void inventory::load_current_items( const JsonArray &data )
+{
+    // Do not restack current identities or run old-save migrations.
+    clear();
+    for( JsonObject entry : data ) {
+        items.emplace_back();
+        items.back().emplace_back( item::from_current_state( entry ) );
+    }
 }
 
 void inventory::json_load_items( const JsonArray &ja )
@@ -2968,6 +3574,34 @@ static step_choice step_choice_from_string( const std::string &s )
     return step_choice::do_wait;
 }
 
+void craft_result_state::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "stage", static_cast<int>( stage ) );
+    out.member( "owner_selects_destination", owner_selects_destination );
+    out.member( "components_pending", components_pending );
+    out.member( "inventory_destination", inventory_destination );
+    out.member( "pending", pending );
+    out.member( "primary_had_results", primary_had_results );
+    out.member( "allow_wield", allow_wield );
+    out.end_object();
+}
+
+void craft_result_state::deserialize( const JsonObject &data )
+{
+    const int phase = data.get_int( "stage" );
+    if( phase < 0 || phase > static_cast<int>( craft_completion_stage::done ) ) {
+        data.throw_error_at( "stage", "Unknown craft completion stage" );
+    }
+    stage = static_cast<craft_completion_stage>( phase );
+    owner_selects_destination = data.get_bool( "owner_selects_destination", false );
+    components_pending = data.get_bool( "components_pending", false );
+    inventory_destination = data.get_bool( "inventory_destination", false );
+    data.read( "pending", pending, true );
+    primary_had_results = data.get_bool( "primary_had_results" );
+    allow_wield = data.get_bool( "allow_wield" );
+}
+
 void item::craft_data::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
@@ -2978,6 +3612,10 @@ void item::craft_data::serialize( JsonOut &jsout ) const
     jsout.member( "tools_to_continue", tools_to_continue );
     jsout.member( "batch_size", batch_size );
     jsout.member( "step_tool_allocs", step_tool_allocs );
+    if( completion.stage != craft_completion_stage::not_started ||
+        completion.owner_selects_destination ) {
+        jsout.member( "completion", completion );
+    }
     jsout.member( "current_step", current_step );
     jsout.member( "step_progress", step_progress );
     if( !step_plans.empty() ) {
@@ -3101,7 +3739,7 @@ static bool bindings_fit_recipe( const recipe &making, int step_index,
     const std::vector<std::vector<quality_requirement>> &quals = step_reqs.get_qualities();
     const std::vector<std::vector<tool_comp>> &tools = step_reqs.get_tools();
 
-    std::map<std::pair<int, int>, std::set<int>> slots_by_group;
+    std::map<std::pair<int, int>, std::set<int >> slots_by_group;
 
     for( const craft_reservation::binding &b : bindings ) {
         if( b.group_index < 0 || b.alternative_index < 0 ) {
@@ -3240,6 +3878,8 @@ void item::craft_data::deserialize( const JsonObject &obj )
         }
         making = &rid.obj();
     }
+    completion = {};
+    obj.read( "completion", completion );
     obj.read( "comps_used", comps_used );
     next_failure_point = obj.get_int( "next_failure_point", -1 );
     tools_to_continue = obj.get_bool( "tools_to_continue", false );
@@ -3551,13 +4191,18 @@ void cata::lua_platform::detail::erase_platform_savegame_blacklist(
 }
 
 template<typename Archive>
-void item::io( Archive &archive )
+void item::io( Archive &archive, item_load_context context )
 {
 
     itype_id orig; // original ID as loaded from JSON
     const auto load_type = [&]( const std::string & id ) {
         orig = itype_id( id );
-        convert( item_controller->migrate_id( orig ) );
+        if( context == item_load_context::current_state ) {
+            type = find_type( orig );
+            contents = item_contents( type->pockets );
+        } else {
+            convert( item_controller->migrate_id( orig ) );
+        }
     };
 
     const auto load_corpse = [this]( const std::string & id ) {
@@ -3575,14 +4220,18 @@ void item::io( Archive &archive )
     // Persistent unique identifier for item instances
     archive.io( "uid", uid_, item_uid() );
     if constexpr( Archive::is_input::value ) {
-        if( !uid_.is_valid() ) {
+        if( context == item_load_context::saved_game && !uid_.is_valid() ) {
             uid_ = item_uid( generate_next_item_uid() );
         }
     }
 
     // normalize legacy saves to always have charges >= 0
     archive.io( "charges", charges, 0 );
-    charges = std::max( charges, 0 );
+    if constexpr( Archive::is_input::value ) {
+        if( context == item_load_context::saved_game ) {
+            charges = std::max( charges, 0 );
+        }
+    }
 
     archive.io( "energy", energy, 0_mJ );
 
@@ -3601,12 +4250,15 @@ void item::io( Archive &archive )
     // archive.io fills item_vars without touching has_item_vars_; set it now so
     // the var accessors are correct for the load-time migrations that run below.
     // (The final resync near the end of this function fixes the post-erase state.)
-    has_item_vars_ = !item_vars.empty();
+    if constexpr( Archive::is_input::value ) {
+        has_item_vars_ = !item_vars.empty();
+    }
 
     // game::legacy_migrate_npctalk_var_prefix( item_vars );
     // doesn't work here, because item_vars is cata::heap<std::map<>>, not std::unordered_map<>
     // remove after 0.J
-    if( savegame_loading_version < 36 ) {
+    if( Archive::is_input::value && context == item_load_context::saved_game &&
+        savegame_loading_version < 36 ) {
         const std::string prefix = "npctalk_var_";
         for( auto i = item_vars.begin(); i != item_vars.end(); ) {
             if( i->first.rfind( prefix, 0 ) == 0 ) {
@@ -3620,10 +4272,12 @@ void item::io( Archive &archive )
         }
     }
 
-    if( auto var = item_vars.find( TIED_DOWN_FURNITURE ); var != item_vars.end() ) {
-        const furn_str_id furnstr( var->second.str() );
-        if( auto it = furn_migrations.find( furnstr ); it != furn_migrations.end() ) {
-            set_var( TIED_DOWN_FURNITURE, it->second.second.str() );
+    if( Archive::is_input::value && context == item_load_context::saved_game ) {
+        if( auto var = item_vars.find( TIED_DOWN_FURNITURE ); var != item_vars.end() ) {
+            const furn_str_id furnstr( var->second.str() );
+            if( auto it = furn_migrations.find( furnstr ); it != furn_migrations.end() ) {
+                set_var( TIED_DOWN_FURNITURE, it->second.second.str() );
+            }
         }
     }
 
@@ -3647,7 +4301,18 @@ void item::io( Archive &archive )
     archive.io( "faults", faults, io::empty_default_tag() );
     archive.io( "item_tags", item_tags, io::empty_default_tag() );
     if( !has_flag( flag_NUTRIENT_OVERRIDE ) ) {
-        archive.io( "components", components, io::empty_default_tag() );
+        if constexpr( Archive::is_input::value ) {
+            if( context == item_load_context::current_state ) {
+                components.clear();
+                if( archive.has_member( "components" ) ) {
+                    components.deserialize( archive.get_member( "components" ), context );
+                }
+            } else {
+                archive.io( "components", components, io::empty_default_tag() );
+            }
+        } else {
+            archive.io( "components", components, io::empty_default_tag() );
+        }
     }
     archive.io( "specific_energy", specific_energy, units::from_joule_per_gram( -10.f ) );
     archive.io( "temperature", temperature, units::from_kelvin( 0.f ) );
@@ -3655,16 +4320,18 @@ void item::io( Archive &archive )
     archive.io( "template_traits", template_traits );
     // Legacy: remove flag check/unset after 0.F
     archive.io( "ethereal", ethereal, has_flag( flag_ETHEREAL_ITEM ) );
-    unset_flag( flag_ETHEREAL_ITEM );
+    if( Archive::is_input::value && context == item_load_context::saved_game ) {
+        unset_flag( flag_ETHEREAL_ITEM );
+    }
     archive.template io<const mtype>( "corpse", corpse, load_corpse,
     []( const mtype & i ) {
         return i.id.str();
     } );
     archive.io( "craft_data", craft_data_, decltype( craft_data_ )() );
-    const auto ivload = [this]( const std::string & variant ) {
+    const auto ivload = [this, context]( const std::string & variant ) {
         if( possible_itype_variant( variant ) ) {
             set_itype_variant( variant );
-        } else {
+        } else if( context == item_load_context::saved_game ) {
             item_controller->migrate_item_from_variant( *this, variant );
         }
     };
@@ -3680,16 +4347,23 @@ void item::io( Archive &archive )
     archive.io( "relic_data", relic_data, null_relic_ptr );
     static const cata::value_ptr<link_data> null_link_ptr = nullptr;
     archive.io( "link_data", link_, null_link_ptr );
-    if( has_link_data() ) {
+    if( Archive::is_input::value && has_link_data() ) {
         const optional_vpart_position vp = get_map().veh_at( link().t_abs_pos );
         if( vp ) {
             link().t_veh = vp.value().vehicle().get_safe_reference();
         }
     }
 
-    item_controller->migrate_item( orig, *this );
+    if( Archive::is_input::value && context == item_load_context::saved_game ) {
+        item_controller->migrate_item( orig, *this );
+    }
 
     if( !Archive::is_input::value ) {
+        return;
+    }
+    if( context == item_load_context::current_state ) {
+        current_phase = static_cast<phase_id>( cur_phase );
+        requires_tags_processing = true;
         return;
     }
     /* Loading has finished, following code is to ensure consistency and fixes bugs in saves. */
@@ -3880,42 +4554,44 @@ void item::migrate_content_item( const item &contained )
     }
 }
 
-void item::deserialize( const JsonObject &data )
+void item::deserialize( const JsonObject &data, item_load_context context )
 {
     data.allow_omitted_members();
     // Since deserialization is handled by the archive, don't check it here.
     // CATA_DO_NOT_CHECK_SERIALIZE
     io::JsonObjectInputArchive archive( data );
-    io( archive );
+    io( archive, context );
     archive.allow_omitted_members();
     data.copy_visited_members( archive );
 
     //*** ITEM MIGRATION (remove in O.I) ***
     if( data.has_object( "contents" ) ) {
         item_contents read_contents;
-        data.read( "contents", read_contents );
+        read_contents.deserialize( data.get_object( "contents" ), context );
         contents.read_mods( read_contents );
         update_modified_pockets();
         contents.combine( std::move( read_contents ), false, true, false, true );
 
-        //migrate SOFTWARE pocket
-        auto pockets_e_legacy = []( item_pocket const & pocket ) {
-            return pocket.is_type( pocket_type::SOFTWARE );
-        };
-        auto pockets_new_efile = []( item_pocket const & pocket ) {
-            return pocket.is_type( pocket_type::E_FILE_STORAGE );
-        };
-        std::vector<item_pocket *> pockets = contents.get_pockets( pockets_new_efile );
-        item_pocket *new_efile_storage = !pockets.empty() ? pockets.front() : nullptr;
+        if( context == item_load_context::saved_game ) {
+            //migrate SOFTWARE pocket
+            auto pockets_e_legacy = []( item_pocket const & pocket ) {
+                return pocket.is_type( pocket_type::SOFTWARE );
+            };
+            auto pockets_new_efile = []( item_pocket const & pocket ) {
+                return pocket.is_type( pocket_type::E_FILE_STORAGE );
+            };
+            std::vector<item_pocket *> pockets = contents.get_pockets( pockets_new_efile );
+            item_pocket *new_efile_storage = !pockets.empty() ? pockets.front() : nullptr;
 
-        for( item_pocket *pocket : contents.get_pockets( pockets_e_legacy ) ) {
-            for( const item *it : pocket->all_items_top() ) {
-                if( new_efile_storage == nullptr ) {
-                    debugmsg( "efile storage pocket needed for item: %s", tname() );
-                } else {
-                    std::optional<item> removed_item = pocket->remove_item( *it );
-                    if( removed_item ) {
-                        new_efile_storage->add( *removed_item );
+            for( item_pocket *pocket : contents.get_pockets( pockets_e_legacy ) ) {
+                for( const item *it : pocket->all_items_top() ) {
+                    if( new_efile_storage == nullptr ) {
+                        debugmsg( "efile storage pocket needed for item: %s", tname() );
+                    } else {
+                        std::optional<item> removed_item = pocket->remove_item( *it );
+                        if( removed_item ) {
+                            new_efile_storage->add( *removed_item );
+                        }
                     }
                 }
             }
@@ -3923,6 +4599,12 @@ void item::deserialize( const JsonObject &data )
         // contents may not be empty if other migration happened in item::io
     } else if( contents.empty() ) { // empty contents was not serialized, recreate pockets from the type
         contents = item_contents( type->pockets );
+    }
+
+    if( context == item_load_context::current_state ) {
+        update_inherited_flags();
+        update_prefix_suffix_flags();
+        return;
     }
 
     // Restore the separate second tube in saves from the combined-magazine KSG.
@@ -3975,6 +4657,55 @@ void item::deserialize( const JsonObject &data )
         }
     }
     update_inherited_flags();
+}
+
+item item::from_current_state( const JsonObject &data )
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const itype_id id( data.get_string( "typeid" ) );
+    if( !id.is_valid() ) {
+        data.throw_error_at( "typeid", "Unknown current item type" );
+    }
+    int64_t stored_uid = 0;
+    if( !data.read( "uid", stored_uid ) || stored_uid <= 0 ) {
+        data.throw_error_at( "uid", "Current item state requires a valid identity" );
+    }
+    item restored;
+    restored.deserialize( data, item_load_context::current_state );
+    return restored;
+}
+
+void item::apply_current_state( item &&state, bool include_contents )
+{
+    // safe_reference_anchor intentionally invalidates references even on move.
+    // Apply the archive fields in place instead of assigning the C++ object:
+    // the lifetime/anchor stays untouched and new serialized fields are covered.
+    std::ostringstream encoded;
+    {
+        JsonOut out( encoded );
+        state.store_current_state( out );
+    }
+    const JsonObject data = json_loader::from_string( encoded.str() ).get_object();
+    if( include_contents ) {
+        contents.apply_current_state( std::move( state.contents ) );
+    }
+    auto retained_contents = std::move( contents );
+    components.clear();
+    io::JsonObjectInputArchive archive( data );
+    io( archive, item_load_context::current_state );
+    archive.allow_omitted_members();
+    data.allow_omitted_members();
+    contents = std::move( retained_contents );
+    on_contents_changed();
+    update_prefix_suffix_flags();
+}
+
+void item::store_current_state( JsonOut &json ) const
+{
+    // Scalar state only. Contents are replicated independently unless their
+    // topology changes, so a running tool does not serialize its whole backpack.
+    io::JsonObjectOutputArchive archive( json );
+    const_cast<item *>( this )->io( archive, item_load_context::current_state );
 }
 
 void item::serialize( JsonOut &json ) const
@@ -4267,6 +4998,10 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "is_autodriving", is_autodriving );
     data.read( "is_following", is_following );
     data.read( "is_patrolling", is_patrolling );
+    following_character.reset();
+    patrol_faction = your_fac;
+    data.read( "following_character", following_character );
+    data.read( "patrol_faction", patrol_faction );
     data.read( "autodrive_local_target", autodrive_local_target );
     data.read( "airworthy", flyable );
     data.read( "requested_z_change", requested_z_change );
@@ -4392,6 +5127,8 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "is_autodriving", is_autodriving );
     json.member( "is_following", is_following );
     json.member( "is_patrolling", is_patrolling );
+    json.member( "following_character", following_character );
+    json.member( "patrol_faction", patrol_faction );
     json.member( "autodrive_local_target", autodrive_local_target );
     json.member( "airworthy", flyable );
     json.member( "requested_z_change", requested_z_change );
@@ -4431,6 +5168,10 @@ void mission::deserialize( const JsonObject &jo )
         // We can't check properly here, since most of the game isn't loaded
         status = mission_status::in_progress;
     }
+
+    failure_effects_pending = has_failed() && jo.get_bool( "failure_effects_pending", false );
+    nemesis_respawn_pending = in_progress() && type->goal == MGOAL_KILL_NEMESIS &&
+                              jo.get_bool( "nemesis_respawn_pending", false );
 
     jo.read( "value", value );
     jo.read( "kill_count_to_reach", kill_count_to_reach );
@@ -4489,6 +5230,8 @@ void mission::serialize( JsonOut &json ) const
 
     json.member( "type_id", type->id );
     json.member( "status", status_to_string( status ) );
+    json.member( "failure_effects_pending", failure_effects_pending );
+    json.member( "nemesis_respawn_pending", nemesis_respawn_pending );
     json.member( "value", value );
     json.member( "kill_count_to_reach", kill_count_to_reach );
     json.member( "reward", reward );
@@ -4790,6 +5533,7 @@ void player_morale::load( const JsonObject &jsin )
 {
     jsin.allow_omitted_members();
     jsin.read( "morale", points );
+    invalidate();
 }
 
 void mm_submap::serialize( JsonOut &jsout ) const
@@ -5091,7 +5835,7 @@ void serialize( const recipe_subset &value, JsonOut &jsout )
     for( const recipe * const &entry : value ) {
         ids.push_back( entry->ident() );
     }
-    std::sort( ids.begin(), ids.end(), []( const recipe_id &lhs, const recipe_id &rhs ) {
+    std::sort( ids.begin(), ids.end(), []( const recipe_id & lhs, const recipe_id & rhs ) {
         return lhs.str() < rhs.str();
     } );
     jsout.write( ids );
@@ -6282,7 +7026,7 @@ void basecamp::deserialize( const JsonObject &data )
     }
 }
 
-void kill_tracker::serialize( JsonOut &jsout ) const
+void kill_statistics::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
     jsout.member( "kills" );
@@ -6301,16 +7045,22 @@ void kill_tracker::serialize( JsonOut &jsout ) const
     jsout.end_object();
 }
 
-void kill_tracker::deserialize( const JsonObject &data )
+void kill_statistics::deserialize( const JsonObject &data )
 {
     data.allow_omitted_members();
+    std::map<mtype_id, int> restored_monsters;
+    std::vector<std::string> restored_characters;
     for( const JsonMember member : data.get_object( "kills" ) ) {
-        kills[mtype_id( member.name() )] = member.get_int();
+        const int count = member.get_int();
+        if( count < 0 ) {
+            data.throw_error_at( "kills", "Kill counts must be nonnegative" );
+        }
+        restored_monsters[mtype_id( member.name() )] = count;
     }
-
-    for( const std::string npc_name : data.get_array( "npc_kills" ) ) {
-        npc_kills.push_back( npc_name );
+    for( const std::string name : data.get_array( "npc_kills" ) ) {
+        restored_characters.push_back( name );
     }
+    reset( restored_monsters, restored_characters );
 }
 
 void cata_variant::serialize( JsonOut &jsout ) const
@@ -6873,6 +7623,9 @@ void submap::store( JsonOut &jsout ) const
             jsout.write( it );
         }
         jsout.end_array();
+        jsout.start_object();
+        jsout.member( "uid", elem.second.uid );
+        jsout.end_object();
     }
     jsout.end_array();
 
@@ -7256,6 +8009,15 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 item tmp;
                 tmp.deserialize( component_json );
                 pc.components.push_back( tmp );
+            }
+            // Older saves have the next site's x coordinate here, not metadata.
+            if( partial_constructions_json.has_more() && partial_constructions_json.test_object() ) {
+                partial_constructions_json.next_object().read( "uid", pc.uid );
+            }
+            if( pc.uid <= 0 ) {
+                pc.uid = g->assign_construction_uid();
+            } else {
+                g->observe_construction_uid( pc.uid );
             }
             partial_constructions[pt] = pc;
         }

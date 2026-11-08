@@ -14,6 +14,8 @@
 
 #include "bionics.h"
 #include "calendar.h"
+#include "cata_assert.h"
+#include "cata_utility.h"
 #include "character_martial_arts.h"
 #include "construction.h"
 #include "coordinates.h"
@@ -27,9 +29,12 @@
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "martialarts.h"
+#include "recipe.h"
 #include "messages.h"
 #include "monster.h"
 #include "mtype.h"
+#include "output.h"
 #include "pimpl.h"
 #include "rng.h"
 #include "skill.h"
@@ -74,6 +79,94 @@ std::vector<matype_id> Character::known_styles( bool teachable_only ) const
     return martial_arts_data->get_known_styles( teachable_only );
 }
 
+bool Character::has_identified( const itype_id &item_id ) const
+{
+    return items_identified.count( item_id ) > 0;
+}
+
+void Character::identify( const item &item )
+{
+    if( has_identified( item.typeId() ) ) {
+        return;
+    }
+    if( !item.is_identifiable() ) {
+        debugmsg( "tried to identify non-book item" );
+        return;
+    }
+
+    const ::item &book = item; // alias
+    cata_assert( !has_identified( item.typeId() ) );
+    items_identified.insert( item.typeId() );
+    cata_assert( has_identified( item.typeId() ) );
+
+    const auto &reading = item.type->book;
+    const skill_id &skill = reading->skill;
+
+    add_msg_if_player( _( "You skim %s to find out what's in it." ), book.type_name() );
+    if( skill && get_skill_level_object( skill ).can_train() ) {
+        add_msg_if_player( m_info, _( "Can bring your %s knowledge to %d." ),
+                           skill.obj().name(), reading->level );
+        if( reading->req != 0 ) {
+            add_msg_if_player( m_info, _( "Requires %1$s knowledge level %2$d to understand." ),
+                               skill.obj().name(), reading->req );
+        }
+    }
+
+    if( reading->intel != 0 ) {
+        add_msg_if_player( m_info, _( "Requires intelligence of %d to easily read." ), reading->intel );
+    }
+    //It feels wrong to use a pointer to *this, but I can't find any other player pointers in this method.
+    if( book_fun_for( book, *this ) != 0 ) {
+        add_msg_if_player( m_info, _( "Reading this book affects your morale by %d." ), book_fun_for( book,
+                           *this ) );
+    }
+
+    if( book.type->use_methods.count( "MA_MANUAL" ) ) {
+        const matype_id style_to_learn = martial_art_learned_from( *book.type );
+        add_msg_if_player( m_info, _( "You can learn %s style from it." ), style_to_learn->name );
+        add_msg_if_player( m_info, _( "This fighting style is %s to learn." ),
+                           martialart_difficulty( style_to_learn ) );
+        add_msg_if_player( m_info, _( "It would be easier to master if you'd have skill expertise in %s." ),
+                           style_to_learn->primary_skill->name() );
+        add_msg_if_player( m_info, _( "A training session with this book takes %s." ),
+                           to_string_clipped( reading->time ) );
+    } else {
+        add_msg_if_player( m_info, _( "A chapter of this book takes %s to read." ),
+                           to_string_clipped( reading->time ) );
+    }
+
+    std::vector<std::string> crafting_recipes;
+    std::vector<std::string> practice_recipes;
+    for( const islot_book::recipe_with_description_t &elem : reading->recipes ) {
+        // If the player knows it, they recognize it even if it's not clearly stated.
+        if( elem.is_hidden() && !knows_recipe( elem.recipe ) ) {
+            continue;
+        }
+        if( elem.recipe->is_practice() ) {
+            practice_recipes.emplace_back( elem.recipe->result_name() );
+        } else {
+            crafting_recipes.emplace_back( elem.name() );
+        }
+    }
+    if( !crafting_recipes.empty() ) {
+        add_msg_if_player( m_info, string_format( _( "This book can help you craft: %s" ),
+                           enumerate_as_string( crafting_recipes ) ) );
+    }
+    if( !practice_recipes.empty() ) {
+        add_msg_if_player( m_info, string_format( _( "This book can help you practice: %s" ),
+                           enumerate_as_string( practice_recipes ) ) );
+    }
+    const std::size_t num_total_recipes = crafting_recipes.size() + practice_recipes.size();
+    if( num_total_recipes < reading->recipes.size() ) {
+        add_msg_if_player( m_info, _( "It might help you figuring out some more recipes." ) );
+    }
+}
+
+void Character::clear_identified()
+{
+    items_identified.clear();
+}
+
 bool Character::has_martialart( const matype_id &m ) const
 {
     return martial_arts_data->has_martialart( m );
@@ -81,8 +174,9 @@ bool Character::has_martialart( const matype_id &m ) const
 
 void Character::handle_skill_warning( const skill_id &id, bool force_warning )
 {
-    //remind the player intermittently that no skill gain takes place
-    if( is_avatar() && ( force_warning || one_in( 5 ) ) ) {
+    // Reminder frequency must not alter the authoritative gameplay RNG.
+    if( ( is_avatar() || has_native_player_control() ) &&
+        ( force_warning || rng_visual( 1, 5 ) == 1 ) ) {
         SkillLevel &level = get_skill_level_object( id );
 
         const Skill &skill = id.obj();
@@ -467,12 +561,14 @@ const Character *Character::get_book_reader( const item &book,
         std::vector<std::string> &reasons ) const
 {
     const map &here = get_map();
+    const bool player_reader = is_avatar() || is_player_controlled();
 
     const Character *reader = nullptr;
 
     if( !book.is_book() ) {
-        reasons.push_back( is_avatar() ? string_format( _( "Your %s is not good reading material." ),
-                           book.tname() ) :
+        reasons.push_back( player_reader ? string_format(
+                               _( "Your %s is not good reading material." ),
+                               book.tname() ) :
                            string_format( _( "The %s is not good reading material." ), book.tname() )
                          );
         return nullptr;
@@ -490,14 +586,15 @@ const Character *Character::get_book_reader( const item &book,
     }
     if( condition & read_condition_result::MORALE_LOW ) {
         // Low morale still permits skimming
-        reasons.emplace_back( is_avatar() ?
+        reasons.emplace_back( player_reader ?
                               _( "What's the point of studying?  (Your morale is too low!)" )  :
                               string_format( _( "What's the point of studying?  (%s's morale is too low!)" ), disp_name() ) );
         return nullptr;
     }
     if( condition & read_condition_result::CANT_UNDERSTAND ) {
-        reasons.push_back( is_avatar() ? string_format( _( "%s %d needed to understand.  You have %d" ),
-                           book_skill->name(), book_skill_requirement, get_knowledge_level( book_skill ) ) :
+        reasons.push_back( player_reader ? string_format(
+                               _( "%s %d needed to understand.  You have %d" ),
+                               book_skill->name(), book_skill_requirement, get_knowledge_level( book_skill ) ) :
                            string_format( _( "%s %d needed to understand.  %s has %d" ), book_skill->name(),
                                           book_skill_requirement, disp_name(), get_knowledge_level( book_skill ) ) );
         return nullptr;
@@ -505,10 +602,12 @@ const Character *Character::get_book_reader( const item &book,
 
     // Check for conditions that disqualify us only if no other Characters can read to us
     if( condition & read_condition_result::ILLITERATE ) {
-        reasons.emplace_back( is_avatar() ? _( "You can't make sense of the text." ) : string_format(
+        reasons.emplace_back( player_reader ? _( "You can't make sense of the text." ) :
+                              string_format(
                                   _( "%s can't make sense of the text." ), disp_name() ) );
     } else if( condition & read_condition_result::NEED_GLASSES ) {
-        reasons.emplace_back( is_avatar() ? _( "Your eyes won't focus without reading glasses." ) :
+        reasons.emplace_back( player_reader ? _( "Your eyes won't focus without reading glasses." )
+                              :
                               string_format( _( "%s's eyes won't focus without reading glasses." ), disp_name() ) );
     } else if( condition & read_condition_result::TOO_DARK &&
                !has_flag( json_flag_READ_IN_DARKNESS ) && !book.has_flag( flag_CAN_USE_IN_DARK ) ) {
@@ -519,7 +618,7 @@ const Character *Character::get_book_reader( const item &book,
         return this;
     }
 
-    if( ! is_avatar() ) {
+    if( ! player_reader ) {
         // NPCs are too proud to ask for help, perhaps someday they will not be
         return nullptr;
     }

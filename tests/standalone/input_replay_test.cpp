@@ -48,6 +48,61 @@ struct grouped_numbers : std::numpunct<char> {
     }
 };
 
+void profile_identity_round_trip( const std::filesystem::path &path )
+{
+    input_replay::finish();
+    check( !input_replay::next_profile_identity( "slot" ), "inactive identity stream" );
+    check( input_replay::begin_record( path.string() ), "record identity seed" );
+    const auto first = input_replay::next_profile_identity( "first slot" );
+    const auto second = input_replay::next_profile_identity( "second slot" );
+    check( first && second && *first != *second && first->size() == 32, "distinct profile IDs" );
+    input_replay::on_record( input_event( 46, input_event_t::keyboard_code ) );
+    input_replay::finish();
+    check( read( path ).find( "CATA_REPLAY 2\n" ) == 0, "new recordings use v2" );
+    check( input_replay::begin_replay( path.string() ), "load recorded identity seed" );
+    check( input_replay::next_profile_identity( "renamed slot" ) == first,
+           "v2 identity is independent of a legacy filename" );
+    const std::string valid_recording = read( path );
+    write( path, "CATA_REPLAY 2\nSEED 19\nPROFILE_SEED invalid\nEV 2 0 1 46 0 0 - -\n" );
+    check( !input_replay::begin_replay( path.string() ), "reject invalid identity seed" );
+    check( input_replay::next_profile_identity( "another slot" ) == second,
+           "failed replacement retains identity stream position" );
+    write( path, valid_recording );
+    check( input_replay::begin_replay( path.string() ), "restart valid recording" );
+    check( input_replay::next_profile_identity( "slot" ) == first, "replay resets identity stream" );
+    check( input_replay::replay_remaining() == 1, "identities do not consume input events" );
+    input_replay::finish();
+
+    const std::string legacy = "CATA_REPLAY 1\nSEED 19\nEV 2 0 1 46 0 0 - -\n";
+    write( path, legacy );
+    check( input_replay::begin_replay( path.string() ), "old recordings still load" );
+    const auto old_first = input_replay::next_profile_identity( "first saved player" );
+    const auto old_second = input_replay::next_profile_identity( "first saved player" );
+    check( old_first && old_second && old_first != old_second, "legacy allocation sequence" );
+    check( *old_first == "92ea3d5fa8f28457ed8e015444f25335" &&
+           *old_second == "92ea3d5fa8f28457ed8e015444f25336", "legacy identity protocol golden values" );
+    check( input_replay::begin_replay( path.string() ), "restart old recording" );
+    check( input_replay::next_profile_identity( "first saved player" ) == old_first,
+           "legacy migration is reproducible" );
+    check( input_replay::begin_replay( path.string() ), "restart with another save" );
+    check( input_replay::next_profile_identity( "second saved player" ) != old_first,
+           "legacy recording disambiguates distinct save slots" );
+    write( path, legacy + "EV 2 0 1 119 0 0 - -\n" );
+    check( input_replay::begin_replay( path.string() ), "different old recording" );
+    check( input_replay::next_profile_identity( "first saved player" ) != old_first,
+           "legacy recording identity includes the input stream" );
+    input_replay::finish();
+    check( !input_replay::next_profile_identity( "slot" ), "finish clears identity state" );
+    write( path,
+           "CATA_REPLAY 2\nSEED 19\nPROFILE_SEED 0000000000000001ffffffffffffffff\nEV 2 0 1 46 0 0 - -\n" );
+    check( input_replay::begin_replay( path.string() ), "load identity carry boundary" );
+    check( input_replay::next_profile_identity( "slot" ) == "0000000000000001ffffffffffffffff",
+           "v2 first identity equals recorded public seed" );
+    check( input_replay::next_profile_identity( "slot" ) == "00000000000000020000000000000000",
+           "v2 identity sequence carries into the high half" );
+    input_replay::finish();
+}
+
 void round_trip( const std::filesystem::path &path )
 {
     input_replay::finish();
@@ -91,6 +146,10 @@ void malformed_logs( const std::filesystem::path &path )
     const std::string valid = "CATA_REPLAY 1\nSEED 19\nEV 2 0 1 46 0 0 - -\n";
     const std::vector<std::string> invalid = {
         "", "CATA_REPLAY 2\nSEED 19\nEV 2 0 1 46 0 0 - -\n",
+        "CATA_REPLAY 3\nSEED 19\nEV 2 0 1 46 0 0 - -\n",
+        "CATA_REPLAY 2\nSEED 19\nPROFILE_SEED AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nEV 2 0 1 46 0 0 - -\n",
+        "CATA_REPLAY 2\nSEED 19\nPROFILE_SEED 0123456789abcdef0123456789abcdef extra\nEV 2 0 1 46 0 0 - -\n",
+        "CATA_REPLAY 2\nSEED 19\nPROFILE_SEED 0123456789abcdef0123456789abcde\nEV 2 0 1 46 0 0 - -\n",
         "CATA_REPLAY 1 extra\nSEED 19\nEV 2 0 1 46 0 0 - -\n",
         "CATA_REPLAY 1\nSEED\n", "CATA_REPLAY 1\nSEED -1\n",
         "CATA_REPLAY 1\nSEED 4294967296\n",
@@ -175,6 +234,7 @@ int main()
     }
     try {
         const auto path = scratch / "recording.txt";
+        profile_identity_round_trip( path );
         round_trip( path );
         malformed_logs( path );
         lifecycle( path );

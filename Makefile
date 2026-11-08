@@ -1104,7 +1104,6 @@ LUA_PLATFORM_ENABLED_SOURCES := \
   $(SRC_DIR)/lua_platform_snapshots.cpp \
   $(SRC_DIR)/lua_platform_registry.cpp \
   $(SRC_DIR)/lua_platform_services.cpp \
-  $(SRC_DIR)/lua_platform_state.cpp \
   $(SRC_DIR)/lua_platform_values.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
@@ -1255,6 +1254,8 @@ LDFLAGS += -lz
 
 all: version prefix $(CHECKS) $(TARGET) $(L10N) $(TESTSTARGET) $(ZZIP_BIN) $(SHADERS_STAMP)
 	@
+
+include build-scripts/coop.mk
 
 ifeq ($(TILES), 1)
 $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
@@ -1429,6 +1430,9 @@ install: version $(TARGET) $(ZZIP_BIN)
 	mkdir -p $(DATA_PREFIX)
 	mkdir -p $(BIN_PREFIX)
 	install --mode=755 $(TARGET) $(BIN_PREFIX)
+ifeq ($(RUST_COOP),1)
+	install --mode=755 $(COOP_LIBRARY) $(BIN_PREFIX)
+endif
 	install --mode=755 $(ZZIP_BIN) $(BIN_PREFIX)
 	cp -R --no-preserve=ownership data/core $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/font $(DATA_PREFIX)
@@ -1470,6 +1474,9 @@ install: version $(TARGET)
 	mkdir -p $(DATA_PREFIX)
 	mkdir -p $(BIN_PREFIX)
 	install --mode=755 $(TARGET) $(BIN_PREFIX)
+ifeq ($(RUST_COOP),1)
+	install --mode=755 $(COOP_LIBRARY) $(BIN_PREFIX)
+endif
 	cp -R --no-preserve=ownership data/core $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/font $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/json $(DATA_PREFIX)
@@ -1524,6 +1531,9 @@ endif
 	cp build-data/osx/Cataclysm.sh $(APPTARGETDIR)/Contents/MacOS/
 	mkdir -p $(APPRESOURCESDIR)
 	cp $(APPTARGET) $(APPRESOURCESDIR)/
+ifeq ($(RUST_COOP),1)
+	cp $(COOP_LIBRARY) $(APPRESOURCESDIR)/
+endif
 	cp $(ZZIP_BIN) $(APPRESOURCESDIR)/
 	cp build-data/osx/AppIcon.icns $(APPRESOURCESDIR)/
 	mkdir -p $(APPDATADIR)

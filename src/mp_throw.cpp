@@ -1,0 +1,203 @@
+#include "mp_throw.h"
+#include "mp_peek.h"
+
+#include "character.h"
+#include "creature_tracker.h"
+#include "flag.h"
+#include "game.h"
+#include "item.h"
+#include "item_location.h"
+#include "item_uid.h"
+#include "map.h"
+#include "monster.h"
+#include "mtype.h"
+#include "projectile.h"
+#include "ranged_actions.h"
+#include "ret_val.h"
+#include "safe_reference.h"
+#include "sling.h"
+#include "translations.h"
+
+namespace cata_mp
+{
+namespace
+{
+bool throwing_in_mech( Character &who )
+{
+    return who.is_mounted() && who.mounted_creature &&
+           who.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH );
+}
+
+
+} // namespace
+
+throw_intent make_throw_intent( const Character &who, item_location source )
+{
+    throw_intent intent;
+    intent.origin = who.pos_abs();
+    const item_location wielded = who.get_wielded_item();
+    intent.wielded = wielded ? wielded->uid().get_value() : 0;
+    intent.item = capture_item_source( who, source );
+    return intent;
+}
+
+bool throw_keeps_wielded( Character &who, const item_location &source )
+{
+    const item_location wielded = who.get_wielded_item();
+    return source && !throwing_in_mech( who ) && wielded &&
+           !who.is_wielding( *source ) && !who.is_worn( *source ) &&
+           wielded->has_flag( flag_THROW_KEEP_WIELDED );
+}
+
+bool can_prepare_throw( Character &who, const item_location &source )
+{
+    if( !source || who.has_active_mutation( trait_id( "SHELL2" ) ) ||
+        who.has_active_mutation( trait_id( "SHELL3" ) ) ||
+        who.has_effect( efftype_id( "incorporeal" ) ) ||
+        who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ||
+        who.throw_range( *source ) <= 0 ||
+        ( who.is_wielding( *source ) && source->has_flag( flag_NO_UNWIELD ) ) ||
+        ( who.is_worn( *source ) && !who.can_takeoff( *source ).success() ) ) {
+        return false;
+    }
+    if( throwing_in_mech( who ) ) {
+        return who.mounted_creature->check_mech_powered();
+    }
+    return throw_keeps_wielded( who, source ) || who.can_wield( *source ).success();
+}
+
+bool execute_throw_intent( Character &who, map &here, const throw_intent &intent,
+                           const peek_authorization *peek )
+{
+    if( who.is_dead_state() || who.get_moves() <= 0 || who.pos_abs() != intent.origin ) {
+        return false;
+    }
+    const bool paid_peek = intent.peek_request > 0 && peek &&
+                           intent.peek_request == peek->request && peek->valid_for( who, here ) &&
+                           intent.blind_from && *intent.blind_from == peek->viewpoint;
+    if( intent.peek_request < 0 || ( intent.peek_request > 0 && !paid_peek ) ) {
+        return false;
+    }
+    item_location source = resolve_item_source( who, here, intent.item );
+    item_location wielded = who.get_wielded_item();
+    if( !source ||
+        intent.wielded != ( wielded ? wielded->uid().get_value() : 0 ) ) {
+        return false;
+    }
+    if( intent.method == throw_method::sling ) {
+        if( !intent.target || intent.blind_from || intent.disposition ||
+            !here.inbounds( *intent.target ) || *intent.target == intent.origin ||
+            who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ||
+            who.has_flag( json_character_flag( "TEMPORARY_SHAPESHIFT_NO_HANDS" ) ) ||
+            who.has_trait( trait_id( "BRAWLER" ) ) ||
+            !can_launch_sling( who, source ).success() ) {
+            return false;
+        }
+        item round = *source;
+        if( round.count_by_charges() ) {
+            round.charges = 1;
+        }
+        if( rl_dist( intent.origin, *intent.target ) > who.throw_range( round ) ) {
+            return false;
+        }
+        const tripoint_bub_ms target = here.get_bub( *intent.target );
+        who.last_target_pos = *intent.target;
+        Creature *victim = get_creature_tracker().creature_at( target, true );
+        who.last_target = victim ? g->shared_from( *victim ) : shared_ptr_fast<Creature>();
+        const safe_reference<Creature> actor = who.get_safe_reference();
+        mark_ranged_target( who, true );
+        return actor && source && wielded && launch_sling( who, source, target ).has_value();
+    }
+    if( intent.method != throw_method::hand || !can_prepare_throw( who, source ) ) {
+        return false;
+    }
+    std::optional<tripoint_bub_ms> blind;
+    if( intent.blind_from ) {
+        if( !here.inbounds( *intent.blind_from ) ||
+            ( !paid_peek && rl_dist( intent.origin, *intent.blind_from ) > 1 ) ||
+            here.impassable( here.get_bub( *intent.blind_from ) ) ||
+            ( !paid_peek && *intent.blind_from != intent.origin &&
+              !here.valid_move( who.pos_bub(), here.get_bub( *intent.blind_from ), false, true ) ) ) {
+            return false;
+        }
+        blind = here.get_bub( *intent.blind_from );
+    }
+    if( intent.target && !here.inbounds( *intent.target ) ) {
+        return false;
+    }
+    const bool in_mech = throwing_in_mech( who );
+    const bool keep_wielded = throw_keeps_wielded( who, source );
+    if( !in_mech && !keep_wielded && !who.is_wielding( *source ) &&
+        !source->is_owned_by( who, true ) && !intent.allow_theft ) {
+        return false;
+    }
+    const safe_reference<Creature> actor = who.get_safe_reference();
+    item thrown = *source;
+    if( blind && !paid_peek ) {
+        who.mod_moves( -who.get_speed() * 2 );
+    }
+    if( !who.try_break_relax_gas( _( "You concentrate mightily, and your body obeys!" ),
+                                  _( "You can't muster up the effort to throw anything…" ) ) ) {
+        return false;
+    }
+    if( !in_mech && !keep_wielded && !who.is_wielding( *source ) ) {
+        if( who.has_wield_conflicts( *source ) ) {
+            if( wielded->has_item( *source ) ) {
+                return false;
+            }
+            const bool disposed = wielded->has_flag( flag_NO_UNWIELD ) ? who.unwield() :
+                                  intent.disposition && execute_item_disposition( who, wielded, *intent.disposition );
+            if( !disposed || !actor ) {
+                return false;
+            }
+            source = resolve_item_source( who, here, intent.item );
+            if( !source ) {
+                return false;
+            }
+        }
+        const bool external = !source.held_by( who );
+        // Player-selected disposal is already complete: avoid NPC stow/MA policy.
+        if( !who.Character::wield( *source ) || !actor ) {
+            return false;
+        }
+        if( external && source ) {
+            source.remove_item();
+        }
+    }
+    item_location weapon = in_mech ? source : ( keep_wielded ? wielded : who.get_wielded_item() );
+    if( !weapon || !intent.target || who.pos_abs() != intent.origin ) {
+        // Canceling targeting still preserves the native preparation and its AP cost.
+        return false;
+    }
+    if( rl_dist( intent.blind_from.value_or( intent.origin ), *intent.target ) >
+        who.throw_range( thrown ) ) {
+        return false;
+    }
+    const tripoint_bub_ms target = here.get_bub( *intent.target );
+    who.last_target_pos = *intent.target;
+    Creature *victim = get_creature_tracker().creature_at( target, true );
+    who.last_target = victim ? g->shared_from( *victim ) : shared_ptr_fast<Creature>();
+    mark_ranged_target( who, true );
+    if( !actor || !weapon || ( keep_wielded && !source ) ) {
+        return false;
+    }
+    if( keep_wielded ) {
+        who.mod_moves( -source.obtain_cost( who ) );
+        if( source->count_by_charges() && source->charges > 1 ) {
+            source->mod_charges( -1 );
+            thrown.charges = 1;
+        } else {
+            source.remove_item();
+        }
+    } else if( weapon->count_by_charges() && weapon->charges > 1 ) {
+        weapon->mod_charges( -1 );
+        thrown.charges = 1;
+    } else if( in_mech ) {
+        source.remove_item();
+    } else {
+        who.remove_weapon();
+    }
+    who.throw_item( target, thrown, blind );
+    return true;
+}
+} // namespace cata_mp

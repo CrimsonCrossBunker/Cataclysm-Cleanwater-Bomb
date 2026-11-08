@@ -7,6 +7,8 @@ on:
       - 'tests/standalone/**'
       - 'tools/replay_ab.py'
       - 'tools/test_replay_ab.py'
+      - 'tools/replay_save_compare.py'
+      - 'tools/test_replay_save_compare.py'
       - '.github/workflows/replay-validation.yml'
   push:
     branches: [master]
@@ -15,6 +17,8 @@ on:
       - 'tests/standalone/**'
       - 'tools/replay_ab.py'
       - 'tools/test_replay_ab.py'
+      - 'tools/replay_save_compare.py'
+      - 'tools/test_replay_save_compare.py'
       - '.github/workflows/replay-validation.yml'
   workflow_dispatch:
 
@@ -35,6 +39,8 @@ jobs:
           persist-credentials: false
       - name: Compare isolated runs, including failed and incomplete runs
         run: python3 tools/test_replay_ab.py
+      - name: Compare decoded saves without hiding state differences
+        run: python3 tools/test_replay_save_compare.py
       - name: Configure focused production-code tests with sanitizers
         run: >-
           cmake -S tests/standalone -B out/replay-protocol

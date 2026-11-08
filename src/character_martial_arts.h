@@ -47,7 +47,7 @@ class character_martial_arts
         void remember_weapon_style( const Character &owner );
         void auto_select_style( Character &owner );
         /** Creates the UI and handles player input for picking martial arts styles */
-        bool pick_style( const Character &you );
+        bool pick_style( Character &you );
 
         bool knows_selected_style() const;
         bool selected_strictly_melee() const;

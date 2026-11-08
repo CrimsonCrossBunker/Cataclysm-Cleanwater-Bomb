@@ -22,6 +22,7 @@
 #include "calendar.h"
 #include "cata_variant.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -338,6 +339,15 @@ static void dispatch_event_handler( runtime &owner, const std::string &name,
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( owner );
+    if( payload.is<sol::table>() ) {
+        const sol::optional<sol::table> actors = payload.as<sol::table>()["actors"];
+        if( actors ) {
+            const sol::optional<game_handle> character = ( *actors )["character"];
+            if( character ) {
+                owner.callback_character = *character;
+            }
+        }
+    }
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( owner, handler_id, result, "event " + name );
@@ -1653,6 +1663,10 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
 
             sol::protected_function callback = handler->second.callback;
             callback_scope scope( *owner );
+            const sol::optional<game_handle> character = payload["character"];
+            if( character ) {
+                owner->callback_character = *character;
+            }
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
                 report_callback_error( *owner, handler_id, result,
@@ -2015,7 +2029,7 @@ void invoke_vehicle_part_activation_handler(
         payload["mount"] = std::move( mount );
 
         sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner );
+        callback_scope scope( *owner, &character );
         const sol::protected_function_result result = callback( payload );
         if( !result.valid() ) {
             report_callback_error( *owner, handler_id, result );
@@ -2059,7 +2073,7 @@ void invoke_character_start_handler(
         payload["scenario_id"] = sol::lua_nil;
     }
     sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
+    callback_scope scope( *owner, &character );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
@@ -2090,7 +2104,7 @@ void invoke_recipe_completion_handler(
     payload["character"] = platform_creature_handle( *owner, character );
     payload["batch"] = batch;
     sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
+    callback_scope scope( *owner, &character );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
@@ -2167,17 +2181,30 @@ void invoke_plant_lifecycle_handlers(
     const std::map<std::string, std::string> &string_context,
     const std::map<std::string, double> &number_context )
 {
+    const character_action_guard lifetime( character );
+    const auto context = here.get_context_reference();
+    if( !lifetime || !context ) {
+        return;
+    }
     const std::string seed_id( seed_id_value );
-    const std::string furniture_id = here.furn( position ).id().str();
+    const auto captured_furniture = string_context.find( "furniture_id" );
+    const std::string furniture_id = captured_furniture != string_context.end() ?
+                                     captured_furniture->second : here.furn( position ).id().str();
     const tripoint_abs_ms absolute = here.get_abs( position );
-    for( auto iterator = detail::active_runtime_values().rbegin();
-         iterator != detail::active_runtime_values().rend(); ++iterator ) {
+    const auto runtimes = detail::active_runtime_values();
+    for( auto iterator = runtimes.rbegin(); iterator != runtimes.rend(); ++iterator ) {
+        if( !lifetime || !context ) {
+            return;
+        }
         const std::shared_ptr<runtime> &owner = *iterator;
         if( !owner || !owner->world_is_ready ) {
             continue;
         }
         const auto dispatch_target = [&]( const std::string_view target,
         const std::string & target_id ) {
+            if( !lifetime || !context || !owner->world_is_ready ) {
+                return;
+            }
             std::string handler_id;
             if( !owner->content.find_plant_lifecycle_handler(
                     target, target_id, phase, handler_id ) || handler_id.empty() ) {
@@ -2218,7 +2245,7 @@ void invoke_plant_lifecycle_handlers(
             }
             payload["numbers"] = std::move( numbers );
             sol::protected_function callback = handler->second.callback;
-            callback_scope scope( *owner );
+            callback_scope scope( *owner, &character );
             const sol::protected_function_result result = callback( payload );
             if( !result.valid() ) {
                 report_callback_error( *owner, handler_id, result );
@@ -2259,7 +2286,7 @@ void invoke_martial_art_handler( const std::string_view martial_art_id,
         payload["phase"] = std::string( phase );
         payload["character"] = platform_creature_handle( *owner, character );
         sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner );
+        callback_scope scope( *owner, &character );
         const sol::protected_function_result result = callback( payload );
         if( !result.valid() ) {
             report_callback_error( *owner, handler_id, result );
@@ -2306,7 +2333,7 @@ void invoke_technique_application_handler(
         payload["weapon_id"] = std::string( weapon_id );
     }
     sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
+    callback_scope scope( *owner, &attacker );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
@@ -2491,7 +2518,7 @@ void invoke_item_consumption_handler(
         "platform_item_consumption", consumed_item.uid().get_value(), 0, 0, 0, {}
     }, owner->handle_runtime(), detail::runtime_world_generation_storage() );
     sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
+    callback_scope scope( *owner, &character );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
@@ -2921,7 +2948,7 @@ void invoke_examine_handler(
     point["z"] = absolute.z();
     payload["position"] = std::move( point );
     sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
+    callback_scope scope( *owner, &character );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
@@ -3074,7 +3101,7 @@ std::optional<bool> invoke_addiction_type_handler(
         payload["sated_turns"] = sated_turns;
         payload["character"] = platform_creature_handle( *owner, character );
         sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner );
+        callback_scope scope( *owner, &character );
         const sol::protected_function_result result = callback( payload );
         if( !result.valid() ) {
             report_callback_error( *owner, handler_id, result );
@@ -3274,7 +3301,7 @@ bool invoke_activity_type_handler(
             return true;
         }
 
-        const safe_reference<Creature> character_reference = character.get_safe_reference();
+        const character_action_guard character_reference( character );
         const std::uint64_t activity_identity = activity.identity_generation();
         const auto same_activity = [&]() {
             return character_reference && activity &&
@@ -3288,7 +3315,7 @@ bool invoke_activity_type_handler(
         const int original_index = activity.index;
         const int original_position = activity.position;
         const std::string original_name = activity.name;
-        callback_scope scope( *owner );
+        callback_scope scope( *owner, &character );
         sol::protected_function callback = handler->second.callback;
         sol::table payload = owner->lua->create_table();
         payload["activity_type_id"] = dispatched_id;
@@ -3435,7 +3462,7 @@ bool invoke_snippet_examine_handler( const std::string_view snippet_id_value,
         payload["item_type_id"] = std::string( item_type_id );
         payload["character"] = platform_creature_handle( *owner, character );
         sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner );
+        callback_scope scope( *owner, &character );
         const sol::protected_function_result result = callback( payload );
         if( !result.valid() ) {
             report_callback_error( *owner, handler_id, result );
@@ -3563,7 +3590,7 @@ void invoke_magic_type_failure_handler( const std::string_view magic_type_id,
         payload["spell_id"] = std::string( spell_id );
         payload["caster"] = platform_creature_handle( *owner, caster );
         sol::protected_function callback = handler->second.callback;
-        callback_scope scope( *owner );
+        callback_scope scope( *owner, &caster );
         const sol::protected_function_result result = callback( payload );
         if( !result.valid() ) {
             report_callback_error( *owner, handler_id, result );

@@ -41,16 +41,6 @@ struct camp_handle_identity_state {
     safe_reference<basecamp> reference;
 };
 
-struct npc_handle_identity_state {
-    std::int64_t stable_id = 0;
-    std::size_t generation = 0;
-    bool active = false;
-    // Keep the native lifetime token with the stable-id registry entry.  A
-    // replacement with the same stable id must retire the old generation
-    // before the new object can receive a handle.
-    safe_reference<Creature> reference;
-};
-
 struct vehicle_handle_identity_state {
     std::size_t generation = 0;
     // Vehicle addresses can be reused after unload/destroy.  Keep the native
@@ -70,11 +60,6 @@ struct item_identity_registry {
 
 struct vehicle_identity_registry {
     std::unordered_map<const vehicle *, std::weak_ptr<vehicle_handle_identity_state>> states;
-    std::size_t lookups_until_prune = initial_identity_state_prune_threshold;
-};
-
-struct npc_identity_registry {
-    std::unordered_map<std::int64_t, std::weak_ptr<npc_handle_identity_state>> states;
     std::size_t lookups_until_prune = initial_identity_state_prune_threshold;
 };
 
@@ -135,12 +120,6 @@ vehicle_identity_registry &vehicle_identities()
     return registry;
 }
 
-npc_identity_registry &npc_identities()
-{
-    static npc_identity_registry registry;
-    return registry;
-}
-
 camp_identity_registry &camp_identities()
 {
     static camp_identity_registry registry;
@@ -190,59 +169,6 @@ std::shared_ptr<camp_handle_identity_state> camp_identity_for_retirement(
     const std::shared_ptr<camp_handle_identity_state> identity =
         found->second.lock();
     if( !identity || identity->reference.get() != &value ) {
-        return nullptr;
-    }
-    return identity;
-}
-
-std::shared_ptr<npc_handle_identity_state> npc_identity_for(
-    npc &value, const bool activate )
-{
-    const std::int64_t stable_id = value.getID().get_value();
-    npc_identity_registry &registry = npc_identities();
-    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
-    std::weak_ptr<npc_handle_identity_state> &stored =
-        registry.states[stable_id];
-    if( std::shared_ptr<npc_handle_identity_state> identity = stored.lock() ) {
-        if( identity->reference.get() == &value ) {
-            if( activate && !identity->active ) {
-                ++identity->generation;
-                identity->active = true;
-            }
-            return identity;
-        }
-        // A different object now owns the same stable id.  Retire every
-        // handle retaining this identity before rebinding the registry.
-        ++identity->generation;
-        identity->stable_id = stable_id;
-        identity->reference = value.get_safe_reference();
-        identity->active = activate;
-        return identity;
-    }
-    std::shared_ptr<npc_handle_identity_state> identity =
-        std::make_shared<npc_handle_identity_state>();
-    identity->stable_id = stable_id;
-    identity->reference = value.get_safe_reference();
-    identity->active = activate;
-    stored = identity;
-    return identity;
-}
-
-std::shared_ptr<npc_handle_identity_state> npc_identity_for_retirement(
-    npc &value )
-{
-    npc_identity_registry &registry = npc_identities();
-    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
-    const auto found = registry.states.find(
-                           value.getID().get_value() );
-    if( found == registry.states.end() ) {
-        return nullptr;
-    }
-    const std::shared_ptr<npc_handle_identity_state> identity =
-        found->second.lock();
-    if( !identity || identity->reference.get() != &value ) {
-        // A late unload callback from an old object must never retire the
-        // replacement that now owns the same stable id.
         return nullptr;
     }
     return identity;
@@ -428,8 +354,9 @@ game_handle game_handle::from_creature(
     result.creature_ = value.get_safe_reference();
     if( npc *npc_value = value.as_npc();
         npc_value != nullptr && npc_value->getID().is_valid() ) {
-        result.npc_identity_ = npc_identity_for( *npc_value, true );
-        result.npc_identity_generation_ = result.npc_identity_->generation;
+        if( auto *owner = current_npc_lifetimes() ) {
+            result.npc_identity_ = owner->acquire( *npc_value );
+        }
         result.npc_stable_id_ = npc_value->getID().get_value();
         result.locator_.stable_id = *result.npc_stable_id_;
     } else if( Character *character = value.as_character();
@@ -562,7 +489,7 @@ std::size_t game_handle::identity_generation() const noexcept
 {
     switch( kind_ ) {
         case game_handle_kind::creature:
-            return npc_identity_ ? npc_identity_generation_ : 0;
+            return npc_identity_.generation();
         case game_handle_kind::item:
             return item_identity_ ? item_identity_generation_ : 0;
         case game_handle_kind::vehicle:
@@ -626,15 +553,9 @@ std::optional<game_handle_error> game_handle::validation_error(
                     };
                 }
             }
-            if( npc_identity_ ) {
-                if( !npc_identity_->active ||
-                    npc_identity_generation_ != npc_identity_->generation ) {
-                    return stale_npc_identity_error();
-                }
-                const Character *character = creature_->as_character();
-                if( !npc_stable_id_ || character == nullptr ||
-                    character->getID().get_value() != *npc_stable_id_ ||
-                    npc_identity_->stable_id != *npc_stable_id_ ) {
+            if( npc_stable_id_ ) {
+                const auto *owner = current_npc_lifetimes();
+                if( !owner || npc_identity_.resolve( *owner ) != creature_.get() ) {
                     return stale_npc_identity_error();
                 }
             }
@@ -825,12 +746,12 @@ native_handle_result<vehicle_part> game_handle::resolve_vehicle_part_for_vehicle
     const std::size_t current_world_generation ) const
 {
     const native_handle_result<vehicle> owner = owner_handle.resolve_vehicle(
-                current_runtime, current_world_generation );
+            current_runtime, current_world_generation );
     if( !owner ) {
         return { nullptr, owner.error };
     }
     const native_handle_result<vehicle_part> part = resolve_vehicle_part(
-                current_runtime, current_world_generation );
+            current_runtime, current_world_generation );
     if( !part ) {
         return part;
     }
@@ -889,7 +810,7 @@ npc *resolve_exact_npc(
     std::optional<game_handle_error> &error )
 {
     const native_handle_result<Creature> resolved = handle.resolve_creature(
-                current_runtime, current_world_generation );
+            current_runtime, current_world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -929,7 +850,7 @@ avatar *resolve_exact_avatar(
     std::optional<game_handle_error> &error )
 {
     const native_handle_result<Creature> resolved = handle.resolve_creature(
-                current_runtime, current_world_generation );
+            current_runtime, current_world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -969,7 +890,7 @@ monster *resolve_exact_monster(
     std::optional<game_handle_error> &error )
 {
     const native_handle_result<Creature> resolved = handle.resolve_creature(
-                current_runtime, current_world_generation );
+            current_runtime, current_world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -1019,7 +940,7 @@ bool resolve_exact_item_for_character(
         return false;
     }
     const native_handle_result<item> resolved = item_handle.resolve_item(
-                current_runtime, current_world_generation );
+            current_runtime, current_world_generation );
     if( !resolved ) {
         entry = nullptr;
         error = resolved.error;
@@ -1047,23 +968,12 @@ void retire_item_handle_identity( item &value )
 
 void register_npc_handle_identity( npc &value )
 {
-    if( !value.getID().is_valid() || value.is_dead() ) {
-        return;
-    }
-    npc_identity_for( value, true );
+    activate_npc_lifetime( value );
 }
 
 void retire_npc_handle_identity( npc &value )
 {
-    if( !value.getID().is_valid() ) {
-        return;
-    }
-    const std::shared_ptr<npc_handle_identity_state> identity =
-        npc_identity_for_retirement( value );
-    if( identity && identity->active ) {
-        ++identity->generation;
-        identity->active = false;
-    }
+    retire_npc_lifetime( value );
 }
 
 void register_camp_handle_identity( basecamp &value )
@@ -1163,9 +1073,9 @@ void install_game_handle_api(
 
     sol::table handles = lua.create_table();
     handles.set_function( "avatar", [
-                           current_runtime,
-                           current_world_generation,
-                           require_read
+                              current_runtime,
+                              current_world_generation,
+                              require_read
     ]() {
         require_read();
         avatar &player = get_avatar();

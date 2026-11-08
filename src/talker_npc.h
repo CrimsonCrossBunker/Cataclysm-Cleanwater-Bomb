@@ -3,9 +3,12 @@
 #define CATA_SRC_TALKER_NPC_H
 
 #include <memory>
+#include <optional>
 #include <string>
 
+#include "mission_dialogue.h"
 #include "npc.h"
+#include "npc_lifetime.h"
 #include "talker.h"
 #include "talker_character.h"
 #include "type_id.h"
@@ -26,8 +29,10 @@ class talker_npc_const : public const_talker_cloner<talker_npc_const, talker_cha
         ~talker_npc_const() override = default;
 
         npc const *get_const_npc() const override {
-            return me_npc;
+            return is_valid() ? me_npc : nullptr;
         }
+
+        void bind_interlocutor( character_id who, Character *who_char = nullptr ) override;
 
         // identity and location
         std::string distance_to_goal() const override;
@@ -47,6 +52,21 @@ class talker_npc_const : public const_talker_cloner<talker_npc_const, talker_cha
         std::vector<mission *> available_missions() const override;
         std::vector<mission *> assigned_missions() const override;
         mission *selected_mission() const override;
+        bool has_chosen_training() const override {
+            return has_chosen_training_;
+        }
+        skill_id chosen_training_skill() const override {
+            return chosen_skill_;
+        }
+        matype_id chosen_training_style() const override {
+            return chosen_style_;
+        }
+        spell_id chosen_training_spell() const override {
+            return chosen_spell_;
+        }
+        proficiency_id chosen_training_proficiency() const override {
+            return chosen_proficiency_;
+        }
 
         // factions and alliances
         bool is_following() const override;
@@ -75,8 +95,22 @@ class talker_npc_const : public const_talker_cloner<talker_npc_const, talker_cha
         int get_npc_value() const override;
         int get_npc_anger() const override;
 
+    protected:
+        character_id interlocutor_id() const;
+        Character *interlocutor_character() const;
+        const npc_opinion &opinion() const;
+        mutable mission_dialogue::mission_selection_identity selected_mission_;
+        bool has_chosen_training_ = false;
+        skill_id chosen_skill_;
+        matype_id chosen_style_;
+        spell_id chosen_spell_;
+        proficiency_id chosen_proficiency_;
+
     private:
         npc const *me_npc{};
+        character_id interlocutor;
+        bool has_bound_interlocutor_ = false;
+        std::optional<character_action_guard> interlocutor_lifetime_;
 };
 
 class talker_npc : virtual public talker_npc_const,
@@ -92,7 +126,7 @@ class talker_npc : virtual public talker_npc_const,
         ~talker_npc() override = default;
 
         npc *get_npc() override {
-            return me_npc;
+            return is_valid() ? me_npc : nullptr;
         }
 
         void update_missions( const std::vector<mission *> &missions_assigned ) override;
@@ -128,5 +162,7 @@ class talker_npc : virtual public talker_npc_const,
 
     private:
         npc *me_npc{};
+        using talker_npc_const::opinion;
+        npc_opinion &opinion();
 };
 #endif // CATA_SRC_TALKER_NPC_H

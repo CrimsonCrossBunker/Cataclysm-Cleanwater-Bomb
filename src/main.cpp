@@ -166,6 +166,9 @@ namespace
 #endif
 [[noreturn]] void close_game( int exit_status )
 {
+    if( g ) {
+        cata_mp::mp_on_world_exit();
+    }
     // exit() below runs static destructors without unwinding main()'s stack,
     // so the json_member_reporting_guard RAII object never fires. Disable the
     // report here so leftover deferred JsonObjects don't crash in DebugLog
@@ -630,7 +633,7 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--port", "<port>",
-                "TCP port for multiplayer server (default 8080)",
+                "UDP port for multiplayer server (default 8080)",
                 section_default,
                 1,
                 [&result]( int, const char **params ) -> int {
@@ -1164,6 +1167,15 @@ int main( int argc, const char *argv[] )
 
     cli_opts cli = parse_commandline( argc, const_cast<const char **>( argv ) );
 
+#if defined(HEADLESS)
+    // This backend has no interactive input device. Reject unsupported launches
+    // before opening a menu or creating an empty recording that cannot finish.
+    if( cli.replay_play.empty() && !cli.verifyexit && !cli.check_mods ) {
+        std::cerr << "HEADLESS requires --replay-play, --jsonverify or --check-mods\n";
+        return EXIT_FAILURE;
+    }
+#endif
+
     validate_directories();
     initialize_debugging();
     initialize_locale();
@@ -1233,15 +1245,11 @@ int main( int argc, const char *argv[] )
                                  cli.client_name, cli.server_password,
                                  getVersionString() );
     } else if( cli.host_mode ) {
-        cata_mp::set_host_mode( true );
-        const uint16_t port = cli.client_port;
-        const std::string password = cli.server_password;
-        const std::string ver = getVersionString();
-        std::thread host_thread( [port, password, ver]() {
-            cata_mp::run_server( port, password, ver );
-        } );
-        host_thread.detach();
-        printf( "[cdda-mp] Hosting on port %d — waiting for player 2…\n", port );
+        if( !cata_mp::mp_request_host_session( cli.client_port, cli.server_password,
+                                               getVersionString() ) ) {
+            close_game( EXIT_FAILURE );
+        }
+        printf( "[ccb-mp] Host armed on port %d; starts after world load\n", cli.client_port );
     }
 #endif
 
