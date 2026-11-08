@@ -22,6 +22,7 @@
 #include "calendar.h"
 #include "cata_variant.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -3236,7 +3237,7 @@ bool invoke_activity_type_handler(
             return true;
         }
 
-        const safe_reference<Creature> character_reference = character.get_safe_reference();
+        const character_action_guard character_reference( character );
         const std::uint64_t activity_identity = activity.identity_generation();
         const auto same_activity = [&]() {
             return character_reference && activity &&

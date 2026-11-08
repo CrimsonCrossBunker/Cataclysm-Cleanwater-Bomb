@@ -46,6 +46,9 @@ class npc_lifetime_registry
         // Observe an already registered active incarnation without activating
         // an unloaded object or replacing the owner of a reused numeric ID.
         npc_lifetime active_reference( npc &value ) const;
+        // Begin observing an NPC verified by the caller to be in the active
+        // world. Never revive an incarnation already retired by a callback.
+        npc_lifetime track_active( npc &value );
         void activate( npc &value );
         void retire( npc &value );
         void reset();
