@@ -4728,7 +4728,7 @@ bool npc::would_take_that( const item &it, const tripoint_bub_ms &p )
         }
         std::vector<npc *> followers;
         overmap_buffer.populate_followers_vec( followers );
-        for( npc*&elem : followers ) {
+        for( npc *&elem : followers ) {
             if( elem->sees( here, this->pos_bub( here ) ) || elem->sees( here,  p ) ) {
                 return false;
             }
