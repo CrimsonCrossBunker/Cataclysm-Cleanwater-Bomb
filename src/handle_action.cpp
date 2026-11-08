@@ -29,6 +29,7 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "bionics.h"
+#include "mp_inventory_activity.h"
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "cached_options.h"
@@ -2735,6 +2736,9 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
 
             if( offset_it != dir_to_offset.end() ) {
+                if( cata_mp::client_auto_mine( here.get_abs( next_pos ) ) ) {
+                    return true;
+                }
                 if( here.impassable( next_pos ) ) {
                     const tripoint_abs_ms next_abs = here.get_abs( next_pos );
                     const bool has_creature = static_cast<bool>(

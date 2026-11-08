@@ -37,7 +37,9 @@
 #include "iuse.h"
 #include "json.h"
 #include "map.h"
+#include "mapdata.h"
 #include "messages.h"
+#include "options.h"
 #include "mp_client_conn.h"
 #include "mp_combat_result.h"
 #include "mp_gamestate.h"
@@ -335,7 +337,8 @@ bool begin_client_inventory_activity( const activity_actor &actor )
     return begin_client_inventory_activity( player_activity( actor ) );
 }
 
-bool start_item_use( Character &who, map &here, const JsonObject &request )
+bool start_item_use( Character &who, map &here, const JsonObject &request,
+                     inventory_activity_host_state &state, const std::string &kind )
 {
     item_source identity;
     request.read( "source", identity, true );
@@ -349,9 +352,29 @@ bool start_item_use( Character &who, map &here, const JsonObject &request )
     if( request.has_member( "timer_seconds" ) ) {
         choices.timer_seconds = request.get_int( "timer_seconds" );
     }
-    return execute_owned_item_activation( who, source, request.get_string( "method" ), target,
-                                          request.get_bool( "allow_theft", false ),
-                                          request.get_bool( "allow_wet", false ), choices );
+    if( kind == "examine_pry" ) {
+        return execute_owned_prying( who, source, target,
+                                     request.get_bool( "allow_theft", false ),
+                                     request.get_bool( "allow_wet", false ) );
+    }
+    const bool automatic = kind == "auto_mine";
+    const std::string method = request.get_string( "method" );
+    if( automatic && ( source != who.get_wielded_item() || method.empty() ||
+                       method != automatic_mining_method( who, here, target ) ) ) {
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    const bool used = execute_owned_item_activation( who, source, method, target,
+                      request.get_bool( "allow_theft", false ),
+                      request.get_bool( "allow_wet", false ), choices );
+    if( lifetime && automatic && used && who.activity &&
+        ( who.activity.id() == activity_id( "ACT_PICKAXE" ) ||
+          who.activity.id() == activity_id( "ACT_JACKHAMMER" ) ) ) {
+        state.automatic_mining_target = target;
+        state.automatic_mining_terrain = here.ter( here.get_bub( target ) ).id();
+        state.automatic_mining_furniture = here.furn( here.get_bub( target ) ).id();
+    }
+    return used;
 }
 
 bool start_insert( Character &who, map &here, const JsonObject &request )
@@ -582,15 +605,18 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             state.needs_placement = false;
             const std::string kind = request.get_string( "kind", "reload" );
             state.tracks_crafting = kind == "craft" || kind == "craft_resume";
-            state.tracks_item_use = kind == "item_use";
+            state.tracks_item_use = kind == "item_use" || kind == "auto_mine" || kind == "examine_pry";
+            if( !who.activity ) {
+                state.automatic_mining_target.reset();
+            }
             const bool construction_request = kind == "construction" || kind == "construction_auto" ||
                                               kind == "construction_resume" || kind == "construction_cancel";
             state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request ||
                                 state.tracks_item_use;
             state.tracks_needs = state.tracks_needs || construction_request;
             state.healing_patient = character_id();
-            if( kind == "item_use" ) {
-                start_item_use( who, here, request );
+            if( state.tracks_item_use ) {
+                start_item_use( who, here, request, state, kind );
             } else if( kind == "reload" ) {
                 start_reload( who, here, request );
             } else if( kind == "unload" ) {
@@ -738,6 +764,17 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     out.member( "type", "inventory_activity_result" );
     out.member( "request", sequence );
     const bool active = owns_inventory_activity( who );
+    if( !active && state.automatic_mining_target ) {
+        const tripoint_abs_ms destination = *state.automatic_mining_target;
+        if( authorized && sequence == state.last_request && operation == "step" &&
+            here.inbounds( destination ) && who.pos_abs().z() == destination.z() &&
+            rl_dist( who.pos_abs(), destination ) == 1 && here.passable( here.get_bub( destination ) ) &&
+            ( here.ter( here.get_bub( destination ) ).id() != state.automatic_mining_terrain ||
+              here.furn( here.get_bub( destination ) ).id() != state.automatic_mining_furniture ) ) {
+            out.member( "automatic_mining_destination", destination );
+        }
+        state.automatic_mining_target.reset();
+    }
     const auto *craft = native_craft( who );
     const auto *build = native_construction( who );
     const partial_con *site = build ? here.partial_con_at( here.get_bub( build->location() ) ) :
@@ -829,6 +866,14 @@ bool apply_inventory_activity_result( const JsonObject &response )
         view.pending_request = 0;
         const std::string next_activity = response.get_string( "activity" );
         view.finished = next_activity.empty();
+        if( view.finished && !view.cancel_requested &&
+            response.has_member( "automatic_mining_destination" ) ) {
+            tripoint_abs_ms destination;
+            response.read( "automatic_mining_destination", destination, true );
+            if( get_map().inbounds( destination ) ) {
+                get_avatar().defer_move( get_map().get_bub( destination ) );
+            }
+        }
         const auto *construction_view = dynamic_cast<const build_construction_activity_actor *>(
                                             get_avatar().activity.actor.get() );
         // Keep the accepted construction generation until the view is cleared:
@@ -1030,9 +1075,11 @@ void client_start_consume( const item_location &source, bool allow_consequences,
     } );
 }
 
-bool client_activate_item( const item_location &source, std::string &method )
+static bool client_activate_item_impl( const item_location &source, std::string &method,
+                                       std::optional<tripoint_abs_ms> explicit_target, const std::string &kind )
 {
-    if( !is_client_mode() || !source || source->has_relic_activation() ) {
+    if( !is_client_mode() || !source ||
+        ( kind == "item_use" && source->has_relic_activation() ) ) {
         return false;
     }
     avatar &who = get_avatar();
@@ -1060,7 +1107,8 @@ bool client_activate_item( const item_location &source, std::string &method )
             method = std::next( methods.begin(), menu.ret )->first;
         }
     }
-    if( !supports_owned_item_activation( *source, method ) ) {
+    const bool examine_pry = kind == "examine_pry";
+    if( !examine_pry && !supports_owned_item_activation( *source, method ) ) {
         return false;
     }
     if( !query_consumption_ownership( *source, who ) ) {
@@ -1072,7 +1120,7 @@ bool client_activate_item( const item_location &source, std::string &method )
         return true;
     }
     item_activation_choices choices;
-    if( !query_item_activation_choices( *source, method, choices ) ) {
+    if( !examine_pry && !query_item_activation_choices( *source, method, choices ) ) {
         return true;
     }
     const item_source identity = capture_item_source( who, source );
@@ -1082,12 +1130,13 @@ bool client_activate_item( const item_location &source, std::string &method )
                              who.pos_abs();
     const adjacent_tool_action action = adjacent_tool_method( method );
     if( action != adjacent_tool_action::none ) {
-        const item *tool = source->get_usable_item( method );
+        const item *tool = examine_pry ? source.get_item() : source->get_usable_item( method );
         if( !tool ) {
             return true;
         }
-        const auto selected = query_adjacent_tool_target( action, who, get_map(), *tool );
-        if( !selected ) {
+        const auto selected = explicit_target ? explicit_target :
+                              query_adjacent_tool_target( action, who, get_map(), *tool );
+        if( !selected || !valid_adjacent_tool_target( action, who, get_map(), *tool, *selected ) ) {
             return true;
         }
         target = *selected;
@@ -1098,7 +1147,7 @@ bool client_activate_item( const item_location &source, std::string &method )
         return true;
     }
     send_inventory_activity( "start", [&]( JsonOut & out ) {
-        out.member( "kind", "item_use" );
+        out.member( "kind", kind );
         out.member( "source", identity );
         out.member( "item_type", type );
         out.member( "method", method );
@@ -1110,6 +1159,30 @@ bool client_activate_item( const item_location &source, std::string &method )
         }
     } );
     return true;
+}
+
+bool client_activate_item( const item_location &source, std::string &method,
+                           std::optional<tripoint_abs_ms> target )
+{
+    return client_activate_item_impl( source, method, target, "item_use" );
+}
+
+bool client_examine_pry( const item_location &tool, const tripoint_abs_ms &target )
+{
+    std::string method = "CROWBAR";
+    return client_activate_item_impl( tool, method, target, "examine_pry" );
+}
+
+bool client_auto_mine( const tripoint_abs_ms &target )
+{
+    if( !is_client_mode() || g->mostseen != 0 || !get_option<bool>( "AUTO_FEATURES" ) ||
+        !get_option<bool>( "AUTO_MINING" ) ) {
+        return false;
+    }
+    avatar &who = get_avatar();
+    std::string method = automatic_mining_method( who, get_map(), target );
+    return !method.empty() &&
+           client_activate_item_impl( who.get_wielded_item(), method, target, "auto_mine" );
 }
 
 void client_start_firstaid( const item_location &source, Character &patient,

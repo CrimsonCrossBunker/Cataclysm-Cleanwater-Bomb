@@ -41,6 +41,9 @@ struct inventory_activity_host_state {
     bool tracks_crafting = false;
     bool tracks_item_use = false;
     character_id healing_patient;
+    std::optional<tripoint_abs_ms> automatic_mining_target;
+    ter_str_id automatic_mining_terrain;
+    furn_str_id automatic_mining_furniture;
     std::vector<craft_notice> notices;
 };
 struct inventory_activity_client_state {
@@ -83,7 +86,10 @@ void client_start_consume( const item_location &source, bool allow_consequences,
                            bool reprompt = false );
 // Returns true when the client request was handled. Unsupported native methods
 // remain on their existing path until their additional choices are migrated.
-bool client_activate_item( const item_location &source, std::string &method );
+bool client_activate_item( const item_location &source, std::string &method,
+                           std::optional<tripoint_abs_ms> target = std::nullopt );
+bool client_auto_mine( const tripoint_abs_ms &target );
+bool client_examine_pry( const item_location &tool, const tripoint_abs_ms &target );
 void client_start_firstaid( const item_location &source, Character &patient,
                             const bodypart_str_id &part, bool allow_theft, bool reprompt = false );
 void client_start_craft( const craft_command &command );

@@ -21,6 +21,7 @@
 #include "avatar.h"
 #include "basecamp.h"
 #include "bionics.h"
+#include "mp_inventory_activity.h"
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
@@ -2141,6 +2142,10 @@ void iexamine::locked_object( Character &you, const tripoint_bub_ms &examp )
         //~ %1$s: terrain/furniture name, %2$s: prying tool name
         you.add_msg_if_player( _( "You attempt to pry open the %1$s using your %2$s…" ),
                                target_name, best_prying.tname() );
+        if( you.is_avatar() && cata_mp::client_examine_pry(
+                item_location( you, &best_prying ), here.get_abs( examp ) ) ) {
+            return;
+        }
         iuse::crowbar( &you, &best_prying, examp );
     } else if( action == act::pick ) {
         locked_object_pickable( you, examp );
@@ -2222,6 +2227,11 @@ void iexamine::locked_object_pickable( Character &you, const tripoint_bub_ms &ex
                                target_name, it->tname() );
         const ret_val<void> can_use = iuse_fn->can_call( you, *it, examp );
         if( can_use.success() ) {
+            std::string method = "PICK_LOCK";
+            if( you.is_avatar() && cata_mp::client_activate_item(
+                    item_location( you, it ), method, here.get_abs( examp ) ) ) {
+                return;
+            }
             iuse_fn->call( &you, *it, examp );
             return;
         } else {
