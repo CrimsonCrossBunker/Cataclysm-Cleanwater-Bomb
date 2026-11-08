@@ -51,6 +51,13 @@ class event_queue
             return queue_.empty();
         }
 
+        // Called after the producer is stopped/joined at a session boundary.
+        void clear() {
+            std::scoped_lock lock( mutex_ );
+            std::queue<mp_event> empty;
+            queue_.swap( empty );
+        }
+
         // Block until an event is available or timeout expires.
         // Returns true if an event is ready, false on timeout.
         bool wait_for_event( std::chrono::milliseconds timeout ) {

@@ -2,6 +2,7 @@
 #include "mp_client_conn.h"
 
 #include <asio.hpp>
+#include <atomic>
 #include <chrono>
 #include <deque>
 #include <map>
@@ -19,7 +20,7 @@ void mp_store_pending_welcome( const std::string &msg ); // NOLINT(cata-static-d
 
 namespace
 {
-bool client_mode = false;
+std::atomic<bool> client_mode{ false };
 bool active = false;
 bool joined = false;
 bool disconnected_reported = false;

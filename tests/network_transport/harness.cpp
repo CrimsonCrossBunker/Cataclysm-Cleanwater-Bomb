@@ -101,16 +101,11 @@ int main( int argc, char **argv )
         require( argc >= 3, "mode port required" );
         const std::string mode = argv[1];
         const uint16_t port = std::stoi( argv[2] );
-        std::thread host;
+        host_session host;
         if( mode == "host" ) {
-            host = std::thread( [port] { run_server( port, "口令\"\\", "abc" ); } );
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
-            while( !get_active_server() && std::chrono::steady_clock::now() < deadline ) {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
-            }
-            if( !get_active_server() ) {
-                host.join();
-                throw std::runtime_error( "host did not start" );
+            if( !host.start( port, "口令\"\\", "abc" ) ) {
+                std::cout << "ERROR " << wire_quote( host.error() ) << std::endl;
+                return 0;
             }
         } else if( mode == "client" ) {
             require( argc == 6, "client port name password version required" );
@@ -131,7 +126,57 @@ int main( int argc, char **argv )
         std::cout << "READY" << std::endl;
         std::string command;
         while( std::getline( std::cin, command ) && command != "stop" ) {
-            if( command == "join" ) {
+            if( command == "stop-session" && mode == "host" ) {
+                host.stop();
+                require( !host.running() && !get_active_server(), "host fully stopped" );
+                require( !renet_transport_get_status().running, "transport fully stopped" );
+                require( get_mp_queue().empty(), "old session events discarded" );
+                std::cout << "STOPPED" << std::endl;
+            } else if( command == "restart" && mode == "host" ) {
+                require( host.start( port, "口令\"\\", "abc" ), "same port restart" );
+                std::cout << "READY" << std::endl;
+            } else if( command == "competing-owner" && mode == "host" ) {
+                const auto original = get_active_server();
+                host_session other;
+                require( !other.start( 0, "", "abc" ), "second owner rejected" );
+                other.stop();
+                require( host.running() && get_active_server() == original, "first owner preserved" );
+                std::cout << "OK" << std::endl;
+            } else if( command == "destructor-restart" && mode == "host" ) {
+                host.stop();
+                std::shared_ptr<server> retained;
+                {
+                    host_session temporary;
+                    require( temporary.start( port, "口令\"\\", "abc" ), "temporary owner start" );
+                    retained = get_active_server();
+                }
+                require( !get_active_server() && !renet_transport_get_status().running,
+                         "destruction joins even with retained server lease" );
+                require( host.start( port, "口令\"\\", "abc" ), "restart after destructor" );
+                retained->post_broadcast( "{\"type\":\"old_session\"}" );
+                require( host.running(), "old server lease cannot stop replacement" );
+                std::cout << "READY" << std::endl;
+            } else if( command == "await-queued" && mode == "host" ) {
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 3 );
+                while( get_mp_queue().empty() && std::chrono::steady_clock::now() < deadline ) {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+                }
+                require( !get_mp_queue().empty(), "actual transport event queued" );
+                std::cout << "QUEUED" << std::endl;
+            } else if( command.compare( 0, 11, "start-port " ) == 0 && mode == "host" ) {
+                const auto requested = static_cast<uint16_t>( std::stoi( command.substr( 11 ) ) );
+                const bool started = host.start( requested, "口令\"\\", "abc" );
+                std::cout << ( started ? "READY" : "ERROR " + wire_quote( host.error() ) ) << std::endl;
+            } else if( command == "worker-failure" && mode == "host" ) {
+                get_active_server()->post_broadcast( std::string( 8 * 1024 * 1024 + 1, 'x' ) );
+                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 3 );
+                while( host.running() && std::chrono::steady_clock::now() < deadline ) {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+                }
+                require( !host.running(), "invalid packet ends worker" );
+                require( host.start( port, "口令\"\\", "abc" ), "recover after worker exit" );
+                std::cout << "READY" << std::endl;
+            } else if( command == "join" ) {
                 client_send_join();
                 std::cout << "OK" << std::endl;
             } else if( command.compare( 0, 5, "send " ) == 0 ) {
@@ -178,9 +223,8 @@ int main( int argc, char **argv )
                 }
             }
         }
-        if( host.joinable() ) {
-            get_active_server()->stop();
-            host.join();
+        if( mode == "host" ) {
+            host.stop();
         } else {
             set_client_mode( false );
             renet_transport_stop();

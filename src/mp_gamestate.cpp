@@ -131,6 +131,9 @@ static const vproto_id vehicle_prototype_none( "none" );
 
 void mp_log( const std::string &msg )
 {
+    // Both the transport worker and simulation thread write this stream.
+    static std::mutex log_mutex;
+    const std::scoped_lock lock( log_mutex );
     // Wall-clock ms since the previous mp_log line — lets us read the log as a
     // timeline ("this step took 47ms") without having to add timing helpers
     // around every call site.  Reset each line: prefix shows the gap since the
@@ -368,7 +371,7 @@ void mp_do_turn_process_turn( Character &u )
     u.set_moves( pre_moves );
 }
 
-static bool server_mode_ = false;
+static std::atomic<bool> server_mode_{ false };
 
 bool is_server_mode()
 {
@@ -380,7 +383,7 @@ void set_server_mode( bool enabled )
     server_mode_ = enabled;
 }
 
-static bool host_mode_ = false;
+static std::atomic<bool> host_mode_{ false };
 
 bool is_host_mode()
 {
@@ -426,6 +429,15 @@ void host_queue_sfx( const std::string &id, const std::string &variant, int vol 
     }
     g_host_sfx_queue.push_back( {id, variant, vol} );
 }
+
+// This is menu/CLI intent, not an active world. It survives initial setup()
+// and is consumed only once the first world turn can create its owned host.
+struct host_request {
+    uint16_t port;
+    std::string password;
+    std::string version;
+};
+static std::optional<host_request> g_pending_host_start;
 
 // Legacy gameplay helpers access the current world's owned proxy bindings.
 // The transport thread communicates through mp_event values instead.
@@ -1820,34 +1832,30 @@ static void mp_cull_local_npcs()
     }
 }
 
-// Remove every NPC with the given name from both the active critter list and the
-// overmap buffer. Eliminates artifacts left by previous sessions before the
-// ID-tracking cleanup mechanism existed.
-// Reset per-world MP state when a world is unloaded (quit-to-menu). The
-// stale-NPC sweep is one-shot per world load via mp_cleanup_done; without this
-// reset, re-entering a world in the same process skips the sweep and leaves
-// phantom proxy NPCs from a prior load-in (a session that quit while connected,
-// so its proxy was saved into the world and never cleanly removed). Reproduced
-// 2026-06-03 ("Alicia Donald" phantom). NOT a same-machine artifact — any host
-// that enters a world twice per launch hits it.
+// End the live transport before releasing a world, including menu return,
+// rollback and application shutdown. Calls after normal save/quit are harmless.
 void mp_on_world_exit()
 {
+    // Join before clearing modes, queues, metadata or UI used by the worker.
+    mp_session().hosting.stop();
+    set_client_mode( false );
+    set_host_mode( false );
+    set_server_mode( false );
+    g_pending_host_start.reset();
+    get_mp_queue().clear();
     mp_session().reset();
-    // A world exit ends any co-op session.  Clear the host/client session mode so
-    // the NEXT game started from the menu is treated as plain single-player.
-    // set_client_mode(false) was previously only called on a *connect failure*, so
-    // after a successful co-op session the process stayed in client mode until it
-    // quit.  A solo "play now" afterward then saw is_client_mode()==true, got
-    // routed into the disposable "Co-op (auto) - DO NOT SELECT" scratch world, and
-    // its save was suppressed — silent single-player save loss.  The join/host
-    // menu paths re-arm the mode before the next session, so clearing here is safe.
-    if( is_client_mode() || is_host_mode() ) {
-        mp_log( "[cdda-mp] WORLD-EXIT: clearing session mode (client=" +
-                std::to_string( is_client_mode() ) + " host=" +
-                std::to_string( is_host_mode() ) + ")" );
-        set_client_mode( false );
-        set_host_mode( false );
-    }
+    g_pending_welcome.clear();
+    g_client_host_world_name.clear();
+    g_client_host_player_name.clear();
+    g_client_host_seed = 0;
+    g_client_host_seed_applied = false;
+    g_client_host_spawn_omt = tripoint_abs_omt::invalid;
+    mp_set_host_world_name( "" );
+    mp_set_host_player_name( "" );
+    g_host_world_seed = 0;
+    g_host_omt_valid = false;
+    g_mp_edge.reset();
+    g_mp_hud.reset();
 }
 
 static void purge_npcs_by_name( const std::string &name )
@@ -5560,34 +5568,12 @@ void mp_notify_session_ending()
     } else {
         return;
     }
-    // Brief pause so the TCP write completes before the socket goes down.
+    // Retain the existing grace interval for the session-ending notification.
     std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
 
-    // Host: tear down the listen server. run_server()'s srv.run() blocks until
-    // stop() is called; if we never stop it, the thread lingers, active_server_
-    // stays set, is_hosting() keeps returning true, and the NEXT host session in
-    // this launch short-circuits the re-arm -> no new thread, no co-op UI
-    // (reproduced 2026-06-02). stop() makes srv.run() return -> run_server sets
-    // active_server_ = nullptr. The post-stop pause lets that unwind before any
-    // re-host checks is_hosting().
-    if( is_host_mode() ) {
-        if( auto srv = get_active_server() ) {
-            srv->stop();
-            mp_log( "[cdda-mp] SESSION-END: host server stop() called" );
-        }
-        // Wait for the (detached) listen thread to FULLY exit run_server() —
-        // not just a fixed sleep. Only then has the server object destructed
-        // and freed the port-8080 socket. A fixed 200ms sleep raced this: a
-        // re-host could bind before the old socket released, the server ctor
-        // threw EADDRINUSE, active_server_ stayed null, is_hosting() read false
-        // on the 2nd host -> no co-op HUD, no live listener (2026-06-02).
-        // Bounded so a wedged thread can't hang the quit/return-to-menu.
-        for( int i = 0; i < 300 && is_server_thread_running(); ++i ) {
-            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        }
-        mp_log( "[cdda-mp] SESSION-END: listen thread exited, running=" +
-                std::to_string( is_server_thread_running() ) );
-    }
+    // The owner does not return until the server worker and its transport
+    // have stopped. No detached thread or timed polling may outlive the world.
+    mp_session().hosting.stop();
 
     // Drop the co-op HUD so the next session re-creates it fresh.  g_mp_hud /
     // g_mp_edge are static and their ui_adaptors register against the current
@@ -5745,77 +5731,44 @@ static void mp_handle_template_data( const std::string &msg )
     }
 }
 
-// Set when the user picks "Host a session" from the main-menu chooser.
-// The server thread isn't actually spawned yet — that's deferred to the
-// first process_mp_events() call (which only runs once a world is loaded),
-// so a client connecting before there's an avatar to spawn into can't crash
-// us.  Lets us also offer a "Cancel co-op" path while still in the menu.
-static bool g_pending_host_start = false;
-static bool g_host_thread_actually_started = false;
-
-// Called from process_mp_events() on the host's first turn after the world
-// has loaded.  Spawns the listen-server thread iff the menu armed it and we
-// haven't already started it.  No-op when the server was started via the
-// --host CLI flag (main.cpp spawns its own thread in that path).
-static void mp_start_pending_host_thread()
+static void mp_start_pending_host()
 {
-    // Nothing armed / already running: return immediately, BEFORE any logging.
-    // process_mp_events() calls this every do_turn even in pure single-player
-    // (the callout in do_turn.cpp is unconditional), so an early return here keeps
-    // a non-hosting player from touching the MP log at all on this path.
-    if( !g_pending_host_start || g_host_thread_actually_started ) {
+    if( !g_pending_host_start ) {
         return;
     }
-    // Lifecycle trace: only reached on the turn the server thread actually starts.
-    // A second host session in one launch can arrive here with stale statics.
-    mp_log( "[cdda-mp] HOST-THREAD-CHECK: pending=" + std::to_string( g_pending_host_start ) +
-            " already_started=" + std::to_string( g_host_thread_actually_started ) +
-            " host_mode=" + std::to_string( is_host_mode() ) );
-    std::thread( []() {
-        run_server( 8080, std::string(), getVersionString() );
-    } ).detach();
-    g_host_thread_actually_started = true;
-    mp_log( "[cdda-mp] MENU: host thread started (post-world-load)" );
+    const host_request request = std::move( *g_pending_host_start );
+    g_pending_host_start.reset();
+    if( !mp_session().hosting.start( request.port, request.password, request.version ) ) {
+        mp_log( "[ccb-mp] HOST-START failed: " + mp_session().hosting.error() );
+        add_msg( m_bad, _( "Unable to start multiplayer host: %s" ), mp_session().hosting.error() );
+        set_host_mode( false );
+    }
+}
+
+bool mp_request_host_session( uint16_t port, const std::string &password,
+                              const std::string &version )
+{
+    if( is_client_mode() ) {
+        return false;
+    }
+    if( mp_session().hosting.running() ) {
+        return true;
+    }
+    set_host_mode( true );
+    g_pending_host_start = host_request{ port, password, version };
+    return true;
 }
 
 bool mp_menu_start_host_session()
 {
-    // Log the running binary's exact version so the log shows what's ACTUALLY
-    // executing — the on-disk binary can differ from a still-running process
-    // after a rebuild, and the handshake compares this string's commit token.
-    mp_log( std::string( "[cdda-mp] VERSION=" ) + getVersionString() + " (role=HOST)" );
-    // Short-circuit ONLY when we're genuinely still hosting (a live server) — the
-    // case where the user re-enters the world/char picker mid-arming.  If
-    // host_mode is set but the server is gone (a prior session ended without
-    // clearing it), fall through and RE-ARM.  Otherwise a second host session in
-    // the same launch never restarts the listen thread:
-    // g_host_thread_actually_started stays true -> mp_start_pending_host_thread
-    // returns early -> no listener, no co-op UI (reproduced 2026-06-02).
-    if( is_host_mode() && is_hosting() ) {
-        mp_log( "[cdda-mp] HOST-ARM: already hosting (live server), short-circuit" );
-        return true;
-    }
-    mp_log( "[cdda-mp] HOST-ARM: arming (host_mode was " +
-            std::to_string( is_host_mode() ) + ", live_server=" +
-            std::to_string( is_hosting() ) + ") — re-arm restarts the thread" );
-    set_host_mode( true );
-    // Server thread starts on the host's first do_turn (see
-    // mp_start_pending_host_thread) so we don't end up listening before
-    // there's a world for incoming clients to spawn into.
-    g_pending_host_start = true;
-    g_host_thread_actually_started = false;
-    mp_log( "[cdda-mp] MENU: host armed on port 8080 (thread deferred to do_turn)" );
-    return true;
+    return mp_request_host_session( 8080, "", getVersionString() );
 }
 
 void mp_menu_cancel_host()
 {
-    if( !g_pending_host_start && !is_host_mode() ) {
-        return;
-    }
-    g_pending_host_start = false;
+    g_pending_host_start.reset();
+    mp_session().hosting.stop();
     set_host_mode( false );
-    mp_log( "[cdda-mp] MENU: host-mode cancelled from co-op chooser" );
 }
 
 void mp_tick_proxy_activity( npc &guy )
@@ -6264,7 +6217,7 @@ bool mp_menu_join_session()
 std::string mp_menu_coop_status_text()
 {
     if( is_host_mode() ) {
-        if( g_pending_host_start && !g_host_thread_actually_started ) {
+        if( g_pending_host_start ) {
             return std::string( _( "Co-op: armed — re-enter Host to pick world / character" ) );
         }
         return std::string( _( "Co-op: hosting on port 8080 — waiting for partner" ) );
@@ -6329,11 +6282,9 @@ static void check_separation_warning( const tripoint_abs_ms &a, const tripoint_a
 
 void process_mp_events()
 {
-    // If the menu armed host mode but the world wasn't loaded yet, the
-    // listen-server thread was deferred until now.  Starts on the first
-    // do_turn() after the avatar exists so a client connecting can actually
-    // be spawned into a world.  No-op for --host CLI launches.
-    mp_start_pending_host_thread();
+    // Menu and CLI hosting both start on the first world turn, after the
+    // avatar exists and an incoming client can be spawned into the world.
+    mp_start_pending_host();
 
     // Client: drain a budget of queued overmap-sync cells this turn (no-op when
     // nothing is pending). Keeps the ~32k-cell apply off the single-frame hot path.

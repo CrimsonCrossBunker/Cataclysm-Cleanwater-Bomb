@@ -798,6 +798,9 @@ void game::reset_game_state()
 
 bool game::reload_active_save( const save_t &save_file )
 {
+    // A rollback replaces the actors/map behind every pending command. End the
+    // old session before clearing those objects, then load as a solo world.
+    cata_mp::mp_on_world_exit();
     // In-place reload: tear down the current game's runtime state and reload
     // the save WITHOUT bouncing through the main menu (which would re-run the
     // expensive JSON/mod load). Used by quickload and snapshot restore.
