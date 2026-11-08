@@ -25,6 +25,7 @@
 #include "game_inventory.h"
 #include "item.h"
 #include "item_activation.h"
+#include "tool_activity_target.h"
 #include "item_healing.h"
 #include "item_disposition.h"
 #include "item_insert.h"
@@ -1077,8 +1078,20 @@ bool client_activate_item( const item_location &source, std::string &method )
     const item_source identity = capture_item_source( who, source );
     const itype_id type = source->typeId();
     const bool allow_theft = !source->is_owned_by( who, true );
-    const tripoint_abs_ms target = source->has_flag( flag_ALLOWS_REMOTE_USE ) ? source.pos_abs() :
-                                   who.pos_abs();
+    tripoint_abs_ms target = source->has_flag( flag_ALLOWS_REMOTE_USE ) ? source.pos_abs() :
+                             who.pos_abs();
+    const adjacent_tool_action action = adjacent_tool_method( method );
+    if( action != adjacent_tool_action::none ) {
+        const item *tool = source->get_usable_item( method );
+        if( !tool ) {
+            return true;
+        }
+        const auto selected = query_adjacent_tool_target( action, who, get_map(), *tool );
+        if( !selected ) {
+            return true;
+        }
+        target = *selected;
+    }
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( !begin_client_inventory_activity( view ) ) {

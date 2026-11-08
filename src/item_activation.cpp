@@ -1,4 +1,5 @@
 #include "item_activation.h"
+#include "tool_activity_target.h"
 
 #include "cata_scope_helpers.h"
 #include "character.h"
@@ -64,6 +65,13 @@ bool execute_owned_item_activation( Character &who, item_location source,
         rl_dist( who.pos_abs(), target ) > 1 ||
         ( !source->is_owned_by( who, true ) && !allow_theft ) ) {
         return false;
+    }
+    const adjacent_tool_action action = adjacent_tool_method( method );
+    if( action != adjacent_tool_action::none ) {
+        const item *tool = source->get_usable_item( method );
+        if( !tool || !valid_adjacent_tool_target( action, who, here, *tool, target ) ) {
+            return false;
+        }
     }
     const bool wet = source->wetness && source->has_flag( flag_WATER_BREAK_ACTIVE );
     if( wet && !allow_wet ) {

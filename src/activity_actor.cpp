@@ -3632,18 +3632,27 @@ int lockpick_activity_actor::lockpicking_moves(
     }
 }
 
-void lockpick_activity_actor::start( player_activity &act, Character & )
+void lockpick_activity_actor::start( player_activity &act, Character &who )
 {
     act.moves_left = moves_total;
     act.moves_total = moves_total;
 
+    start_owned_tool_activity( act, who, lockpick, target, owned_target );
     const time_duration lockpicking_time = time_duration::from_moves( moves_total );
     add_msg_debug( debugmode::DF_ACT_LOCKPICK, "lockpicking time = %s",
                    to_string_writable( lockpicking_time ) );
 }
 
+void lockpick_activity_actor::do_turn( player_activity &act, Character &who )
+{
+    continue_owned_tool_activity( act, who, lockpick, owned_target );
+}
+
 void lockpick_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( !continue_owned_tool_activity( act, who, lockpick, owned_target ) ) {
+        return;
+    }
     act.set_to_null();
 
     item *it;
@@ -3780,16 +3789,16 @@ void lockpick_activity_actor::finish( player_activity &act, Character &who )
         who.add_msg_if_player( m_bad, _( "The lock stumps your efforts to pick it." ) );
     }
 
-    if( avatar *you = dynamic_cast<avatar *>( &who ) ) {
+    if( who.is_avatar() || who.is_player_controlled() ) {
         // Gives another boost to XP, reduced by your skill level.
         // Higher skill levels require more difficult locks to gain a meaningful amount of xp.
         // Again, we're using randomized lock_roll until a defined lock difficulty is implemented.
-        if( lock_roll > round( you->get_skill_level( skill_traps ) ) ) {
-            xp_gain += lock_roll + ( xp_gain / ( you->get_skill_level( skill_traps ) + 1 ) );
+        if( lock_roll > round( who.get_skill_level( skill_traps ) ) ) {
+            xp_gain += lock_roll + ( xp_gain / ( who.get_skill_level( skill_traps ) + 1 ) );
         } else {
-            xp_gain += xp_gain / ( you->get_skill_level( skill_traps ) + 1 );
+            xp_gain += xp_gain / ( who.get_skill_level( skill_traps ) + 1 );
         }
-        you->practice( skill_traps, xp_gain );
+        who.practice( skill_traps, xp_gain );
     }
 
     if( !perfect && ter_type == ter_t_door_locked_alarm && ( lock_roll + dice( 1, 30 ) ) > pick_roll ) {
@@ -3859,6 +3868,7 @@ void lockpick_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "lockpick", lockpick );
     jsout.member( "fake_lockpick", fake_lockpick );
     jsout.member( "target", target );
+    jsout.member( "owned_target", owned_target );
 
     jsout.end_object();
 }
@@ -3873,6 +3883,7 @@ std::unique_ptr<activity_actor> lockpick_activity_actor::deserialize( JsonValue 
     data.read( "lockpick", actor.lockpick );
     data.read( "fake_lockpick", actor.fake_lockpick );
     data.read( "target", actor.target );
+    data.read( "owned_target", actor.owned_target );
 
     return actor.clone();
 }
@@ -10595,7 +10606,11 @@ time_duration prying_activity_actor::prying_time( const activity_data_common &da
 
 void prying_activity_actor::start( player_activity &act, Character &who )
 {
-    const map &here = get_map();
+    map &here = get_map();
+    start_owned_tool_activity( act, who, tool, here.get_abs( target ), owned_target );
+    if( !act ) {
+        return;
+    }
 
     if( here.has_furn( target ) ) {
         const furn_id &furn_type = here.furn( target );
@@ -10640,9 +10655,15 @@ void prying_activity_actor::start( player_activity &act, Character &who )
     act.moves_left = act.moves_total;
 }
 
-void prying_activity_actor::do_turn( player_activity &/*act*/, Character &who )
+void prying_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    if( !continue_owned_tool_activity( act, who, tool, owned_target ) ) {
+        return;
+    }
     map &here = get_map();
+    if( owned_target ) {
+        target = here.get_bub( owned_target->position );
+    }
 
     std::string method = "CROWBAR";
 
@@ -10855,6 +10876,12 @@ void prying_activity_actor::handle_prying_nails( Character &who )
 
 void prying_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( !continue_owned_tool_activity( act, who, tool, owned_target ) ) {
+        return;
+    }
+    if( owned_target ) {
+        target = get_map().get_bub( owned_target->position );
+    }
     act.set_to_null();
 
     if( prying_nails ) {
@@ -10864,12 +10891,25 @@ void prying_activity_actor::finish( player_activity &act, Character &who )
     }
 }
 
+bool prying_activity_actor::can_resume_with_internal( const activity_actor &other,
+        const Character & ) const
+{
+    const auto &actor = static_cast<const prying_activity_actor &>( other );
+    const map &here = get_map();
+    const auto own_position = owned_target ? owned_target->position : here.get_abs( target );
+    const auto other_position = actor.owned_target ? actor.owned_target->position :
+                                here.get_abs( actor.target );
+    return own_position == other_position &&
+           ( ( !owned_target && !actor.owned_target ) || tool == actor.tool );
+}
+
 void prying_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
     jsout.member( "target", target );
     jsout.member( "tool", tool );
     jsout.member( "prying_nails", prying_nails );
+    jsout.member( "owned_target", owned_target );
     jsout.end_object();
 }
 
@@ -10880,6 +10920,7 @@ std::unique_ptr<activity_actor> prying_activity_actor::deserialize( JsonValue &j
     data.read( "target", actor.target );
     data.read( "tool", actor.tool );
     data.read( "prying_nails", actor.prying_nails );
+    data.read( "owned_target", actor.owned_target );
     return actor.clone();
 }
 
@@ -12625,8 +12666,11 @@ std::unique_ptr<activity_actor> longsalvage_activity_actor::deserialize( JsonVal
     return actor.clone();
 }
 
-void pickaxe_activity_actor::do_turn( player_activity &, Character & )
+void pickaxe_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    if( !continue_owned_tool_activity( act, who, mining_tool, owned_target ) ) {
+        return;
+    }
     const tripoint_bub_ms &pos = get_map().get_bub( mined_location );
     sfx::play_activity_sound( "tool", "pickaxe", sfx::get_heard_volume( pos ) );
     // each turn is too much
@@ -12636,8 +12680,11 @@ void pickaxe_activity_actor::do_turn( player_activity &, Character & )
     }
 }
 
-void jackhammer_activity_actor::do_turn( player_activity &, Character & )
+void jackhammer_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    if( !continue_owned_tool_activity( act, who, mining_tool, owned_target ) ) {
+        return;
+    }
     const tripoint_bub_ms &pos = get_map().get_bub( mined_location );
     sfx::play_activity_sound( "tool", "pickaxe", sfx::get_heard_volume( pos ) );
     // each turn is too much
@@ -12649,10 +12696,10 @@ void jackhammer_activity_actor::do_turn( player_activity &, Character & )
 
 void pickaxe_activity_actor::mining_strain( Character &who )
 {
-    if( who.is_avatar() ) {
+    if( who.is_avatar() || who.is_player_controlled() ) {
         map &here = get_map();
         const tripoint_bub_ms mined_location_bub = here.get_bub( mined_location );
-        const int helpersize = get_player_character().get_num_crafting_helpers( 3 );
+        const int helpersize = who.get_num_crafting_helpers( 3 );
         if( here.is_bashable( mined_location_bub ) &&
             here.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF, mined_location_bub ) &&
             here.ter( mined_location_bub ) != ter_t_tree ) {
@@ -12667,17 +12714,31 @@ void pickaxe_activity_actor::mining_strain( Character &who )
     }
 }
 
-void mine_activity_actor::start( player_activity &act, Character & )
+void mine_activity_actor::start( player_activity &act, Character &who )
 {
-    act.moves_left = to_moves<int>( mining_duration );
+    act.moves_total = act.moves_left = to_moves<int>( mining_duration );
+    start_owned_tool_activity( act, who, mining_tool, mined_location, owned_target );
 }
 
 void mine_activity_actor::finish( player_activity &act, Character &who )
 {
+    if( !continue_owned_tool_activity( act, who, mining_tool, owned_target ) ) {
+        return;
+    }
+    if( act.execution() == activity_execution::authoritative &&
+        !mining_tool->ammo_sufficient( &who ) ) {
+        act.set_to_null();
+        return;
+    }
+    const character_action_guard lifetime( who );
+    act.set_to_null();
     map &here = get_map();
     const tripoint_bub_ms &pos = here.get_bub( mined_location );
 
     here.destroy( pos, true );
+    if( !lifetime ) {
+        return;
+    }
 
     who.add_msg_player_or_npc( m_good,
                                _( "You finish digging." ),
@@ -12688,7 +12749,9 @@ void mine_activity_actor::finish( player_activity &act, Character &who )
         mining_tool->consume_tool_uses( 1, get_map(), tripoint_bub_ms::zero, &who );
     }
 
-    act.set_to_null();
+    if( !lifetime ) {
+        return;
+    }
     if( !who.backlog.empty() && who.backlog.front().id() == ACT_MULTIPLE_MINE ) {
         for( item &elem : here.i_at( pos ) ) {
             elem.set_var( "activity_var", who.name );
@@ -12705,6 +12768,7 @@ void mine_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "mining_tool", mining_tool );
     jsout.member( "mined_location", mined_location );
     jsout.member( "mining_duration", mining_duration );
+    jsout.member( "owned_target", owned_target );
 
     jsout.end_object();
 }
@@ -12716,6 +12780,7 @@ JsonObject mine_activity_actor::deserialize_base( JsonValue &jsin )
     data.read( "mining_tool", mining_tool );
     data.read( "mined_location", mined_location );
     data.read( "mining_duration", mining_duration );
+    data.read( "owned_target", owned_target );
 
     return data;
 }
