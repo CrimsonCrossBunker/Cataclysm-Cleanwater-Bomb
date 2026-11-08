@@ -3,20 +3,35 @@
 #define CATA_SRC_MP_SERVER_H
 
 #include <stdint.h>
+#include <array>
+#include <cstddef>
 #include <memory>
-#include <mutex>
+#include <optional>
 #include <string>
-#include <vector>
+#include <thread>
+
+#include "mp_admission.h"
+#include "world_identity.h"
 
 namespace cata_mp
 {
+class event_queue;
 
-struct client_session;
+// Published as one value by the simulation owner. The network worker never
+// reads the game, the current world, or another session's metadata.
+struct server_welcome {
+    std::string world_name;
+    std::string player_name;
+    unsigned int seed = 0;
+    std::optional<std::array<int, 3>> host_omt;
+    world_id world;
+};
 
 class server
 {
     public:
-        server( uint16_t port, std::string password, std::string version = "" );
+        server( uint16_t port, std::string password, std::string version,
+                std::shared_ptr<event_queue> events, server_welcome welcome );
         ~server();
 
         // Start listening. Blocks until stop() is called.
@@ -24,24 +39,24 @@ class server
 
         // Signal the server to stop accepting connections and shut down.
         void stop();
+        bool running() const;
+        void update_welcome( server_welcome welcome );
 
-        // Broadcast a message to all connected clients.
-        // Must be called from the Asio io_context thread (e.g. inside a callback).
+        // Thread-safe delivery bound to the exact authenticated admission.
+        void post_send( const peer_admission &admission, const std::string &msg );
         void broadcast( const std::string &msg );
-
-        // Thread-safe broadcast: posts the send onto the io_context thread.
-        // Use this when calling from the game loop thread.
         void post_broadcast( const std::string &msg );
+        // Owner-side admission failed. Queue a reason and close on the worker.
+        void post_reject( const peer_admission &admission, const std::string &reason );
 
         uint16_t port() const {
             return port_;
         }
 
     private:
-        void do_accept();
-        void on_client_connected( const std::shared_ptr<client_session> &session );
-        void on_client_disconnected( const std::shared_ptr<client_session> &session );
-        void on_message( const std::shared_ptr<client_session> &session, const std::string &msg );
+        void post( const peer_admission *admission, const std::string &msg, bool close );
+        void on_disconnected( uint64_t peer_id );
+        void on_message( uint64_t peer_id, const std::string &msg );
 
         uint16_t port_;
         std::string password_;
@@ -51,25 +66,40 @@ class server
 
         std::unique_ptr<impl> impl_;
 
-        std::vector<std::shared_ptr<client_session>> clients_;
-        std::mutex clients_mutex_;
 };
 
-// Start the server on the given port. Called from main() when --server flag is set.
-// Does not return until the server shuts down.
-void run_server( uint16_t port, const std::string &password,
-                 const std::string &version = "" );
+// The simulation/application owner calls start/stop; only the owned worker
+// calls server::run. Destruction joins before any world state is released.
+// A stopped server lease may outlive this owner, but cannot enqueue new work.
+class host_session
+{
+    public:
+        host_session() = default;
+        host_session( size_t event_limit, size_t byte_limit );
+        ~host_session();
+        host_session( const host_session & ) = delete;
+        host_session &operator=( const host_session & ) = delete;
 
-// Returns the active server instance, or nullptr if not running.
-// Thread-safe: broadcast() on the returned pointer is mutex-protected.
-server *get_active_server();
+        bool start( uint16_t port, const std::string &password, const std::string &version,
+                    server_welcome welcome = {} );
+        void stop();
+        bool running() const;
+        std::shared_ptr<server> active_server() const;
+        event_queue &events();
+        void update_welcome( server_welcome welcome );
+        const std::string &error() const {
+            return error_;
+        }
 
-// True from the moment the (detached) listen thread enters run_server() until
-// it fully returns — i.e. until the server object has destructed and its
-// listen socket (the port) is released. Session-end waits on this going false
-// before allowing a re-host to re-bind the same port, so a second host session
-// in one launch can't race the first session's socket teardown.
-bool is_server_thread_running();
+    private:
+        std::shared_ptr<server> instance_;
+        std::thread worker_;
+        std::shared_ptr<event_queue> events_;
+        std::string error_;
+};
+
+// Current-world owner-thread adapter. Workers keep their explicit session.
+std::shared_ptr<server> get_active_server();
 
 } // namespace cata_mp
 

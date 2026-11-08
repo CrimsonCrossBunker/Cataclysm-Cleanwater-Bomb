@@ -710,6 +710,8 @@ struct technique_definition_data {
     bool crit_tec = false;
     bool crit_ok = false;
     bool manual_activation = false;
+    double cooldown_seconds = 0.0;
+    std::string cooldown_handler;
     bool wall_adjacent = false;
     bool reach_tec = false;
     bool reach_ok = false;
@@ -776,9 +778,9 @@ struct magic_type_definition_data {
     std::string energy_source = "none";
     std::string vitamin;
     std::string energy_color = "cyan";
-    std::set<std::string> cannot_cast_flags;
-    std::optional<std::string> cannot_cast_message;
-    std::optional<std::int64_t> max_book_level;
+    std::set < std::string > cannot_cast_flags;
+    std::optional < std::string > cannot_cast_message;
+    std::optional < std::int64_t > max_book_level;
     double failure_cost_fraction = 0.0;
     double failure_experience_fraction = 0.2;
     std::string level_for_experience_handler;
@@ -814,14 +816,14 @@ struct movement_mode_definition_data {
     std::int64_t mech_power_kilojoules = 2;
     std::int64_t swim_speed_modifier = 0;
     bool stop_hauling = false;
-    std::vector<movement_mode_message_definition_data> messages;
+    std::vector < movement_mode_message_definition_data > messages;
     bool registered = false;
 };
 
 // Character definition handles follow the native Lua-first builders.
 struct magic_type_definition_handle {
-    std::shared_ptr<magic_type_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < magic_type_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     magic_type_definition_handle &cannot_cast_when( const std::string &flag ) {
         require_building_handle( token, *definition, "magic type" );
@@ -895,8 +897,8 @@ struct magic_type_definition_handle {
 };
 
 struct movement_mode_definition_handle {
-    std::shared_ptr<movement_mode_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < movement_mode_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     movement_mode_definition_handle &messages( const std::string &steed,
             const sol::table &options ) {
@@ -904,11 +906,11 @@ struct movement_mode_definition_handle {
         movement_mode_message_definition_data messages;
         messages.steed = steed;
         messages.prepare = detail::read_singular_text(
-                               options.get<sol::object>( "prepare" ), "", "movement-mode prepare message" );
+                               options.get < sol::object > ( "prepare" ), "", "movement-mode prepare message" );
         messages.success = detail::read_singular_text(
-                               options.get<sol::object>( "success" ), "", "movement-mode success message" );
+                               options.get < sol::object > ( "success" ), "", "movement-mode success message" );
         messages.failure = detail::read_singular_text_or(
-                               options.get<sol::object>( "failure" ), messages.failure,
+                               options.get < sol::object > ( "failure" ), messages.failure,
                                "movement-mode failure message" );
         if( messages.prepare.empty() || messages.success.empty() || messages.failure.empty() ) {
             throw std::runtime_error( "movement-mode messages cannot be empty" );
@@ -924,8 +926,8 @@ struct movement_mode_definition_handle {
 };
 
 struct profession_definition_handle {
-    std::shared_ptr<profession_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < profession_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     profession_definition_handle &items( const std::string &both,
                                          const std::string &male,
@@ -1049,8 +1051,8 @@ struct profession_definition_handle {
 };
 
 struct profession_group_definition_handle {
-    std::shared_ptr<profession_group_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < profession_group_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     profession_group_definition_handle &profession( const std::string &profession_id ) {
         require_building_handle( token, *definition, "profession group" );
@@ -1068,8 +1070,8 @@ struct profession_group_definition_handle {
 };
 
 struct widget_definition_handle {
-    std::shared_ptr<widget_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < widget_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     static widget_clause_definition_data parse_clause( const sol::table &options ) {
         widget_clause_definition_data clause;
@@ -1077,22 +1079,22 @@ struct widget_definition_handle {
         clause.symbol = options.get_or( "symbol", options.get_or( "sym", std::string() ) );
         clause.text = options.get_or( "text", std::string() );
         clause.color = options.get_or( "color", std::string() );
-        clause.value = options.get_or<std::int64_t>(
-                           "value", std::numeric_limits<int>::min() );
+        clause.value = options.get_or < std::int64_t > (
+                           "value", std::numeric_limits < int >::min() );
         clause.condition_handler = options.get_or(
                                        "condition", options.get_or( "condition_handler", std::string() ) );
         clause.parse_tags = options.get_or( "parse_tags", false );
-        if( const sol::optional<sol::table> children =
-                options.get<sol::optional<sol::table>>( "widgets" ) ) {
+        if( const sol::optional < sol::table > children =
+                options.get < sol::optional < sol::table>>( "widgets" ) ) {
             const std::size_t count = require_dense_array(
                                           *children, "widget clause children", 0, 1024 );
             clause.widgets.reserve( count );
             for( std::size_t index = 1; index <= count; ++index ) {
-                const sol::object value = children->raw_get<sol::object>( index );
-                if( !value.is<std::string>() ) {
+                const sol::object value = children->raw_get < sol::object > ( index );
+                if( !value.is < std::string > () ) {
                     throw std::runtime_error( "widget clause children must contain widget ids" );
                 }
-                clause.widgets.push_back( value.as<std::string>() );
+                clause.widgets.push_back( value.as < std::string > () );
             }
         }
         return clause;
@@ -1154,24 +1156,24 @@ struct widget_definition_handle {
 };
 
 struct enchantment_definition_handle {
-    std::shared_ptr<enchantment_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < enchantment_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     static enchantment_fake_spell_definition_data parse_spell( const sol::table &options ) {
         enchantment_fake_spell_definition_data spell;
         spell.spell = options.get_or( "id", options.get_or( "spell", std::string() ) );
-        if( const sol::optional<std::int64_t> maximum =
-                options.get<sol::optional<std::int64_t>>( "max_level" ) ) {
+        if( const sol::optional < std::int64_t > maximum =
+                options.get < sol::optional < std::int64_t>>( "max_level" ) ) {
             spell.max_level = *maximum;
         }
-        spell.level = options.get_or<std::int64_t>( "level", fake_spell::level_default );
+        spell.level = options.get_or < std::int64_t > ( "level", fake_spell::level_default );
         spell.self = options.get_or( "self", fake_spell::self_default );
-        spell.trigger_once_in = options.get_or<std::int64_t>(
+        spell.trigger_once_in = options.get_or < std::int64_t > (
                                     "trigger_once_in", fake_spell::trigger_once_in_default );
         spell.trigger_message = read_singular_text(
-                                    options.get<sol::object>( "trigger_message" ), {}, "spell trigger message" );
+                                    options.get < sol::object > ( "trigger_message" ), {}, "spell trigger message" );
         spell.npc_trigger_message = read_singular_text(
-                                        options.get<sol::object>( "npc_trigger_message" ), {}, "NPC spell trigger message" );
+                                        options.get < sol::object > ( "npc_trigger_message" ), {}, "NPC spell trigger message" );
         return spell;
     }
 
@@ -1182,11 +1184,11 @@ struct enchantment_definition_handle {
         value.kind = kind;
         value.target = target;
         value.part = options.get_or( "part", std::string() );
-        if( const sol::optional<double> add = options.get<sol::optional<double>>( "add" ) ) {
+        if( const sol::optional < double > add = options.get < sol::optional<double >> ( "add" ) ) {
             value.add = *add;
         }
-        if( const sol::optional<double> multiply =
-                options.get<sol::optional<double>>( "multiply" ) ) {
+        if( const sol::optional < double > multiply =
+                options.get < sol::optional < double>>( "multiply" ) ) {
             value.multiply = *multiply;
         }
         value.add_handler = options.get_or( "add_handler", std::string() );
@@ -1288,24 +1290,24 @@ struct enchantment_definition_handle {
                                        "condition_handler", std::string() ) );
         vision.precise = options.get_or( "precise", false );
         vision.ignores_aiming_cone = options.get_or( "ignores_aiming_cone", false );
-        if( const sol::optional<sol::table> descriptions =
-                options.get<sol::optional<sol::table>>( "descriptions" ) ) {
+        if( const sol::optional < sol::table > descriptions =
+                options.get < sol::optional < sol::table>>( "descriptions" ) ) {
             const std::size_t count = require_dense_array(
                                           *descriptions, "enchantment vision descriptions", 1, 256 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                const sol::object value = descriptions->raw_get<sol::object>( index );
-                if( !value.is<sol::table>() ) {
+                const sol::object value = descriptions->raw_get < sol::object > ( index );
+                if( !value.is < sol::table > () ) {
                     throw std::runtime_error(
                         "enchantment vision descriptions must contain tables" );
                 }
-                const sol::table item = value.as<sol::table>();
+                const sol::table item = value.as < sol::table > ();
                 enchantment_vision_description_definition_data description;
                 description.id = item.get_or( "id", description.id );
                 description.color = item.get_or( "color", description.color );
                 description.symbol = item.get_or(
                                          "symbol", item.get_or( "sym", description.symbol ) );
                 description.text = read_singular_text(
-                                       item.get<sol::object>( "text" ), {}, "enchantment vision description" );
+                                       item.get < sol::object > ( "text" ), {}, "enchantment vision description" );
                 description.condition_handler = item.get_or(
                                                     "condition", item.get_or( "condition_handler", std::string() ) );
                 vision.descriptions.push_back( std::move( description ) );
@@ -1329,8 +1331,8 @@ struct enchantment_definition_handle {
 };
 
 struct bionic_definition_handle {
-    std::shared_ptr<bionic_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < bionic_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     bionic_definition_handle &activation_spell( const sol::table &options ) {
         require_building_handle( token, *definition, "bionic" );
@@ -1480,8 +1482,8 @@ struct bionic_definition_handle {
 };
 
 struct spell_definition_handle {
-    std::shared_ptr<spell_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < spell_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     spell_definition_handle &target( const std::string &target ) {
         require_building_handle( token, *definition, "spell" );
@@ -1604,8 +1606,8 @@ struct spell_definition_handle {
 };
 
 struct mission_definition_handle {
-    std::shared_ptr<mission_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < mission_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     mission_definition_handle &origin( const std::string &origin ) {
         require_building_handle( token, *definition, "mission definition" );
@@ -1628,11 +1630,11 @@ struct mission_definition_handle {
     }
 
     mission_definition_handle &deadline( const std::int64_t minimum_turns,
-                                         const sol::optional<std::int64_t> &maximum_turns ) {
+                                         const sol::optional < std::int64_t > &maximum_turns ) {
         require_building_handle( token, *definition, "mission definition" );
         definition->deadline_min_turns = minimum_turns;
         definition->deadline_max_turns = maximum_turns ?
-                                         std::optional<std::int64_t>( *maximum_turns ) : std::nullopt;
+                                         std::optional < std::int64_t > ( *maximum_turns ) : std::nullopt;
         definition->deadline_handler.clear();
         return *this;
     }
@@ -1682,27 +1684,27 @@ struct mission_definition_handle {
 };
 
 struct profession_item_substitution_definition_handle {
-    std::shared_ptr<profession_item_substitution_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < profession_item_substitution_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
-    static std::vector<std::string> traits( const sol::table &options,
-                                            const std::string &key ) {
-        const sol::optional<sol::table> values =
-            options.get<sol::optional<sol::table>>( key );
+    static std::vector < std::string > traits( const sol::table &options,
+            const std::string &key ) {
+        const sol::optional < sol::table > values =
+            options.get < sol::optional < sol::table>>( key );
         if( !values ) {
             return {};
         }
         const std::size_t count = require_dense_array(
                                       *values, "profession item substitution " + key, 0, 64 );
-        std::vector<std::string> result;
+        std::vector < std::string > result;
         result.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
-            const sol::object value = values->raw_get<sol::object>( index );
-            if( !value.is<std::string>() ) {
+            const sol::object value = values->raw_get < sol::object > ( index );
+            if( !value.is < std::string > () ) {
                 throw std::runtime_error(
                     "profession item substitution trait lists require strings" );
             }
-            result.push_back( value.as<std::string>() );
+            result.push_back( value.as < std::string > () );
         }
         return result;
     }
@@ -1722,12 +1724,12 @@ struct profession_item_substitution_definition_handle {
                                       "profession item substitution replacements", 1, 64 );
         rule.replacements.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
-            const sol::object value = replacements.raw_get<sol::object>( index );
+            const sol::object value = replacements.raw_get < sol::object > ( index );
             detail::profession_item_substitution_native_replacement replacement;
-            if( value.is<std::string>() ) {
-                replacement.item = value.as<std::string>();
-            } else if( value.is<sol::table>() ) {
-                const sol::table options = value.as<sol::table>();
+            if( value.is < std::string > () ) {
+                replacement.item = value.as < std::string > ();
+            } else if( value.is < sol::table > () ) {
+                const sol::table options = value.as < sol::table > ();
                 replacement.item = options.get_or( "item", std::string() );
                 replacement.ratio = options.get_or( "ratio", 1.0 );
             } else {
@@ -1747,8 +1749,8 @@ struct profession_item_substitution_definition_handle {
 };
 
 struct profession_item_bonus_definition_handle {
-    std::shared_ptr<profession_item_bonus_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < profession_item_bonus_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     profession_item_bonus_definition_handle &when( const sol::table &conditions ) {
         require_building_handle( token, *definition, "profession item bonus" );
@@ -1772,8 +1774,8 @@ struct profession_item_bonus_definition_handle {
 };
 
 struct technique_definition_handle {
-    std::shared_ptr<technique_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < technique_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     technique_definition_handle &flag( const std::string &value ) {
         require_building_handle( token, *definition, "technique" );
@@ -1812,6 +1814,15 @@ struct technique_definition_handle {
         return *this;
     }
 
+    technique_definition_handle &cooldown_duration( const std::string &handler_id ) {
+        require_building_handle( token, *definition, "technique" );
+        if( handler_id.empty() ) {
+            throw std::runtime_error( "technique cooldown handler id cannot be empty" );
+        }
+        definition->cooldown_handler = handler_id;
+        return *this;
+    }
+
     technique_definition_handle &active_when( const std::string &handler_id ) {
         require_building_handle( token, *definition, "technique" );
         if( handler_id.empty() ) {
@@ -1837,8 +1848,8 @@ struct technique_definition_handle {
 };
 
 struct martial_art_definition_handle {
-    std::shared_ptr<martial_art_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < martial_art_definition_data > definition;
+    std::shared_ptr < owner_token > token;
 
     martial_art_definition_handle &autolearn( const std::string &skill,
             const std::int64_t level ) {
@@ -1880,7 +1891,7 @@ struct martial_art_definition_handle {
     martial_art_definition_handle &on( const std::string &phase,
                                        const std::string &handler_id ) {
         require_building_handle( token, *definition, "martial art" );
-        static const std::set<std::string> phases = {
+        static const std::set < std::string > phases = {
             "static", "move", "pause", "hit", "attack", "dodge",
             "block", "gethit", "miss", "crit", "kill"
         };
@@ -1900,64 +1911,64 @@ struct martial_art_definition_handle {
     }
 };
 // Registration storage and transactional operations follow below.
-using profession_registration = catalog_registration<profession_definition_data>;
-using profession_group_registration = catalog_registration<profession_group_definition_data>;
-using widget_registration = catalog_registration<widget_definition_data>;
-using enchantment_registration = catalog_registration<enchantment_definition_data>;
-using bionic_registration = catalog_registration<bionic_definition_data>;
-using spell_registration = catalog_registration<spell_definition_data>;
-using mission_definition_registration = catalog_registration<mission_definition_data>;
+using profession_registration = catalog_registration < profession_definition_data >;
+using profession_group_registration = catalog_registration < profession_group_definition_data >;
+using widget_registration = catalog_registration < widget_definition_data >;
+using enchantment_registration = catalog_registration < enchantment_definition_data >;
+using bionic_registration = catalog_registration < bionic_definition_data >;
+using spell_registration = catalog_registration < spell_definition_data >;
+using mission_definition_registration = catalog_registration < mission_definition_data >;
 using profession_item_substitution_registration =
-    catalog_registration<profession_item_substitution_definition_data>;
+    catalog_registration < profession_item_substitution_definition_data >;
 using profession_item_bonus_registration =
-    catalog_registration<profession_item_bonus_definition_data>;
-using technique_registration = catalog_registration<technique_definition_data>;
-using martial_art_registration = catalog_registration<martial_art_definition_data>;
-using magic_type_registration = catalog_registration<magic_type_definition_data>;
-using movement_mode_registration = catalog_registration<movement_mode_definition_data>;
+    catalog_registration < profession_item_bonus_definition_data >;
+using technique_registration = catalog_registration < technique_definition_data >;
+using martial_art_registration = catalog_registration < martial_art_definition_data >;
+using magic_type_registration = catalog_registration < magic_type_definition_data >;
+using movement_mode_registration = catalog_registration < movement_mode_definition_data >;
 
 } // namespace
 
 struct character_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
-        token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                                              handle_lifecycle::building } ) ) {}
+        token( std::make_shared < owner_token > ( owner_token{ owner, generation,
+                handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
-    std::shared_ptr<owner_token> token;
+    std::shared_ptr < owner_token > token;
 
-    std::vector<profession_registration> professions;
-    std::vector<profession_group_registration> profession_groups;
-    std::vector<widget_registration> widgets;
-    std::vector<enchantment_registration> enchantments;
-    std::vector<bionic_registration> bionics;
-    std::vector<spell_registration> spells;
-    std::vector<mission_definition_registration> mission_definitions;
-    std::vector<profession_item_substitution_registration>
+    std::vector < profession_registration > professions;
+    std::vector < profession_group_registration > profession_groups;
+    std::vector < widget_registration > widgets;
+    std::vector < enchantment_registration > enchantments;
+    std::vector < bionic_registration > bionics;
+    std::vector < spell_registration > spells;
+    std::vector < mission_definition_registration > mission_definitions;
+    std::vector < profession_item_substitution_registration >
     profession_item_substitutions;
-    std::vector<profession_item_bonus_registration> profession_item_bonuses;
-    std::vector<technique_registration> techniques;
-    std::vector<martial_art_registration> martial_arts;
-    std::vector<magic_type_registration> magic_types;
-    std::vector<movement_mode_registration> movement_modes;
+    std::vector < profession_item_bonus_registration > profession_item_bonuses;
+    std::vector < technique_registration > techniques;
+    std::vector < martial_art_registration > martial_arts;
+    std::vector < magic_type_registration > magic_types;
+    std::vector < movement_mode_registration > movement_modes;
 
-    std::vector<std::pair<profession_id, std::optional<profession>>> profession_undo;
-    std::vector<std::pair<profession_group_id, std::optional<profession_group>>>
+    std::vector < std::pair < profession_id, std::optional<profession>>> profession_undo;
+    std::vector < std::pair < profession_group_id, std::optional<profession_group>>>
     profession_group_undo;
-    std::vector<std::pair<widget_id, std::optional<widget>>> widget_undo;
-    std::vector<std::pair<enchantment_id, std::optional<enchantment>>> enchantment_undo;
-    std::vector<std::pair<bionic_id, std::optional<bionic_data>>> bionic_undo;
-    std::vector<std::pair<spell_id, std::optional<spell_type>>> spell_undo;
-    std::vector<std::pair<mission_type_id, std::optional<mission_type>>>
+    std::vector < std::pair < widget_id, std::optional<widget>>> widget_undo;
+    std::vector < std::pair < enchantment_id, std::optional<enchantment>>> enchantment_undo;
+    std::vector < std::pair < bionic_id, std::optional<bionic_data>>> bionic_undo;
+    std::vector < std::pair < spell_id, std::optional<spell_type>>> spell_undo;
+    std::vector < std::pair < mission_type_id, std::optional<mission_type>>>
     mission_definition_undo;
-    std::optional<detail::profession_item_substitution_native_snapshot>
+    std::optional < detail::profession_item_substitution_native_snapshot >
     profession_item_substitution_undo;
-    std::vector<std::pair<matec_id, std::optional<ma_technique>>> technique_undo;
-    std::vector<std::pair<matype_id, std::optional<martialart>>> martial_art_undo;
-    std::vector<std::pair<magic_type_id, std::optional<magic_type>>> magic_type_undo;
-    std::vector<std::pair<move_mode_id, std::optional<move_mode>>> movement_mode_undo;
+    std::vector < std::pair < matec_id, std::optional<ma_technique>>> technique_undo;
+    std::vector < std::pair < matype_id, std::optional<martialart>>> martial_art_undo;
+    std::vector < std::pair < magic_type_id, std::optional<magic_type>>> magic_type_undo;
+    std::vector < std::pair < move_mode_id, std::optional<move_mode>>> movement_mode_undo;
 
     character_content_apply_phase next_apply_phase =
         character_content_apply_phase::profession;
@@ -1995,7 +2006,7 @@ struct character_content_transaction::impl {
 
 character_content_transaction::character_content_transaction( std::string owner,
         const std::size_t generation ) :
-    pimpl_( std::make_unique<impl>( std::move( owner ), generation ) )
+    pimpl_( std::make_unique < impl > ( std::move( owner ), generation ) )
 {}
 
 character_content_transaction::~character_content_transaction() = default;
@@ -2009,7 +2020,7 @@ bool character_content_transaction::register_definition( const sol::object &valu
     if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
         throw std::runtime_error( "content transaction is no longer building" );
     }
-    const definition_operation operation = static_cast<definition_operation>( raw_operation );
+    const definition_operation operation = static_cast < definition_operation >( raw_operation );
     const auto register_catalog = [this, operation]( auto handle, auto & registrations,
     const char *kind ) {
         if( handle.token != pimpl_->token ) {
@@ -2065,36 +2076,36 @@ void character_content_transaction::impl::install_profession( sol::table &conten
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<profession_definition_data>();
+        auto definition = std::make_shared < profession_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         const authored_text common_name = read_singular_text(
-                                              options.get<sol::object>( "name" ), definition->id,
+                                              options.get < sol::object > ( "name" ), definition->id,
                                               "profession name" );
         definition->name_male = detail::read_singular_text_or(
-                                    options.get<sol::object>( "name_male" ), common_name,
+                                    options.get < sol::object > ( "name_male" ), common_name,
                                     "profession male name" );
         definition->name_female = detail::read_singular_text_or(
-                                      options.get<sol::object>( "name_female" ), common_name,
+                                      options.get < sol::object > ( "name_female" ), common_name,
                                       "profession female name" );
         const authored_text common_description = read_singular_text(
-                    options.get<sol::object>( "description" ), {}, "profession description" );
+                    options.get < sol::object > ( "description" ), {}, "profession description" );
         definition->description_male = detail::read_singular_text_or(
-                                           options.get<sol::object>( "description_male" ), common_description,
+                                           options.get < sol::object > ( "description_male" ), common_description,
                                            "profession male description" );
         definition->description_female = detail::read_singular_text_or(
-                                             options.get<sol::object>( "description_female" ), common_description,
+                                             options.get < sol::object > ( "description_female" ), common_description,
                                              "profession female description" );
-        definition->points = options.get_or<std::int64_t>( "points", 0 );
-        if( const sol::optional<std::int64_t> starting_cash =
-                options.get<sol::optional<std::int64_t>>( "starting_cash" ) ) {
+        definition->points = options.get_or < std::int64_t > ( "points", 0 );
+        if( const sol::optional < std::int64_t > starting_cash =
+                options.get < sol::optional < std::int64_t>>( "starting_cash" ) ) {
             definition->starting_cash = *starting_cash;
         }
         definition->npc_background = options.get_or(
                                          "npc_background", definition->npc_background );
         definition->chargen_allow_npc = options.get_or( "chargen_allow_npc", true );
-        definition->age_lower = options.get_or<std::int64_t>(
+        definition->age_lower = options.get_or < std::int64_t > (
                                     "age_lower", profession::DEFAULT_PROF_AGE_LOWER );
-        definition->age_upper = options.get_or<std::int64_t>(
+        definition->age_upper = options.get_or < std::int64_t > (
                                     "age_upper", profession::DEFAULT_PROF_AGE_UPPER );
         definition->starting_vehicle = options.get_or( "vehicle", std::string() );
         definition->items_both = options.get_or( "items_both", definition->items_both );
@@ -2103,7 +2114,7 @@ void character_content_transaction::impl::install_profession( sol::table &conten
         definition->no_bonus = options.get_or( "no_bonus", std::string() );
         definition->hard_requirement = options.get_or( "hard_requirement", false );
         definition->hobbies_whitelist = options.get_or( "whitelist_hobbies", true );
-        definition->martial_arts_choice_amount = options.get_or<std::int64_t>(
+        definition->martial_arts_choice_amount = options.get_or < std::int64_t > (
                     "starting_styles_choices_amount", 1 );
         definition->subtype = options.get_or( "subtype", std::string() );
         definition->start_handler = options.get_or(
@@ -2113,24 +2124,24 @@ void character_content_transaction::impl::install_profession( sol::table &conten
         profession_definition_handle handle{ definition, this->token };
         const auto each_array_entry = [&options]( const char *key, const char *label,
         const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
+            const sol::optional < sol::table > values =
+                options.get < sol::optional < sol::table>>( key );
             if( !values ) {
                 return;
             }
             const std::size_t count = require_dense_array( *values, label, 0, 4096 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
+                visitor( values->raw_get < sol::object > ( index ) );
             }
         };
         const auto each_string = [&each_array_entry]( const char *key, const char *label,
         const auto & visitor ) {
             each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
+                if( !value.is < std::string > () ) {
                     throw std::runtime_error( std::string( label ) +
                                               " must contain strings" );
                 }
-                visitor( value.as<std::string>() );
+                visitor( value.as < std::string > () );
             } );
         };
 
@@ -2140,21 +2151,21 @@ void character_content_transaction::impl::install_profession( sol::table &conten
         } );
         each_array_entry( "skills", "profession skills",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "profession skills must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.skill( item.get_or( "id", item.get_or( "name", std::string() ) ),
-                          item.get_or<std::int64_t>( "level", 0 ) );
+                          item.get_or < std::int64_t > ( "level", 0 ) );
         } );
         each_array_entry( "addictions", "profession addictions",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "profession addictions must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.addiction( item.get_or( "type", std::string() ),
-                              item.get_or<std::int64_t>( "intensity", 1 ) );
+                              item.get_or < std::int64_t > ( "intensity", 1 ) );
         } );
         each_string( "cbms", "profession CBMs", [&handle]( const std::string & value ) {
             handle.cbm( value );
@@ -2168,14 +2179,14 @@ void character_content_transaction::impl::install_profession( sol::table &conten
         } );
         each_array_entry( "traits", "profession traits",
         [&handle]( const sol::object & value ) {
-            if( value.is<std::string>() ) {
-                handle.trait( value.as<std::string>(), std::string() );
+            if( value.is < std::string > () ) {
+                handle.trait( value.as < std::string > (), std::string() );
                 return;
             }
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "profession traits must contain strings or tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.trait( item.get_or( "id", item.get_or( "trait", std::string() ) ),
                           item.get_or( "variant", std::string() ) );
         } );
@@ -2198,20 +2209,20 @@ void character_content_transaction::impl::install_profession( sol::table &conten
             handle.martial_art_choice( value );
         } );
         each_array_entry( "pets", "profession pets", [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "profession pets must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.pet( item.get_or( "id", item.get_or( "name", std::string() ) ),
-                        item.get_or<std::int64_t>( "amount", 1 ) );
+                        item.get_or < std::int64_t > ( "amount", 1 ) );
         } );
         each_array_entry( "spells", "profession spells", [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "profession spells must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.spell( item.get_or( "id", item.get_or( "spell", std::string() ) ),
-                          item.get_or<std::int64_t>( "level", 0 ) );
+                          item.get_or < std::int64_t > ( "level", 0 ) );
         } );
         each_string( "missions", "profession missions", [&handle]( const std::string & value ) {
             handle.mission( value );
@@ -2226,7 +2237,7 @@ void character_content_transaction::impl::install_profession_group( sol::table &
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<profession_group_definition_data>();
+        auto definition = std::make_shared < profession_group_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         return profession_group_definition_handle{
             std::move( definition ), this->token
@@ -2240,14 +2251,14 @@ void character_content_transaction::impl::install_widget( sol::table &content )
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<widget_definition_data>();
+        auto definition = std::make_shared < widget_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
-        definition->width = options.get_or<std::int64_t>( "width", 0 );
-        definition->height = options.get_or<std::int64_t>( "height", 1 );
+        definition->width = options.get_or < std::int64_t > ( "width", 0 );
+        definition->height = options.get_or < std::int64_t > ( "height", 1 );
         definition->symbols = options.get_or( "symbols", definition->symbols );
         definition->fill = options.get_or( "fill", definition->fill );
         definition->label = detail::read_singular_text(
-                                options.get<sol::object>( "label" ), "", "widget label" );
+                                options.get < sol::object > ( "label" ), "", "widget label" );
         definition->description = options.get_or( "description", std::string() );
         definition->style = options.get_or( "style", definition->style );
         definition->arrange = options.get_or( "arrange", definition->arrange );
@@ -2255,17 +2266,17 @@ void character_content_transaction::impl::install_widget( sol::table &content )
         definition->direction = options.get_or( "direction", std::string() );
         definition->text_align = options.get_or( "text_align", definition->text_align );
         definition->label_align = options.get_or( "label_align", definition->label_align );
-        if( const sol::optional<bool> pad_labels =
-                options.get<sol::optional<bool>>( "pad_labels" ) ) {
+        if( const sol::optional < bool > pad_labels =
+                options.get < sol::optional < bool>>( "pad_labels" ) ) {
             definition->pad_labels = *pad_labels;
 
         }
-        if( const sol::optional<std::string> separator =
-                options.get<sol::optional<std::string>>( "separator" ) ) {
+        if( const sol::optional < std::string > separator =
+                options.get < sol::optional < std::string>>( "separator" ) ) {
             definition->separator = *separator;
         }
-        if( const sol::optional<std::int64_t> padding =
-                options.get<sol::optional<std::int64_t>>( "padding" ) ) {
+        if( const sol::optional < std::int64_t > padding =
+                options.get < sol::optional < std::int64_t>>( "padding" ) ) {
             definition->padding = *padding;
         }
         definition->variable = options.get_or( "var", std::string() );
@@ -2274,31 +2285,31 @@ void character_content_transaction::impl::install_widget( sol::table &content )
         definition->text = options.get_or( "string", std::string() );
         widget_definition_handle handle{ definition, this->token };
 
-        if( !options.get<sol::optional<sol::table>>( "bodyparts" ) ) {
-            if( const sol::optional<std::string> bodypart =
-                    options.get<sol::optional<std::string>>( "bodypart" ) ) {
+        if( !options.get < sol::optional < sol::table>>( "bodyparts" ) ) {
+            if( const sol::optional < std::string > bodypart =
+                    options.get < sol::optional < std::string>>( "bodypart" ) ) {
                 handle.bodypart( *bodypart );
             }
         }
         const auto each_array_entry = [&options]( const char *key, const char *label,
         const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
+            const sol::optional < sol::table > values =
+                options.get < sol::optional < sol::table>>( key );
             if( !values ) {
                 return;
             }
             const std::size_t count = require_dense_array( *values, label, 0, 4096 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
+                visitor( values->raw_get < sol::object > ( index ) );
             }
         };
         const auto each_string = [&each_array_entry]( const char *key, const char *label,
         const auto & visitor ) {
             each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
+                if( !value.is < std::string > () ) {
                     throw std::runtime_error( std::string( label ) + " must contain strings" );
                 }
-                visitor( value.as<std::string>() );
+                visitor( value.as < std::string > () );
             } );
         };
         each_string( "bodyparts", "widget bodyparts", [&handle]( const std::string & value ) {
@@ -2308,10 +2319,10 @@ void character_content_transaction::impl::install_widget( sol::table &content )
             handle.color( value );
         } );
         each_array_entry( "breaks", "widget breaks", [&handle]( const sol::object & value ) {
-            if( !value.is<lua_Integer>() ) {
+            if( !value.is < lua_Integer > () ) {
                 throw std::runtime_error( "widget breaks must contain integers" );
             }
-            handle.break_at( value.as<std::int64_t>() );
+            handle.break_at( value.as < std::int64_t > () );
         } );
         each_string( "widgets", "widget children", [&handle]( const std::string & value ) {
             handle.child( value );
@@ -2320,13 +2331,13 @@ void character_content_transaction::impl::install_widget( sol::table &content )
             handle.flag( value );
         } );
         each_array_entry( "clauses", "widget clauses", [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "widget clauses must contain tables" );
             }
-            handle.clause( value.as<sol::table>() );
+            handle.clause( value.as < sol::table > () );
         } );
-        if( const sol::optional<sol::table> default_clause =
-                options.get<sol::optional<sol::table>>( "default_clause" ) ) {
+        if( const sol::optional < sol::table > default_clause =
+                options.get < sol::optional < sol::table>>( "default_clause" ) ) {
             handle.default_clause( *default_clause );
         }
         if( !definition->custom_handler.empty() ) {
@@ -2342,12 +2353,12 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<enchantment_definition_data>();
+        auto definition = std::make_shared < enchantment_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_singular_text(
-                               options.get<sol::object>( "name" ), {}, "enchantment name" );
+                               options.get < sol::object > ( "name" ), {}, "enchantment name" );
         definition->description = read_singular_text(
-                                      options.get<sol::object>( "description" ), {}, "enchantment description" );
+                                      options.get < sol::object > ( "description" ), {}, "enchantment description" );
         definition->has = options.get_or( "has", definition->has );
         definition->condition = options.get_or( "condition", definition->condition );
         definition->condition_handler = options.get_or(
@@ -2359,24 +2370,24 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
         }
         const auto each_array_entry = [&options]( const char *key, const char *label,
         const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
+            const sol::optional < sol::table > values =
+                options.get < sol::optional < sol::table>>( key );
             if( !values ) {
                 return;
             }
             const std::size_t count = require_dense_array( *values, label, 0, 4096 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
+                visitor( values->raw_get < sol::object > ( index ) );
             }
         };
         const auto modifier_array = [&each_array_entry, &handle](
         const char *key, const char *label, const char *kind, const char *target_key ) {
             each_array_entry( key, label, [&handle, kind, target_key, label](
             const sol::object & value ) {
-                if( !value.is<sol::table>() ) {
+                if( !value.is < sol::table > () ) {
                     throw std::runtime_error( std::string( label ) + " must contain tables" );
                 }
-                const sol::table item = value.as<sol::table>();
+                const sol::table item = value.as < sol::table > ();
                 handle.modifier( kind, item.get_or( target_key, std::string() ), item );
             } );
         };
@@ -2398,63 +2409,63 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                         "post_armor_damage", "type" );
         each_array_entry( "ench_effects", "enchantment effects",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "enchantment effects must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.effect( item.get_or( "effect", std::string() ),
-                           item.get_or<std::int64_t>( "intensity", 1 ) );
+                           item.get_or < std::int64_t > ( "intensity", 1 ) );
         } );
         each_array_entry( "modified_bodyparts", "enchantment body-part changes",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "enchantment body-part changes must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.bodypart_change( item.get_or( "gain", std::string() ),
                                     item.get_or( "lose", std::string() ) );
         } );
         each_array_entry( "mutations", "enchantment mutations",
         [&handle]( const sol::object & value ) {
-            if( !value.is<std::string>() ) {
+            if( !value.is < std::string > () ) {
                 throw std::runtime_error( "enchantment mutations must contain strings" );
             }
-            handle.mutation( value.as<std::string>() );
+            handle.mutation( value.as < std::string > () );
         } );
         each_array_entry( "hit_you_effect", "enchantment hit-you effects",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "enchantment hit-you effects must contain tables" );
             }
-            handle.hit_you( value.as<sol::table>() );
+            handle.hit_you( value.as < sol::table > () );
         } );
         each_array_entry( "hit_me_effect", "enchantment hit-me effects",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "enchantment hit-me effects must contain tables" );
             }
-            handle.hit_me( value.as<sol::table>() );
+            handle.hit_me( value.as < sol::table > () );
         } );
         each_array_entry( "intermittent_effects", "enchantment intermittent effects",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "enchantment intermittent effects must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
-            const sol::optional<sol::table> spell =
-                item.get<sol::optional<sol::table>>( "spell" );
+            const sol::table item = value.as < sol::table > ();
+            const sol::optional < sol::table > spell =
+                item.get < sol::optional < sol::table>>( "spell" );
             if( !spell ) {
                 throw std::runtime_error( "enchantment intermittent effect requires a spell table" );
 
             }
-            handle.every( item.get_or<std::int64_t>( "frequency_turns", 0 ), *spell );
+            handle.every( item.get_or < std::int64_t > ( "frequency_turns", 0 ), *spell );
         } );
         each_array_entry( "special_vision", "enchantment special vision",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "enchantment special vision must contain tables" );
             }
-            handle.vision( value.as<sol::table>() );
+            handle.vision( value.as < sol::table > () );
         } );
         return handle;
     } );
@@ -2466,28 +2477,28 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<bionic_definition_data>();
+        auto definition = std::make_shared < bionic_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_singular_text(
-                               options.get<sol::object>( "name" ), {}, "bionic name" );
+                               options.get < sol::object > ( "name" ), {}, "bionic name" );
         definition->description = read_singular_text(
-                                      options.get<sol::object>( "description" ), {}, "bionic description" );
-        const sol::object reason = options.get<sol::object>( "cant_remove_reason" );
+                                      options.get < sol::object > ( "description" ), {}, "bionic description" );
+        const sol::object reason = options.get < sol::object > ( "cant_remove_reason" );
         if( reason.valid() && reason.get_type() != sol::type::nil ) {
             definition->cant_remove_reason = read_singular_text(
                                                  reason, {}, "bionic removal reason" );
         }
-        definition->activation_energy_millijoules = options.get_or<std::int64_t>(
+        definition->activation_energy_millijoules = options.get_or < std::int64_t > (
                     "activation_energy_millijoules", 0 );
-        definition->deactivation_energy_millijoules = options.get_or<std::int64_t>(
+        definition->deactivation_energy_millijoules = options.get_or < std::int64_t > (
                     "deactivation_energy_millijoules", 0 );
-        definition->over_time_energy_millijoules = options.get_or<std::int64_t>(
+        definition->over_time_energy_millijoules = options.get_or < std::int64_t > (
                     "over_time_energy_millijoules", 0 );
-        definition->trigger_energy_millijoules = options.get_or<std::int64_t>(
+        definition->trigger_energy_millijoules = options.get_or < std::int64_t > (
                     "trigger_energy_millijoules", 0 );
-        definition->capacity_energy_millijoules = options.get_or<std::int64_t>(
+        definition->capacity_energy_millijoules = options.get_or < std::int64_t > (
                     "capacity_energy_millijoules", 0 );
-        definition->charge_time_turns = options.get_or<std::int64_t>( "charge_time_turns", 0 );
+        definition->charge_time_turns = options.get_or < std::int64_t > ( "charge_time_turns", 0 );
         definition->power_gen_emission = options.get_or( "power_gen_emission", std::string() );
         definition->fake_weapon = options.get_or( "fake_weapon", std::string() );
         definition->upgraded_bionic = options.get_or( "upgraded_bionic", std::string() );
@@ -2497,20 +2508,20 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
         definition->fuel_efficiency = options.get_or( "fuel_efficiency", 0.0 );
         definition->passive_fuel_efficiency = options.get_or(
                 "passive_fuel_efficiency", 0.0 );
-        if( const sol::optional<double> penalty =
-                options.get<sol::optional<double>>( "coverage_power_gen_penalty" ) ) {
+        if( const sol::optional < double > penalty =
+                options.get < sol::optional < double>>( "coverage_power_gen_penalty" ) ) {
             definition->coverage_power_gen_penalty = *penalty;
         }
-        definition->social_lie = options.get_or<std::int64_t>( "social_lie", 0 );
-        definition->social_persuade = options.get_or<std::int64_t>( "social_persuade", 0 );
-        definition->social_intimidate = options.get_or<std::int64_t>( "social_intimidate", 0 );
-        if( const sol::optional<sol::table> social =
-                options.get<sol::optional<sol::table>>( "social_modifiers" ) ) {
-            definition->social_lie = social->get_or<std::int64_t>(
+        definition->social_lie = options.get_or < std::int64_t > ( "social_lie", 0 );
+        definition->social_persuade = options.get_or < std::int64_t > ( "social_persuade", 0 );
+        definition->social_intimidate = options.get_or < std::int64_t > ( "social_intimidate", 0 );
+        if( const sol::optional < sol::table > social =
+                options.get < sol::optional < sol::table>>( "social_modifiers" ) ) {
+            definition->social_lie = social->get_or < std::int64_t > (
                                          "lie", definition->social_lie );
-            definition->social_persuade = social->get_or<std::int64_t>(
+            definition->social_persuade = social->get_or < std::int64_t > (
                                               "persuade", definition->social_persuade );
-            definition->social_intimidate = social->get_or<std::int64_t>(
+            definition->social_intimidate = social->get_or < std::int64_t > (
                                                 "intimidate", definition->social_intimidate );
         }
         definition->dupes_allowed = options.get_or( "dupes_allowed", false );
@@ -2525,27 +2536,27 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
 
         const auto each_array_entry = [&options]( const char *key, const char *label,
         const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
+            const sol::optional < sol::table > values =
+                options.get < sol::optional < sol::table>>( key );
             if( !values ) {
                 return;
             }
             const std::size_t count = require_dense_array( *values, label, 0, 4096 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
+                visitor( values->raw_get < sol::object > ( index ) );
             }
         };
         const auto each_string = [&each_array_entry]( const char *key, const char *label,
         const auto & visitor ) {
             each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
+                if( !value.is < std::string > () ) {
                     throw std::runtime_error( std::string( label ) + " must contain strings" );
                 }
-                visitor( value.as<std::string>() );
+                visitor( value.as < std::string > () );
             } );
         };
-        if( const sol::optional<sol::table> spell =
-                options.get<sol::optional<sol::table>>( "activation_spell" ) ) {
+        if( const sol::optional < sol::table > spell =
+                options.get < sol::optional < sol::table>>( "activation_spell" ) ) {
             handle.activation_spell( *spell );
         }
         each_string( "fuel_options", "bionic fuel options",
@@ -2597,21 +2608,21 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
         } );
         each_array_entry( "environment_protection", "bionic environmental protection",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error(
                     "bionic environmental protection must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.environment_protection(
                 item.get_or( "bodypart", std::string() ),
-                item.get_or<std::int64_t>( "amount", 0 ) );
+                item.get_or < std::int64_t > ( "amount", 0 ) );
         } );
         each_array_entry( "protection", "bionic protection",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "bionic protection must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.armor(
                 item.get_or( "bodypart", std::string() ),
                 item.get_or( "damage_type", item.get_or( "type", std::string() ) ),
@@ -2619,22 +2630,22 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
         } );
         each_array_entry( "occupied_bodyparts", "bionic occupied body parts",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "bionic occupied body parts must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.occupies( item.get_or( "bodypart", std::string() ),
-                             item.get_or<std::int64_t>( "slots", 0 ) );
+                             item.get_or < std::int64_t > ( "slots", 0 ) );
         } );
         each_array_entry( "encumbrance", "bionic encumbrance",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "bionic encumbrance must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.encumbers( item.get_or( "bodypart", std::string() ),
 
-                              item.get_or<std::int64_t>( "amount", 0 ) );
+                              item.get_or < std::int64_t > ( "amount", 0 ) );
         } );
         each_string( "installable_weapon_flags", "bionic installable weapon flags",
         [&handle]( const std::string & value ) {
@@ -2654,12 +2665,12 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
         } );
         each_array_entry( "learned_spells", "bionic learned spells",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "bionic learned spells must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.learn_spell( item.get_or( "spell", std::string() ),
-                                item.get_or<std::int64_t>( "level", 0 ) );
+                                item.get_or < std::int64_t > ( "level", 0 ) );
         } );
         each_string( "available_upgrades", "bionic available upgrades",
         [&handle]( const std::string & value ) {
@@ -2675,20 +2686,20 @@ void character_content_transaction::impl::install_spell( sol::table &content )
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<spell_definition_data>();
+        auto definition = std::make_shared < spell_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_singular_text(
-                               options.get<sol::object>( "name" ), {}, "spell name" );
+                               options.get < sol::object > ( "name" ), {}, "spell name" );
         definition->description = read_singular_text(
-                                      options.get<sol::object>( "description" ), {}, "spell description" );
+                                      options.get < sol::object > ( "description" ), {}, "spell description" );
         definition->message = read_singular_text(
-                                  options.get<sol::object>( "message" ), definition->message.raw,
+                                  options.get < sol::object > ( "message" ), definition->message.raw,
                                   "spell casting message" );
         definition->skill = options.get_or( "skill", definition->skill );
         definition->magic_type = options.get_or( "magic_type", std::string() );
         definition->components = options.get_or( "components", std::string() );
         definition->sound_description = read_singular_text(
-                                            options.get<sol::object>( "sound_description" ),
+                                            options.get < sol::object > ( "sound_description" ),
                                             definition->sound_description.raw, "spell sound description" );
         definition->sound_type = options.get_or( "sound_type", definition->sound_type );
         definition->sound_ambient = options.get_or( "sound_ambient", false );
@@ -2709,8 +2720,8 @@ void character_content_transaction::impl::install_spell( sol::table &content )
         definition->energy_vitamin = options.get_or( "energy_vitamin", std::string() );
         definition->energy_color = options.get_or(
                                        "energy_color", definition->energy_color );
-        if( const sol::optional<sol::table> energy =
-                options.get<sol::optional<sol::table>>( "energy" ) ) {
+        if( const sol::optional < sol::table > energy =
+                options.get < sol::optional < sol::table>>( "energy" ) ) {
             definition->energy_source = energy->get_or(
                                             "source", energy->get_or( "type", definition->energy_source ) );
             definition->energy_vitamin = energy->get_or(
@@ -2725,26 +2736,26 @@ void character_content_transaction::impl::install_spell( sol::table &content )
         definition->exp_for_level_formula = options.get_or(
                                                 "exp_for_level_formula", options.get_or(
                                                         "exp_for_level_formula_id", std::string() ) );
-        if( const sol::optional<std::int64_t> maximum =
-                options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
+        if( const sol::optional < std::int64_t > maximum =
+                options.get < sol::optional < std::int64_t>>( "max_book_level" ) ) {
             definition->max_book_level = *maximum;
         }
         definition->caster_condition_handler = options.get_or(
                 "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
         definition->caster_condition_fail_message = read_singular_text(
-                    options.get<sol::object>( "caster_condition_fail_message" ), {},
+                    options.get < sol::object > ( "caster_condition_fail_message" ), {},
                     "spell caster failure message" );
         definition->target_condition_handler = options.get_or(
                 "target_condition", options.get_or( "target_condition_handler", std::string() ) );
         definition->target_condition_fail_message = read_singular_text(
-                    options.get<sol::object>( "target_condition_fail_message" ), {},
+                    options.get < sol::object > ( "target_condition_fail_message" ), {},
                     "spell target failure message" );
         definition->teachable = options.get_or( "teachable", true );
-        if( const sol::optional<sol::table> channel =
-                options.get<sol::optional<sol::table>>( "channel" ) ) {
-            const std::int64_t max_channel_turns = channel->get_or<std::int64_t>(
+        if( const sol::optional < sol::table > channel =
+                options.get < sol::optional < sol::table>>( "channel" ) ) {
+            const std::int64_t max_channel_turns = channel->get_or < std::int64_t > (
                     "max_channel_turns", 0 );
-            definition->channel_turns = channel->get<sol::optional<std::int64_t>>(
+            definition->channel_turns = channel->get < sol::optional < std::int64_t>>(
                                             "turns" ).value_or( max_channel_turns );
             definition->channel_spell = channel->get_or( "spell", channel->get_or(
                                             "channel_spell", std::string() ) );
@@ -2759,22 +2770,22 @@ void character_content_transaction::impl::install_spell( sol::table &content )
                                                           "channel_uses_energy", true ) );
         }
         const auto has_option = [&options]( const std::string & name ) {
-            const sol::object value = options.raw_get<sol::object>( name );
+            const sol::object value = options.raw_get < sol::object > ( name );
             return value.valid() && value.get_type() != sol::type::nil;
         };
         const bool has_final_energy = has_option( "final_energy_cost" );
         const bool has_final_casting = has_option( "final_casting_time" );
         for( auto &[name, value] : definition->stats ) {
-            const sol::object supplied = options.raw_get<sol::object>( name );
+            const sol::object supplied = options.raw_get < sol::object > ( name );
             if( !supplied.valid() || supplied.get_type() == sol::type::nil ) {
                 continue;
             }
-            if( supplied.is<double>() ) {
-                value = supplied.as<double>();
+            if( supplied.is < double > () ) {
+                value = supplied.as < double > ();
                 continue;
             }
-            if( supplied.is<sol::table>() ) {
-                const sol::table range = supplied.as<sol::table>();
+            if( supplied.is < sol::table > () ) {
+                const sol::table range = supplied.as < sol::table > ();
                 value = range.get_or( "minimum", range.get_or( "min", value ) );
                 definition->stat_maximums[name] = range.get_or(
                                                       "maximum", range.get_or( "max", value ) );
@@ -2796,23 +2807,23 @@ void character_content_transaction::impl::install_spell( sol::table &content )
 
         const auto each_array_entry = [&options]( const char *key, const char *label,
         const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
+            const sol::optional < sol::table > values =
+                options.get < sol::optional < sol::table>>( key );
             if( !values ) {
                 return;
             }
             const std::size_t count = require_dense_array( *values, label, 0, 4096 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
+                visitor( values->raw_get < sol::object > ( index ) );
             }
         };
         const auto each_string = [&each_array_entry]( const char *key, const char *label,
         const auto & visitor ) {
             each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
+                if( !value.is < std::string > () ) {
                     throw std::runtime_error( std::string( label ) + " must contain strings" );
                 }
-                visitor( value.as<std::string>() );
+                visitor( value.as < std::string > () );
             } );
         };
         each_string( "valid_targets", "spell valid targets",
@@ -2841,31 +2852,31 @@ void character_content_transaction::impl::install_spell( sol::table &content )
         } );
         each_array_entry( "additional_spells", "spell additional spells",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "spell additional spells must contain tables" );
             }
-            handle.extra_spell( value.as<sol::table>() );
+            handle.extra_spell( value.as < sol::table > () );
         } );
         each_array_entry( "learned_spells", "spell learned spells",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "spell learned spells must contain tables" );
             }
-            const sol::table item = value.as<sol::table>();
+            const sol::table item = value.as < sol::table > ();
             handle.learn_spell( item.get_or( "spell", std::string() ),
-                                item.get_or<std::int64_t>( "level", 0 ) );
+                                item.get_or < std::int64_t > ( "level", 0 ) );
         } );
-        if( const sol::optional<sol::table> handlers =
-                options.get<sol::optional<sol::table>>( "dynamic_stats" ) ) {
+        if( const sol::optional < sol::table > handlers =
+                options.get < sol::optional < sol::table>>( "dynamic_stats" ) ) {
             std::size_t count = 0;
             for( const auto &entry : *handlers ) {
                 if( ++count > definition->stats.size() ||
-                    !entry.first.is<std::string>() || !entry.second.is<std::string>() ) {
+                    !entry.first.is < std::string > () || !entry.second.is < std::string > () ) {
                     throw std::runtime_error(
                         "spell dynamic_stats must map known stat names to handler ids" );
                 }
-                handle.dynamic_stat( entry.first.as<std::string>(),
-                                     entry.second.as<std::string>() );
+                handle.dynamic_stat( entry.first.as < std::string > (),
+                                     entry.second.as < std::string > () );
             }
         }
         return handle;
@@ -2878,15 +2889,15 @@ void character_content_transaction::impl::install_mission( sol::table &content )
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<mission_definition_data>();
+        auto definition = std::make_shared < mission_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_singular_text(
-                               options.get<sol::object>( "name" ), {}, "mission name" );
+                               options.get < sol::object > ( "name" ), {}, "mission name" );
         definition->description = read_singular_text(
-                                      options.get<sol::object>( "description" ), {}, "mission description" );
+                                      options.get < sol::object > ( "description" ), {}, "mission description" );
         definition->goal = options.get_or( "goal", definition->goal );
-        definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
-        definition->value = options.get_or<std::int64_t>( "value", 0 );
+        definition->difficulty = options.get_or < std::int64_t > ( "difficulty", 0 );
+        definition->value = options.get_or < std::int64_t > ( "value", 0 );
         definition->urgent = options.get_or( "urgent", false );
         definition->has_generic_rewards = options.get_or( "has_generic_rewards", true );
         definition->item = options.get_or( "item", std::string() );
@@ -2894,8 +2905,8 @@ void character_content_transaction::impl::install_mission( sol::table &content )
         definition->required_container = options.get_or(
                                              "required_container", std::string() );
         definition->empty_container = options.get_or( "empty_container", std::string() );
-        const std::int64_t count = options.get_or<std::int64_t>( "count", 1 );
-        definition->item_count = options.get<sol::optional<std::int64_t>>(
+        const std::int64_t count = options.get_or < std::int64_t > ( "count", 1 );
+        definition->item_count = options.get < sol::optional < std::int64_t>>(
                                      "item_count" ).value_or( count );
         definition->remove_container = options.get_or( "remove_container", false );
         definition->invisible_on_complete = options.get_or(
@@ -2903,7 +2914,7 @@ void character_content_transaction::impl::install_mission( sol::table &content )
         definition->recruit_class = options.get_or( "recruit_class", std::string() );
         definition->monster_type = options.get_or( "monster_type", std::string() );
         definition->monster_species = options.get_or( "monster_species", std::string() );
-        definition->monster_kill_goal = options.get_or<std::int64_t>(
+        definition->monster_kill_goal = options.get_or < std::int64_t > (
                                             "monster_kill_goal", -1 );
         definition->destination = options.get_or( "destination", std::string() );
         definition->followup = options.get_or( "followup", std::string() );
@@ -2915,28 +2926,28 @@ void character_content_transaction::impl::install_mission( sol::table &content )
         definition->goal_condition_handler = options.get_or(
                 "goal_condition", options.get_or( "goal_condition_handler", std::string() ) );
         definition->deadline_handler = options.get_or( "deadline_handler", std::string() );
-        if( const sol::optional<std::int64_t> deadline =
-                options.get<sol::optional<std::int64_t>>( "deadline_turns" ) ) {
+        if( const sol::optional < std::int64_t > deadline =
+                options.get < sol::optional < std::int64_t>>( "deadline_turns" ) ) {
             definition->deadline_min_turns = *deadline;
         }
-        if( const sol::optional<sol::table> deadline =
-                options.get<sol::optional<sol::table>>( "deadline" ) ) {
-            const std::int64_t min_turns = deadline->get_or<std::int64_t>(
+        if( const sol::optional < sol::table > deadline =
+                options.get < sol::optional < sol::table>>( "deadline" ) ) {
+            const std::int64_t min_turns = deadline->get_or < std::int64_t > (
                                                "min_turns", 0 );
-            definition->deadline_min_turns = deadline->get<sol::optional<std::int64_t>>(
+            definition->deadline_min_turns = deadline->get < sol::optional < std::int64_t>>(
                                                  "minimum_turns" ).value_or( min_turns );
-            if( const sol::optional<std::int64_t> maximum =
-                    deadline->get<sol::optional<std::int64_t>>( "maximum_turns" ) ) {
+            if( const sol::optional < std::int64_t > maximum =
+                    deadline->get < sol::optional < std::int64_t>>( "maximum_turns" ) ) {
                 definition->deadline_max_turns = *maximum;
-            } else if( const sol::optional<std::int64_t> maximum =
-                           deadline->get<sol::optional<std::int64_t>>( "max_turns" ) ) {
+            } else if( const sol::optional < std::int64_t > maximum =
+                           deadline->get < sol::optional < std::int64_t>>( "max_turns" ) ) {
                 definition->deadline_max_turns = *maximum;
             }
             definition->deadline_handler = deadline->get_or(
                                                "handler", definition->deadline_handler );
         }
-        if( const sol::optional<sol::table> phases =
-                options.get<sol::optional<sol::table>>( "phases" ) ) {
+        if( const sol::optional < sol::table > phases =
+                options.get < sol::optional < sol::table>>( "phases" ) ) {
             definition->start_handler = phases->get_or( "start", definition->start_handler );
             definition->end_handler = phases->get_or( "success", phases->get_or(
                                           "end", definition->end_handler ) );
@@ -2946,43 +2957,43 @@ void character_content_transaction::impl::install_mission( sol::table &content )
         mission_definition_handle handle{ definition, this->token };
         const auto each_array_entry = [&options]( const char *key, const char *label,
         const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
+            const sol::optional < sol::table > values =
+                options.get < sol::optional < sol::table>>( key );
             if( !values ) {
                 return;
             }
             const std::size_t count = require_dense_array( *values, label, 0, 256 );
             for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
+                visitor( values->raw_get < sol::object > ( index ) );
             }
         };
         each_array_entry( "origins", "mission origins", [&handle]( const sol::object & value ) {
-            if( !value.is<std::string>() ) {
+            if( !value.is < std::string > () ) {
                 throw std::runtime_error( "mission origins must contain strings" );
             }
-            handle.origin( value.as<std::string>() );
+            handle.origin( value.as < std::string > () );
         } );
         each_array_entry( "likely_rewards", "mission likely rewards",
         [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
+            if( !value.is < sol::table > () ) {
                 throw std::runtime_error( "mission likely rewards must contain tables" );
             }
-            const sol::table reward = value.as<sol::table>();
+            const sol::table reward = value.as < sol::table > ();
             handle.reward( reward.get_or( "value", 0.0 ),
                            reward.get_or( "description", reward.get_or(
                                               "text", std::string() ) ) );
         } );
-        if( const sol::optional<sol::table> dialogue =
-                options.get<sol::optional<sol::table>>( "dialogue" ) ) {
+        if( const sol::optional < sol::table > dialogue =
+                options.get < sol::optional < sol::table>>( "dialogue" ) ) {
             std::size_t count = 0;
             for( const auto &entry : *dialogue ) {
-                if( ++count > 64 || !entry.first.is<std::string>() ||
-                    !entry.second.is<std::string>() ) {
+                if( ++count > 64 || !entry.first.is < std::string > () ||
+                    !entry.second.is < std::string > () ) {
                     throw std::runtime_error(
                         "mission dialogue must map phase names to strings" );
                 }
-                handle.dialogue( entry.first.as<std::string>(),
-                                 entry.second.as<std::string>() );
+                handle.dialogue( entry.first.as < std::string > (),
+                                 entry.second.as < std::string > () );
             }
         }
         if( !definition->place_handler.empty() ) {
@@ -3003,7 +3014,7 @@ void character_content_transaction::impl::install_profession_item_substitution(
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<profession_item_substitution_definition_data>();
+        auto definition = std::make_shared < profession_item_substitution_definition_data > ();
         definition->id = options.get_or( "item", options.get_or( "id", std::string() ) );
         return profession_item_substitution_definition_handle{
             std::move( definition ), this->token
@@ -3017,7 +3028,7 @@ void character_content_transaction::impl::install_profession_item_bonus( sol::ta
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<profession_item_bonus_definition_data>();
+        auto definition = std::make_shared < profession_item_bonus_definition_data > ();
         definition->id = options.get_or( "group", options.get_or( "id", std::string() ) );
         return profession_item_bonus_definition_handle{
             std::move( definition ), this->token
@@ -3031,19 +3042,21 @@ void character_content_transaction::impl::install_technique( sol::table &content
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<technique_definition_data>();
+        auto definition = std::make_shared < technique_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = detail::read_singular_text(
-                               options.get<sol::object>( "name" ), "", "technique name" );
+                               options.get < sol::object > ( "name" ), "", "technique name" );
         definition->description = detail::read_singular_text(
-                                      options.get<sol::object>( "description" ), "", "technique description" );
+                                      options.get < sol::object > ( "description" ), "", "technique description" );
         definition->avatar_message = detail::read_singular_text(
-                                         options.get<sol::object>( "avatar_message" ), "", "technique avatar message" );
+                                         options.get < sol::object > ( "avatar_message" ), "", "technique avatar message" );
         definition->npc_message = detail::read_singular_text(
-                                      options.get<sol::object>( "npc_message" ), "", "technique NPC message" );
+                                      options.get < sol::object > ( "npc_message" ), "", "technique NPC message" );
         definition->crit_tec = options.get_or( "crit_tec", false );
         definition->crit_ok = options.get_or( "crit_ok", false );
         definition->manual_activation = options.get_or( "manual_activation", false );
+        definition->cooldown_seconds = options.get_or( "cooldown_seconds", 0.0 );
+        definition->cooldown_handler = options.get_or( "cooldown_duration", std::string() );
         definition->wall_adjacent = options.get_or( "wall_adjacent", false );
         definition->reach_tec = options.get_or( "reach_tec", false );
         definition->reach_ok = options.get_or( "reach_ok", false );
@@ -3057,12 +3070,12 @@ void character_content_transaction::impl::install_technique( sol::table &content
         definition->block_counter = options.get_or( "block_counter", false );
         definition->miss_recovery = options.get_or( "miss_recovery", false );
         definition->grab_break = options.get_or( "grab_break", false );
-        definition->weighting = options.get_or<std::int64_t>( "weighting", 1 );
-        definition->repeat_min = options.get_or<std::int64_t>( "repeat_min", 1 );
-        definition->repeat_max = options.get_or<std::int64_t>( "repeat_max", 1 );
-        definition->down_dur = options.get_or<std::int64_t>( "down_dur", 0 );
-        definition->stun_dur = options.get_or<std::int64_t>( "stun_dur", 0 );
-        definition->knockback_dist = options.get_or<std::int64_t>( "knockback_dist", 0 );
+        definition->weighting = options.get_or < std::int64_t > ( "weighting", 1 );
+        definition->repeat_min = options.get_or < std::int64_t > ( "repeat_min", 1 );
+        definition->repeat_max = options.get_or < std::int64_t > ( "repeat_max", 1 );
+        definition->down_dur = options.get_or < std::int64_t > ( "down_dur", 0 );
+        definition->stun_dur = options.get_or < std::int64_t > ( "stun_dur", 0 );
+        definition->knockback_dist = options.get_or < std::int64_t > ( "knockback_dist", 0 );
         definition->knockback_spread = options.get_or( "knockback_spread", 0.0 );
         definition->knockback_follow = options.get_or( "knockback_follow", false );
         definition->aoe = options.get_or( "aoe", std::string() );
@@ -3088,22 +3101,22 @@ void character_content_transaction::impl::install_martial_art( sol::table &conte
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<martial_art_definition_data>();
+        auto definition = std::make_shared < martial_art_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = detail::read_singular_text(
-                               options.get<sol::object>( "name" ), "", "martial-art name" );
+                               options.get < sol::object > ( "name" ), "", "martial-art name" );
         definition->description = detail::read_singular_text(
-                                      options.get<sol::object>( "description" ), "", "martial-art description" );
+                                      options.get < sol::object > ( "description" ), "", "martial-art description" );
         definition->initiate_avatar = detail::read_singular_text(
-                                          options.get<sol::object>( "initiate_avatar" ), "", "martial-art avatar message" );
+                                          options.get < sol::object > ( "initiate_avatar" ), "", "martial-art avatar message" );
         definition->initiate_npc = detail::read_singular_text(
-                                       options.get<sol::object>( "initiate_npc" ), "", "martial-art NPC message" );
-        definition->priority = options.get_or<std::int64_t>( "priority", 0 );
+                                       options.get < sol::object > ( "initiate_npc" ), "", "martial-art NPC message" );
+        definition->priority = options.get_or < std::int64_t > ( "priority", 0 );
         definition->primary_skill = options.get_or( "primary_skill", std::string() );
-        definition->learn_difficulty = options.get_or<std::int64_t>( "learn_difficulty", 0 );
+        definition->learn_difficulty = options.get_or < std::int64_t > ( "learn_difficulty", 0 );
         definition->teachable = options.get_or( "teachable", true );
-        definition->arm_block = options.get_or<std::int64_t>( "arm_block", 0 );
-        definition->leg_block = options.get_or<std::int64_t>( "leg_block", 0 );
+        definition->arm_block = options.get_or < std::int64_t > ( "arm_block", 0 );
+        definition->leg_block = options.get_or < std::int64_t > ( "leg_block", 0 );
         definition->arm_block_with_bio_armor_arms =
             options.get_or( "arm_block_with_bio_armor_arms", false );
         definition->leg_block_with_bio_armor_legs =
@@ -3137,18 +3150,18 @@ void character_content_transaction::impl::install_magic_type( sol::table &conten
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<magic_type_definition_data>();
+        auto definition = std::make_shared < magic_type_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->energy_source = options.get_or( "energy", std::string( "none" ) );
         definition->vitamin = options.get_or( "vitamin", std::string() );
         definition->energy_color = options.get_or( "energy_color", std::string( "cyan" ) );
-        if( const sol::optional<std::string> message =
-                options.get<sol::optional<std::string>>( "cannot_cast_message" ) ) {
+        if( const sol::optional < std::string > message =
+                options.get < sol::optional < std::string>>( "cannot_cast_message" ) ) {
             definition->cannot_cast_message = *message;
 
         }
-        if( const sol::optional<std::int64_t> maximum =
-                options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
+        if( const sol::optional < std::int64_t > maximum =
+                options.get < sol::optional < std::int64_t>>( "max_book_level" ) ) {
             definition->max_book_level = *maximum;
         }
         definition->failure_cost_fraction = options.get_or(
@@ -3167,10 +3180,10 @@ void character_content_transaction::impl::install_movement_mode( sol::table &con
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<movement_mode_definition_data>();
+        auto definition = std::make_shared < movement_mode_definition_data > ();
         definition->id = options.get_or( "id", std::string() );
         definition->name = detail::read_singular_text(
-                               options.get<sol::object>( "name" ), definition->id, "movement-mode name" );
+                               options.get < sol::object > ( "name" ), definition->id, "movement-mode name" );
         definition->kind = options.get_or( "kind", std::string( "walking" ) );
         definition->panel_color = options.get_or( "panel_color", std::string( "white" ) );
         definition->symbol_color = options.get_or( "symbol_color", std::string( "white" ) );
@@ -3182,9 +3195,9 @@ void character_content_transaction::impl::install_movement_mode( sol::table &con
                                            "sound_multiplier", 1.0 );
         definition->speed_multiplier = options.get_or(
                                            "speed_multiplier", 1.0 );
-        definition->mech_power_kilojoules = options.get_or<std::int64_t>(
+        definition->mech_power_kilojoules = options.get_or < std::int64_t > (
                                                 "mech_power_kilojoules", 2 );
-        definition->swim_speed_modifier = options.get_or<std::int64_t>(
+        definition->swim_speed_modifier = options.get_or < std::int64_t > (
                                               "swim_speed_modifier", 0 );
         definition->stop_hauling = options.get_or( "stop_hauling", false );
         const auto read_symbol = [&options]( const char *name ) {
@@ -3207,7 +3220,7 @@ void character_content_transaction::impl::install_movement_mode( sol::table &con
 void character_content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         sol::table &content )
 {
-    ccb.new_usertype<profession_definition_handle>(
+    ccb.new_usertype < profession_definition_handle > (
         "ProfessionDefinition", sol::no_constructor,
         "id", sol::property( &profession_definition_handle::id ),
         "items", &profession_definition_handle::items,
@@ -3227,11 +3240,11 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "spell", &profession_definition_handle::spell,
         "mission", &profession_definition_handle::mission,
         "on_start", &profession_definition_handle::on_start );
-    ccb.new_usertype<profession_group_definition_handle>(
+    ccb.new_usertype < profession_group_definition_handle > (
         "ProfessionGroupDefinition", sol::no_constructor,
         "id", sol::property( &profession_group_definition_handle::id ),
         "profession", &profession_group_definition_handle::profession );
-    ccb.new_usertype<widget_definition_handle>(
+    ccb.new_usertype < widget_definition_handle > (
         "WidgetDefinition", sol::no_constructor,
         "id", sol::property( &widget_definition_handle::id ),
         "bodypart", &widget_definition_handle::bodypart,
@@ -3242,7 +3255,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "clause", &widget_definition_handle::clause,
         "default_clause", &widget_definition_handle::default_clause,
         "custom_value", &widget_definition_handle::custom_value );
-    ccb.new_usertype<enchantment_definition_handle>(
+    ccb.new_usertype < enchantment_definition_handle > (
         "EnchantmentDefinition", sol::no_constructor,
         "id", sol::property( &enchantment_definition_handle::id ),
         "value", &enchantment_definition_handle::value,
@@ -3262,7 +3275,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "every", &enchantment_definition_handle::every,
         "vision", &enchantment_definition_handle::vision,
         "active_when", &enchantment_definition_handle::active_when );
-    ccb.new_usertype<bionic_definition_handle>(
+    ccb.new_usertype < bionic_definition_handle > (
         "BionicDefinition", sol::no_constructor,
         "id", sol::property( &bionic_definition_handle::id ),
         "activation_spell", &bionic_definition_handle::activation_spell,
@@ -3286,7 +3299,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "give_mutation_when_removed", &bionic_definition_handle::give_mutation_when_removed,
         "learn_spell", &bionic_definition_handle::learn_spell,
         "available_upgrade", &bionic_definition_handle::available_upgrade );
-    ccb.new_usertype<spell_definition_handle>(
+    ccb.new_usertype < spell_definition_handle > (
         "SpellDefinition", sol::no_constructor,
         "id", sol::property( &spell_definition_handle::id ),
         "target", &spell_definition_handle::target,
@@ -3303,7 +3316,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "lua_effect", &spell_definition_handle::lua_effect,
         "caster_when", &spell_definition_handle::caster_when,
         "target_when", &spell_definition_handle::target_when );
-    ccb.new_usertype<mission_definition_handle>(
+    ccb.new_usertype < mission_definition_handle > (
         "MissionDefinition", sol::no_constructor,
         "id", sol::property( &mission_definition_handle::id ),
         "origin", &mission_definition_handle::origin,
@@ -3317,24 +3330,25 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "fail_with", &mission_definition_handle::fail_with,
         "complete_when", &mission_definition_handle::complete_when );
 
-    ccb.new_usertype<profession_item_substitution_definition_handle>(
+    ccb.new_usertype < profession_item_substitution_definition_handle > (
         "ProfessionItemSubstitutionDefinition", sol::no_constructor,
         "id", sol::property( &profession_item_substitution_definition_handle::id ),
         "when", &profession_item_substitution_definition_handle::when );
-    ccb.new_usertype<profession_item_bonus_definition_handle>(
+    ccb.new_usertype < profession_item_bonus_definition_handle > (
         "ProfessionItemBonusDefinition", sol::no_constructor,
         "id", sol::property( &profession_item_bonus_definition_handle::id ),
         "when", &profession_item_bonus_definition_handle::when );
-    ccb.new_usertype<technique_definition_handle>(
+    ccb.new_usertype < technique_definition_handle > (
         "TechniqueDefinition", sol::no_constructor,
         "id", sol::property( &technique_definition_handle::id ),
         "flag", &technique_definition_handle::flag,
         "attack_vector", &technique_definition_handle::attack_vector,
         "requires_skill", &technique_definition_handle::requires_skill,
         "active_when", &technique_definition_handle::active_when,
+        "cooldown_duration", &technique_definition_handle::cooldown_duration,
         "charge_damage", &technique_definition_handle::charge_damage,
         "on_apply", &technique_definition_handle::on_apply );
-    ccb.new_usertype<martial_art_definition_handle>(
+    ccb.new_usertype < martial_art_definition_handle > (
         "MartialArtDefinition", sol::no_constructor,
         "id", sol::property( &martial_art_definition_handle::id ),
         "autolearn", &martial_art_definition_handle::autolearn,
@@ -3342,7 +3356,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "weapon", &martial_art_definition_handle::weapon,
         "weapon_category", &martial_art_definition_handle::weapon_category,
         "on", &martial_art_definition_handle::on );
-    ccb.new_usertype<magic_type_definition_handle>(
+    ccb.new_usertype < magic_type_definition_handle > (
         "MagicTypeDefinition", sol::no_constructor,
         "id", sol::property( &magic_type_definition_handle::id ),
         "cannot_cast_when", &magic_type_definition_handle::cannot_cast_when,
@@ -3352,7 +3366,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "failure_cost", &magic_type_definition_handle::failure_cost,
         "failure_experience", &magic_type_definition_handle::failure_experience,
         "on_failure", &magic_type_definition_handle::on_failure );
-    ccb.new_usertype<movement_mode_definition_handle>(
+    ccb.new_usertype < movement_mode_definition_handle > (
         "MovementModeDefinition", sol::no_constructor,
         "id", sol::property( &movement_mode_definition_handle::id ),
         "messages", &movement_mode_definition_handle::messages );
@@ -3418,7 +3432,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
                          movement_modes, "movement_mode" );
 #undef CATA_CHARACTER_EDIT
 
-    static_cast<void>( lua );
+    static_cast < void >( lua );
 }
 
 // Cross-catalog references share the staged validation index before any apply.
@@ -3448,9 +3462,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           kind + " '" + id + "'" );
             }
         };
-        std::set<std::string> profession_ids;
+        std::set < std::string > profession_ids;
 
-        const auto index_defines = []( const std::function<bool( std::string_view )> &predicate,
+        const auto index_defines = []( const std::function < bool( std::string_view ) > &predicate,
         const std::string_view id ) {
             return predicate && predicate( id );
         };
@@ -3591,7 +3605,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           definition.npc_background + "'" );
             }
 
-            std::set<std::string> unique;
+            std::set < std::string > unique;
             for( const std::string &achievement : definition.requirements ) {
                 require_valid_id( achievement, "profession achievement" );
                 if( !unique.insert( achievement ).second ||
@@ -3720,7 +3734,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             if( !definition.martial_arts_choices.empty() &&
                 definition.martial_arts_choice_amount >
-                static_cast<std::int64_t>( definition.martial_arts_choices.size() ) ) {
+                static_cast < std::int64_t >( definition.martial_arts_choices.size() ) ) {
                 throw std::runtime_error( "profession '" + definition.id +
                                           "' requests more martial arts than it offers" );
             }
@@ -3760,7 +3774,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "profession" );
         }
 
-        std::set<std::string> profession_group_ids;
+        std::set < std::string > profession_group_ids;
         for( const profession_group_registration &entry : pimpl_->profession_groups ) {
             const profession_group_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "profession group" );
@@ -3769,7 +3783,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "profession group '" + definition.id +
                                           "' needs a unique id and at least one profession" );
             }
-            std::set<std::string> professions;
+            std::set < std::string > professions;
             for( const std::string &profession : definition.professions ) {
                 if( !professions.insert( profession ).second ||
                     ( check_engine_state && profession_ids.count( profession ) == 0 &&
@@ -3784,7 +3798,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "profession group" );
         }
 
-        std::set<std::string> widget_ids;
+        std::set < std::string > widget_ids;
         for( const widget_registration &entry : pimpl_->widgets ) {
             if( !widget_ids.insert( entry.definition->id ).second ) {
                 throw std::runtime_error( "widget '" + entry.definition->id +
@@ -3833,11 +3847,11 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "widget '" + definition.id +
                                           "' has dimensions outside the native range" );
             }
-            static const std::set<std::string> styles = {
+            static const std::set < std::string > styles = {
                 "number", "graph", "text", "symbol", "legend", "widget",
                 "layout", "sidebar", "clause"
             };
-            static const std::set<std::string> arrangements = {
+            static const std::set < std::string > arrangements = {
                 "columns", "minimum_columns", "rows"
             };
             if( styles.count( definition.style ) == 0 ||
@@ -3852,7 +3866,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' requires an explicit separator and padding" );
             }
             if( !definition.variable.empty() &&
-                !io::string_to_enum_optional<widget_var>( definition.variable ) ) {
+                !io::string_to_enum_optional < widget_var > ( definition.variable ) ) {
                 throw std::runtime_error( "widget '" + definition.id +
                                           "' has unknown variable '" + definition.variable + "'" );
             }
@@ -3867,16 +3881,16 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' has a custom handler but is not a custom variable" );
             }
             if( !definition.direction.empty() &&
-                !io::string_to_enum_optional<cardinal_direction>( definition.direction ) ) {
+                !io::string_to_enum_optional < cardinal_direction > ( definition.direction ) ) {
                 throw std::runtime_error( "widget '" + definition.id +
                                           "' has unknown direction '" + definition.direction + "'" );
             }
-            if( !io::string_to_enum_optional<widget_alignment>( definition.text_align ) ||
-                !io::string_to_enum_optional<widget_alignment>( definition.label_align ) ) {
+            if( !io::string_to_enum_optional < widget_alignment > ( definition.text_align ) ||
+                !io::string_to_enum_optional < widget_alignment > ( definition.label_align ) ) {
                 throw std::runtime_error( "widget '" + definition.id +
                                           "' has an unknown alignment" );
             }
-            std::set<std::string> unique;
+            std::set < std::string > unique;
             for( const std::string &bodypart : definition.bodyparts ) {
                 require_valid_id( bodypart, "widget body part" );
                 if( !unique.insert( bodypart ).second ||
@@ -3906,7 +3920,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "widget '" + definition.id +
                                           "' requires one fewer break than colors" );
             }
-            std::int64_t previous_break = std::numeric_limits<std::int64_t>::min();
+            std::int64_t previous_break = std::numeric_limits < std::int64_t >::min();
             for( const std::int64_t value : definition.breaks ) {
                 if( !fits_native_int( value ) || value <= previous_break ) {
                     throw std::runtime_error( "widget '" + definition.id +
@@ -3937,9 +3951,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "widget" );
         }
         if( check_engine_state && !pimpl_->widgets.empty() ) {
-            std::map<std::string, std::vector<std::string>> graph;
+            std::map < std::string, std::vector < std::string>> graph;
             for( const widget &value : widget::get_all() ) {
-                std::vector<std::string> &children = graph[value.getId().str()];
+                std::vector < std::string > &children = graph[value.getId().str()];
                 for( const widget_id &child : value._widgets ) {
                     children.push_back( child.str() );
                 }
@@ -3954,7 +3968,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             for( const widget_registration &entry : pimpl_->widgets ) {
                 const widget_definition_data &definition = *entry.definition;
-                std::vector<std::string> &children = graph[definition.id];
+                std::vector < std::string > &children = graph[definition.id];
                 children = definition.widgets;
                 for( const widget_clause_definition_data &clause : definition.clauses ) {
                     children.insert( children.end(), clause.widgets.begin(), clause.widgets.end() );
@@ -3964,8 +3978,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                      definition.default_clause->widgets.end() );
                 }
             }
-            std::map<std::string, int> state;
-            std::function<void( const std::string & )> visit = [&]( const std::string & id ) {
+            std::map < std::string, int > state;
+            std::function < void( const std::string & ) > visit = [&]( const std::string & id ) {
                 if( state[id] == 2 ) {
                     return;
                 }
@@ -3986,7 +4000,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
         }
 
-        std::set<std::string> enchantment_ids;
+        std::set < std::string > enchantment_ids;
         for( const enchantment_registration &entry : pimpl_->enchantments ) {
             if( !enchantment_ids.insert( entry.definition->id ).second ) {
                 throw std::runtime_error( "enchantment '" + entry.definition->id +
@@ -4015,8 +4029,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
         for( const enchantment_registration &entry : pimpl_->enchantments ) {
             const enchantment_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "enchantment" );
-            if( !io::string_to_enum_optional<enchantment::has>( definition.has ) ||
-                !io::string_to_enum_optional<enchantment::condition>( definition.condition ) ) {
+            if( !io::string_to_enum_optional < enchantment::has > ( definition.has ) ||
+                !io::string_to_enum_optional < enchantment::condition > ( definition.condition ) ) {
                 throw std::runtime_error( "enchantment '" + definition.id +
                                           "' has an unknown location or activation condition" );
             }
@@ -4036,7 +4050,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "enchantment '" + definition.id +
                                           "' references unknown emitter '" + definition.emitter + "'" );
             }
-            std::set<std::string> unique;
+            std::set < std::string > unique;
             for( const auto &[effect, intensity] : definition.effects ) {
                 require_valid_id( effect, "enchantment effect" );
                 if( !fits_native_int( intensity ) || intensity <= 0 ||
@@ -4076,7 +4090,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             unique.clear();
-            static const std::set<std::string> modifier_kinds = {
+            static const std::set < std::string > modifier_kinds = {
                 "value", "skill", "custom", "encumbrance", "max_hp",
                 "limb_score", "melee_damage", "incoming_damage", "post_armor_damage"
             };
@@ -4094,7 +4108,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 validate_enchantment_handler( definition.id, modifier.add_handler );
                 validate_enchantment_handler( definition.id, modifier.multiply_handler );
                 if( modifier.kind == "value" &&
-                    !io::string_to_enum_optional<enchant_vals::mod>( modifier.target ) ) {
+                    !io::string_to_enum_optional < enchant_vals::mod > ( modifier.target ) ) {
                     throw std::runtime_error( "enchantment '" + definition.id +
                                               "' has unknown engine value '" + modifier.target + "'" );
                 }
@@ -4157,7 +4171,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
                 validate_enchantment_handler( definition.id, vision.distance_handler );
                 validate_enchantment_handler( definition.id, vision.condition_handler );
-                std::set<std::string> description_ids;
+                std::set < std::string > description_ids;
                 for( const enchantment_vision_description_definition_data &description :
                      vision.descriptions ) {
                     if( description.id.empty() || description.text.empty() ||
@@ -4177,7 +4191,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "enchantment" );
         }
 
-        std::set<std::string> bionic_ids;
+        std::set < std::string > bionic_ids;
         for( const bionic_registration &entry : pimpl_->bionics ) {
             if( !bionic_ids.insert( entry.definition->id ).second ) {
                 throw std::runtime_error( "bionic '" + entry.definition->id +
@@ -4193,8 +4207,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
         };
         const auto validate_bionic_list = [&]( const std::string & owner,
-        const std::vector<std::string> &values, const char *kind, const auto & exists ) {
-            std::set<std::string> unique;
+        const std::vector < std::string > &values, const char *kind, const auto & exists ) {
+            std::set < std::string > unique;
             for( const std::string &value : values ) {
                 if( !unique.insert( value ).second ) {
                     throw std::runtime_error( std::string( "bionic '" ).append( owner ).append(
@@ -4250,7 +4264,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             const auto native_nonnegative_float = []( const double value ) {
                 return std::isfinite( value ) && value >= 0.0 &&
-                       value <= std::numeric_limits<float>::max();
+                       value <= std::numeric_limits < float >::max();
             };
             if( !native_nonnegative_float( definition.fuel_efficiency ) ||
                 !native_nonnegative_float( definition.passive_fuel_efficiency ) ||
@@ -4346,7 +4360,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             validate_bionic_list( definition.id, definition.available_upgrades,
                                   "available upgrade", bionic_exists );
 
-            for( const std::vector<std::string> *references : {
+            for( const std::vector < std::string > *references : {
                      &definition.included_bionics, &definition.auto_deactivated_bionics,
                      &definition.available_upgrades
                  } ) {
@@ -4356,13 +4370,13 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                               "' cannot reference itself" );
                 }
             }
-            std::set<std::string> keyed_bodyparts;
+            std::set < std::string > keyed_bodyparts;
             for( const auto &[bodypart, amount] : definition.environment_protection ) {
                 require_bionic_reference( definition.id, bodypart,
                                           "environmental-protection body part", body_part_exists );
                 if( amount < 0 ||
-                    static_cast<std::uint64_t>( amount ) >
-                    std::numeric_limits<std::size_t>::max() ||
+                    static_cast < std::uint64_t >( amount ) >
+                    std::numeric_limits < std::size_t >::max() ||
                     !keyed_bodyparts.insert( bodypart ).second ) {
                     throw std::runtime_error( "bionic '" + definition.id +
                                               "' has invalid or duplicate environmental protection" );
@@ -4373,8 +4387,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 require_bionic_reference( definition.id, bodypart,
                                           "occupied body part", body_part_exists );
                 if( slots < 0 ||
-                    static_cast<std::uint64_t>( slots ) >
-                    std::numeric_limits<std::size_t>::max() ||
+                    static_cast < std::uint64_t >( slots ) >
+                    std::numeric_limits < std::size_t >::max() ||
                     !keyed_bodyparts.insert( bodypart ).second ) {
                     throw std::runtime_error( "bionic '" + definition.id +
                                               "' has invalid or duplicate occupied body parts" );
@@ -4390,7 +4404,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                               "' has invalid or duplicate encumbrance" );
                 }
             }
-            std::set<std::string> protection_keys;
+            std::set < std::string > protection_keys;
             for( const bionic_protection_definition_data &protection : definition.protection ) {
                 require_bionic_reference( definition.id, protection.bodypart,
                                           "protection body part", body_part_exists );
@@ -4407,7 +4421,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                               "' has invalid or duplicate damage protection" );
                 }
             }
-            std::set<std::string> learned_spell_ids;
+            std::set < std::string > learned_spell_ids;
             for( const auto &[spell, level] : definition.learned_spells ) {
                 require_valid_id( spell, "bionic learned spell" );
                 if( !fits_native_int( level ) || level < 0 ||
@@ -4435,7 +4449,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "bionic" );
         }
 
-        std::set<std::string> spell_ids;
+        std::set < std::string > spell_ids;
         for( const spell_registration &entry : pimpl_->spells ) {
             if( !spell_ids.insert( entry.definition->id ).second ) {
                 throw std::runtime_error( "spell '" + entry.definition->id +
@@ -4476,13 +4490,13 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' references unknown component requirement '" +
                                           definition.components + "'" );
             }
-            if( !io::string_to_enum_optional<sounds::sound_t>( definition.sound_type ) ) {
+            if( !io::string_to_enum_optional < sounds::sound_t > ( definition.sound_type ) ) {
                 throw std::runtime_error( "spell '" + definition.id +
 
                                           "' has unknown sound type '" +
                                           definition.sound_type + "'" );
             }
-            if( !io::string_to_enum_optional<spell_shape>( definition.shape ) ) {
+            if( !io::string_to_enum_optional < spell_shape > ( definition.shape ) ) {
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' has unknown shape '" + definition.shape + "'" );
             }
@@ -4519,9 +4533,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           "' references unknown spell class '" +
                                           definition.spell_class + "'" );
             }
-            const std::optional<magic_energy_type> energy = definition.energy_source.empty() ?
-                    std::optional<magic_energy_type>() :
-                    io::string_to_enum_optional<magic_energy_type>( definition.energy_source );
+            const std::optional < magic_energy_type > energy = definition.energy_source.empty() ?
+                    std::optional < magic_energy_type > () :
+                    io::string_to_enum_optional < magic_energy_type > ( definition.energy_source );
             if( !definition.energy_source.empty() && !energy ) {
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' has unknown energy source '" +
@@ -4574,14 +4588,14 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                     definition.target_condition_handler, "target-condition" );
             for( const auto &[stat, value] : definition.stats ) {
                 if( !std::isfinite( value ) ||
-                    std::abs( value ) > std::numeric_limits<int>::max() ) {
+                    std::abs( value ) > std::numeric_limits < int >::max() ) {
                     throw std::runtime_error( "spell '" + definition.id +
                                               "' has invalid stat '" + stat + "'" );
                 }
             }
             for( const auto &[stat, value] : definition.stat_maximums ) {
                 if( definition.stats.count( stat ) == 0 || !std::isfinite( value ) ||
-                    std::abs( value ) > std::numeric_limits<int>::max() ) {
+                    std::abs( value ) > std::numeric_limits < int >::max() ) {
                     throw std::runtime_error( "spell '" + definition.id +
                                               "' has invalid stat range '" + stat + "'" );
                 }
@@ -4601,10 +4615,10 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' has an invalid nonnegative or chance stat" );
             }
-            std::set<std::string> unique;
+            std::set < std::string > unique;
             for( const std::string &target : definition.valid_targets ) {
                 if( !unique.insert( target ).second ||
-                    !io::string_to_enum_optional<spell_target>( target ) ) {
+                    !io::string_to_enum_optional < spell_target > ( target ) ) {
                     throw std::runtime_error( "spell '" + definition.id +
                                               "' has unknown or duplicate target '" + target + "'" );
                 }
@@ -4625,9 +4639,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "wonder spell '" + definition.id +
                                           "' requires additional spells" );
             }
-            const auto validate_spell_string_list = [&]( const std::vector<std::string> &values,
+            const auto validate_spell_string_list = [&]( const std::vector < std::string > &values,
             const char *kind, const auto & exists ) {
-                std::set<std::string> ids;
+                std::set < std::string > ids;
                 for( const std::string &value : values ) {
                     require_valid_id( value, kind );
                     if( !ids.insert( value ).second ||
@@ -4672,7 +4686,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                               spell.spell + "'" );
                 }
             }
-            std::set<std::string> learned;
+            std::set < std::string > learned;
             for( const auto &[spell, level] : definition.learned_spells ) {
                 require_valid_id( spell, "learned spell" );
                 if( !fits_native_int( level ) || level < 0 ||
@@ -4714,9 +4728,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "spell" );
         }
         if( !pimpl_->spells.empty() ) {
-            std::map<std::string, std::vector<std::string>> graph;
+            std::map < std::string, std::vector < std::string>> graph;
             for( const spell_registration &entry : pimpl_->spells ) {
-                std::vector<std::string> &edges = graph[entry.definition->id];
+                std::vector < std::string > &edges = graph[entry.definition->id];
                 for( const enchantment_fake_spell_definition_data &spell :
                      entry.definition->additional_spells ) {
                     if( spell_ids.count( spell.spell ) != 0 ) {
@@ -4724,8 +4738,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
             }
-            std::map<std::string, int> visited;
-            std::function<void( const std::string & )> visit_spell =
+            std::map < std::string, int > visited;
+            std::function < void( const std::string & ) > visit_spell =
             [&]( const std::string & id ) {
                 if( visited[id] == 2 ) {
                     return;
@@ -4745,7 +4759,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
         }
 
-        std::set<std::string> mission_definition_ids;
+        std::set < std::string > mission_definition_ids;
         for( const mission_definition_registration &entry : pimpl_->mission_definitions ) {
             if( !mission_definition_ids.insert( entry.definition->id ).second ) {
                 throw std::runtime_error( "mission definition '" + entry.definition->id +
@@ -4764,7 +4778,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           handler + "'" );
             }
         };
-        static const std::set<std::string> mission_dialogue_phases = {
+        static const std::set < std::string > mission_dialogue_phases = {
             "describe", "offer", "accepted", "rejected", "advice",
             "inquire", "success", "success_lie", "failure"
         };
@@ -4778,15 +4792,15 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "mission definition '" + definition.id +
                                           "' has missing text or values outside native ranges" );
             }
-            if( !io::string_to_enum_optional<mission_goal>( definition.goal ) ) {
+            if( !io::string_to_enum_optional < mission_goal > ( definition.goal ) ) {
                 throw std::runtime_error( "mission definition '" + definition.id +
                                           "' has unknown goal '" + definition.goal + "'" );
             }
-            std::set<std::string> origins;
+            std::set < std::string > origins;
             bool needs_dialogue = false;
             for( const std::string &origin : definition.origins ) {
-                const std::optional<mission_origin> parsed =
-                    io::string_to_enum_optional<mission_origin>( origin );
+                const std::optional < mission_origin > parsed =
+                    io::string_to_enum_optional < mission_origin > ( origin );
                 if( !parsed || !origins.insert( origin ).second ) {
                     throw std::runtime_error( "mission definition '" + definition.id +
                                               "' has unknown or duplicate origin '" + origin + "'" );
@@ -4896,7 +4910,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             for( const auto &[reward, description] : definition.likely_rewards ) {
                 if( !std::isfinite( reward ) ||
-                    std::abs( reward ) > std::numeric_limits<int>::max() ||
+                    std::abs( reward ) > std::numeric_limits < int >::max() ||
                     description.empty() || description.size() > 16384 ) {
                     throw std::runtime_error( "mission definition '" + definition.id +
                                               "' has an invalid likely reward" );
@@ -4934,7 +4948,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
         const auto validate_profession_item_requirements =
             [&]( const detail::profession_item_substitution_native_requirement & requirements,
         const std::string & owner ) {
-            std::set<std::string> traits;
+            std::set < std::string > traits;
             for( const std::string &trait : requirements.present ) {
                 require_valid_id( trait, "profession item substitution trait" );
                 if( !traits.insert( trait ).second ||
@@ -4954,7 +4968,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
         };
-        std::set<std::string> profession_item_substitution_ids;
+        std::set < std::string > profession_item_substitution_ids;
         for( const profession_item_substitution_registration &entry :
              pimpl_->profession_item_substitutions ) {
             const profession_item_substitution_definition_data &definition = *entry.definition;
@@ -4993,7 +5007,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 definition.id, "profession item substitution" );
         }
 
-        std::set<std::string> profession_item_bonus_ids;
+        std::set < std::string > profession_item_bonus_ids;
         for( const profession_item_bonus_registration &entry : pimpl_->profession_item_bonuses ) {
             const profession_item_bonus_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "profession item bonus group" );
@@ -5015,13 +5029,15 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 definition.id, "profession item bonus" );
         }
 
-        std::set<std::string> technique_ids;
+        std::set < std::string > technique_ids;
         for( const technique_registration &entry : pimpl_->techniques ) {
             const technique_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "technique" );
             if( definition.name.empty() ||
                 !technique_ids.insert( definition.id ).second ||
                 definition.weighting < 0 ||
+                !std::isfinite( definition.cooldown_seconds ) ||
+                definition.cooldown_seconds < 0.0 || definition.cooldown_seconds > 86400.0 ||
                 definition.repeat_min < 1 ||
                 definition.repeat_max < definition.repeat_min ||
                 definition.down_dur < 0 ||
@@ -5050,7 +5066,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             for( const auto &[skill, level] : definition.min_skills ) {
                 if( skill.empty() || level < 0 ||
-                    level > std::numeric_limits<int>::max() ||
+                    level > std::numeric_limits < int >::max() ||
                     ( check_engine_state && !index_defines( index.defines_skill, skill ) &&
                       !skill_id( skill ).is_valid() ) ) {
                     throw std::runtime_error( "technique '" + definition.id +
@@ -5079,7 +5095,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "technique" );
         }
 
-        std::set<std::string> martial_art_ids;
+        std::set < std::string > martial_art_ids;
         for( const martial_art_registration &entry : pimpl_->martial_arts ) {
             const martial_art_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "martial art" );
@@ -5125,7 +5141,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const auto &[phase, handler_id] : definition.handlers ) {
-                static const std::set<std::string> phases = {
+                static const std::set < std::string > phases = {
                     "static", "move", "pause", "hit", "attack", "dodge",
                     "block", "gethit", "miss", "crit", "kill"
                 };
@@ -5139,11 +5155,11 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "martial art" );
         }
 
-        std::set<std::string> magic_type_ids;
+        std::set < std::string > magic_type_ids;
         for( const magic_type_registration &entry : pimpl_->magic_types ) {
             const magic_type_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "magic type" );
-            const std::optional<magic_energy_type> energy =
+            const std::optional < magic_energy_type > energy =
                 platform_magic_energy_type( definition.energy_source );
             if( !magic_type_ids.insert( definition.id ).second || !energy ||
                 !std::isfinite( definition.failure_cost_fraction ) ||
@@ -5154,7 +5170,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                    report_color_error::no ) == c_unset ||
                 ( definition.max_book_level &&
                   ( *definition.max_book_level < 0 ||
-                    *definition.max_book_level > std::numeric_limits<int>::max() ) ) ||
+                    *definition.max_book_level > std::numeric_limits < int >::max() ) ) ||
                 definition.level_for_experience_handler.empty() !=
                 definition.experience_for_level_handler.empty() ) {
                 throw std::runtime_error( "magic type '" + definition.id +
@@ -5177,7 +5193,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                               "' has an empty casting restriction" );
                 }
             }
-            const std::array<std::pair<const char *, const std::string *>, 7> handlers = { {
+            const std::array < std::pair < const char *, const std::string *>, 7 > handlers = { {
                     { "level-for-experience", &definition.level_for_experience_handler },
                     { "experience-for-level", &definition.experience_for_level_handler },
                     { "casting-experience", &definition.casting_experience_handler },
@@ -5198,7 +5214,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "magic type" );
         }
 
-        std::set<std::string> movement_mode_ids;
+        std::set < std::string > movement_mode_ids;
         for( const movement_mode_registration &entry : pimpl_->movement_modes ) {
             const movement_mode_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "movement mode" );
@@ -5211,30 +5227,30 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 color_from_string( definition.symbol_color,
                                    report_color_error::no ) == c_unset ||
                 !std::isfinite( definition.exertion ) || definition.exertion < 0.0 ||
-                definition.exertion > std::numeric_limits<float>::max() ||
+                definition.exertion > std::numeric_limits < float >::max() ||
                 !std::isfinite( definition.riding_exertion ) ||
                 definition.riding_exertion < 0.0 ||
-                definition.riding_exertion > std::numeric_limits<float>::max() ||
+                definition.riding_exertion > std::numeric_limits < float >::max() ||
                 !std::isfinite( definition.stamina_multiplier ) ||
                 definition.stamina_multiplier < 0.0 ||
-                definition.stamina_multiplier > std::numeric_limits<float>::max() ||
+                definition.stamina_multiplier > std::numeric_limits < float >::max() ||
                 !std::isfinite( definition.sound_multiplier ) ||
                 definition.sound_multiplier < 0.0 ||
-                definition.sound_multiplier > std::numeric_limits<float>::max() ||
+                definition.sound_multiplier > std::numeric_limits < float >::max() ||
                 !std::isfinite( definition.speed_multiplier ) ||
                 definition.speed_multiplier <= 0.0 ||
-                definition.speed_multiplier > std::numeric_limits<float>::max() ||
+                definition.speed_multiplier > std::numeric_limits < float >::max() ||
                 definition.mech_power_kilojoules < 0 ||
-                definition.mech_power_kilojoules > std::numeric_limits<int>::max() ||
-                definition.swim_speed_modifier < std::numeric_limits<int>::min() ||
-                definition.swim_speed_modifier > std::numeric_limits<int>::max() ) {
+                definition.mech_power_kilojoules > std::numeric_limits < int >::max() ||
+                definition.swim_speed_modifier < std::numeric_limits < int >::min() ||
+                definition.swim_speed_modifier > std::numeric_limits < int >::max() ) {
                 throw std::runtime_error( "movement mode '" + definition.id +
                                           "' has invalid symbols, colors, type, or movement values" );
             }
-            std::set<steed_type> steed_messages;
+            std::set < steed_type > steed_messages;
             for( const movement_mode_message_definition_data &messages :
                  definition.messages ) {
-                const std::optional<steed_type> steed =
+                const std::optional < steed_type > steed =
                     platform_steed_type( messages.steed );
                 if( !steed || !steed_messages.insert( *steed ).second ||
                     messages.prepare.empty() || messages.success.empty() ||
@@ -5574,7 +5590,7 @@ void character_content_transaction::impl::apply_profession()
     for( const profession_registration &entry : this->professions ) {
         const profession_id id( entry.definition->id );
         this->profession_undo.emplace_back(
-            id, id.is_valid() ? std::optional<profession>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < profession > ( id.obj() ) : std::nullopt );
         const profession_definition_data &source = *entry.definition;
         profession native;
         native.id = id;
@@ -5583,15 +5599,15 @@ void character_content_transaction::impl::apply_profession()
         native._name_female = source.name_female.native();
         native._description_male = source.description_male.native();
         native._description_female = source.description_female.native();
-        native._point_cost = static_cast<int>( source.points );
+        native._point_cost = static_cast < int >( source.points );
         if( source.starting_cash ) {
-            native._starting_cash = static_cast<int>( *source.starting_cash );
+            native._starting_cash = static_cast < int >( *source.starting_cash );
         }
         native._starting_npc_background =
             trait_group::Trait_group_tag( source.npc_background );
         native._chargen_allow_npc = source.chargen_allow_npc;
-        native.age_lower = static_cast<int>( source.age_lower );
-        native.age_upper = static_cast<int>( source.age_upper );
+        native.age_lower = static_cast < int >( source.age_lower );
+        native.age_upper = static_cast < int >( source.age_upper );
         native._starting_vehicle = source.starting_vehicle.empty() ?
                                    vproto_id::NULL_ID() : vproto_id( source.starting_vehicle );
         native._starting_items = item_group_id( source.items_both );
@@ -5604,11 +5620,11 @@ void character_content_transaction::impl::apply_profession()
         native.hard_requirement = source.hard_requirement;
         for( const auto &[skill, level] : source.skills ) {
             native._starting_skills.emplace_back(
-                skill_id( skill ), static_cast<int>( level ) );
+                skill_id( skill ), static_cast < int >( level ) );
         }
         for( const profession_addiction_definition_data &value : source.addictions ) {
             native._starting_addictions.emplace_back(
-                addiction_id( value.type ), static_cast<int>( value.intensity ) );
+                addiction_id( value.type ), static_cast < int >( value.intensity ) );
         }
         for( const std::string &bionic : source.cbms ) {
             native._starting_CBMs.emplace_back( bionic );
@@ -5637,7 +5653,7 @@ void character_content_transaction::impl::apply_profession()
         for( const std::string &style : source.martial_arts_choices ) {
             native._starting_martialarts_choices.emplace_back( style );
         }
-        native.ma_choice_amount = static_cast<int>( source.martial_arts_choice_amount );
+        native.ma_choice_amount = static_cast < int >( source.martial_arts_choice_amount );
         for( const auto &[monster, amount] : source.pets ) {
             for( std::int64_t count = 0; count < amount; ++count ) {
                 native._starting_pets.emplace_back( monster );
@@ -5645,7 +5661,7 @@ void character_content_transaction::impl::apply_profession()
         }
         for( const auto &[spell, level] : source.spells ) {
             native._starting_spells.emplace(
-                spell_id( spell ), static_cast<int>( level ) );
+                spell_id( spell ), static_cast < int >( level ) );
         }
         for( const std::string &mission : source.missions ) {
             native._missions.emplace_back( mission );
@@ -5668,7 +5684,7 @@ void character_content_transaction::impl::apply_profession_group()
     for( const profession_group_registration &entry : this->profession_groups ) {
         const profession_group_id id( entry.definition->id );
         this->profession_group_undo.emplace_back(
-            id, id.is_valid() ? std::optional<profession_group>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < profession_group > ( id.obj() ) : std::nullopt );
         profession_group native;
         native.id = id;
         native.was_loaded = true;
@@ -5687,14 +5703,14 @@ void character_content_transaction::impl::apply_widget()
     for( const widget_registration &entry : this->widgets ) {
         const widget_id id( entry.definition->id );
         this->widget_undo.emplace_back(
-            id, id.is_valid() ? std::optional<widget>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < widget > ( id.obj() ) : std::nullopt );
         const widget_definition_data &source = *entry.definition;
         widget native;
         native.id = id;
         native.was_loaded = true;
         native.src.emplace_back( id, mod_id( this->owner ) );
-        native._width = static_cast<int>( source.width );
-        native._height_max = static_cast<int>( source.height );
+        native._width = static_cast < int >( source.width );
+        native._height_max = static_cast < int >( source.height );
         native._height = native._height_max;
         native._symbols = source.symbols;
 
@@ -5706,19 +5722,19 @@ void character_content_transaction::impl::apply_widget()
         native._body_graph = source.body_graph;
         native._direction = source.direction.empty() ?
                             cardinal_direction::num_cardinal_directions :
-                            *io::string_to_enum_optional<cardinal_direction>( source.direction );
+                            *io::string_to_enum_optional < cardinal_direction > ( source.direction );
         native._text_align =
-            *io::string_to_enum_optional<widget_alignment>( source.text_align );
+            *io::string_to_enum_optional < widget_alignment > ( source.text_align );
         native._label_align =
-            *io::string_to_enum_optional<widget_alignment>( source.label_align );
+            *io::string_to_enum_optional < widget_alignment > ( source.label_align );
         native._pad_labels = source.pad_labels.value_or(
                                  source.style != "layout" || source.arrange == "rows" );
         native.explicit_separator = source.separator.has_value();
         native.explicit_padding = source.padding.has_value();
         native._separator = source.separator.value_or( ": " );
-        native._padding = static_cast<int>( source.padding.value_or( 2 ) );
+        native._padding = static_cast < int >( source.padding.value_or( 2 ) );
         native._var = source.variable.empty() ? widget_var::last :
-                      *io::string_to_enum_optional<widget_var>( source.variable );
+                      *io::string_to_enum_optional < widget_var > ( source.variable );
         for( const std::string &bodypart : source.bodyparts ) {
             native._bps.emplace( bodypart_str_id( bodypart ).id() );
         }
@@ -5727,7 +5743,7 @@ void character_content_transaction::impl::apply_widget()
                 color_from_string( color, report_color_error::no ) );
         }
         for( const std::int64_t value : source.breaks ) {
-            native._breaks.push_back( static_cast<int>( value ) );
+            native._breaks.push_back( static_cast < int >( value ) );
         }
         for( const std::string &child : source.widgets ) {
             native._widgets.emplace_back( child );
@@ -5744,7 +5760,7 @@ void character_content_transaction::impl::apply_widget()
             result.text = no_translation( value.text );
             result.color = value.color.empty() ? c_unset :
                            color_from_string( value.color, report_color_error::no );
-            result.value = static_cast<int>( value.value );
+            result.value = static_cast < int >( value.value );
             result.should_parse_tags = value.parse_tags;
             for( const std::string &child : value.widgets ) {
                 result.widgets.emplace_back( child );
@@ -5774,13 +5790,13 @@ void character_content_transaction::impl::apply_widget()
             const std::string widget_name = source.id;
             const std::string handler = source.custom_handler;
             native.platform_custom_value = [owner, widget_name, handler]( const avatar & subject ) {
-                const std::optional<widget_custom_handler_result> value =
+                const std::optional < widget_custom_handler_result > value =
                     invoke_widget_custom_handler( owner, widget_name, handler, subject );
                 return value ? value->value : 0;
             };
             native.platform_custom_range = [owner, widget_name, handler](
             const avatar & subject, widget & target ) {
-                const std::optional<widget_custom_handler_result> value =
+                const std::optional < widget_custom_handler_result > value =
                     invoke_widget_custom_handler( owner, widget_name, handler, subject );
                 if( value ) {
                     target._var_min = value->minimum;
@@ -5804,7 +5820,7 @@ void character_content_transaction::impl::apply_enchantment()
     for( const enchantment_registration &entry : this->enchantments ) {
         const enchantment_id id( entry.definition->id );
         this->enchantment_undo.emplace_back(
-            id, id.is_valid() ? std::optional<enchantment>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < enchantment > ( id.obj() ) : std::nullopt );
         const enchantment_definition_data &source = *entry.definition;
         enchantment native;
         native.id = id;
@@ -5813,9 +5829,9 @@ void character_content_transaction::impl::apply_enchantment()
         native.name = source.name.native();
         native.description = source.description.native();
         native.active_conditions.first =
-            *io::string_to_enum_optional<enchantment::has>( source.has );
+            *io::string_to_enum_optional < enchantment::has > ( source.has );
         native.active_conditions.second =
-            *io::string_to_enum_optional<enchantment::condition>( source.condition );
+            *io::string_to_enum_optional < enchantment::condition > ( source.condition );
         if( !source.condition_handler.empty() ) {
             const std::string owner = this->owner;
             const std::string enchantment_name = source.id;
@@ -5833,7 +5849,7 @@ void character_content_transaction::impl::apply_enchantment()
         }
         for( const auto &[effect, intensity] : source.effects ) {
             native.ench_effects.emplace(
-                efftype_id( effect ), static_cast<int>( intensity ) );
+                efftype_id( effect ), static_cast < int >( intensity ) );
         }
         for( const auto &[gain, lose] : source.modified_bodyparts ) {
             enchantment::bodypart_changes change;
@@ -5846,7 +5862,7 @@ void character_content_transaction::impl::apply_enchantment()
             native.mutations.emplace_back( mutation );
         }
         for( const enchantment_modifier_definition_data &modifier : source.modifiers ) {
-            const auto static_value = []( const std::optional<double> &number,
+            const auto static_value = []( const std::optional < double > &number,
             auto & map, const auto & key ) {
                 if( number ) {
                     map.emplace( key, dbl_or_var( *number ) );
@@ -5854,7 +5870,7 @@ void character_content_transaction::impl::apply_enchantment()
             };
             if( modifier.kind == "value" ) {
                 const enchant_vals::mod key =
-                    *io::string_to_enum_optional<enchant_vals::mod>( modifier.target );
+                    *io::string_to_enum_optional < enchant_vals::mod > ( modifier.target );
                 static_value( modifier.add, native.values_add, key );
                 static_value( modifier.multiply, native.values_multiply, key );
             } else if( modifier.kind == "skill" ) {
@@ -5889,8 +5905,8 @@ void character_content_transaction::impl::apply_enchantment()
                 }
                 native.limb_score_mods.push_back( std::move( value ) );
             } else {
-                std::map<damage_type_id, dbl_or_var> *add_map = nullptr;
-                std::map<damage_type_id, dbl_or_var> *multiply_map = nullptr;
+                std::map < damage_type_id, dbl_or_var > *add_map = nullptr;
+                std::map < damage_type_id, dbl_or_var > *multiply_map = nullptr;
                 if( modifier.kind == "melee_damage" ) {
                     add_map = &native.damage_values_add;
                     multiply_map = &native.damage_values_multiply;
@@ -5946,10 +5962,10 @@ void character_content_transaction::impl::apply_enchantment()
         const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & source ) {
             fake_spell result( spell_id( source.spell ), source.self );
             if( source.max_level ) {
-                result.max_level = static_cast<int>( *source.max_level );
+                result.max_level = static_cast < int >( *source.max_level );
             }
-            result.level = static_cast<int>( source.level );
-            result.trigger_once_in = static_cast<int>( source.trigger_once_in );
+            result.level = static_cast < int >( source.level );
+            result.trigger_once_in = static_cast < int >( source.trigger_once_in );
             result.trigger_message = source.trigger_message.native();
             result.npc_trigger_message = source.npc_trigger_message.native();
             return result;
@@ -6033,7 +6049,7 @@ void character_content_transaction::impl::apply_bionic()
     for( const bionic_registration &entry : this->bionics ) {
         const bionic_id id( entry.definition->id );
         this->bionic_undo.emplace_back(
-            id, id.is_valid() ? std::optional<bionic_data>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < bionic_data > ( id.obj() ) : std::nullopt );
         const bionic_definition_data &source = *entry.definition;
         bionic_data native;
         native.id = id;
@@ -6058,17 +6074,17 @@ void character_content_transaction::impl::apply_bionic()
         const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & value ) {
             fake_spell result( spell_id( value.spell ), value.self );
             if( value.max_level ) {
-                result.max_level = static_cast<int>( *value.max_level );
+                result.max_level = static_cast < int >( *value.max_level );
             }
-            result.level = static_cast<int>( value.level );
-            result.trigger_once_in = static_cast<int>( value.trigger_once_in );
+            result.level = static_cast < int >( value.level );
+            result.trigger_once_in = static_cast < int >( value.trigger_once_in );
             result.trigger_message = value.trigger_message.native();
             result.npc_trigger_message = value.npc_trigger_message.native();
             return result;
         };
 
         if( source.activation_spell ) {
-            native.spell_on_activate = cata::make_value<fake_spell>(
+            native.spell_on_activate = cata::make_value < fake_spell > (
                                            make_fake_spell( *source.activation_spell ) );
         }
         if( !source.power_gen_emission.empty() ) {
@@ -6116,20 +6132,20 @@ void character_content_transaction::impl::apply_bionic()
         }
         for( const auto &[bodypart, amount] : source.environment_protection ) {
             native.env_protec.emplace(
-                bodypart_str_id( bodypart ), static_cast<std::size_t>( amount ) );
+                bodypart_str_id( bodypart ), static_cast < std::size_t >( amount ) );
         }
         for( const bionic_protection_definition_data &protection : source.protection ) {
             native.protec[bodypart_str_id( protection.bodypart )].set_resist(
                 damage_type_id( protection.damage_type ),
-                static_cast<float>( protection.amount ) );
+                static_cast < float >( protection.amount ) );
         }
         for( const auto &[bodypart, slots] : source.occupied_bodyparts ) {
             native.occupied_bodyparts.emplace(
-                bodypart_str_id( bodypart ), static_cast<std::size_t>( slots ) );
+                bodypart_str_id( bodypart ), static_cast < std::size_t >( slots ) );
         }
         for( const auto &[bodypart, amount] : source.encumbrance ) {
             native.encumbrance.emplace(
-                bodypart_str_id( bodypart ), static_cast<int>( amount ) );
+                bodypart_str_id( bodypart ), static_cast < int >( amount ) );
         }
         for( const std::string &flag : source.installable_weapon_flags ) {
             native.installable_weapon_flags.emplace( flag );
@@ -6144,20 +6160,20 @@ void character_content_transaction::impl::apply_bionic()
             native.give_mut_on_removal.emplace( trait );
         }
         for( const auto &[spell, level] : source.learned_spells ) {
-            native.learned_spells.emplace( spell_id( spell ), static_cast<int>( level ) );
+            native.learned_spells.emplace( spell_id( spell ), static_cast < int >( level ) );
         }
         for( const std::string &bionic : source.available_upgrades ) {
             native.available_upgrades.emplace( bionic );
         }
-        native.fuel_efficiency = static_cast<float>( source.fuel_efficiency );
-        native.passive_fuel_efficiency = static_cast<float>( source.passive_fuel_efficiency );
+        native.fuel_efficiency = static_cast < float >( source.fuel_efficiency );
+        native.passive_fuel_efficiency = static_cast < float >( source.passive_fuel_efficiency );
         if( source.coverage_power_gen_penalty ) {
-            native.coverage_power_gen_penalty = static_cast<float>(
+            native.coverage_power_gen_penalty = static_cast < float >(
                                                     *source.coverage_power_gen_penalty );
         }
-        native.social_mods.lie = static_cast<int>( source.social_lie );
-        native.social_mods.persuade = static_cast<int>( source.social_persuade );
-        native.social_mods.intimidate = static_cast<int>( source.social_intimidate );
+        native.social_mods.lie = static_cast < int >( source.social_lie );
+        native.social_mods.persuade = static_cast < int >( source.social_persuade );
+        native.social_mods.intimidate = static_cast < int >( source.social_intimidate );
         native.dupes_allowed = source.dupes_allowed;
         native.activated_on_install = source.activated_on_install;
         native.included = source.included;
@@ -6185,7 +6201,7 @@ void character_content_transaction::impl::apply_spell()
     for( const spell_registration &entry : this->spells ) {
         const spell_id id( entry.definition->id );
         this->spell_undo.emplace_back(
-            id, id.is_valid() ? std::optional<spell_type>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < spell_type > ( id.obj() ) : std::nullopt );
         const spell_definition_data &source = *entry.definition;
 
         spell_type native;
@@ -6200,7 +6216,7 @@ void character_content_transaction::impl::apply_spell()
         native.teachable = source.teachable;
         native.spell_components = requirement_id( source.components );
         native.sound_description = source.sound_description.native();
-        native.sound_type = *io::string_to_enum_optional<sounds::sound_t>( source.sound_type );
+        native.sound_type = *io::string_to_enum_optional < sounds::sound_t > ( source.sound_type );
         native.sound_ambient = source.sound_ambient;
         native.sound_id = source.sound_id;
         native.sound_variant = source.sound_variant;
@@ -6217,7 +6233,7 @@ void character_content_transaction::impl::apply_spell()
                     owner, spell_name, handler, cast_spell, caster, target );
             };
         }
-        native.spell_area = *io::string_to_enum_optional<spell_shape>( source.shape );
+        native.spell_area = *io::string_to_enum_optional < spell_shape > ( source.shape );
         native.spell_area_function = spell_effect::shape_map.at( native.spell_area );
         native.effect_str = source.effect_data;
         native.explosion_light = explosion_light_str_id( source.explosion_light );
@@ -6229,33 +6245,33 @@ void character_content_transaction::impl::apply_spell()
         if( !source.magic_type.empty() ) {
             native.magic_type = magic_type_id( source.magic_type );
         }
-        const std::optional<magic_energy_type> energy = source.energy_source.empty() ?
-                std::optional<magic_energy_type>() :
-                io::string_to_enum_optional<magic_energy_type>( source.energy_source );
+        const std::optional < magic_energy_type > energy = source.energy_source.empty() ?
+                std::optional < magic_energy_type > () :
+                io::string_to_enum_optional < magic_energy_type > ( source.energy_source );
         native.set_platform_energy_source(
             energy,
-            source.energy_vitamin.empty() ? std::optional<vitamin_id>() :
-            std::optional<vitamin_id>( vitamin_id( source.energy_vitamin ) ),
+            source.energy_vitamin.empty() ? std::optional < vitamin_id > () :
+            std::optional < vitamin_id > ( vitamin_id( source.energy_vitamin ) ),
             energy && *energy == magic_energy_type::vitamin ?
-            std::optional<nc_color>( color_from_string(
-                                         source.energy_color, report_color_error::no ) ) :
-            std::optional<nc_color>() );
+            std::optional < nc_color > ( color_from_string(
+                                             source.energy_color, report_color_error::no ) ) :
+            std::optional < nc_color > () );
         native.set_platform_progression(
-            source.get_level_formula.empty() ? std::optional<jmath_func_id>() :
-            std::optional<jmath_func_id>( jmath_func_id( source.get_level_formula ) ),
-            source.exp_for_level_formula.empty() ? std::optional<jmath_func_id>() :
-            std::optional<jmath_func_id>( jmath_func_id( source.exp_for_level_formula ) ),
+            source.get_level_formula.empty() ? std::optional < jmath_func_id > () :
+            std::optional < jmath_func_id > ( jmath_func_id( source.get_level_formula ) ),
+            source.exp_for_level_formula.empty() ? std::optional < jmath_func_id > () :
+            std::optional < jmath_func_id > ( jmath_func_id( source.exp_for_level_formula ) ),
             source.max_book_level ?
-            std::optional<int>( static_cast<int>( *source.max_book_level ) ) :
-            std::optional<int>() );
+            std::optional < int > ( static_cast < int >( *source.max_book_level ) ) :
+            std::optional < int > () );
         for( const std::string &target : source.valid_targets ) {
             native.valid_targets.set(
-                *io::string_to_enum_optional<spell_target>( target ) );
+                *io::string_to_enum_optional < spell_target > ( target ) );
         }
         for( const std::string &flag : source.flags ) {
             native.flags.insert( flag );
-            if( const std::optional<spell_flag> parsed =
-                    io::string_to_enum_optional<spell_flag>( flag ) ) {
+            if( const std::optional < spell_flag > parsed =
+                    io::string_to_enum_optional < spell_flag > ( flag ) ) {
                 native.spell_tags.set( *parsed );
             }
         }
@@ -6274,10 +6290,10 @@ void character_content_transaction::impl::apply_spell()
         const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & value ) {
             fake_spell result( spell_id( value.spell ), value.self );
             if( value.max_level ) {
-                result.max_level = static_cast<int>( *value.max_level );
+                result.max_level = static_cast < int >( *value.max_level );
             }
-            result.level = static_cast<int>( value.level );
-            result.trigger_once_in = static_cast<int>( value.trigger_once_in );
+            result.level = static_cast < int >( value.level );
+            result.trigger_once_in = static_cast < int >( value.trigger_once_in );
             result.trigger_message = value.trigger_message.native();
             result.npc_trigger_message = value.npc_trigger_message.native();
             return result;
@@ -6287,9 +6303,9 @@ void character_content_transaction::impl::apply_spell()
             native.additional_spells.push_back( make_fake_spell( spell ) );
         }
         for( const auto &[spell, level] : source.learned_spells ) {
-            native.learn_spells.emplace( spell, static_cast<int>( level ) );
+            native.learn_spells.emplace( spell, static_cast < int >( level ) );
         }
-        native.channelling_turns = static_cast<int>( source.channel_turns );
+        native.channelling_turns = static_cast < int >( source.channel_turns );
         native.channel_spell = source.channel_spell;
         native.channel_end_spell = source.channel_end_spell;
         native.channel_interrupt_spell = source.channel_interrupt_spell;
@@ -6391,7 +6407,7 @@ void character_content_transaction::impl::apply_mission_definition()
     for( const mission_definition_registration &entry : this->mission_definitions ) {
         const mission_type_id id( entry.definition->id );
         this->mission_definition_undo.emplace_back(
-            id, id.is_valid() ? std::optional<mission_type>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < mission_type > ( id.obj() ) : std::nullopt );
         const mission_definition_data &source = *entry.definition;
         mission_type native;
         native.id = id;
@@ -6399,14 +6415,14 @@ void character_content_transaction::impl::apply_mission_definition()
         native.was_loaded = true;
         native.set_platform_name( source.name.native() );
         native.description = source.description.native();
-        native.goal = *io::string_to_enum_optional<mission_goal>( source.goal );
-        native.difficulty = static_cast<int>( source.difficulty );
-        native.value = static_cast<int>( source.value );
+        native.goal = *io::string_to_enum_optional < mission_goal > ( source.goal );
+        native.difficulty = static_cast < int >( source.difficulty );
+        native.value = static_cast < int >( source.value );
         native.urgent = source.urgent;
         native.has_generic_rewards = source.has_generic_rewards;
         for( const std::string &origin : source.origins ) {
             native.origins.push_back(
-                *io::string_to_enum_optional<mission_origin>( origin ) );
+                *io::string_to_enum_optional < mission_origin > ( origin ) );
         }
         native.item_id = source.item.empty() ? itype_id::NULL_ID() : itype_id( source.item );
         native.group_id = source.item_group.empty() ? item_group_id::NULL_ID() :
@@ -6415,7 +6431,7 @@ void character_content_transaction::impl::apply_mission_definition()
                               itype_id( source.required_container );
         native.empty_container = source.empty_container.empty() ? itype_id::NULL_ID() :
                                  itype_id( source.empty_container );
-        native.item_count = static_cast<int>( source.item_count );
+        native.item_count = static_cast < int >( source.item_count );
         native.remove_container = source.remove_container;
         native.invisible_on_complete = source.invisible_on_complete;
         native.recruit_class = source.recruit_class.empty() ? npc_class_id::NULL_ID() :
@@ -6425,7 +6441,7 @@ void character_content_transaction::impl::apply_mission_definition()
         if( !source.monster_species.empty() ) {
             native.monster_species = species_id( source.monster_species );
         }
-        native.monster_kill_goal = static_cast<int>( source.monster_kill_goal );
+        native.monster_kill_goal = static_cast < int >( source.monster_kill_goal );
         if( !source.destination.empty() ) {
             native.target_id = oter_type_str_id( source.destination );
         }
@@ -6482,7 +6498,7 @@ void character_content_transaction::impl::apply_mission_definition()
         const std::string & handler ) {
             const std::string owner = this->owner;
             const std::string mission_id = source.id;
-            return [owner, mission_id, phase, handler]( mission * active_mission ) {
+            return [owner, mission_id, phase, handler]( mission * active_mission, Character & ) {
                 invoke_mission_phase_handler(
                     owner, mission_id, phase, handler, active_mission );
             };
@@ -6541,7 +6557,7 @@ void character_content_transaction::impl::apply_technique()
     for( const technique_registration &entry : this->techniques ) {
         const matec_id id( entry.definition->id );
         this->technique_undo.emplace_back(
-            id, id.is_valid() ? std::optional<ma_technique>( id.obj() ) :
+            id, id.is_valid() ? std::optional < ma_technique > ( id.obj() ) :
             std::nullopt );
         const technique_definition_data &source = *entry.definition;
         ma_technique native;
@@ -6559,6 +6575,9 @@ void character_content_transaction::impl::apply_technique()
         native.crit_tec = source.crit_tec;
         native.crit_ok = source.crit_ok;
         native.manual_activation = source.manual_activation;
+        native.cooldown = time_duration::from_seconds(
+                              static_cast<int>( std::ceil( source.cooldown_seconds ) ) );
+        native.lua_platform_cooldown_handler = source.cooldown_handler;
         native.wall_adjacent = source.wall_adjacent;
         native.reach_tec = source.reach_tec;
         native.reach_ok = source.reach_ok;
@@ -6572,13 +6591,13 @@ void character_content_transaction::impl::apply_technique()
         native.block_counter = source.block_counter;
         native.miss_recovery = source.miss_recovery;
         native.grab_break = source.grab_break;
-        native.weighting = static_cast<int>( source.weighting );
-        native.repeat_min = static_cast<int>( source.repeat_min );
-        native.repeat_max = static_cast<int>( source.repeat_max );
-        native.down_dur = static_cast<int>( source.down_dur );
-        native.stun_dur = static_cast<int>( source.stun_dur );
-        native.knockback_dist = static_cast<int>( source.knockback_dist );
-        native.knockback_spread = static_cast<float>( source.knockback_spread );
+        native.weighting = static_cast < int >( source.weighting );
+        native.repeat_min = static_cast < int >( source.repeat_min );
+        native.repeat_max = static_cast < int >( source.repeat_max );
+        native.down_dur = static_cast < int >( source.down_dur );
+        native.stun_dur = static_cast < int >( source.stun_dur );
+        native.knockback_dist = static_cast < int >( source.knockback_dist );
+        native.knockback_spread = static_cast < float >( source.knockback_spread );
         native.knockback_follow = source.knockback_follow;
         native.aoe = source.aoe;
         native.flags = source.flags;
@@ -6590,7 +6609,7 @@ void character_content_transaction::impl::apply_technique()
         }
         for( const auto &[skill, level] : source.min_skills ) {
             native.reqs.min_skill.emplace_back( skill_id( skill ),
-                                                static_cast<int>( level ) );
+                                                static_cast < int >( level ) );
         }
         native.lua_platform_mod = this->owner;
         native.lua_platform_condition_handler = source.condition_handler;
@@ -6613,7 +6632,7 @@ void character_content_transaction::impl::apply_martial_art()
     for( const martial_art_registration &entry : this->martial_arts ) {
         const matype_id id( entry.definition->id );
         this->martial_art_undo.emplace_back(
-            id, id.is_valid() ? std::optional<martialart>( id.obj() ) :
+            id, id.is_valid() ? std::optional < martialart > ( id.obj() ) :
             std::nullopt );
         const martial_art_definition_data &source = *entry.definition;
         martialart native;
@@ -6628,13 +6647,13 @@ void character_content_transaction::impl::apply_martial_art()
         if( !source.initiate_npc.empty() ) {
             native.initiate.emplace_back( source.initiate_npc.native() );
         }
-        native.priority = static_cast<int>( source.priority );
+        native.priority = static_cast < int >( source.priority );
         native.primary_skill = source.primary_skill.empty() ?
                                skill_id::NULL_ID() : skill_id( source.primary_skill );
-        native.learn_difficulty = static_cast<int>( source.learn_difficulty );
+        native.learn_difficulty = static_cast < int >( source.learn_difficulty );
         native.teachable = source.teachable;
-        native.arm_block = static_cast<int>( source.arm_block );
-        native.leg_block = static_cast<int>( source.leg_block );
+        native.arm_block = static_cast < int >( source.arm_block );
+        native.leg_block = static_cast < int >( source.leg_block );
         native.arm_block_with_bio_armor_arms = source.arm_block_with_bio_armor_arms;
         native.leg_block_with_bio_armor_legs = source.leg_block_with_bio_armor_legs;
         native.strictly_unarmed = source.strictly_unarmed;
@@ -6643,7 +6662,7 @@ void character_content_transaction::impl::apply_martial_art()
         native.force_unarmed = source.force_unarmed;
         native.prevent_weapon_blocking = source.prevent_weapon_blocking;
         for( const auto &[skill, level] : source.autolearn_skills ) {
-            native.autolearn_skills.emplace_back( skill, static_cast<int>( level ) );
+            native.autolearn_skills.emplace_back( skill, static_cast < int >( level ) );
         }
         for( const std::string &technique : source.techniques ) {
             native.techniques.insert( matec_id( technique ) );
@@ -6667,7 +6686,7 @@ void character_content_transaction::impl::apply_magic_type()
     for( const magic_type_registration &entry : this->magic_types ) {
         const magic_type_id id( entry.definition->id );
         this->magic_type_undo.emplace_back(
-            id, id.is_valid() ? std::optional<magic_type>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < magic_type > ( id.obj() ) : std::nullopt );
         const magic_type_definition_data &source = *entry.definition;
         magic_type native;
         native.id = id;
@@ -6682,7 +6701,7 @@ void character_content_transaction::impl::apply_magic_type()
         native.cannot_cast_flags = source.cannot_cast_flags;
         native.cannot_cast_message = source.cannot_cast_message;
         if( source.max_book_level ) {
-            native.max_book_level = static_cast<int>( *source.max_book_level );
+            native.max_book_level = static_cast < int >( *source.max_book_level );
         }
         native.failure_cost_percent = source.failure_cost_fraction;
         native.failure_exp_percent = source.failure_experience_fraction;
@@ -6698,7 +6717,7 @@ void character_content_transaction::impl::apply_movement_mode()
     for( const movement_mode_registration &entry : this->movement_modes ) {
         const move_mode_id id( entry.definition->id );
         this->movement_mode_undo.emplace_back(
-            id, id.is_valid() ? std::optional<move_mode>( id.obj() ) : std::nullopt );
+            id, id.is_valid() ? std::optional < move_mode > ( id.obj() ) : std::nullopt );
         const movement_mode_definition_data &source = *entry.definition;
         move_mode native;
         native.id = id;
@@ -6712,14 +6731,14 @@ void character_content_transaction::impl::apply_movement_mode()
                                   source.panel_color, report_color_error::no );
         native._symbol_color = color_from_string(
                                    source.symbol_color, report_color_error::no );
-        native._exertion_level = static_cast<float>( source.exertion );
+        native._exertion_level = static_cast < float >( source.exertion );
         native._exertion_level_animal_riding =
-            static_cast<float>( source.riding_exertion );
-        native._stamina_multiplier = static_cast<float>( source.stamina_multiplier );
-        native._sound_multiplier = static_cast<float>( source.sound_multiplier );
-        native._move_speed_mult = static_cast<float>( source.speed_multiplier );
-        native._mech_power_use = static_cast<int>( source.mech_power_kilojoules );
-        native._swim_speed_mod = static_cast<int>( source.swim_speed_modifier );
+            static_cast < float >( source.riding_exertion );
+        native._stamina_multiplier = static_cast < float >( source.stamina_multiplier );
+        native._sound_multiplier = static_cast < float >( source.sound_multiplier );
+        native._move_speed_mult = static_cast < float >( source.speed_multiplier );
+        native._mech_power_use = static_cast < int >( source.mech_power_kilojoules );
+        native._swim_speed_mod = static_cast < int >( source.swim_speed_modifier );
         native._stop_hauling = source.stop_hauling;
         for( const movement_mode_message_definition_data &messages : source.messages ) {
             const steed_type steed = *platform_steed_type( messages.steed );
@@ -6746,7 +6765,7 @@ bool character_content_transaction::apply_phase(
                 "' is no longer building";
         return false;
     }
-    if( static_cast<int>( phase ) != static_cast<int>( pimpl_->applied_phase_count ) ) {
+    if( static_cast < int >( phase ) != static_cast < int>( pimpl_->applied_phase_count ) ) {
         error = "character content apply phases must be executed in order";
         return false;
     }
@@ -6791,11 +6810,11 @@ bool character_content_transaction::apply_phase(
         }
         ++pimpl_->applied_phase_count;
         if( pimpl_->applied_phase_count ==
-            static_cast<std::size_t>( character_content_apply_phase::movement_mode ) + 1 ) {
+            static_cast < std::size_t >( character_content_apply_phase::movement_mode ) + 1 ) {
             pimpl_->applied = true;
         }
         pimpl_->next_apply_phase =
-            static_cast<character_content_apply_phase>( pimpl_->applied_phase_count );
+            static_cast < character_content_apply_phase >( pimpl_->applied_phase_count );
         error.clear();
         return true;
     } catch( const std::exception &exception ) {
@@ -6822,6 +6841,8 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.crit_tec ? "crit_tec" : "not_crit_tec" );
                 hash_part( state, value.crit_ok ? "crit_ok" : "not_crit_ok" );
                 hash_part( state, value.manual_activation ? "manual_activation" : "automatic_only" );
+                hash_part( state, std::to_string( value.cooldown_seconds ) );
+                hash_part( state, value.cooldown_handler );
                 hash_part( state, value.wall_adjacent ? "wall_adjacent" : "not_wall_adjacent" );
                 hash_part( state, value.reach_tec ? "reach_tec" : "not_reach_tec" );
                 hash_part( state, value.reach_ok ? "reach_ok" : "not_reach_ok" );
@@ -7208,7 +7229,7 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.required_bionic );
                 hash_part( state, value.installation_requirement );
                 const auto hash_strings = [&state]( const char *kind,
-                const std::vector<std::string> &values ) {
+                const std::vector < std::string > &values ) {
                     for( const std::string &item : values ) {
                         hash_part( state, kind );
                         hash_part( state, item );
@@ -7321,7 +7342,7 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.target_condition_handler );
                 hash_part( state, value.target_condition_fail_message );
                 const auto hash_spell_strings = [&state]( const char *kind,
-                const std::vector<std::string> &values ) {
+                const std::vector < std::string > &values ) {
                     for( const std::string &item : values ) {
                         hash_part( state, kind );
                         hash_part( state, item );
@@ -7615,7 +7636,7 @@ namespace cata::lua_platform
 struct character_content_transaction::impl {};
 
 character_content_transaction::character_content_transaction( std::string, std::size_t ) :
-    pimpl_( std::make_unique<impl>() )
+    pimpl_( std::make_unique < impl > () )
 {}
 
 character_content_transaction::~character_content_transaction() = default;

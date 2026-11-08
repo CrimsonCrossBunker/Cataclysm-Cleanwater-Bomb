@@ -111,6 +111,26 @@ class ParserFixtureTest(unittest.TestCase):
             by_key["npc_key"]["parser_registrations"][0]["alias_role"], "beta"
         )
 
+    def test_declaration_whitespace_preserves_offsets(self) -> None:
+        marker = "std::vector<sub_effect_parser>\nparsers ="
+        declarations = (
+            marker,
+            "std :: vector < sub_effect_parser > parsers\n=",
+            "std::vector<sub_effect_parser> parsers =",
+        )
+        for declaration in declarations:
+            with self.subTest(declaration=declaration):
+                source = declaration + (
+                    '\n{\n { "u_key", jarg::member, &scope::handler }\n};'
+                )
+                parsed = parse_parser_vector(
+                    source, marker, "src/npctalk.cpp", "object_member"
+                )
+                self.assertEqual(len(parsed), 1)
+                entry_offset = source.index('{ "u_key"')
+                expected_line = source[:entry_offset].count("\n") + 1
+                self.assertEqual(parsed[0]["source"]["line"], expected_line)
+
 
 class RepositoryParityTest(unittest.TestCase):
     @classmethod

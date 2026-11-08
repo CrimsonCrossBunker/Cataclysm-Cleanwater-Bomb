@@ -38,6 +38,10 @@ TEST_CASE( "automatic_mining_recognizes_powered_mining_tools", "[movement][minin
     clear_avatar();
     clear_map_without_vision();
     avatar &you = get_avatar();
+    you.clear_destination();
+    const on_out_of_scope clear_route( [&you]() {
+        you.clear_destination();
+    } );
     map &here = get_map();
     const override_option auto_features( "AUTO_FEATURES", "true" );
     const override_option auto_mining( "AUTO_MINING", "true" );

@@ -634,7 +634,7 @@ class overmap
         std::map<int, om_vehicle> vehicles;
         std::vector<city> cities;
         std::vector<overmap_river_node> rivers;
-        std::map<string_id<overmap_connection>, std::vector<tripoint_om_omt>> connections_out;
+        std::map<string_id<overmap_connection>, std::vector<tripoint_om_omt >> connections_out;
         void add_camp( const point_abs_omt &p, const basecamp &camp );
         std::optional<basecamp *> find_camp( const point_abs_omt &p );
         void clear_camps();
@@ -700,7 +700,7 @@ class overmap
         // Persisted post-process decisions at overmap_special scope.
         // Colony provides stable pointers so all OMTs of a special share one allocation.
         cata::colony<std::vector<pp_resolved_generator>> pp_decision_storage;
-        std::unordered_map<tripoint_om_omt, std::vector<pp_resolved_generator> *> pp_decisions_index;
+        std::unordered_map<tripoint_om_omt, std::vector<pp_resolved_generator> * > pp_decisions_index;
 
         // Records the joins that were chosen during placement of a mutable
         // special, so that it can be queried later by mapgen
@@ -767,10 +767,10 @@ class overmap
         void move_hordes();
 
         //nemesis movement for "hunted" trait
-        void signal_nemesis( const tripoint_abs_sm & );
+        void signal_nemesis( const tripoint_abs_sm &, character_id who );
         void move_nemesis();
-        void place_nemesis( const tripoint_abs_omt & );
-        bool remove_nemesis(); // returns true if nemesis found and removed
+        void place_nemesis( const tripoint_abs_omt &, int mission_id = -1 );
+        bool remove_nemesis( character_id who ); // removes this player's groups
 
         // code deduplication - calc ocean gradient
         float calculate_ocean_gradient( const point_om_omt &p, point_abs_om this_omt );
@@ -862,7 +862,7 @@ class overmap
         * gets all points drawn for exactly one highway segment special, given a highway path node
         * @return { set of points, offset direction from initial node point }
         */
-        std::pair<std::vector<tripoint_om_omt>, om_direction::type>
+        std::pair<std::vector<tripoint_om_omt>, om_direction::type >
         get_highway_segment_points( const pf::directed_node<tripoint_om_omt> &node ) const;
 
         void place_railroads( const std::vector<const overmap *> &neighbor_overmaps );
@@ -1022,10 +1022,10 @@ class overmap
 // This cache helps avoid much more costly lookups in the full hashmap.
 struct oter_display_lru {
     static constexpr size_t cache_size = 8; // used below to calculate the next index
-    std::array<std::pair<oter_id, oter_t const *>, cache_size> cache;
+    std::array < std::pair < oter_id, oter_t const *>, cache_size > cache;
     size_t cache_next = 0;
 
-    std::pair<std::string, nc_color> get_symbol_and_color( const oter_id &cur_ter, om_vision_level );
+    std::pair < std::string, nc_color > get_symbol_and_color( const oter_id &cur_ter, om_vision_level );
 };
 
 // "arguments" to oter_symbol_and_color that do not change between calls in a batch
@@ -1064,12 +1064,12 @@ struct oter_display_options {
     // How far the PC can see
     int sight_points;
 
-    std::optional<tripoint_abs_omt> mission_target = std::nullopt;
+    std::optional < tripoint_abs_omt > mission_target = std::nullopt;
     // Locations of NPCs to draw
-    std::unordered_map<tripoint_abs_omt, npc_coloring> npc_color;
+    std::unordered_map < tripoint_abs_omt, npc_coloring > npc_color;
     // NPC/player paths to draw
-    std::unordered_set<tripoint_abs_omt> npc_path_route;
-    std::unordered_map<point_abs_omt, int> player_path_route;
+    std::unordered_set < tripoint_abs_omt > npc_path_route;
+    std::unordered_map < point_abs_omt, int > player_path_route;
 
     // Zone to draw and location
     std::string sZoneName;
@@ -1098,7 +1098,7 @@ struct oter_display_args {
 // Symbol and color to display a overmap tile as - depending on notes, overlays, etc...
 // args are updated per call, opts are generated before a batch of calls.
 // A pointer to lru may be provided for possible speed improvements.
-std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &omp,
+std::pair < std::string, nc_color > oter_symbol_and_color( const tripoint_abs_omt &omp,
         oter_display_args &args, const oter_display_options &opts, oter_display_lru *lru = nullptr );
 
 bool is_river( const oter_id &ter );

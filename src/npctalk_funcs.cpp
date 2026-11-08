@@ -35,12 +35,14 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
 #include "clzones.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "debug.h"
+#include "dialogue.h"
 #include "dialogue_chatbin.h"
 #include "enums.h"
 #include "event.h"
@@ -61,6 +63,7 @@
 #include "math_parser_diag_value.h"
 #include "messages.h"
 #include "mission.h"
+#include "mission_dialogue.h"
 #include "monster.h"
 #include "mutation.h"
 #include "npc.h"
@@ -197,104 +200,606 @@ std::string talk_function::vehicle_service_state_snapshot( const vehicle &veh )
     return result.str();
 }
 
+namespace mission_dialogue
+{
+
+namespace
+{
+
+std::vector<mission_selection_identity> active_mission_operations;
+
+class scoped_mission_operation_guard
+{
+    public:
+        explicit scoped_mission_operation_guard( const mission_selection_identity &identity )
+            : identity_( identity ) {
+            if( !identity_.is_set() ) {
+                return;
+            }
+            if( std::find( active_mission_operations.begin(), active_mission_operations.end(),
+                           identity_ ) != active_mission_operations.end() ) {
+                return;
+            }
+            active_mission_operations.push_back( identity_ );
+            acquired_ = true;
+        }
+
+        scoped_mission_operation_guard( const scoped_mission_operation_guard & ) = delete;
+        scoped_mission_operation_guard &operator=( const scoped_mission_operation_guard & ) = delete;
+
+        ~scoped_mission_operation_guard() {
+            if( !acquired_ ) {
+                return;
+            }
+            const auto it = std::find( active_mission_operations.begin(),
+                                       active_mission_operations.end(), identity_ );
+            if( it != active_mission_operations.end() ) {
+                active_mission_operations.erase( it );
+            }
+        }
+
+        explicit operator bool() const {
+            return acquired_;
+        }
+
+    private:
+        mission_selection_identity identity_;
+        bool acquired_ = false;
+};
+
+} // namespace
+
+mission_selection_identity identify_mission( const mission *miss )
+{
+    const mission *live = mission::find_by_address( miss );
+    return live ? mission_selection_identity{ live->get_id(), live->identity_generation() } :
+           mission_selection_identity{};
+}
+
+mission *resolve_live_mission( const mission_selection_identity &identity )
+{
+    if( !identity.is_set() ) {
+        return nullptr;
+    }
+    mission *live = mission::find( identity.uid, true );
+    if( live == nullptr || live->identity_generation() != identity.generation ) {
+        return nullptr;
+    }
+    return live;
+}
+
+bool is_live_mission( const mission *miss )
+{
+    return identify_mission( miss ).is_set();
+}
+
+bool is_available_chatbin_mission( const npc &p, const mission *miss )
+{
+    if( !is_live_mission( miss ) || miss->get_npc_id() != p.getID() ) {
+        return false;
+    }
+    if( miss->is_assigned() || miss->in_progress() ||
+        miss->has_succeeded() || miss->has_failed() ) {
+        return false;
+    }
+    if( std::find( p.chatbin.missions.begin(), p.chatbin.missions.end(), miss ) ==
+        p.chatbin.missions.end() ) {
+        return false;
+    }
+    if( std::find( p.chatbin.missions_assigned.begin(), p.chatbin.missions_assigned.end(), miss ) !=
+        p.chatbin.missions_assigned.end() ) {
+        return false;
+    }
+    return true;
+}
+
+bool is_assigned_chatbin_mission_for( const npc &p, const character_id &owner_id,
+                                      const mission *miss )
+{
+    if( !owner_id.is_valid() || !is_live_mission( miss ) || miss->get_npc_id() != p.getID() ) {
+        return false;
+    }
+    if( !miss->is_assigned() || miss->get_assigned_player_id() != owner_id ) {
+        return false;
+    }
+    return std::find( p.chatbin.missions_assigned.begin(), p.chatbin.missions_assigned.end(),
+                      miss ) != p.chatbin.missions_assigned.end();
+}
+
+bool is_authorized_dialogue_mission( const npc &p, const character_id &owner_id,
+                                     const mission *miss )
+{
+    return is_available_chatbin_mission( p, miss ) ||
+           is_assigned_chatbin_mission_for( p, owner_id, miss );
+}
+
+mission *resolve_selected_mission( const npc &p, const character_id &owner_id,
+                                   mission_selection_identity &selection )
+{
+    mission *live = resolve_live_mission( selection );
+    if( live == nullptr || !is_authorized_dialogue_mission( p, owner_id, live ) ) {
+        selection.reset();
+        return nullptr;
+    }
+    return live;
+}
+
+std::vector<mission *> filter_available_missions( const npc &p )
+{
+    std::vector<mission *> result;
+    for( mission *miss : p.chatbin.missions ) {
+        if( is_available_chatbin_mission( p, miss ) ) {
+            result.push_back( miss );
+        }
+    }
+    return result;
+}
+
+std::vector<mission *> filter_assigned_missions_for( const npc &p,
+        const character_id &owner_id )
+{
+    std::vector<mission *> result;
+    if( !owner_id.is_valid() ) {
+        return result;
+    }
+    for( mission *miss : p.chatbin.missions_assigned ) {
+        if( is_assigned_chatbin_mission_for( p, owner_id, miss ) ) {
+            result.push_back( miss );
+        }
+    }
+    return result;
+}
+
+bool participants_live( const const_dialogue &d )
+{
+    for( const bool beta : {
+             false, true
+         } ) {
+        if( d.has_actor( beta ) && !d.const_actor( beta )->is_valid() ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+Character *resolve_dialogue_character( const const_dialogue &d, const bool is_beta )
+{
+    if( !participants_live( d ) || !d.has_actor( is_beta ) ) {
+        return nullptr;
+    }
+    Character *who = const_cast<Character *>( d.const_actor( is_beta )->get_const_character() );
+    if( !who ) {
+        return nullptr;
+    }
+    const character_action_guard guard( *who );
+    return guard ? who : nullptr;
+}
+
+npc *resolve_dialogue_npc( const dialogue &d, const bool is_beta )
+{
+    Character *ch = resolve_dialogue_character( d, is_beta );
+    return ch != nullptr ? ch->as_npc() : nullptr;
+}
+
+} // namespace mission_dialogue
+
+namespace mission_dialogue
+{
+
+namespace
+{
+
+bool assign_mission_for_character( npc &p, Character &u, mission *miss, dialogue *d )
+{
+    const character_action_guard u_guard( u );
+    const character_action_guard p_guard( p );
+    if( !u_guard || !p_guard || !is_available_chatbin_mission( p, miss ) ) {
+        return false;
+    }
+    const mission_selection_identity identity = identify_mission( miss );
+    const scoped_mission_operation_guard op_guard( identity );
+    if( !op_guard ) {
+        return false;
+    }
+    miss->assign( u );
+    if( !u_guard || !p_guard ) {
+        return false;
+    }
+    mission *live = resolve_live_mission( identity );
+    if( !live || !live->is_assigned() || live->get_assigned_player_id() != u.getID() ||
+        live->get_npc_id() != p.getID() ) {
+        return false;
+    }
+    p.chatbin.missions.erase(
+        std::remove( p.chatbin.missions.begin(), p.chatbin.missions.end(), live ),
+        p.chatbin.missions.end() );
+    if( live != nullptr && live->get_npc_id() == p.getID() &&
+        live->is_assigned() && live->get_assigned_player_id() == u.getID() ) {
+        if( std::find( p.chatbin.missions_assigned.begin(), p.chatbin.missions_assigned.end(),
+                       live ) == p.chatbin.missions_assigned.end() ) {
+            p.chatbin.missions_assigned.push_back( live );
+        }
+    }
+    if( d != nullptr ) {
+        if( live != nullptr && is_assigned_chatbin_mission_for( p, u.getID(), live ) ) {
+            d->actor( true )->select_mission( live );
+        } else {
+            d->actor( true )->select_mission( nullptr );
+        }
+        talk_effect_t::update_missions( *d );
+    }
+    return live != nullptr;
+}
+
+bool succeed_mission_for_character( npc &p, Character &u, mission *miss, dialogue *d )
+{
+    const character_action_guard u_guard( u );
+    const character_action_guard p_guard( p );
+    if( !u_guard || !p_guard ||
+        !is_assigned_chatbin_mission_for( p, u.getID(), miss ) ||
+        miss->has_succeeded() || miss->has_failed() ) {
+        return false;
+    }
+    const mission_selection_identity identity = identify_mission( miss );
+    const scoped_mission_operation_guard op_guard( identity );
+    if( !op_guard ) {
+        return false;
+    }
+    const int miss_val = npc_trading::cash_to_favor( p, miss->get_value() );
+    npc_opinion op;
+    op.value = 1 + miss_val / 5;
+    op.anger = -1;
+    p.opinion_of( u.getID() ) += op;
+    faction *p_fac = p.get_faction();
+    if( p_fac != nullptr ) {
+        const int fac_val = std::min( 1 + miss_val / 10, 10 );
+        p_fac->likes_u += fac_val;
+        p_fac->respects_u += fac_val;
+        p_fac->trusts_u += fac_val;
+        p_fac->power += fac_val;
+    }
+    miss->wrap_up( u );
+    if( d != nullptr && u_guard && p_guard ) {
+        talk_effect_t::update_missions( *d );
+    }
+    return true;
+}
+
+bool fail_mission_for_character( npc &p, Character &u, mission *miss, dialogue *d )
+{
+    const character_action_guard u_guard( u );
+    const character_action_guard p_guard( p );
+    if( !u_guard || !p_guard ||
+        !is_assigned_chatbin_mission_for( p, u.getID(), miss ) ||
+        miss->has_succeeded() || miss->has_failed() ) {
+        return false;
+    }
+    const mission_selection_identity identity = identify_mission( miss );
+    const scoped_mission_operation_guard op_guard( identity );
+    if( !op_guard ) {
+        return false;
+    }
+    npc_opinion op;
+    op.trust = -1;
+    op.value = -1;
+    op.anger = 1;
+    p.opinion_of( u.getID() ) += op;
+    miss->fail( u );
+    if( d != nullptr && u_guard && p_guard ) {
+        talk_effect_t::update_missions( *d );
+    }
+    return true;
+}
+
+bool clear_mission_for_character( npc &p, Character &u, mission *miss, dialogue *d,
+                                  bool update_legacy_selection = true )
+{
+    const character_action_guard u_guard( u );
+    const character_action_guard p_guard( p );
+    if( !u_guard || !p_guard ||
+        !is_assigned_chatbin_mission_for( p, u.getID(), miss ) ) {
+        return false;
+    }
+    if( miss->in_progress() && !miss->is_complete( p.getID(), u ) ) {
+        return false;
+    }
+    const mission_selection_identity identity = identify_mission( miss );
+    const scoped_mission_operation_guard op_guard( identity );
+    if( !op_guard ) {
+        return false;
+    }
+    const auto it = std::find( p.chatbin.missions_assigned.begin(),
+                               p.chatbin.missions_assigned.end(), miss );
+    if( it == p.chatbin.missions_assigned.end() ) {
+        return false;
+    }
+    p.chatbin.missions_assigned.erase( it );
+    if( !miss->has_failed() && miss->has_follow_up() ) {
+        const mission_type_id follow_up_type = miss->get_follow_up();
+        if( follow_up_type.is_valid() ) {
+            mission *follow_up = mission::reserve_new( follow_up_type, p.getID() );
+            if( !u_guard || !p_guard ) {
+                return false;
+            }
+            if( follow_up != nullptr ) {
+                p.add_new_mission( follow_up );
+            }
+        }
+    }
+    mission *next_selected = nullptr;
+    for( mission *candidate : p.chatbin.missions_assigned ) {
+        if( is_assigned_chatbin_mission_for( p, u.getID(), candidate ) ) {
+            next_selected = candidate;
+            break;
+        }
+    }
+    if( next_selected == nullptr ) {
+        for( mission *candidate : p.chatbin.missions ) {
+            if( is_available_chatbin_mission( p, candidate ) ) {
+                next_selected = candidate;
+                break;
+            }
+        }
+    }
+    if( d != nullptr ) {
+        if( p.chatbin.mission_selected == miss ) {
+            p.chatbin.mission_selected = nullptr;
+        }
+        d->actor( true )->select_mission( next_selected );
+        talk_effect_t::update_missions( *d );
+    } else if( update_legacy_selection ) {
+        p.chatbin.mission_selected = next_selected;
+    }
+    return true;
+}
+
+bool reward_mission_for_character( npc &p, Character &u, mission *miss )
+{
+    const character_action_guard u_guard( u );
+    const character_action_guard p_guard( p );
+    if( !u_guard || !p_guard ||
+        !is_assigned_chatbin_mission_for( p, u.getID(), miss ) ||
+        miss->has_failed() || miss->generic_reward_claimed() ) {
+        return false;
+    }
+    const mission_selection_identity identity = identify_mission( miss );
+    const scoped_mission_operation_guard op_guard( identity );
+    if( !op_guard ) {
+        return false;
+    }
+    miss->commit_generic_reward_claim();
+    const int mission_value = miss->get_value();
+    p.opinion_of( u.getID() ).owed += mission_value;
+    if( &u == &get_avatar() ) {
+        npc_trading::trade( p, 0, _( "Reward" ) );
+    }
+    return true;
+}
+
+talk_function::teach_domain selected_training_domain( const dialogue &conversation, const npc &p )
+{
+    talk_function::teach_domain domain;
+    if( conversation.has_beta && conversation.const_actor( true )->has_chosen_training() ) {
+        const const_talker *actor = conversation.const_actor( true );
+        domain.skill = actor->chosen_training_skill();
+        domain.style = actor->chosen_training_style();
+        domain.spell = actor->chosen_training_spell();
+        domain.prof = actor->chosen_training_proficiency();
+    } else {
+        domain.skill = p.chatbin.skill;
+        domain.style = p.chatbin.style;
+        domain.spell = p.chatbin.dialogue_spell;
+        domain.prof = p.chatbin.proficiency;
+    }
+    return domain;
+}
+
+} // namespace
+
+void assign_selected_mission( dialogue &d )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    npc *p = resolve_dialogue_npc( d, true );
+    if( u == nullptr || p == nullptr || !d.has_beta ) {
+        return;
+    }
+    assign_mission_for_character( *p, *u, d.actor( true )->selected_mission(), &d );
+}
+
+void succeed_selected_mission( dialogue &d )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    npc *p = resolve_dialogue_npc( d, true );
+    if( u == nullptr || p == nullptr || !d.has_beta ) {
+        return;
+    }
+    succeed_mission_for_character( *p, *u, d.actor( true )->selected_mission(), &d );
+}
+
+void fail_selected_mission( dialogue &d )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    npc *p = resolve_dialogue_npc( d, true );
+    if( u == nullptr || p == nullptr || !d.has_beta ) {
+        return;
+    }
+    fail_mission_for_character( *p, *u, d.actor( true )->selected_mission(), &d );
+}
+
+void clear_selected_mission( dialogue &d )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    npc *p = resolve_dialogue_npc( d, true );
+    if( u == nullptr || p == nullptr || !d.has_beta ) {
+        return;
+    }
+    clear_mission_for_character( *p, *u, d.actor( true )->selected_mission(), &d );
+}
+
+void reward_selected_mission( dialogue &d )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    npc *p = resolve_dialogue_npc( d, true );
+    if( u == nullptr || p == nullptr || !d.has_beta ) {
+        return;
+    }
+    reward_mission_for_character( *p, *u, d.actor( true )->selected_mission() );
+}
+
+void add_mission_for_dialogue( dialogue &d, const mission_type_id &mission_id )
+{
+    if( !participants_live( d ) || !d.has_beta || !mission_id.is_valid() ) {
+        return;
+    }
+    d.actor( true )->add_mission( mission_id );
+    if( participants_live( d ) ) {
+        talk_effect_t::update_missions( d );
+    }
+}
+
+void finish_mission_by_type_for_dialogue( dialogue &d, const mission_type_id &mission_id,
+        const bool success, const int step )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    if( u == nullptr || !mission_id.is_valid() ) {
+        return;
+    }
+    const character_action_guard u_guard( *u );
+    if( !u_guard ) {
+        return;
+    }
+    const std::vector<mission *> missions = u->get_active_missions();
+    for( mission *miss : missions ) {
+        if( !is_live_mission( miss ) ||
+            miss->get_assigned_player_id() != u->getID() ||
+            miss->has_succeeded() || miss->has_failed() ||
+            miss->mission_id() != mission_id ) {
+            continue;
+        }
+        const mission_selection_identity identity = identify_mission( miss );
+        const scoped_mission_operation_guard op_guard( identity );
+        if( !op_guard ) {
+            return;
+        }
+        if( step >= 0 ) {
+            miss->step_complete( step );
+        } else if( success ) {
+            miss->wrap_up( *u );
+        } else {
+            miss->fail( *u );
+        }
+        break;
+    }
+    if( u_guard && participants_live( d ) ) {
+        talk_effect_t::update_missions( d );
+    }
+}
+
+void remove_active_mission_by_type_for_dialogue( dialogue &d, const mission_type_id &mission_id )
+{
+    Character *u = resolve_dialogue_character( d, false );
+    if( u == nullptr || !mission_id.is_valid() ) {
+        return;
+    }
+    const character_action_guard u_guard( *u );
+    if( !u_guard ) {
+        return;
+    }
+    const std::vector<mission *> missions = u->get_active_missions();
+    for( mission *miss : missions ) {
+        if( !is_live_mission( miss ) ||
+            miss->get_assigned_player_id() != u->getID() ||
+            miss->mission_id() != mission_id ) {
+            continue;
+        }
+        u->remove_active_mission( *miss );
+        break;
+    }
+    if( u_guard && participants_live( d ) ) {
+        talk_effect_t::update_missions( d );
+    }
+}
+
+void start_selected_training( dialogue &conversation )
+{
+    Character *student = resolve_dialogue_character( conversation, false );
+    npc *teacher = resolve_dialogue_npc( conversation );
+    if( !student || !teacher || student == teacher ) {
+        return;
+    }
+    talk_function::teach_domain domain = selected_training_domain( conversation, *teacher );
+    std::vector<Character *> students{ student };
+    talk_function::start_training_gen( *teacher, students, domain,
+                                       conversation.actor( true )->selected_mission() );
+    if( participants_live( conversation ) ) {
+        talk_effect_t::update_missions( conversation );
+    }
+}
+
+void start_selected_training_npc( dialogue &conversation )
+{
+    Character *teacher = resolve_dialogue_character( conversation, false );
+    npc *student = resolve_dialogue_npc( conversation );
+    if( !teacher || !student || teacher == student ) {
+        return;
+    }
+    talk_function::teach_domain domain = selected_training_domain( conversation, *student );
+    std::vector<Character *> students{ student };
+    talk_function::start_training_gen( *teacher, students, domain, nullptr );
+}
+
+void start_selected_training_seminar( dialogue &conversation )
+{
+    Character *student = resolve_dialogue_character( conversation, false );
+    npc *teacher = resolve_dialogue_npc( conversation );
+    if( !student || !teacher || student != &get_avatar() ) {
+        return;
+    }
+    talk_function::teach_domain domain = selected_training_domain( conversation, *teacher );
+    teacher->chatbin.store_chosen_training( domain.skill, domain.style, domain.spell,
+                                            domain.prof );
+    talk_function::start_training_seminar( *teacher );
+}
+
+} // namespace mission_dialogue
+
 void talk_function::nothing( npc & )
 {
 }
 
 void talk_function::assign_mission( npc &p )
 {
-    mission *miss = p.chatbin.mission_selected;
-    if( miss == nullptr ) {
-        debugmsg( "assign_mission: mission_selected == nullptr" );
-        return;
-    } else if( miss->is_assigned() ) {
-        DebugLog( D_WARNING, D_MAIN ) << "assign_mission: mission_id: " << miss->mission_id().str() <<
-                                      " is already assigned!";
-        return;
-    }
-    miss->assign( get_avatar() );
-    p.chatbin.missions_assigned.push_back( miss );
-    const auto it = std::find( p.chatbin.missions.begin(), p.chatbin.missions.end(), miss );
-    p.chatbin.missions.erase( it );
+    mission_dialogue::assign_mission_for_character(
+        p, get_player_character(), p.chatbin.mission_selected, nullptr );
 }
 
 void talk_function::mission_success( npc &p )
 {
-    mission *miss = p.chatbin.mission_selected;
-    if( miss == nullptr ) {
-        debugmsg( "mission_success: mission_selected == nullptr" );
-        return;
-    }
-
-    int miss_val = npc_trading::cash_to_favor( p, miss->get_value() );
-    npc_opinion op;
-    op.value = 1 + miss_val / 5;
-    op.anger = -1;
-    p.op_of_u += op;
-    faction *p_fac = p.get_faction();
-    if( p_fac != nullptr ) {
-        int fac_val = std::min( 1 + miss_val / 10, 10 );
-        p_fac->likes_u += fac_val;
-        p_fac->respects_u += fac_val;
-        p_fac->trusts_u += fac_val;
-        p_fac->power += fac_val;
-    }
-    miss->wrap_up();
+    mission_dialogue::succeed_mission_for_character(
+        p, get_player_character(), p.chatbin.mission_selected, nullptr );
 }
 
 void talk_function::mission_failure( npc &p )
 {
-    mission *miss = p.chatbin.mission_selected;
-    if( miss == nullptr ) {
-        debugmsg( "mission_failure: mission_selected == nullptr" );
-        return;
-    }
-    npc_opinion op;
-    op.trust = -1;
-    op.value = -1;
-    op.anger = 1;
-    p.op_of_u += op;
-    miss->fail();
+    mission_dialogue::fail_mission_for_character(
+        p, get_player_character(), p.chatbin.mission_selected, nullptr );
 }
 
 void talk_function::clear_mission( npc &p )
 {
-    mission *miss = p.chatbin.mission_selected;
-    if( miss == nullptr ) {
-        debugmsg( "clear_mission: mission_selected == nullptr" );
-        return;
-    }
-    const auto it = std::find( p.chatbin.missions_assigned.begin(), p.chatbin.missions_assigned.end(),
-                               miss );
-    if( it == p.chatbin.missions_assigned.end() ) {
-        debugmsg( "clear_mission: mission_selected not in assigned" );
-        return;
-    }
-    p.chatbin.missions_assigned.erase( it );
-    if( p.chatbin.missions_assigned.empty() ) {
-        p.chatbin.mission_selected = nullptr;
-    } else {
-        p.chatbin.mission_selected = p.chatbin.missions_assigned.front();
-    }
-    if( miss->has_follow_up() ) {
-        p.add_new_mission( mission::reserve_new( miss->get_follow_up(), p.getID() ) );
-        if( !p.chatbin.mission_selected ) {
-            p.chatbin.mission_selected = p.chatbin.missions.front();
-        }
-    }
+    mission_dialogue::clear_mission_for_character(
+        p, get_player_character(), p.chatbin.mission_selected, nullptr );
 }
 
 void talk_function::mission_reward( npc &p )
 {
-    const mission *miss = p.chatbin.mission_selected;
+    mission *miss = p.chatbin.mission_selected;
     if( miss == nullptr ) {
         debugmsg( "Called mission_reward with null mission" );
         return;
     }
-
-    int mission_value = miss->get_value();
-    p.op_of_u.owed += mission_value;
-    npc_trading::trade( p, 0, _( "Reward" ) );
+    mission_dialogue::reward_mission_for_character(
+        p, get_player_character(), miss );
 }
 
 void talk_function::buy_chicken( npc &p )
@@ -1603,23 +2108,41 @@ void talk_function::bionic_remove_allies( npc &p )
 
 void talk_function::give_equipment( npc &p )
 {
-    give_equipment_allowance( p, 0 );
+    give_equipment( p, get_player_character() );
+}
+
+void talk_function::give_equipment( npc &p, Character &u )
+{
+    give_equipment_allowance( p, u, 0 );
 }
 
 void talk_function::give_equipment_allowance( npc &p, int allowance )
 {
+    give_equipment_allowance( p, get_player_character(), allowance );
+}
+
+void talk_function::give_equipment_allowance( npc &p, Character &player_character, int allowance )
+{
+    npc_opinion &op = ( &player_character == &get_avatar() &&
+                        &p.opinion_of( player_character.getID() ) != &p.op_of_u &&
+                        p.opinion_of( player_character.getID() ).owed == 0 &&
+                        p.op_of_u.owed != 0 )
+                      ? p.op_of_u
+                      : p.opinion_of( player_character.getID() );
     std::vector<item_pricing> giving = npc_trading::init_selling( p );
     int chosen = -1;
     while( chosen == -1 && !giving.empty() ) {
         int index = rng( 0, giving.size() - 1 );
-        if( giving[index].price < p.op_of_u.owed + allowance ) {
+        if( giving[index].price < op.owed + allowance ) {
             chosen = index;
         } else {
             giving.erase( giving.begin() + index );
         }
     }
     if( giving.empty() ) {
-        popup( _( "%s has nothing to give!" ), p.get_name() );
+        if( &player_character == &get_avatar() ) {
+            popup( _( "%s has nothing to give!" ), p.get_name() );
+        }
         return;
     }
     if( chosen < 0 || static_cast<size_t>( chosen ) >= giving.size() ) {
@@ -1628,20 +2151,25 @@ void talk_function::give_equipment_allowance( npc &p, int allowance )
     }
     item it = *giving[chosen].loc.get_item();
     giving[chosen].loc.remove_item();
-    popup( _( "%1$s gives you a %2$s." ), p.get_name(), it.tname() );
-    Character &player_character = get_player_character();
+    if( &player_character == &get_avatar() ) {
+        popup( _( "%1$s gives you a %2$s." ), p.get_name(), it.tname() );
+    }
     it.set_owner( player_character );
     player_character.i_add( it );
     allowance -= giving[chosen].price;
     if( allowance < 0 ) {
-        p.op_of_u.owed += allowance;
+        op.owed += allowance;
     }
     p.add_effect( effect_asked_for_item, 3_hours );
 }
 
 void talk_function::lesser_give_aid( npc &p )
 {
-    Character &player_character = get_player_character();
+    lesser_give_aid( p, get_player_character() );
+}
+
+void talk_function::lesser_give_aid( npc &p, Character &player_character )
+{
     for( const bodypart_id &bp :
          player_character.get_all_body_parts( get_body_part_flags::only_main ) ) {
         player_character.heal( bp, rng( 5, 15 ) );
@@ -1656,9 +2184,13 @@ void talk_function::lesser_give_aid( npc &p )
 
 void talk_function::lesser_give_all_aid( npc &p )
 {
-    lesser_give_aid( p ); // Provide lesser aid to the player first
+    lesser_give_all_aid( p, get_player_character() );
+}
 
-    Character &player_character = get_player_character();
+void talk_function::lesser_give_all_aid( npc &p, Character &player_character )
+{
+    lesser_give_aid( p, player_character ); // Provide lesser aid to the player first
+
     for( npc &guy : g->all_npcs() ) {
         if( guy.is_walking_with() &&
             rl_dist( guy.pos_bub(), player_character.pos_bub() ) < pickup_range ) {
@@ -1677,7 +2209,11 @@ void talk_function::lesser_give_all_aid( npc &p )
 
 void talk_function::give_aid( npc &p )
 {
-    Character &player_character = get_player_character();
+    give_aid( p, get_player_character() );
+}
+
+void talk_function::give_aid( npc &p, Character &player_character )
+{
     for( const bodypart_id &bp :
          player_character.get_all_body_parts( get_body_part_flags::only_main ) ) {
         player_character.heal( bp, 5 * rng( 2, 5 ) );
@@ -1697,9 +2233,13 @@ void talk_function::give_aid( npc &p )
 
 void talk_function::give_all_aid( npc &p )
 {
-    give_aid( p ); // Provide aid to the player first
+    give_all_aid( p, get_player_character() );
+}
 
-    Character &player_character = get_player_character();
+void talk_function::give_all_aid( npc &p, Character &player_character )
+{
+    give_aid( p, player_character ); // Provide aid to the player first
+
     for( npc &guy : g->all_npcs() ) {
         if( guy.is_walking_with() &&
             rl_dist( guy.pos_bub(), player_character.pos_bub() ) < pickup_range ) {
@@ -1724,8 +2264,11 @@ void talk_function::give_all_aid( npc &p )
 
 void talk_function::repair_bionic_limbs( npc &p )
 {
-    Character &player_character = get_player_character();
+    repair_bionic_limbs( p, get_player_character() );
+}
 
+void talk_function::repair_bionic_limbs( npc &p, Character &player_character )
+{
     signed int price = 0;
 
     for( const bodypart_id &bp : player_character.get_all_body_parts(
@@ -1738,7 +2281,7 @@ void talk_function::repair_bionic_limbs( npc &p )
         add_msg( m_good, _( "You don't need any repairs…" ) );
         return;
     }
-    bool const ret = npc_trading::pay_npc( p, price );
+    bool const ret = npc_trading::pay_npc( p, player_character, price );
     if( !ret ) {
         return;
     }
@@ -1807,7 +2350,11 @@ void talk_function::barber_hair( npc &/*p*/ )
 
 void talk_function::buy_haircut( npc &p )
 {
-    Character &player_character = get_player_character();
+    buy_haircut( p, get_player_character() );
+}
+
+void talk_function::buy_haircut( npc &p, Character &player_character )
+{
     player_character.add_morale( morale_haircut, 5, 5, 720_minutes, 3_minutes );
     player_character.assign_activity( wait_npc_activity_actor( 20_minutes, p.get_name() ) );
     add_msg( m_good, _( "%s gives you a decent haircut…" ), p.get_name() );
@@ -1815,7 +2362,11 @@ void talk_function::buy_haircut( npc &p )
 
 void talk_function::buy_shave( npc &p )
 {
-    Character &player_character = get_player_character();
+    buy_shave( p, get_player_character() );
+}
+
+void talk_function::buy_shave( npc &p, Character &player_character )
+{
     player_character.add_morale( morale_shave, 10, 10, 360_minutes, 3_minutes );
     player_character.assign_activity( wait_npc_activity_actor( 5_minutes, p.get_name() ) );
     add_msg( m_good, _( "%s gives you a decent shave…" ), p.get_name() );
@@ -1823,7 +2374,11 @@ void talk_function::buy_shave( npc &p )
 
 void talk_function::morale_chat_activity( npc &p )
 {
-    Character &player_character = get_player_character();
+    morale_chat_activity( p, get_player_character() );
+}
+
+void talk_function::morale_chat_activity( npc &p, Character &player_character )
+{
     player_character.assign_activity( socialize_activity_actor( 10_minutes, p.getID() ) );
 }
 
@@ -1852,7 +2407,15 @@ void talk_function::drop_items_in_place( npc &p )
 
 void talk_function::follow( npc &p )
 {
+    follow( p, get_player_character() );
+}
+
+void talk_function::follow( npc &p, Character &u )
+{
     g->add_npc_follower( p.getID() );
+    if( avatar *av = u.as_avatar() ) {
+        av->follower_ids.insert( p.getID() );
+    }
     p.set_attitude( NPCATT_FOLLOW );
     p.set_fac( faction_your_followers );
     p.set_mission( NPC_MISSION_NULL );
@@ -1860,7 +2423,7 @@ void talk_function::follow( npc &p )
     p.guard_pos = std::nullopt;
     p.clear_ai_guard_pos();
     p.clear_committed_goal();
-    get_player_character().cash += p.cash;
+    u.cash += p.cash;
     p.cash = 0;
     if( !p.custom_profession.empty() ) {
         p.custom_profession.clear();
@@ -1967,7 +2530,11 @@ void talk_function::stranger_neutral( npc &p )
 
 bool talk_function::drop_stolen_item( item &cur_item, npc &p )
 {
-    Character &player_character = get_player_character();
+    return drop_stolen_item( cur_item, p, get_player_character() );
+}
+
+bool talk_function::drop_stolen_item( item &cur_item, npc &p, Character &player_character )
+{
     map &here = get_map();
     bool dropped = false;
     if( cur_item.is_old_owner( p ) ) {
@@ -1979,7 +2546,7 @@ bool talk_function::drop_stolen_item( item &cur_item, npc &p )
     } else if( cur_item.is_container() ) {
         bool changed = false;
         for( item *contained : cur_item.all_items_top() ) {
-            changed |= drop_stolen_item( *contained, p );
+            changed |= drop_stolen_item( *contained, p, player_character );
         }
         if( changed ) {
             dropped = true;
@@ -1991,10 +2558,14 @@ bool talk_function::drop_stolen_item( item &cur_item, npc &p )
 
 void talk_function::drop_stolen_item( npc &p )
 {
+    drop_stolen_item( p, get_player_character() );
+}
+
+void talk_function::drop_stolen_item( npc &p, Character &player_character )
+{
     bool dropped = false;
-    Character &player_character = get_player_character();
-    for( item *&elem : player_character.inv_dump() ) {
-        dropped |= drop_stolen_item( *elem, p );
+    for( item*&elem : player_character.inv_dump() ) {
+        dropped |= drop_stolen_item( *elem, p, player_character );
     }
     if( dropped ) {
         player_character.invalidate_weight_carried_cache();
@@ -2039,10 +2610,13 @@ void talk_function::drop_weapon( npc &p )
     get_map().add_item_or_charges( p.pos_bub(), weap );
 }
 
-void talk_function::player_weapon_away( npc &/*p*/ )
+void talk_function::player_weapon_away( npc &p )
 {
-    Character &player_character = get_player_character();
+    player_weapon_away( p, get_player_character() );
+}
 
+void talk_function::player_weapon_away( npc &/*p*/, Character &player_character )
+{
     std::optional<bionic *> bionic_weapon = player_character.find_bionic_by_uid(
             player_character.get_weapon_bionic_uid() );
     if( bionic_weapon ) {
@@ -2061,28 +2635,53 @@ void talk_function::drop_player_weapon( Character &player_character )
                  player_character.pos_bub( here ) );
 }
 
-void talk_function::player_weapon_drop( npc &/*p*/ )
+void talk_function::player_weapon_drop( npc &p )
 {
-    drop_player_weapon( get_player_character() );
+    player_weapon_drop( p, get_player_character() );
+}
+
+void talk_function::player_weapon_drop( npc &/*p*/, Character &player_character )
+{
+    drop_player_weapon( player_character );
 }
 
 void talk_function::lead_to_safety( npc &p )
 {
+    lead_to_safety( p, get_player_character() );
+}
+
+void talk_function::lead_to_safety( npc &p, Character &u )
+{
     mission *reach_safety_mission = mission::reserve_new( mission_MISSION_REACH_SAFETY,
                                     character_id() );
-    reach_safety_mission->assign( get_avatar() );
+    reach_safety_mission->assign( u );
     p.goal = reach_safety_mission->get_target();
     p.set_attitude( NPCATT_LEAD );
 }
 
-bool npc_trading::pay_npc( npc &np, int cost )
+bool npc_trading::pay_npc( npc &np, Character &payer, int cost )
 {
-    if( np.op_of_u.owed >= cost ) {
+    npc_opinion &op = np.opinion_of( payer.getID() );
+    if( op.owed >= cost ) {
+        op.owed -= cost;
+        return true;
+    }
+    if( &payer == &get_avatar() && &op != &np.op_of_u && np.op_of_u.owed >= cost ) {
         np.op_of_u.owed -= cost;
         return true;
     }
-
+    if( cost <= 0 && np.will_exchange_items_freely() ) {
+        return true;
+    }
+    if( &payer != &get_avatar() ) {
+        return false;
+    }
     return npc_trading::trade( np, cost, _( "Pay:" ) );
+}
+
+bool npc_trading::pay_npc( npc &np, int cost )
+{
+    return pay_npc( np, get_player_character(), cost );
 }
 
 namespace talk_function
@@ -2197,6 +2796,30 @@ void talk_function::start_training_seminar( npc &p )
 void talk_function::start_training_gen( Character &teacher, std::vector<Character *> &students,
                                         teach_domain &d )
 {
+    npc *provider = teacher.as_npc();
+    start_training_gen( teacher, students, d, provider ? provider->chatbin.mission_selected : nullptr );
+}
+
+void talk_function::start_training_gen( Character &teacher, std::vector<Character *> &students,
+                                        teach_domain &d, mission *reward_mission )
+{
+    const character_action_guard teacher_lifetime( teacher );
+    std::vector<character_action_guard> student_lifetimes;
+    for( Character *student : students ) {
+        if( !student ) {
+            return;
+        }
+        student_lifetimes.emplace_back( *student );
+    }
+    const auto participants_valid = [&]() {
+        return teacher_lifetime && std::all_of( student_lifetimes.begin(), student_lifetimes.end(),
+        []( const character_action_guard & lifetime ) {
+            return static_cast<bool>( lifetime );
+        } );
+    };
+    if( !participants_valid() ) {
+        return;
+    }
     int cost = 0;
     time_duration time = 0_turns;
     std::string name;
@@ -2204,11 +2827,11 @@ void talk_function::start_training_gen( Character &teacher, std::vector<Characte
     const matype_id &style = d.style;
     const spell_id &sp_id = d.spell;
     const proficiency_id &proficiency = d.prof;
-    bool player_is_student = false;
+    Character *patron = nullptr;
 
     for( Character *student : students ) {
         if( student->is_avatar() ) {
-            player_is_student = true;
+            patron = student;
         }
         int tmp_cost = 0;
         time_duration tmp_time = 0_turns;
@@ -2236,16 +2859,26 @@ void talk_function::start_training_gen( Character &teacher, std::vector<Characte
         time = std::max( time, tmp_time );
     }
 
-    if( !teacher.is_avatar() ) {
-        npc &p = static_cast<npc &>( teacher );
-        mission *miss = p.chatbin.mission_selected;
-        const character_id &pid = get_player_character().getID();
-        if( player_is_student && miss != nullptr &&
-            miss->get_assigned_player_id() == pid && miss->is_complete( pid ) ) {
-            clear_mission( p );
-        } else if( !npc_trading::pay_npc( p, cost ) ) {
+    if( patron == nullptr && !students.empty() ) {
+        patron = students.front();
+    }
+    if( npc *p = teacher.as_npc(); p != nullptr && patron != nullptr ) {
+        const bool reward = mission_dialogue::is_assigned_chatbin_mission_for(
+                                *p, patron->getID(), reward_mission ) &&
+                            !reward_mission->generic_reward_claimed() &&
+                            !reward_mission->has_failed() &&
+                            reward_mission->is_complete( p->getID(), *patron );
+        if( reward ) {
+            if( !mission_dialogue::clear_mission_for_character(
+                    *p, *patron, reward_mission, nullptr, false ) ) {
+                return;
+            }
+        } else if( !npc_trading::pay_npc( *p, *patron, cost ) ) {
             return;
         }
+    }
+    if( !participants_valid() ) {
+        return;
     }
     std::vector<character_id> student_ids;
     student_ids.reserve( students.size() );
@@ -2255,8 +2888,14 @@ void talk_function::start_training_gen( Character &teacher, std::vector<Characte
 
     const character_id teacher_id = teacher.getID();
     teacher.assign_activity( training_activity_actor( time, d, student_ids ) );
+    if( !participants_valid() ) {
+        return;
+    }
     teacher.add_effect( effect_asked_to_train, 6_hours );
     for( Character *student : students ) {
+        if( !participants_valid() ) {
+            return;
+        }
         student->assign_activity( training_activity_actor( time, d, teacher_id ) );
     }
 }

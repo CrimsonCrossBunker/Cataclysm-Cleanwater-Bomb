@@ -27,6 +27,7 @@
 #include "cata_small_literal_vector.h"
 #include "coordinates.h"
 #include "map_scale_constants.h"
+#include "map_view_cache_state.h"
 #include "creature.h"
 #include "tile_category.h"
 #include "cuboid_rectangle.h"
@@ -45,6 +46,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
+#include "view_snapshot.h"
 #include "weighted_list.h"
 
 #include "atlas_bake_plan.h"
@@ -1298,6 +1300,14 @@ class cata_tiles
         tile_lookup_frame *lookup_frame_ = nullptr;
         // Synchronous preparation boundary; owns buffers/workers, never world data.
         std::unique_ptr<tile_preparation::frame> preparation_;
+        // View-local working buffers; the map only supplies a change revision.
+        map_view_cache_state draw_cache_state_;
+        view_snapshot draw_points_cache_;
+        point_rel_ms prev_top_left_;
+        point_rel_ms prev_bottom_right_;
+        point prev_o_;
+        std::multimap<point, formatted_text> overlay_strings_cache_;
+        color_block_overlay_container color_blocks_cache_;
         // Platform-owned sprite descriptors are populated during mod loading.
         // Keep the bound descriptor revision alongside the renderer revisions so
         // a cached atlas cannot outlive a descriptor change.

@@ -21,6 +21,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -659,7 +660,7 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
     }
 }
 
-void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
+void flashbang( const tripoint_bub_ms &p, const Creature *immune, const int radius )
 {
 
     auto penalize_char = []( map & here, Character & guy, const tripoint_bub_ms & p,
@@ -715,16 +716,19 @@ void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
     }
 
     Character &you = get_player_character();
-    if( !player_immune && rl_dist( you.pos_bub(), p ) <= radius ) {
+    if( &you != immune && rl_dist( you.pos_bub(), p ) <= radius ) {
         penalize_char( here, you, p, radius );
     }
 
     for( npc &guy : g->all_npcs() ) {
-        penalize_char( here, guy, p, radius );
+        if( &guy != immune ) {
+            penalize_char( here, guy, p, radius );
+        }
     }
 
     for( monster &critter : g->all_monsters() ) {
-        if( critter.type->in_species( species_ROBOT ) || critter.has_flag( mon_flag_FLASHBANGPROOF ) ) {
+        if( &critter == immune || critter.type->in_species( species_ROBOT ) ||
+            critter.has_flag( mon_flag_FLASHBANGPROOF ) ) {
             continue;
         }
         // TODO: can the following code be called for all types of creatures
@@ -745,7 +749,7 @@ void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
 }
 
 void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int dam_mult,
-                bool ignore_player )
+                const Creature *immune )
 {
     draw_explosion( p, radius, c_blue );
 
@@ -753,7 +757,7 @@ void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int d
                    "misc", "shockwave" );
 
     for( monster &critter : g->all_monsters() ) {
-        if( critter.posz() != p.z() ) {
+        if( &critter == immune || critter.posz() != p.z() ) {
             continue;
         }
         if( rl_dist( critter.pos_bub(), p ) <= radius ) {
@@ -763,7 +767,9 @@ void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int d
     }
     // TODO: combine the two loops and the case for avatar using all_creatures()
     for( npc &guy : g->all_npcs() ) {
-        if( guy.posz() != p.z() ) {
+        if( &guy == immune || guy.posz() != p.z() ||
+            ( guy.is_player_controlled() && guy.has_trait( trait_LEG_TENT_BRACE ) &&
+              guy.is_barefoot() ) ) {
             continue;
         }
         if( rl_dist( guy.pos_bub(), p ) <= radius ) {
@@ -772,7 +778,7 @@ void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int d
         }
     }
     Character &player_character = get_player_character();
-    if( rl_dist( player_character.pos_bub(), p ) <= radius && !ignore_player &&
+    if( rl_dist( player_character.pos_bub(), p ) <= radius && &player_character != immune &&
         ( !player_character.has_trait( trait_LEG_TENT_BRACE ) ||
           !player_character.is_barefoot() ) ) {
         add_msg( m_bad, _( "You're caught in the shockwave!" ) );
@@ -892,33 +898,50 @@ void emp_blast( const tripoint_bub_ms &p )
             add_msg( _( "The %s is unaffected by the EMP blast." ), critter.name() );
         }
     }
-    if( player_character.pos_bub() == p ) {
-        if( player_character.get_power_level() > 0_kJ &&
-            !player_character.has_flag( json_flag_EMP_IMMUNE ) &&
-            !player_character.has_flag( json_flag_EMP_ENERGYDRAIN_IMMUNE ) ) {
-            add_msg( m_bad, _( "The EMP blast drains your power." ) );
-            int max_drain = ( player_character.get_power_level() > 1000_kJ ? 1000 : units::to_kilojoule(
-                                  player_character.get_power_level() ) );
-            player_character.mod_power_level( units::from_kilojoule( static_cast<std::int64_t>( -rng(
-                        1 + max_drain / 3, max_drain ) ) ) );
+    if( Character *affected = get_creature_tracker().creature_at<Character>( p ) ) {
+        const character_action_guard lifetime( *affected );
+        if( affected->get_power_level() > 0_kJ &&
+            !affected->has_flag( json_flag_EMP_IMMUNE ) &&
+            !affected->has_flag( json_flag_EMP_ENERGYDRAIN_IMMUNE ) ) {
+            affected->add_msg_player_or_npc( m_bad, _( "The EMP blast drains your power." ),
+                                             _( "The EMP blast drains <npcname>'s power." ) );
+            int max_drain = ( affected->get_power_level() > 1000_kJ ? 1000 : units::to_kilojoule(
+                                  affected->get_power_level() ) );
+            affected->mod_power_level( units::from_kilojoule( static_cast<std::int64_t>( -rng(
+                                           1 + max_drain / 3, max_drain ) ) ) );
         }
         // TODO: More effects?
         //e-handcuffs effects
-        item_location weapon = player_character.get_wielded_item();
+        item_location weapon = affected->get_wielded_item();
         if( weapon && weapon->typeId() == itype_e_handcuffs && weapon->charges > 0 ) {
             weapon->unset_flag( json_flag_NO_UNWIELD );
             weapon->charges = 0;
             weapon->active = false;
-            add_msg( m_good, _( "The %s on your wrists spark briefly, then release your hands!" ),
-                     weapon->tname() );
+            affected->add_msg_player_or_npc( m_good,
+                                             _( "The %s on your wrists spark briefly, then release your hands!" ),
+                                             _( "The %s on <npcname>'s wrists spark briefly, then release their hands!" ),
+                                             weapon->tname() );
         }
 
-        for( item_location &it : player_character.all_items_loc() ) {
+        for( item_location &it : affected->all_items_loc() ) {
+            if( !lifetime ) {
+                break;
+            }
+            if( !it ) {
+                continue;
+            }
             // Render any electronic stuff in player's possession non-functional
             if( it->has_flag( flag_ELECTRONIC ) && !it->is_broken() &&
-                !player_character.has_flag( json_flag_EMP_IMMUNE ) ) {
-                add_msg( m_bad, _( "The EMP blast fries your %s!" ), it->tname() );
+                !affected->has_flag( json_flag_EMP_IMMUNE ) ) {
+                affected->add_msg_player_or_npc( m_bad, _( "The EMP blast fries your %s!" ),
+                                                 _( "The EMP blast fries <npcname>'s %s!" ), it->tname() );
                 it->deactivate();
+                if( !lifetime ) {
+                    break;
+                }
+                if( !it ) {
+                    continue;
+                }
                 item &electronic_item = *it.get_item();
                 if( get_option<bool>( "GAME_EMP" ) ) {
                     electronic_item.set_fault( fault_emp_reboot );
