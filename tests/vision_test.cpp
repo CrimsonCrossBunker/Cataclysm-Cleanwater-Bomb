@@ -23,11 +23,13 @@
 #include "enums.h"
 #include "game.h"
 #include "game_constants.h"
+#include "line.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
 #include "map_test_case.h"
+#include "map_visibility.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
@@ -653,6 +655,80 @@ TEST_CASE( "unseen_light_sources_preserve_camera_clairvoyance_and_lazy_aiming",
     here.invalidate_visibility_cache();
     here.update_visibility_cache( 0 );
     CHECK( cache.visibility_cache[target.x()][target.y()] == expected );
+}
+
+TEST_CASE( "visibility_grid_preserves_ordered_point_queries_for_unseen_cells",
+           "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    const bool circular = GENERATE( false, true );
+    const bool aiming = GENERATE( false, true );
+    const int clairvoyance = GENERATE( 0, 7 );
+    CAPTURE( circular, aiming, clairvoyance );
+    restore_on_out_of_scope restore_distance( trigdist );
+    trigdist = circular;
+    on_out_of_scope restore_aim( [&]() {
+        you.last_target_pos.reset();
+        you.recoil = MAX_RECOIL;
+        you.aim_cache_dirty = true;
+    } );
+    you.last_target_pos = here.get_abs( tripoint_bub_ms( 64, 60, 0 ) );
+    you.recoil = aiming ? 0 : MAX_RECOIL;
+    const field_type_id clairvoyant = field_type_str_id( "fd_clairvoyant" );
+    REQUIRE( here.add_field( tripoint_bub_ms( 71, 59, 0 ), clairvoyant ) );
+    REQUIRE( here.add_field( tripoint_bub_ms( 72, 60, 0 ), clairvoyant ) );
+    visibility_variables variables = here.get_visibility_variables_cache();
+    variables.u_clairvoyance = clairvoyance;
+    variables.clairvoyance_field = clairvoyant;
+    level_cache &cache = here.access_cache( 0 );
+    // An empty view takes the supported owner-side field_at fallback.
+    cata::mdarray<const submap *, point_bub_sm> submaps = {};
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            cache.seen_cache[x][y] = ( x * 7 + y ) % 17 == 0 ? 1.0f : 0.0f;
+            cache.camera_cache[x][y] = ( x + y * 3 ) % 29 == 0 ? 0.5f : 0.0f;
+            cache.lm[x][y] = four_quadrants( ( x + y ) % 23 );
+            cache.sm[x][y] = ( x + y ) % 11 == 0 ? 10000.0f : 0.0f;
+        }
+    }
+    // The point query always evaluates distance. Compare the whole grid and
+    // exploration counts, retaining its x/y traversal and lazy aim/RNG effects.
+    cata::mdarray<lit_level, point_bub_ms> expected;
+    cata::mdarray<int, point_bub_sm> expected_seen = {};
+    you.aim_cache_dirty = true;
+    const auto rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            const lit_level light = here.apparent_light_at( tripoint_bub_ms( x, y, 0 ), variables );
+            expected[x][y] = light;
+            expected_seen[x / SEEX][y / SEEY] += light == lit_level::BRIGHT || light == lit_level::LIT;
+        }
+    }
+    const auto expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const bool expected_aim_dirty = you.aim_cache_dirty;
+    rng_get_engine() = rng_before;
+    you.aim_cache_dirty = true;
+    cata::mdarray<int, point_bub_sm> actual_seen = {};
+    rebuild_visibility_cache_grid( here, cache, 0, variables, submaps, actual_seen );
+    CHECK( rng_get_engine() == expected_rng );
+    CHECK( you.aim_cache_dirty == expected_aim_dirty );
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            CAPTURE( x, y );
+            CHECK( cache.visibility_cache[x][y] == expected[x][y] );
+        }
+    }
+    for( int x = 0; x < MAPSIZE; ++x ) {
+        for( int y = 0; y < MAPSIZE; ++y ) {
+            CHECK( actual_seen[x][y] == expected_seen[x][y] );
+        }
+    }
 }
 
 TEST_CASE( "visibility_grid_tracks_fields_across_submap_boundaries", "[vision][map][cache]" )
