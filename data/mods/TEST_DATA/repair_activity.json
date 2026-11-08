@@ -1,0 +1,36 @@
+[
+  {
+    "id": "test_owned_repair_tool",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "welder",
+    "name": { "str": "test repair tool" },
+    "description": "A deterministic repair tool for activity ownership and resource tests.",
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "battery": 1000 } } ],
+    "use_action": [
+      {
+        "type": "repair_item",
+        "item_action_type": "repair_metal",
+        "materials": [ "steel", "lc_steel_chain" ],
+        "skill": "fabrication",
+        "tool_quality": 1000,
+        "cost_scaling": 0,
+        "move_cost": 100
+      }
+    ]
+  },
+  {
+    "id": "test_owned_multimag_repair_tool",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "test_owned_repair_tool",
+    "name": { "str": "test multimag repair tool" },
+    "description": "A repair tool which consumes vehicle fuel and battery power together.",
+    "charges_per_use": 0,
+    "pocket_data": [
+      { "id": "fuel", "pocket_type": "MAGAZINE", "rigid": true, "watertight": true, "ammo_restriction": { "gasoline": 50 } },
+      { "id": "power", "pocket_type": "MAGAZINE", "ammo_restriction": { "battery": 1000 } }
+    ],
+    "firing_requirements": { "DEFAULT": [ { "pocket": "fuel", "qty": 5 }, { "pocket": "power", "qty": 2 } ] }
+  }
+]

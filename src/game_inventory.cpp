@@ -2359,7 +2359,7 @@ class repair_inventory_preset: public inventory_selector_preset
 
             append_cell( [actor, &you]( const item_location & loc ) {
                 const int level = you.get_skill_level( actor->used_skill );
-                const repair_item_actor::repair_type action_type = actor->default_action( *loc, level );
+                const repair_item_actor::repair_type action_type = actor->default_action( you, *loc, level );
                 const std::pair<float, float> chance = actor->repair_chance( you, *loc, action_type );
                 return colorize( string_format( "%0.1f%%", 100.0f * chance.first ),
                                  chance.first == 0 ? c_yellow : ( chance.second == 0 ? c_light_green : c_unset ) );
@@ -2368,7 +2368,7 @@ class repair_inventory_preset: public inventory_selector_preset
 
             append_cell( [actor, &you]( const item_location & loc ) {
                 const int level = you.get_skill_level( actor->used_skill );
-                const repair_item_actor::repair_type action_type = actor->default_action( *loc, level );
+                const repair_item_actor::repair_type action_type = actor->default_action( you, *loc, level );
                 const std::pair<float, float> chance = actor->repair_chance( you, *loc, action_type );
                 return colorize( string_format( "%0.1f%%", 100.0f * chance.second ),
                                  chance.second > chance.first ? c_yellow : ( chance.second == 0 &&
