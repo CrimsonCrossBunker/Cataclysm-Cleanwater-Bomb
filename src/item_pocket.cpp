@@ -48,6 +48,7 @@
 #include "material.h"
 #include "math_defines.h"
 #include "messages.h"
+#include "options.h"
 #include "output.h"
 #include "path_info.h"
 #include "string_formatter.h"
@@ -2264,7 +2265,8 @@ int item_pocket::fill_with( const item &contained, Character &guy, int amount,
     if( !contained.count_by_charges() || amount <= 0 ) {
         return 0;
     }
-    if( !ignore_settings && !settings.accepts_item( contained ) ) {
+    if( !ignore_settings && ( !settings.accepts_item( contained ) ||
+                              ( guy.is_avatar() && settings.is_disabled() ) ) ) {
         return 0;
     }
     if( !allow_unseal && sealed() ) {
@@ -2380,10 +2382,12 @@ std::pair<item_location, item_pocket *> item_pocket::best_pocket_in_contents(
     const bool allow_sealed, const bool ignore_settings )
 {
     std::pair<item_location, item_pocket *> ret( this_loc, nullptr );
+    const Character *carrier = this_loc ? this_loc.carrier() : nullptr;
     // If the current pocket has restrictions or blacklists the item or is a holster,
     // try the nested pocket regardless of whether it's soft or rigid.
     const bool ignore_rigidity =
         !settings.accepts_item( it ) ||
+        ( !ignore_settings && carrier && carrier->is_avatar() && settings.is_disabled() ) ||
         !get_pocket_data()->get_flag_restrictions().empty() ||
         settings.priority() > 0 || is_holster();
 
@@ -2696,7 +2700,7 @@ bool item_pocket::favorite_settings::is_null() const
 {
     return item_whitelist.empty() && item_blacklist.empty() &&
            category_whitelist.empty() && category_blacklist.empty() &&
-           priority() == 0 && !collapsed && !disabled && unload;
+           priority() == 0 && !collapsed && !disabled.has_value() && unload;
 }
 
 void item_pocket::favorite_settings::whitelist_item( const itype_id &id )
@@ -2810,7 +2814,7 @@ void item_pocket::favorite_settings::clear_category( const item_category_id &id 
 bool item_pocket::favorite_settings::accepts_item( const item &it ) const
 {
     // if this pocket is disabled it accepts nothing
-    if( disabled ) {
+    if( disabled.value_or( false ) ) {
         return false;
     }
     const itype_id &id = it.typeId();
@@ -2867,7 +2871,7 @@ void item_pocket::favorite_settings::set_collapse( bool flag )
 
 bool item_pocket::favorite_settings::is_disabled() const
 {
-    return disabled;
+    return disabled.has_value() ? *disabled : get_option<bool>( "AUTO_INSERT_POCKETS_DISABLED" );
 }
 
 void item_pocket::favorite_settings::set_disabled( bool flag )
@@ -2917,7 +2921,7 @@ static std::string enumerate( const cata::flat_set<T> &container )
 
 void item_pocket::favorite_settings::info( std::vector<iteminfo> &info ) const
 {
-    if( disabled ) {
+    if( is_disabled() ) {
         info.emplace_back( "BASE", string_format(
                                _( "Items <bad>won't be inserted</bad> into this pocket unless you manually insert them." ) ) );
     }
@@ -3006,4 +3010,14 @@ bool pocket_constraint::operator==( const pocket_constraint &o ) const
 bool pocket_constraint::operator!=( const pocket_constraint &o ) const
 {
     return !( *this == o );
+}
+
+void item_pocket::release_current_nodes( std::list<item> &nodes )
+{
+    nodes.splice( nodes.end(), contents );
+}
+
+void item_pocket::reuse_current_nodes( std::list<item> &nodes )
+{
+    item::reuse_current_nodes( nodes, contents );
 }

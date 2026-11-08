@@ -3,6 +3,7 @@
 #define CATA_SRC_ACTIVITY_ACTOR_H
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -68,6 +69,12 @@ class activity_actor
          */
         virtual void finish( player_activity &act, Character &who ) = 0;
 
+        // Elapsed work can still require its owner's input. Defer completion
+        // hooks as well as finish(), so waiting/retries never replay callbacks.
+        virtual bool ready_to_finish() const {
+            return true;
+        }
+
         /**
          * Called just before Character::cancel_activity() executes.
          * This may be used to perform cleanup
@@ -99,6 +106,13 @@ class activity_actor
             if( other.get_type() == get_type() ) {
                 set_resume_values_internal( other, who );
             }
+        }
+
+        // Actors which rescale work when switching tools publish the new value
+        // before resume callbacks run. Frontends must not patch activity progress
+        // after a callback may have replaced that activity.
+        virtual std::optional<int> remaining_moves_on_resume() const {
+            return std::nullopt;
         }
 
         /**

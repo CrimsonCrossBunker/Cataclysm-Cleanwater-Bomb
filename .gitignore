@@ -260,3 +260,9 @@ VERSION.txt
 *.replay
 build-tracy/
 tests/objwin/tiles/pch/tests-pch.hpp.gch
+
+# Co-op runtime build products
+/rust/coop_ecs/target/
+/coop-rust/
+/libccb_bevy_ecs_coop.so
+/libccb_bevy_ecs_coop.dylib

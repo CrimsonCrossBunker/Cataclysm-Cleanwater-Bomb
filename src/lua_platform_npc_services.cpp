@@ -42,6 +42,7 @@ extern "C" {
 #include "lua_platform_items.h"
 #include "lua_platform_missions.h"
 #include "mission.h"
+#include "mission_dialogue.h"
 #include "npc.h"
 #include "npctalk.h"
 #include "npctrade.h"
@@ -683,11 +684,11 @@ sol::table get_npc_mission_available_count(
     if( provider == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    // Native talker_npc_const::available_missions returns this raw vector;
-    // its count includes entries omitted from the bounded live-item snapshot.
+    // Match native dialogue filtering: retired, foreign and already assigned
+    // entries must not appear as available tasks.
     return make_game_value_result(
                state, sol::make_object(
-                   state, provider->chatbin.missions.size() ) );
+                   state, mission_dialogue::filter_available_missions( *provider ).size() ) );
 }
 
 sol::table get_npc_mission_selected_condition(

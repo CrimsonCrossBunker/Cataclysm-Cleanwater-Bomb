@@ -99,8 +99,8 @@ void explosion( const Creature *source, map *here, const tripoint_bub_ms &p,
 void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
                       const explosion_data &ex );
 
-/** Triggers a flashbang explosion at p. */
-void flashbang( const tripoint_bub_ms &p, bool player_immune = false, int radius = 8 );
+/** Triggers a flashbang at p, optionally sparing one explicit creature. */
+void flashbang( const tripoint_bub_ms &p, const Creature *immune = nullptr, int radius = 8 );
 /** Triggers a resonance cascade at p. */
 void resonance_cascade( const tripoint_bub_ms &p );
 /** Triggers a scrambler blast at p. */
@@ -109,9 +109,9 @@ void scrambler_blast( const tripoint_bub_ms &p );
 void emp_blast( const tripoint_bub_ms &p );
 // shockwave applies knockback to all targets within radius of p
 // parameters force, stun, and dam_mult are passed to knockback()
-// ignore_player determines if player is affected, useful for bionic, etc.
+// immune identifies the protected activator, independently of the local view.
 void shockwave( const tripoint_bub_ms &p, int radius, int force, int stun, int dam_mult,
-                bool ignore_player );
+                const Creature *immune = nullptr );
 
 void draw_explosion( const tripoint_bub_ms &p, int radius, const nc_color &col );
 // \p epicenter, when provided, is the true blast origin (reality-bubble coords);

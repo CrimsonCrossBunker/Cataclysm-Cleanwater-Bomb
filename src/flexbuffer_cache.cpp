@@ -1,5 +1,7 @@
 #include "flexbuffer_cache.h"
 
+#include "json_loader_buffer.h"
+
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -236,6 +238,26 @@ struct string_flexbuffer : parsed_flexbuffer {
 
     private:
         std::string source_;
+};
+
+struct owned_buffer_flexbuffer : parsed_flexbuffer {
+    owned_buffer_flexbuffer( std::shared_ptr<flexbuffer_storage> storage,
+                             std::shared_ptr<const char[]> source ) :
+        parsed_flexbuffer( std::move( storage ) ), source_( std::move( source ) ) {}
+
+    bool is_stale() const override {
+        return false;
+    }
+    std::filesystem::path get_source_path() const noexcept override {
+        return {};
+    }
+    std::unique_ptr<std::istream> get_source_stream() const override {
+        // Copy only for error reporting; normal map loading keeps the original
+        // allocation and its resource reservation until parsing has finished.
+        return std::make_unique<std::istringstream>( std::string( source_.get() ) );
+    }
+
+    std::shared_ptr<const char[]> source_;
 };
 } // namespace
 
@@ -516,4 +538,17 @@ std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::parse_buffer( std::string b
     std::vector<uint8_t> fb = parse_json_to_flexbuffer_( buffer.c_str(), nullptr );
     auto storage = std::make_shared<flexbuffer_vector_storage>( std::move( fb ) );
     return std::make_shared<string_flexbuffer>( std::move( storage ), std::move( buffer ) );
+}
+
+JsonValue json_from_owned_buffer( std::shared_ptr<const char[]> buffer )
+{
+    if( !buffer ) {
+        throw JsonError( "Cannot parse a null source buffer" );
+    }
+    std::vector<uint8_t> fb = parse_json_to_flexbuffer_( buffer.get(), nullptr );
+    auto storage = std::make_shared<flexbuffer_vector_storage>( std::move( fb ) );
+    auto parsed = std::make_shared<owned_buffer_flexbuffer>( std::move( storage ),
+        std::move( buffer ) );
+    flexbuffers::Reference root = flexbuffer_root_from_storage( parsed->get_storage() );
+    return JsonValue( std::move( parsed ), root, nullptr, 0 );
 }

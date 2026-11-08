@@ -580,6 +580,11 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                            proj.shot_spread, spread, max_spread,
                            target_arg.to_string_writable(), target_c.to_string_writable() );
         }
+        const auto boundary = std::find_if( t_copy.begin(), t_copy.end(), [here](
+        const tripoint_bub_ms & point ) {
+            return !here->inbounds( point );
+        } );
+        t_copy.erase( boundary, t_copy.end() );
         // Range can be 0
         size_t traj_len = t_copy.size();
         while( traj_len > 0 && rl_dist( source, t_copy[traj_len - 1] ) > proj_arg.range ) {
@@ -595,14 +600,10 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         // momentum, or obstacle). Used to clip the drawn flight line so a stopped
         // shot doesn't render a tracer all the way to max range (the "infinite
         // penetration" look). Defaults to the full length; narrowed on stop.
-        size_t stop_idx = traj_len;
+        size_t stop_idx = traj_len > 0 ? traj_len - 1 : 0;
 
         for( size_t i = 1; i < traj_len && ( has_momentum || stream ); ++i ) {
             tp = t_copy[i];
-            if( !here->inbounds( tp ) ) {
-                debugmsg( "Shot along %s out-of-bounds", tp.to_string() );
-                break;
-            }
             int distance = rl_dist( source, tp );
             // no spread at point-blank, skip point-blank calculate
             if( !first && distance <= 1 ) {

@@ -8,6 +8,7 @@
 #include "type_id.h"
 
 class map;
+class mongroup;
 class monster;
 class submap;
 class time_point;
@@ -25,6 +26,9 @@ class map_meddler
 {
     public:
         static bool has_altered_submaps( map &m );
+        static void spawn_monsters_submap_group( map &m, const tripoint_rel_sm &p, mongroup &group,
+                bool ignore_sight );
+        static void set_abs_sub( map &m, const tripoint_abs_sm &p );
         static submap *unsafe_get_submap_at( tripoint_bub_ms &p, point_sm_ms &l );
         static submap *get_submap_at_grid( map &m, const tripoint_rel_sm &p );
 };

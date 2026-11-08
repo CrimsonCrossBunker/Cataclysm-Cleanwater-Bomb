@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:bc45b19eb51d00f10a6e3a6ee8109cfc521edba6dc6820d11df90aa5aa22cd52",
+    "source_fingerprint": "sha256:0e4de28601edccdd96860b828e5efaf395cc27535350fcb41dcf8857e29163c7",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6840,
-    "top_level_objects": 95406,
+    "tracked_json_files": 6844,
+    "top_level_objects": 95427,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15220,
+        "occurrences": 15224,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -1071,7 +1071,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 208,
+        "occurrences": 211,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.J/player_activities.json",
@@ -3216,7 +3216,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1688,
+        "occurrences": 1692,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -3299,7 +3299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5826
+            "line": 5827
           }
         ],
         "confidence": "lexical_only"
@@ -3766,7 +3766,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5364
+            "line": 5365
           }
         ],
         "confidence": "lexical_only"
@@ -5030,7 +5030,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 58,
+        "occurrences": 59,
         "examples": [
           {
             "path": "data/json/martialarts.json",
@@ -9633,11 +9633,11 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 352,
+        "occurrences": 360,
         "examples": [
           {
-            "path": "data/json/martialarts_fictional.json",
-            "pointer": "/7"
+            "path": "data/json/martial_grappling.json",
+            "pointer": "/4"
           }
         ],
         "contract_roots": [
@@ -9834,7 +9834,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5561
+            "line": 5562
           }
         ],
         "confidence": "lexical_only"
@@ -11147,7 +11147,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1469,
+        "occurrences": 1470,
         "examples": [
           {
             "path": "data/json/ui/activity.json",

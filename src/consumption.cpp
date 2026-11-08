@@ -1,3 +1,5 @@
+#include "character_action_guard.h"
+#include "item_consumption.h"
 #include <player_activity.h>
 #include <algorithm>
 #include <array>
@@ -318,7 +320,7 @@ static std::map<vitamin_id, int> compute_default_effective_vitamins(
     }
     for( std::pair<const vitamin_id, int> &vit : res ) {
         vit.second = you.enchantment_cache->modify_value( enchant_vals::mod::VITAMIN_ABSORB_MOD,
-            vit.second );
+                     vit.second );
         vit.second = std::max( 0, vit.second );
     }
     return res;
@@ -813,7 +815,7 @@ float Character::metabolic_rate_base() const
     static const std::string hunger_rate_string( "PLAYER_HUNGER_RATE" );
     float hunger_rate = get_option< float >( hunger_rate_string );
     const float final_hunger_rate = enchantment_cache->modify_value( enchant_vals::mod::METABOLISM,
-        hunger_rate );
+                                    hunger_rate );
     return std::clamp( final_hunger_rate, 0.0f, std::numeric_limits<float>::max() );
 }
 
@@ -836,7 +838,7 @@ float Character::metabolic_rate() const
     // Penalize fast survivors
     // TODO: Have cold temperature increase, not decrease, metabolism
     const float effective_hunger = ( get_hunger() + get_starvation() ) * 100.0f / std::max( 50,
-        get_speed() );
+                                   get_speed() );
     const float modifier = multi_lerp( thresholds, effective_hunger );
 
     return modifier * metabolic_rate_base();
@@ -915,7 +917,7 @@ ret_val<edible_rating> Character::can_eat( const item &food ) const
     if( edible || drinkable ) {
         // Consumption EOCs run too late to refuse the food without ingesting it.
         if( food.has_flag( json_flag_MARLOSS ) ) {
-            if( is_npc() ) {
+            if( is_npc() && !is_player_controlled() ) {
                 return ret_val<edible_rating>::make_failure( _( "That doesn't look edible to you." ) );
             }
             if( has_trait( trait_MARLOSS_AVOID ) ) {
@@ -954,7 +956,7 @@ ret_val<edible_rating> Character::can_eat( const item &food ) const
             return ret_val<edible_rating>::make_failure( _( "You cannot use that while shapeshifted." ) );
         }
         const consume_drug_iuse *consume_drug_use = dynamic_cast<const consume_drug_iuse *>
-            ( consume_drug->get_actor_ptr() );
+                ( consume_drug->get_actor_ptr() );
         for( const auto &tool : consume_drug_use->tools_needed ) {
             const bool has = item::count_by_charges( tool.first )
                              ? has_charges( tool.first, ( tool.second == -1 ) ? 1 : tool.second )
@@ -1242,7 +1244,7 @@ static bool eat( item &food, Character &you, bool force )
             !you.has_trait( trait_SAPROVORE ) ) {
             const std::string tname = food.tname( 1,
                                                   tname::segment_bitset( tname::default_tname_bits & ~( 1ULL << static_cast<size_t>
-                                                      ( tname::segments::FOOD_STATUS ) ) ) );
+                                                          ( tname::segments::FOOD_STATUS ) ) ) );
 
             add_msg( m_bad, _( "Ick, this %s (rotten) doesn't taste so good…" ), tname );
             add_msg( _( "You drink your %s (rotten)." ), tname );
@@ -1255,7 +1257,7 @@ static bool eat( item &food, Character &you, bool force )
             !you.has_trait( trait_SAPROVORE ) ) {
             const std::string tname = food.tname( 1,
                                                   tname::segment_bitset( tname::default_tname_bits & ~( 1ULL << static_cast<size_t>
-                                                      ( tname::segments::FOOD_STATUS ) ) ) );
+                                                          ( tname::segments::FOOD_STATUS ) ) ) );
             add_msg( m_bad, _( "Ick, this %s (rotten) doesn't taste so good…" ), tname );
             add_msg( _( "You eat your %s (rotten)." ), tname );
         } else {
@@ -1273,7 +1275,7 @@ static bool eat( item &food, Character &you, bool force )
         you.get_power_level() > units::from_kilojoule( static_cast<std::int64_t>( std::abs(
                     food.get_comestible_fun() ) ) ) ) {
         you.mod_power_level( units::from_kilojoule( static_cast<std::int64_t>
-                ( food.get_comestible_fun() ) ) );
+                             ( food.get_comestible_fun() ) ) );
     }
 
     if( food.has_flag( flag_FUNGAL_VECTOR ) && !you.has_trait( trait_M_IMMUNE ) ) {
@@ -1784,7 +1786,7 @@ bool Character::consume_effects( item &food )
     }
     // Moved here and changed a bit - it was too complex
     // Incredibly minor stuff like this shouldn't require complexity
-    if( !is_npc() && has_trait( trait_SLIMESPAWNER ) &&
+    if( ( !is_npc() || is_player_controlled() ) && has_trait( trait_SLIMESPAWNER ) &&
         ( get_healthy_kcal() < get_stored_kcal() + 4000 &&
           get_thirst() - stomach.get_water() / 5_ml < -20 ) && get_thirst() < 40 ) {
         add_msg_if_player( m_mixed,
@@ -1906,19 +1908,19 @@ time_duration Character::get_consume_time( const item &it ) const
         volume = units::to_milliliter( it.type->volume );
     }
     time_duration time = time_duration::from_seconds( std::max( ( volume /
-        5 ), 1 ) );  //Default 5 mL (1 tablespoon) per second
+                         5 ), 1 ) );  //Default 5 mL (1 tablespoon) per second
     float consume_time_modifier = 1.0f;//only for food and drinks
     const bool eat_verb = it.has_flag( flag_USE_EAT_VERB );
     const std::string comest_type = it.get_comestible() ? it.get_comestible()->comesttype : "";
     if( eat_verb || comest_type == "FOOD" ) {
         time = time_duration::from_seconds( volume / 5 ); //Eat 5 mL (1 teaspoon) per second
         consume_time_modifier = enchantment_cache->modify_value( enchant_vals::mod::CONSUME_TIME_MOD,
-            consume_time_modifier );
+                                consume_time_modifier );
         consume_time_modifier *= get_modifier( character_modifier_solid_consume_mod );
     } else if( !eat_verb && comest_type == "DRINK" ) {
         time = time_duration::from_seconds( volume / 15 ); //Drink 15 mL (1 tablespoon) per second
         consume_time_modifier = enchantment_cache->modify_value( enchant_vals::mod::CONSUME_TIME_MOD,
-            consume_time_modifier );
+                                consume_time_modifier );
         consume_time_modifier *= get_modifier( character_modifier_liquid_consume_mod );
     } else if( use_function const *fun = it.type->get_use( "heal" ) ) {
         time = time_duration::from_moves( dynamic_cast<heal_actor const *>
@@ -1929,7 +1931,7 @@ time_duration Character::get_consume_time( const item &it ) const
         const use_function *adrenaline_injector = it.type->get_use( "ADRENALINE_INJECTOR" );
         if( consume_drug != nullptr ) { //its a drug
             const consume_drug_iuse *consume_drug_use = dynamic_cast<const consume_drug_iuse *>
-                ( consume_drug->get_actor_ptr() );
+                    ( consume_drug->get_actor_ptr() );
             if( consume_drug_use->tools_needed.find( itype_syringe ) != consume_drug_use->tools_needed.end() &&
                 has_bionic( bio_syringe ) ) {
                 time = time_duration::from_seconds(
@@ -1954,9 +1956,9 @@ time_duration Character::get_consume_time( const item &it ) const
         }
     } else if( it.get_category_shallow().get_id() == item_category_chems ) {
         time = time_duration::from_seconds( std::max( ( volume / 15 ),
-            1 ) ); //Consume 15 mL (1 tablespoon) per second
+                                            1 ) ); //Consume 15 mL (1 tablespoon) per second
         consume_time_modifier = enchantment_cache->modify_value( enchant_vals::mod::CONSUME_TIME_MOD,
-            consume_time_modifier );
+                                consume_time_modifier );
         consume_time_modifier *=  it.made_of_from_type( phase_id::LIQUID ) ?
                                   get_modifier( character_modifier_liquid_consume_mod ) :
                                   get_modifier( character_modifier_solid_consume_mod );
@@ -1968,7 +1970,7 @@ time_duration Character::get_consume_time( const item &it ) const
     return time * consume_time_modifier;
 }
 
-static bool query_consume_ownership( item &target, Character &p )
+bool query_consumption_ownership( const item &target, Character &p )
 {
     if( !target.is_owned_by( p, true ) ) {
         const std::string thief_mode = p.get_value( "THIEF_MODE" ).str();
@@ -1986,7 +1988,6 @@ static bool query_consume_ownership( item &target, Character &p )
                 return false;
             }
         }
-        g->on_witness_theft( target );
     }
     return true;
 }
@@ -2061,8 +2062,10 @@ static bool consume_med( item &target, Character &you )
     return true;
 }
 
-trinary Character::consume( item &target, bool force )
+trinary Character::consume( item &target, bool force, bool ownership_confirmed )
 {
+    const character_action_guard lifetime( *this );
+    const auto target_lifetime = target.get_safe_reference();
     if( target.is_null() ) {
         add_msg_if_player( m_info, _( "You don't have that item." ) );
         return trinary::NONE;
@@ -2079,31 +2082,55 @@ trinary Character::consume( item &target, bool force )
         }
         return trinary::NONE;
     }
-    if( is_avatar() && !query_consume_ownership( target, *this ) ) {
+    if( is_avatar() && !ownership_confirmed && !query_consumption_ownership( target, *this ) ) {
+        return trinary::NONE;
+    }
+    if( !lifetime || !target_lifetime ) {
+        return trinary::NONE;
+    }
+    if( ( is_avatar() || ownership_confirmed ) && !target.is_owned_by( *this, true ) ) {
+        g->on_witness_theft( target, *this );
+    }
+    if( !lifetime || !target_lifetime ) {
         return trinary::NONE;
     }
 
-    if( consume_med( target, *this ) || eat( target, *this, force ) ) {
-
-        get_event_bus().send<event_type::character_consumes_item>( getID(), target.typeId() );
-
-        invalidate_weight_carried_cache();
-        target.on_contents_changed();
-        return !target.count_by_charges() || target.charges <= 0 ? trinary::ALL : trinary::SOME;
+    bool consumed = consume_med( target, *this );
+    if( !consumed && lifetime && target_lifetime ) {
+        consumed = eat( target, *this, force );
+    }
+    if( consumed ) {
+        trinary result = !target_lifetime || !target.count_by_charges() || target.charges <= 0 ?
+                         trinary::ALL : trinary::SOME;
+        if( lifetime && target_lifetime ) {
+            get_event_bus().send<event_type::character_consumes_item>( getID(), target.typeId() );
+        }
+        if( lifetime && target_lifetime ) {
+            invalidate_weight_carried_cache();
+            target.on_contents_changed();
+        }
+        if( target_lifetime ) {
+            result = !target.count_by_charges() || target.charges <= 0 ? trinary::ALL : trinary::SOME;
+        }
+        return result;
     }
 
     return trinary::NONE;
 }
 
-trinary Character::consume( item_location loc, bool force )
+trinary Character::consume( item_location loc, bool force, bool ownership_confirmed )
 {
+    const character_action_guard lifetime( *this );
     if( !loc ) {
         debugmsg( "Null loc to consume." );
         return trinary::NONE;
     }
     contents_change_handler handler;
     item &target = *loc;
-    trinary result = consume( target, force );
+    trinary result = consume( target, force, ownership_confirmed );
+    if( !lifetime || !loc ) {
+        return result;
+    }
     if( result != trinary::NONE ) {
         handler.unseal_pocket_containing( loc );
     }
@@ -2114,6 +2141,8 @@ trinary Character::consume( item_location loc, bool force )
             loc.remove_item();
         }
     }
-    handler.handle_by( *this );
+    if( lifetime ) {
+        handler.handle_by( *this );
+    }
     return result;
 }

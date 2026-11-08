@@ -233,6 +233,7 @@ struct bionic {
 
         int get_quality( const quality_id &quality ) const;
         item get_weapon() const;
+        const item &weapon_view() const;
         void set_weapon( const item &new_weapon );
         bool install_weapon( const item &new_weapon, bool skip_checks = false );
         std::optional<item> uninstall_weapon();

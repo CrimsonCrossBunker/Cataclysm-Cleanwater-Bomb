@@ -7,6 +7,7 @@
 #include "calendar.h"
 #include "coords_fwd.h"
 #include "messages.h"
+#include "message_routing.h"
 
 class Creature;
 class JsonObject;
@@ -28,6 +29,7 @@ class window;
  */
 
 static std::vector<std::pair<std::string, std::string>> messages;
+static std::vector<std::optional<player_id>> excluded_owners;
 
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages( size_t count )
 {
@@ -49,15 +51,36 @@ void Messages::add_msg( std::string m )
 {
     if( !m.empty() ) {
         messages.emplace_back( to_string_time_of_day( calendar::turn ), std::move( m ) );
+        excluded_owners.emplace_back();
     }
 }
 void Messages::add_msg( const game_message_params &, std::string m )
 {
     add_msg( std::move( m ) );
 }
+void Messages::add_observer_msg( const game_message_params &params, std::string message,
+                                 const std::optional<player_id> &owner )
+{
+    if( !message.empty() ) {
+        Messages::add_msg( params, std::move( message ) );
+        excluded_owners.back() = owner;
+    }
+}
+std::vector<std::pair<std::string, std::string>> Messages::recent_messages_for_player(
+            size_t count, const player_id &recipient )
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    for( size_t i = messages.size() - std::min( count, messages.size() ); i < messages.size(); ++i ) {
+        if( !excluded_owners[i] || !( *excluded_owners[i] == recipient ) ) {
+            result.push_back( messages[i] );
+        }
+    }
+    return result;
+}
 void Messages::clear_messages()
 {
     messages.clear();
+    excluded_owners.clear();
 }
 void Messages::deactivate() {}
 size_t Messages::size()

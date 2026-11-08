@@ -1,5 +1,9 @@
 #include "mongroup.h"
 
+#include "avatar.h"
+#include "character_id.h"
+#include "mission.h"
+
 #include <enums.h>
 #include <mapgen_primitives.h>
 #include <monster.h>
@@ -672,4 +676,26 @@ const mtype_id &MonsterGroupManager::GetRandomMonsterFromGroup( const mongroup_i
     }
 
     return group->defaultMonster;
+}
+
+bool mongroup::nemesis_targets( const character_id who ) const
+{
+    if( !who.is_valid() || behaviour != horde_behaviour::nemesis ) {
+        return false;
+    }
+    if( nemesis_mission_id < 0 ) {
+        return who == get_avatar().getID();
+    }
+    const mission *task = mission::find( nemesis_mission_id, true );
+    return task && task->get_type().goal == MGOAL_KILL_NEMESIS &&
+           task->get_assigned_player_id() == who;
+}
+
+bool mongroup::nemesis_orphaned() const
+{
+    if( behaviour != horde_behaviour::nemesis || nemesis_mission_id < 0 ) {
+        return false;
+    }
+    const mission *task = mission::find( nemesis_mission_id, true );
+    return !task || task->get_type().goal != MGOAL_KILL_NEMESIS || !task->is_assigned();
 }

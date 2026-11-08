@@ -34,6 +34,7 @@
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
+#include "player_helpers.h"
 #include "npctalk.h"
 
 static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
@@ -679,7 +680,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            "[lua][platform][missions][npc]" )
 {
     avatar owner;
-    owner.normalize();
+    clear_character( owner, true );
     owner.setID( character_id( 7303 ), true );
     clear_npcs();
     owner.reset_all_missions();
@@ -741,7 +742,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     { "avatar", owner.getID().get_value(), 0, 0, 0, {} },
     runtime, active_world );
     avatar wrong_owner;
-    wrong_owner.normalize();
+    clear_character( wrong_owner, true );
     wrong_owner.setID( character_id( 7304 ), true );
     const cata::lua_platform::game_handle wrong_owner_handle =
         cata::lua_platform::game_handle::from_creature(
@@ -823,6 +824,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     dialogue reward_dialogue(
         get_talker_for( owner ), get_talker_for( *provider ) );
     const auto compare_selected_generic_rewards = [&]() {
+        reward_dialogue.actor( true )->select_mission(
+            provider->chatbin.mission_selected );
         const bool native_result = native_generic_rewards_condition(
                                        reward_dialogue );
         const bool platform_result = boolean_from(
@@ -1081,6 +1084,10 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( value_from( assigned_for_owner( provider_handle, wrong_owner_handle ) )
            ["total"].get<int>() == 1 );
 
+    mission *available_for_dialogue = mission::reserve_new(
+                                          mission_TEST_MISSION_GOAL_CONDITION1, provider->getID() );
+    mission *second_available_for_dialogue = mission::reserve_new(
+                mission_TEST_MISSION_GOAL_CONDITION1, provider->getID() );
     dialogue mission_dialogue(
         get_talker_for( owner ), get_talker_for( *provider ) );
     mission_dialogue.missions_assigned = {
@@ -1107,9 +1114,9 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     };
     provider->chatbin.missions.clear();
     check_available_count( 0 );
-    provider->chatbin.missions.push_back( owned_for_dialogue );
+    provider->chatbin.missions.push_back( available_for_dialogue );
     check_available_count( 1 );
-    provider->chatbin.missions.push_back( second_owned_for_dialogue );
+    provider->chatbin.missions.push_back( second_available_for_dialogue );
     check_available_count( 2 );
     provider->chatbin.missions.clear();
 
@@ -1178,7 +1185,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     { "avatar", current_avatar.getID().get_value(), 0, 0, 0, {} },
     runtime, active_world );
     dialogue selected_mission_dialogue(
-        get_talker_for( current_avatar ), get_talker_for( *provider ) );
+        get_talker_for( wrong_owner ), get_talker_for( *provider ) );
     const conditional_t mission_complete( "mission_complete" );
     const conditional_t npc_mission_complete( "npc_mission_complete" );
     const conditional_t mission_incomplete( "mission_incomplete" );
@@ -1192,15 +1199,17 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
             R"({"npc_mission_goal":"MGOAL_CONDITION"})" )
                                           .get_object() );
     // Native mission status aliases select beta's mission; complete/incomplete
-    // then evaluate it with get_avatar(), which is the explicit service owner.
+    // then evaluate it with the dialogue interlocutor, which matches the service owner.
     const auto compare_selected_status = [&]( const char *predicate,
     const conditional_t &native_condition ) {
         CHECK( native_condition( selected_mission_dialogue ) ==
                boolean_from( selected_condition(
-                                 provider_handle, current_avatar_handle,
+                                 provider_handle, wrong_owner_handle,
                                  predicate ) ) );
     };
     const auto check_selected_conditions = [&]() {
+        selected_mission_dialogue.actor( true )->select_mission(
+            provider->chatbin.mission_selected );
         compare_selected_status( "complete", mission_complete );
         compare_selected_status( "complete", npc_mission_complete );
         compare_selected_status( "incomplete", mission_incomplete );
@@ -1270,7 +1279,9 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     // The same native alpha selectors inspect the selected NPC when that is
     // the actual talker. Typed NPC services preserve this actor-slot choice.
     dialogue npc_alpha_mission_dialogue(
-        get_talker_for( *provider ), get_talker_for( current_avatar ) );
+        get_talker_for( *provider ), get_talker_for( wrong_owner ) );
+    npc_alpha_mission_dialogue.actor( false )->select_mission(
+        provider->chatbin.mission_selected );
     const auto check_alpha_available_count = [&]( const std::size_t expected ) {
         const std::size_t native_count =
             npc_alpha_mission_dialogue.const_actor( false )->available_missions().size();
@@ -1286,9 +1297,9 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     };
     provider->chatbin.missions.clear();
     check_alpha_available_count( 0 );
-    provider->chatbin.missions.push_back( owned_for_dialogue );
+    provider->chatbin.missions.push_back( available_for_dialogue );
     check_alpha_available_count( 1 );
-    provider->chatbin.missions.push_back( second_owned_for_dialogue );
+    provider->chatbin.missions.push_back( second_available_for_dialogue );
     check_alpha_available_count( 2 );
     provider->chatbin.missions.clear();
 
@@ -1296,7 +1307,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     const conditional_t &native_condition ) {
         CHECK( native_condition( npc_alpha_mission_dialogue ) ==
                boolean_from( selected_condition(
-                                 provider_handle, current_avatar_handle,
+                                 provider_handle, wrong_owner_handle,
                                  predicate ) ) );
     };
     compare_alpha_selected_status( "complete", alpha_mission_complete );
@@ -1320,14 +1331,14 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( error_code( select( provider_handle, retired_token ) ) ==
            "missing_mission" );
     provider->chatbin.missions.push_back( retired );
-    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     sol::table stale_available_state = value_from( state( provider_handle ) );
     CHECK( stale_available_state["available"].get<sol::table>()
            ["total"].get<int>() == 0 );
     provider->chatbin.missions.clear();
 
     provider->chatbin.missions.push_back( nullptr );
-    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     sol::table null_available_state = value_from( state( provider_handle ) );
     CHECK( null_available_state["available"].get<sol::table>()
            ["total"].get<int>() == 0 );
@@ -1356,7 +1367,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     const cata::lua_platform::mission_token foreign_token(
         foreign->get_id(), foreign->identity_generation(), runtime,
         active_world );
-    foreign->fail( owner );
+    foreign->fail();
     provider->chatbin.mission_selected = foreign;
     sol::table invalid_state = value_from( state( provider_handle ) );
     CHECK_FALSE( invalid_state["selected"].valid() );
@@ -1379,7 +1390,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            ["total"].get<int>() == 0 );
     CHECK( filtered_state["available"].get<sol::table>()
            ["returned"].get<int>() == 0 );
-    CHECK( integer_from( available_count( provider_handle ) ) == 1 );
+    CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     provider->chatbin.missions.clear();
     provider->chatbin.mission_selected = nullptr;
     REQUIRE( mission::remove_unassigned( foreign->get_id() ) );

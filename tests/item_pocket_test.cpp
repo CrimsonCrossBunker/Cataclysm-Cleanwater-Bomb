@@ -15,6 +15,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
 #include "coordinates.h"
@@ -22,6 +23,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "flat_set.h"
+#include "flexbuffer_json.h"
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_category.h"
@@ -38,6 +40,8 @@
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "mapgen_helpers.h"
+#include "npc.h"
+#include "options_helpers.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -1650,6 +1654,279 @@ TEST_CASE( "best_pocket_in_item_contents", "[pocket][item][best]" )
 // item_pocket::favorite_settings::get_item_whitelist
 // item_pocket::favorite_settings::get_item_blacklist
 //
+TEST_CASE( "pocket_automatic_insertion_defaults", "[pocket][favorite][item]" )
+{
+    const bool disabled_by_default = GENERATE( false, true );
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED",
+            disabled_by_default ? "true" : "false" );
+    item_pocket::favorite_settings settings;
+    const item rock( itype_test_rock );
+
+    SECTION( "unconfigured pockets follow the current global default" ) {
+        CHECK( settings.is_null() );
+        CHECK( settings.is_disabled() == disabled_by_default );
+        CHECK( settings.accepts_item( rock ) );
+
+        const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
+                                              disabled_by_default ? "false" : "true" );
+        CHECK( settings.is_disabled() == !disabled_by_default );
+        CHECK( settings.accepts_item( rock ) );
+    }
+
+    SECTION( "individual pockets can override either default" ) {
+        const bool disabled = GENERATE( false, true );
+        settings.set_disabled( disabled );
+        CHECK_FALSE( settings.is_null() );
+        CHECK( settings.is_disabled() == disabled );
+        CHECK( settings.accepts_item( rock ) == !disabled );
+
+        const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
+                                              disabled_by_default ? "false" : "true" );
+        CHECK( settings.is_disabled() == disabled );
+        CHECK( settings.accepts_item( rock ) == !disabled );
+    }
+
+    SECTION( "explicitly enabled pockets still respect item filters" ) {
+        settings.set_disabled( false );
+        settings.blacklist_item( rock.typeId() );
+        CHECK_FALSE( settings.is_disabled() );
+        CHECK_FALSE( settings.accepts_item( rock ) );
+    }
+}
+
+TEST_CASE( "pocket_automatic_insertion_settings_round_trip", "[pocket][favorite][item][save]" )
+{
+    const bool disabled_by_default = GENERATE( false, true );
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED",
+            disabled_by_default ? "true" : "false" );
+    item_pocket::favorite_settings settings;
+    const std::optional<bool> disabled = GENERATE( std::optional<bool>(),
+                                         std::optional<bool>( false ), std::optional<bool>( true ) );
+    if( disabled.has_value() ) {
+        settings.set_disabled( *disabled );
+    }
+    settings.set_priority( 5 );
+    item_pocket::favorite_settings restored;
+    deserialize_from_string( restored, serialize( settings ) );
+    CHECK( restored.priority() == 5 );
+    CHECK( restored.is_disabled() == disabled.value_or( disabled_by_default ) );
+
+    const override_option change_default( "AUTO_INSERT_POCKETS_DISABLED",
+                                          disabled_by_default ? "false" : "true" );
+    CHECK( restored.is_disabled() == disabled.value_or( !disabled_by_default ) );
+}
+
+TEST_CASE( "pocket_automatic_insertion_legacy_settings", "[pocket][favorite][item][save]" )
+{
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    item_pocket::favorite_settings settings;
+
+    SECTION( "missing setting follows the default" ) {
+        deserialize_from_string( settings, "{}" );
+        CHECK( settings.is_disabled() );
+    }
+
+    SECTION( "saved enabled setting overrides the default" ) {
+        deserialize_from_string( settings, R"({"disabled":false})" );
+        CHECK_FALSE( settings.is_disabled() );
+        CHECK_FALSE( settings.is_null() );
+    }
+
+    SECTION( "saved disabled setting remains disabled" ) {
+        deserialize_from_string( settings, R"({"disabled":true})" );
+        CHECK( settings.is_disabled() );
+    }
+}
+
+TEST_CASE( "pocket_automatic_insertion_container_round_trip", "[pocket][favorite][item][save]" )
+{
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    item backpack( itype_test_backpack );
+    item other_backpack( itype_test_backpack );
+    const item rock( itype_test_rock );
+    item_pocket *pocket = backpack.get_contents().get_standard_pockets().front();
+    REQUIRE( pocket->settings.is_disabled() );
+    REQUIRE( other_backpack.get_contents().get_standard_pockets().front()->settings.is_disabled() );
+    CHECK( has_best_pocket( backpack, rock ) );
+    CHECK( has_best_pocket( other_backpack, rock ) );
+
+    pocket->settings.set_disabled( false );
+    CHECK_FALSE( pocket->settings.is_disabled() );
+    CHECK( has_best_pocket( backpack, rock ) );
+    CHECK( other_backpack.get_contents().get_standard_pockets().front()->settings.is_disabled() );
+
+    item restored;
+    deserialize_from_string( restored, serialize( backpack ) );
+    CHECK_FALSE( restored.get_contents().get_standard_pockets().front()->settings.is_disabled() );
+    CHECK( has_best_pocket( restored, rock ) );
+
+    REQUIRE( other_backpack.put_in( rock, pocket_type::CONTAINER ).success() );
+    CHECK_FALSE( other_backpack.is_container_empty() );
+}
+
+TEST_CASE( "pocket_default_disabling_only_affects_player_inventory", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    standard_npc follower( "Follower", player.pos_bub() + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    const item rock( itype_test_rock );
+    REQUIRE( player.wear_item( item( itype_test_backpack ), false, false ) );
+    REQUIRE( follower.wear_item( item( itype_test_backpack ), false, false ) );
+    CHECK_FALSE( player.can_stash( rock ) );
+    CHECK( follower.can_stash( rock ) );
+    CHECK( player.best_pocket( rock, nullptr, true ).second );
+
+    item_pocket *const player_pocket = player.best_pocket( rock, nullptr, true ).second;
+    REQUIRE( player_pocket );
+    player_pocket->settings.set_disabled( false );
+    CHECK( player.can_stash( rock ) );
+
+    item_pocket *const npc_pocket = follower.best_pocket( rock ).second;
+    REQUIRE( npc_pocket );
+    npc_pocket->settings.set_disabled( true );
+    CHECK_FALSE( follower.can_stash( rock ) );
+}
+
+TEST_CASE( "stacked_pickup_respects_default_pocket_disabling", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    const auto disabled_pack = player.wear_item( item( itype_test_backpack ), false, false );
+    const auto enabled_pack = player.wear_item( item( itype_test_mini_backpack ), false, false );
+    REQUIRE( disabled_pack );
+    REQUIRE( enabled_pack );
+    item_pocket *const disabled_pocket =
+        ( **disabled_pack ).get_contents().get_standard_pockets().front();
+    item_pocket *const enabled_pocket =
+        ( **enabled_pack ).get_contents().get_standard_pockets().front();
+    REQUIRE( disabled_pocket->settings.is_disabled() );
+    disabled_pocket->settings.set_priority( 10 );
+    enabled_pocket->settings.set_disabled( false );
+
+    item ammo( itype_test_9mm_ammo, calendar::turn_zero, 10 );
+    REQUIRE( player.can_stash_partial( ammo ) );
+    REQUIRE( player.i_add_or_fill( ammo, true, nullptr, nullptr, false, false, false ).success() );
+    CHECK( ammo.charges == 0 );
+    CHECK( ( **disabled_pack ).is_container_empty() );
+    REQUIRE_FALSE( ( **enabled_pack ).is_container_empty() );
+    CHECK( ( **enabled_pack ).only_item().charges == 10 );
+}
+
+TEST_CASE( "pocket_charge_filling_only_applies_default_to_player", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    standard_npc follower( "Follower", player.pos_bub() + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    item backpack( itype_test_backpack );
+    item_pocket *const pocket = backpack.get_contents().get_standard_pockets().front();
+    const item ammo( itype_test_9mm_ammo, calendar::turn_zero, 10 );
+    REQUIRE( pocket->settings.is_disabled() );
+
+    SECTION( "player_default_disabled" ) {
+        CHECK( pocket->fill_with( ammo, player, 10, false, false ) == 0 );
+        CHECK( backpack.is_container_empty() );
+    }
+    SECTION( "player_explicitly_enabled" ) {
+        pocket->settings.set_disabled( false );
+        CHECK( pocket->fill_with( ammo, player, 10, false, false ) == 10 );
+    }
+    SECTION( "player_ignores_settings" ) {
+        pocket->settings.set_disabled( true );
+        CHECK( pocket->fill_with( ammo, player, 10, false, true ) == 10 );
+    }
+    SECTION( "npc_ignores_player_default" ) {
+        CHECK( pocket->fill_with( ammo, follower, 10, false, false ) == 10 );
+    }
+    SECTION( "npc_respects_explicit_disabling" ) {
+        pocket->settings.set_disabled( true );
+        CHECK( pocket->fill_with( ammo, follower, 10, false, false ) == 0 );
+        CHECK( backpack.is_container_empty() );
+    }
+}
+
+TEST_CASE( "disabled_outer_pockets_allow_enabled_soft_inner_pockets", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    const bool outer_explicitly_disabled = GENERATE( false, true );
+    const bool inner_disabled = GENERATE( false, true );
+    CAPTURE( outer_explicitly_disabled, inner_disabled );
+    item backpack( itype_test_backpack );
+    item mini_backpack( itype_test_mini_backpack );
+    mini_backpack.get_contents().get_standard_pockets().front()->settings.set_disabled(
+        inner_disabled );
+    REQUIRE( backpack.put_in( mini_backpack, pocket_type::CONTAINER ).success() );
+    const auto worn_pack = player.wear_item( backpack, false, false );
+    REQUIRE( worn_pack );
+    item &outer = **worn_pack;
+    item &inner = outer.only_item();
+    item_pocket *const outer_pocket = outer.get_contents().get_standard_pockets().front();
+    item_pocket *const inner_pocket = inner.get_contents().get_standard_pockets().front();
+    REQUIRE_FALSE( outer_pocket->rigid() );
+    REQUIRE_FALSE( inner_pocket->rigid() );
+    if( outer_explicitly_disabled ) {
+        outer_pocket->settings.set_disabled( true );
+    }
+
+    const item rock( itype_test_rock );
+    CHECK( player.can_stash( rock ) == !inner_disabled );
+    CHECK( player.best_pocket( rock, nullptr, true ).second );
+    if( inner_disabled ) {
+        CHECK_FALSE( player.best_pocket( rock ).second );
+    } else {
+        REQUIRE( player.best_pocket( rock ).second == inner_pocket );
+        const item_location stored =
+            player.i_add( rock, true, nullptr, nullptr, false, false, false );
+        REQUIRE( stored );
+        CHECK( stored.parent_item() == item_location( player, &inner ) );
+        CHECK( inner.only_item().typeId() == rock.typeId() );
+    }
+}
+
+TEST_CASE( "nested_pocket_defaults_only_affect_player_carriers", "[pocket][favorite][item]" )
+{
+    clear_avatar();
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    avatar &player = get_avatar();
+    standard_npc follower( "Follower", player.pos_bub() + tripoint::east, {}, 0, 8, 8, 8, 8 );
+    const bool inner_explicitly_enabled = GENERATE( false, true );
+    CAPTURE( inner_explicitly_enabled );
+    item backpack( itype_test_backpack );
+    item mini_backpack( itype_test_mini_backpack );
+    backpack.get_contents().get_standard_pockets().front()->settings.set_disabled( true );
+    if( inner_explicitly_enabled ) {
+        mini_backpack.get_contents().get_standard_pockets().front()->settings.set_disabled( false );
+    }
+    REQUIRE( backpack.put_in( mini_backpack, pocket_type::CONTAINER ).success() );
+    REQUIRE( player.wear_item( backpack, false, false ) );
+    const auto npc_pack = follower.wear_item( backpack, false, false );
+    REQUIRE( npc_pack );
+    item_pocket *const npc_inner_pocket =
+        ( **npc_pack ).only_item().get_contents().get_standard_pockets().front();
+
+    const item rock( itype_test_rock );
+    CHECK( player.can_stash( rock ) == inner_explicitly_enabled );
+    CHECK( follower.can_stash( rock ) );
+    CHECK( follower.best_pocket( rock ).second == npc_inner_pocket );
+}
+
+TEST_CASE( "pocket_default_disabling_preserves_generated_contents", "[pocket][favorite][item]" )
+{
+    const override_option default_insertion( "AUTO_INSERT_POCKETS_DISABLED", "true" );
+    item liquid( itype_test_liquid );
+    liquid.charges = 5;
+    const item filled = liquid.in_container( itype_test_waterskin, 5 );
+    CHECK( filled.typeId() == itype_test_waterskin );
+    const std::list<const item *> contents = filled.all_items_top();
+    REQUIRE( contents.size() == 1 );
+    CHECK( contents.front()->typeId() == liquid.typeId() );
+    CHECK( contents.front()->charges == 5 );
+}
+
 TEST_CASE( "pocket_favorites_allow_or_restrict_items", "[pocket][favorite][item]" )
 {
     item_location loc;

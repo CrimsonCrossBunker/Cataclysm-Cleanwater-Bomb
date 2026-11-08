@@ -23,6 +23,7 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character_attire.h"
+#include "character_martial_arts.h"
 #include "color.h"
 #include "coordinates.h"
 #include "display.h"
@@ -34,6 +35,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "martialarts.h"
 #include "mission.h"
 #include "monster.h"
 #include "options_helpers.h"
@@ -88,7 +90,11 @@ static const itype_id itype_sneakers( "sneakers" );
 static const itype_id itype_swim_fins( "swim_fins" );
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_socks( "test_socks" );
+static const itype_id itype_test_weapon1( "test_weapon1" );
 static const itype_id itype_test_zentai( "test_zentai" );
+
+static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
+static const matype_id test_style_cooldown( "test_style_cooldown" );
 
 static const morale_type morale_food_good( "morale_food_good" );
 static const morale_type morale_killed_innocent( "morale_killed_innocent" );
@@ -124,6 +130,7 @@ static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
 static const widget_id widget_sound_num( "sound_num" );
 static const widget_id widget_speed_num( "speed_num" );
 static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
+static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
@@ -232,6 +239,25 @@ static std::vector<std::string> scrape_win_at(
     return lines;
 }
 #endif
+
+TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
+           "[widget][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.martial_arts_data->add_martialart( test_style_cooldown );
+    player.martial_arts_data->set_style( test_style_cooldown );
+    player.set_wielded_item( item( itype_test_weapon1 ) );
+    widget cooldowns = widget_technique_cooldowns.obj();
+    CHECK( player.active_technique_cooldowns_text().empty() );
+    player.martial_arts_data->start_technique_cooldown( test_active_cooldown_strike, 8_seconds );
+    CHECK( cooldowns.layout( player ).find( test_active_cooldown_strike->name.translated() ) !=
+           std::string::npos );
+    CHECK( cooldowns.layout( player ).find( to_string( 8_seconds ) ) != std::string::npos );
+    calendar::turn += 8_seconds;
+    CHECK( player.active_technique_cooldowns_text().empty() );
+}
 
 TEST_CASE( "widget_value_strings", "[widget][value][string]" )
 {
