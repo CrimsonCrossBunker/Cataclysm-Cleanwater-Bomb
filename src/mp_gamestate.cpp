@@ -1828,12 +1828,7 @@ void host_broadcast_vehicle_step()
         if( !v ) {
             continue;
         }
-        auto vid_it = mp_session().replication.server_veh_ids.find( v );
-        if( vid_it == mp_session().replication.server_veh_ids.end() ) {
-            mp_session().replication.server_veh_ids[v] = ++mp_session().replication.next_net_id;
-            vid_it = mp_session().replication.server_veh_ids.find( v );
-        }
-        const uint32_t nid = vid_it->second;
+        const uint32_t nid = mp_session().replication.entity_ids.assign( *v );
         const tripoint_abs_ms vabs = v->pos_abs();
         const int face_deg     = static_cast<int>( std::lround( to_degrees( v->face.dir() ) ) );
         const int turn_dir_deg = static_cast<int>( std::lround( to_degrees( v->turn_dir ) ) );
@@ -2707,13 +2702,8 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                     if( nid == 0 || new_hp < 0 ) {
                         continue;
                     }
-                    monster *mon = nullptr;
-                    for( const auto &ptr : get_creature_tracker().get_monsters_list() ) {
-                        if( ptr && ptr->mp_net_id == nid ) {
-                            mon = ptr.get();
-                            break;
-                        }
-                    }
+                    monster *mon = mp_session().replication.entity_ids.find_monster(
+                                       nid, get_creature_tracker() );
                     if( !mon || mon->is_dead() ) {
                         // Diagnostic for the resurrection report: the client
                         // reported a hit/kill for a net id the host can't match,
@@ -8481,10 +8471,8 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
         // Assign a stable network ID the first time this monster enters sync range.
         // Done for EVERY in-radius monster (even ones we delta-omit below) so the
         // removed_monsters diff (g_server_mon_known_nids) stays accurate.
-        if( mon_ptr->mp_net_id == 0 ) {
-            mon_ptr->mp_net_id = ++mp_session().replication.next_net_id;
-        }
-        const uint32_t nid = mon_ptr->mp_net_id;
+        const uint32_t nid = mp_session().replication.entity_ids.assign( *mon_ptr );
+        mon_ptr->mp_net_id = nid;
         seen_nids.insert( nid );
         const int mon_facing = ( mon_ptr->facing == FacingDirection::LEFT ) ? 0 : 1;
         std::string rec = "{\"nid\":" + std::to_string( nid )
@@ -10012,8 +10000,10 @@ std::string serialize_remote_player_state()
     // cull-by-absence, which killed live monsters (the woodpecker bug).
     std::unordered_set<uint32_t> mon_alive_now;
     for( const auto &mon_ptr : get_creature_tracker().get_monsters_list() ) {
-        if( mon_ptr && mon_ptr->mp_net_id != 0 && !mon_ptr->is_dead() ) {
-            mon_alive_now.insert( mon_ptr->mp_net_id );
+        if( mon_ptr && !mon_ptr->is_dead() ) {
+            if( const uint32_t nid = mp_session().replication.entity_ids.known_id( *mon_ptr ) ) {
+                mon_alive_now.insert( nid );
+            }
         }
     }
     std::string removed_monsters_json = "[";
@@ -10287,12 +10277,7 @@ std::string serialize_remote_player_state()
                 continue;
             }
             // Assign a stable net ID on first encounter.
-            auto vid_it = mp_session().replication.server_veh_ids.find( v );
-            if( vid_it == mp_session().replication.server_veh_ids.end() ) {
-                mp_session().replication.server_veh_ids[v] = ++mp_session().replication.next_net_id;
-                vid_it = mp_session().replication.server_veh_ids.find( v );
-            }
-            const uint32_t nid = vid_it->second;
+            const uint32_t nid = mp_session().replication.entity_ids.assign( *v );
             alive_now.insert( nid );
 
             // Detect structural change: if the parts vector grew or shrank since
