@@ -246,6 +246,31 @@ class ReplayProcessTest(unittest.TestCase):
         self.assertEqual(
             report["runs"][0]["native_completion"], native_summary())
 
+    def test_recorded_zero_overrides_distinct_invocation_seeds(self):
+        self.replay.write_text(self.replay.read_text().replace("SEED 123", "SEED 0"))
+        self.binary = self.native_executable("native", native_summary(seed=0))
+        code, report = self.execute([
+            "--expected-turns", "2", "--invocation-seeds", "first", "second",
+        ])
+        self.assertEqual(code, 0)
+        for run, seed in zip(report["runs"], ("first", "second")):
+            command = run["command"]
+            self.assertEqual(command[command.index("--seed") + 1], seed)
+            self.assertEqual(run["native_completion"]["seed"], 0)
+
+    def test_invocation_seed_leaking_into_save_fails_comparison(self):
+        self.binary = self.executable(
+            "seed_leak",
+            "player.write_text(sys.argv[sys.argv.index('--seed') + 1])",
+        )
+        code, report = self.execute(["--invocation-seeds", "first", "second"])
+        self.assertEqual(code, 1)
+        self.assertEqual(report["differences"], ["differs:   world/player.sav"])
+
+    def test_conflicting_invocation_seeds_fail_before_copying(self):
+        for extra in (["--seed", "shared"], ["--seed=shared"]):
+            self.assert_invalid(["--invocation-seeds", "first", "second", "--", *extra])
+
     def test_different_native_positions_fail_even_with_equal_save_bytes(self):
         self.binary = self.native_executable("native", native_summary())
         candidate = self.native_executable(

@@ -77,7 +77,8 @@ bool replay_just_finished();
 int replay_remaining();
 
 // The RNG seed stored in the replay log header. Valid after begin_replay().
-// The harness applies this via rng_set_engine_seed() so the run is reproducible.
+// The harness must apply this exactly, including zero, which the normal gameplay
+// rng_set_engine_seed() helper treats as a no-op.
 unsigned int recorded_seed();
 
 // Seed written into the header by begin_record(). The recorder is responsible
