@@ -1421,9 +1421,12 @@ void game::load_npcs( map *here )
 
 void game::on_witness_theft( const item &target )
 {
-    const map &here = get_map();
+    on_witness_theft( target, get_player_character() );
+}
 
-    Character &p = get_player_character();
+void game::on_witness_theft( const item &target, Character &p )
+{
+    const map &here = get_map();
     std::vector<npc *> witnesses;
     for( npc &elem : g->all_npcs() ) {
         if( rl_dist( elem.pos_bub(), p.pos_bub() ) < MAX_VIEW_DISTANCE &&

@@ -1,3 +1,4 @@
+#include "item_consumption.h"
 #include "handle_liquid.h"
 
 #include <algorithm>
@@ -558,7 +559,7 @@ bool perform_liquid_transfer( item_location &liquid, liquid_dest_opt &target )
 
     switch( target.dest_opt ) {
         case LD_CONSUME:
-            player_character.assign_activity( consume_activity_actor( liquid ) );
+            start_item_consumption( player_character, liquid );
             return true;
         case LD_ITEM:
         case LD_VEH:

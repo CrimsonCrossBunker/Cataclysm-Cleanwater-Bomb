@@ -79,6 +79,7 @@
 #include "input_popup.h"
 #include "inventory_ui.h"
 #include "item.h"
+#include "item_consumption.h"
 #include "item_category.h"
 #include "item_components.h"
 #include "item_contents.h"
@@ -6295,75 +6296,93 @@ std::unique_ptr<activity_actor> close_tile_activity_actor::deserialize( JsonValu
     return actor.clone();
 }
 
-void consume_activity_actor::start( player_activity &act, Character &guy )
+consume_activity_actor consume_activity_actor::client_view()
 {
-    int moves = 0;
-    Character &player_character = get_player_character();
-    //TODO: why use both `player_character` and `guy`?
-    auto player_will_eat = [this, &moves, &player_character, &guy]( const item & it ) {
-        ret_val<edible_rating> ret = player_character.will_eat( it, true );
-        if( !ret.success() ) {
-            was_canceled = true;
-            uistate.consume_uistate.clear();
-        } else {
-            moves = to_moves<int>( guy.get_consume_time( it ) );
-        }
-    };
-
-    if( consume_location ) {
-        player_will_eat( *consume_location );
-    } else if( !consume_item.is_null() ) {
-        player_will_eat( consume_item );
-    } else {
-        add_msg_debug( debugmode::DF_ACTIVITY,
-                       "consume activity target is no longer available at start" );
-        was_canceled = true;
-        reprompt_consume_menu = false;
-        uistate.consume_uistate.clear();
-    }
-
-    act.moves_total = moves;
-    act.moves_left = moves;
+    consume_activity_actor actor( item_location::nowhere );
+    actor.view_only = true;
+    return actor;
 }
 
-void consume_activity_actor::finish( player_activity &act, Character & )
+bool consume_activity_actor::prepare_owned_turn( Character &who )
 {
-    // Prevent interruptions from this point onwards, so that e.g. pain from
-    // injecting serum doesn't pop up messages about cancelling consuming (it's
-    // too late; we've already consumed).
-    act.interruptable = false;
+    consume_location = resolve_item_source( who, get_map(), owned_source );
+    return owned_consumption_allowed( who, consume_location, allow_consequences, allow_theft );
+}
 
-    item_location consume_loc = consume_location;
+void consume_activity_actor::do_turn( player_activity &, Character & )
+{
+    if( view_only ) {
+        cata_mp::client_step_inventory_activity();
+    }
+}
 
-    avatar &player_character = get_avatar();
-    if( !was_canceled ) {
-        if( consume_loc ) {
-            player_character.consume( consume_loc, /*force=*/true );
-        } else if( !consume_item.is_null() ) {
-            player_character.consume( consume_item, /*force=*/true );
-        } else {
-            add_msg_debug( debugmode::DF_ACTIVITY,
-                           "consume activity target is no longer available at finish" );
-            was_canceled = true;
+void consume_activity_actor::start( player_activity &act, Character &who )
+{
+    if( view_only ) {
+        act.moves_left = act.moves_total = 1;
+        return;
+    }
+    if( server_owned ) {
+        owned_source = capture_item_source( who, consume_location );
+        if( !prepare_owned_turn( who ) ) {
+            act.set_to_null();
+            return;
+        }
+    }
+    const item *target = consume_location ? &*consume_location :
+                         !consume_item.is_null() ? &consume_item : nullptr;
+    if( !target || ( !server_owned && !who.will_eat( *target, who.is_avatar() ).success() ) ) {
+        was_canceled = true;
+        if( !target ) {
             reprompt_consume_menu = false;
+        }
+        if( who.is_avatar() ) {
             uistate.consume_uistate.clear();
         }
     }
+    act.moves_total = was_canceled ? 0 : to_moves<int>( who.get_consume_time( *target ) );
+    act.moves_left = act.moves_total;
+}
 
-    /*
-    At this point, this consume_activity_actor may have been cancelled
-    and a new activity (e.g. firstaid_activity_actor) assigned.
-    */
-    if( act.id() == ACT_CONSUME ) {
-        // only set to null if there isn't a new activity
+void consume_activity_actor::finish( player_activity &act, Character &who )
+{
+    if( view_only ) {
+        return;
+    }
+    if( server_owned && !prepare_owned_turn( who ) ) {
+        who.cancel_activity();
+        return;
+    }
+    act.interruptable = false;
+    const auto identity = act.identity_generation();
+    const safe_reference<Creature> lifetime = who.get_safe_reference();
+    // Consumption callbacks can replace this activity. Keep all subsequent
+    // inputs outside the actor before invoking the native operation.
+    item_location location = consume_location;
+    item temporary = consume_item;
+    const bool owned = server_owned;
+    const bool reprompt = reprompt_consume_menu;
+    if( !was_canceled ) {
+        if( location ) {
+            who.consume( location, /*force=*/true, owned );
+        } else if( !temporary.is_null() ) {
+            who.consume( temporary, /*force=*/true );
+        }
+    }
+    if( !lifetime ) {
+        return;
+    }
+    if( act.id() == ACT_CONSUME && act.identity_generation() == identity ) {
         act.set_to_null();
     }
-
-    if( act.id() == ACT_FIRSTAID && consume_loc ) {
-        uistate.consume_uistate.consume_menu_selected_items = { consume_loc };
+    avatar *local = who.as_avatar();
+    if( !local || owned ) {
+        return;
     }
-
-    if( !avatar_action::eat_here( player_character ) && reprompt_consume_menu ) {
+    if( act.id() == ACT_FIRSTAID && location ) {
+        uistate.consume_uistate.consume_menu_selected_items = { location };
+    }
+    if( !avatar_action::eat_here( *local ) && reprompt ) {
         uistate.open_menu = []() {
             avatar_action::eat_or_use( get_avatar(),
                                        game_menus::inv::consume( uistate.consume_uistate.consume_menu_comestype ) );
@@ -6373,6 +6392,9 @@ void consume_activity_actor::finish( player_activity &act, Character & )
 
 void consume_activity_actor::canceled( player_activity &, Character &who )
 {
+    if( view_only ) {
+        cata_mp::client_cancel_inventory_activity();
+    }
     if( who.is_avatar() ) {
         uistate.consume_uistate.clear();
     }
@@ -6382,8 +6404,16 @@ void consume_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
 
-    jsout.member( "consume_location", consume_location );
-    jsout.member( "consume_item", consume_item );
+    jsout.member( "server_owned", server_owned );
+    jsout.member( "view_only", view_only );
+    jsout.member( "allow_consequences", allow_consequences );
+    jsout.member( "allow_theft", allow_theft );
+    if( server_owned ) {
+        jsout.member( "owned_source", owned_source );
+    } else if( !view_only ) {
+        jsout.member( "consume_location", consume_location );
+        jsout.member( "consume_item", consume_item );
+    }
     jsout.member( "canceled", was_canceled );
     jsout.member( "reprompt_consume_menu", reprompt_consume_menu );
 
@@ -6397,6 +6427,11 @@ std::unique_ptr<activity_actor> consume_activity_actor::deserialize( JsonValue &
 
     JsonObject data = jsin.get_object();
 
+    data.read( "server_owned", actor.server_owned );
+    data.read( "view_only", actor.view_only );
+    data.read( "allow_consequences", actor.allow_consequences );
+    data.read( "allow_theft", actor.allow_theft );
+    data.read( "owned_source", actor.owned_source );
     data.read( "consume_location", actor.consume_location );
     data.read( "consume_item", actor.consume_item );
     data.read( "canceled", actor.was_canceled );

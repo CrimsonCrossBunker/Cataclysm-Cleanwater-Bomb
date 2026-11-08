@@ -17,6 +17,9 @@
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_insert.h"
+#include "item_consumption.h"
+#include "player_control.h"
+#include "flag.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_reload.h"
@@ -347,6 +350,9 @@ TEST_CASE( "client_inventory_activity_view_does_not_advance_native_or_emit_lifec
     }
     SECTION( "insert" ) {
         who.assign_activity( insert_item_activity_actor::client_view() );
+    }
+    SECTION( "consume" ) {
+        who.assign_activity( consume_activity_actor::client_view() );
     }
     who.activity.moves_left = 500;
     auto &view = g->multiplayer_session().client_inventory_activity;
@@ -914,5 +920,200 @@ TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
     CHECK( container_quantity( local.get_wielded_item(), itype_id( "556" ) ) == 5 );
     CHECK( events.starts == 0 );
     CHECK( events.finishes == 0 );
+    CHECK( rng_get_engine() == rng );
+}
+
+namespace
+{
+struct consumption_fixture : reload_fixture {
+    player_control_registry controls;
+    std::optional<player_control> control;
+    npc &remote() {
+        npc &who = reload_fixture::remote();
+        control.emplace( controls.claim( cata_mp::player_id( std::string( 32, '6' ) ), who,
+                                         player_control_kind::legacy_proxy ) );
+        REQUIRE( who.is_player_controlled() );
+        who.stomach.empty();
+        who.guts.empty();
+        who.set_hunger( 100 );
+        who.set_thirst( 100 );
+        return who;
+    }
+};
+
+class consumption_events : public event_subscriber
+{
+    public:
+        std::vector<character_id> actors;
+        consumption_events() {
+            get_event_bus().subscribe( this );
+        }
+        void notify( const cata::event &event ) override {
+            if( event.type() == event_type::character_consumes_item ) {
+                actors.push_back( event.get<character_id>( "character" ) );
+            }
+        }
+};
+
+item_location drinking_source( Character &who )
+{
+    item bottle( itype_id( "bottle_plastic" ) );
+    REQUIRE( bottle.put_in( item( itype_id( "water_clean" ), calendar::turn, 2 ),
+                            pocket_type::CONTAINER ).success() );
+    who.set_wielded_item( bottle );
+    item_location root = who.get_wielded_item();
+    return item_location( root, root->all_items_top().front() );
+}
+
+std::string consume_request( reload_fixture &fixture, Character &who,
+                             const item_location &source, bool consequences = false )
+{
+    return fixture.request( who, "start", [&]( JsonOut & out ) {
+        out.member( "kind", "consume" );
+        out.member( "source", capture_item_source( who, source ) );
+        out.member( "allow_consequences", consequences );
+    } );
+}
+
+std::string needs_state( const Character &who )
+{
+    std::ostringstream text;
+    JsonOut out( text );
+    who.store_needs_state( out );
+    return text.str();
+}
+} // namespace
+
+TEST_CASE( "native_consumption_uses_the_activity_owner_not_the_global_avatar",
+           "[multiplayer][consume_owned]" )
+{
+    consumption_fixture fixture;
+    npc &who = fixture.remote();
+    item_location source = drinking_source( who );
+    get_avatar().set_underwater( true );
+    const std::string local_before = needs_state( get_avatar() );
+    consumption_events events;
+    who.assign_activity( consume_activity_actor( source ) );
+    REQUIRE( who.activity.moves_left > 0 );
+    who.set_moves( 100000 );
+    who.activity.do_turn( who );
+    CHECK_FALSE( who.activity );
+    CHECK( source->charges == 1 );
+    CHECK( who.stomach.get_water() > 0_ml );
+    CHECK( who.get_thirst() == who.Character::get_thirst() );
+    REQUIRE( events.actors.size() == 1 );
+    CHECK( events.actors.front() == who.getID() );
+    CHECK( needs_state( get_avatar() ) == local_before );
+}
+
+TEST_CASE( "owned_consumption_progress_cancel_and_saved_source",
+           "[multiplayer][consume_owned]" )
+{
+    consumption_fixture fixture;
+    npc &who = fixture.remote();
+    item_location source = drinking_source( who );
+    consumption_events events;
+    fixture.run( who, consume_request( fixture, who, source ) );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) );
+    const int total = who.activity.moves_left;
+    REQUIRE( total > 100 );
+    fixture.run( who, fixture.request( who, "step" ) );
+    CHECK( who.activity.moves_left < total );
+    CHECK( who.get_moves() == 0 );
+    CHECK( source->charges == 2 );
+    save_reload_activity( who );
+    SECTION( "finish once" ) {
+        who.set_moves( 100000 );
+        const std::string step = fixture.request( who, "step" );
+        fixture.run( who, step );
+        REQUIRE_FALSE( who.activity );
+        CHECK( source->charges == 1 );
+        const std::string after = needs_state( who );
+        fixture.run( who, step );
+        CHECK( needs_state( who ) == after );
+        CHECK( events.actors.size() == 1 );
+    }
+    SECTION( "cancel without AP" ) {
+        who.set_moves( -5 );
+        fixture.run( who, fixture.request( who, "cancel" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( who.get_moves() == -5 );
+        CHECK( source->charges == 2 );
+        CHECK( events.actors.empty() );
+    }
+    SECTION( "source removed after saving" ) {
+        source.remove_item();
+        who.set_moves( 100 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK_FALSE( who.activity );
+        CHECK( who.get_moves() == 100 );
+        CHECK( events.actors.empty() );
+    }
+}
+
+TEST_CASE( "owned_consumption_validates_actor_food_and_confirmation",
+           "[multiplayer][consume_owned]" )
+{
+    consumption_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_id( "apple" ), calendar::turn, 2 ) );
+    item_location source = who.get_wielded_item();
+    SECTION( "another player's food" ) {
+        get_avatar().set_wielded_item( item( itype_id( "apple" ) ) );
+        fixture.run( who, consume_request( fixture, who, get_avatar().get_wielded_item() ) );
+        CHECK_FALSE( who.activity );
+    }
+    SECTION( "hard dietary restriction cannot be confirmed away" ) {
+        source->set_flag( flag_DIRTY );
+        fixture.run( who, consume_request( fixture, who, source, true ) );
+        CHECK_FALSE( who.activity );
+    }
+    SECTION( "rotten food requires the owner's confirmation" ) {
+        source->set_relative_rot( 2.0 );
+        fixture.run( who, consume_request( fixture, who, source ) );
+        CHECK_FALSE( who.activity );
+        fixture.run( who, consume_request( fixture, who, source, true ) );
+        CHECK( cata_mp::owns_inventory_activity( who ) );
+        fixture.run( who, fixture.request( who, "cancel" ) );
+    }
+    CHECK( source->charges == 2 );
+    CHECK( who.get_moves() == 100 );
+    CHECK( who.stomach.contains() == 0_ml );
+}
+
+TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_overwrite",
+           "[multiplayer][consume_owned]" )
+{
+    consumption_fixture fixture;
+    npc &remote = fixture.remote();
+    remote.set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 2 ) );
+    const std::string started = fixture.run( remote, consume_request( fixture, remote,
+                                remote.get_wielded_item() ) );
+    REQUIRE( remote.activity );
+    remote.set_moves( 100000 );
+    const std::string finished = fixture.run( remote, fixture.request( remote, "step" ) );
+    REQUIRE_FALSE( remote.activity );
+    const std::string expected = needs_state( remote );
+    const int expected_morale = remote.get_morale_level();
+    avatar &local = get_avatar();
+    cata_mp::set_client_mode( true );
+    auto &view = g->multiplayer_session().client_inventory_activity;
+    view.active = true;
+    view.pending_request = 1;
+    local.assign_activity( consume_activity_actor::client_view() );
+    const auto rng = rng_get_engine();
+    consumption_events events;
+    REQUIRE( cata_mp::client_apply_message( started ) );
+    local.get_morale_level(); // Populate the cache before restoring changed morale.
+    view.pending_request = 2;
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    CHECK( local.get_wielded_item()->charges == 1 );
+    CHECK( needs_state( local ) == expected );
+    CHECK( local.get_morale_level() == expected_morale );
+    cata_mp::client_update_inventory_activity_view();
+    REQUIRE( cata_mp::client_apply_message( finished ) );
+    REQUIRE( cata_mp::client_apply_message( started ) );
+    CHECK( needs_state( local ) == expected );
+    CHECK( events.actors.empty() );
     CHECK( rng_get_engine() == rng );
 }

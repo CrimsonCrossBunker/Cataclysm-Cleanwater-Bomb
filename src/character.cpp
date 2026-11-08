@@ -1,3 +1,4 @@
+#include "item_consumption.h"
 #include "character.h"
 
 #include <activity_tracker.h>
@@ -8810,12 +8811,11 @@ void Character::use( item_location loc, int pre_obtain_moves, std::string const 
         }
 
         if( avatar *u = as_avatar() ) {
-            const ret_val<edible_rating> ret = u->will_eat( used, true );
-            if( !ret.success() ) {
+            if( !cata_mp::is_client_mode() && !u->will_eat( used, true ).success() ) {
                 set_moves( pre_obtain_moves );
                 return;
             }
-            u->assign_activity( consume_activity_actor( loc ) );
+            start_item_consumption( *u, loc );
         } else  {
             const time_duration &consume_time = get_consume_time( used );
             mod_moves( -to_moves<int>( consume_time ) );

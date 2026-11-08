@@ -1,3 +1,4 @@
+#include "item_consumption.h"
 #include <player_activity.h>
 #include <algorithm>
 #include <array>
@@ -915,7 +916,7 @@ ret_val<edible_rating> Character::can_eat( const item &food ) const
     if( edible || drinkable ) {
         // Consumption EOCs run too late to refuse the food without ingesting it.
         if( food.has_flag( json_flag_MARLOSS ) ) {
-            if( is_npc() ) {
+            if( is_npc() && !is_player_controlled() ) {
                 return ret_val<edible_rating>::make_failure( _( "That doesn't look edible to you." ) );
             }
             if( has_trait( trait_MARLOSS_AVOID ) ) {
@@ -1784,7 +1785,7 @@ bool Character::consume_effects( item &food )
     }
     // Moved here and changed a bit - it was too complex
     // Incredibly minor stuff like this shouldn't require complexity
-    if( !is_npc() && has_trait( trait_SLIMESPAWNER ) &&
+    if( ( !is_npc() || is_player_controlled() ) && has_trait( trait_SLIMESPAWNER ) &&
         ( get_healthy_kcal() < get_stored_kcal() + 4000 &&
           get_thirst() - stomach.get_water() / 5_ml < -20 ) && get_thirst() < 40 ) {
         add_msg_if_player( m_mixed,
@@ -1968,7 +1969,7 @@ time_duration Character::get_consume_time( const item &it ) const
     return time * consume_time_modifier;
 }
 
-static bool query_consume_ownership( item &target, Character &p )
+bool query_consumption_ownership( const item &target, Character &p )
 {
     if( !target.is_owned_by( p, true ) ) {
         const std::string thief_mode = p.get_value( "THIEF_MODE" ).str();
@@ -1986,7 +1987,6 @@ static bool query_consume_ownership( item &target, Character &p )
                 return false;
             }
         }
-        g->on_witness_theft( target );
     }
     return true;
 }
@@ -2061,7 +2061,7 @@ static bool consume_med( item &target, Character &you )
     return true;
 }
 
-trinary Character::consume( item &target, bool force )
+trinary Character::consume( item &target, bool force, bool ownership_confirmed )
 {
     if( target.is_null() ) {
         add_msg_if_player( m_info, _( "You don't have that item." ) );
@@ -2079,8 +2079,11 @@ trinary Character::consume( item &target, bool force )
         }
         return trinary::NONE;
     }
-    if( is_avatar() && !query_consume_ownership( target, *this ) ) {
+    if( is_avatar() && !ownership_confirmed && !query_consumption_ownership( target, *this ) ) {
         return trinary::NONE;
+    }
+    if( ( is_avatar() || ownership_confirmed ) && !target.is_owned_by( *this, true ) ) {
+        g->on_witness_theft( target, *this );
     }
 
     if( consume_med( target, *this ) || eat( target, *this, force ) ) {
@@ -2095,7 +2098,7 @@ trinary Character::consume( item &target, bool force )
     return trinary::NONE;
 }
 
-trinary Character::consume( item_location loc, bool force )
+trinary Character::consume( item_location loc, bool force, bool ownership_confirmed )
 {
     if( !loc ) {
         debugmsg( "Null loc to consume." );
@@ -2103,7 +2106,7 @@ trinary Character::consume( item_location loc, bool force )
     }
     contents_change_handler handler;
     item &target = *loc;
-    trinary result = consume( target, force );
+    trinary result = consume( target, force, ownership_confirmed );
     if( result != trinary::NONE ) {
         handler.unseal_pocket_containing( loc );
     }

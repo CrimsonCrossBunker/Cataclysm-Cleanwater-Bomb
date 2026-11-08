@@ -688,6 +688,7 @@ class game
         /** NPCs who saw player interacting with their stuff (disassembling, cutting etc)
         * will notify the player that thievery was witnessed and make angry at the player. */
         void on_witness_theft( const item &target );
+        void on_witness_theft( const item &target, Character &thief );
     private:
         /** Unloads all NPCs.
          *
