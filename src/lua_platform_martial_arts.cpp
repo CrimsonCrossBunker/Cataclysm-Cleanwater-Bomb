@@ -17,11 +17,13 @@
 #include <vector>
 
 #include "character.h"
+#include "calendar.h"
 #include "character_martial_arts.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_relation_page.h"
 #include "martialarts.h"
+#include "ret_val.h"
 
 static const matype_id style_kicks( "style_kicks" );
 static const matype_id style_none( "style_none" );
@@ -120,6 +122,8 @@ sol::table snapshot_technique_definition(
     result["critical_only"] = definition.crit_tec;
     result["critical_compatible"] = definition.crit_ok;
     result["manual_activation"] = definition.can_activate();
+    result["cooldown_seconds"] = to_seconds<double>( definition.cooldown );
+    result["dynamic_cooldown"] = !definition.lua_platform_cooldown_handler.empty();
     result["conditional_activation"] =
         !definition.lua_platform_condition_handler.empty();
     result["reach_only"] = definition.reach_tec;
@@ -717,6 +721,32 @@ void install_martial_art_api(
     const script_game_id & id ) {
         require_read();
         return get_technique_definition( lua_state, id );
+    } );
+    martial_arts.set_function(
+        "technique_state",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle, const script_game_id & id ) {
+        require_read();
+        if( id.kind() != "martial_art_technique" || !id.is_valid() ) {
+            throw std::invalid_argument( "services.martial_arts.technique_state requires a valid technique id" );
+        }
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   handle, current_runtime_generation(), current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const matec_id technique( id.value() );
+        const ret_val<void> availability = character->active_technique_availability( technique );
+        sol::table snapshot = state.create_table();
+        snapshot["id"] = id;
+        snapshot["available"] = availability.success();
+        snapshot["reason"] = availability.str();
+        snapshot["base_cooldown_seconds"] = to_seconds<double>( technique->cooldown );
+        snapshot["remaining_seconds"] = to_seconds<double>(
+                                            character->martial_arts_data->technique_cooldown_remaining( technique ) );
+        return make_game_value_result( state, sol::make_object( state, std::move( snapshot ) ) );
     } );
     martial_arts.set_function( "technique_name", [require_read]( const std::string & id ) {
         require_read();

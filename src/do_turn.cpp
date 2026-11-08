@@ -726,7 +726,9 @@ bool game::do_turn()
     // query); a single in-loop check missed cases where the avatar loop was not
     // re-entered. One-shot, so it only triggers the save once.
     if( input_replay::replay_just_finished() ) {
-        save();
+        if( input_replay::had_input_failure() || !save() ) {
+            throw input_replay::replay_error( "Replay did not reach a successful save boundary" );
+        }
         uquit = QUIT_SAVED;
     }
 

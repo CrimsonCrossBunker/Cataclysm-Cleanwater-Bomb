@@ -15,7 +15,7 @@ Q 'def skip(to_skip): select(all(. != to_skip; .));
 	| select(type=="object")
 	| select(.type=="overmap_special")
 	| .id as $id
-	| .overmaps[].overmap
+	| .overmaps[]?.overmap
     | select(. != null)
 	| sub("_(north|south|east|west)$"; "")
 	# Skip common terrains to prevent false positives

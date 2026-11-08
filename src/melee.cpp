@@ -1680,7 +1680,7 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
                          sub_bodypart_str_id::NULL_ID() ) );
 }
 
-std::vector<matec_id> Character::active_techniques() const
+std::vector<matec_id> Character::active_techniques( const bool include_unavailable ) const
 {
     std::vector<matec_id> available;
     std::set<matec_id> seen;
@@ -1690,11 +1690,19 @@ std::vector<matec_id> Character::active_techniques() const
         candidates.push_back( tec_mounted_charge );
     }
     for( const matec_id &id : candidates ) {
-        if( !id.is_valid() || !id->can_activate() || !id->is_valid_character( *this ) ||
-            !id->activation_allowed( *this, "menu" ) || !seen.insert( id ).second ) {
+        if( !id.is_valid() || !id->can_activate() || !seen.insert( id ).second ) {
+            continue;
+        }
+        if( !include_unavailable && ( !id->is_valid_character( *this ) ||
+                                      martial_arts_data->technique_cooldown_remaining( id ) > 0_turns ||
+                                      !id->activation_allowed( *this, "menu" ) ) ) {
             continue;
         }
         if( id == tec_mounted_charge ) {
+            if( !include_unavailable && ( !is_mounted() || !mounted_creature ||
+                                          mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ) {
+                continue;
+            }
             // Mounted charge is an explicit weapon action; use the actual
             // wielded item even when the selected style suppresses weapon use.
             if( !wielded || !wielded->type->mounted_charge ||
@@ -1705,6 +1713,58 @@ std::vector<matec_id> Character::active_techniques() const
         available.push_back( id );
     }
     return available;
+}
+
+ret_val<void> Character::active_technique_availability( const matec_id &technique ) const
+{
+    const std::vector<matec_id> known = active_techniques( true );
+    if( std::find( known.begin(), known.end(), technique ) == known.end() ) {
+        return ret_val<void>::make_failure( _( "Technique not available with this style and weapon." ) );
+    }
+    if( has_flag( json_flag_CANNOT_ATTACK ) ||
+        ( is_mounted() && mounted_creature && mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ) {
+        return ret_val<void>::make_failure( _( "You cannot attack right now." ) );
+    }
+    const time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
+    if( remaining > 0_turns ) {
+        return ret_val<void>::make_failure( _( "Cooldown: %s" ), to_string( remaining ) );
+    }
+    if( technique == tec_mounted_charge && ( !is_mounted() || !mounted_creature ) ) {
+        return ret_val<void>::make_failure( _( "Requires an animal mount." ) );
+    }
+    if( !technique->is_valid_character( *this ) ) {
+        return ret_val<void>::make_failure( _( "Technique requirements are not met." ) );
+    }
+    if( !technique->activation_allowed( *this, "menu" ) ) {
+        return ret_val<void>::make_failure( _( "Activation conditions are not met." ) );
+    }
+    return ret_val<void>::make_success();
+}
+
+std::string Character::active_technique_cooldowns_text() const
+{
+    std::string text;
+    int shown = 0;
+    int hidden = 0;
+    for( const matec_id &technique : active_techniques( true ) ) {
+        const time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
+        if( remaining <= 0_turns ) {
+            continue;
+        }
+        if( shown >= 3 ) {
+            ++hidden;
+            continue;
+        }
+        if( !text.empty() ) {
+            text += "; ";
+        }
+        text += string_format( _( "%1$s: %2$s" ), technique->name.translated(), to_string( remaining ) );
+        ++shown;
+    }
+    if( hidden > 0 ) {
+        text += string_format( _( "; +%d" ), hidden );
+    }
+    return text;
 }
 
 int Character::active_technique_range( const matec_id &technique ) const
@@ -1728,8 +1788,8 @@ bool Character::use_active_technique( Creature &target, const matec_id &techniqu
         pos_bub().z() != target.pos_bub().z() ) {
         return false;
     }
-    const std::vector<matec_id> granted = active_techniques();
-    if( std::find( granted.begin(), granted.end(), technique ) == granted.end() ) {
+    if( !active_technique_availability( technique ).success() ||
+        !technique->activation_allowed( *this, "start" ) ) {
         return false;
     }
     const item_location weapon = used_weapon();
@@ -1760,7 +1820,12 @@ bool Character::use_active_technique( Creature &target, const matec_id &techniqu
     if( !selected || ( distance > 1 && !std::get<1>( *selected )->weapon ) ) {
         return false;
     }
-    return melee_attack( target, false, technique, true, -1, selected );
+    const time_duration cooldown = technique->activation_cooldown( *this );
+    const bool executed = melee_attack( target, false, technique, true, -1, selected );
+    if( executed ) {
+        martial_arts_data->start_technique_cooldown( technique, cooldown );
+    }
+    return executed;
 }
 
 std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>

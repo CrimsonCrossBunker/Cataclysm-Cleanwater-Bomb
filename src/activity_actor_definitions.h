@@ -4606,6 +4606,7 @@ class mounted_charge_activity_actor : public activity_actor
         tripoint_abs_ms origin = tripoint_abs_ms::min;
         itype_id charge_item_type;
         int completed_steps = 0;
+        bool cooldown_started = false;
 
         bool valid_state( Character &who, const item *&weapon ) const;
         tripoint_abs_ms route_destination( int max_steps ) const;
