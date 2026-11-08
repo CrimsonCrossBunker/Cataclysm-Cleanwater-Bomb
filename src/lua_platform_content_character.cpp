@@ -710,6 +710,8 @@ struct technique_definition_data {
     bool crit_tec = false;
     bool crit_ok = false;
     bool manual_activation = false;
+    double cooldown_seconds = 0.0;
+    std::string cooldown_handler;
     bool wall_adjacent = false;
     bool reach_tec = false;
     bool reach_ok = false;
@@ -1809,6 +1811,15 @@ struct technique_definition_handle {
             throw std::runtime_error( "technique application handler id cannot be empty" );
         }
         definition->apply_handler = handler_id;
+        return *this;
+    }
+
+    technique_definition_handle &cooldown_duration( const std::string &handler_id ) {
+        require_building_handle( token, *definition, "technique" );
+        if( handler_id.empty() ) {
+            throw std::runtime_error( "technique cooldown handler id cannot be empty" );
+        }
+        definition->cooldown_handler = handler_id;
         return *this;
     }
 
@@ -3044,6 +3055,8 @@ void character_content_transaction::impl::install_technique( sol::table &content
         definition->crit_tec = options.get_or( "crit_tec", false );
         definition->crit_ok = options.get_or( "crit_ok", false );
         definition->manual_activation = options.get_or( "manual_activation", false );
+        definition->cooldown_seconds = options.get_or( "cooldown_seconds", 0.0 );
+        definition->cooldown_handler = options.get_or( "cooldown_duration", std::string() );
         definition->wall_adjacent = options.get_or( "wall_adjacent", false );
         definition->reach_tec = options.get_or( "reach_tec", false );
         definition->reach_ok = options.get_or( "reach_ok", false );
@@ -3332,6 +3345,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "attack_vector", &technique_definition_handle::attack_vector,
         "requires_skill", &technique_definition_handle::requires_skill,
         "active_when", &technique_definition_handle::active_when,
+        "cooldown_duration", &technique_definition_handle::cooldown_duration,
         "charge_damage", &technique_definition_handle::charge_damage,
         "on_apply", &technique_definition_handle::on_apply );
     ccb.new_usertype<martial_art_definition_handle>(
@@ -5022,6 +5036,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             if( definition.name.empty() ||
                 !technique_ids.insert( definition.id ).second ||
                 definition.weighting < 0 ||
+                !std::isfinite( definition.cooldown_seconds ) ||
+                definition.cooldown_seconds < 0.0 || definition.cooldown_seconds > 86400.0 ||
                 definition.repeat_min < 1 ||
                 definition.repeat_max < definition.repeat_min ||
                 definition.down_dur < 0 ||
@@ -6559,6 +6575,9 @@ void character_content_transaction::impl::apply_technique()
         native.crit_tec = source.crit_tec;
         native.crit_ok = source.crit_ok;
         native.manual_activation = source.manual_activation;
+        native.cooldown = time_duration::from_seconds(
+                              static_cast<int>( std::ceil( source.cooldown_seconds ) ) );
+        native.lua_platform_cooldown_handler = source.cooldown_handler;
         native.wall_adjacent = source.wall_adjacent;
         native.reach_tec = source.reach_tec;
         native.reach_ok = source.reach_ok;
@@ -6822,6 +6841,8 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.crit_tec ? "crit_tec" : "not_crit_tec" );
                 hash_part( state, value.crit_ok ? "crit_ok" : "not_crit_ok" );
                 hash_part( state, value.manual_activation ? "manual_activation" : "automatic_only" );
+                hash_part( state, std::to_string( value.cooldown_seconds ) );
+                hash_part( state, value.cooldown_handler );
                 hash_part( state, value.wall_adjacent ? "wall_adjacent" : "not_wall_adjacent" );
                 hash_part( state, value.reach_tec ? "reach_tec" : "not_reach_tec" );
                 hash_part( state, value.reach_ok ? "reach_ok" : "not_reach_ok" );

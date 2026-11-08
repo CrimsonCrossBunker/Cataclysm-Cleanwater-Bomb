@@ -35,6 +35,21 @@ entries:
     command: make python-check
     workdir: .
     cost: fast
+  - id: replay-comparison
+    paths: [tools/replay_ab.py, tools/test_replay_ab.py]
+    command: python3 tools/test_replay_ab.py
+    workdir: .
+    cost: fast
+  - id: cmake-version
+    paths: [CMakeLists.txt, src/version.cmake, tools/test_cmake_version.py]
+    command: python3 tools/test_cmake_version.py
+    workdir: .
+    cost: fast
+  - id: replay-protocol
+    paths: [src/input_replay.cpp, src/input_replay.h, tests/standalone/CMakeLists.txt, tests/standalone/input_replay_test.cpp]
+    command: cmake -S tests/standalone -B out/replay-protocol && cmake --build out/replay-protocol --target input_replay_test --parallel 2 && ctest --test-dir out/replay-protocol --output-on-failure
+    workdir: .
+    cost: fast
   - id: cpp-format
     paths: [src/, tests/, tools/]
     command: make astyle-check

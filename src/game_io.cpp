@@ -692,6 +692,9 @@ bool game::save_player_data()
         std::filesystem::path tmp_path = save_path;
         tmp_path.concat( ".tmp" ); // NOLINT(cata-u8-path)
         std::optional<zzip> z = zzip::load( save_path );
+        if( !z ) {
+            return false;
+        }
         saved_data = z->add_file( ( playerfile + SAVE_EXTENSION ).get_unrelative_path().filename(),
                                   save.str() );
         if( saved_data && z->compact_to( tmp_path, 2.0 ) ) {

@@ -162,6 +162,7 @@
 #include "weighted_list.h"
 
 static const activity_id ACT_AIM( "ACT_AIM" );
+static const activity_id ACT_GENERIC_GAME( "ACT_GENERIC_GAME" );
 static const activity_id ACT_SOCIALIZE( "ACT_SOCIALIZE" );
 static const activity_id ACT_TARGET_PRACTICE( "ACT_TARGET_PRACTICE" );
 static const activity_id ACT_TRAIN( "ACT_TRAIN" );
@@ -5982,7 +5983,16 @@ talk_effect_fun_t::func f_assign_activity( const JsonObject &jo, std::string_vie
         Character *target = d.actor( is_npc )->get_character();
         if( target ) {
             const activity_id a = activity_id( act.evaluate( d ) );
-            if( a == ACT_TARGET_PRACTICE ) {
+            if( a == ACT_GENERIC_GAME ) {
+                std::vector<character_id> players = { target->getID() };
+                if( d.has_actor( !is_npc ) ) {
+                    if( const Character *partner = d.actor( !is_npc )->get_character() ) {
+                        players.push_back( partner->getID() );
+                    }
+                }
+                target->assign_activity( tabletop_game_activity_actor(
+                                             dov.evaluate( d ), item_location(), players ) );
+            } else if( a == ACT_TARGET_PRACTICE ) {
                 target->assign_activity( target_practice_activity_actor() );
             } else {
                 target->assign_activity( a, to_moves<int>( dov.evaluate( d ) ) );

@@ -30,6 +30,7 @@
 #include "path_info.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "rng.h"
 #include "sdl_renderer_recovery.h"
 #include "sdl_wrappers.h"
 #include "sdltiles.h"
@@ -226,6 +227,56 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
         fx.draw();
         THEN( "vision effect over a hidden tile keeps its look" ) {
             CHECK( fx.drew( "lighting_hidden", draw_light::fixed ) );
+        }
+    }
+}
+
+TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
+           "[smooth_lighting][tiles][vision_effects]" )
+{
+    policy_fixture fx( plain_tiles( {
+        ter_t_grass.str(), "lighting_hidden", "lighting_lowlight_light",
+        "lighting_lowlight_dark", "lighting_boomered_light", "lighting_boomered_dark"
+    } ) );
+    REQUIRE( fx.available_ );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const efftype_id boomered( "boomered" );
+    on_out_of_scope remove_effect( [&]() {
+        you.remove_effect( boomered );
+    } );
+    struct effect_case {
+        lit_level level;
+        bool boomered;
+        const char *id;
+    };
+    const std::array<effect_case, 6> cases = {{
+            { lit_level::BLANK, false, "lighting_hidden" },
+            { lit_level::BRIGHT_ONLY, false, "lighting_lowlight_light" },
+            { lit_level::BRIGHT_ONLY, true, "lighting_boomered_light" },
+            { lit_level::DARK, true, "lighting_boomered_dark" },
+            { lit_level::DARK, false, "lighting_lowlight_dark" },
+            { lit_level::LIT, false, "t_grass" }
+        }
+    };
+    for( const effect_case &example : cases ) {
+        INFO( example.id );
+        you.remove_effect( boomered );
+        if( example.boomered ) {
+            you.add_effect( boomered, 1_hours );
+        }
+        policy_fixture::refresh_caches();
+        // Supply controlled visibility to the real map draw path. Repeated
+        // frames must keep both effect selection and gameplay RNG unchanged.
+        for( const tripoint_bub_ms &pos : around( player_pos ) ) {
+            here.access_cache( 0 ).visibility_cache[pos.x()][pos.y()] = example.level;
+        }
+        const auto before = rng_get_engine(); // NOLINT(cata-determinism)
+        for( int repeat = 0; repeat < 2; ++repeat ) {
+            fx.draw();
+            CHECK( fx.drew( example.id, example.level == lit_level::LIT ?
+                            draw_light::scene : draw_light::fixed ) );
+            CHECK( rng_get_engine() == before );
         }
     }
 }
