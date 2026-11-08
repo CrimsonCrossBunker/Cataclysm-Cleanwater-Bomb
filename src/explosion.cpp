@@ -21,6 +21,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -892,33 +893,50 @@ void emp_blast( const tripoint_bub_ms &p )
             add_msg( _( "The %s is unaffected by the EMP blast." ), critter.name() );
         }
     }
-    if( player_character.pos_bub() == p ) {
-        if( player_character.get_power_level() > 0_kJ &&
-            !player_character.has_flag( json_flag_EMP_IMMUNE ) &&
-            !player_character.has_flag( json_flag_EMP_ENERGYDRAIN_IMMUNE ) ) {
-            add_msg( m_bad, _( "The EMP blast drains your power." ) );
-            int max_drain = ( player_character.get_power_level() > 1000_kJ ? 1000 : units::to_kilojoule(
-                                  player_character.get_power_level() ) );
-            player_character.mod_power_level( units::from_kilojoule( static_cast<std::int64_t>( -rng(
-                        1 + max_drain / 3, max_drain ) ) ) );
+    if( Character *affected = get_creature_tracker().creature_at<Character>( p ) ) {
+        const character_action_guard lifetime( *affected );
+        if( affected->get_power_level() > 0_kJ &&
+            !affected->has_flag( json_flag_EMP_IMMUNE ) &&
+            !affected->has_flag( json_flag_EMP_ENERGYDRAIN_IMMUNE ) ) {
+            affected->add_msg_player_or_npc( m_bad, _( "The EMP blast drains your power." ),
+                                             _( "The EMP blast drains <npcname>'s power." ) );
+            int max_drain = ( affected->get_power_level() > 1000_kJ ? 1000 : units::to_kilojoule(
+                                  affected->get_power_level() ) );
+            affected->mod_power_level( units::from_kilojoule( static_cast<std::int64_t>( -rng(
+                                           1 + max_drain / 3, max_drain ) ) ) );
         }
         // TODO: More effects?
         //e-handcuffs effects
-        item_location weapon = player_character.get_wielded_item();
+        item_location weapon = affected->get_wielded_item();
         if( weapon && weapon->typeId() == itype_e_handcuffs && weapon->charges > 0 ) {
             weapon->unset_flag( json_flag_NO_UNWIELD );
             weapon->charges = 0;
             weapon->active = false;
-            add_msg( m_good, _( "The %s on your wrists spark briefly, then release your hands!" ),
-                     weapon->tname() );
+            affected->add_msg_player_or_npc( m_good,
+                                             _( "The %s on your wrists spark briefly, then release your hands!" ),
+                                             _( "The %s on <npcname>'s wrists spark briefly, then release their hands!" ),
+                                             weapon->tname() );
         }
 
-        for( item_location &it : player_character.all_items_loc() ) {
+        for( item_location &it : affected->all_items_loc() ) {
+            if( !lifetime ) {
+                break;
+            }
+            if( !it ) {
+                continue;
+            }
             // Render any electronic stuff in player's possession non-functional
             if( it->has_flag( flag_ELECTRONIC ) && !it->is_broken() &&
-                !player_character.has_flag( json_flag_EMP_IMMUNE ) ) {
-                add_msg( m_bad, _( "The EMP blast fries your %s!" ), it->tname() );
+                !affected->has_flag( json_flag_EMP_IMMUNE ) ) {
+                affected->add_msg_player_or_npc( m_bad, _( "The EMP blast fries your %s!" ),
+                                                 _( "The EMP blast fries <npcname>'s %s!" ), it->tname() );
                 it->deactivate();
+                if( !lifetime ) {
+                    break;
+                }
+                if( !it ) {
+                    continue;
+                }
                 item &electronic_item = *it.get_item();
                 if( get_option<bool>( "GAME_EMP" ) ) {
                     electronic_item.set_fault( fault_emp_reboot );

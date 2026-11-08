@@ -1,0 +1,87 @@
+#include "bionic_activation.h"
+
+#include "action.h"
+#include "bionics.h"
+#include "cata_scope_helpers.h"
+#include "character.h"
+#include "character_action_guard.h"
+#include "field_type.h"
+#include "item.h"
+#include "line.h"
+#include "map.h"
+#include "player_activity.h"
+#include "tool_activity_target.h"
+#include "translations.h"
+
+bool bionic_requires_adjacent_target( const bionic_id &id )
+{
+    return id == bionic_id( "bio_lockpick" ) || id == bionic_id( "bio_lighter" ) ||
+           id == bionic_id( "bio_emp" );
+}
+
+bool supports_owned_bionic_activation( const bionic &bio )
+{
+    // Spell aiming and weapon disposition have their own player choices. Do
+    // not silently skip them when a Mod extends an otherwise supported CBM.
+    return bionic_requires_adjacent_target( bio.id ) && !bio.info().spell_on_activate &&
+           !bio.info().activate_remove_cbm && !bio.has_weapon() &&
+           !bio.info().has_flag( json_character_flag( "BIONIC_WEAPON" ) ) &&
+           !bio.info().has_flag( json_character_flag( "BIONIC_GUN" ) );
+}
+
+bool valid_bionic_activation_choices( const Character &who, const bionic &bio,
+                                      const bionic_activation_choices &choices )
+{
+    map &here = get_map();
+    if( !bionic_requires_adjacent_target( bio.id ) || !choices.target ||
+        !here.inbounds( *choices.target ) || choices.target->z() != who.pos_abs().z() ||
+        rl_dist( who.pos_abs(), *choices.target ) > 1 ) {
+        return false;
+    }
+    const tripoint_bub_ms target = here.get_bub( *choices.target );
+    if( bio.id == bionic_id( "bio_lockpick" ) ) {
+        return valid_adjacent_tool_target( adjacent_tool_action::lockpick, who, here,
+                                           null_item_reference(), *choices.target );
+    }
+    return bio.id != bionic_id( "bio_lighter" ) ||
+           ( here.is_flammable( target ) && !here.get_field( target, fd_fire ) );
+}
+
+std::optional<bionic_activation_choices> query_bionic_activation_choices(
+    Character &who, const bionic &bio )
+{
+    if( !bionic_requires_adjacent_target( bio.id ) ) {
+        return std::nullopt;
+    }
+    const bionic_id type = bio.id;
+    const auto target = type == bionic_id( "bio_lockpick" ) ?
+                        query_adjacent_tool_target( adjacent_tool_action::lockpick, who, get_map(),
+                                null_item_reference() ) :
+    [&]() -> std::optional<tripoint_abs_ms> {
+        const auto selected = choose_adjacent( who.pos_bub(), type == bionic_id( "bio_lighter" ) ?
+                                               _( "Start a fire where?" ) : _( "Create an EMP where?" ) );
+        return selected ? std::make_optional( get_map().get_abs( *selected ) ) : std::nullopt;
+    }();
+    return target ? std::make_optional( bionic_activation_choices{ target } ) : std::nullopt;
+}
+
+bool execute_owned_bionic_activation( Character &who, unsigned int uid,
+                                      const bionic_id &expected_type,
+                                      const bionic_activation_choices &choices )
+{
+    const character_action_guard lifetime( who );
+    const auto bio = who.find_bionic_by_uid( uid );
+    if( !lifetime || who.activity || who.get_moves() <= 0 || !bio ||
+        ( *bio )->id != expected_type || !supports_owned_bionic_activation( **bio ) ||
+        !valid_bionic_activation_choices( who, **bio, choices ) ) {
+        return false;
+    }
+    const activity_execution previous = who.activity.execution();
+    who.activity.set_execution( activity_execution::authoritative );
+    const on_out_of_scope restore_role( [&]() {
+        if( lifetime ) {
+            who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+        }
+    } );
+    return who.activate_bionic( **bio, false, nullptr, &choices );
+}

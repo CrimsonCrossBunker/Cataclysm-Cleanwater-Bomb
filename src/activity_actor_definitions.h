@@ -1341,6 +1341,8 @@ class lockpick_activity_actor : public activity_actor
         int moves_total;
         std::optional<item_location> lockpick;
         std::optional<item> fake_lockpick;
+        unsigned int bionic_uid = 0;
+        bool check_bionic( player_activity &act, Character &who ) const;
         tripoint_abs_ms target;
         std::optional<tool_activity_target> owned_target;
 
@@ -1362,7 +1364,7 @@ class lockpick_activity_actor : public activity_actor
 
         /** Use bionic lockpick. */
         static lockpick_activity_actor use_bionic(
-            const tripoint_abs_ms &target
+            const tripoint_abs_ms &target, unsigned int bionic_uid = 0
         );
 
         static int lockpicking_moves( const item_location &lockpick, const Character &who );

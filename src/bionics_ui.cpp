@@ -598,7 +598,7 @@ void avatar::power_bionics()
 
     sorted_bionics passive = filtered_bionics( *my_bionics, TAB_PASSIVE );
     sorted_bionics active = filtered_bionics( *my_bionics, TAB_ACTIVE );
-    bionic *bio_last = nullptr;
+    std::optional<bionic_uid> bio_last;
     bionic_tab_mode tab_mode = TAB_ACTIVE;
 
     //added title_tab_height for the tabbed bionic display
@@ -774,13 +774,16 @@ void avatar::power_bionics()
     } );
 
     for( ;; ) {
-        ui_manager::redraw();
+        // Activation callbacks can add/remove implants or replace their storage.
+        active = filtered_bionics( *my_bionics, TAB_ACTIVE );
+        passive = filtered_bionics( *my_bionics, TAB_PASSIVE );
 
         //track which list we are looking at
         ::sorted_bionics *current_bionic_list = tab_mode == TAB_ACTIVE ? &active : &passive;
         max_scroll_position = std::max( 0, static_cast<int>( current_bionic_list->size() ) - LIST_HEIGHT );
         scroll_position = clamp( scroll_position, 0, max_scroll_position );
-        cursor = clamp<int>( cursor, 0, current_bionic_list->size() );
+        cursor = clamp( cursor, 0, std::max( 0, static_cast<int>( current_bionic_list->size() ) - 1 ) );
+        ui_manager::redraw();
 
 #if defined(__ANDROID__)
         ctxt.get_registered_manual_keys().clear();
@@ -917,7 +920,7 @@ void avatar::power_bionics()
                 tmp = bio_list[cursor];
             } else {
                 tmp = bionic_by_invlet( ch );
-                if( tmp && tmp != bio_last ) {
+                if( tmp && ( !bio_last || tmp->get_uid() != *bio_last ) ) {
                     // new bionic selected, update cursor and scroll position
                     int temp_cursor = 0;
                     for( temp_cursor = 0; temp_cursor < static_cast<int>( bio_list.size() ); temp_cursor++ ) {
@@ -942,7 +945,7 @@ void avatar::power_bionics()
                 // entered a key that is not mapped to any bionic
                 continue;
             }
-            bio_last = tmp;
+            bio_last = tmp->get_uid();
             const bionic_id &bio_id = tmp->id;
             const bionic_data &bio_data = bio_id.obj();
             if( menu_mode == ACTIVATING ) {
@@ -1022,9 +1025,12 @@ void avatar::power_bionics()
                                 activate_bionic( bio, false, &close_ui );
                                 break;
                             } else {
+                                const bionic_uid uid = bio.get_uid();
                                 activate_bionic( bio, false, &close_ui );
-                                // Exit this ui if we are firing a complex bionic
-                                if( close_ui && tmp->get_weapon().shots_remaining( here, this ) > 0 ) {
+                                const auto current = find_bionic_by_uid( uid );
+                                // Target selection and native hooks may invalidate tmp.
+                                if( close_ui && ( !current || !( *current )->has_weapon() ||
+                                                  ( *current )->get_weapon().shots_remaining( here, this ) > 0 ) ) {
                                     break;
                                 }
                             }
