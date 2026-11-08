@@ -10,6 +10,13 @@ class Character;
 class player_control_registry;
 struct player_control_state;
 
+enum class player_control_kind {
+    native,
+    // Existing network proxies keep their current activity/clock path until
+    // authoritative command dispatch replaces that compatibility boundary.
+    legacy_proxy
+};
+
 // Observes one assignment without retaining the actor or controller. A
 // reference cannot be resolved against another world or a later assignment.
 class player_control_reference
@@ -27,10 +34,11 @@ class player_control
 {
     public:
         player_control() = default;
+        ~player_control();
         player_control( const player_control & ) = delete;
         player_control &operator=( const player_control & ) = delete;
-        player_control( player_control && ) noexcept = default;
-        player_control &operator=( player_control && ) noexcept = default;
+        player_control( player_control && ) noexcept;
+        player_control &operator=( player_control && ) noexcept;
         // Exact retained actor, including death while a final save is pending.
         Character *get() const;
         player_id player() const;
@@ -55,13 +63,21 @@ class player_control_registry
         ~player_control_registry();
         player_control_registry( const player_control_registry & ) = delete;
         player_control_registry &operator=( const player_control_registry & ) = delete;
-        player_control claim( const player_id &player, Character &actor );
+        player_control claim( const player_id &player, Character &actor,
+                              player_control_kind kind = player_control_kind::native );
         player_control_reference find( const player_id &player ) const;
         bool is_claimed( const Character &actor ) const;
         bool is_reserved( const player_id &player ) const;
+        // Native simulation phases for an exact, living assigned actor. False
+        // means no phase ran; a copied character ID never authorizes dispatch.
+        // The simulation owns phase order and calls each phase once per step.
+        bool update_body( Character &actor );
+        bool process_turn( Character &actor );
         void reset();
     private:
         friend class player_control_reference;
+        friend struct player_control_state;
+        static bool observes_assignment( const Character &actor, const player_control_state *state );
         struct impl;
         std::unique_ptr<impl> impl_;
 };
