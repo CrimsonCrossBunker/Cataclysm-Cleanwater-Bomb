@@ -6297,6 +6297,10 @@ units::energy Character::available_ups() const
     }
 
     cache_visit_items_with( flag_IS_UPS, [&available_charges]( const item_location & it ) {
+        if( it->uses_energy() ) {
+            available_charges += it->energy_remaining( nullptr );
+            return;
+        }
         available_charges += units::from_kilojoule( static_cast < std::int64_t >
                              ( it->ammo_remaining( ) ) );
     } );
@@ -6330,10 +6334,14 @@ units::energy Character::consume_ups( units::energy qty, const int radius )
 
     // UPS from inventory
     if( qty != 0_kJ ) {
-        cache_visit_items_with( flag_IS_UPS, [&qty]( item_location & it ) {
+        cache_visit_items_with( flag_IS_UPS, [this, &qty]( item_location & it ) {
             if( it->is_tool() && it->type->tool->fuel_efficiency >= 0 ) {
                 qty -= it->energy_consume( qty, tripoint_bub_ms::zero, nullptr,
                                            it->type->tool->fuel_efficiency );
+            } else if( !it->uses_energy() ) {
+                const int charges = divide_round_up( units::to_millijoule( qty ),
+                                                     units::to_millijoule( 1_kJ ) );
+                qty -= std::min( qty, it->ammo_consume( charges, pos_bub(), nullptr ) * 1_kJ );
             } else {
                 qty -= it->energy_consume( qty, tripoint_bub_ms::zero, nullptr );
             }

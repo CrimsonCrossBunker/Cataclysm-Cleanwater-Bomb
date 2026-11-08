@@ -1447,21 +1447,21 @@ class Character : public Creature, public visitable
         float ranged_weakpoint_skill( const item &weapon ) const;
         float throw_weakpoint_skill() const;
         /** Consumes power from power armor or deactivates without enough power */
-        void armor_use_power_when_hit( damage_unit &du, item &armor ) const;
+        void armor_use_power_when_hit( damage_unit &du, item &armor );
         /**
          * Reduces and mutates du, prints messages about armor taking damage.
          * Requires a roll out of 100
          * @return true if the armor was completely destroyed (and the item must be deleted).
          */
         bool armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll,
-                           bool damage_armor = true ) const;
+                           bool damage_armor = true );
         /**
          * Reduces and mutates du, prints messages about armor taking damage.
          * Requires a roll out of 100
          * @return true if the armor was completely destroyed (and the item must be deleted).
          */
         bool armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, const sub_bodypart_id &sbp,
-                           int roll, bool damage_armor = true ) const;
+                           int roll, bool damage_armor = true );
         /**
          * Reduces and mutates du, prints messages about armor taking damage.
          * If the armor is fully destroyed it is replaced
