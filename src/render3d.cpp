@@ -137,7 +137,7 @@ constexpr float VEH_MIRROR_Z = 0.80f;
 
 // the whole rendered z range must be inside map memory's prepared region; the
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
-static_assert( fov_3d_z_range >= OVERMAP_DEPTH && fov_3d_z_range >= OVERMAP_HEIGHT,
+static_assert( fov_3d_z_range >= OVERMAP_DEPTH &&fov_3d_z_range >= OVERMAP_HEIGHT,
                "map memory region must cover every rendered z-level" );
 
 // geometry kind of an instance batch (matches `params.x` in terrain3d.vert)
@@ -205,13 +205,14 @@ vec3 vec3_sub( const vec3 &a, const vec3 &b )
 
 vec3 vec3_cross( const vec3 &a, const vec3 &b )
 {
-    return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x };
+    return { a.y *b.z - a.z * b.y, a.z *b.x - a.x * b.z, a.x *b.y - a.y * b.x };
 }
 
 vec3 vec3_normalize( const vec3 &v )
 {
     const float len = std::sqrt( v.x * v.x + v.y * v.y + v.z * v.z );
-    return len > 0.0f ? vec3{ v.x / len, v.y / len, v.z / len } : vec3{ 0, 0, 1 };
+    return len > 0.0f ? vec3{ v.x / len, v.y / len, v.z / len } :
+           vec3{ 0, 0, 1 };
 }
 
 float vec3_dot( const vec3 &a, const vec3 &b )
@@ -254,21 +255,24 @@ view_frustum make_view_frustum( const mat4 &m )
 {
     view_frustum out;
     const auto row = [&m]( const int r ) {
-        return std::array<float, 4>{ m.c[r], m.c[4 + r], m.c[8 + r], m.c[12 + r] };
+        return std::array<float, 4> { m.c[r], m.c[4 + r], m.c[8 + r], m.c[12 + r] };
     };
     const auto add = []( const std::array<float, 4> &a, const std::array<float, 4> &b,
     const float sign ) {
-        return std::array<float, 4>{ a[0] + sign * b[0], a[1] + sign * b[1],
-                                     a[2] + sign * b[2], a[3] + sign * b[3] };
+        return std::array<float, 4> { a[0] + sign *b[0], a[1] + sign *b[1],
+                                      a[2] + sign *b[2], a[3] + sign *b[3]
+                                    };
     };
     const std::array<float, 4> x = row( 0 );
     const std::array<float, 4> y = row( 1 );
     const std::array<float, 4> z = row( 2 );
     const std::array<float, 4> w = row( 3 );
-    out.planes = {{ add( w, x, 1.0f ), add( w, x, -1.0f ),
-                    add( w, y, 1.0f ), add( w, y, -1.0f ),
-                    z, add( w, z, -1.0f )
-                 }};
+    out.planes = {{
+            add( w, x, 1.0f ), add( w, x, -1.0f ),
+            add( w, y, 1.0f ), add( w, y, -1.0f ),
+            z, add( w, z, -1.0f )
+        }
+    };
     for( std::array<float, 4> &p : out.planes ) {
         const float len = std::sqrt( p[0] * p[0] + p[1] * p[1] + p[2] * p[2] );
         if( len > 1e-8f ) {
@@ -330,7 +334,8 @@ const std::array<float, 36 * 6> &cube_vertices()
             { {1, 0, 0}, {1, 1, 0}, {1, 0, 1}, {1, 0, 0} },  // east (x+)
         };
         int i = 0;
-        for( const auto &f : faces ) {
+        for( const auto &f : faces )
+        {
             const vec3 o{ f[0][0], f[0][1], f[0][2] };
             const vec3 e1{ f[1][0] - o.x, f[1][1] - o.y, f[1][2] - o.z };
             const vec3 e2{ f[2][0] - o.x, f[2][1] - o.y, f[2][2] - o.z };
@@ -387,12 +392,12 @@ const std::array<float, 6 * 6> &quad_vertices()
 {
     static const std::array<float, 6 * 6> verts = {
         -0.5f, 1, 0,  0, 0, 0,
-        0.5f, 1, 0,  1, 0, 0,
-        0.5f, 0, 0,  1, 1, 0,
-        -0.5f, 1, 0,  0, 0, 0,
-        0.5f, 0, 0,  1, 1, 0,
-        -0.5f, 0, 0,  0, 1, 0,
-    };
+            0.5f, 1, 0,  1, 0, 0,
+            0.5f, 0, 0,  1, 1, 0,
+            -0.5f, 1, 0,  0, 0, 0,
+            0.5f, 0, 0,  1, 1, 0,
+            -0.5f, 0, 0,  0, 1, 0,
+        };
     return verts;
 }
 
@@ -629,8 +634,7 @@ struct frame_profile {
     double composite_ms = 0.0;
     double total_ms = 0.0;
 
-    void add( const frame_profile &other )
-    {
+    void add( const frame_profile &other ) {
         main_tiles += other.main_tiles;
         coarse_tiles += other.coarse_tiles;
         frustum_tiles += other.frustum_tiles;
@@ -990,14 +994,18 @@ bool build_glyph_atlas( SDL_Renderer *renderer )
     const SDL_Color white{ 255, 255, 255, 255 };
     const int ascent = TTF_GetFontAscent( font );
     for( int c = 32; c <= 126; ++c ) {
-        int minx = 0, maxx = 0, miny = 0, maxy = 0, advance = 0;
+        int minx = 0;
+        int maxx = 0;
+        int miny = 0;
+        int maxy = 0;
+        int advance = 0;
         TTF_GetGlyphMetrics( font, c, &minx, &maxx, &miny, &maxy, &advance );
         SDL_Surface *g = TTF_RenderGlyph_Blended( font, c, white );
         if( !g ) {
             continue;
         }
-        SDL_Rect dst{ ( c - 32 ) % cols * cell_w + ( cell_w - advance ) / 2 + minx,
-                      ( c - 32 ) / cols * cell_h + ascent - maxy, g->w, g->h };
+        SDL_Rect dst{ ( c - 32 ) % cols *cell_w + ( cell_w - advance ) / 2 + minx,
+                      ( c - 32 ) / cols *cell_h + ascent - maxy, g->w, g->h };
         SDL_BlitSurface( g, nullptr, atlas, &dst );
         SDL_DestroySurface( g );
     }
@@ -1048,7 +1056,7 @@ bool probe( SDL_Renderer *renderer )
         return false;
     }
 
-    SDL_GPUVertexBufferDescription vb_descs[2]{};
+    SDL_GPUVertexBufferDescription vb_descs[2] {};
     vb_descs[0].slot = 0;
     vb_descs[0].pitch = 6 * sizeof( float );
     vb_descs[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
@@ -1056,7 +1064,7 @@ bool probe( SDL_Renderer *renderer )
     vb_descs[1].pitch = INSTANCE_STRIDE;
     vb_descs[1].input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
 
-    SDL_GPUVertexAttribute attrs[9]{};
+    SDL_GPUVertexAttribute attrs[9] {};
     attrs[0].location = 0;
     attrs[0].buffer_slot = 0;
     attrs[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
@@ -1319,7 +1327,9 @@ void terrain_color( const int id, float &r, float &g, float &b )
     const uint32_t h = static_cast<uint32_t>( id ) * 2654435761u;
     const float hue = static_cast<float>( h % 360u ) / 60.0f;
     const float x = 1.0f - std::fabs( std::fmod( hue, 2.0f ) - 1.0f );
-    float rr = 0.0f, gg = 0.0f, bb = 0.0f;
+    float rr = 0.0f;
+    float gg = 0.0f;
+    float bb = 0.0f;
     const int sector = static_cast<int>( hue );
     switch( sector ) {
         case 0:
@@ -1661,8 +1671,8 @@ struct sprite_lookup_key {
 
 struct sprite_lookup_hash {
     size_t operator()( const sprite_lookup_key &k ) const {
-        size_t h = std::hash<std::string_view>{}( k.id );
-        h ^= std::hash<std::string_view>{}( k.variant ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+        size_t h = std::hash<std::string_view> {}( k.id );
+        h ^= std::hash<std::string_view> {}( k.variant ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
         h = h * 1000003u + static_cast<size_t>( k.category );
         h = h * 1000003u + static_cast<size_t>( k.subtile );
         h = h * 1000003u + static_cast<size_t>( k.rota );
@@ -1825,15 +1835,13 @@ struct instance_bucket {
 struct bucket_key {
     int mode;
     SDL_Texture *atlas;
-    bool operator==( const bucket_key &other ) const
-    {
+    bool operator==( const bucket_key &other ) const {
         return mode == other.mode && atlas == other.atlas;
     }
 };
 
 struct bucket_key_hash {
-    size_t operator()( const bucket_key &key ) const
-    {
+    size_t operator()( const bucket_key &key ) const {
         size_t h = std::hash<SDL_Texture *> {}( key.atlas );
         h ^= std::hash<int> {}( key.mode ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
         return h;
@@ -1860,9 +1868,11 @@ struct decal_instance {
 
 struct instance_sink {
     float *data;
+    // Intentional implicit conversions keep the instance emission call sites small.
+    // NOLINTNEXTLINE(google-explicit-constructor)
     instance_sink( float *data ) : data( data ) {}
-    instance_sink( std::vector<float> &out )
-    {
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    instance_sink( std::vector<float> &out ) {
         const size_t offset = out.size();
         out.resize( offset + INSTANCE_STRIDE / sizeof( float ) );
         data = out.data() + offset;
@@ -1929,7 +1939,7 @@ int push_utility_shell( std::vector<float> &top_out, std::vector<float> &side_ou
     const float side_height = FLAT_UTILITY_Z + 0.001f;
     const int rot = rota4 & 3;
 
-    const auto inverse_point = [rot]( const float u, const float v, float &x, float &y ) {
+    const auto inverse_point = [rot]( const float u, const float v, float & x, float & y ) {
         if( rot == 1 ) {
             x = 1.0f - v;
             y = u;
@@ -1944,7 +1954,7 @@ int push_utility_shell( std::vector<float> &top_out, std::vector<float> &side_ou
             y = v;
         }
     };
-    const auto inverse_direction = [rot]( const float u, const float v, float &x, float &y ) {
+    const auto inverse_direction = [rot]( const float u, const float v, float & x, float & y ) {
         if( rot == 1 ) {
             x = -v;
             y = u;
@@ -1962,7 +1972,7 @@ int push_utility_shell( std::vector<float> &top_out, std::vector<float> &side_ou
 
     const auto emit_edge = [&]( const float lo, const float hi, const float fixed,
                                 const float uv_lo, const float uv_hi, const float uv_fixed,
-                                const bool along_x ) {
+    const bool along_x ) {
         if( hi <= lo ) {
             return;
         }
@@ -1985,7 +1995,10 @@ int push_utility_shell( std::vector<float> &top_out, std::vector<float> &side_ou
 
         const float cx = along_x ? ( lo + hi ) * 0.5f : fixed;
         const float cy = along_x ? fixed : ( lo + hi ) * 0.5f;
-        float wx, wy, dirx, diry;
+        float wx;
+        float wy;
+        float dirx;
+        float diry;
         inverse_point( cx, cy, wx, wy );
         inverse_direction( along_x ? 1.0f : 0.0f, along_x ? 0.0f : 1.0f, dirx, diry );
         const float run_pad = std::abs( diry ) > 0.5f ? 1.0f : 0.0f;
@@ -2114,9 +2127,9 @@ std::optional<tripoint_bub_ms> tile_at_pixel( const point &logical_pixel )
     const float ny = 1.0f - ( ( logical_pixel.y - g_dest.y ) / g_dest.h ) * 2.0f;
     const float tan_half = std::tan( g_fov_y * 0.5f );
     const vec3 ray{
-        g_basis_r.x * nx * tan_half * g_aspect + g_basis_u.x * ny * tan_half + g_basis_f.x,
-        g_basis_r.y * nx * tan_half * g_aspect + g_basis_u.y * ny * tan_half + g_basis_f.y,
-        g_basis_r.z * nx * tan_half * g_aspect + g_basis_u.z * ny * tan_half + g_basis_f.z
+        g_basis_r.x *nx *tan_half *g_aspect + g_basis_u.x *ny *tan_half + g_basis_f.x,
+        g_basis_r.y *nx *tan_half *g_aspect + g_basis_u.y *ny *tan_half + g_basis_f.y,
+        g_basis_r.z *nx *tan_half *g_aspect + g_basis_u.z *ny *tan_half + g_basis_f.z
     };
     if( ray.z >= -1e-5f ) {
         return std::nullopt;
@@ -2258,7 +2271,7 @@ struct orientation_cache_key {
 
 struct orientation_cache_hash {
     size_t operator()( const orientation_cache_key &key ) const {
-        size_t h = std::hash<int>{}( key.pos.x() );
+        size_t h = std::hash<int> {}( key.pos.x() );
         h = h * 1000003u + static_cast<size_t>( key.pos.y() );
         h = h * 1000003u + static_cast<size_t>( key.pos.z() );
         h = h * 1000003u + static_cast<size_t>( key.query );
@@ -2344,6 +2357,8 @@ uint8_t terrain_connections_cached( map &here, const avatar &you,
     } ).connections;
 }
 
+// The scene is gathered in one pass to preserve tile and layer ordering.
+// NOLINTNEXTLINE(readability-function-size)
 int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                       std::vector<instance_bucket> &buckets, size_t &bucket_count,
                       std::vector<decal_instance> &decals,
@@ -2356,20 +2371,23 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     panels.clear();
     static bucket_index_map bucket_index;
     bucket_index.clear();
-    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
+    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float>& {
         const bucket_key key{ mode, atlas };
         const auto it = bucket_index.find( key );
-        if( it != bucket_index.end() ) {
+        if( it != bucket_index.end() )
+        {
             return buckets[it->second].data;
         }
         const size_t index = bucket_count++;
         bucket_index[key] = index;
-        if( index < buckets.size() ) {
+        if( index < buckets.size() )
+        {
             instance_bucket &bucket = buckets[index];
             bucket.mode = mode;
             bucket.atlas = atlas;
             bucket.data.clear();
-        } else {
+        } else
+        {
             buckets.push_back( instance_bucket{ mode, atlas, {} } );
         }
         return buckets[index].data;
@@ -2397,7 +2415,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // per-tile visibility, exactly when 2D draws the real tile: LOW/LIT/BRIGHT
     // are the lit levels map::get_visibility maps to CLEAR. everything else
     // draws memory or a vision-effect tile in 2D, so 3D must not show it
-    const auto tile_visible = []( const level_cache &c, const tripoint_bub_ms &q ) {
+    const auto tile_visible = []( const level_cache & c, const tripoint_bub_ms & q ) {
         const lit_level ll = c.visibility_cache[q.x()][q.y()];
         return ll == lit_level::LOW || ll == lit_level::LIT || ll == lit_level::BRIGHT;
     };
@@ -2417,8 +2435,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const float t = std::clamp( light / smooth_lighting::full_color_light, 0.0f, 1.0f );
         return tile_tone{
             smooth_lighting::shadow_shade +
-            ( 1.0f - smooth_lighting::shadow_shade ) * light,
-            nv_tint ? std::clamp( light, 0.0f, 1.0f ) : t * t * ( 3.0f - 2.0f * t ) };
+            ( 1.0f - smooth_lighting::shadow_shade ) *light,
+            nv_tint ? std::clamp( light, 0.0f, 1.0f ) : t *t *( 3.0f - 2.0f * t ) };
     };
     const visibility_variables &vis_vars = here.get_visibility_variables_cache();
     // upper levels are not refreshed by update_visibility_cache (it stops at
@@ -2428,7 +2446,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // light is certainly invisible; this also keeps upper levels, which the
     // cast hides behind their own floor/roof (shadowcasting floor_block),
     // nearly free.
-    const auto upper_lit_at = [&]( const level_cache &c, const tripoint_bub_ms &q ) {
+    const auto upper_lit_at = [&]( const level_cache & c, const tripoint_bub_ms & q ) {
         if( c.seen_cache[q.x()][q.y()] <= 0.0f && c.camera_cache[q.x()][q.y()] <= 0.0f &&
             vis_vars.u_clairvoyance <= 0 && !vis_vars.clairvoyance_field ) {
             return lit_level::BLANK;
@@ -2437,8 +2455,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     };
     // tile light tone from its lit level, the same model 2D's smooth lighting
     // uses (smooth_lighting::classify_light_cell + data/shaders/lit.frag)
-    const auto tone_for = [&]( const level_cache &c, const tripoint_bub_ms &q,
-                               const lit_level ll ) {
+    const auto tone_for = [&]( const level_cache & c, const tripoint_bub_ms & q,
+    const lit_level ll ) {
         const float apparent = smooth_lighting::needs_apparent_light( ll )
                                ? map::apparent_light_helper( c, q ).apparent_light : 0.0f;
         return tone_from_light( smooth_lighting::classify_light_cell(
@@ -2448,7 +2466,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // from the shared TTF glyph atlas and tinted with the entity color (the
     // same curses-style fallback 2D uses)
     const auto glyph_sprite = [&]( const char32_t cp, sprite_info & out ) -> bool {
-        if( !g_ctx.glyph_tex ) {
+        if( !g_ctx.glyph_tex )
+        {
             return false;
         }
         const uint32_t c = static_cast<uint32_t>( cp );
@@ -2456,7 +2475,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         out = sprite_info{};
         out.atlas = g_ctx.glyph_tex;
         out.u0 = ( gc % 16 ) * g_ctx.glyph_cell_w / static_cast<float>( g_ctx.glyph_atlas_w );
-        out.v0 = ( gc / 16 ) * g_ctx.glyph_cell_h / static_cast<float>( g_ctx.glyph_atlas_h );
+        const int glyph_row = gc / 16;
+        out.v0 = glyph_row * g_ctx.glyph_cell_h / static_cast<float>( g_ctx.glyph_atlas_h );
         out.u1 = out.u0 + g_ctx.glyph_cell_w / static_cast<float>( g_ctx.glyph_atlas_w );
         out.v1 = out.v0 + g_ctx.glyph_cell_h / static_cast<float>( g_ctx.glyph_atlas_h );
         out.aspect = g_ctx.glyph_cell_h > 0
@@ -2502,7 +2522,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // lookup_sprite_layers_3d supplies the cross-frame single-variant cache;
     // multi-variant remembered tiles still resolve with their position seed.
     const auto memory_lookup = [&]( const std::string & id, const TILE_CATEGORY cat,
-    const tripoint_bub_ms &p, const int subtile,
+                                    const tripoint_bub_ms & p, const int subtile,
     const int rota, const bool force ) -> sprite_lookup_3d {
         sprite_lookup_3d l;
         lookup_sprite_layers_3d( tiles, id, cat, p, subtile, rota, force, l );
@@ -2534,11 +2554,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // vehicle part ("vp_"); 3D renders furniture only, as it does live
         const bool has_furn = !dec_id.empty() && dec_id.rfind( "f_", 0 ) == 0;
         furn_str_id fid;
-        if( has_furn ) {
+        if( has_furn )
+        {
             fid = furn_str_id( dec_id );
         }
         const bool furn_ok = has_furn && fid.is_valid();
-        const auto push_memory_furniture = [&]() {
+        const auto push_memory_furniture = [&]()
+        {
             if( !furn_ok || !with_furniture || count >= MAX_DRAW_INSTANCES ) {
                 return;
             }
@@ -2550,7 +2572,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             const bool layered = fl.bg_tex && wants_layered_face( furn_id( fid ).obj() );
             const sprite_info &fspr = layered ? fl.bg : fl.fg;
             const bool ftex = layered ? fl.bg_tex : fl.fg_tex;
-            float fr = 1.0f, fg = 1.0f, fb = 1.0f;
+            float fr = 1.0f;
+            float fg = 1.0f;
+            float fb = 1.0f;
             if( !ftex ) {
                 terrain_color( furn_id( fid ).to_i() * 31 + 7, fr, fg, fb );
             }
@@ -2585,7 +2609,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         };
 
         const ter_str_id tid( mem_ter );
-        if( mem_ter.empty() || !tid.is_valid() ) {
+        if( mem_ter.empty() || !tid.is_valid() )
+        {
             // stale memory id (content removed): nothing faithful to draw
             if( furn_ok && with_furniture ) {
                 push_fog_slab( dx, dy, wz );
@@ -2596,7 +2621,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         }
         const ter_t &t = *tid;
         const int ter_int = ter_id( tid ).to_i();
-        if( t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+        if( t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) )
+        {
             // remembered open air stays open, as the live path draws it; a
             // remembered decoration still gets its dark backdrop
             if( !dec_id.empty() && with_furniture ) {
@@ -2628,11 +2654,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         int lookup_subtile = -1;
         int lookup_rota = 0;
         bool force_rota = false;
-        if( plain_floor || is_tree || is_shrub || is_flat_utility || is_upright_equipment ) {
+        if( plain_floor || is_tree || is_shrub || is_flat_utility || is_upright_equipment )
+        {
             // 2D's memory draw uses the stored subtile and rotation as-is
             lookup_subtile = mt.get_ter_subtile();
             lookup_rota = mt.get_ter_rotation();
-        } else {
+        } else
+        {
             lookup_subtile = SUBTILE_EDGE;
             lookup_rota = ( is_wall || is_fence ) ? 1 : ( ew_line ? 1 : 0 );
             force_rota = true;
@@ -2642,7 +2670,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // a subtile without its own bg falls back to the base tile's bg
         sprite_info bspr = tl.bg;
         bool btex = tl.bg_tex;
-        if( !btex && lookup_subtile != -1 ) {
+        if( !btex && lookup_subtile != -1 )
+        {
             const sprite_lookup_3d base_l = memory_lookup( mem_ter, TILE_CATEGORY::TERRAIN, p,
                                             -1, lookup_rota, false );
             if( base_l.bg_tex ) {
@@ -2658,7 +2687,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const bool layered_face = is_panel && !is_empty_frame && btex && !is_opening &&
                                   wants_layered_face( t );
         // diagnostic: remembered door-family classification trace, once per id
-        if( is_panel || t.has_flag( "LOCKED" ) ) {
+        if( is_panel || t.has_flag( "LOCKED" ) )
+        {
             static std::unordered_set<std::string> logged_mem_doors;
             if( logged_mem_doors.size() < 300 && logged_mem_doors.insert( mem_ter ).second ) {
                 write_status( std::string( "memdoor: " ) + mem_ter +
@@ -2676,7 +2706,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         static const std::string t_floor_id = "t_floor";
         sprite_info dfspr;
         bool dtex = false;
-        if( is_panel && ( !btex || layered_face ) ) {
+        if( is_panel && ( !btex || layered_face ) )
+        {
             const sprite_lookup_3d dl = memory_lookup( t_floor_id, TILE_CATEGORY::TERRAIN, p,
                                         -1, 0, false );
             if( dl.fg_tex ) {
@@ -2689,18 +2720,23 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const bool ground_tex = ( btex && !layered_face ) || dtex ||
                                 ( tl.fg_tex && plain_floor );
         const int ground_rot4 = ( !btex && !dtex ) ? tl.fg_rot4 : 0;
-        float gr = 1.0f, gg = 1.0f, gb = 1.0f;
-        if( !ground_tex ) {
+        float gr = 1.0f;
+        float gg = 1.0f;
+        float gb = 1.0f;
+        if( !ground_tex )
+        {
             terrain_color( ter_int, gr, gg, gb );
         }
-        if( plain_floor && !btex && !dtex && ground_spr.has_transparency ) {
+        if( plain_floor && !btex && !dtex && ground_spr.has_transparency )
+        {
             std::vector<float> &v = bucket_for( MODE_FLATQUAD,
                                                 ground_tex ? ground_spr.atlas : nullptr );
             push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                            wz - 0.001f, 1.0f, 1.0f, 1.0f, ground_spr, gr, gg, gb,
                            false, ground_rot4, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) ) {
+        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) )
+        {
             // Horizontal objects without a bg must not acquire an unrelated
             // hash-colored floor box beneath their textured top and silhouette.
             sprite_info gspr = ground_spr;
@@ -2717,25 +2753,32 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
         const sprite_info &fspr = tl.fg;
         const bool ftex = tl.fg_tex;
-        float or_ = 1.0f, og = 1.0f, ob = 1.0f;
-        if( !ftex ) {
+        float or_ = 1.0f;
+        float og = 1.0f;
+        float ob = 1.0f;
+        if( !ftex )
+        {
             terrain_color( ter_int, or_, og, ob );
         }
         // the wall sprite clamping a panel or backing a doorway's lintel:
         // consecutive doors/windows/openings are one run, scanned along the
         // wall line to the first wall at either end
-        const auto mem_clamp_wall = [&]( sprite_info & out ) {
+        const auto mem_clamp_wall = [&]( sprite_info & out )
+        {
             const auto mem_ter_at = [&]( const tripoint_bub_ms & q ) -> const ter_t * {
                 const std::string &nid =
-                    get_avatar().get_memorized_tile( here.get_abs( q ) ).get_ter_id();
-                if( nid.empty() ) {
+                get_avatar().get_memorized_tile( here.get_abs( q ) ).get_ter_id();
+                if( nid.empty() )
+                {
                     return nullptr;
                 }
                 const ter_str_id ntid( nid );
-                return ntid.is_valid() ? &*ntid : nullptr;
+                return ntid.is_valid() ? & *ntid : nullptr;
             };
             const point line_step = ew_line ? point::east : point::north;
-            for( const int dir : { 1, -1 } ) {
+            for( const int dir : {
+                     1, -1
+                 } ) {
                 tripoint_bub_ms wall_pos;
                 const ter_t *wt = panel_run_end( p, line_step * dir, mem_ter_at, wall_pos );
                 if( wt == nullptr ) {
@@ -2750,21 +2793,24 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             }
             return false;
         };
-        if( is_tree ) {
+        if( is_tree )
+        {
             std::vector<float> &v = bucket_for( MODE_XQUAD, ftex ? fspr.atlas : nullptr );
             push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                            wz - TREE_HEIGHT * fspr.base_drop,
                            1.0f, 1.0f, TREE_HEIGHT, fspr, or_, og, ob,
                            false, 0, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else if( is_shrub ) {
+        } else if( is_shrub )
+        {
             std::vector<float> &v = bucket_for( MODE_XQUAD, ftex ? fspr.atlas : nullptr );
             push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                            wz - SHRUB_HEIGHT * fspr.base_drop,
                            0.9f, 0.9f, SHRUB_HEIGHT, fspr, or_, og, ob,
                            false, 0, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else if( is_panel ) {
+        } else if( is_panel )
+        {
             const float px = ew_line ? static_cast<float>( dx )
                              : dx + 0.5f - PANEL_THICK * 0.5f;
             const float py = ew_line ? dy + 0.5f - PANEL_THICK * 0.5f
@@ -2854,26 +2900,31 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     ++count;
                 }
             }
-        } else if( is_upright_equipment ) {
+        } else if( is_upright_equipment )
+        {
             std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP, ftex ? fspr.atlas : nullptr );
             push_instance( v, dx + 0.5f, dy + 0.5f, wz - FENCE_HEIGHT * fspr.base_drop,
                            1.0f, FENCE_HEIGHT, 1.0f, fspr, or_, og, ob,
                            false, 0, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else if( is_flat_utility ) {
+        } else if( is_flat_utility )
+        {
             std::vector<float> &top = bucket_for( MODE_FLATQUAD, ftex ? fspr.atlas : nullptr );
             std::vector<float> &sides = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
             count += push_utility_shell( top, sides, dx, dy, wz, fspr, or_, og, ob, tl.fg_rot4,
                                          false, 1.0f, true );
-        } else if( is_fence ) {
+        } else if( is_fence )
+        {
             const float fh = t.has_flag( "TINY" ) ? 0.35f : FENCE_HEIGHT;
             std::vector<float> &v = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
             // the stored subtile/rotation encode the fence run; a memory tile
             // has no neighbors to consult
             const uint8_t conn = memory_conn_mask( mt.get_ter_subtile(),
                                                    mt.get_ter_rotation() );
-            const bool cn = ( conn & 8 ) != 0, cs = ( conn & 1 ) != 0;
-            const bool ce = ( conn & 2 ) != 0, cw = ( conn & 4 ) != 0;
+            const bool cn = ( conn & 8 ) != 0;
+            const bool cs = ( conn & 1 ) != 0;
+            const bool ce = ( conn & 2 ) != 0;
+            const bool cw = ( conn & 4 ) != 0;
             const bool straight = ( cn && cs && !ce && !cw ) ||
                                   ( ce && cw && !cn && !cs );
             if( straight || ( !cn && !cs && !ce && !cw ) ) {
@@ -2885,7 +2936,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             } else {
                 sprite_info hspr = fspr;
                 hspr.u1 = fspr.u0 + ( fspr.u1 - fspr.u0 ) * 0.5f;
-                const float fcx = dx + 0.5f, fcy = dy + 0.5f;
+                const float fcx = dx + 0.5f;
+                const float fcy = dy + 0.5f;
                 if( cn ) {
                     push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                    or_, og, ob, false, 0, false, 1.0f, false, 1.0f, true );
@@ -2907,7 +2959,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     ++count;
                 }
             }
-        } else if( is_wall ) {
+        } else if( is_wall )
+        {
             std::vector<float> &v = bucket_for( MODE_BOX, ftex ? fspr.atlas : nullptr );
             push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ), wz,
                            1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
@@ -2916,7 +2969,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         }
 
         // plain floor with a bg and an fg composites them like live/2D
-        if( plain_floor && ftex && btex && count < MAX_DRAW_INSTANCES ) {
+        if( plain_floor && ftex && btex && count < MAX_DRAW_INSTANCES )
+        {
             std::vector<float> &v = bucket_for( MODE_FLATQUAD, fspr.atlas );
             push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                            wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, or_, og, ob,
@@ -2933,7 +2987,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const float wz = dz * LEVEL_HEIGHT;
         const level_cache &cache = here.get_cache_ref( zlev );
         const region_cull_mask cull_mask = build_region_cull_mask( here, you, center, zlev,
-                                             lowest_vis_z, vis_vars, frustum );
+                                           lowest_vis_z, vis_vars, frustum );
         g_profile.skipped_submaps += cull_mask.skipped_submaps;
         if( cull_mask.any_submaps && !cull_mask.any_active ) {
             ++g_profile.skipped_levels;
@@ -3068,7 +3122,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
                                          !is_wall && !is_upright_equipment;
                 const bool shaped = plain_floor || is_flat_utility || is_upright_equipment;
-                int rota = 0, subtile = 0;
+                int rota = 0;
+                int subtile = 0;
                 if( tiles && shaped ) {
                     terrain_rota_subtile_cached( tiles, here, you, p, rota, subtile );
                 } else if( is_wall || ( is_fence && !is_flat_utility ) || is_panel ) {
@@ -3077,8 +3132,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const bool force_rota = is_wall || ( is_fence && !is_flat_utility ) || is_panel;
                 const int lookup_subtile = shaped ? subtile : ( force_rota ? SUBTILE_EDGE : -1 );
                 const int lookup_rota = shaped ? rota
-                                      : ( is_fence || is_wall ) ? 1
-                                      : ( is_panel ? ( ew_line ? 1 : 0 ) : 0 );
+                                        : ( is_fence || is_wall ) ? 1
+                                        : ( is_panel ? ( ew_line ? 1 : 0 ) : 0 );
                 sprite_lookup_3d tspr;
                 lookup_sprite_layers_3d( tiles, t->id.str(), TILE_CATEGORY::TERRAIN, p,
                                          lookup_subtile, lookup_rota, force_rota, tspr );
@@ -3164,14 +3219,18 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                         ( ftex && plain_floor );
 
                 // untextured fallback: hash color; textured: white, the atlas supplies the color
-                float gr = tone.shade, gg = tone.shade, gb = tone.shade;
+                float gr = tone.shade;
+                float gg = tone.shade;
+                float gb = tone.shade;
                 if( !ground_tex ) {
                     terrain_color( t.to_i(), gr, gg, gb );
                     gr *= tone.shade;
                     gg *= tone.shade;
                     gb *= tone.shade;
                 }
-                float or_ = tone.shade, og = tone.shade, ob = tone.shade;
+                float or_ = tone.shade;
+                float og = tone.shade;
+                float ob = tone.shade;
                 if( !ftex ) {
                     terrain_color( t.to_i(), or_, og, ob );
                     or_ *= tone.shade;
@@ -3256,10 +3315,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const auto live_clamp_wall = [&]( sprite_info & out ) {
                     const auto live_ter_at = [&]( const tripoint_bub_ms & q ) -> const ter_t * {
                         const ter_id nt = here.ter( q );
-                        return nt ? &*nt : nullptr;
+                        return nt ? & *nt : nullptr;
                     };
                     const point line_step = ew_line ? point::east : point::north;
-                    for( const int dir : { 1, -1 } ) {
+                    for( const int dir : {
+                             1, -1
+                         } ) {
                         tripoint_bub_ms wall_pos;
                         const ter_t *wt = panel_run_end( p, line_step * dir, live_ter_at, wall_pos );
                         if( wt == nullptr ) {
@@ -3415,8 +3476,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     // quad; corners, T-junctions, crossings and dead ends bend —
                     // one half-length quad from the tile center toward each
                     // connected edge
-                    const bool cn = ( wall_conn & 8 ) != 0, cs = ( wall_conn & 1 ) != 0;
-                    const bool ce = ( wall_conn & 2 ) != 0, cw = ( wall_conn & 4 ) != 0;
+                    const bool cn = ( wall_conn & 8 ) != 0;
+                    const bool cs = ( wall_conn & 1 ) != 0;
+                    const bool ce = ( wall_conn & 2 ) != 0;
+                    const bool cw = ( wall_conn & 4 ) != 0;
                     const bool straight = ( cn && cs && !ce && !cw ) ||
                                           ( ce && cw && !cn && !cs );
                     if( straight || ( !cn && !cs && !ce && !cw ) ) {
@@ -3429,7 +3492,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         // density matches the full-length segments
                         sprite_info hspr = fspr;
                         hspr.u1 = fspr.u0 + ( fspr.u1 - fspr.u0 ) * 0.5f;
-                        const float fcx = dx + 0.5f, fcy = dy + 0.5f;
+                        const float fcx = dx + 0.5f;
+                const float fcy = dy + 0.5f;
                         if( cn ) {
                             push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
                                            or_, og, ob, false, 0, false, 1.0f, ghost, tone.sat );
@@ -3473,31 +3537,36 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         // connection edges toward unseen neighbours)
                         const auto neighbor_same_field = [&]( const field_type_id & fid,
                         const tripoint_bub_ms & q ) -> int {
-                            if( !here.inbounds( q ) ) {
+                            if( !here.inbounds( q ) )
+                            {
                                 return -1;
                             }
                             const int qdx = q.x() - center.x();
                             const int qdy = q.y() - center.y();
                             const int qdz = q.z() - cz;
-                            if( std::abs( qdx ) > VIEW_RADIUS || std::abs( qdy ) > VIEW_RADIUS ) {
+                            if( std::abs( qdx ) > VIEW_RADIUS || std::abs( qdy ) > VIEW_RADIUS )
+                            {
                                 return -1;
                             }
                             if( qdz != 0 && ( std::abs( qdx ) > REGION_RADIUS ||
-                                              std::abs( qdy ) > REGION_RADIUS ) ) {
+                                              std::abs( qdy ) > REGION_RADIUS ) )
+                            {
                                 return -1;
                             }
                             const level_cache &qc = here.get_cache_ref( q.z() );
                             lit_level qll = lit_level::BLANK;
-                            if( !( qdz < 0 && q.z() < lowest_vis_z ) ) {
+                            if( !( qdz < 0 && q.z() < lowest_vis_z ) )
+                            {
                                 qll = qdz > 0 ? upper_lit_at( qc, q )
-                                      : qc.visibility_cache[q.x()][q.y()];
+                                : qc.visibility_cache[q.x()][q.y()];
                             }
                             if( qll != lit_level::LOW && qll != lit_level::LIT &&
-                                qll != lit_level::BRIGHT ) {
+                                qll != lit_level::BRIGHT )
+                            {
                                 return -1;
                             }
                             return here.field_at( q ).find_field( fid ) ?
-                                   static_cast<int>( fid ) : -1;
+                            static_cast<int>( fid ) : -1;
                         };
                         // render phase, following looks_like through valid
                         // field ids (fd_fog -> fd_smoke, ...); PNULL stays a
@@ -3565,7 +3634,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             }
                             sprite_info gspr;
                             bool gtex = false;
-                            float fr = tone.shade, fgn = tone.shade, fb = tone.shade;
+                            float fr = tone.shade;
+                            float fgn = tone.shade;
+                            float fb = tone.shade;
                             if( spr == nullptr ) {
                                 // ASCII fallback: the level-0 symbol and colour,
                                 // exactly the FIELD fallback draw_from_id_string
@@ -3633,7 +3704,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     const bool layered = fl.bg_tex && wants_layered_face( f.obj() );
                     const sprite_info &fspr = layered ? fl.bg : fl.fg;
                     const bool ftex = layered ? fl.bg_tex : fl.fg_tex;
-                    float fr = tone.shade, fg = tone.shade, fb = tone.shade;
+                    float fr = tone.shade;
+                    float fg = tone.shade;
+                    float fb = tone.shade;
                     if( !ftex ) {
                         terrain_color( f.to_i() * 31 + 7, fr, fg, fb );
                         fr *= tone.shade;
@@ -3680,7 +3753,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         sprite_info ispr;
                         bool itex = lookup_sprite( tiles, itm.typeId().str(), TILE_CATEGORY::ITEM,
                                                    p, ispr );
-                        float ir = tone.shade, ig = tone.shade, ib = tone.shade;
+                        float ir = tone.shade;
+                        float ig = tone.shade;
+                        float ib = tone.shade;
                         if( !itex && g_ctx.glyph_tex ) {
                             // sprite-less item: its ASCII symbol tinted with the
                             // item's own color (curses-style fallback) instead of
@@ -3693,7 +3768,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             ispr.atlas = g_ctx.glyph_tex;
                             ispr.u0 = ( gc % 16 ) * g_ctx.glyph_cell_w /
                                       static_cast<float>( g_ctx.glyph_atlas_w );
-                            ispr.v0 = ( gc / 16 ) * g_ctx.glyph_cell_h /
+                            const int glyph_row = gc / 16;
+                            ispr.v0 = glyph_row * g_ctx.glyph_cell_h /
                                       static_cast<float>( g_ctx.glyph_atlas_h );
                             ispr.u1 = ispr.u0 + g_ctx.glyph_cell_w /
                                       static_cast<float>( g_ctx.glyph_atlas_w );
@@ -3778,7 +3854,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // in tiles — 32x32 frame/bed 0, 32x48 door/hood 0.5,
                             // 32x64 tall body 1.0
                             const float spill = std::max( 0.0f,
-                                -static_cast<float>( vl.offset.y ) ) / 32.0f;
+                                                          -static_cast<float>( vl.offset.y ) ) / 32.0f;
                             // near the player the WHOLE vehicle's shell
                             // (panels, voxel body, roof gear) hides and only
                             // the flat 2D skin stays, so working on the car /
@@ -3835,7 +3911,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // hollow the whole row)
                             const auto row_width = [&]( const point_rel_ms & m ) -> int {
                                 int w = 0;
-                                for( int row_dy = -10; row_dy <= 10; ++row_dy ) {
+                                for( int row_dy = -10; row_dy <= 10; ++row_dy )
+                                {
                                     if( !veh.parts_at_relative( m + point_rel_ms( 0, row_dy ),
                                                                 true, false ).empty() ) {
                                         ++w;
@@ -3855,7 +3932,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // this tile's body box top (TP-18 height tiers)
                             const float box_top = roof_covered ? VEH_ROOF_Z
                                                   : VEH_BODY_BASE +
-                                                    VEH_BODY_PER_SPILL * spill;
+                                                  VEH_BODY_PER_SPILL * spill;
                             // mount-space delta -> map delta for the car's
                             // facing. vrota is 2D's frame index,
                             // angle_to_dir4(face.dir()-270°) — the dir4 labels
@@ -3863,11 +3940,16 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // index maps to facing N,E,S,W as 0,1,2,3 (a car
                             // facing east has vrota 1)
                             const auto rot_mount = []( const point & dm, const int k ) -> point {
-                                switch( k & 3 ) {
-                                    case 0: return point( dm.y, -dm.x );   // facing N
-                                    case 1: return dm;                     // facing E
-                                    case 2: return point( -dm.y, dm.x );   // facing S
-                                    default: return point( -dm.x, -dm.y ); // facing W
+                                switch( k & 3 )
+                                {
+                                    case 0:
+                                        return point( dm.y, -dm.x );   // facing N
+                                    case 1:
+                                        return dm;                     // facing E
+                                    case 2:
+                                        return point( -dm.y, dm.x );   // facing S
+                                    default:
+                                        return point( -dm.x, -dm.y ); // facing W
                                 }
                             };
                             const point front_dir = rot_mount( point( 1, 0 ), vrota );
@@ -3883,7 +3965,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                          const float ddy, const float dz,
                                                          const float sx, const float sy,
                                                          const sprite_info & dspr, const float dr, const float dg,
-                                                         const float db, const int drot4 ) {
+                            const float db, const int drot4 ) {
                                 decal_instance di;
                                 di.atlas = datlas;
                                 push_instance( di.f, ddx, ddy, dz, sx, sy, 1.0f, dspr, dr, dg, db,
@@ -3924,7 +4006,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // strip, the glass as a sliver) — crop the spill
                             // rows off the v range so the art fills the quad
                             const auto crop_spill = []( const sprite_info & s,
-                                                        const point & soff ) {
+                            const point & soff ) {
                                 sprite_info c = s;
                                 if( s.px_h > 0 && soff.y < 0 ) {
                                     c.v0 += ( s.v1 - s.v0 ) *
@@ -3933,14 +4015,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                                 return c;
                             };
-                                // windshield footprint split (TP-22): the upright
+                            // windshield footprint split (TP-22): the upright
                             // panel takes only the glass band (top of the
                             // footprint) — the gray cowl below it is flat
                             // gray153, invisible against the box top, so the
                             // cover surface comes from the hood decal instead
                             // (TP-23)
                             const auto glass_band = [&crop_spill]( const sprite_info & s,
-                                                                   const point & soff ) {
+                            const point & soff ) {
                                 sprite_info c = crop_spill( s, soff );
                                 c.v1 = c.v0 + ( c.v1 - c.v0 ) * VEH_WSH_GLASS_FRAC;
                                 return c;
@@ -3948,7 +4030,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             const auto push_panel = [&]( const sprite_info & pspr, const point & d,
                                                          const bool swap_u, const float base_z,
                                                          const float ph, const bool anchor_front,
-                                                         const float proud = 1.0f ) {
+                            const float proud = 1.0f ) {
                                 if( count >= MAX_DRAW_INSTANCES ) {
                                     return;
                                 }
@@ -3957,7 +4039,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 if( swap_u ) {
                                     std::swap( uspr.u0, uspr.u1 );
                                 }
-                                float pcx, pcy;
+                                float pcx;
+                                float pcy;
                                 bool run_ns;
                                 if( d.x != 0 ) {
                                     // plane x = edge, runs N-S
@@ -3971,7 +4054,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                     } else {
                                         pcy = static_cast<float>( dy ) +
                                               ( swap_u ? 1.0f - ox - plen * 0.5f
-                                                       : ox + plen * 0.5f );
+                                                : ox + plen * 0.5f );
                                     }
                                 } else {
                                     // plane y = edge, runs E-W
@@ -3985,7 +4068,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                     } else {
                                         pcx = static_cast<float>( dx ) +
                                               ( swap_u ? 1.0f - ox - plen * 0.5f
-                                                       : ox + plen * 0.5f );
+                                                : ox + plen * 0.5f );
                                     }
                                 }
                                 // stand proud of the voxel body box face
@@ -4062,7 +4145,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // become two panels in 2D order
                             bool got_side_panel = false;
                             if( vdrew && has_elevation && !near_hide ) {
-                                for( const point dm : { point( 0, -1 ), point( 0, 1 ) } ) {
+                                for( const point dm : {
+                                         point( 0, -1 ), point( 0, 1 )
+                                     } ) {
                                     if( !exterior( dm ) ) {
                                         continue;
                                     }
@@ -4127,7 +4212,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // quarter-turn, like the skin does)
                             const point left_dir = rot_mount( point( 0, -1 ), vrota );
                             const point front_axis = front_dir.x != 0 ? point( 0, 1 )
-                                                                     : point( 1, 0 );
+                                                     : point( 1, 0 );
                             const bool front_swap = front_axis != left_dir;
                             // TP-28: a tightened corner tile draws NO hood
                             // art — its decal shifted onto the middle column
@@ -4171,7 +4256,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                     !vd_behind.id->has_flag( VPFLAG_OPENABLE ) &&
                                     !vd_behind.id->has_flag( "DOOR" ) &&
                                     !row_has_roof( behind_mount );
-                                float hdx = dx, hdy = dy, hsx = 1.0f, hsy = 1.0f;
+                                float hdx = dx;
+                                float hdy = dy;
+                                float hsx = 1.0f;
+                                float hsy = 1.0f;
                                 if( hood_two_rows ) {
                                     hdx += rear_dir.x < 0 ? -1.0f : 0.0f;
                                     hdy += rear_dir.y < 0 ? -1.0f : 0.0f;
@@ -4211,7 +4299,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // rear face
                             const point right_dir = rot_mount( point( 0, 1 ), vrota );
                             const point rear_axis = rear_dir.x != 0 ? point( 0, 1 )
-                                                                    : point( 1, 0 );
+                                                    : point( 1, 0 );
                             const bool rear_swap = rear_axis != right_dir;
                             const bool is_windshield = vd.id.is_valid() &&
                                                        vd.id->has_flag( VPFLAG_WINDOW ) &&
@@ -4243,8 +4331,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 // nearer end: behind the front glass, ahead of
                                 // the rear glass
                                 const bool cabin_roofed = row_has_roof( mount +
-                                    ( rear_glass ? point_rel_ms( 1, 0 )
-                                                 : point_rel_ms( -1, 0 ) ) );
+                                                                        ( rear_glass ? point_rel_ms( 1, 0 )
+                                                                                : point_rel_ms( -1, 0 ) ) );
                                 const bool flush_cabin = cabin_roofed && !roof_covered;
                                 const point glass_dir = flush_cabin
                                                         ? ( rear_glass ? front_dir : rear_dir )
@@ -4360,8 +4448,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // no inboard body tile exists
                             if( is_mirror && vdrew && !near_hide ) {
                                 point minv( 0, 0 );
-                                for( const point dm : { point( 0, -1 ), point( 0, 1 ),
-                                                        point( -1, 0 ), point( 1, 0 ) } ) {
+                                for( const point dm : {
+                                         point( 0, -1 ), point( 0, 1 ),
+                                         point( -1, 0 ), point( 1, 0 )
+                                     } ) {
                                     if( !veh.parts_at_relative( mount + point_rel_ms( dm.x, dm.y ),
                                                                 true, false ).empty() ) {
                                         minv = rot_mount( dm, vrota );
@@ -4517,7 +4607,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // stacks them correctly even across tilesheet draw calls.
     auto push_entity = [&]( const Creature & critter, const tripoint_bub_ms & p,
                             const float dx, const float dy, const float wz,
-                            const tile_tone & tone ) {
+    const tile_tone & tone ) {
         std::string sprite_id;
         TILE_CATEGORY cat = TILE_CATEGORY::NONE;
         float size_scale = 1.0f;
@@ -4890,7 +4980,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         ++call_count;
         write_status( "draw_terrain_window called #" + std::to_string( call_count ) +
                       " available=" + ( g_available ? std::string( "yes" ) : std::string( "no" ) ) +
-                      " renderer_match=" + ( renderer == g_probed_renderer ? std::string( "yes" ) : std::string( "no" ) ) );
+                      " renderer_match=" + ( renderer == g_probed_renderer ? std::string( "yes" ) :
+                                             std::string( "no" ) ) );
     }
     if( !renderer ) {
         return;
@@ -4953,8 +5044,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // lets invisible/offscreen tiles avoid map and sprite work entirely.
     const vec3 target{ 0.5f, 0.5f, 1.0f };
     const vec3 dir{
-        std::cos( g_pitch ) * std::cos( g_yaw ),
-        std::cos( g_pitch ) * std::sin( g_yaw ),
+        std::cos( g_pitch ) *std::cos( g_yaw ),
+        std::cos( g_pitch ) *std::sin( g_yaw ),
         std::sin( g_pitch )
     };
     const vec3 eye{ target.x - dir.x * g_cam_dist,
@@ -5090,7 +5181,7 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // here, not row order): the nearer flank's panel always overdraws the
     // farther one's, whose mirrored backface then reads as the interior view
     std::stable_sort( panels.begin(), panels.end(),
-                      []( const decal_instance & a, const decal_instance & b ) {
+    []( const decal_instance & a, const decal_instance & b ) {
         return a.sort_key > b.sort_key;
     } );
     for( size_t i = 0; i < panels.size(); ) {
@@ -5125,8 +5216,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                          3.14159265f / 180.0f;
     const float sun_alt = static_cast<float>( units::to_degrees( sun_aa.second ) ) *
                           3.14159265f / 180.0f;
-    const vec3 sun_dir{ -std::sin( sun_az ) * std::cos( sun_alt ),
-                        std::cos( sun_az ) * std::cos( sun_alt ),
+    const vec3 sun_dir{ -std::sin( sun_az ) *std::cos( sun_alt ),
+                        std::cos( sun_az ) *std::cos( sun_alt ),
                         std::sin( sun_alt ) };
     const bool sun_up = sun_alt > 0.0f && daylight > 0.05f;
 
@@ -5176,7 +5267,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     sky_ub.cam_forward = { g_basis_f.x, g_basis_f.y, g_basis_f.z, 0.0f };
     sky_ub.sun_dir = { sun_dir.x, sun_dir.y, sun_dir.z, daylight };
     sky_ub.params = { std::tan( g_fov_y * 0.5f ), g_aspect, cloudiness,
-                      nv_tint ? 1.0f : 0.0f };
+                      nv_tint ? 1.0f : 0.0f
+                    };
     sky_ub.wind = { wind_dir.x * drift_scale, wind_dir.y * drift_scale, 0.0f, 0.0f };
 
     // fragment-shader uniforms: the camera->player occlusion mask. walls and
@@ -5203,7 +5295,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     frag_ub.eye_pos = { eye.x, eye.y, eye.z, 0.0f };
     frag_ub.player_pos = { ( upos.x() - center.x() ) + 0.5f,
                            ( upos.y() - center.y() ) + 0.5f,
-                           player_gz + 1.0f, 0.0f };
+                           player_gz + 1.0f, 0.0f
+                         };
     frag_ub.cam_right = { g_basis_r.x, g_basis_r.y, g_basis_r.z, 0.0f };
     frag_ub.cam_up = { g_basis_u.x, g_basis_u.y, g_basis_u.z, 0.0f };
     frag_ub.mask_params = { 3.2f, 2.2f, player_gz, 1.0f };
@@ -5213,15 +5306,19 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                 cata_shader::memory_preset_from_option_value(
                     get_option<std::string>( "MEMORY_MAP_MODE" ) ) );
     frag_ub.memory_params = { mem_look.preset ? static_cast<float>( *mem_look.preset ) : 0.0f,
-                              mem_look.preset ? 0.0f : 1.0f, 0.0f, 0.0f };
+                              mem_look.preset ? 0.0f : 1.0f, 0.0f, 0.0f
+                            };
     frag_ub.memory_dark = { mem_look.custom_dark[0], mem_look.custom_dark[1],
-                            mem_look.custom_dark[2], mem_look.custom_gamma };
+                            mem_look.custom_dark[2], mem_look.custom_gamma
+                          };
     frag_ub.memory_light = { mem_look.custom_light[0], mem_look.custom_light[1],
-                             mem_look.custom_light[2], 0.0f };
+                             mem_look.custom_light[2], 0.0f
+                           };
     // 2D's reference_night_rgb constants travel to the shader so the two
     // implementations cannot drift apart (nv_tint was resolved with the sky)
     frag_ub.nv_params = { nv_tint ? 1.0f : 0.0f, smooth_lighting::night_floor,
-                          smooth_lighting::overexpose_start, 0.0f };
+                          smooth_lighting::overexpose_start, 0.0f
+                        };
 
     // fallback clear color when the sky pass is unavailable
     const SDL_FColor sky{ 0.02f + 0.35f * daylight, 0.02f + 0.45f * daylight,
