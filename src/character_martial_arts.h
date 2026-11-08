@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "damage.h"
 #include "martialarts.h"
 #include "type_id.h"
@@ -24,6 +25,7 @@ class character_martial_arts
         std::vector<matype_id> ma_styles;
         matype_id style_selected = matype_id( "style_none" );
         std::map<itype_id, matype_id> preferred_weapon_styles;
+        std::map<matec_id, time_point> technique_cooldowns;
     public:
         character_martial_arts();
         character_martial_arts( const std::vector<matype_id> &styles,
@@ -32,6 +34,9 @@ class character_martial_arts
 
         void serialize( JsonOut &json ) const;
         void deserialize( const JsonObject &data );
+
+        time_duration technique_cooldown_remaining( const matec_id &technique ) const;
+        void start_technique_cooldown( const matec_id &technique, time_duration duration );
 
         void reset_style();
         void clear_style( const matype_id &id );

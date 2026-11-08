@@ -1063,6 +1063,16 @@ lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms
                              const visibility_variables &cache, const light_observer &observer,
                              const int dist )
 {
+    if( map_cache.seen_cache[p.x()][p.y()] == 0.0f &&
+        map_cache.camera_cache[p.x()][p.y()] == 0.0f ) {
+        // With neither visibility path, both obstruction flags are true and
+        // lighting cannot make this cell visible. Clairvoyance was handled by
+        // the caller. Preserve the helper's lazy aiming-cache side effect.
+        if( observer.character.recoil < MAX_RECOIL ) {
+            static_cast<void>( observer.character.cant_see( p ) );
+        }
+        return lit_level::BLANK;
+    }
     const map::apparent_light_info a = apparent_light_helper( map_cache, p, observer, dist );
 
     // Unimpaired range is an override to strictly limit vision range based on various conditions,
