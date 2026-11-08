@@ -3,12 +3,50 @@
 #define CATA_SRC_MP_CLIENT_CONN_H
 
 #include <cstdint>
+#include <atomic>
+#include <memory>
 #include <string>
-#include <string_view>
 
 namespace cata_mp
 {
 struct player_credentials;
+
+// Application/world owner only; workers never borrow this connection state.
+// A successful menu probe is pending admission until send_join(). Initial world
+// setup preserves that pending attempt; a reset/exit always closes it.
+class client_connection
+{
+    public:
+        client_connection();
+        ~client_connection();
+        client_connection( const client_connection & ) = delete;
+        client_connection &operator=( const client_connection & ) = delete;
+
+        bool enabled() const;
+        void set_enabled( bool enabled );
+        void reset();
+        void prepare_for_world_load();
+        bool pending_admission() const;
+        bool connect( const std::string &host, uint16_t port, const std::string &name,
+                      const std::string &password, const std::string &version );
+        std::string error() const;
+        std::string identity_scope() const;
+        std::string welcome() const;
+        void send_join( const player_credentials &player );
+        bool join_is_sent() const;
+        void send( const std::string &json );
+        bool recv_pop( std::string &out );
+
+    private:
+        struct impl;
+        std::unique_ptr<impl> impl_;
+        std::atomic<bool> enabled_{ false };
+        void close_transport();
+};
+
+// Owner-thread adapter for existing gameplay/menu callers. No fallback global
+// connection is created when there is no game/application owner.
+client_connection *current_client_connection();
 
 bool is_client_mode();
 void set_client_mode( bool enabled );
