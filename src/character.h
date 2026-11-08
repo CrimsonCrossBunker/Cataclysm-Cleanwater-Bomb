@@ -1235,8 +1235,12 @@ class Character : public Creature, public visitable
                                     &validated_technique = std::nullopt );
         void reduce_moves_from_attack( int forced_movecost, int move_cost );
         /** Handles reach melee attacks */
+        // Shared by local input and authoritative remote commands.
+        bool try_break_relax_gas( const std::string &msg_success, const std::string &msg_failure );
         bool can_reach_attack( const Creature &target ) const;
-        void reach_attack( const tripoint_bub_ms &p, int forced_movecost = -1 );
+        // Remote input confirms collateral on its own UI; nullopt keeps native prompting.
+        void reach_attack( const tripoint_bub_ms &p, int forced_movecost = -1,
+                           std::optional<bool> allow_collateral = std::nullopt );
 
         /**
          * Calls the to other melee_attack function with an empty technique id (meaning no specific
@@ -3031,6 +3035,13 @@ class Character : public Creature, public visitable
         void randomize_cosmetics();
         int get_focus() const {
             return std::max( 1, focus_pool / 1000 );
+        }
+        // Preserve fractional focus when restoring an authoritative character snapshot.
+        int get_focus_pool() const {
+            return focus_pool;
+        }
+        void set_focus_pool( int amount ) {
+            focus_pool = std::max( 0, amount );
         }
         int get_effective_focus() const;
         void mod_focus( int amount ) {

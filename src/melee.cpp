@@ -651,6 +651,22 @@ static void melee_train( Character &you, int lo, int hi, int training_level, con
     }
 }
 
+bool Character::try_break_relax_gas( const std::string &msg_success,
+                                     const std::string &msg_failure )
+{
+    const effect &pacify = get_effect( efftype_id( "relax_gas" ), bodypart_str_id( "mouth" ).id() );
+    if( pacify.is_null() ) {
+        return true;
+    } else if( one_in( pacify.get_intensity() ) ) {
+        add_msg( m_good, msg_success );
+        return true;
+    } else {
+        mod_moves( std::max( 0, pacify.get_intensity() * 10 + rng( -30, 30 ) ) );
+        add_msg( m_bad, msg_failure );
+        return false;
+    }
+}
+
 bool Character::melee_attack( Creature &t, bool allow_special )
 {
     static const matec_id no_technique_id( "" );
@@ -1207,7 +1223,8 @@ bool Character::can_reach_attack( const Creature &target ) const
     return true;
 }
 
-void Character::reach_attack( const tripoint_bub_ms &p, int forced_movecost )
+void Character::reach_attack( const tripoint_bub_ms &p, int forced_movecost,
+                              std::optional<bool> allow_collateral )
 {
     // Blind attacks are allowed, but a weapon cannot cross a solid floor.
     // Validate the actual path, independently of whether the target is visible.
@@ -1260,8 +1277,9 @@ void Character::reach_attack( const tripoint_bub_ms &p, int forced_movecost )
                      ( inter->get_size() * inter->get_size() + 1 ) * 10 ) ) {
             // Even if we miss here, low roll means weapon is pushed away or something like that
             if( inter->has_effect( effect_pet ) || ( inter->is_npc() &&
-                    inter->as_npc()->is_friendly( get_player_character() ) ) ) {
-                if( query_yn( _( "Your attack may cause accidental injury, continue?" ) ) ) {
+                    inter->as_npc()->is_friendly( *this ) ) ) {
+                if( allow_collateral ? *allow_collateral :
+                    query_yn( _( "Your attack may cause accidental injury, continue?" ) ) ) {
                     critter = inter;
                     break;
                 } else {

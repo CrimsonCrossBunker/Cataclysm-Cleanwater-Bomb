@@ -12,6 +12,7 @@ class avatar;
 class item;
 class item_location;
 class map;
+class monster;
 class turret_data;
 
 namespace avatar_action
@@ -31,6 +32,7 @@ bool move( avatar &you, map &m, const tripoint_rel_ms &d );
 /** Handles swimming by the player. Called by avatar_action::move(). */
 void swim( map &m, avatar &you, const tripoint_bub_ms &p );
 
+bool confirm_non_hostile_melee_attack( avatar &you, const monster &critter );
 void autoattack( avatar &you, map &m );
 void active_technique( avatar &you, map &m );
 /** Whether the currently wielded weapon offers a usable mounted charge. */

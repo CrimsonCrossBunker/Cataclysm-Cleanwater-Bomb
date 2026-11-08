@@ -1939,7 +1939,11 @@ static void reach_attack( avatar &you )
     }
 
     if( !traj.empty() ) {
-        you.reach_attack( traj.back() );
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_request_melee( traj.back(), cata_mp::melee_action::reach );
+        } else {
+            you.reach_attack( traj.back() );
+        }
     }
     g->reenter_fullscreen();
 }
@@ -1954,25 +1958,23 @@ static void fire()
         return;
     }
 
-    if( !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
+    const item_location weapon = you.get_wielded_item();
+    const bool reach = weapon ? !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 :
+                       static_cast<int>( you.calculate_by_enchantment( 1,
+                                         enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1;
+    if( !( cata_mp::is_client_mode() && reach ) &&
+        !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
                                   _( "You're too pacified to strike anything…" ) ) ) {
         return;
     }
 
-    const item_location weapon = you.get_wielded_item();
     // try reach weapon
     // used_weapon() returns null location if force unarmed is selected
     if( weapon && !you.used_weapon() && !weapon->is_gun() ) {
         add_msg( m_info, _( "You can't use reach attacks while forcing yourself to fight unarmed." ) );
         return;
     }
-    if( weapon && !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 ) {
-        reach_attack( you );
-        return;
-    }
-    if( !weapon &&
-        static_cast<int>( you.calculate_by_enchantment( 1,
-                          enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1 ) {
+    if( reach ) {
         reach_attack( you );
         return;
     }
@@ -2756,6 +2758,17 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     g->npc_menu( *hnpc );
                     cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-CLOSE: moves=" +
                                      std::to_string( player_character.get_moves() ) );
+                    return true;
+                }
+
+                if( Creature *target = get_creature_tracker().creature_at( next_pos, true ) ) {
+                    if( npc *person = target->as_npc(); person && !person->is_enemy() ) {
+                        g->npc_menu( *person );
+                    } else if( !target->as_monster() ||
+                               avatar_action::confirm_non_hostile_melee_attack( player_character,
+                                       *target->as_monster() ) ) {
+                        cata_mp::client_request_melee( next_pos, cata_mp::melee_action::strike );
+                    }
                     return true;
                 }
 
@@ -3720,12 +3733,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_ACTIVE_TECHNIQUE:
-#ifdef MP_ENABLED
-            if( cata_mp::is_client_mode() ) {
-                add_msg( m_info, _( "Active techniques are not available to remote players yet." ) );
-                break;
-            }
-#endif
             avatar_action::active_technique( player_character, here );
             break;
 

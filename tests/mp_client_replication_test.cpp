@@ -4,6 +4,8 @@
 #include <sstream>
 
 #include "avatar.h"
+#include "avatar_action.h"
+#include "rng.h"
 #include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
@@ -257,4 +259,38 @@ TEST_CASE( "client_turn_packets_do_not_execute_activities_or_replay_a_grant",
     CHECK( cata_mp::client_begin_simulation_turn() );
     CHECK( actor.get_moves() == -50 );
     CHECK( actor.activity.moves_left == 10000 );
+}
+
+TEST_CASE( "client_autoattack_submits_intent_without_local_damage_or_rng", "[multiplayer][melee]" )
+{
+    clear_avatar();
+    clear_map();
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    calendar::turn = calendar::turn_zero + 12_hours;
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        get_creature_tracker().clear();
+        clear_avatar();
+    } );
+    cata_mp::set_client_mode( true );
+    avatar &actor = get_avatar();
+    actor.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    monster source( mtype_id( "mon_test_zombie" ), tripoint_bub_ms( 61, 60, 0 ) );
+    REQUIRE( cata_mp::client_apply_message( state_message( { { 81, &source, 100 } } ) ) );
+    monster *target = session.replication.client.monsters.find( 81 );
+    REQUIRE( target );
+    session.client_turn.client_last_grant_seq = 41;
+    actor.set_moves( 100 );
+    get_map().build_map_cache( 0 );
+    const int stamina = actor.get_stamina();
+    const auto rng = rng_get_engine();
+    avatar_action::autoattack( actor, get_map() );
+    CHECK( target->get_hp() == 100 );
+    CHECK( actor.get_stamina() == stamina );
+    CHECK( rng_get_engine() == rng );
+    CHECK( actor.get_moves() == 0 );
+    CHECK( cata_mp::is_client_waiting_for_ack() );
 }

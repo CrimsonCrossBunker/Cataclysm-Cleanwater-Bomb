@@ -105,7 +105,6 @@ static const efftype_id effect_irradiated( "irradiated" );
 static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pkill( "pkill" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
-static const efftype_id effect_relax_gas( "relax_gas" );
 static const efftype_id effect_sad( "sad" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_sleep_deprived( "sleep_deprived" );
@@ -1002,20 +1001,6 @@ void avatar::vomit()
     Character::vomit();
 }
 
-bool avatar::try_break_relax_gas( const std::string &msg_success, const std::string &msg_failure )
-{
-    const effect &pacify = get_effect( effect_relax_gas, body_part_mouth );
-    if( pacify.is_null() ) {
-        return true;
-    } else if( one_in( pacify.get_intensity() ) ) {
-        add_msg( m_good, msg_success );
-        return true;
-    } else {
-        mod_moves( std::max( 0, pacify.get_intensity() * 10 + rng( -30, 30 ) ) );
-        add_msg( m_bad, msg_failure );
-        return false;
-    }
-}
 
 nc_color avatar::basic_symbol_color() const
 {
@@ -1282,7 +1267,7 @@ void avatar::rebuild_aim_cache() const
     double pi = 2 * acos( 0.0 );
 
     const tripoint_bub_ms local_last_target = here.get_bub(
-            last_target_pos.value() );
+                last_target_pos.value() );
     const tripoint_bub_ms pos = pos_bub( here );
     float base_angle = atan2f( local_last_target.y() - pos.y(),
                                local_last_target.x() - pos.x() );
