@@ -935,7 +935,9 @@ static item wishitem_produce( const itype &type, std::string &flags, bool incont
         granted = granted.in_its_container();
     }
     // If the item has an ammunition, this loads it to capacity, including magazines.
-    if( !granted.ammo_default().is_null() ) {
+    if( granted.all_magazine_well_pockets().size() > 1 ) {
+        granted.dress_magazine_wells( true, true );
+    } else if( !granted.ammo_default().is_null() ) {
         granted.ammo_set( granted.ammo_default(), -1 );
     }
 

@@ -41,6 +41,7 @@
 #include "options.h"
 #include "output.h"
 #include "overmap.h"
+#include "overmap_test_helpers.h"
 #include "overmap_connection.h"
 #include "overmap_location.h"
 #include "overmap_types.h"
@@ -69,28 +70,6 @@ static const overmap_special_id overmap_special_Lab( "Lab" );
 
 static const region_settings_id region_settings_default( "default" );
 
-class overmap_test_helper
-{
-    public:
-        static void generate_railroads( overmap &om ) {
-            om.place_railroads( std::vector<const overmap *>( 4, nullptr ) );
-        }
-        static void set_highway_connections(
-            overmap &om,
-            const std::array<tripoint_om_omt, 4> &conns ) {
-            om.highway_connections = conns;
-        }
-        static const std::array<tripoint_om_omt, 4> &get_highway_connections(
-            const overmap &om ) {
-            return om.highway_connections;
-        }
-        static bool select_highway_end_points( overmap &om,
-                                               const std::vector<const overmap *> &neighbors,
-                                               std::array<tripoint_om_omt, 4> &end_points,
-                                               std::bitset<4> &connections ) {
-            return om.highway_select_end_points( neighbors, end_points, connections, {}, 0 );
-        }
-};
 
 static std::vector<oter_flags> all_oter_flags()
 {

@@ -1497,10 +1497,54 @@ void spell::gain_exp( const Character &guy, int nxp )
 {
     int oldLevel = get_level();
     experience += nxp;
-    if( guy.is_avatar() && oldLevel != get_level() ) {
+    if( ( guy.is_avatar() || guy.is_player_controlled() ) && oldLevel != get_level() ) {
         get_event_bus().send<event_type::player_levels_spell>( guy.getID(), id(), get_level(),
                 spell_class() );
     }
+}
+
+void spell::store_casting_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "id", type );
+    out.member( "xp", experience );
+    out.member( "temp_level_adjustment", temp_level_adjustment );
+    out.member( "temp_damage_multiplyer", temp_damage_multiplyer );
+    out.member( "temp_cast_time_multiplyer", temp_cast_time_multiplyer );
+    out.member( "temp_spell_cost_multiplyer", temp_spell_cost_multiplyer );
+    out.member( "temp_aoe_multiplyer", temp_aoe_multiplyer );
+    out.member( "temp_range_multiplyer", temp_range_multiplyer );
+    out.member( "temp_duration_multiplyer", temp_duration_multiplyer );
+    out.member( "temp_difficulty_adjustment", temp_difficulty_adjustment );
+    out.member( "temp_somatic_difficulty_multiplyer", temp_somatic_difficulty_multiplyer );
+    out.member( "temp_sound_multiplyer", temp_sound_multiplyer );
+    out.member( "temp_concentration_difficulty_multiplyer", temp_concentration_difficulty_multiplyer );
+    // Casting state stores presentation text, not a translatable content definition.
+    out.member( "alt_message", alt_message.translated() );
+    out.end_object();
+}
+
+spell spell::from_casting_state( const JsonObject &data )
+{
+    const spell_id id( data.get_string( "id" ) );
+    if( !id.is_valid() ) {
+        data.throw_error_at( "id", "Unknown spell in casting state" );
+    }
+    spell result( id, data.get_int( "xp" ) );
+    data.read( "temp_level_adjustment", result.temp_level_adjustment );
+    data.read( "temp_damage_multiplyer", result.temp_damage_multiplyer );
+    data.read( "temp_cast_time_multiplyer", result.temp_cast_time_multiplyer );
+    data.read( "temp_spell_cost_multiplyer", result.temp_spell_cost_multiplyer );
+    data.read( "temp_aoe_multiplyer", result.temp_aoe_multiplyer );
+    data.read( "temp_range_multiplyer", result.temp_range_multiplyer );
+    data.read( "temp_duration_multiplyer", result.temp_duration_multiplyer );
+    data.read( "temp_difficulty_adjustment", result.temp_difficulty_adjustment );
+    data.read( "temp_somatic_difficulty_multiplyer", result.temp_somatic_difficulty_multiplyer );
+    data.read( "temp_sound_multiplyer", result.temp_sound_multiplyer );
+    data.read( "temp_concentration_difficulty_multiplyer",
+               result.temp_concentration_difficulty_multiplyer );
+    result.alt_message = no_translation( data.get_string( "alt_message", "" ) );
+    return result;
 }
 
 void spell::set_exp( int nxp )
@@ -2459,6 +2503,52 @@ known_magic::known_magic()
     mana = mana_base;
 }
 
+void known_magic::store_casting_state( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "last_spell", last_spell );
+    out.member( "spells" );
+    out.start_array();
+    for( const auto &entry : spellbook ) {
+        entry.second.store_casting_state( out );
+    }
+    out.end_array();
+    out.end_object();
+}
+
+void known_magic::load_casting_state( const JsonObject &data )
+{
+    decltype( spellbook ) restored;
+    for( const JsonObject entry : data.get_array( "spells" ) ) {
+        spell selected = spell::from_casting_state( entry );
+        const spell_id id = selected.id();
+        if( !restored.emplace( id, std::move( selected ) ).second ) {
+            data.throw_error_at( "spells", "Duplicate spell in casting state" );
+        }
+    }
+    spell_id last;
+    data.read( "last_spell", last, true );
+    spellbook = std::move( restored );
+    last_spell = knows_spell( last ) ? last : spell_id::NULL_ID();
+    // Favorites and shortcuts belong to this frontend. Remove only references
+    // to spells which no longer exist in the authoritative book.
+    for( auto it = spells_to_invlets.begin(); it != spells_to_invlets.end(); ) {
+        if( !knows_spell( it->first ) ) {
+            it = spells_to_invlets.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    for( auto it = favorites.begin(); it != favorites.end(); ) {
+        if( !knows_spell( *it ) ) {
+            it = favorites.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    build_invlets_to_spells();
+}
+
 void known_magic::serialize( JsonOut &json ) const
 {
     json.start_object();
@@ -2847,7 +2937,7 @@ void known_magic::clear_opens_spellbook_data()
     }
 }
 
-void known_magic::evaluate_opens_spellbook_data()
+void known_magic::evaluate_opens_spellbook_data( const Character &caster )
 {
     for( spell *sp : get_spells() ) {
         double raw_level_adjust = caster_level_adjustment + sp->get_temp_level_adjustment();
@@ -2862,7 +2952,7 @@ void known_magic::evaluate_opens_spellbook_data()
             raw_level_adjust += spell_it->second;
         }
         int final_level = clamp( sp->get_level() + static_cast<int>( raw_level_adjust ), 0,
-                                 sp->get_max_level( get_player_character() ) );
+                                 sp->get_max_level( caster ) );
         sp->set_temp_level_adjustment( final_level - sp->get_level() );
     }
 }

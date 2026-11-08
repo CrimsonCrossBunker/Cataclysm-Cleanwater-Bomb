@@ -84,42 +84,5 @@ int talker_avatar_const::get_daily_calories( int day, std::string const &type ) 
 bool talker_avatar::buy_monster( talker &seller, const mtype_id &mtype, int cost,
                                  int count, bool pacified, const translation &name )
 {
-    npc *seller_guy = seller.get_npc();
-    if( !seller_guy ) {
-        popup( _( "%s can't sell you any %s" ), seller.disp_name(), mtype.obj().nname( 2 ) );
-        return false;
-    }
-    if( cost > 0 && !npc_trading::pay_npc( *seller_guy, cost ) ) {
-        popup( _( "You can't afford it!" ) );
-        return false;
-    }
-
-    for( int i = 0; i < count; i++ ) {
-        monster *const mon_ptr = g->place_critter_around( mtype, me_chr->pos_bub(), 3 );
-        if( !mon_ptr ) {
-            add_msg_debug( debugmode::DF_TALKER, "Cannot place u_buy_monster, no valid placement locations." );
-            break;
-        }
-        monster &tmp = *mon_ptr;
-        // Our monster is always a pet.
-        tmp.friendly = -1;
-        tmp.add_effect( effect_pet, 1_turns, true );
-
-        if( pacified ) {
-            tmp.add_effect( effect_pacified, 1_turns, true );
-        }
-
-        if( !name.empty() ) {
-            tmp.unique_name = name.translated();
-        }
-
-    }
-
-    if( name.empty() ) {
-        popup( _( "%1$s gives you %2$d %3$s." ), seller_guy->get_name(),
-               count, mtype.obj().nname( count ) );
-    } else {
-        popup( _( "%1$s gives you %2$s." ), seller_guy->get_name(), name );
-    }
-    return true;
+    return talker_character::buy_monster( seller, mtype, cost, count, pacified, name );
 }

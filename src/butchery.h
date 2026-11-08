@@ -6,6 +6,7 @@
 
 #include "calendar.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "map.h"
 #include "type_id.h"
 
@@ -25,6 +26,22 @@ enum class butcher_type : int {
     NUM_TYPES       // always keep at the end, number of butchery types
 };
 
+struct butchery_selection {
+    item_source corpse;
+    mtype_id type;
+    butcher_type action = butcher_type::QUICK;
+    bool allow_theft = false;
+    bool allow_desecration = false;
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
+// Choices only; requirements, duration and yields are calculated by the operator.
+bool query_butchery_selection( Character &who, const std::vector<item_location> &corpses,
+                               butcher_type action, std::vector<butchery_selection> &selected );
+bool start_owned_butchery( Character &who, const std::vector<butchery_selection> &selected );
+bool accessible_butchery_corpse( Character &who, const item_location &corpse );
+
 struct butchery_data {
     item_location corpse;
     requirement_id req;
@@ -33,6 +50,10 @@ struct butchery_data {
     time_duration time_to_butcher;
     // when `progress` reaches `time_to_butcher`, the corpse is butchered
     time_duration progress;
+    // Old/native activities ask locally; owned requests carry explicit consent.
+    std::optional<bool> allow_desecration;
+    bool allow_theft = false;
+    std::optional<mtype_id> corpse_type;
 
     butchery_data() = default;
     butchery_data( item_location &corpse, const butcher_type &b_type ) : corpse( corpse ),
@@ -57,16 +78,12 @@ double butcher_get_progress( const item &corpse_item, butcher_type action );
 
 butcher_type get_butcher_type( player_activity *act );
 
-bool set_up_butchery( player_activity &act, Character &you, butchery_data bd );
+bool set_up_butchery( Character &you, const butchery_data &bd );
 
 int roll_butchery_dissect( int skill_level, int dex, int tool_quality );
 
-// Returns false if the calling function should abort
-bool butchery_drops_harvest( butchery_data bt, Character &you );
-
-void butchery_quarter( item *corpse_item, const Character &you );
-
-void destroy_the_carcass( const butchery_data &bd, Character &you );
+// Returns real blood stacks awaiting the operator's destination choice.
+std::vector<item_location> destroy_the_carcass( const butchery_data &bd, Character &you );
 
 std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterator> &corpses,
         int index = -1 );

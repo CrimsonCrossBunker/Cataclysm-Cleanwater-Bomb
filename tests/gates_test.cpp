@@ -1,3 +1,5 @@
+#include <limits>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -6,16 +8,28 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "coordinates.h"
+#include "flexbuffer_json.h"
+#include "gates.h"
+#include "game.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "mapdata.h"
+#include "mp_gamestate.h"
+#include "mp_queue.h"
+#include "mp_world_session.h"
+#include "mp_test_helpers.h"
 #include "npc.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "sounds.h"
 #include "type_id.h"
+#include "vehicle.h"
+#include "vpart_position.h"
 
 static const ter_str_id ter_t_door_c( "t_door_c" );
 static const ter_str_id ter_t_door_locked( "t_door_locked" );
@@ -271,4 +285,247 @@ TEST_CASE( "synchronous_door_close_uses_the_actual_actor", "[gates][network]" )
     CHECK( you.get_moves() == 2000 );
     CHECK( remote.activity.id() == waiting );
     CHECK( remote.activity.moves_left == 500 );
+}
+
+TEST_CASE( "shared_open_uses_actual_actor_and_charges_only_success",
+           "[gates][open][network]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    standard_npc remote;
+    remote.setpos( here, tripoint_bub_ms( 65, 60, 0 ) );
+    Character &actor = GENERATE( false, true ) ? static_cast<Character &>( remote ) : you;
+    const tripoint_bub_ms target = actor.pos_bub( here ) + point::east;
+    you.set_moves( 2000 );
+    remote.set_moves( 1000 );
+    const int moves = actor.get_moves();
+    const activity_id waiting( "ACT_WAIT" );
+    actor.activity = player_activity( waiting, 500 );
+    sounds::reset_sounds();
+
+    SECTION( "a closed door opens once" ) {
+        here.ter_set( target, ter_t_door_c );
+        REQUIRE( doors::open_immediately( here, actor, target ) );
+        CHECK( here.ter( target ) == ter_t_door_o );
+        CHECK( actor.get_moves() == moves - 100 );
+        CHECK( sounds::get_monster_sounds().first.size() == 1 );
+        CHECK_FALSE( doors::open_immediately( here, actor, target ) );
+        CHECK( actor.get_moves() == moves - 100 );
+        CHECK( sounds::get_monster_sounds().first.size() == 1 );
+    }
+    SECTION( "locked door rejection is free" ) {
+        here.ter_set( target, ter_t_door_locked );
+        CHECK_FALSE( doors::open_immediately( here, actor, target ) );
+        CHECK( here.ter( target ) == ter_t_door_locked );
+        CHECK( actor.get_moves() == moves );
+        CHECK( sounds::get_monster_sounds().first.empty() );
+    }
+    SECTION( "the actor must reach the target" ) {
+        for( const tripoint_bub_ms rejected : {
+                 actor.pos_bub( here ) + tripoint_rel_ms( 2, 0, 0 ),
+                 actor.pos_bub( here ) + tripoint_rel_ms( 0, 0, 1 )
+             } ) {
+            here.ter_set( rejected, ter_t_door_c );
+            CHECK_FALSE( doors::open_immediately( here, actor, rejected ) );
+            CHECK( here.ter( rejected ) == ter_t_door_c );
+        }
+        CHECK_FALSE( doors::open_immediately( here, actor, tripoint_bub_ms( -1, -1, 0 ) ) );
+        CHECK( actor.get_moves() == moves );
+        CHECK( sounds::get_monster_sounds().first.empty() );
+    }
+    SECTION( "outside actors cannot open inside-only windows" ) {
+        here.ter_set( target, ter_t_window_no_curtains );
+        REQUIRE( here.is_outside( actor.pos_bub( here ) ) );
+        CHECK_FALSE( doors::open_immediately( here, actor, target ) );
+        CHECK( here.ter( target ) == ter_t_window_no_curtains );
+        CHECK( actor.get_moves() == moves );
+        CHECK( sounds::get_monster_sounds().first.empty() );
+    }
+    if( &actor == &remote ) {
+        CHECK( you.get_moves() == 2000 );
+    } else {
+        CHECK( remote.get_moves() == 1000 );
+    }
+    CHECK( actor.activity.id() == waiting );
+    CHECK( actor.activity.moves_left == 500 );
+    sounds::reset_sounds();
+}
+
+TEST_CASE( "open_activity_keeps_delayed_settlement_and_rechecks_target",
+           "[gates][open][activity]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms target = you.pos_bub( here ) + point::east;
+    here.ter_set( target, ter_t_door_c );
+    you.set_moves( 100 );
+    you.assign_activity( open_tile_activity_actor( target ) );
+    REQUIRE_FALSE( you.activity.is_null() );
+    REQUIRE( you.activity.moves_total == 100 );
+    REQUIRE( here.ter( target ) == ter_t_door_c );
+    REQUIRE( you.get_moves() == 100 );
+
+    if( GENERATE( false, true ) ) {
+        std::ostringstream saved;
+        JsonOut output( saved );
+        you.activity.serialize( output );
+        you.activity.set_to_null();
+        you.activity.deserialize( json_loader::from_string( saved.str() ).get_object() );
+        REQUIRE( you.activity.id() == activity_id( "ACT_OPEN_TILE" ) );
+        REQUIRE( you.activity.moves_total == 100 );
+        REQUIRE( you.activity.moves_left == 100 );
+        REQUIRE( here.ter( target ) == ter_t_door_c );
+        REQUIRE( you.get_moves() == 100 );
+    }
+
+    SECTION( "normal activity completes through the production activity driver" ) {
+        you.activity.do_turn( you );
+        CHECK( here.ter( target ) == ter_t_door_o );
+        CHECK( you.get_moves() == 0 );
+        CHECK( you.activity.is_null() );
+    }
+    SECTION( "another actor locks the door before completion" ) {
+        here.ter_set( target, ter_t_door_locked );
+        you.activity.do_turn( you );
+        CHECK( here.ter( target ) == ter_t_door_locked );
+        CHECK( you.activity.is_null() );
+    }
+    SECTION( "the actor moved away before completion" ) {
+        you.setpos( here, tripoint_bub_ms( 65, 60, 0 ) );
+        you.activity.do_turn( you );
+        CHECK( here.ter( target ) == ter_t_door_c );
+        CHECK( you.activity.is_null() );
+    }
+}
+
+TEST_CASE( "shared_vehicle_open_checks_live_parts_and_inside_access",
+           "[gates][open][vehicle]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms target = you.pos_bub( here ) + point::east;
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int part = veh->install_part( here, point_rel_ms::zero, vpart_id( "aisle_curtain" ) );
+    REQUIRE( part >= 0 );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    you.set_moves( 1000 );
+    REQUIRE_FALSE( veh->part( part ).open );
+
+    SECTION( "curtain cannot open from outside" ) {
+        CHECK_FALSE( doors::open_immediately( here, you, target ) );
+        CHECK_FALSE( veh->part( part ).open );
+        CHECK( you.get_moves() == 1000 );
+    }
+    SECTION( "curtain opens from the vehicle tile" ) {
+        you.setpos( here, target );
+        REQUIRE( doors::open_immediately( here, you, target ) );
+        CHECK( veh->part( part ).open );
+        CHECK( you.get_moves() == 900 );
+    }
+    SECTION( "incorporeal actors cannot bypass the terrain interaction restriction" ) {
+        you.setpos( here, target );
+        you.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+        CHECK_FALSE( doors::open_immediately( here, you, target ) );
+        CHECK_FALSE( veh->part( part ).open );
+        CHECK( you.get_moves() == 1000 );
+    }
+    SECTION( "invalid saved part index never gets dereferenced" ) {
+        you.setpos( here, target );
+        doors::opening started = doors::begin_open( here, you, target );
+        REQUIRE( started.result == open_tile_result::OPEN_VEHICLE_SINGLE );
+        started.vehicle_part = std::numeric_limits<int>::max();
+        CHECK_FALSE( doors::finish_open( here, you, target, started ) );
+        CHECK_FALSE( veh->part( part ).open );
+    }
+    SECTION( "removed part cannot be opened through an old activity" ) {
+        you.setpos( here, target );
+        const doors::opening started = doors::begin_open( here, you, target );
+        REQUIRE( started.result == open_tile_result::OPEN_VEHICLE_SINGLE );
+        veh->remove_part( veh->part( part ) );
+        veh->part_removal_cleanup( here );
+        CHECK_FALSE( doors::finish_open( here, you, target, started ) );
+    }
+    clear_vehicles();
+}
+
+TEST_CASE( "door_intents_ignore_attached_client_mutations", "[gates][multiplayer][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        cata_mp::get_mp_queue().clear();
+    } );
+    npc &remote = spawn_npc( { 60, 60 }, "test_talker" );
+    const cata_mp::player_id player( std::string( 32, 'd' ) );
+    remote.set_value( "mp_proxy", std::string( "1" ) );
+    remote.set_value( "mp_player_id", player.str() );
+    make_test_remote( session );
+    only_test_remote( session ).actor.bind_player( remote, player, g->npc_lifetimes(),
+            g->player_controls().claim( player, remote ) );
+    only_test_remote( session ).connected = true;
+    set_test_admission( session, cata_mp::peer_admission::create( 702 ) );
+    only_test_remote( session ).turn.remote_moves = 100;
+    map &here = get_map();
+    const bool opening = GENERATE( true, false );
+    const bool reachable = GENERATE( true, false );
+    const tripoint_bub_ms target = remote.pos_bub( here ) + tripoint( reachable ? 1 : 5, 0, 0 );
+    const tripoint_abs_ms absolute = here.get_abs( target );
+    const ter_str_id before = opening ? ter_t_door_c : ter_t_door_o;
+    here.ter_set( target, before );
+    const auto name = remote.name;
+    const auto position = remote.pos_abs();
+    std::ostringstream text;
+    JsonOut out( text );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", opening ? "open" : "close" );
+    out.member( "x", absolute.x() );
+    out.member( "y", absolute.y() );
+    out.member( "z", absolute.z() );
+    out.member( "char_stats" );
+    out.start_object();
+    out.member( "name", "forged" );
+    out.end_object();
+    out.member( "nested" );
+    out.start_object();
+    out.member( "type", "trade_delta" );
+    out.end_object();
+    out.member( "client_tile_changes" );
+    out.start_array();
+    out.start_object();
+    out.member( "x", absolute.x() );
+    out.member( "y", absolute.y() );
+    out.member( "z", absolute.z() );
+    out.member( "ter", "t_wall" );
+    out.end_object();
+    out.end_array();
+    out.end_object();
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
+                                           test_granted_action( text.str(), only_test_remote( session ).turn.grant_seq ),
+                                           only_test_remote( session ).admission } ) );
+    cata_mp::process_mp_events();
+    const ter_str_id expected = reachable ? ( opening ? ter_t_door_o : ter_t_door_c ) : before;
+    CHECK( here.ter( target ) == expected );
+    CHECK( remote.name == name );
+    CHECK( remote.pos_abs() == position );
+    CHECK( only_test_remote( session ).turn.client_acted_this_turn );
+    CHECK( only_test_remote( session ).turn.remote_moves == 0 );
 }

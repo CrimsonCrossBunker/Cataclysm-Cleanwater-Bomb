@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:347b07381816d88eb226f758bf213e221b8ed1a41b256d021c481d53bd439626",
+    "source_fingerprint": "sha256:6e0c05a82fd3878d16f4704de87fcb8b1d3df5eec5b9225fca9c2e3b89aa9338",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -67,7 +67,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2708,
+            "line": 2732,
             "symbol": "conditional_t::conditional_t"
           }
         }
@@ -117,7 +117,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5474,
+        "occurrences": 5475,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -163,7 +163,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2636,
+            "line": 2660,
             "symbol": "parsers_simple"
           }
         }
@@ -256,7 +256,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2598,
+            "line": 2622,
             "symbol": "parsers"
           }
         }
@@ -349,7 +349,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2599,
+            "line": 2623,
             "symbol": "parsers"
           }
         }
@@ -442,7 +442,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2537,
+            "line": 2561,
             "symbol": "parsers"
           }
         }
@@ -535,7 +535,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2552,
+            "line": 2576,
             "symbol": "parsers"
           }
         }
@@ -628,7 +628,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2551,
+            "line": 2575,
             "symbol": "parsers"
           }
         }
@@ -716,7 +716,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2600,
+            "line": 2624,
             "symbol": "parsers"
           }
         }
@@ -809,7 +809,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2673,
+            "line": 2697,
             "symbol": "parsers_simple"
           }
         }
@@ -902,7 +902,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2669,
+            "line": 2693,
             "symbol": "parsers_simple"
           }
         }
@@ -995,7 +995,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2615,
+            "line": 2639,
             "symbol": "parsers_simple"
           }
         }
@@ -1090,7 +1090,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2619,
+            "line": 2643,
             "symbol": "parsers_simple"
           }
         }
@@ -1178,7 +1178,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2674,
+            "line": 2698,
             "symbol": "parsers_simple"
           }
         }
@@ -1271,7 +1271,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2616,
+            "line": 2640,
             "symbol": "parsers_simple"
           }
         }
@@ -1366,7 +1366,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2621,
+            "line": 2645,
             "symbol": "parsers_simple"
           }
         }
@@ -1459,7 +1459,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2614,
+            "line": 2638,
             "symbol": "parsers_simple"
           }
         }
@@ -1549,7 +1549,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2617,
+            "line": 2641,
             "symbol": "parsers_simple"
           }
         }
@@ -1644,7 +1644,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2651,
+            "line": 2675,
             "symbol": "parsers_simple"
           }
         }
@@ -1732,7 +1732,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2654,
+            "line": 2678,
             "symbol": "parsers_simple"
           }
         }
@@ -1825,7 +1825,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2653,
+            "line": 2677,
             "symbol": "parsers_simple"
           }
         }
@@ -1918,7 +1918,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2645,
+            "line": 2669,
             "symbol": "parsers_simple"
           }
         }
@@ -2011,7 +2011,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2536,
+            "line": 2560,
             "symbol": "parsers"
           }
         }
@@ -2104,7 +2104,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2687,
+            "line": 2711,
             "symbol": "parsers_simple"
           }
         }
@@ -2192,7 +2192,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2565,
+            "line": 2589,
             "symbol": "parsers"
           }
         }
@@ -2285,7 +2285,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2585,
+            "line": 2609,
             "symbol": "parsers"
           }
         }
@@ -2378,7 +2378,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2572,
+            "line": 2596,
             "symbol": "parsers"
           }
         }
@@ -2471,7 +2471,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2591,
+            "line": 2615,
             "symbol": "parsers"
           }
         }
@@ -2564,7 +2564,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2590,
+            "line": 2614,
             "symbol": "parsers"
           }
         }
@@ -2657,7 +2657,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2587,
+            "line": 2611,
             "symbol": "parsers"
           }
         }
@@ -2750,7 +2750,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2593,
+            "line": 2617,
             "symbol": "parsers"
           }
         }
@@ -2843,7 +2843,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2592,
+            "line": 2616,
             "symbol": "parsers"
           }
         }
@@ -2936,7 +2936,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2588,
+            "line": 2612,
             "symbol": "parsers"
           }
         }
@@ -3024,7 +3024,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2589,
+            "line": 2613,
             "symbol": "parsers"
           }
         }
@@ -3117,7 +3117,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2586,
+            "line": 2610,
             "symbol": "parsers"
           }
         }
@@ -3210,7 +3210,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2596,
+            "line": 2620,
             "symbol": "parsers"
           }
         }
@@ -3305,7 +3305,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2623,
+            "line": 2647,
             "symbol": "parsers_simple"
           }
         }
@@ -3400,7 +3400,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2627,
+            "line": 2651,
             "symbol": "parsers_simple"
           }
         }
@@ -3495,7 +3495,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2566,
+            "line": 2590,
             "symbol": "parsers"
           }
         }
@@ -3588,7 +3588,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2655,
+            "line": 2679,
             "symbol": "parsers_simple"
           }
         }
@@ -3683,7 +3683,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2625,
+            "line": 2649,
             "symbol": "parsers_simple"
           }
         }
@@ -3776,7 +3776,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2594,
+            "line": 2618,
             "symbol": "parsers"
           }
         }
@@ -3869,7 +3869,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2724,
+            "line": 2748,
             "symbol": "conditional_t::conditional_t"
           }
         }
@@ -3919,7 +3919,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6781,
+        "occurrences": 6785,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3965,7 +3965,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2559,
+            "line": 2583,
             "symbol": "parsers"
           }
         }
@@ -4059,7 +4059,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2554,
+            "line": 2578,
             "symbol": "parsers"
           }
         }
@@ -4154,7 +4154,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2555,
+            "line": 2579,
             "symbol": "parsers"
           }
         }
@@ -4250,7 +4250,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2549,
+            "line": 2573,
             "symbol": "parsers"
           }
         }
@@ -4345,7 +4345,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2637,
+            "line": 2661,
             "symbol": "parsers_simple"
           }
         }
@@ -4435,7 +4435,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2629,
+            "line": 2653,
             "symbol": "parsers_simple"
           }
         }
@@ -4530,7 +4530,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2523,
+            "line": 2547,
             "symbol": "parsers"
           }
         }
@@ -4625,7 +4625,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2639,
+            "line": 2663,
             "symbol": "parsers_simple"
           }
         }
@@ -4715,7 +4715,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2679,
+            "line": 2703,
             "symbol": "parsers_simple"
           }
         }
@@ -4805,7 +4805,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2677,
+            "line": 2701,
             "symbol": "parsers_simple"
           }
         }
@@ -4895,7 +4895,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2656,
+            "line": 2680,
             "symbol": "parsers_simple"
           }
         }
@@ -4985,7 +4985,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2584,
+            "line": 2608,
             "symbol": "parsers"
           }
         }
@@ -5080,7 +5080,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2638,
+            "line": 2662,
             "symbol": "parsers_simple"
           }
         }
@@ -5170,7 +5170,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2562,
+            "line": 2586,
             "symbol": "parsers"
           }
         }
@@ -5260,7 +5260,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2561,
+            "line": 2585,
             "symbol": "parsers"
           }
         }
@@ -5350,7 +5350,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2641,
+            "line": 2665,
             "symbol": "parsers_simple"
           }
         }
@@ -5440,7 +5440,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2642,
+            "line": 2666,
             "symbol": "parsers_simple"
           }
         }
@@ -5535,7 +5535,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2560,
+            "line": 2584,
             "symbol": "parsers"
           }
         }
@@ -5630,7 +5630,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2660,
+            "line": 2684,
             "symbol": "parsers_simple"
           }
         }
@@ -5720,7 +5720,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2612,
+            "line": 2636,
             "symbol": "parsers_simple"
           }
         }
@@ -5815,7 +5815,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2630,
+            "line": 2654,
             "symbol": "parsers_simple"
           }
         }
@@ -5910,7 +5910,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2631,
+            "line": 2655,
             "symbol": "parsers_simple"
           }
         }
@@ -6007,7 +6007,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2525,
+            "line": 2549,
             "symbol": "parsers"
           }
         },
@@ -6020,7 +6020,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2643,
+            "line": 2667,
             "symbol": "parsers_simple"
           }
         }
@@ -6116,7 +6116,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2545,
+            "line": 2569,
             "symbol": "parsers"
           }
         }
@@ -6211,7 +6211,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2513,
+            "line": 2537,
             "symbol": "parsers"
           }
         }
@@ -6304,7 +6304,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2650,
+            "line": 2674,
             "symbol": "parsers_simple"
           }
         }
@@ -6394,7 +6394,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2620,
+            "line": 2644,
             "symbol": "parsers_simple"
           }
         }
@@ -6484,7 +6484,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2544,
+            "line": 2568,
             "symbol": "parsers"
           }
         }
@@ -6579,7 +6579,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2524,
+            "line": 2548,
             "symbol": "parsers"
           }
         }
@@ -6675,7 +6675,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2531,
+            "line": 2555,
             "symbol": "parsers"
           }
         }
@@ -6766,7 +6766,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2546,
+            "line": 2570,
             "symbol": "parsers"
           }
         }
@@ -6861,7 +6861,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2521,
+            "line": 2545,
             "symbol": "parsers"
           }
         }
@@ -6957,7 +6957,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2532,
+            "line": 2556,
             "symbol": "parsers"
           }
         }
@@ -7053,7 +7053,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2538,
+            "line": 2562,
             "symbol": "parsers"
           }
         }
@@ -7148,7 +7148,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2542,
+            "line": 2566,
             "symbol": "parsers"
           }
         }
@@ -7238,7 +7238,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2539,
+            "line": 2563,
             "symbol": "parsers"
           }
         }
@@ -7328,7 +7328,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2540,
+            "line": 2564,
             "symbol": "parsers"
           }
         }
@@ -7418,7 +7418,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2541,
+            "line": 2565,
             "symbol": "parsers"
           }
         }
@@ -7508,7 +7508,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2622,
+            "line": 2646,
             "symbol": "parsers_simple"
           }
         }
@@ -7593,7 +7593,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2518,
+            "line": 2542,
             "symbol": "parsers"
           }
         }
@@ -7683,7 +7683,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2583,
+            "line": 2607,
             "symbol": "parsers"
           }
         }
@@ -7768,7 +7768,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2618,
+            "line": 2642,
             "symbol": "parsers_simple"
           }
         }
@@ -7858,7 +7858,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2602,
+            "line": 2626,
             "symbol": "parsers"
           }
         }
@@ -7949,7 +7949,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2534,
+            "line": 2558,
             "symbol": "parsers"
           }
         }
@@ -8041,7 +8041,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2533,
+            "line": 2557,
             "symbol": "parsers"
           }
         }
@@ -8137,7 +8137,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2652,
+            "line": 2676,
             "symbol": "parsers_simple"
           }
         }
@@ -8227,7 +8227,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2517,
+            "line": 2541,
             "symbol": "parsers"
           }
         }
@@ -8317,7 +8317,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2520,
+            "line": 2544,
             "symbol": "parsers"
           }
         }
@@ -8407,7 +8407,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2543,
+            "line": 2567,
             "symbol": "parsers"
           }
         }
@@ -8497,7 +8497,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2522,
+            "line": 2546,
             "symbol": "parsers"
           }
         }
@@ -8592,7 +8592,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2646,
+            "line": 2670,
             "symbol": "parsers_simple"
           }
         }
@@ -8678,7 +8678,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2530,
+            "line": 2554,
             "symbol": "parsers"
           }
         }
@@ -8769,7 +8769,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2514,
+            "line": 2538,
             "symbol": "parsers"
           }
         }
@@ -8864,7 +8864,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2516,
+            "line": 2540,
             "symbol": "parsers"
           }
         }
@@ -8959,7 +8959,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2640,
+            "line": 2664,
             "symbol": "parsers_simple"
           }
         }
@@ -9054,7 +9054,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2577,
+            "line": 2601,
             "symbol": "parsers"
           }
         }
@@ -9144,7 +9144,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2574,
+            "line": 2598,
             "symbol": "parsers"
           }
         }
@@ -9234,7 +9234,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2576,
+            "line": 2600,
             "symbol": "parsers"
           }
         }
@@ -9329,7 +9329,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2575,
+            "line": 2599,
             "symbol": "parsers"
           }
         }
@@ -9419,7 +9419,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2573,
+            "line": 2597,
             "symbol": "parsers"
           }
         }
@@ -9514,7 +9514,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2632,
+            "line": 2656,
             "symbol": "parsers_simple"
           }
         }
@@ -9609,7 +9609,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2658,
+            "line": 2682,
             "symbol": "parsers_simple"
           }
         }
@@ -9704,7 +9704,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2661,
+            "line": 2685,
             "symbol": "parsers_simple"
           }
         }
@@ -9799,7 +9799,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2685,
+            "line": 2709,
             "symbol": "parsers_simple"
           }
         }
@@ -9889,7 +9889,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2663,
+            "line": 2687,
             "symbol": "parsers_simple"
           }
         }
@@ -9984,7 +9984,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2657,
+            "line": 2681,
             "symbol": "parsers_simple"
           }
         }
@@ -10074,7 +10074,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2675,
+            "line": 2699,
             "symbol": "parsers_simple"
           }
         }
@@ -10164,7 +10164,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2681,
+            "line": 2705,
             "symbol": "parsers_simple"
           }
         }
@@ -10254,7 +10254,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2680,
+            "line": 2704,
             "symbol": "parsers_simple"
           }
         }
@@ -10344,7 +10344,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2678,
+            "line": 2702,
             "symbol": "parsers_simple"
           }
         }
@@ -10434,7 +10434,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2666,
+            "line": 2690,
             "symbol": "parsers_simple"
           }
         }
@@ -10524,7 +10524,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2582,
+            "line": 2606,
             "symbol": "parsers"
           }
         }
@@ -10614,7 +10614,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2686,
+            "line": 2710,
             "symbol": "parsers_simple"
           }
         }
@@ -10704,7 +10704,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2665,
+            "line": 2689,
             "symbol": "parsers_simple"
           }
         }
@@ -10794,7 +10794,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2664,
+            "line": 2688,
             "symbol": "parsers_simple"
           }
         }
@@ -10889,7 +10889,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2662,
+            "line": 2686,
             "symbol": "parsers_simple"
           }
         }
@@ -10984,7 +10984,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2580,
+            "line": 2604,
             "symbol": "parsers"
           }
         }
@@ -11074,7 +11074,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2581,
+            "line": 2605,
             "symbol": "parsers"
           }
         }
@@ -11164,7 +11164,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2684,
+            "line": 2708,
             "symbol": "parsers_simple"
           }
         }
@@ -11254,7 +11254,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2578,
+            "line": 2602,
             "symbol": "parsers"
           }
         }
@@ -11349,7 +11349,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2579,
+            "line": 2603,
             "symbol": "parsers"
           }
         }
@@ -11444,7 +11444,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2647,
+            "line": 2671,
             "symbol": "parsers_simple"
           }
         }
@@ -11539,7 +11539,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2676,
+            "line": 2700,
             "symbol": "parsers_simple"
           }
         }
@@ -11631,7 +11631,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2526,
+            "line": 2550,
             "symbol": "parsers"
           }
         },
@@ -11644,7 +11644,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2644,
+            "line": 2668,
             "symbol": "parsers_simple"
           }
         }
@@ -11735,7 +11735,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2683,
+            "line": 2707,
             "symbol": "parsers_simple"
           }
         }
@@ -11825,7 +11825,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2682,
+            "line": 2706,
             "symbol": "parsers_simple"
           }
         }
@@ -11915,7 +11915,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2515,
+            "line": 2539,
             "symbol": "parsers"
           }
         }
@@ -12005,7 +12005,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2613,
+            "line": 2637,
             "symbol": "parsers_simple"
           }
         }
@@ -12100,7 +12100,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2648,
+            "line": 2672,
             "symbol": "parsers_simple"
           }
         }
@@ -12195,7 +12195,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2667,
+            "line": 2691,
             "symbol": "parsers_simple"
           }
         }
@@ -12285,7 +12285,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2659,
+            "line": 2683,
             "symbol": "parsers_simple"
           }
         }
@@ -12380,7 +12380,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2535,
+            "line": 2559,
             "symbol": "parsers"
           }
         }
@@ -12470,7 +12470,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2611,
+            "line": 2635,
             "symbol": "parsers_simple"
           }
         }
@@ -12565,7 +12565,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2624,
+            "line": 2648,
             "symbol": "parsers_simple"
           }
         }
@@ -12655,7 +12655,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2628,
+            "line": 2652,
             "symbol": "parsers_simple"
           }
         }
@@ -12745,7 +12745,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2567,
+            "line": 2591,
             "symbol": "parsers"
           }
         }
@@ -12835,7 +12835,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2626,
+            "line": 2650,
             "symbol": "parsers_simple"
           }
         }
@@ -12925,7 +12925,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2550,
+            "line": 2574,
             "symbol": "parsers"
           }
         }
@@ -13020,7 +13020,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2547,
+            "line": 2571,
             "symbol": "parsers"
           }
         }
@@ -13115,7 +13115,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2564,
+            "line": 2588,
             "symbol": "parsers"
           }
         }
@@ -13205,7 +13205,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2548,
+            "line": 2572,
             "symbol": "parsers"
           }
         }
@@ -13293,7 +13293,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2553,
+            "line": 2577,
             "symbol": "parsers"
           }
         }
@@ -13388,7 +13388,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2563,
+            "line": 2587,
             "symbol": "parsers"
           }
         }
@@ -13483,7 +13483,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2671,
+            "line": 2695,
             "symbol": "parsers_simple"
           }
         }
@@ -13568,7 +13568,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2672,
+            "line": 2696,
             "symbol": "parsers_simple"
           }
         }
@@ -13653,7 +13653,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2556,
+            "line": 2580,
             "symbol": "parsers"
           }
         }
@@ -13748,7 +13748,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2633,
+            "line": 2657,
             "symbol": "parsers_simple"
           }
         }
@@ -13843,7 +13843,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2635,
+            "line": 2659,
             "symbol": "parsers_simple"
           }
         }
@@ -13928,7 +13928,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2634,
+            "line": 2658,
             "symbol": "parsers_simple"
           }
         }
@@ -14023,7 +14023,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2519,
+            "line": 2543,
             "symbol": "parsers"
           }
         }
@@ -14113,7 +14113,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2668,
+            "line": 2692,
             "symbol": "parsers_simple"
           }
         }
@@ -14202,7 +14202,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2570,
+            "line": 2594,
             "symbol": "parsers"
           }
         }
@@ -14252,7 +14252,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 121,
+        "occurrences": 122,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -14296,7 +14296,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2716,
+            "line": 2740,
             "symbol": "conditional_t::conditional_t"
           }
         }
@@ -14346,7 +14346,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1770,
+        "occurrences": 1771,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -14390,7 +14390,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2597,
+            "line": 2621,
             "symbol": "parsers"
           }
         }
@@ -14480,7 +14480,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2670,
+            "line": 2694,
             "symbol": "parsers_simple"
           }
         }
@@ -14575,7 +14575,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2670,
+            "line": 2694,
             "symbol": "parsers_simple"
           }
         }
@@ -14668,7 +14668,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2568,
+            "line": 2592,
             "symbol": "parsers"
           }
         }
@@ -14761,7 +14761,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2601,
+            "line": 2625,
             "symbol": "parsers"
           }
         }
@@ -14856,7 +14856,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2559,
+            "line": 2583,
             "symbol": "parsers"
           }
         }
@@ -14945,7 +14945,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2558,
+            "line": 2582,
             "symbol": "parsers"
           }
         }
@@ -15041,7 +15041,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2549,
+            "line": 2573,
             "symbol": "parsers"
           }
         }
@@ -15137,7 +15137,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2636,
+            "line": 2660,
             "symbol": "parsers_simple"
           }
         },
@@ -15150,7 +15150,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2637,
+            "line": 2661,
             "symbol": "parsers_simple"
           }
         }
@@ -15240,7 +15240,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2629,
+            "line": 2653,
             "symbol": "parsers_simple"
           }
         }
@@ -15330,7 +15330,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2523,
+            "line": 2547,
             "symbol": "parsers"
           }
         }
@@ -15420,7 +15420,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2639,
+            "line": 2663,
             "symbol": "parsers_simple"
           }
         }
@@ -15515,7 +15515,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2679,
+            "line": 2703,
             "symbol": "parsers_simple"
           }
         }
@@ -15605,7 +15605,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2677,
+            "line": 2701,
             "symbol": "parsers_simple"
           }
         }
@@ -15695,7 +15695,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2656,
+            "line": 2680,
             "symbol": "parsers_simple"
           }
         }
@@ -15790,7 +15790,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2584,
+            "line": 2608,
             "symbol": "parsers"
           }
         }
@@ -15885,7 +15885,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2638,
+            "line": 2662,
             "symbol": "parsers_simple"
           }
         }
@@ -15980,7 +15980,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2562,
+            "line": 2586,
             "symbol": "parsers"
           }
         }
@@ -16070,7 +16070,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2561,
+            "line": 2585,
             "symbol": "parsers"
           }
         }
@@ -16160,7 +16160,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2641,
+            "line": 2665,
             "symbol": "parsers_simple"
           }
         }
@@ -16255,7 +16255,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2642,
+            "line": 2666,
             "symbol": "parsers_simple"
           }
         }
@@ -16350,7 +16350,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2560,
+            "line": 2584,
             "symbol": "parsers"
           }
         }
@@ -16440,7 +16440,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2660,
+            "line": 2684,
             "symbol": "parsers_simple"
           }
         }
@@ -16535,7 +16535,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2612,
+            "line": 2636,
             "symbol": "parsers_simple"
           }
         }
@@ -16630,7 +16630,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2630,
+            "line": 2654,
             "symbol": "parsers_simple"
           }
         }
@@ -16725,7 +16725,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2631,
+            "line": 2655,
             "symbol": "parsers_simple"
           }
         }
@@ -16817,7 +16817,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2525,
+            "line": 2549,
             "symbol": "parsers"
           }
         },
@@ -16830,7 +16830,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2643,
+            "line": 2667,
             "symbol": "parsers_simple"
           }
         }
@@ -16921,7 +16921,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2545,
+            "line": 2569,
             "symbol": "parsers"
           }
         }
@@ -17016,7 +17016,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2513,
+            "line": 2537,
             "symbol": "parsers"
           }
         }
@@ -17112,7 +17112,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2619,
+            "line": 2643,
             "symbol": "parsers_simple"
           }
         },
@@ -17125,7 +17125,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2620,
+            "line": 2644,
             "symbol": "parsers_simple"
           }
         }
@@ -17215,7 +17215,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2544,
+            "line": 2568,
             "symbol": "parsers"
           }
         }
@@ -17264,7 +17264,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 182,
+        "occurrences": 184,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -17308,7 +17308,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2649,
+            "line": 2673,
             "symbol": "parsers_simple"
           }
         }
@@ -17402,7 +17402,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2557,
+            "line": 2581,
             "symbol": "parsers"
           }
         }
@@ -17498,7 +17498,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2524,
+            "line": 2548,
             "symbol": "parsers"
           }
         }
@@ -17589,7 +17589,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2531,
+            "line": 2555,
             "symbol": "parsers"
           }
         }
@@ -17685,7 +17685,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2546,
+            "line": 2570,
             "symbol": "parsers"
           }
         }
@@ -17734,7 +17734,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2279,
+        "occurrences": 2282,
         "examples": [
           {
             "path": "data/json/effects.json",
@@ -17779,7 +17779,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2595,
+            "line": 2619,
             "symbol": "parsers"
           }
         }
@@ -17875,7 +17875,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2521,
+            "line": 2545,
             "symbol": "parsers"
           }
         }
@@ -17971,7 +17971,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2532,
+            "line": 2556,
             "symbol": "parsers"
           }
         }
@@ -18067,7 +18067,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2538,
+            "line": 2562,
             "symbol": "parsers"
           }
         }
@@ -18162,7 +18162,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2542,
+            "line": 2566,
             "symbol": "parsers"
           }
         }
@@ -18257,7 +18257,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2539,
+            "line": 2563,
             "symbol": "parsers"
           }
         }
@@ -18352,7 +18352,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2540,
+            "line": 2564,
             "symbol": "parsers"
           }
         }
@@ -18447,7 +18447,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2541,
+            "line": 2565,
             "symbol": "parsers"
           }
         }
@@ -18543,7 +18543,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2621,
+            "line": 2645,
             "symbol": "parsers_simple"
           }
         },
@@ -18556,7 +18556,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2622,
+            "line": 2646,
             "symbol": "parsers_simple"
           }
         }
@@ -18641,7 +18641,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2518,
+            "line": 2542,
             "symbol": "parsers"
           }
         }
@@ -18734,7 +18734,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2527,
+            "line": 2551,
             "symbol": "parsers"
           }
         }
@@ -18829,7 +18829,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2583,
+            "line": 2607,
             "symbol": "parsers"
           }
         }
@@ -18920,7 +18920,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2617,
+            "line": 2641,
             "symbol": "parsers_simple"
           }
         },
@@ -18933,7 +18933,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2618,
+            "line": 2642,
             "symbol": "parsers_simple"
           }
         }
@@ -19023,7 +19023,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2602,
+            "line": 2626,
             "symbol": "parsers"
           }
         }
@@ -19114,7 +19114,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2534,
+            "line": 2558,
             "symbol": "parsers"
           }
         }
@@ -19206,7 +19206,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2533,
+            "line": 2557,
             "symbol": "parsers"
           }
         }
@@ -19303,7 +19303,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2651,
+            "line": 2675,
             "symbol": "parsers_simple"
           }
         },
@@ -19316,7 +19316,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2652,
+            "line": 2676,
             "symbol": "parsers_simple"
           }
         }
@@ -19406,7 +19406,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2517,
+            "line": 2541,
             "symbol": "parsers"
           }
         }
@@ -19501,7 +19501,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2520,
+            "line": 2544,
             "symbol": "parsers"
           }
         }
@@ -19596,7 +19596,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2543,
+            "line": 2567,
             "symbol": "parsers"
           }
         }
@@ -19691,7 +19691,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2522,
+            "line": 2546,
             "symbol": "parsers"
           }
         }
@@ -19786,7 +19786,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2646,
+            "line": 2670,
             "symbol": "parsers_simple"
           }
         }
@@ -19877,7 +19877,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2530,
+            "line": 2554,
             "symbol": "parsers"
           }
         }
@@ -19973,7 +19973,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2514,
+            "line": 2538,
             "symbol": "parsers"
           }
         }
@@ -20068,7 +20068,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2516,
+            "line": 2540,
             "symbol": "parsers"
           }
         }
@@ -20158,7 +20158,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2640,
+            "line": 2664,
             "symbol": "parsers_simple"
           }
         }
@@ -20253,7 +20253,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2577,
+            "line": 2601,
             "symbol": "parsers"
           }
         }
@@ -20348,7 +20348,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2574,
+            "line": 2598,
             "symbol": "parsers"
           }
         }
@@ -20443,7 +20443,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2576,
+            "line": 2600,
             "symbol": "parsers"
           }
         }
@@ -20538,7 +20538,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2575,
+            "line": 2599,
             "symbol": "parsers"
           }
         }
@@ -20633,7 +20633,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2573,
+            "line": 2597,
             "symbol": "parsers"
           }
         }
@@ -20728,7 +20728,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2632,
+            "line": 2656,
             "symbol": "parsers_simple"
           }
         }
@@ -20818,7 +20818,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2658,
+            "line": 2682,
             "symbol": "parsers_simple"
           }
         }
@@ -20913,7 +20913,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2661,
+            "line": 2685,
             "symbol": "parsers_simple"
           }
         }
@@ -21008,7 +21008,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2685,
+            "line": 2709,
             "symbol": "parsers_simple"
           }
         }
@@ -21098,7 +21098,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2663,
+            "line": 2687,
             "symbol": "parsers_simple"
           }
         }
@@ -21193,7 +21193,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2657,
+            "line": 2681,
             "symbol": "parsers_simple"
           }
         }
@@ -21242,11 +21242,11 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 8,
+        "occurrences": 10,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/7/effect/1/run_eocs/0/condition/not"
+            "pointer": "/7/effect/2/run_eocs/0/condition/not"
           }
         ],
         "confidence": "lexical_only",
@@ -21288,7 +21288,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2675,
+            "line": 2699,
             "symbol": "parsers_simple"
           }
         }
@@ -21378,7 +21378,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2681,
+            "line": 2705,
             "symbol": "parsers_simple"
           }
         }
@@ -21468,7 +21468,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2680,
+            "line": 2704,
             "symbol": "parsers_simple"
           }
         }
@@ -21558,7 +21558,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2678,
+            "line": 2702,
             "symbol": "parsers_simple"
           }
         }
@@ -21648,7 +21648,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2666,
+            "line": 2690,
             "symbol": "parsers_simple"
           }
         }
@@ -21743,7 +21743,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2582,
+            "line": 2606,
             "symbol": "parsers"
           }
         }
@@ -21796,7 +21796,7 @@
         "examples": [
           {
             "path": "data/json/effects.json",
-            "pointer": "/411/enchantments/0/condition/u_is_in_field"
+            "pointer": "/414/enchantments/0/condition/u_is_in_field"
           }
         ],
         "confidence": "lexical_only",
@@ -21838,7 +21838,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2686,
+            "line": 2710,
             "symbol": "parsers_simple"
           }
         }
@@ -21933,7 +21933,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2665,
+            "line": 2689,
             "symbol": "parsers_simple"
           }
         }
@@ -22028,7 +22028,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2664,
+            "line": 2688,
             "symbol": "parsers_simple"
           }
         }
@@ -22123,7 +22123,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2662,
+            "line": 2686,
             "symbol": "parsers_simple"
           }
         }
@@ -22218,7 +22218,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2580,
+            "line": 2604,
             "symbol": "parsers"
           }
         }
@@ -22313,7 +22313,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2581,
+            "line": 2605,
             "symbol": "parsers"
           }
         }
@@ -22403,7 +22403,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2684,
+            "line": 2708,
             "symbol": "parsers_simple"
           }
         }
@@ -22493,7 +22493,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2578,
+            "line": 2602,
             "symbol": "parsers"
           }
         }
@@ -22588,7 +22588,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2579,
+            "line": 2603,
             "symbol": "parsers"
           }
         }
@@ -22683,7 +22683,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2647,
+            "line": 2671,
             "symbol": "parsers_simple"
           }
         }
@@ -22778,7 +22778,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2676,
+            "line": 2700,
             "symbol": "parsers_simple"
           }
         }
@@ -22870,7 +22870,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2526,
+            "line": 2550,
             "symbol": "parsers"
           }
         },
@@ -22883,7 +22883,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2644,
+            "line": 2668,
             "symbol": "parsers_simple"
           }
         }
@@ -22969,7 +22969,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2683,
+            "line": 2707,
             "symbol": "parsers_simple"
           }
         }
@@ -23059,7 +23059,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2682,
+            "line": 2706,
             "symbol": "parsers_simple"
           }
         }
@@ -23149,7 +23149,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2515,
+            "line": 2539,
             "symbol": "parsers"
           }
         }
@@ -23239,7 +23239,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2613,
+            "line": 2637,
             "symbol": "parsers_simple"
           }
         }
@@ -23329,7 +23329,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2648,
+            "line": 2672,
             "symbol": "parsers_simple"
           }
         }
@@ -23424,7 +23424,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2667,
+            "line": 2691,
             "symbol": "parsers_simple"
           }
         }
@@ -23514,7 +23514,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2659,
+            "line": 2683,
             "symbol": "parsers_simple"
           }
         }
@@ -23604,7 +23604,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2535,
+            "line": 2559,
             "symbol": "parsers"
           }
         }
@@ -23697,7 +23697,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2569,
+            "line": 2593,
             "symbol": "parsers"
           }
         }
@@ -23792,7 +23792,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2611,
+            "line": 2635,
             "symbol": "parsers_simple"
           }
         }
@@ -23888,7 +23888,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2623,
+            "line": 2647,
             "symbol": "parsers_simple"
           }
         },
@@ -23901,7 +23901,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2624,
+            "line": 2648,
             "symbol": "parsers_simple"
           }
         }
@@ -23992,7 +23992,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2627,
+            "line": 2651,
             "symbol": "parsers_simple"
           }
         },
@@ -24005,7 +24005,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2628,
+            "line": 2652,
             "symbol": "parsers_simple"
           }
         }
@@ -24096,7 +24096,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2566,
+            "line": 2590,
             "symbol": "parsers"
           }
         },
@@ -24109,7 +24109,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2567,
+            "line": 2591,
             "symbol": "parsers"
           }
         }
@@ -24200,7 +24200,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2625,
+            "line": 2649,
             "symbol": "parsers_simple"
           }
         },
@@ -24213,7 +24213,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2626,
+            "line": 2650,
             "symbol": "parsers_simple"
           }
         }
@@ -24301,7 +24301,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2528,
+            "line": 2552,
             "symbol": "parsers"
           }
         }
@@ -24391,7 +24391,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2550,
+            "line": 2574,
             "symbol": "parsers"
           }
         }
@@ -24486,7 +24486,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2547,
+            "line": 2571,
             "symbol": "parsers"
           }
         }
@@ -24571,7 +24571,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2564,
+            "line": 2588,
             "symbol": "parsers"
           }
         }
@@ -24661,7 +24661,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2548,
+            "line": 2572,
             "symbol": "parsers"
           }
         }
@@ -24756,7 +24756,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2563,
+            "line": 2587,
             "symbol": "parsers"
           }
         }
@@ -24844,7 +24844,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2529,
+            "line": 2553,
             "symbol": "parsers"
           }
         }
@@ -24934,7 +24934,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2671,
+            "line": 2695,
             "symbol": "parsers_simple"
           }
         }
@@ -25024,7 +25024,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2672,
+            "line": 2696,
             "symbol": "parsers_simple"
           }
         }
@@ -25119,7 +25119,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2556,
+            "line": 2580,
             "symbol": "parsers"
           }
         }
@@ -25204,7 +25204,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2633,
+            "line": 2657,
             "symbol": "parsers_simple"
           }
         }
@@ -25294,7 +25294,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2635,
+            "line": 2659,
             "symbol": "parsers_simple"
           }
         }
@@ -25379,7 +25379,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2634,
+            "line": 2658,
             "symbol": "parsers_simple"
           }
         }
@@ -25469,7 +25469,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2519,
+            "line": 2543,
             "symbol": "parsers"
           }
         }
@@ -25564,7 +25564,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2668,
+            "line": 2692,
             "symbol": "parsers_simple"
           }
         }
@@ -25652,7 +25652,7 @@
           ],
           "source": {
             "path": "src/condition.cpp",
-            "line": 2571,
+            "line": 2595,
             "symbol": "parsers"
           }
         }

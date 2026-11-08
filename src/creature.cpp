@@ -543,7 +543,7 @@ bool Creature::sees( const map &here, const Creature &critter ) const
 {
     const Character *ch = critter.as_character();
 
-    const tripoint_bub_ms pos = pos_bub( here );
+    const tripoint_bub_ms pos = here.observer_position( *this );
     const tripoint_bub_ms critter_pos = critter.pos_bub( here );
 
     // Creatures always see themselves (simplifies drawing).
@@ -551,11 +551,11 @@ bool Creature::sees( const map &here, const Creature &critter ) const
         return true;
     }
 
-    if( std::abs( posz() - critter.posz() ) > fov_3d_z_range ) {
+    if( std::abs( pos.z() - critter.posz() ) > here.observer_z_range( *this ) ) {
         return false;
     }
 
-    const int target_range = rl_dist( pos_abs( ), critter.pos_abs( ) );
+    const int target_range = rl_dist( pos, critter_pos );
     if( target_range > MAX_VIEW_DISTANCE ) {
         return false;
     }
@@ -634,7 +634,7 @@ bool Creature::sees( const map &here, const Creature &critter ) const
     // Can always see adjacent monsters on the same level.
     // We also bypass lighting for vertically adjacent monsters, but still check for floors.
     if( target_range <= 1 ) {
-        return ( posz() == critter.posz() || here.sees( pos, critter_pos, 1 ) ) &&
+        return ( pos.z() == critter.posz() || here.sees( pos, critter_pos, 1 ) ) &&
                visible( ch );
     }
 
@@ -663,19 +663,19 @@ bool Creature::sees( const map &here, const Creature &critter ) const
         ( !is_likely_underwater( here ) && critter.is_likely_underwater( here ) &&
           majority_rule( critter.has_flag( mon_flag_WATER_CAMOUFLAGE ),
                          here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, critter_pos ),
-                         posz() != critter.posz() ) ) ||
+                         pos.z() != critter.posz() ) ) ||
         ( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_HIDE_PLACE, critter_pos ) &&
           !( std::abs( pos.x() - critter_pos.x() ) <= 1 && std::abs( pos.y() - critter_pos.y() ) <= 1 &&
-             std::abs( posz() - critter.posz() ) <= 1 ) ) ||
+             std::abs( pos.z() - critter.posz() ) <= 1 ) ) ||
         ( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SMALL_HIDE, critter_pos ) &&
           critter.has_flag( mon_flag_SMALL_HIDER ) &&
           !( std::abs( pos.x() - critter_pos.x() ) <= 1 && std::abs( pos.y() - critter_pos.y() ) <= 1 &&
-             std::abs( posz() - critter.posz() ) <= 1 ) ) ) {
+             std::abs( pos.z() - critter.posz() ) <= 1 ) ) ) {
         return false;
     }
     if( ch != nullptr ) {
         if( ch->is_crouching() || ch->has_effect( effect_all_fours ) || ch->is_prone() ||
-            posz() != critter.posz() ) {
+            pos.z() != critter.posz() ) {
             const int coverage = std::max( here.obstacle_coverage( pos, critter_pos ),
                                            here.ledge_coverage( *this, critter_pos ) );
             if( coverage < 30 ) {
@@ -722,11 +722,10 @@ bool Creature::sees( const map &here, const Creature &critter ) const
 bool Creature::sees( const map &here, const tripoint_bub_ms &t, bool is_avatar,
                      int range_mod ) const
 {
-    if( std::abs( posz() - t.z() ) > fov_3d_z_range ) {
+    const tripoint_bub_ms pos = here.observer_position( *this );
+    if( std::abs( pos.z() - t.z() ) > here.observer_z_range( *this ) ) {
         return false;
     }
-
-    const tripoint_bub_ms pos = pos_bub( here );
     const int range_cur = sight_range( here.ambient_light_at( t ) );
     const int range_day = sight_range( default_daylight_level() );
     const int range_night = sight_range( 0 );
@@ -753,7 +752,7 @@ bool Creature::sees( const map &here, const tripoint_bub_ms &t, bool is_avatar,
             const float player_visibility_factor = get_player_character().visibility() / 100.0f;
             int adj_range = std::floor( range * player_visibility_factor );
             return adj_range >= wanted_range &&
-                   here.get_cache_ref( posz() ).seen_cache[pos.x()][pos.y()] > LIGHT_TRANSPARENCY_SOLID;
+                   here.get_cache_ref( pos.z() ).seen_cache[pos.x()][pos.y()] > LIGHT_TRANSPARENCY_SOLID;
         } else {
             return here.sees( pos, t, range );
         }
@@ -826,7 +825,7 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
         // TODO: what about g->u?
         return false;
     } );
-    for( Creature *&m : targets ) {
+    for( Creature*&m : targets ) {
         if( !sees( here, *m ) ) {
             // can't see nor sense it
             if( is_fake() && in_veh ) {
@@ -2043,6 +2042,15 @@ void Creature::clear_effects()
     }
     effects->clear();
 }
+void Creature::restore_effects_snapshot( const std::vector<effect> &snapshot )
+{
+    clear_effects();
+    for( const effect &entry : snapshot ) {
+        ( *effects )[entry.get_id()][entry.get_bp()] = entry;
+        on_effect_int_change( entry.get_id(), entry.get_intensity(), entry.get_bp() );
+    }
+}
+
 bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
 {
     const safe_reference<Creature> creature_reference = get_safe_reference();

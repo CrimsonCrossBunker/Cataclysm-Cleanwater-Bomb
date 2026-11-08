@@ -46,6 +46,8 @@
 #include "item_factory.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_reload.h"
+#include "item_uid.h"
 #include "item_transformation.h"
 #include "itype.h"
 #include "iuse.h"
@@ -175,6 +177,23 @@ static const std::vector<pocket_consumption_entry> *resolve_firing_entries(
     return set.for_mode( gun_mode_DEFAULT );
 }
 
+static bool consumption_uses_battery( const item &host, const std::string &pocket_id )
+{
+    if( const item_pocket *pocket = host.pocket_by_id( pocket_id ) ) {
+        return host.pocket_accepts_battery( pocket );
+    }
+    if( host.is_tool() && ( host.has_flag( flag_USE_UPS ) ||
+                            host.has_flag( flag_USES_BIONIC_POWER ) ) ) {
+        for( const pocket_data &definition : host.type->pockets ) {
+            if( definition.pocket_id == pocket_id ) {
+                const item_pocket base_pocket( &definition );
+                return host.pocket_accepts_battery( &base_pocket );
+            }
+        }
+    }
+    return false;
+}
+
 // Per-mode feasibility for multimag. Local pocket stock is non-fungible
 // across pocket ids; only the external pool (cable + UPS + bionic) is
 // shared, and it's usable only by battery-flavored entries.
@@ -194,8 +213,7 @@ static int feasible_uses( const item &host,
             continue;
         }
         const int local = host.ammo_remaining_in_pocket( e.pocket );
-        const item_pocket *p = host.pocket_by_id( e.pocket );
-        if( host.pocket_accepts_battery( p ) ) {
+        if( consumption_uses_battery( host, e.pocket ) ) {
             battery.push_back( { q, local } );
         } else {
             n_max = std::min( n_max, local / q );
@@ -275,10 +293,19 @@ static int ceil_kilojoules( const units::energy energy )
     return static_cast<int>( ( joules + 999 ) / 1000 );
 }
 
+namespace
+{
 struct external_power_reservation {
     int ups_kj = 0;
     int bionic_kj = 0;
 };
+
+struct dps_comp_data {
+    mtype_id mon_id;
+    bool display;
+    bool evaluate;
+};
+} // namespace
 
 static external_power_reservation reserve_firing_requirement_external_power(
     const item &host, const Character *carrier, int uses )
@@ -295,7 +322,7 @@ static external_power_reservation reserve_firing_requirement_external_power(
     }
     if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
         reservation.bionic_kj = static_cast<int>( std::min<int64_t>(
-                remaining, units::to_kilojoule( carrier->get_power_level() ) ) );
+                                    remaining, units::to_kilojoule( carrier->get_power_level() ) ) );
     }
     return reservation;
 }
@@ -549,7 +576,7 @@ double item::effective_dps( const Character &guy, Creature &mon ) const
      * only some small percent of them actually become critical hits.
      */
     const int rng_high_mean = std::max( std::min( static_cast<int>( base_hit - 1.5 * mon_dodge ),
-        20 ), -20 ) + 20;
+                                        20 ), -20 ) + 20;
     double num_high_hits = hits_by_accuracy[ rng_high_mean ] * num_all_hits / hit_trials;
     double double_crit_chance = guy.crit_chance( 4, 0, *this );
     double crit_chance = guy.crit_chance( 0, 0, *this );
@@ -635,15 +662,6 @@ double item::effective_dps( const Character &guy, Creature &mon ) const
     total_damage += summary.second;
     return total_damage * to_moves<double>( 1_seconds ) / total_moves;
 }
-
-namespace
-{
-struct dps_comp_data {
-    mtype_id mon_id;
-    bool display;
-    bool evaluate;
-};
-} // namespace
 
 static const std::vector<std::pair<translation, dps_comp_data>> dps_comp_monsters = {
     { to_translation( "Best" ), { pseudo_debug_mon, true, false } },
@@ -810,7 +828,7 @@ std::string item::overheat_symbol() const
         return string_format( _( "<color_light_green>\u2588VNT </color>" ) );
     }
     switch( std::min( 5, static_cast<int>( get_var( "gun_heat",
-            0 ) / std::max( type->gun->overheat_threshold * multiplier + modifier, 5.0 ) * 5.0 ) ) ) {
+                                           0 ) / std::max( type->gun->overheat_threshold * multiplier + modifier, 5.0 ) * 5.0 ) ) ) {
         case 1:
             return "";
         case 2:
@@ -944,7 +962,7 @@ std::pair<int, int> item::reach_range( const Character &guy ) const
 
     if( !is_gun() ) {
         res = std::max( 1, static_cast<int>( guy.calculate_by_enchantment( res,
-            enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+                                             enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     }
 
     // for guns consider any attached gunmods
@@ -957,7 +975,7 @@ std::pair<int, int> item::reach_range( const Character &guy ) const
                 res = std::max( {
                     res, 1,
                     static_cast<int>( guy.calculate_by_enchantment( m.second.qty + reach_attack_add,
-                    enchant_vals::mod::MELEE_RANGE_MODIFIER ) )
+                                      enchant_vals::mod::MELEE_RANGE_MODIFIER ) )
                 } );
             }
         }
@@ -980,7 +998,7 @@ std::pair<int, int> item::current_reach_range( const Character &guy ) const
 
     if( !is_gun() || ( is_gun() && !is_gunmod() && gun_current_mode().melee() ) ) {
         res = std::max( 1, static_cast<int>( guy.calculate_by_enchantment( res,
-            enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+                                             enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     }
 
     if( is_gun() && !is_gunmod() ) {
@@ -1444,7 +1462,7 @@ int item::gun_recoil( const Character &p, bool bipod, bool ideal_strength ) cons
     // we consider only base weight to avoid exploits
     // now we need to add weight of receiver
     double wt = ideal_strength ? gun_base_weight() / 333.0_gram : std::min( gun_base_weight(),
-        p.get_arm_str() * 333_gram ) / 333.0_gram;
+                p.get_arm_str() * 333_gram ) / 333.0_gram;
 
     double handling = type->gun->handling;
     for( const item *mod : gunmods() ) {
@@ -2672,6 +2690,11 @@ bool item::pocket_accepts_battery( const item_pocket *p ) const
     if( p == nullptr ) {
         return false;
     }
+    const itype_id default_magazine = p->magazine_default();
+    if( !default_magazine.is_null() && !default_magazine.is_empty() &&
+        default_magazine->magazine && default_magazine->magazine->type.count( ammo_battery ) ) {
+        return true;
+    }
     for( const ammotype &at : p->ammo_types() ) {
         if( at == ammo_battery ) {
             return true;
@@ -2927,8 +2950,7 @@ int multimag_drain( item &host, const std::vector<pocket_consumption_entry> &ent
         if( qty <= 0 ) {
             continue;
         }
-        const item_pocket *p = host.pocket_by_id( e.pocket );
-        const bool battery = host.pocket_accepts_battery( p );
+        const bool battery = consumption_uses_battery( host, e.pocket );
         if( battery ) {
             const int from_cable = std::min( qty, cable_left );
             cable_left -= from_cable;
@@ -3060,7 +3082,7 @@ int item::effective_qty( const pocket_consumption_entry &e ) const
 {
     const item_pocket *p = pocket_by_id( e.pocket );
     const bool is_primary = pocket_is_primary_ammo( p );
-    const bool is_battery = pocket_accepts_battery( p );
+    const bool is_battery = consumption_uses_battery( *this, e.pocket );
 
     float multiplier = 1.0f;
     int modifier_int = 0;
@@ -3277,8 +3299,8 @@ std::map<gun_mode_id, gun_mode> item::gun_all_modes() const
                 const int qty = m.second.qty();
 
                 res.emplace( gun_mode_id( prefix + m.first.str() ), gun_mode( m.second.name(),
-                        const_cast<item *>( e ),
-                        qty, m.second.flags() ) );
+                             const_cast<item *>( e ),
+                             qty, m.second.flags() ) );
             }
 
             // non-auxiliary gunmods may provide additional modes for the base item
@@ -3508,7 +3530,12 @@ void item::casings_handle( const std::function<bool( item & )> &func )
     contents.casings_handle( func );
 }
 
-bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
+namespace
+{
+// A null actor applies only the item contents transition to caller-owned copies.
+// Character, map and source-location effects stay in the authoritative path.
+bool reload_contents( item &target, Character *who, item_location ammo, int qty, int pocket_index,
+                      item *preview_ammo, int64_t *removed_preview = nullptr )
 {
     if( qty <= 0 ) {
         debugmsg( "Tried to reload zero or less charges" );
@@ -3519,184 +3546,331 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         debugmsg( "Tried to reload using non-existent ammo" );
         return false;
     }
-    const auto reload_finished = [&]() {
-        return true;
+    const auto source = [&]() -> item & {
+        return preview_ammo ? *preview_ammo :*ammo;
+    };
+    const auto remove_ammo = [&]() {
+        if( who ) {
+            ammo.remove_item();
+        } else if( removed_preview ) {
+            *removed_preview = source().uid().get_value();
+        }
+    };
+    const auto unwrap_speedloader = [&]() {
+        if( source().has_flag( flag_SPEEDLOADER ) || source().has_flag( flag_SPEEDLOADER_CLIP ) ) {
+            if( preview_ammo ) {
+                preview_ammo = &preview_ammo->first_ammo();
+            } else {
+                ammo = item_location( ammo, &ammo->first_ammo() );
+            }
+        }
     };
 
     // Targeted reload: MAGAZINE_WELL swap, or loose ammo into integral MAGAZINE.
     if( pocket_index >= 0 ) {
-        std::vector<item_pocket *> all_pockets = get_pockets(
+        std::vector<item_pocket *> all_pockets = target.get_pockets(
         []( const item_pocket & ) {
             return true;
         } );
         if( pocket_index >= static_cast<int>( all_pockets.size() ) ) {
-            debugmsg( "reload: pocket_index %d out of range on %s", pocket_index, tname() );
+            if( who ) {
+                debugmsg( "reload: pocket_index %d out of range on %s", pocket_index, target.tname() );
+            }
             return false;
         }
         item_pocket *target_pocket = all_pockets[pocket_index];
         const bool integral_magazine = target_pocket->is_type( pocket_type::MAGAZINE );
         if( !target_pocket->is_type( pocket_type::MAGAZINE_WELL ) && !integral_magazine ) {
-            debugmsg( "reload: pocket_index %d on %s is not a MAGAZINE_WELL or MAGAZINE",
-                      pocket_index, tname() );
+            if( who ) {
+                debugmsg( "reload: pocket_index %d on %s is not a MAGAZINE_WELL or MAGAZINE",
+                          pocket_index, target.tname() );
+            }
             return false;
         }
         if( integral_magazine ) {
             // Eject casings before the compatibility gate; a spent shell
             // fills the pocket and would make can_reload_with refuse.
-            casings_handle( [&u]( item & e ) {
-                return u.i_add_or_drop( e );
+            target.casings_handle( [who]( item & e ) {
+                return !who || who->i_add_or_drop( e );
             } );
         }
-        if( !target_pocket->can_reload_with( *ammo.get_item(), true ) ) {
+        if( !target_pocket->can_reload_with( source(), true ) ) {
             return false;
         }
-        const bool ammo_from_map = !ammo.held_by( u );
-        if( ammo->has_flag( flag_SPEEDLOADER ) || ammo->has_flag( flag_SPEEDLOADER_CLIP ) ) {
-            ammo = item_location( ammo, &ammo->first_ammo() );
-        }
+        const bool ammo_from_map = who && !ammo.held_by( *who );
+        unwrap_speedloader();
 
         if( integral_magazine ) {
-            const ammotype loose_type = ammo->ammo_type();
+            const ammotype loose_type = source().ammo_type();
             const int limit = target_pocket->remaining_ammo_capacity( loose_type );
             if( limit <= 0 ) {
                 return false;
             }
-            const int take = std::min( { qty, ammo->charges, limit } );
+            const int take = std::min( { qty, source().charges, limit } );
             if( take <= 0 ) {
                 return false;
             }
-            item item_copy( *ammo );
+            item item_copy( source() );
             item_copy.charges = take;
             ret_val<item *> ins = target_pocket->insert_item( item_copy );
             if( !ins.success() ) {
                 return false;
             }
-            ammo->charges -= take;
-            if( ammo->charges == 0 ) {
-                ammo.remove_item();
+            source().charges -= take;
+            if( source().charges == 0 ) {
+                remove_ammo();
             }
             if( ammo_from_map ) {
-                u.invalidate_weight_carried_cache();
+                who->invalidate_weight_carried_cache();
             }
-            return reload_finished();
+            return true;
         }
 
-        item magazine_removed;
+        std::optional<item> magazine_removed;
         bool allow_wield = false;
         if( !target_pocket->empty() ) {
             item *existing = target_pocket->magazine_current();
             if( existing != nullptr ) {
-                allow_wield = ( !u.is_wielding( *ammo ) && !u.is_wielding( *this ) );
+                allow_wield = ( who && !who->is_wielding( source() ) && !who->is_wielding( target ) );
                 magazine_removed = *existing;
                 target_pocket->remove_item( *existing );
             }
         }
 
-        ret_val<item *> ins = target_pocket->insert_item( *ammo );
+        ret_val<item *> ins = target_pocket->insert_item( source() );
         if( !ins.success() ) {
             // Restore the ejected magazine on failure.
-            if( !magazine_removed.is_null() ) {
-                target_pocket->insert_item( magazine_removed );
+            if( magazine_removed.has_value() ) {
+                target_pocket->insert_item( *magazine_removed );
             }
             return false;
         }
-        ammo.remove_item();
+        remove_ammo();
         if( ammo_from_map ) {
-            u.invalidate_weight_carried_cache();
+            who->invalidate_weight_carried_cache();
         }
-        if( !magazine_removed.is_null() ) {
-            u.i_add( magazine_removed, true, nullptr, nullptr, true, allow_wield );
+        if( who && magazine_removed.has_value() ) {
+            who->i_add( *magazine_removed, true, nullptr, nullptr, true, allow_wield );
         }
-        return reload_finished();
+        return true;
     }
 
-    if( !can_reload_with( *ammo.get_item(), true ) ) {
+    if( !target.can_reload_with( source(), true ) ) {
         return false;
     }
-    bool ammo_from_map = !ammo.held_by( u );
-    if( ammo->has_flag( flag_SPEEDLOADER ) || ammo->has_flag( flag_SPEEDLOADER_CLIP ) ) {
-        // if the thing passed in is a speed loader, we want the ammo
-        ammo = item_location( ammo, &ammo->first_ammo() );
-    }
+    bool ammo_from_map = who && !ammo.held_by( *who );
+    unwrap_speedloader();
 
     // limit quantity of ammo loaded to remaining capacity
     int limit = 0;
-    if( is_watertight_container() && ammo->made_of_from_type( phase_id::LIQUID ) ) {
-        limit = get_remaining_capacity_for_liquid( *ammo );
-    } else if( ammo->is_ammo() ) {
-        limit = ammo_capacity( ammo->ammo_type() ) - ammo_remaining( );
+    if( target.is_watertight_container() && source().made_of_from_type( phase_id::LIQUID ) ) {
+        limit = target.get_remaining_capacity_for_liquid( source() );
+    } else if( source().is_ammo() ) {
+        limit = target.ammo_capacity( source().ammo_type() ) - target.ammo_remaining( );
     }
 
-    if( ammo->ammo_type() == ammo_plutonium ) {
+    if( source().ammo_type() == ammo_plutonium ) {
         limit = limit / PLUTONIUM_CHARGES + ( limit % PLUTONIUM_CHARGES != 0 );
     }
 
     qty = std::min( qty, limit );
 
-    casings_handle( [&u]( item & e ) {
-        return u.i_add_or_drop( e );
+    target.casings_handle( [who]( item & e ) {
+        return !who || who->i_add_or_drop( e );
     } );
 
-    if( is_magazine() ) {
-        qty = std::min( qty, ammo->charges );
+    if( target.is_magazine() ) {
+        qty = std::min( qty, source().charges );
 
-        if( is_ammo_belt() && type->magazine->linkage ) {
-            if( !u.use_charges_if_avail( *type->magazine->linkage, qty ) ) {
+        if( who && target.is_ammo_belt() && target.type->magazine->linkage ) {
+            if( !who->use_charges_if_avail( *target.type->magazine->linkage, qty ) ) {
                 debugmsg( "insufficient linkages available when reloading ammo belt" );
             }
         }
 
-        item item_copy( *ammo );
-        ammo->charges -= qty;
+        item item_copy( source() );
+        source().charges -= qty;
 
-        if( ammo->ammo_type() == ammo_plutonium ) {
+        if( source().ammo_type() == ammo_plutonium ) {
             // any excess is wasted rather than overfilling the item
-            item_copy.charges = std::min( qty * PLUTONIUM_CHARGES, ammo_capacity( ammo_plutonium ) );
+            item_copy.charges = std::min( qty * PLUTONIUM_CHARGES, target.ammo_capacity( ammo_plutonium ) );
             item_copy.mark_internal_plutonium_fuel();
         } else {
             item_copy.charges = qty;
         }
 
-        put_in( item_copy, pocket_type::MAGAZINE );
+        target.put_in( item_copy, pocket_type::MAGAZINE );
 
-    } else if( is_watertight_container() && ammo->made_of_from_type( phase_id::LIQUID ) ) {
-        item contents( *ammo );
-        fill_with( contents, qty );
-        if( ammo.has_parent() ) {
-            ammo.parent_item()->contained_where( *ammo.get_item() )->on_contents_changed();
+    } else if( target.is_watertight_container() && source().made_of_from_type( phase_id::LIQUID ) ) {
+        item contents( source() );
+        target.fill_with( contents, qty );
+        if( who && ammo.has_parent() ) {
+            ammo.parent_item()->contained_where( source() )->on_contents_changed();
         }
-        ammo->charges -= qty;
+        source().charges -= qty;
     } else {
-        item magazine_removed;
+        std::optional<item> magazine_removed;
         bool allow_wield = false;
         // if we already have a magazine loaded prompt to eject it
-        if( magazine_current() ) {
+        if( target.magazine_current() ) {
             // we don't want to replace wielded `ammo` with ejected magazine
             // as it will invalidate `ammo`. Also keep wielding the item being reloaded.
-            allow_wield = ( !u.is_wielding( *ammo ) && !u.is_wielding( *this ) );
+            allow_wield = ( who && !who->is_wielding( source() ) && !who->is_wielding( target ) );
             // Defer placing the magazine into inventory until new magazine is installed.
-            magazine_removed = *magazine_current();
-            remove_item( *magazine_current() );
+            magazine_removed = *target.magazine_current();
+            target.remove_item( *target.magazine_current() );
         }
 
-        put_in( *ammo, pocket_type::MAGAZINE_WELL );
-        ammo.remove_item();
+        target.put_in( source(), pocket_type::MAGAZINE_WELL );
+        remove_ammo();
         if( ammo_from_map ) {
-            u.invalidate_weight_carried_cache();
+            who->invalidate_weight_carried_cache();
         }
-        if( !magazine_removed.is_null() ) {
-            u.i_add( magazine_removed, true, nullptr, nullptr, true, allow_wield );
+        if( who && magazine_removed.has_value() ) {
+            who->i_add( *magazine_removed, true, nullptr, nullptr, true, allow_wield );
         }
-        return reload_finished();
+        return true;
     }
 
-    if( ammo->charges == 0 ) {
-        ammo.remove_item();
+    if( source().charges == 0 ) {
+        remove_ammo();
     }
     if( ammo_from_map ) {
-        u.invalidate_weight_carried_cache();
+        who->invalidate_weight_carried_cache();
     }
-    return reload_finished();
+    return true;
+}
+
+item *reload_copy_item( const item &original, item &copy, const item &wanted )
+{
+    if( &original == &wanted ) {
+        return &copy;
+    }
+    const auto source_children = original.all_items_top();
+    const auto copy_children = copy.all_items_top();
+    auto to = copy_children.begin();
+    for( const item *from : source_children ) {
+        if( to == copy_children.end() ) {
+            return nullptr;
+        }
+        if( item *found = reload_copy_item( *from, **to, wanted ) ) {
+            return found;
+        }
+        ++to;
+    }
+    return nullptr;
+}
+
+void update_reload_copy( item &root, int64_t removed )
+{
+    for( item *child : root.all_items_top() ) {
+        if( child->uid().get_value() == removed ) {
+            root.remove_item( *child );
+        } else {
+            update_reload_copy( *child, removed );
+        }
+    }
+    root.on_contents_changed();
+}
+
+// nullopt means the target is not in this subtree.
+std::optional<bool> reload_copy_capacity( const item &root, int64_t target )
+{
+    if( root.uid().get_value() == target ) {
+        return true;
+    }
+    for( const item_pocket *pocket : root.get_pockets( []( const item_pocket & ) {
+    return true;
+} ) ) {
+        for( const item *child : pocket->all_items_top() ) {
+            if( const auto capacity = reload_copy_capacity( *child, target ) ) {
+                return *capacity && pocket->remaining_volume() >= 0_ml &&
+                       pocket->remaining_weight() >= 0_gram;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
+bool item::reload( Character &who, item_location ammo, int qty, int pocket_index )
+{
+    return reload_contents( *this, &who, std::move( ammo ), qty, pocket_index, nullptr );
+}
+
+std::optional<item> preview_reload( const item &target, item_location ammo, int qty,
+                                    int pocket_index )
+{
+    if( !ammo || qty <= 0 ) {
+        return std::nullopt;
+    }
+    item loaded = target;
+    item source = *ammo;
+    if( !reload_contents( loaded, nullptr, std::move( ammo ), qty, pocket_index, &source ) ) {
+        return std::nullopt;
+    }
+    return loaded;
+}
+
+bool reload_would_fit( const item_location &target, item_location ammo, int qty,
+                       int pocket_index )
+{
+    if( !target || !ammo || qty <= 0 ) {
+        return false;
+    }
+    if( !target.has_parent() ) {
+        return true;
+    }
+    item_location ancestor = target;
+    while( ancestor.has_parent() ) {
+        ancestor = ancestor.parent_item();
+    }
+    item contents = *ancestor;
+    item *loaded = reload_copy_item( *ancestor, contents, *target );
+    item external_ammo = *ammo;
+    item *source = reload_copy_item( *ancestor, contents, *ammo );
+    if( !source ) {
+        source = &external_ammo;
+    }
+    const int64_t target_uid = loaded ? loaded->uid().get_value() : 0;
+    int64_t removed = 0;
+    if( !loaded || !reload_contents( *loaded, nullptr, ammo, qty, pocket_index, source, &removed ) ) {
+        return false;
+    }
+    update_reload_copy( contents, removed );
+    return reload_copy_capacity( contents, target_uid ).value_or( false );
+}
+
+std::optional<std::vector<size_t>> reload_item_path( const item &root, const item &child )
+{
+    if( &root == &child ) {
+        return std::vector<size_t> {};
+    }
+    size_t index = 0;
+    for( const item *candidate : root.all_items_top() ) {
+        if( auto path = reload_item_path( *candidate, child ) ) {
+            path->insert( path->begin(), index );
+            return path;
+        }
+        ++index;
+    }
+    return std::nullopt;
+}
+
+item_location reload_item_at( item_location root, const std::vector<size_t> &path )
+{
+    for( size_t index : path ) {
+        if( !root ) {
+            return {};
+        }
+        const auto children = root->all_items_top();
+        if( index >= children.size() ) {
+            return {};
+        }
+        root = item_location( root, *std::next( children.begin(), index ) );
+    }
+    return root;
 }
 
 bool item::detonate( const tripoint_bub_ms &p, std::vector<item> &drops )
@@ -3896,11 +4070,11 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
 
     // Prepare target tripoints for the cable parts that'll be added to the selected/previous vehicles
     const std::pair<tripoint_abs_ms, tripoint_abs_ms> prev_part_target = std::make_pair(
-            veh.pos_abs() + veh.coord_translate( mount ),
-            veh.pos_abs() );
+                veh.pos_abs() + veh.coord_translate( mount ),
+                veh.pos_abs() );
     const std::pair<tripoint_abs_ms, tripoint_abs_ms> sel_part_target = std::make_pair(
-            link().t_abs_pos + prev_veh->coord_translate( link().t_mount ),
-            link().t_abs_pos );
+                link().t_abs_pos + prev_veh->coord_translate( link().t_mount ),
+                link().t_abs_pos );
 
     for( const vpart_reference &vpr : prev_veh->get_any_parts( VPFLAG_POWER_TRANSFER ) ) {
         if( vpr.part().target.first == prev_part_target.first &&
@@ -4200,7 +4374,7 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
 
     if( link().last_processed <= t_veh->part( link_vp_index ).last_disconnected ) {
         add_msg_if_player_sees( pos, m_warning, string_format( _( "You detached the %s." ),
-                type_name() ) );
+                                type_name() ) );
         return reset_link( true, carrier, -2 );
     }
     t_veh->part( link_vp_index ).set_flag( vp_flag::linked_flag );
@@ -4467,7 +4641,7 @@ units::energy item::energy_per_second() const
     units::energy energy_to_burn;
     if( type->tool->turns_per_charge > 0 ) {
         energy_to_burn += units::from_kilojoule( std::max<int64_t>( ammo_required(),
-            1 ) ) / type->tool->turns_per_charge;
+                          1 ) ) / type->tool->turns_per_charge;
     } else if( type->tool->power_draw > 0_mW ) {
         energy_to_burn += type->tool->power_draw * 1_seconds;
     }
@@ -4556,7 +4730,7 @@ bool item::process_blackpowder_fouling( Character *carrier )
     // Rust is deterministic. At a total modifier of 1 (the max): 12 hours for first rust, then 24 (36 total), then 36 (72 total) and finally 48 (120 hours to go to XX)
     // this speeds up by the amount the gun is dirty, 2-6x as fast depending on dirt level. At minimum dirt, the modifier is 0.3x the speed of the above mentioned figures.
     set_var( "rust_timer", get_var( "rust_timer", 0 ) + std::min( 0.3 + get_var( "dirt", 0 ) / 200,
-            1.0 ) );
+             1.0 ) );
     double time_mult = 1.0 + ( 4.0 * static_cast<double>( damage() ) ) / static_cast<double>
                        ( max_damage() );
     if( damage() < max_damage() && get_var( "rust_timer", 0 ) > 43200.0 * time_mult ) {

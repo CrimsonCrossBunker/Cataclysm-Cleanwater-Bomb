@@ -50,6 +50,7 @@ local mounted_charge = ccb.content.Technique {
     avatar_message = ccb.content.text("You charge into %s"),
     npc_message = ccb.content.text("<npcname> charges into %s"),
     manual_activation = true,
+    cooldown_seconds = 10,
     melee_allowed = true,
     active_when = "ccb_mounted_charge_available",
     charge_damage = "ccb_mounted_charge_damage",

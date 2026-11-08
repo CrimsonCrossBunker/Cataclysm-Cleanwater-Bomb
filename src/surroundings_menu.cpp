@@ -21,6 +21,7 @@
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "creature_tracker.h"
 #include "debug.h"
 #include "enum_traits.h"
 #include "enums.h"
@@ -99,13 +100,15 @@ static std::string list_items_filter_history_help()
 static void center_selection( const tripoint_rel_ms &active_item_position, int ui_width )
 {
     Character &u = get_avatar();
+    const auto selected_from_actor = active_item_position +
+                                     ( get_map().observer_position( u ) - u.pos_bub() );
     if( get_option<std::string>( "SHIFT_LIST_ITEM_VIEW" ) != "false" ) {
-        u.view_offset.z() = active_item_position.z();
+        u.view_offset.z() = selected_from_actor.z();
         if( get_option<std::string>( "SHIFT_LIST_ITEM_VIEW" ) == "centered" ) {
-            u.view_offset.x() = active_item_position.x();
-            u.view_offset.y() = active_item_position.y();
+            u.view_offset.x() = selected_from_actor.x();
+            u.view_offset.y() = selected_from_actor.y();
         } else {
-            point_rel_ms pos( active_item_position.xy() + point( POSX, POSY ) );
+            point_rel_ms pos( selected_from_actor.xy() + point( POSX, POSY ) );
 
             // item/monster list UI is on the right, so get the difference between its width
             // and the width of the sidebar on the right (if any)
@@ -275,7 +278,7 @@ void item_tab_data::find_nearby_items( const Character &you, map &m )
         return;
     }
 
-    tripoint_bub_ms pos = you.pos_bub();
+    tripoint_bub_ms pos = m.observer_position( you );
 
     for( tripoint_bub_ms &points_p_it : closest_points_first( pos, radius ) ) {
         if( points_p_it.y() >= pos.y() - radius && points_p_it.y() <= pos.y() + radius &&
@@ -448,7 +451,7 @@ void monster_tab_data::find_nearby_monsters( const Character &you )
     std::vector<Creature *> mons = you.get_visible_creatures( radius );
 
     for( Creature *mon : mons ) {
-        tripoint_rel_ms pos = mon->pos_bub() - you.pos_bub();
+        tripoint_rel_ms pos = mon->pos_bub() - get_map().observer_position( you );
         map_entity_stack<Creature> mstack( mon, pos );
         monsters.push_back( mstack );
     }
@@ -617,7 +620,7 @@ void terfurn_tab_data::find_nearby_terfurn( const Character &you, map &m )
         return;
     }
 
-    tripoint_bub_ms pos = you.pos_bub();
+    tripoint_bub_ms pos = m.observer_position( you );
 
     for( tripoint_bub_ms &points_p_it : closest_points_first( pos, radius ) ) {
         if( points_p_it.y() >= pos.y() - radius && points_p_it.y() <= pos.y() + radius &&
@@ -736,6 +739,9 @@ surroundings_menu::surroundings_menu( avatar &you, map &m, std::optional<tripoin
     you( you ),
     path_end( path_end ),
     stored_view_offset( you.view_offset ),
+    observation_origin( m.observer_position( you ) ),
+    real_origin( you.pos_abs() ),
+    map_context( m.get_context_reference() ),
     min_width( min_width )
 {
     item_data.init( you, m );
@@ -1205,9 +1211,13 @@ void surroundings_menu::draw_examine_info()
     }
 }
 
-void surroundings_menu::execute()
+std::optional<view_action> surroundings_menu::execute( bool defer_action )
 {
+    std::optional<view_action> selection;
     while( true ) {
+        if( !map_context || you.pos_abs() != real_origin ) {
+            break;
+        }
         update_path_end();
         g->invalidate_main_ui_adaptor();
 
@@ -1240,7 +1250,19 @@ void surroundings_menu::execute()
             --switch_tab;
         } else if( action == "fire" ) {
             tab_data *data = get_selected_data();
-            if( data->fire_at_selected( you, max_gun_range, stored_view_offset ) ) {
+            if( defer_action && data->can_fire_at_selected( you, max_gun_range ) &&
+                monster_data.selected_entry ) {
+                const Creature *selected = monster_data.selected_entry->get_selected_entity();
+                Creature *subject = selected ? get_creature_tracker().creature_at(
+                                        selected->pos_bub(), true ) : nullptr;
+                if( !subject || subject != selected ) {
+                    continue;
+                }
+                selection = select_view_action( view_action::kind::fire, you, *map_context,
+                                                subject->pos_bub( *map_context ), subject );
+                break;
+            }
+            if( !defer_action && data->fire_at_selected( you, max_gun_range, stored_view_offset ) ) {
                 break;
             }
         } else if( action == "QUIT" ) {
@@ -1250,6 +1272,12 @@ void surroundings_menu::execute()
             you.view_offset = stored_view_offset;
             if( !you.sees( get_map(), *path_end ) ) {
                 add_msg( _( "You can't see that destination." ) );
+                continue;
+            }
+            if( defer_action ) {
+                selection = select_view_action( view_action::kind::travel, you, *map_context, *path_end );
+                selection->distance = 1;
+                break;
             }
             // try finding route to the tile, or one tile away from it
             const std::optional<std::vector<tripoint_bub_ms>> try_route =
@@ -1260,6 +1288,19 @@ void surroundings_menu::execute()
                 you.set_destination( *try_route );
                 break;
             }
+        } else if( action == "look" && defer_action ) {
+            tripoint_bub_ms center = observation_origin;
+            const auto result = g->look_around( { true, center, center, false, false, true, true } );
+            selection = result.selection;
+            if( result.peek_action && ( *result.peek_action == PA_BLIND_THROW ||
+                                        *result.peek_action == PA_BLIND_THROW_WIELDED ) ) {
+                selection = select_view_action( *result.peek_action == PA_BLIND_THROW ?
+                                                view_action::kind::blind_throw : view_action::kind::blind_throw_wielded,
+                                                you, *map_context, observation_origin );
+            }
+            // The nested look can process network updates. Do not reuse the
+            // outer list's borrowed item/creature pointers after it closes.
+            break;
         } else if( action == "EXAMINE" ) {
             draw_examine_info();
         } else if( action == "COMPARE" ) {
@@ -1286,6 +1327,8 @@ void surroundings_menu::execute()
     }
 
     uistate.vmenu_tab = selected_tab;
+    you.view_offset = stored_view_offset;
+    return selection;
 }
 
 void surroundings_menu::get_filter()
@@ -1326,7 +1369,7 @@ void surroundings_menu::update_path_end()
     std::optional<tripoint_rel_ms> p = get_selected_pos();
 
     if( p ) {
-        path_end = you.pos_bub() + *p;
+        path_end = observation_origin + *p;
         // The 3D view centers on the selected entry (SHIFT_LIST_ITEM_VIEW) and
         // the camera follows the view center, so the raw mouse hover would
         // sweep across the map while the list pans. Push the selection as a
