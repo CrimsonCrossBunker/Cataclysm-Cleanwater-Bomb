@@ -28,7 +28,7 @@ struct WORLD;
 namespace Pickup
 {
 struct selection;
-}
+} // namespace Pickup
 
 namespace cata_mp
 {
