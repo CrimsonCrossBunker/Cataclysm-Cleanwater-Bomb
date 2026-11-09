@@ -5,6 +5,7 @@
 #if defined(TILES)
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -532,6 +533,7 @@ struct renderer_recovery_test_support {
     // Test fixture tile contexts exercise the real overmap animation state.
     static std::unique_ptr<cata_tiles> make_test_tiles( const std::shared_ptr<const tileset> &ts );
     static void draw_test_map( cata_tiles &tiles, const tripoint_bub_ms &center, int w, int h );
+    static std::size_t cached_map_tile_count( cata_tiles &tiles, int z );
     static void draw_test_overmap( cata_tiles &tiles, const tripoint_abs_omt &center );
     static void set_has_animated_tiles( cata_tiles &tiles, bool animated );
 
