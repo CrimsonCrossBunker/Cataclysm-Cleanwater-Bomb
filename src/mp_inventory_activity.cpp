@@ -1072,7 +1072,7 @@ void send_inventory_activity( const std::string &operation,
                               const std::function<void( JsonOut & )> &fields = {} )
 {
     world_session &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    inventory_activity_client_state &view = session.client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
         view.next_request == std::numeric_limits<int64_t>::max() ) {
         return;
