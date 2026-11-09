@@ -55,14 +55,17 @@ sys.exit(code)
 
     def test_recovers_from_the_observed_vcpkg_download_failure(self):
         result, attempts = self.run_download([
-            ("EXEC : error : curl operation failed with response code 504.", 1),
+            ("EXEC : error : curl operation failed with response code 504.",
+             1),
             ("build complete", 0),
         ])
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(attempts, 2)
 
     def test_windows_build_uses_bounded_download_retries(self):
-        workflow = (ROOT / ".github/workflows/msvc-full-features.yml").read_text()
+        workflow = (
+            ROOT / ".github/workflows/msvc-full-features.yml"
+        ).read_text()
         self.assertIn(
             "python build-scripts/retry-download-command.py -- msbuild -m",
             workflow,
