@@ -3021,7 +3021,7 @@ static bool client_choose_dialogue_response( std::size_t index )
     return view.pending_request != 0;
 }
 
-bool client_dialogue_special_action( const std::string &action )
+static bool client_dialogue_special_action( const std::string &action )
 {
     auto &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
