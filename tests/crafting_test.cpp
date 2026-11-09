@@ -69,7 +69,6 @@
 #include "recipe_dictionary.h"
 #include "requirements.h"
 #include "ret_val.h"
-#include "rng.h"
 #include "rng_helpers.h"
 #include "skill.h"
 #include "string_formatter.h"
