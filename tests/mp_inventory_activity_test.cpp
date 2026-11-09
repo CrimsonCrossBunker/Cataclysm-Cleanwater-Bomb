@@ -16904,7 +16904,10 @@ TEST_CASE( "server_owned_dialogue_session_drives_mission_assignment_and_synchron
     const mission_type_id test_mission_id( "TEST_MISSION_GENERIC_REWARD" );
     mission_type &definition = const_cast<mission_type &>( test_mission_id.obj() );
     const restore_on_out_of_scope restore_start( definition.start );
+    const restore_on_out_of_scope restore_dialogue( definition.dialogue );
     definition.start = []( mission *, Character & ) {};
+    definition.dialogue["offer"] = no_translation( "Test mission offer" );
+    definition.dialogue["accepted"] = no_translation( "Test mission accepted" );
     mission *task = mission::reserve_new( test_mission_id, provider.getID() );
     REQUIRE( task != nullptr );
     provider.chatbin.missions = { task };

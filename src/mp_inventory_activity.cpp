@@ -396,10 +396,12 @@ struct owned_dialogue_session {
                 return true;
             }
             const std::size_t index = static_cast<std::size_t>( raw_index );
-            if( revision == session.response_revision() &&
-                index < current_prompt.options.size() ) {
-                chosen_text = current_prompt.options[index].text;
+            if( revision != session.response_revision() ||
+                index >= current_prompt.options.size() ||
+                !current_prompt.options[index].selectable ) {
+                return true;
             }
+            chosen_text = current_prompt.options[index].text;
             selected = session.select_response( index, revision, false );
             if( !selected ) {
                 if( !actor || !participants_alive() || session.done ) {
