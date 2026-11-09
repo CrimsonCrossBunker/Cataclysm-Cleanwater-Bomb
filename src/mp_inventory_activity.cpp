@@ -137,6 +137,10 @@ static const bionic_id bio_shockwave( "bio_shockwave" );
 static const bionic_id bio_teleport( "bio_teleport" );
 static const bionic_id bio_water_extractor( "bio_water_extractor" );
 
+static const itype_id itype_foodperson_mask( "foodperson_mask" );
+static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
+static const itype_id itype_guidebook( "guidebook" );
+
 namespace cata_mp
 {
 void dialogue_view_option::serialize( JsonOut &out ) const
@@ -680,7 +684,7 @@ bool start_read( Character &who, map &here, const JsonObject &request )
     }
     const character_action_guard lifetime( who );
     const bool identified = who.has_identified( book->typeId() );
-    if( identified && book->typeId() == itype_id( "guidebook" ) ) {
+    if( identified && book->typeId() == itype_guidebook ) {
         who.add_msg_if_player( m_info, get_hint() );
         get_event_bus().send<event_type::reads_book>( who.getID(), book->typeId() );
         if( lifetime ) {
@@ -1202,8 +1206,8 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
         return;
     }
     if( who.has_trait( trait_id( "PROF_FOODP" ) ) &&
-        !( who.is_wearing( itype_id( "foodperson_mask" ) ) ||
-           who.is_wearing( itype_id( "foodperson_mask_on" ) ) ) ) {
+        !( who.is_wearing( itype_foodperson_mask ) ||
+           who.is_wearing( itype_foodperson_mask_on ) ) ) {
         who.add_msg_if_player( m_warning, _( "You can't speak without your face!" ) );
         return;
     }
