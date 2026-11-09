@@ -38,6 +38,8 @@
 #include "type_id.h"
 #include "weighted_list.h"
 
+static const efftype_id effect_boomered( "boomered" );
+
 static const furn_str_id furn_f_chair( "f_chair" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
@@ -241,9 +243,8 @@ TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
     REQUIRE( fx.available_ );
     avatar &you = get_avatar();
     map &here = get_map();
-    const efftype_id boomered( "boomered" );
     on_out_of_scope remove_effect( [&]() {
-        you.remove_effect( boomered );
+        you.remove_effect( effect_boomered );
     } );
     struct effect_case {
         lit_level level;
@@ -261,9 +262,9 @@ TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
     };
     for( const effect_case &example : cases ) {
         INFO( example.id );
-        you.remove_effect( boomered );
+        you.remove_effect( effect_boomered );
         if( example.boomered ) {
-            you.add_effect( boomered, 1_hours );
+            you.add_effect( effect_boomered, 1_hours );
         }
         policy_fixture::refresh_caches();
         // Supply controlled visibility to the real map draw path. Repeated
