@@ -1422,7 +1422,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 state.refresh_observers = zone_edit_session::apply( who, zone_manager::get_manager(), batch );
                 if( !state.refresh_observers ) {
                     who.add_msg_if_player( m_warning,
-                                           _( "The zones could not be changed. Reopen the zone manager to refresh them." ) );
+                                           _( "The zones could not be changed.  "
+                                              "Reopen the zone manager to refresh them." ) );
                 }
             } else if( kind == "zone_sort" ) {
                 const int scope = request.get_int( "scope", -1 );
