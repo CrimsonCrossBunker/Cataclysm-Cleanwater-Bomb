@@ -14119,8 +14119,8 @@ TEST_CASE( "ordinary_peek_rechecks_adjacent_geometry_and_preserves_crouching",
     CHECK( who.pos_abs() == origin );
     CHECK( rng_get_engine() == rng );
     who.set_moves( 1000 );
-    const auto far = origin + tripoint_rel_ms( 3, 0, 0 );
-    CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, far, 0, 2 ) );
+    const auto distant_target = origin + tripoint_rel_ms( 3, 0, 0 );
+    CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, distant_target, 0, 2 ) );
     const auto adjacent = origin + tripoint_rel_ms::east;
     here.ter_set( here.get_bub( adjacent ), ter_id( "t_wall" ) );
     CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, adjacent, 0, 3 ) );

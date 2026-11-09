@@ -956,7 +956,7 @@ TEST_CASE( "EOC_math_spell", "[eoc][math_parser]" )
     CHECK( globvars.get_global_value( "key_spell_count" ) == 2 );
     CHECK( globvars.get_global_value( "key_spell_count_test_trait" ) == 1 );
 
-    get_avatar().magic->evaluate_opens_spellbook_data();
+    get_avatar().magic->evaluate_opens_spellbook_data( get_avatar() );
 
     CHECK( get_avatar().magic->get_spell( spell_test_eoc_spell ).get_effective_level() == 4 );
 }

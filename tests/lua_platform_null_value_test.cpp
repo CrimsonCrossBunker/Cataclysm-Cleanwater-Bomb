@@ -272,9 +272,9 @@ TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
                     R"({"type":"tripoint_abs_ms","value":[-2147483648,0,2147483647]})" ).get_object() );
         const cata::lua_platform::script_persistent_tripoint &position =
             std::get<cata::lua_platform::script_persistent_tripoint>( value );
-        CHECK( position.x == -2147483647 - 1 );
-        CHECK( position.y == 0 );
-        CHECK( position.z == 2147483647 );
+        CHECK( position.value.x == -2147483647 - 1 );
+        CHECK( position.value.y == 0 );
+        CHECK( position.value.z == 2147483647 );
     }
 }
 
