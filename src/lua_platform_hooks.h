@@ -112,6 +112,8 @@ class native_callback_value final
                              native_callback_talker, native_callback_mission >;
 
         native_callback_value() = default;
+        // Payload initializer lists intentionally convert values to this variant wrapper.
+        // NOLINTBEGIN(google-explicit-constructor)
         native_callback_value( bool value ) : value_( value ) {}
         template < typename T,
                    std::enable_if_t < std::is_integral_v<T> &&
@@ -133,6 +135,7 @@ class native_callback_value final
         native_callback_value( const item *value );
         native_callback_value( const vehicle *value );
         native_callback_value( const const_talker *value );
+        // NOLINTEND(google-explicit-constructor)
 
         native_callback_value &operator=( const Character *value );
         native_callback_value &operator=( const Creature *value );
