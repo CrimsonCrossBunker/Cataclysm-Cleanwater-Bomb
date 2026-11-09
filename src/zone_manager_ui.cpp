@@ -981,27 +981,27 @@ void zone_manager_ui::display_zone_actions( const std::shared_ptr<zone_edit_sess
     }
     const auto zones = server_draft ? server_draft :
                        std::make_shared<zone_edit_session>( player_character, mgr );
-    const auto near = [&]( const zone_type_id & type ) {
+    const auto has_nearby_zone = [&]( const zone_type_id & type ) {
         return zones->has_near( type, player_character.pos_abs(), MAX_VIEW_DISTANCE );
     };
 
-    flags |= near( zone_type_LOOT_UNSORTED ) ? SortLoot : 0;
-    flags |= near( zone_type_UNLOAD_ALL ) ||
-             near( zone_type_STRIP_CORPSES ) ? UnloadLoot : 0;
-    if( near( zone_type_FARM_PLOT ) ) {
+    flags |= has_nearby_zone( zone_type_LOOT_UNSORTED ) ? SortLoot : 0;
+    flags |= has_nearby_zone( zone_type_UNLOAD_ALL ) ||
+             has_nearby_zone( zone_type_STRIP_CORPSES ) ? UnloadLoot : 0;
+    if( has_nearby_zone( zone_type_FARM_PLOT ) ) {
         flags |= MultiFarmPlots;
     }
-    flags |= near( zone_type_CONSTRUCTION_BLUEPRINT ) ? ConstructPlots : 0;
+    flags |= has_nearby_zone( zone_type_CONSTRUCTION_BLUEPRINT ) ? ConstructPlots : 0;
 
-    flags |= near( zone_type_CHOP_TREES ) ? Multichoptrees : 0;
-    flags |= near( zone_type_LOOT_WOOD ) ? Multichopplanks : 0;
-    flags |= near( zone_type_VEHICLE_DECONSTRUCT ) ? Multideconvehicle : 0;
-    flags |= near( zone_type_VEHICLE_REPAIR ) ? Multirepairvehicle : 0;
-    flags |= near( zone_type_LOOT_CORPSE ) ? MultiButchery : 0;
-    flags |= near( zone_type_MINING ) ? MultiMining : 0;
-    flags |= near( zone_type_DISASSEMBLE ) ? MultiDis : 0;
-    flags |= near( zone_type_MOPPING ) ? MultiMopping : 0;
-    flags |= near( zone_type_STUDY_ZONE ) ? MultiStudy : 0;
+    flags |= has_nearby_zone( zone_type_CHOP_TREES ) ? Multichoptrees : 0;
+    flags |= has_nearby_zone( zone_type_LOOT_WOOD ) ? Multichopplanks : 0;
+    flags |= has_nearby_zone( zone_type_VEHICLE_DECONSTRUCT ) ? Multideconvehicle : 0;
+    flags |= has_nearby_zone( zone_type_VEHICLE_REPAIR ) ? Multirepairvehicle : 0;
+    flags |= has_nearby_zone( zone_type_LOOT_CORPSE ) ? MultiButchery : 0;
+    flags |= has_nearby_zone( zone_type_MINING ) ? MultiMining : 0;
+    flags |= has_nearby_zone( zone_type_DISASSEMBLE ) ? MultiDis : 0;
+    flags |= has_nearby_zone( zone_type_MOPPING ) ? MultiMopping : 0;
+    flags |= has_nearby_zone( zone_type_STUDY_ZONE ) ? MultiStudy : 0;
     if( flags == 0 ) {
         add_msg( m_info, _( "There is no compatible zone nearby." ) );
         add_msg( m_info, _( "Compatible zones are %s and %s" ),
