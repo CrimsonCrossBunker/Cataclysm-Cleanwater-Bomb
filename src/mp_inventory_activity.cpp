@@ -2420,7 +2420,7 @@ bool client_change_construction( const tripoint_abs_ms &position, int64_t uid, b
 
 void client_start_craft( const craft_command &command )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     const bool repeat = view.active && view.craft_decision == "repeat";
     if( !repeat && !begin_client_inventory_activity( craft_activity_actor::client_view() ) ) {
         return;
