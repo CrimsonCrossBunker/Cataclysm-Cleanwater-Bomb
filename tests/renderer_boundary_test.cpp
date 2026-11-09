@@ -93,7 +93,7 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         here.add_item_or_charges( center + point::south, item( itype_id( "rock" ), calendar::turn ) );
         // The public dirty notifier intentionally ignores test_mode. This
         // renderer fixture explicitly publishes changed owner inputs instead.
-        here.draw_points_cache_dirty = true;
+        tilecontext->set_draw_cache_dirty();
         const auto dynamic = draw_boundary_pixels( center );
         CHECK( dynamic != plain );
         const tripoint_bub_ms preview = center + point::north;
@@ -144,11 +144,11 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         REQUIRE_FALSE( you.sees( here, hidden ) );
         you.memorize_terrain( absolute, "t_wall", 0, 0 );
         REQUIRE( you.has_memory_at( absolute ) );
-        here.draw_points_cache_dirty = true;
+        tilecontext->set_draw_cache_dirty();
         const auto remembered = draw_boundary_pixels( center );
         CHECK( you.get_memorized_tile( absolute ).get_ter_id() == "t_wall" );
         bool captured_hidden = false;
-        for( const auto &row : here.draw_points_cache.tiles[0] ) {
+        for( const auto &row : renderer_recovery_test_support::tile_draw_snapshot().tiles[0] ) {
             for( const auto &tile : row ) {
                 if( tile.view.pos == hidden ) {
                     const auto *sprite = std::get_if<tile_render_info::sprite>( &tile.var );
@@ -161,7 +161,7 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         }
         REQUIRE( captured_hidden );
         you.memorize_terrain( absolute, "t_floor", 0, 0 );
-        here.draw_points_cache_dirty = true;
+        tilecontext->set_draw_cache_dirty();
         const auto refreshed = draw_boundary_pixels( center );
         CHECK( remembered != refreshed );
         CHECK( here.ter( hidden ) == ter_id( "t_floor" ) );
@@ -246,14 +246,14 @@ TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
         REQUIRE( renderer_recovery_test_support::install_character_preview_targets() );
         tilecontext->load_tileset( id );
         tilecontext->set_draw_scale( 16 );
-        here.draw_points_cache_dirty = true;
+        tilecontext->set_draw_cache_dirty();
         // A real mixed visible/vision-effect frame, above the production16384
         // threshold. Read the same physical64x64 region of its actual SDL target.
         const auto pixels = draw_boundary_pixels( center, 1024 );
         CHECK( renderer_recovery_test_support::tile_preparation_used_workers() == ( workers != 0 ) );
         std::size_t sprites = 0;
         std::size_t effects = 0;
-        for( const auto &row : here.draw_points_cache.tiles[0] ) {
+        for( const auto &row : renderer_recovery_test_support::tile_draw_snapshot().tiles[0] ) {
             for( const auto &tile : row ) {
                 if( std::holds_alternative<tile_render_info::sprite>( tile.var ) ) {
                     ++sprites;
