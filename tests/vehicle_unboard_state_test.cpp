@@ -16,6 +16,7 @@
 #include "units.h"
 #include "vehicle.h"
 #include "vpart_position.h"
+#include "character.h"
 
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_seat( "seat" );

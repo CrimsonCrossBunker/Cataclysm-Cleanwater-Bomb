@@ -8,6 +8,11 @@
 #include "mp_inventory_activity.h"
 #include "iuse_actor.h"
 
+#include <cstdlib>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -30,7 +35,6 @@
 #include "remote_vehicle_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
-#include "character_martial_arts.h"
 #include "martialarts.h"
 #include "help.h"
 #include "activity_handlers.h"
@@ -46,10 +50,8 @@
 #include "construction.h"
 #include "dialogue.h"
 #include "dialogue_win.h"
-#include "input.h"
 #include "input_context.h"
 #include "input_popup.h"
-#include "line.h"
 #include "creature_tracker.h"
 #include "flag.h"
 #include "event.h"
@@ -72,12 +74,10 @@
 #include "iuse.h"
 #include "json.h"
 #include "map.h"
-#include "mapdata.h"
 #include "magic.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
-#include "npctalk.h"
 #include "output.h"
 #include "spell_casting_choice.h"
 #include "messages.h"
@@ -103,6 +103,37 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vpart_position.h"
+#include "action.h"
+#include "activity_actor.h"
+#include "calendar.h"
+#include "character_id.h"
+#include "clone_ptr.h"
+#include "coordinates.h"
+#include "craft_result_state.h"
+#include "crafting_enums.h"
+#include "creature.h"
+#include "enums.h"
+#include "flexbuffer_json.h"
+#include "handle_liquid.h"
+#include "input_enums.h"
+#include "item_components.h"
+#include "item_source.h"
+#include "item_unload.h"
+#include "lua_platform_state.h"
+#include "map_iterator.h"
+#include "map_scale_constants.h"
+#include "mp_actor_binding.h"
+#include "mp_peek.h"
+#include "mp_world_state.h"
+#include "pimpl.h"
+#include "player_identity.h"
+#include "point.h"
+#include "recipe.h"
+#include "translation.h"
+#include "type_id.h"
+#include "units.h"
+#include "view_action.h"
+#include "vpart_range.h"
 
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_CHOP_LOGS( "ACT_CHOP_LOGS" );

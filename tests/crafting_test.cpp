@@ -72,6 +72,7 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather_type.h"
+#include "json_loader.h"
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 
