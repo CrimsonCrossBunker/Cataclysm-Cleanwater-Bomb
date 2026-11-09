@@ -346,6 +346,9 @@ class draw_points_cache_t
         level_rows &operator[]( const int zlevel ) {
             return levels[zlevel + OVERMAP_DEPTH];
         }
+        const level_rows &operator[]( const int zlevel ) const {
+            return levels[zlevel + OVERMAP_DEPTH];
+        }
         void soft_clear() {
             for( level_rows &lr : levels ) {
                 lr.soft_clear();
