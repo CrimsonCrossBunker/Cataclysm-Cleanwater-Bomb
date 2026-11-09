@@ -405,7 +405,7 @@ shared_ptr_fast<zone_options> read_edit_options( const zone_edit_definition &def
 bool bounded_edit_geometry( const Character &who, const zone_edit_definition &definition )
 {
     const tripoint origin = definition.personal ? tripoint::zero : who.pos_abs().raw();
-    const auto near = [&]( const tripoint & point ) {
+    const auto in_bounds = [&]( const tripoint & point ) {
         const int64_t dx = static_cast<int64_t>( point.x ) - origin.x;
         const int64_t dy = static_cast<int64_t>( point.y ) - origin.y;
         const int64_t z = definition.personal ? static_cast<int64_t>( point.z ) + who.pos_abs().z() :
@@ -416,7 +416,8 @@ bool bounded_edit_geometry( const Character &who, const zone_edit_definition &de
     };
     // Native zone overlays and menus describe a single floor.
     return definition.start.x <= definition.end.x && definition.start.y <= definition.end.y &&
-           definition.start.z == definition.end.z && near( definition.start ) && near( definition.end );
+           definition.start.z == definition.end.z && in_bounds( definition.start ) &&
+           in_bounds( definition.end );
 }
 
 vehicle *resolve_zone_vehicle( const zone_edit_definition &definition, const faction_id &faction,
