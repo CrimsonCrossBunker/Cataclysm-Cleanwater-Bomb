@@ -107,9 +107,9 @@ TEST_CASE( "prefetch_prioritizes_near_work_with_bounded_pending_and_ready_entrie
     prefetch_fixture fixture;
     byte_budget budget( 8192 );
     submap_prefetcher prefetch( budget, 2 );
-    const auto distant_request = fixture.plain( 30, "far" );
-    const auto middle = fixture.plain( 20, "middle" );
-    const auto nearby_request = fixture.plain( 0, "near" );
+    const submap_prefetcher::request_t distant_request = fixture.plain( 30, "far" );
+    const submap_prefetcher::request_t middle = fixture.plain( 20, "middle" );
+    const submap_prefetcher::request_t nearby_request = fixture.plain( 0, "near" );
     prefetch.pause();
     REQUIRE( prefetch.request( distant_request, 30 ) );
     REQUIRE( prefetch.request( middle, 20 ) );
@@ -123,7 +123,7 @@ TEST_CASE( "prefetch_prioritizes_near_work_with_bounded_pending_and_ready_entrie
     CHECK_FALSE( prefetch.take( distant_request.om ) );
     CHECK( prefetch.inspect().ready == 2 );
     // Ready bytes participate in the same entry budget as pending reads.
-    const auto closer = fixture.plain( 5, "closer" );
+    const submap_prefetcher::request_t closer = fixture.plain( 5, "closer" );
     REQUIRE( prefetch.request( closer, 5 ) );
     wait_until_idle( prefetch );
     CHECK( prefetch.inspect().ready == 2 );
