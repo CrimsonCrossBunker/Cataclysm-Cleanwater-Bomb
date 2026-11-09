@@ -2897,6 +2897,11 @@ bool renderer_recovery_test_support::tile_preparation_used_workers()
     return tilecontext && tilecontext->preparation_ && tilecontext->preparation_->used_workers();
 }
 
+const view_snapshot &renderer_recovery_test_support::draw_snapshot( const cata_tiles &tiles )
+{
+    return tiles.draw_points_cache_;
+}
+
 void renderer_recovery_test_support::remove_character_preview_context()
 {
     tilecontext.reset();
