@@ -144,6 +144,8 @@ static const itype_id itype_guidebook( "guidebook" );
 static const json_character_flag json_flag_BIONIC_GUN( "BIONIC_GUN" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 
+static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
+
 namespace cata_mp
 {
 void dialogue_view_option::serialize( JsonOut &out ) const
@@ -1208,7 +1210,7 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
         request.has_member( "topic" ) || request.has_member( "effect" ) ) {
         return;
     }
-    if( who.has_trait( trait_id( "PROF_FOODP" ) ) &&
+    if( who.has_trait( trait_PROF_FOODP ) &&
         !( who.is_wearing( itype_foodperson_mask ) ||
            who.is_wearing( itype_foodperson_mask_on ) ) ) {
         who.add_msg_if_player( m_warning, _( "You can't speak without your face!" ) );
