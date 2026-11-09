@@ -91,7 +91,7 @@ class mission;
 namespace debug_menu
 {
 class mission_debug;
-}
+} // namespace debug_menu
 class player_morale;
 class profession;
 class recipe;

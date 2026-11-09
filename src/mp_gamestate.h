@@ -28,7 +28,7 @@ struct WORLD;
 namespace Pickup
 {
 struct selection;
-}
+} // namespace Pickup
 
 namespace cata_mp
 {
@@ -501,6 +501,8 @@ const std::string &get_client_turn_activity();
 // should be readable after a session without stopping the process.  Do not echo
 // to stdout: in curses builds that writes through the active terminal UI.
 void mp_log( const std::string &msg );
+void mp_log_host( const std::string &msg );
+void mp_log_client( const std::string &msg );
 
 // DIAGNOSTIC (temporary, 2026-06-23, for #5 assist-distraction / client safe-mode):
 // log the safe-mode / hostile decision so we can see whether the client actually

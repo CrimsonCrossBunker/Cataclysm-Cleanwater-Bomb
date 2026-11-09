@@ -15,7 +15,7 @@ class player_id;
 namespace Pickup
 {
 struct selection;
-}
+} // namespace Pickup
 
 namespace cata_mp
 {
