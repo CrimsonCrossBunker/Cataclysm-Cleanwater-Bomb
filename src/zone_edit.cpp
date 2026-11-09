@@ -470,6 +470,7 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
     // Inspect identities across native containers, including zones not owned by this player.
     std::map<std::string, zone_data *> live;
     std::vector<zone_data *> all;
+    all.reserve( manager.zones.size() );
     for( zone_data &zone : manager.zones ) {
         all.push_back( &zone );
     }
