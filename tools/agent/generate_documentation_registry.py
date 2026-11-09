@@ -104,7 +104,7 @@ def tracked_paths() -> list[str]:
         check=True,
         stdout=subprocess.PIPE,
     ).stdout.decode("utf-8")
-    paths = sorted(item for item in output.split("\0") if item)
+    paths = sorted({item for item in output.split("\0") if item})
     if any("obj-lua" in Path(path).parts for path in paths):
         raise RuntimeError("obj-lua must never enter documentation metadata")
     return paths
