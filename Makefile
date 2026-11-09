@@ -1324,13 +1324,13 @@ DIRS = $(sort $(dir $(OBJS) $(PCH_P)))
 $(shell mkdir -p $(DIRS))
 
 $(ODIR)/%.inc: $(SRC_DIR)/%.cpp
-	$(COMPILE.cc) -o /dev/null -Wno-error -H -E $< 2> $@
+	$(COMPILE.cc) -o /dev/null -Wno-error -H -E $< 2> "$@" || { compiler_status=$$?; sed '/^[.][.]* /d' "$@" >&2; exit $$compiler_status; }
 
 $(ODIR)/%.inc: $(SRC_DIR)/%.cc
-	$(COMPILE.cc) -o /dev/null -Wno-error -H -E $< 2> $@
+	$(COMPILE.cc) -o /dev/null -Wno-error -H -E $< 2> "$@" || { compiler_status=$$?; sed '/^[.][.]* /d' "$@" >&2; exit $$compiler_status; }
 
 $(ODIR)/%.inc: $(SRC_DIR)/%.c
-	$(COMPILE.c) -o /dev/null -Wno-error -H -E $< 2> $@
+	$(COMPILE.c) -o /dev/null -Wno-error -H -E $< 2> "$@" || { compiler_status=$$?; sed '/^[.][.]* /d' "$@" >&2; exit $$compiler_status; }
 
 .PHONY: includes
 includes: $(OBJS:.o=.inc)
