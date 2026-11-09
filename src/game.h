@@ -48,7 +48,7 @@ struct vertical_move_choices;
 namespace cata_mp
 {
 struct world_session;
-}
+} // namespace cata_mp
 
 extern std::unique_ptr<game> g;
 
