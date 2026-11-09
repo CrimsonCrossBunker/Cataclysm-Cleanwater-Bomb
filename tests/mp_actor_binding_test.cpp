@@ -133,3 +133,36 @@ TEST_CASE( "mp_actor_binding_releases_world_control_and_rejects_wrong_assignment
     CHECK_FALSE( binding.retained( world ) );
     CHECK_FALSE( binding.resolve_loaded( &second, world ) );
 }
+
+TEST_CASE( "mp_npc_replica_binding_is_view_only_and_retains_exact_identity",
+           "[multiplayer][actor_binding][regression]" )
+{
+    npc actor;
+    actor.normalize();
+    actor.setID( character_id( 12112 ), true );
+    npc_lifetime_registry world;
+    npc_lifetime_registry other_world;
+    player_control_registry controls;
+    cata_mp::actor_binding binding;
+    CHECK_THROWS( binding.bind_view( actor, world ) );
+    actor.set_value( "mp_npc_replica", std::string( "1" ) );
+    actor.set_value( "mp_player_id", owner.str() );
+    CHECK_FALSE( cata_mp::is_player_proxy( actor ) );
+    CHECK_THROWS( binding.bind_player( actor, owner, world, controls.claim( owner, actor ) ) );
+    CHECK_FALSE( binding.id().is_valid() );
+    binding.bind_view( actor, world );
+    REQUIRE( binding.resolve_loaded( &actor, world ) == &actor );
+    CHECK_FALSE( binding.retained( other_world ) );
+    npc replacement;
+    replacement.normalize();
+    replacement.setID( actor.getID(), true );
+    replacement.set_value( "mp_npc_replica", std::string( "1" ) );
+    CHECK_FALSE( binding.resolve_loaded( &replacement, world ) );
+    world.retire( actor );
+    CHECK_FALSE( binding.resolve_loaded( &actor, world ) );
+    CHECK( binding.retained( world ) == &actor );
+    world.activate( actor );
+    CHECK( binding.resolve_loaded( &actor, world ) == &actor );
+    actor.set_value( "mp_npc_replica", std::string( "0" ) );
+    CHECK_FALSE( binding.retained( world ) );
+}
