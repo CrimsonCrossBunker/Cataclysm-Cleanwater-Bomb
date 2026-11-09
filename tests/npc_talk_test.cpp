@@ -2356,17 +2356,19 @@ TEST_CASE( "dialogue_choice_revalidates_and_commits_only_once", "[npc_talk][owne
     CHECK( executions == 0 );
 
     SECTION( "changed_condition_rejects_without_gameplay_randomness_or_effects" ) {
+        const auto before_selection = rng_get_engine();
         permitted = false;
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 0 );
-        CHECK( rng_get_engine() == before );
+        CHECK( rng_get_engine() == before_selection );
     }
     SECTION( "success_cannot_repeat_or_reenter" ) {
+        const auto before_selection = rng_get_engine();
         const auto next = conversation.select_response( 0, revision );
         REQUIRE( next );
         CHECK( next->id == "TALK_DONE" );
         CHECK( executions == 1 );
-        CHECK( rng_get_engine() != before );
+        CHECK( rng_get_engine() != before_selection );
         const auto after = rng_get_engine();
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 1 );
