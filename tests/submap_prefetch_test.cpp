@@ -220,8 +220,9 @@ TEST_CASE( "prefetch_cancel_and_reissue_do_not_publish_old_request_bytes", "[pre
     prefetch_fixture fixture;
     byte_budget budget( 16 * 1024 * 1024 );
     submap_prefetcher prefetch( budget, 8 );
-    const auto old = fixture.plain( 0, std::string( 8 * 1024 * 1024, 'o' ) );
-    auto current = fixture.plain( 1, "current" );
+    const submap_prefetcher::request_t old =
+        fixture.plain( 0, std::string( 8 * 1024 * 1024, 'o' ) );
+    submap_prefetcher::request_t current = fixture.plain( 1, "current" );
     current.om = old.om;
     for( int i = 0; i < 8; ++i ) {
         REQUIRE( prefetch.request( old, 0 ) );
