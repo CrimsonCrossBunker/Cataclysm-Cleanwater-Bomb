@@ -6325,7 +6325,7 @@ bool game::warn_character_maybe_anger_local_faction( Character &who, bool really
 }
 
 bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
-        bool asking_for_public_goods )
+        bool asking_for_public_goods ) const
 {
     return warn_character_maybe_anger_local_faction( get_player_character(), really_bad_offense,
             asking_for_public_goods, std::nullopt );
