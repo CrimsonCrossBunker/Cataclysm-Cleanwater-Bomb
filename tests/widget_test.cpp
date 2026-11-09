@@ -259,6 +259,34 @@ TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
     CHECK( player.active_technique_cooldowns_text().empty() );
 }
 
+TEST_CASE( "row_layout_skips_disabled_empty_cooldown_widgets", "[widget][layout][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.martial_arts_data->add_martialart( test_style_cooldown );
+    player.martial_arts_data->set_style( test_style_cooldown );
+    player.set_wielded_item( item( itype_test_weapon1 ) );
+    const int cooldown_position = GENERATE( 0, 1, 2 );
+    CAPTURE( cooldown_position );
+    widget rows = widget_id( "weapon_style_layout" ).obj();
+    rows._widgets = { widget_id( "wielding_desc" ), widget_id( "style_desc" ) };
+    rows._widgets.insert( rows._widgets.begin() + cooldown_position, widget_technique_cooldowns );
+
+    const std::string empty = rows.layout( player, 80 );
+    REQUIRE_FALSE( empty.empty() );
+    CHECK( empty.front() != '\n' );
+    CHECK( empty.back() != '\n' );
+    CHECK( string_split( empty, '\n' ).size() == 2 );
+
+    player.martial_arts_data->start_technique_cooldown( test_active_cooldown_strike, 8_seconds );
+    const std::string active = rows.layout( player, 80 );
+    CHECK( string_split( active, '\n' ).size() == 3 );
+    CHECK( active.find( test_active_cooldown_strike->name.translated() ) != std::string::npos );
+    calendar::turn += 8_seconds;
+    CHECK( rows.layout( player, 80 ) == empty );
+}
+
 TEST_CASE( "widget_value_strings", "[widget][value][string]" )
 {
     SECTION( "numeric values" ) {
