@@ -360,10 +360,10 @@ struct owned_dialogue_session {
             finish( who );
             return false;
         }
-        const int64_t raw_session = ( request.has_member( "dialogue_session" ) ?
-                                      request.get_int64( "dialogue_session" ) : 0 );
-        const int64_t raw_revision = ( request.has_member( "response_revision" ) ?
-                                       request.get_int64( "response_revision" ) : 0 );
+        const int64_t raw_session = request.has_member( "dialogue_session" ) ?
+                                    request.get_int64( "dialogue_session" ) : 0;
+        const int64_t raw_revision = request.has_member( "response_revision" ) ?
+                                     request.get_int64( "response_revision" ) : 0;
         if( raw_session <= 0 || static_cast<uint64_t>( raw_session ) != session_id ||
             raw_revision <= 0 ) {
             return true;
