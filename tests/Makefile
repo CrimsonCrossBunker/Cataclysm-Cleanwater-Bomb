@@ -116,7 +116,7 @@ $(ODIR)/%.o: %.cpp $(PCH_P)
 	$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -MMD -MP $(subst main-pch,tests-pch,$(PCHFLAGS)) -c ../tests/$< -o $@
 
 $(ODIR)/%.inc: %.cpp
-	$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -H -E $< -o /dev/null 2> $@
+	$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -H -E $< -o /dev/null 2> "$@" || { compiler_status=$$?; sed '/^[.][.]* /d' "$@" >&2; exit $$compiler_status; }
 
 .PHONY: includes
 includes: $(OBJS:.o=.inc)
