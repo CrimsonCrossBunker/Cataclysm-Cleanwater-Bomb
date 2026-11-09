@@ -30,6 +30,9 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
            "[lua][platform][martial_arts][semantic]" )
 {
     const auto previous_runtimes = cata::lua_platform::detail::active_runtime_values();
+    const on_out_of_scope verify_runtime_restoration( [previous_runtimes]() {
+        CHECK( cata::lua_platform::detail::active_runtime_values() == previous_runtimes );
+    } );
     avatar native_avatar;
     avatar platform_avatar;
     native_avatar.normalize();
