@@ -942,7 +942,8 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
             const bool submitted = remote ? cata_mp::client_submit_zone_edits( batch ) :
                                    zone_edit_session::apply( u, mgr, batch );
             if( !submitted ) {
-                popup( _( "The zones could not be changed. Reopen the zone manager to refresh them." ) );
+                popup( _( "The zones could not be changed.  "
+                          "Reopen the zone manager to refresh them." ) );
             }
         }
     }
