@@ -68,10 +68,10 @@ class native_callback_entity final
 
         // These constructors make existing engine call sites safe without
         // storing the transient pointer in the payload object.
-        native_callback_entity( const Character *value );
-        native_callback_entity( const Creature *value );
-        native_callback_entity( const item *value );
-        native_callback_entity( const vehicle *value );
+        explicit native_callback_entity( const Character *value );
+        explicit native_callback_entity( const Creature *value );
+        explicit native_callback_entity( const item *value );
+        explicit native_callback_entity( const vehicle *value );
 
         native_callback_entity_kind kind() const noexcept;
         bool valid() const noexcept;
