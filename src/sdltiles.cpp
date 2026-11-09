@@ -2789,6 +2789,12 @@ std::size_t renderer_recovery_test_support::cached_map_tile_count( cata_tiles &t
     return count;
 }
 
+const draw_points_cache_t::level_rows &renderer_recovery_test_support::cached_map_rows(
+    cata_tiles &tiles, const int z )
+{
+    return tiles.draw_points_cache_.tiles[z];
+}
+
 void renderer_recovery_test_support::draw_test_overmap( cata_tiles &tiles,
         const tripoint_abs_omt &center )
 {
