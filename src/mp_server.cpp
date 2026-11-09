@@ -1,6 +1,7 @@
 #include "mp_server.h"
 #include "mp_log.h"
 
+#include <exception>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -15,6 +16,10 @@
 #include "mp_protocol.h"
 #include "mp_queue.h"
 #include "mp_renet_transport.h"
+#include "mp_admission.h"
+#include "mp_player_identity.h"
+#include "player_identity.h"
+#include "world_identity.h"
 
 namespace cata_mp
 {
