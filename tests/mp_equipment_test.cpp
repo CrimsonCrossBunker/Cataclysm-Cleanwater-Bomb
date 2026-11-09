@@ -18,6 +18,7 @@
 #include "item_stack.h"
 #include "item_uid.h"
 #include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"

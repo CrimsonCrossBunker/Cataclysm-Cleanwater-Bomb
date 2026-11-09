@@ -21,4 +21,4 @@ inline void restore_rng_state( const std::string &state )
     saved >> rng_get_engine();
 }
 
-#endif
+#endif // CATA_TESTS_RNG_HELPERS_H

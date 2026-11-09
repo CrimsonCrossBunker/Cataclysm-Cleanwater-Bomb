@@ -6,7 +6,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -49,7 +48,6 @@
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "lua_platform_dialogue.h"
-
     #include "lua_platform_runtime.h"
 
 #endif
@@ -80,6 +78,8 @@
 #include "units.h"
 #include "weather.h"
 #include "weather_gen.h"
+
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
 
 static const bionic_id bio_ads( "bio_ads" );
 static const bionic_id bio_power_storage( "bio_power_storage" );
@@ -116,6 +116,7 @@ static const npc_class_id NC_TEST_CLASS( "NC_TEST_CLASS" );
 static const proficiency_id proficiency_prof_test( "prof_test" );
 
 static const skill_id skill_driving( "driving" );
+static const skill_id skill_speech( "speech" );
 
 static const spell_id spell_test_spell_json( "test_spell_json" );
 static const spell_id spell_test_spell_lava( "test_spell_lava" );
@@ -2317,8 +2318,8 @@ TEST_CASE( "dialogue_total_kills_belongs_to_its_speaker", "[npc_talk][multiplaye
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
-    host.get_kill_statistics().reset( { { mtype_id( "mon_zombie" ), 9 } }, {} );
-    speaker.get_kill_statistics().reset( { { mtype_id( "mon_zombie" ), 2 } }, {} );
+    host.get_kill_statistics().reset( { { mon_zombie, 9 } }, {} );
+    speaker.get_kill_statistics().reset( { { mon_zombie, 2 } }, {} );
     std::string local_text = "<total_kills>";
     std::string remote_text = "<total_kills>";
     parse_tags( local_text, host, speaker );
@@ -2602,7 +2603,6 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
     provider.opinion_of( remote.getID() ).owed = 50000;
 
     SECTION( "session_training_selection_and_remote_paid_or_reward_training" ) {
-        const skill_id skill_speech( "speech" );
         provider.set_skill_level( skill_driving, 5 );
         provider.set_skill_level( skill_speech, 5 );
         host.set_skill_level( skill_driving, 0 );
@@ -2630,20 +2630,20 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
 
         CHECK( provider.op_of_u.owed == host_owed_before );
         CHECK( provider.opinion_of( remote.getID() ).owed < remote_owed_before );
-        CHECK( remote.activity.id() == activity_id( "ACT_TRAIN" ) );
-        CHECK_FALSE( host.activity.id() == activity_id( "ACT_TRAIN" ) );
+        CHECK( remote.activity.id() == ACT_TRAIN );
+        CHECK_FALSE( host.activity.id() == ACT_TRAIN );
 
         remote.cancel_activity();
         provider.cancel_activity();
 
         mission *reward_miss = mission::reserve_new(
-                                   mission_type_id( "TEST_MISSION_GENERIC_REWARD" ),
+                                   mission_TEST_MISSION_GENERIC_REWARD,
                                    provider.getID() );
         REQUIRE( reward_miss != nullptr );
         provider.chatbin.missions.push_back( reward_miss );
         remote_d.actor( true )->select_mission( reward_miss );
         mission_dialogue::assign_selected_mission( remote_d );
-        remote.i_add( item( itype_id( "test_rock" ) ) );
+        remote.i_add( item( itype_test_rock ) );
         REQUIRE( reward_miss->is_complete( provider.getID(), remote ) );
 
         const int remote_owed_after_paid = provider.opinion_of( remote.getID() ).owed;
@@ -2653,7 +2653,7 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
 
         CHECK( provider.opinion_of( remote.getID() ).owed == remote_owed_after_paid );
         CHECK( provider.chatbin.missions_assigned.empty() );
-        CHECK( remote.activity.id() == activity_id( "ACT_TRAIN" ) );
+        CHECK( remote.activity.id() == ACT_TRAIN );
     }
 
     SECTION( "remote_mission_reward_credits_remote_debt_without_host_ui" ) {

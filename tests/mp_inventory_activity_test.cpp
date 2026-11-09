@@ -11,7 +11,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -2246,7 +2245,7 @@ std::string practice_state( const Character &who )
     who.store_practice_state( out );
     return text.str();
 }
-}
+} // namespace
 
 TEST_CASE( "owned_firstaid_treats_the_selected_patient_and_part_once",
            "[multiplayer][firstaid_owned]" )
@@ -4305,7 +4304,7 @@ cata_mp::remote_player_session &bind_feedback_player( npc &actor, char id, uint6
                                  g->player_controls().claim( recipient.credentials.id, actor ) );
     return recipient;
 }
-}
+} // namespace
 
 TEST_CASE( "native_player_feedback_keeps_private_and_observer_messages_separate", "[mp_feedback]" )
 {
@@ -4470,7 +4469,7 @@ std::string cqb_choice_request( reload_fixture &fixture, Character &who, unsigne
         out.member( "martial_style", choice );
     } );
 }
-}
+} // namespace
 
 TEST_CASE( "martial_style_choices_apply_native_effects_only_to_the_owner", "[mp_martial]" )
 {
@@ -4833,7 +4832,7 @@ int count_magnet_test_items( map &here, const tripoint_bub_ms &origin )
     }
     return count;
 }
-}
+} // namespace
 
 TEST_CASE( "owned_resonator_changes_terrain_once_and_projects_the_delta", "[mp_world_bionic]" )
 {
@@ -8004,7 +8003,7 @@ vehicle_control_selection fill_water_choice( Character &who, vehicle &target, in
     selected.water->destination->container = capture_item_source( who, container );
     return selected;
 }
-}
+} // namespace
 
 TEST_CASE( "owned_faucet_transfer_keeps_native_rate_save_and_exact_resource_counts",
            "[multiplayer][vehicle_water_owned]" )
@@ -15008,7 +15007,7 @@ std::string fire_request( reload_fixture &fixture, Character &who, const item_lo
         }
     } );
 }
-}
+} // namespace
 
 TEST_CASE( "owned_fire_start_keeps_its_operator_source_and_surface_across_save_load",
            "[mp_inventory_activity][fire_start_owned]" )
@@ -15202,7 +15201,7 @@ int salvage_count( Character *who, map &here, const tripoint_bub_ms &position, c
     }
     return count;
 }
-}
+} // namespace
 
 TEST_CASE( "owned_salvage_consumes_only_the_selected_item_and_publishes_yield_once",
            "[mp_inventory_activity][salvage_owned]" )
@@ -15435,7 +15434,7 @@ std::string salvage_batch_request( reload_fixture &fixture, Character &who,
         out.member( "salvage_batch", targets );
     } );
 }
-}
+} // namespace
 
 TEST_CASE( "bulk_salvage_saves_the_original_queue_and_pays_each_cut_once",
            "[mp_inventory_activity][salvage_owned]" )
@@ -15652,7 +15651,7 @@ std::string butchery_request( reload_fixture &fixture, Character &who,
         out.member( "corpses", corpses );
     } );
 }
-}
+} // namespace
 
 TEST_CASE( "owned_butchery_reserves_and_processes_only_its_operators_corpse",
            "[mp_inventory_activity][butchery_owned]" )
@@ -16090,7 +16089,7 @@ item_location disassembly_original( Character &who )
     return item_location( map_cursor( who.pos_abs() ),
                           &here.add_item( who.pos_bub(), item( itype_test_rag_bundle ) ) );
 }
-}
+} // namespace
 
 TEST_CASE( "owned_disassembly_saves_original_queue_and_preparation_without_host_interaction",
            "[mp_inventory_activity][disassembly_owned]" )
@@ -16290,7 +16289,7 @@ item_location prepare_disassembly_work( reload_fixture &fixture, Character &who,
     REQUIRE( actor->target );
     return actor->target;
 }
-}
+} // namespace
 
 TEST_CASE( "disassembly_publishes_workpiece_and_removed_mod_before_unwield_callbacks",
            "[mp_inventory_activity][disassembly_owned]" )
