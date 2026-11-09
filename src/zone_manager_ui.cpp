@@ -606,7 +606,7 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
                 if( position->first == position->second && vp && vp.cargo() &&
                     vp->vehicle().get_owner() == zones_faction &&
                     query_yn( _( "Bind this zone to the cargo part here?" ) ) ) {
-                    if( id == zone_type_id( "FARM_PLOT" ) || id == zone_type_id( "CONSTRUCTION_BLUEPRINT" ) ) {
+                    if( id == zone_type_FARM_PLOT || id == zone_type_CONSTRUCTION_BLUEPRINT ) {
                         popup( _( "You cannot add that type of zone to a vehicle." ), PF_NONE );
                         break;
                     }
