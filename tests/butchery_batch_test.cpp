@@ -1,10 +1,12 @@
 #include <string>
+#include <utility>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "butchery.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "coordinates.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
@@ -19,10 +21,17 @@
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "recipe_dictionary.h"
+#include "ret_val.h"
 #include "type_id.h"
 
 static const itype_id itype_knife_combat( "knife_combat" );
+static const itype_id itype_test_rag_bundle( "test_rag_bundle" );
+
+static const mtype_id mon_chicken( "mon_chicken" );
 static const mtype_id mon_deer( "mon_deer" );
+static const mtype_id mon_zombie( "mon_zombie" );
+
+static const skill_id skill_survival( "survival" );
 
 TEST_CASE( "completed_butchery_delivers_products_and_consumes_the_corpse",
            "[butchery][activity_completion]" )
@@ -33,12 +42,11 @@ TEST_CASE( "completed_butchery_delivers_products_and_consumes_the_corpse",
     map &here = get_map();
     item knife( itype_knife_combat );
     you.wield( knife );
-    you.set_skill_level( skill_id( "survival" ), 10 );
+    you.set_skill_level( skill_survival, 10 );
     you.set_dex_base( 12 );
-    const mtype_id type = GENERATE( mtype_id( "mon_deer" ), mtype_id( "mon_chicken" ),
-                                    mtype_id( "mon_zombie" ) );
+    const mtype_id type = GENERATE( mon_deer, mon_chicken, mon_zombie );
     CAPTURE( type );
-    const auto position = you.pos_bub();
+    const tripoint_bub_ms position = you.pos_bub();
     monster victim( type, position );
     victim.die( &here, nullptr );
     item_location corpse;
@@ -51,7 +59,7 @@ TEST_CASE( "completed_butchery_delivers_products_and_consumes_the_corpse",
     REQUIRE( corpse );
     SECTION( "ordinary_corpse" ) {}
     SECTION( "corpse_with_an_unfinished_workpiece" ) {
-        item component( itype_id( "test_rag_bundle" ) );
+        item component( itype_test_rag_bundle );
         item unfinished( &recipe_dictionary::get_uncraft( component.typeId() ), 1, component );
         REQUIRE( corpse->put_in( unfinished, pocket_type::CONTAINER ).success() );
     }
@@ -81,7 +89,7 @@ TEST_CASE( "butchery_rechecks_the_corpse_after_training_callbacks",
     map &here = get_map();
     item knife( itype_knife_combat );
     you.wield( knife );
-    you.set_skill_level( skill_id( "survival" ), 10 );
+    you.set_skill_level( skill_survival, 10 );
     item_location corpse = here.add_item_or_charges_ret_loc( you.pos_bub(),
                            item::make_corpse( mon_deer, calendar::turn ) );
     REQUIRE( corpse );
@@ -90,7 +98,7 @@ TEST_CASE( "butchery_rechecks_the_corpse_after_training_callbacks",
         public:
             item_location corpse;
             bool fired = false;
-            explicit change_corpse_on_training( item_location corpse ) : corpse( corpse ) {
+            explicit change_corpse_on_training( item_location corpse ) : corpse( std::move( corpse ) ) {
                 get_event_bus().subscribe( this );
             }
             void notify( const cata::event &event ) override {

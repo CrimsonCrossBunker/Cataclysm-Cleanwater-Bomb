@@ -161,7 +161,7 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
     std::vector<std::string> add_topics;
     // For each active mission we have, let the mission know we talked to this NPC.
     if( interlocutor_char != nullptr ) {
-        for( mission*&mission : interlocutor_char->get_active_missions() ) {
+        for( mission *&mission : interlocutor_char->get_active_missions() ) {
             if( mission_dialogue::is_live_mission( mission ) ) {
                 mission->on_talk_with_npc( me_npc->getID() );
             }

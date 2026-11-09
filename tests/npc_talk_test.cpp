@@ -1661,7 +1661,7 @@ TEST_CASE( "event_eoc_with_monster_and_fake_shooter_preserves_npc_opinions",
 {
     dialogue setup;
     prep_test( setup );
-    monster target( mtype_id( "mon_zombie" ) );
+    monster target( mon_zombie );
     standard_npc shooter( "temporary monster shooter" );
     shooter.set_fake( true );
     shooter.personality.aggression = 0;
@@ -1700,7 +1700,7 @@ TEST_CASE( "npc_opinion_writes_require_a_live_character_interlocutor",
     npc &provider = prep_test( setup );
     provider.op_of_u.trust = 19;
     provider.op_of_u.owed = 123;
-    monster target( mtype_id( "mon_zombie" ) );
+    monster target( mon_zombie );
     npc speaker;
     speaker.normalize();
     speaker.setID( character_id( 700091 ) );
@@ -1715,7 +1715,9 @@ TEST_CASE( "npc_opinion_writes_require_a_live_character_interlocutor",
     std::ostringstream before;
     JsonOut before_json( before );
     provider.serialize( before_json );
-    const auto rng_before = rng_get_engine();
+    // Snapshot the shared engine to check that the writes do not advance it.
+    // NOLINTNEXTLINE(cata-determinism)
+    const cata_default_random_engine rng_before = rng_get_engine();
     talker &receiver = *d.actor( true );
     receiver.set_npc_trust( 3 );
     receiver.set_npc_fear( 4 );
