@@ -246,7 +246,8 @@ TEST_CASE( "prefetch_clear_joins_active_work_and_lazy_restart_preserves_pause", 
     prefetch_fixture fixture;
     byte_budget budget( 4 * 1024 * 1024 );
     submap_prefetcher prefetch( budget, 8 );
-    const auto request = fixture.compressed( 0, std::string( 1024 * 1024, 'a' ) );
+    const submap_prefetcher::request_t request =
+        fixture.compressed( 0, std::string( 1024 * 1024, 'a' ) );
     for( int i = 0; i < 8; ++i ) {
         REQUIRE( prefetch.request( request, 0 ) );
         prefetch.clear();
