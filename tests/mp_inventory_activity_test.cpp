@@ -13027,6 +13027,9 @@ TEST_CASE( "vertical_movement_does_not_push_another_player_or_accept_changed_lan
            "[multiplayer][vertical_movement_owned]" )
 {
     reload_fixture fixture;
+    player_control_registry controls;
+    player_control host_control = controls.claim( player_id( std::string( 32, 'b' ) ), get_avatar() );
+    REQUIRE( get_avatar().is_player_controlled() );
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
@@ -13276,7 +13279,8 @@ TEST_CASE( "vehicle_ladder_requests_bind_the_part_and_recompute_the_descent",
     bool accepted = false;
     SECTION( "current three story ladder derives a two level landing" ) { accepted = true; }
     SECTION( "part replaced at the same mount" ) {
-        REQUIRE( veh->remove_part( veh->part( part ) ) );
+        veh->remove_part( veh->part( part ) );
+        REQUIRE( veh->part( part ).removed );
         veh->part_removal_cleanup( here );
         REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "ladder_3" ) ) >= 0 );
         veh->refresh();
@@ -13324,6 +13328,7 @@ TEST_CASE( "climb_preview_is_read_only_and_request_rechecks_the_selected_owners_
     const itype_id grapnel( "grapnel" );
     host.i_add( item( grapnel ) );
     who.i_add( item( grapnel ) );
+    who.set_moves( 1000 );
     vertical_move_selection choice;
     choice.origin = who.pos_abs();
     choice.target = here.get_abs( ledge );
@@ -13682,7 +13687,7 @@ TEST_CASE( "glide_start_callback_preserves_its_replacement_activity_and_removes_
                 if( !replaced && event.type() == event_type::character_starts_activity &&
                     event.get<character_id>( "character" ) == owner.getID() ) {
                     replaced = true;
-                    owner.assign_activity( activity_id( "ACT_WAIT" ), 400 );
+                    owner.assign_activity( wait_activity_actor( 4_seconds ) );
                 }
             }
     } events( who );
