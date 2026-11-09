@@ -66,9 +66,9 @@ void succeed_selected_mission( dialogue &d );
 void fail_selected_mission( dialogue &d );
 void clear_selected_mission( dialogue &d );
 void reward_selected_mission( dialogue &d );
-void start_selected_training( dialogue &d );
-void start_selected_training_npc( dialogue &d );
-void start_selected_training_seminar( dialogue &d );
+void start_selected_training( dialogue &conversation );
+void start_selected_training_npc( dialogue &conversation );
+void start_selected_training_seminar( dialogue &conversation );
 
 void add_mission_for_dialogue( dialogue &d, const mission_type_id &mission_id );
 void assign_mission_by_type_for_dialogue( dialogue &d, const mission_type_id &mission_id );
