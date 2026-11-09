@@ -53,8 +53,24 @@ sys.exit(code)
         self.assertEqual(result.returncode, 22)
         self.assertEqual(attempts, 3)
 
+    def test_recovers_from_the_observed_vcpkg_download_failure(self):
+        result, attempts = self.run_download([
+            ("EXEC : error : curl operation failed with response code 504.", 1),
+            ("build complete", 0),
+        ])
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(attempts, 2)
+
+    def test_windows_build_uses_bounded_download_retries(self):
+        workflow = (ROOT / ".github/workflows/msvc-full-features.yml").read_text()
+        self.assertIn(
+            "python build-scripts/retry-download-command.py -- msbuild -m",
+            workflow,
+        )
+
     def test_does_not_retry_permanent_or_non_network_errors(self):
-        for message in ("HTTP/2 404", "CMake Error: invalid configuration"):
+        for message in ("HTTP/2 404", "CMake Error: invalid configuration",
+                        "curl operation failed with response code 404."):
             with self.subTest(message=message):
                 result, attempts = self.run_download([(message, 17)])
                 self.assertEqual(result.returncode, 17)

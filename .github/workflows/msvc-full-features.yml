@@ -180,7 +180,7 @@ jobs:
       env:
         CDDA_RELEASE_BUILD: 1
       run: |
-          msbuild -m -p:Configuration=Release -p:Platform=x64 -p:UseSDL3=true "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features/Cataclysm-vcpkg-static.sln
+          python build-scripts/retry-download-command.py -- msbuild -m -p:Configuration=Release -p:Platform=x64 -p:UseSDL3=true "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features/Cataclysm-vcpkg-static.sln
 
     - name: Post-build ccache manipulation
       id: trim-compiler-cache
