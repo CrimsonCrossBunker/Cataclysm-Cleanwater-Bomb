@@ -141,6 +141,9 @@ static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
 static const itype_id itype_guidebook( "guidebook" );
 
+static const json_character_flag json_flag_BIONIC_GUN( "BIONIC_GUN" );
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+
 namespace cata_mp
 {
 void dialogue_view_option::serialize( JsonOut &out ) const
@@ -851,7 +854,7 @@ bool start_spell( Character &who, const JsonObject &request )
     const character_action_guard lifetime( who );
     const spell_id id( request.get_string( "spell" ) );
     if( !lifetime || who.activity || who.get_moves() <= 0 || !id.is_valid() ||
-        !who.magic->knows_spell( id ) || who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ) {
+        !who.magic->knows_spell( id ) || who.has_flag( json_flag_CANNOT_ATTACK ) ) {
         return false;
     }
     std::optional<tripoint_abs_ms> target;
@@ -2633,7 +2636,7 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
         return true;
     }
     if( action == bionic_action::activate &&
-        bio.info().has_flag( json_character_flag( "BIONIC_GUN" ) ) ) {
+        bio.info().has_flag( json_flag_BIONIC_GUN ) ) {
         const item *gun = bionic_firearm_source( who, bio.get_uid() );
         if( who.activity || !gun || gun->get_gun_bionic_drain() > who.get_power_level() ||
             ( choices && !valid_bionic_activation_choices( who, bio, *choices ) ) ) {
@@ -3336,7 +3339,7 @@ void client_update_inventory_activity_view()
         if( spellbook ) {
             const restore_on_out_of_scope restore_rng( rng_get_engine() );
             avatar &who = get_avatar();
-            if( who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ) {
+            if( who.has_flag( json_flag_CANNOT_ATTACK ) ) {
                 add_msg( m_bad, _( "You cannot cast spells at this moment." ) );
             } else if( !who.magic->knows_spell() ) {
                 add_msg( m_bad, _( "You don't know any spells to cast." ) );
