@@ -71,6 +71,43 @@ sys.exit(code)
             workflow,
         )
 
+    @unittest.skipUnless(
+        shutil.which("pwsh") or shutil.which("powershell"),
+        "PowerShell is required",
+    )
+    def test_windows_build_preserves_msbuild_arguments(self):
+        workflow = (
+            ROOT / ".github/workflows/msvc-full-features.yml"
+        ).read_text()
+        prefix = "python build-scripts/retry-download-command.py -- msbuild"
+        command = next(line.strip() for line in workflow.splitlines()
+                       if prefix in line)
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "msbuild.py"
+            fixture.write_text(
+                "import json, sys\nprint(json.dumps(sys.argv[1:]))\n",
+                encoding="utf-8",
+            )
+            command = command.replace(
+                prefix,
+                f"& '{sys.executable}' '{RETRY}' -- "
+                f"'{sys.executable}' '{fixture}'",
+                1,
+            )
+            shell = shutil.which("pwsh") or shutil.which("powershell")
+            result = subprocess.run(
+                [shell, "-NoProfile", "-NonInteractive", "-Command", command],
+                capture_output=True, text=True,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [
+            "-m", "-p:Configuration=Release", "-p:Platform=x64",
+            "-p:UseSDL3=true",
+            "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static;"
+            "JsonFormatter-vcpkg-static;zzip",
+            "msvc-full-features/Cataclysm-vcpkg-static.sln",
+        ])
+
     def test_does_not_retry_permanent_or_non_network_errors(self):
         for message in ("HTTP/2 404", "CMake Error: invalid configuration",
                         "curl operation failed with response code 404."):
