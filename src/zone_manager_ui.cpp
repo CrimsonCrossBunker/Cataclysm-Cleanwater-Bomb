@@ -47,6 +47,8 @@ static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
 
 static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
 
+static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
+
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 
 static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
@@ -64,8 +66,6 @@ static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
 static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
 
 static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
-
-static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
 
 shared_ptr_fast<game::draw_callback_t> zone_manager_ui::create_zone_callback(
     const std::optional<tripoint_bub_ms> &zone_start,
