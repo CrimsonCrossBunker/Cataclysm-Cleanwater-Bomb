@@ -3002,38 +3002,40 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
     return true;
 }
 
-bool client_choose_dialogue_response( std::size_t index )
+bool client_choose_dialogue_response( uint64_t session_id, uint64_t response_revision,
+                                      std::size_t index )
 {
     auto &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
-        !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        !view.dialogue_prompt || view.dialogue_prompt->session_id != session_id ||
+        view.dialogue_prompt->response_revision != response_revision ||
+        is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
         index >= view.dialogue_prompt->options.size() ||
         !view.dialogue_prompt->options[index].selectable ) {
         return false;
     }
-    const uint64_t session_id = view.dialogue_prompt->session_id;
-    const uint64_t revision = view.dialogue_prompt->response_revision;
     send_inventory_activity( "choose", [&]( JsonOut & out ) {
         out.member( "dialogue_session", static_cast<int64_t>( session_id ) );
-        out.member( "response_revision", static_cast<int64_t>( revision ) );
+        out.member( "response_revision", static_cast<int64_t>( response_revision ) );
         out.member( "response_index", static_cast<int>( index ) );
     } );
     return view.pending_request != 0;
 }
 
-bool client_dialogue_special_action( const std::string &action )
+bool client_dialogue_special_action( uint64_t session_id, uint64_t response_revision,
+                                     const std::string &action )
 {
     auto &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
-        !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        !view.dialogue_prompt || view.dialogue_prompt->session_id != session_id ||
+        view.dialogue_prompt->response_revision != response_revision ||
+        is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
         action.empty() ) {
         return false;
     }
-    const uint64_t session_id = view.dialogue_prompt->session_id;
-    const uint64_t revision = view.dialogue_prompt->response_revision;
     send_inventory_activity( "choose", [&]( JsonOut & out ) {
         out.member( "dialogue_session", static_cast<int64_t>( session_id ) );
-        out.member( "response_revision", static_cast<int64_t>( revision ) );
+        out.member( "response_revision", static_cast<int64_t>( response_revision ) );
         out.member( "special_action", action );
     } );
     return view.pending_request != 0;
@@ -3129,7 +3131,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
                 ( action == "LOOK_AT" || action == "SIZE_UP_STATS" ||
                   action == "ASSESS_PERSONALITY" || action == "YELL" ||
                   action == "CHECK_OPINION" ) ) {
-                client_dialogue_special_action( action );
+                client_dialogue_special_action( prompt.session_id, prompt.response_revision, action );
                 return;
             }
             if( action == "HELP_KEYBINDINGS" ) {
@@ -3161,7 +3163,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
         }
     } while( !okay );
 
-    client_choose_dialogue_response( response_ind );
+    client_choose_dialogue_response( prompt.session_id, prompt.response_revision, response_ind );
 }
 
 void client_step_inventory_activity()
