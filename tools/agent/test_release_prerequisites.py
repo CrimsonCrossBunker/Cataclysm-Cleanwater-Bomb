@@ -68,13 +68,15 @@ sys.exit(code)
 
 def workflow_script(path, name):
     workflow = (ROOT / path).read_text()
-    start = workflow.index("      - name: " + name + "\n")
-    start = workflow.index("        run: |\n", start) + len("        run: |\n")
+    start = workflow.index("- name: " + name + "\n")
+    start = workflow.index("run: |\n", start) + len("run: |\n")
+    body = workflow[start:].splitlines()
+    indentation = len(body[0]) - len(body[0].lstrip())
     lines = []
-    for line in workflow[start:].splitlines():
-        if line and not line.startswith("          "):
+    for line in body:
+        if line and not line.startswith(" " * indentation):
             break
-        lines.append(line[10:] if line else "")
+        lines.append(line[indentation:] if line else "")
     return "\n".join(lines)
 
 
@@ -170,6 +172,88 @@ os.execvp(args[0], args)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(requests, [200])
         self.assertFalse(installed)
+
+
+@unittest.skipUnless(shutil.which("curl") and shutil.which("tar")
+                     and shutil.which("bash"), "curl, tar and bash are required")
+class CcacheInstallTest(unittest.TestCase):
+    def install(self, statuses, valid_archive=True):
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:xz") as output:
+            content = b"#!/bin/sh\necho test-ccache\n"
+            entry = tarfile.TarInfo("ccache-4.10.2-linux-x86_64/ccache")
+            entry.size = len(content)
+            entry.mode = 0o755
+            output.addfile(entry, io.BytesIO(content))
+        payload = archive.getvalue() if valid_archive else b"<html>error</html>"
+        requests = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                status = statuses[min(len(requests), len(statuses) - 1)]
+                requests.append(status)
+                self.send_response(status)
+                self.end_headers()
+                self.wfile.write(payload if status == 200 else b"unavailable")
+
+            def log_message(self, *args):
+                pass
+
+        with tempfile.TemporaryDirectory(prefix="ccb ccache install ") as directory:
+            root = Path(directory)
+            marker = root / "install-commands"
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                script = workflow_script(".github/workflows/matrix.yml",
+                                         "install recent ccache on ubuntu")
+                script = script.replace(
+                    "https://github.com/ccache/ccache/releases/download/v4.10.2/"
+                    "ccache-4.10.2-linux-x86_64.tar.xz",
+                    f"http://127.0.0.1:{server.server_port}/ccache.tar.xz",
+                )
+                env = dict(os.environ)
+                env.update(RUNNER_TEMP=root.as_posix(),
+                           TEST_INSTALL_MARKER=marker.as_posix())
+                result = subprocess.run(
+                    ["bash", "-e", "-o", "pipefail", "-c",
+                     'ccache() { :; }\n'
+                     'sudo() { printf "%s\\n" "$*" >> "$TEST_INSTALL_MARKER"; }\n'
+                     + script],
+                    env=env, capture_output=True, text=True, timeout=30,
+                )
+                commands = marker.read_text() if marker.exists() else ""
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join()
+            return result, requests, commands
+
+    def test_http_504_recovers_before_installing(self):
+        result, requests, commands = self.install([504, 200])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(requests, [504, 200])
+        self.assertIn("apt-get remove", commands)
+        self.assertIn("tar -xJf", commands)
+
+    def test_http_404_preserves_the_installed_cache(self):
+        result, requests, commands = self.install([404])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(requests, [404])
+        self.assertEqual(commands, "")
+
+    def test_http_504_exhaustion_preserves_the_installed_cache(self):
+        result, requests, commands = self.install([504])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(requests, [504, 504, 504, 504])
+        self.assertEqual(commands, "")
+
+    def test_invalid_archive_preserves_the_installed_cache(self):
+        result, requests, commands = self.install([200], valid_archive=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(requests, [200])
+        self.assertEqual(commands, "")
 
 
 @unittest.skipUnless(shutil.which("make"), "make is required")
