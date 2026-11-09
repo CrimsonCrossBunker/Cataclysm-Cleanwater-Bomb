@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <thread>
 
@@ -49,9 +50,10 @@ class prefetch_fixture
             request.quad_path = file;
             return request;
         }
-        submap_prefetcher::request_t compressed( int x, const std::string &bytes ) {
-            const auto file = root / ( std::to_string( x ) + ".zzip" );
-            const auto entry = std::filesystem::path( "quad.map" );
+        submap_prefetcher::request_t compressed( int x, std::string_view bytes ) const {
+            const std::filesystem::path file =
+                root / std::filesystem::u8path( std::to_string( x ) + ".zzip" );
+            const std::filesystem::path entry = std::filesystem::u8path( "quad.map" );
             {
                 auto archive = zzip::load( file );
                 REQUIRE( archive );
