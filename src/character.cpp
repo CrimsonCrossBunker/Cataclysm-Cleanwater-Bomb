@@ -6047,7 +6047,7 @@ void Character::fall_asleep()
         so shorter naps are already handled. */
         time_duration sleep_duration = 12_hours;
         if( has_effect( effect_melatonin ) ) {
-            sleep_duration = 13_hours;  // Artificial sleep hormone boost allows you to sleep longer
+            sleep_duration = 14_hours;  // Artificial sleep hormone boost allows you to sleep longer
         }
         fall_asleep( sleep_duration );
     }
