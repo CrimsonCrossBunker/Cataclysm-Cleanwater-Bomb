@@ -2658,7 +2658,7 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
 
     SECTION( "remote_mission_reward_credits_remote_debt_without_host_ui" ) {
         mission *miss = mission::reserve_new(
-                            mission_type_id( "TEST_MISSION_GENERIC_REWARD" ),
+                            mission_TEST_MISSION_GENERIC_REWARD,
                             provider.getID() );
         REQUIRE( miss != nullptr );
         provider.chatbin.missions.push_back( miss );
