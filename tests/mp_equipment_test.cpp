@@ -33,6 +33,7 @@
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "json_loader.h"
 
 namespace
 {

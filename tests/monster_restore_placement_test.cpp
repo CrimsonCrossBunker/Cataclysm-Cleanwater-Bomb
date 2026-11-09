@@ -22,7 +22,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
-#include "units.h"
+#include "calendar.h"
 
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
