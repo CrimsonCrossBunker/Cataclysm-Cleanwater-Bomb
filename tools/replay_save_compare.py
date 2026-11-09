@@ -50,11 +50,13 @@ def reject_constant(value):
 
 def read_document(path):
     path = Path(path)
-    if (any(part.startswith("obj-lua") for part in path.parts)
-            or any(part.startswith("obj-lua") for part in path.resolve().parts)):
+    if (any(part.startswith("obj-lua") for part in path.parts) or
+            any(part.startswith("obj-lua") for part in path.resolve().parts)):
         raise ValueError("protected build cache cannot be an input")
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_BYTES:
-        raise ValueError("input must be a regular decoded file of at most 64 MiB")
+    if (path.is_symlink() or not path.is_file() or
+            path.stat().st_size > MAX_BYTES):
+        raise ValueError(
+            "input must be a regular decoded file of at most 64 MiB")
     with path.open("rb") as stream:
         raw = stream.read(MAX_BYTES + 1)
     if len(raw) > MAX_BYTES:
@@ -71,8 +73,9 @@ def read_document(path):
         if line.startswith("#"):
             preamble.append(line)
         first_json += 1
-    value = json.loads("\n".join(lines[first_json:]), object_pairs_hook=unique_object,
-                       parse_constant=reject_constant)
+    value = json.loads(
+        "\n".join(lines[first_json:]), object_pairs_hook=unique_object,
+        parse_constant=reject_constant)
     return value, hashlib.sha256(raw).hexdigest(), preamble
 
 
@@ -99,8 +102,8 @@ def string_set(owner, key):
     if key not in owner:
         return
     value = owner[key]
-    if (type(value) is not list or any(type(v) is not str for v in value)
-            or len(value) != len(set(value))):
+    if (type(value) is not list or any(type(v) is not str for v in value) or
+            len(value) != len(set(value))):
         raise ValueError(f"{key} must be an array of unique strings")
     owner[key] = sorted(value)
 
@@ -122,8 +125,8 @@ def memory_region(value):
                 raise ValueError("invalid map-memory RLE record")
             count, symbol, terrain, subtile, rotation = run[:5]
             decoration = run[5:] if len(run) == 8 else ["", 0, 0]
-            if (type(count) is not int or not 1 <= count <= SUBMAP_TILES
-                    or len(tiles) + count > SUBMAP_TILES):
+            if (type(count) is not int or not 1 <= count <= SUBMAP_TILES or
+                    len(tiles) + count > SUBMAP_TILES):
                 raise ValueError("invalid map-memory run length")
             if type(symbol) is not int or not -(2**31) <= symbol < 2**31:
                 raise ValueError("invalid persisted map-memory symbol")
@@ -133,7 +136,7 @@ def memory_region(value):
                    for v in (subtile, rotation, *decoration[1:])):
                 raise ValueError("invalid map-memory orientation")
             tile = dict(zip(MEMORY_FIELDS, [symbol, terrain, subtile, rotation,
-                                           *decoration]))
+                                            *decoration]))
             tiles.extend([tile] * count)
         if len(tiles) != SUBMAP_TILES:
             raise ValueError("map-memory submap must decode to 144 tiles")
@@ -190,7 +193,8 @@ def compare_documents(kind, a, b):
                 child = path + "/" + key.replace("~", "~0").replace("/", "~1")
                 if key not in left or key not in right:
                     # Distinguish absent members from explicit JSON null.
-                    pending.append((child, left.get(key, absent), right.get(key, absent)))
+                    pending.append(
+                        (child, left.get(key, absent), right.get(key, absent)))
                 else:
                     pending.append((child, left[key], right[key]))
         elif type(left) is list:
@@ -206,7 +210,8 @@ def compare_documents(kind, a, b):
     return {"schema_version": 1, "kind": kind, "match": not differences,
             "differences": differences, "truncated": bool(pending),
             "scope": "Decoded persisted state; no identity, message, version, "
-                     "glyph or unknown-field exclusions; not runtime or visual acceptance"}
+                     "glyph or unknown-field exclusions; "
+                     "not runtime or visual acceptance"}
 
 
 def main(argv=None):
@@ -224,7 +229,8 @@ def main(argv=None):
         report["input_sha256"] = {"a": a_hash, "b": b_hash}
         code = 0 if report["match"] else 1
     except (OSError, ValueError, RecursionError) as error:
-        report = {"schema_version": 1, "status": "invalid", "error": str(error)}
+        report = {"schema_version": 1,
+                  "status": "invalid", "error": str(error)}
         code = 2
     print(json.dumps(report, ensure_ascii=False, sort_keys=True))
     return code
