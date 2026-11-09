@@ -1,4 +1,5 @@
 #include "mp_server.h"
+#include "mp_log.h"
 
 #include <algorithm>
 #include <atomic>
@@ -17,8 +18,6 @@
 
 namespace cata_mp
 {
-void mp_log_host( const std::string &msg ); // NOLINT(cata-static-declarations)
-
 namespace
 {
 using clock = std::chrono::steady_clock;

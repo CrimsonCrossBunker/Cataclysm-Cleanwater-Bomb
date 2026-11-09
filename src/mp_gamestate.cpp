@@ -1,5 +1,6 @@
 #include "vehicle_control.h"
 #include "mp_gamestate.h"
+#include "mp_log.h"
 #include "mp_combat_result.h"
 #include "mp_throw.h"
 #include "mp_peek.h"
