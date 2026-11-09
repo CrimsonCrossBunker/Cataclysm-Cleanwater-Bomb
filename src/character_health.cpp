@@ -146,6 +146,7 @@ static const efftype_id effect_jetinjector( "jetinjector" );
 static const efftype_id effect_lack_sleep( "lack_sleep" );
 static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_melatonin( "melatonin" );
+static const efftype_id effect_melatonin_sleep( "melatonin_sleep" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_nausea( "nausea" );
@@ -1588,7 +1589,9 @@ void Character::update_needs( int rate_multiplier )
     } else if( asleep ) {
         if( rates.recovery > 0.0f ) {
             int recovered = roll_remainder( rates.recovery * rate_multiplier );
-            if( get_sleepiness() - recovered < 0 ) {
+            const bool melatonin_sleep = get_effect_dur( effect_melatonin_sleep ) > 0_turns &&
+                                         calendar::turn - sleep.get_start_time() < 30_minutes;
+            if( get_sleepiness() - recovered < 0 && !melatonin_sleep ) {
                 // Should be wake up, but that could prevent some retroactive regeneration
                 sleep.set_duration( 1_turns );
                 mod_sleepiness( -25 );
@@ -2723,6 +2726,9 @@ void Character::wake_up()
     if( has_effect( effect_sleep ) ) {
         get_effect( effect_sleep ).set_duration( 0_turns );
         get_event_bus().send<event_type::character_wakes_up>( getID() );
+    }
+    if( has_effect( effect_melatonin_sleep ) ) {
+        get_effect( effect_melatonin_sleep ).set_duration( 0_turns );
     }
     remove_effect( effect_slept_through_alarm );
     remove_effect( effect_lying_down );
