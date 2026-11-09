@@ -1967,7 +1967,7 @@ bool apply_inventory_activity_result( const JsonObject &response )
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     world_session &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    inventory_activity_client_state &view = session.client_inventory_activity;
 
     JsonObject combat = response.get_object( "combat" );
     combat.allow_omitted_members();
