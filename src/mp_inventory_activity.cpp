@@ -771,7 +771,7 @@ bool start_consume( Character &who, map &here, const JsonObject &request )
 
 bool begin_client_inventory_activity( const player_activity &activity )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
         get_avatar().get_moves() <= 0 ) {
         return false;
