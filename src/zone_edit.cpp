@@ -24,6 +24,10 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 
+static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
+static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
+static const zone_type_id zone_type_LOOT_ITEM_GROUP( "LOOT_ITEM_GROUP" );
+
 zone_edit_definition zone_edit_definition::capture( const zone_data &zone )
 {
     zone_edit_definition result;
@@ -344,7 +348,7 @@ shared_ptr_fast<zone_options> read_edit_options( const zone_edit_definition &def
             }
         } else if( dynamic_cast<loot_options *>( options.get() ) ) {
             strings = { "mark" };
-            if( definition.type == zone_type_id( "LOOT_ITEM_GROUP" ) &&
+            if( definition.type == zone_type_LOOT_ITEM_GROUP &&
                 !item_group::group_is_defined( item_group_id( object.get_string( "mark" ) ) ) ) {
                 return nullptr;
             }
@@ -560,8 +564,8 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
         if( definition.vehicle_bound ) {
             if( ( definition.displayed && ( !change.before || !change.before->displayed ) ) ||
                 ( ( !change.before || definition.type != change.before->type ) &&
-                  ( definition.type == zone_type_id( "FARM_PLOT" ) ||
-                    definition.type == zone_type_id( "CONSTRUCTION_BLUEPRINT" ) ) ) ) {
+                  ( definition.type == zone_type_FARM_PLOT ||
+                    definition.type == zone_type_CONSTRUCTION_BLUEPRINT ) ) ) {
                 return false;
             }
             point_rel_ms mount;
