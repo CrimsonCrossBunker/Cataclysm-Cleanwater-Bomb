@@ -3237,7 +3237,7 @@ void client_cancel_inventory_activity()
 
 void client_update_inventory_activity_view()
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() ) {
         return;
     }
@@ -3245,7 +3245,8 @@ void client_update_inventory_activity_view()
     view.notices.clear();
     for( const craft_notice &notice : notices ) {
         const bool interrupt = notice.alarm || uistate.distraction_craft_step_complete;
-        const auto type = notice.alarm ? distraction_type::noise : distraction_type::craft_step_complete;
+        const distraction_type type = notice.alarm ? distraction_type::noise :
+                                      distraction_type::craft_step_complete;
         if( !interrupt || !g->cancel_activity_or_ignore_query( type, notice.message ) ) {
             add_msg( m_info, notice.message );
         }
@@ -3324,8 +3325,8 @@ void client_update_inventory_activity_view()
                 const on_out_of_scope clear_peek( [&]() {
                     view.peek.reset();
                 } );
-                const auto result = g->look_from( here.get_bub( peek->viewpoint ), peek->standing,
-                                                  peek->z_range );
+                const look_around_result result = g->look_from(
+                        here.get_bub( peek->viewpoint ), peek->standing, peek->z_range );
                 if( view.peek && view.peek->request == peek->request && result.selection ) {
                     g->apply_view_action( *result.selection );
                 }
@@ -3453,8 +3454,9 @@ void client_update_inventory_activity_view()
             const auto controls = target->get_avail_parts( "REMOTE_CONTROLS" );
             const auto electronics = target->get_avail_parts( "CTRL_ELECTRONIC" );
             if( !empty( controls ) || !empty( electronics ) ) {
-                const auto position = empty( controls ) ? electronics.begin()->pos_abs() :
-                                      controls.begin()->pos_abs();
+                const tripoint_abs_ms position = empty( controls ) ?
+                                                 electronics.begin()->pos_abs() :
+                                                 controls.begin()->pos_abs();
                 selection = query_owned_vehicle_menu( who, here, *target, position, &source );
             }
         }
@@ -3470,7 +3472,8 @@ void client_update_inventory_activity_view()
                get_avatar().get_moves() > 0 ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         const item water = *view.preview;
-        const auto choice = query_liquid_destination( water, nullptr, view.liquid_source_uid, true );
+        const unload_liquid_choice choice = query_liquid_destination(
+                                                water, nullptr, view.liquid_source_uid, true );
         if( choice.kind == LD_NULL ) {
             view.cancel_requested = true;
             send_inventory_activity( "cancel" );
