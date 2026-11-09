@@ -170,7 +170,7 @@ TEST_CASE( "prefetch_budget_failure_is_a_retryable_cache_miss", "[prefetch]" )
     prefetch_fixture fixture;
     byte_budget budget( 1024 );
     submap_prefetcher prefetch( budget, 4 );
-    const auto small = fixture.plain( 0, "small" );
+    const submap_prefetcher::request_t small = fixture.plain( 0, "small" );
     REQUIRE( budget.acquire( budget.limit() ) );
     CHECK_FALSE( prefetch.request( small, 0 ) );
     CHECK( prefetch.inspect().pending == 0 );
