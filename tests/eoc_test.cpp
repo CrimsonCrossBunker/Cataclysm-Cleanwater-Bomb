@@ -526,21 +526,29 @@ TEST_CASE( "EOC_activation_topic_item_uses_copied_dialogue_value", "[eoc][condit
     eoc.has_condition = true;
     std::string evaluated_topic_item;
     int condition_evaluations = 0;
-    eoc.condition = [&legacy_condition, &evaluated_topic_item, &condition_evaluations](
+    bool clear_topic_item = false;
+    eoc.condition = [&legacy_condition, &evaluated_topic_item, &condition_evaluations,
+                                        &clear_topic_item](
     const const_dialogue & condition_dialogue ) {
         ++condition_evaluations;
         evaluated_topic_item = condition_dialogue.cur_item.str();
-        return legacy_condition( condition_dialogue );
+        const bool condition_matches = legacy_condition( condition_dialogue );
+        if( clear_topic_item ) {
+            condition_dialogue.cur_item = itype_id();
+        }
+        return condition_matches;
     };
 
     CHECK( eoc.test_condition( d ) );
     CHECK( evaluated_topic_item == topic_item );
     condition_evaluations = 0;
     evaluated_topic_item.clear();
+    clear_topic_item = true;
 
-    CHECK_FALSE( eoc.activate( d, false ) );
+    CHECK( eoc.activate( d, false ) );
     REQUIRE( condition_evaluations == 1 );
-    CHECK( evaluated_topic_item.empty() );
+    CHECK( evaluated_topic_item == topic_item );
+    CHECK( d.cur_item.str() == topic_item );
 }
 
 TEST_CASE( "EOC_run_unique_npc_skips_removed_target", "[eoc][npc]" )
