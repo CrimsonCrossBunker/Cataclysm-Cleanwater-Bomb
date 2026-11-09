@@ -5234,10 +5234,11 @@ void map::smash_items( const tripoint_bub_ms &p, int power, const std::string &c
                 damaged_item_name = i->tname();
                 items_damaged++;
                 items_destroyed++;
+                const mtype_id corpse_type = i->get_corpse_mon()->id;
                 // Remove the corpse first, to make sure we have space for the resulting gibs.
                 i = i_rem( p, i );
                 // Extremely funny implementation: Making a fake monster and splattering it.
-                monster mon( i->get_corpse_mon()->id );
+                monster mon( corpse_type );
                 mon.set_hp( mon.get_hp_max() * -2 );
                 mon.setpos( get_abs( p ) );
                 mdeath::splatter( this, mon );
