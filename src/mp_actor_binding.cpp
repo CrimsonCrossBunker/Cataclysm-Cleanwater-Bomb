@@ -82,7 +82,7 @@ npc *actor_binding::resolve_loaded( npc *candidate, const npc_lifetime_registry 
     if( active_.resolve( world ) != candidate ) {
         // Observation only: an unload or replacement must not be undone by
         // a getter. A legitimate on_load supplies the new active incarnation.
-        const auto loaded = world.active_reference( *candidate );
+        const npc_lifetime loaded = world.active_reference( *candidate );
         if( loaded.resolve( world ) != candidate ) {
             return nullptr;
         }

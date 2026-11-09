@@ -2307,7 +2307,7 @@ void dialogue::gen_responses( const talk_topic &the_topic )
             add_response( _( "Tell me about it." ), "TALK_MISSION_OFFER",
                           actor( true )->available_missions().front(), true );
         } else {
-            for( mission*&mission : actor( true )->available_missions() ) {
+            for( mission *&mission : actor( true )->available_missions() ) {
                 add_response( mission->get_type().tname(), "TALK_MISSION_OFFER", mission, true );
             }
         }
@@ -2315,7 +2315,7 @@ void dialogue::gen_responses( const talk_topic &the_topic )
         if( missions_assigned.size() == 1 ) {
             add_response( _( "I have news." ), "TALK_MISSION_INQUIRE", missions_assigned.front() );
         } else {
-            for( mission*&miss_it : missions_assigned ) {
+            for( mission *&miss_it : missions_assigned ) {
                 add_response( miss_it->get_type().tname(), "TALK_MISSION_INQUIRE", miss_it );
             }
         }
@@ -9500,7 +9500,7 @@ void talk_effect_t::update_missions( dialogue &d )
             : character_id();
         // Update the missions we can talk about (must only be current, non-complete ones)
         if( owner_id.is_valid() ) {
-            for( mission*&mission : d.actor( true )->assigned_missions() ) {
+            for( mission *&mission : d.actor( true )->assigned_missions() ) {
                 if( mission != nullptr && mission->get_assigned_player_id() == owner_id ) {
                     ma.push_back( mission );
                 }

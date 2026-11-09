@@ -34,7 +34,7 @@ TEST_CASE( "mp_actor_control_requires_exact_world_and_instance", "[multiplayer][
     npc_lifetime_registry other_world;
     cata_mp::actor_binding binding;
     binding.bind_player( first, owner, world, controls.claim( owner, first ) );
-    const auto old_lifetime = world.acquire( first );
+    const npc_lifetime old_lifetime = world.acquire( first );
     REQUIRE( binding.resolve_loaded( &first, world ) == &first );
     CHECK_FALSE( binding.resolve_loaded( &first, other_world ) );
     CHECK_FALSE( binding.retained( other_world ) );
@@ -49,7 +49,7 @@ TEST_CASE( "mp_actor_control_requires_exact_world_and_instance", "[multiplayer][
     CHECK_FALSE( old_lifetime.resolve( world ) );
 
     // A replacement has identical persistent tags and ID, but no control role.
-    const auto replacement = world.acquire( second );
+    const npc_lifetime replacement = world.acquire( second );
     CHECK_FALSE( binding.resolve_loaded( &first, world ) );
     CHECK_FALSE( binding.resolve_loaded( &second, world ) );
     world.retire( first );
@@ -83,7 +83,7 @@ TEST_CASE( "mp_actor_control_rejects_tampered_or_destroyed_identity",
     CHECK_FALSE( binding.retained( world ) );
     actor->setID( character_id( 12011 ), true );
     REQUIRE( binding.retained( world ) == actor.get() );
-    actor.reset();
+    actor = nullptr;
     CHECK_FALSE( binding.retained( world ) );
     binding.reset();
     CHECK_FALSE( binding.id().is_valid() );
@@ -125,7 +125,7 @@ TEST_CASE( "mp_actor_binding_releases_world_control_and_rejects_wrong_assignment
     CHECK_FALSE( controls.is_claimed( first ) );
     CHECK_FALSE( binding.id().is_valid() );
     binding.bind_player( first, owner, world, controls.claim( owner, first ) );
-    const auto before = controls.find( owner );
+    const player_control_reference before = controls.find( owner );
     CHECK_THROWS( controls.claim( owner, second ) );
     CHECK( binding.resolve_loaded( &first, world ) == &first );
     binding.reset();

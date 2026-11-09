@@ -1,10 +1,25 @@
 #include <functional>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "rng.h"
+#include "rng_helpers.h"
 #include "test_statistics.h"
+
+TEST_CASE( "rng_state_capture_is_read_only_and_restores_the_sequence", "[rng][regression]" )
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const std::string before = capture_rng_state();
+    CHECK( capture_rng_state() == before );
+    const unsigned int first = rng_bits();
+    CHECK( capture_rng_state() != before );
+    restore_rng_state( before );
+    CHECK( capture_rng_state() == before );
+    CHECK( rng_bits() == first );
+}
 
 static void check_remainder( float proportion )
 {

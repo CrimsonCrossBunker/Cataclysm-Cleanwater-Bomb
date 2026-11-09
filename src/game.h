@@ -1116,7 +1116,7 @@ class game
                 bool asking_for_public_goods = false );
         std::string local_faction_action_warning( Character &who, bool public_goods = false ) const;
         bool warn_character_maybe_anger_local_faction( Character &who, bool really_bad_offense,
-                bool public_goods, std::optional<bool> consent );
+                bool public_goods, std::optional<bool> consent ) const;
         int grabbed_furn_move_time( const tripoint_rel_ms &dp );
         int grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp );
         bool grabbed_furn_move( const tripoint_rel_ms &dp );
@@ -1543,7 +1543,7 @@ class game
         void climb_down( const tripoint_bub_ms &examp );
 
         void climb_down_menu_gen( const tripoint_bub_ms &examp, uilist &cmenu );
-        void climb_down_menu_gen( Character &who, const tripoint_bub_ms &examp, uilist &cmenu );
+        void climb_down_menu_gen( Character &you, const tripoint_bub_ms &examp, uilist &cmenu );
         bool climb_down_menu_pick( const tripoint_bub_ms &examp, int retval );
         void climb_down_using(
             const tripoint_bub_ms &examp,
@@ -1551,10 +1551,10 @@ class game
             bool deploy_affordance = false );
         bool can_climb_down_using( Character &who, const tripoint_bub_ms &examp,
                                    climbing_aid_id aid );
-        std::optional<std::string> climb_down_prompt( Character &who,
-                const tripoint_bub_ms &examp, climbing_aid_id aid );
-        void climb_down_using( Character &who, const tripoint_bub_ms &examp,
-                               climbing_aid_id aid, bool deploy_affordance, bool confirmed );
+        std::optional<std::string> climb_down_prompt( Character &you,
+                const tripoint_bub_ms &examp, climbing_aid_id aid_id );
+        void climb_down_using( Character &you, const tripoint_bub_ms &examp,
+                               climbing_aid_id aid_id, bool deploy_affordance, bool confirmed );
 
         pulp_data calculate_character_ability_to_pulp( const Character &you );
         pulp_data calculate_pulpability( const Character &you, const mtype &corpse_mtype );

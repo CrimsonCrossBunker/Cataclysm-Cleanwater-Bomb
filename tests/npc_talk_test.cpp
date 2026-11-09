@@ -71,6 +71,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "rng.h"
+#include "rng_helpers.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "talker.h"
@@ -100,6 +101,11 @@ static const itype_id itype_bottle_plastic( "bottle_plastic" );
 static const itype_id itype_dnd_handbook( "dnd_handbook" );
 static const itype_id itype_knife_huge( "knife_huge" );
 static const itype_id itype_manual_speech( "manual_speech" );
+static const itype_id itype_test_rock( "test_rock" );
+
+static const mission_type_id mission_TEST_MISSION_FIND_ITEM( "TEST_MISSION_FIND_ITEM" );
+static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
+static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
 
 static const morale_type morale_haircut( "morale_haircut" );
 
@@ -116,7 +122,6 @@ static const spell_id spell_test_spell_lava( "test_spell_lava" );
 static const spell_id spell_test_spell_pew( "test_spell_pew" );
 
 static const trait_id trait_ELFA_EARS( "ELFA_EARS" );
-
 static const trait_id trait_PROF_FED( "PROF_FED" );
 static const trait_id trait_PROF_SWAT( "PROF_SWAT" );
 static const trait_id trait_PSYCHOPATH( "PSYCHOPATH" );
@@ -1646,7 +1651,7 @@ TEST_CASE( "dialogue_opinions_belong_to_the_interlocutor", "[npc_talk][multiplay
 
     // Switching back and forth must not retarget existing wrappers or clones.
     host_dialogue.actor( true )->add_debt( 100 );
-    const const_dialogue condition( remote_dialogue );
+    const const_dialogue condition( static_cast<const const_dialogue &>( remote_dialogue ) );
     dialogue copied( remote_dialogue );
     dialogue moved( std::move( copied ) );
     moved.actor( true )->add_debt( 25 );
@@ -1699,14 +1704,14 @@ TEST_CASE( "dialogue_trials_and_hostility_use_the_same_player_opinion", "[npc_ta
     std::ostringstream before;
     JsonOut before_json( before );
     provider.serialize( before_json );
-    const auto rng_before = rng_get_engine();
+    const std::string rng_before = capture_rng_state();
     const npc &readonly = provider;
     CHECK( readonly.opinion_of( character_id( 700002 ) ).trust == 0 );
     std::ostringstream after;
     JsonOut after_json( after );
     provider.serialize( after_json );
     CHECK( after.str() == before.str() );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
 }
 
 TEST_CASE( "npc_opinions_keep_their_owners_across_save_and_reload",
@@ -1777,7 +1782,7 @@ TEST_CASE( "legacy_npc_opinion_is_not_inherited_by_the_first_remote_speaker",
         const int start = source.tell();
         source.skip_value();
         std::string value = source.substr( start, source.tell() - start );
-        value.erase( value.find_last_not_of( " \t\r\n," ) + 1 );
+        value.erase( value.find_last_not_of( std::string{ ' ', '\t', '\r', '\n', ',' } ) + 1 );
         if( name != "op_of_u_owner" && name != "opinions" ) {
             legacy_json.member( name );
             legacy << value;
@@ -1799,11 +1804,6 @@ TEST_CASE( "legacy_npc_opinion_is_not_inherited_by_the_first_remote_speaker",
     CHECK( remote_dialogue.const_actor( true )->debt() == 20 );
 }
 
-static const itype_id itype_test_rock( "test_rock" );
-static const mission_type_id mission_TEST_MISSION_FIND_ITEM( "TEST_MISSION_FIND_ITEM" );
-static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
-static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
-static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION2( "TEST_MISSION_GOAL_CONDITION2" );
 
 TEST_CASE( "interleaved_dialogues_isolate_selected_missions_and_preserve_clones",
            "[npc_talk][mission][multiplayer]" )
@@ -1841,7 +1841,7 @@ TEST_CASE( "interleaved_dialogues_isolate_selected_missions_and_preserve_clones"
     CHECK( host_dialogue.const_actor( true )->selected_mission() == host_available );
     CHECK( remote_dialogue.const_actor( true )->selected_mission() == remote_available );
 
-    const_dialogue host_const_copy( host_dialogue );
+    const_dialogue host_const_copy( static_cast<const const_dialogue &>( host_dialogue ) );
     dialogue remote_copy( remote_dialogue );
     CHECK( host_const_copy.const_actor( true )->selected_mission() == host_available );
     CHECK( remote_copy.const_actor( true )->selected_mission() == remote_available );
@@ -2121,7 +2121,8 @@ TEST_CASE( "native_talk_effects_and_lua_dialogue_context_share_session_mission_s
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     sol::state lua;
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime_identity( runtime_owner, 991 );
     cata::lua_platform::runtime_world_ready( true );
     const std::size_t world_generation = cata::lua_platform::runtime_world_generation();
@@ -2167,7 +2168,7 @@ TEST_CASE( "mission_phase_removal_stops_the_outer_dialogue_effect_chain",
     mission::clear_all();
     npc &provider = create_test_talker();
     const character_id provider_id = provider.getID();
-    const auto reference = g->npc_lifetimes().track_active( provider );
+    const npc_lifetime reference = g->npc_lifetimes().track_active( provider );
     const on_out_of_scope cleanup( [&]() {
         owner.reset_all_missions();
         mission::clear_all();
@@ -2220,7 +2221,7 @@ TEST_CASE( "mission_phase_removal_stops_the_outer_dialogue_effect_chain",
     CHECK( reference.resolve( g->npc_lifetimes() ) == nullptr );
     CHECK( conversation.actor( true )->get_npc() == nullptr );
     CHECK( conversation.const_actor( true )->selected_mission() == nullptr );
-    const_dialogue copied( conversation );
+    const_dialogue copied( static_cast<const const_dialogue &>( conversation ) );
     CHECK( copied.const_actor( true )->selected_mission() == nullptr );
 }
 
@@ -2250,9 +2251,9 @@ TEST_CASE( "mission_dialogue_rejects_freed_objects_and_same_id_substitutes",
     CHECK( conversation.const_actor( true )->selected_mission() == nullptr );
     CHECK( conversation.const_actor( true )->available_missions().empty() );
     CHECK( mission::to_uid_vector( provider.chatbin.missions ).empty() );
-    speaker.reset();
+    speaker = nullptr;
     CHECK( mission_dialogue::resolve_dialogue_character( conversation ) == nullptr );
-    const_dialogue copied( conversation );
+    const_dialogue copied( static_cast<const const_dialogue &>( conversation ) );
     CHECK( mission_dialogue::resolve_dialogue_character( copied ) == nullptr );
     CHECK( copied.const_actor( true )->selected_mission() == nullptr );
     CHECK_FALSE( mission_dialogue::participants_live( copied ) );
@@ -2361,37 +2362,37 @@ TEST_CASE( "dialogue_choice_revalidates_and_commits_only_once", "[npc_talk][owne
     conversation.responses = { choice };
     conversation.response_condition_exists = { true };
     conversation.response_condition_eval = { true };
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     conversation.responses.front().deferred_text_condition = []( dialogue & ) {
         return rng( 1, 100 ) > 0;
     };
     conversation.responses.front().create_option_line( conversation, input_event() );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     CHECK_FALSE( conversation.select_response( 9, revision ) );
     CHECK_FALSE( conversation.select_response( 0, old_revision ) );
     dialogue copy( conversation );
     CHECK_FALSE( copy.select_response( 0, revision ) );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     CHECK( executions == 0 );
 
     SECTION( "changed_condition_rejects_without_gameplay_randomness_or_effects" ) {
-        const cata_default_random_engine before_selection = rng_get_engine();
+        const std::string before_selection = capture_rng_state();
         permitted = false;
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 0 );
-        CHECK( rng_get_engine() == before_selection );
+        CHECK( capture_rng_state() == before_selection );
     }
     SECTION( "success_cannot_repeat_or_reenter" ) {
-        const cata_default_random_engine before_selection = rng_get_engine();
+        const std::string before_selection = capture_rng_state();
         const auto next = conversation.select_response( 0, revision );
         REQUIRE( next );
         CHECK( next->id == "TALK_DONE" );
         CHECK( executions == 1 );
-        CHECK( rng_get_engine() != before_selection );
-        const auto after = rng_get_engine();
+        CHECK( capture_rng_state() != before_selection );
+        const std::string after = capture_rng_state();
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 1 );
-        CHECK( rng_get_engine() == after );
+        CHECK( capture_rng_state() == after );
     }
 }
 
@@ -2450,12 +2451,12 @@ TEST_CASE( "dialogue_choice_rejects_mission_taken_by_another_player",
     second.actor( true )->select_mission( task );
     mission_dialogue::assign_selected_mission( second );
     REQUIRE( task->get_assigned_player_id() == remote.getID() );
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     CHECK_FALSE( first.select_response( index, first.response_revision() ) );
     CHECK( first.actor( true )->selected_mission() == nullptr );
     CHECK( owner.get_active_missions().empty() );
     CHECK( task->get_assigned_player_id() == remote.getID() );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
 }
 
 TEST_CASE( "dialogue_choice_stops_after_participant_removal", "[npc_talk][lifetime]" )
@@ -2522,24 +2523,24 @@ TEST_CASE( "dialogue_native_topic_actions_run_once_outside_text_preview",
     avatar &host = get_avatar();
     const int host_oxygen = host.oxygen;
     dialogue conversation( get_talker_for( remote ), get_talker_for( provider ) );
-    const auto preview_rng = rng_get_engine();
+    const std::string preview_rng = capture_rng_state();
     CHECK_FALSE( conversation.dynamic_line( talk_topic( "TALK_SHOUT" ) ).empty() );
     CHECK( remote.oxygen == 200 );
-    CHECK( rng_get_engine() == preview_rng );
+    CHECK( capture_rng_state() == preview_rng );
     REQUIRE( conversation.begin_conversation( false, "TALK_SHOUT", true ) ==
              dialogue_start_result::started );
     REQUIRE( conversation.prepare_topic() );
     const int after_shout = remote.oxygen;
     CHECK( after_shout == 200 - remote.get_shout_volume() );
     CHECK( host.oxygen == host_oxygen );
-    const auto revision = conversation.response_revision();
-    const auto after_rng = rng_get_engine();
+    const std::uint64_t revision = conversation.response_revision();
+    const std::string after_rng = capture_rng_state();
     const std::string line = conversation.prepared_challenge();
     REQUIRE( conversation.prepare_topic() );
     CHECK( remote.oxygen == after_shout );
     CHECK( conversation.prepared_challenge() == line );
     CHECK( conversation.response_revision() == revision );
-    CHECK( rng_get_engine() == after_rng );
+    CHECK( capture_rng_state() == after_rng );
     conversation.finish_conversation();
     conversation.finish_conversation();
     CHECK_FALSE( conversation.prepare_topic() );
@@ -2566,7 +2567,7 @@ TEST_CASE( "dialogue_native_lifecycle_rejects_a_retired_participant",
     }
     SECTION( "removal_after_preparing_choices" ) {
         REQUIRE( conversation.prepare_topic() );
-        const auto revision = conversation.response_revision();
+        const std::uint64_t revision = conversation.response_revision();
         g->remove_npc( provider_id );
         const auto next = conversation.select_response( 0, revision );
         REQUIRE( next );

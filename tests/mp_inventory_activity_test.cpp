@@ -152,6 +152,7 @@
 #include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "rng_helpers.h"
 #include "skill.h"
 #include "spell_casting_choice.h"
 #include "stomach.h"
@@ -191,6 +192,353 @@
 #include "zone_edit.h"
 #include "zone_work.h"
 
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    #include "lua_platform_test_support.h"
+#endif
+
+static const activity_id ACT_BIONIC_WATER( "ACT_BIONIC_WATER" );
+static const activity_id ACT_CHOP_LOGS( "ACT_CHOP_LOGS" );
+static const activity_id ACT_CHOP_PLANKS( "ACT_CHOP_PLANKS" );
+static const activity_id ACT_CHOP_TREE( "ACT_CHOP_TREE" );
+static const activity_id ACT_CHURN( "ACT_CHURN" );
+static const activity_id ACT_CONSUME( "ACT_CONSUME" );
+static const activity_id ACT_DISASSEMBLE( "ACT_DISASSEMBLE" );
+static const activity_id ACT_DISMEMBER( "ACT_DISMEMBER" );
+static const activity_id ACT_FERTILIZE_PLANT( "ACT_FERTILIZE_PLANT" );
+static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
+static const activity_id ACT_FORAGE( "ACT_FORAGE" );
+static const activity_id ACT_FURNITURE_MOVE( "ACT_FURNITURE_MOVE" );
+static const activity_id ACT_GLIDE( "ACT_GLIDE" );
+static const activity_id ACT_HACKSAW( "ACT_HACKSAW" );
+static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );
+static const activity_id ACT_INSERT_ITEM( "ACT_INSERT_ITEM" );
+static const activity_id ACT_LOCKPICK( "ACT_LOCKPICK" );
+static const activity_id ACT_LONGSALVAGE( "ACT_LONGSALVAGE" );
+static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
+static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
+static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
+static const activity_id ACT_MULTIPLE_MOP( "ACT_MULTIPLE_MOP" );
+static const activity_id ACT_MULTIPLE_STUDY( "ACT_MULTIPLE_STUDY" );
+static const activity_id ACT_PRYING( "ACT_PRYING" );
+static const activity_id ACT_READ( "ACT_READ" );
+static const activity_id ACT_REMOTE_VEHICLE( "ACT_REMOTE_VEHICLE" );
+static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
+static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
+static const activity_id ACT_START_ENGINES( "ACT_START_ENGINES" );
+static const activity_id ACT_START_FIRE( "ACT_START_FIRE" );
+static const activity_id ACT_TEST_OWNED_ITEM( "ACT_TEST_OWNED_ITEM" );
+static const activity_id ACT_UNLOAD( "ACT_UNLOAD" );
+static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
+static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
+static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
+
+static const bionic_id bio_blood_anal( "bio_blood_anal" );
+static const bionic_id bio_claws( "bio_claws" );
+static const bionic_id bio_cqb( "bio_cqb" );
+static const bionic_id bio_earplugs( "bio_earplugs" );
+static const bionic_id bio_ears( "bio_ears" );
+static const bionic_id bio_emp( "bio_emp" );
+static const bionic_id bio_evap( "bio_evap" );
+static const bionic_id bio_flashbang( "bio_flashbang" );
+static const bionic_id bio_geiger( "bio_geiger" );
+static const bionic_id bio_lighter( "bio_lighter" );
+static const bionic_id bio_lockpick( "bio_lockpick" );
+static const bionic_id bio_magnet( "bio_magnet" );
+static const bionic_id bio_night_vision( "bio_night_vision" );
+static const bionic_id bio_painkiller( "bio_painkiller" );
+static const bionic_id bio_power_storage( "bio_power_storage" );
+static const bionic_id bio_remote( "bio_remote" );
+static const bionic_id bio_resonator( "bio_resonator" );
+static const bionic_id bio_shockwave( "bio_shockwave" );
+static const bionic_id bio_taser( "bio_taser" );
+static const bionic_id bio_teleport( "bio_teleport" );
+static const bionic_id bio_water_extractor( "bio_water_extractor" );
+
+static const climbing_aid_id climbing_aid_default( "default" );
+static const climbing_aid_id climbing_aid_item_grapnel( "item_grapnel" );
+
+static const construction_str_id construction_constr_veh( "constr_veh" );
+static const construction_str_id construction_constr_wall_half( "constr_wall_half" );
+
+static const efftype_id effect_beartrap( "beartrap" );
+static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_blind( "blind" );
+static const efftype_id effect_deaf( "deaf" );
+static const efftype_id effect_disinfected( "disinfected" );
+static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_gliding( "gliding" );
+static const efftype_id effect_harnessed( "harnessed" );
+static const efftype_id effect_incorporeal( "incorporeal" );
+static const efftype_id effect_on_roof( "on_roof" );
+static const efftype_id effect_onfire( "onfire" );
+static const efftype_id effect_pkill1_nsaid( "pkill1_nsaid" );
+static const efftype_id effect_pkill3( "pkill3" );
+static const efftype_id effect_poison( "poison" );
+static const efftype_id effect_sleep( "sleep" );
+static const efftype_id effect_slimed( "slimed" );
+static const efftype_id effect_spores( "spores" );
+static const efftype_id effect_stunned( "stunned" );
+static const efftype_id effect_teleglow( "teleglow" );
+static const efftype_id effect_tied( "tied" );
+static const efftype_id effect_took_prozac( "took_prozac" );
+static const efftype_id effect_weed_high( "weed_high" );
+
+static const faction_id faction_free_merchants( "free_merchants" );
+static const faction_id faction_hells_raiders( "hells_raiders" );
+static const faction_id faction_no_faction( "no_faction" );
+
+static const flag_id json_flag_BLED( "BLED" );
+static const flag_id json_flag_NEVER_JAMS( "NEVER_JAMS" );
+static const flag_id json_flag_NO_PACKED( "NO_PACKED" );
+static const flag_id json_flag_RADIO_MOD( "RADIO_MOD" );
+static const flag_id json_flag_REQUIRES_TINDER( "REQUIRES_TINDER" );
+
+static const furn_str_id furn_f_aluminum_stepladder( "f_aluminum_stepladder" );
+static const furn_str_id furn_f_chair( "f_chair" );
+static const furn_str_id furn_f_console( "f_console" );
+static const furn_str_id furn_f_crate_c( "f_crate_c" );
+static const furn_str_id furn_f_crate_o( "f_crate_o" );
+static const furn_str_id furn_f_flower_fungal( "f_flower_fungal" );
+static const furn_str_id furn_f_flower_marloss( "f_flower_marloss" );
+static const furn_str_id furn_f_ladder( "f_ladder" );
+static const furn_str_id furn_f_machinery_electronic( "f_machinery_electronic" );
+static const furn_str_id furn_f_null( "f_null" );
+static const furn_str_id furn_f_planter_seed( "f_planter_seed" );
+static const furn_str_id furn_f_rope_up( "f_rope_up" );
+static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
+static const furn_str_id furn_test_f_hacksaw1( "test_f_hacksaw1" );
+static const furn_str_id furn_test_f_hacksaw2( "test_f_hacksaw2" );
+static const furn_str_id furn_test_f_hacksaw3( "test_f_hacksaw3" );
+static const furn_str_id furn_test_f_oxytorch1( "test_f_oxytorch1" );
+static const furn_str_id furn_test_f_oxytorch2( "test_f_oxytorch2" );
+
+static const gun_mode_id gun_mode_BURST( "BURST" );
+static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
+static const gun_mode_id gun_mode_absent( "absent" );
+static const gun_mode_id gun_mode_not_a_gun_mode( "not_a_gun_mode" );
+
+static const itype_id itype_2x4( "2x4" );
+static const itype_id itype_556( "556" );
+static const itype_id itype_9mm( "9mm" );
+static const itype_id itype_ammolink223( "ammolink223" );
+static const itype_id itype_apple( "apple" );
+static const itype_id itype_aspirin( "aspirin" );
+static const itype_id itype_ax( "ax" );
+static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_belt223( "belt223" );
+static const itype_id itype_bfipowder( "bfipowder" );
+static const itype_id itype_bio_power_storage( "bio_power_storage" );
+static const itype_id itype_blanket( "blanket" );
+static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_butane( "butane" );
+static const itype_id itype_c4( "c4" );
+static const itype_id itype_c4armed( "c4armed" );
+static const itype_id itype_child_book( "child_book" );
+static const itype_id itype_chocolate( "chocolate" );
+static const itype_id itype_cordless_impact_wrench( "cordless_impact_wrench" );
+static const itype_id itype_cotton_patchwork( "cotton_patchwork" );
+static const itype_id itype_cudgel( "cudgel" );
+static const itype_id itype_detergent( "detergent" );
+static const itype_id itype_disassembly( "disassembly" );
+static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
+static const itype_id itype_folded_bicycle( "folded_bicycle" );
+static const itype_id itype_frame( "frame" );
+static const itype_id itype_gasoline( "gasoline" );
+static const itype_id itype_generic_folded_vehicle( "generic_folded_vehicle" );
+static const itype_id itype_glockmag( "glockmag" );
+static const itype_id itype_grapnel( "grapnel" );
+static const itype_id itype_grenade( "grenade" );
+static const itype_id itype_grenade_act( "grenade_act" );
+static const itype_id itype_hammer( "hammer" );
+static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
+static const itype_id itype_hotplate( "hotplate" );
+static const itype_id itype_hygrometer( "hygrometer" );
+static const itype_id itype_jackhammer_mining( "jackhammer_mining" );
+static const itype_id itype_jar_glass_sealed( "jar_glass_sealed" );
+static const itype_id itype_jeans( "jeans" );
+static const itype_id itype_jug_plastic( "jug_plastic" );
+static const itype_id itype_knife_huge( "knife_huge" );
+static const itype_id itype_lc_chain_link( "lc_chain_link" );
+static const itype_id itype_lc_chainmail_vest( "lc_chainmail_vest" );
+static const itype_id itype_light_battery_cell( "light_battery_cell" );
+static const itype_id itype_lighter( "lighter" );
+static const itype_id itype_log( "log" );
+static const itype_id itype_maple_sap( "maple_sap" );
+static const itype_id itype_meat( "meat" );
+static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
+static const itype_id itype_morphine( "morphine" );
+static const itype_id itype_muscle( "muscle" );
+static const itype_id itype_mws_weather_data_incomplete( "mws_weather_data_incomplete" );
+static const itype_id itype_nail( "nail" );
+static const itype_id itype_nail_puller_bronze( "nail_puller_bronze" );
+static const itype_id itype_oxy_torch( "oxy_torch" );
+static const itype_id itype_oxyacetylene( "oxyacetylene" );
+static const itype_id itype_paper( "paper" );
+static const itype_id itype_pickaxe( "pickaxe" );
+static const itype_id itype_pipe( "pipe" );
+static const itype_id itype_pot( "pot" );
+static const itype_id itype_power_cord( "power_cord" );
+static const itype_id itype_propane( "propane" );
+static const itype_id itype_radio_car_on( "radio_car_on" );
+static const itype_id itype_radio_mod( "radio_mod" );
+static const itype_id itype_radiocontrol( "radiocontrol" );
+static const itype_id itype_reciprocating_saw( "reciprocating_saw" );
+static const itype_id itype_remotevehcontrol( "remotevehcontrol" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_rope_30( "rope_30" );
+static const itype_id itype_rope_6( "rope_6" );
+static const itype_id itype_screwdriver( "screwdriver" );
+static const itype_id itype_seed_buckwheat( "seed_buckwheat" );
+static const itype_id itype_shovel( "shovel" );
+static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
+static const itype_id itype_splinter( "splinter" );
+static const itype_id itype_stanag30( "stanag30" );
+static const itype_id itype_steel_chunk( "steel_chunk" );
+static const itype_id itype_stepladder( "stepladder" );
+static const itype_id itype_stick( "stick" );
+static const itype_id itype_string_36( "string_36" );
+static const itype_id itype_syringe( "syringe" );
+static const itype_id itype_test_apple( "test_apple" );
+static const itype_id itype_test_battery_disposable( "test_battery_disposable" );
+static const itype_id itype_test_ebook_reader( "test_ebook_reader" );
+static const itype_id itype_test_goggles_welding( "test_goggles_welding" );
+static const itype_id itype_test_hacksaw( "test_hacksaw" );
+static const itype_id itype_test_halligan( "test_halligan" );
+static const itype_id itype_test_knotted_string_ball( "test_knotted_string_ball" );
+static const itype_id itype_test_lamp( "test_lamp" );
+static const itype_id itype_test_multimag_gun_integral_ammo( "test_multimag_gun_integral_ammo" );
+static const itype_id
+itype_test_multimag_turret_flamethrower( "test_multimag_turret_flamethrower" );
+static const itype_id itype_test_multimag_turret_gun( "test_multimag_turret_gun" );
+static const itype_id itype_test_multitool( "test_multitool" );
+static const itype_id itype_test_owned_lua_tool( "test_owned_lua_tool" );
+static const itype_id itype_test_owned_multimag_repair_tool( "test_owned_multimag_repair_tool" );
+static const itype_id itype_test_owned_repair_tool( "test_owned_repair_tool" );
+static const itype_id itype_test_rag( "test_rag" );
+static const itype_id itype_test_rag_bundle( "test_rag_bundle" );
+static const itype_id itype_test_rock( "test_rock" );
+static const itype_id itype_test_seed_eoc( "test_seed_eoc" );
+static const itype_id itype_test_sonic_screwdriver( "test_sonic_screwdriver" );
+static const itype_id itype_test_textbook_fabrication( "test_textbook_fabrication" );
+static const itype_id itype_test_vehicle_hotplate_startup( "test_vehicle_hotplate_startup" );
+static const itype_id
+itype_test_watertight_open_sealed_container_1L( "test_watertight_open_sealed_container_1L" );
+static const itype_id itype_test_weapon1( "test_weapon1" );
+static const itype_id itype_test_weapon2( "test_weapon2" );
+static const itype_id itype_towel( "towel" );
+static const itype_id itype_tree_spile( "tree_spile" );
+static const itype_id itype_tshirt( "tshirt" );
+static const itype_id itype_twig( "twig" );
+static const itype_id itype_water( "water" );
+static const itype_id itype_water_clean( "water_clean" );
+static const itype_id itype_water_purifier( "water_purifier" );
+static const itype_id itype_welder( "welder" );
+static const itype_id itype_wrench( "wrench" );
+
+static const json_character_flag json_flag_CARNIVORE_DIET( "CARNIVORE_DIET" );
+static const json_character_flag json_flag_DEAF( "DEAF" );
+static const json_character_flag json_flag_NIGHT_VISION( "NIGHT_VISION" );
+
+static const matype_id not_a_real_style( "not_a_real_style" );
+static const matype_id style_judo( "style_judo" );
+static const matype_id style_karate( "style_karate" );
+static const matype_id style_none( "style_none" );
+static const matype_id test_style_ma1( "test_style_ma1" );
+
+static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
+
+static const move_mode_id move_mode_crouch( "crouch" );
+static const move_mode_id move_mode_walk( "walk" );
+
+static const mtype_id mon_deer( "mon_deer" );
+static const mtype_id mon_horse( "mon_horse" );
+static const mtype_id mon_zombie( "mon_zombie" );
+
+static const proficiency_id proficiency_prof_driver( "prof_driver" );
+static const proficiency_id proficiency_prof_wound_care( "prof_wound_care" );
+
+static const quality_id qual_SCREW( "SCREW" );
+
+static const recipe_id
+recipe_cudgel_test_charged_fast_stepless( "cudgel_test_charged_fast_stepless" );
+
+static const skill_id skill_computer( "computer" );
+static const skill_id skill_cooking( "cooking" );
+static const skill_id skill_fabrication( "fabrication" );
+static const skill_id skill_mechanics( "mechanics" );
+static const skill_id skill_survival( "survival" );
+static const skill_id skill_traps( "traps" );
+
+static const spell_id spell_test_eoc_spell( "test_eoc_spell" );
+static const spell_id spell_test_spell_json( "test_spell_json" );
+static const spell_id spell_test_spell_pew( "test_spell_pew" );
+
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_door_c( "t_door_c" );
+static const ter_str_id ter_t_door_locked( "t_door_locked" );
+static const ter_str_id ter_t_greenhouse_tilled( "t_greenhouse_tilled" );
+static const ter_str_id ter_t_pavement( "t_pavement" );
+static const ter_str_id ter_t_rock( "t_rock" );
+static const ter_str_id ter_t_stump( "t_stump" );
+static const ter_str_id ter_t_tree( "t_tree" );
+static const ter_str_id ter_t_tree_maple_tapped( "t_tree_maple_tapped" );
+static const ter_str_id ter_t_trunk( "t_trunk" );
+static const ter_str_id ter_t_underbrush( "t_underbrush" );
+static const ter_str_id ter_t_wall( "t_wall" );
+static const ter_str_id ter_t_wall_half( "t_wall_half" );
+static const ter_str_id ter_test_t_prying1( "test_t_prying1" );
+
+static const trait_id trait_BRAWLER( "BRAWLER" );
+static const trait_id trait_CARNIVORE( "CARNIVORE" );
+static const trait_id trait_GUNSHY( "GUNSHY" );
+static const trait_id trait_HUGE( "HUGE" );
+static const trait_id trait_LEG_TENT_BRACE( "LEG_TENT_BRACE" );
+static const trait_id trait_MASOCHIST( "MASOCHIST" );
+static const trait_id trait_PROBOSCIS( "PROBOSCIS" );
+static const trait_id trait_QUICK( "QUICK" );
+static const trait_id trait_SMALL2( "SMALL2" );
+static const trait_id trait_WEB_WEAVER( "WEB_WEAVER" );
+static const trait_id trait_WINGS_BIRD( "WINGS_BIRD" );
+
+static const vpart_id vpart_cam_control( "cam_control" );
+static const vpart_id vpart_compact_ASRG_containment( "compact_ASRG_containment" );
+static const vpart_id vpart_controls( "controls" );
+static const vpart_id vpart_controls_electronic( "controls_electronic" );
+static const vpart_id vpart_controls_turret( "controls_turret" );
+static const vpart_id vpart_door_lock( "door_lock" );
+static const vpart_id vpart_door_motor( "door_motor" );
+static const vpart_id vpart_drive_by_wire_controls( "drive_by_wire_controls" );
+static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_ladder_3( "ladder_3" );
+static const vpart_id vpart_programmable_autopilot( "programmable_autopilot" );
+static const vpart_id vpart_seed_drill( "seed_drill" );
+static const vpart_id vpart_tank_test( "tank_test" );
+static const vpart_id vpart_trunk( "trunk" );
+static const vpart_id vpart_turret_mount( "turret_mount" );
+static const vpart_id vpart_turret_test_multimag_turret_gun( "turret_test_multimag_turret_gun" );
+static const vpart_id vpart_vehicle_alarm( "vehicle_alarm" );
+static const vpart_id vpart_washing_machine( "washing_machine" );
+static const vpart_id vpart_yoke_harness( "yoke_harness" );
+
+static const vproto_id vehicle_prototype_( "" );
+static const vproto_id vehicle_prototype_car( "car" );
+static const vproto_id vehicle_prototype_none( "none" );
+#if !defined(CATA_ENABLE_LUA_PLATFORM) || !CATA_ENABLE_LUA_PLATFORM
+    static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
+#endif
+static const vproto_id vehicle_prototype_test_turret_rig( "test_turret_rig" );
+
+static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
+static const zone_type_id zone_type_LOOT_DEFAULT( "LOOT_DEFAULT" );
+static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
+static const zone_type_id zone_type_MOPPING( "MOPPING" );
+static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
+static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
+static const zone_type_id zone_type_VEHICLE_PATROL( "VEHICLE_PATROL" );
+
 namespace
 {
 struct reload_fixture {
@@ -228,7 +576,7 @@ struct reload_fixture {
     }
     std::string request( Character &who, const std::string &operation,
                          const std::function<void( JsonOut & )> &extra = {},
-                         std::optional<std::string> activity = std::nullopt ) {
+                         const std::optional<std::string> &activity = std::nullopt ) {
         std::ostringstream stream;
         JsonOut out( stream );
         out.start_object();
@@ -273,7 +621,7 @@ class reload_events : public event_subscriber
     public:
         int starts = 0;
         int finishes = 0;
-        std::optional<cata_default_random_engine> rng_at_finish;
+        std::optional<std::string> rng_at_finish;
         reload_events() {
             get_event_bus().subscribe( this );
         }
@@ -283,7 +631,7 @@ class reload_events : public event_subscriber
             }
             if( event.type() == event_type::character_finished_activity ) {
                 ++finishes;
-                rng_at_finish = rng_get_engine();
+                rng_at_finish = capture_rng_state();
             }
         }
 };
@@ -303,7 +651,7 @@ void save_reload_activity( Character &who )
 item_location loose_ammo( Character &who, int quantity )
 {
     return get_map().add_item_or_charges_ret_loc( who.pos_bub(),
-            item( itype_id( "556" ), calendar::turn, quantity ) );
+            item( itype_556, calendar::turn, quantity ) );
 }
 } // namespace
 
@@ -318,7 +666,7 @@ TEST_CASE( "owned_reload_preserves_native_progress_partial_ammo_and_cancel",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "stanag30" ) ) );
+    who.set_wielded_item( item( itype_stanag30 ) );
     const item_location target = who.get_wielded_item();
     const item_location ammo = loose_ammo( who, 30 );
     reload_events events;
@@ -363,7 +711,7 @@ TEST_CASE( "owned_reload_obtains_external_target_and_finishes_once", "[multiplay
     reload_fixture fixture;
     npc &who = fixture.remote();
     item_location target = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
-                           item( itype_id( "stanag30" ) ) );
+                           item( itype_stanag30 ) );
     const item_location ammo = loose_ammo( who, 3 );
     reload_events events;
     fixture.start( who, target, ammo, 3 );
@@ -386,7 +734,7 @@ TEST_CASE( "owned_reload_rejects_ungranted_step_and_stale_activity", "[multiplay
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "stanag30" ) ) );
+    who.set_wielded_item( item( itype_stanag30 ) );
     const item_location target = who.get_wielded_item();
     const item_location ammo = loose_ammo( who, 10 );
     fixture.start( who, target, ammo, 10 );
@@ -413,17 +761,17 @@ TEST_CASE( "reload_capacity_preview_accounts_for_consumed_sibling_ammo",
 {
     reload_fixture fixture;
     avatar &who = get_avatar();
-    item container( itype_id( "backpack" ) );
-    REQUIRE( container.put_in( item( itype_id( "stanag30" ) ), pocket_type::CONTAINER ).success() );
-    REQUIRE( container.put_in( item( itype_id( "556" ), calendar::turn, 30 ),
+    item container( itype_backpack );
+    REQUIRE( container.put_in( item( itype_stanag30 ), pocket_type::CONTAINER ).success() );
+    REQUIRE( container.put_in( item( itype_556, calendar::turn, 30 ),
                                pocket_type::CONTAINER ).success() );
     item_location root = get_map().add_item_or_charges_ret_loc( who.pos_bub(), container );
     item_location target;
     item_location ammo;
     for( item *child : root->all_items_top() ) {
-        if( child->typeId() == itype_id( "stanag30" ) ) {
+        if( child->typeId() == itype_stanag30 ) {
             target = item_location( root, child );
-        } else if( child->typeId() == itype_id( "556" ) ) {
+        } else if( child->typeId() == itype_556 ) {
             ammo = item_location( root, child );
         }
     }
@@ -431,11 +779,11 @@ TEST_CASE( "reload_capacity_preview_accounts_for_consumed_sibling_ammo",
     REQUIRE( ammo );
     // Fill precisely the remaining weight budget. An implementation that only
     // adds loaded ammo weight without removing the sibling source would fail.
-    const auto before = target.parent_pocket()->remaining_weight();
-    const item ballast( itype_id( "9mm" ), calendar::turn, 1 );
+    const units::mass before = target.parent_pocket()->remaining_weight();
+    const item ballast( itype_9mm, calendar::turn, 1 );
     const int charges = units::to_milligram( before ) / units::to_milligram( ballast.weight() );
     REQUIRE( charges > 0 );
-    target.parent_pocket()->add( item( itype_id( "9mm" ), calendar::turn, charges ) );
+    target.parent_pocket()->add( item( itype_9mm, calendar::turn, charges ) );
     REQUIRE( target.check_parent_capacity_recursive() );
     REQUIRE( target.parent_pocket()->remaining_weight() < ammo->weight() );
     CHECK( reload_would_fit( target, ammo, 30 ) );
@@ -450,15 +798,15 @@ TEST_CASE( "owned_reload_overflow_waits_before_ammo_and_supports_drop_or_cancel"
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const auto jeans = who.wear_item( item( itype_id( "jeans" ) ), false );
+    const auto jeans = who.wear_item( item( itype_jeans ), false );
     REQUIRE( jeans );
     item_location clothing( who, & **jeans );
-    const auto inserted = clothing->put_in( item( itype_id( "belt223" ) ), pocket_type::CONTAINER );
+    const auto inserted = clothing->put_in( item( itype_belt223 ), pocket_type::CONTAINER );
     REQUIRE( inserted.success() );
     item_location target( clothing, &clothing->only_item() );
     const item_location ammo = loose_ammo( who, 500 );
-    who.i_add( item( itype_id( "ammolink223" ), calendar::turn, 500 ) );
-    REQUIRE( who.has_charges( itype_id( "ammolink223" ), 500 ) );
+    who.i_add( item( itype_ammolink223, calendar::turn, 500 ) );
+    REQUIRE( who.has_charges( itype_ammolink223, 500 ) );
     // Use an owned native activity directly to isolate placement from selection.
     item::reload_option option( &who, target, ammo, -1 );
     option.qty( 500 );
@@ -516,14 +864,14 @@ TEST_CASE( "client_inventory_activity_view_does_not_advance_native_or_emit_lifec
         who.assign_activity( consume_activity_actor::client_view() );
     }
     who.activity.moves_left = 500;
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     who.activity.do_turn( who );
     CHECK( who.activity.moves_left == 500 );
     CHECK( who.get_moves() == 0 );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     const activity_id view_id = who.activity.id();
     who.cancel_activity();
     g->multiplayer_session().client_turn.client_last_grant_seq = 1;
@@ -540,7 +888,7 @@ TEST_CASE( "reload_wire_updates_client_progress_inventory_and_completion_once",
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    remote.set_wielded_item( item( itype_id( "stanag30" ) ) );
+    remote.set_wielded_item( item( itype_stanag30 ) );
     const item_location target = remote.get_wielded_item();
     const item_location ammo = loose_ammo( remote, 3 );
     const std::string started = fixture.start( remote, target, ammo, 3 );
@@ -553,13 +901,13 @@ TEST_CASE( "reload_wire_updates_client_progress_inventory_and_completion_once",
 
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     view.next_request = 1;
     reload_events events;
     local.assign_activity( reload_activity_actor::client_view() );
-    const auto before_rng = rng_get_engine();
+    const std::string before_rng = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( started ) );
     CHECK( cata_mp::inventory_activity_view( local.activity ) );
     CHECK( local.get_wielded_item()->ammo_remaining() == 0 );
@@ -576,7 +924,7 @@ TEST_CASE( "reload_wire_updates_client_progress_inventory_and_completion_once",
     CHECK( local.get_wielded_item()->ammo_remaining() == 3 );
     CHECK( events.starts == 0 );
     CHECK( events.finishes == 0 );
-    CHECK( rng_get_engine() == before_rng );
+    CHECK( capture_rng_state() == before_rng );
 }
 
 TEST_CASE( "reload_save_after_source_exhaustion_retains_ammo_name_and_quantity",
@@ -584,7 +932,7 @@ TEST_CASE( "reload_save_after_source_exhaustion_retains_ammo_name_and_quantity",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "stanag30" ) ) );
+    who.set_wielded_item( item( itype_stanag30 ) );
     item_location target = who.get_wielded_item();
     target->set_var( "dirt", 8000 );
     item_location ammo = loose_ammo( who, 3 );
@@ -604,7 +952,7 @@ TEST_CASE( "reload_save_after_source_exhaustion_retains_ammo_name_and_quantity",
     CHECK( target->ammo_remaining() == 3 );
     const auto messages = Messages::recent_messages( 1 );
     REQUIRE( messages.size() == 1 );
-    CHECK( messages.front().second.find( item::nname( itype_id( "556" ), 3 ) ) != std::string::npos );
+    CHECK( messages.front().second.find( item::nname( itype_556, 3 ) ) != std::string::npos );
 }
 
 namespace
@@ -613,7 +961,7 @@ std::string start_unload( reload_fixture &fixture, Character &who,
                           const item_location &root, const unload_selection &selection,
                           const std::vector<unload_liquid_choice> &liquids = {} )
 {
-    const auto intent = cata_mp::make_unload_intent( who, root, selection, liquids );
+    const cata_mp::unload_intent intent = cata_mp::make_unload_intent( who, root, selection, liquids );
     return fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
         out.member( "kind", "unload" );
         out.member( "unload", intent );
@@ -627,11 +975,11 @@ TEST_CASE( "owned_unload_selects_only_the_requested_integral_source",
     reload_fixture fixture;
     npc &who = fixture.remote();
     get_avatar().set_moves( 517 );
-    item gun( itype_id( "test_multimag_gun_integral_ammo" ) );
-    item battery( itype_id( "heavy_battery_cell" ) );
-    battery.ammo_set( itype_id( "battery" ), 100 );
+    item gun( itype_test_multimag_gun_integral_ammo );
+    item battery( itype_heavy_battery_cell );
+    battery.ammo_set( itype_battery, 100 );
     REQUIRE( gun.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
-    REQUIRE( gun.put_in( item( itype_id( "9mm" ), calendar::turn, 1 ),
+    REQUIRE( gun.put_in( item( itype_9mm, calendar::turn, 1 ),
                          pocket_type::MAGAZINE ).success() );
     who.set_wielded_item( gun );
     item_location root = who.get_wielded_item();
@@ -665,13 +1013,13 @@ TEST_CASE( "owned_unload_uses_explicit_liquid_container_without_host_ui",
     npc &who = fixture.remote();
     who.set_moves( 1500 );
     get_avatar().set_moves( 517 );
-    who.set_wielded_item( item( itype_id( "test_multimag_turret_flamethrower" ) ) );
+    who.set_wielded_item( item( itype_test_multimag_turret_flamethrower ) );
     item_location root = who.get_wielded_item();
     item_pocket *fuel = root->pocket_by_id( "fuel" );
     REQUIRE( fuel );
-    item gasoline( itype_id( "gasoline" ), calendar::turn, 20 );
+    item gasoline( itype_gasoline, calendar::turn, 20 );
     REQUIRE( fuel->insert_item( gasoline ).success() );
-    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "bottle_plastic" ) ) );
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_bottle_plastic ) );
     item supply = gasoline;
     supply.charges = 10000;
     const int capacity = bottle.get_remaining_capacity_for_liquid( supply, true );
@@ -685,7 +1033,7 @@ TEST_CASE( "owned_unload_uses_explicit_liquid_container_without_host_ui",
     const auto sources = unload_sources( *root );
     REQUIRE( sources.size() == 1 );
     unload_selection selected{ root, { sources.front().identity } };
-    const auto intent = cata_mp::make_unload_intent( who, root, selected, { choice } );
+    const cata_mp::unload_intent intent = cata_mp::make_unload_intent( who, root, selected, { choice } );
     const std::string wire = fixture.request( who, "start", [&]( JsonOut & out ) {
         out.member( "kind", "unload" );
         out.member( "unload", intent );
@@ -708,14 +1056,14 @@ TEST_CASE( "owned_unload_activity_progress_cancel_and_source_loss",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    item mag( itype_id( "stanag30" ) );
-    mag.ammo_set( itype_id( "556" ), 30 );
+    item mag( itype_stanag30 );
+    mag.ammo_set( itype_556, 30 );
     who.set_wielded_item( mag );
     const item_location root = who.get_wielded_item();
     reload_events events;
     start_unload( fixture, who, root, { root, {} } );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_UNLOAD" ) );
+    REQUIRE( who.activity.id() == ACT_UNLOAD );
     const int total = who.activity.moves_left;
     REQUIRE( total > 100 );
     const std::string first_step = fixture.request( who, "step" );
@@ -767,11 +1115,11 @@ TEST_CASE( "owned_unload_liquid_activity_revalidates_destination_after_save",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    who.set_wielded_item( item( itype_bottle_plastic ) );
     item_location root = who.get_wielded_item();
-    item water( itype_id( "water_clean" ), calendar::turn, 2 );
+    item water( itype_water_clean, calendar::turn, 2 );
     REQUIRE( root->fill_with( water, 2 ) == 2 );
-    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "bottle_plastic" ) ) );
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_bottle_plastic ) );
     item_location destination( map_cursor( who.pos_bub() ), &bottle );
     unload_liquid_choice choice;
     choice.source = root->legacy_front().uid().get_value();
@@ -809,8 +1157,8 @@ TEST_CASE( "owned_unload_rejects_another_players_item_and_stale_cancel",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    item mag( itype_id( "stanag30" ) );
-    mag.ammo_set( itype_id( "556" ), 30 );
+    item mag( itype_stanag30 );
+    mag.ammo_set( itype_556, 30 );
     get_avatar().set_wielded_item( mag );
     const item_location foreign = get_avatar().get_wielded_item();
     start_unload( fixture, who, foreign, { foreign, {} } );
@@ -835,8 +1183,8 @@ TEST_CASE( "owned_unload_wire_applies_without_client_gameplay_hooks_or_rng",
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    item mag( itype_id( "stanag30" ) );
-    mag.ammo_set( itype_id( "556" ), 3 );
+    item mag( itype_stanag30 );
+    mag.ammo_set( itype_556, 3 );
     remote.set_wielded_item( mag );
     item_location root = remote.get_wielded_item();
     const std::string started = start_unload( fixture, remote, root, { root, {} } );
@@ -846,12 +1194,12 @@ TEST_CASE( "owned_unload_wire_applies_without_client_gameplay_hooks_or_rng",
     REQUIRE_FALSE( remote.activity );
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     reload_events events;
     local.assign_activity( unload_activity_actor::client_view() );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( started ) );
     REQUIRE( cata_mp::inventory_activity_view( local.activity ) );
     CHECK( local.get_wielded_item()->ammo_remaining() == 3 );
@@ -864,7 +1212,7 @@ TEST_CASE( "owned_unload_wire_applies_without_client_gameplay_hooks_or_rng",
     CHECK( local.get_wielded_item()->ammo_remaining() == 0 );
     CHECK( events.starts == 0 );
     CHECK( events.finishes == 0 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 namespace
@@ -896,17 +1244,17 @@ TEST_CASE( "owned_insert_advances_native_list_and_saves_between_items",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "backpack" ) ) );
+    who.set_wielded_item( item( itype_backpack ) );
     const item_location destination = who.get_wielded_item();
     const item_location first = loose_ammo( who, 5 );
     const item_location second = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
-                                 item( itype_id( "9mm" ), calendar::turn, 7 ) );
+                                 item( itype_9mm, calendar::turn, 7 ) );
     reload_events events;
     const std::string start = insert_request( fixture, who, destination, {{first, 5}, {second, 7}} );
     fixture.run( who, start );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
     CHECK( events.starts == 1 );
-    CHECK( container_quantity( destination, itype_id( "556" ) ) == 0 );
+    CHECK( container_quantity( destination, itype_556 ) == 0 );
     const int initial_moves = who.activity.moves_left;
     cata_mp::mp_tick_proxy_activity( who );
     CHECK( who.activity.moves_left == initial_moves );
@@ -915,7 +1263,7 @@ TEST_CASE( "owned_insert_advances_native_list_and_saves_between_items",
     fixture.run( who, step );
     REQUIRE( who.activity );
     CHECK_FALSE( first );
-    CHECK( container_quantity( destination, itype_id( "556" ) ) == 5 );
+    CHECK( container_quantity( destination, itype_556 ) == 5 );
     const int remaining = who.activity.moves_left;
     const int ap = who.get_moves();
     fixture.run( who, step );
@@ -927,7 +1275,7 @@ TEST_CASE( "owned_insert_advances_native_list_and_saves_between_items",
         fixture.run( who, fixture.request( who, "step" ) );
         CHECK_FALSE( who.activity );
         CHECK_FALSE( second );
-        CHECK( container_quantity( destination, itype_id( "9mm" ) ) == 7 );
+        CHECK( container_quantity( destination, itype_9mm ) == 7 );
         CHECK( events.finishes == 2 );
     }
     SECTION( "cancel keeps earlier insert and remaining source" ) {
@@ -937,9 +1285,9 @@ TEST_CASE( "owned_insert_advances_native_list_and_saves_between_items",
         CHECK( who.get_moves() == -10 );
         REQUIRE( second );
         CHECK( second->charges == 7 );
-        CHECK( container_quantity( destination, itype_id( "9mm" ) ) == 0 );
+        CHECK( container_quantity( destination, itype_9mm ) == 0 );
     }
-    CHECK( container_quantity( destination, itype_id( "556" ) ) == 5 );
+    CHECK( container_quantity( destination, itype_556 ) == 5 );
 }
 
 TEST_CASE( "owned_insert_caps_changed_stack_and_preserves_partial_remainder",
@@ -947,10 +1295,10 @@ TEST_CASE( "owned_insert_caps_changed_stack_and_preserves_partial_remainder",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    who.set_wielded_item( item( itype_bottle_plastic ) );
     item_location destination = who.get_wielded_item();
-    item jug( itype_id( "jug_plastic" ) );
-    REQUIRE( jug.put_in( item( itype_id( "water_clean" ), calendar::turn, 10 ),
+    item jug( itype_jug_plastic );
+    REQUIRE( jug.put_in( item( itype_water_clean, calendar::turn, 10 ),
                          pocket_type::CONTAINER ).success() );
     item_location root = get_map().add_item_or_charges_ret_loc( who.pos_bub(), jug );
     item_location water( root, root->all_items_top().front() );
@@ -963,11 +1311,11 @@ TEST_CASE( "owned_insert_caps_changed_stack_and_preserves_partial_remainder",
     const std::string step = fixture.request( who, "step" );
     fixture.run( who, step );
     CHECK_FALSE( who.activity );
-    CHECK( container_quantity( destination, itype_id( "water_clean" ) ) == 2 );
-    CHECK( container_quantity( root, itype_id( "water_clean" ) ) == 1 );
+    CHECK( container_quantity( destination, itype_water_clean ) == 2 );
+    CHECK( container_quantity( root, itype_water_clean ) == 1 );
     fixture.run( who, step );
-    CHECK( container_quantity( destination, itype_id( "water_clean" ) ) == 2 );
-    CHECK( container_quantity( root, itype_id( "water_clean" ) ) == 1 );
+    CHECK( container_quantity( destination, itype_water_clean ) == 2 );
+    CHECK( container_quantity( root, itype_water_clean ) == 1 );
 }
 
 TEST_CASE( "owned_insert_rejects_invalid_selection_and_lost_targets",
@@ -975,7 +1323,7 @@ TEST_CASE( "owned_insert_rejects_invalid_selection_and_lost_targets",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "backpack" ) ) );
+    who.set_wielded_item( item( itype_backpack ) );
     item_location destination = who.get_wielded_item();
     item_location source = loose_ammo( who, 5 );
     SECTION( "duplicate source" ) {
@@ -985,14 +1333,14 @@ TEST_CASE( "owned_insert_rejects_invalid_selection_and_lost_targets",
         fixture.run( who, insert_request( fixture, who, destination, {{source, 6}} ) );
     }
     SECTION( "other player inventory" ) {
-        get_avatar().set_wielded_item( item( itype_id( "556" ), calendar::turn, 5 ) );
+        get_avatar().set_wielded_item( item( itype_556, calendar::turn, 5 ) );
         fixture.run( who, insert_request( fixture, who, destination,
         {{get_avatar().get_wielded_item(), 5}} ) );
         CHECK( get_avatar().get_wielded_item()->charges == 5 );
     }
     SECTION( "loose liquid cannot be picked up through insertion" ) {
         item_location liquid = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
-                               item( itype_id( "water_clean" ), calendar::turn, 5 ) );
+                               item( itype_water_clean, calendar::turn, 5 ) );
         REQUIRE( liquid );
         fixture.run( who, insert_request( fixture, who, destination, {{liquid, 5}} ) );
         CHECK( liquid->charges == 5 );
@@ -1029,25 +1377,25 @@ TEST_CASE( "owned_unload_to_selected_container_uses_insert_activity",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "backpack" ) ) );
+    who.set_wielded_item( item( itype_backpack ) );
     item_location destination = who.get_wielded_item();
-    item bag( itype_id( "backpack" ) );
-    REQUIRE( bag.put_in( item( itype_id( "556" ), calendar::turn, 5 ),
+    item bag( itype_backpack );
+    REQUIRE( bag.put_in( item( itype_556, calendar::turn, 5 ),
                          pocket_type::CONTAINER ).success() );
     item_location root = get_map().add_item_or_charges_ret_loc( who.pos_bub(), bag );
-    auto intent = cata_mp::make_unload_intent( who, root, {root, {}}, {} );
+    cata_mp::unload_intent intent = cata_mp::make_unload_intent( who, root, {root, {}}, {} );
     intent.destination = capture_item_source( who, destination );
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
         out.member( "kind", "unload" );
         out.member( "unload", intent );
     } ) );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
-    CHECK( who.activity.id() == activity_id( "ACT_INSERT_ITEM" ) );
+    CHECK( who.activity.id() == ACT_INSERT_ITEM );
     who.set_moves( 100000 );
     fixture.run( who, fixture.request( who, "step" ) );
     CHECK_FALSE( who.activity );
     CHECK( root->is_container_empty() );
-    CHECK( container_quantity( destination, itype_id( "556" ) ) == 5 );
+    CHECK( container_quantity( destination, itype_556 ) == 5 );
 }
 
 TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
@@ -1055,7 +1403,7 @@ TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    remote.set_wielded_item( item( itype_id( "backpack" ) ) );
+    remote.set_wielded_item( item( itype_backpack ) );
     const item_location source = loose_ammo( remote, 5 );
     const std::string started = fixture.run( remote, insert_request( fixture, remote,
     remote.get_wielded_item(), {{source, 5}} ) );
@@ -1065,12 +1413,12 @@ TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
     REQUIRE_FALSE( remote.activity );
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     reload_events events;
     local.assign_activity( insert_item_activity_actor::client_view() );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( started ) );
     CHECK( local.get_wielded_item()->is_container_empty() );
     view.pending_request = 2;
@@ -1078,10 +1426,10 @@ TEST_CASE( "owned_insert_wire_applies_without_duplicate_client_execution",
     cata_mp::client_update_inventory_activity_view();
     CHECK_FALSE( local.activity );
     REQUIRE( cata_mp::client_apply_message( finished ) );
-    CHECK( container_quantity( local.get_wielded_item(), itype_id( "556" ) ) == 5 );
+    CHECK( container_quantity( local.get_wielded_item(), itype_556 ) == 5 );
     CHECK( events.starts == 0 );
     CHECK( events.finishes == 0 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 namespace
@@ -1118,8 +1466,8 @@ class consumption_events : public event_subscriber
 
 item_location drinking_source( Character &who )
 {
-    item bottle( itype_id( "bottle_plastic" ) );
-    REQUIRE( bottle.put_in( item( itype_id( "water_clean" ), calendar::turn, 2 ),
+    item bottle( itype_bottle_plastic );
+    REQUIRE( bottle.put_in( item( itype_water_clean, calendar::turn, 2 ),
                             pocket_type::CONTAINER ).success() );
     who.set_wielded_item( bottle );
     item_location root = who.get_wielded_item();
@@ -1143,7 +1491,7 @@ struct consumption_completion {
 
 consumption_completion finish_consumption( Character &who, reload_fixture *fixture = nullptr )
 {
-    REQUIRE( who.activity.id() == activity_id( "ACT_CONSUME" ) );
+    REQUIRE( who.activity.id() == ACT_CONSUME );
     consumption_completion result;
     // Player-controlled bodies advance time-based activities once per world turn.
     for( int turn = 0; who.activity && turn < 1000; ++turn ) {
@@ -1207,7 +1555,7 @@ TEST_CASE( "owned_consumption_progress_cancel_and_saved_source",
     CHECK( source->charges == 2 );
     save_reload_activity( who );
     SECTION( "finish once" ) {
-        const auto finished = finish_consumption( who, &fixture );
+        const consumption_completion finished = finish_consumption( who, &fixture );
         REQUIRE_FALSE( who.activity );
         CHECK( source->charges == 1 );
         const std::string after = needs_state( who );
@@ -1238,10 +1586,10 @@ TEST_CASE( "owned_consumption_validates_actor_food_and_confirmation",
 {
     consumption_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "apple" ), calendar::turn, 2 ) );
+    who.set_wielded_item( item( itype_apple, calendar::turn, 2 ) );
     item_location source = who.get_wielded_item();
     SECTION( "another player's food" ) {
-        get_avatar().set_wielded_item( item( itype_id( "apple" ) ) );
+        get_avatar().set_wielded_item( item( itype_apple ) );
         fixture.run( who, consume_request( fixture, who, get_avatar().get_wielded_item() ) );
         CHECK_FALSE( who.activity );
     }
@@ -1271,7 +1619,7 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     restore_on_out_of_scope restore_consume_ui( uistate.consume_uistate );
     uistate.open_menu.reset();
     npc &remote = fixture.remote();
-    remote.set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 2 ) );
+    remote.set_wielded_item( item( itype_chocolate, calendar::turn, 2 ) );
     const std::string started = fixture.run( remote, consume_request( fixture, remote,
                                 remote.get_wielded_item() ) );
     REQUIRE( remote.activity );
@@ -1281,11 +1629,11 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     const int expected_morale = remote.get_morale_level();
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     local.assign_activity( consume_activity_actor::client_view( true ) );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     consumption_events events;
     REQUIRE( cata_mp::client_apply_message( started ) );
     local.get_morale_level(); // Populate the cache before restoring changed morale.
@@ -1303,7 +1651,7 @@ TEST_CASE( "consumption_results_restore_needs_without_client_ingestion_or_stale_
     CHECK_FALSE( uistate.open_menu.has_value() );
     CHECK( needs_state( local ) == expected );
     CHECK( events.actors.empty() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "client_consumption_continuation_respects_cancel_and_other_ui",
@@ -1315,7 +1663,7 @@ TEST_CASE( "client_consumption_continuation_respects_cancel_and_other_ui",
     uistate.open_menu.reset();
     cata_mp::set_client_mode( true );
     avatar &local = get_avatar();
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     local.assign_activity( consume_activity_actor::client_view( true ) );
     view.active = true;
     view.finished = true;
@@ -1376,13 +1724,13 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
 {
     consumption_fixture fixture;
     npc &remote = fixture.remote();
-    remote.set_wielded_item( item( itype_id( "chocolate" ), calendar::turn, 3 ) );
+    remote.set_wielded_item( item( itype_chocolate, calendar::turn, 3 ) );
     remote.set_thirst( 42 );
     remote.set_str_base( 15 );
-    remote.set_skill_level( skill_id( "mechanics" ), 6 );
-    remote.set_mutation( trait_id( "QUICK" ) );
-    remote.set_mutation( trait_id( "CARNIVORE" ) );
-    remote.set_mutation( trait_id( "MASOCHIST" ) );
+    remote.set_skill_level( skill_mechanics, 6 );
+    remote.set_mutation( trait_QUICK );
+    remote.set_mutation( trait_CARNIVORE );
+    remote.set_mutation( trait_MASOCHIST );
     remote.set_pain( 80 );
     const int expected_morale = remote.get_morale_level();
     REQUIRE( expected_morale > 0 );
@@ -1395,38 +1743,38 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     REQUIRE( fixture.inventory.revision > 0 );
     avatar &local = get_avatar();
     cata_mp::set_client_mode( true );
-    local.set_wielded_item( item( itype_id( "rock" ) ) );
+    local.set_wielded_item( item( itype_rock ) );
     local.set_str_base( 8 );
-    REQUIRE_FALSE( local.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
-    const auto identity = local.getID();
-    const auto position = local.pos_abs();
-    local.activity = player_activity( activity_id( "ACT_WAIT" ), 400 );
-    const auto rng = rng_get_engine();
+    REQUIRE_FALSE( local.has_trait_flag( json_flag_CARNIVORE_DIET ) );
+    const character_id identity = local.getID();
+    const tripoint_abs_ms position = local.pos_abs();
+    local.activity = player_activity( ACT_WAIT, 400 );
+    const std::string rng = capture_rng_state();
     consumption_events events;
     REQUIRE( cata_mp::client_apply_message( resumed ) );
     REQUIRE( local.get_wielded_item() );
-    CHECK( local.get_wielded_item()->typeId() == itype_id( "chocolate" ) );
+    CHECK( local.get_wielded_item()->typeId() == itype_chocolate );
     CHECK( local.get_wielded_item()->charges == 3 );
     CHECK( local.get_thirst() == 42 );
     CHECK( local.get_str_base() == 15 );
     CHECK( local.get_morale_level() == expected_morale );
     CHECK( local.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
     CHECK( local.get_part_hp_max( bodypart_id( "arm_l" ) ) == 137 );
-    CHECK( local.get_skill_level( skill_id( "mechanics" ) ) == 6 );
-    CHECK( local.has_trait( trait_id( "QUICK" ) ) );
-    CHECK( local.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
+    CHECK( local.get_skill_level( skill_mechanics ) == 6 );
+    CHECK( local.has_trait( trait_QUICK ) );
+    CHECK( local.has_trait_flag( json_flag_CARNIVORE_DIET ) );
     CHECK( local.getID() == identity );
     CHECK( local.pos_abs() == position );
-    CHECK( local.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( local.activity.id() == ACT_WAIT );
     // Bad packets must not leave a half-replaced body or lose carried items.
     std::ostringstream before;
     JsonOut saved( before );
     local.store_player_state( saved );
     std::string malformed = before.str();
-    const auto body = malformed.find( "\"body\":" );
+    const std::string::size_type body = malformed.find( "\"body\":" );
     REQUIRE( body != std::string::npos );
     malformed.replace( body, 6, "\"missing_body\"" );
-    const auto strength = malformed.find( "\"str_max\":15" );
+    const std::string::size_type strength = malformed.find( "\"str_max\":15" );
     REQUIRE( strength != std::string::npos );
     malformed.replace( strength, 12, "\"str_max\":99" );
     CHECK_THROWS_AS( local.load_player_state( json_loader::from_string( malformed ).get_object() ),
@@ -1443,7 +1791,7 @@ TEST_CASE( "rejoining_player_restores_saved_inventory_and_needs_without_stale_ro
     CHECK( local.get_wielded_item()->charges == 2 );
     CHECK( local.get_thirst() == 24 );
     CHECK( events.actors.empty() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
@@ -1451,9 +1799,9 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
 {
     consumption_fixture fixture;
     npc &owner = fixture.remote();
-    owner.set_mutation( trait_id( "CARNIVORE" ) );
-    owner.set_mutation( trait_id( "MASOCHIST" ) );
-    owner.add_effect( efftype_id( "took_prozac" ), 3_hours );
+    owner.set_mutation( trait_CARNIVORE );
+    owner.set_mutation( trait_MASOCHIST );
+    owner.add_effect( effect_took_prozac, 3_hours );
     owner.set_pain( 80 );
     const int expected_morale = owner.get_morale_level();
     REQUIRE( expected_morale > 0 );
@@ -1464,8 +1812,8 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
     owner.set_stamina( 1234 );
     owner.set_thirst( 42 );
     owner.magic->set_mana( 456 );
-    owner.add_effect( efftype_id( "bleed" ), 10_minutes, bodypart_id( "arm_l" ), 2 );
-    owner.add_effect( efftype_id( "sleep" ), 3_hours );
+    owner.add_effect( effect_bleed, 10_minutes, bodypart_id( "arm_l" ), true );
+    owner.add_effect( effect_sleep, 3_hours );
     const auto snapshot = [&]() {
         std::ostringstream encoded;
         JsonOut out( encoded );
@@ -1487,16 +1835,16 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
 
     avatar &replica = get_avatar();
     cata_mp::set_client_mode( true );
-    replica.set_wielded_item( item( itype_id( "rock" ) ) );
+    replica.set_wielded_item( item( itype_rock ) );
     const item_location held = replica.get_wielded_item();
     const item *const address = held.get_item();
     const character_id identity = replica.getID();
     const tripoint_abs_ms position = replica.pos_abs();
-    replica.activity = player_activity( activity_id( "ACT_WAIT" ), 400 );
+    replica.activity = player_activity( ACT_WAIT, 400 );
     replica.set_moves( 37 );
-    replica.add_effect( efftype_id( "poison" ), 10_minutes );
-    REQUIRE_FALSE( replica.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
-    const auto rng = rng_get_engine();
+    replica.add_effect( effect_poison, 10_minutes );
+    REQUIRE_FALSE( replica.has_trait_flag( json_flag_CARNIVORE_DIET ) );
+    const std::string rng = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( first ) );
     CHECK( replica.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
     CHECK( replica.get_part_hp_max( bodypart_id( "arm_l" ) ) == 137 );
@@ -1508,44 +1856,44 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
     CHECK( replica.magic->available_mana() == 456 );
     CHECK( replica.get_pain() == 80 );
     CHECK( replica.get_morale_level() == expected_morale );
-    CHECK( replica.get_effect( efftype_id( "sleep" ) ).get_duration() == 3_hours );
-    CHECK( replica.get_effect( efftype_id( "bleed" ), bodypart_id( "arm_l" ) ).get_duration() ==
+    CHECK( replica.get_effect( effect_sleep ).get_duration() == 3_hours );
+    CHECK( replica.get_effect( effect_bleed, bodypart_id( "arm_l" ) ).get_duration() ==
            10_minutes );
-    CHECK_FALSE( replica.has_effect( efftype_id( "poison" ) ) );
-    CHECK( replica.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
+    CHECK_FALSE( replica.has_effect( effect_poison ) );
+    CHECK( replica.has_trait_flag( json_flag_CARNIVORE_DIET ) );
     CHECK( replica.getID() == identity );
     CHECK( replica.pos_abs() == position );
-    CHECK( replica.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( replica.activity.id() == ACT_WAIT );
     CHECK( replica.activity.moves_left == 400 );
     CHECK( replica.get_moves() == 37 );
     CHECK( held.get_item() == address );
     CHECK( replica.get_wielded_item().get_item() == address );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 
     // Two updates may occur without advancing the game calendar. The earlier
     // frame must not undo a more recent effect removal or stamina expenditure.
     owner.set_stamina( 900 );
-    owner.remove_effect( efftype_id( "bleed" ) );
+    owner.remove_effect( effect_bleed );
     REQUIRE( cata_mp::client_apply_message( frame( 2 ) ) );
     REQUIRE( cata_mp::client_apply_message( first ) );
     CHECK( replica.get_stamina() == 900 );
-    CHECK_FALSE( replica.has_effect( efftype_id( "bleed" ) ) );
+    CHECK_FALSE( replica.has_effect( effect_bleed ) );
     CHECK( held.get_item() == address );
 
     // A malformed body cannot leave a half-imported character behind.
     owner.set_stamina( 500 );
     std::string malformed = snapshot();
-    const auto body = malformed.find( "\"body\":" );
+    const std::string::size_type body = malformed.find( "\"body\":" );
     REQUIRE( body != std::string::npos );
     malformed.replace( body, 6, "\"missing_body\"" );
-    const auto before_rejected = rng_get_engine();
+    const std::string before_rejected = capture_rng_state();
     CHECK_THROWS_AS( replica.load_turn_state( json_loader::from_string( malformed ).get_object() ),
                      JsonError );
     CHECK( replica.get_stamina() == 900 );
     CHECK( replica.get_part_hp_cur( bodypart_id( "arm_l" ) ) == 17 );
-    CHECK( replica.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( replica.activity.id() == ACT_WAIT );
     CHECK( held.get_item() == address );
-    CHECK( rng_get_engine() == before_rejected );
+    CHECK( capture_rng_state() == before_rejected );
 }
 
 
@@ -1553,7 +1901,7 @@ TEST_CASE( "current_item_replica_preserves_zero_charges_and_timers",
            "[multiplayer][item_turn]" )
 {
     reload_fixture fixture;
-    item ammo( itype_id( "556" ), calendar::turn, 5 );
+    item ammo( itype_556, calendar::turn, 5 );
     ammo.charges = 0;
     ammo.active = true;
     ammo.item_counter = 7;
@@ -1565,9 +1913,9 @@ TEST_CASE( "current_item_replica_preserves_zero_charges_and_timers",
         return text.str();
     };
     const std::string wire = encode( ammo );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     item restored = item::from_current_state( json_loader::from_string( wire ).get_object() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( restored.uid() == ammo.uid() );
     CHECK( restored.charges == 0 );
     CHECK( restored.active );
@@ -1578,7 +1926,7 @@ TEST_CASE( "current_item_replica_preserves_zero_charges_and_timers",
 
     CHECK_THROWS_AS( item::from_current_state( json_loader::from_string(
                          R"({"typeid":"556","uid":0})" ).get_object() ), JsonError );
-    item rock( itype_id( "rock" ) );
+    item rock( itype_rock );
     rock.charges = -1;
     const std::string rock_wire = encode( rock );
     CHECK( rock.charges == -1 );
@@ -1590,15 +1938,15 @@ TEST_CASE( "current_item_replica_preserves_zero_charges_and_timers",
     legacy.deserialize( json_loader::from_string( wire ).get_object() );
     CHECK( legacy.charges > 0 );
 
-    item bag( itype_id( "backpack" ) );
+    item bag( itype_backpack );
     REQUIRE( bag.put_in( ammo, pocket_type::CONTAINER ).success() );
-    item cable( itype_id( "power_cord" ) );
+    item cable( itype_power_cord );
     cable.link().last_processed = calendar::turn - 17_turns;
     REQUIRE( bag.put_in( cable, pocket_type::CONTAINER ).success() );
     const std::string nested = encode( bag );
-    const auto nested_rng = rng_get_engine();
+    const std::string nested_rng = capture_rng_state();
     item restored_bag = item::from_current_state( json_loader::from_string( nested ).get_object() );
-    CHECK( rng_get_engine() == nested_rng );
+    CHECK( capture_rng_state() == nested_rng );
     CHECK( encode( restored_bag ) == nested );
 }
 
@@ -1607,29 +1955,29 @@ TEST_CASE( "native_item_turns_replicate_changes_and_preserve_surviving_locations
 {
     reload_fixture fixture;
     npc &owner = fixture.remote();
-    owner.set_wielded_item( item( itype_id( "backpack" ) ) );
+    owner.set_wielded_item( item( itype_backpack ) );
     item_location bag = owner.get_wielded_item();
-    item temporary( itype_id( "rock" ) );
+    item temporary( itype_rock );
     temporary.ethereal = true;
     temporary.set_var( "ethereal", 2 );
     REQUIRE( bag->put_in( temporary, pocket_type::CONTAINER ).success() );
-    REQUIRE( bag->put_in( item( itype_id( "556" ), calendar::turn, 5 ),
+    REQUIRE( bag->put_in( item( itype_556, calendar::turn, 5 ),
                           pocket_type::CONTAINER ).success() );
     avatar &replica = get_avatar();
     cata_mp::set_client_mode( true );
-    const auto initial = cata_mp::make_inventory_update( owner, fixture.inventory );
+    const std::string initial = cata_mp::make_inventory_update( owner, fixture.inventory );
     REQUIRE( cata_mp::client_apply_message( initial ) );
-    auto &client = g->multiplayer_session().client_pickup;
+    cata_mp::pickup_client_state &client = g->multiplayer_session().client_pickup;
     const item_location replica_bag = replica.get_wielded_item();
     const item *const bag_address = replica_bag.get_item();
     const auto source_ammo = owner.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "556" );
+        return it.typeId() == itype_556;
     } );
     const auto replica_ammo = replica.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "556" );
+        return it.typeId() == itype_556;
     } );
     const auto replica_rocks = replica.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "rock" );
+        return it.typeId() == itype_rock;
     } );
     REQUIRE( source_ammo.size() == 1 );
     REQUIRE( replica_ammo.size() == 1 );
@@ -1637,10 +1985,10 @@ TEST_CASE( "native_item_turns_replicate_changes_and_preserve_surviving_locations
     const item_location rounds( replica_bag, replica_ammo.front() );
     const item_location disappearing( replica_bag, replica_rocks.front() );
     const item *const rounds_address = rounds.get_item();
-    replica.activity = player_activity( activity_id( "ACT_WAIT" ), 400 );
+    replica.activity = player_activity( ACT_WAIT, 400 );
     replica.activity.targets.push_back( rounds );
 
-    const auto before = cata_mp::capture_inventory_turn( owner );
+    const cata_mp::inventory_turn_snapshot before = cata_mp::capture_inventory_turn( owner );
     CHECK_FALSE( cata_mp::make_inventory_turn_update( owner, before, fixture.inventory ) );
     owner.process_items( &get_map() );
     source_ammo.front()->charges = 3;
@@ -1651,9 +1999,9 @@ TEST_CASE( "native_item_turns_replicate_changes_and_preserve_surviving_locations
     CHECK( delta.get_string( "type" ) == "inventory_delta" );
     CHECK_FALSE( delta.has_member( "carried" ) );
     CHECK( delta.get_array( "items" ).size() == 2 );
-    const auto before_apply = rng_get_engine();
+    const std::string before_apply = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( *first ) );
-    CHECK( rng_get_engine() == before_apply );
+    CHECK( capture_rng_state() == before_apply );
     REQUIRE( rounds.get_item() == rounds_address );
     CHECK( rounds->charges == 3 );
     REQUIRE( disappearing );
@@ -1661,10 +2009,11 @@ TEST_CASE( "native_item_turns_replicate_changes_and_preserve_surviving_locations
     CHECK( replica_bag.get_item() == bag_address );
     CHECK( replica.activity.targets.front().get_item() == rounds_address );
     CHECK( client.revision == fixture.inventory.revision );
-    const auto old_upload = json_loader::from_string( R"({"inventory_revision":1})" ).get_object();
+    const JsonObject old_upload = json_loader::from_string(
+                                      R"({"inventory_revision":1})" ).get_object();
     CHECK_FALSE( cata_mp::pickup_inventory_revision_matches( old_upload, fixture.inventory ) );
 
-    const auto second_before = cata_mp::capture_inventory_turn( owner );
+    const cata_mp::inventory_turn_snapshot second_before = cata_mp::capture_inventory_turn( owner );
     owner.process_items( &get_map() );
     source_ammo.front()->charges = 0;
     const auto second = cata_mp::make_inventory_turn_update( owner, second_before, fixture.inventory );
@@ -1679,7 +2028,7 @@ TEST_CASE( "native_item_turns_replicate_changes_and_preserve_surviving_locations
     CHECK( rounds->charges == 0 );
     CHECK( replica.activity.targets.front().get_item() == rounds_address );
     CHECK( replica.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "rock" );
+        return it.typeId() == itype_rock;
     } ).empty() );
     REQUIRE( cata_mp::client_apply_message( *first ) );
     CHECK( client.revision == fixture.inventory.revision );
@@ -1691,7 +2040,7 @@ TEST_CASE( "item_delta_rejects_gaps_and_duplicate_ids_before_modifying_items",
 {
     reload_fixture fixture;
     avatar &replica = get_avatar();
-    replica.set_wielded_item( item( itype_id( "556" ), calendar::turn, 5 ) );
+    replica.set_wielded_item( item( itype_556, calendar::turn, 5 ) );
     item_location rounds = replica.get_wielded_item();
     std::ostringstream payload;
     {
@@ -1707,14 +2056,14 @@ TEST_CASE( "item_delta_rejects_gaps_and_duplicate_ids_before_modifying_items",
     rounds->charges = 3;
     cata_mp::pickup_client_state client;
     client.revision = 1;
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     CHECK_THROWS_AS( cata_mp::apply_inventory_turn_update( replica,
                      json_loader::from_string( request( 0, false ) ).get_object(), client ), JsonError );
     CHECK_THROWS_AS( cata_mp::apply_inventory_turn_update( replica,
                      json_loader::from_string( request( 1, true ) ).get_object(), client ), JsonError );
     CHECK( rounds->charges == 3 );
     CHECK( client.revision == 1 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 
@@ -1730,7 +2079,7 @@ TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_clie
         DYNAMIC_SECTION( medicine.first ) {
             consumption_fixture fixture;
             npc &owner = fixture.remote();
-            owner.set_wielded_item( item( itype_id( "backpack" ) ) );
+            owner.set_wielded_item( item( itype_backpack ) );
             item_location bag = owner.get_wielded_item();
             REQUIRE( bag->put_in( item( itype_id( medicine.first ), calendar::turn, 2 ),
                                   pocket_type::CONTAINER ).success() );
@@ -1743,7 +2092,7 @@ TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_clie
             CHECK( source->charges == 2 );
             CHECK_FALSE( owner.has_effect( effect ) );
             save_reload_activity( owner );
-            const auto completed = finish_consumption( owner, &fixture );
+            const consumption_completion completed = finish_consumption( owner, &fixture );
             const std::string &step = completed.request;
             const std::string &finished = completed.response;
             REQUIRE_FALSE( owner.activity );
@@ -1752,21 +2101,21 @@ TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_clie
             CHECK( events.actors == std::vector<character_id> { owner.getID() } );
             CHECK( needs_state( get_avatar() ) == host_before );
             CHECK_FALSE( get_avatar().has_effect( effect ) );
-            const auto duration = owner.get_effect_dur( effect );
-            const auto after_dose = rng_get_engine();
+            const time_duration duration = owner.get_effect_dur( effect );
+            const std::string after_dose = capture_rng_state();
             fixture.run( owner, step );
-            CHECK( rng_get_engine() == after_dose );
+            CHECK( capture_rng_state() == after_dose );
             CHECK( source->charges == 1 );
             CHECK( owner.get_effect_dur( effect ) == duration );
             CHECK( events.actors.size() == 1 );
 
             avatar &replica = get_avatar();
             cata_mp::set_client_mode( true );
-            auto &view = g->multiplayer_session().client_inventory_activity;
+            cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
             view.active = true;
             view.pending_request = 1;
             replica.assign_activity( consume_activity_actor::client_view( false ) );
-            const auto before_restore = rng_get_engine();
+            const std::string before_restore = capture_rng_state();
             REQUIRE( cata_mp::client_apply_message( started ) );
             view.pending_request = fixture.sequence;
             REQUIRE( cata_mp::client_apply_message( finished ) );
@@ -1785,7 +2134,7 @@ TEST_CASE( "owned_medication_applies_one_dose_to_its_actor_and_restores_the_clie
             CHECK( remaining.front()->charges == 1 );
             CHECK( replica.get_effect_dur( effect ) == duration );
             CHECK( events.actors.size() == 1 );
-            CHECK( rng_get_engine() == before_restore );
+            CHECK( capture_rng_state() == before_restore );
         }
     }
 }
@@ -1795,24 +2144,24 @@ TEST_CASE( "owned_injection_requires_the_actors_tool_through_completion",
 {
     consumption_fixture fixture;
     npc &owner = fixture.remote();
-    owner.set_wielded_item( item( itype_id( "backpack" ) ) );
+    owner.set_wielded_item( item( itype_backpack ) );
     item_location bag = owner.get_wielded_item();
-    REQUIRE( bag->put_in( item( itype_id( "morphine" ), calendar::turn, 2 ),
+    REQUIRE( bag->put_in( item( itype_morphine, calendar::turn, 2 ),
                           pocket_type::CONTAINER ).success() );
     item_location drug( bag, bag->all_items_top().front() );
-    get_avatar().set_wielded_item( item( itype_id( "syringe" ) ) );
+    get_avatar().set_wielded_item( item( itype_syringe ) );
     fixture.run( owner, consume_request( fixture, owner, drug ) );
     CHECK_FALSE( owner.activity );
     CHECK( drug->charges == 2 );
-    CHECK_FALSE( owner.has_effect( efftype_id( "pkill3" ) ) );
-    REQUIRE( bag->put_in( item( itype_id( "syringe" ) ), pocket_type::CONTAINER ).success() );
+    CHECK_FALSE( owner.has_effect( effect_pkill3 ) );
+    REQUIRE( bag->put_in( item( itype_syringe ), pocket_type::CONTAINER ).success() );
     fixture.run( owner, consume_request( fixture, owner, drug ) );
     REQUIRE( cata_mp::owns_inventory_activity( owner ) );
     bool removed = false;
     SECTION( "tool remains available" ) {}
     SECTION( "tool removed during activity" ) {
         const auto tools = owner.items_with( []( const item & it ) {
-            return it.typeId() == itype_id( "syringe" );
+            return it.typeId() == itype_syringe;
         } );
         REQUIRE( tools.size() == 1 );
         item_location( bag, tools.front() ).remove_item();
@@ -1821,8 +2170,8 @@ TEST_CASE( "owned_injection_requires_the_actors_tool_through_completion",
     finish_consumption( owner, &fixture );
     CHECK_FALSE( owner.activity );
     CHECK( drug->charges == ( removed ? 2 : 1 ) );
-    CHECK( owner.has_effect( efftype_id( "pkill3" ) ) == !removed );
-    CHECK_FALSE( get_avatar().has_effect( efftype_id( "pkill3" ) ) );
+    CHECK( owner.has_effect( effect_pkill3 ) == !removed );
+    CHECK_FALSE( get_avatar().has_effect( effect_pkill3 ) );
 }
 
 TEST_CASE( "owned_consumption_does_not_invoke_targeted_or_scripted_medicine",
@@ -1836,13 +2185,13 @@ TEST_CASE( "owned_consumption_does_not_invoke_targeted_or_scripted_medicine",
             npc &owner = fixture.remote();
             owner.set_wielded_item( item( itype_id( id ), calendar::turn, 2 ) );
             const item_location source = owner.get_wielded_item();
-            const auto rng = rng_get_engine();
+            const std::string rng = capture_rng_state();
             const std::string before = needs_state( owner );
             fixture.run( owner, consume_request( fixture, owner, source, true ) );
             CHECK_FALSE( owner.activity );
             CHECK( source->charges == 2 );
             CHECK( needs_state( owner ) == before );
-            CHECK( rng_get_engine() == rng );
+            CHECK( capture_rng_state() == rng );
         }
     }
 }
@@ -1855,13 +2204,14 @@ TEST_CASE( "client_medication_activation_submits_without_obtaining_or_consuming"
     local.stomach.empty();
     local.set_moves( 100 );
     item_location source = get_map().add_item_or_charges_ret_loc( local.pos_bub(),
-                           item( itype_id( "aspirin" ), calendar::turn, 2 ) );
+                           item( itype_aspirin, calendar::turn, 2 ) );
     REQUIRE( source );
     const int64_t uid = source->uid().get_value();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     avatar_action::use_item( local, source );
-    const auto &view = g->multiplayer_session().client_inventory_activity;
+    const cata_mp::inventory_activity_client_state &view =
+        g->multiplayer_session().client_inventory_activity;
     CHECK( view.active );
     CHECK( view.pending_request == 1 );
     CHECK( cata_mp::inventory_activity_view( local.activity ) );
@@ -1869,8 +2219,8 @@ TEST_CASE( "client_medication_activation_submits_without_obtaining_or_consuming"
     CHECK( source.where() == item_location::type::map );
     CHECK( source->uid().get_value() == uid );
     CHECK( source->charges == 2 );
-    CHECK_FALSE( local.has_effect( efftype_id( "pkill1_nsaid" ) ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK_FALSE( local.has_effect( effect_pkill1_nsaid ) );
+    CHECK( capture_rng_state() == rng );
 }
 
 namespace
@@ -1920,13 +2270,13 @@ TEST_CASE( "owned_firstaid_treats_the_selected_patient_and_part_once",
                 patient.set_part_hp_cur( torso, patient.get_part_hp_max( torso ) - 30 );
                 const efftype_id effect( std::string( medicine ) == "bandages" ? "bandaged" :
                                          "disinfected" );
-                healer.set_wielded_item( item( itype_id( "backpack" ) ) );
+                healer.set_wielded_item( item( itype_backpack ) );
                 item_location bag = healer.get_wielded_item();
                 item dressing( itype_id( medicine ), calendar::turn );
                 if( dressing.count_by_charges() ) {
                     dressing.charges = 2;
                 }
-                REQUIRE( bag->put_in( std::move( dressing ),
+                REQUIRE( bag->put_in( dressing,
                                       pocket_type::CONTAINER ).success() );
                 item_location source( bag, bag->all_items_top().front() );
                 const bool charged = source->count_by_charges();
@@ -1944,7 +2294,7 @@ TEST_CASE( "owned_firstaid_treats_the_selected_patient_and_part_once",
                 REQUIRE( patient.has_effect( effect, arm ) );
                 CHECK_FALSE( patient.has_effect( effect, torso ) );
                 CHECK( practice_state( host ) == untouched_practice );
-                CHECK( healer.get_proficiency_practiced_time( proficiency_id( "prof_wound_care" ) ) >
+                CHECK( healer.get_proficiency_practiced_time( proficiency_prof_wound_care ) >
                        0_turns );
                 if( !self ) {
                     CHECK_FALSE( healer.has_effect( effect, arm ) );
@@ -1955,13 +2305,13 @@ TEST_CASE( "owned_firstaid_treats_the_selected_patient_and_part_once",
                 } else {
                     CHECK_FALSE( source );
                 }
-                const auto duration = patient.get_effect_dur( effect, arm );
+                const time_duration duration = patient.get_effect_dur( effect, arm );
                 const std::string progress = practice_state( healer );
-                const auto rng = rng_get_engine();
+                const std::string rng = capture_rng_state();
                 fixture.run( healer, step );
                 CHECK( patient.get_effect_dur( effect, arm ) == duration );
                 CHECK( practice_state( healer ) == progress );
-                CHECK( rng_get_engine() == rng );
+                CHECK( capture_rng_state() == rng );
             }
         }
     }
@@ -1977,7 +2327,7 @@ TEST_CASE( "owned_firstaid_revalidates_tools_patients_and_cancellation",
     patient.setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
     const bodypart_id arm( "arm_l" );
     patient.set_part_hp_cur( arm, patient.get_part_hp_max( arm ) - 10 );
-    healer.set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+    healer.set_wielded_item( item( itype_bfipowder, calendar::turn, 2 ) );
     item_location source = healer.get_wielded_item();
     reload_events events;
     fixture.run( healer, firstaid_request( fixture, healer, patient, source ) );
@@ -1990,7 +2340,7 @@ TEST_CASE( "owned_firstaid_revalidates_tools_patients_and_cancellation",
         source.remove_item();
     }
     SECTION( "tool changes type" ) {
-        source->convert( itype_id( "aspirin" ) );
+        source->convert( itype_aspirin );
     }
     SECTION( "tool becomes filthy" ) {
         source->set_flag( flag_FILTHY );
@@ -2002,18 +2352,18 @@ TEST_CASE( "owned_firstaid_revalidates_tools_patients_and_cancellation",
     const std::string request = fixture.request( healer, operation );
     fixture.run( healer, request );
     CHECK_FALSE( healer.activity );
-    CHECK_FALSE( patient.has_effect( efftype_id( "disinfected" ), arm ) );
-    CHECK( healer.get_proficiency_practiced_time( proficiency_id( "prof_wound_care" ) ) == 0_turns );
+    CHECK_FALSE( patient.has_effect( effect_disinfected, arm ) );
+    CHECK( healer.get_proficiency_practiced_time( proficiency_prof_wound_care ) == 0_turns );
     CHECK( events.finishes == 1 );
     if( source ) {
         CHECK( source->charges == 2 );
     }
     // Native cancellation emits a gameplay event whose EOCs may use RNG.
     // A repeated request must not emit it again or advance gameplay RNG.
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( healer, request );
     CHECK( events.finishes == 1 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "owned_firstaid_rejects_invalid_or_untreatable_body_parts",
@@ -2021,7 +2371,7 @@ TEST_CASE( "owned_firstaid_rejects_invalid_or_untreatable_body_parts",
 {
     consumption_fixture fixture;
     npc &healer = fixture.remote();
-    healer.set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+    healer.set_wielded_item( item( itype_bfipowder, calendar::turn, 2 ) );
     item_location source = healer.get_wielded_item();
     item_location selected = source;
     std::string part = "arm_l";
@@ -2031,14 +2381,14 @@ TEST_CASE( "owned_firstaid_rejects_invalid_or_untreatable_body_parts",
     SECTION( "undamaged body part" ) {}
     SECTION( "another actor owns the tool" ) {
         healer.set_part_hp_cur( bodypart_id( "arm_l" ), 10 );
-        get_avatar().set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+        get_avatar().set_wielded_item( item( itype_bfipowder, calendar::turn, 2 ) );
         selected = get_avatar().get_wielded_item();
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( healer, firstaid_request( fixture, healer, healer, selected, part ) );
     CHECK_FALSE( healer.activity );
     CHECK( source->charges == 2 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "firstaid_results_restore_body_and_practice_without_replaying_treatment",
@@ -2048,7 +2398,7 @@ TEST_CASE( "firstaid_results_restore_body_and_practice_without_replaying_treatme
     npc &healer = fixture.remote();
     const bodypart_id arm( "arm_l" );
     healer.set_part_hp_cur( arm, healer.get_part_hp_max( arm ) - 10 );
-    healer.set_wielded_item( item( itype_id( "bfipowder" ), calendar::turn, 2 ) );
+    healer.set_wielded_item( item( itype_bfipowder, calendar::turn, 2 ) );
     item_location source = healer.get_wielded_item();
     const std::string started = fixture.run( healer, firstaid_request( fixture, healer, healer,
                                 source ) );
@@ -2056,21 +2406,21 @@ TEST_CASE( "firstaid_results_restore_body_and_practice_without_replaying_treatme
     healer.set_moves( 100000 );
     const std::string finished = fixture.run( healer, fixture.request( healer, "step" ) );
     REQUIRE_FALSE( healer.activity );
-    REQUIRE( healer.has_effect( efftype_id( "disinfected" ), arm ) );
+    REQUIRE( healer.has_effect( effect_disinfected, arm ) );
     avatar &replica = get_avatar();
     cata_mp::set_client_mode( true );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = 1;
     replica.assign_activity( firstaid_activity_actor::client_view() );
     reload_events events;
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( started ) );
     view.pending_request = 2;
     REQUIRE( cata_mp::client_apply_message( finished ) );
     CHECK( replica.get_part_hp_cur( arm ) == healer.get_part_hp_cur( arm ) );
-    CHECK( replica.get_effect_dur( efftype_id( "disinfected" ), arm ) ==
-           healer.get_effect_dur( efftype_id( "disinfected" ), arm ) );
+    CHECK( replica.get_effect_dur( effect_disinfected, arm ) ==
+           healer.get_effect_dur( effect_disinfected, arm ) );
     CHECK( practice_state( replica ) == practice_state( healer ) );
     REQUIRE( replica.get_wielded_item() );
     CHECK( replica.get_wielded_item()->charges == 1 );
@@ -2081,7 +2431,7 @@ TEST_CASE( "firstaid_results_restore_body_and_practice_without_replaying_treatme
     CHECK( practice_state( replica ) == practice_state( healer ) );
     CHECK( replica.get_wielded_item()->charges == 1 );
     CHECK( events.finishes == 0 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 
@@ -2090,7 +2440,7 @@ TEST_CASE( "owned_craft_request_completes_for_its_player_once_after_activity_rel
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    const recipe_id &recipe = recipe_cudgel_test_charged_fast_stepless;
     who.learn_recipe( &recipe.obj() );
     who.set_wielded_item( item( &recipe.obj(), 1, item_components{}, {}, false ) );
     item_location workpiece = who.get_wielded_item();
@@ -2103,12 +2453,12 @@ TEST_CASE( "owned_craft_request_completes_for_its_player_once_after_activity_rel
     CHECK_FALSE( who.activity );
     CHECK_FALSE( workpiece );
     REQUIRE( who.get_wielded_item() );
-    CHECK( who.get_wielded_item()->typeId() == itype_id( "cudgel" ) );
+    CHECK( who.get_wielded_item()->typeId() == itype_cudgel );
     const int64_t result = who.get_wielded_item()->uid().get_value();
-    const auto completed = rng_get_engine();
+    const std::string completed = capture_rng_state();
     fixture.run( who, step );
     CHECK( who.get_wielded_item()->uid().get_value() == result );
-    CHECK( rng_get_engine() == completed );
+    CHECK( capture_rng_state() == completed );
     CHECK_FALSE( get_avatar().get_wielded_item() );
 }
 
@@ -2117,15 +2467,15 @@ TEST_CASE( "owned_craft_pending_outputs_survive_cancel_and_reject_an_old_activit
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    const recipe_id &recipe = recipe_cudgel_test_charged_fast_stepless;
     who.learn_recipe( &recipe.obj() );
     who.set_wielded_item( item( &recipe.obj(), 1, item_components{}, {}, false ) );
     item_location workpiece = who.get_wielded_item();
     workpiece->item_counter = 10000000;
-    auto &completion = workpiece->get_craft_results();
+    craft_result_state &completion = workpiece->get_craft_results();
     completion.stage = craft_completion_stage::primary_results;
     completion.primary_had_results = true;
-    completion.pending.emplace_back( itype_id( "gasoline" ), calendar::turn, 20 );
+    completion.pending.emplace_back( itype_gasoline, calendar::turn, 20 );
     const int64_t fuel_id = completion.pending.front().uid().get_value();
     who.assign_activity( craft_activity_actor( workpiece, false, &who ) );
     const std::string old_activity = std::to_string( who.activity.identity_generation() );
@@ -2143,7 +2493,7 @@ TEST_CASE( "owned_craft_pending_outputs_survive_cancel_and_reject_an_old_activit
     fixture.run( who, fixture.request( who, "cancel", {}, old_activity ) );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
     fixture.run( who, fixture.request( who, "step" ) );
-    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "bottle_plastic" ) ) );
+    item &bottle = get_map().add_item_or_charges( who.pos_bub(), item( itype_bottle_plastic ) );
     unload_liquid_choice choice;
     choice.source = fuel_id;
     choice.kind = LD_ITEM;
@@ -2157,10 +2507,10 @@ TEST_CASE( "owned_craft_pending_outputs_survive_cancel_and_reject_an_old_activit
     CHECK_FALSE( workpiece );
     REQUIRE_FALSE( bottle.empty() );
     CHECK( bottle.legacy_front().charges == 20 );
-    const auto received = rng_get_engine();
+    const std::string received = capture_rng_state();
     fixture.run( who, collect );
     CHECK( bottle.legacy_front().charges == 20 );
-    CHECK( rng_get_engine() == received );
+    CHECK( capture_rng_state() == received );
 }
 
 
@@ -2171,7 +2521,7 @@ TEST_CASE( "owned_workpiece_cannot_be_claimed_by_two_active_players",
     npc &who = fixture.remote();
     avatar &other = get_avatar();
     other.setpos( get_map(), who.pos_bub() + tripoint::east );
-    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    const recipe_id &recipe = recipe_cudgel_test_charged_fast_stepless;
     item prepared( &recipe.obj(), 1, item_components{}, {}, false );
     prepared.item_counter = 10000000;
     item_location workpiece = get_map().add_item_or_charges_ret_loc( who.pos_bub(), prepared );
@@ -2189,7 +2539,7 @@ TEST_CASE( "owned_craft_start_resume_and_repeat_consume_each_selection_once",
     reload_fixture fixture;
     npc &who = fixture.remote();
     set_time( calendar::turn_zero + 12_hours );
-    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
+    const recipe_id &recipe = recipe_cudgel_test_charged_fast_stepless;
     who.learn_recipe( &recipe.obj() );
     who.set_skill_level( recipe->skill_used, recipe->difficulty );
     who.set_knowledge_level( recipe->skill_used, recipe->difficulty );
@@ -2199,9 +2549,9 @@ TEST_CASE( "owned_craft_start_resume_and_repeat_consume_each_selection_once",
     }
     map &here = get_map();
     item_location material = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                             item( itype_id( "2x4" ) ) );
+                             item( itype_2x4 ) );
     item_location tool = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                         tool_with_ammo( itype_id( "soldering_iron_portable" ), 100 ) );
+                         tool_with_ammo( itype_soldering_iron_portable, 100 ) );
     who.invalidate_crafting_inventory();
     craft_command selected( &recipe.obj(), 1, true, &who, who.pos_bub() );
     REQUIRE( selected.prepare() );
@@ -2278,12 +2628,12 @@ TEST_CASE( "owned_craft_start_resume_and_repeat_consume_each_selection_once",
         REQUIRE( actor->waiting_for() == "repeat" );
         CHECK_FALSE( workpiece );
         item_location next_material = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                                      item( itype_id( "2x4" ) ) );
+                                      item( itype_2x4 ) );
         who.invalidate_crafting_inventory();
         craft_command next( &recipe.obj(), 1, true, &who, who.pos_bub() );
         REQUIRE( next.prepare() );
         REQUIRE( next.prepare_owned_start() );
-        const auto previous = who.activity.identity_generation();
+        const std::uint64_t previous = who.activity.identity_generation();
         const std::string restart = fixture.request( who, "restart", [&]( JsonOut & out ) {
             out.member( "selection" );
             next.serialize_selection( out );
@@ -2310,9 +2660,9 @@ TEST_CASE( "owned_craft_keeps_component_liquid_until_its_owner_selects_a_contain
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const recipe_id recipe( "cudgel_test_charged_fast_stepless" );
-    item container( itype_id( "bottle_plastic" ) );
-    item fuel( itype_id( "gasoline" ), calendar::turn, 20 );
+    const recipe_id &recipe = recipe_cudgel_test_charged_fast_stepless;
+    item container( itype_bottle_plastic );
+    item fuel( itype_gasoline, calendar::turn, 20 );
     REQUIRE( container.fill_with( fuel, 20 ) == 20 );
     item_components components;
     components.add( container );
@@ -2333,7 +2683,7 @@ TEST_CASE( "owned_craft_keeps_component_liquid_until_its_owner_selects_a_contain
     CHECK( remaining.charges == 20 );
     CHECK( workpiece->item_counter == 0 );
     item_location destination = get_map().add_item_or_charges_ret_loc( who.pos_bub(),
-                                item( itype_id( "bottle_plastic" ) ) );
+                                item( itype_bottle_plastic ) );
     unload_liquid_choice choice;
     choice.source = remaining.uid().get_value();
     choice.kind = LD_ITEM;
@@ -2357,7 +2707,7 @@ TEST_CASE( "craft_timers_notify_only_the_owning_player", "[multiplayer][craft_ow
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    auto &session = g->multiplayer_session();
+    cata_mp::world_session &session = g->multiplayer_session();
     const cata_mp::player_id owner( std::string( 32, '7' ) );
     who.set_value( "mp_player_id", owner.str() );
     auto peer = std::make_unique<cata_mp::remote_player_session>();
@@ -2365,7 +2715,8 @@ TEST_CASE( "craft_timers_notify_only_the_owning_player", "[multiplayer][craft_ow
                              g->player_controls().claim( owner, who ) );
     peer->connected = true;
     session.remote_players.emplace( 7, std::move( peer ) );
-    auto &notices = session.remote_players.at( 7 )->inventory_activity;
+    cata_mp::inventory_activity_host_state &notices = session.remote_players.at(
+                7 )->inventory_activity;
     cata_mp::notify_craft_owner( who.getID(), "timer", true );
     cata_mp::notify_craft_owner( get_avatar().getID(), "host only" );
     REQUIRE( notices.notices.size() == 1 );
@@ -2389,17 +2740,17 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
     set_time( calendar::turn_zero + 12_hours );
     map &here = get_map();
     const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
-    here.ter_set( target, ter_str_id( "t_dirt" ) );
-    const construction_str_id id( "constr_wall_half" );
+    here.ter_set( target, ter_t_dirt );
+    const construction_str_id &id = construction_constr_wall_half;
     for( const auto &[skill, level] : id->required_skills ) {
         who.set_skill_level( skill, level );
         who.set_knowledge_level( skill, level );
     }
     for( int i = 0; i < 10; ++i ) {
-        here.add_item_or_charges( who.pos_bub(), item( itype_id( "2x4" ) ) );
+        here.add_item_or_charges( who.pos_bub(), item( itype_2x4 ) );
     }
-    here.add_item_or_charges( who.pos_bub(), item( itype_id( "nail" ), calendar::turn, 20 ) );
-    here.add_item_or_charges( who.pos_bub(), item( itype_id( "hammer" ) ) );
+    here.add_item_or_charges( who.pos_bub(), item( itype_nail, calendar::turn, 20 ) );
+    here.add_item_or_charges( who.pos_bub(), item( itype_hammer ) );
     who.invalidate_crafting_inventory();
     auto selected = construction_selection::prepare( who, id.obj(), here.get_abs( target ) );
     REQUIRE( selected );
@@ -2416,7 +2767,7 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
         CHECK_FALSE( who.activity );
         int boards = 0;
         for( const item &it : here.i_at( who.pos_bub() ) ) {
-            if( it.typeId() == itype_id( "2x4" ) ) {
+            if( it.typeId() == itype_2x4 ) {
                 boards += it.count();
             }
         }
@@ -2425,7 +2776,7 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
     SECTION( "automatic_blueprint_selects_materials_on_the_server" ) {
         map_stack ground = here.i_at( who.pos_bub() );
         const auto boards = std::find_if( ground.begin(), ground.end(), []( const item & it ) {
-            return it.typeId() == itype_id( "2x4" );
+            return it.typeId() == itype_2x4;
         } );
         REQUIRE( boards != ground.end() );
         REQUIRE( boards->count_by_charges() );
@@ -2434,7 +2785,7 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
         carried.charges = 5;
         boards->mod_charges( -5 );
         who.i_add( carried );
-        REQUIRE( who.charges_of( itype_id( "2x4" ) ) == 5 );
+        REQUIRE( who.charges_of( itype_2x4 ) == 5 );
         who.invalidate_crafting_inventory();
         // i_add may wield the boards and spend the setup character's moves.
         who.set_moves( 100 );
@@ -2447,21 +2798,22 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
         REQUIRE( here.partial_con_at( target ) );
         int consumed_boards = 0;
         for( const item &it : here.partial_con_at( target )->components ) {
-            if( it.typeId() == itype_id( "2x4" ) ) {
+            if( it.typeId() == itype_2x4 ) {
                 consumed_boards += it.count();
             }
         }
         CHECK( consumed_boards == 10 );
-        CHECK( who.amount_of( itype_id( "2x4" ) ) == 0 );
+        CHECK( who.amount_of( itype_2x4 ) == 0 );
     }
     SECTION( "zone_construction_preserves_its_parent_instead_of_an_id_only_duplicate" ) {
-        const auto origin = who.pos_abs();
+        const tripoint_abs_ms origin = who.pos_abs();
         who.assign_activity( multi_build_construction_activity_actor() );
         who.activity.set_execution( activity_execution::authoritative );
         auto *planner = dynamic_cast<multi_build_construction_activity_actor *>( who.activity.actor.get() );
         REQUIRE( planner );
-        const auto reason = activity_reason_info::build( do_activity_reason::CAN_DO_CONSTRUCTION,
-                            true, id.id() );
+        const activity_reason_info reason = activity_reason_info::build(
+                                                do_activity_reason::CAN_DO_CONSTRUCTION,
+                                                true, id.id() );
         REQUIRE_FALSE( planner->multi_activity_do( who, reason, here.get_abs( target ), target ) );
         REQUIRE( here.partial_con_at( target ) );
         REQUIRE( who.backlog.size() == 1 );
@@ -2476,7 +2828,7 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
         CHECK( who.activity.execution() == activity_execution::authoritative );
         int boards = 0;
         for( const item &it : here.partial_con_at( target )->components ) {
-            if( it.typeId() == itype_id( "2x4" ) ) {
+            if( it.typeId() == itype_2x4 ) {
                 boards += it.count();
             }
         }
@@ -2493,7 +2845,7 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
         REQUIRE( site );
         const int64_t uid = site->uid;
         REQUIRE( uid > 0 );
-        const auto components = site->components.size();
+        const std::string::size_type components = site->components.size();
         REQUIRE( components > 0 );
         fixture.run( who, start );
         CHECK( site->uid == uid );
@@ -2508,11 +2860,11 @@ TEST_CASE( "owned_construction_start_and_completion_apply_once",
         fixture.run( who, finish );
         CHECK_FALSE( here.partial_con_at( target ) );
         CHECK_FALSE( who.activity );
-        CHECK( here.ter( target ) == ter_str_id( "t_wall_half" ) );
-        const auto rng = rng_get_engine();
+        CHECK( here.ter( target ) == ter_t_wall_half );
+        const std::string rng = capture_rng_state();
         fixture.run( who, finish );
-        CHECK( rng_get_engine() == rng );
-        CHECK( here.ter( target ) == ter_str_id( "t_wall_half" ) );
+        CHECK( capture_rng_state() == rng );
+        CHECK( here.ter( target ) == ter_t_wall_half );
         CHECK_FALSE( get_avatar().activity );
     }
 }
@@ -2525,13 +2877,13 @@ TEST_CASE( "owned_construction_rejects_replaced_sites_and_refunds_only_once",
     set_time( calendar::turn_zero + 12_hours );
     map &here = get_map();
     const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
-    const construction_str_id id( "constr_wall_half" );
+    const construction_str_id &id = construction_constr_wall_half;
     for( const auto &[skill, level] : id->required_skills ) {
         who.set_skill_level( skill, level );
     }
     partial_con original;
     original.id = id.id();
-    original.components.emplace_back( itype_id( "2x4" ) );
+    original.components.emplace_back( itype_2x4 );
     here.partial_con_set( target, original );
     const int64_t old_uid = here.partial_con_at( target )->uid;
     auto change = [&]( const std::string & kind, int64_t uid ) {
@@ -2558,9 +2910,10 @@ TEST_CASE( "owned_construction_rejects_replaced_sites_and_refunds_only_once",
     fixture.run( who, cancel );
     CHECK_FALSE( here.partial_con_at( target ) );
     const auto count = [&]() {
-        return std::count_if( here.i_at( who.pos_bub() ).begin(), here.i_at( who.pos_bub() ).end(),
+        const map_stack items = here.i_at( who.pos_bub() );
+        return std::count_if( items.begin(), items.end(),
         []( const item & it ) {
-            return it.typeId() == itype_id( "2x4" );
+            return it.typeId() == itype_2x4;
         } );
     };
     CHECK( count() == 1 );
@@ -2577,9 +2930,9 @@ TEST_CASE( "owned_vehicle_construction_waits_for_its_players_name",
     map &here = get_map();
     const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
     partial_con site;
-    site.id = construction_str_id( "constr_veh" ).id();
+    site.id = construction_constr_veh.id();
     site.counter = 10000000;
-    site.components.emplace_back( itype_id( "frame" ) );
+    site.components.emplace_back( itype_frame );
     here.partial_con_set( target, site );
     who.assign_activity( build_construction_activity_actor( here.get_abs( target ), &who ) );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
@@ -2602,9 +2955,9 @@ TEST_CASE( "owned_vehicle_construction_waits_for_its_players_name",
     CHECK( here.veh_at( target )->vehicle().name == "Remote workshop" );
     CHECK_FALSE( here.partial_con_at( target ) );
     CHECK_FALSE( who.activity );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, finish );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( here.veh_at( target )->vehicle().name == "Remote workshop" );
 }
 
@@ -2613,7 +2966,7 @@ TEST_CASE( "construction_site_save_preserves_identity_and_loads_legacy_layout",
 {
     reload_fixture fixture;
     submap original;
-    original.set_all_ter( ter_str_id( "t_dirt" ) );
+    original.set_all_ter( ter_t_dirt );
     // Two legacy entries exercise the optional metadata delimiter between sites.
     const JsonValue legacy = json_loader::from_string(
                                  R"([0,1,0,5000000,"constr_pit_shallow",[],2,3,0,0,"constr_wall_half",[]])" );
@@ -2653,24 +3006,24 @@ TEST_CASE( "blueprint_client_only_requests_work_and_preserves_its_planner",
     map &here = get_map();
     const tripoint_abs_ms target = who.pos_abs() + tripoint::east;
     REQUIRE( cata_mp::client_start_blueprint_construction(
-                 construction_str_id( "constr_wall_half" ), target ) );
+                 construction_constr_wall_half, target ) );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK_FALSE( here.partial_con_at( here.get_bub( target ) ) );
     REQUIRE_FALSE( who.backlog.empty() );
-    CHECK( who.backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) );
+    CHECK( who.backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION );
     CHECK( who.backlog.front().auto_resume );
     partial_con replica;
-    replica.id = construction_str_id( "constr_wall_half" ).id();
+    replica.id = construction_constr_wall_half.id();
     here.partial_con_set( here.get_bub( target ), replica );
     const std::string upload = cata_mp::client_enrich_action( R"({"action":"wait"})" );
     CHECK( upload.find( "partial_con" ) == std::string::npos );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.pending_request = 0;
     view.finished = true;
     SECTION( "accepted_work_resumes_the_blueprint_planner" ) {
         view.activity = "42";
         cata_mp::client_update_inventory_activity_view();
-        CHECK( who.activity.id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) );
+        CHECK( who.activity.id() == ACT_MULTIPLE_CONSTRUCTION );
         CHECK( who.backlog.empty() );
         CHECK_FALSE( view.active );
     }
@@ -2698,7 +3051,6 @@ TEST_CASE( "blueprint_client_only_requests_work_and_preserves_its_planner",
 #include "cata_path.h"
 #include "inventory.h"
 #include "lua_platform_runtime_internal.h"
-#include "lua_platform_test_support.h"
 #include "path_info.h"
 #include "worldfactory.h"
 
@@ -2721,7 +3073,7 @@ TEST_CASE( "mp_item_activation_keeps_character_state_and_delayed_work_owned",
     PATH_INFO::set_savedir( directory.root.string() + "/" );
     world_generator->active_world = &isolated_world;
     REQUIRE( std::filesystem::create_directory( isolated_world.folder_path().get_unrelative_path() ) );
-    directory.write( "main.lua", R"lua(
+    directory.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local ccb = require("ccb")
 local state = ccb.state.character
 ccb.runtime.handler("start", function(event)
@@ -2774,7 +3126,7 @@ ccb.content.add(tool)
     const std::string mod = "item_activation_ownership";
     std::string error;
     const bool prepared = platform::prepare_mods(
-    { { mod, directory.root, directory.root / "main.lua" } }, error );
+    { { mod, directory.root, directory.root / std::filesystem::u8path( "main.lua" ) } }, error );
     INFO( error );
     REQUIRE( prepared );
     REQUIRE( platform::apply_prepared_content( error ) );
@@ -2785,10 +3137,10 @@ ccb.content.add(tool)
     REQUIRE( runtime );
     avatar &host = get_avatar();
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim(
+    player_control controller = g->player_controls().claim(
                           cata_mp::player_id( std::string( 32, '8' ) ), remote );
-    const itype_id tool( "test_owned_lua_tool" );
-    const itype_id apple( "apple" );
+    const itype_id &tool = itype_test_owned_lua_tool;
+    const itype_id &apple = itype_apple;
     for( Character *actor : { static_cast<Character *>( &host ), static_cast<Character *>( &remote ) } ) {
         actor->lua_character_state = {};
         actor->set_wielded_item( item( tool ) );
@@ -2797,7 +3149,7 @@ ccb.content.add(tool)
         actor->set_moves( 1000 );
     }
     const auto value = [&]( Character &who, const std::string &key ) {
-        const auto &state = who.lua_character_state.for_mod( mod );
+        const cata::lua_platform::script_persistent_state &state = who.lua_character_state.for_mod( mod );
         const auto found = state.find( key );
         return found == state.end() ? int64_t( 0 ) : std::get<int64_t>( found->second );
     };
@@ -2882,7 +3234,7 @@ ccb.content.add(tool)
     // A client progress view must not run the Lua activity a second time.
     const int64_t host_starts = value( host, "starts" );
     const int64_t host_turns = value( host, "turns" );
-    player_activity view( activity_id( "ACT_TEST_OWNED_ITEM" ), 100 );
+    player_activity view( ACT_TEST_OWNED_ITEM, 100 );
     view.set_execution( activity_execution::presentation );
     host.assign_activity( view );
     host.activity.do_turn( host );
@@ -2904,12 +3256,12 @@ ccb.content.add(tool)
     {
         platform::detail::callback_scope actor_scope( *runtime, &remote );
         platform::detail::callback_scope nested_actorless( *runtime, nullptr );
-        const auto inherited = get_state( "uses", 0 );
+        const sol::protected_function_result inherited = get_state( "uses", 0 );
         REQUIRE( inherited.valid() );
         CHECK( inherited.get<int>() == 1 );
         g->remove_npc( remote.getID() );
         // A stale explicit actor must never fall back to the host's state.
-        const auto expired = get_state( "uses", 0 );
+        const sol::protected_function_result expired = get_state( "uses", 0 );
         CHECK_FALSE( expired.valid() );
     }
     CHECK( value( host, "uses" ) == 0 );
@@ -2920,9 +3272,9 @@ TEST_CASE( "mp_native_item_activation_transforms_once", "[mp_inventory_activity]
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    remote.set_wielded_item( item( itype_id( "grenade" ) ) );
+    remote.set_wielded_item( item( itype_grenade ) );
     remote.set_moves( 1000 );
-    const auto source = capture_item_source( remote, remote.get_wielded_item() );
+    const item_source source = capture_item_source( remote, remote.get_wielded_item() );
     const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
         out.member( "kind", "item_use" );
         out.member( "source", source );
@@ -2932,9 +3284,9 @@ TEST_CASE( "mp_native_item_activation_transforms_once", "[mp_inventory_activity]
     } );
     fixture.run( remote, request );
     REQUIRE( remote.get_wielded_item() );
-    CHECK( remote.get_wielded_item()->typeId() == itype_id( "grenade_act" ) );
+    CHECK( remote.get_wielded_item()->typeId() == itype_grenade_act );
     const int moves = remote.get_moves();
-    const auto countdown = remote.get_wielded_item()->countdown_point;
+    const time_point countdown = remote.get_wielded_item()->countdown_point;
     fixture.run( remote, request );
     CHECK( remote.get_moves() == moves );
     CHECK( remote.get_wielded_item()->countdown_point == countdown );
@@ -2950,10 +3302,10 @@ TEST_CASE( "mp_item_activation_timer_uses_player_choice_once",
     avatar &host = get_avatar();
     host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
     host.set_moves( 1000 );
-    host.set_wielded_item( item( itype_id( "c4" ) ) );
+    host.set_wielded_item( item( itype_c4 ) );
     remote.set_moves( 1000 );
-    remote.set_wielded_item( item( itype_id( "c4" ) ) );
-    const auto source = capture_item_source( remote, remote.get_wielded_item() );
+    remote.set_wielded_item( item( itype_c4 ) );
+    const item_source source = capture_item_source( remote, remote.get_wielded_item() );
     const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
         out.member( "kind", "item_use" );
         out.member( "source", source );
@@ -2962,20 +3314,20 @@ TEST_CASE( "mp_item_activation_timer_uses_player_choice_once",
         out.member( "target", remote.pos_abs() );
         out.member( "timer_seconds", 37 );
     } );
-    const auto before_rng = rng_get_engine();
+    const std::string before_rng = capture_rng_state();
     fixture.run( remote, request );
-    const auto after_rng = rng_get_engine();
+    const std::string after_rng = capture_rng_state();
     REQUIRE( remote.get_wielded_item() );
-    CHECK( remote.get_wielded_item()->typeId() == itype_id( "c4armed" ) );
+    CHECK( remote.get_wielded_item()->typeId() == itype_c4armed );
     CHECK( remote.get_wielded_item()->countdown_point == calendar::turn + 37_seconds );
     const int moves = remote.get_moves();
     fixture.run( remote, request );
     CHECK( remote.get_moves() == moves );
     CHECK( remote.get_wielded_item()->countdown_point == calendar::turn + 37_seconds );
-    CHECK( rng_get_engine() == after_rng );
+    CHECK( capture_rng_state() == after_rng );
 
     // The same explicit choice follows the same native operation on the host.
-    rng_get_engine() = before_rng;
+    restore_rng_state( before_rng );
     item_activation_choices choices;
     choices.timer_seconds = 37;
     REQUIRE( execute_owned_item_activation( host, host.get_wielded_item(), "transform",
@@ -2983,7 +3335,7 @@ TEST_CASE( "mp_item_activation_timer_uses_player_choice_once",
     CHECK( host.get_wielded_item()->typeId() == remote.get_wielded_item()->typeId() );
     CHECK( host.get_wielded_item()->countdown_point == remote.get_wielded_item()->countdown_point );
     CHECK( host.get_moves() == moves );
-    CHECK( rng_get_engine() == after_rng );
+    CHECK( capture_rng_state() == after_rng );
 
     // Timer is native item state and survives the normal save format.
     std::ostringstream saved;
@@ -2992,7 +3344,7 @@ TEST_CASE( "mp_item_activation_timer_uses_player_choice_once",
     item restored;
     JsonValue value = json_loader::from_string( saved.str() );
     restored.deserialize( value.get_object() );
-    CHECK( restored.typeId() == itype_id( "c4armed" ) );
+    CHECK( restored.typeId() == itype_c4armed );
     CHECK( restored.countdown_point == calendar::turn + 37_seconds );
 }
 
@@ -3004,9 +3356,9 @@ TEST_CASE( "mp_item_activation_rejects_invalid_choices_before_effects",
     restore_on_out_of_scope restore_turn( calendar::turn );
     calendar::turn = calendar::turn_zero + 1_days;
     remote.set_moves( 1000 );
-    remote.set_wielded_item( item( itype_id( "c4" ) ) );
-    const auto source = capture_item_source( remote, remote.get_wielded_item() );
-    const auto before_rng = rng_get_engine();
+    remote.set_wielded_item( item( itype_c4 ) );
+    const item_source source = capture_item_source( remote, remote.get_wielded_item() );
+    const std::string before_rng = capture_rng_state();
     for( const std::optional<int> seconds : { std::optional<int>(), std::optional<int>( 0 ),
             std::optional<int>( -1 ), std::optional<int>( std::numeric_limits<int>::max() ) } ) {
         const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
@@ -3025,18 +3377,18 @@ TEST_CASE( "mp_item_activation_rejects_invalid_choices_before_effects",
         response.allow_omitted_members();
         CHECK( response.get_string( "activity" ).empty() );
         CHECK( remote.get_moves() == 1000 );
-        CHECK( remote.get_wielded_item()->typeId() == itype_id( "c4" ) );
-        CHECK( rng_get_engine() == before_rng );
+        CHECK( remote.get_wielded_item()->typeId() == itype_c4 );
+        CHECK( capture_rng_state() == before_rng );
     }
     // A stale or malicious choice cannot retime a fixed-fuse transformation.
-    remote.set_wielded_item( item( itype_id( "grenade" ) ) );
+    remote.set_wielded_item( item( itype_grenade ) );
     item_activation_choices choices;
     choices.timer_seconds = 90;
     CHECK_FALSE( execute_owned_item_activation( remote, remote.get_wielded_item(), "transform",
                  remote.pos_abs(), false, false, choices ) );
-    CHECK( remote.get_wielded_item()->typeId() == itype_id( "grenade" ) );
+    CHECK( remote.get_wielded_item()->typeId() == itype_grenade );
     CHECK( remote.get_moves() == 1000 );
-    CHECK( rng_get_engine() == before_rng );
+    CHECK( capture_rng_state() == before_rng );
 }
 
 TEST_CASE( "item_activation_choices_preserve_delayed_readiness_and_npc_defaults",
@@ -3047,27 +3399,27 @@ TEST_CASE( "item_activation_choices_preserve_delayed_readiness_and_npc_defaults"
     restore_on_out_of_scope restore_turn( calendar::turn );
     calendar::turn = calendar::turn_zero + 1_days;
     delayed_transform_iuse action;
-    action.transform.target = itype_id( "c4armed" );
+    action.transform.target = itype_c4armed;
     action.set_timer = true;
     action.transform_age = 100;
-    item explosive( itype_id( "c4" ), calendar::turn );
+    item explosive( itype_c4, calendar::turn );
     item_activation_choices choices;
     choices.timer_seconds = 23;
     CHECK_FALSE( action.use_with_choices( &remote, explosive, &get_map(), remote.pos_bub(), choices ) );
-    CHECK( explosive.typeId() == itype_id( "c4" ) );
+    CHECK( explosive.typeId() == itype_c4 );
     explosive.set_age( 100_seconds );
     REQUIRE( action.time_to_do( explosive ) == 0 );
     REQUIRE( action.use_with_choices( &remote, explosive, &get_map(), remote.pos_bub(), choices ) );
-    CHECK( explosive.typeId() == itype_id( "c4armed" ) );
+    CHECK( explosive.typeId() == itype_c4armed );
     CHECK( explosive.countdown_point == calendar::turn + 23_seconds );
 
     // An ordinary NPC call, with no player choice channel, keeps the type's fuse.
-    item automatic( itype_id( "c4" ) );
+    item automatic( itype_c4 );
     iuse_transform normal;
-    normal.transform.target = itype_id( "c4armed" );
+    normal.transform.target = itype_c4armed;
     normal.set_timer = true;
     REQUIRE( normal.use( &remote, automatic, &get_map(), remote.pos_bub() ) );
-    CHECK( automatic.typeId() == itype_id( "c4armed" ) );
+    CHECK( automatic.typeId() == itype_c4armed );
     CHECK( automatic.countdown_point == calendar::turn + 6_seconds );
 }
 
@@ -3080,7 +3432,7 @@ TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
     reload_fixture fixture;
     map &here = get_map();
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim(
+    player_control controller = g->player_controls().claim(
                           cata_mp::player_id( std::string( 32, '9' ) ), remote );
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 62, 60, 0 ) );
@@ -3094,9 +3446,9 @@ TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
     for( Character *who : { static_cast<Character *>( &host ), static_cast<Character *>( &remote ) } ) {
         item tool( tool_id );
         if( method == "JACKHAMMER" ) {
-            tool.ammo_set( itype_id( "gasoline" ), 1200 );
+            tool.ammo_set( itype_gasoline, 1200 );
         }
-        who->set_wielded_item( std::move( tool ) );
+        who->set_wielded_item( tool );
         who->set_moves( 1000 );
     }
     const std::string start = fixture.request( remote, "start", [&]( JsonOut &out ) {
@@ -3119,7 +3471,7 @@ TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
     REQUIRE( execute_owned_item_activation( host, host.get_wielded_item(), method,
                                             here.get_abs( target ), false, false ) );
     REQUIRE( host.activity );
-    const auto host_ammo = host.get_wielded_item()->ammo_remaining();
+    const int host_ammo = host.get_wielded_item()->ammo_remaining();
     remote.activity.moves_left = 1;
     remote.set_moves( 100 );
     const std::string finish = fixture.request( remote, "step" );
@@ -3127,17 +3479,17 @@ TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
     CHECK_FALSE( remote.activity );
     CHECK( here.ter( target ) != original );
     if( method == "PICK_LOCK" ) {
-        CHECK( remote.get_skill_level_object( skill_id( "traps" ) ).exercise() > 0 );
-        CHECK( host.get_skill_level_object( skill_id( "traps" ) ).exercise() == 0 );
+        CHECK( remote.get_skill_level_object( skill_traps ).exercise() > 0 );
+        CHECK( host.get_skill_level_object( skill_traps ).exercise() == 0 );
     }
     if( method == "JACKHAMMER" ) {
         CHECK( remote.get_wielded_item()->ammo_remaining() < host_ammo );
     }
-    const auto after_rng = rng_get_engine();
-    const auto drops = here.i_at( target ).size();
-    const auto remote_ammo = remote.get_wielded_item()->ammo_remaining();
+    const std::string after_rng = capture_rng_state();
+    const size_t drops = here.i_at( target ).size();
+    const int remote_ammo = remote.get_wielded_item()->ammo_remaining();
     fixture.run( remote, finish );
-    CHECK( rng_get_engine() == after_rng );
+    CHECK( capture_rng_state() == after_rng );
     CHECK( here.i_at( target ).size() == drops );
     CHECK( remote.get_wielded_item()->ammo_remaining() == remote_ammo );
 
@@ -3148,7 +3500,7 @@ TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
     CHECK_FALSE( host.activity );
     CHECK( here.i_at( target ).size() == drops );
     CHECK( host.get_wielded_item()->ammo_remaining() == host_ammo );
-    CHECK( rng_get_engine() == after_rng );
+    CHECK( capture_rng_state() == after_rng );
 }
 
 TEST_CASE( "mp_adjacent_tools_reject_bad_targets_and_lost_access",
@@ -3157,20 +3509,20 @@ TEST_CASE( "mp_adjacent_tools_reject_bad_targets_and_lost_access",
     reload_fixture fixture;
     map &here = get_map();
     npc &remote = fixture.remote();
-    remote.set_wielded_item( item( itype_id( "test_halligan" ) ) );
+    remote.set_wielded_item( item( itype_test_halligan ) );
     remote.set_moves( 1000 );
-    const auto before_rng = rng_get_engine();
+    const std::string before_rng = capture_rng_state();
     for( const tripoint_bub_ms &target : { remote.pos_bub(), tripoint_bub_ms( 64, 60, 0 ),
                                            tripoint_bub_ms( 60, 60, 1 ) } ) {
-        here.ter_set( target, ter_str_id( "test_t_prying1" ) );
+        here.ter_set( target, ter_test_t_prying1 );
         CHECK_FALSE( execute_owned_item_activation( remote, remote.get_wielded_item(), "CROWBAR",
                      here.get_abs( target ), false, false ) );
         CHECK_FALSE( remote.activity );
         CHECK( remote.get_moves() == 1000 );
-        CHECK( rng_get_engine() == before_rng );
+        CHECK( capture_rng_state() == before_rng );
     }
     const tripoint_bub_ms target( 61, 60, 0 );
-    here.ter_set( target, ter_str_id( "test_t_prying1" ) );
+    here.ter_set( target, ter_test_t_prying1 );
     REQUIRE( execute_owned_item_activation( remote, remote.get_wielded_item(), "CROWBAR",
                                             here.get_abs( target ), false, false ) );
     SECTION( "tool_removed" ) {
@@ -3181,7 +3533,7 @@ TEST_CASE( "mp_adjacent_tools_reject_bad_targets_and_lost_access",
     }
     SECTION( "target_changed_while_saved" ) {
         save_reload_activity( remote );
-        here.ter_set( target, ter_str_id( "t_door_locked" ) );
+        here.ter_set( target, ter_t_door_locked );
     }
     remote.activity.moves_left = 1;
     remote.set_moves( 100 );
@@ -3196,8 +3548,8 @@ TEST_CASE( "owned_tool_target_tracks_absolute_surface_and_vehicle_identity",
     reload_fixture fixture;
     map &here = get_map();
     const tripoint_bub_ms target( 61, 60, 0 );
-    here.ter_set( target, ter_str_id( "t_door_locked" ) );
-    const auto captured = tool_activity_target::capture( here, here.get_abs( target ) );
+    here.ter_set( target, ter_t_door_locked );
+    const tool_activity_target captured = tool_activity_target::capture( here, here.get_abs( target ) );
     std::ostringstream stream;
     JsonOut out( stream );
     captured.serialize( out );
@@ -3206,13 +3558,13 @@ TEST_CASE( "owned_tool_target_tracks_absolute_surface_and_vehicle_identity",
     restored.deserialize( value.get_object() );
     CHECK( restored.position == here.get_abs( target ) );
     CHECK( restored.matches( here ) );
-    here.ter_set( target, ter_str_id( "t_door_c" ) );
+    here.ter_set( target, ter_t_door_c );
     CHECK_FALSE( restored.matches( here ) );
-    here.ter_set( target, ter_str_id( "t_pavement" ) );
-    const auto empty = tool_activity_target::capture( here, here.get_abs( target ) );
-    vehicle *car = here.add_vehicle( vproto_id( "car" ), target, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    here.ter_set( target, ter_t_pavement );
+    const tool_activity_target empty = tool_activity_target::capture( here, here.get_abs( target ) );
+    vehicle *car = here.add_vehicle( vehicle_prototype_car, target, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( car );
-    const auto occupied = tool_activity_target::capture( here, here.get_abs( target ) );
+    const tool_activity_target occupied = tool_activity_target::capture( here, here.get_abs( target ) );
     CHECK( occupied.vehicle == car->uid().get_value() );
     CHECK_FALSE( empty.matches( here ) );
     bool checked_lock = false;
@@ -3220,10 +3572,10 @@ TEST_CASE( "owned_tool_target_tracks_absolute_surface_and_vehicle_identity",
         if( car->part( i ).info().has_flag( "LOCKABLE_DOOR" ) ) {
             if( !car->part_has_lock( i ) ) {
                 const point_rel_ms mount = car->part( i ).mount;
-                REQUIRE( car->install_part( here, mount, vpart_id( "door_lock" ) ) >= 0 );
+                REQUIRE( car->install_part( here, mount, vpart_door_lock ) >= 0 );
             }
             car->part( i ).locked = true;
-            const auto door = tool_activity_target::capture( here,
+            const tool_activity_target door = tool_activity_target::capture( here,
                               here.get_abs( car->bub_part_pos( here, i ) ) );
             REQUIRE( door.locked_part != 0 );
             CHECK( door.matches( here ) );
@@ -3244,28 +3596,28 @@ TEST_CASE( "automatic_mining_is_authoritative_and_only_completed_work_queues_mov
     reload_fixture fixture;
     map &here = get_map();
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim(
+    player_control controller = g->player_controls().claim(
                           cata_mp::player_id( std::string( 32, '9' ) ), remote );
     avatar &local = get_avatar();
     local.clear_destination();
     const on_out_of_scope clear_route( [&local]() { local.clear_destination(); } );
     const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
-    here.ter_set( target, ter_str_id( "t_rock" ) );
+    here.ter_set( target, ter_t_rock );
     local.setpos( here, remote.pos_bub(), false );
     const auto pending_mining = capture_automove_step( local, here, here.get_abs( target ), true );
     REQUIRE( pending_mining );
     local.setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    remote.set_wielded_item( item( itype_id( "jackhammer_mining" ) ) );
+    remote.set_wielded_item( item( itype_jackhammer_mining ) );
     item_location tool = remote.get_wielded_item();
-    tool->ammo_set( itype_id( "gasoline" ), 1200 );
+    tool->ammo_set( itype_gasoline, 1200 );
     const std::string outcome = GENERATE( "finish", "cancel", "empty", "stunned", "lost_tool" );
     CAPTURE( outcome );
     if( outcome == "empty" ) {
-        tool->ammo_set( itype_id( "gasoline" ), 0 );
+        tool->ammo_set( itype_gasoline, 0 );
     } else if( outcome == "stunned" ) {
-        remote.add_effect( efftype_id( "stunned" ), 1_minutes );
+        remote.add_effect( effect_stunned, 1_minutes );
     }
-    const auto rng_before_start = rng_get_engine();
+    const std::string rng_before_start = capture_rng_state();
     const std::string wire = fixture.request( remote, "start", [&]( JsonOut &out ) {
         out.member( "kind", "auto_mine" );
         out.member( "source", cata_mp::capture_item_source( remote, tool ) );
@@ -3274,16 +3626,16 @@ TEST_CASE( "automatic_mining_is_authoritative_and_only_completed_work_queues_mov
         out.member( "target", here.get_abs( target ) );
     } );
     const std::string started = fixture.run( remote, wire );
-    const auto rng_after_start = rng_get_engine();
+    const std::string rng_after_start = capture_rng_state();
     fixture.run( remote, wire );
     const bool accepted = outcome != "empty" && outcome != "stunned";
     CHECK( static_cast<bool>( remote.activity ) == accepted );
     CHECK( static_cast<bool>( fixture.reload.automatic_mining_target ) == accepted );
-    CHECK( rng_get_engine() == rng_after_start );
+    CHECK( capture_rng_state() == rng_after_start );
     if( !accepted ) {
-        CHECK( rng_get_engine() == rng_before_start );
+        CHECK( capture_rng_state() == rng_before_start );
     }
-    CHECK( here.ter( target ) == ter_str_id( "t_rock" ).id() );
+    CHECK( here.ter( target ) == ter_t_rock.id() );
     std::string result = started;
     if( accepted ) {
         save_reload_activity( remote );
@@ -3312,16 +3664,16 @@ TEST_CASE( "automatic_mining_is_authoritative_and_only_completed_work_queues_mov
     player_activity view_activity{ invoke_item_activity_actor( item_location(), std::string() ) };
     view_activity.set_execution( activity_execution::presentation );
     local.assign_activity( view_activity );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = fixture.sequence;
     view.pending_automove = pending_mining;
     view.automatic_mining = true;
-    const auto rng_before_replica = rng_get_engine();
+    const std::string rng_before_replica = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( result ) );
     CHECK_FALSE( local.has_destination() );
     REQUIRE( cata_mp::client_apply_message( result ) );
-    auto &turn = g->multiplayer_session().client_turn;
+    cata_mp::client_turn_state &turn = g->multiplayer_session().client_turn;
     turn.client_waiting_for_ack = true;
     local.set_moves( 100 );
     cata_mp::client_update_inventory_activity_view();
@@ -3331,7 +3683,7 @@ TEST_CASE( "automatic_mining_is_authoritative_and_only_completed_work_queues_mov
     cata_mp::client_update_inventory_activity_view();
     CHECK( local.has_destination() == finished );
     CHECK_FALSE( local.activity );
-    CHECK( rng_get_engine() == rng_before_replica );
+    CHECK( capture_rng_state() == rng_before_replica );
     if( finished ) {
         CHECK( local.get_next_auto_move_direction() == ACTION_MOVE_RIGHT );
         CHECK_FALSE( local.has_destination() );
@@ -3353,35 +3705,35 @@ TEST_CASE( "automatic_and_examine_tool_entries_only_create_client_views",
     g->mostseen = 0;
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
-    auto rng_before = rng_get_engine();
+    std::string rng_before = capture_rng_state();
     SECTION( "automatic_mining" ) {
-        here.ter_set( target, ter_str_id( "t_rock" ) );
-        who.set_wielded_item( item( itype_id( "pickaxe" ) ) );
-        rng_before = rng_get_engine();
+        here.ter_set( target, ter_t_rock );
+        who.set_wielded_item( item( itype_pickaxe ) );
+        rng_before = capture_rng_state();
         REQUIRE( cata_mp::client_auto_mine( here.get_abs( target ) ) );
         REQUIRE( g->multiplayer_session().client_inventory_activity.pending_automove );
         CHECK( g->multiplayer_session().client_inventory_activity.automatic_mining );
-        CHECK( here.ter( target ) == ter_str_id( "t_rock" ).id() );
+        CHECK( here.ter( target ) == ter_t_rock.id() );
         CHECK_FALSE( who.has_destination() );
     }
     SECTION( "examine_pry" ) {
-        here.ter_set( target, ter_str_id( "test_t_prying1" ) );
-        who.set_wielded_item( item( itype_id( "test_halligan" ) ) );
-        rng_before = rng_get_engine();
+        here.ter_set( target, ter_test_t_prying1 );
+        who.set_wielded_item( item( itype_test_halligan ) );
+        rng_before = capture_rng_state();
         iexamine::locked_object( who, target );
-        CHECK( here.ter( target ) == ter_str_id( "test_t_prying1" ).id() );
+        CHECK( here.ter( target ) == ter_test_t_prying1.id() );
     }
     SECTION( "explicit_lockpick_target" ) {
-        here.ter_set( target, ter_str_id( "t_door_locked" ) );
-        who.set_wielded_item( item( itype_id( "test_sonic_screwdriver" ) ) );
+        here.ter_set( target, ter_t_door_locked );
+        who.set_wielded_item( item( itype_test_sonic_screwdriver ) );
         std::string method = "PICK_LOCK";
-        rng_before = rng_get_engine();
+        rng_before = capture_rng_state();
         REQUIRE( cata_mp::client_activate_item( who.get_wielded_item(), method, here.get_abs( target ) ) );
-        CHECK( here.ter( target ) == ter_str_id( "t_door_locked" ).id() );
+        CHECK( here.ter( target ) == ter_t_door_locked.id() );
     }
     CHECK( who.activity.execution() == activity_execution::presentation );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     CHECK_FALSE( dynamic_cast<prying_activity_actor *>( who.activity.actor.get() ) );
     CHECK_FALSE( dynamic_cast<lockpick_activity_actor *>( who.activity.actor.get() ) );
 }
@@ -3393,8 +3745,8 @@ TEST_CASE( "examine_prying_preserves_tools_without_a_manual_use_action",
     npc &who = fixture.remote();
     map &here = get_map();
     const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
-    here.ter_set( target, ter_str_id( "test_t_prying1" ) );
-    who.set_wielded_item( item( itype_id( "nail_puller_bronze" ) ) );
+    here.ter_set( target, ter_test_t_prying1 );
+    who.set_wielded_item( item( itype_nail_puller_bronze ) );
     item_location tool = who.get_wielded_item();
     REQUIRE_FALSE( supports_owned_item_activation( *tool, "CROWBAR" ) );
     const std::string start = fixture.request( who, "start", [&]( JsonOut &out ) {
@@ -3404,25 +3756,25 @@ TEST_CASE( "examine_prying_preserves_tools_without_a_manual_use_action",
         out.member( "target", here.get_abs( target ) );
     } );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_PRYING" ) );
+    REQUIRE( who.activity.id() == ACT_PRYING );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     who.activity.moves_left = 1;
     who.set_moves( 100 );
     const std::string finish = fixture.request( who, "step" );
     fixture.run( who, finish );
-    CHECK( here.ter( target ) == ter_str_id( "t_dirt" ).id() );
-    const auto count = here.i_at( target ).size();
-    const auto rng_after = rng_get_engine();
+    CHECK( here.ter( target ) == ter_t_dirt.id() );
+    const size_t count = here.i_at( target ).size();
+    const std::string rng_after = capture_rng_state();
     fixture.run( who, finish );
     CHECK( here.i_at( target ).size() == count );
-    CHECK( rng_get_engine() == rng_after );
+    CHECK( capture_rng_state() == rng_after );
 }
 
 namespace
 {
 unsigned int prepare_targeted_bionic( Character &who, const bionic_id &id )
 {
-    who.add_bionic( bionic_id( "bio_power_storage" ) );
+    who.add_bionic( bio_power_storage );
     const unsigned int uid = who.add_bionic( id );
     who.set_max_power_level( 200_kJ );
     who.set_power_level( 200_kJ );
@@ -3431,13 +3783,13 @@ unsigned int prepare_targeted_bionic( Character &who, const bionic_id &id )
 }
 void prepare_bionic_target( map &here, const tripoint_bub_ms &target, const bionic_id &id )
 {
-    if( id == bionic_id( "bio_lockpick" ) ) {
-        here.ter_set( target, ter_str_id( "t_door_locked" ) );
-    } else if( id == bionic_id( "bio_lighter" ) ) {
-        here.add_item_or_charges( target, item( itype_id( "2x4" ) ) );
+    if( id == bio_lockpick ) {
+        here.ter_set( target, ter_t_door_locked );
+    } else if( id == bio_lighter ) {
+        here.add_item_or_charges( target, item( itype_2x4 ) );
         REQUIRE( here.is_flammable( target ) );
     } else {
-        here.furn_set( target, furn_str_id( "f_console" ) );
+        here.furn_set( target, furn_f_console );
         REQUIRE( here.has_flag( ter_furn_flag::TFLAG_CONSOLE, target ) );
     }
 }
@@ -3457,7 +3809,7 @@ TEST_CASE( "targeted_bionics_execute_once_on_the_owning_player", "[mp_bionic]" )
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim(
+    player_control controller = g->player_controls().claim(
                           cata_mp::player_id( std::string( 32, '9' ) ), remote );
     avatar &host = get_avatar();
     map &here = get_map();
@@ -3468,28 +3820,28 @@ TEST_CASE( "targeted_bionics_execute_once_on_the_owning_player", "[mp_bionic]" )
     prepare_targeted_bionic( host, id );
     const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
     prepare_bionic_target( here, target, id );
-    const auto before = remote.get_power_level();
+    const units::energy before = remote.get_power_level();
     const std::string wire = bionic_request( fixture, remote, uid, id, here.get_abs( target ) );
     fixture.run( remote, wire );
     CHECK( remote.get_power_level() == before - id->power_activate );
     CHECK( host.get_power_level() == before );
-    const auto after_start = rng_get_engine();
+    const std::string after_start = capture_rng_state();
     fixture.run( remote, wire );
-    CHECK( rng_get_engine() == after_start );
+    CHECK( capture_rng_state() == after_start );
     CHECK( remote.get_power_level() == before - id->power_activate );
-    if( id == bionic_id( "bio_lockpick" ) ) {
-        REQUIRE( remote.activity.id() == activity_id( "ACT_LOCKPICK" ) );
+    if( id == bio_lockpick ) {
+        REQUIRE( remote.activity.id() == ACT_LOCKPICK );
         save_reload_activity( remote );
         remote.set_moves( 100 );
         remote.activity.moves_left = 1;
         fixture.run( remote, fixture.request( remote, "step" ) );
         CHECK_FALSE( remote.activity );
-        CHECK( here.ter( target ) == ter_str_id( "t_door_c" ).id() );
-    } else if( id == bionic_id( "bio_lighter" ) ) {
+        CHECK( here.ter( target ) == ter_t_door_c.id() );
+    } else if( id == bio_lighter ) {
         CHECK( here.get_field( target, fd_fire ) );
         CHECK( remote.get_moves() == 0 );
     } else {
-        CHECK( here.furn( target ) == furn_str_id( "f_machinery_electronic" ).id() );
+        CHECK( here.furn( target ) == furn_f_machinery_electronic.id() );
         CHECK( remote.get_moves() == 0 );
     }
 }
@@ -3499,7 +3851,7 @@ TEST_CASE( "targeted_bionics_reject_invalid_intents_and_cancel_removed_implants"
     reload_fixture fixture;
     npc &remote = fixture.remote();
     map &here = get_map();
-    const bionic_id id( "bio_lockpick" );
+    const bionic_id &id = bio_lockpick;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     const tripoint_bub_ms target = remote.pos_bub() + tripoint::east;
     prepare_bionic_target( here, target, id );
@@ -3510,11 +3862,11 @@ TEST_CASE( "targeted_bionics_reject_invalid_intents_and_cancel_removed_implants"
     } else if( failure == "shorted" ) {
         ( *remote.find_bionic_by_uid( uid ) )->incapacitated_time = 1_minutes;
     }
-    const auto before_power = remote.get_power_level();
-    const auto before_rng = rng_get_engine();
+    const units::energy before_power = remote.get_power_level();
+    const std::string before_rng = capture_rng_state();
     fixture.run( remote, bionic_request( fixture, remote,
                                          failure == "wrong_uid" ? uid + 100 : uid,
-                                         failure == "wrong_type" ? bionic_id( "bio_lighter" ) : id,
+                                         failure == "wrong_type" ? bio_lighter : id,
                                          here.get_abs( failure == "far" ? target + tripoint::east : target ) ) );
     if( failure == "removed_after_load" ) {
         REQUIRE( remote.activity );
@@ -3528,17 +3880,17 @@ TEST_CASE( "targeted_bionics_reject_invalid_intents_and_cancel_removed_implants"
         fixture.run( remote, fixture.request( remote, "step" ) );
     } else {
         CHECK( remote.get_power_level() == before_power );
-        CHECK( rng_get_engine() == before_rng );
+        CHECK( capture_rng_state() == before_rng );
     }
     CHECK_FALSE( remote.activity );
-    CHECK( here.ter( target ) == ter_str_id( "t_door_locked" ).id() );
+    CHECK( here.ter( target ) == ter_t_door_locked.id() );
 }
 
 TEST_CASE( "bionic_identity_is_not_recycled_after_character_restore", "[mp_bionic][bionics]" )
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const bionic_id id( "bio_lockpick" );
+    const bionic_id &id = bio_lockpick;
     const unsigned int uid = prepare_targeted_bionic( who, id );
     who.remove_bionic( **who.find_bionic_by_uid( uid ) );
     const std::string mode = GENERATE( "save", "player_state", "turn_state" );
@@ -3571,12 +3923,12 @@ TEST_CASE( "bionic_menu_and_examine_only_queue_client_requests", "[mp_bionic]" )
     reload_fixture fixture;
     avatar &who = get_avatar();
     map &here = get_map();
-    const bionic_id id( "bio_lockpick" );
+    const bionic_id &id = bio_lockpick;
     const unsigned int uid = prepare_targeted_bionic( who, id );
     const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
     prepare_bionic_target( here, target, id );
-    const auto before_power = who.get_power_level();
-    const auto before_rng = rng_get_engine();
+    const units::energy before_power = who.get_power_level();
+    const std::string before_rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     SECTION( "native_menu_entry" ) {
         bool close_ui = false;
@@ -3590,8 +3942,8 @@ TEST_CASE( "bionic_menu_and_examine_only_queue_client_requests", "[mp_bionic]" )
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK( who.activity.execution() == activity_execution::presentation );
     CHECK( who.get_power_level() == before_power );
-    CHECK( rng_get_engine() == before_rng );
-    CHECK( here.ter( target ) == ter_str_id( "t_door_locked" ).id() );
+    CHECK( capture_rng_state() == before_rng );
+    CHECK( here.ter( target ) == ter_t_door_locked.id() );
 }
 
 TEST_CASE( "bionic_emp_affects_the_character_at_the_target_tile", "[mp_bionic]" )
@@ -3601,11 +3953,11 @@ TEST_CASE( "bionic_emp_affects_the_character_at_the_target_tile", "[mp_bionic]" 
     avatar &host = get_avatar();
     map &here = get_map();
     host.setpos( here, remote.pos_bub() + tripoint::west );
-    const bionic_id id( "bio_emp" );
+    const bionic_id &id = bio_emp;
     const unsigned int uid = prepare_targeted_bionic( host, id );
-    prepare_targeted_bionic( remote, bionic_id( "bio_lockpick" ) );
-    const auto host_power = host.get_power_level();
-    const auto remote_power = remote.get_power_level();
+    prepare_targeted_bionic( remote, bio_lockpick );
+    const units::energy host_power = host.get_power_level();
+    const units::energy remote_power = remote.get_power_level();
     REQUIRE( execute_owned_bionic_action( host, uid, id, { remote.pos_abs() } ) );
     CHECK( host.get_power_level() == host_power - id->power_activate );
     CHECK( remote.get_power_level() < remote_power );
@@ -3628,11 +3980,11 @@ TEST_CASE( "bionic_native_hooks_keep_lua_state_on_the_acting_character", "[mp_bi
     platform::runtime_world_ready( true );
     lua["ccb"] = ccb;
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim(
+    player_control controller = g->player_controls().claim(
                           cata_mp::player_id( std::string( 32, '9' ) ), remote );
     avatar &host = get_avatar();
     host.setpos( get_map(), tripoint_bub_ms( 65, 60, 0 ) );
-    const bionic_id id( "bio_lockpick" );
+    const bionic_id &id = bio_lockpick;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     const unsigned int host_uid = prepare_targeted_bionic( host, id );
     const bool remove_during_hook = GENERATE( false, true );
@@ -3644,7 +3996,7 @@ TEST_CASE( "bionic_native_hooks_keep_lua_state_on_the_acting_character", "[mp_bi
             }
         }
     } );
-    const auto registered = lua.safe_script( R"lua(
+    const sol::protected_function_result registered = lua.safe_script( R"lua(
 ccb.runtime.handler("activated", function(context)
     local state = ccb.state.character
     state.set("uses", state.get("uses", 0) + 1)
@@ -3654,7 +4006,7 @@ ccb.runtime.hook("on_bionic_activated", "activated")
 )lua", sol::script_pass_on_error );
     REQUIRE( registered.valid() );
     const auto uses = [&]( Character &who ) {
-        const auto &values = who.lua_character_state.for_mod( mod );
+        const cata::lua_platform::script_persistent_state &values = who.lua_character_state.for_mod( mod );
         const auto found = values.find( "uses" );
         return found == values.end() ? int64_t( 0 ) : std::get<int64_t>( found->second );
     };
@@ -3695,31 +4047,31 @@ TEST_CASE( "bionic_switches_set_only_the_owning_players_native_state", "[mp_bion
     reload_fixture fixture;
     npc &remote = fixture.remote();
     avatar &host = get_avatar();
-    const bionic_id id( "bio_night_vision" );
+    const bionic_id &id = bio_night_vision;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     const unsigned int host_uid = prepare_targeted_bionic( host, id );
-    const auto host_power = host.get_power_level();
-    const auto before = remote.get_power_level();
+    const units::energy host_power = host.get_power_level();
+    const units::energy before = remote.get_power_level();
     const std::string start = bionic_switch_request( fixture, remote, uid, id, true );
     fixture.run( remote, start );
     CHECK( remote.has_active_bionic( id ) );
-    CHECK( remote.has_flag( json_character_flag( "NIGHT_VISION" ) ) );
+    CHECK( remote.has_flag( json_flag_NIGHT_VISION ) );
     CHECK_FALSE( host.has_active_bionic( id ) );
     CHECK( host.get_power_level() == host_power );
     CHECK( remote.get_power_level() == before - id->power_activate );
-    const auto after_start = rng_get_engine();
+    const std::string after_start = capture_rng_state();
     fixture.run( remote, start );
-    CHECK( rng_get_engine() == after_start );
+    CHECK( capture_rng_state() == after_start );
     CHECK( remote.get_power_level() == before - id->power_activate );
 
     const std::string stop = bionic_switch_request( fixture, remote, uid, id, false );
     const std::string result = fixture.run( remote, stop );
     CHECK_FALSE( remote.has_active_bionic( id ) );
-    CHECK_FALSE( remote.has_flag( json_character_flag( "NIGHT_VISION" ) ) );
+    CHECK_FALSE( remote.has_flag( json_flag_NIGHT_VISION ) );
     CHECK( remote.get_power_level() == before - id->power_activate - id->power_deactivate );
-    const auto after_stop = rng_get_engine();
+    const std::string after_stop = capture_rng_state();
     fixture.run( remote, stop );
-    CHECK( rng_get_engine() == after_stop );
+    CHECK( capture_rng_state() == after_stop );
     CHECK( remote.get_power_level() == before - id->power_activate - id->power_deactivate );
 
     // The real reply updates the replica without rerunning native callbacks.
@@ -3730,18 +4082,18 @@ TEST_CASE( "bionic_switches_set_only_the_owning_players_native_state", "[mp_bion
     player_activity activity{ invoke_item_activity_actor( item_location(), std::string() ) };
     activity.set_execution( activity_execution::presentation );
     host.assign_activity( activity );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = fixture.sequence;
-    const auto rng_before_reply = rng_get_engine();
+    const std::string rng_before_reply = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( result ) );
     REQUIRE( cata_mp::client_apply_message( result ) );
     cata_mp::client_update_inventory_activity_view();
     CHECK_FALSE( host.activity );
     CHECK_FALSE( host.has_active_bionic( id ) );
-    CHECK_FALSE( host.has_flag( json_character_flag( "NIGHT_VISION" ) ) );
+    CHECK_FALSE( host.has_flag( json_flag_NIGHT_VISION ) );
     CHECK( host.get_power_level() == remote.get_power_level() );
-    CHECK( rng_get_engine() == rng_before_reply );
+    CHECK( capture_rng_state() == rng_before_reply );
 }
 
 TEST_CASE( "bionic_switches_preserve_exclusion_and_native_periodic_effects", "[mp_bionic_switch]" )
@@ -3750,25 +4102,25 @@ TEST_CASE( "bionic_switches_preserve_exclusion_and_native_periodic_effects", "[m
     npc &remote = fixture.remote();
     avatar &host = get_avatar();
     SECTION( "hearing_and_earplugs" ) {
-        const bionic_id hearing( "bio_ears" );
+        const bionic_id &hearing = bio_ears;
         const unsigned int hearing_uid = prepare_targeted_bionic( remote, hearing );
         prepare_targeted_bionic( host, hearing );
         if( !host.has_active_bionic( hearing ) ) {
             REQUIRE( host.activate_bionic( **host.find_bionic_by_type( hearing ) ) );
         }
-        const bionic_id plugs( "bio_earplugs" );
+        const bionic_id &plugs = bio_earplugs;
         const auto plug = remote.find_bionic_by_type( plugs );
         REQUIRE( plug );
         fixture.run( remote, bionic_switch_request( fixture, remote, ( *plug )->get_uid(), plugs, true ) );
-        CHECK( remote.has_flag( json_character_flag( "DEAF" ) ) );
+        CHECK( remote.has_flag( json_flag_DEAF ) );
         CHECK_FALSE( remote.has_active_bionic( hearing ) );
         CHECK( host.has_active_bionic( hearing ) );
         fixture.run( remote, bionic_switch_request( fixture, remote, hearing_uid, hearing, true ) );
-        CHECK_FALSE( remote.has_flag( json_character_flag( "DEAF" ) ) );
+        CHECK_FALSE( remote.has_flag( json_flag_DEAF ) );
         CHECK( remote.has_active_bionic( hearing ) );
     }
     SECTION( "painkiller_tick" ) {
-        const bionic_id id( "bio_painkiller" );
+        const bionic_id &id = bio_painkiller;
         const unsigned int uid = prepare_targeted_bionic( remote, id );
         prepare_targeted_bionic( host, id );
         remote.set_pain( 100 );
@@ -3776,27 +4128,27 @@ TEST_CASE( "bionic_switches_preserve_exclusion_and_native_periodic_effects", "[m
         host.set_painkiller( 0 );
         fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
         REQUIRE( remote.has_active_bionic( id ) );
-        const auto before_tick = remote.get_power_level();
+        const units::energy before_tick = remote.get_power_level();
         remote.process_bionic( **remote.find_bionic_by_uid( uid ) );
         CHECK( remote.get_painkiller() == 1 );
         CHECK( remote.get_power_level() == before_tick - id->power_trigger );
         CHECK( host.get_painkiller() == 0 );
     }
     SECTION( "retract_existing_weapon" ) {
-        const bionic_id id( "bio_claws" );
+        const bionic_id &id = bio_claws;
         const unsigned int uid = prepare_targeted_bionic( remote, id );
         REQUIRE( remote.activate_bionic( **remote.find_bionic_by_uid( uid ) ) );
         REQUIRE( remote.is_using_bionic_weapon() );
-        host.set_wielded_item( item( itype_id( "hammer" ) ) );
+        host.set_wielded_item( item( itype_hammer ) );
         fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, false ) );
         CHECK_FALSE( remote.has_active_bionic( id ) );
         CHECK_FALSE( remote.is_using_bionic_weapon() );
         CHECK_FALSE( remote.get_wielded_item() );
         REQUIRE( host.get_wielded_item() );
-        CHECK( host.get_wielded_item()->typeId() == itype_id( "hammer" ) );
+        CHECK( host.get_wielded_item()->typeId() == itype_hammer );
     }
     SECTION( "evaporator_uses_its_owners_environment" ) {
-        const bionic_id id( "bio_evap" );
+        const bionic_id &id = bio_evap;
         const unsigned int uid = prepare_targeted_bionic( remote, id );
         const bool underwater = GENERATE( true, false );
         remote.set_underwater( underwater );
@@ -3812,14 +4164,14 @@ TEST_CASE( "bionic_switch_client_entries_do_not_toggle_the_replica", "[mp_bionic
 {
     reload_fixture fixture;
     avatar &who = get_avatar();
-    const bionic_id id( "bio_night_vision" );
+    const bionic_id &id = bio_night_vision;
     const unsigned int uid = prepare_targeted_bionic( who, id );
     const bool enabled = GENERATE( true, false );
     if( !enabled ) {
         REQUIRE( who.activate_bionic( **who.find_bionic_by_uid( uid ) ) );
     }
-    const auto before_power = who.get_power_level();
-    const auto before_rng = rng_get_engine();
+    const units::energy before_power = who.get_power_level();
+    const std::string before_rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     if( enabled ) {
         bool close_ui = false;
@@ -3830,7 +4182,7 @@ TEST_CASE( "bionic_switch_client_entries_do_not_toggle_the_replica", "[mp_bionic
     }
     CHECK( who.has_active_bionic( id ) == !enabled );
     CHECK( who.get_power_level() == before_power );
-    CHECK( rng_get_engine() == before_rng );
+    CHECK( capture_rng_state() == before_rng );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
 }
 
@@ -3839,29 +4191,29 @@ TEST_CASE( "bionic_switches_reject_missing_choices_and_invalid_stops", "[mp_bion
     reload_fixture fixture;
     npc &remote = fixture.remote();
     SECTION( "missing_remote_choice" ) {
-        const bionic_id id( "bio_remote" );
+        const bionic_id &id = bio_remote;
         const unsigned int uid = prepare_targeted_bionic( remote, id );
-        const auto power = remote.get_power_level();
-        const auto rng = rng_get_engine();
+        const units::energy power = remote.get_power_level();
+        const std::string rng = capture_rng_state();
         fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
         CHECK_FALSE( remote.has_active_bionic( id ) );
         CHECK( remote.get_power_level() == power );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
     SECTION( "shorted_or_wrong_identity" ) {
-        const bionic_id id( "bio_night_vision" );
+        const bionic_id &id = bio_night_vision;
         const unsigned int uid = prepare_targeted_bionic( remote, id );
         REQUIRE( remote.activate_bionic( **remote.find_bionic_by_uid( uid ) ) );
         const bool shorted = GENERATE( true, false );
         if( shorted ) {
             ( *remote.find_bionic_by_uid( uid ) )->incapacitated_time = 1_minutes;
         }
-        const auto power = remote.get_power_level();
-        const auto rng = rng_get_engine();
+        const units::energy power = remote.get_power_level();
+        const std::string rng = capture_rng_state();
         fixture.run( remote, bionic_switch_request( fixture, remote, shorted ? uid : uid + 100, id, false ) );
         CHECK( ( *remote.find_bionic_by_uid( uid ) )->powered );
         CHECK( remote.get_power_level() == power );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
 }
 
@@ -3883,13 +4235,13 @@ TEST_CASE( "bionic_switch_hooks_retain_owned_activities_and_safe_deactivation", 
     platform::runtime_world_ready( true );
     lua["ccb"] = ccb;
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim(
+    player_control controller = g->player_controls().claim(
                           cata_mp::player_id( std::string( 32, '9' ) ), remote );
-    const bionic_id id( "bio_night_vision" );
+    const bionic_id &id = bio_night_vision;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     const bool remove_on_stop = GENERATE( false, true );
     lua.set_function( "begin_native_work", [&]() {
-        remote.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+        remote.assign_activity( player_activity( ACT_WAIT, 100 ) );
     } );
     lua.set_function( "stop_native", [&]() {
         if( remove_on_stop ) {
@@ -3899,7 +4251,7 @@ TEST_CASE( "bionic_switch_hooks_retain_owned_activities_and_safe_deactivation", 
             }
         }
     } );
-    const auto registered = lua.safe_script( R"lua(
+    const sol::protected_function_result registered = lua.safe_script( R"lua(
 ccb.runtime.handler("on", function(context)
     local state = ccb.state.character
     state.set("started", state.get("started", 0) + 1)
@@ -3915,15 +4267,15 @@ ccb.runtime.hook("on_bionic_deactivated", "off")
 )lua", sol::script_pass_on_error );
     REQUIRE( registered.valid() );
     const auto value = [&]( Character &who, const std::string &key ) {
-        const auto &values = who.lua_character_state.for_mod( mod );
+        const cata::lua_platform::script_persistent_state &values = who.lua_character_state.for_mod( mod );
         const auto found = values.find( key );
         return found == values.end() ? int64_t( 0 ) : std::get<int64_t>( found->second );
     };
-    const auto before = remote.get_power_level();
+    const units::energy before = remote.get_power_level();
     fixture.run( remote, bionic_switch_request( fixture, remote, uid, id, true ) );
     CHECK( remote.get_power_level() == before - id->power_activate );
     CHECK( remote.has_active_bionic( id ) );
-    REQUIRE( remote.activity.id() == activity_id( "ACT_WAIT" ) );
+    REQUIRE( remote.activity.id() == ACT_WAIT );
     CHECK( remote.activity.execution() == activity_execution::authoritative );
     CHECK( value( remote, "started" ) == 1 );
     CHECK( value( get_avatar(), "started" ) == 0 );
@@ -3944,7 +4296,7 @@ namespace
 {
 cata_mp::remote_player_session &bind_feedback_player( npc &actor, char id, uint64_t peer )
 {
-    auto &recipient = make_test_remote( g->multiplayer_session(), peer );
+    cata_mp::remote_player_session &recipient = make_test_remote( g->multiplayer_session(), peer );
     recipient.connected = true;
     recipient.credentials.id = player_id( std::string( 32, id ) );
     actor.set_value( "mp_proxy", std::string( "1" ) );
@@ -3959,9 +4311,9 @@ TEST_CASE( "native_player_feedback_keeps_private_and_observer_messages_separate"
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    auto &recipient = bind_feedback_player( remote, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( remote, 'a', 701 );
     npc &other = spawn_npc( { 62, 60 }, "test_talker" );
-    auto &other_recipient = bind_feedback_player( other, 'b', 702 );
+    cata_mp::remote_player_session &other_recipient = bind_feedback_player( other, 'b', 702 );
     avatar &host = get_avatar();
     host.setpos( get_map(), tripoint_bub_ms( 61, 60, 0 ) );
     get_map().build_map_cache( 0 );
@@ -3996,7 +4348,7 @@ TEST_CASE( "native_player_feedback_keeps_private_and_observer_messages_separate"
     impostor.setID( remote.getID() );
     impostor.set_value( "mp_proxy", std::string( "1" ) );
     impostor.set_value( "mp_player_id", recipient.credentials.id.str() );
-    const auto before = recipient.feedback.sequence;
+    const int64_t before = recipient.feedback.sequence;
     impostor.add_msg_if_player( "must not be delivered" );
     CHECK( recipient.feedback.sequence == before );
     recipient.admission.retire();
@@ -4010,7 +4362,7 @@ TEST_CASE( "native_feedback_survives_full_logs_and_replays_without_advancing_gam
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    auto &recipient = bind_feedback_player( remote, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( remote, 'a', 701 );
     const override_option options( "MESSAGE_LIMIT", "20" );
     Messages::clear_messages();
     for( int i = 0; i < 40; ++i ) {
@@ -4030,16 +4382,16 @@ TEST_CASE( "native_feedback_survives_full_logs_and_replays_without_advancing_gam
     CHECK( recipient.feedback.pending.empty() );
     const JsonValue value = json_loader::from_string( wire );
     const JsonObject data = value.get_object();
-    get_avatar().add_effect( efftype_id( "weed_high" ), 3_hours );
-    const auto rng_before = rng_get_engine();
+    get_avatar().add_effect( effect_weed_high, 3_hours );
+    const std::string rng_before = capture_rng_state();
     cata_mp::apply_player_feedback( data );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     CHECK( g->multiplayer_session().client_feedback_sequence == 141 );
     CHECK( g->multiplayer_session().client_turn.client_msg_watermark == Messages::size() );
     const auto first = Messages::recent_messages( Messages::size() );
     cata_mp::apply_player_feedback( data );
     CHECK( Messages::recent_messages( Messages::size() ) == first );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
 
     g->multiplayer_session().reset();
     CHECK( g->multiplayer_session().client_feedback_sequence == 0 );
@@ -4051,13 +4403,13 @@ TEST_CASE( "informational_bionics_report_the_owning_body_without_host_input", "[
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    auto &recipient = bind_feedback_player( remote, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( remote, 'a', 701 );
     const bionic_id id( GENERATE( "bio_geiger", "bio_blood_anal", "bio_meteorologist" ) );
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     remote.set_rad( 53 );
     get_avatar().set_rad( 11 );
-    remote.add_effect( efftype_id( "poison" ), 1_hours );
-    const auto power = remote.get_power_level();
+    remote.add_effect( effect_poison, 1_hours );
+    const units::energy power = remote.get_power_level();
     const std::string request = bionic_switch_request( fixture, remote, uid, id, true );
     Messages::clear_messages();
     fixture.run( remote, request );
@@ -4067,13 +4419,13 @@ TEST_CASE( "informational_bionics_report_the_owning_body_without_host_input", "[
     fixture.run( remote, request );
     CHECK( recipient.feedback.sequence == sequence );
     std::string report;
-    for( const auto &entry : recipient.feedback.pending ) {
+    for( const cata_mp::player_feedback_message &entry : recipient.feedback.pending ) {
         report += entry.text + "\n";
     }
-    if( id == bionic_id( "bio_geiger" ) ) {
+    if( id == bio_geiger ) {
         CHECK( report.find( "53" ) != std::string::npos );
         CHECK( report.find( "11" ) == std::string::npos );
-    } else if( id == bionic_id( "bio_blood_anal" ) ) {
+    } else if( id == bio_blood_anal ) {
         CHECK( report.find( "Blood Test Results" ) != std::string::npos );
         CHECK( report.find( "Poison" ) != std::string::npos );
     } else {
@@ -4126,8 +4478,8 @@ TEST_CASE( "martial_style_choices_apply_native_effects_only_to_the_owner", "[mp_
     npc &remote = fixture.remote();
     bind_feedback_player( remote, 'a', 701 );
     avatar &host = get_avatar();
-    const matype_id karate( "style_karate" );
-    const matype_id none( "style_none" );
+    const matype_id &karate = style_karate;
+    const matype_id &none = style_none;
     const martial_style_choice choice{ martial_style_action::select, karate };
     remote.martial_arts_data->add_martialart( karate );
     REQUIRE_FALSE( karate->static_buffs.empty() );
@@ -4140,9 +4492,9 @@ TEST_CASE( "martial_style_choices_apply_native_effects_only_to_the_owner", "[mp_
     CHECK( remote.get_moves() == moves );
     CHECK( host.martial_arts_data->selected_style() == none );
     CHECK_FALSE( host.has_effect( stance ) );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( remote, request );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 
     host.martial_arts_data->add_martialart( karate );
     host.set_moves( 100 );
@@ -4152,13 +4504,13 @@ TEST_CASE( "martial_style_choices_apply_native_effects_only_to_the_owner", "[mp_
     CHECK_FALSE( host.has_effect( stance ) );
     CHECK( host.activity.execution() == activity_execution::presentation );
     g->multiplayer_session().client_inventory_activity.pending_request = fixture.sequence;
-    const auto before_apply = rng_get_engine();
+    const std::string before_apply = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( result ) );
     REQUIRE( cata_mp::client_apply_message( result ) );
     cata_mp::client_update_inventory_activity_view();
     CHECK( host.martial_arts_data->selected_style() == karate );
     CHECK( host.has_effect( stance ) );
-    CHECK( rng_get_engine() == before_apply );
+    CHECK( capture_rng_state() == before_apply );
     CHECK_FALSE( host.activity );
 }
 
@@ -4166,12 +4518,12 @@ TEST_CASE( "martial_preferences_are_owned_replay_safe_and_survive_save", "[mp_ma
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), remote );
-    auto &arts = *remote.martial_arts_data;
-    const matype_id style( "test_style_ma1" );
-    const matype_id none( "style_none" );
+    player_control controller = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), remote );
+    character_martial_arts &arts = *remote.martial_arts_data;
+    const matype_id &style = test_style_ma1;
+    const matype_id &none = style_none;
     arts.add_martialart( style );
-    remote.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    remote.set_wielded_item( item( itype_test_weapon1 ) );
     REQUIRE( style->weapon_valid( remote.get_wielded_item() ) );
     const martial_style_choice automatic{ martial_style_action::toggle_auto, matype_id() };
     const std::string auto_request = martial_choice_request( fixture, remote, automatic );
@@ -4197,9 +4549,9 @@ TEST_CASE( "martial_preferences_are_owned_replay_safe_and_survive_save", "[mp_ma
     restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
     REQUIRE( restored.martial_arts_data->auto_style );
     REQUIRE( restored.martial_arts_data->keep_hands_free );
-    restored.set_wielded_item( item( itype_id( "test_weapon2" ) ) );
+    restored.set_wielded_item( item( itype_test_weapon2 ) );
     CHECK( restored.martial_arts_data->selected_style() == style );
-    restored.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    restored.set_wielded_item( item( itype_test_weapon1 ) );
     CHECK( restored.martial_arts_data->selected_style() == none );
 }
 
@@ -4207,11 +4559,11 @@ TEST_CASE( "cqb_choice_uses_installed_styles_and_preserves_native_cancellation_c
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    auto controller = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), remote );
-    const bionic_id id( "bio_cqb" );
-    const matype_id karate( "style_karate" );
+    player_control controller = g->player_controls().claim( player_id( std::string( 32, 'a' ) ), remote );
+    const bionic_id &id = bio_cqb;
+    const matype_id &karate = style_karate;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
-    const auto before = remote.get_power_level();
+    const units::energy before = remote.get_power_level();
     const auto styles = available_martial_styles( remote, uid );
     REQUIRE( std::find( styles.begin(), styles.end(), karate ) != styles.end() );
     CHECK_FALSE( remote.has_active_bionic( id ) );
@@ -4231,14 +4583,14 @@ TEST_CASE( "cqb_choice_uses_installed_styles_and_preserves_native_cancellation_c
     } else if( action == martial_style_action::toggle_hands_free ) {
         CHECK( remote.martial_arts_data->keep_hands_free );
     }
-    const auto after = rng_get_engine();
+    const std::string after = capture_rng_state();
     fixture.run( remote, request );
     CHECK( remote.get_power_level() == before - id->power_activate );
-    CHECK( rng_get_engine() == after );
+    CHECK( capture_rng_state() == after );
 
     avatar &host = get_avatar();
     const unsigned int local_uid = prepare_targeted_bionic( host, id );
-    const auto local_power = host.get_power_level();
+    const units::energy local_power = host.get_power_level();
     bionic_activation_choices input;
     input.martial_style = choice;
     cata_mp::set_client_mode( true );
@@ -4259,8 +4611,8 @@ TEST_CASE( "martial_and_cqb_choices_reject_unavailable_or_wrong_action_data", "[
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    const matype_id karate( "style_karate" );
-    const matype_id none( "style_none" );
+    const matype_id &karate = style_karate;
+    const matype_id &none = style_none;
     const martial_style_choice choose{ martial_style_action::select, karate };
     fixture.run( remote, martial_choice_request( fixture, remote, choose ) );
     CHECK( remote.martial_arts_data->selected_style() == none );
@@ -4270,16 +4622,16 @@ TEST_CASE( "martial_and_cqb_choices_reject_unavailable_or_wrong_action_data", "[
     fixture.run( remote, martial_choice_request( fixture, remote,
                  { martial_style_action::toggle_hands_free, karate } ) );
     CHECK_FALSE( remote.martial_arts_data->keep_hands_free );
-    const bionic_id id( "bio_cqb" );
+    const bionic_id &id = bio_cqb;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
-    const auto power = remote.get_power_level();
+    const units::energy power = remote.get_power_level();
     fixture.run( remote, cqb_choice_request( fixture, remote, uid,
-                 { martial_style_action::select, matype_id( "not_a_real_style" ) } ) );
+                 { martial_style_action::select, not_a_real_style } ) );
     CHECK_FALSE( remote.has_active_bionic( id ) );
     CHECK( remote.get_power_level() == power );
     bionic_activation_choices extra;
     extra.martial_style = choose;
-    const bionic_id ordinary( "bio_night_vision" );
+    const bionic_id &ordinary = bio_night_vision;
     const unsigned int ordinary_uid = prepare_targeted_bionic( remote, ordinary );
     CHECK_FALSE( execute_owned_bionic_action( remote, ordinary_uid, ordinary, extra ) );
     CHECK_FALSE( execute_owned_bionic_action( remote, uid, id, extra, bionic_action::deactivate ) );
@@ -4289,7 +4641,7 @@ TEST_CASE( "martial_turn_projection_rejects_unknown_styles_without_partial_chang
 {
     reload_fixture fixture;
     npc &remote = fixture.remote();
-    remote.martial_arts_data->add_martialart( matype_id( "style_karate" ) );
+    remote.martial_arts_data->add_martialart( style_karate );
     std::ostringstream stream;
     JsonOut out( stream );
     remote.store_turn_state( out );
@@ -4298,16 +4650,16 @@ TEST_CASE( "martial_turn_projection_rejects_unknown_styles_without_partial_chang
     REQUIRE( position != std::string::npos );
     invalid.replace( position, std::string( "style_karate" ).size(), "nonexistent_martial_style" );
     avatar &host = get_avatar();
-    const matype_id judo( "style_judo" );
+    const matype_id &judo = style_judo;
     host.martial_arts_data->add_martialart( judo );
     host.martial_arts_data->set_style( judo );
     host.set_rad( 73 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const JsonValue value = json_loader::from_string( invalid );
     REQUIRE_THROWS_AS( host.load_turn_state( value.get_object() ), JsonError );
     CHECK( host.martial_arts_data->selected_style() == judo );
     CHECK( host.get_rad() == 73 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "world_bionics_spare_the_activator_and_project_affected_players", "[mp_world_bionic]" )
@@ -4320,7 +4672,7 @@ TEST_CASE( "world_bionics_spare_the_activator_and_project_affected_players", "[m
     bind_feedback_player( remote, 'a', 701 );
     npc &other = spawn_npc( { 60, 62 }, "test_talker" );
     clear_character( other, true );
-    auto &observer = bind_feedback_player( other, 'b', 702 );
+    cata_mp::remote_player_session &observer = bind_feedback_player( other, 'b', 702 );
     const bionic_id id( GENERATE( "bio_flashbang", "bio_shockwave" ) );
     const bool local = GENERATE( false, true );
     CAPTURE( id, local );
@@ -4346,24 +4698,24 @@ TEST_CASE( "world_bionics_spare_the_activator_and_project_affected_players", "[m
     CHECK( activator.get_power_level() == 500_kJ - id->power_activate );
     CHECK( activator.get_moves() == 0 );
     CHECK( activator.pos_bub() == origin );
-    CHECK_FALSE( activator.has_effect( efftype_id( "deaf" ) ) );
-    CHECK_FALSE( activator.has_effect( efftype_id( "blind" ) ) );
-    CHECK_FALSE( activator.has_effect( efftype_id( "stunned" ) ) );
-    const efftype_id affected( id == bionic_id( "bio_flashbang" ) ? "deaf" : "stunned" );
+    CHECK_FALSE( activator.has_effect( effect_deaf ) );
+    CHECK_FALSE( activator.has_effect( effect_blind ) );
+    CHECK_FALSE( activator.has_effect( effect_stunned ) );
+    const efftype_id affected( id == bio_flashbang ? "deaf" : "stunned" );
     CHECK( bystander.has_effect( affected ) );
     CHECK( other.has_effect( affected ) );
-    if( id == bionic_id( "bio_shockwave" ) ) {
+    if( id == bio_shockwave ) {
         CHECK( other.pos_abs() != other_before );
         CHECK( bystander.pos_abs() != bystander_before );
     }
     if( !local ) {
-        const auto after_rng = rng_get_engine();
-        const auto after_pos = other.pos_abs();
+        const std::string after_rng = capture_rng_state();
+        const tripoint_abs_ms after_pos = other.pos_abs();
         fixture.run( remote, request );
         CHECK_FALSE( fixture.reload.refresh_observers );
         CHECK( remote.get_power_level() == 500_kJ - id->power_activate );
         CHECK( other.pos_abs() == after_pos );
-        CHECK( rng_get_engine() == after_rng );
+        CHECK( capture_rng_state() == after_rng );
     }
 
     // The same per-recipient producer used by observer delivery carries both
@@ -4378,10 +4730,10 @@ TEST_CASE( "world_bionics_spare_the_activator_and_project_affected_players", "[m
     CHECK( position.get_int( "z" ) == other.pos_abs().z() );
     host.clear_effects();
     CHECK_FALSE( host.has_effect( affected ) );
-    const auto before_apply = rng_get_engine();
+    const std::string before_apply = capture_rng_state();
     host.load_turn_state( data.get_object( "character_turn" ) );
     CHECK( host.has_effect( affected ) );
-    CHECK( rng_get_engine() == before_apply );
+    CHECK( capture_rng_state() == before_apply );
 }
 
 TEST_CASE( "client_world_bionics_do_not_execute_area_effects_locally", "[mp_world_bionic]" )
@@ -4395,17 +4747,17 @@ TEST_CASE( "client_world_bionics_do_not_execute_area_effects_locally", "[mp_worl
     const unsigned int uid = prepare_targeted_bionic( host, id );
     host.set_max_power_level( 500_kJ );
     host.set_power_level( 500_kJ );
-    const auto position = other.pos_abs();
-    const auto rng = rng_get_engine();
+    const tripoint_abs_ms position = other.pos_abs();
+    const std::string rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     REQUIRE( host.activate_bionic( **host.find_bionic_by_uid( uid ) ) );
     CHECK( g->multiplayer_session().client_inventory_activity.active );
     CHECK( host.activity.execution() == activity_execution::presentation );
     CHECK( host.get_power_level() == 500_kJ );
     CHECK( other.pos_abs() == position );
-    CHECK_FALSE( other.has_effect( efftype_id( "deaf" ) ) );
-    CHECK_FALSE( other.has_effect( efftype_id( "stunned" ) ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK_FALSE( other.has_effect( effect_deaf ) );
+    CHECK_FALSE( other.has_effect( effect_stunned ) );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "world_bionic_requests_require_ownership_and_native_power", "[mp_world_bionic]" )
@@ -4422,17 +4774,17 @@ TEST_CASE( "world_bionic_requests_require_ownership_and_native_power", "[mp_worl
     CAPTURE( id, failure );
     remote.set_max_power_level( 500_kJ );
     remote.set_power_level( failure == "power" ? 0_kJ : 500_kJ );
-    const auto power = remote.get_power_level();
-    const auto position = host.pos_abs();
-    const auto rng = rng_get_engine();
+    const units::energy power = remote.get_power_level();
+    const tripoint_abs_ms position = host.pos_abs();
+    const std::string rng = capture_rng_state();
     fixture.run( remote, bionic_switch_request( fixture, remote,
                  failure == "wrong_uid" ? uid + 10 : uid, id, true ), failure != "unauthorized" );
     CHECK( remote.get_power_level() == power );
     CHECK( remote.get_moves() == 100 );
     CHECK( host.pos_abs() == position );
-    CHECK_FALSE( host.has_effect( efftype_id( "deaf" ) ) );
-    CHECK_FALSE( host.has_effect( efftype_id( "stunned" ) ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK_FALSE( host.has_effect( effect_deaf ) );
+    CHECK_FALSE( host.has_effect( effect_stunned ) );
+    CHECK( capture_rng_state() == rng );
     if( failure == "unauthorized" ) {
         CHECK_FALSE( fixture.reload.refresh_observers );
     }
@@ -4446,25 +4798,25 @@ TEST_CASE( "remote_player_bracing_protects_from_shockwave_like_local_bracing", "
     bind_feedback_player( remote, 'a', 701 );
     avatar &host = get_avatar();
     host.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
-    const trait_id brace( "LEG_TENT_BRACE" );
+    const trait_id &brace = trait_LEG_TENT_BRACE;
     remote.set_mutation( brace );
     host.set_mutation( brace );
     REQUIRE( remote.is_barefoot() );
     REQUIRE( host.is_barefoot() );
-    const auto host_position = host.pos_abs();
-    const auto remote_position = remote.pos_abs();
+    const tripoint_abs_ms host_position = host.pos_abs();
+    const tripoint_abs_ms remote_position = remote.pos_abs();
     explosion_handler::shockwave( tripoint_bub_ms( 61, 60, 0 ), 3, 4, 2, 8 );
     CHECK( host.pos_abs() == host_position );
     CHECK( remote.pos_abs() == remote_position );
-    CHECK_FALSE( host.has_effect( efftype_id( "stunned" ) ) );
-    CHECK_FALSE( remote.has_effect( efftype_id( "stunned" ) ) );
+    CHECK_FALSE( host.has_effect( effect_stunned ) );
+    CHECK_FALSE( remote.has_effect( effect_stunned ) );
 }
 
 namespace
 {
 void add_magnet_test_item( map &here, const tripoint_bub_ms &position )
 {
-    item pipe( itype_id( "pipe" ) );
+    item pipe( itype_pipe );
     pipe.set_var( "ccb_magnet_test", 1 );
     here.add_item( position, std::move( pipe ) );
 }
@@ -4492,16 +4844,16 @@ TEST_CASE( "owned_resonator_changes_terrain_once_and_projects_the_delta", "[mp_w
     npc &remote = fixture.remote();
     bind_feedback_player( remote, 'a', 701 );
     npc &other = spawn_npc( { 64, 62 }, "test_talker" );
-    auto &observer = bind_feedback_player( other, 'b', 702 );
+    cata_mp::remote_player_session &observer = bind_feedback_player( other, 'b', 702 );
     const bool local = GENERATE( false, true );
     const tripoint_bub_ms origin( 60, 60, 0 );
     host.setpos( here, local ? origin : tripoint_bub_ms( 30, 30, 0 ) );
     remote.setpos( here, local ? tripoint_bub_ms( 30, 30, 0 ) : origin );
     Character &activator = local ? static_cast<Character &>( host ) : remote;
-    const bionic_id id( "bio_resonator" );
+    const bionic_id &id = bio_resonator;
     const unsigned int uid = prepare_targeted_bionic( activator, id );
     const tripoint_bub_ms door = origin + tripoint::east;
-    here.ter_set( door, ter_str_id( "t_door_c" ) );
+    here.ter_set( door, ter_t_door_c );
     const tripoint_abs_ms absolute = here.get_abs( door );
     cata_mp::serialize_remote_player_state( observer );
     std::string request;
@@ -4514,16 +4866,16 @@ TEST_CASE( "owned_resonator_changes_terrain_once_and_projects_the_delta", "[mp_w
     }
     CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
     CHECK( activator.get_moves() == 0 );
-    CHECK( here.ter( door ) != ter_str_id( "t_door_c" ).id() );
+    CHECK( here.ter( door ) != ter_t_door_c.id() );
     CHECK( here.passable( door ) );
     const ter_id destroyed = here.ter( door );
     if( !local ) {
-        const auto rng = rng_get_engine();
+        const std::string rng = capture_rng_state();
         fixture.run( remote, request );
         CHECK_FALSE( fixture.reload.refresh_observers );
         CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
         CHECK( here.ter( door ) == destroyed );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
     const JsonValue state = json_loader::from_string( cata_mp::serialize_remote_player_state( observer ) );
     const JsonObject data = state.get_object();
@@ -4550,26 +4902,26 @@ TEST_CASE( "owned_magnet_preserves_item_counts_and_projects_source_and_landing",
     npc &remote = fixture.remote();
     bind_feedback_player( remote, 'a', 701 );
     npc &other = spawn_npc( { 64, 65 }, "test_talker" );
-    auto &observer = bind_feedback_player( other, 'b', 702 );
+    cata_mp::remote_player_session &observer = bind_feedback_player( other, 'b', 702 );
     const bool local = GENERATE( false, true );
     const tripoint_bub_ms origin( 60, 60, 0 );
     host.setpos( here, local ? origin : tripoint_bub_ms( 30, 30, 0 ) );
     remote.setpos( here, local ? tripoint_bub_ms( 30, 30, 0 ) : origin );
     Character &activator = local ? static_cast<Character &>( host ) : remote;
-    const bionic_id id( "bio_magnet" );
+    const bionic_id &id = bio_magnet;
     const unsigned int uid = prepare_targeted_bionic( activator, id );
     const tripoint_bub_ms source = origin + tripoint( 4, 0, 0 );
     const tripoint_bub_ms landing = origin + tripoint::east;
     const tripoint_bub_ms sealed = origin + tripoint( 0, 4, 0 );
     const tripoint_bub_ms distant = origin + tripoint( 12, 0, 0 );
-    here.furn_set( sealed, furn_str_id( "f_crate_c" ) );
+    here.furn_set( sealed, furn_f_crate_c );
     REQUIRE( here.has_flag( ter_furn_flag::TFLAG_SEALED, sealed ) );
     for( const auto &p : { source, source, sealed, distant, origin } ) {
         add_magnet_test_item( here, p );
     }
     const tripoint_bub_ms nonmetal = origin + tripoint( 4, 2, 0 );
-    here.add_item( nonmetal, item( itype_id( "rock" ) ) );
-    activator.set_wielded_item( item( itype_id( "pipe" ) ) );
+    here.add_item( nonmetal, item( itype_rock ) );
+    activator.set_wielded_item( item( itype_pipe ) );
     const int64_t wielded_uid = activator.get_wielded_item()->uid().get_value();
     REQUIRE( count_magnet_test_items( here, origin ) == 5 );
     cata_mp::serialize_remote_player_state( observer );
@@ -4589,14 +4941,14 @@ TEST_CASE( "owned_magnet_preserves_item_counts_and_projects_source_and_landing",
         CHECK( here.i_at( p ).size() == 1 );
     }
     if( !local ) {
-        const auto rng = rng_get_engine();
+        const std::string rng = capture_rng_state();
         fixture.run( remote, request );
         CHECK_FALSE( fixture.reload.refresh_observers );
         CHECK( activator.get_power_level() == 200_kJ - id->power_activate );
         CHECK( here.i_at( source ).size() == 1 );
         CHECK( here.i_at( landing ).size() == 1 );
         CHECK( count_magnet_test_items( here, origin ) == 5 );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
     const JsonValue state = json_loader::from_string( cata_mp::serialize_remote_player_state( observer ) );
     const JsonObject data = state.get_object();
@@ -4629,8 +4981,8 @@ TEST_CASE( "magnetic_attraction_restores_unlaunched_items_when_a_hit_retires_the
     victim.setpos( here, tripoint_bub_ms( 58, 60, 0 ) );
     victim.set_dodges_left( 0 );
     victim.set_free_dodges_left( 0 );
-    victim.set_mutation( trait_id( "HUGE" ) );
-    const bionic_id id( "bio_magnet" );
+    victim.set_mutation( trait_HUGE );
+    const bionic_id &id = bio_magnet;
     const unsigned int uid = prepare_targeted_bionic( remote, id );
     const tripoint_bub_ms origin = remote.pos_bub();
     for( int x = 52; x <= 56; ++x ) {
@@ -4669,7 +5021,7 @@ namespace
 {
 item_location extraction_corpse( Character &who, int charges )
 {
-    item corpse = item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn );
+    item corpse = item::make_corpse( mon_zombie, calendar::turn );
     corpse.set_var( "remaining_water", charges );
     corpse.set_item_temperature( units::from_celsius( 20 ) );
     return get_map().add_item_or_charges_ret_loc( who.pos_bub(), corpse );
@@ -4681,7 +5033,7 @@ std::string water_start_request( reload_fixture &fixture, Character &who, unsign
     return fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "bionic_activation" );
         out.member( "bionic_uid", uid );
-        out.member( "bionic_type", bionic_id( "bio_water_extractor" ) );
+        out.member( "bionic_type", bio_water_extractor );
         out.member( "water_corpse", corpse );
     } );
 }
@@ -4701,14 +5053,14 @@ TEST_CASE( "water_extraction_keeps_one_activation_across_containers_and_save", "
     reload_fixture fixture;
     npc &who = fixture.remote();
     avatar &host = get_avatar();
-    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
-    prepare_targeted_bionic( host, bionic_id( "bio_water_extractor" ) );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_water_extractor );
+    prepare_targeted_bionic( host, bio_water_extractor );
     host.set_moves( 517 );
-    const auto corpse = extraction_corpse( who, 7 );
-    const auto source = capture_item_source( who, corpse );
-    const auto start = water_start_request( fixture, who, uid, source );
+    const item_location corpse = extraction_corpse( who, 7 );
+    const item_source source = capture_item_source( who, corpse );
+    const std::string start = water_start_request( fixture, who, uid, source );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_BIONIC_WATER" ) );
+    REQUIRE( who.activity.id() == ACT_BIONIC_WATER );
     CHECK( who.get_power_level() == 180_kJ );
     fixture.run( who, start );
     CHECK( who.get_power_level() == 180_kJ );
@@ -4718,9 +5070,9 @@ TEST_CASE( "water_extraction_keeps_one_activation_across_containers_and_save", "
     CHECK( corpse->get_var( "remaining_water", -1 ) == 7 );
     who.set_moves( 100 );
 
-    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    who.set_wielded_item( item( itype_bottle_plastic ) );
     item_location bottle = who.get_wielded_item();
-    item water( itype_id( "water_clean" ), calendar::turn, 7 );
+    item water( itype_water_clean, calendar::turn, 7 );
     const int capacity = bottle->get_remaining_capacity_for_liquid( water, true );
     REQUIRE( capacity > 0 );
     REQUIRE( capacity < 7 );
@@ -4728,7 +5080,7 @@ TEST_CASE( "water_extraction_keeps_one_activation_across_containers_and_save", "
     choice.source = corpse->uid().get_value();
     choice.kind = LD_ITEM;
     choice.container = capture_item_source( who, bottle );
-    const auto pour = water_choice_request( fixture, who, choice );
+    const std::string pour = water_choice_request( fixture, who, choice );
     fixture.run( who, pour );
     CHECK( fixture.reload.refresh_observers );
     REQUIRE_FALSE( bottle->is_container_empty() );
@@ -4736,14 +5088,14 @@ TEST_CASE( "water_extraction_keeps_one_activation_across_containers_and_save", "
     CHECK( corpse->get_var( "remaining_water", -1 ) == 7 - capacity );
     CHECK( who.get_moves() == 0 );
     CHECK( who.get_power_level() == 180_kJ );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, pour );
     CHECK_FALSE( fixture.reload.refresh_observers );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( corpse->get_var( "remaining_water", -1 ) == 7 - capacity );
     save_reload_activity( who );
 
-    const auto landing = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms landing = who.pos_bub() + tripoint::east;
     choice.kind = LD_GROUND;
     choice.position = get_map().get_abs( landing );
     who.set_moves( 100 );
@@ -4752,7 +5104,7 @@ TEST_CASE( "water_extraction_keeps_one_activation_across_containers_and_save", "
     CHECK( corpse->get_var( "remaining_water", -1 ) == 0 );
     int spilled = 0;
     for( const item &entry : get_map().i_at( landing ) ) {
-        if( entry.typeId() == itype_id( "water_clean" ) ) {
+        if( entry.typeId() == itype_water_clean ) {
             spilled += entry.charges;
         }
     }
@@ -4767,12 +5119,12 @@ TEST_CASE( "water_extraction_cancel_refunds_only_unused_activation", "[mp_bionic
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
-    const auto corpse = extraction_corpse( who, 4 );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_water_extractor );
+    const item_location corpse = extraction_corpse( who, 4 );
     fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
     const bool extracted = GENERATE( false, true );
     if( extracted ) {
-        who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+        who.set_wielded_item( item( itype_bottle_plastic ) );
         unload_liquid_choice choice;
         choice.source = corpse->uid().get_value();
         choice.kind = LD_ITEM;
@@ -4782,7 +5134,7 @@ TEST_CASE( "water_extraction_cancel_refunds_only_unused_activation", "[mp_bionic
     }
     REQUIRE( who.activity );
     save_reload_activity( who );
-    const auto cancel = fixture.request( who, "cancel" );
+    const std::string cancel = fixture.request( who, "cancel" );
     fixture.run( who, cancel );
     fixture.run( who, cancel );
     CHECK_FALSE( who.activity );
@@ -4796,10 +5148,10 @@ TEST_CASE( "water_extraction_revalidates_corpse_and_destination_identity", "[mp_
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const bionic_id type( "bio_water_extractor" );
-    const auto uid = prepare_targeted_bionic( who, type );
-    auto corpse = extraction_corpse( who, 4 );
-    const auto source = capture_item_source( who, corpse );
+    const bionic_id &type = bio_water_extractor;
+    const unsigned int uid = prepare_targeted_bionic( who, type );
+    item_location corpse = extraction_corpse( who, 4 );
+    const item_source source = capture_item_source( who, corpse );
     fixture.run( who, water_start_request( fixture, who, uid, source ) );
     save_reload_activity( who );
     unload_liquid_choice choice;
@@ -4817,7 +5169,7 @@ TEST_CASE( "water_extraction_revalidates_corpse_and_destination_identity", "[mp_
     } else if( failure == "removed_bionic" ) {
         who.remove_bionic( **who.find_bionic_by_uid( uid ) );
     } else if( failure == "host_container" ) {
-        get_avatar().set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+        get_avatar().set_wielded_item( item( itype_bottle_plastic ) );
         choice.kind = LD_ITEM;
         choice.container = capture_item_source( get_avatar(), get_avatar().get_wielded_item() );
     } else if( failure == "far_destination" ) {
@@ -4835,7 +5187,7 @@ TEST_CASE( "water_extraction_revalidates_corpse_and_destination_identity", "[mp_
     CHECK_FALSE( who.activity );
     CHECK( who.get_power_level() == 200_kJ );
     for( const item &entry : get_map().i_at( get_map().get_bub( source.position ) ) ) {
-        CHECK( entry.typeId() != itype_id( "water_clean" ) );
+        CHECK( entry.typeId() != itype_water_clean );
     }
 }
 
@@ -4843,15 +5195,15 @@ TEST_CASE( "water_extraction_drinks_as_owner_and_survives_callback_cancellation"
 {
     consumption_fixture fixture;
     npc &who = fixture.remote();
-    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
-    const auto corpse = extraction_corpse( who, 4 );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_water_extractor );
+    const item_location corpse = extraction_corpse( who, 4 );
     fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
     class cancel_on_drink : public event_subscriber {
         public:
             Character &who;
             item_location corpse;
             int count = 0;
-            cancel_on_drink( Character &who, item_location corpse ) : who( who ), corpse( corpse ) {
+            cancel_on_drink( Character &who, item_location corpse ) : who( who ), corpse( std::move( corpse ) ) {
                 get_event_bus().subscribe( this );
             }
             void notify( const cata::event &event ) override {
@@ -4864,12 +5216,12 @@ TEST_CASE( "water_extraction_drinks_as_owner_and_survives_callback_cancellation"
             }
     } observer( who, corpse );
     consumption_events consumption;
-    const auto stomach = who.stomach.contains();
-    const auto host_stomach = get_avatar().stomach.contains();
+    const units::volume stomach = who.stomach.contains();
+    const units::volume host_stomach = get_avatar().stomach.contains();
     unload_liquid_choice choice;
     choice.source = corpse->uid().get_value();
     choice.kind = LD_CONSUME;
-    const auto request = water_choice_request( fixture, who, choice );
+    const std::string request = water_choice_request( fixture, who, choice );
     fixture.run( who, request );
     REQUIRE( observer.count == 1 );
     CHECK( consumption.actors == std::vector<character_id>{ who.getID() } );
@@ -4879,10 +5231,10 @@ TEST_CASE( "water_extraction_drinks_as_owner_and_survives_callback_cancellation"
     CHECK( who.stomach.contains() > stomach );
     CHECK( get_avatar().stomach.contains() == host_stomach );
     CHECK( who.get_moves() < 100 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( observer.count == 1 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( corpse->get_var( "remaining_water", -1 ) == 3 );
 }
 
@@ -4890,8 +5242,8 @@ TEST_CASE( "local_water_extraction_preserves_synchronous_pour_and_cancel", "[mp_
 {
     reload_fixture fixture;
     avatar &who = get_avatar();
-    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
-    const auto corpse = extraction_corpse( who, 4 );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_water_extractor );
+    const item_location corpse = extraction_corpse( who, 4 );
     bionic_activation_choices choices;
     choices.water_corpse = capture_item_source( who, corpse );
     const bool pour = GENERATE( true, false );
@@ -4908,41 +5260,41 @@ TEST_CASE( "client_water_selection_is_presentation_only_and_receives_remaining_w
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const bionic_id id( "bio_water_extractor" );
-    const auto uid = prepare_targeted_bionic( who, id );
-    const auto corpse = extraction_corpse( who, 4 );
-    const auto result = fixture.run( who, water_start_request( fixture, who, uid,
+    const bionic_id &id = bio_water_extractor;
+    const unsigned int uid = prepare_targeted_bionic( who, id );
+    const item_location corpse = extraction_corpse( who, 4 );
+    const std::string result = fixture.run( who, water_start_request( fixture, who, uid,
                                      capture_item_source( who, corpse ) ) );
     avatar &local = get_avatar();
     local.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
-    const auto local_uid = prepare_targeted_bionic( local, id );
-    const auto local_corpse = extraction_corpse( local, 5 );
+    const unsigned int local_uid = prepare_targeted_bionic( local, id );
+    const item_location local_corpse = extraction_corpse( local, 5 );
     bionic_activation_choices choices;
     choices.water_corpse = capture_item_source( local, local_corpse );
     cata_mp::set_client_mode( true );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( local.activate_bionic( **local.find_bionic_by_uid( local_uid ), false, nullptr, &choices ) );
     CHECK( local.get_power_level() == 200_kJ );
     CHECK( local_corpse->get_var( "remaining_water", -1 ) == 5 );
-    CHECK( rng_get_engine() == rng );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    CHECK( capture_rng_state() == rng );
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.pending_request = fixture.sequence;
     REQUIRE( cata_mp::client_apply_message( result ) );
     CHECK( local.activity.execution() == activity_execution::presentation );
     CHECK( view.liquid_source_uid == corpse->uid().get_value() );
     REQUIRE( view.preview );
-    CHECK( view.preview->typeId() == itype_id( "water_clean" ) );
+    CHECK( view.preview->typeId() == itype_water_clean );
     CHECK( view.preview->charges == 4 );
     CHECK( local.get_power_level() == 180_kJ );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "water_extraction_never_duplicates_frozen_water", "[mp_bionic_water]" )
 {
     consumption_fixture fixture;
     npc &who = fixture.remote();
-    const auto uid = prepare_targeted_bionic( who, bionic_id( "bio_water_extractor" ) );
-    auto corpse = extraction_corpse( who, 4 );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_water_extractor );
+    item_location corpse = extraction_corpse( who, 4 );
     corpse->set_item_temperature( units::from_celsius( -20 ) );
     fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
     const auto *actor = dynamic_cast<bionic_water_activity_actor *>( who.activity.actor.get() );
@@ -4950,8 +5302,8 @@ TEST_CASE( "water_extraction_never_duplicates_frozen_water", "[mp_bionic_water]"
     const auto preview = actor->preview( who );
     REQUIRE( preview );
     REQUIRE_FALSE( preview->made_of( phase_id::LIQUID ) );
-    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
-    const auto stomach = who.stomach.contains();
+    who.set_wielded_item( item( itype_bottle_plastic ) );
+    const units::volume stomach = who.stomach.contains();
     consumption_events events;
     unload_liquid_choice choice;
     choice.source = corpse->uid().get_value();
@@ -4964,11 +5316,11 @@ TEST_CASE( "water_extraction_never_duplicates_frozen_water", "[mp_bionic_water]"
     CHECK( who.get_moves() == 100 );
     CHECK( corpse->get_var( "remaining_water", -1 ) == 4 );
     CHECK( who.get_wielded_item()->is_container_empty() );
-    CHECK( who.charges_of( itype_id( "water_clean" ) ) == 0 );
+    CHECK( who.charges_of( itype_water_clean ) == 0 );
     CHECK( who.stomach.contains() == stomach );
     CHECK( events.actors.empty() );
     for( const item &entry : get_map().i_at( who.pos_bub() ) ) {
-        CHECK( entry.typeId() != itype_id( "water_clean" ) );
+        CHECK( entry.typeId() != itype_water_clean );
     }
 }
 
@@ -5017,10 +5369,10 @@ vehicle_control_selection control_choice( const Character &who, const vehicle &t
 vehicle &owned_foldable_vehicle( Character &who, const tripoint_bub_ms &position )
 {
     map &here = get_map();
-    vehicle *target = here.add_vehicle( vproto_id( "none" ), position, 0_degrees, 0,
+    vehicle *target = here.add_vehicle( vehicle_prototype_none, position, 0_degrees, 0,
                                         veh_spawn_status::UNDAMAGED, false );
     REQUIRE( target );
-    REQUIRE( target->restore_folded_parts( item( itype_id( "folded_bicycle" ) ) ) );
+    REQUIRE( target->restore_folded_parts( item( itype_folded_bicycle ) ) );
     target->name = "folding fixture";
     target->set_owner( who );
     here.add_vehicle_to_cache( target );
@@ -5046,14 +5398,14 @@ TEST_CASE( "owned_vehicle_folding_retains_operator_vehicle_and_part_identity",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 90, 90, 0 ) );
-    const auto position = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms position = who.pos_bub() + tripoint::east;
     vehicle &target = owned_foldable_vehicle( who, position );
     const int64_t original_id = target.uid().get_value();
-    auto choice = control_choice( who, target, "fold" );
+    vehicle_control_selection choice = control_choice( who, target, "fold" );
     choice.position = here.get_abs( position );
     const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
-    REQUIRE( who.activity.id() == activity_id( "ACT_VEHICLE_FOLD" ) );
+    REQUIRE( who.activity.id() == ACT_VEHICLE_FOLD );
     const int original_time = who.activity.moves_left;
     fixture.run( who, request ); // A replay must not restart the job.
     CHECK( who.activity.moves_left == original_time );
@@ -5110,7 +5462,7 @@ TEST_CASE( "owned_vehicle_folding_retains_operator_vehicle_and_part_identity",
     CHECK( here.i_at( position ).size() == ( fold ? 1 : 0 ) );
     if( fold ) {
         CHECK_FALSE( vehicle::find_vehicle_by_uid( here, original_id ) );
-        REQUIRE( here.i_at( position ).begin()->typeId() == itype_id( "generic_folded_vehicle" ) );
+        REQUIRE( here.i_at( position ).begin()->typeId() == itype_generic_folded_vehicle );
     } else {
         CHECK( vehicle::find_vehicle_by_uid( here, replacement_id ? replacement_id : original_id ) );
     }
@@ -5125,17 +5477,17 @@ TEST_CASE( "folding_settles_cargo_and_vehicle_before_drop_callbacks_can_replace_
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 90, 90, 0 ) );
-    const auto position = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms position = who.pos_bub() + tripoint::east;
     vehicle &target = owned_foldable_vehicle( who, position );
     const int64_t original_id = target.uid().get_value();
     const auto cargo_parts = target.get_any_parts( VPFLAG_CARGO );
     REQUIRE_FALSE( empty( cargo_parts ) );
     const vpart_reference cargo = *cargo_parts.begin();
-    REQUIRE( target.add_item( here, cargo.part(), item( itype_id( "rock" ) ) ) );
-    auto choice = control_choice( who, target, "fold" );
+    REQUIRE( target.add_item( here, cargo.part(), item( itype_rock ) ) );
+    vehicle_control_selection choice = control_choice( who, target, "fold" );
     choice.position = here.get_abs( position );
     fixture.run( who, control_request( fixture, who, choice ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_VEHICLE_FOLD" ) );
+    REQUIRE( who.activity.id() == ACT_VEHICLE_FOLD );
     bool folded = true;
     bool destroyed_by_callback = false;
     SECTION( "cargo consumption interrupts folding without duplicating the cargo" ) {
@@ -5150,28 +5502,28 @@ TEST_CASE( "folding_settles_cargo_and_vehicle_before_drop_callbacks_can_replace_
     SECTION( "packed vehicle callback sees the old vehicle already removed" ) {
         who.set_value( "fold_drop_mode", "packed" );
     }
-    itype &rock = *const_cast<itype *>( item::find_type( itype_id( "rock" ) ) );
+    itype &rock = *const_cast<itype *>( item::find_type( itype_rock ) );
     const restore_on_out_of_scope restore_rock( rock.drop_action );
     rock.drop_action = use_function( "folding_cargo_drop", []( Character *actor, item *,
                                      const tripoint_bub_ms &position ) -> std::optional<int> {
                                          actor->set_value( "fold_cargo_seen", "yes" );
                                          const std::string mode = actor->get_value( "fold_drop_mode" ).str();
     if( mode == "interrupt" ) {
-    actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     } else if( mode == "destroy" ) {
-    const auto target = get_map().veh_at( position );
+    const optional_vpart_position target = get_map().veh_at( position );
         REQUIRE( target );
         get_map().destroy_vehicle( &target->vehicle() );
     }
     return 1;
                                      } );
-    itype &packed = *const_cast<itype *>( item::find_type( itype_id( "generic_folded_vehicle" ) ) );
+    itype &packed = *const_cast<itype *>( item::find_type( itype_generic_folded_vehicle ) );
     const restore_on_out_of_scope restore_packed( packed.drop_action );
     packed.drop_action = use_function( "folding_packed_drop", []( Character *actor, item *,
                                        const tripoint_bub_ms &position ) -> std::optional<int> {
                                            CHECK_FALSE( get_map().veh_at( position ) );
                                            actor->set_value( "fold_packed_seen", "yes" );
-                                           actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+                                           actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
                                            return std::nullopt;
                                        } );
     const int host_moves = host.get_moves();
@@ -5187,7 +5539,7 @@ TEST_CASE( "folding_settles_cargo_and_vehicle_before_drop_callbacks_can_replace_
         CHECK( cargo.items().empty() );
     }
     if( !destroyed_by_callback ) {
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
 }
 
@@ -5199,13 +5551,13 @@ TEST_CASE( "owned_unfolding_keeps_one_detached_item_and_checks_without_world_or_
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 90, 90, 0 ) );
-    item folded( itype_id( "folded_bicycle" ) );
+    item folded( itype_folded_bicycle );
     folded.set_damage( 1000 );
     who.set_wielded_item( folded );
     const item_source source = capture_item_source( who, who.get_wielded_item() );
-    const auto origin = who.pos_bub();
+    const tripoint_bub_ms origin = who.pos_bub();
     const size_t vehicles = here.get_vehicles().size();
-    const auto routing = here.pathfinding_cache_revision();
+    const uint64_t routing = here.pathfinding_cache_revision();
     const std::string start = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "item_use" );
         out.member( "source", source );
@@ -5214,22 +5566,22 @@ TEST_CASE( "owned_unfolding_keeps_one_detached_item_and_checks_without_world_or_
         out.member( "target", who.pos_abs() );
     } );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_VEHICLE_UNFOLD" ) );
+    REQUIRE( who.activity.id() == ACT_VEHICLE_UNFOLD );
     CHECK_FALSE( who.get_wielded_item() );
     CHECK( here.get_vehicles().size() == vehicles );
     CHECK( here.pathfinding_cache_revision() == routing );
     // Native activity-start callbacks run gameplay effects. The detached
     // layout check itself must be pure, independently of those callbacks.
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     who.activity.actor->start( who.activity, who );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     save_reload_activity( who );
     const restore_on_out_of_scope restore_turn( calendar::turn );
     calendar::turn = calendar::turn_zero + 60_seconds;
     who.activity.actor->do_turn( who.activity, who );
     CHECK( here.get_vehicles().size() == vehicles );
     CHECK( here.pathfinding_cache_revision() == routing );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     bool unfold = true;
     SECTION( "saved owner completes the native unfold" ) {}
     SECTION( "operator moves before completion" ) {
@@ -5262,7 +5614,7 @@ TEST_CASE( "owned_unfolding_keeps_one_detached_item_and_checks_without_world_or_
         CHECK( here.i_at( origin ).empty() );
     } else {
         REQUIRE( here.i_at( who.pos_bub() ).size() == 1 );
-        CHECK( here.i_at( who.pos_bub() ).begin()->typeId() == itype_id( "folded_bicycle" ) );
+        CHECK( here.i_at( who.pos_bub() ).begin()->typeId() == itype_folded_bicycle );
         CHECK( here.i_at( who.pos_bub() ).begin()->damage() == 1000 );
     }
 }
@@ -5274,7 +5626,7 @@ TEST_CASE( "unfold_start_events_cannot_leave_a_second_folded_source",
     npc &who = fixture.remote();
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 90, 90, 0 ) );
-    who.set_wielded_item( item( itype_id( "folded_bicycle" ) ) );
+    who.set_wielded_item( item( itype_folded_bicycle ) );
     class cancel_on_unfold : public event_subscriber {
         public:
             Character &who;
@@ -5285,22 +5637,22 @@ TEST_CASE( "unfold_start_events_cannot_leave_a_second_folded_source",
             void notify( const cata::event &event ) override {
                 if( fired || event.type() != event_type::character_starts_activity ||
                     event.get<character_id>( "character" ) != who.getID() ||
-                    who.activity.id() != activity_id( "ACT_VEHICLE_UNFOLD" ) ) {
+                    who.activity.id() != ACT_VEHICLE_UNFOLD ) {
                     return;
                 }
                 fired = true;
                 CHECK_FALSE( who.get_wielded_item() );
                 who.cancel_activity();
-                who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+                who.assign_activity( player_activity( ACT_WAIT, 100 ) );
             }
     } events( who );
     REQUIRE( iuse::unfold_generic( &who, who.get_wielded_item().get_item(), who.pos_bub() ) );
     REQUIRE( events.fired );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     CHECK_FALSE( who.get_wielded_item() );
     CHECK( here.get_vehicles().empty() );
     REQUIRE( here.i_at( who.pos_bub() ).size() == 1 );
-    CHECK( here.i_at( who.pos_bub() ).begin()->typeId() == itype_id( "folded_bicycle" ) );
+    CHECK( here.i_at( who.pos_bub() ).begin()->typeId() == itype_folded_bicycle );
 }
 
 TEST_CASE( "owned_vehicle_start_uses_native_time_survives_save_and_releases_without_unboarding",
@@ -5309,19 +5661,19 @@ TEST_CASE( "owned_vehicle_start_uses_native_time_survives_save_and_releases_with
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
     const int host_moves = host.get_moves();
-    const int battery = target.fuel_left( here, itype_id( "battery" ) );
+    const int battery = target.fuel_left( here, itype_battery );
     const std::string request = control_request( fixture, who, control_choice( who, target, "take" ) );
     fixture.run( who, request );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
-    CHECK( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    CHECK( who.activity.id() == ACT_START_ENGINES );
     REQUIRE( who.activity.moves_left > 1 );
     CHECK_FALSE( target.engine_on );
-    CHECK( target.fuel_left( here, itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( here, itype_battery ) == battery );
     CHECK( who.controlling_vehicle );
     CHECK( who.in_vehicle );
     CHECK_FALSE( host.controlling_vehicle );
@@ -5341,9 +5693,9 @@ TEST_CASE( "owned_vehicle_start_uses_native_time_survives_save_and_releases_with
     REQUIRE_FALSE( who.activity );
     REQUIRE( target.engine_on );
     CHECK( recipient.feedback.pending.size() == messages_before_start + 1 );
-    const int after_start = target.fuel_left( here, itype_id( "battery" ) );
+    const int after_start = target.fuel_left( here, itype_battery );
     fixture.run( who, step );
-    CHECK( target.fuel_left( here, itype_id( "battery" ) ) == after_start );
+    CHECK( target.fuel_left( here, itype_battery ) == after_start );
     who.set_moves( 100 );
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "release" ) ) );
     CHECK_FALSE( who.controlling_vehicle );
@@ -5375,12 +5727,12 @@ TEST_CASE( "owned_vehicle_controls_reject_wrong_identity_and_competing_driver",
     SECTION( "locked vehicle" ) {
         target.is_locked = true;
     }
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK_FALSE( who.activity );
     CHECK_FALSE( who.controlling_vehicle );
     CHECK_FALSE( target.engine_on );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
 }
 
 TEST_CASE( "owned_vehicle_start_cancels_when_controls_are_lost_or_vehicle_replaced",
@@ -5447,7 +5799,7 @@ TEST_CASE( "vehicle_start_client_view_never_executes_native_start",
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     who.set_moves( 100 );
     cata_mp::set_client_mode( true );
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     const std::string action = GENERATE( "take", "hotwire", "autopilot_follow", "autopilot_patrol",
                                          "precollision_off" );
     const bool hotwire = action == "hotwire";
@@ -5461,7 +5813,7 @@ TEST_CASE( "vehicle_start_client_view_never_executes_native_start",
     CHECK_FALSE( target.is_patrolling );
     CHECK( target.precollision_on );
     CHECK_FALSE( who.controlling_vehicle );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
 }
 
 TEST_CASE( "remote_vehicle_binding_is_per_character_and_rejects_replacement_identity",
@@ -5475,10 +5827,10 @@ TEST_CASE( "remote_vehicle_binding_is_per_character_and_rejects_replacement_iden
     vehicle &second = owned_test_vehicle( remote, tripoint_bub_ms( 65, 65, 0 ) );
     for( vehicle *target : { &first, &second } ) {
         REQUIRE( target->install_part( here, point_rel_ms::zero,
-                                       vpart_id( "drive_by_wire_controls" ) ) >= 0 );
+                                       vpart_drive_by_wire_controls ) >= 0 );
     }
     for( Character *who : { static_cast<Character *>( &host ), static_cast<Character *>( &remote ) } ) {
-        item controller( itype_id( "remotevehcontrol" ) );
+        item controller( itype_remotevehcontrol );
         controller.active = true;
         who->set_wielded_item( controller );
     }
@@ -5487,9 +5839,9 @@ TEST_CASE( "remote_vehicle_binding_is_per_character_and_rejects_replacement_iden
     CHECK( get_remote_vehicle( host, here ) == &first );
     CHECK( get_remote_vehicle( remote, here ) == &second );
     CHECK_FALSE( first.remote_controlled( remote ) );
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     CHECK( resolve_remote_vehicle( host, here ) == &first );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     SECTION( "old bubble-coordinate save migrates to identity" ) {
         set_remote_vehicle( remote, here, nullptr );
         remote.set_value( "remote_controlling_vehicle", tripoint_abs_ms( second.pos_bub( here ).raw() ) );
@@ -5568,11 +5920,11 @@ TEST_CASE( "vehicle_muscle_power_and_training_belong_to_the_seated_driver",
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = owned_test_vehicle( host, tripoint_bub_ms( 60, 60, 0 ), "bicycle" );
     const tripoint_bub_ms controls = host.pos_bub();
-    const proficiency_id driving( "prof_driver" );
+    const proficiency_id &driving = proficiency_prof_driver;
     const float host_training = host.get_proficiency_practice( driving );
     const int host_stamina = host.get_stamina();
     // Merely standing over the pedals does not provide a body's fuel or training.
-    CHECK( target.fuel_left( here, itype_id( "muscle" ) ) == 0 );
+    CHECK( target.fuel_left( here, itype_muscle ) == 0 );
     target.consume_fuel( here, 1000, false );
     CHECK( host.get_proficiency_practice( driving ) == host_training );
     CHECK( host.get_stamina() == host_stamina );
@@ -5584,7 +5936,7 @@ TEST_CASE( "vehicle_muscle_power_and_training_belong_to_the_seated_driver",
     target.engine_on = true;
     REQUIRE( target.get_driver( here ) == &who );
     REQUIRE( vehicle_operator( target, here ) == &who );
-    REQUIRE( target.fuel_left( here, itype_id( "muscle" ) ) > 0 );
+    REQUIRE( target.fuel_left( here, itype_muscle ) > 0 );
     const float training = who.get_proficiency_practice( driving );
     const int stamina = who.get_stamina();
     target.consume_fuel( here, 1000, false );
@@ -5614,8 +5966,8 @@ TEST_CASE( "vehicle_cruise_and_idle_recognize_seated_and_remote_players",
     const bool remote_control = GENERATE( false, true );
     if( remote_control ) {
         REQUIRE( target.install_part( here, point_rel_ms::zero,
-                                      vpart_id( "drive_by_wire_controls" ) ) >= 0 );
-        item controller( itype_id( "remotevehcontrol" ) );
+                                      vpart_drive_by_wire_controls ) >= 0 );
+        item controller( itype_remotevehcontrol );
         controller.active = true;
         who.set_wielded_item( controller );
         who.setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
@@ -5637,10 +5989,10 @@ TEST_CASE( "vehicle_cruise_and_idle_recognize_seated_and_remote_players",
     target.idle( here, true );
     CHECK( target.fuel_used_last_turn == used );
     CHECK( who.get_stamina() == stamina );
-    CHECK( who.get_proficiency_practice( proficiency_id( "prof_driver" ) ) > 0.0f );
-    CHECK( get_avatar().get_proficiency_practice( proficiency_id( "prof_driver" ) ) == 0.0f );
+    CHECK( who.get_proficiency_practice( proficiency_prof_driver ) > 0.0f );
+    CHECK( get_avatar().get_proficiency_practice( proficiency_prof_driver ) == 0.0f );
 
-    const auto snapshot = json_loader::from_string(
+    const JsonValue snapshot = json_loader::from_string(
                               cata_mp::serialize_remote_player_state( only_test_remote( g->multiplayer_session() ) ) );
     const JsonObject state = snapshot.get_object();
     state.allow_omitted_members();
@@ -5656,19 +6008,19 @@ TEST_CASE( "vehicle_driving_intents_reject_unowned_controls_and_mutation_uploads
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     g->multiplayer_session().host_mode = true;
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     get_avatar().setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
     recipient.turn.granted_this_turn = true;
-    const auto send = [&]( const std::string &action, int dx, int dy ) {
+    const auto send = [&]( const std::string &action, const point &delta ) {
         std::ostringstream stream;
         JsonOut out( stream );
         out.start_object();
         out.member( "type", "action" );
         out.member( "action", action );
-        out.member( "dx", dx );
-        out.member( "dy", dy );
+        out.member( "dx", delta.x );
+        out.member( "dy", delta.y );
         out.member( "grant_seq", recipient.turn.grant_seq );
         out.member( "char_stats" );
         out.start_object();
@@ -5680,48 +6032,48 @@ TEST_CASE( "vehicle_driving_intents_reject_unowned_controls_and_mutation_uploads
         cata_mp::process_mp_events();
     };
     const int strength = who.get_str_base();
-    const auto rng_before = rng_get_engine();
-    send( "cruise", 0, -1 );
-    send( "pldrive", 1, 0 );
-    send( "handbrake", 0, 0 );
+    const std::string rng_before = capture_rng_state();
+    send( "cruise", point::north );
+    send( "pldrive", point::east );
+    send( "handbrake", point::zero );
     CHECK( target.cruise_velocity == 0 );
     CHECK( recipient.turn.remote_moves == 100 );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     CHECK( who.get_str_base() == strength );
 
     here.board_vehicle( who.pos_bub(), &who );
     who.controlling_vehicle = true;
     target.engine_on = true;
-    send( "cruise", 0, std::numeric_limits<int>::min() );
-    send( "pldrive", 99, 0 );
+    send( "cruise", point( 0, std::numeric_limits<int>::min() ) );
+    send( "pldrive", point( 99, 0 ) );
     CHECK( target.cruise_velocity == 0 );
-    CHECK( rng_get_engine() == rng_before );
-    send( "cruise", 0, -1 );
+    CHECK( capture_rng_state() == rng_before );
+    send( "cruise", point::north );
     REQUIRE( target.cruise_velocity > 0 );
     CHECK( recipient.turn.remote_moves == 100 );
     CHECK( who.get_str_base() == strength );
     target.is_on_ramp = true;
-    send( "pldrive", 1, 0 );
+    send( "pldrive", point::east );
     CHECK( recipient.turn.remote_moves == 100 );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     target.is_on_ramp = false;
-    send( "pldrive", 1, 0 );
+    send( "pldrive", point::east );
     CHECK( recipient.turn.remote_moves < 100 );
     CHECK( who.get_moves() == recipient.turn.remote_moves );
     CHECK( who.get_str_base() == strength );
     next_test_remote_turn( recipient );
     target.last_turn = 0_degrees;
     target.velocity = 2000;
-    send( "handbrake", 0, 0 );
+    send( "handbrake", point::zero );
     CHECK( target.cruise_velocity == 0 );
     CHECK( target.velocity == 0 );
     CHECK( recipient.turn.remote_moves == 0 );
     CHECK( who.get_moves() == 0 );
     CHECK( recipient.turn.client_acted_this_turn );
-    const auto after_brake = rng_get_engine();
-    send( "cruise", 0, -1 );
+    const std::string after_brake = capture_rng_state();
+    send( "cruise", point::north );
     CHECK( target.cruise_velocity == 0 );
-    CHECK( rng_get_engine() == after_brake );
+    CHECK( capture_rng_state() == after_brake );
 }
 
 TEST_CASE( "remote_driving_feedback_and_sinking_do_not_depend_on_the_host",
@@ -5730,7 +6082,7 @@ TEST_CASE( "remote_driving_feedback_and_sinking_do_not_depend_on_the_host",
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     here.board_vehicle( who.pos_bub(), &who );
     who.controlling_vehicle = true;
@@ -5738,7 +6090,7 @@ TEST_CASE( "remote_driving_feedback_and_sinking_do_not_depend_on_the_host",
     SECTION( "thrust failure reaches its operator" ) {
         target.engine_on = false;
         target.cruise_velocity = 400;
-        const auto count = recipient.feedback.pending.size();
+        const std::string::size_type count = recipient.feedback.pending.size();
         target.thrust( here, 1 );
         CHECK( recipient.feedback.pending.size() > count );
     }
@@ -5755,9 +6107,9 @@ TEST_CASE( "remote_driving_feedback_and_sinking_do_not_depend_on_the_host",
                              VPFLAG_CONTROLS );
         REQUIRE( controls >= 0 );
         target.set_hp( target.part( controls ), 0, false );
-        const auto before = rng_get_engine();
+        const std::string before = capture_rng_state();
         CHECK_FALSE( drive_vehicle( who, here, tripoint_rel_ms( 1, 0, 0 ) ) );
-        CHECK( rng_get_engine() == before );
+        CHECK( capture_rng_state() == before );
         CHECK_FALSE( who.controlling_vehicle );
     }
     SECTION( "sinking unboards remote passengers even after releasing controls" ) {
@@ -5784,15 +6136,15 @@ TEST_CASE( "owned_hotwire_uses_operator_skill_time_save_and_replay",
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     target.is_locked = true;
-    who.i_add( item( itype_id( "screwdriver" ) ) );
-    who.set_skill_level( skill_id( "mechanics" ), 8 );
+    who.i_add( item( itype_screwdriver ) );
+    who.set_skill_level( skill_mechanics, 8 );
     who.set_moves( 100 );
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
     const int host_moves = host.get_moves();
     const std::string request = control_request( fixture, who, control_choice( who, target, "hotwire" ) );
     fixture.run( who, request );
-    REQUIRE( who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) );
+    REQUIRE( who.activity.id() == ACT_HOTWIRE_CAR );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
     CHECK( who.activity.moves_total == to_moves<int>( 750_seconds ) );
     save_reload_activity( who );
@@ -5808,9 +6160,9 @@ TEST_CASE( "owned_hotwire_uses_operator_skill_time_save_and_replay",
     REQUIRE_FALSE( who.activity );
     CHECK_FALSE( target.is_locked );
     CHECK_FALSE( target.engine_on );
-    const auto after = rng_get_engine();
+    const std::string after = capture_rng_state();
     fixture.run( who, finish );
-    CHECK( rng_get_engine() == after );
+    CHECK( capture_rng_state() == after );
 }
 
 TEST_CASE( "owned_hotwire_cancels_lost_tools_controls_and_replaced_vehicles",
@@ -5827,14 +6179,14 @@ TEST_CASE( "owned_hotwire_cancels_lost_tools_controls_and_replaced_vehicles",
     for( const vpart_reference &part : target.get_avail_parts( "CARGO" ) ) {
         target.get_items( part.part() ).clear();
     }
-    item_location tool = who.i_add( item( itype_id( "screwdriver" ) ) );
+    item_location tool = who.i_add( item( itype_screwdriver ) );
     who.set_moves( 100 );
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "hotwire" ) ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) );
+    REQUIRE( who.activity.id() == ACT_HOTWIRE_CAR );
     SECTION( "tool removed" ) {
         tool.remove_item();
         who.invalidate_crafting_inventory();
-        REQUIRE_FALSE( who.crafting_inventory( &here ).has_quality( quality_id( "SCREW" ) ) );
+        REQUIRE_FALSE( who.crafting_inventory( &here ).has_quality( qual_SCREW ) );
     }
     SECTION( "operator moved away" ) {
         who.setpos( here, tripoint_bub_ms( 80, 80, 0 ) );
@@ -5853,10 +6205,10 @@ TEST_CASE( "owned_hotwire_cancels_lost_tools_controls_and_replaced_vehicles",
         save_reload_activity( who );
     }
     who.set_moves( 1000000 );
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     fixture.run( who, fixture.request( who, "step" ) );
     CHECK_FALSE( who.activity );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     for( const wrapped_vehicle &entry : here.get_vehicles() ) {
         CHECK( entry.v->is_locked );
         CHECK_FALSE( entry.v->engine_on );
@@ -5888,12 +6240,12 @@ TEST_CASE( "owned_engine_configuration_validates_all_choices_before_applying",
     SECTION( "wrong vehicle identity" ) {
         ++selection.vehicle_id;
     }
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     fixture.run( who, control_request( fixture, who, selection ) );
     CHECK( engine.enabled );
     CHECK( target.engine_on );
     CHECK_FALSE( who.activity );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
 }
 
 TEST_CASE( "owned_engine_configuration_stops_all_and_restarts_with_native_time",
@@ -5923,12 +6275,12 @@ TEST_CASE( "owned_engine_configuration_stops_all_and_restarts_with_native_time",
     fixture.run( who, disable );
     CHECK_FALSE( target.engine_on );
     selection.engines.front().enabled = true;
-    const int battery = target.fuel_left( here, itype_id( "battery" ) );
+    const int battery = target.fuel_left( here, itype_battery );
     who.set_moves( 100 );
     fixture.run( who, control_request( fixture, who, selection ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    REQUIRE( who.activity.id() == ACT_START_ENGINES );
     CHECK_FALSE( target.engine_on );
-    CHECK( target.fuel_left( here, itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( here, itype_battery ) == battery );
     CHECK_FALSE( get_avatar().activity );
     save_reload_activity( who );
     who.set_moves( 100000 );
@@ -5943,18 +6295,18 @@ TEST_CASE( "obsolete_vehicle_toggles_cannot_upload_state_or_change_engines",
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     g->multiplayer_session().host_mode = true;
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     here.board_vehicle( who.pos_bub(), &who );
     who.controlling_vehicle = true;
     target.engine_on = true;
     const int strength = who.get_str_base();
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     for( const char *action : { "control_vehicle", "stop_engine", "toggle_engine" } ) {
         next_test_remote_turn( recipient );
-        const std::string wire = test_granted_action( std::string( "{\"action\":\"" ) + action +
-                                 "\",\"char_stats\":{\"str\":999}}", recipient.turn.grant_seq );
+        const std::string wire = test_granted_action( std::string( R"({"action":")" ) + action +
+                                 R"(","char_stats":{"str":999}})", recipient.turn.grant_seq );
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", wire,
                                                recipient.admission } ) );
         cata_mp::process_mp_events();
@@ -5964,7 +6316,7 @@ TEST_CASE( "obsolete_vehicle_toggles_cannot_upload_state_or_change_engines",
         CHECK( who.get_str_base() == strength );
         CHECK_FALSE( who.activity );
     }
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
 }
 
 TEST_CASE( "vehicle_alarm_operations_use_the_actual_operator",
@@ -5973,49 +6325,49 @@ TEST_CASE( "vehicle_alarm_operations_use_the_actual_operator",
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     const int controls = target.avail_part_with_feature( here.veh_at( who.pos_bub() )->part_index(),
                          VPFLAG_CONTROLS );
     REQUIRE( controls >= 0 );
     if( !target.has_security_working( here ) ) {
         REQUIRE( target.install_part( here, target.part( controls ).mount,
-                                      vpart_id( "vehicle_alarm" ) ) >= 0 );
+                                      vpart_vehicle_alarm ) >= 0 );
     }
     REQUIRE( target.has_security_working( here ) );
-    get_avatar().set_skill_level( skill_id( "mechanics" ), 0 );
-    who.set_skill_level( skill_id( "mechanics" ), 10 );
+    get_avatar().set_skill_level( skill_mechanics, 0 );
+    who.set_skill_level( skill_mechanics, 10 );
     target.is_locked = false;
     target.is_alarm_on = false;
-    const auto unlocked_rng = rng_get_engine();
+    const std::string unlocked_rng = capture_rng_state();
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "alarm" ) ) );
     CHECK_FALSE( target.is_alarm_on );
-    CHECK( rng_get_engine() == unlocked_rng );
+    CHECK( capture_rng_state() == unlocked_rng );
     target.is_locked = true;
-    const auto count = recipient.feedback.pending.size();
+    const std::string::size_type count = recipient.feedback.pending.size();
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "alarm" ) ) );
     REQUIRE( target.is_alarm_on );
     CHECK( recipient.feedback.pending.size() > count );
     const int controls_hp = target.part( controls ).hp();
     // Select a roll where a skilled operator stops the alarm, but the unskilled
     // host would damage the controls.  Keep this independent of setup RNG use.
-    auto alarm_rng = rng_get_engine();
+    std::string alarm_rng = capture_rng_state();
     bool selected_roll = false;
     for( int attempt = 0; attempt < 100 && !selected_roll; ++attempt ) {
-        alarm_rng = rng_get_engine();
+        alarm_rng = capture_rng_state();
         const int roll = rng( 1, 100 );
         selected_roll = roll >= 10 && roll <= 20;
     }
     REQUIRE( selected_roll );
-    rng_get_engine() = alarm_rng;
+    restore_rng_state( alarm_rng );
     const std::string request = control_request( fixture, who, control_choice( who, target, "smash_alarm" ) );
     fixture.run( who, request );
     CHECK_FALSE( target.is_alarm_on );
     CHECK( target.part( controls ).hp() == controls_hp );
     CHECK( target.is_locked );
-    const auto after = rng_get_engine();
+    const std::string after = capture_rng_state();
     fixture.run( who, request );
-    CHECK( rng_get_engine() == after );
+    CHECK( capture_rng_state() == after );
 }
 
 TEST_CASE( "legacy_hotwire_save_binds_nearby_controls_to_vehicle_identity",
@@ -6026,8 +6378,8 @@ TEST_CASE( "legacy_hotwire_save_binds_nearby_controls_to_vehicle_identity",
     npc &who = fixture.remote();
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
     target.is_locked = true;
-    who.i_add( item( itype_id( "screwdriver" ) ) );
-    who.set_skill_level( skill_id( "mechanics" ), 8 );
+    who.i_add( item( itype_screwdriver ) );
+    who.set_skill_level( skill_mechanics, 8 );
     const tripoint_abs_ms controls = who.pos_abs();
     bool adjacent = false;
     for( const tripoint_abs_ms &position : target.get_points() ) {
@@ -6060,12 +6412,12 @@ vehicle &owned_autopilot_vehicle( Character &who )
 {
     map &here = get_map();
     vehicle &target = owned_test_vehicle( who, tripoint_bub_ms( 60, 60, 0 ) );
-    const auto at = here.veh_at( who.pos_bub() );
+    const optional_vpart_position at = here.veh_at( who.pos_bub() );
     REQUIRE( at );
     if( target.avail_part_with_feature( at->mount_pos(), "CTRL_ELECTRONIC" ) < 0 ) {
-        REQUIRE( target.install_part( here, at->mount_pos(), vpart_id( "controls_electronic" ) ) >= 0 );
+        REQUIRE( target.install_part( here, at->mount_pos(), vpart_controls_electronic ) >= 0 );
     }
-    REQUIRE( target.install_part( here, at->mount_pos(), vpart_id( "programmable_autopilot" ) ) >= 0 );
+    REQUIRE( target.install_part( here, at->mount_pos(), vpart_programmable_autopilot ) >= 0 );
     return target;
 }
 } // namespace
@@ -6080,25 +6432,25 @@ TEST_CASE( "owned_autopilot_follow_uses_operator_startup_and_persists_target",
     avatar &host = get_avatar();
     host.setpos( get_map(), tripoint_bub_ms( 40, 40, 0 ) );
     const int host_moves = host.get_moves();
-    const auto request = control_request( fixture, who, control_choice( who, target, "autopilot_follow" ) );
+    const std::string request = control_request( fixture, who, control_choice( who, target, "autopilot_follow" ) );
     fixture.run( who, request );
     REQUIRE( target.is_following );
     CHECK( target.get_follow_target() == &who );
     CHECK( target.following_character == who.getID() );
-    REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    REQUIRE( who.activity.id() == ACT_START_ENGINES );
     CHECK( cata_mp::owns_inventory_activity( who ) );
     CHECK_FALSE( host.activity );
     CHECK( host.get_moves() == host_moves );
     const int startup = who.activity.moves_left;
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( who.activity.moves_left == startup );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 
     std::ostringstream encoded;
     JsonOut out( encoded );
     target.serialize( out );
-    vehicle restored( vproto_id( "" ) );
+    vehicle restored( vehicle_prototype_ );
     restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
     CHECK( restored.following_character == who.getID() );
     CHECK( restored.get_follow_target() == &who );
@@ -6215,21 +6567,21 @@ TEST_CASE( "owned_autopilot_settings_validate_parts_access_and_replay",
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = owned_autopilot_vehicle( who );
     target.engine_on = target.autopilot_on = target.is_following = true;
     target.following_character = who.getID();
-    const auto disable = control_request( fixture, who, control_choice( who, target, "precollision_off" ) );
+    const std::string disable = control_request( fixture, who, control_choice( who, target, "precollision_off" ) );
     fixture.run( who, disable );
     REQUIRE_FALSE( target.precollision_on );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, disable );
     CHECK_FALSE( target.precollision_on );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     REQUIRE_FALSE( recipient.feedback.pending.empty() );
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "precollision_on" ) ) );
     REQUIRE( target.precollision_on );
-    const auto stop = control_choice( who, target, "autopilot_stop" );
+    const vehicle_control_selection stop = control_choice( who, target, "autopilot_stop" );
     SECTION( "stopping uses native state and engine shutdown" ) {
         fixture.run( who, control_request( fixture, who, stop ) );
         CHECK_FALSE( target.engine_on );
@@ -6264,17 +6616,17 @@ TEST_CASE( "owned_autopilot_patrol_uses_initiating_faction_zones_and_survives_sa
     const on_out_of_scope clear_zones( [&]() { zones.clear(); } );
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    who.set_fac( faction_id( "free_merchants" ) );
+    who.set_fac( faction_free_merchants );
     vehicle &target = owned_autopilot_vehicle( who );
     target.engine_on = true;
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto start = here.get_abs( tripoint_bub_ms( 80, 70, 0 ) );
-    const auto end = here.get_abs( tripoint_bub_ms( 85, 75, 0 ) );
-    zones.add( "Host patrol", zone_type_id( "VEHICLE_PATROL" ), your_fac, false, true, start, end );
+    const tripoint_abs_ms start = here.get_abs( tripoint_bub_ms( 80, 70, 0 ) );
+    const tripoint_abs_ms end = here.get_abs( tripoint_bub_ms( 85, 75, 0 ) );
+    zones.add( "Host patrol", zone_type_VEHICLE_PATROL, your_fac, false, true, start, end );
     zones.cache_data();
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "autopilot_patrol" ) ) );
     CHECK_FALSE( target.is_patrolling );
-    zones.add( "Operator patrol", zone_type_id( "VEHICLE_PATROL" ), who.get_faction()->id,
+    zones.add( "Operator patrol", zone_type_VEHICLE_PATROL, who.get_faction()->id,
                false, true, start, end );
     zones.cache_data();
     fixture.run( who, control_request( fixture, who, control_choice( who, target, "autopilot_patrol" ) ) );
@@ -6284,11 +6636,11 @@ TEST_CASE( "owned_autopilot_patrol_uses_initiating_faction_zones_and_survives_sa
     std::ostringstream encoded;
     JsonOut out( encoded );
     target.serialize( out );
-    vehicle restored( vproto_id( "" ) );
+    vehicle restored( vehicle_prototype_ );
     restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
     CHECK( restored.patrol_faction == who.get_faction()->id );
     target.autopilot_patrol( &here );
-    const auto points = zones.get_near( zone_type_id( "VEHICLE_PATROL" ), target.pos_abs(),
+    const auto points = zones.get_near( zone_type_VEHICLE_PATROL, target.pos_abs(),
                                         MAX_VIEW_DISTANCE, nullptr, who.get_faction()->id );
     std::ostringstream updated;
     JsonOut waypoint_out( updated );
@@ -6311,9 +6663,9 @@ namespace
 {
 item_location remote_controller( Character &who )
 {
-    item controller( itype_id( "remotevehcontrol" ) );
-    item battery( itype_id( "light_battery_cell" ) );
-    battery.ammo_set( itype_id( "battery" ), 100 );
+    item controller( itype_remotevehcontrol );
+    item battery( itype_light_battery_cell );
+    battery.ammo_set( itype_battery, 100 );
     REQUIRE( controller.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
     who.set_wielded_item( controller );
     who.set_moves( 1000 );
@@ -6352,23 +6704,23 @@ void arrange_security_prompt( Character &who, item &controller, vehicle &target 
 {
     map &here = get_map();
     if( !target.has_security_working( here ) ) {
-        REQUIRE( target.install_part( here, point_rel_ms::zero, vpart_id( "vehicle_alarm" ) ) >= 0 );
+        REQUIRE( target.install_part( here, point_rel_ms::zero, vpart_vehicle_alarm ) >= 0 );
     }
     REQUIRE( target.has_security_working( here ) );
     target.is_locked = true;
     target.is_alarm_on = false;
-    who.set_skill_level( skill_id( "computer" ), 10 );
+    who.set_skill_level( skill_computer, 10 );
     who.set_int_bonus( 4 );
-    auto selected = rng_get_engine();
+    std::string selected = capture_rng_state();
     bool found = false;
     for( int attempt = 0; attempt < 100 && !found; ++attempt ) {
-        selected = rng_get_engine();
+        selected = capture_rng_state();
         REQUIRE( controller.activation_success() );
         const int roll = dice( 12, who.get_int() ) - 50;
         found = roll >= 0 && roll < 20;
     }
     REQUIRE( found );
-    rng_get_engine() = selected;
+    restore_rng_state( selected );
 }
 } // namespace
 
@@ -6392,26 +6744,26 @@ TEST_CASE( "remote_cbm_control_and_deactivation_belong_to_operator", "[mp_bionic
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    const bionic_id id( "bio_remote" );
+    const bionic_id &id = bio_remote;
     const unsigned int uid = prepare_targeted_bionic( who, id );
     vehicle &target = radio_vehicle( who );
     target.engine_on = true;
-    const auto power = who.get_power_level();
-    const auto host_power = get_avatar().get_power_level();
-    const auto request = bionic_radio_request( fixture, who, uid, "control", target.uid().get_value() );
+    const units::energy power = who.get_power_level();
+    const units::energy host_power = get_avatar().get_power_level();
+    const std::string request = bionic_radio_request( fixture, who, uid, "control", target.uid().get_value() );
     fixture.run( who, request );
     CHECK_FALSE( who.activity );
     CHECK( who.has_active_bionic( id ) );
     CHECK( resolve_remote_vehicle( who, get_map() ) == &target );
     CHECK( who.get_power_level() == power - 1_kJ );
     CHECK_FALSE( who.get_wielded_item() );
-    CHECK_FALSE( who.has_active_item( itype_id( "remotevehcontrol" ) ) );
+    CHECK_FALSE( who.has_active_item( itype_remotevehcontrol ) );
     CHECK_FALSE( resolve_remote_vehicle( get_avatar(), get_map() ) );
     CHECK( get_avatar().get_power_level() == host_power );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( who.get_power_level() == power - 1_kJ );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     fixture.run( who, bionic_switch_request( fixture, who, uid, id, false ) );
     CHECK_FALSE( who.has_active_bionic( id ) );
     CHECK_FALSE( resolve_remote_vehicle( who, get_map() ) );
@@ -6424,17 +6776,17 @@ TEST_CASE( "remote_cbm_security_saves_owner_roll_and_bills_only_success", "[mp_b
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    const bionic_id id( "bio_remote" );
+    const bionic_id &id = bio_remote;
     const unsigned int uid = prepare_targeted_bionic( who, id );
     vehicle &target = radio_vehicle( who );
     target.engine_on = true;
-    item facade( itype_id( "remotevehcontrol" ), calendar::turn_zero );
+    item facade( itype_remotevehcontrol, calendar::turn_zero );
     facade.set_flag( flag_USES_BIONIC_POWER );
     facade.charges = 200;
     arrange_security_prompt( who, facade, target );
     who.set_moves( 1000 );
-    const auto power = who.get_power_level();
-    const auto request = bionic_radio_request( fixture, who, uid, "control", target.uid().get_value() );
+    const units::energy power = who.get_power_level();
+    const std::string request = bionic_radio_request( fixture, who, uid, "control", target.uid().get_value() );
     fixture.run( who, request );
     auto *actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
     REQUIRE( actor );
@@ -6442,13 +6794,13 @@ TEST_CASE( "remote_cbm_security_saves_owner_roll_and_bills_only_success", "[mp_b
     REQUIRE( actor->waiting_for_security() );
     CHECK( who.get_power_level() == power );
     CHECK_FALSE( who.has_active_bionic( id ) );
-    const auto scanned = rng_get_engine();
+    const std::string scanned = capture_rng_state();
     fixture.run( who, request );
-    CHECK( rng_get_engine() == scanned );
+    CHECK( capture_rng_state() == scanned );
     save_reload_activity( who );
-    CHECK( rng_get_engine() == scanned );
+    CHECK( capture_rng_state() == scanned );
     const bool consent = GENERATE( false, true );
-    const auto answer = fixture.request( who, "choose", [&]( JsonOut &out ) {
+    const std::string answer = fixture.request( who, "choose", [&]( JsonOut &out ) {
         out.member( "remote_security", consent );
     } );
     fixture.run( who, answer );
@@ -6458,10 +6810,10 @@ TEST_CASE( "remote_cbm_security_saves_owner_roll_and_bills_only_success", "[mp_b
     CHECK( target.is_locked == !consent );
     CHECK( ( resolve_remote_vehicle( who, get_map() ) == &target ) == consent );
     CHECK( who.get_moves() < 1000 );
-    const auto settled = rng_get_engine();
+    const std::string settled = capture_rng_state();
     const int moves = who.get_moves();
     fixture.run( who, answer );
-    CHECK( rng_get_engine() == settled );
+    CHECK( capture_rng_state() == settled );
     CHECK( who.get_moves() == moves );
     CHECK( who.get_power_level() == power - ( consent ? 1_kJ : 0_kJ ) );
 }
@@ -6471,10 +6823,10 @@ TEST_CASE( "remote_cbm_one_action_keeps_installed_identity_through_engine_start"
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    const unsigned int uid = prepare_targeted_bionic( who, bionic_id( "bio_remote" ) );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_remote );
     vehicle &target = radio_vehicle( who, false );
-    const auto power = who.get_power_level();
-    const auto reply = fixture.run( who, bionic_radio_request( fixture, who, uid, "action",
+    const units::energy power = who.get_power_level();
+    const std::string reply = fixture.run( who, bionic_radio_request( fixture, who, uid, "action",
                                     target.uid().get_value() ) );
     auto *actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
     REQUIRE( actor );
@@ -6485,7 +6837,7 @@ TEST_CASE( "remote_cbm_one_action_keeps_installed_identity_through_engine_start"
     CHECK_FALSE( response.has_member( "remote_controller" ) );
     CHECK( who.get_power_level() == power );
     SECTION( "cancel after access costs once" ) {
-        const auto cancel = fixture.request( who, "cancel" );
+        const std::string cancel = fixture.request( who, "cancel" );
         fixture.run( who, cancel );
         CHECK_FALSE( who.activity );
         CHECK( who.get_power_level() == power - 1_kJ );
@@ -6500,10 +6852,10 @@ TEST_CASE( "remote_cbm_one_action_keeps_installed_identity_through_engine_start"
         fixture.run( who, fixture.request( who, "choose", [&]( JsonOut &out ) {
             out.member( "vehicle_control", choice );
         } ) );
-        REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+        REQUIRE( who.activity.id() == ACT_START_ENGINES );
         CHECK( who.get_power_level() == power - 1_kJ );
         CHECK_FALSE( who.controlling_vehicle );
-        CHECK_FALSE( who.has_active_bionic( bionic_id( "bio_remote" ) ) );
+        CHECK_FALSE( who.has_active_bionic( bio_remote ) );
         save_reload_activity( who );
         const bool shorted = GENERATE( false, true );
         if( shorted ) {
@@ -6522,13 +6874,13 @@ TEST_CASE( "remote_cbm_radio_signals_spend_only_operators_time_and_power", "[mp_
 {
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
-    const unsigned int uid = prepare_targeted_bionic( who, bionic_id( "bio_remote" ) );
+    const unsigned int uid = prepare_targeted_bionic( who, bio_remote );
     who.set_moves( 1000 );
-    const auto power = who.get_power_level();
-    const auto host_power = get_avatar().get_power_level();
+    const units::energy power = who.get_power_level();
+    const units::energy host_power = get_avatar().get_power_level();
     const int host_moves = get_avatar().get_moves();
     const int button = GENERATE( 1, 2, 3, 4 );
-    const auto request = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string request = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "bionic_activation" );
         out.member( "bionic_uid", uid );
         out.member( "bionic_type", "bio_remote" );
@@ -6537,12 +6889,12 @@ TEST_CASE( "remote_cbm_radio_signals_spend_only_operators_time_and_power", "[mp_
     fixture.run( who, request );
     CHECK( who.get_power_level() == power - ( button < 4 ? 1_kJ : 0_kJ ) );
     CHECK( who.get_moves() == ( button < 4 ? 800 : 1000 ) );
-    CHECK_FALSE( who.has_active_bionic( bionic_id( "bio_remote" ) ) );
+    CHECK_FALSE( who.has_active_bionic( bio_remote ) );
     CHECK( get_avatar().get_power_level() == host_power );
     CHECK( get_avatar().get_moves() == host_moves );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( who.get_power_level() == power - ( button < 4 ? 1_kJ : 0_kJ ) );
 }
 
@@ -6550,9 +6902,9 @@ namespace
 {
 item_location toy_radio_controller( Character &who )
 {
-    item controller( itype_id( "radiocontrol" ), calendar::turn_zero );
-    item battery( itype_id( "light_battery_cell" ), calendar::turn_zero );
-    battery.ammo_set( itype_id( "battery" ), 100 );
+    item controller( itype_radiocontrol, calendar::turn_zero );
+    item battery( itype_light_battery_cell, calendar::turn_zero );
+    battery.ammo_set( itype_battery, 100 );
     REQUIRE( controller.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
     who.set_wielded_item( controller );
     who.set_moves( 1000 );
@@ -6561,10 +6913,10 @@ item_location toy_radio_controller( Character &who )
 
 item_location toy_car( map &here, const tripoint_bub_ms &position )
 {
-    item car( itype_id( "radio_car_on" ), calendar::turn_zero );
+    item car( itype_radio_car_on, calendar::turn_zero );
     car.active = true;
-    item battery( itype_id( "medium_battery_cell" ), calendar::turn_zero );
-    battery.ammo_set( itype_id( "battery" ), 100 );
+    item battery( itype_medium_battery_cell, calendar::turn_zero );
+    battery.ammo_set( itype_battery, 100 );
     REQUIRE( car.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
     item &placed = here.add_item_or_charges( position, car, false );
     REQUIRE_FALSE( placed.is_null() );
@@ -6609,10 +6961,10 @@ TEST_CASE( "radio_car_moves_only_for_its_operator_and_retains_identity", "[mp_ra
     REQUIRE( car->magazine_current() );
     const int battery_ammo = car->magazine_current()->ammo_remaining();
     const int64_t battery_uid = car->magazine_current()->uid().get_value();
-    const auto actor_position = who.pos_abs();
-    const auto host_position = get_avatar().pos_abs();
+    const tripoint_abs_ms actor_position = who.pos_abs();
+    const tripoint_abs_ms host_position = get_avatar().pos_abs();
     const int host_moves = get_avatar().get_moves();
-    const auto start = toy_radio_request( fixture, who, 0 );
+    const std::string start = toy_radio_request( fixture, who, 0 );
     fixture.run( who, start );
     REQUIRE( has_radio_car_control( who, here ) );
     REQUIRE( controller->active );
@@ -6624,7 +6976,7 @@ TEST_CASE( "radio_car_moves_only_for_its_operator_and_retains_identity", "[mp_ra
     CHECK( binding->car == uid );
     CHECK( binding->position == here.get_abs( origin ) );
     const int moves = who.get_moves();
-    const auto drive = toy_drive_request( fixture, who, *binding, point_rel_ms( 1, 0 ) );
+    const std::string drive = toy_drive_request( fixture, who, *binding, point_rel_ms( 1, 0 ) );
     fixture.run( who, drive );
     const auto moved = read_radio_car_binding( who, here );
     REQUIRE( moved );
@@ -6642,10 +6994,10 @@ TEST_CASE( "radio_car_moves_only_for_its_operator_and_retains_identity", "[mp_ra
     CHECK( who.pos_abs() == actor_position );
     CHECK( get_avatar().pos_abs() == host_position );
     CHECK( get_avatar().get_moves() == host_moves );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, drive );
     CHECK( who.get_moves() == moves - 50 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     fixture.run( who, toy_radio_request( fixture, who, 0 ) );
     CHECK_FALSE( has_radio_car_binding( who ) );
     CHECK_FALSE( controller->active );
@@ -6669,7 +7021,7 @@ TEST_CASE( "radio_car_rejects_stale_targets_collisions_and_invalid_directions", 
         REQUIRE( car->uid().get_value() != binding->car );
     }
     SECTION( "obstacle" ) {
-        here.ter_set( origin + direction, ter_str_id( "t_wall" ) );
+        here.ter_set( origin + direction, ter_t_wall );
     }
     SECTION( "invalid direction including integer minimum" ) {
         direction.x() = std::numeric_limits<int>::min();
@@ -6737,14 +7089,14 @@ TEST_CASE( "radio_car_legacy_binding_and_turn_projection_keep_absolute_identity"
     std::ostringstream encoded;
     JsonOut out( encoded );
     who.store_turn_state( out );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     disconnect_radio_car( who );
     who.load_turn_state( json_loader::from_string( encoded.str() ).get_object() );
     REQUIRE( read_radio_car_binding( who, here ) );
     CHECK( read_radio_car_binding( who, here )->car == moved->car );
     CHECK( read_radio_car_binding( who, here )->position == moved->position );
     CHECK( read_radio_car_binding( who, here )->controller == controller->uid().get_value() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "radio_car_cbm_binding_uses_installed_operator_and_deactivates_cleanly", "[mp_radio_car]" )
@@ -6752,11 +7104,11 @@ TEST_CASE( "radio_car_cbm_binding_uses_installed_operator_and_deactivates_cleanl
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    const bionic_id type( "bio_remote" );
+    const bionic_id &type = bio_remote;
     const unsigned int uid = prepare_targeted_bionic( who, type );
     const item_location car = toy_car( here, who.pos_bub() + point_rel_ms( 2, 0 ) );
-    const auto power = who.get_power_level();
-    const auto request = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const units::energy power = who.get_power_level();
+    const std::string request = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "bionic_activation" );
         out.member( "bionic_uid", uid );
         out.member( "bionic_type", type );
@@ -6788,13 +7140,13 @@ TEST_CASE( "radio_car_client_movement_does_not_move_replica_items", "[mp_radio_c
     controller->active = true;
     const auto binding = read_radio_car_binding( who, here );
     REQUIRE( binding );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     REQUIRE( cata_mp::client_drive_radio_car( point_rel_ms( 1, 0 ) ) );
     REQUIRE( car );
     CHECK( car.pos_bub( here ) == origin );
     CHECK( read_radio_car_binding( who, here )->position == binding->position );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
 }
 
@@ -6809,7 +7161,7 @@ TEST_CASE( "remote_controller_take_and_stop_belong_to_operator_and_replay_once",
     const item_location controller = remote_controller( who );
     const int before = controller->ammo_remaining();
     const int host_moves = get_avatar().get_moves();
-    const auto request = radio_request( fixture, who, "control", target.uid().get_value() );
+    const std::string request = radio_request( fixture, who, "control", target.uid().get_value() );
     const std::string result = fixture.run( who, request );
     CHECK( controller->active );
     CHECK( resolve_remote_vehicle( who, get_map() ) == &target );
@@ -6817,10 +7169,10 @@ TEST_CASE( "remote_controller_take_and_stop_belong_to_operator_and_replay_once",
     CHECK( get_avatar().get_moves() == host_moves );
     CHECK_FALSE( get_avatar().activity );
     CHECK( controller->ammo_remaining() == before - 1 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( controller->ammo_remaining() == before - 1 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     JsonObject reply = json_loader::from_string( result ).get_object();
     reply.allow_omitted_members();
     JsonObject binding = reply.get_object( "remote_vehicle" );
@@ -6842,34 +7194,34 @@ TEST_CASE( "remote_security_scan_survives_save_and_owner_choice_without_reroll",
     target.engine_on = true;
     item_location controller = remote_controller( who );
     arrange_security_prompt( who, *controller, target );
-    const auto request = radio_request( fixture, who, "control", target.uid().get_value() );
+    const std::string request = radio_request( fixture, who, "control", target.uid().get_value() );
     fixture.run( who, request );
     auto *actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
     REQUIRE( actor );
     REQUIRE( actor->waiting_for_security() );
     CHECK( who.get_moves() == 1000 );
-    const auto scanned = rng_get_engine();
+    const std::string scanned = capture_rng_state();
     fixture.run( who, request );
-    CHECK( rng_get_engine() == scanned );
+    CHECK( capture_rng_state() == scanned );
     save_reload_activity( who );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
     actor = dynamic_cast<remote_vehicle_activity_actor *>( who.activity.actor.get() );
     REQUIRE( actor );
     REQUIRE( actor->waiting_for_security() );
-    CHECK( rng_get_engine() == scanned );
+    CHECK( capture_rng_state() == scanned );
     const bool consent = GENERATE( false, true );
     const int charges = controller->charges;
     const int ammo = controller->ammo_remaining();
     const int battery_ammo = controller->magazine_current()->ammo_remaining();
-    auto canceled_rng = rng_get_engine();
+    std::string canceled_rng = capture_rng_state();
     {
         // TEST_DATA's finished-activity EOC chooses its sole string with rng.
         // Include that native callback, but no second security dice roll.
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         rng( 0, 0 );
-        canceled_rng = rng_get_engine();
+        canceled_rng = capture_rng_state();
     }
-    const auto answer = fixture.request( who, "choose", [&]( JsonOut &out ) {
+    const std::string answer = fixture.request( who, "choose", [&]( JsonOut &out ) {
         out.member( "remote_security", consent );
     } );
     fixture.run( who, answer );
@@ -6890,12 +7242,12 @@ TEST_CASE( "remote_security_scan_survives_save_and_owner_choice_without_reroll",
         CHECK( controller->charges == charges - 1 );
         CHECK( controller->ammo_remaining() == ammo - 1 );
         CHECK( controller->magazine_current()->ammo_remaining() == battery_ammo );
-        CHECK( rng_get_engine() == canceled_rng );
+        CHECK( capture_rng_state() == canceled_rng );
     }
-    const auto final_rng = rng_get_engine();
+    const std::string final_rng = capture_rng_state();
     const int final_moves = who.get_moves();
     fixture.run( who, answer );
-    CHECK( rng_get_engine() == final_rng );
+    CHECK( capture_rng_state() == final_rng );
     CHECK( who.get_moves() == final_moves );
 }
 
@@ -6922,7 +7274,7 @@ TEST_CASE( "one_remote_vehicle_action_keeps_native_startup_without_granting_driv
         out.member( "vehicle_control", choice );
     } );
     fixture.run( who, action );
-    REQUIRE( who.activity.id() == activity_id( "ACT_START_ENGINES" ) );
+    REQUIRE( who.activity.id() == ACT_START_ENGINES );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
     CHECK_FALSE( who.controlling_vehicle );
     CHECK_FALSE( controller->active );
@@ -6958,14 +7310,14 @@ TEST_CASE( "remote_access_rejects_unreachable_and_replaced_vehicles_before_rng",
     SECTION( "original vehicle no longer exists" ) {
         get_map().destroy_vehicle( &target );
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int ammo = controller->ammo_remaining();
     fixture.run( who, radio_request( fixture, who, "control", uid ) );
     CHECK_FALSE( who.activity );
     CHECK_FALSE( controller->active );
     CHECK( controller->ammo_remaining() == ammo );
     CHECK( who.get_moves() == 1000 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "local_remote_controller_retains_native_invocation_result_and_charge",
@@ -7034,7 +7386,7 @@ TEST_CASE( "saved_remote_security_scan_never_uses_a_replacement_controller",
     item_location controller = remote_controller( who );
     arrange_security_prompt( who, *controller, target );
     fixture.run( who, radio_request( fixture, who, "control", target.uid().get_value() ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) );
+    REQUIRE( who.activity.id() == ACT_REMOTE_VEHICLE );
     save_reload_activity( who );
     who.remove_weapon();
     controller = remote_controller( who );
@@ -7073,7 +7425,7 @@ point_rel_ms next_electronic_mount( const vehicle &target )
 vehicle_control_selection electronic_choice( Character &who, vehicle &target,
         const std::string &system, bool enabled, int64_t part = 0 )
 {
-    auto choice = control_choice( who, target, "electronics" );
+    vehicle_control_selection choice = control_choice( who, target, "electronics" );
     choice.electronics = vehicle_electronics_selection{ system, part, enabled };
     return choice;
 }
@@ -7093,12 +7445,12 @@ TEST_CASE( "owned_vehicle_device_choices_are_read_only_and_replay_once",
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
         part.part().enabled = false;
     }
-    const auto initial_rng = rng_get_engine();
+    const std::string initial_rng = capture_rng_state();
     const auto options = vehicle_electronics_options( who, here, target );
     const auto lights = std::find_if( options.begin(), options.end(), []( const vehicle_electronics_option &option ) {
         return option.choice.system == "CONE_LIGHT";
@@ -7107,16 +7459,16 @@ TEST_CASE( "owned_vehicle_device_choices_are_read_only_and_replay_once",
     CHECK( lights->enabled );
     CHECK( lights->choice.enabled );
     require_lights( target, false );
-    CHECK( rng_get_engine() == initial_rng );
-    const auto request = control_request( fixture, who, electronic_choice( who, target, "CONE_LIGHT", true ) );
+    CHECK( capture_rng_state() == initial_rng );
+    const std::string request = control_request( fixture, who, electronic_choice( who, target, "CONE_LIGHT", true ) );
     fixture.run( who, request );
     require_lights( target, true );
     CHECK( here.get_cache_ref( who.posz() ).lightmap_dirty );
     CHECK_FALSE( recipient.feedback.pending.empty() );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     require_lights( target, true );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "CONE_LIGHT", false ) ) );
     require_lights( target, false );
     CHECK_FALSE( who.controlling_vehicle );
@@ -7133,7 +7485,7 @@ TEST_CASE( "owned_vehicle_electronics_rejects_forged_systems_and_lost_access",
     for( const vpart_reference &part : target.get_avail_parts( "CONE_LIGHT" ) ) {
         part.part().enabled = false;
     }
-    auto choice = electronic_choice( who, target, "CONE_LIGHT", true );
+    vehicle_control_selection choice = electronic_choice( who, target, "CONE_LIGHT", true );
     SECTION( "engine is not an electronic switch" ) {
         choice.electronics->system = "ENGINE";
     }
@@ -7152,11 +7504,11 @@ TEST_CASE( "owned_vehicle_electronics_rejects_forged_systems_and_lost_access",
         }
         REQUIRE_FALSE( vehicle_electronics_position( who, get_map(), target ) );
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, control_request( fixture, who, choice ) );
     require_lights( target, false );
     CHECK_FALSE( target.engine_on );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "owned_camera_and_reactor_commands_validate_power_and_hardware_identity",
@@ -7168,9 +7520,9 @@ TEST_CASE( "owned_camera_and_reactor_commands_validate_power_and_hardware_identi
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     SECTION( "camera state is explicit and refreshes visibility" ) {
-        REQUIRE( target.install_part( here, point_rel_ms::zero, vpart_id( "cam_control" ) ) >= 0 );
+        REQUIRE( target.install_part( here, point_rel_ms::zero, vpart_cam_control ) >= 0 );
         target.camera_on = false;
-        const auto request = control_request( fixture, who, electronic_choice( who, target, "camera", true ) );
+        const std::string request = control_request( fixture, who, electronic_choice( who, target, "camera", true ) );
         fixture.run( who, request );
         CHECK( target.camera_on );
         CHECK( here.get_cache_ref( who.posz() ).seen_cache_dirty );
@@ -7178,23 +7530,23 @@ TEST_CASE( "owned_camera_and_reactor_commands_validate_power_and_hardware_identi
         CHECK( target.camera_on );
         fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "camera", false ) ) );
         CHECK_FALSE( target.camera_on );
-        target.discharge_battery( here, target.fuel_left( here, itype_id( "battery" ) ) );
-        REQUIRE( target.fuel_left( here, itype_id( "battery" ) ) == 0 );
+        target.discharge_battery( here, target.fuel_left( here, itype_battery ) );
+        REQUIRE( target.fuel_left( here, itype_battery ) == 0 );
         fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "camera", true ) ) );
         CHECK_FALSE( target.camera_on );
     }
     SECTION( "removed reactor never addresses its replacement" ) {
         const point_rel_ms mount = next_electronic_mount( target );
-        REQUIRE( target.install_part( here, mount, vpart_id( "frame" ) ) >= 0 );
-        const int index = target.install_part( here, mount, vpart_id( "compact_ASRG_containment" ) );
+        REQUIRE( target.install_part( here, mount, vpart_frame ) >= 0 );
+        const int index = target.install_part( here, mount, vpart_compact_ASRG_containment );
         REQUIRE( index >= 0 );
         target.part( index ).enabled = false;
         const int64_t id = target.part( index ).get_base().uid().get_value();
-        const auto choice = electronic_choice( who, target, "reactor", true, id );
+        const vehicle_control_selection choice = electronic_choice( who, target, "reactor", true, id );
         fixture.run( who, control_request( fixture, who, choice ) );
         CHECK( target.part( index ).enabled );
         target.remove_part( target.part( index ) );
-        const int replacement = target.install_part( here, mount, vpart_id( "compact_ASRG_containment" ) );
+        const int replacement = target.install_part( here, mount, vpart_compact_ASRG_containment );
         REQUIRE( replacement >= 0 );
         target.part( replacement ).enabled = false;
         REQUIRE( target.part( replacement ).get_base().uid().get_value() != id );
@@ -7209,20 +7561,20 @@ TEST_CASE( "owned_motorized_doors_keep_native_blocking_locking_and_group_rules",
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const auto doors = target.get_avail_parts( "DOOR" );
     REQUIRE_FALSE( empty( doors ) );
     const int door = doors.begin()->part_index();
     const point_rel_ms mount = target.part( door ).mount;
-    const int motor = target.install_part( here, mount, vpart_id( "door_motor" ) );
+    const int motor = target.install_part( here, mount, vpart_door_motor );
     REQUIRE( motor >= 0 );
     if( !target.part_has_lock( door ) ) {
-        REQUIRE( target.install_part( here, mount, vpart_id( "door_lock" ) ) >= 0 );
+        REQUIRE( target.install_part( here, mount, vpart_door_lock ) >= 0 );
     }
     const int64_t id = target.part( door ).get_base().uid().get_value();
     target.open( here, door );
-    const auto close = electronic_choice( who, target, "door_open", false, id );
+    const vehicle_control_selection close = electronic_choice( who, target, "door_open", false, id );
     get_avatar().setpos( here, here.get_bub( target.abs_part_pos( target.part( door ) ) ) );
     fixture.run( who, control_request( fixture, who, close ) );
     CHECK( target.part( door ).open );
@@ -7232,7 +7584,7 @@ TEST_CASE( "owned_motorized_doors_keep_native_blocking_locking_and_group_rules",
     CHECK_FALSE( target.part( door ).open );
     fixture.run( who, control_request( fixture, who, electronic_choice( who, target, "door_lock", true, id ) ) );
     CHECK( target.part( door ).locked );
-    const auto all_open = control_request( fixture, who, electronic_choice( who, target, "doors_open", true ) );
+    const std::string all_open = control_request( fixture, who, electronic_choice( who, target, "doors_open", true ) );
     fixture.run( who, all_open );
     CHECK_FALSE( target.part( door ).locked );
     CHECK( target.part( door ).open );
@@ -7257,11 +7609,11 @@ TEST_CASE( "remote_one_shot_electronics_uses_the_authorized_controller_once",
         part.part().enabled = false;
     }
     fixture.run( who, radio_request( fixture, who, "action", target.uid().get_value() ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) );
-    auto choice = electronic_choice( who, target, "CONE_LIGHT", true );
+    REQUIRE( who.activity.id() == ACT_REMOTE_VEHICLE );
+    vehicle_control_selection choice = electronic_choice( who, target, "CONE_LIGHT", true );
     choice.position = target.get_avail_parts( "REMOTE_CONTROLS" ).begin()->pos_abs();
     const int ammo = controller->ammo_remaining();
-    const auto request = fixture.request( who, "choose", [&]( JsonOut &out ) {
+    const std::string request = fixture.request( who, "choose", [&]( JsonOut &out ) {
         out.member( "vehicle_control", choice );
     } );
     fixture.run( who, request );
@@ -7304,21 +7656,21 @@ TEST_CASE( "planter_enabling_reads_the_operator_environment_instead_of_the_host"
     npc &who = fixture.remote();
     map &here = get_map();
     vehicle &target = electronic_vehicle( who );
-    const int planter = target.install_part( here, next_electronic_mount( target ), vpart_id( "seed_drill" ) );
+    const int planter = target.install_part( here, next_electronic_mount( target ), vpart_seed_drill );
     REQUIRE( planter >= 0 );
     who.setpos( here, tripoint_bub_ms( 50, 50, 0 ), false );
-    here.ter_set( who.pos_bub(), ter_str_id( "t_greenhouse_tilled" ) );
+    here.ter_set( who.pos_bub(), ter_t_greenhouse_tilled );
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, -1 ), false );
-    REQUIRE( warm_enough_to_plant( who.pos_bub(), itype_id( "seed_buckwheat" ) ).success() );
-    REQUIRE_FALSE( warm_enough_to_plant( get_avatar().pos_bub(), itype_id( "seed_buckwheat" ) ).success() );
+    REQUIRE( warm_enough_to_plant( who.pos_bub(), itype_seed_buckwheat ).success() );
+    REQUIRE_FALSE( warm_enough_to_plant( get_avatar().pos_bub(), itype_seed_buckwheat ).success() );
     CHECK( can_enable_vehicle_part( who, here, target, target.part( planter ) ) );
     CHECK_FALSE( target.can_enable( here, target.part( planter ) ) );
     // Ordinary soil must forecast temperature without advancing wind or gameplay RNG.
-    here.ter_set( who.pos_bub(), ter_str_id( "t_dirt" ) );
-    const auto rng = rng_get_engine();
+    here.ter_set( who.pos_bub(), ter_t_dirt );
+    const std::string rng = capture_rng_state();
     const int wind = weather_generator::current_winddir;
     vehicle_electronics_options( who, here, target );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( weather_generator::current_winddir == wind );
 }
 
@@ -7336,7 +7688,7 @@ int install_test_appliance( Character &who, vehicle &target, const std::string &
     map &here = get_map();
     const point_rel_ms mount = next_electronic_mount( target );
     if( vpart_id( type )->location.str() != "structure" ) {
-        REQUIRE( target.install_part( here, mount, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( target.install_part( here, mount, vpart_frame ) >= 0 );
     }
     const auto allowed = target.can_mount( mount, vpart_id( type ).obj() );
     INFO( allowed.str() );
@@ -7350,7 +7702,7 @@ int install_test_appliance( Character &who, vehicle &target, const std::string &
     return index;
 }
 
-void fill_appliance_water( vehicle &target, const itype_id &type = itype_id( "water" ) )
+void fill_appliance_water( vehicle &target, const itype_id &type = itype_water )
 {
     for( const int index : target.fuel_containers ) {
         if( target.part( index ).is_tank() ) {
@@ -7364,18 +7716,18 @@ void fill_appliance_water( vehicle &target, const itype_id &type = itype_id( "wa
 vehicle_control_selection appliance_choice( Character &who, vehicle &target, int part,
         bool enabled, bool detergent = false, usage_from from = usage_from::player )
 {
-    auto choice = control_choice( who, target, "appliance" );
+    vehicle_control_selection choice = control_choice( who, target, "appliance" );
     choice.position = target.abs_part_pos( target.part( part ) );
     choice.appliance = vehicle_appliance_selection{};
     choice.appliance->part_id = target.part( part ).get_base().uid().get_value();
     choice.appliance->enabled = enabled;
     if( detergent ) {
-        choice.appliance->detergent = comp_selection<item_comp>{from, item_comp( itype_id( "detergent" ), 5 )};
+        choice.appliance->detergent = comp_selection<item_comp>{from, item_comp( itype_detergent, 5 )};
     }
     return choice;
 }
 
-void add_dirty_cargo( vehicle &target, int part, const itype_id &type = itype_id( "tshirt" ) )
+void add_dirty_cargo( vehicle &target, int part, const itype_id &type = itype_tshirt )
 {
     item cargo( type, calendar::turn );
     cargo.set_flag( flag_FILTHY );
@@ -7389,16 +7741,16 @@ TEST_CASE( "owned_washer_uses_operator_supplies_and_never_duplicates_start_costs
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int machine = install_test_appliance( who, target, "washing_machine" );
     fill_appliance_water( target );
     add_dirty_cargo( target, machine );
-    who.i_add( item( itype_id( "detergent" ), calendar::turn, 10 ) );
+    who.i_add( item( itype_detergent, calendar::turn, 10 ) );
     // Adding supplies can wield them and spend the fixture's initial moves.
     who.set_moves( 100 );
-    get_avatar().i_add( item( itype_id( "detergent" ), calendar::turn, 20 ) );
-    const auto rng = rng_get_engine();
+    get_avatar().i_add( item( itype_detergent, calendar::turn, 20 ) );
+    const std::string rng = capture_rng_state();
     const auto query = query_vehicle_appliance( who, get_map(), target,
                        target.abs_part_pos( target.part( machine ) ), target.part( machine ).get_base().uid().get_value() );
     REQUIRE( query );
@@ -7406,25 +7758,25 @@ TEST_CASE( "owned_washer_uses_operator_supplies_and_never_duplicates_start_costs
     REQUIRE( query->appliance->detergent );
     REQUIRE( valid_vehicle_appliance_selection( who, get_map(), target, query->position, *query->appliance ) );
     CHECK_FALSE( target.part( machine ).enabled );
-    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 100 );
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == 10 );
-    CHECK( rng_get_engine() == rng );
-    const auto request = control_request( fixture, who, *query );
+    CHECK( target.fuel_left( get_map(), itype_water ) == 100 );
+    CHECK( who.charges_of( itype_detergent ) == 10 );
+    CHECK( capture_rng_state() == rng );
+    const std::string request = control_request( fixture, who, *query );
     fixture.run( who, request );
     CHECK( target.part( machine ).enabled );
     CHECK( target.get_items( target.part( machine ) ).only_item().age() == 0_turns );
-    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 76 );
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == 5 );
-    CHECK( get_avatar().charges_of( itype_id( "detergent" ) ) == 20 );
+    CHECK( target.fuel_left( get_map(), itype_water ) == 76 );
+    CHECK( who.charges_of( itype_detergent ) == 5 );
+    CHECK( get_avatar().charges_of( itype_detergent ) == 20 );
     CHECK_FALSE( recipient.feedback.pending.empty() );
     fixture.run( who, request );
     // A new request with the same desired state is also a harmless no-op.
     fixture.run( who, control_request( fixture, who, *query ) );
-    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 76 );
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == 5 );
+    CHECK( target.fuel_left( get_map(), itype_water ) == 76 );
+    CHECK( who.charges_of( itype_detergent ) == 5 );
     fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, false ) ) );
     CHECK_FALSE( target.part( machine ).enabled );
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == 5 );
+    CHECK( who.charges_of( itype_detergent ) == 5 );
 }
 
 TEST_CASE( "owned_washer_rejects_forged_or_stale_choices_without_consuming_resources",
@@ -7437,19 +7789,19 @@ TEST_CASE( "owned_washer_rejects_forged_or_stale_choices_without_consuming_resou
     const int machine = install_test_appliance( who, target, "washing_machine" );
     fill_appliance_water( target );
     add_dirty_cargo( target, machine );
-    who.i_add( item( itype_id( "detergent" ), calendar::turn, 5 ) );
+    who.i_add( item( itype_detergent, calendar::turn, 5 ) );
     // Adding supplies can wield them and spend the fixture's initial moves.
     who.set_moves( 100 );
-    get_avatar().i_add( item( itype_id( "detergent" ), calendar::turn, 20 ) );
-    auto choice = appliance_choice( who, target, machine, true, true );
+    get_avatar().i_add( item( itype_detergent, calendar::turn, 20 ) );
+    vehicle_control_selection choice = appliance_choice( who, target, machine, true, true );
     SECTION( "only the host has detergent" ) {
-        who.use_charges( itype_id( "detergent" ), 5 );
+        who.use_charges( itype_detergent, 5 );
     }
     SECTION( "wrong quantity" ) {
         choice.appliance->detergent->comp.count = 0;
     }
     SECTION( "wrong material" ) {
-        choice.appliance->detergent->comp.type = itype_id( "water" );
+        choice.appliance->detergent->comp.type = itype_water;
     }
     SECTION( "invalid source" ) {
         choice.appliance->detergent->use_from = usage_from::none;
@@ -7466,14 +7818,14 @@ TEST_CASE( "owned_washer_rejects_forged_or_stale_choices_without_consuming_resou
     SECTION( "replacement machine" ) {
         const point_rel_ms mount = target.part( machine ).mount;
         target.remove_part( target.part( machine ) );
-        REQUIRE( target.install_part( get_map(), mount, vpart_id( "washing_machine" ) ) >= 0 );
+        REQUIRE( target.install_part( get_map(), mount, vpart_washing_machine ) >= 0 );
     }
-    const int detergent = who.charges_of( itype_id( "detergent" ) );
+    const int detergent = who.charges_of( itype_detergent );
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK_FALSE( target.part( machine ).enabled );
-    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == 100 );
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == detergent );
-    CHECK( get_avatar().charges_of( itype_id( "detergent" ) ) == 20 );
+    CHECK( target.fuel_left( get_map(), itype_water ) == 100 );
+    CHECK( who.charges_of( itype_detergent ) == detergent );
+    CHECK( get_avatar().charges_of( itype_detergent ) == 20 );
 }
 
 TEST_CASE( "owned_dishwasher_preserves_content_rules_and_mixed_source_selection",
@@ -7484,18 +7836,18 @@ TEST_CASE( "owned_dishwasher_preserves_content_rules_and_mixed_source_selection"
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int machine = install_test_appliance( who, target, "dishwasher" );
-    fill_appliance_water( target, itype_id( "water_clean" ) );
+    fill_appliance_water( target, itype_water_clean );
     const bool soft = GENERATE( false, true );
     add_dirty_cargo( target, machine, itype_id( soft ? "tshirt" : "bio_power_storage" ) );
-    who.i_add( item( itype_id( "detergent" ), calendar::turn, 2 ) );
+    who.i_add( item( itype_detergent, calendar::turn, 2 ) );
     // Adding supplies can wield them and spend the fixture's initial moves.
     who.set_moves( 100 );
-    get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "detergent" ), calendar::turn, 3 ) );
+    get_map().add_item_or_charges( who.pos_bub(), item( itype_detergent, calendar::turn, 3 ) );
     fixture.run( who, control_request( fixture, who,
                                        appliance_choice( who, target, machine, true, true, usage_from::both ) ) );
     CHECK( target.part( machine ).enabled == !soft );
-    CHECK( target.fuel_left( get_map(), itype_id( "water_clean" ) ) == ( soft ? 100 : 76 ) );
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == ( soft ? 2 : 0 ) );
+    CHECK( target.fuel_left( get_map(), itype_water_clean ) == ( soft ? 100 : 76 ) );
+    CHECK( who.charges_of( itype_detergent ) == ( soft ? 2 : 0 ) );
     CHECK( get_map().i_at( who.pos_bub() ).empty() == !soft );
 }
 
@@ -7508,14 +7860,14 @@ TEST_CASE( "owned_autoclave_preserves_sterilization_preconditions",
     vehicle &target = electronic_vehicle( who );
     const int machine = install_test_appliance( who, target, "autoclave" );
     fill_appliance_water( target );
-    item cbm( itype_id( "bio_power_storage" ), calendar::turn );
+    item cbm( itype_bio_power_storage, calendar::turn );
     cbm.unset_flag( flag_FILTHY );
-    cbm.unset_flag( flag_id( "NO_PACKED" ) );
+    cbm.unset_flag( json_flag_NO_PACKED );
     cbm.set_age( 30_minutes );
     bool valid = true;
     SECTION( "packed CBM" ) {}
     SECTION( "unpacked CBM" ) {
-        cbm.set_flag( flag_id( "NO_PACKED" ) );
+        cbm.set_flag( json_flag_NO_PACKED );
         valid = false;
     }
     SECTION( "filthy CBM" ) {
@@ -7525,7 +7877,7 @@ TEST_CASE( "owned_autoclave_preserves_sterilization_preconditions",
     REQUIRE( target.add_item( get_map(), target.part( machine ), cbm ) );
     fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, true ) ) );
     CHECK( target.part( machine ).enabled == valid );
-    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == ( valid ? 92 : 100 ) );
+    CHECK( target.fuel_left( get_map(), itype_water ) == ( valid ? 92 : 100 ) );
     CHECK( target.get_items( target.part( machine ) ).only_item().age() == ( valid ? 0_turns : 30_minutes ) );
 }
 
@@ -7537,14 +7889,14 @@ TEST_CASE( "owned_cooker_checks_power_and_resets_nested_food_progress",
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int machine = install_test_appliance( who, target, "app_electric_cooker" );
-    item food( itype_id( "meat" ), calendar::turn );
+    item food( itype_meat, calendar::turn );
     food.set_var( "cook_energy_done", "123" );
-    item jar( itype_id( "jar_glass_sealed" ), calendar::turn );
+    item jar( itype_jar_glass_sealed, calendar::turn );
     REQUIRE( jar.put_in( food, pocket_type::CONTAINER ).success() );
     REQUIRE( target.add_item( get_map(), target.part( machine ), jar ) );
     const bool powered = GENERATE( false, true );
     if( !powered ) {
-        target.discharge_battery( get_map(), target.fuel_left( get_map(), itype_id( "battery" ) ) );
+        target.discharge_battery( get_map(), target.fuel_left( get_map(), itype_battery ) );
     }
     fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, true ) ) );
     CHECK( target.part( machine ).enabled == powered );
@@ -7561,11 +7913,11 @@ TEST_CASE( "owned_weather_station_start_and_cancel_reuse_native_timer",
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int machine = install_test_appliance( who, target, "veh_mobile_weather_station" );
-    const auto start = control_request( fixture, who, appliance_choice( who, target, machine, true ) );
+    const std::string start = control_request( fixture, who, appliance_choice( who, target, machine, true ) );
     fixture.run( who, start );
     CHECK( target.part( machine ).enabled );
     REQUIRE( target.get_items( target.part( machine ) ).size() == 1 );
-    CHECK( target.get_items( target.part( machine ) ).only_item().typeId() == itype_id( "mws_weather_data_incomplete" ) );
+    CHECK( target.get_items( target.part( machine ) ).only_item().typeId() == itype_mws_weather_data_incomplete );
     CHECK( target.get_items( target.part( machine ) ).only_item().age() == 0_turns );
     fixture.run( who, start );
     CHECK( target.get_items( target.part( machine ) ).size() == 1 );
@@ -7581,11 +7933,11 @@ TEST_CASE( "owned_boiler_outside_its_dimension_never_destroys_cargo",
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int machine = install_test_appliance( who, target, "ap_nl_safehouse_boiler" );
-    REQUIRE( target.add_item( get_map(), target.part( machine ), item( itype_id( "rock" ), calendar::turn ) ) );
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    REQUIRE( target.add_item( get_map(), target.part( machine ), item( itype_rock, calendar::turn ) ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
     fixture.run( who, control_request( fixture, who, appliance_choice( who, target, machine, true ) ) );
     CHECK( target.get_items( target.part( machine ) ).size() == 1 );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == battery );
 }
 
 TEST_CASE( "native_appliance_callback_uses_owned_command_and_stable_hardware_identity",
@@ -7597,7 +7949,7 @@ TEST_CASE( "native_appliance_callback_uses_owned_command_and_stable_hardware_ide
     const int machine = install_test_appliance( who, target, "washing_machine" );
     fill_appliance_water( target );
     add_dirty_cargo( target, machine );
-    who.i_add( item( itype_id( "detergent" ), calendar::turn, 10 ) );
+    who.i_add( item( itype_detergent, calendar::turn, 10 ) );
     // Adding supplies can wield them and spend the fixture's initial moves.
     who.set_moves( 100 );
     veh_menu menu( target, "appliances" );
@@ -7610,13 +7962,13 @@ TEST_CASE( "native_appliance_callback_uses_owned_command_and_stable_hardware_ide
         target.remove_part( target.part( machine ) );
     }
     entries.front()._on_submit();
-    CHECK( who.charges_of( itype_id( "detergent" ) ) == ( removed ? 10 : 5 ) );
-    CHECK( target.fuel_left( get_map(), itype_id( "water" ) ) == ( removed ? 100 : 76 ) );
+    CHECK( who.charges_of( itype_detergent ) == ( removed ? 10 : 5 ) );
+    CHECK( target.fuel_left( get_map(), itype_water ) == ( removed ? 100 : 76 ) );
 }
 
 namespace
 {
-int test_water_tank( vehicle &target, const itype_id &type = itype_id( "water_clean" ), int amount = 4 )
+int test_water_tank( vehicle &target, const itype_id &type = itype_water_clean, int amount = 4 )
 {
     for( const vpart_reference &part : target.get_all_parts() ) {
         if( part.part().is_tank() ) {
@@ -7632,7 +7984,7 @@ int test_water_tank( vehicle &target, const itype_id &type = itype_id( "water_cl
 vehicle_control_selection water_choice( Character &who, vehicle &target, int tool, int tank,
                                         const std::string &operation )
 {
-    auto selected = control_choice( who, target, "water" );
+    vehicle_control_selection selected = control_choice( who, target, "water" );
     selected.position = target.abs_part_pos( target.part( tool ) );
     selected.water.emplace();
     selected.water->operation = operation;
@@ -7645,7 +7997,7 @@ vehicle_control_selection water_choice( Character &who, vehicle &target, int too
 vehicle_control_selection fill_water_choice( Character &who, vehicle &target, int tool, int tank,
         const item_location &container )
 {
-    auto selected = water_choice( who, target, tool, tank, "fill" );
+    vehicle_control_selection selected = water_choice( who, target, tool, tank, "fill" );
     selected.water->destination.emplace();
     selected.water->destination->kind = LD_ITEM;
     selected.water->destination->source = selected.water->liquid;
@@ -7663,17 +8015,17 @@ TEST_CASE( "owned_faucet_transfer_keeps_native_rate_save_and_exact_resource_coun
     vehicle &target = electronic_vehicle( who );
     const int tap = install_test_appliance( who, target, "water_faucet" );
     const int tank = test_water_tank( target );
-    const item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    const item_location bottle = who.i_add( item( itype_bottle_plastic, calendar::turn ) );
     REQUIRE( bottle );
     who.set_moves( 100 );
-    const auto choice = fill_water_choice( who, target, tap, tank, bottle );
-    const auto rng = rng_get_engine();
+    const vehicle_control_selection choice = fill_water_choice( who, target, tap, tank, bottle );
+    const std::string rng = capture_rng_state();
     REQUIRE( valid_vehicle_water_selection( who, get_map(), target, choice.position, *choice.water ) );
-    CHECK( rng_get_engine() == rng );
-    const auto request = control_request( fixture, who, choice );
+    CHECK( capture_rng_state() == rng );
+    const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
-    CHECK( who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) );
+    CHECK( who.activity.id() == ACT_FILL_LIQUID );
     CHECK( target.part( tank ).ammo_remaining() == 4 );
     CHECK( bottle->empty() );
     fixture.run( who, request );
@@ -7708,7 +8060,7 @@ TEST_CASE( "owned_faucet_transfer_revalidates_access_and_source_each_turn",
     vehicle &target = electronic_vehicle( who );
     const int tap = install_test_appliance( who, target, "water_faucet" );
     const int tank = test_water_tank( target );
-    item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    item_location bottle = who.i_add( item( itype_bottle_plastic, calendar::turn ) );
     who.set_moves( 100 );
     fixture.run( who, control_request( fixture, who, fill_water_choice( who, target, tap, tank, bottle ) ) );
     REQUIRE( who.activity );
@@ -7717,7 +8069,7 @@ TEST_CASE( "owned_faucet_transfer_revalidates_access_and_source_each_turn",
     }
     SECTION( "liquid replaced in same tank" ) {
         target.part( tank ).ammo_unset();
-        target.part( tank ).ammo_set( itype_id( "water_clean" ), 4 );
+        target.part( tank ).ammo_set( itype_water_clean, 4 );
     }
     SECTION( "operator left" ) {
         who.setpos( get_map(), tripoint_bub_ms( 100, 100, 0 ) );
@@ -7750,10 +8102,10 @@ TEST_CASE( "owned_faucet_drinking_uses_remote_tank_and_only_operator_needs",
     who.set_thirst( 100 );
     target.is_locked = true; // Native faucets remain accessible on a locked car.
     const std::string host = needs_state( get_avatar() );
-    auto choice = water_choice( who, target, tap, tank, "drink" );
+    vehicle_control_selection choice = water_choice( who, target, tap, tank, "drink" );
     fixture.run( who, control_request( fixture, who, choice ) );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
-    CHECK( who.activity.id() == activity_id( "ACT_CONSUME" ) );
+    CHECK( who.activity.id() == ACT_CONSUME );
     REQUIRE( who.activity.moves_left > 0 );
     CHECK( target.part( tank ).ammo_remaining() == 4 );
     save_reload_activity( who );
@@ -7761,8 +8113,8 @@ TEST_CASE( "owned_faucet_drinking_uses_remote_tank_and_only_operator_needs",
     if( removed ) {
         target.remove_part( target.part( tap ) );
     }
-    const auto completed = finish_consumption( who, &fixture );
-    const auto &step = completed.request;
+    const consumption_completion completed = finish_consumption( who, &fixture );
+    const std::string &step = completed.request;
     REQUIRE_FALSE( who.activity );
     CHECK( target.part( tank ).ammo_remaining() == ( removed ? 4 : 3 ) );
     CHECK( fixture.reload.refresh_observers );
@@ -7781,28 +8133,28 @@ TEST_CASE( "owned_vehicle_purification_is_atomic_and_replays_without_power_loss"
     bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int tool = install_test_appliance( who, target, "water_purifier" );
-    const int tank = test_water_tank( target, itype_id( "water" ), 100 );
+    const int tank = test_water_tank( target, itype_water, 100 );
     const bool frozen = GENERATE( false, true );
     if( frozen ) {
         item_location base = item_location::from_vehicle_part( vehicle_cursor( target, tank ) );
         base->only_item().set_item_temperature( units::from_kelvin( 250 ) );
         REQUIRE( base->only_item().made_of( phase_id::SOLID ) );
     }
-    const int cost = 100 * itype_id( "water_purifier" )->charges_to_use();
+    const int cost = 100 * itype_water_purifier->charges_to_use();
     target.discharge_battery( get_map(), INT_MAX );
     const bool enough = GENERATE( false, true );
     target.charge_battery( get_map(), enough ? cost : cost - 1 );
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
     REQUIRE( battery == ( enough ? cost : cost - 1 ) );
-    const auto choice = water_choice( who, target, tool, tank, "purify" );
-    const auto request = control_request( fixture, who, choice );
+    const vehicle_control_selection choice = water_choice( who, target, tool, tank, "purify" );
+    const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
     CHECK( target.part( tank ).ammo_current() == itype_id( enough ? "water_clean" : "water" ) );
     CHECK( target.part( tank ).ammo_remaining() == 100 );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == ( enough ? 0 : battery ) );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == ( enough ? 0 : battery ) );
     fixture.run( who, request );
     fixture.run( who, control_request( fixture, who, choice ) );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == ( enough ? 0 : battery ) );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == ( enough ? 0 : battery ) );
     CHECK( target.part( tank ).ammo_remaining() == 100 );
 }
 
@@ -7814,9 +8166,9 @@ TEST_CASE( "owned_vehicle_water_rejects_forged_hardware_sources_and_destinations
     vehicle &target = electronic_vehicle( who );
     const int tap = install_test_appliance( who, target, "water_faucet" );
     const int tank = test_water_tank( target );
-    const item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    const item_location bottle = who.i_add( item( itype_bottle_plastic, calendar::turn ) );
     who.set_moves( 100 );
-    auto choice = fill_water_choice( who, target, tap, tank, bottle );
+    vehicle_control_selection choice = fill_water_choice( who, target, tap, tank, bottle );
     SECTION( "missing hardware identity" ) {
         choice.water->tool = 0;
     }
@@ -7831,10 +8183,10 @@ TEST_CASE( "owned_vehicle_water_rejects_forged_hardware_sources_and_destinations
         choice.water->destination.reset();
     }
     SECTION( "different fuel in tank" ) {
-        target.part( tank ).ammo_set( itype_id( "gasoline" ), 4 );
+        target.part( tank ).ammo_set( itype_gasoline, 4 );
     }
     SECTION( "destination is source tank" ) {
-        auto &to = *choice.water->destination;
+        unload_liquid_choice &to = *choice.water->destination;
         to.kind = LD_VEH;
         to.vehicle = target.uid().get_value();
         to.tank = choice.water->tank;
@@ -7858,12 +8210,12 @@ TEST_CASE( "native_faucet_menu_uses_readonly_queries_and_owned_drinking",
     const int tap = install_test_appliance( who, target, "water_faucet" );
     const int tank = test_water_tank( target );
     who.set_thirst( 100 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     veh_menu menu( target, "water" );
     add_vehicle_water_menu( menu, get_map(), target, target.abs_part_pos( target.part( tap ) ) );
     const auto entries = menu.get_items();
     REQUIRE( entries.size() == 2 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( target.part( tank ).ammo_remaining() == 4 );
     const bool removed = GENERATE( false, true );
     if( removed ) {
@@ -7883,7 +8235,7 @@ TEST_CASE( "legacy_actorless_liquid_save_still_executes_its_native_transfer",
     install_test_appliance( who, target, "water_faucet" );
     const int tank = test_water_tank( target );
     item_location base = item_location::from_vehicle_part( vehicle_cursor( target, tank ) );
-    const item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ), calendar::turn ) );
+    const item_location bottle = who.i_add( item( itype_bottle_plastic, calendar::turn ) );
     who.set_moves( 100 );
     liquid_dest_opt destination;
     destination.dest_opt = LD_ITEM;
@@ -7898,7 +8250,7 @@ TEST_CASE( "legacy_actorless_liquid_save_still_executes_its_native_transfer",
     player_activity restored;
     restored.deserialize( value.get_object() );
     who.activity = std::move( restored );
-    REQUIRE( who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) );
+    REQUIRE( who.activity.id() == ACT_FILL_LIQUID );
     REQUIRE_FALSE( who.activity.actor );
     CHECK( who.activity.execution() == activity_execution::local );
     who.activity.do_turn( who );
@@ -7912,13 +8264,13 @@ namespace
 vehicle_control_selection heating_choice( Character &who, vehicle &target,
         const item_location &food, const std::string &tool = "hotplate" )
 {
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
     const int part = install_test_appliance( who, target, "veh_tools_kitchen" );
     auto &tools = target.get_tools( target.part( part ) );
     tools.emplace_back( itype_id( tool ), calendar::turn );
     target.discharge_battery( get_map(), INT_MAX );
     target.charge_battery( get_map(), 10000 );
-    auto choice = control_choice( who, target, "heating" );
+    vehicle_control_selection choice = control_choice( who, target, "heating" );
     choice.position = target.abs_part_pos( target.part( part ) );
     choice.heating = vehicle_heating_selection{};
     choice.heating->part = target.part( part ).get_base().uid().get_value();
@@ -7956,38 +8308,38 @@ TEST_CASE( "mounted_heating_owns_food_power_duration_and_saved_completion",
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "apple" ), calendar::turn, 2 ) );
+    who.set_wielded_item( item( itype_apple, calendar::turn, 2 ) );
     item_location food = who.get_wielded_item();
     food->set_item_temperature( units::from_kelvin( 280 ) );
     vehicle &target = electronic_vehicle( who );
-    const auto choice = heating_choice( who, target, food );
+    const vehicle_control_selection choice = heating_choice( who, target, food );
     const std::string host = needs_state( get_avatar() );
     const units::mass mass = food->count_by_charges() ? food->weight( false, false ) / food->charges :
                              food->weight( false, false );
-    const auto required = heating_requirements_for_weight( 0_gram, mass, food->volume( false, true, 1 ) );
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
-    const auto rng = rng_get_engine();
+    const heating_requirements required = heating_requirements_for_weight( 0_gram, mass, food->volume( false, true, 1 ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
+    const std::string rng = capture_rng_state();
     CHECK( valid_vehicle_heating( who, get_map(), target, choice.position, *choice.heating ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     const std::string start = control_request( fixture, who, choice );
     fixture.run( who, start );
     REQUIRE( is_vehicle_heating( who.activity ) );
     CHECK( who.activity.moves_total == required.time );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == battery );
     fixture.run( who, start );
     save_reload_activity( who );
     const auto completed = finish_vehicle_heating( fixture, who );
     CHECK_FALSE( who.activity );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) ==
-           battery - required.ammo * itype_id( "hotplate" )->charges_to_use() );
+    CHECK( target.fuel_left( get_map(), itype_battery ) ==
+           battery - required.ammo * itype_hotplate->charges_to_use() );
     const auto hot = who.items_with( []( const item &it ) {
-        return it.typeId() == itype_id( "apple" ) && it.has_own_flag( flag_HOT );
+        return it.typeId() == itype_apple && it.has_own_flag( flag_HOT );
     } );
     REQUIRE( hot.size() == 1 );
     CHECK( hot.front()->count() == 1 );
-    const int remaining = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int remaining = target.fuel_left( get_map(), itype_battery );
     fixture.run( who, completed.first );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == remaining );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == remaining );
     CHECK( needs_state( get_avatar() ) == host );
 }
 
@@ -7999,7 +8351,7 @@ TEST_CASE( "mounted_heating_cancels_without_loss_when_inputs_or_access_change",
     item_location food = drinking_source( who );
     food->set_item_temperature( units::from_kelvin( 280 ) );
     vehicle &target = electronic_vehicle( who );
-    const auto choice = heating_choice( who, target, food );
+    const vehicle_control_selection choice = heating_choice( who, target, food );
     fixture.run( who, control_request( fixture, who, choice ) );
     REQUIRE( is_vehicle_heating( who.activity ) );
     // Resolve by stable identity without retaining a part pointer across mutation.
@@ -8015,7 +8367,7 @@ TEST_CASE( "mounted_heating_cancels_without_loss_when_inputs_or_access_change",
     }
     SECTION( "installed tool replaced" ) {
         target.get_tools( target.part( index ) ).clear();
-        target.get_tools( target.part( index ) ).emplace_back( itype_id( "hotplate" ) );
+        target.get_tools( target.part( index ) ).emplace_back( itype_hotplate );
     }
     SECTION( "operator moved away" ) {
         who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 5, 0, 0 ) );
@@ -8030,14 +8382,14 @@ TEST_CASE( "mounted_heating_cancels_without_loss_when_inputs_or_access_change",
         who.set_moves( 0 );
         fixture.run( who, fixture.request( who, "cancel" ) );
     }
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
     const int charges = food->charges;
     if( who.activity ) {
         who.set_moves( 100 );
         fixture.run( who, fixture.request( who, "step" ) );
     }
     CHECK_FALSE( who.activity );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == battery );
     CHECK( food->charges == charges );
     CHECK_FALSE( food->has_own_flag( flag_HOT ) );
 }
@@ -8050,18 +8402,18 @@ TEST_CASE( "mounted_heating_preserves_liquid_until_owner_choice_and_replays_with
     item_location food = drinking_source( who );
     food->set_item_temperature( units::from_kelvin( 280 ) );
     vehicle &target = electronic_vehicle( who );
-    const auto choice = heating_choice( who, target, food );
+    const vehicle_control_selection choice = heating_choice( who, target, food );
     fixture.run( who, control_request( fixture, who, choice ) );
     finish_vehicle_heating( fixture, who );
     REQUIRE( food->charges == 1 );
     REQUIRE( vehicle_heating_liquid( who.activity ) );
     CHECK( vehicle_heating_liquid( who.activity )->charges == 1 );
     CHECK( vehicle_heating_liquid( who.activity )->has_own_flag( flag_HOT ) );
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
     save_reload_activity( who );
-    const auto pending = vehicle_heating_liquid( who.activity );
+    const item *pending = vehicle_heating_liquid( who.activity );
     REQUIRE( pending );
-    item_location bottle = who.i_add( item( itype_id( "bottle_plastic" ) ) );
+    item_location bottle = who.i_add( item( itype_bottle_plastic ) );
     unload_liquid_choice destination;
     destination.source = pending->uid().get_value();
     destination.kind = LD_ITEM;
@@ -8077,7 +8429,7 @@ TEST_CASE( "mounted_heating_preserves_liquid_until_owner_choice_and_replays_with
     CHECK( bottle->only_item().has_own_flag( flag_HOT ) );
     fixture.run( who, request );
     CHECK( bottle->only_item().charges == 1 );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == battery );
 }
 
 TEST_CASE( "mounted_heating_rejects_forged_requests_before_consuming_resources",
@@ -8087,7 +8439,7 @@ TEST_CASE( "mounted_heating_rejects_forged_requests_before_consuming_resources",
     npc &who = fixture.remote();
     item_location food = drinking_source( who );
     vehicle &target = electronic_vehicle( who );
-    auto choice = heating_choice( who, target, food );
+    vehicle_control_selection choice = heating_choice( who, target, food );
     SECTION( "wrong tool identity" ) { ++choice.heating->installed_tool; }
     SECTION( "missing hardware" ) { choice.heating->part = 0; }
     SECTION( "unavailable method" ) { choice.heating->method = "HEAT_ALL_ITEMS"; }
@@ -8097,11 +8449,11 @@ TEST_CASE( "mounted_heating_rejects_forged_requests_before_consuming_resources",
         choice.heating->items.front().first = capture_item_source( get_avatar(), drinking_source( get_avatar() ) );
     }
     SECTION( "locked electric vehicle" ) { target.is_locked = true; }
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK_FALSE( who.activity );
     CHECK( food->charges == 2 );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == battery );
 }
 
 TEST_CASE( "canceling_saved_heated_liquid_keeps_the_result_and_does_not_refund_spent_energy",
@@ -8112,7 +8464,7 @@ TEST_CASE( "canceling_saved_heated_liquid_keeps_the_result_and_does_not_refund_s
     item_location food = drinking_source( who );
     food->set_item_temperature( units::from_kelvin( 280 ) );
     vehicle &target = electronic_vehicle( who );
-    const auto choice = heating_choice( who, target, food );
+    const vehicle_control_selection choice = heating_choice( who, target, food );
     fixture.run( who, control_request( fixture, who, choice ) );
     const auto completed = finish_vehicle_heating( fixture, who );
     REQUIRE( vehicle_heating_liquid( who.activity ) );
@@ -8122,20 +8474,20 @@ TEST_CASE( "canceling_saved_heated_liquid_keeps_the_result_and_does_not_refund_s
     state.allow_omitted_members();
     CHECK( state.get_int64( "liquid_source_uid" ) == output_id );
     save_reload_activity( who );
-    const int battery = target.fuel_left( get_map(), itype_id( "battery" ) );
+    const int battery = target.fuel_left( get_map(), itype_battery );
     who.set_moves( 0 );
     fixture.run( who, fixture.request( who, "cancel" ) );
     CHECK_FALSE( who.activity );
     int spilled = 0;
     for( const item &it : get_map().i_at( who.pos_bub() ) ) {
-        if( it.typeId() == itype_id( "water_clean" ) ) {
+        if( it.typeId() == itype_water_clean ) {
             spilled += it.charges;
             CHECK( it.has_own_flag( flag_HOT ) );
         }
     }
     CHECK( spilled == 1 );
     CHECK( food->charges == 1 );
-    CHECK( target.fuel_left( get_map(), itype_id( "battery" ) ) == battery );
+    CHECK( target.fuel_left( get_map(), itype_battery ) == battery );
 }
 
 TEST_CASE( "legacy_portable_heating_actor_still_loads_and_finishes",
@@ -8143,9 +8495,9 @@ TEST_CASE( "legacy_portable_heating_actor_still_loads_and_finishes",
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
-    who.set_wielded_item( item( itype_id( "hotplate" ), calendar::turn ) );
-    item_location food = who.i_add( item( itype_id( "apple" ), calendar::turn, 1 ) );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
+    who.set_wielded_item( item( itype_hotplate, calendar::turn ) );
+    item_location food = who.i_add( item( itype_apple, calendar::turn, 1 ) );
     food->set_item_temperature( units::from_kelvin( 280 ) );
     heating_requirements required{ 0_ml, 0, 100 };
     heater source{ who.get_wielded_item(), false, 0, 0, {}, false };
@@ -8163,7 +8515,7 @@ TEST_CASE( "legacy_portable_heating_actor_still_loads_and_finishes",
     who.activity.do_turn( who );
     CHECK_FALSE( who.activity );
     CHECK( who.items_with( []( const item &it ) {
-        return it.typeId() == itype_id( "apple" ) && it.has_own_flag( flag_HOT );
+        return it.typeId() == itype_apple && it.has_own_flag( flag_HOT );
     } ).size() == 1 );
 }
 
@@ -8173,9 +8525,9 @@ TEST_CASE( "item_source_search_range_remains_native_operation_owned",
     appliance_fixture fixture;
     npc &who = fixture.remote();
     const tripoint_bub_ms location = who.pos_bub() + tripoint_rel_ms( 2, 0, 0 );
-    item &placed = get_map().add_item_or_charges( location, item( itype_id( "apple" ), calendar::turn, 1 ) );
+    item &placed = get_map().add_item_or_charges( location, item( itype_apple, calendar::turn, 1 ) );
     item_location source( map_cursor( location ), &placed );
-    const auto identity = capture_item_source( who, source );
+    const item_source identity = capture_item_source( who, source );
     CHECK_FALSE( resolve_item_source( who, get_map(), identity ) );
     CHECK( resolve_item_source( who, get_map(), identity, 3 ) == source );
     // Ground items are shared by nearby players, but the range belongs to the
@@ -8194,25 +8546,25 @@ TEST_CASE( "mounted_hotplate_charges_startup_once_and_preserves_legacy_position_
     food->set_item_temperature( units::from_kelvin( 280 ) );
     vehicle &target = electronic_vehicle( who );
     const int gas_tank = install_test_appliance( who, target, "small_pressure_tank" );
-    target.part( gas_tank ).ammo_set( itype_id( "propane" ), 1000 );
+    target.part( gas_tank ).ammo_set( itype_propane, 1000 );
     REQUIRE( target.part( gas_tank ).ammo_remaining() == 1000 );
-    const itype_id tool( "test_vehicle_hotplate_startup" );
-    const auto choice = heating_choice( who, target, food, tool.str() );
+    const itype_id &tool = itype_test_vehicle_hotplate_startup;
+    const vehicle_control_selection choice = heating_choice( who, target, food, tool.str() );
     REQUIRE( choice.heating->method == "HOTPLATE" );
-    const int before = target.fuel_left( get_map(), itype_id( "propane" ) );
+    const int before = target.fuel_left( get_map(), itype_propane );
     const int initial = item( tool ).ammo_required();
     REQUIRE( initial > 0 );
-    const auto required = heating_requirements_for_weight( 0_gram,
+    const heating_requirements required = heating_requirements_for_weight( 0_gram,
                           food->weight( false, false ) / food->charges, food->volume( false, true, 1 ) );
     const std::string start = control_request( fixture, who, choice );
     fixture.run( who, start );
     REQUIRE( is_vehicle_heating( who.activity ) );
-    CHECK( target.fuel_left( get_map(), itype_id( "propane" ) ) == before - initial );
+    CHECK( target.fuel_left( get_map(), itype_propane ) == before - initial );
     fixture.run( who, start );
     save_reload_activity( who );
-    CHECK( target.fuel_left( get_map(), itype_id( "propane" ) ) == before - initial );
+    CHECK( target.fuel_left( get_map(), itype_propane ) == before - initial );
     finish_vehicle_heating( fixture, who );
-    CHECK( target.fuel_left( get_map(), itype_id( "propane" ) ) ==
+    CHECK( target.fuel_left( get_map(), itype_propane ) ==
            before - initial - required.ammo * tool->charges_to_use() );
     who.cancel_activity();
 
@@ -8231,25 +8583,25 @@ namespace
 {
 item_location repair_fixture_target( Character &who )
 {
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
     set_time_to_day();
     REQUIRE( who.fine_detail_vision_mod() <= 1 );
-    item_location target = who.i_add( item( itype_id( "pot" ) ) );
+    item_location target = who.i_add( item( itype_pot ) );
     REQUIRE( target );
     target->set_damage( 2 * itype::damage_scale );
     target->set_degradation( 0 );
     for( int i = 0; i < 10; ++i ) {
-        who.i_add( item( itype_id( "steel_chunk" ) ) );
+        who.i_add( item( itype_steel_chunk ) );
     }
-    REQUIRE( who.charges_of( itype_id( "steel_chunk" ) ) == 10 );
+    REQUIRE( who.charges_of( itype_steel_chunk ) == 10 );
     who.set_moves( 100 );
     return target;
 }
 
 item_location repair_fixture_tool( Character &who )
 {
-    item tool( itype_id( "test_owned_repair_tool" ) );
-    tool.ammo_set( itype_id( "battery" ), 1000 );
+    item tool( itype_test_owned_repair_tool );
+    tool.ammo_set( itype_battery, 1000 );
     const item_location result = who.i_add( tool );
     REQUIRE( result );
     REQUIRE( result->ammo_remaining() == 1000 );
@@ -8273,7 +8625,7 @@ repair_activity_choice repair_choice( Character &who, const item_location &targe
     repair_activity_choice result;
     result.target = capture_item_source( who, target );
     result.repeat = static_cast<int>( repair_repeat::ONCE );
-    result.material = { usage_from::player, item_comp( itype_id( "steel_chunk" ), 1 ) };
+    result.material = { usage_from::player, item_comp( itype_steel_chunk, 1 ) };
     return result;
 }
 
@@ -8294,14 +8646,14 @@ repair_activity_actor &repair_actor( Character &who )
 }
 
 vehicle_control_selection mounted_repair_choice( Character &who, vehicle &target,
-        const itype_id &type = itype_id( "test_owned_repair_tool" ) )
+        const itype_id &type = itype_test_owned_repair_tool )
 {
     const int part = install_test_appliance( who, target, "veh_tools_workshop" );
     auto &tools = target.get_tools( target.part( part ) );
     tools.emplace_back( type );
     target.discharge_battery( get_map(), INT_MAX );
     target.charge_battery( get_map(), 10000 );
-    auto result = control_choice( who, target, "repair" );
+    vehicle_control_selection result = control_choice( who, target, "repair" );
     result.position = target.abs_part_pos( target.part( part ) );
     result.repair.emplace();
     result.repair->vehicle_id = result.vehicle_id;
@@ -8346,11 +8698,11 @@ TEST_CASE( "owned_portable_repair_keeps_choices_resources_and_saved_progress_wit
     fixture.run( who, step );
     REQUIRE( repair_actor( who ).waiting );
     CHECK( target->damage() == itype::damage_scale );
-    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 9 );
+    CHECK( who.charges_of( itype_steel_chunk ) == 9 );
     CHECK( tool->ammo_remaining() == 1000 - tool->ammo_required() );
     fixture.run( who, step );
     CHECK( target->damage() == itype::damage_scale );
-    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 9 );
+    CHECK( who.charges_of( itype_steel_chunk ) == 9 );
     CHECK( needs_state( get_avatar() ) == host_before );
     who.set_moves( 0 );
     fixture.run( who, fixture.request( who, "cancel" ) );
@@ -8365,19 +8717,19 @@ TEST_CASE( "owned_repair_rejects_another_players_items_and_unavailable_material_
     const item_location target = repair_fixture_target( who );
     const item_location tool = repair_fixture_tool( who );
     fixture.run( who, repair_start_request( fixture, who, tool ) );
-    auto choice = repair_choice( who, target );
+    repair_activity_choice choice = repair_choice( who, target );
     SECTION( "another player's target" ) {
         choice.target = capture_item_source( get_avatar(), repair_fixture_target( get_avatar() ) );
     }
-    SECTION( "unrelated component type" ) { choice.material.comp.type = itype_id( "apple" ); }
+    SECTION( "unrelated component type" ) { choice.material.comp.type = itype_apple; }
     SECTION( "unavailable nearby components" ) { choice.material.use_from = usage_from::map; }
     SECTION( "invalid repeat mode" ) { choice.repeat = 2; }
     SECTION( "refitting a rigid pot" ) { choice.repeat = static_cast<int>( repair_repeat::REFIT_ONCE ); }
-    const auto random_before = rng_get_engine();
+    const std::string random_before = capture_rng_state();
     fixture.run( who, repair_choose_request( fixture, who, choice ) );
     CHECK( repair_actor( who ).waiting );
-    CHECK( rng_get_engine() == random_before );
-    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 10 );
+    CHECK( capture_rng_state() == random_before );
+    CHECK( who.charges_of( itype_steel_chunk ) == 10 );
     CHECK( target->damage() == 2 * itype::damage_scale );
     CHECK( tool->ammo_remaining() == 1000 );
 }
@@ -8390,25 +8742,25 @@ TEST_CASE( "mounted_repair_bills_the_selected_vehicle_once_and_keeps_inventory_t
     const item_location target = repair_fixture_target( who );
     const item_location carried_tool = repair_fixture_tool( who );
     vehicle &car = electronic_vehicle( who );
-    const auto selected = mounted_repair_choice( who, car );
-    const int before = car.fuel_left( get_map(), itype_id( "battery" ) );
-    const auto random_before = rng_get_engine();
+    const vehicle_control_selection selected = mounted_repair_choice( who, car );
+    const int before = car.fuel_left( get_map(), itype_battery );
+    const std::string random_before = capture_rng_state();
     CHECK( valid_vehicle_repair( who, get_map(), car, selected.position, *selected.repair ) );
-    CHECK( rng_get_engine() == random_before );
+    CHECK( capture_rng_state() == random_before );
     fixture.run( who, control_request( fixture, who, selected ) );
     fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
     REQUIRE_FALSE( repair_actor( who ).waiting );
     save_reload_activity( who );
     who.set_moves( 100 );
-    const auto step = fixture.request( who, "step" );
+    const std::string step = fixture.request( who, "step" );
     fixture.run( who, step );
     REQUIRE( repair_actor( who ).waiting );
-    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == before - carried_tool->ammo_required() );
+    CHECK( car.fuel_left( get_map(), itype_battery ) == before - carried_tool->ammo_required() );
     CHECK( carried_tool->ammo_remaining() == 1000 );
-    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == 9 );
+    CHECK( who.charges_of( itype_steel_chunk ) == 9 );
     CHECK( target->damage() == itype::damage_scale );
     fixture.run( who, step );
-    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == before - carried_tool->ammo_required() );
+    CHECK( car.fuel_left( get_map(), itype_battery ) == before - carried_tool->ammo_required() );
 }
 
 TEST_CASE( "mounted_repair_rechecks_hardware_access_and_materials_before_attempting",
@@ -8418,11 +8770,11 @@ TEST_CASE( "mounted_repair_rechecks_hardware_access_and_materials_before_attempt
     npc &who = fixture.remote();
     const item_location target = repair_fixture_target( who );
     vehicle &car = electronic_vehicle( who );
-    const auto selected = mounted_repair_choice( who, car );
+    const vehicle_control_selection selected = mounted_repair_choice( who, car );
     fixture.run( who, control_request( fixture, who, selected ) );
     fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
     REQUIRE_FALSE( repair_actor( who ).waiting );
-    const int before = car.fuel_left( get_map(), itype_id( "battery" ) );
+    const int before = car.fuel_left( get_map(), itype_battery );
     SECTION( "owner moved away" ) { who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 8, 0, 0 ) ); }
     SECTION( "locked vehicle" ) { car.is_locked = true; }
     SECTION( "removed hardware" ) {
@@ -8437,14 +8789,14 @@ TEST_CASE( "mounted_repair_rechecks_hardware_access_and_materials_before_attempt
         for( const vpart_reference &part : car.get_all_parts() ) {
             if( part.part().get_base().uid().get_value() == selected.repair->part ) {
                 car.get_tools( part.part() ).clear();
-                car.get_tools( part.part() ).emplace_back( itype_id( "test_owned_repair_tool" ) );
+                car.get_tools( part.part() ).emplace_back( itype_test_owned_repair_tool );
                 break;
             }
         }
     }
     SECTION( "material moved out of reach" ) {
         for( item *component : who.items_with( []( const item &it ) {
-        return it.typeId() == itype_id( "steel_chunk" );
+        return it.typeId() == itype_steel_chunk;
         } ) ) {
             item_location( who, component ).remove_item();
         }
@@ -8456,10 +8808,10 @@ TEST_CASE( "mounted_repair_rechecks_hardware_access_and_materials_before_attempt
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "step" ) );
     CHECK( target->damage() == 2 * itype::damage_scale );
-    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == before );
+    CHECK( car.fuel_left( get_map(), itype_battery ) == before );
     REQUIRE( events.finishes == 1 );
     REQUIRE( events.rng_at_finish );
-    CHECK( rng_get_engine() == *events.rng_at_finish );
+    CHECK( capture_rng_state() == *events.rng_at_finish );
     CHECK( ( !who.activity || repair_actor( who ).waiting ) );
 }
 
@@ -8470,29 +8822,29 @@ TEST_CASE( "owned_repair_preserves_native_attempt_and_random_sequence",
     npc &who = fixture.remote();
     item_location target = repair_fixture_target( who );
     item_location tool = repair_fixture_tool( who );
-    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    who.set_skill_level( skill_fabrication, 10 );
     fixture.run( who, repair_start_request( fixture, who, tool ) );
     fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
     const auto *native = dynamic_cast<const repair_item_actor *>(
                              tool->get_use( "repair_metal" )->get_actor_ptr() );
     REQUIRE( native );
-    const auto random_before = rng_get_engine();
+    const std::string random_before = capture_rng_state();
     REQUIRE( native->repair( who, *tool, target ) == repair_item_actor::AS_SUCCESS );
     tool->consume_tool_uses( 1, get_map(), who.pos_bub(), &who );
-    const auto expected_rng = rng_get_engine();
+    const std::string expected_rng = capture_rng_state();
     const int expected_damage = target->damage();
     const int expected_ammo = tool->ammo_remaining();
-    const int expected_components = who.charges_of( itype_id( "steel_chunk" ) );
+    const int expected_components = who.charges_of( itype_steel_chunk );
     target->set_damage( 2 * itype::damage_scale );
-    tool->ammo_set( itype_id( "battery" ), 1000 );
-    who.i_add( item( itype_id( "steel_chunk" ) ) );
+    tool->ammo_set( itype_battery, 1000 );
+    who.i_add( item( itype_steel_chunk ) );
     who.invalidate_crafting_inventory();
-    rng_get_engine() = random_before;
+    restore_rng_state( random_before );
     repair_actor( who ).finish( who.activity, who );
     CHECK( target->damage() == expected_damage );
     CHECK( tool->ammo_remaining() == expected_ammo );
-    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == expected_components );
-    CHECK( rng_get_engine() == expected_rng );
+    CHECK( who.charges_of( itype_steel_chunk ) == expected_components );
+    CHECK( capture_rng_state() == expected_rng );
 }
 
 TEST_CASE( "actorless_legacy_repair_still_loads_and_completes",
@@ -8502,7 +8854,7 @@ TEST_CASE( "actorless_legacy_repair_still_loads_and_completes",
     npc &who = fixture.remote();
     const item_location target = repair_fixture_target( who );
     const item_location tool = repair_fixture_tool( who );
-    who.assign_activity( activity_id( "ACT_REPAIR_ITEM" ), 100 );
+    who.assign_activity( ACT_REPAIR_ITEM, 100 );
     who.activity.targets = { tool, target };
     who.activity.str_values = { "repair_metal" };
     who.activity.values = { static_cast<int>( repair_repeat::ONCE ) };
@@ -8512,7 +8864,7 @@ TEST_CASE( "actorless_legacy_repair_still_loads_and_completes",
     JsonValue value = json_loader::from_string( encoded.str() );
     player_activity restored;
     restored.deserialize( value.get_object() );
-    REQUIRE( restored.id() == activity_id( "ACT_REPAIR_ITEM" ) );
+    REQUIRE( restored.id() == ACT_REPAIR_ITEM );
     REQUIRE_FALSE( restored.actor );
     who.activity = std::move( restored );
     repair_item_finish( &who.activity, &who, true );
@@ -8530,20 +8882,20 @@ TEST_CASE( "owned_repair_repeat_and_refit_stop_at_the_native_completion_boundary
     const item_location tool = repair_fixture_tool( who );
     const bool refit = GENERATE( false, true );
     if( refit ) {
-        target = who.i_add( item( itype_id( "lc_chainmail_vest" ) ) );
+        target = who.i_add( item( itype_lc_chainmail_vest ) );
         REQUIRE( target );
         target->set_damage( 2 * itype::damage_scale );
         target->set_degradation( 0 );
         target->unset_flag( flag_FIT );
         REQUIRE( target->has_flag( flag_VARSIZE ) );
-        who.i_add( item( itype_id( "lc_chain_link" ) ) );
+        who.i_add( item( itype_lc_chain_link ) );
     }
     who.set_moves( 100 );
     fixture.run( who, repair_start_request( fixture, who, tool ) );
-    auto choice = repair_choice( who, target );
+    repair_activity_choice choice = repair_choice( who, target );
     choice.repeat = static_cast<int>( refit ? repair_repeat::REFIT_FULL : repair_repeat::FULL );
     if( refit ) {
-        choice.material.comp.type = itype_id( "lc_chain_link" );
+        choice.material.comp.type = itype_lc_chain_link;
     }
     // Quantities are derived by the server, even if a client supplies a forged one.
     choice.material.comp.count = -999;
@@ -8559,9 +8911,9 @@ TEST_CASE( "owned_repair_repeat_and_refit_stop_at_the_native_completion_boundary
     if( refit ) {
         CHECK( target->has_flag( flag_FIT ) );
     }
-    CHECK( who.charges_of( itype_id( "steel_chunk" ) ) == ( refit ? 10 : 10 - attempts ) );
+    CHECK( who.charges_of( itype_steel_chunk ) == ( refit ? 10 : 10 - attempts ) );
     if( refit ) {
-        CHECK( who.amount_of( itype_id( "lc_chain_link" ) ) == 0 );
+        CHECK( who.amount_of( itype_lc_chain_link ) == 0 );
     }
     CHECK( tool->ammo_remaining() == 1000 - attempts * tool->ammo_required() );
     who.set_moves( 100 );
@@ -8576,23 +8928,23 @@ TEST_CASE( "mounted_multimag_repair_consumes_each_bound_resource_once",
     npc &who = fixture.remote();
     const item_location target = repair_fixture_target( who );
     vehicle &car = electronic_vehicle( who );
-    test_water_tank( car, itype_id( "gasoline" ), 1000 );
-    const auto selected = mounted_repair_choice( who, car, itype_id( "test_owned_multimag_repair_tool" ) );
-    const int battery = car.fuel_left( get_map(), itype_id( "battery" ) );
-    const int fuel = car.fuel_left( get_map(), itype_id( "gasoline" ) );
+    test_water_tank( car, itype_gasoline, 1000 );
+    const vehicle_control_selection selected = mounted_repair_choice( who, car, itype_test_owned_multimag_repair_tool );
+    const int battery = car.fuel_left( get_map(), itype_battery );
+    const int fuel = car.fuel_left( get_map(), itype_gasoline );
     fixture.run( who, control_request( fixture, who, selected ) );
     fixture.run( who, repair_choose_request( fixture, who, repair_choice( who, target ) ) );
     REQUIRE_FALSE( repair_actor( who ).waiting );
     save_reload_activity( who );
     who.set_moves( 100 );
-    const auto step = fixture.request( who, "step" );
+    const std::string step = fixture.request( who, "step" );
     fixture.run( who, step );
     CHECK( target->damage() == itype::damage_scale );
-    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == battery - 2 );
-    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    CHECK( car.fuel_left( get_map(), itype_battery ) == battery - 2 );
+    CHECK( car.fuel_left( get_map(), itype_gasoline ) == fuel - 5 );
     fixture.run( who, step );
-    CHECK( car.fuel_left( get_map(), itype_id( "battery" ) ) == battery - 2 );
-    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    CHECK( car.fuel_left( get_map(), itype_battery ) == battery - 2 );
+    CHECK( car.fuel_left( get_map(), itype_gasoline ) == fuel - 5 );
 }
 
 TEST_CASE( "repair_resize_uses_the_operator_body_instead_of_the_host",
@@ -8600,14 +8952,14 @@ TEST_CASE( "repair_resize_uses_the_operator_body_instead_of_the_host",
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    get_avatar().set_mutation( trait_id( "SMALL2" ) );
+    get_avatar().set_mutation( trait_SMALL2 );
     REQUIRE( get_avatar().get_size() == creature_size::tiny );
     REQUIRE( who.get_size() == creature_size::medium );
-    item clothing( itype_id( "lc_chainmail_vest" ) );
+    item clothing( itype_lc_chainmail_vest );
     clothing.set_flag( flag_FIT );
     clothing.set_flag( flag_UNDERSIZE );
     REQUIRE( clothing.has_flag( flag_VARSIZE ) );
-    item tool( itype_id( "test_owned_repair_tool" ) );
+    item tool( itype_test_owned_repair_tool );
     const auto *native = dynamic_cast<const repair_item_actor *>(
                              tool.get_use( "repair_metal" )->get_actor_ptr() );
     REQUIRE( native );
@@ -8619,7 +8971,7 @@ namespace
 {
 item empty_station_tool()
 {
-    item tool( itype_id( "welder" ) );
+    item tool( itype_welder );
     tool.clear_items();
     tool.set_damage( itype::damage_scale );
     tool.set_var( "station_test_owner", "remote" );
@@ -8630,7 +8982,7 @@ item empty_station_tool()
 
 vehicle_control_selection station_choice( Character &who, vehicle &target, int part )
 {
-    auto choice = control_choice( who, target, "toolstation" );
+    vehicle_control_selection choice = control_choice( who, target, "toolstation" );
     choice.position = target.abs_part_pos( target.part( part ) );
     choice.toolstation.emplace();
     choice.toolstation->part_id = target.part( part ).get_base().uid().get_value();
@@ -8643,20 +8995,20 @@ TEST_CASE( "owned_vehicle_tool_transfers_follow_the_operator_and_ignore_repeated
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
     vehicle &target = electronic_vehicle( who );
     const int station = install_test_appliance( who, target, "veh_tools_workshop" );
     target.is_locked = true; // Native tool attachment does not require the ignition key.
     const item_location tool = who.i_add( empty_station_tool() );
     REQUIRE( tool );
-    auto attach = station_choice( who, target, station );
+    vehicle_control_selection attach = station_choice( who, target, station );
     attach.toolstation->source = capture_item_source( who, tool );
-    const auto request = control_request( fixture, who, attach );
+    const std::string request = control_request( fixture, who, attach );
     const int moves = who.get_moves();
     fixture.run( who, request );
     REQUIRE( target.get_tools( target.part( station ) ).size() == 1 );
-    CHECK( who.amount_of( itype_id( "welder" ) ) == 0 );
-    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( who.amount_of( itype_welder ) == 0 );
+    CHECK( get_avatar().amount_of( itype_welder ) == 0 );
     CHECK( who.get_moves() == moves );
     CHECK_FALSE( resolve_item_source( who, get_map(), *attach.toolstation->source ) );
     CHECK( target.get_tools( target.part( station ) ).front().damage() == itype::damage_scale );
@@ -8665,22 +9017,22 @@ TEST_CASE( "owned_vehicle_tool_transfers_follow_the_operator_and_ignore_repeated
     fixture.run( who, control_request( fixture, who, attach ) );
     REQUIRE( target.get_tools( target.part( station ) ).size() == 1 );
 
-    auto detach = station_choice( who, target, station );
+    vehicle_control_selection detach = station_choice( who, target, station );
     detach.toolstation->tool_id = target.get_tools( target.part( station ) ).front().uid().get_value();
-    const auto removal = control_request( fixture, who, detach );
+    const std::string removal = control_request( fixture, who, detach );
     fixture.run( who, removal );
     CHECK( target.get_tools( target.part( station ) ).empty() );
-    REQUIRE( who.amount_of( itype_id( "welder" ) ) == 1 );
+    REQUIRE( who.amount_of( itype_welder ) == 1 );
     const auto received = who.items_with( []( const item &candidate ) {
-        return candidate.typeId() == itype_id( "welder" );
+        return candidate.typeId() == itype_welder;
     } );
     REQUIRE( received.size() == 1 );
     CHECK( received.front()->damage() == itype::damage_scale );
     CHECK( received.front()->get_var( "station_test_owner" ) == "remote" );
     fixture.run( who, removal );
     fixture.run( who, control_request( fixture, who, detach ) );
-    CHECK( who.amount_of( itype_id( "welder" ) ) == 1 );
-    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( who.amount_of( itype_welder ) == 1 );
+    CHECK( get_avatar().amount_of( itype_welder ) == 0 );
 }
 
 TEST_CASE( "owned_vehicle_tool_attachment_revalidates_item_rules_and_player_access",
@@ -8688,12 +9040,12 @@ TEST_CASE( "owned_vehicle_tool_attachment_revalidates_item_rules_and_player_acce
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
     vehicle &target = electronic_vehicle( who );
     const int station = install_test_appliance( who, target, "veh_tools_workshop" );
     item_location tool = who.i_add( empty_station_tool() );
     REQUIRE( tool );
-    auto choice = station_choice( who, target, station );
+    vehicle_control_selection choice = station_choice( who, target, station );
     choice.toolstation->source = capture_item_source( who, tool );
     REQUIRE( valid_vehicle_tool_selection( who, get_map(), target, choice.position, *choice.toolstation ) );
     SECTION( "another player's tool" ) {
@@ -8701,9 +9053,9 @@ TEST_CASE( "owned_vehicle_tool_attachment_revalidates_item_rules_and_player_acce
         choice.toolstation->source = capture_item_source( get_avatar(), get_avatar().get_wielded_item() );
     }
     SECTION( "tool is no longer empty" ) {
-        item wrench( itype_id( "cordless_impact_wrench" ) );
-        item battery( itype_id( "heavy_battery_cell" ) );
-        battery.ammo_set( itype_id( "battery" ), 20 );
+        item wrench( itype_cordless_impact_wrench );
+        item battery( itype_heavy_battery_cell );
+        battery.ammo_set( itype_battery, 20 );
         REQUIRE( wrench.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
         REQUIRE_FALSE( wrench.empty() );
         const item_location loaded = who.i_add( wrench );
@@ -8711,7 +9063,7 @@ TEST_CASE( "owned_vehicle_tool_attachment_revalidates_item_rules_and_player_acce
         choice.toolstation->source = capture_item_source( who, loaded );
     }
     SECTION( "unsupported item" ) {
-        choice.toolstation->source = capture_item_source( who, who.i_add( item( itype_id( "rock" ) ) ) );
+        choice.toolstation->source = capture_item_source( who, who.i_add( item( itype_rock ) ) );
     }
     SECTION( "same tool type already attached" ) {
         target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
@@ -8724,16 +9076,16 @@ TEST_CASE( "owned_vehicle_tool_attachment_revalidates_item_rules_and_player_acce
     SECTION( "attach and detach supplied together" ) { choice.toolstation->tool_id = tool->uid().get_value(); }
     SECTION( "wrong command action" ) { choice.action = "start"; }
     SECTION( "vehicle belongs to someone else" ) {
-        who.set_fac( faction_id( "free_merchants" ) );
+        who.set_fac( faction_free_merchants );
         target.set_owner( get_avatar() );
         REQUIRE_FALSE( target.is_owned_by( who ) );
     }
     const size_t installed = target.get_tools( target.part( station ) ).size();
-    const auto random_before = rng_get_engine();
+    const std::string random_before = capture_rng_state();
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK( target.get_tools( target.part( station ) ).size() == installed );
-    CHECK( who.amount_of( itype_id( "welder" ) ) == 1 );
-    CHECK( rng_get_engine() == random_before );
+    CHECK( who.amount_of( itype_welder ) == 1 );
+    CHECK( capture_rng_state() == random_before );
 }
 
 TEST_CASE( "owned_vehicle_tool_detachment_rejects_stale_or_foreign_hardware",
@@ -8744,7 +9096,7 @@ TEST_CASE( "owned_vehicle_tool_detachment_rejects_stale_or_foreign_hardware",
     vehicle &target = electronic_vehicle( who );
     const int station = install_test_appliance( who, target, "veh_tools_workshop" );
     target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
-    auto choice = station_choice( who, target, station );
+    vehicle_control_selection choice = station_choice( who, target, station );
     choice.toolstation->tool_id = target.get_tools( target.part( station ) ).front().uid().get_value();
     SECTION( "same type replaced the selected tool" ) {
         target.get_tools( target.part( station ) ).clear();
@@ -8763,8 +9115,8 @@ TEST_CASE( "owned_vehicle_tool_detachment_rejects_stale_or_foreign_hardware",
     const size_t installed = target.get_tools( target.part( station ) ).size();
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK( target.get_tools( target.part( station ) ).size() == installed );
-    CHECK( who.amount_of( itype_id( "welder" ) ) == 0 );
-    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( who.amount_of( itype_welder ) == 0 );
+    CHECK( get_avatar().amount_of( itype_welder ) == 0 );
 }
 
 TEST_CASE( "owned_vehicle_tool_detachment_keeps_native_overflow_placement",
@@ -8772,27 +9124,27 @@ TEST_CASE( "owned_vehicle_tool_detachment_keeps_native_overflow_placement",
 {
     appliance_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "rock" ) ) );
+    who.set_wielded_item( item( itype_rock ) );
     vehicle &target = electronic_vehicle( who );
     const int station = install_test_appliance( who, target, "veh_tools_workshop" );
     target.get_tools( target.part( station ) ).push_back( empty_station_tool() );
     REQUIRE_FALSE( who.can_pickVolume( target.get_tools( target.part( station ) ).front(), false ) );
-    auto choice = station_choice( who, target, station );
+    vehicle_control_selection choice = station_choice( who, target, station );
     choice.toolstation->tool_id = target.get_tools( target.part( station ) ).front().uid().get_value();
-    const auto request = control_request( fixture, who, choice );
+    const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
     fixture.run( who, request );
     CHECK( target.get_tools( target.part( station ) ).empty() );
     int found = 0;
     for( const item &tool : get_map().i_at( who.pos_bub() ) ) {
-        if( tool.typeId() == itype_id( "welder" ) ) {
+        if( tool.typeId() == itype_welder ) {
             ++found;
             CHECK( tool.damage() == itype::damage_scale );
             CHECK( tool.get_var( "station_test_owner" ) == "remote" );
         }
     }
     CHECK( found == 1 );
-    CHECK( get_avatar().amount_of( itype_id( "welder" ) ) == 0 );
+    CHECK( get_avatar().amount_of( itype_welder ) == 0 );
 }
 
 TEST_CASE( "vehicle_tool_menu_does_not_eject_items_before_an_explicit_detach",
@@ -8802,15 +9154,15 @@ TEST_CASE( "vehicle_tool_menu_does_not_eject_items_before_an_explicit_detach",
     avatar &who = get_avatar();
     vehicle &target = electronic_vehicle( who );
     const int station = install_test_appliance( who, target, "veh_tools_workshop" );
-    target.get_tools( target.part( station ) ).emplace_back( itype_id( "rock" ) );
+    target.get_tools( target.part( station ) ).emplace_back( itype_rock );
     const int64_t identity = target.get_tools( target.part( station ) ).front().uid().get_value();
     veh_menu menu( target, "toolstation" );
     target.build_interact_menu( menu, &get_map(), get_map().get_bub( target.abs_part_pos(
                                     target.part( station ) ) ), false );
     REQUIRE( target.get_tools( target.part( station ) ).size() == 1 );
     CHECK( target.get_tools( target.part( station ) ).front().uid().get_value() == identity );
-    CHECK( who.amount_of( itype_id( "rock" ) ) == 0 );
-    auto choice = station_choice( who, target, station );
+    CHECK( who.amount_of( itype_rock ) == 0 );
+    vehicle_control_selection choice = station_choice( who, target, station );
     choice.toolstation->tool_id = identity;
     REQUIRE( execute_vehicle_control( who, get_map(), choice ) );
     CHECK( target.get_tools( target.part( station ) ).empty() );
@@ -8820,7 +9172,7 @@ namespace
 {
 vehicle_control_selection instant_tool_choice( Character &who, vehicle &target, int part )
 {
-    auto choice = control_choice( who, target, "tool_use" );
+    vehicle_control_selection choice = control_choice( who, target, "tool_use" );
     choice.position = target.abs_part_pos( target.part( part ) );
     const auto options = vehicle_tool_use_options( target, choice.position );
     REQUIRE( options.size() == 1 );
@@ -8841,28 +9193,28 @@ TEST_CASE( "mounted_towels_clean_only_the_operator_and_do_not_repeat_requests",
     const int part = install_test_appliance( who, target,
                      installed ? "veh_tools_kitchen" : "towel_hanger" );
     if( installed ) {
-        target.get_tools( target.part( part ) ).emplace_back( itype_id( "towel" ) );
+        target.get_tools( target.part( part ) ).emplace_back( itype_towel );
     }
-    auto choice = instant_tool_choice( who, target, part );
+    vehicle_control_selection choice = instant_tool_choice( who, target, part );
     CHECK( ( choice.tool_use->installed_tool != 0 ) == installed );
     target.is_locked = true; // Unpowered tools do not require the ignition key.
-    who.add_effect( efftype_id( "slimed" ), 10_minutes );
-    get_avatar().add_effect( efftype_id( "slimed" ), 10_minutes );
+    who.add_effect( effect_slimed, 10_minutes );
+    get_avatar().add_effect( effect_slimed, 10_minutes );
     const int host_moves = get_avatar().get_moves();
     const int power = target.battery_left( get_map() );
     const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
-    CHECK_FALSE( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK_FALSE( who.has_effect( effect_slimed ) );
     CHECK( who.get_moves() == 50 );
-    CHECK( get_avatar().has_effect( efftype_id( "slimed" ) ) );
+    CHECK( get_avatar().has_effect( effect_slimed ) );
     CHECK( get_avatar().get_moves() == host_moves );
     CHECK( target.battery_left( get_map() ) == power );
-    who.add_effect( efftype_id( "slimed" ), 10_minutes );
-    const auto rng = rng_get_engine();
+    who.add_effect( effect_slimed, 10_minutes );
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
-    CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK( who.has_effect( effect_slimed ) );
     CHECK( who.get_moves() == 50 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "mounted_weather_readings_charge_the_selected_vehicle_and_reach_the_operator",
@@ -8870,15 +9222,15 @@ TEST_CASE( "mounted_weather_readings_charge_the_selected_vehicle_and_reach_the_o
 {
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     vehicle &target = electronic_vehicle( who );
     const int part = install_test_appliance( who, target, "veh_mobile_weather_station" );
-    const auto choice = instant_tool_choice( who, target, part );
+    const vehicle_control_selection choice = instant_tool_choice( who, target, part );
     const int power = target.battery_left( get_map() );
     REQUIRE( power > 1 );
     Messages::clear_messages();
     recipient.feedback.pending.clear();
-    const auto request = control_request( fixture, who, choice );
+    const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
     CHECK( target.battery_left( get_map() ) == power - 1 );
     CHECK_FALSE( recipient.feedback.pending.empty() );
@@ -8895,7 +9247,7 @@ TEST_CASE( "mounted_tools_reject_changed_hardware_access_and_forged_actions_befo
     npc &who = fixture.remote();
     vehicle &target = electronic_vehicle( who );
     const int part = install_test_appliance( who, target, "veh_mobile_weather_station" );
-    auto choice = instant_tool_choice( who, target, part );
+    vehicle_control_selection choice = instant_tool_choice( who, target, part );
     const std::string failure = GENERATE( "part", "installed", "type", "method", "action", "removed",
                                           "distance", "locked", "owner", "power", "incorporeal" );
     CAPTURE( failure );
@@ -8916,19 +9268,19 @@ TEST_CASE( "mounted_tools_reject_changed_hardware_access_and_forged_actions_befo
     } else if( failure == "locked" ) {
         target.is_locked = true;
     } else if( failure == "owner" ) {
-        target.set_owner( faction_id( "no_faction" ) );
+        target.set_owner( faction_no_faction );
     } else if( failure == "power" ) {
         target.discharge_battery( get_map(), target.battery_left( get_map() ) );
     } else if( failure == "incorporeal" ) {
-        who.add_effect( efftype_id( "incorporeal" ), 1_hours );
+        who.add_effect( effect_incorporeal, 1_hours );
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int power = target.battery_left( get_map() );
     CHECK_FALSE( execute_vehicle_control( who, get_map(), choice ) );
     CHECK( target.battery_left( get_map() ) == power );
     CHECK( who.get_moves() == 100 );
     CHECK_FALSE( who.activity );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "mounted_tool_menu_is_readonly_and_revalidates_installed_identity",
@@ -8939,36 +9291,36 @@ TEST_CASE( "mounted_tool_menu_is_readonly_and_revalidates_installed_identity",
     vehicle &target = electronic_vehicle( who );
     const int part = install_test_appliance( who, target, "veh_tools_kitchen" );
     auto &tools = target.get_tools( target.part( part ) );
-    tools.emplace_back( itype_id( "towel" ) );
-    const auto choice = instant_tool_choice( who, target, part );
-    who.add_effect( efftype_id( "slimed" ), 10_minutes );
-    const auto rng = rng_get_engine();
+    tools.emplace_back( itype_towel );
+    const vehicle_control_selection choice = instant_tool_choice( who, target, part );
+    who.add_effect( effect_slimed, 10_minutes );
+    const std::string rng = capture_rng_state();
     veh_menu menu( target, "tool fixture" );
     add_vehicle_tool_use_menu( menu, get_map(), target, choice.position );
     const auto entries = menu.get_items();
     REQUIRE( entries.size() == 1 );
     REQUIRE( entries.front()._enabled );
     REQUIRE( entries.front()._on_submit );
-    CHECK( rng_get_engine() == rng );
-    CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK( capture_rng_state() == rng );
+    CHECK( who.has_effect( effect_slimed ) );
     SECTION( "native menu uses the same operation" ) {
         entries.front()._on_submit();
-        CHECK_FALSE( who.has_effect( efftype_id( "slimed" ) ) );
+        CHECK_FALSE( who.has_effect( effect_slimed ) );
         CHECK( who.get_moves() == 50 );
     }
     SECTION( "a replacement of the same type is not the selected tool" ) {
         tools.clear();
-        tools.emplace_back( itype_id( "towel" ) );
+        tools.emplace_back( itype_towel );
         entries.front()._on_submit();
-        CHECK( who.has_effect( efftype_id( "slimed" ) ) );
+        CHECK( who.has_effect( effect_slimed ) );
         CHECK( who.get_moves() == 100 );
     }
     SECTION( "client submits a choice without applying local gameplay" ) {
         cata_mp::set_client_mode( true );
-        const auto before = rng_get_engine();
+        const std::string before = capture_rng_state();
         entries.front()._on_submit();
-        CHECK( who.has_effect( efftype_id( "slimed" ) ) );
-        CHECK( rng_get_engine() == before );
+        CHECK( who.has_effect( effect_slimed ) );
+        CHECK( capture_rng_state() == before );
         CHECK( g->multiplayer_session().client_inventory_activity.pending_request != 0 );
     }
 }
@@ -8979,14 +9331,14 @@ TEST_CASE( "portable_weather_and_towels_use_the_same_owned_native_callbacks",
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    who.set_wielded_item( item( itype_id( "towel" ) ) );
-    who.add_effect( efftype_id( "slimed" ), 10_minutes );
+    who.set_wielded_item( item( itype_towel ) );
+    who.add_effect( effect_slimed, 10_minutes );
     CHECK( execute_owned_item_activation( who, who.get_wielded_item(), "TOWEL", who.pos_abs(), false, false ) );
-    CHECK_FALSE( who.has_effect( efftype_id( "slimed" ) ) );
+    CHECK_FALSE( who.has_effect( effect_slimed ) );
     CHECK( who.get_wielded_item()->is_filthy() );
     CHECK( who.get_wielded_item()->has_flag( flag_WET ) );
     CHECK( who.get_moves() == 50 );
-    who.set_wielded_item( item( itype_id( "hygrometer" ) ) );
+    who.set_wielded_item( item( itype_hygrometer ) );
     CHECK( execute_owned_item_activation( who, who.get_wielded_item(), "WEATHER_TOOL", who.pos_abs(),
                                           false, false ) );
     CHECK( who.get_moves() == 50 );
@@ -8996,11 +9348,11 @@ namespace
 {
 item_location portable_saw( Character &who )
 {
-    item saw( itype_id( "reciprocating_saw" ) );
-    item battery( itype_id( "heavy_battery_cell" ) );
-    battery.ammo_set( itype_id( "battery" ), 100 );
+    item saw( itype_reciprocating_saw );
+    item battery( itype_heavy_battery_cell );
+    battery.ammo_set( itype_battery, 100 );
     REQUIRE( saw.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
-    who.set_wielded_item( std::move( saw ) );
+    who.set_wielded_item( saw );
     REQUIRE( who.get_wielded_item()->type->get_use( "HACKSAW" ) );
     return who.get_wielded_item();
 }
@@ -9021,13 +9373,13 @@ vehicle_control_selection mounted_saw_choice( Character &who, vehicle &car,
 {
     const int part = install_test_appliance( who, car, "veh_tools_workshop" );
     car.get_tools( car.part( part ) ).emplace_back( itype_id( type ) );
-    auto choice = control_choice( who, car, "tool_use" );
+    vehicle_control_selection choice = control_choice( who, car, "tool_use" );
     choice.position = car.abs_part_pos( car.part( part ) );
     const auto source = capture_mounted_tool( car, choice.position, itype_id( type ), "HACKSAW" );
     REQUIRE( source );
     choice.tool_use = source->tool;
-    choice.tool_use->target = who.pos_abs() + tripoint( 0, 1, 0 );
-    get_map().furn_set( get_map().get_bub( *choice.tool_use->target ), furn_str_id( "test_f_hacksaw2" ) );
+    choice.tool_use->target = who.pos_abs() + tripoint::south;
+    get_map().furn_set( get_map().get_bub( *choice.tool_use->target ), furn_test_f_hacksaw2 );
     REQUIRE( valid_vehicle_tool_use( who, get_map(), car, choice.position, *choice.tool_use ) );
     return choice;
 }
@@ -9041,15 +9393,15 @@ TEST_CASE( "owned_sawing_preserves_progress_and_bills_the_selected_source_once",
     bind_feedback_player( who, 'a', 701 );
     const item_location carried = portable_saw( who );
     vehicle &car = electronic_vehicle( who );
-    const auto choice = mounted_saw_choice( who, car );
+    const vehicle_control_selection choice = mounted_saw_choice( who, car );
     const bool mounted = GENERATE( false, true );
     const auto target = *choice.tool_use->target;
     const int power = car.battery_left( get_map() );
     const int personal = carried->ammo_remaining();
     const int host_moves = get_avatar().get_moves();
-    const auto request = mounted ? control_request( fixture, who, choice ) : saw_request( fixture, who, target );
+    const std::string request = mounted ? control_request( fixture, who, choice ) : saw_request( fixture, who, target );
     fixture.run( who, request );
-    REQUIRE( who.activity.id() == activity_id( "ACT_HACKSAW" ) );
+    REQUIRE( who.activity.id() == ACT_HACKSAW );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     CHECK( who.activity.moves_left == to_moves<int>( 5_minutes ) / 2 );
     CHECK( who.activity.exertion_level() == LIGHT_EXERCISE );
@@ -9065,15 +9417,15 @@ TEST_CASE( "owned_sawing_preserves_progress_and_bills_the_selected_source_once",
     save_reload_activity( who );
     who.activity.moves_left = 1;
     who.set_moves( 100 );
-    const auto finish = fixture.request( who, "step" );
+    const std::string finish = fixture.request( who, "step" );
     fixture.run( who, finish );
     CHECK_FALSE( who.activity );
-    CHECK( get_map().furn( get_map().get_bub( target ) ) == furn_str_id( "test_f_hacksaw1" ) );
+    CHECK( get_map().furn( get_map().get_bub( target ) ) == furn_test_f_hacksaw1 );
     CHECK( car.battery_left( get_map() ) == power - ( mounted ? 2 : 0 ) );
     CHECK( carried->ammo_remaining() == personal - ( mounted ? 0 : 2 ) );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, finish );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( get_avatar().get_moves() == host_moves );
 }
 
@@ -9083,7 +9435,7 @@ TEST_CASE( "owned_sawing_cancels_stale_hardware_and_changed_targets_without_char
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     vehicle &car = electronic_vehicle( who );
-    const auto choice = mounted_saw_choice( who, car );
+    const vehicle_control_selection choice = mounted_saw_choice( who, car );
     fixture.run( who, control_request( fixture, who, choice ) );
     REQUIRE( who.activity );
     save_reload_activity( who );
@@ -9097,20 +9449,20 @@ TEST_CASE( "owned_sawing_cancels_stale_hardware_and_changed_targets_without_char
                 } else {
                     auto &tools = car.get_tools( part.part() );
                     tools.clear();
-                    tools.emplace_back( itype_id( "reciprocating_saw" ) );
+                    tools.emplace_back( itype_reciprocating_saw );
                 }
                 break;
             }
         }
     } else if( failure == "target" ) {
-        get_map().furn_set( get_map().get_bub( *choice.tool_use->target ), furn_str_id( "test_f_hacksaw3" ) );
+        get_map().furn_set( get_map().get_bub( *choice.tool_use->target ), furn_test_f_hacksaw3 );
     } else if( failure == "range" ) {
         who.setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
     } else {
         car.is_locked = true;
     }
     const int power = car.battery_left( get_map() );
-    const auto surface = get_map().furn( get_map().get_bub( *choice.tool_use->target ) );
+    const furn_id surface = get_map().furn( get_map().get_bub( *choice.tool_use->target ) );
     who.activity.moves_left = 1;
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "step" ) );
@@ -9125,8 +9477,8 @@ TEST_CASE( "owned_sawing_rebinds_resumed_work_between_portable_and_mounted_tools
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     vehicle &car = electronic_vehicle( who );
-    const auto choice = mounted_saw_choice( who, car );
-    who.set_wielded_item( item( itype_id( "test_hacksaw" ) ) );
+    const vehicle_control_selection choice = mounted_saw_choice( who, car );
+    who.set_wielded_item( item( itype_test_hacksaw ) );
     const auto target = *choice.tool_use->target;
     fixture.run( who, saw_request( fixture, who, target ) );
     REQUIRE( who.activity );
@@ -9163,17 +9515,17 @@ TEST_CASE( "mounted_sawing_does_not_keep_unpaid_progress_and_bills_all_fuel_pock
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     vehicle &car = electronic_vehicle( who );
-    test_water_tank( car, itype_id( "gasoline" ), 1000 );
-    const auto choice = mounted_saw_choice( who, car, "test_owned_multimag_saw" );
+    test_water_tank( car, itype_gasoline, 1000 );
+    const vehicle_control_selection choice = mounted_saw_choice( who, car, "test_owned_multimag_saw" );
     fixture.run( who, control_request( fixture, who, choice ) );
     REQUIRE( who.activity );
     const int battery = car.battery_left( get_map() );
-    const int fuel = car.fuel_left( get_map(), itype_id( "gasoline" ) );
+    const int fuel = car.fuel_left( get_map(), itype_gasoline );
     who.set_moves( 100 );
-    const auto step = fixture.request( who, "step" );
+    const std::string step = fixture.request( who, "step" );
     fixture.run( who, step );
     CHECK( car.battery_left( get_map() ) == battery - 2 );
-    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    CHECK( car.fuel_left( get_map(), itype_gasoline ) == fuel - 5 );
     const int progress = who.activity.moves_left;
     fixture.run( who, step );
     CHECK( who.activity.moves_left == progress );
@@ -9183,7 +9535,7 @@ TEST_CASE( "mounted_sawing_does_not_keep_unpaid_progress_and_bills_all_fuel_pock
     CHECK_FALSE( who.activity );
     REQUIRE_FALSE( who.backlog.empty() );
     CHECK( who.backlog.front().moves_left == progress );
-    CHECK( car.fuel_left( get_map(), itype_id( "gasoline" ) ) == fuel - 5 );
+    CHECK( car.fuel_left( get_map(), itype_gasoline ) == fuel - 5 );
     car.charge_battery( get_map(), 100 );
     who.set_moves( 100 );
     fixture.run( who, control_request( fixture, who, choice ) );
@@ -9196,9 +9548,9 @@ TEST_CASE( "owned_portable_sawing_rechecks_saved_sources_and_competing_work",
 {
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
-    const auto tool = portable_saw( who );
+    const item_location tool = portable_saw( who );
     const auto pos = who.pos_bub() + tripoint_rel_ms( 0, 1, 0 );
-    get_map().furn_set( pos, furn_str_id( "test_f_hacksaw2" ) );
+    get_map().furn_set( pos, furn_test_f_hacksaw2 );
     fixture.run( who, saw_request( fixture, who, get_map().get_abs( pos ) ) );
     REQUIRE( who.activity );
     save_reload_activity( who );
@@ -9207,7 +9559,7 @@ TEST_CASE( "owned_portable_sawing_rechecks_saved_sources_and_competing_work",
         who.set_moves( 100 );
         fixture.run( who, fixture.request( who, "step" ) );
         CHECK_FALSE( who.activity );
-        CHECK( get_map().furn( pos ) == furn_str_id( "test_f_hacksaw2" ) );
+        CHECK( get_map().furn( pos ) == furn_test_f_hacksaw2 );
     }
     SECTION( "another player completes the same surface" ) {
         avatar &host = get_avatar();
@@ -9223,7 +9575,7 @@ TEST_CASE( "owned_portable_sawing_rechecks_saved_sources_and_competing_work",
         who.set_moves( 100 );
         fixture.run( who, fixture.request( who, "step" ) );
         CHECK_FALSE( who.activity );
-        CHECK( get_map().furn( pos ) == furn_str_id( "test_f_hacksaw1" ) );
+        CHECK( get_map().furn( pos ) == furn_test_f_hacksaw1 );
         CHECK( tool->ammo_remaining() == personal );
     }
 }
@@ -9234,17 +9586,17 @@ TEST_CASE( "legacy_saw_saves_acquire_owned_sources_and_resume_saved_progress",
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     vehicle &car = electronic_vehicle( who );
-    const auto choice = mounted_saw_choice( who, car );
+    const vehicle_control_selection choice = mounted_saw_choice( who, car );
     const bool mounted = GENERATE( false, true );
     const bool already_paused = GENERATE( false, true );
     CAPTURE( mounted, already_paused );
-    const auto portable = mounted ? item_location::nowhere : portable_saw( who );
+    const item_location portable = mounted ? item_location::nowhere : portable_saw( who );
     std::ostringstream stream;
     JsonOut out( stream );
     out.start_object();
     out.member( "target", get_map().get_bub( *choice.tool_use->target ) );
     out.member( "tool", portable );
-    out.member( "type", mounted ? std::make_optional( itype_id( "reciprocating_saw" ) ) :
+    out.member( "type", mounted ? std::make_optional( itype_reciprocating_saw ) :
                 std::nullopt );
     out.member( "veh_pos", mounted ? std::make_optional( get_map().get_bub( choice.position ) ) :
                 std::nullopt );
@@ -9283,28 +9635,28 @@ TEST_CASE( "owned_saw_target_validation_and_client_selection_do_not_apply_gamepl
     avatar &who = get_avatar();
     who.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
     who.set_moves( 100 );
-    const auto source = portable_saw( who );
-    const auto pos = who.pos_abs() + tripoint( 0, 1, 0 );
-    get_map().furn_set( get_map().get_bub( pos ), furn_str_id( "test_f_hacksaw2" ) );
+    const item_location source = portable_saw( who );
+    const tripoint_abs_ms pos = who.pos_abs() + tripoint::south;
+    get_map().furn_set( get_map().get_bub( pos ), furn_test_f_hacksaw2 );
     const int ammo = source->ammo_remaining();
     SECTION( "invalid target" ) {
-        const auto own_position = who.pos_abs();
+        const tripoint_abs_ms own_position = who.pos_abs();
         const auto target = GENERATE_COPY( own_position, pos + tripoint( 0, 8, 0 ),
-                                           own_position + tripoint( 1, 0, 0 ) );
-        const auto rng = rng_get_engine();
+                                           own_position + tripoint::east );
+        const std::string rng = capture_rng_state();
         fixture.run( who, saw_request( fixture, who, target ) );
         CHECK_FALSE( who.activity );
         CHECK( source->ammo_remaining() == ammo );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
     SECTION( "explicit client target submits without local work" ) {
         cata_mp::set_client_mode( true );
-        const auto rng = rng_get_engine();
+        const std::string rng = capture_rng_state();
         std::string method = "HACKSAW";
         REQUIRE( cata_mp::client_activate_item( source, method, pos ) );
         CHECK( source->ammo_remaining() == ammo );
-        CHECK( get_map().furn( get_map().get_bub( pos ) ) == furn_str_id( "test_f_hacksaw2" ) );
-        CHECK( rng_get_engine() == rng );
+        CHECK( get_map().furn( get_map().get_bub( pos ) ) == furn_test_f_hacksaw2 );
+        CHECK( capture_rng_state() == rng );
         CHECK( who.activity.execution() == activity_execution::presentation );
     }
 }
@@ -9315,8 +9667,8 @@ TEST_CASE( "saw_resume_progress_is_set_before_callbacks_and_does_not_overwrite_r
     vehicle_control_fixture fixture;
     npc &who = fixture.remote();
     vehicle &car = electronic_vehicle( who );
-    const auto choice = mounted_saw_choice( who, car );
-    who.set_wielded_item( item( itype_id( "test_hacksaw" ) ) );
+    const vehicle_control_selection choice = mounted_saw_choice( who, car );
+    who.set_wielded_item( item( itype_test_hacksaw ) );
     fixture.run( who, saw_request( fixture, who, *choice.tool_use->target ) );
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "step" ) );
@@ -9335,14 +9687,14 @@ TEST_CASE( "saw_resume_progress_is_set_before_callbacks_and_does_not_overwrite_r
                     event.get<bool>( "resume" ) && event.get<character_id>( "character" ) == who.getID() ) {
                     fired = true;
                     CHECK( who.activity.moves_left == expected );
-                    who.activity = player_activity( activity_id( "ACT_WAIT" ), 777 );
+                    who.activity = player_activity( ACT_WAIT, 777 );
                 }
             }
     } replacement( who, remaining / 2 );
     who.set_moves( 100 );
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK( replacement.fired );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     CHECK( who.activity.moves_left == 777 );
 }
 
@@ -9351,11 +9703,11 @@ namespace
 struct owned_turret_fixture : vehicle_control_fixture {
     vehicle &rig( Character &who, units::angle direction = 0_degrees ) {
         map &here = get_map();
-        vehicle *car = here.add_vehicle( vproto_id( "test_turret_rig" ),
+        vehicle *car = here.add_vehicle( vehicle_prototype_test_turret_rig,
                                          tripoint_bub_ms( 60, 60, 0 ), direction, 0,
                                          veh_spawn_status::PRISTINE, false, true );
         REQUIRE( car );
-        REQUIRE( car->install_part( here, point_rel_ms::zero, vpart_id( "controls" ) ) >= 0 );
+        REQUIRE( car->install_part( here, point_rel_ms::zero, vpart_controls ) >= 0 );
         car->set_owner( who.get_faction()->id );
         car->is_locked = false;
         car->charge_battery( here, 1000, false );
@@ -9366,15 +9718,15 @@ struct owned_turret_fixture : vehicle_control_fixture {
     int install( vehicle &car, const point_rel_ms &mount = point_rel_ms::zero ) {
         map &here = get_map();
         if( mount != point_rel_ms::zero ) {
-            REQUIRE( car.install_part( here, mount, vpart_id( "turret_mount" ) ) >= 0 );
+            REQUIRE( car.install_part( here, mount, vpart_turret_mount ) >= 0 );
         }
-        const int index = car.install_part( here, mount, vpart_id( "turret_test_multimag_turret_gun" ) );
+        const int index = car.install_part( here, mount, vpart_turret_test_multimag_turret_gun );
         REQUIRE( index >= 0 );
         item gun( car.part( index ).get_base() );
         gun.faults.clear();
-        gun.set_flag( flag_id( "NEVER_JAMS" ) );
-        item magazine( itype_id( "glockmag" ) );
-        magazine.ammo_set( itype_id( "9mm" ), 15 );
+        gun.set_flag( json_flag_NEVER_JAMS );
+        item magazine( itype_glockmag );
+        magazine.ammo_set( itype_9mm, 15 );
         REQUIRE( gun.put_in( magazine, pocket_type::MAGAZINE_WELL ).success() );
         car.part( index ).set_base( std::move( gun ) );
         car.part( index ).enabled = false;
@@ -9383,7 +9735,7 @@ struct owned_turret_fixture : vehicle_control_fixture {
     }
     vehicle_control_selection choice( Character &who, vehicle &car, int index,
                                       const std::string &operation ) {
-        auto result = control_choice( who, car, operation == "fire_direct" ? "turret_direct" : "turret" );
+        vehicle_control_selection result = control_choice( who, car, operation == "fire_direct" ? "turret_direct" : "turret" );
         result.position = car.abs_part_pos( car.part( index ) );
         vehicle_turret_selection selected;
         selected.operation = operation;
@@ -9405,20 +9757,20 @@ TEST_CASE( "owned_turret_configuration_is_explicit_and_does_not_take_another_dri
     npc &who = fixture.remote();
     vehicle &car = fixture.rig( who );
     const int index = fixture.install( car );
-    const int control = car.install_part( get_map(), point_rel_ms::zero, vpart_id( "controls_turret" ) );
+    const int control = car.install_part( get_map(), point_rel_ms::zero, vpart_controls_turret );
     REQUIRE( control >= 0 );
     avatar &driver = get_avatar();
     driver.setpos( get_map(), who.pos_bub() );
     driver.controlling_vehicle = true;
     who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
     const int driver_moves = driver.get_moves();
-    auto choice = fixture.choice( who, car, index, "targeting" );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "targeting" );
     choice.turret->turrets.front().automatic = true;
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK_FALSE( car.part( index ).enabled );
-    const auto request = control_request( fixture, who, choice );
+    const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
     CHECK( car.part( index ).enabled );
     CHECK( car.part( control ).enabled );
@@ -9426,14 +9778,14 @@ TEST_CASE( "owned_turret_configuration_is_explicit_and_does_not_take_another_dri
     CHECK( car.part( index ).enabled );
     CHECK( car.part( index ).target.first == car.part( index ).target.second );
     choice = fixture.choice( who, car, index, "mode" );
-    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    choice.turret->turrets.front().mode = gun_mode_BURST;
     fixture.run( who, control_request( fixture, who, choice ) );
-    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "BURST" ) );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_BURST );
     CHECK( driver.controlling_vehicle );
     CHECK_FALSE( who.controlling_vehicle );
     CHECK( driver.get_moves() == driver_moves );
     CHECK( who.get_moves() == 100 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "owned_console_turrets_bill_the_operator_and_selected_vehicle_once",
@@ -9444,17 +9796,17 @@ TEST_CASE( "owned_console_turrets_bill_the_operator_and_selected_vehicle_once",
     vehicle &car = fixture.rig( who );
     const int first = fixture.install( car );
     const std::string operation = GENERATE( "aim_manual", "aim_single" );
-    auto choice = fixture.choice( who, car, first, operation );
+    vehicle_control_selection choice = fixture.choice( who, car, first, operation );
     int second = -1;
     if( operation == "aim_manual" ) {
         second = fixture.install( car, point_rel_ms( 1, 0 ) );
         choice.turret->turrets.push_back( capture_vehicle_turret( car, car.part( second ) ) );
     }
-    get_avatar().set_mutation( trait_id( "GUNSHY" ) );
+    get_avatar().set_mutation( trait_GUNSHY );
     get_avatar().set_moves( 321 );
     const auto host_target = get_avatar().last_target_pos;
     const int battery = car.battery_left( get_map() );
-    const auto wire = control_request( fixture, who, choice );
+    const std::string wire = control_request( fixture, who, choice );
     fixture.run( who, wire );
     CHECK( who.get_moves() == 0 );
     const int consumed = 15 - car.part( first ).get_base().ammo_remaining() +
@@ -9464,11 +9816,11 @@ TEST_CASE( "owned_console_turrets_bill_the_operator_and_selected_vehicle_once",
     CHECK( car.part( first ).target.first == car.part( first ).target.second );
     CHECK( get_avatar().get_moves() == 321 );
     CHECK( get_avatar().last_target_pos == host_target );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int after = car.battery_left( get_map() );
     fixture.run( who, wire );
     CHECK( car.battery_left( get_map() ) == after );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "owned_direct_turret_fire_uses_the_shooters_selected_mode_and_native_cost",
@@ -9478,26 +9830,26 @@ TEST_CASE( "owned_direct_turret_fire_uses_the_shooters_selected_mode_and_native_
     npc &who = fixture.remote();
     vehicle &car = fixture.rig( who );
     const int index = fixture.install( car );
-    auto choice = fixture.choice( who, car, index, "fire_direct" );
-    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "fire_direct" );
+    choice.turret->turrets.front().mode = gun_mode_BURST;
     // Direct operation of the mounted gun does not acquire locked driving controls.
     car.is_locked = true;
     const int host_moves = get_avatar().get_moves();
     const double host_recoil = get_avatar().recoil;
     const int battery = car.battery_left( get_map() );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
-    CHECK( rng_get_engine() == rng );
-    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "DEFAULT" ) );
+    CHECK( capture_rng_state() == rng );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_DEFAULT );
     fixture.run( who, control_request( fixture, who, choice ) );
     REQUIRE( who.get_moves() < 100 );
-    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "BURST" ) );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_BURST );
     const int consumed = 15 - car.part( index ).get_base().ammo_remaining();
     REQUIRE( consumed > 0 );
     CHECK( battery - car.battery_left( get_map() ) == consumed * 5 );
     CHECK( get_avatar().get_moves() == host_moves );
     CHECK( get_avatar().recoil == host_recoil );
-    CHECK_FALSE( who.has_effect( efftype_id( "on_roof" ) ) );
+    CHECK_FALSE( who.has_effect( effect_on_roof ) );
 }
 
 TEST_CASE( "owned_automatic_turret_override_schedules_native_fire_without_firing_during_selection",
@@ -9508,12 +9860,12 @@ TEST_CASE( "owned_automatic_turret_override_schedules_native_fire_without_firing
     vehicle &car = fixture.rig( who );
     const int index = fixture.install( car );
     car.part( index ).enabled = true;
-    auto choice = fixture.choice( who, car, index, "aim_auto" );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "aim_auto" );
     const int battery = car.battery_left( get_map() );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
     CHECK( car.part( index ).target.second != *choice.turret->target );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK( who.get_moves() == 0 );
     CHECK( car.part( index ).target.second == *choice.turret->target );
@@ -9531,7 +9883,7 @@ TEST_CASE( "owned_turret_rejects_stale_hardware_targets_roles_and_resources_befo
     npc &who = fixture.remote();
     vehicle &car = fixture.rig( who );
     const int index = fixture.install( car );
-    auto choice = fixture.choice( who, car, index, "aim_manual" );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "aim_manual" );
     const std::string fault = GENERATE( "hardware", "part_position", "mode", "ammo", "operator",
                                         "range", "locked", "role", "duplicate", "power", "trait", "automatic" );
     CAPTURE( fault );
@@ -9539,11 +9891,11 @@ TEST_CASE( "owned_turret_rejects_stale_hardware_targets_roles_and_resources_befo
     if( fault == "hardware" ) {
         selected.part += 100000;
     } else if( fault == "part_position" ) {
-        selected.position += tripoint( 0, 1, 0 );
+        selected.position += tripoint::south;
     } else if( fault == "mode" ) {
-        selected.mode = gun_mode_id( "not_a_gun_mode" );
+        selected.mode = gun_mode_not_a_gun_mode;
     } else if( fault == "ammo" ) {
-        selected.ammo = itype_id( "gasoline" );
+        selected.ammo = itype_gasoline;
     } else if( fault == "operator" ) {
         who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
     } else if( fault == "range" ) {
@@ -9557,15 +9909,15 @@ TEST_CASE( "owned_turret_rejects_stale_hardware_targets_roles_and_resources_befo
     } else if( fault == "power" ) {
         car.discharge_battery( get_map(), car.battery_left( get_map() ) );
     } else if( fault == "trait" ) {
-        who.set_mutation( trait_id( "BRAWLER" ) );
+        who.set_mutation( trait_BRAWLER );
     } else if( fault == "automatic" ) {
         car.part( index ).enabled = true;
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int battery = car.battery_left( get_map() );
     const auto previous_target = car.part( index ).target;
     CHECK_FALSE( execute_vehicle_control( who, get_map(), choice ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( who.get_moves() == 100 );
     CHECK( car.battery_left( get_map() ) == battery );
     CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
@@ -9580,20 +9932,20 @@ TEST_CASE( "owned_turret_configuration_validates_the_whole_selection_before_appl
     vehicle &car = fixture.rig( who );
     const int first = fixture.install( car );
     const int second = fixture.install( car, point_rel_ms( 1, 0 ) );
-    auto choice = fixture.choice( who, car, first, "mode" );
-    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    vehicle_control_selection choice = fixture.choice( who, car, first, "mode" );
+    choice.turret->turrets.front().mode = gun_mode_BURST;
     choice.turret->turrets.push_back( capture_vehicle_turret( car, car.part( second ) ) );
     SECTION( "one part has been replaced" ) {
-        item replacement( itype_id( "test_multimag_turret_gun" ) );
+        item replacement( itype_test_multimag_turret_gun );
         car.part( second ).set_base( std::move( replacement ) );
     }
     SECTION( "one mode does not exist" ) {
-        choice.turret->turrets.back().mode = gun_mode_id( "absent" );
+        choice.turret->turrets.back().mode = gun_mode_absent;
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     CHECK_FALSE( execute_vehicle_control( who, get_map(), choice ) );
-    CHECK( car.part( first ).get_base().gun_get_mode_id() == gun_mode_id( "DEFAULT" ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( car.part( first ).get_base().gun_get_mode_id() == gun_mode_DEFAULT );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "client_turret_choices_do_not_fire_or_change_live_modes_ammo_and_targets",
@@ -9603,11 +9955,11 @@ TEST_CASE( "client_turret_choices_do_not_fire_or_change_live_modes_ammo_and_targ
     avatar &who = get_avatar();
     vehicle &car = fixture.rig( who );
     const int index = fixture.install( car );
-    auto choice = fixture.choice( who, car, index, "fire_direct" );
-    choice.turret->turrets.front().mode = gun_mode_id( "BURST" );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "fire_direct" );
+    choice.turret->turrets.front().mode = gun_mode_BURST;
     const int battery = car.battery_left( get_map() );
     const auto previous_target = car.part( index ).target;
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
     CHECK( who.get_moves() == 100 );
     cata_mp::set_client_mode( true );
@@ -9618,9 +9970,9 @@ TEST_CASE( "client_turret_choices_do_not_fire_or_change_live_modes_ammo_and_targ
     who.activity.do_turn( who );
     CHECK( car.battery_left( get_map() ) == battery );
     CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
-    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_id( "DEFAULT" ) );
+    CHECK( car.part( index ).get_base().gun_get_mode_id() == gun_mode_DEFAULT );
     CHECK( car.part( index ).target == previous_target );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( g->multiplayer_session().client_inventory_activity.pending_request != 0 );
 }
 
@@ -9632,14 +9984,14 @@ TEST_CASE( "owned_turret_preview_preserves_rotated_mount_range_without_changing_
     vehicle &car = fixture.rig( who, 90_degrees );
     const int index = fixture.install( car, point_rel_ms( 1, 0 ) );
     who.setpos( get_map(), car.bub_part_pos( get_map(), index ) );
-    auto choice = fixture.choice( who, car, index, "fire_direct" );
-    const auto data = car.turret_query( car.part( index ) );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "fire_direct" );
+    const turret_data data = car.turret_query( car.part( index ) );
     choice.turret->target = who.pos_abs() + tripoint( data.range(), 0, 0 );
     REQUIRE( data.in_range( *choice.turret->target ) );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int battery = car.battery_left( get_map() );
     REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( car.battery_left( get_map() ) == battery );
     CHECK( car.part( index ).get_base().ammo_remaining() == 15 );
 }
@@ -9652,7 +10004,7 @@ TEST_CASE( "owned_console_target_on_the_turret_mount_preserves_native_no_shot_be
     vehicle &car = fixture.rig( who );
     const int index = fixture.install( car );
     who.setpos( get_map(), who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
-    auto choice = fixture.choice( who, car, index, "aim_single" );
+    vehicle_control_selection choice = fixture.choice( who, car, index, "aim_single" );
     choice.turret->target = choice.turret->turrets.front().position;
     const int battery = car.battery_left( get_map() );
     REQUIRE( execute_vehicle_control( who, get_map(), choice ) );
@@ -9670,23 +10022,23 @@ struct owned_harness_fixture : vehicle_control_fixture {
     int harness = -1;
     void prepare( Character &who ) {
         map &here = get_map();
-        car = here.add_vehicle( vproto_id( "test_turret_rig" ), tripoint_bub_ms( 60, 60, 0 ),
+        car = here.add_vehicle( vehicle_prototype_test_turret_rig, tripoint_bub_ms( 60, 60, 0 ),
                                 0_degrees, 0, veh_spawn_status::PRISTINE, false, true );
         REQUIRE( car );
         car->set_owner( who.get_faction()->id );
-        harness = car->install_part( here, point_rel_ms( -1, 0 ), vpart_id( "yoke_harness" ) );
+        harness = car->install_part( here, point_rel_ms( -1, 0 ), vpart_yoke_harness );
         REQUIRE( harness >= 0 );
         who.setpos( here, car->bub_part_pos( here, harness ) + tripoint_rel_ms( 0, 1, 0 ) );
         who.set_moves( 100 );
-        animal = g->place_critter_at( mtype_id( "mon_horse" ),
+        animal = g->place_critter_at( mon_horse,
                                       who.pos_bub() + tripoint_rel_ms( 1, 0, 0 ) );
         REQUIRE( animal );
         animal->friendly = -1;
-        animal->add_effect( efftype_id( "tied" ), 1_turns, true );
-        animal->tied_item = cata::make_value<item>( itype_id( "rope_6" ) );
+        animal->add_effect( effect_tied, 1_turns, true );
+        animal->tied_item = cata::make_value<item>( itype_rope_6 );
     }
-    vehicle_control_selection choice( Character &who ) {
-        auto result = control_choice( who, *car, "harness" );
+    vehicle_control_selection choice( Character &who ) const {
+        vehicle_control_selection result = control_choice( who, *car, "harness" );
         result.position = car->abs_part_pos( car->part( harness ) );
         result.harness = vehicle_harness_selection{ car->part( harness ).get_base().uid().get_value(),
                                                     animal->uid().get_value(), animal->pos_abs() };
@@ -9701,23 +10053,23 @@ TEST_CASE( "owned_harness_returns_the_rope_to_the_operator_once",
     owned_harness_fixture fixture;
     npc &who = fixture.remote();
     fixture.prepare( who );
-    auto choice = fixture.choice( who );
-    const int host_rope = get_avatar().amount_of( itype_id( "rope_6" ) );
-    const int operator_rope = who.amount_of( itype_id( "rope_6" ) );
-    const auto rng = rng_get_engine();
+    vehicle_control_selection choice = fixture.choice( who );
+    const int host_rope = get_avatar().amount_of( itype_rope_6 );
+    const int operator_rope = who.amount_of( itype_rope_6 );
+    const std::string rng = capture_rng_state();
     REQUIRE( valid_vehicle_harness( who, get_map(), *fixture.car, choice.position, *choice.harness ) );
-    CHECK( rng_get_engine() == rng );
-    CHECK( fixture.animal->has_effect( efftype_id( "tied" ) ) );
-    const auto request = control_request( fixture, who, choice );
+    CHECK( capture_rng_state() == rng );
+    CHECK( fixture.animal->has_effect( effect_tied ) );
+    const std::string request = control_request( fixture, who, choice );
     fixture.run( who, request );
-    CHECK( fixture.animal->has_effect( efftype_id( "harnessed" ) ) );
-    CHECK_FALSE( fixture.animal->has_effect( efftype_id( "tied" ) ) );
+    CHECK( fixture.animal->has_effect( effect_harnessed ) );
+    CHECK_FALSE( fixture.animal->has_effect( effect_tied ) );
     CHECK( fixture.animal->pos_abs() == choice.position );
     CHECK_FALSE( fixture.animal->tied_item );
-    CHECK( who.amount_of( itype_id( "rope_6" ) ) == operator_rope + 1 );
-    CHECK( get_avatar().amount_of( itype_id( "rope_6" ) ) == host_rope );
+    CHECK( who.amount_of( itype_rope_6 ) == operator_rope + 1 );
+    CHECK( get_avatar().amount_of( itype_rope_6 ) == host_rope );
     fixture.run( who, request );
-    CHECK( who.amount_of( itype_id( "rope_6" ) ) == operator_rope + 1 );
+    CHECK( who.amount_of( itype_rope_6 ) == operator_rope + 1 );
 }
 
 TEST_CASE( "owned_harness_rejects_changed_animals_hardware_and_occupied_positions",
@@ -9726,28 +10078,28 @@ TEST_CASE( "owned_harness_rejects_changed_animals_hardware_and_occupied_position
     owned_harness_fixture fixture;
     npc &who = fixture.remote();
     fixture.prepare( who );
-    auto choice = fixture.choice( who );
+    vehicle_control_selection choice = fixture.choice( who );
     const std::string invalid = GENERATE( "animal", "part", "position", "hostile", "occupied" );
     if( invalid == "animal" ) {
         ++choice.harness->animal;
     } else if( invalid == "part" ) {
         ++choice.harness->part;
     } else if( invalid == "position" ) {
-        choice.harness->animal_position += tripoint( 1, 0, 0 );
+        choice.harness->animal_position += tripoint::east;
     } else if( invalid == "hostile" ) {
         fixture.animal->friendly = 0;
     } else {
         get_avatar().setpos( get_map(), get_map().get_bub( choice.position ) );
     }
-    const auto position = fixture.animal->pos_abs();
-    const auto rng = rng_get_engine();
+    const tripoint_abs_ms position = fixture.animal->pos_abs();
+    const std::string rng = capture_rng_state();
     fixture.run( who, control_request( fixture, who, choice ) );
     CHECK( fixture.animal->pos_abs() == position );
-    CHECK( fixture.animal->has_effect( efftype_id( "tied" ) ) );
-    CHECK_FALSE( fixture.animal->has_effect( efftype_id( "harnessed" ) ) );
+    CHECK( fixture.animal->has_effect( effect_tied ) );
+    CHECK_FALSE( fixture.animal->has_effect( effect_harnessed ) );
     CHECK( fixture.animal->tied_item );
-    CHECK( who.amount_of( itype_id( "rope_6" ) ) == 0 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( who.amount_of( itype_rope_6 ) == 0 );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "client_harness_selection_cannot_move_the_animal_or_take_its_rope",
@@ -9756,16 +10108,16 @@ TEST_CASE( "client_harness_selection_cannot_move_the_animal_or_take_its_rope",
     owned_harness_fixture fixture;
     avatar &who = get_avatar();
     fixture.prepare( who );
-    const auto choice = fixture.choice( who );
-    const auto origin = fixture.animal->pos_abs();
+    const vehicle_control_selection choice = fixture.choice( who );
+    const tripoint_abs_ms origin = fixture.animal->pos_abs();
     cata_mp::set_client_mode( true );
     REQUIRE( cata_mp::client_vehicle_control( choice ) );
     who.activity.do_turn( who );
     CHECK( fixture.animal->pos_abs() == origin );
-    CHECK( fixture.animal->has_effect( efftype_id( "tied" ) ) );
-    CHECK_FALSE( fixture.animal->has_effect( efftype_id( "harnessed" ) ) );
+    CHECK( fixture.animal->has_effect( effect_tied ) );
+    CHECK_FALSE( fixture.animal->has_effect( effect_harnessed ) );
     CHECK( fixture.animal->tied_item );
-    CHECK( who.amount_of( itype_id( "rope_6" ) ) == 0 );
+    CHECK( who.amount_of( itype_rope_6 ) == 0 );
 }
 
 TEST_CASE( "owned_bionic_weapon_uses_the_operators_disposition_and_restores_its_binding",
@@ -9774,13 +10126,13 @@ TEST_CASE( "owned_bionic_weapon_uses_the_operators_disposition_and_restores_its_
     reload_fixture fixture;
     npc &who = fixture.remote();
     avatar &host = get_avatar();
-    const bionic_id id( "bio_claws" );
+    const bionic_id &id = bio_claws;
     const unsigned int uid = prepare_targeted_bionic( who, id );
-    who.set_wielded_item( item( itype_id( "hammer" ) ) );
-    host.set_wielded_item( item( itype_id( "wrench" ) ) );
+    who.set_wielded_item( item( itype_hammer ) );
+    host.set_wielded_item( item( itype_wrench ) );
     const int64_t held = who.get_wielded_item()->uid().get_value();
-    const auto power = who.get_power_level();
-    const auto host_power = host.get_power_level();
+    const units::energy power = who.get_power_level();
+    const units::energy host_power = host.get_power_level();
     const std::string request = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "bionic_activation" );
         out.member( "bionic_uid", uid );
@@ -9798,12 +10150,12 @@ TEST_CASE( "owned_bionic_weapon_uses_the_operators_disposition_and_restores_its_
     CHECK( who.get_weapon_bionic_uid() == uid );
     CHECK( who.get_power_level() == power - id->power_activate );
     REQUIRE( host.get_wielded_item() );
-    CHECK( host.get_wielded_item()->typeId() == itype_id( "wrench" ) );
+    CHECK( host.get_wielded_item()->typeId() == itype_wrench );
     CHECK( host.get_power_level() == host_power );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( who.get_power_level() == power - id->power_activate );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 
     // Body projections can precede the inventory ACK on the other channel.
     std::ostringstream turn;
@@ -9812,20 +10164,20 @@ TEST_CASE( "owned_bionic_weapon_uses_the_operators_disposition_and_restores_its_
     host.load_turn_state( json_loader::from_string( turn.str() ).get_object() );
     CHECK( host.get_weapon_bionic_uid() == uid );
     REQUIRE( host.get_wielded_item() );
-    CHECK( host.get_wielded_item()->typeId() == itype_id( "wrench" ) );
+    CHECK( host.get_wielded_item()->typeId() == itype_wrench );
 
     cata_mp::set_client_mode( true );
     player_activity presentation{ invoke_item_activity_actor( item_location(), std::string() ) };
     presentation.set_execution( activity_execution::presentation );
     host.assign_activity( presentation );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = fixture.sequence;
     REQUIRE( cata_mp::client_apply_message( reply ) );
     cata_mp::client_update_inventory_activity_view();
     REQUIRE( host.is_using_bionic_weapon() );
     CHECK( host.get_weapon_bionic_uid() == uid );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     cata_mp::set_client_mode( false );
 
     std::ostringstream encoded;
@@ -9834,7 +10186,7 @@ TEST_CASE( "owned_bionic_weapon_uses_the_operators_disposition_and_restores_its_
     host.load_player_state( json_loader::from_string( encoded.str() ).get_object() );
     CHECK( host.is_using_bionic_weapon() );
     CHECK( host.get_weapon_bionic_uid() == uid );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     REQUIRE( host.deactivate_bionic( **host.find_bionic_by_uid( uid ) ) );
     CHECK_FALSE( host.get_wielded_item() );
     CHECK_FALSE( host.is_using_bionic_weapon() );
@@ -9846,9 +10198,9 @@ TEST_CASE( "owned_bionic_weapon_rejects_changed_hands_before_activation",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const bionic_id id( "bio_claws" );
+    const bionic_id &id = bio_claws;
     const unsigned int uid = prepare_targeted_bionic( who, id );
-    who.set_wielded_item( item( itype_id( "hammer" ) ) );
+    who.set_wielded_item( item( itype_hammer ) );
     bionic_activation_choices choice;
     choice.weapon = who.get_wielded_item()->uid().get_value();
     choice.unwield = item_disposition{ "drop", 0, 0 };
@@ -9856,16 +10208,16 @@ TEST_CASE( "owned_bionic_weapon_rejects_changed_hands_before_activation",
     if( invalid_disposition ) {
         choice.unwield->action = "invalid";
     } else {
-        who.set_wielded_item( item( itype_id( "hammer" ) ) );
+        who.set_wielded_item( item( itype_hammer ) );
     }
-    const auto power = who.get_power_level();
-    const auto rng = rng_get_engine();
+    const units::energy power = who.get_power_level();
+    const std::string rng = capture_rng_state();
     CHECK_FALSE( execute_owned_bionic_action( who, uid, id, choice ) );
     CHECK_FALSE( who.has_active_bionic( id ) );
     CHECK( who.get_power_level() == power );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     REQUIRE( who.get_wielded_item() );
-    CHECK( who.get_wielded_item()->typeId() == itype_id( "hammer" ) );
+    CHECK( who.get_wielded_item()->typeId() == itype_hammer );
 }
 
 TEST_CASE( "owned_bionic_teleport_moves_only_its_operator_and_does_not_repeat",
@@ -9873,23 +10225,23 @@ TEST_CASE( "owned_bionic_teleport_moves_only_its_operator_and_does_not_repeat",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const bionic_id id( "bio_teleport" );
+    const bionic_id &id = bio_teleport;
     const unsigned int uid = prepare_targeted_bionic( who, id );
-    const auto origin = who.pos_abs();
-    const auto host_position = get_avatar().pos_abs();
-    const auto host_power = get_avatar().get_power_level();
-    const auto power = who.get_power_level();
-    const auto request = bionic_switch_request( fixture, who, uid, id, true );
+    const tripoint_abs_ms origin = who.pos_abs();
+    const tripoint_abs_ms host_position = get_avatar().pos_abs();
+    const units::energy host_power = get_avatar().get_power_level();
+    const units::energy power = who.get_power_level();
+    const std::string request = bionic_switch_request( fixture, who, uid, id, true );
     fixture.run( who, request );
     CHECK( who.pos_abs() != origin );
     CHECK( who.get_power_level() == power - id->power_activate );
     CHECK( get_avatar().pos_abs() == host_position );
     CHECK( get_avatar().get_power_level() == host_power );
-    const auto destination = who.pos_abs();
-    const auto rng = rng_get_engine();
+    const tripoint_abs_ms destination = who.pos_abs();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( who.pos_abs() == destination );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 namespace
@@ -9910,7 +10262,7 @@ spell &prepare_owned_test_spell( Character &who, const spell_id &id )
 
 void finish_owned_casting_time( reload_fixture &fixture, Character &who )
 {
-    REQUIRE( who.activity.id() == activity_id( "ACT_SPELLCASTING" ) );
+    REQUIRE( who.activity.id() == ACT_SPELLCASTING );
     who.set_moves( std::max( 100, who.activity.moves_left + 100 ) );
     fixture.run( who, fixture.request( who, "step" ) );
     const auto *casting = dynamic_cast<const spellcasting_activity_actor *>( who.activity.actor.get() );
@@ -9926,7 +10278,7 @@ TEST_CASE( "owned_spell_waits_for_its_caster_and_finishes_once_after_save_restor
     reload_fixture fixture;
     npc &who = fixture.remote();
     avatar &host = get_avatar();
-    const spell_id id( "test_eoc_spell" );
+    const spell_id &id = spell_test_eoc_spell;
     spell &selected = prepare_owned_test_spell( who, id );
     REQUIRE( selected.spell_fail( who ) == 0.0f );
     const int mana = who.magic->available_mana();
@@ -9944,10 +10296,10 @@ TEST_CASE( "owned_spell_waits_for_its_caster_and_finishes_once_after_save_restor
     CHECK( who.magic->available_mana() == mana );
     CHECK( who.get_hp() == health );
     save_reload_activity( who );
-    const auto rng_before_choice = rng_get_engine();
+    const std::string rng_before_choice = capture_rng_state();
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "step" ) );
-    CHECK( rng_get_engine() == rng_before_choice );
+    CHECK( capture_rng_state() == rng_before_choice );
     CHECK( events.finishes == 0 );
 
     spell_casting_choice choice;
@@ -9963,27 +10315,27 @@ TEST_CASE( "owned_spell_waits_for_its_caster_and_finishes_once_after_save_restor
     CHECK( host.get_hp() == host_health );
     CHECK( host.magic->available_mana() == host_mana );
     const int settled_health = who.get_hp();
-    const auto settled_rng = rng_get_engine();
+    const std::string settled_rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( events.finishes == 1 );
     CHECK( who.get_hp() == settled_health );
-    CHECK( rng_get_engine() == settled_rng );
+    CHECK( capture_rng_state() == settled_rng );
 
     // Apply the real reply to a frontend with a different learned spellbook.
-    host.magic->learn_spell( spell_id( "test_spell_pew" ), host, true );
+    host.magic->learn_spell( spell_test_spell_pew, host, true );
     cata_mp::set_client_mode( true );
     player_activity presentation{ invoke_item_activity_actor( item_location(), std::string() ) };
     presentation.set_execution( activity_execution::presentation );
     host.assign_activity( presentation );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = fixture.sequence;
-    const auto rng_before_apply = rng_get_engine();
+    const std::string rng_before_apply = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( reply ) );
     CHECK( host.magic->knows_spell( id ) );
-    CHECK_FALSE( host.magic->knows_spell( spell_id( "test_spell_pew" ) ) );
+    CHECK_FALSE( host.magic->knows_spell( spell_test_spell_pew ) );
     CHECK( host.magic->get_spell( id ).xp() == who.magic->get_spell( id ).xp() );
-    CHECK( rng_get_engine() == rng_before_apply );
+    CHECK( capture_rng_state() == rng_before_apply );
     cata_mp::set_client_mode( false );
 }
 
@@ -9992,9 +10344,9 @@ TEST_CASE( "owned_spell_rejects_unlearned_and_stale_targets_without_spending_res
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const spell_id id( "test_eoc_spell" );
+    const spell_id &id = spell_test_eoc_spell;
     const int initial_mana = who.magic->available_mana();
-    const auto initial_rng = rng_get_engine();
+    const std::string initial_rng = capture_rng_state();
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "spell" );
         out.member( "spell", id );
@@ -10003,7 +10355,7 @@ TEST_CASE( "owned_spell_rejects_unlearned_and_stale_targets_without_spending_res
     } ) );
     CHECK_FALSE( who.activity );
     CHECK( who.magic->available_mana() == initial_mana );
-    CHECK( rng_get_engine() == initial_rng );
+    CHECK( capture_rng_state() == initial_rng );
 
     prepare_owned_test_spell( who, id );
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
@@ -10012,7 +10364,7 @@ TEST_CASE( "owned_spell_rejects_unlearned_and_stale_targets_without_spending_res
     } ) );
     finish_owned_casting_time( fixture, who );
     const int mana = who.magic->available_mana();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     spell_casting_choice choice;
     choice.target = get_avatar().pos_abs();
     who.set_moves( 100 );
@@ -10021,7 +10373,7 @@ TEST_CASE( "owned_spell_rejects_unlearned_and_stale_targets_without_spending_res
     } ) );
     REQUIRE( who.activity );
     CHECK( who.magic->available_mana() == mana );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     who.set_moves( 0 );
     fixture.run( who, fixture.request( who, "cancel" ) );
     CHECK_FALSE( who.activity );
@@ -10033,28 +10385,28 @@ TEST_CASE( "spell_component_choices_keep_the_native_zero_radius_and_shared_quant
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    spell selected( spell_id( "test_spell_json" ) );
+    spell selected( spell_test_spell_json );
     REQUIRE( selected.has_components() );
     item_location rag = get_map().add_item_or_charges_ret_loc(
-                            who.pos_bub() + tripoint::east, item( itype_id( "test_rag" ) ) );
+                            who.pos_bub() + tripoint::east, item( itype_test_rag ) );
     spell_casting_choice choice;
     choice.components.push_back( { usage_from::map, selected.components().get_components().front().front() } );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     CHECK_FALSE( valid_spell_casting_choice( who, selected, choice, false, true ) );
     REQUIRE( rag );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     rag.remove_item();
-    get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "test_rag" ) ) );
+    get_map().add_item_or_charges( who.pos_bub(), item( itype_test_rag ) );
     REQUIRE( valid_spell_casting_choice( who, selected, choice, false, true ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     consume_spell_casting_components( who, choice );
     CHECK_FALSE( valid_spell_casting_choice( who, selected, choice, false, true ) );
 
-    who.i_add( item( itype_id( "test_rag" ) ) );
+    who.i_add( item( itype_test_rag ) );
     choice.components.front().use_from = usage_from::player;
     choice.components.front().comp.count = 0;
     CHECK_FALSE( valid_spell_casting_choice( who, selected, choice, false, true ) );
-    CHECK( who.has_amount( itype_id( "test_rag" ), 1 ) );
+    CHECK( who.has_amount( itype_test_rag, 1 ) );
 }
 
 TEST_CASE( "spellbook_callbacks_run_once_for_the_requesting_player_and_views_keep_temporary_modifiers",
@@ -10062,7 +10414,7 @@ TEST_CASE( "spellbook_callbacks_run_once_for_the_requesting_player_and_views_kee
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const spell_id id( "test_eoc_spell" );
+    const spell_id &id = spell_test_eoc_spell;
     prepare_owned_test_spell( who, id ).set_message( no_translation( "Casting snapshot message" ) );
     prepare_owned_test_spell( get_avatar(), id );
     class spellbook_events : public event_subscriber {
@@ -10094,16 +10446,16 @@ TEST_CASE( "spellbook_callbacks_run_once_for_the_requesting_player_and_views_kee
     player_activity presentation{ invoke_item_activity_actor( item_location(), std::string() ) };
     presentation.set_execution( activity_execution::presentation );
     get_avatar().assign_activity( presentation );
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    cata_mp::inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     view.active = true;
     view.pending_request = fixture.sequence;
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( cata_mp::client_apply_message( reply ) );
     CHECK( view.spellbook_ready );
     CHECK( get_avatar().magic->get_spell( id ).get_temp_level_adjustment() == 3 );
     CHECK( get_avatar().magic->get_spell( id ).message() == "Casting snapshot message" );
     CHECK( events.count == 1 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     cata_mp::set_client_mode( false );
 }
 
@@ -10112,11 +10464,11 @@ TEST_CASE( "client_spell_selection_does_not_cast_or_open_the_authoritative_spell
 {
     reload_fixture fixture;
     avatar &who = get_avatar();
-    const spell_id id( "test_eoc_spell" );
+    const spell_id &id = spell_test_eoc_spell;
     spell &selected = prepare_owned_test_spell( who, id );
     const int mana = who.magic->available_mana();
     const int health = who.get_hp();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     reload_events events;
     cata_mp::set_client_mode( true );
     REQUIRE( who.cast_spell( selected, false, std::nullopt ) );
@@ -10126,7 +10478,7 @@ TEST_CASE( "client_spell_selection_does_not_cast_or_open_the_authoritative_spell
     CHECK( who.get_hp() == health );
     CHECK( events.starts == 0 );
     CHECK( events.finishes == 0 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     cata_mp::set_client_mode( false );
 }
 
@@ -10137,10 +10489,10 @@ TEST_CASE( "bionic_spells_wait_for_the_operators_target_instead_of_using_npc_ai"
     npc &who = fixture.remote();
     avatar &host = get_avatar();
     host.setpos( get_map(), who.pos_bub() + tripoint::east );
-    const bionic_id id( "bio_taser" );
+    const bionic_id &id = bio_taser;
     const unsigned int uid = prepare_targeted_bionic( who, id );
-    const auto power = who.get_power_level();
-    const auto host_power = host.get_power_level();
+    const units::energy power = who.get_power_level();
+    const units::energy host_power = host.get_power_level();
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "bionic_activation" );
         out.member( "bionic_uid", uid );
@@ -10167,11 +10519,11 @@ TEST_CASE( "item_spell_completion_consumes_one_unit_and_rejects_a_lost_casting_i
     npc &who = fixture.remote();
     get_avatar().setpos( get_map(), who.pos_bub() + tripoint( 5, 0, 0 ) );
     who.magic->set_mana( who.magic->max_mana( who ) );
-    item source_item( itype_id( "aspirin" ), calendar::turn, 2 );
+    item source_item( itype_aspirin, calendar::turn, 2 );
     source_item.set_flag( flag_SINGLE_USE );
     item_location source = who.i_add( source_item );
     cast_spell_actor caster;
-    caster.item_spell = spell_id( "test_eoc_spell" );
+    caster.item_spell = spell_test_eoc_spell;
     caster.spell_level = 1;
     caster.no_fail = true;
     who.activity.set_execution( activity_execution::authoritative );
@@ -10205,13 +10557,13 @@ namespace
 item_location equip_cutting_tool( Character &who, bool torch )
 {
     if( torch ) {
-        REQUIRE( who.wear_item( item( itype_id( "test_goggles_welding" ) ), false ) );
+        REQUIRE( who.wear_item( item( itype_test_goggles_welding ), false ) );
     }
     item tool( itype_id( torch ? "test_oxytorch" : "tin_snips" ) );
     if( torch ) {
-        tool.ammo_set( itype_id( "oxyacetylene" ) );
+        tool.ammo_set( itype_oxyacetylene );
     }
-    who.set_wielded_item( std::move( tool ) );
+    who.set_wielded_item( tool );
     who.set_moves( 1000 );
     return who.get_wielded_item();
 }
@@ -10244,7 +10596,7 @@ TEST_CASE( "owned_metal_cutting_reloads_bills_only_operator_and_cancels_competin
     const item_location host_tool = equip_cutting_tool( host, torch );
     const tripoint_bub_ms target( 61, 60, 0 );
     here.furn_set( target, furn_str_id( torch ? "test_f_oxytorch2" : "test_f_boltcut2" ) );
-    const auto request = cutting_request( fixture, who, tool, torch, here.get_abs( target ) );
+    const std::string request = cutting_request( fixture, who, tool, torch, here.get_abs( target ) );
     fixture.run( who, request );
     REQUIRE( who.activity );
     CHECK( who.activity.execution() == activity_execution::authoritative );
@@ -10256,12 +10608,12 @@ TEST_CASE( "owned_metal_cutting_reloads_bills_only_operator_and_cancels_competin
     REQUIRE( execute_owned_item_activation( host, host_tool, torch ? "OXYTORCH" : "BOLTCUTTERS",
                                             here.get_abs( target ), false, false ) );
     REQUIRE( host.activity );
-    const auto fuel = tool->ammo_remaining();
-    const auto host_fuel = host_tool->ammo_remaining();
+    const int fuel = tool->ammo_remaining();
+    const int host_fuel = host_tool->ammo_remaining();
     const int host_moves = host.get_moves();
     who.activity.moves_left = 1;
     who.set_moves( 100 );
-    const auto finish = fixture.request( who, "step" );
+    const std::string finish = fixture.request( who, "step" );
     fixture.run( who, finish );
     CHECK_FALSE( who.activity );
     const auto result = furn_str_id( torch ? "test_f_oxytorch1" : "test_f_boltcut1" ).id();
@@ -10269,10 +10621,10 @@ TEST_CASE( "owned_metal_cutting_reloads_bills_only_operator_and_cancels_competin
     CHECK( tool->ammo_remaining() == fuel - tool->ammo_required() );
     CHECK( host_tool->ammo_remaining() == host_fuel );
     CHECK( host.get_moves() == host_moves );
-    const auto after_rng = rng_get_engine();
+    const std::string after_rng = capture_rng_state();
     fixture.run( who, finish );
     CHECK( here.furn( target ) == result );
-    CHECK( rng_get_engine() == after_rng );
+    CHECK( capture_rng_state() == after_rng );
     host.activity.moves_left = 1;
     host.set_moves( 100 );
     host.activity.do_turn( host );
@@ -10300,19 +10652,19 @@ TEST_CASE( "owned_metal_cutting_revalidates_saved_source_surface_range_and_tool_
     if( change == "source" ) {
         item replacement( tool->typeId() );
         if( torch ) {
-            replacement.ammo_set( itype_id( "oxyacetylene" ) );
+            replacement.ammo_set( itype_oxyacetylene );
         }
-        who.set_wielded_item( std::move( replacement ) );
+        who.set_wielded_item( replacement );
         tool = who.get_wielded_item();
     } else if( change == "surface" ) {
         here.furn_set( target, furn_str_id( torch ? "test_f_oxytorch3" : "test_f_boltcut3" ) );
     } else if( change == "range" ) {
         who.setpos( here, tripoint_bub_ms( 60, 62, 0 ) );
     } else {
-        tool->convert( itype_id( "rock" ) );
+        tool->convert( itype_rock );
     }
-    const auto fuel = tool->ammo_remaining();
-    const auto surface = here.furn( target );
+    const int fuel = tool->ammo_remaining();
+    const furn_id surface = here.furn( target );
     who.activity.moves_left = 1;
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "step" ) );
@@ -10328,31 +10680,31 @@ TEST_CASE( "owned_torch_uses_an_in_place_ground_source_and_requires_operator_gla
     map &here = get_map();
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    const auto host_tool = equip_cutting_tool( get_avatar(), true );
-    item torch( itype_id( "oxy_torch" ) );
-    torch.ammo_set( itype_id( "oxyacetylene" ) );
+    const item_location host_tool = equip_cutting_tool( get_avatar(), true );
+    item torch( itype_oxy_torch );
+    torch.ammo_set( itype_oxyacetylene );
     item &placed = here.add_item_or_charges( who.pos_bub( here ), std::move( torch ) );
     const item_location source( map_cursor( who.pos_abs() ), &placed );
     REQUIRE( source->ammo_sufficient( &who ) );
     const tripoint_bub_ms target( 61, 60, 0 );
-    here.furn_set( target, furn_str_id( "test_f_oxytorch2" ) );
+    here.furn_set( target, furn_test_f_oxytorch2 );
     // The host's welding protection must never authorize the other player.
     fixture.run( who, cutting_request( fixture, who, source, true, here.get_abs( target ) ) );
     CHECK_FALSE( who.activity );
-    REQUIRE( who.wear_item( item( itype_id( "test_goggles_welding" ) ), false ) );
+    REQUIRE( who.wear_item( item( itype_test_goggles_welding ), false ) );
     who.set_moves( 1000 );
     fixture.run( who, cutting_request( fixture, who, source, true, here.get_abs( target ) ) );
     REQUIRE( who.activity );
     CHECK( locate_cutting_tool( who, placed ) == source );
     CHECK_FALSE( who.has_item( placed ) );
     save_reload_activity( who );
-    const auto fuel = source->ammo_remaining();
-    const auto host_fuel = host_tool->ammo_remaining();
+    const int fuel = source->ammo_remaining();
+    const int host_fuel = host_tool->ammo_remaining();
     who.activity.moves_left = 1;
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "step" ) );
     CHECK_FALSE( who.activity );
-    CHECK( here.furn( target ) == furn_str_id( "test_f_oxytorch1" ).id() );
+    CHECK( here.furn( target ) == furn_test_f_oxytorch1.id() );
     CHECK( source->ammo_remaining() == fuel - source->ammo_required() );
     CHECK( host_tool->ammo_remaining() == host_fuel );
 }
@@ -10371,7 +10723,7 @@ TEST_CASE( "personal_zone_queries_keep_each_operator_origin_and_scope_independen
     const on_out_of_scope cleanup( [&]() { zones.clear(); } );
     const faction_id fac = first.get_faction_id();
     REQUIRE( second.get_faction_id() == fac );
-    const zone_type_id type( "LOOT_UNSORTED" );
+    const zone_type_id &type = zone_type_LOOT_UNSORTED;
     const tripoint_rel_ms first_offset( 1, 0, 0 );
     const tripoint_rel_ms second_offset( 2, 0, 0 );
     REQUIRE( zones.add( "First personal", type, fac, false, true, first_offset, first_offset,
@@ -10381,8 +10733,8 @@ TEST_CASE( "personal_zone_queries_keep_each_operator_origin_and_scope_independen
     const tripoint_abs_ms shared = first.pos_abs() + tripoint( 3, 0, 0 );
     REQUIRE( zones.add( "Shared static", type, fac, false, true, shared, shared,
                         nullptr, true, nullptr, false ) );
-    auto first_query = zone_query_context::for_character( first, first.pos_abs(), zone_scope::personal_only );
-    auto second_query = zone_query_context::for_character( second, second.pos_abs(), zone_scope::personal_only );
+    zone_query_context first_query = zone_query_context::for_character( first, first.pos_abs(), zone_scope::personal_only );
+    zone_query_context second_query = zone_query_context::for_character( second, second.pos_abs(), zone_scope::personal_only );
     std::ostringstream saved;
     JsonOut saved_out( saved );
     zones.get_zones( fac ).front().get().serialize( saved_out );
@@ -10419,18 +10771,18 @@ TEST_CASE( "owned_zone_sort_keeps_personal_anchor_and_scope_across_save_and_trav
     const on_out_of_scope cleanup( [&]() { zones.clear(); } );
     const tripoint_abs_ms origin = who.pos_abs();
     const tripoint_rel_ms offset( 1, 0, 0 );
-    REQUIRE( zones.add( "Mine", zone_type_id( "LOOT_UNSORTED" ), who.get_faction_id(),
+    REQUIRE( zones.add( "Mine", zone_type_LOOT_UNSORTED, who.get_faction_id(),
                         false, true, offset, offset, nullptr, who.getID() ) );
-    const auto request = fixture.request( who, "start", []( JsonOut &out ) {
+    const std::string request = fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_sort" );
         out.member( "scope", static_cast<int>( zone_scope::personal_only ) );
     } );
     fixture.run( who, request );
-    REQUIRE( who.activity.id() == activity_id( "ACT_MOVE_LOOT" ) );
+    REQUIRE( who.activity.id() == ACT_MOVE_LOOT );
     auto *actor = dynamic_cast<zone_sort_activity_actor *>( who.activity.actor.get() );
     REQUIRE( actor );
     actor->stage_init( who.activity, who );
-    const auto identity = who.activity.identity_generation();
+    const std::uint64_t identity = who.activity.identity_generation();
     fixture.run( who, request );
     CHECK( who.activity.identity_generation() == identity );
     save_reload_activity( who );
@@ -10454,19 +10806,19 @@ TEST_CASE( "owned_zone_sort_moves_items_once_without_toggling_other_players_zone
     zone_manager &zones = zone_manager::get_manager();
     zones.clear();
     const on_out_of_scope cleanup( [&]() { zones.clear(); } );
-    const tripoint_abs_ms source = who.pos_abs() + tripoint( 1, 0, 0 );
-    const tripoint_abs_ms destination = who.pos_abs() + tripoint( 0, 1, 0 );
+    const tripoint_abs_ms source = who.pos_abs() + tripoint::east;
+    const tripoint_abs_ms destination = who.pos_abs() + tripoint::south;
     const faction_id fac = who.get_faction_id();
-    REQUIRE( zones.add( "Input", zone_type_id( "LOOT_UNSORTED" ), fac, false, true, source, source,
+    REQUIRE( zones.add( "Input", zone_type_LOOT_UNSORTED, fac, false, true, source, source,
                         nullptr, true, nullptr, false ) );
-    REQUIRE( zones.add( "Output", zone_type_id( "LOOT_DEFAULT" ), fac, false, true, destination, destination,
+    REQUIRE( zones.add( "Output", zone_type_LOOT_DEFAULT, fac, false, true, destination, destination,
                         nullptr, true, nullptr, false ) );
     const tripoint_rel_ms personal( 1, 0, 0 );
-    REQUIRE( zones.add( "Host", zone_type_id( "LOOT_UNSORTED" ), fac, false, true, personal, personal,
+    REQUIRE( zones.add( "Host", zone_type_LOOT_UNSORTED, fac, false, true, personal, personal,
                         nullptr, get_avatar().getID() ) );
-    here.add_item_or_charges( here.get_bub( source ), item( itype_id( "rock" ) ) );
+    here.add_item_or_charges( here.get_bub( source ), item( itype_rock ) );
     const int host_moves = get_avatar().get_moves();
-    const auto start = fixture.request( who, "start", []( JsonOut &out ) {
+    const std::string start = fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_sort" );
         out.member( "scope", static_cast<int>( zone_scope::static_only ) );
     } );
@@ -10479,7 +10831,7 @@ TEST_CASE( "owned_zone_sort_moves_items_once_without_toggling_other_players_zone
     CHECK_FALSE( who.activity );
     CHECK( here.i_at( here.get_bub( source ) ).empty() );
     REQUIRE( here.i_at( here.get_bub( destination ) ).size() == 1 );
-    CHECK( here.i_at( here.get_bub( destination ) ).begin()->typeId() == itype_id( "rock" ) );
+    CHECK( here.i_at( here.get_bub( destination ) ).begin()->typeId() == itype_rock );
     fixture.run( who, start );
     CHECK_FALSE( who.activity );
     CHECK( here.i_at( here.get_bub( destination ) ).size() == 1 );
@@ -10501,22 +10853,22 @@ TEST_CASE( "remote_sorting_uses_its_held_cart_without_sorting_transport_cargo",
     zone_manager &zones = zone_manager::get_manager();
     zones.clear();
     const on_out_of_scope cleanup( [&]() { zones.clear(); } );
-    const auto source = who.pos_bub() + tripoint::east;
-    const auto destination = who.pos_bub() + tripoint::south;
-    vehicle *cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+    const tripoint_bub_ms source = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms destination = who.pos_bub() + tripoint::south;
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                       veh_spawn_status::UNDAMAGED );
     REQUIRE( cart );
     cart->set_owner( who.get_faction_id() );
     const auto cargo = here.veh_at( source ).cargo();
     REQUIRE( cargo );
-    REQUIRE( cart->add_item( here, cargo->part(), item( itype_id( "test_apple" ) ) ) );
-    here.add_item_or_charges( source, item( itype_id( "test_apple" ) ) );
+    REQUIRE( cart->add_item( here, cargo->part(), item( itype_test_apple ) ) );
+    here.add_item_or_charges( source, item( itype_test_apple ) );
     who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
     REQUIRE( zone_sorting::grabbed_cart( who, here ) == cart );
-    const auto fac = who.get_faction_id();
-    REQUIRE( zones.add( "Ground input", zone_type_id( "LOOT_UNSORTED" ), fac, false, true,
+    const faction_id fac = who.get_faction_id();
+    REQUIRE( zones.add( "Ground input", zone_type_LOOT_UNSORTED, fac, false, true,
                         here.get_abs( source ), here.get_abs( source ), nullptr, true, nullptr, false ) );
-    REQUIRE( zones.add( "Output", zone_type_id( "LOOT_DEFAULT" ), fac, false, true,
+    REQUIRE( zones.add( "Output", zone_type_LOOT_DEFAULT, fac, false, true,
                         here.get_abs( destination ), here.get_abs( destination ), nullptr, false ) );
     fixture.run( who, fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_sort" );
@@ -10545,20 +10897,20 @@ TEST_CASE( "saved_cart_sorting_batch_requires_the_same_operator_and_live_hold",
     zone_manager &zones = zone_manager::get_manager();
     zones.clear();
     const on_out_of_scope cleanup( [&]() { zones.clear(); } );
-    const auto source = who.pos_bub() + tripoint::east;
-    const auto destination = who.pos_bub() + tripoint( 5, 0, 0 );
-    vehicle *cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+    const tripoint_bub_ms source = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms destination = who.pos_bub() + tripoint( 5, 0, 0 );
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                       veh_spawn_status::UNDAMAGED );
     REQUIRE( cart );
     cart->set_owner( who.get_faction_id() );
     const auto cargo = here.veh_at( source ).cargo();
     REQUIRE( cargo );
-    REQUIRE( cart->add_item( here, cargo->part(), item( itype_id( "test_apple" ) ) ) );
+    REQUIRE( cart->add_item( here, cargo->part(), item( itype_test_apple ) ) );
     who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
-    const auto fac = who.get_faction_id();
-    REQUIRE( zones.add( "Cart input", zone_type_id( "LOOT_UNSORTED" ), fac, false, true,
+    const faction_id fac = who.get_faction_id();
+    REQUIRE( zones.add( "Cart input", zone_type_LOOT_UNSORTED, fac, false, true,
                         here.get_abs( source ), here.get_abs( source ), nullptr, true ) );
-    REQUIRE( zones.add( "Output", zone_type_id( "LOOT_DEFAULT" ), fac, false, true,
+    REQUIRE( zones.add( "Output", zone_type_LOOT_DEFAULT, fac, false, true,
                         here.get_abs( destination ), here.get_abs( destination ), nullptr, false ) );
     fixture.run( who, fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_sort" );
@@ -10591,13 +10943,13 @@ TEST_CASE( "saved_cart_sorting_batch_requires_the_same_operator_and_live_hold",
     SECTION( "cart replaced at the old handhold" ) {
         deliver = false;
         here.displace_vehicle( *cart, tripoint_rel_ms( 10, 0, 0 ) );
-        replacement = here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+        replacement = here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                         veh_spawn_status::UNDAMAGED );
         REQUIRE( replacement );
         replacement->set_owner( fac );
         const auto new_cargo = here.veh_at( source ).cargo();
         REQUIRE( new_cargo );
-        REQUIRE( replacement->add_item( here, new_cargo->part(), item( itype_id( "test_apple" ) ) ) );
+        REQUIRE( replacement->add_item( here, new_cargo->part(), item( itype_test_apple ) ) );
         zones.cache_vzones();
     }
     SECTION( "cancel releases the batch claim without moving cargo" ) {
@@ -10635,12 +10987,12 @@ TEST_CASE( "saved_vehicle_item_locations_follow_identity_after_a_cart_moves",
     reload_fixture fixture;
     map &here = get_map();
     const tripoint_bub_ms source( 65, 60, 0 );
-    vehicle *cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                       veh_spawn_status::UNDAMAGED );
     REQUIRE( cart );
     const auto cargo = here.veh_at( source ).cargo();
     REQUIRE( cargo );
-    const auto added = cart->add_item( here, cargo->part(), item( itype_id( "test_apple" ) ) );
+    const auto added = cart->add_item( here, cargo->part(), item( itype_test_apple ) );
     REQUIRE( added );
     item_location location( vehicle_cursor( *cart, cargo->part_index() ), &**added );
     std::ostringstream stream;
@@ -10649,13 +11001,13 @@ TEST_CASE( "saved_vehicle_item_locations_follow_identity_after_a_cart_moves",
     bool exists = true;
     SECTION( "the old cell now contains a different cart" ) {
         here.displace_vehicle( *cart, tripoint_rel_ms( 3, 0, 0 ) );
-        REQUIRE( here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+        REQUIRE( here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                    veh_spawn_status::UNDAMAGED ) );
     }
     SECTION( "the original vehicle was removed" ) {
         exists = false;
         here.destroy_vehicle( cart );
-        REQUIRE( here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+        REQUIRE( here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                    veh_spawn_status::UNDAMAGED ) );
     }
     location.deserialize( json_loader::from_string( stream.str() ).get_object() );
@@ -10673,8 +11025,8 @@ TEST_CASE( "sorting_route_cache_reacts_to_map_changes_without_moving_the_operato
     reload_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    const auto origin = who.pos_bub();
-    const auto target = origin + tripoint( 4, 0, 0 );
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms target = origin + tripoint( 4, 0, 0 );
     REQUIRE( zone_sorting::route_length( who, target ) != INT_MAX );
     for( int x = -1; x <= 1; ++x ) {
         for( int y = -1; y <= 1; ++y ) {
@@ -10692,9 +11044,9 @@ TEST_CASE( "sorting_map_transfer_keeps_the_unplaced_part_of_a_stack",
     reload_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    const auto source_pos = who.pos_bub() + tripoint::east;
-    const auto destination = who.pos_bub() + tripoint::south;
-    item ammunition( itype_id( "556" ), calendar::turn, 20 );
+    const tripoint_bub_ms source_pos = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms destination = who.pos_bub() + tripoint::south;
+    item ammunition( itype_556, calendar::turn, 20 );
     const int capacity = ammunition.charges_per_volume( here.free_volume( destination ), true );
     REQUIRE( capacity > 20 );
     int room = 10;
@@ -10711,11 +11063,12 @@ TEST_CASE( "sorting_map_transfer_keeps_the_unplaced_part_of_a_stack",
     CHECK( source->charges == 20 - room );
     int destination_count = 0;
     for( const item &entry : here.i_at( destination ) ) {
-        REQUIRE( entry.typeId() == itype_id( "556" ) );
+        REQUIRE( entry.typeId() == itype_556 );
         destination_count += entry.charges;
     }
     CHECK( destination_count + source->charges == capacity - room + 20 );
-    CHECK( here.stored_volume( destination ) <= here.max_volume( destination ) );
+    const units::volume stored = here.stored_volume( destination );
+    CHECK( stored <= here.max_volume( destination ) );
 }
 
 TEST_CASE( "sorting_drop_callbacks_cannot_commit_a_replaced_or_modified_source",
@@ -10724,10 +11077,10 @@ TEST_CASE( "sorting_drop_callbacks_cannot_commit_a_replaced_or_modified_source",
     reload_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    const auto source_pos = who.pos_bub() + tripoint::east;
-    const auto destination = who.pos_bub() + tripoint::south;
+    const tripoint_bub_ms source_pos = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms destination = who.pos_bub() + tripoint::south;
     item_location source( map_cursor( source_pos ),
-                          &here.add_item( source_pos, item( itype_id( "556" ), calendar::turn, 20 ) ) );
+                          &here.add_item( source_pos, item( itype_556, calendar::turn, 20 ) ) );
     int expected = 0;
     bool original_survives = true;
     SECTION( "consumption reports the pre-callback quantity even without an output item" ) {
@@ -10745,12 +11098,12 @@ TEST_CASE( "sorting_drop_callbacks_cannot_commit_a_replaced_or_modified_source",
     SECTION( "map context changes stop insertion" ) {
         who.set_value( "sorting_drop_mode", "context" );
     }
-    itype &type = *const_cast<itype *>( item::find_type( itype_id( "556" ) ) );
+    itype &type = *const_cast<itype *>( item::find_type( itype_556 ) );
     const restore_on_out_of_scope restore_drop( type.drop_action );
     type.drop_action = use_function( "sorting_source_change", []( Character *actor, item *value,
                                      const tripoint_bub_ms & ) -> std::optional<int> {
                                          map &here = get_map();
-                                         const auto source = actor->pos_bub() + tripoint::east;
+                                         const tripoint_bub_ms source = actor->pos_bub() + tripoint::east;
                                          const std::string mode = actor->get_value( "sorting_drop_mode" ).str();
     if( mode == "consume" ) {
     value->charges = 0;
@@ -10758,7 +11111,7 @@ TEST_CASE( "sorting_drop_callbacks_cannot_commit_a_replaced_or_modified_source",
 }
 if( mode == "replace" ) {
     here.i_clear( source );
-        here.add_item( source, item( itype_id( "556" ), calendar::turn, 20 ) );
+        here.add_item( source, item( itype_556, calendar::turn, 20 ) );
     } else if( mode == "modify" ) {
     here.i_at( source ).begin()->set_var( "sorting_callback_change", "retained" );
     } else {
@@ -10796,30 +11149,30 @@ TEST_CASE( "sorting_settles_a_drop_before_leaving_a_callback_replacement_activit
     const bool restart_sorting = GENERATE( false, true );
     who.set_value( "sorting_drop_restart", restart_sorting ? "yes" : "no" );
     who.set_value( "sorting_drop_consumed", consumed ? "yes" : "no" );
-    const auto source = who.pos_bub() + tripoint::east;
-    auto destination = who.pos_bub() + tripoint::south;
+    const tripoint_bub_ms source = who.pos_bub() + tripoint::east;
+    tripoint_bub_ms destination = who.pos_bub() + tripoint::south;
     vehicle *cart = nullptr;
     item_location original;
     SECTION( "adjacent ground transfer" ) {
-        original = item_location( map_cursor( source ), &here.add_item( source, item( itype_id( "rock" ) ) ) );
+        original = item_location( map_cursor( source ), &here.add_item( source, item( itype_rock ) ) );
     }
     SECTION( "saved pending cargo transfer" ) {
         destination = who.pos_bub() + tripoint( 5, 0, 0 );
-        cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), source, 0_degrees, 0,
+        cart = here.add_vehicle( vehicle_prototype_test_shopping_cart, source, 0_degrees, 0,
                                  veh_spawn_status::UNDAMAGED );
         REQUIRE( cart );
         cart->set_owner( who.get_faction_id() );
         const auto cargo = here.veh_at( source ).cargo();
         REQUIRE( cargo );
-        const auto added = cart->add_item( here, cargo->part(), item( itype_id( "rock" ) ) );
+        const auto added = cart->add_item( here, cargo->part(), item( itype_rock ) );
         REQUIRE( added );
         original = item_location( vehicle_cursor( *cart, cargo->part_index() ), &**added );
         who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
     }
-    const auto faction = who.get_faction_id();
-    REQUIRE( zones.add( "Input", zone_type_id( "LOOT_UNSORTED" ), faction, false, true,
+    const faction_id faction = who.get_faction_id();
+    REQUIRE( zones.add( "Input", zone_type_LOOT_UNSORTED, faction, false, true,
                         here.get_abs( source ), here.get_abs( source ), nullptr, true ) );
-    REQUIRE( zones.add( "Output", zone_type_id( "LOOT_DEFAULT" ), faction, false, true,
+    REQUIRE( zones.add( "Output", zone_type_LOOT_DEFAULT, faction, false, true,
                         here.get_abs( destination ), here.get_abs( destination ), nullptr, true ) );
     fixture.run( who, fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_sort" );
@@ -10836,7 +11189,7 @@ TEST_CASE( "sorting_settles_a_drop_before_leaving_a_callback_replacement_activit
         REQUIRE( activity_handlers::activity_item_owned_by( *original, who ) );
         save_reload_activity( who );
     }
-    itype &type = *const_cast<itype *>( item::find_type( itype_id( "rock" ) ) );
+    itype &type = *const_cast<itype *>( item::find_type( itype_rock ) );
     const restore_on_out_of_scope restore_drop( type.drop_action );
     type.drop_action = use_function( "sorting_activity_replacement", []( Character *actor, item *,
                                      const tripoint_bub_ms & ) -> std::optional<int> {
@@ -10845,7 +11198,7 @@ TEST_CASE( "sorting_settles_a_drop_before_leaving_a_callback_replacement_activit
     if( actor->get_value( "sorting_drop_restart" ).str() == "yes" ) {
     actor->assign_activity( zone_sort_activity_actor( zone_scope::static_only ) );
     } else {
-        actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+        actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     }
     return actor->get_value( "sorting_drop_consumed" ).str() == "yes" ?
            std::make_optional( 1 ) : std::nullopt;
@@ -10882,14 +11235,14 @@ TEST_CASE( "sorting_auto_wield_commits_its_source_before_acquisition_events",
     zones.clear();
     const on_out_of_scope cleanup( [&]() { zones.clear(); } );
     const bool replace_weapon = GENERATE( false, true );
-    const auto source = who.pos_bub() + tripoint::east;
-    const auto destination = who.pos_bub() + tripoint( 5, 0, 0 );
-    here.add_item( source, item( itype_id( "rock" ) ) );
+    const tripoint_bub_ms source = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms destination = who.pos_bub() + tripoint( 5, 0, 0 );
+    here.add_item( source, item( itype_rock ) );
     REQUIRE_FALSE( who.has_weapon() );
-    const auto faction = who.get_faction_id();
-    REQUIRE( zones.add( "Input", zone_type_id( "LOOT_UNSORTED" ), faction, false, true,
+    const faction_id faction = who.get_faction_id();
+    REQUIRE( zones.add( "Input", zone_type_LOOT_UNSORTED, faction, false, true,
                         here.get_abs( source ), here.get_abs( source ), nullptr, true ) );
-    REQUIRE( zones.add( "Output", zone_type_id( "LOOT_DEFAULT" ), faction, false, true,
+    REQUIRE( zones.add( "Output", zone_type_LOOT_DEFAULT, faction, false, true,
                         here.get_abs( destination ), here.get_abs( destination ), nullptr, true ) );
     fixture.run( who, fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_sort" );
@@ -10913,9 +11266,9 @@ TEST_CASE( "sorting_auto_wield_commits_its_source_before_acquisition_events",
                 fired = true;
                 CHECK( get_map().i_at( source ).empty() );
                 who.cancel_activity();
-                who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+                who.assign_activity( player_activity( ACT_WAIT, 100 ) );
                 if( replace_weapon ) {
-                    who.set_wielded_item( item( itype_id( "stick" ) ) );
+                    who.set_wielded_item( item( itype_stick ) );
                 }
             }
     } events( who, source, replace_weapon );
@@ -10923,7 +11276,7 @@ TEST_CASE( "sorting_auto_wield_commits_its_source_before_acquisition_events",
     REQUIRE( who.activity.actor );
     who.activity.actor->do_turn( who.activity, who );
     REQUIRE( events.fired );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     CHECK( here.i_at( source ).empty() );
     CHECK( here.i_at( destination ).empty() );
     const item_location wielded = who.get_wielded_item();
@@ -10936,11 +11289,11 @@ TEST_CASE( "zone_identity_survives_save_and_does_not_consume_gameplay_rng",
            "[mp_inventory_activity][zone_edit_owned]" )
 {
     reload_fixture fixture;
-    const auto rng_before = rng_get_engine();
-    zone_data zone( "Saved zone", zone_type_id( "LOOT_UNSORTED" ), your_fac, false, true,
+    const std::string rng_before = capture_rng_state();
+    zone_data zone( "Saved zone", zone_type_LOOT_UNSORTED, your_fac, false, true,
                     get_avatar().pos_abs(), get_avatar().pos_abs() );
     REQUIRE( zone_data::valid_identity( zone.get_identity() ) );
-    const std::string identity = zone.get_identity();
+    const std::string &identity = zone.get_identity();
     std::ostringstream stream;
     JsonOut out( stream );
     zone.serialize( out );
@@ -10948,7 +11301,7 @@ TEST_CASE( "zone_identity_survives_save_and_does_not_consume_gameplay_rng",
     restored.deserialize( json_loader::from_string( stream.str() ).get_object() );
     CHECK( restored.get_identity() == identity );
     CHECK( restored.make_edit_draft().get_identity() == identity );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
 
     // Old files did not have identities. Loading grants one without changing the layout.
     restored.deserialize( json_loader::from_string(
@@ -10957,7 +11310,7 @@ TEST_CASE( "zone_identity_survives_save_and_does_not_consume_gameplay_rng",
     CHECK( restored.get_identity() != identity );
     CHECK( restored.get_start_point() == tripoint_abs_ms( 1, 2, 0 ) );
     CHECK( restored.get_end_point() == tripoint_abs_ms( 3, 4, 0 ) );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
 }
 
 TEST_CASE( "zone_edit_draft_does_not_mutate_world_options_or_cache",
@@ -10971,12 +11324,12 @@ TEST_CASE( "zone_edit_draft_does_not_mutate_world_options_or_cache",
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
     const auto options = make_shared_fast<loot_options>();
     options->set_mark( "rock" );
-    const tripoint_abs_ms position = who.pos_abs() + tripoint( 1, 0, 0 );
-    zone_data *live = manager.add( "Original", zone_type_id( "LOOT_CUSTOM" ), who.get_faction_id(),
+    const tripoint_abs_ms position = who.pos_abs() + tripoint::east;
+    zone_data *live = manager.add( "Original", zone_type_LOOT_CUSTOM, who.get_faction_id(),
                                    false, true, position, position, options, true, nullptr, false );
     REQUIRE( live );
     const zone_edit_definition original = zone_edit_definition::capture( *live );
-    const auto original_points = manager.get_near( zone_type_id( "LOOT_CUSTOM" ), position, 5,
+    const auto original_points = manager.get_near( zone_type_LOOT_CUSTOM, position, 5,
                                  nullptr, who.get_faction_id() );
     {
         zone_edit_session editor( who, manager );
@@ -11001,7 +11354,7 @@ TEST_CASE( "zone_edit_draft_does_not_mutate_world_options_or_cache",
     }
     // Cancelling only destroys the draft; no temporary zone file or world rollback is needed.
     CHECK( zone_edit_definition::capture( *live ) == original );
-    CHECK( manager.get_near( zone_type_id( "LOOT_CUSTOM" ), position, 5,
+    CHECK( manager.get_near( zone_type_LOOT_CUSTOM, position, 5,
                              nullptr, who.get_faction_id() ) == original_points );
     CHECK( dynamic_cast<const loot_options &>( live->get_options() ).get_mark() == "rock" );
 }
@@ -11017,7 +11370,7 @@ TEST_CASE( "zone_edit_session_keeps_owners_and_originals_for_combined_submit",
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
-    const zone_type_id type( "LOOT_UNSORTED" );
+    const zone_type_id &type = zone_type_LOOT_UNSORTED;
     const faction_id fac = first.get_faction_id();
     const tripoint_rel_ms offset( 1, 0, 0 );
     REQUIRE( manager.add( "First", type, fac, false, true, offset, offset, nullptr, first.getID() ) );
@@ -11074,7 +11427,7 @@ TEST_CASE( "detached_vehicle_zone_can_be_edited_without_a_live_vehicle_handle",
            "[mp_inventory_activity][zone_edit_owned]" )
 {
     reload_fixture fixture;
-    zone_data original( "Vehicle", zone_type_id( "LOOT_UNSORTED" ), your_fac, false, true,
+    zone_data original( "Vehicle", zone_type_LOOT_UNSORTED, your_fac, false, true,
                         get_avatar().pos_abs(), get_avatar().pos_abs() );
     original.set_is_vehicle( true );
     zone_data draft = original.make_edit_draft();
@@ -11096,7 +11449,7 @@ TEST_CASE( "zone_edit_authority_applies_a_combined_draft_and_preserves_other_own
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
-    const zone_type_id type( "LOOT_UNSORTED" );
+    const zone_type_id &type = zone_type_LOOT_UNSORTED;
     const tripoint_rel_ms offset( 1, 0, 0 );
     const faction_id fac = who.get_faction_id();
     REQUIRE( manager.add( "Mine", type, fac, false, true, offset, offset, nullptr, who.getID() ) );
@@ -11116,10 +11469,10 @@ TEST_CASE( "zone_edit_authority_applies_a_combined_draft_and_preserves_other_own
     const std::string creation_token = editor.add( layout ).get_identity();
     drafts = editor.get_zones();
     REQUIRE( editor.swap( drafts.front(), drafts.back() ) );
-    const auto rng_before = rng_get_engine();
+    const std::string rng_before = capture_rng_state();
     const zone_edit_batch batch = editor.finish();
     REQUIRE( zone_edit_session::apply( who, manager, batch ) );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     auto live = manager.get_zones( fac );
     REQUIRE( live.size() == 3 );
     CHECK( live[0].get().get_name() == "New shared" );
@@ -11147,7 +11500,7 @@ TEST_CASE( "zone_edit_rejects_conflicts_and_invalid_choices_before_any_mutation"
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
-    const zone_type_id type( "LOOT_UNSORTED" );
+    const zone_type_id &type = zone_type_LOOT_UNSORTED;
     const faction_id fac = who.get_faction_id();
     const tripoint_rel_ms offset( 1, 0, 0 );
     REQUIRE( manager.add( "Mine", type, fac, false, true, offset, offset, nullptr, who.getID() ) );
@@ -11184,7 +11537,7 @@ TEST_CASE( "zone_edit_rejects_conflicts_and_invalid_choices_before_any_mutation"
         batch.changes.back().after->options = R"({"personal_owner":1234})";
     }
     SECTION( "forged faction" ) {
-        batch.faction = faction_id( "hells_raiders" );
+        batch.faction = faction_hells_raiders;
     }
     SECTION( "duplicate identity" ) {
         batch.changes.back().identity = batch.changes.front().identity;
@@ -11209,7 +11562,7 @@ TEST_CASE( "zone_editor_projection_and_request_replay_keep_world_authority",
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
-    const zone_type_id type( "LOOT_UNSORTED" );
+    const zone_type_id &type = zone_type_LOOT_UNSORTED;
     const faction_id fac = who.get_faction_id();
     const tripoint_rel_ms offset( 1, 0, 0 );
     REQUIRE( manager.add( "Mine", type, fac, false, true, offset, offset, nullptr, who.getID() ) );
@@ -11217,7 +11570,7 @@ TEST_CASE( "zone_editor_projection_and_request_replay_keep_world_authority",
     const std::string query = fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_query" );
     } );
-    const auto rng_before = rng_get_engine();
+    const std::string rng_before = capture_rng_state();
     const JsonObject response = json_loader::from_string( fixture.run( who, query ) ).get_object();
     REQUIRE( response.has_object( "zone_editor" ) );
     auto editor = zone_edit_session::read_view( who, response.get_object( "zone_editor" ) );
@@ -11226,7 +11579,7 @@ TEST_CASE( "zone_editor_projection_and_request_replay_keep_world_authority",
     CHECK( editor->finish().empty() );
     REQUIRE( editor->get_zones().front().get().set_name( "Edited from server view" ) );
     CHECK( manager.get_zones( fac ).front().get().get_name() == "Mine" );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     const std::string edit = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "zone_edit" );
         out.member( "zones", editor->finish() );
@@ -11239,7 +11592,7 @@ TEST_CASE( "zone_editor_projection_and_request_replay_keep_world_authority",
     CHECK_FALSE( fixture.reload.refresh_observers );
     CHECK( manager.get_zones( fac ).front().get().get_name() == "After request" );
     CHECK( manager.get_zones( fac ).back().get().get_personal_owner() == other.getID() );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
 }
 
 TEST_CASE( "vehicle_zone_edits_resolve_exact_cargo_and_do_not_replay_creation",
@@ -11261,7 +11614,7 @@ TEST_CASE( "vehicle_zone_edits_resolve_exact_cargo_and_do_not_replay_creation",
     REQUIRE( cargo_index >= 0 );
     const int64_t part_id = car.part( cargo_index ).get_base().uid().get_value();
     const tripoint_abs_ms location = car.abs_part_pos( cargo_index );
-    zone_data layout( "Cargo", zone_type_id( "LOOT_UNSORTED" ), who.get_faction_id(), false, true,
+    zone_data layout( "Cargo", zone_type_LOOT_UNSORTED, who.get_faction_id(), false, true,
                       location, location );
     zone_edit_session creator( who, manager );
     creator.add( layout, car.uid().get_value(), part_id );
@@ -11300,7 +11653,7 @@ TEST_CASE( "vehicle_zone_edits_resolve_exact_cargo_and_do_not_replay_creation",
         }
     }
     SECTION( "owner changed" ) {
-        car.set_owner( faction_id( "no_faction" ) );
+        car.set_owner( faction_no_faction );
         CHECK_FALSE( zone_edit_session::apply( who, manager, batch ) );
         CHECK( car.loot_zones.begin()->second.get_name() == "Cargo" );
     }
@@ -11332,8 +11685,8 @@ TEST_CASE( "zone_work_scan_cache_belongs_to_one_job_and_observes_zone_edits",
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
-    const auto position = who.pos_abs();
-    REQUIRE( manager.add( "Work", zone_type_id( "MOPPING" ), who.get_faction_id(), false, true,
+    const tripoint_abs_ms position = who.pos_abs();
+    REQUIRE( manager.add( "Work", zone_type_MOPPING, who.get_faction_id(), false, true,
                           position, position, nullptr, true, nullptr, false ) );
     const auto scan = [&]() {
         auto *actor = dynamic_cast<counted_zone_scan *>( who.activity.actor.get() );
@@ -11379,20 +11732,20 @@ TEST_CASE( "zone_fetch_preserves_parent_origin_and_runtime_requirements_across_s
     const tripoint_abs_ms origin = who.pos_abs();
     const tripoint_rel_ms offset( 10, 0, 0 );
     const tripoint_abs_ms source = origin + offset;
-    const tripoint_abs_ms destination = origin + tripoint( 0, 1, 0 );
-    REQUIRE( manager.add( "Materials", zone_type_id( "LOOT_DEFAULT" ), who.get_faction_id(),
+    const tripoint_abs_ms destination = origin + tripoint::south;
+    REQUIRE( manager.add( "Materials", zone_type_LOOT_DEFAULT, who.get_faction_id(),
                           false, true, offset, offset, nullptr, who.getID() ) );
-    here.add_item_or_charges( here.get_bub( source ), item( itype_id( "rock" ) ) );
+    here.add_item_or_charges( here.get_bub( source ), item( itype_rock ) );
     who.assign_activity( multi_build_construction_activity_actor() );
     who.activity.set_execution( activity_execution::authoritative );
     save_reload_activity( who );
     who.setpos( here, here.get_bub( origin + tripoint( 0, 2, 0 ) ) );
-    const requirement_data requirements( {}, {}, { { item_comp( itype_id( "rock" ), 1 ) } } );
+    const requirement_data requirements( {}, {}, { { item_comp( itype_rock, 1 ) } } );
     const requirement_id requirement = multi_activity_actor::hash_and_cache_requirement_data( requirements );
     who.assign_activity( fetch_required_activity_actor( requirement, do_activity_reason::NO_COMPONENTS,
                          destination, origin ) );
     REQUIRE( who.backlog.size() == 1 );
-    REQUIRE( who.backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) );
+    REQUIRE( who.backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION );
     CHECK( active_zone_query( who ).origin == origin );
     save_reload_activity( who );
     auto *actor = dynamic_cast<fetch_required_activity_actor *>( who.activity.actor.get() );
@@ -11400,12 +11753,12 @@ TEST_CASE( "zone_fetch_preserves_parent_origin_and_runtime_requirements_across_s
     CHECK( actor->query_for( who ).origin == origin );
     CHECK( actor->multi_activity_locations( who ) == std::unordered_set<tripoint_abs_ms>{ source } );
     // Travel and a global recache must not move the personal material source.
-    who.setpos( here, here.get_bub( source + tripoint( -1, 0, 0 ) ) );
+    who.setpos( here, here.get_bub( source + tripoint::west ) );
     manager.cache_data();
-    REQUIRE( actor->fetch_activity( who, here.get_bub( source ), activity_id( "ACT_FETCH_REQUIRED" ) ) );
+    REQUIRE( actor->fetch_activity( who, here.get_bub( source ), ACT_FETCH_REQUIRED ) );
     CHECK( here.i_at( here.get_bub( source ) ).empty() );
     REQUIRE( here.i_at( here.get_bub( destination ) ).size() == 1 );
-    CHECK( here.i_at( here.get_bub( destination ) ).begin()->typeId() == itype_id( "rock" ) );
+    CHECK( here.i_at( here.get_bub( destination ) ).begin()->typeId() == itype_rock );
     CHECK( who.job.fetch_history.empty() );
 
     // Old actor payloads lacked requirements. The parent can recompute them.
@@ -11428,14 +11781,14 @@ TEST_CASE( "zone_action_query_and_dispatch_use_the_actual_owner_and_do_not_repla
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
     const tripoint_rel_ms offset( 1, 0, 0 );
-    const zone_type_id type( "MOPPING" );
+    const zone_type_id &type = zone_type_MOPPING;
     REQUIRE( manager.add( "Other", type, who.get_faction_id(), false, true,
                           offset, offset, nullptr, other.getID() ) );
     CHECK_FALSE( start_owned_zone_work( who, "mop" ) );
     REQUIRE( manager.add( "Mine", type, who.get_faction_id(), false, true,
                           offset, offset, nullptr, who.getID() ) );
     const int host_moves = get_avatar().get_moves();
-    const auto query = fixture.request( who, "start", []( JsonOut &out ) {
+    const std::string query = fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_query" );
         out.member( "zone_actions", true );
     } );
@@ -11447,13 +11800,13 @@ TEST_CASE( "zone_action_query_and_dispatch_use_the_actual_owner_and_do_not_repla
     CHECK( menu->has_near( type, who.pos_abs(), MAX_VIEW_DISTANCE ) );
     CHECK_FALSE( who.activity );
     CHECK_FALSE( start_owned_zone_work( who, "unknown action" ) );
-    const auto request = fixture.request( who, "start", []( JsonOut &out ) {
+    const std::string request = fixture.request( who, "start", []( JsonOut &out ) {
         out.member( "kind", "zone_work" );
         out.member( "zone_action", "mop" );
     } );
     fixture.run( who, request );
-    REQUIRE( who.activity.id() == activity_id( "ACT_MULTIPLE_MOP" ) );
-    const auto identity = who.activity.identity_generation();
+    REQUIRE( who.activity.id() == ACT_MULTIPLE_MOP );
+    const std::uint64_t identity = who.activity.identity_generation();
     fixture.run( who, request );
     CHECK( who.activity.identity_generation() == identity );
     CHECK( who.activity.execution() == activity_execution::authoritative );
@@ -11479,14 +11832,14 @@ TEST_CASE( "zone_unload_rechecks_owner_and_zone_after_planning",
                               R"({"mark":"","mods":false,"molle":false,"sparse_only":false,"sparse_threshold":20,"always_unload":true})" ).get_object() );
     const tripoint_rel_ms mine( 1, 0, 0 );
     const tripoint_rel_ms theirs( 0, 1, 0 );
-    const auto origin = who.pos_abs();
-    const zone_type_id type( "UNLOAD_ALL" );
+    const tripoint_abs_ms origin = who.pos_abs();
+    const zone_type_id &type = zone_type_UNLOAD_ALL;
     REQUIRE( manager.add( "Mine", type, who.get_faction_id(), false, true,
                           mine, mine, options, who.getID() ) );
     REQUIRE( manager.add( "Other", type, who.get_faction_id(), false, true,
                           theirs, theirs, options, other.getID() ) );
-    item bag( itype_id( "backpack" ) );
-    REQUIRE( bag.put_in( item( itype_id( "rock" ) ), pocket_type::CONTAINER ).success() );
+    item bag( itype_backpack );
+    REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
     const item_location owned = here.add_item_or_charges_ret_loc( here.get_bub( origin + mine ), bag );
     const item_location foreign = here.add_item_or_charges_ret_loc( here.get_bub( origin + theirs ), bag );
     REQUIRE( owned );
@@ -11515,13 +11868,13 @@ TEST_CASE( "local_zone_construction_completion_resumes_the_original_work_order",
     avatar &who = get_avatar();
     map &here = get_map();
     who.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     who.assign_activity( multi_build_construction_activity_actor() );
     who.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
     const tripoint_bub_ms target( 61, 61, 0 );
-    here.ter_set( target, ter_str_id( "t_dirt" ) );
+    here.ter_set( target, ter_t_dirt );
     partial_con site;
-    site.id = construction_str_id( "constr_wall_half" ).id();
+    site.id = construction_constr_wall_half.id();
     here.partial_con_set( target, site );
     who.assign_activity( build_construction_activity_actor( here.get_abs( target ) ) );
     REQUIRE( who.backlog.size() == 1 );
@@ -11529,7 +11882,7 @@ TEST_CASE( "local_zone_construction_completion_resumes_the_original_work_order",
     REQUIRE( building );
     building->complete_construction( who.activity, who );
     CHECK_FALSE( here.partial_con_at( target ) );
-    CHECK( here.ter( target ) == ter_str_id( "t_wall_half" ) );
+    CHECK( here.ter( target ) == ter_t_wall_half );
     // This is the same resume performed by player_activity after completion.
     who.resume_backlog_activity();
     const auto *parent = dynamic_cast<const multi_build_construction_activity_actor *>(
@@ -11546,15 +11899,15 @@ TEST_CASE( "vehicle_work_keeps_exact_vehicle_and_part_identity_across_save_and_r
     map &here = get_map();
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    const auto position = who.pos_bub() + tripoint::south;
-    const vpart_id tank_type( "tank_test" );
+    const tripoint_bub_ms position = who.pos_bub() + tripoint::south;
+    const vpart_id &tank_type = vpart_tank_test;
     const auto create_vehicle = [&]() {
-        vehicle *result = here.add_vehicle( vproto_id( "none" ), position, 0_degrees, 0,
+        vehicle *result = here.add_vehicle( vehicle_prototype_none, position, 0_degrees, 0,
                                             veh_spawn_status::UNDAMAGED );
         REQUIRE( result );
         result->set_owner( who.get_faction_id() );
-        REQUIRE( result->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-        REQUIRE( result->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( result->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+        REQUIRE( result->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );
         REQUIRE( result->install_part( here, point_rel_ms::zero, tank_type ) >= 0 );
         REQUIRE( result->install_part( here, point_rel_ms( 1, 0 ), tank_type ) >= 0 );
         result->refresh();
@@ -11564,8 +11917,8 @@ TEST_CASE( "vehicle_work_keeps_exact_vehicle_and_part_identity_across_save_and_r
     vehicle *target = create_vehicle();
     const int original_index = target->part_count() - 1;
     const int64_t original_part = target->part( original_index ).get_base().uid().get_value();
-    item fuel( itype_id( "gasoline" ), calendar::turn, 100 );
-    item container( itype_id( "test_watertight_open_sealed_container_1L" ) );
+    item fuel( itype_gasoline, calendar::turn, 100 );
+    item container( itype_test_watertight_open_sealed_container_1L );
     REQUIRE( container.fill_with( fuel, 100 ) == 100 );
     const item_location source = here.add_item_or_charges_ret_loc( who.pos_bub(), container );
     who.assign_activity( vehicle_activity_actor( VEHICLE_REFILL, 1_seconds, target,
@@ -11633,7 +11986,7 @@ TEST_CASE( "vehicle_work_saved_operator_cannot_be_reassigned_to_another_player",
     player_activity stolen = who.activity;
     other.assign_activity( stolen );
     CHECK_FALSE( other.activity );
-    CHECK( who.activity.id() == activity_id( "ACT_VEHICLE" ) );
+    CHECK( who.activity.id() == ACT_VEHICLE );
 }
 
 TEST_CASE( "batch_butchery_skips_a_disappeared_corpse_before_initializing_it",
@@ -11644,9 +11997,9 @@ TEST_CASE( "batch_butchery_skips_a_disappeared_corpse_before_initializing_it",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     item_location remaining = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                              item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                              item::make_corpse( mon_zombie, calendar::turn ) );
     item_location vanished = here.add_item_or_charges_ret_loc( who.pos_bub() + tripoint::east,
-                             item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                             item::make_corpse( mon_zombie, calendar::turn ) );
     butchery_data continuing( remaining, butcher_type::QUICK );
     continuing.progress = 1_seconds;
     continuing.time_to_butcher = 10_seconds;
@@ -11675,9 +12028,9 @@ TEST_CASE( "zone_item_claims_distinguish_same_named_players_and_survive_renaming
     bind_feedback_player( second, 'b', 702 );
     first.name = second.name = "Damon";
     map &here = get_map();
-    const auto at = first.pos_bub() + tripoint::east;
+    const tripoint_bub_ms at = first.pos_bub() + tripoint::east;
     item_location corpse = here.add_item_or_charges_ret_loc( at,
-                           item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                           item::make_corpse( mon_zombie, calendar::turn ) );
     activity_handlers::reserve_activity_item( first, corpse );
     multi_butchery_activity_actor planner;
     CHECK( planner.multi_activity_can_do( second, at ).reason == do_activity_reason::NO_COMPONENTS );
@@ -11712,12 +12065,12 @@ TEST_CASE( "different_players_reserved_materials_do_not_merge_into_one_stack",
     npc &first = fixture.remote();
     npc &second = fixture.remote();
     first.name = second.name = "Damon";
-    item first_material( itype_id( "nail" ), calendar::turn, 20 );
+    item first_material( itype_nail, calendar::turn, 20 );
     item second_material = first_material;
     activity_handlers::mark_activity_item( first_material, first );
     activity_handlers::mark_activity_item( second_material, second );
     map &here = get_map();
-    const auto position = first.pos_bub() + tripoint::east;
+    const tripoint_bub_ms position = first.pos_bub() + tripoint::east;
     item_location first_stack = here.add_item_or_charges_ret_loc( position, first_material );
     item_location second_stack = here.add_item_or_charges_ret_loc( position, second_material );
     REQUIRE( first_stack );
@@ -11736,7 +12089,7 @@ TEST_CASE( "remote_book_discovery_survives_save_and_authoritative_projection",
     reload_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    const item book( itype_id( "test_textbook_fabrication" ) );
+    const item book( itype_test_textbook_fabrication );
     REQUIRE_FALSE( who.has_identified( book.typeId() ) );
     who.identify( book );
     REQUIRE( who.has_identified( book.typeId() ) );
@@ -11749,18 +12102,18 @@ TEST_CASE( "remote_book_discovery_survives_save_and_authoritative_projection",
         npc restored;
         restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
         CHECK( restored.Character::has_identified( book.typeId() ) );
-        CHECK_FALSE( restored.Character::has_identified( itype_id( "child_book" ) ) );
+        CHECK_FALSE( restored.Character::has_identified( itype_child_book ) );
     }
     SECTION( "full player projection replaces stale local discovery" ) {
-        get_avatar().identify( item( itype_id( "child_book" ) ) );
+        get_avatar().identify( item( itype_child_book ) );
         std::ostringstream saved;
         JsonOut out( saved );
         who.store_player_state( out );
-        const auto before = rng_get_engine();
+        const std::string before = capture_rng_state();
         get_avatar().load_player_state( json_loader::from_string( saved.str() ).get_object() );
         CHECK( get_avatar().has_identified( book.typeId() ) );
-        CHECK_FALSE( get_avatar().has_identified( itype_id( "child_book" ) ) );
-        CHECK( rng_get_engine() == before );
+        CHECK_FALSE( get_avatar().has_identified( itype_child_book ) );
+        CHECK( capture_rng_state() == before );
     }
     SECTION( "ordinary AI NPCs keep their existing book knowledge" ) {
         npc ai;
@@ -11776,9 +12129,9 @@ TEST_CASE( "owned_reading_skims_then_learns_for_the_remote_player_only",
     reload_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    who.i_add( item( itype_id( "test_lamp" ) ) );
-    item_location book = who.i_add( item( itype_id( "test_textbook_fabrication" ) ) );
-    const skill_id skill( "fabrication" );
+    who.i_add( item( itype_test_lamp ) );
+    item_location book = who.i_add( item( itype_test_textbook_fabrication ) );
+    const skill_id &skill = skill_fabrication;
     who.set_knowledge_level( skill, 0 );
     const int host_level = get_avatar().get_knowledge_level( skill );
     const auto start = [&]() {
@@ -11787,7 +12140,7 @@ TEST_CASE( "owned_reading_skims_then_learns_for_the_remote_player_only",
             out.member( "kind", "read" );
             out.member( "book", cata_mp::capture_item_source( who, book ) );
         } ) );
-        REQUIRE( who.activity.id() == activity_id( "ACT_READ" ) );
+        REQUIRE( who.activity.id() == ACT_READ );
         REQUIRE( cata_mp::owns_inventory_activity( who ) );
     };
     start();
@@ -11797,7 +12150,7 @@ TEST_CASE( "owned_reading_skims_then_learns_for_the_remote_player_only",
     CHECK( who.get_knowledge_level( skill ) == 0 );
     CHECK_FALSE( get_avatar().has_identified( book->typeId() ) );
 
-    const auto before = who.get_skill_level_object( skill ).knowledgeExperience();
+    const int before = who.get_skill_level_object( skill ).knowledgeExperience();
     start();
     who.activity.actor->finish( who.activity, who );
     CHECK_FALSE( who.activity );
@@ -11808,13 +12161,13 @@ TEST_CASE( "owned_reading_skims_then_learns_for_the_remote_player_only",
     std::ostringstream knowledge;
     JsonOut out( knowledge );
     who.store_practice_state( out, true );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     get_avatar().load_practice_state( json_loader::from_string( knowledge.str() ).get_object() );
     CHECK( get_avatar().has_identified( book->typeId() ) );
     CHECK( get_avatar().book_chapters == who.book_chapters );
     CHECK( get_avatar().get_skill_level_object( skill ).knowledgeExperience() ==
            who.get_skill_level_object( skill ).knowledgeExperience() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "owned_reading_rejects_stale_sources_and_unrelated_learners",
@@ -11823,10 +12176,10 @@ TEST_CASE( "owned_reading_rejects_stale_sources_and_unrelated_learners",
     reload_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    who.i_add( item( itype_id( "test_lamp" ) ) );
-    item_location book = who.i_add( item( itype_id( "test_textbook_fabrication" ) ) );
+    who.i_add( item( itype_test_lamp ) );
+    item_location book = who.i_add( item( itype_test_textbook_fabrication ) );
     who.identify( *book );
-    const auto source = cata_mp::capture_item_source( who, book );
+    const item_source source = cata_mp::capture_item_source( who, book );
     bool continuous = false;
     SECTION( "book removed after selection" ) {
         book.remove_item();
@@ -11837,7 +12190,7 @@ TEST_CASE( "owned_reading_rejects_stale_sources_and_unrelated_learners",
     SECTION( "selected learner is not participating" ) {
         continuous = true;
     }
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     const int moves = who.get_moves();
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
         out.member( "kind", "read" );
@@ -11847,7 +12200,7 @@ TEST_CASE( "owned_reading_rejects_stale_sources_and_unrelated_learners",
     } ) );
     CHECK_FALSE( who.activity );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
 }
 
 TEST_CASE( "read_completion_stops_when_a_read_event_removes_the_book",
@@ -11856,7 +12209,7 @@ TEST_CASE( "read_completion_stops_when_a_read_event_removes_the_book",
     reload_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    item_location book = who.i_add( item( itype_id( "test_textbook_fabrication" ) ) );
+    item_location book = who.i_add( item( itype_test_textbook_fabrication ) );
     const itype_id id = book->typeId();
     item_location ereader;
     who.assign_activity( read_activity_actor( 1_minutes, book, ereader ) );
@@ -11865,7 +12218,7 @@ TEST_CASE( "read_completion_stops_when_a_read_event_removes_the_book",
         public:
             item_location target;
             character_id owner;
-            remove_book_on_read( item_location target, character_id owner ) : target( target ), owner( owner ) {
+            remove_book_on_read( item_location target, character_id owner ) : target( std::move( target ) ), owner( owner ) {
                 get_event_bus().subscribe( this );
             }
             void notify( const cata::event &event ) override {
@@ -11894,8 +12247,8 @@ TEST_CASE( "study_preferences_keep_same_named_players_separate_after_rename_and_
     options.deserialize( json_loader::from_string(
                              R"({"npc_skill_preferences":{"Reader":["cooking"]}})" ).get_object() );
     REQUIRE( options.get_skill_preferences( who ) );
-    CHECK( options.get_skill_preferences( who )->count( skill_id( "cooking" ) ) == 1 );
-    options.set_skill_preferences( who, { skill_id( "fabrication" ) } );
+    CHECK( options.get_skill_preferences( who )->count( skill_cooking ) == 1 );
+    options.set_skill_preferences( who, { skill_fabrication } );
     options.set_skill_preferences( other, {} );
     who.name = "Renamed reader";
     std::ostringstream stream;
@@ -11906,7 +12259,7 @@ TEST_CASE( "study_preferences_keep_same_named_players_separate_after_rename_and_
     study_zone_options restored;
     restored.deserialize( json_loader::from_string( stream.str() ).get_object() );
     REQUIRE( restored.get_skill_preferences( who ) );
-    CHECK( *restored.get_skill_preferences( who ) == std::set<skill_id>{ skill_id( "fabrication" ) } );
+    CHECK( *restored.get_skill_preferences( who ) == std::set<skill_id>{ skill_fabrication } );
     REQUIRE( restored.get_skill_preferences( other ) );
     CHECK( restored.get_skill_preferences( other )->empty() );
 }
@@ -11917,18 +12270,18 @@ TEST_CASE( "owned_study_rechecks_preferences_and_zone_before_starting_a_child",
     reload_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    who.i_add( item( itype_id( "test_lamp" ) ) );
+    who.i_add( item( itype_test_lamp ) );
     map &here = get_map();
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
     auto options = make_shared_fast<study_zone_options>();
-    options->set_skill_preferences( who, { skill_id( "fabrication" ) } );
-    const auto position = who.pos_abs();
-    REQUIRE( manager.add( "Study", zone_type_id( "STUDY_ZONE" ), who.get_faction_id(), false, true,
+    options->set_skill_preferences( who, { skill_fabrication } );
+    const tripoint_abs_ms position = who.pos_abs();
+    REQUIRE( manager.add( "Study", zone_type_STUDY_ZONE, who.get_faction_id(), false, true,
                           position, position, options, true, nullptr, false ) );
     const item_location book = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                               item( itype_id( "test_textbook_fabrication" ) ) );
+                               item( itype_test_textbook_fabrication ) );
     REQUIRE( start_owned_zone_work( who, "study" ) );
     auto *planner = dynamic_cast<multi_study_activity_actor *>( who.activity.actor.get() );
     REQUIRE( planner );
@@ -11946,15 +12299,15 @@ TEST_CASE( "owned_study_rechecks_preferences_and_zone_before_starting_a_child",
     }
     CHECK( planner->multi_activity_do( who, reason, position, who.pos_bub() ) == !start_child );
     if( start_child ) {
-        REQUIRE( who.activity.id() == activity_id( "ACT_READ" ) );
+        REQUIRE( who.activity.id() == ACT_READ );
         CHECK( who.activity.execution() == activity_execution::authoritative );
         REQUIRE_FALSE( who.backlog.empty() );
-        CHECK( who.backlog.front().id() == activity_id( "ACT_MULTIPLE_STUDY" ) );
+        CHECK( who.backlog.front().id() == ACT_MULTIPLE_STUDY );
         who.activity.actor->finish( who.activity, who );
         CHECK( who.has_identified( book->typeId() ) );
         CHECK_FALSE( get_avatar().has_identified( book->typeId() ) );
     } else {
-        CHECK( who.activity.id() == activity_id( "ACT_MULTIPLE_STUDY" ) );
+        CHECK( who.activity.id() == ACT_MULTIPLE_STUDY );
         CHECK_FALSE( who.has_identified( book->typeId() ) );
     }
 }
@@ -11965,19 +12318,19 @@ TEST_CASE( "automatic_study_uses_the_selected_ebook_reader_battery",
     reload_fixture fixture;
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    who.i_add( item( itype_id( "test_lamp" ) ) );
+    who.i_add( item( itype_test_lamp ) );
     zone_manager &manager = zone_manager::get_manager();
     manager.clear();
     const on_out_of_scope cleanup( [&]() { manager.clear(); } );
     auto options = make_shared_fast<study_zone_options>();
-    const auto position = who.pos_abs();
-    REQUIRE( manager.add( "Study", zone_type_id( "STUDY_ZONE" ), who.get_faction_id(), false, true,
+    const tripoint_abs_ms position = who.pos_abs();
+    REQUIRE( manager.add( "Study", zone_type_STUDY_ZONE, who.get_faction_id(), false, true,
                           position, position, options, true, nullptr, false ) );
-    item device( itype_id( "test_ebook_reader" ) );
-    item battery( itype_id( "test_battery_disposable" ) );
+    item device( itype_test_ebook_reader );
+    item battery( itype_test_battery_disposable );
     battery.ammo_set( battery.ammo_default(), 100 );
     REQUIRE( device.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
-    REQUIRE( device.put_in( item( itype_id( "test_textbook_fabrication" ) ),
+    REQUIRE( device.put_in( item( itype_test_textbook_fabrication ),
                             pocket_type::E_FILE_STORAGE ).success() );
     const item_location ereader = get_map().add_item_or_charges_ret_loc( who.pos_bub(), device );
     REQUIRE( start_owned_zone_work( who, "study" ) );
@@ -11986,10 +12339,10 @@ TEST_CASE( "automatic_study_uses_the_selected_ebook_reader_battery",
     const activity_reason_info reason = planner->multi_activity_can_do( who, who.pos_bub() );
     REQUIRE( reason.reason == do_activity_reason::NEEDS_BOOK_TO_LEARN );
     REQUIRE_FALSE( planner->multi_activity_do( who, reason, position, who.pos_bub() ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_READ" ) );
+    REQUIRE( who.activity.id() == ACT_READ );
     CHECK( ereader->ammo_remaining() == 99 );
     who.activity.actor->finish( who.activity, who );
-    CHECK( who.has_identified( itype_id( "test_textbook_fabrication" ) ) );
+    CHECK( who.has_identified( itype_test_textbook_fabrication ) );
 }
 
 TEST_CASE( "zone_item_movement_cost_uses_the_operator_capacity",
@@ -11997,13 +12350,13 @@ TEST_CASE( "zone_item_movement_cost_uses_the_operator_capacity",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const item load( itype_id( "rock" ) );
+    const item load( itype_rock );
     const tripoint_bub_ms source = who.pos_bub();
     const tripoint_bub_ms destination = source + tripoint( 5, 0, 0 );
     const int empty_capacity = activity_handlers::move_cost( who, load, source, destination );
-    get_avatar().worn.wear_item( get_avatar(), item( itype_id( "backpack" ) ), false, false );
+    get_avatar().worn.wear_item( get_avatar(), item( itype_backpack ), false, false );
     CHECK( activity_handlers::move_cost( who, load, source, destination ) == empty_capacity );
-    who.worn.wear_item( who, item( itype_id( "backpack" ) ), false, false );
+    who.worn.wear_item( who, item( itype_backpack ), false, false );
     CHECK( activity_handlers::move_cost( who, load, source, destination ) < empty_capacity );
 }
 
@@ -12032,7 +12385,7 @@ TEST_CASE( "grab_state_belongs_to_the_character_and_survives_save_and_projection
         } else {
             who.store_turn_state( out );
         }
-        const auto rng = rng_get_engine();
+        const std::string rng = capture_rng_state();
         const JsonObject state = json_loader::from_string( stream.str() ).get_object();
         if( mode == "player_state" ) {
             get_avatar().load_player_state( state );
@@ -12041,7 +12394,7 @@ TEST_CASE( "grab_state_belongs_to_the_character_and_survives_save_and_projection
         }
         CHECK( get_avatar().get_grab_type() == object_type::VEHICLE );
         CHECK( get_avatar().grab_point == tripoint_rel_ms::east );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
     who.grab( object_type::NONE );
     CHECK( who.grab_point == tripoint_rel_ms::zero );
@@ -12054,13 +12407,13 @@ TEST_CASE( "native_hauling_setup_and_completion_use_the_operator",
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto source = who.pos_bub();
-    item_location load = here.add_item_or_charges_ret_loc( source, item( itype_id( "test_rock" ) ) );
+    const tripoint_bub_ms source = who.pos_bub();
+    item_location load = here.add_item_or_charges_ret_loc( source, item( itype_test_rock ) );
     who.start_hauling( { load } );
     who.setpos( here, source + tripoint::east );
     who.activity.set_execution( activity_execution::authoritative );
     g->start_hauling( who, source );
-    REQUIRE( who.activity.id() == activity_id( "ACT_MOVE_ITEMS" ) );
+    REQUIRE( who.activity.id() == ACT_MOVE_ITEMS );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     CHECK_FALSE( get_avatar().activity );
     CHECK_FALSE( get_avatar().is_hauling() );
@@ -12081,10 +12434,10 @@ TEST_CASE( "hauling_rejects_foreign_sources_and_reassigned_jobs",
     bind_feedback_player( who, 'a', 701 );
     bind_feedback_player( other, 'b', 702 );
     map &here = get_map();
-    const auto source = who.pos_bub() + tripoint::west;
-    item_location load = here.add_item_or_charges_ret_loc( source, item( itype_id( "test_rock" ) ) );
+    const tripoint_bub_ms source = who.pos_bub() + tripoint::west;
+    item_location load = here.add_item_or_charges_ret_loc( source, item( itype_test_rock ) );
     SECTION( "another character carries the selected item" ) {
-        other.set_wielded_item( item( itype_id( "test_rock" ) ) );
+        other.set_wielded_item( item( itype_test_rock ) );
         load = other.get_wielded_item();
     }
     SECTION( "another player reserved the ground item" ) {
@@ -12121,19 +12474,19 @@ TEST_CASE( "grab_commands_resolve_the_selected_object_on_the_authority",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().grab( object_type::NONE );
-    const auto target = who.pos_bub() + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    here.furn_set( target, furn_f_chair );
     const auto choice = query_grab( who, here, target );
     REQUIRE( choice );
     CHECK( who.get_grab_type() == object_type::NONE );
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "grab" );
         out.member( "grab", *choice );
     } );
     bool accepted = false;
     bool authorized = true;
     SECTION( "current adjacent furniture" ) { accepted = true; }
-    SECTION( "target changed while choosing" ) { here.furn_set( target, furn_str_id( "f_crate_o" ) ); }
+    SECTION( "target changed while choosing" ) { here.furn_set( target, furn_f_crate_o ); }
     SECTION( "operator walked away" ) { who.setpos( here, who.pos_bub() + tripoint( -3, 0, 0 ) ); }
     SECTION( "unowned connection" ) { authorized = false; }
     fixture.run( who, wire, authorized );
@@ -12153,13 +12506,13 @@ TEST_CASE( "grab_vehicle_choice_rejects_replacement_at_the_same_tile",
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto target = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
     const auto create = [&]() {
-        vehicle *veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+        vehicle *veh = here.add_vehicle( vehicle_prototype_none, target, 0_degrees, 0,
                                          veh_spawn_status::UNDAMAGED );
         REQUIRE( veh );
         veh->set_owner( who.get_faction_id() );
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
         veh->refresh();
         here.add_vehicle_to_cache( veh );
         return veh;
@@ -12192,20 +12545,20 @@ TEST_CASE( "native_furniture_drag_uses_operator_strength_and_moves_container_con
     host.grab( object_type::VEHICLE, tripoint_rel_ms::north );
     const int host_moves = host.get_moves();
     who.set_str_base( 50 );
-    const auto target = who.pos_bub() + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_crate_o" ) );
-    here.add_item_or_charges( target, item( itype_id( "test_rock" ) ) );
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    here.furn_set( target, furn_f_crate_o );
+    here.add_item_or_charges( target, item( itype_test_rock ) );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     REQUIRE( g->can_move_furniture( who, who.pos_bub(), tripoint_rel_ms::west ) );
     const int cost = g->grabbed_furn_move_time( who, tripoint_rel_ms::west );
     host.set_str_base( 50 );
     CHECK( g->grabbed_furn_move_time( who, tripoint_rel_ms::west ) == cost );
     REQUIRE_FALSE( g->grabbed_furn_move( who, tripoint_rel_ms::west ) );
-    CHECK( here.furn( who.pos_bub() ) == furn_str_id( "f_crate_o" ) );
+    CHECK( here.furn( who.pos_bub() ) == furn_f_crate_o );
     CHECK_FALSE( here.has_furn( target ) );
     CHECK( here.i_at( target ).empty() );
     REQUIRE( here.i_at( who.pos_bub() ).size() == 1 );
-    CHECK( here.i_at( who.pos_bub() ).begin()->typeId() == itype_id( "test_rock" ) );
+    CHECK( here.i_at( who.pos_bub() ).begin()->typeId() == itype_test_rock );
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
     CHECK( host.get_moves() == host_moves );
     CHECK( host.grab_point == tripoint_rel_ms::north );
@@ -12218,8 +12571,8 @@ TEST_CASE( "furniture_drag_cannot_push_into_another_player",
     reload_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    const auto target = who.pos_bub() + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    here.furn_set( target, furn_f_chair );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     get_avatar().setpos( here, target + tripoint::east );
     CHECK_FALSE( g->can_move_furniture( who, target + tripoint::east, tripoint_rel_ms::east ) );
@@ -12232,9 +12585,9 @@ TEST_CASE( "hauling_selection_splits_only_on_authority_and_rejects_stale_or_dupl
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     item_location load = here.add_item_or_charges_ret_loc( position,
-                         item( itype_id( "nail" ), calendar::turn, 100 ) );
+                         item( itype_nail, calendar::turn, 100 ) );
     hauling_selection choice;
     choice.action = "select";
     choice.position = who.pos_abs();
@@ -12283,7 +12636,7 @@ TEST_CASE( "hauling_preferences_and_turn_projection_do_not_toggle_native_gamepla
     get_avatar().stop_hauling();
     get_avatar().setpos( here, who.pos_bub() );
     const item_location load = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                               item( itype_id( "test_rock" ) ) );
+                               item( itype_test_rock ) );
     hauling_selection choice;
     choice.position = who.pos_abs();
     choice.action = "all";
@@ -12293,13 +12646,13 @@ TEST_CASE( "hauling_preferences_and_turn_projection_do_not_toggle_native_gamepla
     choice.filter = "rock";
     REQUIRE( execute_hauling( who, here, choice ) );
     const item_location extra = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                                item( itype_id( "nail" ), calendar::turn, 100 ) );
+                                item( itype_nail, calendar::turn, 100 ) );
     std::ostringstream stream;
     JsonOut out( stream );
     who.store_turn_state( out );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     get_avatar().load_turn_state( json_loader::from_string( stream.str() ).get_object() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( get_avatar().is_hauling() );
     CHECK( get_avatar().is_autohauling() );
     CHECK( get_avatar().hauling_filter == "rock" );
@@ -12322,15 +12675,15 @@ TEST_CASE( "native_vehicle_drag_bills_and_moves_the_actual_operator_object",
     host.set_str_base( 1 );
     who.set_str_base( 50 );
     const int host_moves = host.get_moves();
-    const auto position = who.pos_bub() + tripoint::east;
-    vehicle *target = here.add_vehicle( vproto_id( "none" ), position, 0_degrees, 0,
+    const tripoint_bub_ms position = who.pos_bub() + tripoint::east;
+    vehicle *target = here.add_vehicle( vehicle_prototype_none, position, 0_degrees, 0,
                                         veh_spawn_status::UNDAMAGED );
     REQUIRE( target );
     target->set_owner( who.get_faction_id() );
-    REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
     target->refresh();
     here.add_vehicle_to_cache( target );
-    const auto identity = target->uid().get_value();
+    const int64_t identity = target->uid().get_value();
     const auto choice = query_grab( who, here, position );
     REQUIRE( choice );
     REQUIRE( execute_grab( who, here, *choice ) );
@@ -12354,13 +12707,13 @@ TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     who.set_str_base( 50 );
-    const auto target = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
     const auto create = [&]() {
-        vehicle *veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+        vehicle *veh = here.add_vehicle( vehicle_prototype_none, target, 0_degrees, 0,
                                          veh_spawn_status::UNDAMAGED );
         REQUIRE( veh );
         veh->set_owner( who.get_faction_id() );
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
         veh->refresh();
         here.add_vehicle_to_cache( veh );
         return veh;
@@ -12368,7 +12721,7 @@ TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
     vehicle *veh = create();
     who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
     REQUIRE( who.validate_grab( here ) );
-    const auto generation = who.grab_generation();
+    const uint64_t generation = who.grab_generation();
     const int held_part = who.grabbed_vehicle_part( here );
     REQUIRE( held_part >= 0 );
     std::ostringstream stream;
@@ -12393,9 +12746,9 @@ TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
     restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
     CHECK( restored.grab_generation() == generation );
     CHECK( restored.validate_grab( here ) == unchanged );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     who.load_turn_state( json_loader::from_string( stream.str() ).get_object() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( who.grab_generation() == generation );
     CHECK( who.validate_grab( here ) == unchanged );
     const int moves = who.get_moves();
@@ -12408,7 +12761,7 @@ TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
         CHECK( veh->pos_bub( here ) == target );
         CHECK( who.get_grab_type() == object_type::NONE );
         CHECK( who.get_moves() == moves );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
     }
 }
 
@@ -12427,7 +12780,7 @@ TEST_CASE( "moving_shared_furniture_invalidates_other_players_old_hold",
     second.setpos( here, target + tripoint::north );
     first.set_str_base( 50 );
     second.set_str_base( 50 );
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    here.furn_set( target, furn_f_chair );
     first.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     second.grab( object_type::FURNITURE, tripoint_rel_ms::south );
     first.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false,
@@ -12438,21 +12791,21 @@ TEST_CASE( "moving_shared_furniture_invalidates_other_players_old_hold",
     REQUIRE( second.activity );
     save_reload_activity( second );
     first.activity.actor->finish( first.activity, first );
-    REQUIRE( here.furn( target + tripoint::east ) == furn_str_id( "f_chair" ) );
+    REQUIRE( here.furn( target + tripoint::east ) == furn_f_chair );
     REQUIRE( first.pos_bub() == target );
     REQUIRE( first.validate_grab( here ) );
     // Another chair arriving at the original cell must not revive the old job.
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    here.furn_set( target, furn_f_chair );
     CHECK_FALSE( second.validate_grab( here ) );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     second.activity.actor->finish( second.activity, second );
     CHECK_FALSE( second.activity );
     CHECK( second.get_grab_type() == object_type::NONE );
     CHECK( second.pos_bub() == target + tripoint::north );
-    CHECK( here.furn( target ) == furn_str_id( "f_chair" ) );
+    CHECK( here.furn( target ) == furn_f_chair );
     CHECK_FALSE( here.has_furn( target + tripoint::south ) );
     CHECK( first.validate_grab( here ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "saved_furniture_activity_does_not_take_over_a_new_grab",
@@ -12462,25 +12815,25 @@ TEST_CASE( "saved_furniture_activity_does_not_take_over_a_new_grab",
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto origin = who.pos_bub();
-    const auto target = origin + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms target = origin + tripoint::east;
+    here.furn_set( target, furn_f_chair );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false ) );
     save_reload_activity( who );
     player_activity stale = who.activity;
     who.cancel_activity();
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
-    const auto generation = who.grab_generation();
+    const uint64_t generation = who.grab_generation();
     who.activity = std::move( stale );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     who.activity.actor->finish( who.activity, who );
     CHECK_FALSE( who.activity );
     CHECK( who.pos_bub() == origin );
     CHECK( who.grab_generation() == generation );
     CHECK( who.validate_grab( here ) );
-    CHECK( here.furn( target ) == furn_str_id( "f_chair" ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( here.furn( target ) == furn_f_chair );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "shared_native_walk_moves_and_bills_only_its_operator",
@@ -12494,11 +12847,11 @@ TEST_CASE( "shared_native_walk_moves_and_bills_only_its_operator",
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     host.grab( object_type::NONE );
     who.grab( object_type::NONE );
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const int host_moves = host.get_moves();
     const int host_stamina = host.get_stamina();
     who.set_moves( 1000 );
@@ -12523,31 +12876,31 @@ TEST_CASE( "owned_furniture_finish_preserves_the_next_hauling_activity",
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     get_avatar().grab( object_type::NONE );
     who.set_str_base( 50 );
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
     here.ter_set( destination + tripoint::east, ter_id( "t_floor" ) );
-    here.furn_set( destination, furn_str_id( "f_chair" ) );
-    const auto load = here.add_item_or_charges_ret_loc( origin, item( itype_id( "test_rock" ) ) );
+    here.furn_set( destination, furn_f_chair );
+    const item_location load = here.add_item_or_charges_ret_loc( origin, item( itype_test_rock ) );
     who.start_hauling( { load } );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     who.activity.set_execution( activity_execution::authoritative );
     const walk_move_choices choices;
     REQUIRE( g->walk_move( who, destination, false, false, &choices ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) );
+    REQUIRE( who.activity.id() == ACT_FURNITURE_MOVE );
     CHECK( who.pos_bub() == origin );
     save_reload_activity( who );
     who.activity.actor->finish( who.activity, who );
     CHECK( who.pos_bub() == destination );
-    CHECK( here.furn( destination + tripoint::east ) == furn_str_id( "f_chair" ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_MOVE_ITEMS" ) );
+    CHECK( here.furn( destination + tripoint::east ) == furn_f_chair );
+    REQUIRE( who.activity.id() == ACT_MOVE_ITEMS );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     who.set_moves( 100000 );
     who.activity.actor->do_turn( who.activity, who );
     CHECK( here.i_at( origin ).empty() );
     REQUIRE( here.i_at( destination ).size() == 1 );
-    CHECK( here.i_at( destination ).begin()->typeId() == itype_id( "test_rock" ) );
+    CHECK( here.i_at( destination ).begin()->typeId() == itype_test_rock );
     CHECK_FALSE( get_avatar().activity );
     CHECK( get_avatar().pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
 }
@@ -12562,9 +12915,9 @@ TEST_CASE( "furniture_activity_rejects_reassignment_and_replaced_target_after_re
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     host.grab( object_type::VEHICLE, tripoint_rel_ms::north );
-    const auto origin = who.pos_bub();
-    const auto target = origin + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms target = origin + tripoint::east;
+    here.furn_set( target, furn_f_chair );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false ) );
     save_reload_activity( who );
@@ -12576,14 +12929,14 @@ TEST_CASE( "furniture_activity_rejects_reassignment_and_replaced_target_after_re
         other.activity.actor->finish( other.activity, other );
         CHECK_FALSE( other.activity );
         CHECK( other.pos_bub() == origin );
-        CHECK( here.furn( target ) == furn_str_id( "f_chair" ) );
+        CHECK( here.furn( target ) == furn_f_chair );
     }
     SECTION( "the furniture was replaced" ) {
-        here.furn_set( target, furn_str_id( "f_crate_o" ) );
+        here.furn_set( target, furn_f_crate_o );
         who.activity.actor->finish( who.activity, who );
         CHECK_FALSE( who.activity );
         CHECK( who.pos_bub() == origin );
-        CHECK( here.furn( target ) == furn_str_id( "f_crate_o" ) );
+        CHECK( here.furn( target ) == furn_f_crate_o );
     }
     SECTION( "cancel belongs to the operator" ) {
         who.cancel_activity();
@@ -12601,18 +12954,18 @@ TEST_CASE( "vehicle_loaded_furniture_uses_the_same_saved_activity_and_operator",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_bub();
-    const auto target = origin + tripoint::east;
-    const auto destination = target + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms target = origin + tripoint::east;
+    const tripoint_bub_ms destination = target + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( target, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, target, 0_degrees, 0,
                                      veh_spawn_status::UNDAMAGED );
     REQUIRE( veh );
     veh->set_owner( who.get_faction_id() );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-    const int part = veh->install_part( here, point_rel_ms::zero, vpart_id( "trunk" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int part = veh->install_part( here, point_rel_ms::zero, vpart_trunk );
     REQUIRE( part >= 0 );
     item base = veh->part( part ).get_base();
     base.set_var( "tied_down_furniture", "f_chair" );
@@ -12627,7 +12980,7 @@ TEST_CASE( "vehicle_loaded_furniture_uses_the_same_saved_activity_and_operator",
     save_reload_activity( who );
     who.activity.actor->finish( who.activity, who );
     CHECK( who.pos_bub() == target );
-    CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
+    CHECK( here.furn( destination ) == furn_f_chair );
     CHECK_FALSE( veh->part( part ).get_base().has_var( "tied_down_furniture" ) );
     CHECK( who.get_grab_type() == object_type::FURNITURE );
     CHECK( who.validate_grab( here ) );
@@ -12643,22 +12996,22 @@ TEST_CASE( "furniture_hold_follows_loading_and_unloading_across_consecutive_step
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     who.set_str_base( 50 );
-    const auto origin = who.pos_bub();
-    const auto target = origin + tripoint::east;
-    const auto deck = target + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms target = origin + tripoint::east;
+    const tripoint_bub_ms deck = target + tripoint::east;
     for( int x = 0; x < 4; ++x ) {
         here.ter_set( origin + tripoint( x, 0, 0 ), ter_id( "t_floor" ) );
     }
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), deck, 0_degrees, 0,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, deck, 0_degrees, 0,
                                      veh_spawn_status::UNDAMAGED );
     REQUIRE( veh );
     veh->set_owner( who.get_faction_id() );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-    const int trunk = veh->install_part( here, point_rel_ms::zero, vpart_id( "trunk" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int trunk = veh->install_part( here, point_rel_ms::zero, vpart_trunk );
     REQUIRE( trunk >= 0 );
     veh->refresh();
     here.add_vehicle_to_cache( veh );
-    here.furn_set( target, furn_str_id( "f_chair" ) );
+    here.furn_set( target, furn_f_chair );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false,
                          walk_move_choices{} ) );
@@ -12676,7 +13029,7 @@ TEST_CASE( "furniture_hold_follows_loading_and_unloading_across_consecutive_step
     CHECK( who.pos_bub() == deck );
     CHECK( who.get_grab_type() == object_type::FURNITURE );
     CHECK( who.validate_grab( here ) );
-    CHECK( here.furn( deck + tripoint::east ) == furn_str_id( "f_chair" ) );
+    CHECK( here.furn( deck + tripoint::east ) == furn_f_chair );
     CHECK_FALSE( veh->part( trunk ).get_base().has_var( "tied_down_furniture" ) );
 }
 
@@ -12689,9 +13042,9 @@ TEST_CASE( "walking_hazard_queries_and_consent_belong_to_the_operator",
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    host.add_effect( efftype_id( "blind" ), 1_hours );
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::east;
+    host.add_effect( effect_blind, 1_hours );
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::east;
     here.add_field( destination, field_type_id( "fd_fire" ), 3 );
     REQUIRE( host.is_blind() );
     CHECK( g->get_dangerous_tile( host, destination ).empty() );
@@ -12729,8 +13082,8 @@ TEST_CASE( "shared_walking_hooks_bind_the_operator_and_revalidate_hook_mutations
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
     const bool replace_destination = GENERATE( false, true );
@@ -12739,7 +13092,7 @@ TEST_CASE( "shared_walking_hooks_bind_the_operator_and_revalidate_hook_mutations
             here.ter_set( destination, ter_id( "t_wall" ) );
         }
     } );
-    const auto registered = lua.safe_script( R"lua(
+    const sol::protected_function_result registered = lua.safe_script( R"lua(
 ccb.runtime.handler("move_player", function(context)
     local state = ccb.state.character
     state.set("player_moves", state.get("player_moves", 0) + 1)
@@ -12758,7 +13111,7 @@ ccb.runtime.hook("on_character_try_move", "move_character")
     const walk_move_choices choices;
     CHECK( g->walk_move( who, destination, false, false, &choices ) == !replace_destination );
     CHECK( who.pos_bub() == ( replace_destination ? origin : destination ) );
-    const auto &values = who.lua_character_state.for_mod( mod );
+    const cata::lua_platform::script_persistent_state &values = who.lua_character_state.for_mod( mod );
     REQUIRE( values.count( "player_moves" ) == 1 );
     REQUIRE( values.count( "character_moves" ) == 1 );
     CHECK( std::get<int64_t>( values.at( "player_moves" ) ) == 1 );
@@ -12777,11 +13130,11 @@ TEST_CASE( "walking_intents_validate_authority_origin_and_unit_direction_before_
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_abs();
-    const auto destination = who.pos_bub() + tripoint::east;
+    const tripoint_abs_ms origin = who.pos_abs();
+    const tripoint_bub_ms destination = who.pos_bub() + tripoint::east;
     here.ter_set( who.pos_bub(), ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     tripoint_abs_ms submitted_origin = origin;
     tripoint_rel_ms direction = tripoint_rel_ms::east;
     bool authorized = true;
@@ -12814,7 +13167,7 @@ TEST_CASE( "walking_intents_validate_authority_origin_and_unit_direction_before_
     if( !accepted ) {
         CHECK( who.get_stamina() == stamina );
     }
-    const auto settled_position = who.pos_abs();
+    const tripoint_abs_ms settled_position = who.pos_abs();
     const int settled_moves = who.get_moves();
     const int settled_stamina = who.get_stamina();
     fixture.run( who, wire, authorized );
@@ -12835,9 +13188,9 @@ TEST_CASE( "walking_authority_derives_ramp_height_from_terrain",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_bub();
-    const auto lower = origin + tripoint::east;
-    const auto upper = lower + tripoint( 0, 0, 1 );
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms lower = origin + tripoint::east;
+    const tripoint_bub_ms upper = lower + tripoint::above;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( lower, ter_id( "t_ramp_up_high" ) );
     here.ter_set( upper, ter_id( "t_floor" ) );
@@ -12866,13 +13219,13 @@ TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_pla
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_bub();
-    const auto chair = origin + tripoint::east;
-    const auto destination = chair + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms chair = origin + tripoint::east;
+    const tripoint_bub_ms destination = chair + tripoint::east;
     for( const auto &p : { origin, chair, destination } ) {
         here.ter_set( p, ter_id( "t_floor" ) );
     }
-    here.furn_set( chair, furn_str_id( "f_chair" ) );
+    here.furn_set( chair, furn_f_chair );
     who.set_str_base( 50 );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     walk_move_choices choices;
@@ -12885,13 +13238,13 @@ TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_pla
         out.member( "mode", "walk" );
         out.member( "choices", choices );
     } ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) );
+    REQUIRE( who.activity.id() == ACT_FURNITURE_MOVE );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     save_reload_activity( who );
     who.set_moves( 100000 );
     fixture.run( who, fixture.request( who, "step" ) );
     CHECK( who.pos_bub() == chair );
-    CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
+    CHECK( here.furn( destination ) == furn_f_chair );
     CHECK_FALSE( get_avatar().activity );
     CHECK( get_avatar().pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
 }
@@ -12905,11 +13258,11 @@ TEST_CASE( "remote_swimming_requires_consent_and_changes_only_the_swimmer",
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_water_dp" ) );
-    who.add_effect( efftype_id( "onfire" ), 1_minutes, bodypart_id( "torso" ) );
+    who.add_effect( effect_onfire, 1_minutes, bodypart_id( "torso" ) );
     who.set_moves( 1000 );
     const int host_moves = host.get_moves();
     const int host_stamina = host.get_stamina();
@@ -12917,12 +13270,12 @@ TEST_CASE( "remote_swimming_requires_consent_and_changes_only_the_swimmer",
     choices.destination = here.get_abs( destination );
     avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
     CHECK( who.pos_bub() == origin );
-    CHECK( who.has_effect( efftype_id( "onfire" ) ) );
+    CHECK( who.has_effect( effect_onfire ) );
     CHECK( who.get_moves() == 1000 );
     choices.allow_swimming = true;
     avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
     CHECK( who.pos_bub() == destination );
-    CHECK_FALSE( who.has_effect( efftype_id( "onfire" ) ) );
+    CHECK_FALSE( who.has_effect( effect_onfire ) );
     CHECK( who.get_moves() < 1000 );
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
     CHECK( host.get_moves() == host_moves );
@@ -12937,8 +13290,8 @@ TEST_CASE( "walking_uses_native_injured_leg_and_player_mode_transition_rules",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
     std::string requested_mode = "crouch";
@@ -12981,12 +13334,12 @@ TEST_CASE( "native_vertical_movement_uses_operator_height_without_recentring_hos
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 2 );
-    const auto destination = origin + tripoint::below;
+    const tripoint_bub_ms destination = origin + tripoint::below;
     here.ter_set( origin, ter_id( "t_stairs_down" ) );
     here.ter_set( destination, ter_id( "t_stairs_up" ) );
     who.setpos( here, origin, false );
     who.set_moves( 1000 );
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const int host_moves = host.get_moves();
     const int host_stamina = host.get_stamina();
     vertical_move_choices choices;
@@ -13009,8 +13362,8 @@ TEST_CASE( "stair_search_is_relative_to_operator_not_host",
     const tripoint_bub_ms origin( 60, 60, 1 );
     here.ter_set( origin, ter_id( "t_stairs_down" ) );
     who.setpos( here, origin, false );
-    const auto near_operator = tripoint_bub_ms( 61, 60, 0 );
-    const auto far_operator = tripoint_bub_ms( 70, 60, 0 );
+    const tripoint_bub_ms near_operator = tripoint_bub_ms( 61, 60, 0 );
+    const tripoint_bub_ms far_operator = tripoint_bub_ms( 70, 60, 0 );
     here.ter_set( near_operator, ter_id( "t_stairs_up" ) );
     here.ter_set( far_operator, ter_id( "t_stairs_up" ) );
     get_avatar().setpos( here, tripoint_bub_ms( 71, 60, 0 ) );
@@ -13033,8 +13386,8 @@ TEST_CASE( "vertical_movement_does_not_push_another_player_or_accept_changed_lan
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto origin = who.pos_bub();
-    const auto destination = origin + tripoint::above;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms destination = origin + tripoint::above;
     here.ter_set( origin, ter_id( "t_stairs_up" ) );
     here.ter_set( destination, ter_id( "t_stairs_down" ) );
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
@@ -13048,7 +13401,7 @@ TEST_CASE( "vertical_movement_does_not_push_another_player_or_accept_changed_lan
         choices.landing = here.get_abs( destination + tripoint::east );
     }
     who.set_moves( 1000 );
-    const auto host_position = get_avatar().pos_abs();
+    const tripoint_abs_ms host_position = get_avatar().pos_abs();
     g->vertical_move( who, 1, false, false, &choices );
     CHECK( who.pos_bub() == origin );
     CHECK( who.get_moves() == 1000 );
@@ -13063,12 +13416,12 @@ TEST_CASE( "missing_stairs_consume_only_the_operators_selected_rope",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto destination = origin + tripoint::below;
+    const tripoint_bub_ms destination = origin + tripoint::below;
     here.ter_set( origin, ter_id( "t_stairs_down" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
     who.setpos( here, origin, false );
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const itype_id rope( "rope_30" );
+    const itype_id &rope = itype_rope_30;
     who.i_add( item( rope ) );
     get_avatar().i_add( item( rope ) );
     REQUIRE_FALSE( g->find_stairs( here, 0, origin ) );
@@ -13099,7 +13452,7 @@ TEST_CASE( "climbing_slip_risk_uses_operator_limbs_strength_and_stamina",
     const auto risk = [&]() {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         return g->slip_down_chance( who, game::climb_maneuver::up,
-                                    climbing_aid_id( "default" ), false );
+                                    climbing_aid_default, false );
     };
     who.set_str_base( 4 );
     who.set_dex_base( 4 );
@@ -13126,18 +13479,18 @@ TEST_CASE( "climb_descent_revalidates_and_consumes_the_operators_aid",
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
-    const auto bottom = ledge + tripoint::below;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
+    const tripoint_bub_ms bottom = ledge + tripoint::below;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( bottom, ter_id( "t_floor" ) );
-    here.furn_set( ledge, furn_str_id( "f_null" ) );
-    here.furn_set( bottom, furn_str_id( "f_null" ) );
+    here.furn_set( ledge, furn_f_null );
+    here.furn_set( bottom, furn_f_null );
     who.setpos( here, origin, false );
     who.set_str_base( 40 );
     who.set_dex_base( 40 );
-    const itype_id grapnel( "grapnel" );
-    const climbing_aid_id aid( "item_grapnel" );
+    const itype_id &grapnel = itype_grapnel;
+    const climbing_aid_id &aid = climbing_aid_item_grapnel;
     host.i_add( item( grapnel ) );
     bool accepted = false;
     SECTION( "operator has the selected aid" ) {
@@ -13147,7 +13500,7 @@ TEST_CASE( "climb_descent_revalidates_and_consumes_the_operators_aid",
     SECTION( "only host has the selected aid" ) {}
     SECTION( "deployment would overwrite existing furniture" ) {
         who.i_add( item( grapnel ) );
-        here.furn_set( bottom, furn_str_id( "f_chair" ) );
+        here.furn_set( bottom, furn_f_chair );
     }
     CHECK( g->can_climb_down_using( who, ledge, aid ) == accepted );
     const int host_moves = host.get_moves();
@@ -13155,7 +13508,7 @@ TEST_CASE( "climb_descent_revalidates_and_consumes_the_operators_aid",
     CHECK( who.pos_bub() == ( accepted ? bottom : origin ) );
     if( accepted ) {
         CHECK_FALSE( who.has_amount( grapnel, 1 ) );
-        CHECK( here.furn( bottom ) == furn_str_id( "f_rope_up" ) );
+        CHECK( here.furn( bottom ) == furn_f_rope_up );
     }
     CHECK( host.has_amount( grapnel, 1 ) );
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
@@ -13172,7 +13525,7 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 2 );
-    const auto destination = origin + tripoint::below;
+    const tripoint_bub_ms destination = origin + tripoint::below;
     here.ter_set( origin, ter_id( "t_stairs_down" ) );
     here.ter_set( destination, ter_id( "t_stairs_up" ) );
     who.setpos( here, origin, false );
@@ -13195,10 +13548,10 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     SECTION( "removed stairs cannot be bypassed by a client force flag" ) {
         here.ter_set( origin, ter_id( "t_floor" ) );
     }
-    const auto host_position = host.pos_abs();
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_ms host_position = host.pos_abs();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const int host_moves = host.get_moves();
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_move" );
         out.member( "vertical", choice );
         out.member( "mode", mode );
@@ -13208,7 +13561,7 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     fixture.run( who, wire, authorized );
     CHECK( who.pos_bub() == ( accepted ? destination : origin ) );
     CHECK( who.get_moves() == ( accepted ? 900 : 1000 ) );
-    const auto settled_position = who.pos_abs();
+    const tripoint_abs_ms settled_position = who.pos_abs();
     const int settled_moves = who.get_moves();
     fixture.run( who, wire, authorized );
     CHECK( who.pos_abs() == settled_position );
@@ -13234,13 +13587,13 @@ TEST_CASE( "vertical_client_request_does_not_simulate_movement_or_consume_random
     choice.target = choice.origin;
     choice.direction = -1;
     choice.choices.landing = here.get_abs( origin + tripoint::below );
-    const auto state = rng_get_engine();
+    const std::string state = capture_rng_state();
     const int stamina = who.get_stamina();
     cata_mp::set_client_mode( true );
     REQUIRE( cata_mp::client_vertical_move( choice ) );
     CHECK( who.pos_bub() == origin );
     CHECK( who.get_stamina() == stamina );
-    CHECK( rng_get_engine() == state );
+    CHECK( capture_rng_state() == state );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
 }
 
@@ -13253,15 +13606,15 @@ TEST_CASE( "vehicle_ladder_requests_bind_the_part_and_recompute_the_descent",
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 2 );
-    const auto bottom = origin + tripoint( 0, 0, -2 );
+    const tripoint_bub_ms bottom = origin + tripoint( 0, 0, -2 );
     here.ter_set( origin, ter_id( "t_open_air" ) );
     here.ter_set( origin + tripoint::below, ter_id( "t_open_air" ) );
     here.ter_set( bottom, ter_id( "t_floor" ) );
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), origin, 0_degrees, 0,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, origin, 0_degrees, 0,
                                      veh_spawn_status::UNDAMAGED );
     REQUIRE( veh );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-    const int part = veh->install_part( here, point_rel_ms::zero, vpart_id( "ladder_3" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int part = veh->install_part( here, point_rel_ms::zero, vpart_ladder_3 );
     REQUIRE( part >= 0 );
     veh->refresh();
     here.add_vehicle_to_cache( veh );
@@ -13282,7 +13635,7 @@ TEST_CASE( "vehicle_ladder_requests_bind_the_part_and_recompute_the_descent",
         veh->remove_part( veh->part( part ) );
         REQUIRE( veh->part( part ).removed );
         veh->part_removal_cleanup( here );
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "ladder_3" ) ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_ladder_3 ) >= 0 );
         veh->refresh();
         here.add_vehicle_to_cache( veh );
     }
@@ -13290,7 +13643,7 @@ TEST_CASE( "vehicle_ladder_requests_bind_the_part_and_recompute_the_descent",
         here.ter_set( origin + tripoint::below, ter_id( "t_wall" ) );
     }
     const int host_moves = get_avatar().get_moves();
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_move" );
         out.member( "vertical", choice );
@@ -13316,8 +13669,8 @@ TEST_CASE( "climb_preview_is_read_only_and_request_rechecks_the_selected_owners_
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
-    const auto bottom = ledge + tripoint::below;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
+    const tripoint_bub_ms bottom = ledge + tripoint::below;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( bottom, ter_id( "t_floor" ) );
@@ -13325,7 +13678,7 @@ TEST_CASE( "climb_preview_is_read_only_and_request_rechecks_the_selected_owners_
     who.set_str_base( 40 );
     who.set_dex_base( 40 );
     who.set_moves( 1000 );
-    const itype_id grapnel( "grapnel" );
+    const itype_id &grapnel = itype_grapnel;
     host.i_add( item( grapnel ) );
     who.i_add( item( grapnel ) );
     who.set_moves( 1000 );
@@ -13334,10 +13687,10 @@ TEST_CASE( "climb_preview_is_read_only_and_request_rechecks_the_selected_owners_
     choice.target = here.get_abs( ledge );
     choice.direction = -1;
     choice.action = "climb";
-    choice.aid = climbing_aid_id( "item_grapnel" );
-    const auto before = rng_get_engine();
+    choice.aid = climbing_aid_item_grapnel;
+    const std::string before = capture_rng_state();
     REQUIRE( g->climb_down_prompt( who, ledge, choice.aid ) );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     CHECK( who.pos_bub() == origin );
     CHECK( who.get_moves() == 1000 );
     CHECK( who.has_amount( grapnel, 1 ) );
@@ -13348,7 +13701,7 @@ TEST_CASE( "climb_preview_is_read_only_and_request_rechecks_the_selected_owners_
         who.use_amount( grapnel, 1 );
         accepted = false;
     }
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_move" );
         out.member( "vertical", choice );
         out.member( "mode", "walk" );
@@ -13358,12 +13711,12 @@ TEST_CASE( "climb_preview_is_read_only_and_request_rechecks_the_selected_owners_
     CHECK_FALSE( who.has_amount( grapnel, 1 ) );
     CHECK( host.has_amount( grapnel, 1 ) );
     if( accepted ) {
-        CHECK( here.furn( bottom ) == furn_str_id( "f_rope_up" ) );
+        CHECK( here.furn( bottom ) == furn_f_rope_up );
     } else {
         CHECK_FALSE( here.has_furn( bottom ) );
         CHECK( who.get_moves() == 1000 );
     }
-    const auto settled = who.pos_abs();
+    const tripoint_abs_ms settled = who.pos_abs();
     const int moves = who.get_moves();
     fixture.run( who, wire );
     CHECK( who.pos_abs() == settled );
@@ -13386,16 +13739,16 @@ TEST_CASE( "vertical_preview_uses_authoritative_geometry_without_spending_a_turn
     who.set_moves( 1000 );
     bool authorized = true;
     bool accepted = true;
-    auto submitted_origin = who.pos_abs();
+    tripoint_abs_ms submitted_origin = who.pos_abs();
     SECTION( "native destination differs from the tile directly below" ) {}
     SECTION( "unowned query" ) { authorized = false; accepted = false; }
     SECTION( "moved while query was pending" ) {
         submitted_origin += tripoint_rel_ms::east;
         accepted = false;
     }
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     const int stamina = who.get_stamina();
-    const auto result = fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string result = fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_query" );
         out.member( "origin", submitted_origin );
         out.member( "direction", -1 );
@@ -13408,12 +13761,12 @@ TEST_CASE( "vertical_preview_uses_authoritative_geometry_without_spending_a_turn
     CHECK( who.get_moves() == 1000 );
     CHECK( who.get_stamina() == stamina );
     CHECK_FALSE( who.activity );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     if( accepted ) {
         vertical_move_prompt prompt;
         response.read( "vertical_prompt", prompt, true );
         REQUIRE( prompt.options.size() == 1 );
-        const auto choice = prompt.options.front().selection;
+        const vertical_move_selection choice = prompt.options.front().selection;
         CHECK( prompt.origin == who.pos_abs() );
         CHECK( choice.choices.landing == here.get_abs( destination ) );
         fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
@@ -13438,19 +13791,19 @@ TEST_CASE( "ledge_jump_intents_recheck_the_gap_and_use_only_the_requesting_playe
     host.set_str_base( 1 );
     who.set_str_base( 20 );
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
-    const auto landing = ledge + tripoint::east;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
+    const tripoint_bub_ms landing = ledge + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( landing, ter_id( "t_floor" ) );
     who.setpos( here, origin, false );
     who.set_moves( 1000 );
-    auto prompt = make_ledge_move_prompt( who, here, ledge );
+    vertical_move_prompt prompt = make_ledge_move_prompt( who, here, ledge );
     const auto jump = std::find_if( prompt.options.begin(), prompt.options.end(), []( const auto &entry ) {
         return entry.selection.action == "ledge_jump";
     } );
     REQUIRE( jump != prompt.options.end() );
-    auto choice = jump->selection;
+    vertical_move_selection choice = jump->selection;
     bool accepted = false;
     bool authorized = true;
     SECTION( "native jump" ) { accepted = true; }
@@ -13463,15 +13816,15 @@ TEST_CASE( "ledge_jump_intents_recheck_the_gap_and_use_only_the_requesting_playe
         host.set_str_base( 40 );
     }
     const int host_moves = host.get_moves();
-    const auto map_origin = here.get_abs_sub();
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_move" );
         out.member( "vertical", choice );
         out.member( "mode", "walk" );
     } );
     fixture.run( who, wire, authorized );
     CHECK( who.pos_bub() == ( accepted ? landing : origin ) );
-    const auto settled = who.pos_abs();
+    const tripoint_abs_ms settled = who.pos_abs();
     fixture.run( who, wire, authorized );
     CHECK( who.pos_abs() == settled );
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
@@ -13487,7 +13840,7 @@ TEST_CASE( "ordinary_walking_cannot_replace_a_ledge_choice_with_danger_consent",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( ledge + tripoint::below, ter_id( "t_floor" ) );
@@ -13517,8 +13870,8 @@ TEST_CASE( "ledge_fall_requires_explicit_consent_and_runs_the_operators_native_g
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
-    const auto bottom = ledge + tripoint::below;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
+    const tripoint_bub_ms bottom = ledge + tripoint::below;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( bottom, ter_id( "t_floor" ) );
@@ -13532,8 +13885,8 @@ TEST_CASE( "ledge_fall_requires_explicit_consent_and_runs_the_operators_native_g
     const bool confirmed = GENERATE( false, true );
     choice.choices.allow_one_way = confirmed;
     const int host_moves = host.get_moves();
-    const auto map_origin = here.get_abs_sub();
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_move" );
         out.member( "vertical", choice );
         out.member( "mode", "walk" );
@@ -13563,26 +13916,26 @@ TEST_CASE( "glide_choice_preview_does_not_try_to_escape_restraints",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( ledge + tripoint::below, ter_id( "t_floor" ) );
     who.setpos( here, origin, false );
-    who.set_mutation( trait_id( "WINGS_BIRD" ) );
+    who.set_mutation( trait_WINGS_BIRD );
     REQUIRE( who.can_glide() );
-    who.add_effect( efftype_id( "beartrap" ), 1_hours, bodypart_id( "leg_l" ), true );
-    const auto rng_before = rng_get_engine();
+    who.add_effect( effect_beartrap, 1_hours, bodypart_id( "leg_l" ), true );
+    const std::string rng_before = capture_rng_state();
     const int moves = who.get_moves();
     const int leg_hp = who.get_part_hp_cur( bodypart_id( "leg_l" ) );
     glide_activity_actor unused( who, here.get_abs( ledge ), 6, 5 );
-    CHECK( unused.get_type() == activity_id( "ACT_GLIDE" ) );
-    CHECK_FALSE( who.has_effect( efftype_id( "gliding" ) ) );
-    const auto prompt = make_ledge_move_prompt( who, here, ledge );
+    CHECK( unused.get_type() == ACT_GLIDE );
+    CHECK_FALSE( who.has_effect( effect_gliding ) );
+    const vertical_move_prompt prompt = make_ledge_move_prompt( who, here, ledge );
     CHECK( std::any_of( prompt.options.begin(), prompt.options.end(), []( const auto &entry ) {
         return entry.selection.action == "ledge_glide";
     } ) );
-    CHECK( rng_get_engine() == rng_before );
-    CHECK( who.has_effect( efftype_id( "beartrap" ) ) );
+    CHECK( capture_rng_state() == rng_before );
+    CHECK( who.has_effect( effect_beartrap ) );
     CHECK( who.get_moves() == moves );
     CHECK( who.get_part_hp_cur( bodypart_id( "leg_l" ) ) == leg_hp );
     CHECK( who.pos_bub() == origin );
@@ -13604,7 +13957,7 @@ TEST_CASE( "saved_glide_belongs_to_its_operator_and_cancel_cleans_only_that_flig
         here.ter_set( tripoint_bub_ms( x, 60, 0 ), ter_id( "t_floor" ) );
     }
     who.setpos( here, origin, false );
-    who.set_mutation( trait_id( "WINGS_BIRD" ) );
+    who.set_mutation( trait_WINGS_BIRD );
     REQUIRE( who.can_glide() );
     who.set_moves( 1000 );
     vertical_move_selection choice;
@@ -13618,19 +13971,19 @@ TEST_CASE( "saved_glide_belongs_to_its_operator_and_cancel_cleans_only_that_flig
         out.member( "mode", "walk" );
         out.member( "glide_distance", 100000 ); // Flight physics is derived on the server.
     } ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_GLIDE" ) );
-    REQUIRE( who.has_effect( efftype_id( "gliding" ) ) );
+    REQUIRE( who.activity.id() == ACT_GLIDE );
+    REQUIRE( who.has_effect( effect_gliding ) );
     REQUIRE( who.pos_bub() == origin + tripoint::east );
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const int host_moves = host.get_moves();
     save_reload_activity( who );
     SECTION( "resume one tick then cancel" ) {
         fixture.run( who, fixture.request( who, "step" ) );
         REQUIRE( who.pos_bub() == origin + tripoint( 2, 0, 0 ) );
-        const auto wire = fixture.request( who, "cancel" );
+        const std::string wire = fixture.request( who, "cancel" );
         fixture.run( who, wire );
         CHECK_FALSE( who.activity );
-        CHECK_FALSE( who.has_effect( efftype_id( "gliding" ) ) );
+        CHECK_FALSE( who.has_effect( effect_gliding ) );
         CHECK( who.pos_bub() == origin + tripoint( 2, 0, -1 ) );
         const int settled_moves = who.get_moves();
         fixture.run( who, wire );
@@ -13638,11 +13991,11 @@ TEST_CASE( "saved_glide_belongs_to_its_operator_and_cancel_cleans_only_that_flig
     }
     SECTION( "a copied activity cannot operate another character" ) {
         host.activity = who.activity;
-        host.add_effect( efftype_id( "gliding" ), 1_turns, true );
+        host.add_effect( effect_gliding, 1_turns, true );
         host.activity.actor->do_turn( host.activity, host );
         CHECK_FALSE( host.activity );
-        CHECK( host.has_effect( efftype_id( "gliding" ) ) );
-        CHECK( who.activity.id() == activity_id( "ACT_GLIDE" ) );
+        CHECK( host.has_effect( effect_gliding ) );
+        CHECK( who.activity.id() == ACT_GLIDE );
         CHECK( who.pos_bub() == origin + tripoint::east );
     }
     SECTION( "relocation does not continue the old flight" ) {
@@ -13651,7 +14004,7 @@ TEST_CASE( "saved_glide_belongs_to_its_operator_and_cancel_cleans_only_that_flig
         who.setpos( here, relocated, false );
         fixture.run( who, fixture.request( who, "step" ) );
         CHECK_FALSE( who.activity );
-        CHECK_FALSE( who.has_effect( efftype_id( "gliding" ) ) );
+        CHECK_FALSE( who.has_effect( effect_gliding ) );
         CHECK( who.pos_bub() == relocated );
     }
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
@@ -13667,13 +14020,13 @@ TEST_CASE( "glide_start_callback_preserves_its_replacement_activity_and_removes_
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
-    const auto bottom = ledge + tripoint::below;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
+    const tripoint_bub_ms bottom = ledge + tripoint::below;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( bottom, ter_id( "t_floor" ) );
     who.setpos( here, origin, false );
-    who.set_mutation( trait_id( "WINGS_BIRD" ) );
+    who.set_mutation( trait_WINGS_BIRD );
     REQUIRE( who.can_glide() );
     who.set_moves( 1000 );
     class replace_on_start : public event_subscriber {
@@ -13702,8 +14055,8 @@ TEST_CASE( "glide_start_callback_preserves_its_replacement_activity_and_removes_
         out.member( "mode", "walk" );
     } ) );
     REQUIRE( events.replaced );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
-    CHECK_FALSE( who.has_effect( efftype_id( "gliding" ) ) );
+    CHECK( who.activity.id() == ACT_WAIT );
+    CHECK_FALSE( who.has_effect( effect_gliding ) );
     CHECK( who.pos_bub() == bottom );
 }
 
@@ -13716,11 +14069,11 @@ TEST_CASE( "reaching_deployed_furniture_below_uses_owned_choices_and_rejects_sta
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
-    const auto host_origin = host.pos_abs();
+    const tripoint_abs_ms host_origin = host.pos_abs();
     const int host_moves = host.get_moves();
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto ledge = origin + tripoint::east;
-    const auto below = ledge + tripoint::below;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
+    const tripoint_bub_ms below = ledge + tripoint::below;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( below, ter_id( "t_floor" ) );
@@ -13728,9 +14081,9 @@ TEST_CASE( "reaching_deployed_furniture_below_uses_owned_choices_and_rejects_sta
     const furn_str_id furniture( GENERATE( "f_ladder", "f_aluminum_stepladder", "f_rope_up" ) );
     REQUIRE( here.furn_set( below, furniture ) );
     const itype_id recovered = furniture.obj().deployed_item;
-    const auto rng = rng_get_engine();
-    const auto prompt = make_ledge_move_prompt( who, here, ledge );
-    CHECK( rng_get_engine() == rng );
+    const std::string rng = capture_rng_state();
+    const vertical_move_prompt prompt = make_ledge_move_prompt( who, here, ledge );
+    CHECK( capture_rng_state() == rng );
     const auto reach = std::find_if( prompt.options.begin(), prompt.options.end(), []( const auto &entry ) {
         return entry.selection.action == "ledge_reach";
     } );
@@ -13746,18 +14099,18 @@ TEST_CASE( "reaching_deployed_furniture_below_uses_owned_choices_and_rejects_sta
     SECTION( "no authority" ) { authorized = false; }
     SECTION( "no action grant" ) { who.set_moves( 0 ); }
     SECTION( "operator moved since selection" ) { who.setpos( here, origin + tripoint::west, false ); }
-    SECTION( "furniture replaced" ) { here.furn_set( below, furn_str_id( "f_chair" ) ); }
+    SECTION( "furniture replaced" ) { here.furn_set( below, furn_f_chair ); }
     SECTION( "floor now blocks reach" ) { here.ter_set( ledge, ter_id( "t_floor" ) ); }
     SECTION( "target forged two floors down" ) { choice.target += tripoint::below; }
     SECTION( "arbitrary furniture is not recoverable" ) {
-        here.furn_set( below, furn_str_id( "f_chair" ) );
-        choice.furniture = furn_str_id( "f_chair" );
+        here.furn_set( below, furn_f_chair );
+        choice.furniture = furn_f_chair;
     }
     const auto expected_furniture = here.furn( below ).id();
-    const auto actor_origin = who.pos_abs();
-    const auto map_origin = here.get_abs_sub();
+    const tripoint_abs_ms actor_origin = who.pos_abs();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const int moves = who.get_moves();
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "take_down_furniture" );
         out.member( "furniture", choice );
     } );
@@ -13766,7 +14119,7 @@ TEST_CASE( "reaching_deployed_furniture_below_uses_owned_choices_and_rejects_sta
     CHECK( fixture.reload.changed_tiles.size() == ( accepted ? 1 : 0 ) );
     CHECK( here.furn( below ).id() == ( accepted ? furn_str_id::NULL_ID() : expected_furniture ) );
     const auto count_recovered = [&]() {
-        const auto items = here.i_at( origin );
+        const map_stack items = here.i_at( origin );
         return std::count_if( items.begin(), items.end(), [&]( const item &it ) { return it.typeId() == recovered; } );
     };
     CHECK( count_recovered() == ( accepted ? 1 : 0 ) );
@@ -13784,21 +14137,21 @@ TEST_CASE( "deployed_furniture_drop_callbacks_use_operator_and_cannot_recover_th
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    auto &recipient = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &recipient = bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const tripoint_bub_ms origin( 60, 60, 1 );
-    const auto below = origin + tripoint( 1, 0, -1 );
+    const tripoint_bub_ms below = origin + tripoint( 1, 0, -1 );
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( below + tripoint::above, ter_id( "t_open_air" ) );
     here.ter_set( below, ter_id( "t_floor" ) );
-    here.furn_set( below, furn_str_id( "f_ladder" ) );
+    here.furn_set( below, furn_f_ladder );
     who.setpos( here, origin, false );
-    const deployed_furniture_selection choice{ who.pos_abs(), here.get_abs( below ), furn_str_id( "f_ladder" ) };
+    const deployed_furniture_selection choice{ who.pos_abs(), here.get_abs( below ), furn_f_ladder };
     // Populate the real recipient delta cache, including the lower floor.
     cata_mp::serialize_remote_player_state( recipient, { choice.target } );
-    itype &ladder = *const_cast<itype *>( item::find_type( itype_id( "stepladder" ) ) );
+    itype &ladder = *const_cast<itype *>( item::find_type( itype_stepladder ) );
     const restore_on_out_of_scope restore_drop( ladder.drop_action );
     ladder.drop_action = use_function( "owned_furniture_drop", []( Character *actor, item *,
                                        const tripoint_bub_ms &pos ) -> std::optional<int> {
@@ -13806,17 +14159,17 @@ TEST_CASE( "deployed_furniture_drop_callbacks_use_operator_and_cannot_recover_th
     actor->set_value( "furniture_drop_seen", "1" );
         actor->mod_moves( -7 );
         map &here = get_map();
-        const auto below = pos + tripoint( 1, 0, -1 );
-        const deployed_furniture_selection again{ actor->pos_abs(), here.get_abs( below ), furn_str_id( "f_ladder" ) };
+        const tripoint_bub_ms below = pos + tripoint( 1, 0, -1 );
+        const deployed_furniture_selection again{ actor->pos_abs(), here.get_abs( below ), furn_f_ladder };
         actor->set_value( "furniture_recovered_twice", take_down_deployed_furniture( *actor, here, again ) ? "1" : "0" );
         // A callback's replacement must survive completion of the old action.
-        here.furn_set( below, furn_str_id( "f_aluminum_stepladder" ) );
+        here.furn_set( below, furn_f_aluminum_stepladder );
     }
     return std::nullopt;
                                        } );
     const int host_moves = host.get_moves();
     const int actor_moves = who.get_moves();
-    const auto wire = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string wire = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "take_down_furniture" );
         out.member( "furniture", choice );
     } );
@@ -13825,14 +14178,14 @@ TEST_CASE( "deployed_furniture_drop_callbacks_use_operator_and_cannot_recover_th
     CHECK( who.get_value( "furniture_recovered_twice" ).str() == "0" );
     CHECK( host.get_moves() == host_moves );
     CHECK_FALSE( host.maybe_get_value( "furniture_drop_seen" ) );
-    CHECK( here.furn( below ).id() == furn_str_id( "f_aluminum_stepladder" ) );
-    const auto items = here.i_at( origin );
+    CHECK( here.furn( below ).id() == furn_f_aluminum_stepladder );
+    const map_stack items = here.i_at( origin );
     CHECK( std::count_if( items.begin(), items.end(), []( const item &it ) {
-        return it.typeId() == itype_id( "stepladder" );
+        return it.typeId() == itype_stepladder;
     } ) == 1 );
-    const auto value = json_loader::from_string( cata_mp::serialize_remote_player_state( recipient,
+    const JsonValue value = json_loader::from_string( cata_mp::serialize_remote_player_state( recipient,
                        fixture.reload.changed_tiles ) );
-    const auto message = value.get_object();
+    const JsonObject message = value.get_object();
     message.allow_omitted_members();
     bool received = false;
     for( const JsonObject cell : message.get_array( "tile_changes" ) ) {
@@ -13852,15 +14205,15 @@ TEST_CASE( "client_furniture_selection_does_not_mutate_the_replica_or_gameplay_r
     reload_fixture fixture;
     avatar &who = get_avatar();
     map &here = get_map();
-    const auto target = who.pos_bub( here ) + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_ladder" ) );
-    const deployed_furniture_selection choice{ who.pos_abs(), here.get_abs( target ), furn_str_id( "f_ladder" ) };
-    const auto rng = rng_get_engine();
+    const tripoint_bub_ms target = who.pos_bub( here ) + tripoint::east;
+    here.furn_set( target, furn_f_ladder );
+    const deployed_furniture_selection choice{ who.pos_abs(), here.get_abs( target ), furn_f_ladder };
+    const std::string rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     REQUIRE( cata_mp::client_take_down_furniture( choice ) );
     CHECK( here.furn( target ).id() == choice.furniture );
     CHECK( here.i_at( target ).empty() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
 }
 
@@ -13877,15 +14230,15 @@ TEST_CASE( "peek_viewpoints_belong_to_the_map_and_never_restore_a_stale_characte
     const tripoint_bub_ms second( 64, 60, 0 );
     who.setpos( here, origin, false );
     who.activate_crouch_mode();
-    const auto mode = who.current_movement_mode();
-    const auto rng = rng_get_engine();
+    const move_mode_id mode = who.current_movement_mode();
+    const std::string rng = capture_rng_state();
     const int moves = who.get_moves();
-    const auto map_origin = here.get_abs_sub();
-    auto expected_position = origin;
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
+    tripoint_bub_ms expected_position = origin;
     struct isolated_map : map {
         isolated_map() : map( 1, true ) {}
     } separate;
-    const auto separate_position = separate.observer_position( who );
+    const tripoint_bub_ms separate_position = separate.observer_position( who );
     {
         const scoped_map_viewpoint outer( here, who, here.get_abs( first ), true );
         CHECK( who.pos_bub( here ) == origin );
@@ -13918,7 +14271,7 @@ TEST_CASE( "peek_viewpoints_belong_to_the_map_and_never_restore_a_stale_characte
     CHECK_FALSE( here.observer_standing( who ) );
     CHECK( who.current_movement_mode() == mode );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( here.get_abs_sub() == map_origin );
 }
 
@@ -13935,7 +14288,7 @@ TEST_CASE( "peek_visibility_and_target_range_follow_the_viewpoint_without_moving
     for( int y = 0; y < MAPSIZE_Y; ++y ) {
         here.ter_set( tripoint_bub_ms( 61, y, 0 ), ter_id( "t_wall" ) );
     }
-    monster *critter = g->place_critter_at( mtype_id( "mon_zombie" ), target );
+    monster *critter = g->place_critter_at( mon_zombie, target );
     REQUIRE( critter );
     here.build_map_cache( 0 );
     CHECK( here.get_cache_ref( 0 ).seen_cache[target.x()][target.y()] == 0.0f );
@@ -13962,22 +14315,22 @@ TEST_CASE( "ledge_peek_derives_a_deep_viewpoint_without_moving_or_paying_during_
     avatar &who = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 2 );
-    const auto ledge = origin + tripoint::east;
+    const tripoint_bub_ms ledge = origin + tripoint::east;
     const tripoint_bub_ms bottom( 61, 60, -3 );
     here.ter_set( origin, ter_id( "t_floor" ) );
     for( int z = bottom.z() + 1; z <= ledge.z(); ++z ) {
         here.ter_set( tripoint_bub_ms( ledge.xy(), z ), ter_id( "t_open_air" ) );
     }
     here.ter_set( bottom, ter_id( "t_floor" ) );
-    const auto target = bottom + tripoint::east;
+    const tripoint_bub_ms target = bottom + tripoint::east;
     here.ter_set( target, ter_id( "t_floor" ) );
     who.setpos( here, origin, false );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int moves = who.get_moves();
     const auto viewpoint = ledge_peek_position( who, here, here.get_abs( ledge ) );
     REQUIRE( viewpoint == here.get_abs( bottom ) );
-    CHECK( rng_get_engine() == rng );
-    monster *critter = g->place_critter_at( mtype_id( "mon_zombie" ), target );
+    CHECK( capture_rng_state() == rng );
+    monster *critter = g->place_critter_at( mon_zombie, target );
     REQUIRE( critter );
     {
         const scoped_map_viewpoint view( here, who, *viewpoint );
@@ -13987,10 +14340,10 @@ TEST_CASE( "ledge_peek_derives_a_deep_viewpoint_without_moving_or_paying_during_
     }
     CHECK( who.get_moves() == moves );
     // Creature creation uses RNG; the pure ledge query is checked separately below.
-    const auto rng_after_spawn = rng_get_engine();
+    const std::string rng_after_spawn = capture_rng_state();
     here.ter_set( ledge, ter_id( "t_floor" ) );
     CHECK_FALSE( ledge_peek_position( who, here, here.get_abs( ledge ) ) );
-    CHECK( rng_get_engine() == rng_after_spawn );
+    CHECK( capture_rng_state() == rng_after_spawn );
 }
 
 TEST_CASE( "owned_ledge_peek_pays_once_and_synchronizes_the_selected_floor",
@@ -13998,22 +14351,22 @@ TEST_CASE( "owned_ledge_peek_pays_once_and_synchronizes_the_selected_floor",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    auto &peer = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &peer = bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     const tripoint_bub_ms ledge( 61, 60, 0 );
     const tripoint_bub_ms bottom( 61, 60, -2 );
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( ledge + tripoint::below, ter_id( "t_open_air" ) );
     here.ter_set( bottom, ter_id( "t_floor" ) );
-    const auto target = bottom + tripoint::east;
+    const tripoint_bub_ms target = bottom + tripoint::east;
     here.ter_set( target, ter_id( "t_floor" ) );
-    here.add_item_or_charges( target, item( itype_id( "rock" ) ) );
-    monster *critter = g->place_critter_at( mtype_id( "mon_zombie" ), target );
+    here.add_item_or_charges( target, item( itype_rock ) );
+    monster *critter = g->place_critter_at( mon_zombie, target );
     REQUIRE( critter );
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     const int moves = who.get_moves();
     const int host_moves = get_avatar().get_moves();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const auto request = [&]( JsonOut &out ) {
         out.member( "kind", "ledge_peek" );
         out.member( "origin", origin );
@@ -14022,9 +14375,9 @@ TEST_CASE( "owned_ledge_peek_pays_once_and_synchronizes_the_selected_floor",
     fixture.run( who, fixture.request( who, "start", request ), false );
     CHECK_FALSE( fixture.reload.peek );
     CHECK( who.get_moves() == moves );
-    const auto wire = fixture.request( who, "start", request );
-    const auto result = json_loader::from_string( fixture.run( who, wire ) );
-    const auto message = result.get_object();
+    const std::string wire = fixture.request( who, "start", request );
+    const JsonValue result = json_loader::from_string( fixture.run( who, wire ) );
+    const JsonObject message = result.get_object();
     message.allow_omitted_members();
     REQUIRE( message.has_object( "peek" ) );
     REQUIRE( fixture.reload.peek );
@@ -14036,14 +14389,14 @@ TEST_CASE( "owned_ledge_peek_pays_once_and_synchronizes_the_selected_floor",
     CHECK( who.get_moves() == moves - 2 * who.get_speed() );
     CHECK( who.pos_abs() == origin );
     CHECK( get_avatar().get_moves() == host_moves );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 
     // A remote view must receive live entities and items from that floor, not
     // the replica's unrelated mapgen population. Restrict the fixture to one floor.
     peer.inventory_activity.peek = fixture.reload.peek;
     peer.inventory_activity.peek->z_range = 0;
-    const auto snapshot = json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
-    const auto state = snapshot.get_object();
+    const JsonValue snapshot = json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
+    const JsonObject state = snapshot.get_object();
     state.allow_omitted_members();
     REQUIRE( state.has_object( "peek" ) );
     bool received_monster = false;
@@ -14068,8 +14421,8 @@ TEST_CASE( "owned_ledge_peek_pays_once_and_synchronizes_the_selected_floor",
     CHECK( received_item );
     // Revalidate the path on every state delivery, not only at the initial request.
     here.ter_set( ledge, ter_id( "t_floor" ) );
-    const auto closed = json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
-    const auto closed_state = closed.get_object();
+    const JsonValue closed = json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
+    const JsonObject closed_state = closed.get_object();
     closed_state.allow_omitted_members();
     CHECK_FALSE( closed_state.has_object( "peek" ) );
     CHECK_FALSE( peer.inventory_activity.peek );
@@ -14080,16 +14433,16 @@ TEST_CASE( "client_ledge_peek_waits_for_the_authoritative_scene_and_cancel_relea
 {
     reload_fixture fixture;
     avatar &who = get_avatar();
-    const auto origin = who.pos_abs();
-    const auto ledge = origin + tripoint::east;
-    const auto rng = rng_get_engine();
+    const tripoint_abs_ms origin = who.pos_abs();
+    const tripoint_abs_ms ledge = origin + tripoint::east;
+    const std::string rng = capture_rng_state();
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
     REQUIRE( cata_mp::client_peek_over_ledge( origin, ledge ) );
     CHECK( who.pos_abs() == origin );
-    CHECK( rng_get_engine() == rng );
-    auto &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    CHECK( capture_rng_state() == rng );
+    cata_mp::world_session &session = g->multiplayer_session();
+    cata_mp::inventory_activity_client_state &view = session.client_inventory_activity;
     view.pending_request = 0;
     view.finished = true;
     view.peek = cata_mp::peek_authorization{ who.getID(), 7, origin, ledge, ledge, 0 };
@@ -14107,7 +14460,7 @@ TEST_CASE( "client_ledge_peek_waits_for_the_authoritative_scene_and_cancel_relea
     CHECK_FALSE( view.active );
     CHECK_FALSE( view.peek );
     CHECK( who.pos_abs() == origin );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "stair_peek_query_and_payment_never_execute_vertical_movement",
@@ -14125,22 +14478,22 @@ TEST_CASE( "stair_peek_query_and_payment_never_execute_vertical_movement",
     who.set_moves( 1000 );
     // Native movement would try to get up before proceeding. A peek must not
     // run move_effects, move the actor/mount, or fire movement/landing callbacks.
-    who.add_effect( efftype_id( "downed" ), 1_hours );
-    const auto rng = rng_get_engine();
+    who.add_effect( effect_downed, 1_hours );
+    const std::string rng = capture_rng_state();
     const int stamina = who.get_stamina();
-    const auto result = json_loader::from_string( fixture.run( who,
+    const JsonValue result = json_loader::from_string( fixture.run( who,
     fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "vertical_query" );
         out.member( "origin", who.pos_abs() );
         out.member( "direction", -1 );
         out.member( "peeking", true );
     } ) ) );
-    const auto response = result.get_object();
+    const JsonObject response = result.get_object();
     response.allow_omitted_members();
     vertical_move_prompt prompt;
     response.read( "vertical_prompt", prompt, true );
     REQUIRE( prompt.options.size() == 1 );
-    const auto choice = prompt.options.front().selection;
+    const vertical_move_selection choice = prompt.options.front().selection;
     CHECK( choice.action == "peek" );
     CHECK( choice.target == here.get_abs( destination ) );
     CHECK( who.get_moves() == 1000 );
@@ -14154,9 +14507,9 @@ TEST_CASE( "stair_peek_query_and_payment_never_execute_vertical_movement",
     CHECK( fixture.reload.peek->valid_for( who, here ) );
     CHECK( who.get_moves() == 1000 - 2 * who.get_speed() );
     CHECK( who.pos_bub( here ) == origin );
-    CHECK( who.has_effect( efftype_id( "downed" ) ) );
+    CHECK( who.has_effect( effect_downed ) );
     CHECK( who.get_stamina() == stamina );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     here.ter_set( origin, ter_id( "t_floor" ) );
     CHECK_FALSE( fixture.reload.peek->valid_for( who, here ) );
 }
@@ -14167,15 +14520,15 @@ TEST_CASE( "ordinary_peek_rechecks_adjacent_geometry_and_preserves_crouching",
     reload_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    who.set_movement_mode( move_mode_id( "crouch" ) );
-    const auto origin = who.pos_abs();
-    const auto rng = rng_get_engine();
+    who.set_movement_mode( move_mode_crouch );
+    const tripoint_abs_ms origin = who.pos_abs();
+    const std::string rng = capture_rng_state();
     const auto peek = cata_mp::authorize_peek( who, here, origin, origin, 0, 1 );
     REQUIRE( peek );
     CHECK( peek->standing );
     CHECK( who.is_crouching() );
     CHECK( who.pos_abs() == origin );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     who.set_moves( 1000 );
     const auto distant_target = origin + tripoint_rel_ms( 3, 0, 0 );
     CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, distant_target, 0, 2 ) );
@@ -14183,8 +14536,8 @@ TEST_CASE( "ordinary_peek_rechecks_adjacent_geometry_and_preserves_crouching",
     here.ter_set( here.get_bub( adjacent ), ter_id( "t_wall" ) );
     CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, adjacent, 0, 3 ) );
     CHECK( who.get_moves() == 1000 );
-    CHECK( rng_get_engine() == rng );
-    who.set_movement_mode( move_mode_id( "walk" ) );
+    CHECK( capture_rng_state() == rng );
+    who.set_movement_mode( move_mode_walk );
     CHECK_FALSE( peek->valid_for( who, here ) );
 }
 
@@ -14200,7 +14553,7 @@ TEST_CASE( "peek_travel_is_deferred_and_starts_at_the_real_actor",
     who.setpos( here, origin, false );
     here.ter_set( origin + tripoint::east, ter_id( "t_wall" ) );
     const int moves = who.get_moves();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     view_action selection;
     {
         const scoped_map_viewpoint view( here, who, here.get_abs( viewpoint ) );
@@ -14217,7 +14570,7 @@ TEST_CASE( "peek_travel_is_deferred_and_starts_at_the_real_actor",
     CHECK( route.back() == target );
     CHECK( who.pos_bub( here ) == origin );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     who.clear_destination();
     who.setpos( here, origin + tripoint::south, false );
     CHECK_FALSE( g->apply_view_action( selection ) );
@@ -14232,12 +14585,12 @@ TEST_CASE( "peek_item_list_uses_the_view_floor_and_deferred_names_recheck_subjec
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
     const tripoint_bub_ms viewpoint( 61, 60, -2 );
-    const auto target = viewpoint + tripoint::east;
+    const tripoint_bub_ms target = viewpoint + tripoint::east;
     here.ter_set( viewpoint, ter_id( "t_floor" ) );
     here.ter_set( target, ter_id( "t_floor" ) );
     who.setpos( here, origin, false );
-    here.add_item_or_charges( target, item( itype_id( "rock" ) ) );
-    monster *critter = g->place_critter_at( mtype_id( "mon_zombie" ), target );
+    here.add_item_or_charges( target, item( itype_rock ) );
+    monster *critter = g->place_critter_at( mon_zombie, target );
     REQUIRE( critter );
     view_action selected;
     {
@@ -14256,7 +14609,7 @@ TEST_CASE( "peek_item_list_uses_the_view_floor_and_deferred_names_recheck_subjec
     CHECK( critter->nickname == "ledge observer" );
     CHECK( who.pos_bub( here ) == origin );
     get_creature_tracker().remove( *critter );
-    monster *replacement = g->place_critter_at( mtype_id( "mon_zombie" ), target );
+    monster *replacement = g->place_critter_at( mon_zombie, target );
     REQUIRE( replacement );
     CHECK_FALSE( g->apply_view_action( selected ) );
     CHECK( replacement->nickname.empty() );
@@ -14267,24 +14620,24 @@ TEST_CASE( "remote_monster_names_require_a_live_observation_and_replicate_withou
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    auto &peer = bind_feedback_player( who, 'a', 701 );
+    cata_mp::remote_player_session &peer = bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     const tripoint_bub_ms ledge( 61, 60, 0 );
-    const auto viewpoint = ledge + tripoint::below;
-    const auto target = viewpoint + tripoint::east;
+    const tripoint_bub_ms viewpoint = ledge + tripoint::below;
+    const tripoint_bub_ms target = viewpoint + tripoint::east;
     here.ter_set( ledge, ter_id( "t_open_air" ) );
     here.ter_set( viewpoint, ter_id( "t_floor" ) );
     here.ter_set( target, ter_id( "t_floor" ) );
-    monster *critter = g->place_critter_at( mtype_id( "mon_zombie" ), target );
+    monster *critter = g->place_critter_at( mon_zombie, target );
     REQUIRE( critter );
-    const auto nid = g->multiplayer_session().replication.entity_ids.assign( *critter );
+    const uint32_t nid = g->multiplayer_session().replication.entity_ids.assign( *critter );
     peer.inventory_activity.peek = cata_mp::authorize_ledge_peek( who, here, who.pos_abs(),
                                    here.get_abs( ledge ), 31 );
     REQUIRE( peer.inventory_activity.peek );
     peer.inventory_activity.peek->z_range = 0;
     peer.turn.granted_this_turn = false; // A nickname is free even while AP recovers.
     const int moves = who.get_moves();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const std::string name = "watcher \"below\"";
     const auto send = [&]( int64_t request, const std::string &nickname ) {
         std::ostringstream text;
@@ -14306,9 +14659,9 @@ TEST_CASE( "remote_monster_names_require_a_live_observation_and_replicate_withou
     send( 31, name );
     CHECK( critter->nickname == name );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == rng );
-    const auto snapshot = json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
-    const auto state = snapshot.get_object();
+    CHECK( capture_rng_state() == rng );
+    const JsonValue snapshot = json_loader::from_string( cata_mp::serialize_remote_player_state( peer ) );
+    const JsonObject state = snapshot.get_object();
     state.allow_omitted_members();
     bool received = false;
     for( const JsonObject mon : state.get_array( "monsters" ) ) {
@@ -14332,15 +14685,15 @@ TEST_CASE( "authoritative_automove_result_retries_an_opened_door_but_not_a_block
     avatar &who = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
-    const auto door = origin + tripoint::east;
-    const auto goal = door + tripoint::east;
+    const tripoint_bub_ms door = origin + tripoint::east;
+    const tripoint_bub_ms goal = door + tripoint::east;
     who.setpos( here, origin, false );
     here.ter_set( door, ter_id( "t_door_c" ) );
     who.set_destination( { door, goal } );
     REQUIRE( who.get_next_auto_move_direction() != ACTION_NULL );
     const auto pending = capture_automove_step( who, here, here.get_abs( door ) );
     REQUIRE( pending );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int moves = who.get_moves();
     SECTION( "door_opened_without_moving_retries_that_same_step" ) {
         here.ter_set( door, ter_id( "t_door_o" ) );
@@ -14370,7 +14723,7 @@ TEST_CASE( "authoritative_automove_result_retries_an_opened_door_but_not_a_block
     }
     CHECK( who.pos_bub( here ) == origin );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "client_automove_continuation_waits_for_the_position_and_tile_ack",
@@ -14380,8 +14733,8 @@ TEST_CASE( "client_automove_continuation_waits_for_the_position_and_tile_ack",
     avatar &who = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
-    const auto door = origin + tripoint::east;
-    const auto goal = door + tripoint::east;
+    const tripoint_bub_ms door = origin + tripoint::east;
+    const tripoint_bub_ms goal = door + tripoint::east;
     who.setpos( here, origin, false );
     here.ter_set( door, ter_id( "t_door_c" ) );
     who.set_destination( { door, goal } );
@@ -14391,8 +14744,8 @@ TEST_CASE( "client_automove_continuation_waits_for_the_position_and_tile_ack",
     walk_move_choices choices;
     choices.destination = here.get_abs( door );
     REQUIRE( cata_mp::client_walk( tripoint_rel_ms::east, choices ) );
-    auto &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    cata_mp::world_session &session = g->multiplayer_session();
+    cata_mp::inventory_activity_client_state &view = session.client_inventory_activity;
     REQUIRE( view.pending_automove );
     view.pending_request = 0;
     view.finished = true;
@@ -14419,9 +14772,9 @@ TEST_CASE( "automove_arrival_requires_the_destination_tile_and_new_routes_reset_
     avatar &who = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
-    const auto destination = origin + tripoint::east;
+    const tripoint_bub_ms destination = origin + tripoint::east;
     who.setpos( here, origin, false );
-    who.set_destination( { destination }, player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    who.set_destination( { destination }, player_activity( ACT_WAIT, 100 ) );
     REQUIRE( who.get_next_auto_move_direction() != ACTION_NULL );
     REQUIRE_FALSE( who.has_destination() );
 
@@ -14438,18 +14791,18 @@ TEST_CASE( "automove_arrival_requires_the_destination_tile_and_new_routes_reset_
         who.setpos( here, destination, false );
         REQUIRE( who.has_destination_activity() );
         who.start_destination_activity();
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
         CHECK_FALSE( who.has_destination_activity() );
         CHECK_FALSE( who.is_auto_moving() );
     }
     SECTION( "replacement_route_does_not_inherit_an_old_expected_position" ) {
-        const auto relocated = origin + tripoint( 5, 5, 0 );
+        const tripoint_bub_ms relocated = origin + tripoint( 5, 5, 0 );
         who.setpos( here, relocated, false );
         who.set_destination( { relocated + tripoint::east } );
         CHECK( who.get_next_auto_move_direction() != ACTION_NULL );
     }
     SECTION( "a_distant_xy_step_with_a_z_difference_is_not_a_stair_command" ) {
-        const auto invalid = origin + tripoint( 2, 0, 1 );
+        const tripoint_bub_ms invalid = origin + tripoint( 2, 0, 1 );
         who.set_destination( { invalid } );
         CHECK( who.get_next_auto_move_direction() == ACTION_NULL );
         REQUIRE( who.get_auto_move_route().size() == 1 );
@@ -14469,9 +14822,9 @@ TEST_CASE( "destination_activity_start_callbacks_keep_their_new_route",
     npc &who = fixture.remote();
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    const auto arrived = who.pos_bub() + tripoint::east;
-    const auto next = arrived + tripoint::south;
-    who.set_destination( { arrived }, player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    const tripoint_bub_ms arrived = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms next = arrived + tripoint::south;
+    who.set_destination( { arrived }, player_activity( ACT_WAIT, 100 ) );
     REQUIRE( who.get_next_auto_move_direction() != ACTION_NULL );
     who.setpos( here, arrived, false );
     class route_on_start : public event_subscriber
@@ -14508,8 +14861,8 @@ TEST_CASE( "native_automove_result_retries_doors_once_and_stops_at_collisions",
     npc &who = fixture.remote();
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    const auto origin = who.pos_bub();
-    const auto target = origin + tripoint::east;
+    const tripoint_bub_ms origin = who.pos_bub();
+    const tripoint_bub_ms target = origin + tripoint::east;
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( target, ter_id( "t_floor" ) );
     bool blocked = false;
@@ -14526,7 +14879,7 @@ TEST_CASE( "native_automove_result_retries_doors_once_and_stops_at_collisions",
         blocked = true;
     }
     who.set_moves( 1000 );
-    who.set_destination( { target }, player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    who.set_destination( { target }, player_activity( ACT_WAIT, 100 ) );
     REQUIRE( who.get_next_auto_move_direction() != ACTION_NULL );
     const auto pending = capture_automove_step( who, here, here.get_abs( target ) );
     REQUIRE( pending );
@@ -14565,17 +14918,17 @@ TEST_CASE( "client_last_automove_step_waits_for_position_before_destination_work
     avatar &who = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
-    const auto target = origin + tripoint::east;
+    const tripoint_bub_ms target = origin + tripoint::east;
     who.setpos( here, origin, false );
-    who.set_destination( { target }, player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    who.set_destination( { target }, player_activity( ACT_WAIT, 100 ) );
     REQUIRE( who.get_next_auto_move_direction() != ACTION_NULL );
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
     walk_move_choices choices;
     choices.destination = here.get_abs( target );
     REQUIRE( cata_mp::client_walk( tripoint_rel_ms::east, choices ) );
-    auto &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    cata_mp::world_session &session = g->multiplayer_session();
+    cata_mp::inventory_activity_client_state &view = session.client_inventory_activity;
     REQUIRE( view.pending_automove );
     view.pending_request = 0;
     view.finished = true;
@@ -14604,22 +14957,22 @@ TEST_CASE( "native_deferred_work_preserves_the_retry_without_reviving_a_replaced
     npc &who = fixture.remote();
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    const auto target = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
     here.ter_set( target, ter_id( "t_rock" ) );
     who.set_destination( { target } );
     REQUIRE( who.get_next_auto_move_direction() != ACTION_NULL );
     const auto pending = capture_automove_step( who, here, here.get_abs( target ) );
     REQUIRE( pending );
-    who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    who.assign_activity( player_activity( ACT_WAIT, 100 ) );
     REQUIRE( who.defer_move( target ) );
     SECTION( "native_work_has_already_deferred_the_step" ) {
         pending->finish( who, here, false );
         REQUIRE( who.get_auto_move_route().size() == 1 );
         CHECK( who.get_auto_move_route().front() == target );
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
     SECTION( "a_replacement_route_survives_an_old_failed_movement" ) {
-        const auto replacement = who.pos_bub() + tripoint::south;
+        const tripoint_bub_ms replacement = who.pos_bub() + tripoint::south;
         who.set_destination( { replacement } );
         pending->finish( who, here, true );
         REQUIRE( who.get_auto_move_route().size() == 1 );
@@ -14663,19 +15016,19 @@ TEST_CASE( "owned_fire_start_keeps_its_operator_source_and_surface_across_save_l
     avatar &host = get_avatar();
     host.setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
     const int host_moves = host.get_moves();
-    const auto target = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
     here.ter_set( target, ter_id( "t_floor" ) );
-    item fuel( itype_id( "paper" ) );
+    item fuel( itype_paper );
     fuel.charges = 200;
     here.add_item( target, fuel );
     REQUIRE( here.is_flammable( target ) );
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
+    tool->ammo_set( itype_butane, 100 );
     const std::string start = fire_request( fixture, who, tool, target );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_START_FIRE" ) );
-    const auto generation = who.activity.identity_generation();
+    REQUIRE( who.activity.id() == ACT_START_FIRE );
+    const std::uint64_t generation = who.activity.identity_generation();
     fixture.run( who, start );
     CHECK( who.activity.identity_generation() == generation );
     CHECK( tool->ammo_remaining() == 100 );
@@ -14687,12 +15040,12 @@ TEST_CASE( "owned_fire_start_keeps_its_operator_source_and_surface_across_save_l
     }
     SECTION( "same_type_replacement_tool" ) {
         who.remove_weapon();
-        who.set_wielded_item( item( itype_id( "lighter" ) ) );
+        who.set_wielded_item( item( itype_lighter ) );
         tool = who.get_wielded_item();
-        tool->ammo_set( itype_id( "butane" ), 100 );
+        tool->ammo_set( itype_butane, 100 );
     }
     SECTION( "changed_furniture" ) {
-        here.furn_set( target, furn_str_id( "f_chair" ) );
+        here.furn_set( target, furn_f_chair );
     }
     SECTION( "operator_moved_out_of_reach" ) {
         who.setpos( here, who.pos_bub() + tripoint( 0, 3, 0 ), false );
@@ -14707,7 +15060,7 @@ TEST_CASE( "owned_fire_start_keeps_its_operator_source_and_surface_across_save_l
         other.activity = who.activity;
         other.activity.actor->do_turn( other.activity, other );
         CHECK_FALSE( other.activity );
-        CHECK( who.activity.id() == activity_id( "ACT_START_FIRE" ) );
+        CHECK( who.activity.id() == ACT_START_FIRE );
         copy = true;
     }
     if( !copy ) {
@@ -14732,35 +15085,35 @@ TEST_CASE( "owned_fire_uses_the_selected_tinder_once_and_rejects_replaced_tinder
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    const auto target = who.pos_bub() + tripoint::east;
-    const auto supply = who.pos_bub() + tripoint::south;
-    item fuel( itype_id( "paper" ) );
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    const tripoint_bub_ms supply = who.pos_bub() + tripoint::south;
+    item fuel( itype_paper );
     fuel.charges = 200;
     here.add_item( target, fuel );
     REQUIRE( here.is_flammable( target ) );
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
-    tool->set_flag( flag_id( "REQUIRES_TINDER" ) );
-    item_location tinder( map_cursor( supply ), &here.add_item( supply, item( itype_id( "twig" ) ) ) );
+    tool->ammo_set( itype_butane, 100 );
+    tool->set_flag( json_flag_REQUIRES_TINDER );
+    item_location tinder( map_cursor( supply ), &here.add_item( supply, item( itype_twig ) ) );
     const std::string outcome = GENERATE( "finish", "replace", "cancel", "missing_choice" );
-    const auto selected = outcome == "missing_choice" ? item_location() : tinder;
+    const item_location selected = outcome == "missing_choice" ? item_location() : tinder;
     fixture.run( who, fire_request( fixture, who, tool, target, selected ) );
     if( outcome == "missing_choice" ) {
         CHECK_FALSE( who.activity );
         CHECK( tinder );
     } else {
-        REQUIRE( who.activity.id() == activity_id( "ACT_START_FIRE" ) );
+        REQUIRE( who.activity.id() == ACT_START_FIRE );
         CHECK( tinder );
         save_reload_activity( who );
         if( outcome == "replace" ) {
             tinder.remove_item();
-            tinder = item_location( map_cursor( supply ), &here.add_item( supply, item( itype_id( "twig" ) ) ) );
+            tinder = item_location( map_cursor( supply ), &here.add_item( supply, item( itype_twig ) ) );
         }
         who.set_moves( 100 );
         fixture.run( who, fixture.request( who, outcome == "cancel" ? "cancel" : "step" ) );
         if( outcome == "finish" ) {
-            REQUIRE( who.activity.id() == activity_id( "ACT_START_FIRE" ) );
+            REQUIRE( who.activity.id() == ACT_START_FIRE );
             CHECK_FALSE( tinder );
             CHECK( here.i_at( supply ).empty() );
             save_reload_activity( who );
@@ -14785,23 +15138,23 @@ TEST_CASE( "client_fire_selection_does_not_clear_or_spend_from_a_smoking_rack",
     reload_fixture fixture;
     avatar &who = get_avatar();
     map &here = get_map();
-    const auto target = who.pos_bub() + tripoint::east;
-    here.furn_set( target, furn_str_id( "f_smoking_rack" ) );
-    item_location contents( map_cursor( target ), &here.add_item( target, item( itype_id( "rock" ) ) ) );
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    const tripoint_bub_ms target = who.pos_bub() + tripoint::east;
+    here.furn_set( target, furn_f_smoking_rack );
+    item_location contents( map_cursor( target ), &here.add_item( target, item( itype_rock ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
+    tool->ammo_set( itype_butane, 100 );
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     std::string method = "firestarter";
     REQUIRE( cata_mp::client_activate_item( tool, method, here.get_abs( target ) ) );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK( contents );
     CHECK( contents.pos_bub( here ) == target );
     CHECK( tool->ammo_remaining() == 100 );
-    CHECK( rng_get_engine() == rng );
-    CHECK( here.furn( target ) == furn_str_id( "f_smoking_rack" ) );
+    CHECK( capture_rng_state() == rng );
+    CHECK( here.furn( target ) == furn_f_smoking_rack );
     CHECK_FALSE( here.get_field( target, field_type_id( "fd_fire" ) ) );
 }
 
@@ -14856,29 +15209,29 @@ TEST_CASE( "owned_salvage_consumes_only_the_selected_item_and_publishes_yield_on
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
     const int host_moves = get_avatar().get_moves();
-    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    who.set_skill_level( skill_fabrication, 10 );
     who.set_dex_base( 12 );
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
+    who.set_wielded_item( item( itype_knife_huge ) );
     item_location tool = who.get_wielded_item();
-    auto position = who.pos_bub() + tripoint::east;
+    tripoint_bub_ms position = who.pos_bub() + tripoint::east;
     item_location original;
     SECTION( "ground" ) {
-        original = item_location( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+        original = item_location( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     }
     SECTION( "carried" ) {
         position = who.pos_bub();
-        original = who.i_add( item( itype_id( "blanket" ) ) );
+        original = who.i_add( item( itype_blanket ) );
         REQUIRE( original.held_by( who ) );
     }
     SECTION( "vehicle_cargo" ) {
-        vehicle *cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), position, 0_degrees, 0,
+        vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart, position, 0_degrees, 0,
                                           veh_spawn_status::UNDAMAGED );
         REQUIRE( cart );
         cart->set_owner( who.get_faction_id() );
         const auto cargo = here.veh_at( position ).cargo();
         REQUIRE( cargo );
-        const auto added = cart->add_item( here, cargo->part(), item( itype_id( "blanket" ) ) );
+        const auto added = cart->add_item( here, cargo->part(), item( itype_blanket ) );
         REQUIRE( added );
         original = item_location( vehicle_cursor( *cart, cargo->part_index() ), &**added );
     }
@@ -14893,10 +15246,10 @@ TEST_CASE( "owned_salvage_consumes_only_the_selected_item_and_publishes_yield_on
     fixture.run( who, request );
     CHECK_FALSE( original );
     const int moves = who.get_moves();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, request );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     for( const auto &[type, amount] : expected ) {
         CHECK( salvage_count( &who, here, position, type ) == amount );
     }
@@ -14913,27 +15266,27 @@ TEST_CASE( "owned_salvage_rejects_a_changed_source_or_unconfirmed_equipment",
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
-    item_location tool = who.i_add( item( itype_id( "knife_huge" ) ) );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
+    item_location tool = who.i_add( item( itype_knife_huge ) );
     REQUIRE( tool.held_by( who ) );
-    const auto position = who.pos_bub() + tripoint::east;
-    item_location original( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    const tripoint_bub_ms position = who.pos_bub() + tripoint::east;
+    item_location original( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     salvage_selection selection;
     selection.target = capture_item_source( who, original );
     selection.type = original->typeId();
     SECTION( "same_type_replacement" ) {
         original.remove_item();
-        original = item_location( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+        original = item_location( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     }
     SECTION( "transformed_original" ) {
-        original->convert( itype_id( "tshirt" ) );
+        original->convert( itype_tshirt );
     }
     SECTION( "out_of_reach" ) {
         who.setpos( here, who.pos_bub() + tripoint( 0, 4, 0 ), false );
     }
     SECTION( "equipped_without_confirmation" ) {
         original.remove_item();
-        who.set_wielded_item( item( itype_id( "blanket" ) ) );
+        who.set_wielded_item( item( itype_blanket ) );
         original = who.get_wielded_item();
         selection.target = capture_item_source( who, original );
     }
@@ -14952,15 +15305,15 @@ TEST_CASE( "salvage_yield_survives_a_wield_event_replacing_or_retiring_the_opera
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    who.set_skill_level( skill_fabrication, 10 );
     who.set_dex_base( 12 );
-    REQUIRE( who.wear_item( item( itype_id( "backpack" ) ), false ).has_value() );
-    item_location tool = who.i_add( item( itype_id( "knife_huge" ) ) );
+    REQUIRE( who.wear_item( item( itype_backpack ), false ).has_value() );
+    item_location tool = who.i_add( item( itype_knife_huge ) );
     REQUIRE( tool.held_by( who ) );
-    who.set_wielded_item( item( itype_id( "blanket" ) ) );
-    const auto original = who.get_wielded_item();
+    who.set_wielded_item( item( itype_blanket ) );
+    const item_location original = who.get_wielded_item();
     const auto expected = salvage_actor::salvage_results( original, 1.0 );
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     const bool retire = GENERATE( false, true );
     class on_unwield : public event_subscriber
     {
@@ -14978,7 +15331,7 @@ TEST_CASE( "salvage_yield_survives_a_wield_event_replacing_or_retiring_the_opera
                     if( retire ) {
                         g->remove_npc( who.getID() );
                     } else {
-                        who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+                        who.assign_activity( player_activity( ACT_WAIT, 100 ) );
                     }
                 }
             }
@@ -14995,7 +15348,7 @@ TEST_CASE( "salvage_yield_survives_a_wield_event_replacing_or_retiring_the_opera
     }
     if( !retire ) {
         CHECK_FALSE( who.has_weapon() );
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
     CHECK_FALSE( get_avatar().activity );
 }
@@ -15008,12 +15361,12 @@ TEST_CASE( "salvage_drop_callbacks_leave_the_complete_yield_after_replacing_work
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
-    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    who.set_skill_level( skill_fabrication, 10 );
     who.set_dex_base( 12 );
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    who.set_wielded_item( item( itype_knife_huge ) );
     item_location tool = who.get_wielded_item();
-    const auto position = who.pos_bub() + tripoint::east;
-    item_location original( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    const tripoint_bub_ms position = who.pos_bub() + tripoint::east;
+    item_location original( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     const auto expected = salvage_actor::salvage_results( original, 1.0 );
     const auto chosen = std::find_if( expected.begin(), expected.end(), []( const auto &entry ) {
         return entry.second > 0;
@@ -15024,10 +15377,10 @@ TEST_CASE( "salvage_drop_callbacks_leave_the_complete_yield_after_replacing_work
     material.drop_action = use_function( "salvage_drop_interruption", []( Character *actor, item *,
                                          const tripoint_bub_ms &where ) -> std::optional<int> {
     for( const item &it : get_map().i_at( where ) ) {
-    CHECK( it.typeId() != itype_id( "blanket" ) );
+    CHECK( it.typeId() != itype_blanket );
     }
     actor->set_value( "salvage_drop_seen", "yes" );
-    actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     return std::nullopt;
                                          } );
     salvage_selection selection;
@@ -15038,7 +15391,7 @@ TEST_CASE( "salvage_drop_callbacks_leave_the_complete_yield_after_replacing_work
     fixture.run( who, request );
     CHECK_FALSE( original );
     CHECK( who.get_value( "salvage_drop_seen" ).str() == "yes" );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     fixture.run( who, request );
     for( const auto &[type, amount] : expected ) {
         CHECK( salvage_count( &who, here, position, type ) == amount );
@@ -15051,7 +15404,7 @@ namespace
 // Exercise the real tool charge path with a native salvage actor. No production
 // item needs a power requirement merely to test long salvage's settlement.
 struct powered_salvage_tool {
-    itype &type = *const_cast<itype *>( item::find_type( itype_id( "lighter" ) ) );
+    itype &type = *const_cast<itype *>( item::find_type( itype_lighter ) );
     restore_on_out_of_scope<decltype( type.use_methods )> restore{ type.use_methods };
     powered_salvage_tool() {
         type.use_methods.emplace( "salvage", use_function( std::make_unique<salvage_actor>() ) );
@@ -15090,24 +15443,24 @@ TEST_CASE( "bulk_salvage_saves_the_original_queue_and_pays_each_cut_once",
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
     const int host_moves = get_avatar().get_moves();
-    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    who.set_skill_level( skill_fabrication, 10 );
     who.set_dex_base( 12 );
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
-    const auto position = who.pos_bub();
-    item_location first( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
-    item_location second( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    tool->ammo_set( itype_butane, 100 );
+    const tripoint_bub_ms position = who.pos_bub();
+    item_location first( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
+    item_location second( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     const auto expected = salvage_actor::salvage_results( first, 1.0 );
     const std::string start = salvage_batch_request( fixture, who, tool,
                               { select_salvage( who, first ), select_salvage( who, second ) } );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) );
+    REQUIRE( who.activity.id() == ACT_LONGSALVAGE );
     CHECK( first );
     CHECK( second );
     CHECK( tool->ammo_remaining() == 100 );
     fixture.run( who, start );
-    item_location later( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    item_location later( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     save_reload_activity( who );
     const std::string first_step = fixture.request( who, "step" );
     fixture.run( who, first_step );
@@ -15116,10 +15469,10 @@ TEST_CASE( "bulk_salvage_saves_the_original_queue_and_pays_each_cut_once",
     CHECK( later );
     CHECK( tool->ammo_remaining() == 99 );
     const int moves = who.get_moves();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     fixture.run( who, first_step );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( tool->ammo_remaining() == 99 );
     save_reload_activity( who );
     who.set_moves( 100 );
@@ -15143,26 +15496,26 @@ TEST_CASE( "bulk_salvage_cancels_without_redirecting_the_tool_or_sources",
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
-    const auto position = who.pos_bub();
-    item_location first( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
-    item_location second( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    tool->ammo_set( itype_butane, 100 );
+    const tripoint_bub_ms position = who.pos_bub();
+    item_location first( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
+    item_location second( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     fixture.run( who, salvage_batch_request( fixture, who, tool,
                  { select_salvage( who, first ), select_salvage( who, second ) } ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) );
+    REQUIRE( who.activity.id() == ACT_LONGSALVAGE );
     save_reload_activity( who );
     bool copied = false;
     SECTION( "same_slot_tool_replacement" ) {
         tool.remove_item();
-        who.set_wielded_item( item( itype_id( "lighter" ) ) );
+        who.set_wielded_item( item( itype_lighter ) );
         tool = who.get_wielded_item();
-        tool->ammo_set( itype_id( "butane" ), 100 );
+        tool->ammo_set( itype_butane, 100 );
     }
     SECTION( "source_replacement" ) {
         first.remove_item();
-        first = item_location( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+        first = item_location( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     }
     SECTION( "operator_left_work_tile" ) {
         who.setpos( here, position + tripoint::east, false );
@@ -15182,7 +15535,7 @@ TEST_CASE( "bulk_salvage_cancels_without_redirecting_the_tool_or_sources",
         other.activity = who.activity;
         other.activity.actor->do_turn( other.activity, other );
         CHECK_FALSE( other.activity );
-        CHECK( who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) );
+        CHECK( who.activity.id() == ACT_LONGSALVAGE );
         copied = true;
     }
     if( !copied ) {
@@ -15203,14 +15556,14 @@ TEST_CASE( "bulk_salvage_keeps_remaining_items_when_a_drop_callback_replaces_wor
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    who.set_skill_level( skill_id( "fabrication" ), 10 );
+    who.set_skill_level( skill_fabrication, 10 );
     who.set_dex_base( 12 );
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
-    const auto position = who.pos_bub();
-    item_location first( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
-    item_location second( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    tool->ammo_set( itype_butane, 100 );
+    const tripoint_bub_ms position = who.pos_bub();
+    item_location first( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
+    item_location second( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     const auto expected = salvage_actor::salvage_results( first, 1.0 );
     const auto chosen = std::find_if( expected.begin(), expected.end(), []( const auto &entry ) {
         return entry.second > 0;
@@ -15229,21 +15582,21 @@ TEST_CASE( "bulk_salvage_keeps_remaining_items_when_a_drop_callback_replaces_wor
     if( actor->get_value( "replace_salvage_tool" ).str() == "yes" ) {
     item_location old = actor->get_wielded_item();
         old.remove_item();
-        actor->set_wielded_item( item( itype_id( "lighter" ) ) );
-        actor->get_wielded_item()->ammo_set( itype_id( "butane" ), 100 );
+        actor->set_wielded_item( item( itype_lighter ) );
+        actor->get_wielded_item()->ammo_set( itype_butane, 100 );
     }
-    actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     return std::nullopt;
                                          } );
     fixture.run( who, salvage_batch_request( fixture, who, tool,
                  { select_salvage( who, first ), select_salvage( who, second ) } ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) );
+    REQUIRE( who.activity.id() == ACT_LONGSALVAGE );
     const std::string step = fixture.request( who, "step" );
     fixture.run( who, step );
     fixture.run( who, step );
     CHECK_FALSE( first );
     CHECK( second );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     CHECK( who.get_wielded_item()->ammo_remaining() == ( replaced_tool ? 100 : 99 ) );
     for( const auto &[type, count] : expected ) {
         CHECK( salvage_count( &who, here, position, type ) == count );
@@ -15257,22 +15610,22 @@ TEST_CASE( "client_bulk_salvage_sends_choices_without_cutting_or_spending_charge
     powered_salvage_tool powered;
     avatar &who = get_avatar();
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "lighter" ) ) );
+    who.set_wielded_item( item( itype_lighter ) );
     item_location tool = who.get_wielded_item();
-    tool->ammo_set( itype_id( "butane" ), 100 );
-    const auto position = who.pos_bub();
-    item_location target( map_cursor( position ), &here.add_item( position, item( itype_id( "blanket" ) ) ) );
+    tool->ammo_set( itype_butane, 100 );
+    const tripoint_bub_ms position = who.pos_bub();
+    item_location target( map_cursor( position ), &here.add_item( position, item( itype_blanket ) ) );
     item_activation_choices choices;
     choices.salvage_batch = { select_salvage( who, target ) };
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     std::string method = "salvage";
     REQUIRE( cata_mp::client_activate_item( tool, method, std::nullopt, &choices ) );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK( target );
     CHECK( tool->ammo_remaining() == 100 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 namespace
@@ -15306,15 +15659,15 @@ TEST_CASE( "owned_butchery_reserves_and_processes_only_its_operators_corpse",
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
     const int host_moves = get_avatar().get_moves();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    who.set_wielded_item( item( itype_knife_huge ) );
     item_location corpse = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                           item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
-    const auto selection = select_butchery( who, corpse );
+                           item::make_corpse( mon_zombie, calendar::turn ) );
+    const butchery_selection selection = select_butchery( who, corpse );
     const std::string start = butchery_request( fixture, who, { selection } );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_DISMEMBER" ) );
+    REQUIRE( who.activity.id() == ACT_DISMEMBER );
     CHECK( activity_handlers::activity_item_owned_by( *corpse, who ) );
-    const auto generation = who.activity.identity_generation();
+    const std::uint64_t generation = who.activity.identity_generation();
     fixture.run( who, start );
     CHECK( who.activity.identity_generation() == generation );
     save_reload_activity( who );
@@ -15322,7 +15675,7 @@ TEST_CASE( "owned_butchery_reserves_and_processes_only_its_operators_corpse",
     clear_character( other, true );
     other.setpos( here, who.pos_bub(), false );
     other.set_moves( 100 );
-    other.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    other.set_wielded_item( item( itype_knife_huge ) );
     CHECK_FALSE( start_owned_butchery( other, { select_butchery( other, corpse ) } ) );
     CHECK_FALSE( other.activity );
     std::string last;
@@ -15333,10 +15686,10 @@ TEST_CASE( "owned_butchery_reserves_and_processes_only_its_operators_corpse",
     }
     CHECK_FALSE( who.activity );
     CHECK_FALSE( corpse );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int moves = who.get_moves();
     fixture.run( who, last );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( who.get_moves() == moves );
     CHECK( get_avatar().get_moves() == host_moves );
     CHECK_FALSE( get_avatar().activity );
@@ -15349,17 +15702,17 @@ TEST_CASE( "owned_butchery_rejects_stale_or_forged_selections_before_mutation",
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    who.set_wielded_item( item( itype_knife_huge ) );
     item_location corpse = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                           item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                           item::make_corpse( mon_zombie, calendar::turn ) );
     std::vector<butchery_selection> selected{ select_butchery( who, corpse ) };
     SECTION( "replaced_original" ) {
         corpse.remove_item();
         corpse = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                 item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                 item::make_corpse( mon_zombie, calendar::turn ) );
     }
     SECTION( "wrong_monster_type" ) {
-        selected.front().type = mtype_id( "mon_deer" );
+        selected.front().type = mon_deer;
     }
     SECTION( "invalid_action" ) {
         selected.front().action = static_cast<butcher_type>( -1 );
@@ -15370,13 +15723,13 @@ TEST_CASE( "owned_butchery_rejects_stale_or_forged_selections_before_mutation",
     SECTION( "out_of_reach" ) {
         who.setpos( here, who.pos_bub() + tripoint( 4, 0, 0 ), false );
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     const int moves = who.get_moves();
     fixture.run( who, butchery_request( fixture, who, selected ) );
     CHECK_FALSE( who.activity );
     CHECK( corpse );
     CHECK_FALSE( activity_handlers::activity_item_owned_by( *corpse, who ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     CHECK( who.get_moves() == moves );
 }
 
@@ -15387,9 +15740,9 @@ TEST_CASE( "saved_butchery_stops_for_wrong_body_location_or_corpse_and_releases_
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    who.set_wielded_item( item( itype_knife_huge ) );
     item_location corpse = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                           item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                           item::make_corpse( mon_zombie, calendar::turn ) );
     fixture.run( who, butchery_request( fixture, who, { select_butchery( who, corpse ) } ) );
     REQUIRE( who.activity );
     save_reload_activity( who );
@@ -15398,7 +15751,7 @@ TEST_CASE( "saved_butchery_stops_for_wrong_body_location_or_corpse_and_releases_
         who.setpos( here, who.pos_bub() + tripoint::east, false );
     }
     SECTION( "corpse_changed_in_place" ) {
-        corpse->set_mtype( &mtype_id( "mon_deer" ).obj() );
+        corpse->set_mtype( &mon_deer.obj() );
     }
     SECTION( "cancel_before_initialization" ) {
         fixture.run( who, fixture.request( who, "cancel" ) );
@@ -15435,19 +15788,19 @@ TEST_CASE( "client_butchery_choice_does_not_start_native_work_or_claim_a_corpse"
     reload_fixture fixture;
     avatar &who = get_avatar();
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
+    who.set_wielded_item( item( itype_knife_huge ) );
     item_location corpse = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                           item::make_corpse( mtype_id( "mon_zombie" ), calendar::turn ) );
+                           item::make_corpse( mon_zombie, calendar::turn ) );
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     std::vector<butchery_selection> choices;
     REQUIRE( query_butchery_selection( who, { corpse }, butcher_type::DISMEMBER, choices ) );
     REQUIRE( cata_mp::client_start_butchery( choices ) );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK( corpse );
     CHECK_FALSE( activity_handlers::activity_item_owned_by( *corpse, who ) );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 TEST_CASE( "harvest_drop_interruption_keeps_the_complete_yield_and_consumes_the_original_once",
@@ -15457,24 +15810,24 @@ TEST_CASE( "harvest_drop_interruption_keeps_the_complete_yield_and_consumes_the_
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
-    who.set_skill_level( skill_id( "survival" ), 10 );
+    who.set_wielded_item( item( itype_knife_huge ) );
+    who.set_skill_level( skill_survival, 10 );
     who.set_dex_base( 12 );
     for( const char *id : { "prof_butchering_basic", "prof_butchering_adv",
                             "prof_skinning_basic", "prof_skinning_adv" } ) {
         who.add_proficiency( proficiency_id( id ) );
     }
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     const auto prepare = [&]() {
         item_location corpse = here.add_item_or_charges_ret_loc( position,
-                               item::make_corpse( mtype_id( "mon_deer" ), calendar::turn ) );
+                               item::make_corpse( mon_deer, calendar::turn ) );
         butchery_data work( corpse, butcher_type::QUICK );
         butchery_activity_actor calculation( work );
         calculation.calculate_butchery_data( who, work );
         return work;
     };
     butchery_data baseline = prepare();
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     destroy_the_carcass( baseline, who );
     REQUIRE_FALSE( baseline.corpse );
     std::map<itype_id, int> expected;
@@ -15503,11 +15856,11 @@ TEST_CASE( "harvest_drop_interruption_keeps_the_complete_yield_and_consumes_the_
     if( actor->get_value( "retire_harvester" ).str() == "yes" ) {
     g->remove_npc( actor->getID() );
     } else {
-        actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+        actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     }
     return std::nullopt;
                                          } );
-    rng_get_engine() = rng;
+    restore_rng_state( rng );
     destroy_the_carcass( work, who );
     CHECK_FALSE( work.corpse );
     std::map<itype_id, int> actual;
@@ -15516,7 +15869,7 @@ TEST_CASE( "harvest_drop_interruption_keeps_the_complete_yield_and_consumes_the_
     }
     CHECK( actual == expected );
     if( !retired ) {
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
     CHECK_FALSE( get_avatar().activity );
 }
@@ -15527,17 +15880,17 @@ TEST_CASE( "bleeding_marks_the_original_and_returns_real_saved_blood_sources",
     reload_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
-    who.set_skill_level( skill_id( "survival" ), 10 );
+    who.set_wielded_item( item( itype_knife_huge ) );
+    who.set_skill_level( skill_survival, 10 );
     who.set_dex_base( 12 );
     item_location corpse = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                           item::make_corpse( mtype_id( "mon_deer" ), calendar::turn ) );
+                           item::make_corpse( mon_deer, calendar::turn ) );
     butchery_data work( corpse, butcher_type::BLEED );
     butchery_activity_actor calculation( work );
     calculation.calculate_butchery_data( who, work );
     const auto blood = destroy_the_carcass( work, who );
     REQUIRE( corpse );
-    CHECK( corpse->has_flag( flag_id( "BLED" ) ) );
+    CHECK( corpse->has_flag( json_flag_BLED ) );
     REQUIRE_FALSE( blood.empty() );
     int amount = 0;
     for( const item_location &liquid : blood ) {
@@ -15546,9 +15899,9 @@ TEST_CASE( "bleeding_marks_the_original_and_returns_real_saved_blood_sources",
         CHECK( liquid->made_of( phase_id::LIQUID ) );
         amount += liquid->charges;
     }
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     CHECK( destroy_the_carcass( work, who ).empty() );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
     int remaining = 0;
     for( const item_location &liquid : blood ) {
         REQUIRE( liquid );
@@ -15563,17 +15916,17 @@ TEST_CASE( "unprocessed_result_publication_defers_item_processing_until_native_p
     reload_fixture fixture;
     avatar &who = get_avatar();
     map &here = get_map();
-    itype &type = *const_cast<itype *>( item::find_type( itype_id( "meat" ) ) );
+    itype &type = *const_cast<itype *>( item::find_type( itype_meat ) );
     const restore_on_out_of_scope restore_countdown( type.countdown_action );
     type.countdown_action = use_function( "result_processing_probe", []( Character *, item *,
                                           const tripoint_bub_ms & ) -> std::optional<int> {
                                               get_avatar().set_value( "processed_result", "yes" );
                                               return std::nullopt;
                                           } );
-    item result( itype_id( "meat" ), calendar::turn );
+    item result( itype_meat, calendar::turn );
     result.active = true;
     result.countdown_point = calendar::turn;
-    const auto pos = who.pos_bub();
+    const tripoint_bub_ms pos = who.pos_bub();
     item_location staged( map_cursor( pos ), &here.add_item_unprocessed( pos, result ) );
     REQUIRE( staged );
     CHECK( who.get_value( "processed_result" ).is_empty() );
@@ -15591,12 +15944,12 @@ TEST_CASE( "owned_bleeding_saves_real_liquid_and_revalidates_partial_destination
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    who.set_wielded_item( item( itype_id( "knife_huge" ) ) );
-    who.set_skill_level( skill_id( "survival" ), 10 );
+    who.set_wielded_item( item( itype_knife_huge ) );
+    who.set_skill_level( skill_survival, 10 );
     who.set_dex_base( 12 );
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     item_location corpse = here.add_item_or_charges_ret_loc( position,
-                           item::make_corpse( mtype_id( "mon_deer" ), calendar::turn ) );
+                           item::make_corpse( mon_deer, calendar::turn ) );
     // Resume the native saved progress at completion; no timing shortcut in production.
     corpse->set_var( butcher_progress_var( butcher_type::BLEED ), 1.0 );
     fixture.run( who, butchery_request( fixture, who,
@@ -15612,7 +15965,7 @@ TEST_CASE( "owned_bleeding_saves_real_liquid_and_revalidates_partial_destination
     const int initial = preview->charges;
     const itype_id blood_type = preview->typeId();
     const int64_t original_id = preview->uid().get_value();
-    CHECK( corpse->has_flag( flag_id( "BLED" ) ) );
+    CHECK( corpse->has_flag( json_flag_BLED ) );
     const JsonValue wire = json_loader::from_string( response );
     const JsonObject view = wire.get_object();
     view.allow_omitted_members();
@@ -15636,7 +15989,7 @@ TEST_CASE( "owned_bleeding_saves_real_liquid_and_revalidates_partial_destination
     choice.source = original_id;
     choice.kind = LD_ITEM;
     item_location bottle( map_cursor( position ),
-                          &here.add_item( position, item( itype_id( "bottle_plastic" ) ) ) );
+                          &here.add_item( position, item( itype_bottle_plastic ) ) );
     choice.container = capture_item_source( who, bottle );
     who.set_moves( 100 );
     SECTION( "partial_fill_save_then_cancel_preserves_every_charge" ) {
@@ -15659,7 +16012,7 @@ TEST_CASE( "owned_bleeding_saves_real_liquid_and_revalidates_partial_destination
         who.set_moves( 100 );
         // A fresh request carrying the old source identity must also be harmless.
         item_location second_bottle( map_cursor( position ),
-                                     &here.add_item( position, item( itype_id( "bottle_plastic" ) ) ) );
+                                     &here.add_item( position, item( itype_bottle_plastic ) ) );
         choice.container = capture_item_source( who, second_bottle );
         fixture.run( who, fixture.request( who, "choose", [&]( JsonOut &out ) {
             out.member( "liquid", choice );
@@ -15674,7 +16027,7 @@ TEST_CASE( "owned_bleeding_saves_real_liquid_and_revalidates_partial_destination
     SECTION( "wrong_identity_or_other_players_container_cannot_receive_blood" ) {
         const bool foreign = GENERATE( false, true );
         if( foreign ) {
-            get_avatar().set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+            get_avatar().set_wielded_item( item( itype_bottle_plastic ) );
             choice.container = capture_item_source( get_avatar(), get_avatar().get_wielded_item() );
         } else {
             ++choice.source;
@@ -15731,7 +16084,7 @@ item_location disassembly_original( Character &who )
 {
     map &here = get_map();
     return item_location( map_cursor( who.pos_abs() ),
-                          &here.add_item( who.pos_bub(), item( itype_id( "test_rag_bundle" ) ) ) );
+                          &here.add_item( who.pos_bub(), item( itype_test_rag_bundle ) ) );
 }
 }
 
@@ -15746,12 +16099,12 @@ TEST_CASE( "owned_disassembly_saves_original_queue_and_preparation_without_host_
     item_location second = disassembly_original( who );
     const int64_t first_id = first->uid().get_value();
     const int64_t second_id = second->uid().get_value();
-    const auto first_choice = capture_disassembly( who, first, 1 );
-    const auto second_choice = capture_disassembly( who, second, 1 );
+    const disassembly_selection first_choice = capture_disassembly( who, first, 1 );
+    const disassembly_selection second_choice = capture_disassembly( who, second, 1 );
     const std::string start = disassembly_request( fixture, who, { first_choice, second_choice } );
     const std::string response = fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_DISASSEMBLE" ) );
-    const auto generation = who.activity.identity_generation();
+    REQUIRE( who.activity.id() == ACT_DISASSEMBLE );
+    const std::uint64_t generation = who.activity.identity_generation();
     fixture.run( who, start );
     CHECK( who.activity.identity_generation() == generation );
     CHECK( first );
@@ -15778,7 +16131,7 @@ TEST_CASE( "owned_disassembly_saves_original_queue_and_preparation_without_host_
     const int64_t work_id = actor->target->uid().get_value();
     CHECK_FALSE( first );
     CHECK( second );
-    CHECK( actor->target->typeId() == itype_id( "disassembly" ) );
+    CHECK( actor->target->typeId() == itype_disassembly );
     fixture.run( who, choose );
     CHECK( actor->target->uid().get_value() == work_id );
     save_reload_activity( who );
@@ -15811,7 +16164,7 @@ TEST_CASE( "owned_disassembly_rejects_forged_originals_and_preparation_before_co
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     item_location original = disassembly_original( who );
-    auto selected = capture_disassembly( who, original, 1 );
+    disassembly_selection selected = capture_disassembly( who, original, 1 );
     const std::string failure = GENERATE( "quantity", "type", "recipe", "favorite", "duplicate",
                                           "tool_payload", "placement", "source_identity" );
     CAPTURE( failure );
@@ -15819,7 +16172,7 @@ TEST_CASE( "owned_disassembly_rejects_forged_originals_and_preparation_before_co
     if( failure == "quantity" ) {
         selected.quantity = 2;
     } else if( failure == "type" ) {
-        selected.type = itype_id( "test_knotted_string_ball" );
+        selected.type = itype_test_knotted_string_ball;
     } else if( failure == "recipe" ) {
         selected.recipe = recipe_id::NULL_ID();
     } else if( failure == "favorite" ) {
@@ -15836,7 +16189,7 @@ TEST_CASE( "owned_disassembly_rejects_forged_originals_and_preparation_before_co
         choice.placement = craft_placement::work_on_ground;
         if( failure == "tool_payload" ) {
             comp_selection<tool_comp> tool;
-            tool.comp.type = itype_id( "test_multitool" );
+            tool.comp.type = itype_test_multitool;
             tool.comp.count = -1;
             choice.tools.push_back( tool );
         } else if( failure == "placement" ) {
@@ -15903,14 +16256,14 @@ TEST_CASE( "client_disassembly_selects_without_wielding_consuming_or_claiming",
     item_location original = disassembly_original( who );
     cata_mp::set_client_mode( true );
     who.set_moves( 100 );
-    const auto rng = rng_get_engine();
+    const std::string rng = capture_rng_state();
     REQUIRE( who.disassemble( original, false, true ) );
     CHECK( original );
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK_FALSE( activity_handlers::activity_item_owned_by( *original, who ) );
     CHECK_FALSE( who.has_weapon() );
     CHECK( who.get_moves() == 100 );
-    CHECK( rng_get_engine() == rng );
+    CHECK( capture_rng_state() == rng );
 }
 
 
@@ -15943,11 +16296,11 @@ TEST_CASE( "disassembly_publishes_workpiece_and_removed_mod_before_unwield_callb
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto position = who.pos_bub();
-    who.set_wielded_item( item( itype_id( "test_rag_bundle" ) ) );
+    const tripoint_bub_ms position = who.pos_bub();
+    who.set_wielded_item( item( itype_test_rag_bundle ) );
     item_location original = who.get_wielded_item();
-    original->set_flag( flag_id( "RADIO_MOD" ) );
-    const auto selection = capture_disassembly( who, original, 1 );
+    original->set_flag( json_flag_RADIO_MOD );
+    const disassembly_selection selection = capture_disassembly( who, original, 1 );
     fixture.run( who, disassembly_request( fixture, who, { selection } ) );
     REQUIRE( who.activity );
     const bool retire = GENERATE( false, true );
@@ -15964,12 +16317,12 @@ TEST_CASE( "disassembly_publishes_workpiece_and_removed_mod_before_unwield_callb
                 if( !fired && event.type() == event_type::character_wields_item &&
                     event.get<character_id>( "character" ) == who.getID() && !who.has_weapon() ) {
                     fired = true;
-                    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_id( "disassembly" ) ) == 1 );
-                    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_id( "radio_mod" ) ) == 1 );
+                    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_disassembly ) == 1 );
+                    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_radio_mod ) == 1 );
                     if( retire ) {
                         g->remove_npc( who.getID() );
                     } else {
-                        who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+                        who.assign_activity( player_activity( ACT_WAIT, 100 ) );
                     }
                 }
             }
@@ -15981,17 +16334,17 @@ TEST_CASE( "disassembly_publishes_workpiece_and_removed_mod_before_unwield_callb
         out.member( "disassembly_choice", choice );
     } ) );
     REQUIRE( events.fired );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "disassembly" ) ) == 1 );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "radio_mod" ) ) == 1 );
+    CHECK( salvage_count( nullptr, here, position, itype_disassembly ) == 1 );
+    CHECK( salvage_count( nullptr, here, position, itype_radio_mod ) == 1 );
     for( const item &value : here.i_at( position ) ) {
         CHECK_FALSE( value.has_var( "activity_owner_id" ) );
-        if( value.typeId() == itype_id( "disassembly" ) ) {
-            CHECK_FALSE( value.components.only_item().has_flag( flag_id( "RADIO_MOD" ) ) );
+        if( value.typeId() == itype_disassembly ) {
+            CHECK_FALSE( value.components.only_item().has_flag( json_flag_RADIO_MOD ) );
         }
     }
     if( !retire ) {
         CHECK_FALSE( who.has_weapon() );
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
     CHECK_FALSE( get_avatar().activity );
 }
@@ -16004,11 +16357,11 @@ TEST_CASE( "disassembly_drop_interruption_keeps_complete_native_yield_after_sour
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     item_location original = disassembly_original( who );
     item_location work = prepare_disassembly_work( fixture, who, original );
     work->item_counter = 10000000;
-    itype &cotton = *const_cast<itype *>( item::find_type( itype_id( "cotton_patchwork" ) ) );
+    itype &cotton = *const_cast<itype *>( item::find_type( itype_cotton_patchwork ) );
     const restore_on_out_of_scope restore_drop( cotton.drop_action );
     const bool retire = GENERATE( false, true );
     if( retire ) {
@@ -16018,14 +16371,14 @@ TEST_CASE( "disassembly_drop_interruption_keeps_complete_native_yield_after_sour
                                        const tripoint_bub_ms &position ) -> std::optional<int> {
                                            REQUIRE( actor );
                                            CHECK( actor->is_npc() );
-                                           CHECK( salvage_count( nullptr, get_map(), position, itype_id( "disassembly" ) ) == 0 );
-                                           CHECK( salvage_count( nullptr, get_map(), position, itype_id( "cotton_patchwork" ) ) == 100 );
-                                           CHECK( salvage_count( nullptr, get_map(), position, itype_id( "string_36" ) ) == 1 );
+                                           CHECK( salvage_count( nullptr, get_map(), position, itype_disassembly ) == 0 );
+                                           CHECK( salvage_count( nullptr, get_map(), position, itype_cotton_patchwork ) == 100 );
+                                           CHECK( salvage_count( nullptr, get_map(), position, itype_string_36 ) == 1 );
                                            get_avatar().set_value( "disassembly_drop_callback", "yes" );
     if( actor->get_value( "retire_disassembly" ).str() == "yes" ) {
     g->remove_npc( actor->getID() );
     } else {
-        actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+        actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     }
     return std::nullopt;
                                        } );
@@ -16033,10 +16386,10 @@ TEST_CASE( "disassembly_drop_interruption_keeps_complete_native_yield_after_sour
     fixture.run( who, fixture.request( who, "step" ) );
     CHECK( get_avatar().get_value( "disassembly_drop_callback" ).str() == "yes" );
     CHECK_FALSE( work );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "cotton_patchwork" ) ) == 100 );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "string_36" ) ) == 1 );
+    CHECK( salvage_count( nullptr, here, position, itype_cotton_patchwork ) == 100 );
+    CHECK( salvage_count( nullptr, here, position, itype_string_36 ) == 1 );
     if( !retire ) {
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
     CHECK_FALSE( get_avatar().activity );
 }
@@ -16049,12 +16402,12 @@ TEST_CASE( "disassembly_liquid_components_save_and_fill_once_with_remainder_on_c
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
     map &here = get_map();
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     item_location original = disassembly_original( who );
-    item water( itype_id( "water_clean" ), calendar::turn );
+    item water( itype_water_clean, calendar::turn );
     water.charges = 8;
     original->components.add( water );
-    item cotton( itype_id( "cotton_patchwork" ), calendar::turn );
+    item cotton( itype_cotton_patchwork, calendar::turn );
     cotton.charges = 3;
     original->components.add( cotton );
     item_location work = prepare_disassembly_work( fixture, who, original );
@@ -16074,10 +16427,10 @@ TEST_CASE( "disassembly_liquid_components_save_and_fill_once_with_remainder_on_c
     const JsonObject view = value.get_object();
     view.allow_omitted_members();
     CHECK( view.get_int64( "liquid_source_uid" ) == source );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "cotton_patchwork" ) ) == 3 );
+    CHECK( salvage_count( nullptr, here, position, itype_cotton_patchwork ) == 3 );
     save_reload_activity( who );
     item_location bottle( map_cursor( position ),
-                          &here.add_item( position, item( itype_id( "bottle_plastic" ) ) ) );
+                          &here.add_item( position, item( itype_bottle_plastic ) ) );
     unload_liquid_choice choice;
     choice.source = source;
     choice.kind = LD_ITEM;
@@ -16093,12 +16446,12 @@ TEST_CASE( "disassembly_liquid_components_save_and_fill_once_with_remainder_on_c
     REQUIRE( filled < 8 );
     fixture.run( who, fill );
     CHECK( bottle->only_item().charges == filled );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "water_clean" ) ) == 8 - filled );
+    CHECK( salvage_count( nullptr, here, position, itype_water_clean ) == 8 - filled );
     save_reload_activity( who );
     who.set_moves( 0 );
     fixture.run( who, fixture.request( who, "cancel" ) );
     CHECK_FALSE( who.activity );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "water_clean" ) ) + filled == 8 );
+    CHECK( salvage_count( nullptr, here, position, itype_water_clean ) + filled == 8 );
     CHECK_FALSE( get_avatar().activity );
 }
 
@@ -16106,7 +16459,7 @@ namespace
 {
 item_location chopping_tool( Character &who )
 {
-    who.set_wielded_item( item( itype_id( "ax" ) ) );
+    who.set_wielded_item( item( itype_ax ) );
     who.set_moves( 1000 );
     return who.get_wielded_item();
 }
@@ -16131,12 +16484,12 @@ TEST_CASE( "remote_tree_chopping_waits_for_saved_owner_direction_then_finishes_o
     map &here = get_map();
     npc &who = fixture.remote();
     bind_feedback_player( who, 'a', 701 );
-    auto tool = chopping_tool( who );
+    item_location tool = chopping_tool( who );
     const tripoint_bub_ms position( 61, 60, 0 );
-    here.ter_set( position, ter_str_id( "t_tree" ) );
+    here.ter_set( position, ter_t_tree );
     const int host_moves = get_avatar().get_moves();
     fixture.run( who, chopping_request( fixture, who, tool, true, position ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_CHOP_TREE" ) );
+    REQUIRE( who.activity.id() == ACT_CHOP_TREE );
     CHECK( who.activity.moves_total == chopping_work_moves( who, *tool ) );
     save_reload_activity( who );
     who.activity.moves_left = 1;
@@ -16148,7 +16501,7 @@ TEST_CASE( "remote_tree_chopping_waits_for_saved_owner_direction_then_finishes_o
     CHECK( tree->pending_direction() );
     CHECK_FALSE( tree->ready_to_finish() );
     CHECK( json_loader::from_string( pending ).get_object().get_bool( "tree_direction_prompt" ) );
-    CHECK( here.ter( position ) == ter_str_id( "t_tree" ) );
+    CHECK( here.ter( position ) == ter_t_tree );
     save_reload_activity( who );
     const int moves = who.get_moves();
     for( const auto &direction : {
@@ -16160,7 +16513,7 @@ TEST_CASE( "remote_tree_chopping_waits_for_saved_owner_direction_then_finishes_o
         } ) );
         CHECK( who.activity );
         CHECK( who.get_moves() == moves );
-        CHECK( here.ter( position ) == ter_str_id( "t_tree" ) );
+        CHECK( here.ter( position ) == ter_t_tree );
     }
     class tree_events : public event_subscriber {
             character_id owner;
@@ -16182,11 +16535,11 @@ TEST_CASE( "remote_tree_chopping_waits_for_saved_owner_direction_then_finishes_o
     fixture.run( who, choice );
     CHECK_FALSE( who.activity );
     CHECK( events.cuts == 1 );
-    CHECK( here.ter( position ) == ter_str_id( "t_stump" ) );
-    who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    CHECK( here.ter( position ) == ter_t_stump );
+    who.assign_activity( player_activity( ACT_WAIT, 100 ) );
     fixture.run( who, choice );
     CHECK( events.cuts == 1 );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     CHECK( get_avatar().get_moves() == host_moves );
     CHECK_FALSE( get_avatar().activity );
 }
@@ -16199,16 +16552,16 @@ TEST_CASE( "saved_chopping_cancels_on_changed_surface_tool_operator_or_origin",
     npc &who = fixture.remote();
     const bool tree = GENERATE( false, true );
     const std::string change = GENERATE( "surface", "tool", "operator", "origin" );
-    auto tool = chopping_tool( who );
+    item_location tool = chopping_tool( who );
     const tripoint_bub_ms position( 61, 60, 0 );
     here.ter_set( position, ter_str_id( tree ? "t_tree" : "t_trunk" ) );
     fixture.run( who, chopping_request( fixture, who, tool, tree, position ) );
     REQUIRE( who.activity );
     save_reload_activity( who );
     if( change == "surface" ) {
-        here.ter_set( position, ter_str_id( "t_dirt" ) );
+        here.ter_set( position, ter_t_dirt );
     } else if( change == "tool" ) {
-        who.set_wielded_item( item( itype_id( "ax" ) ) );
+        who.set_wielded_item( item( itype_ax ) );
     } else if( change == "origin" ) {
         who.setpos( here, tripoint_bub_ms( 60, 61, 0 ) );
     }
@@ -16228,7 +16581,7 @@ TEST_CASE( "saved_chopping_cancels_on_changed_surface_tool_operator_or_origin",
     }
     CHECK( here.ter( position ) == ter_str_id( change == "surface" ? "t_dirt" :
             tree ? "t_tree" : "t_trunk" ) );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "log" ) ) == 0 );
+    CHECK( salvage_count( nullptr, here, position, itype_log ) == 0 );
 }
 
 TEST_CASE( "chopping_logs_publishes_native_yield_before_interrupted_drop_and_cannot_replay",
@@ -16238,28 +16591,28 @@ TEST_CASE( "chopping_logs_publishes_native_yield_before_interrupted_drop_and_can
     map &here = get_map();
     npc &who = fixture.remote();
     const bool retire = GENERATE( false, true );
-    auto tool = chopping_tool( who );
+    item_location tool = chopping_tool( who );
     const tripoint_bub_ms position( 61, 60, 0 );
-    here.ter_set( position, ter_str_id( "t_trunk" ) );
+    here.ter_set( position, ter_t_trunk );
     fixture.run( who, chopping_request( fixture, who, tool, false, position ) );
-    REQUIRE( who.activity.id() == activity_id( "ACT_CHOP_LOGS" ) );
+    REQUIRE( who.activity.id() == ACT_CHOP_LOGS );
     save_reload_activity( who );
     who.set_value( "retire_chopper", retire ? "yes" : "no" );
-    itype &log = *const_cast<itype *>( item::find_type( itype_id( "log" ) ) );
+    itype &log = *const_cast<itype *>( item::find_type( itype_log ) );
     const restore_on_out_of_scope restore_drop( log.drop_action );
     log.drop_action = use_function( "settled_chopping", []( Character *actor, item *,
                                     const tripoint_bub_ms &position ) -> std::optional<int> {
                                         REQUIRE( actor );
                                         CHECK( actor->is_npc() );
-                                        CHECK( get_map().ter( position ) == ter_str_id( "t_dirt" ) );
-                                        const int logs = salvage_count( nullptr, get_map(), position, itype_id( "log" ) );
+                                        CHECK( get_map().ter( position ) == ter_t_dirt );
+                                        const int logs = salvage_count( nullptr, get_map(), position, itype_log );
                                         CHECK( logs >= 2 );
                                         CHECK( logs <= 3 );
                                         get_avatar().set_value( "chopping_drop_callback", std::to_string( logs ) );
     if( actor->get_value( "retire_chopper" ).str() == "yes" ) {
     g->remove_npc( actor->getID() );
     } else {
-        actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+        actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     }
     return std::nullopt;
                                     } );
@@ -16267,15 +16620,15 @@ TEST_CASE( "chopping_logs_publishes_native_yield_before_interrupted_drop_and_can
     who.set_moves( 1000 );
     const std::string step = fixture.request( who, "step" );
     fixture.run( who, step );
-    const int logs = salvage_count( nullptr, here, position, itype_id( "log" ) );
+    const int logs = salvage_count( nullptr, here, position, itype_log );
     CHECK( logs >= 2 );
     CHECK( logs <= 3 );
     CHECK( get_avatar().get_value( "chopping_drop_callback" ).str() == std::to_string( logs ) );
-    CHECK( here.ter( position ) == ter_str_id( "t_dirt" ) );
+    CHECK( here.ter( position ) == ter_t_dirt );
     if( !retire ) {
         fixture.run( who, step );
-        CHECK( salvage_count( nullptr, here, position, itype_id( "log" ) ) == logs );
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( salvage_count( nullptr, here, position, itype_log ) == logs );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
 }
 
@@ -16285,30 +16638,30 @@ TEST_CASE( "zone_chopping_keeps_automatic_direction_and_client_entry_only_sends_
     reload_fixture fixture;
     map &here = get_map();
     const tripoint_bub_ms position( 61, 60, 0 );
-    here.ter_set( position, ter_str_id( "t_tree" ) );
+    here.ter_set( position, ter_t_tree );
     SECTION( "automatic work uses the actual remote operator" ) {
         npc &who = fixture.remote();
         bind_feedback_player( who, 'a', 701 );
-        auto tool = chopping_tool( who );
+        item_location tool = chopping_tool( who );
         REQUIRE( start_chopping_work( who, tool, here.get_abs( position ), true ) );
         who.activity.moves_left = 1;
         who.set_moves( 1000 );
         fixture.run( who, fixture.request( who, "step" ) );
         CHECK_FALSE( who.activity );
-        CHECK( here.ter( position ) == ter_str_id( "t_stump" ) );
+        CHECK( here.ter( position ) == ter_t_stump );
     }
     SECTION( "frontend does not cut or consume time" ) {
         avatar &who = get_avatar();
         who.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
-        auto tool = chopping_tool( who );
+        item_location tool = chopping_tool( who );
         const int moves = who.get_moves();
-        const auto rng = rng_get_engine();
+        const std::string rng = capture_rng_state();
         cata_mp::set_client_mode( true );
         std::string method = "CHOP_TREE";
         REQUIRE( cata_mp::client_activate_item( tool, method, here.get_abs( position ) ) );
-        CHECK( here.ter( position ) == ter_str_id( "t_tree" ) );
+        CHECK( here.ter( position ) == ter_t_tree );
         CHECK( who.get_moves() == moves );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
         CHECK( who.activity.execution() == activity_execution::presentation );
         cata_mp::set_client_mode( false );
     }
@@ -16331,7 +16684,7 @@ std::string plank_request( reload_fixture &fixture, Character &who, const item_l
 
 item_location plank_log( Character &who )
 {
-    item &log = get_map().add_item_or_charges( who.pos_bub(), item( itype_id( "log" ) ) );
+    item &log = get_map().add_item_or_charges( who.pos_bub(), item( itype_log ) );
     return item_location( map_cursor( who.pos_abs() ), &log );
 }
 } // namespace
@@ -16341,14 +16694,14 @@ TEST_CASE( "plank_work_spends_only_the_selected_log_once_and_retains_native_canc
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    auto tool = chopping_tool( who );
+    item_location tool = chopping_tool( who );
     item_location first = plank_log( who );
     item_location selected = plank_log( who );
     const lumber_selection choice{ capture_item_source( who, selected ), false };
     const int host_moves = get_avatar().get_moves();
     const std::string start = plank_request( fixture, who, tool, choice );
     fixture.run( who, start );
-    REQUIRE( who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) );
+    REQUIRE( who.activity.id() == ACT_CHOP_PLANKS );
     CHECK( who.activity.moves_total == to_moves<int>( 20_minutes ) );
     CHECK( first );
     CHECK_FALSE( selected );
@@ -16360,8 +16713,8 @@ TEST_CASE( "plank_work_spends_only_the_selected_log_once_and_retains_native_canc
     fixture.run( who, cancel );
     fixture.run( who, cancel );
     CHECK_FALSE( who.activity );
-    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_id( "log" ) ) == 1 );
-    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_id( "2x4" ) ) == 0 );
+    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_log ) == 1 );
+    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_2x4 ) == 0 );
     CHECK( get_avatar().get_moves() == host_moves );
 }
 
@@ -16371,7 +16724,7 @@ TEST_CASE( "plank_choices_and_saved_work_do_not_adopt_another_source_or_operator
     reload_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    auto tool = chopping_tool( who );
+    item_location tool = chopping_tool( who );
     const item_location log = plank_log( who );
     lumber_selection choice{ capture_item_source( who, log ), false };
     SECTION( "a missing log is rejected without spending the nearby one" ) {
@@ -16382,8 +16735,8 @@ TEST_CASE( "plank_choices_and_saved_work_do_not_adopt_another_source_or_operator
     }
     SECTION( "another character's log cannot be submitted as the operator's" ) {
         avatar &other = get_avatar();
-        other.set_wielded_item( item( itype_id( "log" ) ) );
-        const auto foreign = other.get_wielded_item();
+        other.set_wielded_item( item( itype_log ) );
+        const item_location foreign = other.get_wielded_item();
         choice.log = capture_item_source( other, foreign );
         fixture.run( who, plank_request( fixture, who, tool, choice ) );
         CHECK_FALSE( who.activity );
@@ -16415,14 +16768,14 @@ TEST_CASE( "plank_choices_and_saved_work_do_not_adopt_another_source_or_operator
             CHECK( who.activity );
         } else {
             if( changed == "tool" ) {
-                who.set_wielded_item( item( itype_id( "ax" ) ) );
+                who.set_wielded_item( item( itype_ax ) );
             } else {
                 who.setpos( here, who.pos_bub() + point::east );
             }
             fixture.run( who, fixture.request( who, "step" ) );
             CHECK_FALSE( who.activity );
         }
-        CHECK( salvage_count( nullptr, here, tripoint_bub_ms( 60, 60, 0 ), itype_id( "2x4" ) ) == 0 );
+        CHECK( salvage_count( nullptr, here, tripoint_bub_ms( 60, 60, 0 ), itype_2x4 ) == 0 );
     }
 }
 
@@ -16433,39 +16786,39 @@ TEST_CASE( "plank_completion_keeps_native_yields_when_drop_callbacks_replace_or_
     map &here = get_map();
     npc &who = fixture.remote();
     const bool retire = GENERATE( false, true );
-    auto tool = chopping_tool( who );
-    const auto log = plank_log( who );
+    item_location tool = chopping_tool( who );
+    const item_location log = plank_log( who );
     fixture.run( who, plank_request( fixture, who, tool,
                                      { capture_item_source( who, log ), false } ) );
     REQUIRE( who.activity );
     save_reload_activity( who );
-    const auto position = who.pos_bub();
-    const auto before_roll = rng_get_engine();
-    int planks = normal_roll( 2 + who.get_skill_level( skill_id( "fabrication" ) ), 1 );
+    const tripoint_bub_ms position = who.pos_bub();
+    const std::string before_roll = capture_rng_state();
+    int planks = normal_roll( 2 + who.get_skill_level( skill_fabrication ), 1 );
     const int waste = 10 - planks;
     const int scraps = rng( waste, waste * 3 );
     planks = std::max( 0, std::min( planks, 10 ) );
-    rng_get_engine() = before_roll;
+    restore_rng_state( before_roll );
     get_avatar().set_value( "expected_planks", std::to_string( planks ) );
     get_avatar().set_value( "expected_splinters", std::to_string( std::max( 0, scraps ) ) );
     who.set_value( "retire_plank_worker", retire ? "yes" : "no" );
-    itype &plank = *const_cast<itype *>( item::find_type( itype_id( "2x4" ) ) );
-    itype &splinter = *const_cast<itype *>( item::find_type( itype_id( "splinter" ) ) );
+    itype &plank = *const_cast<itype *>( item::find_type( itype_2x4 ) );
+    itype &splinter = *const_cast<itype *>( item::find_type( itype_splinter ) );
     const restore_on_out_of_scope restore_plank( plank.drop_action );
     const restore_on_out_of_scope restore_splinter( splinter.drop_action );
     const use_function drop( "settled_planks", []( Character *actor, item *,
                              const tripoint_bub_ms &position ) -> std::optional<int> {
                                  REQUIRE( actor );
-                                 CHECK( salvage_count( nullptr, get_map(), position, itype_id( "log" ) ) == 0 );
-                                 CHECK( std::to_string( salvage_count( nullptr, get_map(), position, itype_id( "2x4" ) ) ) ==
+                                 CHECK( salvage_count( nullptr, get_map(), position, itype_log ) == 0 );
+                                 CHECK( std::to_string( salvage_count( nullptr, get_map(), position, itype_2x4 ) ) ==
                                         get_avatar().get_value( "expected_planks" ).str() );
-                                 CHECK( std::to_string( salvage_count( nullptr, get_map(), position, itype_id( "splinter" ) ) ) ==
+                                 CHECK( std::to_string( salvage_count( nullptr, get_map(), position, itype_splinter ) ) ==
                                         get_avatar().get_value( "expected_splinters" ).str() );
                                  get_avatar().set_value( "plank_drop_callback", "yes" );
     if( actor->get_value( "retire_plank_worker" ).str() == "yes" ) {
     g->remove_npc( actor->getID() );
     } else {
-        actor->assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+        actor->assign_activity( player_activity( ACT_WAIT, 100 ) );
     }
     return std::nullopt;
                              } );
@@ -16475,10 +16828,10 @@ TEST_CASE( "plank_completion_keeps_native_yields_when_drop_callbacks_replace_or_
     // without unrelated turn processing consuming RNG before those two rolls.
     who.activity.actor->finish( who.activity, who );
     CHECK( get_avatar().get_value( "plank_drop_callback" ).str() == "yes" );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "2x4" ) ) == planks );
-    CHECK( salvage_count( nullptr, here, position, itype_id( "splinter" ) ) == std::max( 0, scraps ) );
+    CHECK( salvage_count( nullptr, here, position, itype_2x4 ) == planks );
+    CHECK( salvage_count( nullptr, here, position, itype_splinter ) == std::max( 0, scraps ) );
     if( !retire ) {
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == ACT_WAIT );
     }
 }
 
@@ -16487,27 +16840,27 @@ TEST_CASE( "plank_native_entry_and_client_selection_share_the_original_ground_lo
 {
     reload_fixture fixture;
     avatar &who = get_avatar();
-    auto tool = chopping_tool( who );
-    const auto log = plank_log( who );
+    item_location tool = chopping_tool( who );
+    const item_location log = plank_log( who );
     SECTION( "native tool activation starts paid work without another material menu" ) {
         who.invoke_item( tool.get_item(), "LUMBER" );
-        REQUIRE( who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) );
+        REQUIRE( who.activity.id() == ACT_CHOP_PLANKS );
         CHECK_FALSE( log );
         who.activity.moves_left = 1;
         who.set_moves( 1000 );
         who.activity.do_turn( who );
         CHECK_FALSE( who.activity );
-        CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_id( "log" ) ) == 0 );
+        CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_log ) == 0 );
     }
     SECTION( "client sends the material identity without spending it" ) {
-        const auto before = rng_get_engine();
+        const std::string before = capture_rng_state();
         const int moves = who.get_moves();
         cata_mp::set_client_mode( true );
         std::string method = "LUMBER";
         REQUIRE( cata_mp::client_activate_item( tool, method ) );
         CHECK( log );
         CHECK( who.get_moves() == moves );
-        CHECK( rng_get_engine() == before );
+        CHECK( capture_rng_state() == before );
         CHECK( who.activity.execution() == activity_execution::presentation );
         cata_mp::set_client_mode( false );
     }
@@ -16531,9 +16884,9 @@ TEST_CASE( "plank_start_does_not_overwrite_an_activity_created_by_consuming_the_
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "log" ) ) );
+    who.set_wielded_item( item( itype_log ) );
     const item_location log = who.get_wielded_item();
-    item_location tool = who.i_add( item( itype_id( "ax" ) ) );
+    item_location tool = who.i_add( item( itype_ax ) );
     class replace_on_unwield : public event_subscriber {
             Character &owner;
         public:
@@ -16546,7 +16899,7 @@ TEST_CASE( "plank_start_does_not_overwrite_an_activity_created_by_consuming_the_
                     event.get<character_id>( "character" ) == owner.getID() &&
                     !owner.get_wielded_item() ) {
                     called = true;
-                    owner.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+                    owner.assign_activity( player_activity( ACT_WAIT, 100 ) );
                 }
             }
     } events( who );
@@ -16556,10 +16909,10 @@ TEST_CASE( "plank_start_does_not_overwrite_an_activity_created_by_consuming_the_
     CHECK( events.called );
     CHECK_FALSE( log );
     CHECK( tool );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     fixture.run( who, start );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
-    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_id( "2x4" ) ) == 0 );
+    CHECK( who.activity.id() == ACT_WAIT );
+    CHECK( salvage_count( nullptr, get_map(), who.pos_bub(), itype_2x4 ) == 0 );
 }
 
 TEST_CASE( "tilling_uses_the_requesting_operator_and_original_ground_after_save",
@@ -16568,13 +16921,13 @@ TEST_CASE( "tilling_uses_the_requesting_operator_and_original_ground_after_save"
     reload_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "shovel" ) ) );
-    const auto tool = who.get_wielded_item();
+    who.set_wielded_item( item( itype_shovel ) );
+    const item_location tool = who.get_wielded_item();
     const bool greenhouse = GENERATE( false, true );
     const tripoint_bub_ms position( 61, 60, 0 );
     here.ter_set( position, ter_str_id( greenhouse ? "t_greenhouse" : "t_dirt" ) );
     const int host_moves = get_avatar().get_moves();
-    const auto request = fixture.request( who, "start", [&]( JsonOut &out ) {
+    const std::string request = fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "item_use" );
         out.member( "source", capture_item_source( who, tool ) );
         out.member( "item_type", tool->typeId() );
@@ -16582,27 +16935,27 @@ TEST_CASE( "tilling_uses_the_requesting_operator_and_original_ground_after_save"
         out.member( "target", here.get_abs( position ) );
     } );
     fixture.run( who, request );
-    REQUIRE( who.activity.id() == activity_id( "ACT_CHURN" ) );
+    REQUIRE( who.activity.id() == ACT_CHURN );
     CHECK( who.activity.moves_total == 18000 );
     save_reload_activity( who );
     SECTION( "complete and replay" ) {
         who.activity.moves_left = 1;
         who.set_moves( 1000 );
-        const auto step = fixture.request( who, "step" );
+        const std::string step = fixture.request( who, "step" );
         fixture.run( who, step );
         CHECK_FALSE( who.activity );
         CHECK( here.ter( position ) == ter_str_id( greenhouse ? "t_greenhouse_tilled" : "t_dirtmound" ) );
-        here.ter_set( position, ter_str_id( "t_pavement" ) );
+        here.ter_set( position, ter_t_pavement );
         fixture.run( who, step );
-        CHECK( here.ter( position ) == ter_str_id( "t_pavement" ) );
+        CHECK( here.ter( position ) == ter_t_pavement );
     }
     SECTION( "replaced ground is not overwritten by completed work" ) {
-        here.ter_set( position, ter_str_id( "t_pavement" ) );
+        here.ter_set( position, ter_t_pavement );
         who.activity.moves_left = 0;
         who.set_moves( 100 );
         fixture.run( who, fixture.request( who, "step" ) );
         CHECK_FALSE( who.activity );
-        CHECK( here.ter( position ) == ter_str_id( "t_pavement" ) );
+        CHECK( here.ter( position ) == ter_t_pavement );
     }
     CHECK( get_avatar().get_moves() == host_moves );
     CHECK_FALSE( get_avatar().activity );
@@ -16614,15 +16967,15 @@ TEST_CASE( "automatic_tilling_rechecks_native_capability_and_client_tilling_only
     reload_fixture fixture;
     map &here = get_map();
     const tripoint_bub_ms position( 61, 60, 0 );
-    here.ter_set( position, ter_str_id( "t_dirt" ) );
+    here.ter_set( position, ter_t_dirt );
     SECTION( "automated work retains the native tool-independent DIG capability check" ) {
         npc &who = fixture.remote();
-        who.set_wielded_item( item( itype_id( "shovel" ) ) );
+        who.set_wielded_item( item( itype_shovel ) );
         REQUIRE( start_tilling_work( who, item_location(), here.get_abs( position ), true ) );
         save_reload_activity( who );
         const bool lose_quality = GENERATE( false, true );
         if( lose_quality ) {
-            who.set_wielded_item( item( itype_id( "rock" ) ) );
+            who.set_wielded_item( item( itype_rock ) );
         }
         who.activity.moves_left = 1;
         who.set_moves( 100 );
@@ -16633,16 +16986,16 @@ TEST_CASE( "automatic_tilling_rechecks_native_capability_and_client_tilling_only
     SECTION( "frontend neither changes soil nor starts native work" ) {
         avatar &who = get_avatar();
         who.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
-        who.set_wielded_item( item( itype_id( "shovel" ) ) );
+        who.set_wielded_item( item( itype_shovel ) );
         who.set_moves( 100 );
-        const auto tool = who.get_wielded_item();
-        const auto rng = rng_get_engine();
+        const item_location tool = who.get_wielded_item();
+        const std::string rng = capture_rng_state();
         cata_mp::set_client_mode( true );
         std::string method = "MAKEMOUND";
         REQUIRE( cata_mp::client_activate_item( tool, method, here.get_abs( position ) ) );
-        CHECK( here.ter( position ) == ter_str_id( "t_dirt" ) );
+        CHECK( here.ter( position ) == ter_t_dirt );
         CHECK( who.get_moves() == 100 );
-        CHECK( rng_get_engine() == rng );
+        CHECK( capture_rng_state() == rng );
         CHECK( who.activity.execution() == activity_execution::presentation );
         cata_mp::set_client_mode( false );
     }
@@ -16654,9 +17007,9 @@ TEST_CASE( "kill_statistics_projection_is_private_and_changes_only_when_needed",
     reload_fixture fixture;
     npc &remote = fixture.remote();
     npc &other = spawn_npc( point_bub_ms( 64, 62 ), "test_talker" );
-    auto &first = bind_feedback_player( remote, 'a', 701 );
-    auto &second = bind_feedback_player( other, 'b', 702 );
-    const mtype_id killed( "mon_zombie" );
+    cata_mp::remote_player_session &first = bind_feedback_player( remote, 'a', 701 );
+    cata_mp::remote_player_session &second = bind_feedback_player( other, 'b', 702 );
+    const mtype_id &killed = mon_zombie;
     get_avatar().get_kill_statistics().reset( { { killed, 8 } }, {} );
     remote.get_kill_statistics().reset( { { killed, 2 } }, {} );
     other.get_kill_statistics().reset( { { killed, 5 } }, {} );
@@ -16694,17 +17047,17 @@ TEST_CASE( "farming_requests_spend_the_operator_resources_and_reject_stale_or_re
     avatar &host = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms plot = remote.pos_bub() + tripoint::east;
-    const itype_id seed_type( "test_seed_eoc" );
-    const itype_id clean_water( "water_clean" );
-    const itype_id fertilizer_type( "fertilizer_commercial" );
+    const itype_id &seed_type = itype_test_seed_eoc;
+    const itype_id &clean_water = itype_water_clean;
+    const itype_id &fertilizer_type = itype_fertilizer_commercial;
     here.add_item( plot, item( seed_type ) );
-    here.furn_set( plot, furn_str_id( "f_planter_seed" ) );
-    item bottle( itype_id( "bottle_plastic" ) );
+    here.furn_set( plot, furn_f_planter_seed );
+    item bottle( itype_bottle_plastic );
     REQUIRE( bottle.put_in( item( clean_water, calendar::turn, 2 ),
                             pocket_type::CONTAINER ).success() );
     remote.i_add( bottle );
     host.i_add( bottle );
-    const auto choice = capture_farming_command( remote, here, here.get_abs( plot ),
+    const farming_command choice = capture_farming_command( remote, here, here.get_abs( plot ),
                         farming_action::water );
     REQUIRE( choice.seed );
     const auto encode = [&]( const farming_command & command ) {
@@ -16745,7 +17098,7 @@ TEST_CASE( "farming_requests_spend_the_operator_resources_and_reject_stale_or_re
         fertilize.action = farming_action::fertilize;
         fertilize.material = fertilizer_type;
         fixture.run( remote, encode( fertilize ) );
-        REQUIRE( remote.activity.id() == activity_id( "ACT_FERTILIZE_PLANT" ) );
+        REQUIRE( remote.activity.id() == ACT_FERTILIZE_PLANT );
         CHECK( remote.activity.execution() == activity_execution::authoritative );
         CHECK_FALSE( host.activity );
         remote.activity.actor->finish( remote.activity, remote );
@@ -16762,8 +17115,8 @@ TEST_CASE( "wild_plant_requests_create_owned_work_and_reject_replayed_or_stale_t
     avatar &host = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms plot = remote.pos_bub() + tripoint::east;
-    here.ter_set( plot, ter_str_id( "t_underbrush" ) );
-    const auto choice = capture_farming_command( remote, here, here.get_abs( plot ),
+    here.ter_set( plot, ter_t_underbrush );
+    const farming_command choice = capture_farming_command( remote, here, here.get_abs( plot ),
                         farming_action::forage );
     const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
         out.member( "kind", "farming" );
@@ -16771,31 +17124,31 @@ TEST_CASE( "wild_plant_requests_create_owned_work_and_reject_replayed_or_stale_t
     } );
     SECTION( "request_creates_only_the_remote_activity_and_duplicate_does_not_restart_it" ) {
         fixture.run( remote, request );
-        REQUIRE( remote.activity.id() == activity_id( "ACT_FORAGE" ) );
+        REQUIRE( remote.activity.id() == ACT_FORAGE );
         CHECK( remote.activity.execution() == activity_execution::authoritative );
         CHECK_FALSE( host.activity );
-        const auto generation = remote.activity.identity_generation();
-        const auto random_before = rng_get_engine();
+        const std::uint64_t generation = remote.activity.identity_generation();
+        const std::string random_before = capture_rng_state();
         fixture.run( remote, request );
         CHECK( remote.activity.identity_generation() == generation );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( capture_rng_state() == random_before );
         remote.activity.actor->finish( remote.activity, remote );
-        CHECK( here.ter( plot ) != ter_str_id( "t_underbrush" ) );
+        CHECK( here.ter( plot ) != ter_t_underbrush );
         CHECK_FALSE( host.activity );
     }
     SECTION( "changed_surface_is_rejected_before_any_work_or_random_draw" ) {
-        here.ter_set( plot, ter_str_id( "t_dirt" ) );
-        const auto random_before = rng_get_engine();
+        here.ter_set( plot, ter_t_dirt );
+        const std::string random_before = capture_rng_state();
         fixture.run( remote, request );
         CHECK_FALSE( remote.activity );
-        CHECK( here.ter( plot ) == ter_str_id( "t_dirt" ) );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( here.ter( plot ) == ter_t_dirt );
+        CHECK( capture_rng_state() == random_before );
     }
     SECTION( "an_unauthorized_request_cannot_start_native_foraging" ) {
         fixture.run( remote, request, false );
         CHECK_FALSE( remote.activity );
         CHECK_FALSE( host.activity );
-        CHECK( here.ter( plot ) == ter_str_id( "t_underbrush" ) );
+        CHECK( here.ter( plot ) == ter_t_underbrush );
     }
 }
 
@@ -16809,12 +17162,12 @@ TEST_CASE( "special_vegetation_requests_settle_the_remote_choice_only_once",
     host.setpos( here, remote.pos_bub() + tripoint( 5, 0, 0 ) );
     const tripoint_bub_ms plot = remote.pos_bub() + tripoint::east;
     SECTION( "nectar_choice_transfers_effects_and_cost_without_picking_the_flower" ) {
-        const trait_id proboscis( "PROBOSCIS" );
+        const trait_id &proboscis = trait_PROBOSCIS;
         remote.set_mutation( proboscis );
         remote.activate_mutation( proboscis );
         remote.set_hunger( 100 );
         REQUIRE( iexamine_helper::can_drink_nectar( remote ) );
-        here.furn_set( plot, furn_str_id( "f_flower_marloss" ) );
+        here.furn_set( plot, furn_f_flower_marloss );
         farming_command choice = capture_farming_command( remote, here, here.get_abs( plot ),
                                  farming_action::flower );
         choice.drink = true;
@@ -16825,21 +17178,21 @@ TEST_CASE( "special_vegetation_requests_settle_the_remote_choice_only_once",
             out.member( "farm", choice );
         } );
         fixture.run( remote, request );
-        const efftype_id teleglow( "teleglow" );
+        const efftype_id &teleglow = effect_teleglow;
         CHECK( remote.get_moves() == 100 - to_moves<int>( 30_seconds ) );
         CHECK( remote.get_effect_dur( teleglow ) == 10_minutes );
         CHECK_FALSE( host.has_effect( teleglow ) );
-        CHECK( here.furn( plot ) == furn_str_id( "f_flower_marloss" ) );
+        CHECK( here.furn( plot ) == furn_f_flower_marloss );
         CHECK( here.i_at( remote.pos_bub() ).empty() );
         const int moves_after = remote.get_moves();
-        const auto random_after = rng_get_engine();
+        const std::string random_after = capture_rng_state();
         fixture.run( remote, request );
         CHECK( remote.get_moves() == moves_after );
-        CHECK( rng_get_engine() == random_after );
+        CHECK( capture_rng_state() == random_after );
     }
     SECTION( "fungal_flower_is_removed_before_native_spores_and_cannot_be_replayed" ) {
-        here.furn_set( plot, furn_str_id( "f_flower_fungal" ) );
-        const auto choice = capture_farming_command( remote, here, here.get_abs( plot ),
+        here.furn_set( plot, furn_f_flower_fungal );
+        const farming_command choice = capture_farming_command( remote, here, here.get_abs( plot ),
                             farming_action::fungus );
         const std::string request = fixture.request( remote, "start", [&]( JsonOut &out ) {
             out.member( "kind", "farming" );
@@ -16848,10 +17201,10 @@ TEST_CASE( "special_vegetation_requests_settle_the_remote_choice_only_once",
         fixture.run( remote, request );
         CHECK_FALSE( here.has_furn( plot ) );
         CHECK( remote.get_moves() == 100 - to_moves<int>( 1_seconds ) / 2 );
-        CHECK_FALSE( host.has_effect( efftype_id( "spores" ) ) );
-        const auto random_after = rng_get_engine();
+        CHECK_FALSE( host.has_effect( effect_spores ) );
+        const std::string random_after = capture_rng_state();
         fixture.run( remote, request );
-        CHECK( rng_get_engine() == random_after );
+        CHECK( capture_rng_state() == random_after );
         CHECK( remote.get_moves() == 100 - to_moves<int>( 1_seconds ) / 2 );
     }
 }
@@ -16868,13 +17221,13 @@ TEST_CASE( "maple_requests_refresh_selected_supplies_and_sap_destination",
     const tripoint_bub_ms tree = remote.pos_bub() + tripoint::east;
     const tripoint_bub_ms supply = remote.pos_bub() + tripoint::west;
     const tripoint_bub_ms destination = remote.pos_bub() + tripoint::north;
-    here.ter_set( tree, ter_str_id( "t_tree_maple_tapped" ) );
-    here.add_item_unprocessed( tree, item( itype_id( "tree_spile" ) ) );
-    item &bottle = here.add_item_unprocessed( supply, item( itype_id( "bottle_plastic" ) ) );
+    here.ter_set( tree, ter_t_tree_maple_tapped );
+    here.add_item_unprocessed( tree, item( itype_tree_spile ) );
+    item &bottle = here.add_item_unprocessed( supply, item( itype_bottle_plastic ) );
     item_location selected( map_cursor( supply ), &bottle );
-    auto choice = capture_farming_command( remote, here, here.get_abs( tree ),
+    farming_command choice = capture_farming_command( remote, here, here.get_abs( tree ),
                                            farming_action::maple_add_container );
-    const auto before = inspect_maple_tree( here, here.get_abs( tree ) );
+    const maple_tree_items before = inspect_maple_tree( here, here.get_abs( tree ) );
     REQUIRE( before.tap );
     choice.tap = capture_item_source( remote, before.tap );
     choice.container = capture_item_source( remote, selected );
@@ -16885,7 +17238,7 @@ TEST_CASE( "maple_requests_refresh_selected_supplies_and_sap_destination",
     } );
     fixture.run( remote, add );
     REQUIRE( here.i_at( supply ).empty() );
-    auto installed = inspect_maple_tree( here, here.get_abs( tree ) );
+    maple_tree_items installed = inspect_maple_tree( here, here.get_abs( tree ) );
     REQUIRE( installed.container );
     CHECK( remote.get_moves() == 100 - handling_cost );
     CHECK( std::find( fixture.reload.changed_tiles.begin(), fixture.reload.changed_tiles.end(),
@@ -16895,7 +17248,7 @@ TEST_CASE( "maple_requests_refresh_selected_supplies_and_sap_destination",
     CHECK( remote.get_moves() == 100 - handling_cost );
 
     // A second, freshly submitted selection cannot install another container.
-    item &competitor = here.add_item_unprocessed( supply, item( itype_id( "bottle_plastic" ) ) );
+    item &competitor = here.add_item_unprocessed( supply, item( itype_bottle_plastic ) );
     item_location competing( map_cursor( supply ), &competitor );
     choice.container = capture_item_source( remote, competing );
     remote.set_moves( 100 );
@@ -16907,11 +17260,11 @@ TEST_CASE( "maple_requests_refresh_selected_supplies_and_sap_destination",
     CHECK( remote.get_moves() == 100 );
     CHECK( here.i_at( tree ).size() == 2 );
 
-    item sap( itype_id( "maple_sap" ), calendar::turn, 2 );
+    item sap( itype_maple_sap, calendar::turn, 2 );
     REQUIRE( installed.container->fill_with( sap, 2, true ) == 2 );
-    const auto filled = inspect_maple_tree( here, here.get_abs( tree ) );
+    const maple_tree_items filled = inspect_maple_tree( here, here.get_abs( tree ) );
     REQUIRE( filled.sap );
-    item &receiver = here.add_item_unprocessed( destination, item( itype_id( "bottle_plastic" ) ) );
+    item &receiver = here.add_item_unprocessed( destination, item( itype_bottle_plastic ) );
     item_location receiver_location( map_cursor( destination ), &receiver );
     choice.action = farming_action::maple_sap;
     choice.container = capture_item_source( remote, filled.container );
@@ -16926,12 +17279,12 @@ TEST_CASE( "maple_requests_refresh_selected_supplies_and_sap_destination",
     } );
     fixture.run( remote, collect );
     CHECK_FALSE( inspect_maple_tree( here, here.get_abs( tree ) ).sap );
-    CHECK( receiver.charges_of( itype_id( "maple_sap" ) ) == 2 );
+    CHECK( receiver.charges_of( itype_maple_sap ) == 2 );
     CHECK( remote.get_moves() == 0 );
     CHECK( std::find( fixture.reload.changed_tiles.begin(), fixture.reload.changed_tiles.end(),
                       here.get_abs( destination ) ) != fixture.reload.changed_tiles.end() );
     fixture.run( remote, collect );
-    CHECK( receiver.charges_of( itype_id( "maple_sap" ) ) == 2 );
+    CHECK( receiver.charges_of( itype_maple_sap ) == 2 );
     CHECK( remote.get_moves() == 0 );
 }
 
@@ -16956,10 +17309,10 @@ TEST_CASE( "server_owned_dialogue_session_drives_mission_assignment_and_synchron
     provider.set_hunger( 0 );
     provider.set_thirst( 0 );
     provider.set_sleepiness( 0 );
-    provider.set_mutation( trait_id( "WEB_WEAVER" ) );
+    provider.set_mutation( trait_WEB_WEAVER );
     provider.chatbin.first_topic = "TALK_MISSION_LIST";
 
-    const mission_type_id test_mission_id( "TEST_MISSION_GENERIC_REWARD" );
+    const mission_type_id &test_mission_id = mission_TEST_MISSION_GENERIC_REWARD;
     mission_type &definition = const_cast<mission_type &>( test_mission_id.obj() );
     const restore_on_out_of_scope restore_start( definition.start );
     const restore_on_out_of_scope restore_dialogue( definition.dialogue );
@@ -17114,7 +17467,7 @@ TEST_CASE( "server_owned_dialogue_rejects_stale_revisions_debug_bypass_and_proxy
     provider.set_hunger( 0 );
     provider.set_thirst( 0 );
     provider.set_sleepiness( 0 );
-    provider.set_mutation( trait_id( "WEB_WEAVER" ) );
+    provider.set_mutation( trait_WEB_WEAVER );
     provider.chatbin.first_topic = "TALK_TEST_SHOW_ALWAYS";
 
     fixture.run( remote, fixture.request( remote, "start", [&]( JsonOut & out ) {
@@ -17149,7 +17502,7 @@ TEST_CASE( "server_owned_dialogue_rejects_stale_revisions_debug_bypass_and_proxy
         return next.response_revision;
     };
 
-    const auto rng_before = rng_get_engine();
+    const std::string rng_before = capture_rng_state();
     const std::string unselectable_reply = fixture.run( remote,
     fixture.request( remote, "choose", [&]( JsonOut & out ) {
         out.member( "dialogue_session", static_cast<int64_t>( prompt.session_id ) );
@@ -17158,7 +17511,7 @@ TEST_CASE( "server_owned_dialogue_rejects_stale_revisions_debug_bypass_and_proxy
     }, activity_id ) );
     REQUIRE( fixture.reload.dialogue_session != nullptr );
     CHECK( read_revision( unselectable_reply ) == prompt.response_revision );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
 
     const std::string bypass_reply = fixture.run( remote,
     fixture.request( remote, "choose", [&]( JsonOut & out ) {
