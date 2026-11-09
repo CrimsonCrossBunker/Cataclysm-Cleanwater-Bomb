@@ -1113,7 +1113,7 @@ class game
         * to the faction, like merely using the examine_action of furniture.
         */
         bool warn_player_maybe_anger_local_faction( bool really_bad_offense = false,
-                bool asking_for_public_goods = false );
+                bool asking_for_public_goods = false ) const;
         std::string local_faction_action_warning( Character &who, bool public_goods = false ) const;
         bool warn_character_maybe_anger_local_faction( Character &who, bool really_bad_offense,
                 bool public_goods, std::optional<bool> consent ) const;

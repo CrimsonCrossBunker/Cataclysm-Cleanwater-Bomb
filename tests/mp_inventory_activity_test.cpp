@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <initializer_list>
@@ -12,8 +14,6 @@
 #include <random>
 #include <set>
 #include <sstream>
-#include <stddef.h>
-#include <stdint.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -14231,7 +14231,7 @@ TEST_CASE( "peek_viewpoints_belong_to_the_map_and_never_restore_a_stale_characte
     who.setpos( here, origin, false );
     who.activate_crouch_mode();
     const move_mode_id mode = who.current_movement_mode();
-    const std::string rng = capture_rng_state();
+    std::string rng;
     const int moves = who.get_moves();
     const tripoint_abs_sm map_origin = here.get_abs_sub();
     tripoint_bub_ms expected_position = origin;
@@ -14253,14 +14253,18 @@ TEST_CASE( "peek_viewpoints_belong_to_the_map_and_never_restore_a_stale_characte
             CHECK_FALSE( here.observer_standing( who ) );
         }
         CHECK( here.observer_position( who ) == first );
-        SECTION( "normal scope exit" ) {}
+        SECTION( "normal scope exit" ) {
+            rng = capture_rng_state();
+        }
         SECTION( "actor relocated by a callback or replica update" ) {
+            rng = capture_rng_state();
             expected_position = origin + tripoint::south;
             who.setpos( here, expected_position, false );
             CHECK( here.observer_position( who ) == who.pos_bub( here ) );
             CHECK_FALSE( here.observer_standing( who ) );
         }
         SECTION( "map context replaced" ) {
+            rng = capture_rng_state();
             map_meddler::set_abs_sub( here, map_origin );
             CHECK( here.observer_position( who ) == origin );
             CHECK_FALSE( here.observer_standing( who ) );
