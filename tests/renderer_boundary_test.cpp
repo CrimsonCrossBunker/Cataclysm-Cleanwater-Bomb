@@ -246,14 +246,15 @@ TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
         REQUIRE( renderer_recovery_test_support::install_character_preview_targets() );
         tilecontext->load_tileset( id );
         tilecontext->set_draw_scale( 16 );
-        here.draw_points_cache_dirty = true;
+        tilecontext->set_draw_cache_dirty();
         // A real mixed visible/vision-effect frame, above the production16384
         // threshold. Read the same physical64x64 region of its actual SDL target.
         const auto pixels = draw_boundary_pixels( center, 1024 );
         CHECK( renderer_recovery_test_support::tile_preparation_used_workers() == ( workers != 0 ) );
         std::size_t sprites = 0;
         std::size_t effects = 0;
-        for( const auto &row : here.draw_points_cache.tiles[0] ) {
+        for( const draw_points_cache_t::row_vec &row :
+             renderer_recovery_test_support::cached_map_rows( *tilecontext, 0 ) ) {
             for( const auto &tile : row ) {
                 if( std::holds_alternative<tile_render_info::sprite>( tile.var ) ) {
                     ++sprites;
