@@ -163,6 +163,7 @@ zone_edit_session::zone_edit_session( const Character &who, zone_manager &manage
     zone_edit_session( who, selected_faction.value_or( who.get_faction_id() ) )
 {
     std::vector<zone_data *> visible;
+    visible.reserve( manager.zones.size() );
     for( zone_data &zone : manager.zones ) {
         visible.push_back( &zone );
     }
