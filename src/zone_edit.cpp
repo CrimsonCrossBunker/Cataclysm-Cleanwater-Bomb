@@ -411,6 +411,8 @@ bool bounded_edit_geometry( const Character &who, const zone_edit_definition &de
 {
     const tripoint origin = definition.personal ? tripoint::zero : who.pos_abs().raw();
     const auto within_bounds = [&]( const tripoint & point ) {
+        // Coordinate differences can exceed the int components of point.
+        // NOLINTNEXTLINE(cata-combine-locals-into-point)
         const int64_t dx = static_cast<int64_t>( point.x ) - origin.x;
         const int64_t dy = static_cast<int64_t>( point.y ) - origin.y;
         const int64_t z = definition.personal ? static_cast<int64_t>( point.z ) + who.pos_abs().z() :
