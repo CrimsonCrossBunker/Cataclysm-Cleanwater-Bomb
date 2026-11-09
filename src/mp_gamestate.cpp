@@ -282,8 +282,8 @@ struct mp_apply_step {
     mp_apply_step( const mp_apply_step & ) = delete;
     mp_apply_step &operator=( const mp_apply_step & ) = delete;
     ~mp_apply_step() {
-        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::steady_clock::now() - t0_ ).count();
+        const std::chrono::milliseconds::rep ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - t0_ ).count();
         watchdog_.end( token_ );
         mp_log( "[cdda-mp] STATE-APPLY: " + label_ + " done dur=" + std::to_string( ms ) + "ms" );
     }
@@ -333,7 +333,7 @@ void host_queue_sfx( const std::string &id, const std::string &variant, int vol 
         return;
     }
     for( const auto &entry : mp_session().remote_players ) {
-        auto &recipient = *entry.second;
+        cata_mp::remote_player_session &recipient = *entry.second;
         if( recipient.connected && !recipient.detach_pending &&
             recipient.turn.host_sfx_queue.size() < 32 ) {
             recipient.turn.host_sfx_queue.push_back( { id, variant, vol } );
@@ -1214,7 +1214,7 @@ static void mp_save_npc_ids()
     std::vector<int> ids;
     std::vector<std::string> names;
     for( const auto &entry : mp_session().remote_players ) {
-        auto &recipient = *entry.second;
+        cata_mp::remote_player_session &recipient = *entry.second;
         if( recipient.actor.id().is_valid() ) {
             ids.push_back( recipient.actor.id().get_value() );
             npc *rn = mp_remote_actor( recipient );
@@ -1415,7 +1415,7 @@ static npc *helped_partner( const player_activity &activity )
         }
     } else {
         for( const auto &entry : mp_session().remote_players ) {
-            const auto &peer = *entry.second;
+            cata_mp::remote_player_session const &peer = *entry.second;
             if( peer.connected && !peer.detach_pending && peer.credentials.id.str() == target ) {
                 return mp_remote_actor( *entry.second );
             }
@@ -1484,7 +1484,7 @@ bool mp_save_remote_player()
 {
     bool saved = true;
     for( auto it = mp_session().remote_players.begin(); it != mp_session().remote_players.end(); ) {
-        auto &recipient = *it++->second;
+        cata_mp::remote_player_session &recipient = *it++->second;
         // Successful retry may release a disconnected actor and erase its entry.
         if( !save_remote_player( recipient ) ) {
             saved = false;
@@ -1496,7 +1496,7 @@ bool mp_save_remote_player()
 }
 static std::optional<std::string> restore_player( const player_credentials &player )
 {
-    auto &store = world_players();
+    player_store &store = world_players();
     auto saved = store.load( player );
     const auto legacy = saved ? std::vector<cata_path>() : store.legacy_records();
     if( !legacy.empty() ) {
@@ -1515,7 +1515,7 @@ static std::optional<std::string> restore_player( const player_credentials &play
         }
         if( choice.ret > 0 && static_cast<size_t>( choice.ret ) <= legacy.size() ) {
             const auto &source = legacy[choice.ret - 1];
-            const auto legacy_json = json_loader::from_path( source ).get_object();
+            const JsonObject legacy_json = json_loader::from_path( source ).get_object();
             legacy_json.allow_omitted_members();
             const character_id id( legacy_json.get_int( "id" ) );
             if( id == get_avatar().getID() || g->critter_by_id<npc>( id ) ||
@@ -1547,7 +1547,7 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     }
     const auto saved = restore_player( player );
     auto pending = std::make_unique<remote_player_session>();
-    auto &recipient = *pending;
+    cata_mp::remote_player_session &recipient = *pending;
     recipient.admission = admission;
     recipient.credentials = player;
     if( !saved && !initial ) {
@@ -1629,7 +1629,7 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // or remote player cannot acquire a second character through admission.
     // The world advances the admitted player's native body/effect/AP phases;
     // commands supply actions, while the NPC representation never runs AI.
-    auto control = g->player_controls().claim( player.id, *remote );
+    player_control control = g->player_controls().claim( player.id, *remote );
     remote->set_value( "mp_player_id", player.id.str() );
     remote->set_value( "mp_proxy", std::string( "1" ) );
     world_players().save( player, serialize_player( *remote ) );
@@ -2014,7 +2014,7 @@ void host_capture_vehmove_msgs( unsigned long long pre_msg )
         return;
     }
     for( const auto &entry : mp_session().remote_players ) {
-        auto &recipient = *entry.second;
+        cata_mp::remote_player_session &recipient = *entry.second;
         const npc *actor = mp_remote_actor( recipient );
         if( actor && actor->controlling_vehicle ) {
             for( const auto &message : Messages::recent_messages_for_player(
@@ -2066,7 +2066,7 @@ void host_broadcast_vehicle_step()
     // per host turn and stretches the grant→ack cycle to ~500ms.  Same
     // baseline-diff pattern as the cargo broadcast.
     for( const auto &entry : mp_session().remote_players ) {
-        auto &recipient = *entry.second;
+        cata_mp::remote_player_session &recipient = *entry.second;
         if( !recipient.connected || recipient.detach_pending ||
             vehicles_json == recipient.replication.last_vehicle_step_payload ) {
             continue;
@@ -2107,7 +2107,7 @@ void host_capture_avatar_msgs( unsigned long long pre_msg )
     }
     const std::string host_name = get_avatar().name;
     for( const auto &entry : mp_session().remote_players ) {
-        auto &recipient = *entry.second;
+        cata_mp::remote_player_session &recipient = *entry.second;
         const auto new_msgs = Messages::recent_messages_for_player(
                                   static_cast<size_t>( cur - pre_msg ), recipient.credentials.id );
         for( const auto &[time_str, text] : new_msgs ) {
@@ -2142,7 +2142,7 @@ void host_broadcast_post_action()
 {
     if( const auto srv = get_active_server() ) {
         for( const auto &entry : mp_session().remote_players ) {
-            auto &recipient = *entry.second;
+            cata_mp::remote_player_session &recipient = *entry.second;
             if( recipient.connected && !recipient.detach_pending ) {
                 srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
             }
@@ -2155,7 +2155,7 @@ static void send_inventory_activity_observers( const remote_player_session &init
     if( const auto server = get_active_server() ) {
         const auto *patient = mp_session().find_remote( initiator.inventory_activity.healing_patient );
         for( const auto &entry : mp_session().remote_players ) {
-            auto &observer = *entry.second;
+            cata_mp::remote_player_session &observer = *entry.second;
             if( &observer != &initiator && observer.connected && !observer.detach_pending &&
                 ( initiator.inventory_activity.refresh_observers || &observer == patient ) ) {
                 server->post_send( observer.admission, serialize_remote_player_state( observer,
@@ -2222,7 +2222,7 @@ static Character *resolve_partner_target( remote_player_session &sender, const J
         target = &get_avatar();
     } else {
         for( const auto &entry : mp_session().remote_players ) {
-            auto &other = *entry.second;
+            cata_mp::remote_player_session &other = *entry.second;
             if( other.connected && !other.detach_pending && requested == other.credentials.id ) {
                 target = mp_remote_actor( other );
                 break;
@@ -2252,9 +2252,9 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         if( action != "player_create" ) {
             return;
         }
-        const auto admission = recipient.admission;
-        const auto credentials = recipient.credentials;
-        const auto name = recipient.observation.partner_name_cached;
+        const peer_admission admission = recipient.admission;
+        const player_credentials credentials = recipient.credentials;
+        const std::string name = recipient.observation.partner_name_cached;
         // Complete admission creates and persists a fresh actor atomically.
         // Nothing from this upload can replace an already saved character.
         mp_session().remote_players.erase( admission.peer_id() );
@@ -2284,12 +2284,12 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             if( !subject ) {
                 return;
             }
-            auto selected = select_view_action( view_action::kind::rename, *remote, get_map(),
-                                                subject->pos_bub(), subject );
+            view_action selected = select_view_action( view_action::kind::rename, *remote, get_map(),
+                                   subject->pos_bub(), subject );
             jo.read( "origin", selected.origin, true );
             jo.read( "target", selected.target, true );
             jo.read( "name", selected.name, true );
-            const int64_t request = ( jo.has_member( "peek_request" ) ? jo.get_int64( "peek_request" ) : 0 );
+            const int64_t request = jo.has_member( "peek_request" ) ? jo.get_int64( "peek_request" ) : 0;
             if( selected.name.size() > 1024 || request < 0 ) {
                 return;
             }
@@ -2328,7 +2328,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                              recipient.turn.remote_moves > 0;
         remote->set_moves( recipient.turn.remote_moves );
         const int original_z = remote->pos_abs().z();
-        const auto messages = Messages::size();
+        const size_t messages = Messages::size();
         std::string result;
         try {
             const bool cancel = action == "inventory_activity_cancel" &&
@@ -2447,7 +2447,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     if( action == "pldrive" || action == "cruise" || action == "handbrake" ) {
         // Driving is an intent, not a character/vehicle upload. The grant above
         // and native control lookup select the operator and vehicle on the host.
-        const auto messages = Messages::size();
+        const size_t messages = Messages::size();
         remote->set_moves( recipient.turn.remote_moves );
         try {
             if( recipient.firearm.weapon == 0 ) {
@@ -2496,7 +2496,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     if( action == "firearm_cancel" ) {
         // Cancellation can arrive while AP is exhausted; the owned preparation
         // identity makes retries harmless, without accepting client mutations.
-        const auto &aim = recipient.firearm;
+        const firearm_state &aim = recipient.firearm;
         const int64_t source = aim.weapon ? aim.weapon :
                                aim.bionic_weapon_source;
         if( source > 0 && source == ( jo.has_member( "weapon" ) ? jo.get_int64( "weapon" ) : 0 ) &&
@@ -2504,7 +2504,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             ( jo.has_member( "request" ) ? jo.get_int64( "request" ) : 0 ) > aim.last_request ) {
             recipient.firearm.last_request = jo.get_int64( "request" );
             remote->set_moves( recipient.turn.remote_moves );
-            const auto messages = Messages::size();
+            const size_t messages = Messages::size();
             finish_firearm_activity( *remote, recipient.firearm, true,
                                      jo.get_bool( "unload_ras", false ) );
             remote = mp_remote_actor( recipient );
@@ -2579,7 +2579,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     }
     if( action == "equipment" ) {
         remote->set_moves( recipient.turn.remote_moves );
-        const auto messages = Messages::size();
+        const size_t messages = Messages::size();
         try {
             equipment_intent intent;
             jo.read( "equipment", intent, true );
@@ -2611,7 +2611,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     }
     if( action == "throw" ) {
         remote->set_moves( recipient.turn.remote_moves );
-        const auto messages = Messages::size();
+        const size_t messages = Messages::size();
         const auto paid_peek = std::exchange( recipient.inventory_activity.peek, std::nullopt );
         try {
             throw_intent intent;
@@ -2673,7 +2673,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     if( action == "firearm" ) {
         const int budget = recipient.turn.remote_moves;
         remote->set_moves( budget );
-        const auto messages = Messages::size();
+        const size_t messages = Messages::size();
         firearm_intent intent;
         firearm_outcome outcome = firearm_outcome::rejected;
         try {
@@ -2740,7 +2740,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     if( action == "melee" ) {
         const int budget = recipient.turn.remote_moves;
         remote->set_moves( budget );
-        const auto messages = Messages::size();
+        const size_t messages = Messages::size();
         try {
             melee_intent intent;
             jo.read( "origin", intent.origin, true );
@@ -4400,14 +4400,14 @@ void grant_client_turn()
     mp_set_host_player_name( get_avatar().name );
     mp_session().hosting.update_welcome( mp_session().host_info );
     for( auto it = mp_session().remote_players.begin(); it != mp_session().remote_players.end(); ) {
-        auto &recipient = *it++->second;
+        cata_mp::remote_player_session &recipient = *it++->second;
         grant_remote_turn( recipient );
     }
 }
 static bool remote_turns_pending()
 {
     for( const auto &entry : mp_session().remote_players ) {
-        const auto &recipient = *entry.second;
+        cata_mp::remote_player_session const &recipient = *entry.second;
         if( recipient.connected && !recipient.detach_pending &&
             recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn ) {
             return true;
@@ -4425,7 +4425,7 @@ void wait_for_client_action()
         return;
     }
     mp_session().host_waiting_for_clients = true;
-    const auto start = std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     std::string previous_activity = get_avatar().activity ? get_avatar().activity.id().str() : "";
     while( g->uquit == QUIT_NO && remote_turns_pending() ) {
         get_mp_queue().wait_for_event( std::chrono::milliseconds( 16 ) );
@@ -4444,7 +4444,7 @@ void wait_for_client_action()
         handle_key_blocking_activity( 16 );
         ensure_mp_hud();
         inp_mngr.pump_events();
-        const auto now = std::chrono::steady_clock::now();
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         if( std::chrono::duration_cast<std::chrono::milliseconds>(
                 now - mp_session().presentation.last_redraw ).count() > 100 ) {
             ui_manager::redraw();
@@ -4479,7 +4479,7 @@ bool should_advance_calendar()
 
 bool client_begin_simulation_turn()
 {
-    auto &turn = mp_session().client_turn;
+    client_turn_state &turn = mp_session().client_turn;
     if( !is_client_mode() || turn.observed_host_turn <= turn.processed_host_turn ) {
         return false;
     }
@@ -4530,7 +4530,7 @@ bool should_fast_forward()
     }
     bool participants = false;
     for( const auto &entry : mp_session().remote_players ) {
-        const auto &recipient = *entry.second;
+        cata_mp::remote_player_session const &recipient = *entry.second;
         if( !recipient.connected || recipient.detach_pending ) {
             continue;
         }
@@ -4619,7 +4619,7 @@ bool is_remote_player( character_id id )
             return true;
         }
         for( const auto &entry : mp_session().client_player_views ) {
-            const auto &binding = entry.second->actor;
+            const actor_binding &binding = entry.second->actor;
             if( binding.id() == id &&
                 binding.owns_instance( g->critter_by_id<npc>( id ), g->npc_lifetimes() ) ) {
                 return true;
@@ -4667,7 +4667,7 @@ bool is_partner_helping( character_id helper, character_id worker )
     if( helper == get_avatar().getID() ) {
         return activity_help_target( get_avatar().activity ) == target.str();
     }
-    const auto &observation = mp_partner_observation( helper );
+    const peer_observation &observation = mp_partner_observation( helper );
     return observation.partner_activity == "ACT_HELP_PARTNER" &&
            observation.partner_help_target == target.str();
 }
@@ -4868,7 +4868,7 @@ npc *get_partner_npc( character_id target )
     }
     npc *nearest = nullptr;
     for( const auto &entry : mp_session().remote_players ) {
-        auto &recipient = *entry.second;
+        cata_mp::remote_player_session &recipient = *entry.second;
         if( !recipient.connected || recipient.detach_pending ) {
             continue;
         }
@@ -6147,7 +6147,7 @@ bool client_apply_message( const std::string &msg )
                 }
                 get_avatar().recoil = message.get_float( "recoil" );
                 get_avatar().mark_aim_cache_dirty();
-                auto &view = mp_session().client_firearm;
+                firearm_view_state &view = mp_session().client_firearm;
                 if( view.phase == firearm_view_phase::pending && view.weapon ==
                     message.get_int64( "weapon" ) &&
                     view.bionic == ( message.has_member( "bionic" ) ? message.get_int64( "bionic" ) : 0 ) &&
@@ -7138,7 +7138,7 @@ bool client_apply_message( const std::string &msg )
             if( sequence <= 0 || sequence > std::numeric_limits<uint32_t>::max() ) {
                 jo.throw_error_at( "grant_seq", "Invalid turn grant" );
             }
-            auto &turn = mp_session().client_turn;
+            client_turn_state &turn = mp_session().client_turn;
             const uint32_t grant_seq = static_cast<uint32_t>( sequence );
             const int moves = jo.get_int( "moves" );
             turn.last_grant_time = std::chrono::steady_clock::now();
@@ -7913,7 +7913,7 @@ std::vector<player_light> player_lights()
         }
     } else if( is_hosting() ) {
         for( const auto &entry : mp_session().remote_players ) {
-            auto &recipient = *entry.second;
+            cata_mp::remote_player_session &recipient = *entry.second;
             const npc *actor = mp_remote_actor( recipient );
             if( actor && recipient.observation.mp_remote_player_luminance > 0 ) {
                 result.push_back( { actor->pos_bub(), recipient.observation.mp_remote_player_luminance } );
@@ -7946,7 +7946,7 @@ void client_start_firearm_activity( unsigned int bionic_uid )
     if( weapon ) {
         const int64_t next_request = mp_session().client_firearm.next_request;
         mp_session().client_firearm = {};
-        auto &view = mp_session().client_firearm;
+        firearm_view_state &view = mp_session().client_firearm;
         const item *installed = bionic_uid ? bionic_firearm_source( get_avatar(), bionic_uid ) : nullptr;
         view.weapon = installed ? installed->uid().get_value() : weapon->uid().get_value();
         view.phase = firearm_view_phase::preparing;
@@ -7964,7 +7964,7 @@ void client_finish_firearm_activity()
 
 void client_apply_firearm_preview( aim_activity_actor &aim )
 {
-    auto &view = mp_session().client_firearm;
+    firearm_view_state &view = mp_session().client_firearm;
     if( is_client_mode() && view.bionic_preview && view.bionic == aim.bionic_source() ) {
         aim.update_bionic_weapon( view.bionic, *view.bionic_preview );
         view.bionic_preview.reset();
@@ -7982,7 +7982,7 @@ void client_finish_ready_firearm_activity()
     if( !is_client_mode() ) {
         return;
     }
-    const auto firearm_phase = client_firearm_phase();
+    const firearm_view_phase firearm_phase = client_firearm_phase();
     if( auto *aim = dynamic_cast<aim_activity_actor *>( u.activity.actor.get() ) ) {
         client_apply_firearm_preview( *aim );
     }
@@ -8048,7 +8048,7 @@ void client_request_firearm( const tripoint_bub_ms &target, const std::string &a
         !weapon || !client_uses_firearm_intents( *weapon ) ) {
         return;
     }
-    auto &view = mp_session().client_firearm;
+    firearm_view_state &view = mp_session().client_firearm;
     const item *installed = view.bionic ? bionic_firearm_source( who, view.bionic ) : nullptr;
     const int64_t source = installed ? installed->uid().get_value() : weapon->uid().get_value();
     if( view.weapon != source || view.phase == firearm_view_phase::inactive ||
@@ -8085,7 +8085,7 @@ void client_close_peek( int64_t request )
     if( !is_client_mode() || request <= 0 ) {
         return;
     }
-    client_send( "{\"type\":\"action\",\"action\":\"peek_close\",\"request\":" +
+    client_send( R"({"type":"action","action":"peek_close","request":)" +
                  std::to_string( request ) + "}" );
 }
 
@@ -8095,7 +8095,7 @@ bool client_name_monster( const monster &subject, const tripoint_abs_ms &origin,
     if( !is_client_mode() || origin != get_avatar().pos_abs() || name.size() > 1024 ) {
         return false;
     }
-    const auto nid = mp_session().replication.client.monsters.known_id( subject );
+    const uint32_t nid = mp_session().replication.client.monsters.known_id( subject );
     if( nid == 0 ) {
         return false;
     }
@@ -8204,7 +8204,7 @@ void client_request_melee( const tripoint_bub_ms &target, melee_action action,
     out.member( "inventory_revision", mp_session().client_pickup.revision );
     if( Creature *victim = get_creature_tracker().creature_at( target, true ) ) {
         if( monster *mon = victim->as_monster() ) {
-            const auto id = mp_session().replication.client.monsters.known_id( *mon );
+            const uint32_t id = mp_session().replication.client.monsters.known_id( *mon );
             if( id == 0 ) {
                 return; // Wait for an identified host snapshot before targeting it.
             }
@@ -9546,7 +9546,7 @@ static void apply_monster_sync( JsonObject &jo )
     // resurrection flicker. Distinct from legit re-entry (host removed it first, so
     // the nid was erased and a re-spawn is expected, not flagged).
 
-    auto &mirrors = mp_session().replication.client.monsters;
+    monster_mirrors &mirrors = mp_session().replication.client.monsters;
     mirrors.begin_sync( ct );
 
     std::optional<peek_authorization> peek;
@@ -10255,7 +10255,7 @@ static std::string build_player_roster( remote_player_session &recipient )
     out.start_array();
     std::set<std::string> present;
     for( const auto &entry : mp_session().remote_players ) {
-        auto &other = *entry.second;
+        cata_mp::remote_player_session &other = *entry.second;
         if( &other == &recipient || !other.connected ) {
             continue;
         }
@@ -10905,7 +10905,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
         if( recipient.turn.pending_wake_client )
         {
             recipient.turn.pending_wake_client = false;
-            return "\"wake_client\":true,\"wake_from\":\"" + json_escape_str( recipient.turn.wake_from ) +
+            return R"("wake_client":true,"wake_from":")" + json_escape_str( recipient.turn.wake_from ) +
             "\",";
         }
         return "";
@@ -10917,13 +10917,13 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
         if( recipient.turn.pending_partner_swap )
         {
             recipient.turn.pending_partner_swap = false;
-            s += "\"partner_swapped\":true,\"swap_from\":\"" + json_escape_str( recipient.turn.swap_from ) +
+            s += R"("partner_swapped":true,"swap_from":")" + json_escape_str( recipient.turn.swap_from ) +
             "\",";
         }
         if( recipient.turn.pending_partner_push )
         {
             recipient.turn.pending_partner_push = false;
-            s += "\"partner_pushed\":true,\"push_from\":\"" + json_escape_str( recipient.turn.push_from ) +
+            s += R"("partner_pushed":true,"push_from":")" + json_escape_str( recipient.turn.push_from ) +
             "\",";
         }
         return s;

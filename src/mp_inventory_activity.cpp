@@ -104,6 +104,44 @@
 #include "vehicle_control.h"
 #include "vpart_position.h"
 
+static const activity_id ACT_AIM( "ACT_AIM" );
+static const activity_id ACT_CHOP_LOGS( "ACT_CHOP_LOGS" );
+static const activity_id ACT_CHOP_PLANKS( "ACT_CHOP_PLANKS" );
+static const activity_id ACT_CHOP_TREE( "ACT_CHOP_TREE" );
+static const activity_id ACT_CHURN( "ACT_CHURN" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
+static const activity_id ACT_FURNITURE_MOVE( "ACT_FURNITURE_MOVE" );
+static const activity_id ACT_GLIDE( "ACT_GLIDE" );
+static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );
+static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
+static const activity_id ACT_LONGSALVAGE( "ACT_LONGSALVAGE" );
+static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
+static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
+static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
+static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
+static const activity_id ACT_REMOTE_VEHICLE( "ACT_REMOTE_VEHICLE" );
+static const activity_id ACT_SOCIALIZE( "ACT_SOCIALIZE" );
+static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
+static const activity_id ACT_START_ENGINES( "ACT_START_ENGINES" );
+static const activity_id ACT_START_FIRE( "ACT_START_FIRE" );
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
+static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
+static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
+static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
+static const bionic_id bio_flashbang( "bio_flashbang" );
+static const bionic_id bio_magnet( "bio_magnet" );
+static const bionic_id bio_remote( "bio_remote" );
+static const bionic_id bio_resonator( "bio_resonator" );
+static const bionic_id bio_shockwave( "bio_shockwave" );
+static const bionic_id bio_teleport( "bio_teleport" );
+static const bionic_id bio_water_extractor( "bio_water_extractor" );
+static const itype_id itype_foodperson_mask( "foodperson_mask" );
+static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
+static const itype_id itype_guidebook( "guidebook" );
+static const json_character_flag json_flag_BIONIC_GUN( "BIONIC_GUN" );
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
+
 namespace cata_mp
 {
 void dialogue_view_option::serialize( JsonOut &out ) const
@@ -260,7 +298,7 @@ struct owned_dialogue_session {
             }
         } );
         session.finish_conversation();
-        if( actor && who.activity.id() == ::activity_id( "ACT_AIM" ) && !who.has_weapon() ) {
+        if( actor && who.activity.id() == ACT_AIM && !who.has_weapon() ) {
             who.cancel_activity();
         }
     }
@@ -318,10 +356,10 @@ struct owned_dialogue_session {
             finish( who );
             return false;
         }
-        const int64_t raw_session = ( request.has_member( "dialogue_session" ) ?
-                                      request.get_int64( "dialogue_session" ) : 0 );
-        const int64_t raw_revision = ( request.has_member( "response_revision" ) ?
-                                       request.get_int64( "response_revision" ) : 0 );
+        const int64_t raw_session = request.has_member( "dialogue_session" ) ?
+                                    request.get_int64( "dialogue_session" ) : 0;
+        const int64_t raw_revision = request.has_member( "response_revision" ) ?
+                                     request.get_int64( "response_revision" ) : 0;
         if( raw_session <= 0 || static_cast<uint64_t>( raw_session ) != session_id ||
             raw_revision <= 0 ) {
             return true;
@@ -579,7 +617,7 @@ bool resume_craft( Character &who, map &here, const JsonObject &request )
         if( who.has_wield_conflicts( *workpiece ) ) {
             item_source weapon;
             request.read( "weapon", weapon, true );
-            const auto wielded = resolve_item_source( who, here, weapon );
+            const item_location wielded = resolve_item_source( who, here, weapon );
             if( !wielded || wielded != who.get_wielded_item() || wielded.eventually_contains( workpiece ) ||
                 !request.has_object( "disposition" ) ) {
                 return false;
@@ -647,7 +685,7 @@ bool start_read( Character &who, map &here, const JsonObject &request )
     }
     const character_action_guard lifetime( who );
     const bool identified = who.has_identified( book->typeId() );
-    if( identified && book->typeId() == itype_id( "guidebook" ) ) {
+    if( identified && book->typeId() == itype_guidebook ) {
         who.add_msg_if_player( m_info, get_hint() );
         get_event_bus().send<event_type::reads_book>( who.getID(), book->typeId() );
         if( lifetime ) {
@@ -729,7 +767,7 @@ bool start_consume( Character &who, map &here, const JsonObject &request )
 
 bool begin_client_inventory_activity( const player_activity &activity )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( view.active || !is_client_mode() || is_client_waiting_for_ack() ||
         get_avatar().get_moves() <= 0 ) {
         return false;
@@ -802,10 +840,10 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     // A world callback may retire the activator after affecting bystanders.
     // Refresh conservatively even if native activation subsequently returns false.
     refresh_observers = action == bionic_action::activate &&
-                        ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) ||
-                          type == bionic_id( "bio_resonator" ) || type == bionic_id( "bio_magnet" ) ||
-                          type == bionic_id( "bio_water_extractor" ) || type == bionic_id( "bio_teleport" ) ||
-                          type == bionic_id( "bio_remote" ) );
+                        ( type == bio_flashbang || type == bio_shockwave ||
+                          type == bio_resonator || type == bio_magnet ||
+                          type == bio_water_extractor || type == bio_teleport ||
+                          type == bio_remote );
     return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ), type, choices, action );
 }
 
@@ -814,7 +852,7 @@ bool start_spell( Character &who, const JsonObject &request )
     const character_action_guard lifetime( who );
     const spell_id id( request.get_string( "spell" ) );
     if( !lifetime || who.activity || who.get_moves() <= 0 || !id.is_valid() ||
-        !who.magic->knows_spell( id ) || who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ) {
+        !who.magic->knows_spell( id ) || who.has_flag( json_flag_CANNOT_ATTACK ) ) {
         return false;
     }
     std::optional<tripoint_abs_ms> target;
@@ -892,8 +930,8 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
                       request.get_bool( "allow_theft", false ),
                       request.get_bool( "allow_wet", false ), choices );
     if( lifetime && automatic && used && who.activity &&
-        ( who.activity.id() == activity_id( "ACT_PICKAXE" ) ||
-          who.activity.id() == activity_id( "ACT_JACKHAMMER" ) ) ) {
+        ( who.activity.id() == ACT_PICKAXE ||
+          who.activity.id() == ACT_JACKHAMMER ) ) {
         state.automatic_mining_target = target;
         state.automatic_mining_terrain = here.ter( here.get_bub( target ) ).id();
         state.automatic_mining_furniture = here.furn( here.get_bub( target ) ).id();
@@ -943,7 +981,7 @@ bool reload_wield_allowed( const Character &who, const reload_activity_actor &ac
     if( !who.can_wield( preview ).success() ) {
         return false;
     }
-    const auto weapon = who.get_wielded_item();
+    const item_location weapon = who.get_wielded_item();
     // Native wielding also requires putting this bag away first. Disposing
     // it here would copy/remove the very target or ammunition we are using.
     return !weapon || ( !weapon->has_flag( flag_NO_UNWIELD ) &&
@@ -1030,7 +1068,7 @@ void send_inventory_activity( const std::string &operation,
                               const std::function<void( JsonOut & )> &fields = {} )
 {
     world_session &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    inventory_activity_client_state &view = session.client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
         view.next_request == std::numeric_limits<int64_t>::max() ) {
         return;
@@ -1168,9 +1206,9 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
         request.has_member( "topic" ) || request.has_member( "effect" ) ) {
         return;
     }
-    if( who.has_trait( trait_id( "PROF_FOODP" ) ) &&
-        !( who.is_wearing( itype_id( "foodperson_mask" ) ) ||
-           who.is_wearing( itype_id( "foodperson_mask_on" ) ) ) ) {
+    if( who.has_trait( trait_PROF_FOODP ) &&
+        !( who.is_wearing( itype_foodperson_mask ) ||
+           who.is_wearing( itype_foodperson_mask_on ) ) ) {
         who.add_msg_if_player( m_warning, _( "You can't speak without your face!" ) );
         return;
     }
@@ -1268,33 +1306,33 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     }
     if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
-        state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
-                                  who.activity.id() == activity_id( "ACT_START_FIRE" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHOP_TREE" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHOP_LOGS" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHURN" ) ||
-                                  who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) ||
-                                  who.activity.id() == activity_id( "ACT_VEHICLE_FOLD" ) ||
-                                  who.activity.id() == activity_id( "ACT_VEHICLE_UNFOLD" ) ||
-                                  who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
-                                  who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) ||
-                                  who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) ||
-                                  who.activity.id() == activity_id( "ACT_SPELLCASTING" ) ||
-                                  who.activity.id() == activity_id( "ACT_MOVE_LOOT" ) ||
-                                  who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) ||
-                                  who.activity.id() == activity_id( "ACT_MOVE_ITEMS" ) ||
-                                  who.activity.id() == activity_id( "ACT_GLIDE" ) ||
-                                  who.activity.id() == activity_id( "ACT_TRAIN" ) ||
-                                  who.activity.id() == activity_id( "ACT_WAIT_NPC" ) ||
-                                  who.activity.id() == activity_id( "ACT_SOCIALIZE" ) ||
+        state.refresh_observers = who.activity.id() == ACT_START_ENGINES ||
+                                  who.activity.id() == ACT_START_FIRE ||
+                                  who.activity.id() == ACT_CHOP_TREE ||
+                                  who.activity.id() == ACT_CHOP_LOGS ||
+                                  who.activity.id() == ACT_CHOP_PLANKS ||
+                                  who.activity.id() == ACT_CHURN ||
+                                  who.activity.id() == ACT_LONGSALVAGE ||
+                                  who.activity.id() == ACT_VEHICLE_FOLD ||
+                                  who.activity.id() == ACT_VEHICLE_UNFOLD ||
+                                  who.activity.id() == ACT_HOTWIRE_CAR ||
+                                  who.activity.id() == ACT_REMOTE_VEHICLE ||
+                                  who.activity.id() == ACT_FILL_LIQUID ||
+                                  who.activity.id() == ACT_SPELLCASTING ||
+                                  who.activity.id() == ACT_MOVE_LOOT ||
+                                  who.activity.id() == ACT_FURNITURE_MOVE ||
+                                  who.activity.id() == ACT_MOVE_ITEMS ||
+                                  who.activity.id() == ACT_GLIDE ||
+                                  who.activity.id() == ACT_TRAIN ||
+                                  who.activity.id() == ACT_WAIT_NPC ||
+                                  who.activity.id() == ACT_SOCIALIZE ||
                                   dynamic_cast<const butchery_activity_actor *>( who.activity.actor.get() ) ||
                                   dynamic_cast<const disassemble_activity_actor *>( who.activity.actor.get() ) ||
                                   dynamic_cast<const zone_activity_actor *>( who.activity.actor.get() ) ||
                                   dynamic_cast<const multi_zone_activity_actor *>( who.activity.actor.get() ) ||
                                   is_vehicle_heating( who.activity ) ||
                                   dynamic_cast<repair_activity_actor *>( who.activity.actor.get() );
-        if( who.activity.id() == activity_id( "ACT_START_FIRE" ) ) {
+        if( who.activity.id() == ACT_START_FIRE ) {
             for( const tripoint_bub_ms &p : here.points_in_radius( who.pos_bub( here ), 1 ) ) {
                 state.changed_tiles.push_back( here.get_abs( p ) );
             }
@@ -1380,7 +1418,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 state.refresh_observers = zone_edit_session::apply( who, zone_manager::get_manager(), batch );
                 if( !state.refresh_observers ) {
                     who.add_msg_if_player( m_warning,
-                                           _( "The zones could not be changed. Reopen the zone manager to refresh them." ) );
+                                           _( "The zones could not be changed.  Reopen the zone manager to refresh them." ) );
                 }
             } else if( kind == "zone_sort" ) {
                 const int scope = request.get_int( "scope", -1 );
@@ -1700,42 +1738,43 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 if( operation == "step" && who.get_moves() > 0 ) {
                     who.activity.do_turn( who );
                 }
-            } else if( !reload_locations_accessible( who, here, *native_reload( who ) ) ) {
-                who.cancel_activity();
-                state.needs_placement = false;
-            } else if( who.get_moves() > 0 && operation == "step" ) {
+            } else {
                 reload_activity_actor *actor = native_reload( who );
-                const auto identity = who.activity.identity_generation();
-                const bool ready = actor->prepare_owned_turn( who );
-                if( lifetime && who.activity.identity_generation() == identity ) {
-                    state.needs_placement = !ready;
-                    if( ready ) {
-                        who.activity.do_turn( who );
-                    } else if( !actor->preview_remaining() ) {
-                        who.cancel_activity();
+                if( !reload_locations_accessible( who, here, *actor ) ) {
+                    who.cancel_activity();
+                    state.needs_placement = false;
+                } else if( who.get_moves() > 0 && operation == "step" ) {
+                    const std::uint64_t identity = who.activity.identity_generation();
+                    const bool ready = actor->prepare_owned_turn( who );
+                    if( lifetime && who.activity.identity_generation() == identity ) {
+                        state.needs_placement = !ready;
+                        if( ready ) {
+                            who.activity.do_turn( who );
+                        } else if( !actor->preview_remaining() ) {
+                            who.cancel_activity();
+                            state.needs_placement = false;
+                        }
+                    }
+                } else if( who.get_moves() > 0 && operation == "place" && state.needs_placement ) {
+                    const std::string placement = request.get_string( "placement" );
+                    const std::uint64_t identity = who.activity.identity_generation();
+                    const auto preview = actor->preview_remaining();
+                    bool ready = preview && ( placement != "wield" || reload_wield_allowed( who, *actor, *preview ) );
+                    if( ready && placement == "wield" && who.has_wield_conflicts( *preview ) ) {
+                        const item_location weapon = who.get_wielded_item();
+                        ready = who.can_wield( *preview ).success() && request.has_object( "disposition" );
+                        if( ready ) {
+                            const JsonObject selected = request.get_object( "disposition" );
+                            const item_disposition choice{ selected.get_string( "action" ),
+                                                           selected.get_int64( "container" ), selected.get_int64( "pocket" ) };
+                            ready = execute_item_disposition( who, weapon, choice );
+                        }
+                    }
+                    if( lifetime && who.activity.identity_generation() == identity && ready &&
+                        ( placement == "wield" || placement == "drop" ) &&
+                        actor->place_target( who, placement == "wield" ) ) {
                         state.needs_placement = false;
                     }
-                }
-            } else if( who.get_moves() > 0 && operation == "place" && state.needs_placement ) {
-                const std::string placement = request.get_string( "placement" );
-                reload_activity_actor *actor = native_reload( who );
-                const auto identity = who.activity.identity_generation();
-                const auto preview = actor->preview_remaining();
-                bool ready = preview && ( placement != "wield" || reload_wield_allowed( who, *actor, *preview ) );
-                if( ready && placement == "wield" && who.has_wield_conflicts( *preview ) ) {
-                    const item_location weapon = who.get_wielded_item();
-                    ready = who.can_wield( *preview ).success() && request.has_object( "disposition" );
-                    if( ready ) {
-                        const JsonObject selected = request.get_object( "disposition" );
-                        const item_disposition choice{ selected.get_string( "action" ),
-                                                       selected.get_int64( "container" ), selected.get_int64( "pocket" ) };
-                        ready = execute_item_disposition( who, weapon, choice );
-                    }
-                }
-                if( lifetime && who.activity.identity_generation() == identity && ready &&
-                    ( placement == "wield" || placement == "drop" ) &&
-                    actor->place_target( who, placement == "wield" ) ) {
-                    state.needs_placement = false;
                 }
             }
         }
@@ -1923,8 +1962,8 @@ bool apply_inventory_activity_result( const JsonObject &response )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    auto &session = g->multiplayer_session();
-    auto &view = session.client_inventory_activity;
+    cata_mp::world_session &session = g->multiplayer_session();
+    inventory_activity_client_state &view = session.client_inventory_activity;
 
     JsonObject combat = response.get_object( "combat" );
     combat.allow_omitted_members();
@@ -2377,7 +2416,7 @@ bool client_change_construction( const tripoint_abs_ms &position, int64_t uid, b
 
 void client_start_craft( const craft_command &command )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     const bool repeat = view.active && view.craft_decision == "repeat";
     if( !repeat && !begin_client_inventory_activity( craft_activity_actor::client_view() ) ) {
         return;
@@ -2596,7 +2635,7 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
         return true;
     }
     if( action == bionic_action::activate &&
-        bio.info().has_flag( json_character_flag( "BIONIC_GUN" ) ) ) {
+        bio.info().has_flag( json_flag_BIONIC_GUN ) ) {
         const item *gun = bionic_firearm_source( who, bio.get_uid() );
         if( who.activity || !gun || gun->get_gun_bionic_drain() > who.get_power_level() ||
             ( choices && !valid_bionic_activation_choices( who, bio, *choices ) ) ) {
@@ -2929,7 +2968,7 @@ bool client_auto_mine( const tripoint_abs_ms &target )
     if( !client_activate_item_impl( who.get_wielded_item(), method, target, "auto_mine" ) ) {
         return false;
     }
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( view.active && view.next_request != sequence && view.pending_request != 0 ) {
         view.pending_automove = automove;
         view.automatic_mining = true;
@@ -3005,7 +3044,7 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
 bool client_choose_dialogue_response( uint64_t session_id, uint64_t response_revision,
                                       std::size_t index )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
         !view.dialogue_prompt || view.dialogue_prompt->session_id != session_id ||
         view.dialogue_prompt->response_revision != response_revision ||
@@ -3025,7 +3064,7 @@ bool client_choose_dialogue_response( uint64_t session_id, uint64_t response_rev
 bool client_dialogue_special_action( uint64_t session_id, uint64_t response_revision,
                                      const std::string &action )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
         !view.dialogue_prompt || view.dialogue_prompt->session_id != session_id ||
         view.dialogue_prompt->response_revision != response_revision ||
@@ -3045,7 +3084,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
         const dialogue_view_prompt &prompt )
 {
     if( prompt.options.empty() ) {
-        auto &view = g->multiplayer_session().client_inventory_activity;
+        inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
         view.cancel_requested = true;
         send_inventory_activity( "cancel" );
         return;
@@ -3117,7 +3156,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
             ui_manager::redraw();
             action = ctxt.handle_input();
             if( get_avatar().is_dead_state() ) {
-                auto &view = g->multiplayer_session().client_inventory_activity;
+                inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
                 view.cancel_requested = true;
                 send_inventory_activity( "cancel" );
                 return;
@@ -3168,7 +3207,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
 
 void client_step_inventory_activity()
 {
-    const auto &view = g->multiplayer_session().client_inventory_activity;
+    const inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active ) {
         get_avatar().activity.set_to_null();
         return;
@@ -3194,7 +3233,7 @@ void client_cancel_inventory_activity()
 
 void client_update_inventory_activity_view()
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() ) {
         return;
     }
@@ -3202,7 +3241,8 @@ void client_update_inventory_activity_view()
     view.notices.clear();
     for( const craft_notice &notice : notices ) {
         const bool interrupt = notice.alarm || uistate.distraction_craft_step_complete;
-        const auto type = notice.alarm ? distraction_type::noise : distraction_type::craft_step_complete;
+        const distraction_type type = notice.alarm ? distraction_type::noise :
+                                      distraction_type::craft_step_complete;
         if( !interrupt || !g->cancel_activity_or_ignore_query( type, notice.message ) ) {
             add_msg( m_info, notice.message );
         }
@@ -3239,7 +3279,7 @@ void client_update_inventory_activity_view()
         const auto *build = dynamic_cast<const build_construction_activity_actor *>(
                                 get_avatar().activity.actor.get() );
         const bool blueprint = build && build->is_client_view() && !get_avatar().backlog.empty() &&
-                               get_avatar().backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" );
+                               get_avatar().backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION;
         const bool resume_blueprint = blueprint && !view.cancel_requested && !view.activity.empty();
         if( blueprint && !resume_blueprint ) {
             get_avatar().backlog.front().auto_resume = false;
@@ -3281,7 +3321,7 @@ void client_update_inventory_activity_view()
                 const on_out_of_scope clear_peek( [&]() {
                     view.peek.reset();
                 } );
-                const auto result = g->look_from( here.get_bub( peek->viewpoint ), peek->standing,
+                const look_around_result result = g->look_from( here.get_bub( peek->viewpoint ), peek->standing,
                                                   peek->z_range );
                 if( view.peek && view.peek->request == peek->request && result.selection ) {
                     g->apply_view_action( *result.selection );
@@ -3301,7 +3341,7 @@ void client_update_inventory_activity_view()
         if( spellbook ) {
             const restore_on_out_of_scope restore_rng( rng_get_engine() );
             avatar &who = get_avatar();
-            if( who.has_flag( json_character_flag( "CANNOT_ATTACK" ) ) ) {
+            if( who.has_flag( json_flag_CANNOT_ATTACK ) ) {
                 add_msg( m_bad, _( "You cannot cast spells at this moment." ) );
             } else if( !who.magic->knows_spell() ) {
                 add_msg( m_bad, _( "You don't know any spells to cast." ) );
@@ -3410,8 +3450,8 @@ void client_update_inventory_activity_view()
             const auto controls = target->get_avail_parts( "REMOTE_CONTROLS" );
             const auto electronics = target->get_avail_parts( "CTRL_ELECTRONIC" );
             if( !empty( controls ) || !empty( electronics ) ) {
-                const auto position = empty( controls ) ? electronics.begin()->pos_abs() :
-                                      controls.begin()->pos_abs();
+                const tripoint_abs_ms position = empty( controls ) ? electronics.begin()->pos_abs() :
+                                                 controls.begin()->pos_abs();
                 selection = query_owned_vehicle_menu( who, here, *target, position, &source );
             }
         }
@@ -3427,7 +3467,8 @@ void client_update_inventory_activity_view()
                get_avatar().get_moves() > 0 ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         const item water = *view.preview;
-        const auto choice = query_liquid_destination( water, nullptr, view.liquid_source_uid, true );
+        const unload_liquid_choice choice = query_liquid_destination( water, nullptr,
+                                            view.liquid_source_uid, true );
         if( choice.kind == LD_NULL ) {
             view.cancel_requested = true;
             send_inventory_activity( "cancel" );
@@ -3451,7 +3492,7 @@ void client_update_inventory_activity_view()
         if( !answer && ( view.construction_decision == "deconstruct" ||
                          view.construction_decision == "exhume" ) &&
             !get_avatar().backlog.empty() &&
-            get_avatar().backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) ) {
+            get_avatar().backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION ) {
             // These choices cancel native work; do not immediately ask again.
             get_avatar().backlog.front().auto_resume = false;
         }
