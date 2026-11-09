@@ -157,7 +157,7 @@ class RepositoryParityTest(unittest.TestCase):
         self.assertEqual(
             effects["summary"]["object_parser_registrations"], 145)
         self.assertEqual(
-            effects["summary"]["string_parser_registrations"], 123)
+            effects["summary"]["string_parser_registrations"], 128)
         self.assertEqual(conditions["summary"]["public_keys"], 276)
         self.assertEqual(effects["summary"]["public_keys"], 329)
         self.assertEqual({entry["key"] for entry in conditions["entries"]} & {
