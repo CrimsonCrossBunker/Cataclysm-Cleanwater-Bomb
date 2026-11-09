@@ -174,18 +174,22 @@ os.execvp(args[0], args)
         self.assertFalse(installed)
 
 
-@unittest.skipUnless(shutil.which("curl") and shutil.which("tar")
-                     and shutil.which("bash"), "curl, tar and bash are required")
+@unittest.skipUnless(
+    shutil.which("curl") and shutil.which("tar") and shutil.which("bash"),
+    "curl, tar and bash are required",
+)
 class CcacheInstallTest(unittest.TestCase):
     def install(self, statuses, valid_archive=True):
         archive = io.BytesIO()
         with tarfile.open(fileobj=archive, mode="w:xz") as output:
             content = b"#!/bin/sh\necho test-ccache\n"
-            entry = tarfile.TarInfo("ccache-4.10.2-linux-x86_64/ccache")
+            entry = tarfile.TarInfo(
+                "ccache-4.10.2-linux-x86_64/ccache")
             entry.size = len(content)
             entry.mode = 0o755
             output.addfile(entry, io.BytesIO(content))
-        payload = archive.getvalue() if valid_archive else b"<html>error</html>"
+        payload = (archive.getvalue() if valid_archive
+                   else b"<html>error</html>")
         requests = []
 
         class Handler(http.server.BaseHTTPRequestHandler):
@@ -199,28 +203,36 @@ class CcacheInstallTest(unittest.TestCase):
             def log_message(self, *args):
                 pass
 
-        with tempfile.TemporaryDirectory(prefix="ccb ccache install ") as directory:
+        with tempfile.TemporaryDirectory(
+            prefix="ccb ccache install "
+        ) as directory:
             root = Path(directory)
             marker = root / "install-commands"
             server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
-                script = workflow_script(".github/workflows/matrix.yml",
-                                         "install recent ccache on ubuntu")
+                script = workflow_script(
+                    ".github/workflows/matrix.yml",
+                    "install recent ccache on ubuntu")
                 script = script.replace(
-                    "https://github.com/ccache/ccache/releases/download/v4.10.2/"
+                    "https://github.com/ccache/ccache/releases/download/"
+                    "v4.10.2/"
                     "ccache-4.10.2-linux-x86_64.tar.xz",
                     f"http://127.0.0.1:{server.server_port}/ccache.tar.xz",
                 )
                 env = dict(os.environ)
                 env.update(RUNNER_TEMP=root.as_posix(),
                            TEST_INSTALL_MARKER=marker.as_posix())
+                shell_setup = (
+                    'ccache() { :; }\n'
+                    'sudo() {\n'
+                    '  printf "%s\\n" "$*" >> "$TEST_INSTALL_MARKER"\n'
+                    '}\n'
+                )
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c",
-                     'ccache() { :; }\n'
-                     'sudo() { printf "%s\\n" "$*" >> "$TEST_INSTALL_MARKER"; }\n'
-                     + script],
+                     shell_setup + script],
                     env=env, capture_output=True, text=True, timeout=30,
                 )
                 commands = marker.read_text() if marker.exists() else ""
