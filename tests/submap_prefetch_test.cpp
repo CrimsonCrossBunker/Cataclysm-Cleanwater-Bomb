@@ -22,8 +22,9 @@ class prefetch_fixture
     public:
         prefetch_fixture() {
             for( int i = 0; i < 1000; ++i ) {
-                const auto candidate = std::filesystem::temp_directory_path() /
-                                       ( "ccb-prefetch-test-" + std::to_string( i ) );
+                const std::filesystem::path candidate =
+                    std::filesystem::temp_directory_path() /
+                    std::filesystem::u8path( "ccb-prefetch-test-" + std::to_string( i ) );
                 std::error_code error;
                 if( std::filesystem::create_directory( candidate, error ) ) {
                     root = candidate;
