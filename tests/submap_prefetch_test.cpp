@@ -38,8 +38,9 @@ class prefetch_fixture
             std::error_code error;
             std::filesystem::remove_all( root, error );
         }
-        submap_prefetcher::request_t plain( int x, const std::string &bytes ) {
-            const auto file = root / ( std::to_string( x ) + ".map" );
+        submap_prefetcher::request_t plain( int x, const std::string &bytes ) const {
+            const std::filesystem::path file =
+                root / std::filesystem::u8path( std::to_string( x ) + ".map" );
             std::ofstream out( file, std::ios::binary );
             out << bytes;
             REQUIRE( out.good() );
