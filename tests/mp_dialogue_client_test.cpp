@@ -1,3 +1,5 @@
+#include <functional>
+#include <vector>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -7,7 +9,6 @@
 #include "cata_scope_helpers.h"
 #include "game.h"
 #include "mp_client_conn.h"
-#include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
 #include "mp_queue.h"
 #include "mp_world_session.h"

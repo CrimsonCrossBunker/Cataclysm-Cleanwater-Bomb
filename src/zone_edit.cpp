@@ -1,7 +1,8 @@
 #include "zone_edit.h"
 
+#include <stddef.h>
+#include <unordered_map>
 #include <algorithm>
-#include <limits>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -9,20 +10,28 @@
 
 #include "character.h"
 #include "construction.h"
-#include "construction_group.h"
 #include "debug.h"
-#include "game_constants.h"
 #include "item_group.h"
 #include "itype.h"
 #include "json_loader.h"
 #include "mp_client_conn.h"
 #include "map_scale_constants.h"
-#include "skill.h"
 #include "json.h"
 #include "map.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "character_id.h"
+#include "clzones.h"
+#include "coordinates.h"
+#include "flexbuffer_json.h"
+#include "item.h"
+#include "item_uid.h"
+#include "memory_fast.h"
+#include "player_activity.h"
+#include "safe_reference.h"
+#include "value_ptr.h"
+#include "vehicle_uid.h"
 
 static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
 static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
