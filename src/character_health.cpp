@@ -1618,6 +1618,9 @@ void Character::update_needs( int rate_multiplier )
                     }
                 }
                 sleepiness_multiplier += comfort * 0.025f;
+                if( comfort >= 5 ) {
+                    rest_modifier += std::min( 1.0f, ( comfort - 5 ) * 0.025f );
+                }
                 int current_sleepiness = get_sleepiness();
                 if( current_sleepiness >= sleepiness_levels::TIRED ) {
                     if( current_sleepiness >= sleepiness_levels::EXHAUSTED ) {
