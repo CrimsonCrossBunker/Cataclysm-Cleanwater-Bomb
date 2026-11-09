@@ -1599,6 +1599,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             }
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
+            // Cancellation covers every actor; reload accessibility is checked only later.
+            // NOLINTNEXTLINE(bugprone-branch-clone)
             if( operation == "cancel" ) {
                 // This must work with exhausted AP, and a replay cannot cancel
                 // a replacement activity with a different identity.
