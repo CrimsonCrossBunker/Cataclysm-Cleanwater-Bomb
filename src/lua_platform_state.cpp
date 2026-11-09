@@ -14,6 +14,7 @@
 
 #include "flexbuffer_json.h"
 #include "json.h"
+#include "point.h"
 
 namespace cata::lua_platform
 {
@@ -26,9 +27,9 @@ void script_null_value::serialize( JsonOut &json ) const
 void script_persistent_tripoint::serialize( JsonOut &json ) const
 {
     json.start_array();
-    json.write( x );
-    json.write( y );
-    json.write( z );
+    json.write( value.x );
+    json.write( value.y );
+    json.write( value.z );
     json.end_array();
 }
 
@@ -225,7 +226,9 @@ static script_persistent_value read_persistent_value_impl( const JsonObject &ent
             }
             return value.get_int_exact();
         };
-        result = script_persistent_tripoint{ component( 0 ), component( 1 ), component( 2 ) };
+        result = script_persistent_tripoint{
+            tripoint( component( 0 ), component( 1 ), component( 2 ) )
+        };
     } else if( type == "array" ) {
         script_persistent_array array;
         for( const JsonObject child : entry.get_array( "value" ) ) {
