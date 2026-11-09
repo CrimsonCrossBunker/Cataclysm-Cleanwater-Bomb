@@ -104,6 +104,31 @@
 #include "vehicle_control.h"
 #include "vpart_position.h"
 
+static const activity_id ACT_AIM( "ACT_AIM" );
+static const activity_id ACT_CHOP_LOGS( "ACT_CHOP_LOGS" );
+static const activity_id ACT_CHOP_PLANKS( "ACT_CHOP_PLANKS" );
+static const activity_id ACT_CHOP_TREE( "ACT_CHOP_TREE" );
+static const activity_id ACT_CHURN( "ACT_CHURN" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
+static const activity_id ACT_FURNITURE_MOVE( "ACT_FURNITURE_MOVE" );
+static const activity_id ACT_GLIDE( "ACT_GLIDE" );
+static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );
+static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
+static const activity_id ACT_LONGSALVAGE( "ACT_LONGSALVAGE" );
+static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
+static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
+static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
+static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
+static const activity_id ACT_REMOTE_VEHICLE( "ACT_REMOTE_VEHICLE" );
+static const activity_id ACT_SOCIALIZE( "ACT_SOCIALIZE" );
+static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
+static const activity_id ACT_START_ENGINES( "ACT_START_ENGINES" );
+static const activity_id ACT_START_FIRE( "ACT_START_FIRE" );
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
+static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
+static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
+static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
+
 namespace cata_mp
 {
 void dialogue_view_option::serialize( JsonOut &out ) const
@@ -260,7 +285,7 @@ struct owned_dialogue_session {
             }
         } );
         session.finish_conversation();
-        if( actor && who.activity.id() == ::activity_id( "ACT_AIM" ) && !who.has_weapon() ) {
+        if( actor && who.activity.id() == ACT_AIM && !who.has_weapon() ) {
             who.cancel_activity();
         }
     }
@@ -892,8 +917,8 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
                       request.get_bool( "allow_theft", false ),
                       request.get_bool( "allow_wet", false ), choices );
     if( lifetime && automatic && used && who.activity &&
-        ( who.activity.id() == activity_id( "ACT_PICKAXE" ) ||
-          who.activity.id() == activity_id( "ACT_JACKHAMMER" ) ) ) {
+        ( who.activity.id() == ACT_PICKAXE ||
+          who.activity.id() == ACT_JACKHAMMER ) ) {
         state.automatic_mining_target = target;
         state.automatic_mining_terrain = here.ter( here.get_bub( target ) ).id();
         state.automatic_mining_furniture = here.furn( here.get_bub( target ) ).id();
@@ -1268,33 +1293,33 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     }
     if( who.activity && who.activity.execution() == activity_execution::authoritative ) {
         state.tracks_item_use = state.tracks_body = state.tracks_needs = true;
-        state.refresh_observers = who.activity.id() == activity_id( "ACT_START_ENGINES" ) ||
-                                  who.activity.id() == activity_id( "ACT_START_FIRE" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHOP_TREE" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHOP_LOGS" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) ||
-                                  who.activity.id() == activity_id( "ACT_CHURN" ) ||
-                                  who.activity.id() == activity_id( "ACT_LONGSALVAGE" ) ||
-                                  who.activity.id() == activity_id( "ACT_VEHICLE_FOLD" ) ||
-                                  who.activity.id() == activity_id( "ACT_VEHICLE_UNFOLD" ) ||
-                                  who.activity.id() == activity_id( "ACT_HOTWIRE_CAR" ) ||
-                                  who.activity.id() == activity_id( "ACT_REMOTE_VEHICLE" ) ||
-                                  who.activity.id() == activity_id( "ACT_FILL_LIQUID" ) ||
-                                  who.activity.id() == activity_id( "ACT_SPELLCASTING" ) ||
-                                  who.activity.id() == activity_id( "ACT_MOVE_LOOT" ) ||
-                                  who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) ||
-                                  who.activity.id() == activity_id( "ACT_MOVE_ITEMS" ) ||
-                                  who.activity.id() == activity_id( "ACT_GLIDE" ) ||
-                                  who.activity.id() == activity_id( "ACT_TRAIN" ) ||
-                                  who.activity.id() == activity_id( "ACT_WAIT_NPC" ) ||
-                                  who.activity.id() == activity_id( "ACT_SOCIALIZE" ) ||
+        state.refresh_observers = who.activity.id() == ACT_START_ENGINES ||
+                                  who.activity.id() == ACT_START_FIRE ||
+                                  who.activity.id() == ACT_CHOP_TREE ||
+                                  who.activity.id() == ACT_CHOP_LOGS ||
+                                  who.activity.id() == ACT_CHOP_PLANKS ||
+                                  who.activity.id() == ACT_CHURN ||
+                                  who.activity.id() == ACT_LONGSALVAGE ||
+                                  who.activity.id() == ACT_VEHICLE_FOLD ||
+                                  who.activity.id() == ACT_VEHICLE_UNFOLD ||
+                                  who.activity.id() == ACT_HOTWIRE_CAR ||
+                                  who.activity.id() == ACT_REMOTE_VEHICLE ||
+                                  who.activity.id() == ACT_FILL_LIQUID ||
+                                  who.activity.id() == ACT_SPELLCASTING ||
+                                  who.activity.id() == ACT_MOVE_LOOT ||
+                                  who.activity.id() == ACT_FURNITURE_MOVE ||
+                                  who.activity.id() == ACT_MOVE_ITEMS ||
+                                  who.activity.id() == ACT_GLIDE ||
+                                  who.activity.id() == ACT_TRAIN ||
+                                  who.activity.id() == ACT_WAIT_NPC ||
+                                  who.activity.id() == ACT_SOCIALIZE ||
                                   dynamic_cast<const butchery_activity_actor *>( who.activity.actor.get() ) ||
                                   dynamic_cast<const disassemble_activity_actor *>( who.activity.actor.get() ) ||
                                   dynamic_cast<const zone_activity_actor *>( who.activity.actor.get() ) ||
                                   dynamic_cast<const multi_zone_activity_actor *>( who.activity.actor.get() ) ||
                                   is_vehicle_heating( who.activity ) ||
                                   dynamic_cast<repair_activity_actor *>( who.activity.actor.get() );
-        if( who.activity.id() == activity_id( "ACT_START_FIRE" ) ) {
+        if( who.activity.id() == ACT_START_FIRE ) {
             for( const tripoint_bub_ms &p : here.points_in_radius( who.pos_bub( here ), 1 ) ) {
                 state.changed_tiles.push_back( here.get_abs( p ) );
             }
@@ -3237,7 +3262,7 @@ void client_update_inventory_activity_view()
         const auto *build = dynamic_cast<const build_construction_activity_actor *>(
                                 get_avatar().activity.actor.get() );
         const bool blueprint = build && build->is_client_view() && !get_avatar().backlog.empty() &&
-                               get_avatar().backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" );
+                               get_avatar().backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION;
         const bool resume_blueprint = blueprint && !view.cancel_requested && !view.activity.empty();
         if( blueprint && !resume_blueprint ) {
             get_avatar().backlog.front().auto_resume = false;
@@ -3449,7 +3474,7 @@ void client_update_inventory_activity_view()
         if( !answer && ( view.construction_decision == "deconstruct" ||
                          view.construction_decision == "exhume" ) &&
             !get_avatar().backlog.empty() &&
-            get_avatar().backlog.front().id() == activity_id( "ACT_MULTIPLE_CONSTRUCTION" ) ) {
+            get_avatar().backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION ) {
             // These choices cancel native work; do not immediately ask again.
             get_avatar().backlog.front().auto_resume = false;
         }
