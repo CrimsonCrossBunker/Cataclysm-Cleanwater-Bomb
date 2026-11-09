@@ -9448,8 +9448,10 @@ talk_topic talk_effect_t::apply( dialogue &d ) const
     if( d.has_beta ) {
         // Need to get the selected mission value before effects are applied, because effects can remove the mission
         const mission *miss = d.actor( true )->selected_mission();
-        const std::optional < int > selected_mission_value =
-            miss != nullptr ? std::optional < int > ( miss->get_value() ) : std::nullopt;
+        std::optional<int> selected_mission_value;
+        if( miss != nullptr ) {
+            selected_mission_value = miss->get_value();
+        }
         for( const talk_effect_fun_t &effect : effects ) {
             effect( d );
             if( !mission_dialogue::participants_live( d ) ) {
