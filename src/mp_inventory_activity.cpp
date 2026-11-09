@@ -621,7 +621,7 @@ bool resume_craft( Character &who, map &here, const JsonObject &request )
         if( who.has_wield_conflicts( *workpiece ) ) {
             item_source weapon;
             request.read( "weapon", weapon, true );
-            const auto wielded = resolve_item_source( who, here, weapon );
+            const item_location wielded = resolve_item_source( who, here, weapon );
             if( !wielded || wielded != who.get_wielded_item() || wielded.eventually_contains( workpiece ) ||
                 !request.has_object( "disposition" ) ) {
                 return false;
