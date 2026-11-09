@@ -11,6 +11,7 @@ import time
 TRANSIENT = re.compile(
     r"HTTP(?:/[\d.]+)?\s+(?:408|429|5\d\d)\b"
     r"|requested URL returned error:\s*(?:408|429|5\d\d)\b"
+    r"|curl operation failed with response code\s+(?:408|429|5\d\d)\b"
     r"|status_code:\s*(?:6|7|28|35|52|56)\b"
     r"|connection (?:timed out|reset by peer|refused)",
     re.IGNORECASE,
@@ -30,15 +31,19 @@ def main():
         parser.error(
             "provide a command, positive attempts and nonnegative delay")
     for attempt in range(1, args.attempts + 1):
-        result = subprocess.run(
+        process = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True,
         )
-        print(result.stdout, end="", flush=True)
-        if result.returncode == 0:
+        transient_failure = False
+        for line in process.stdout:
+            print(line, end="", flush=True)
+            transient_failure |= TRANSIENT.search(line) is not None
+        returncode = process.wait()
+        if returncode == 0:
             return 0
-        if attempt == args.attempts or not TRANSIENT.search(result.stdout):
-            return result.returncode
+        if attempt == args.attempts or not transient_failure:
+            return returncode
         print(
             f"Transient download failure; retry {attempt + 1}/{args.attempts}",
             flush=True,
