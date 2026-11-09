@@ -3330,7 +3330,7 @@ void client_update_inventory_activity_view()
                     view.peek.reset();
                 } );
                 const look_around_result result = g->look_from(
-                        here.get_bub( peek->viewpoint ), peek->standing, peek->z_range );
+                                                      here.get_bub( peek->viewpoint ), peek->standing, peek->z_range );
                 if( view.peek && view.peek->request == peek->request && result.selection ) {
                     g->apply_view_action( *result.selection );
                 }
