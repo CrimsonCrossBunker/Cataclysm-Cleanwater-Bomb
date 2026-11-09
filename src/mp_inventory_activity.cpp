@@ -1748,7 +1748,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 state.needs_placement = false;
             } else if( who.get_moves() > 0 && operation == "step" ) {
                 reload_activity_actor *actor = native_reload( who );
-                const auto identity = who.activity.identity_generation();
+                const uint64_t identity = who.activity.identity_generation();
                 const bool ready = actor->prepare_owned_turn( who );
                 if( lifetime && who.activity.identity_generation() == identity ) {
                     state.needs_placement = !ready;
@@ -1762,7 +1762,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             } else if( who.get_moves() > 0 && operation == "place" && state.needs_placement ) {
                 const std::string placement = request.get_string( "placement" );
                 reload_activity_actor *actor = native_reload( who );
-                const auto identity = who.activity.identity_generation();
+                const uint64_t identity = who.activity.identity_generation();
                 const auto preview = actor->preview_remaining();
                 bool ready = preview && ( placement != "wield" || reload_wield_allowed( who, *actor, *preview ) );
                 if( ready && placement == "wield" && who.has_wield_conflicts( *preview ) ) {
