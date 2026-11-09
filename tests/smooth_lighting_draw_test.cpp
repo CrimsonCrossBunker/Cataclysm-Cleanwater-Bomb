@@ -271,7 +271,7 @@ TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
         for( const tripoint_bub_ms &pos : around( player_pos ) ) {
             here.access_cache( 0 ).visibility_cache[pos.x()][pos.y()] = example.level;
         }
-        const auto before = rng_get_engine(); // NOLINT(cata-determinism)
+        const cata_default_random_engine before = rng_get_engine(); // NOLINT(cata-determinism)
         for( int repeat = 0; repeat < 2; ++repeat ) {
             fx.draw();
             CHECK( fx.drew( example.id, example.level == lit_level::LIT ?
