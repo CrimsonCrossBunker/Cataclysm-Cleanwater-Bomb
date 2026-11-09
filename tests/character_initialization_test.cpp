@@ -1,3 +1,5 @@
+#include <initializer_list>
+#include <random>
 #include <array>
 #include <memory>
 #include <new>
@@ -12,6 +14,7 @@
 #include "json_loader.h"
 #include "npc.h"
 #include "rng.h"
+#include "flexbuffer_json.h"
 
 namespace
 {

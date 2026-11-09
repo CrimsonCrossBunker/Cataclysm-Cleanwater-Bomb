@@ -8,6 +8,7 @@
 #include "mp_equipment.h"
 #include "sling.h"
 
+#include <list>
 #include <stdexcept>
 #include <limits>
 
@@ -84,7 +85,6 @@
 #include "player_activity.h"
 #include "point.h"
 #include "rng.h"
-#include "skill.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
@@ -101,12 +101,31 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "worldfactory.h"
+#include "item_disposition.h"
+#include "item_load_context.h"
+#include "item_source.h"
+#include "item_uid.h"
+#include "kill_statistics.h"
+#include "map_viewpoint.h"
+#include "mp_admission.h"
+#include "mp_apply_watchdog.h"
+#include "mp_entity_registry.h"
+#include "mp_firearm.h"
+#include "mp_inventory_activity.h"
+#include "mp_item_source.h"
+#include "mp_melee.h"
+#include "mp_player_identity.h"
+#include "mp_player_store.h"
+#include "mp_player_view.h"
+#include "mp_world_state.h"
+#include "player_control.h"
+#include "player_identity.h"
+#include "world_identity.h"
 #ifdef TILES
     #include "sdl_wrappers.h"
 #endif
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cmath>
