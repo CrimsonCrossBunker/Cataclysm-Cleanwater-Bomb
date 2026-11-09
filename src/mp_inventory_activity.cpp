@@ -3066,7 +3066,7 @@ static bool client_choose_dialogue_response( std::size_t index )
 
 static bool client_dialogue_special_action( const std::string &action )
 {
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
         !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
         action.empty() ) {
