@@ -1,4 +1,5 @@
 #include "mp_apply_watchdog.h"
+#include "mp_log.h"
 
 #include <algorithm>
 #include <condition_variable>
@@ -11,8 +12,6 @@
 
 namespace cata_mp
 {
-void mp_log_client( const std::string &msg ); // NOLINT(cata-static-declarations)
-
 struct apply_watchdog::state {
     struct phase {
         token id;
