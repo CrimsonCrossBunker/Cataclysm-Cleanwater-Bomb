@@ -1584,7 +1584,7 @@ void Character::update_needs( int rate_multiplier )
     } else if( asleep ) {
         if( rates.recovery > 0.0f ) {
             int recovered = roll_remainder( rates.recovery * rate_multiplier );
-            if( get_sleepiness() - recovered < 10 ) {
+            if( get_sleepiness() - recovered < 0 ) {
                 // Should be wake up, but that could prevent some retroactive regeneration
                 sleep.set_duration( 1_turns );
                 mod_sleepiness( -25 );
