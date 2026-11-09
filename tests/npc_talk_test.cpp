@@ -1622,6 +1622,7 @@ TEST_CASE( "dialogue_opinions_belong_to_the_interlocutor", "[npc_talk][multiplay
     host_dialogue.actor( true )->add_debt( 900 );
 
     npc remote;
+    clear_character( remote );
     remote.setID( character_id( 700001 ) );
     REQUIRE( remote.getID() != get_avatar().getID() );
     dialogue remote_dialogue( get_talker_for( remote ), get_talker_for( provider ) );
@@ -1664,6 +1665,7 @@ TEST_CASE( "dialogue_trials_and_hostility_use_the_same_player_opinion", "[npc_ta
     provider.op_of_u.fear = 20;
     provider.op_of_u.anger = 25;
     npc remote;
+    clear_character( remote );
     remote.setID( character_id( 700001 ) );
     dialogue remote_dialogue( get_talker_for( remote ), get_talker_for( provider ) );
     talker &remote_provider = *remote_dialogue.actor( true );
@@ -1736,6 +1738,7 @@ TEST_CASE( "npc_opinions_keep_their_owners_across_save_and_reload",
 
     // Loading another save into the same object must discard stale entries.
     restored.opinion_of( character_id( 700002 ) ).trust = 99;
+    restored.setID( character_id(), true );
     restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
     CHECK( std::as_const( restored ).opinion_of( character_id( 700002 ) ).trust == 0 );
 }
@@ -1774,6 +1777,7 @@ TEST_CASE( "legacy_npc_opinion_is_not_inherited_by_the_first_remote_speaker",
     npc restored;
     restored.deserialize( json_loader::from_string( legacy.str() ).get_object() );
     npc remote;
+    clear_character( remote );
     remote.setID( character_id( 700001 ) );
     dialogue remote_dialogue( get_talker_for( remote ), get_talker_for( restored ) );
     CHECK( remote_dialogue.const_actor( true )->debt() == 0 );
@@ -1855,7 +1859,8 @@ TEST_CASE( "interleaved_dialogues_isolate_selected_missions_and_preserve_clones"
     CHECK( remote_dialogue.const_actor( true )->assigned_missions() ==
            std::vector<mission *> { remote_available } );
 
-    remote.wield( remote.i_add( item( itype_test_rock ) ) );
+    remote.set_wielded_item( item( itype_test_rock ) );
+    REQUIRE( remote.has_amount( itype_test_rock, 1 ) );
     const conditional_t cond_complete( "mission_complete" );
     const conditional_t cond_incomplete( "mission_incomplete" );
     const conditional_t cond_has_remote(
@@ -2109,9 +2114,12 @@ TEST_CASE( "native_talk_effects_and_lua_dialogue_context_share_session_mission_s
     const cata::lua_platform::game_handle_runtime runtime_identity( runtime_owner, 991 );
     cata::lua_platform::runtime_world_ready( true );
     const std::size_t world_generation = cata::lua_platform::runtime_world_generation();
+    cata::lua_platform::dialogue::begin_session(
+        remote_dialogue, runtime_identity, world_generation );
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
         cata::lua_platform::dialogue::session_for(
             remote_dialogue, "TALK_TEST", runtime_identity, world_generation );
+    REQUIRE( session != nullptr );
     cata::lua_platform::dialogue::context lua_ctx(
         lua.lua_state(), remote_dialogue, "TALK_TEST", true,
         "stale", {}, session, runtime_identity, world_generation, true );
@@ -2356,14 +2364,14 @@ TEST_CASE( "dialogue_choice_revalidates_and_commits_only_once", "[npc_talk][owne
     CHECK( executions == 0 );
 
     SECTION( "changed_condition_rejects_without_gameplay_randomness_or_effects" ) {
-        const auto before_selection = rng_get_engine();
+        const cata_default_random_engine before_selection = rng_get_engine();
         permitted = false;
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 0 );
         CHECK( rng_get_engine() == before_selection );
     }
     SECTION( "success_cannot_repeat_or_reenter" ) {
-        const auto before_selection = rng_get_engine();
+        const cata_default_random_engine before_selection = rng_get_engine();
         const auto next = conversation.select_response( 0, revision );
         REQUIRE( next );
         CHECK( next->id == "TALK_DONE" );
@@ -2406,6 +2414,7 @@ TEST_CASE( "dialogue_choice_rejects_mission_taken_by_another_player",
     mission::clear_all();
     npc &provider = create_test_talker();
     npc remote;
+    clear_character( remote );
     remote.setID( character_id( 87433 ) );
     const on_out_of_scope cleanup( [&]() {
         remote.reset_all_missions();
