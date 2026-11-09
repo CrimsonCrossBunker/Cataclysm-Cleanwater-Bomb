@@ -2972,7 +2972,7 @@ bool client_auto_mine( const tripoint_abs_ms &target )
     if( !client_activate_item_impl( who.get_wielded_item(), method, target, "auto_mine" ) ) {
         return false;
     }
-    auto &view = g->multiplayer_session().client_inventory_activity;
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( view.active && view.next_request != sequence && view.pending_request != 0 ) {
         view.pending_automove = automove;
         view.automatic_mining = true;
