@@ -611,7 +611,7 @@ TEST_CASE( "colored_lighting_option_changes_pixels_without_changing_world_light"
         fx.draw( MAPSIZE_X + 1 );
         std::size_t prepared_tiles = 0;
         for( const draw_points_cache_t::row_vec &row : renderer_recovery_test_support::tile_draw_rows(
-                 0 ) ) {
+                 *fx.tiles_, 0 ) ) {
             prepared_tiles += row.size();
         }
         REQUIRE( prepared_tiles >= 16384 );

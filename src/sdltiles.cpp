@@ -2897,9 +2897,10 @@ bool renderer_recovery_test_support::tile_preparation_used_workers()
     return tilecontext && tilecontext->preparation_ && tilecontext->preparation_->used_workers();
 }
 
-const draw_points_cache_t::level_rows &renderer_recovery_test_support::tile_draw_rows( int zlevel )
+const draw_points_cache_t::level_rows &renderer_recovery_test_support::tile_draw_rows(
+    cata_tiles &tiles, int zlevel )
 {
-    return tilecontext->draw_points_cache_.tiles[zlevel];
+    return tiles.draw_points_cache_.tiles[zlevel];
 }
 
 void renderer_recovery_test_support::remove_character_preview_context()
