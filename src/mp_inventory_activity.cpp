@@ -3002,7 +3002,7 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
     return true;
 }
 
-bool client_choose_dialogue_response( std::size_t index )
+static bool client_choose_dialogue_response( std::size_t index )
 {
     auto &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
