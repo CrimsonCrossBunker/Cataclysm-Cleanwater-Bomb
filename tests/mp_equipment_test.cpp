@@ -18,6 +18,7 @@
 #include "item_stack.h"
 #include "item_uid.h"
 #include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
@@ -76,6 +77,8 @@ class equipment_fixture
 class equipment_events : public event_subscriber
 {
     public:
+        using event_subscriber::notify;
+
         int wear = 0;
         int takeoff = 0;
         int wield = 0;

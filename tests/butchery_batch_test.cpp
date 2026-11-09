@@ -96,6 +96,8 @@ TEST_CASE( "butchery_rechecks_the_corpse_after_training_callbacks",
     class change_corpse_on_training : public event_subscriber
     {
         public:
+            using event_subscriber::notify;
+
             item_location corpse;
             bool fired = false;
             explicit change_corpse_on_training( item_location corpse ) : corpse( std::move( corpse ) ) {

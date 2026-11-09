@@ -4,6 +4,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -17,9 +18,11 @@
 #include "character_attire.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "dialogue.h"
 #include "condition.h"
 #include "dialogue_chatbin.h"
+#include "dialogue_helpers.h"
 #include "dialogue_win.h"
 #include "effect.h"
 #include "effect_on_condition.h"
