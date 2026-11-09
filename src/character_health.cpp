@@ -1578,7 +1578,11 @@ void Character::update_needs( int rate_multiplier )
 
                 // Note: Since needs are updated in 5-minute increments, we have to multiply the roll again by
                 // 5. If rate_multiplier is > 1, sleepiness_roll will be higher and this will work out.
-                mod_sleep_deprivation( sleepiness_roll * 5 );
+                const float sleepiness_modifier = enchantment_cache->modify_value(
+                                                      enchant_vals::mod::SLEEPINESS, 1.0f );
+                const float deprivation_modifier = 1.0f - std::clamp(
+                                                       ( 1.0f - sleepiness_modifier ) * 0.25f, 0.0f, 0.25f );
+                mod_sleep_deprivation( roll_remainder( sleepiness_roll * 5 * deprivation_modifier ) );
             }
         }
     } else if( asleep ) {
