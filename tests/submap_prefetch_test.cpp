@@ -196,14 +196,14 @@ TEST_CASE( "prefetch_failed_result_publication_does_not_terminate_worker", "[pre
     // ownership, but not for the larger completed-map node. This injects real
     // allocation failures at publication without any test hook in the worker.
     for( std::size_t size = 600; size < 1024; size += 8 ) {
-        auto request = fixture.plain( 0, std::string( size, 'x' ) );
+        const submap_prefetcher::request_t request = fixture.plain( 0, std::string( size, 'x' ) );
         REQUIRE( prefetch.request( request, 0 ) );
         wait_until_idle( prefetch );
         prefetch.take( request.om );
         CHECK( budget.used() <= budget.limit() );
     }
     CHECK( prefetch.inspect().publication_failures > 0 );
-    auto request = fixture.plain( 0, "recovered" );
+    const submap_prefetcher::request_t request = fixture.plain( 0, "recovered" );
     REQUIRE( prefetch.request( request, 0 ) );
     wait_until_idle( prefetch );
     {
