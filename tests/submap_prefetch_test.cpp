@@ -85,7 +85,7 @@ TEST_CASE( "prefetch_transfers_owned_bytes_without_world_or_parser_access", "[pr
     byte_budget budget( 8192 );
     submap_prefetcher prefetch( budget, 8 );
     const std::string text = "[1,2,3]";
-    const auto request = fixture.plain( 0, text );
+    const submap_prefetcher::request_t request = fixture.plain( 0, text );
     REQUIRE( prefetch.request( request, 0 ) );
     wait_until_idle( prefetch );
     auto data = prefetch.take( request.om );
