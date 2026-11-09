@@ -38,34 +38,20 @@
 #include "uilist.h"
 
 static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
-
 static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
-
 static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
-
 static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
-
 static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
-
-static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
-
-static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
-
-static const zone_type_id zone_type_MINING( "MINING" );
-
-static const zone_type_id zone_type_MOPPING( "MOPPING" );
-
-static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
-
-static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
-
-static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
-
-static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
-
-static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
-
 static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
+static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
+static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
+static const zone_type_id zone_type_MINING( "MINING" );
+static const zone_type_id zone_type_MOPPING( "MOPPING" );
+static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
+static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
+static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
+static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
+static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
 
 shared_ptr_fast<game::draw_callback_t> zone_manager_ui::create_zone_callback(
     const std::optional<tripoint_bub_ms> &zone_start,
@@ -327,7 +313,7 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
         zones.erase( std::remove_if( zones.begin(), zones.end(),
         [&u, remote]( zone_manager::ref_zone_data const & it ) {
             zone_type_id const type = it.get().get_type();
-            const auto query = zone_query_context::for_character( u, u.pos_abs() );
+            const zone_query_context query = zone_query_context::for_character( u, u.pos_abs() );
             return !it.get().matches_query( query ) || ( !( debug_mode && !remote ) && type.is_valid() &&
                     type->hidden );
         } ),
@@ -942,7 +928,7 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
             const bool submitted = remote ? cata_mp::client_submit_zone_edits( batch ) :
                                    zone_edit_session::apply( u, mgr, batch );
             if( !submitted ) {
-                popup( _( "The zones could not be changed. Reopen the zone manager to refresh them." ) );
+                popup( _( "The zones could not be changed.  Reopen the zone manager to refresh them." ) );
             }
         }
     }

@@ -30,7 +30,7 @@ struct apply_watchdog::state {
         while( !wake.wait_for( lock, std::chrono::seconds( 1 ), [&]() {
         return stopping;
     } ) ) {
-            const auto now = clock::now();
+            const clock::time_point now = clock::now();
             if( phases.empty() || now < phases.back().next_warning ) {
                 continue;
             }
@@ -74,7 +74,7 @@ apply_watchdog::token apply_watchdog::begin( std::string label, clock::time_poin
     if( !state_ ) {
         state_ = std::make_unique<state>();
     }
-    std::lock_guard<std::mutex> lock( state_->mutex );
+    std::scoped_lock lock( state_->mutex );
     const token id = ++next_token_;
     state_->phases.push_back( { id, std::move( label ), started, started + std::chrono::seconds( 3 ) } );
     try {
@@ -95,7 +95,7 @@ void apply_watchdog::end( token phase )
     if( !state_ ) {
         return;
     }
-    std::lock_guard<std::mutex> lock( state_->mutex );
+    std::scoped_lock lock( state_->mutex );
     const auto found = std::find_if( state_->phases.begin(), state_->phases.end(),
     [phase]( const state::phase & entry ) {
         return entry.id == phase;
@@ -111,7 +111,7 @@ void apply_watchdog::stop()
         return;
     }
     {
-        std::lock_guard<std::mutex> lock( state_->mutex );
+        std::scoped_lock lock( state_->mutex );
         state_->stopping = true;
     }
     state_->wake.notify_all();
