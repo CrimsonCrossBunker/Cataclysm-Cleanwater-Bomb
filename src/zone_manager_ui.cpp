@@ -327,7 +327,7 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
         zones.erase( std::remove_if( zones.begin(), zones.end(),
         [&u, remote]( zone_manager::ref_zone_data const & it ) {
             zone_type_id const type = it.get().get_type();
-            const auto query = zone_query_context::for_character( u, u.pos_abs() );
+            const zone_query_context query = zone_query_context::for_character( u, u.pos_abs() );
             return !it.get().matches_query( query ) || ( !( debug_mode && !remote ) && type.is_valid() &&
                     type->hidden );
         } ),
