@@ -349,8 +349,9 @@ script_persistent_state &character_script_state::for_mod( const std::string &mod
     return mods_[mod_id];
 }
 
+// try_emplace forwards and moves this state when the mod has no existing entry.
 void character_script_state::migrate_legacy( const std::string &mod_id,
-        script_persistent_state values )
+        script_persistent_state values ) // NOLINT(performance-unnecessary-value-param)
 {
     mods_.try_emplace( mod_id, std::move( values ) );
 }
