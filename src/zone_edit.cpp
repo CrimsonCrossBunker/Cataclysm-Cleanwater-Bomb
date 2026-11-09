@@ -24,6 +24,10 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 
+static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
+static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
+static const zone_type_id zone_type_LOOT_ITEM_GROUP( "LOOT_ITEM_GROUP" );
+
 zone_edit_definition zone_edit_definition::capture( const zone_data &zone )
 {
     zone_edit_definition result;
@@ -163,6 +167,7 @@ zone_edit_session::zone_edit_session( const Character &who, zone_manager &manage
     zone_edit_session( who, selected_faction.value_or( who.get_faction_id() ) )
 {
     std::vector<zone_data *> visible;
+    visible.reserve( manager.zones.size() );
     for( zone_data &zone : manager.zones ) {
         visible.push_back( &zone );
     }
@@ -343,7 +348,7 @@ shared_ptr_fast<zone_options> read_edit_options( const zone_edit_definition &def
             }
         } else if( dynamic_cast<loot_options *>( options.get() ) ) {
             strings = { "mark" };
-            if( definition.type == zone_type_id( "LOOT_ITEM_GROUP" ) &&
+            if( definition.type == zone_type_LOOT_ITEM_GROUP &&
                 !item_group::group_is_defined( item_group_id( object.get_string( "mark" ) ) ) ) {
                 return nullptr;
             }
@@ -406,12 +411,12 @@ bool bounded_edit_geometry( const Character &who, const zone_edit_definition &de
 {
     const tripoint origin = definition.personal ? tripoint::zero : who.pos_abs().raw();
     const auto in_bounds = [&]( const tripoint & point ) {
-        const int64_t dx = static_cast<int64_t>( point.x ) - origin.x;
-        const int64_t dy = static_cast<int64_t>( point.y ) - origin.y;
         const int64_t z = definition.personal ? static_cast<int64_t>( point.z ) + who.pos_abs().z() :
                           point.z;
-        return dx >= -MAX_VIEW_DISTANCE && dx <= MAX_VIEW_DISTANCE &&
-               dy >= -MAX_VIEW_DISTANCE && dy <= MAX_VIEW_DISTANCE &&
+        return static_cast<int64_t>( point.x ) >= static_cast<int64_t>( origin.x ) - MAX_VIEW_DISTANCE &&
+               static_cast<int64_t>( point.x ) <= static_cast<int64_t>( origin.x ) + MAX_VIEW_DISTANCE &&
+               static_cast<int64_t>( point.y ) >= static_cast<int64_t>( origin.y ) - MAX_VIEW_DISTANCE &&
+               static_cast<int64_t>( point.y ) <= static_cast<int64_t>( origin.y ) + MAX_VIEW_DISTANCE &&
                z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT;
     };
     // Native zone overlays and menus describe a single floor.
@@ -469,6 +474,7 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
     // Inspect identities across native containers, including zones not owned by this player.
     std::map<std::string, zone_data *> live;
     std::vector<zone_data *> all;
+    all.reserve( manager.zones.size() );
     for( zone_data &zone : manager.zones ) {
         all.push_back( &zone );
     }
@@ -558,8 +564,8 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
         if( definition.vehicle_bound ) {
             if( ( definition.displayed && ( !change.before || !change.before->displayed ) ) ||
                 ( ( !change.before || definition.type != change.before->type ) &&
-                  ( definition.type == zone_type_id( "FARM_PLOT" ) ||
-                    definition.type == zone_type_id( "CONSTRUCTION_BLUEPRINT" ) ) ) ) {
+                  ( definition.type == zone_type_FARM_PLOT ||
+                    definition.type == zone_type_CONSTRUCTION_BLUEPRINT ) ) ) {
                 return false;
             }
             point_rel_ms mount;

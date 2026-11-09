@@ -4108,7 +4108,7 @@ class firstaid_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
 
     private:
         int moves = 0;
@@ -4143,7 +4143,7 @@ class forage_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
 
     private:
         int moves = 0;
