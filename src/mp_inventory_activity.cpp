@@ -985,7 +985,7 @@ bool reload_wield_allowed( const Character &who, const reload_activity_actor &ac
     if( !who.can_wield( preview ).success() ) {
         return false;
     }
-    const auto weapon = who.get_wielded_item();
+    const item_location weapon = who.get_wielded_item();
     // Native wielding also requires putting this bag away first. Disposing
     // it here would copy/remove the very target or ammunition we are using.
     return !weapon || ( !weapon->has_flag( flag_NO_UNWIELD ) &&
