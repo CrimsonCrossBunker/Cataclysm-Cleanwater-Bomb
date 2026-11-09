@@ -148,7 +148,7 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         const auto remembered = draw_boundary_pixels( center );
         CHECK( you.get_memorized_tile( absolute ).get_ter_id() == "t_wall" );
         bool captured_hidden = false;
-        for( const auto &row : renderer_recovery_test_support::tile_draw_snapshot().tiles[0] ) {
+        for( const auto &row : renderer_recovery_test_support::tile_draw_rows( 0 ) ) {
             for( const auto &tile : row ) {
                 if( tile.view.pos == hidden ) {
                     const auto *sprite = std::get_if<tile_render_info::sprite>( &tile.var );
@@ -253,7 +253,7 @@ TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
         CHECK( renderer_recovery_test_support::tile_preparation_used_workers() == ( workers != 0 ) );
         std::size_t sprites = 0;
         std::size_t effects = 0;
-        for( const auto &row : renderer_recovery_test_support::tile_draw_snapshot().tiles[0] ) {
+        for( const auto &row : renderer_recovery_test_support::tile_draw_rows( 0 ) ) {
             for( const auto &tile : row ) {
                 if( std::holds_alternative<tile_render_info::sprite>( tile.var ) ) {
                     ++sprites;

@@ -417,7 +417,7 @@ struct renderer_recovery_test_support {
     static bool install_character_preview_targets();
     static bool has_character_preview_targets();
     static bool tile_preparation_used_workers();
-    static const view_snapshot &tile_draw_snapshot();
+    static const draw_points_cache_t::level_rows &tile_draw_rows( int zlevel );
     static void remove_character_preview_context();
     // Reverse setup: drain the quarantine and release atlases on the live
     // renderer, destroy variant_pass before the renderer, reset globals and the
