@@ -609,10 +609,8 @@ TEST_CASE( "colored_lighting_option_changes_pixels_without_changing_world_light"
         RenderClear( get_sdl_renderer() );
         // Include more than the worker threshold's 16384 viewport slots.
         fx.draw( MAPSIZE_X + 1 );
-        std::size_t prepared_tiles = 0;
-        for( const draw_points_cache_t::row_vec &row : here.draw_points_cache.tiles[0] ) {
-            prepared_tiles += row.size();
-        }
+        const std::size_t prepared_tiles =
+            renderer_recovery_test_support::cached_map_tile_count( *fx.tiles_, 0 );
         REQUIRE( prepared_tiles >= 16384 );
         const SDL_Rect probe = { 32, 32, 1, 1 };
         Uint32 pixel = 0;
