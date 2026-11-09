@@ -10872,9 +10872,12 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
 
     if( who.grab_point != tripoint_rel_ms::zero ) {
         who.grab_point.z() = who.grab_point.z() - movez;
-        const std::optional<tripoint_rel_ms> dir = choices ? choices->drag_direction :
-                local_input ? choose_direction( _( "Select a direction to push grabbed object towards." ) ) :
-                std::nullopt;
+        std::optional<tripoint_rel_ms> dir;
+        if( choices ) {
+            dir = choices->drag_direction;
+        } else if( local_input ) {
+            dir = choose_direction( _( "Select a direction to push grabbed object towards." ) );
+        }
         if( !dir ) {
             who.grab( object_type::NONE );
         } else { // Try to vertically move whatever we're grabbing.
