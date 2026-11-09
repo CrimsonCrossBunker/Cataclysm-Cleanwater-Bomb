@@ -1,9 +1,12 @@
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -16,10 +19,11 @@
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
+#include "condition.h"
 #include "coordinates.h"
 #include "dialogue.h"
-#include "condition.h"
 #include "dialogue_chatbin.h"
+#include "dialogue_helpers.h"
 #include "dialogue_win.h"
 #include "effect.h"
 #include "enums.h"
@@ -34,13 +38,20 @@
 #include "item.h"
 #include "item_category.h"
 #include "item_location.h"
-#include "talker_npc.h"
 #include "json.h"
 #include "json_loader.h"
+#include "kill_statistics.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_sol.h"
+#include "player_activity.h"
+#include "talker_npc.h"
+#include "translations.h"
+
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "lua_platform_dialogue.h"
+
     #include "lua_platform_runtime.h"
-    #include "lua_platform_state.h"
+
 #endif
 #include "magic.h"
 #include "map.h"
@@ -60,8 +71,8 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "rng.h"
-#include "string_formatter.h"
 #include "sounds.h"
+#include "string_formatter.h"
 #include "talker.h"
 #include "talker_topic.h"
 #include "type_id.h"

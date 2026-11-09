@@ -1,10 +1,17 @@
 #include "mp_actor_binding.h"
 
 #include <stdexcept>
+#include <string>
 #include <utility>
 
+#include "character_id.h"
 #include "creature.h"
+#include "math_parser_diag_value.h"
+#include "mp_player_identity.h"
 #include "npc.h"
+#include "npc_lifetime.h"
+#include "player_control.h"
+#include "safe_reference.h"
 
 namespace cata_mp
 {

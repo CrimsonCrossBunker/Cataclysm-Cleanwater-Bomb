@@ -1,10 +1,14 @@
-#include "cata_catch.h"
-
 #include <memory>
 #include <string>
 
+#include "cata_catch.h"
+#include "character_id.h"
 #include "mp_actor_binding.h"
+#include "mp_player_identity.h"
 #include "npc.h"
+#include "npc_lifetime.h"
+#include "player_control.h"
+#include "player_identity.h"
 
 namespace
 {
