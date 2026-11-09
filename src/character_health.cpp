@@ -146,6 +146,7 @@ static const efftype_id effect_jetinjector( "jetinjector" );
 static const efftype_id effect_lack_sleep( "lack_sleep" );
 static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_melatonin( "melatonin" );
+static const efftype_id effect_melatonin_sleep( "melatonin_sleep" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_nausea( "nausea" );
@@ -1578,13 +1579,19 @@ void Character::update_needs( int rate_multiplier )
 
                 // Note: Since needs are updated in 5-minute increments, we have to multiply the roll again by
                 // 5. If rate_multiplier is > 1, sleepiness_roll will be higher and this will work out.
-                mod_sleep_deprivation( sleepiness_roll * 5 );
+                const float sleepiness_modifier = enchantment_cache->modify_value(
+                                                      enchant_vals::mod::SLEEPINESS, 1.0f );
+                const float deprivation_modifier = 1.0f - std::clamp(
+                                                       ( 1.0f - sleepiness_modifier ) * 0.25f, 0.0f, 0.25f );
+                mod_sleep_deprivation( roll_remainder( sleepiness_roll * 5 * deprivation_modifier ) );
             }
         }
     } else if( asleep ) {
         if( rates.recovery > 0.0f ) {
             int recovered = roll_remainder( rates.recovery * rate_multiplier );
-            if( get_sleepiness() - recovered < 10 ) {
+            const bool melatonin_sleep = get_effect_dur( effect_melatonin_sleep ) > 0_turns &&
+                                         calendar::turn - sleep.get_start_time() < 30_minutes;
+            if( get_sleepiness() - recovered < 0 && !melatonin_sleep ) {
                 // Should be wake up, but that could prevent some retroactive regeneration
                 sleep.set_duration( 1_turns );
                 mod_sleepiness( -25 );
@@ -1617,7 +1624,10 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 0.75f;
                     }
                 }
-                sleepiness_multiplier += comfort * 0.05f;
+                sleepiness_multiplier += comfort * 0.025f;
+                if( comfort >= 5 ) {
+                    rest_modifier += std::min( 1.0f, ( comfort - 5 ) * 0.025f );
+                }
                 int current_sleepiness = get_sleepiness();
                 if( current_sleepiness >= sleepiness_levels::TIRED ) {
                     if( current_sleepiness >= sleepiness_levels::EXHAUSTED ) {
@@ -2716,6 +2726,9 @@ void Character::wake_up()
     if( has_effect( effect_sleep ) ) {
         get_effect( effect_sleep ).set_duration( 0_turns );
         get_event_bus().send<event_type::character_wakes_up>( getID() );
+    }
+    if( has_effect( effect_melatonin_sleep ) ) {
+        get_effect( effect_melatonin_sleep ).set_duration( 0_turns );
     }
     remove_effect( effect_slept_through_alarm );
     remove_effect( effect_lying_down );
