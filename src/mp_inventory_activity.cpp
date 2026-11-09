@@ -3086,7 +3086,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
         const dialogue_view_prompt &prompt )
 {
     if( prompt.options.empty() ) {
-        auto &view = g->multiplayer_session().client_inventory_activity;
+        inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
         view.cancel_requested = true;
         send_inventory_activity( "cancel" );
         return;
@@ -3158,7 +3158,8 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
             ui_manager::redraw();
             action = ctxt.handle_input();
             if( get_avatar().is_dead_state() ) {
-                auto &view = g->multiplayer_session().client_inventory_activity;
+                inventory_activity_client_state &view =
+                    g->multiplayer_session().client_inventory_activity;
                 view.cancel_requested = true;
                 send_inventory_activity( "cancel" );
                 return;
