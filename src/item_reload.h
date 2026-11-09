@@ -26,7 +26,7 @@ std::optional<std::vector<size_t>> reload_item_path( const item &root, const ite
 item_location reload_item_at( item_location root, const std::vector<size_t> &path );
 
 class Character;
-bool query_crush_frozen_liquid( Character &who, item_location liquid );
-bool execute_crush_frozen_liquid( Character &who, item_location liquid, bool allow_hammer );
+bool query_crush_frozen_liquid( Character &who, item_location loc );
+bool execute_crush_frozen_liquid( Character &who, item_location loc, bool allow_hammer );
 
 #endif // CATA_SRC_ITEM_RELOAD_H

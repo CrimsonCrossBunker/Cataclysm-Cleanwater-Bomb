@@ -308,7 +308,6 @@ static const activity_id ACT_WORKOUT_HARD( "ACT_WORKOUT_HARD" );
 static const activity_id ACT_WORKOUT_LIGHT( "ACT_WORKOUT_LIGHT" );
 static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
 
-
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_money( "money" );
 static const ammotype ammo_plutonium( "plutonium" );
@@ -318,8 +317,8 @@ static const bionic_id bio_painkiller( "bio_painkiller" );
 static const efftype_id effect_asocial_dissatisfied( "asocial_dissatisfied" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
-static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_blind( "blind" );
+static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_controlled( "controlled" );
 static const efftype_id effect_currently_busy( "currently_busy" );
 static const efftype_id effect_docile( "docile" );
@@ -343,8 +342,6 @@ static const efftype_id effect_under_operation( "under_operation" );
 static const efftype_id effect_worked_on( "worked_on" );
 
 static const faction_id faction_your_followers( "your_followers" );
-
-static const fault_id fault_fail_to_feed( "fault_fail_to_feed" );
 
 static const flag_id json_flag_ALWAYS_AIMED( "ALWAYS_AIMED" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
@@ -463,9 +460,7 @@ static const ter_str_id ter_t_door_metal_c( "t_door_metal_c" );
 static const ter_str_id ter_t_door_metal_locked( "t_door_metal_locked" );
 static const ter_str_id ter_t_greenhouse( "t_greenhouse" );
 static const ter_str_id ter_t_greenhouse_tilled( "t_greenhouse_tilled" );
-static const ter_str_id ter_t_stump( "t_stump" );
 static const ter_str_id ter_t_tree( "t_tree" );
-static const ter_str_id ter_t_trunk( "t_trunk" );
 
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 static const trait_id trait_SPIRITUAL( "SPIRITUAL" );
@@ -564,7 +559,7 @@ void aim_activity_actor::do_turn( player_activity &act, Character &who )
     }
     avatar &you = get_avatar();
 
-    const auto remote_phase = cata_mp::client_firearm_phase();
+    const cata_mp::firearm_view_phase remote_phase = cata_mp::client_firearm_phase();
     if( cata_mp::is_client_mode() && remote_phase != cata_mp::firearm_view_phase::inactive ) {
         if( remote_phase == cata_mp::firearm_view_phase::preparing ) {
             cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
@@ -1701,7 +1696,7 @@ bool hacksaw_activity_actor::continue_work( player_activity &act, Character &who
     if( type && veh_pos && !mounted ) {
         // Upgrade an older position-only mounted activity once. Subsequent
         // turns and saves retain the exact vehicle and hardware identities.
-        const auto part = here.veh_at( *veh_pos );
+        const optional_vpart_position part = here.veh_at( *veh_pos );
         const auto source = part ? capture_mounted_tool( part->vehicle(), here.get_abs( *veh_pos ),
                             *type, "HACKSAW" ) : std::nullopt;
         if( !source || !here.inbounds( target ) ) {
@@ -1760,7 +1755,7 @@ int hacksaw_activity_actor::get_tool_quality() const
 bool hacksaw_activity_actor::can_resume_with_internal( const activity_actor &other,
         const Character & ) const
 {
-    const auto &next = static_cast<const hacksaw_activity_actor &>( other );
+    const hacksaw_activity_actor &next = static_cast<const hacksaw_activity_actor &>( other );
     if( owned_target && ( !owned_target->matches( get_map() ) || !next.owned_target ||
                           owned_target->position != next.owned_target->position ) ) {
         return false;
@@ -1775,7 +1770,7 @@ bool hacksaw_activity_actor::can_resume_with_internal( const activity_actor &oth
 void hacksaw_activity_actor::set_resume_values_internal( const activity_actor &other,
         const Character & )
 {
-    const auto &next = static_cast<const hacksaw_activity_actor &>( other );
+    const hacksaw_activity_actor &next = static_cast<const hacksaw_activity_actor &>( other );
     const int quality = next.get_tool_quality();
     const int old_quality = quality_at_start > 1 ? quality_at_start : get_tool_quality();
     // Keep completed work when switching saw quality or portable/mounted source.
@@ -2256,17 +2251,17 @@ void glide_activity_actor::start( player_activity &act, Character &who )
         act.set_to_null();
         return;
     }
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     const auto entry = *entry_position;
-    const auto current = who.pos_bub( here );
-    const auto target = here.get_bub( entry );
+    const tripoint_bub_ms current = who.pos_bub( here );
+    const tripoint_bub_ms target = here.get_bub( entry );
     if( target.z() != current.z() || square_dist( target.xy(), current.xy() ) != 1 ||
         !here.is_open_air( target ) || !here.valid_move( current, target, false, true ) ||
         get_creature_tracker().creature_at( target ) ) {
         act.set_to_null();
         return;
     }
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const auto still_current = [&]() {
         return lifetime && who.activity.identity_generation() == generation &&
                who.activity.actor.get() == this;
@@ -2317,7 +2312,7 @@ void glide_activity_actor::do_turn( player_activity &act, Character &who )
         finish_gliding( act, who );
         return;
     }
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const auto still_current = [&]() {
         return lifetime && who.activity.identity_generation() == generation &&
                who.activity.actor.get() == this;
@@ -2337,7 +2332,7 @@ void glide_activity_actor::do_turn( player_activity &act, Character &who )
     const tripoint_abs_ms origin = who.pos_abs();
     const tripoint_abs_ms newpos = origin + headings[jump_direction];
     map &here = get_map();
-    auto checknewpos = here.get_bub( newpos );
+    tripoint_bub_ms checknewpos = here.get_bub( newpos );
     if( !here.is_open_air( who.pos_bub( here ) ) ) {
         who.add_msg_player_or_npc( m_good, _( "You come to a gentle landing." ),
                                    _( "<npcname> comes to a gentle landing." ) );
@@ -2409,10 +2404,10 @@ void glide_activity_actor::do_turn( player_activity &act, Character &who )
     }
     if( descend ) {
         // Airborne descent is one vertical step, never a search for nearby stairs.
-        const auto below = who.pos_bub( here ) + tripoint::below;
+        const tripoint_bub_ms below = who.pos_bub( here ) + tripoint::below;
         if( here.is_open_air( who.pos_bub( here ) ) && here.inbounds( below ) &&
             here.valid_move( who.pos_bub( here ), below, false, true ) ) {
-            const auto below_position = here.get_abs( below );
+            const tripoint_abs_ms below_position = here.get_abs( below );
             g->vertical_move( who, -1, true, false );
             if( !still_current() ) {
                 return;
@@ -4196,7 +4191,7 @@ bool lockpick_activity_actor::check_bionic( player_activity &act, Character &who
 bool boltcutting_activity_actor::can_resume_with_internal( const activity_actor &other,
         const Character & ) const
 {
-    const auto &next = static_cast<const boltcutting_activity_actor &>( other );
+    const boltcutting_activity_actor &next = static_cast<const boltcutting_activity_actor &>( other );
     if( owned_target && owned_target->tool_source ) {
         const auto &path = owned_target->tool_source->path;
         if( !next.tool || path.empty() || next.tool->uid().get_value() != path.back() ) {
@@ -4213,7 +4208,7 @@ bool boltcutting_activity_actor::can_resume_with_internal( const activity_actor 
 void boltcutting_activity_actor::set_resume_values_internal( const activity_actor &other,
         const Character & )
 {
-    const auto &next = static_cast<const boltcutting_activity_actor &>( other );
+    const boltcutting_activity_actor &next = static_cast<const boltcutting_activity_actor &>( other );
     target = next.target;
     tool = next.tool;
     owned_target = next.owned_target;
@@ -6216,7 +6211,7 @@ void multi_zone_activity_actor::write_context( JsonOut &out ) const
 std::unordered_set<tripoint_abs_ms> multi_zone_activity_actor::multi_activity_locations(
     Character  &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     return multi_activity_actor::generic_locations( you, get_type(), &query );
 }
 
@@ -6433,7 +6428,7 @@ requirement_check_result multi_zone_activity_actor::check_requirements( Characte
         const std::unordered_set<tripoint_abs_ms> &src_set,
         bool check_only )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
     const activity_id act_id = get_type();
@@ -7048,7 +7043,7 @@ void consume_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
     act.interruptable = false;
-    const auto identity = act.identity_generation();
+    const std::uint64_t identity = act.identity_generation();
     const safe_reference<Creature> lifetime = who.get_safe_reference();
     // Consumption callbacks can replace this activity. Keep all subsequent
     // inputs outside the actor before invoking the native operation.
@@ -7641,7 +7636,7 @@ void craft_activity_actor::deliver_owned_results( Character &who,
     }
     if( input_needed == "components" ) {
         const safe_reference<Creature> lifetime = who.get_safe_reference();
-        const auto identity = who.activity.identity_generation();
+        const std::uint64_t identity = who.activity.identity_generation();
         item_location workpiece = craft_item;
         const bool ready = unload_craft_components( who, workpiece, liquids );
         if( !lifetime || who.activity.identity_generation() != identity ) {
@@ -7668,7 +7663,7 @@ void craft_activity_actor::deliver_owned_results( Character &who,
     next_location = craft_item.where_recursive() == item_location::type::character ?
                     std::nullopt : std::make_optional( craft_item.pos_abs() );
     const safe_reference<Creature> lifetime = who.get_safe_reference();
-    const auto identity = who.activity.identity_generation();
+    const std::uint64_t identity = who.activity.identity_generation();
     // Completion callbacks can replace the activity. Do not give them a
     // reference to storage owned by this actor, which they may destroy.
     item_location workpiece = craft_item;
@@ -8735,7 +8730,7 @@ void harvest_activity_actor::finish( player_activity &act, Character &who )
     const bool drink_nectar = nectar;
     const harvest_id harvest_type = harvest;
     act.set_to_null();
-    const auto generation = who.activity.identity_generation();
+    const std::uint64_t generation = who.activity.identity_generation();
     // Nectar uses the same native consumption activity for this character.
     // No remote action can open a host menu or consume from the host inventory.
     if( drink_nectar && iexamine_helper::drink_nectar( who ) ) {
@@ -8770,7 +8765,7 @@ void harvest_activity_actor::finish( player_activity &act, Character &who )
         who.add_msg_if_player( m_bad, _( "You couldn't harvest anything." ) );
         who.add_msg_if_npc( m_bad, _( "<npcname> couldn't harvest anything." ) );
     }
-    for( item_location product : products ) {
+    for( const item_location &product : products ) {
         if( !lifetime || !context || who.pos_abs() != origin ||
             who.activity.identity_generation() != generation ) {
             return;
@@ -9227,10 +9222,10 @@ bool move_loaded_furniture( Character &who, const tripoint_rel_ms &dp )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
-    const auto origin = who.pos_abs();
-    const auto old_grab = who.grab_point;
+    const tripoint_abs_ms origin = who.pos_abs();
+    const tripoint_rel_ms old_grab = who.grab_point;
     const auto position = who.pos_bub() + who.grab_point;
-    auto from = here.veh_at( position );
+    optional_vpart_position from = here.veh_at( position );
     if( !from || !from->has_loaded_furniture() ) {
         who.add_msg_if_player( m_warning, _( "The grabbed furniture has been lost." ) );
         who.grab( object_type::NONE );
@@ -9243,7 +9238,7 @@ bool move_loaded_furniture( Character &who, const tripoint_rel_ms &dp )
         return true;
     }
     const bool shifting = dp.xy() != who.grab_point.xy() && dp.xy() != -who.grab_point.xy();
-    auto to = here.veh_at( destination );
+    optional_vpart_position to = here.veh_at( destination );
     const auto tiedown = from->part_with_feature( "FURNITURE_TIEDOWN", true );
     if( !tiedown ) {
         return true;
@@ -9302,11 +9297,11 @@ bool move_furniture_activity_actor::target_valid( const Character &who ) const
         !here.inbounds( source.position ) ) {
         return false;
     }
-    const auto position = here.get_bub( source.position );
+    const tripoint_bub_ms position = here.get_bub( source.position );
     if( !source.loaded_furniture ) {
         return !here.veh_at( position ) && here.furn( position ).id() == source.furniture;
     }
-    const auto vp = here.veh_at( position );
+    const optional_vpart_position vp = here.veh_at( position );
     if( !vp || vp->vehicle().uid().get_value() != source.vehicle_id ) {
         return false;
     }
@@ -9339,10 +9334,10 @@ bool move_furniture_activity_actor::bind_target( Character &who )
     if( !here.inbounds( source.position ) ) {
         return false;
     }
-    const auto position = here.get_bub( source.position );
+    const tripoint_bub_ms position = here.get_bub( source.position );
     source.loaded_furniture = who.get_grab_type() == object_type::FURNITURE_ON_VEHICLE;
     if( source.loaded_furniture ) {
-        const auto vp = here.veh_at( position );
+        const optional_vpart_position vp = here.veh_at( position );
         const auto tiedown = vp.part_with_feature( "FURNITURE_TIEDOWN", true );
         if( !tiedown ) {
             return false;
@@ -9385,17 +9380,17 @@ void move_furniture_activity_actor::finish( player_activity &act, Character &who
         return;
     }
     const character_action_guard lifetime( who );
-    const auto step = dp;
+    const tripoint_rel_ms step = dp;
     const bool ramp = via_ramp;
     const auto decisions = choices;
-    const auto execution = act.execution();
+    const activity_execution execution = act.execution();
     const auto held_destination = source.position + dp;
     const bool stay = source.loaded_furniture ? move_loaded_furniture( who, dp ) :
                       g->grabbed_furn_move( who, dp );
     if( !lifetime || act.actor.get() != this ) {
         return;
     }
-    const auto held_generation = who.grab_generation();
+    const uint64_t held_generation = who.grab_generation();
     // Clear before stepping: placement may create hauling or another native
     // activity. Never erase that successor or access this actor after clearing.
     act.set_to_null();
@@ -10595,8 +10590,8 @@ bool disassemble_activity_actor::owns_work( Character &who )
             // Old saves kept later originals on player_activity, outside the actor.
             for( const item_location &location : who.activity.targets ) {
                 if( accessible_disassembly( who, location ) && location->is_disassemblable() ) {
-                    auto selected = capture_disassembly( who, location,
-                                                         who.activity.get_value( 0 ) ? location->count() : 1 );
+                    disassembly_selection selected = capture_disassembly( who, location,
+                                                     who.activity.get_value( 0 ) ? location->count() : 1 );
                     selected.allow_favorite = selected.allow_worn = selected.allow_theft = true;
                     pending.push_back( std::move( selected ) );
                 }
@@ -10633,7 +10628,7 @@ void disassemble_activity_actor::queue_recursive( Character &who )
             !who.can_disassemble( value, who.crafting_inventory() ).success() ) {
             continue;
         }
-        auto selected = capture_disassembly( who, location, value.count() );
+        disassembly_selection selected = capture_disassembly( who, location, value.count() );
         if( resolve_disassembly( who, selected ) ) {
             pending.push_back( std::move( selected ) );
         }
@@ -10654,7 +10649,7 @@ void disassemble_activity_actor::start( player_activity &act, Character &who )
     if( pending.empty() && !target ) {
         for( const item_location &location : act.targets ) {
             if( accessible_disassembly( who, location ) && location->is_disassemblable() ) {
-                auto selected = capture_disassembly( who, location, std::max( 1, act.position ) );
+                disassembly_selection selected = capture_disassembly( who, location, std::max( 1, act.position ) );
                 selected.allow_favorite = selected.allow_worn = selected.allow_theft = true;
                 pending.push_back( std::move( selected ) );
             }
@@ -10677,7 +10672,8 @@ std::optional<disassembly_selection> disassemble_activity_actor::pending_prepara
         if( !accessible_disassembly( who, target ) || target->typeId() != itype_disassembly ) {
             return std::nullopt;
         }
-        auto selected = capture_disassembly( who, target, target->get_making_batch_size() );
+        disassembly_selection selected = capture_disassembly( who, target,
+                                         target->get_making_batch_size() );
         selected.allow_favorite = selected.allow_worn = selected.allow_theft = true;
         return selected;
     }
@@ -10693,7 +10689,7 @@ bool disassemble_activity_actor::apply_preparation( Character &who, disassembly_
     const character_action_guard lifetime( who );
     map &here = get_map();
     const auto context = here.get_context_reference();
-    const auto generation = who.activity.identity_generation();
+    const std::uint64_t generation = who.activity.identity_generation();
     const auto continuing = [&]() {
         return lifetime && context && who.activity.identity_generation() == generation &&
                who.activity.actor.get() == this && who.pos_abs() == origin;
@@ -10841,7 +10837,7 @@ void disassemble_activity_actor::do_turn( player_activity &act, Character &who )
     if( craft.item_counter >= 10000000 ) {
         const character_action_guard lifetime( who );
         const auto context = here.get_context_reference();
-        const auto generation = act.identity_generation();
+        const std::uint64_t generation = act.identity_generation();
         const auto tools = preparation ? preparation->tools : std::vector<comp_selection<tool_comp>>();
         item_location completed = target;
         const recipe &rec = craft.get_making();
@@ -11127,7 +11123,7 @@ std::unique_ptr<activity_actor> oxytorch_activity_actor::deserialize( JsonValue 
 bool oxytorch_activity_actor::can_resume_with_internal( const activity_actor &other,
         const Character &/*who*/ ) const
 {
-    const auto &next = static_cast<const oxytorch_activity_actor &>( other );
+    const oxytorch_activity_actor &next = static_cast<const oxytorch_activity_actor &>( other );
     return owned_target ? owned_target->matches( get_map() ) && next.owned_target &&
            owned_target->position == next.owned_target->position : target == next.target;
 }
@@ -11135,7 +11131,7 @@ bool oxytorch_activity_actor::can_resume_with_internal( const activity_actor &ot
 void oxytorch_activity_actor::set_resume_values_internal( const activity_actor &other,
         const Character & )
 {
-    const auto &next = static_cast<const oxytorch_activity_actor &>( other );
+    const oxytorch_activity_actor &next = static_cast<const oxytorch_activity_actor &>( other );
     target = next.target;
     tool = next.tool;
     owned_target = next.owned_target;
@@ -11343,7 +11339,7 @@ void build_construction_activity_actor::do_turn( player_activity &act, Character
     const double current_progress = old_counter * base_total_moves / 10000000.0 +
                                     delta_progress;
     you.set_moves( 0 );
-    const auto identity = you.activity.identity_generation();
+    const std::uint64_t identity = you.activity.identity_generation();
     const int64_t original_site = pc->uid;
     const safe_reference<Creature> lifetime = you.get_safe_reference();
     pc->id->do_turn_special( construction_bub, you );
@@ -12016,11 +12012,11 @@ void prying_activity_actor::finish( player_activity &act, Character &who )
 bool prying_activity_actor::can_resume_with_internal( const activity_actor &other,
         const Character & ) const
 {
-    const auto &actor = static_cast<const prying_activity_actor &>( other );
+    const prying_activity_actor &actor = static_cast<const prying_activity_actor &>( other );
     const map &here = get_map();
-    const auto own_position = owned_target ? owned_target->position : here.get_abs( target );
-    const auto other_position = actor.owned_target ? actor.owned_target->position :
-                                here.get_abs( actor.target );
+    const tripoint_abs_ms own_position = owned_target ? owned_target->position : here.get_abs( target );
+    const tripoint_abs_ms other_position = actor.owned_target ? actor.owned_target->position :
+                                           here.get_abs( actor.target );
     return own_position == other_position &&
            ( ( !owned_target && !actor.owned_target ) || tool == actor.tool );
 }
@@ -12321,7 +12317,7 @@ std::unique_ptr<activity_actor> multi_chop_planks_activity_actor::deserialize( J
 std::unordered_set<tripoint_abs_ms> multi_chop_trees_activity_actor::multi_activity_locations(
     Character &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     return multi_activity_actor::no_same_tile_locations( you, get_type(), &query );
 }
 
@@ -12478,7 +12474,7 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     map &here = get_map();
     const auto context = here.get_context_reference();
     const character_action_guard lifetime( who );
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const tool_activity_target expected = *target;
     const std::optional<item_source> original_seed = seed_source;
     const tripoint_bub_ms plant_position = here.get_bub( this->plant_position );
@@ -12926,7 +12922,7 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
     const bool owned = server_owned;
-    const auto identity = act.identity_generation();
+    const std::uint64_t identity = act.identity_generation();
     const safe_reference<Creature> healer_lifetime = who.get_safe_reference();
     map &here = get_map();
 
@@ -13187,7 +13183,7 @@ void forage_activity_actor::finish( player_activity &act, Character &who )
     const tripoint_abs_ms origin = who.pos_abs();
     const season_type foraging_season = static_cast<season_type>( season );
     act.set_to_null();
-    const auto generation = who.activity.identity_generation();
+    const std::uint64_t generation = who.activity.identity_generation();
     const tripoint_bub_ms bush = here.get_bub( position );
     here.ter_set( bush, here.get_ter_transforms_into( bush ) );
     const ter_id depleted = here.ter( bush );
@@ -13702,7 +13698,7 @@ void longsalvage_activity_actor::do_turn( player_activity &act, Character &who )
     }
     const character_action_guard lifetime( who );
     const auto context = get_map().get_context_reference();
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     // Pop before callbacks: a saved/replaced activity must never repeat this cut.
     pending.pop_back();
     item_activation_choices choices;
@@ -13884,7 +13880,7 @@ std::unique_ptr<activity_actor> jackhammer_activity_actor::deserialize( JsonValu
 std::unordered_set<tripoint_abs_ms> multi_mine_activity_actor::multi_activity_locations(
     Character &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     return multi_activity_actor::no_same_tile_locations( you, get_type(), &query );
 }
 
@@ -13939,6 +13935,7 @@ void zone_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "moves", moves );
     jsout.member( "num_processed", num_processed );
     jsout.member( "stage", stage );
+    jsout.member( "scope", static_cast<int>( scope ) );
     jsout.member( "coord_set", coord_set );
     jsout.member( "placement", placement );
     jsout.member( "personal_origin", personal_origin );
@@ -13956,6 +13953,11 @@ std::unique_ptr<activity_actor> unload_loot_activity_actor::deserialize( JsonVal
     data.read( "moves", actor.moves );
     data.read( "num_processed", actor.num_processed );
     data.read( "stage", actor.stage );
+    const int scope = data.get_int( "scope", 0 );
+    if( scope < 0 || scope > static_cast<int>( zone_scope::personal_only ) ) {
+        data.throw_error_at( "scope", "Invalid sorting scope" );
+    }
+    actor.scope = static_cast<zone_scope>( scope );
     data.read( "coord_set", actor.coord_set );
     data.read( "placement", actor.placement );
     data.read( "personal_origin", actor.personal_origin );
@@ -13988,7 +13990,7 @@ void unload_loot_activity_actor::stage_init( player_activity &, Character &you )
 {
 
     ensure_zone_origin( you );
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const zone_manager &mgr = zone_manager::get_manager();
     const faction_id fac_id = you.get_faction_id();
     const tripoint_abs_ms abspos = you.pos_abs();
@@ -14012,7 +14014,7 @@ bool unload_loot_activity_actor::stage_think( player_activity &act, Character &y
 {
 
     ensure_zone_origin( you );
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const zone_manager &mgr = zone_manager::get_manager();
     map &here = get_map();
     const faction_id fac_id = you.get_faction_id();
@@ -14079,7 +14081,7 @@ void unload_loot_activity_actor::stage_do( player_activity &, Character &you )
 {
 
     ensure_zone_origin( you );
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const zone_manager &mgr = zone_manager::get_manager();
     const map &here = get_map();
     const tripoint_abs_ms src( placement );
@@ -14243,7 +14245,7 @@ void vehicle_activity_actor::finish( player_activity &act, Character &you )
 #endif
     map &here = get_map();
     const character_action_guard lifetime( you );
-    const auto identity = act.identity_generation();
+    const std::uint64_t identity = act.identity_generation();
     vehicle *target = resolve_target( here );
     const safe_reference<vehicle> target_ref = target ? target->get_safe_reference() :
             safe_reference<vehicle>();
@@ -14781,7 +14783,7 @@ bool vehicle_folding_activity_actor::fold_vehicle( Character &p, bool check_only
 
     const auto context = here.get_context_reference();
     const auto target_ref = target->get_safe_reference();
-    const auto activity_identity = p.activity.identity_generation();
+    const std::uint64_t activity_identity = p.activity.identity_generation();
     const tripoint_bub_ms output = target->pos_bub( here );
     std::vector<item_location> cargo;
     for( const vpart_reference &part : target->get_any_parts( VPFLAG_CARGO ) ) {
@@ -14858,7 +14860,7 @@ void vehicle_folding_activity_actor::start( player_activity &act, Character &p )
         return;
     }
     if( p.get_grab_type() == object_type::VEHICLE && p.validate_grab( get_map() ) ) {
-        const auto grabbed = get_map().veh_at( p.pos_bub() + p.grab_point );
+        const optional_vpart_position grabbed = get_map().veh_at( p.pos_bub() + p.grab_point );
         if( grabbed && grabbed->vehicle().uid().get_value() == vehicle_id ) {
             const std::string name = grabbed->vehicle().name;
             p.grab( object_type::NONE );
@@ -14945,8 +14947,8 @@ bool vehicle_unfolding_activity_actor::unfold_vehicle( Character &p, bool check_
                 continue;
             }
             const auto position = p.pos_bub() + part.part().precalc[0];
-            const auto existing = here.inbounds( position ) ? here.veh_at( position ) :
-                                  optional_vpart_position( std::nullopt );
+            const optional_vpart_position existing = here.inbounds( position ) ? here.veh_at( position ) :
+                    optional_vpart_position( std::nullopt );
             if( !here.inbounds( position ) || ( existing && &existing->vehicle() != &candidate ) ||
                 here.impassable_ter_furn( position ) ||
                 ( cant_float && here.has_flag_ter( ter_furn_flag::TFLAG_DEEP_WATER, position ) ) ) {
@@ -15038,7 +15040,7 @@ void vehicle_unfolding_activity_actor::do_turn( player_activity &act, Character 
 static void return_folded_vehicle_item( Character &who, item value )
 {
     map &here = get_map();
-    const auto position = who.pos_bub();
+    const tripoint_bub_ms position = who.pos_bub();
     item &placed = here.add_item( position, std::move( value ) );
     if( !placed.is_null() ) {
         finish_folded_item_drop( who, item_location( map_cursor( position ), &placed ) );
@@ -15556,7 +15558,7 @@ void fire_start_activity_actor::do_turn( player_activity &act, Character &who )
             selector.add_nearby_items( pickup_range );
             selector.add_character_items( who );
             selector.set_title( _( "Select tinder to use for lighting a fire" ) );
-            const auto tinder = selector.empty() ? item_location() : selector.execute();
+            const item_location tinder = selector.empty() ? item_location() : selector.execute();
             if( !still_working() ) {
                 return;
             }
@@ -15608,7 +15610,7 @@ void fire_start_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
     map &here = get_map();
-    const auto position = here.get_bub( fire_placement );
+    const tripoint_bub_ms position = here.get_bub( fire_placement );
     if( !here.is_flammable( position ) ) {
         act.set_to_null();
         return;
@@ -16627,7 +16629,7 @@ bool butchery_activity_actor::initiate_butchery( player_activity &act, Character
     const character_action_guard lifetime( you );
     map &here = get_map();
     const auto context = here.get_context_reference();
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const auto unchanged = [&]() {
         return lifetime && context && act.identity_generation() == generation && act.actor.get() == this;
     };
@@ -16728,7 +16730,7 @@ void butchery_activity_actor::do_turn( player_activity &act, Character &you )
 {
     const character_action_guard lifetime( you );
     const auto context = get_map().get_context_reference();
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     if( !owns_work( you ) ) {
         canceled( act, you );
         act.set_to_null();
@@ -17847,7 +17849,7 @@ bool zone_sort_activity_actor::owns_picked_item( const Character &who,
         cursor->part < 0 || cursor->part >= cart->part_count() || cart->part( cursor->part ).removed ) {
         return false;
     }
-    const auto items = cart->get_items( cart->part( cursor->part ) );
+    const vehicle_stack items = cart->get_items( cart->part( cursor->part ) );
     return std::any_of( items.begin(), items.end(), [&]( const item & entry ) {
         return &entry == loc.get_item();
     } );
@@ -18295,7 +18297,7 @@ void zone_sort_activity_actor::return_items_to_source( Character &you,
                     continue;
                 }
             }
-            // Keep a local handle: a drop callback can destroy this activity.
+            // Keep a local handle: a drop callback can destroy this activity. NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
             item_location source = item;
             const int count = source->count();
             const int returned = transfer_sorted_item( you, source, src_bub, false );
