@@ -143,7 +143,7 @@ TEST_CASE( "prefetch_pause_invalidates_old_bytes_before_owner_writes", "[prefetc
     const auto write = [&]( const std::string & text ) {
         return compressed ? fixture.compressed( 0, text ) : fixture.plain( 0, text );
     };
-    auto request = write( "old" );
+    submap_prefetcher::request_t request = write( "old" );
     REQUIRE( prefetch.request( request, 0 ) );
     wait_until_idle( prefetch );
     REQUIRE( prefetch.inspect().ready == 1 );
