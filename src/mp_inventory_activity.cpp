@@ -3210,7 +3210,8 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
 
 void client_step_inventory_activity()
 {
-    const auto &view = g->multiplayer_session().client_inventory_activity;
+    const inventory_activity_client_state &view =
+        g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active ) {
         get_avatar().activity.set_to_null();
         return;
