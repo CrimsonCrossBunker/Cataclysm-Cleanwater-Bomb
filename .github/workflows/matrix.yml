@@ -339,8 +339,15 @@ jobs:
       if: ${{ env.SKIP == 'false' && runner.os == 'Linux' }}
       run: |
           ccache --version
+          archive="$RUNNER_TEMP/ccache-4.10.2-linux-x86_64.tar.xz"
+          curl --fail --location --show-error --silent \
+            --retry 3 --retry-delay 2 --retry-connrefused \
+            --connect-timeout 30 --max-time 120 \
+            --output "$archive" \
+            https://github.com/ccache/ccache/releases/download/v4.10.2/ccache-4.10.2-linux-x86_64.tar.xz
+          tar -tJf "$archive" ccache-4.10.2-linux-x86_64/ccache > /dev/null
           sudo apt-get remove --purge -y ccache
-          curl -sL https://github.com/ccache/ccache/releases/download/v4.10.2/ccache-4.10.2-linux-x86_64.tar.xz | sudo tar Jxvf - --strip-components 1 -C /usr/bin ccache-4.10.2-linux-x86_64/ccache
+          sudo tar -xJf "$archive" --strip-components 1 -C /usr/bin ccache-4.10.2-linux-x86_64/ccache
           ccache --version
     - name: install build dependencies (mac)
       if: ${{ env.SKIP == 'false' && runner.os == 'macOS' }}
