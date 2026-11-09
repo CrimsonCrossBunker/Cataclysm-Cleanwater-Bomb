@@ -129,6 +129,14 @@ static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 
+static const bionic_id bio_flashbang( "bio_flashbang" );
+static const bionic_id bio_magnet( "bio_magnet" );
+static const bionic_id bio_remote( "bio_remote" );
+static const bionic_id bio_resonator( "bio_resonator" );
+static const bionic_id bio_shockwave( "bio_shockwave" );
+static const bionic_id bio_teleport( "bio_teleport" );
+static const bionic_id bio_water_extractor( "bio_water_extractor" );
+
 namespace cata_mp
 {
 void dialogue_view_option::serialize( JsonOut &out ) const
@@ -827,10 +835,10 @@ bool start_bionic_action( Character &who, const JsonObject &request, bionic_acti
     // A world callback may retire the activator after affecting bystanders.
     // Refresh conservatively even if native activation subsequently returns false.
     refresh_observers = action == bionic_action::activate &&
-                        ( type == bionic_id( "bio_flashbang" ) || type == bionic_id( "bio_shockwave" ) ||
-                          type == bionic_id( "bio_resonator" ) || type == bionic_id( "bio_magnet" ) ||
-                          type == bionic_id( "bio_water_extractor" ) || type == bionic_id( "bio_teleport" ) ||
-                          type == bionic_id( "bio_remote" ) );
+                        ( type == bio_flashbang || type == bio_shockwave ||
+                          type == bio_resonator || type == bio_magnet ||
+                          type == bio_water_extractor || type == bio_teleport ||
+                          type == bio_remote );
     return execute_owned_bionic_action( who, static_cast<unsigned int>( uid ), type, choices, action );
 }
 
