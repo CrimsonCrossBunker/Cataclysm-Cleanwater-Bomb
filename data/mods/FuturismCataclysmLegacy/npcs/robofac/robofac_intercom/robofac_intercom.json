@@ -25,5 +25,10 @@
     "type": "snippet",
     "category": "<fcl_hub_new_cybernetics>",
     "text": [ "Cybernetics?  What exactly have you developed?" ]
+  },
+  {
+    "id": "TALK_EXODI_INTERCOM_AUTODOC_B_EXODII_INTERFACE",
+    "type": "talk_topic",
+    "dynamic_line": "&The intercom is silent for a long moment, then it clicks off, then back on, with the same voice as before:  \"Interesting.  We'll inform Doc Stevens.  We would be willing to pay you to study this device, whether you wish to participate in the field testing units or not.  Unfortunately, based on our research, this Exodii technology was a complete dead end, with no room for improvement, and it carries significant risks, including cancer and increased risk of internal bleeding.  In fact, that technology has not considered making one exist as a human being at all.  Our improved interface is completely safe and will be of great benefit to u- to mankind.  To boot, it will work with local CBMs and remain compatible with whatever bionic modules we can continue to recover from the Exodii.  We suggest you have Doc Stevens swap it out immediately.\""
   }
 ]
