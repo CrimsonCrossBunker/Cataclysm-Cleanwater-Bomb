@@ -43,15 +43,15 @@ void mission_favor( npc & );
 void give_equipment( npc & );
 void give_equipment( npc &, Character &u );
 void give_equipment_allowance( npc &p, int allowance );
-void give_equipment_allowance( npc &p, Character &u, int allowance );
+void give_equipment_allowance( npc &p, Character &player_character, int allowance );
 void lesser_give_aid( npc & );
-void lesser_give_aid( npc &, Character &u );
+void lesser_give_aid( npc &, Character &player_character );
 void lesser_give_all_aid( npc & );
-void lesser_give_all_aid( npc &, Character &u );
+void lesser_give_all_aid( npc &, Character &player_character );
 void give_aid( npc & );
-void give_aid( npc &, Character &u );
+void give_aid( npc &, Character &player_character );
 void give_all_aid( npc & );
-void give_all_aid( npc &, Character &u );
+void give_all_aid( npc &, Character &player_character );
 void buy_horse( npc & );
 void buy_cow( npc & );
 void buy_chicken( npc & );
@@ -62,18 +62,18 @@ void bionic_remove( npc & );
 void bionic_remove( npc &, Character &patient );
 void bionic_remove_allies( npc & );
 void repair_bionic_limbs( npc & );
-void repair_bionic_limbs( npc &, Character &u );
+void repair_bionic_limbs( npc &, Character &player_character );
 void dismount( npc & );
 void find_mount( npc & );
 
 void barber_beard( npc & );
 void barber_hair( npc & );
 void buy_haircut( npc & );
-void buy_haircut( npc &, Character &u );
+void buy_haircut( npc &, Character &player_character );
 void buy_shave( npc & );
-void buy_shave( npc &, Character &u );
+void buy_shave( npc &, Character &player_character );
 void morale_chat_activity( npc & );
-void morale_chat_activity( npc &, Character &u );
+void morale_chat_activity( npc &, Character &player_character );
 void start_trade( npc & );
 void sort_loot( npc & );
 void do_construction( npc & );
@@ -123,7 +123,7 @@ void stop_following( npc & );
 void stranger_neutral( npc & );      // p is now neutral towards you
 
 bool drop_stolen_item( item &cur_item, npc &p );
-bool drop_stolen_item( item &cur_item, npc &p, Character &u );
+bool drop_stolen_item( item &cur_item, npc &p, Character &player_character );
 
 void start_mugging( npc & );
 void player_leaving( npc & );
@@ -132,12 +132,12 @@ void remove_stolen_status( npc & );
 
 void drop_weapon( npc & );
 void player_weapon_away( npc & );
-void player_weapon_away( npc &, Character &u );
+void player_weapon_away( npc &, Character &player_character );
 void player_weapon_drop( npc & );
-void player_weapon_drop( npc &, Character &u );
+void player_weapon_drop( npc &, Character &player_character );
 void drop_player_weapon( Character &player_character );
 void drop_stolen_item( npc & );
-void drop_stolen_item( npc &, Character &u );
+void drop_stolen_item( npc &, Character &player_character );
 
 void lead_to_safety( npc & );
 void lead_to_safety( npc &, Character &u );
