@@ -882,10 +882,10 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                     observed_item = frame.cur_item.str();
                     return condition( frame );
                 };
-                const bool empty_match = value_of( services["proficiencies"]["has_id_text"],
-                                                   handle_for_selector( selector ), std::string() ).as<bool>();
-                CHECK( activated.activate( conversation, false ) == empty_match );
-                CHECK( observed_item.empty() );
+                const bool topic_match = value_of( services["proficiencies"]["has_id_text"],
+                                                   handle_for_selector( selector ), id_text ).as<bool>();
+                CHECK( activated.activate( conversation, false ) == topic_match );
+                CHECK( observed_item == id_text );
                 CHECK( conversation.cur_item.str() == id_text );
             }
         }
