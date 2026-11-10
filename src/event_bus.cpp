@@ -93,7 +93,7 @@ void event_bus::send_with_talker( Creature *alpha, Creature *beta,
                                   const cata::event &e ) const
 {
     for( event_subscriber *s : subscribers ) {
-        s->notify( e, get_talker_for( alpha ), get_talker_for( beta ) );
+        s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );
     }
 }
 
@@ -108,7 +108,7 @@ void event_bus::send_with_talker( Creature *alpha, item_location *beta,
 void event_bus::send_with_talker( vehicle *alpha,  Creature *beta, const cata::event &e ) const
 {
     for( event_subscriber *s : subscribers ) {
-        s->notify( e, get_talker_for( alpha ), get_talker_for( beta ) );
+        s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );
     }
 }
 namespace

@@ -132,8 +132,6 @@ static const widget_id widget_speed_num( "speed_num" );
 static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 static const widget_id widget_style_desc( "style_desc" );
 static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
-static const widget_id widget_weapon_style_layout( "weapon_style_layout" );
-static const widget_id widget_wielding_desc( "wielding_desc" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
@@ -209,6 +207,8 @@ static const widget_id widget_test_weather_text_height5( "test_weather_text_heig
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
 static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
+static const widget_id widget_weapon_style_layout( "weapon_style_layout" );
+static const widget_id widget_wielding_desc( "wielding_desc" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
 // Scrapes the window w at origin, reading the number of cols and rows.
