@@ -403,7 +403,7 @@ jobs:
       run: bash ./build-scripts/gha_compile_only.sh
     - name: run Railroads native acceptance
       if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
-      run: ./tests/cata_test '[railroads]' --mods=railroads --rng-seed 3404 --order lex --user-dir=test_user_dir_railroads --drop-world --error-format=github-action
+      run: ./tests/cata_test '[railroads],event_talkers_preserve_optional_creature' --mods=railroads --rng-seed 3404 --order lex --user-dir=test_user_dir_railroads --drop-world --error-format=github-action
     - name: post-build ccache manipulation
       id: trim-compiler-cache
       if: ${{ always() && !cancelled() && steps.compiler-cache.outcome == 'success' }}
