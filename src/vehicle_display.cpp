@@ -12,18 +12,25 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
+#include "coordinates.h"
 #include "cursesdef.h"
 #include "debug.h"
+#include "item.h"
 #include "itype.h"
 #include "options.h"
 #include "output.h"
+#include "point.h"
 #include "string_formatter.h"
+#include "tileray.h"
 #include "translations.h"
+#include "type_id.h"
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+
+class map;
 
 static const ammotype ammo_battery( "battery" );
 
@@ -178,10 +185,14 @@ int vehicle::print_part_list( const catacurses::window &win, int y1,
                     partname += string_format( _( " (%d/%d charge)" ), vp.ammo_remaining( ),
                                                vp.ammo_capacity( ammo_battery ) );
                 } else if( vp.ammo_current()->stack_size > 0 ) {
-                    const itype *pt_ammo_cur = item::find_type( vp.ammo_current() );
-                    auto stack = 250_ml / pt_ammo_cur->stack_size;
+                    units::volume volume = 0_ml;
+                    if( vp.ammo_remaining() > 0 ) {
+                        const item &base = vp.get_base();
+                        const item &fuel = vp.is_tank() ? base.legacy_front() : base.first_ammo();
+                        volume = fuel.volume();
+                    }
                     partname += string_format( _( " (%.1fL %s)" ),
-                                               round_up( units::to_liter( vp.ammo_remaining( ) * stack ), 1 ),
+                                               round_up( units::to_liter( volume ), 1 ),
                                                item::nname( vp.ammo_current() ) );
                 }
             } else {

@@ -1,11 +1,9 @@
+#include <initializer_list>
 #include <list>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "enums.h"
-#include "flexbuffer_json.h"
-#include <initializer_list>
 
 #include "avatar.h"
 #include "cached_options.h"
@@ -13,7 +11,9 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_location.h"
@@ -35,10 +35,13 @@ static const itype_id itype_avgas( "avgas" );
 static const itype_id itype_biodiesel( "biodiesel" );
 static const itype_id itype_crude_lamp_oil( "crude_lamp_oil" );
 static const itype_id itype_crude_oil( "crude_oil" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_diesel( "diesel" );
 static const itype_id itype_flamethrower_fuel( "flamethrower_fuel" );
 static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_gelled_gasoline( "gelled_gasoline" );
+static const itype_id itype_jackhammer_mining( "jackhammer_mining" );
+static const itype_id itype_jerrycan_big( "jerrycan_big" );
 static const itype_id itype_jp8( "jp8" );
 static const itype_id itype_lamp_oil( "lamp_oil" );
 static const itype_id itype_motor_oil( "motor_oil" );
@@ -49,6 +52,92 @@ static const itype_id itype_test_watertight_open_sealed_container_250ml( "test_w
 static const itype_id itype_test_watertight_open_sealed_multipocket_container_2x250ml( "test_watertight_open_sealed_multipocket_container_2x250ml" );
 static const itype_id itype_water_clean( "water_clean" );
 // *INDENT-ON*
+
+static item_location place_fuel_item( item obj, const bool carried, const tripoint_bub_ms &pos )
+{
+    if( carried ) {
+        return get_avatar().i_add( std::move( obj ) );
+    }
+    return item_location( map_cursor( pos ), &get_map().add_item_or_charges( pos, obj ) );
+}
+
+TEST_CASE( "gasoline_pours_from_tool_into_filled_can_on_ground_or_in_inventory",
+           "[liquid][handler][ownership]" )
+{
+    const bool tool_carried = GENERATE( false, true );
+    const bool can_carried = GENERATE( false, true );
+    CAPTURE( tool_carried, can_carried );
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    REQUIRE( you.wear_item( item( itype_debug_backpack ) ) );
+
+    item tool( itype_jackhammer_mining );
+    tool.ammo_set( itype_gasoline, 97 );
+    item can( itype_jerrycan_big );
+    item fuel( itype_gasoline, calendar::turn_zero, 6147 );
+    REQUIRE( can.fill_with( fuel, fuel.charges ) == 6147 );
+    item_location tool_loc = place_fuel_item( std::move( tool ), tool_carried,
+                             you.pos_bub() + tripoint::east );
+    item_location can_loc = place_fuel_item( std::move( can ), can_carried,
+                            you.pos_bub() + tripoint::west );
+    REQUIRE( tool_loc );
+    REQUIRE( can_loc );
+    REQUIRE( tool_loc.held_by( you ) == tool_carried );
+    REQUIRE( can_loc.held_by( you ) == can_carried );
+    CHECK( tool_loc->first_ammo().get_owner().is_null() == !tool_carried );
+    CHECK( can_loc->only_item().get_owner().is_null() == !can_carried );
+
+    liquid_dest_opt target;
+    target.dest_opt = LD_ITEM;
+    target.item_loc = can_loc;
+    REQUIRE( liquid_handler::handle_liquid( tool_loc->first_ammo(), target, &*tool_loc, 0 ) );
+    CHECK( tool_loc->ammo_remaining() == 0 );
+    CHECK( can_loc->only_item().charges == 6244 );
+    CHECK( can_loc->only_item().volume() == 6244_ml );
+    CHECK( can_loc->only_item().get_owner().is_null() == !( tool_carried || can_carried ) );
+    CHECK( can_loc->only_item().get_old_owner().is_null() );
+}
+
+TEST_CASE( "partly_filled_gasoline_tool_reloads_from_ground_or_inventory",
+           "[liquid][handler][ownership][reload]" )
+{
+    const bool tool_carried = GENERATE( false, true );
+    const bool can_carried = GENERATE( false, true );
+    const int requested = GENERATE( 5, 6147 );
+    CAPTURE( tool_carried, can_carried, requested );
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    REQUIRE( you.wear_item( item( itype_debug_backpack ) ) );
+
+    item tool( itype_jackhammer_mining );
+    tool.ammo_set( itype_gasoline, 97 );
+    item can( itype_jerrycan_big );
+    item fuel( itype_gasoline, calendar::turn_zero, 6147 );
+    REQUIRE( can.fill_with( fuel, fuel.charges ) == 6147 );
+    item_location tool_loc = place_fuel_item( std::move( tool ), tool_carried,
+                             you.pos_bub() + tripoint::east );
+    item_location can_loc = place_fuel_item( std::move( can ), can_carried,
+                            you.pos_bub() + tripoint::west );
+    REQUIRE( tool_loc );
+    REQUIRE( can_loc );
+    REQUIRE( tool_loc.held_by( you ) == tool_carried );
+    REQUIRE( can_loc.held_by( you ) == can_carried );
+    item_location ammo( can_loc, &can_loc->only_item() );
+    REQUIRE( tool_loc->can_reload_with( *ammo, true ) );
+    // The old reload gate offered the tool even when insertion would emit
+    // "can't mix liquid with contained item" after removing the source fuel.
+    REQUIRE( tool_loc->can_contain_partial( *ammo ).success() );
+    REQUIRE( tool_loc->reload( you, ammo, requested ) );
+
+    const int transferred = requested == 5 ? 5 : 1103;
+    CHECK( tool_loc->ammo_remaining() == 97 + transferred );
+    CHECK( ammo->charges == 6147 - transferred );
+    CHECK( tool_loc->ammo_remaining() + ammo->charges == 6244 );
+    CHECK( tool_loc->first_ammo().get_owner().is_null() == !( tool_carried || can_carried ) );
+    CHECK( tool_loc->first_ammo().get_old_owner().is_null() );
+}
 
 TEST_CASE( "temporary_liquid_drinks_apply_each_serving", "[liquid][handler]" )
 {
