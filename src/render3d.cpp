@@ -2509,7 +2509,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( !here.inbounds( p ) || !tile_in_frustum( frustum, point( dx, dy ), 0.0f ) ) {
                     continue;
                 }
-                const point r( dx - pd.x, dy - pd.y );
+                const point r = point( dx, dy ) - pd;
                 if( r.x * r.x + r.y * r.y <= DOLLHOUSE_RADIUS * DOLLHOUSE_RADIUS &&
                     tile_visible( center_cache, p ) &&
                     !center_cache.outside_cache[p.x()][p.y()] &&
