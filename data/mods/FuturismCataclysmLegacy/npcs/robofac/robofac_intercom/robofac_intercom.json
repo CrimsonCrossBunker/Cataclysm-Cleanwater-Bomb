@@ -15,5 +15,10 @@
         }
       }
     }
+  },
+  {
+    "type": "snippet",
+    "category": "<fcl_hub_has_interface>",
+    "text": [ "Actually, I already have one of the Exodii CBM interfaces installed." ]
   }
 ]
