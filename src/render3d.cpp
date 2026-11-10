@@ -2379,7 +2379,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     panels.clear();
     static bucket_index_map bucket_index;
     bucket_index.clear();
-    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
+    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float>& {
         const bucket_key key{ mode, atlas };
         const auto it = bucket_index.find( key );
         if( it != bucket_index.end() )
