@@ -122,7 +122,8 @@ def replay_metadata(path: Path) -> dict:
             if (len(fields) != 2 or fields[0] != "PROFILE_SEED" or
                     len(fields[1]) != 32 or
                     any(c not in "0123456789abcdef" for c in fields[1])):
-                raise ValueError("replay must have a valid PROFILE_SEED header")
+                raise ValueError(
+                    "replay must have a valid PROFILE_SEED header")
             profile_seed = fields[1]
         events = sum(line.startswith("EV ") for line in stream)
     if not events:
@@ -387,7 +388,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[A/B] run {label}: {binary}")
             extra_args = list(args.extra)
             if args.invocation_seeds:
-                extra_args += ["--seed", args.invocation_seeds[0 if label == "A" else 1]]
+                extra_args += ["--seed",
+                               args.invocation_seeds[0 if label == "A" else 1]]
             record = run_once(
                 binary,
                 replay,

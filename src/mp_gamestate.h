@@ -4,26 +4,26 @@
 
 #include <stdint.h>
 #include <climits>
-#include <list>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "mp_melee.h"
-#include "mp_firearm.h"
 #include "character_id.h"
-#include "player_identity.h"
 #include "coordinates.h"
-#include "map_viewpoint.h"
+#include "mp_firearm.h"
+#include "player_identity.h"
+#include "point.h"
 #include "type_id.h"
 
-class aim_activity_actor;
 class Character;
+class aim_activity_actor;
 class item;
-class npc;
+class item_location;
 class monster;
-enum class object_type : int;
+class npc;
 struct WORLD;
+struct map_viewpoint;
 
 namespace Pickup
 {
@@ -32,7 +32,9 @@ struct selection;
 
 namespace cata_mp
 {
+enum class melee_action;
 struct throw_intent;
+
 void client_close_peek( int64_t request );
 bool client_name_monster( const monster &subject, const tripoint_abs_ms &origin,
                           const std::string &name, const std::optional<map_viewpoint> &observation );
@@ -501,8 +503,6 @@ const std::string &get_client_turn_activity();
 // should be readable after a session without stopping the process.  Do not echo
 // to stdout: in curses builds that writes through the active terminal UI.
 void mp_log( const std::string &msg );
-void mp_log_host( const std::string &msg );
-void mp_log_client( const std::string &msg );
 
 // DIAGNOSTIC (temporary, 2026-06-23, for #5 assist-distraction / client safe-mode):
 // log the safe-mode / hostile decision so we can see whether the client actually
