@@ -47,6 +47,8 @@ static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
 
 static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
 
+static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
+
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 
 static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
@@ -64,8 +66,6 @@ static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
 static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
 
 static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
-
-static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
 
 shared_ptr_fast<game::draw_callback_t> zone_manager_ui::create_zone_callback(
     const std::optional<tripoint_bub_ms> &zone_start,
@@ -327,7 +327,7 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
         zones.erase( std::remove_if( zones.begin(), zones.end(),
         [&u, remote]( zone_manager::ref_zone_data const & it ) {
             zone_type_id const type = it.get().get_type();
-            const auto query = zone_query_context::for_character( u, u.pos_abs() );
+            const zone_query_context query = zone_query_context::for_character( u, u.pos_abs() );
             return !it.get().matches_query( query ) || ( !( debug_mode && !remote ) && type.is_valid() &&
                     type->hidden );
         } ),
@@ -606,7 +606,7 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
                 if( position->first == position->second && vp && vp.cargo() &&
                     vp->vehicle().get_owner() == zones_faction &&
                     query_yn( _( "Bind this zone to the cargo part here?" ) ) ) {
-                    if( id == zone_type_id( "FARM_PLOT" ) || id == zone_type_id( "CONSTRUCTION_BLUEPRINT" ) ) {
+                    if( id == zone_type_FARM_PLOT || id == zone_type_CONSTRUCTION_BLUEPRINT ) {
                         popup( _( "You cannot add that type of zone to a vehicle." ), PF_NONE );
                         break;
                     }
@@ -942,7 +942,8 @@ void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_sess
             const bool submitted = remote ? cata_mp::client_submit_zone_edits( batch ) :
                                    zone_edit_session::apply( u, mgr, batch );
             if( !submitted ) {
-                popup( _( "The zones could not be changed. Reopen the zone manager to refresh them." ) );
+                popup( _( "The zones could not be changed.  "
+                          "Reopen the zone manager to refresh them." ) );
             }
         }
     }
@@ -981,27 +982,27 @@ void zone_manager_ui::display_zone_actions( const std::shared_ptr<zone_edit_sess
     }
     const auto zones = server_draft ? server_draft :
                        std::make_shared<zone_edit_session>( player_character, mgr );
-    const auto near = [&]( const zone_type_id & type ) {
+    const auto has_nearby_zone = [&]( const zone_type_id & type ) {
         return zones->has_near( type, player_character.pos_abs(), MAX_VIEW_DISTANCE );
     };
 
-    flags |= near( zone_type_LOOT_UNSORTED ) ? SortLoot : 0;
-    flags |= near( zone_type_UNLOAD_ALL ) ||
-             near( zone_type_STRIP_CORPSES ) ? UnloadLoot : 0;
-    if( near( zone_type_FARM_PLOT ) ) {
+    flags |= has_nearby_zone( zone_type_LOOT_UNSORTED ) ? SortLoot : 0;
+    flags |= has_nearby_zone( zone_type_UNLOAD_ALL ) ||
+             has_nearby_zone( zone_type_STRIP_CORPSES ) ? UnloadLoot : 0;
+    if( has_nearby_zone( zone_type_FARM_PLOT ) ) {
         flags |= MultiFarmPlots;
     }
-    flags |= near( zone_type_CONSTRUCTION_BLUEPRINT ) ? ConstructPlots : 0;
+    flags |= has_nearby_zone( zone_type_CONSTRUCTION_BLUEPRINT ) ? ConstructPlots : 0;
 
-    flags |= near( zone_type_CHOP_TREES ) ? Multichoptrees : 0;
-    flags |= near( zone_type_LOOT_WOOD ) ? Multichopplanks : 0;
-    flags |= near( zone_type_VEHICLE_DECONSTRUCT ) ? Multideconvehicle : 0;
-    flags |= near( zone_type_VEHICLE_REPAIR ) ? Multirepairvehicle : 0;
-    flags |= near( zone_type_LOOT_CORPSE ) ? MultiButchery : 0;
-    flags |= near( zone_type_MINING ) ? MultiMining : 0;
-    flags |= near( zone_type_DISASSEMBLE ) ? MultiDis : 0;
-    flags |= near( zone_type_MOPPING ) ? MultiMopping : 0;
-    flags |= near( zone_type_STUDY_ZONE ) ? MultiStudy : 0;
+    flags |= has_nearby_zone( zone_type_CHOP_TREES ) ? Multichoptrees : 0;
+    flags |= has_nearby_zone( zone_type_LOOT_WOOD ) ? Multichopplanks : 0;
+    flags |= has_nearby_zone( zone_type_VEHICLE_DECONSTRUCT ) ? Multideconvehicle : 0;
+    flags |= has_nearby_zone( zone_type_VEHICLE_REPAIR ) ? Multirepairvehicle : 0;
+    flags |= has_nearby_zone( zone_type_LOOT_CORPSE ) ? MultiButchery : 0;
+    flags |= has_nearby_zone( zone_type_MINING ) ? MultiMining : 0;
+    flags |= has_nearby_zone( zone_type_DISASSEMBLE ) ? MultiDis : 0;
+    flags |= has_nearby_zone( zone_type_MOPPING ) ? MultiMopping : 0;
+    flags |= has_nearby_zone( zone_type_STUDY_ZONE ) ? MultiStudy : 0;
     if( flags == 0 ) {
         add_msg( m_info, _( "There is no compatible zone nearby." ) );
         add_msg( m_info, _( "Compatible zones are %s and %s" ),

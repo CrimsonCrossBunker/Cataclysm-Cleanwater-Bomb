@@ -44,6 +44,8 @@ namespace
 class firearm_events : public event_subscriber
 {
     public:
+        using event_subscriber::notify;
+
         int starts = 0;
         int finishes = 0;
 

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <memory>
@@ -29,6 +30,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
+#include "character_id.h"
 #include "character_martial_arts.h"
 #include "color.h"
 #include "coordinates.h"
@@ -39,6 +41,7 @@
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
+#include "effect_source.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
@@ -116,21 +119,29 @@ static const damage_type_id damage_stab( "stab" );
 static const efftype_id effect_amigara( "amigara" );
 static const efftype_id effect_beartrap( "beartrap" );
 static const efftype_id effect_contacts( "contacts" );
+static const efftype_id effect_crushed( "crushed" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_fearparalyze( "fearparalyze" );
+static const efftype_id effect_grabbed( "grabbed" );
+static const efftype_id effect_harnessed( "harnessed" );
 static const efftype_id effect_heavysnare( "heavysnare" );
 static const efftype_id effect_hit_by_player( "hit_by_player" );
+static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_lightsnare( "lightsnare" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_natural_stance( "natural_stance" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_stunned( "stunned" );
+static const efftype_id effect_tied( "tied" );
 static const efftype_id effect_transition_contacts( "transition_contacts" );
 static const efftype_id effect_venom_dmg( "venom_dmg" );
 static const efftype_id effect_venom_player1( "venom_player1" );
 static const efftype_id effect_venom_player2( "venom_player2" );
 static const efftype_id effect_venom_weaken( "venom_weaken" );
+static const efftype_id effect_webbed( "webbed" );
 static const efftype_id effect_winded( "winded" );
 
 static const itype_id itype_fur( "fur" );
@@ -139,6 +150,7 @@ static const itype_id itype_sheet_cotton( "sheet_cotton" );
 
 static const json_character_flag json_flag_BLOCK_HUGE_ATTACKS( "BLOCK_HUGE_ATTACKS" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+static const json_character_flag json_flag_CANNOT_GAIN_EFFECTS( "CANNOT_GAIN_EFFECTS" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
 static const json_character_flag json_flag_CBQ_LEARN_BONUS( "CBQ_LEARN_BONUS" );
@@ -1797,10 +1809,160 @@ int Character::active_technique_range( const matec_id &technique ) const
     return 1;
 }
 
+static bool use_grapple_technique( Character &attacker, Creature &target,
+                                   const ma_technique &technique )
+{
+    if( const avatar *const player = attacker.as_avatar();
+        player && player->get_grab_type() != object_type::NONE ) {
+        attacker.add_msg_if_player( m_info, _( "Release the object you are dragging before grappling." ) );
+        return false;
+    }
+    monster *const victim = target.as_monster();
+    if( !victim || victim->is_hallucination() || victim->has_flag( mon_flag_IMMOBILE ) ||
+        victim->has_flag( json_flag_CANNOT_MOVE ) || victim->has_flag( mon_flag_PLASTIC ) ||
+        victim->has_flag( mon_flag_FLIES ) || victim->type->bodytype == "blob" ||
+        victim->type->bodytype == "snake" || victim->type->bodytype == "fish" ||
+        victim->has_effect( effect_ridden ) ||
+        victim->has_effect( effect_harnessed ) ||
+        victim->has_effect( effect_tied ) ) {
+        attacker.add_msg_if_player( m_info, _( "You cannot get a safe grappling grip on this target." ) );
+        return false;
+    }
+    if( victim->is_immune_effect( effect_martial_grapple ) ||
+        victim->has_flag( json_flag_CANNOT_GAIN_EFFECTS ) ) {
+        return false;
+    }
+    const bool holding = victim->has_effect( effect_martial_grapple ) &&
+                         victim->get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID();
+    if( technique.grapple_action != "hold" && !holding ) {
+        attacker.add_msg_if_player( m_info, _( "You must first establish your own grappling grip." ) );
+        return false;
+    }
+    if( technique.grapple_action == "hold" && victim->has_effect( effect_martial_grapple ) &&
+        !holding ) {
+        return false;
+    }
+    const int size_difference = static_cast<int>( victim->get_size() ) -
+                                static_cast<int>( attacker.get_size() );
+    const float capacity = std::max( 1.0f, ( attacker.get_str() * 10.0f +
+                                     attacker.get_skill_level( skill_unarmed ) * 5.0f ) *
+                                     technique.grapple_power / 100.0f );
+    const float load = units::to_kilogram( victim->get_weight() ) / capacity;
+    if( size_difference > 1 || load > 1.0f ) {
+        attacker.add_msg_if_player( m_info, _( "That target is too large or heavy for this technique." ) );
+        return false;
+    }
+    const int stamina = technique.grapple_stamina +
+                        static_cast<int>( technique.grapple_stamina * load );
+    if( attacker.get_stamina() < stamina ) {
+        attacker.add_msg_if_player( m_info,
+                                    _( "You lack the stamina to grapple a target of this weight." ) );
+        return false;
+    }
+    map &here = get_map();
+    const tripoint_abs_ms previous_absolute = attacker.pos_abs();
+    const tripoint_rel_ms direction = target.pos_bub() - attacker.pos_bub();
+    const tripoint_bub_ms retreat = attacker.pos_bub() - direction;
+    if( technique.grapple_action != "hold" ) {
+        for( const efftype_id &restraint : {
+                 effect_beartrap, effect_webbed,
+                 effect_lightsnare, effect_heavysnare,
+                 effect_crushed, effect_in_pit
+             } ) {
+            if( attacker.has_effect( restraint ) || victim->has_effect( restraint ) ) {
+                attacker.add_msg_if_player( m_info,
+                                            _( "A restraint prevents you from completing the technique." ) );
+                return false;
+            }
+        }
+        if( attacker.has_effect_with_flag( flag_EFFECT_IMPEDING ) ||
+            victim->has_effect_with_flag( flag_EFFECT_IMPEDING ) ) {
+            return false;
+        }
+    }
+    if( technique.grapple_action != "hold" &&
+        ( here.impassable( retreat ) || !here.has_floor_or_support( retreat ) ||
+          get_creature_tracker().creature_at( retreat, true ) ||
+          !here.valid_move( attacker.pos_bub(), retreat, false, true ) ||
+          here.veh_at( retreat ) || here.veh_at( attacker.pos_bub() ) ||
+          here.veh_at( victim->pos_bub() ) ||
+          ( technique.grapple_action == "drag" &&
+            ( !victim->can_move_to( attacker.pos_bub() ) ||
+              here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, retreat ) ||
+              attacker.has_effect( effect_grabbed ) ||
+              attacker.has_effect( effect_beartrap ) ||
+              attacker.has_effect( effect_tied ) ||
+              attacker.has_flag( json_flag_CANNOT_MOVE ) ) ) ) ) {
+        attacker.add_msg_if_player( m_info,
+                                    _( "There is no safe, clear space behind you for this technique." ) );
+        return false;
+    }
+    if( technique.grapple_action == "throw" && victim->is_immune_effect( effect_downed ) ) {
+        attacker.add_msg_if_player( m_info, _( "This target cannot be thrown off its feet." ) );
+        return false;
+    }
+    attacker.mod_stamina( -stamina );
+    attacker.mod_moves( -static_cast<int>( 100 + 100 * load + std::max( 0, size_difference ) * 25 ) );
+    attacker.add_effect( technique.grapple_cooldown_effect(), technique.grapple_cooldown );
+    if( technique.grapple_action == "hold" ) {
+        for( monster &other : g->all_monsters() ) {
+            if( other.has_effect( effect_martial_grapple ) &&
+                other.get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID() ) {
+                other.remove_effect( effect_martial_grapple );
+            }
+        }
+        const int duration = std::max( 2, static_cast<int>( 6 - 3 * load ) -
+                                       std::max( 0, size_difference ) );
+        victim->add_effect( effect_source( &attacker ), effect_martial_grapple,
+                            time_duration::from_turns( duration ) );
+        attacker.add_msg_player_or_npc( _( "You establish a grappling grip on %s!" ),
+                                        _( "<npcname> establishes a grappling grip on %s!" ), victim->disp_name() );
+    } else if( technique.grapple_action == "drag" ) {
+        const tripoint_bub_ms previous = attacker.pos_bub();
+        attacker.setpos( here, retreat );
+        attacker.set_underwater( false );
+        victim->setpos( here, previous );
+        here.creature_on_trap( attacker );
+        here.creature_on_trap( *victim );
+        attacker.add_msg_player_or_npc( _( "You step back, dragging %s with you!" ),
+                                        _( "<npcname> steps back, dragging %s along!" ), victim->disp_name() );
+    } else {
+        victim->remove_effect( effect_martial_grapple );
+        victim->setpos( here, retreat );
+        const int duration = std::max( 1, static_cast<int>( 4 - 2 * load ) -
+                                       std::max( 0, size_difference ) );
+        victim->add_effect( effect_source( &attacker ), effect_downed,
+                            time_duration::from_turns( duration ) );
+        const float damage = std::max( 1.0f, ( attacker.get_str() +
+                                               attacker.get_skill_level( skill_unarmed ) ) *
+                                       technique.grapple_power / 100.0f * ( 1.0f - load * 0.5f ) *
+                                       technique.damage_multiplier( attacker, damage_bash ) /
+                                       ( 1.0f + 0.5f * std::max( 0, size_difference ) ) );
+        victim->deal_damage( &attacker, bodypart_id( "torso" ), damage_instance( damage_bash, damage ) );
+        victim->check_dead_state( &here );
+        here.creature_on_trap( *victim );
+        attacker.add_msg_player_or_npc( _( "You throw %s to the ground!" ),
+                                        _( "<npcname> throws %s to the ground!" ), victim->disp_name() );
+    }
+    if( attacker.is_avatar() ) {
+        victim->add_effect( effect_hit_by_player, 1_minutes );
+    }
+    attacker.practice( skill_unarmed, 3 );
+    if( technique.grapple_action == "drag" ) {
+        if( avatar *const player = attacker.as_avatar() ) {
+            g->update_map( *player );
+            cata_event_dispatch::avatar_moves( previous_absolute, *player, here );
+        }
+    }
+    return true;
+}
+
 bool Character::use_active_technique( Creature &target, const matec_id &technique )
 {
     if( !technique.is_valid() || technique == tec_mounted_charge ||
-        !technique->can_activate() || &target == this || target.is_dead_state() ||
+        !technique->can_activate() || ( !technique->grapple_action.empty() &&
+                                        !technique->activation_allowed( *this, "start" ) ) ||
+        &target == this || target.is_dead_state() ||
         has_flag( json_flag_CANNOT_ATTACK ) ||
         ( is_mounted() && mounted_creature && mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ||
         pos_bub().z() != target.pos_bub().z() ) {
@@ -1835,6 +1997,9 @@ bool Character::use_active_technique( Creature &target, const matec_id &techniqu
     reach_attacking = technique->reach_tec || distance > 1;
     const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>> selected =
                 evaluate_technique( technique, target, weapon, false, false, false, true );
+    if( selected && !technique->grapple_action.empty() ) {
+        return use_grapple_technique( *this, target, *technique );
+    }
     if( !selected || ( distance > 1 && !std::get<1>( *selected )->weapon ) ) {
         return false;
     }

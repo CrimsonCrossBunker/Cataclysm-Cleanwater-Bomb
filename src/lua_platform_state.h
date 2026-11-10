@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <variant>
 
+#include "point.h"
+
 class JsonValue;
 class JsonObject;
 class JsonOut;
@@ -33,12 +35,10 @@ struct script_null_value {
 
 // Absolute map-square coordinates are values, not live map references.
 struct script_persistent_tripoint {
-    int x;
-    int y;
-    int z;
+    tripoint value;
     void serialize( JsonOut &json ) const;
     bool operator==( const script_persistent_tripoint &other ) const {
-        return x == other.x && y == other.y && z == other.z;
+        return value == other.value;
     }
     bool operator!=( const script_persistent_tripoint &other ) const {
         return !( *this == other );

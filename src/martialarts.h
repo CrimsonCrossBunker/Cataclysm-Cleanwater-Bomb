@@ -227,6 +227,12 @@ class ma_technique
         bool reach_ok = false; // possible to use during a reach attack
         bool manual_activation = false; // restrict this technique to manual activation
 
+        std::string grapple_action;
+        int grapple_power = 100;
+        int grapple_stamina = 0;
+        time_duration grapple_cooldown = 0_turns;
+        efftype_id grapple_cooldown_effect() const;
+
         ma_requirements reqs;
 
         // What way is the technique delivered to the target?
