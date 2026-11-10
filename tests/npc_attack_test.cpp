@@ -1,18 +1,25 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "cata_catch.h"
+#include "calendar.h"
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
+#include "event.h"
+#include "event_bus.h"
+#include "event_subscriber.h"
 #include "flag.h"
 #include "game.h"
 #include "item.h"
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_iterator.h"
 #include "monster.h"
 #include "npc.h"
 #include "npc_attack.h"
@@ -31,6 +38,7 @@ static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_combat_exoskeleton_medium( "combat_exoskeleton_medium" );
 static const itype_id itype_combat_exoskeleton_medium_on( "combat_exoskeleton_medium_on" );
+static const itype_id itype_grenade_act( "grenade_act" );
 static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_knife_large( "knife_large" );
 static const itype_id itype_modular_m16a4( "modular_m16a4" );
@@ -42,6 +50,8 @@ static const mtype_id mon_zombie( "mon_zombie" );
 static const skill_id skill_throw( "throw" );
 
 static const string_id<npc_template> npc_template_test_talker( "test_talker" );
+
+static const ter_str_id ter_t_wall( "t_wall" );
 
 static const weather_type_id weather_sunny( "sunny" );
 
@@ -82,7 +92,154 @@ static monster *spawn_zombie_at_range( const int range )
 {
     return g->place_critter_at( mon_zombie, main_npc_start_tripoint + tripoint( range, 0, 0 ) );
 }
+
+static npc &spawn_armed_grenade_npc()
+{
+    clear_avatar();
+    get_player_character().setpos( get_map(), main_npc_start_tripoint );
+    clear_map_and_put_player_underground();
+    clear_vehicles();
+    npc &model = respawn_main_npc();
+    // Respawning can leave the previous NPC's corpse and gear on this tile.
+    get_map().i_clear( model.pos_bub() );
+    model.set_fac( faction_your_followers );
+    model.set_attitude( NPCATT_FOLLOW );
+    model.set_knowledge_level( skill_throw, 10 );
+    model.rules.set_flag( ally_rule::avoid_friendly_fire );
+    model.rules.engagement = combat_engagement::NO_MOVE;
+    item grenade( itype_grenade_act );
+    grenade.active = true;
+    model.set_wielded_item( grenade );
+    REQUIRE( model.get_wielded_item()->has_flag( flag_NPC_THROW_NOW ) );
+    model.set_moves( 1000 );
+    model.regen_ai_cache();
+    return model;
+}
 } // namespace npc_attack_setup
+
+TEST_CASE( "armed_grenade_chooses_a_throwable_tile_past_an_obstructed_corner",
+           "[npc_attack][npc_explosive]" )
+{
+    npc &model = npc_attack_setup::spawn_armed_grenade_npc();
+    map &here = get_map();
+    item &grenade = *model.get_wielded_item();
+    const bool best_weapon = GENERATE( false, true );
+    CAPTURE( best_weapon );
+    const int range = model.throw_range( grenade );
+    REQUIRE( range > 2 );
+    for( const tripoint_bub_ms &point : here.points_in_radius( model.pos_bub(), range ) ) {
+        if( point.x() == model.pos_bub().x() - 1 ) {
+            here.ter_set( point, ter_t_wall.id() );
+        }
+    }
+    npc_attack_throw attack( grenade, best_weapon ? &grenade : nullptr, model.speed_rating() );
+
+    const npc_attack_rating rating = attack.evaluate( model, nullptr );
+    REQUIRE( rating.value() );
+    REQUIRE( *rating.value() > 0 );
+    CHECK( rating.target() != model.pos_bub() );
+    attack.use( model, rating.target() );
+    CHECK_FALSE( model.get_wielded_item() );
+}
+
+TEST_CASE( "npc_discards_armed_grenade_even_without_a_combat_target",
+           "[npc_attack][npc_explosive]" )
+{
+    npc &model = npc_attack_setup::spawn_armed_grenade_npc();
+    REQUIRE( model.current_target() == nullptr );
+    model.move();
+    CHECK_FALSE( model.get_wielded_item() );
+    CHECK( get_map().i_at( model.pos_bub() ).empty() );
+}
+
+TEST_CASE( "armed_grenade_throw_avoids_a_nearby_friend_in_the_first_direction",
+           "[npc_attack][npc_explosive]" )
+{
+    npc &model = npc_attack_setup::spawn_armed_grenade_npc();
+    calendar::turn = calendar::turn_zero + 12_hours;
+    map &here = get_map();
+    item &grenade = *model.get_wielded_item();
+    const int range = model.throw_range( grenade );
+    REQUIRE( range > 1 );
+    const tripoint_bub_ms corner = *here.points_in_radius( model.pos_bub(), range ).begin();
+    const auto ray = here.find_clear_path( model.pos_bub(), corner );
+    REQUIRE( ray.size() > 1 );
+    const tripoint_bub_ms friend_pos = ray.front();
+    get_player_character().setpos( here, friend_pos );
+    here.build_map_cache( 0 );
+    model.regen_ai_cache();
+    REQUIRE_FALSE( model.get_cached_friends().empty() );
+    npc_attack_throw attack( grenade, nullptr, model.speed_rating() );
+
+    const npc_attack_rating rating = attack.evaluate( model, nullptr );
+    REQUIRE( rating.value() );
+    CHECK( rl_dist( rating.target(), friend_pos ) > 1 );
+    attack.use( model, rating.target() );
+    CHECK_FALSE( model.get_wielded_item() );
+}
+
+TEST_CASE( "npc_drops_armed_grenade_when_surrounded_by_walls",
+           "[npc_attack][npc_explosive]" )
+{
+    npc &model = npc_attack_setup::spawn_armed_grenade_npc();
+    map &here = get_map();
+    for( const tripoint_bub_ms &point : here.points_in_radius( model.pos_bub(), 1 ) ) {
+        if( point != model.pos_bub() ) {
+            here.ter_set( point, ter_t_wall.id() );
+        }
+    }
+    model.move();
+    CHECK_FALSE( model.get_wielded_item() );
+    map_stack at_feet = here.i_at( model.pos_bub() );
+    REQUIRE( at_feet.size() == 1 );
+    CHECK( at_feet.only_item().typeId() == itype_grenade_act );
+    CHECK( at_feet.only_item().active );
+}
+
+TEST_CASE( "npc_leaves_armed_grenade_at_its_feet_if_retired_during_disposal",
+           "[npc_attack][npc_explosive]" )
+{
+    npc &model = npc_attack_setup::spawn_armed_grenade_npc();
+    map &here = get_map();
+    const tripoint_bub_ms origin = model.pos_bub();
+    const bool surrounded = GENERATE( false, true );
+    CAPTURE( surrounded );
+    if( surrounded ) {
+        for( const tripoint_bub_ms &point : here.points_in_radius( origin, 1 ) ) {
+            if( point != origin ) {
+                here.ter_set( point, ter_t_wall.id() );
+            }
+        }
+    }
+
+    class retire_on_unwield : public event_subscriber
+    {
+        public:
+            using event_subscriber::notify;
+
+            explicit retire_on_unwield( character_id id ) : id( id ) {
+                get_event_bus().subscribe( this );
+            }
+            void notify( const cata::event &event ) override {
+                if( event.type() == event_type::character_wields_item &&
+                    event.get<character_id>( "character" ) == id ) {
+                    fired = true;
+                    g->remove_npc( id );
+                }
+            }
+
+            const character_id id;
+            bool fired = false;
+    } callback( model.getID() );
+
+    model.move();
+    REQUIRE( callback.fired );
+    CHECK( get_creature_tracker().creature_at<npc>( origin ) == nullptr );
+    map_stack at_origin = here.i_at( origin );
+    REQUIRE( at_origin.size() == 1 );
+    CHECK( at_origin.only_item().typeId() == itype_grenade_act );
+    CHECK( at_origin.only_item().active );
+}
 
 TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
 {
