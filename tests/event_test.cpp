@@ -8,13 +8,14 @@
 #include "cata_variant.h"
 #include "cata_catch.h"
 #include "character_id.h"
-#include "creature.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
+
+class Creature;
 
 static const mtype_id zombie( "zombie" );
 
