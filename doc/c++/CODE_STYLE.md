@@ -14,7 +14,9 @@
 
 All of the C++ code in the project is styled. You should run any changes you make through astyle before pushing a pull request.
 
-We are using astyle version 3.1. Other versions of astyle produce different formatting and should not be used.
+Code-style CI uses Ubuntu 24.04 and AStyle 3.1.  Use the same AStyle version
+locally; other versions can produce different formatting.  The CI installation
+step prints `astyle --version` so its tool version can be verified.
 
 Blocks of code can be passed through astyle to ensure that their formatting is correct:
 
