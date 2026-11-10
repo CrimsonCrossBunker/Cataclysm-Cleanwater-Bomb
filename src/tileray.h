@@ -47,6 +47,8 @@ class tileray
         void init( const point_rel_ms &ad );   // init ray with ad
         void init( const point_bub_ms &ad ); // init ray with ad
         void init( const units::angle &adir ); // init ray with direction
+        // Change heading without discarding sub-tile progress on the minor axis.
+        void redirect( units::angle adir );
 
         int dx() const;       // return dx of last advance (-1 to 1)
         int dy() const;       // return dy of last advance (-1 to 1)

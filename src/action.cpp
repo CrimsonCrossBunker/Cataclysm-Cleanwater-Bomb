@@ -302,6 +302,10 @@ std::string action_ident( action_id act )
             return "sleep";
         case ACTION_CONTROL_VEHICLE:
             return "control_vehicle";
+        case ACTION_VEHICLE_TURNING_ASSIST:
+            return "vehicle_turning_assist";
+        case ACTION_VEHICLE_GUIDANCE:
+            return "vehicle_guidance";
         case ACTION_TOGGLE_AUTO_TRAVEL_MODE:
             return "auto_travel_mode";
         case ACTION_TOGGLE_SAFEMODE:
@@ -1171,6 +1175,8 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_BIONICS );
             REGISTER_ACTION( ACTION_MUTATIONS );
             REGISTER_ACTION( ACTION_CONTROL_VEHICLE );
+            REGISTER_ACTION( ACTION_VEHICLE_TURNING_ASSIST );
+            REGISTER_ACTION( ACTION_VEHICLE_GUIDANCE );
             REGISTER_ACTION( ACTION_ITEMACTION );
             REGISTER_ACTION( ACTION_TOGGLE_THIEF_MODE );
 #if defined(TILES)

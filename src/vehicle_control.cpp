@@ -267,6 +267,7 @@ bool brake_vehicle( Character &who, map &here )
     if( !target ) {
         return false;
     }
+    target->turning_arc.reset();
     who.add_msg_player_or_npc( _( "You pull a handbrake." ), _( "<npcname> pulls a handbrake." ) );
     target->cruise_velocity = 0;
     if( target->last_turn != 0_degrees && rng( 15, 60 ) * 100 < std::abs( target->velocity ) ) {
@@ -1053,6 +1054,7 @@ bool execute_vehicle_control( Character &who, map &here,
         return true;
     }
     if( selection.action == "release" || selection.action == "stop_driving" ) {
+        target->turning_arc.reset();
         if( selection.action == "stop_driving" ) {
             target->disable_smart_controller_if_needed();
             target->stop_engines( here );

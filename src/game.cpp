@@ -253,6 +253,7 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_turning.h"
 #include "viewer.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -3682,6 +3683,155 @@ bool game::has_blink_curses()
     return !blink_layer_curses.empty();
 }
 
+void game::vehicle_turning_assist()
+{
+    map &here = get_map();
+    vehicle *veh = controlled_vehicle( u, here );
+    if( !veh ) {
+        add_msg( m_info, _( "You must be driving to choose a turning control point." ) );
+        return;
+    }
+    if( cata_mp::is_client_mode() ) {
+        add_msg( m_info, _( "Turning control points are not yet supported on multiplayer clients." ) );
+        return;
+    }
+    if( veh->turning_arc ) {
+        veh->turning_arc.reset();
+        add_msg( m_info, _( "Turning assistance cancelled." ) );
+        return;
+    }
+    if( veh->velocity <= 0 || veh->skidding || veh->is_flying_in_air() || veh->is_on_ramp ||
+        veh->can_use_rails( here ) || !veh->valid_wheel_config( here ) ||
+        veh->steering_effectiveness( here ) <= 0.0f || !veh->can_control_on_land( u ) ||
+        veh->is_autodriving || veh->autopilot_on ) {
+        add_msg( m_info, _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
+        return;
+    }
+    const safe_reference<vehicle> lifetime = veh->get_safe_reference();
+    add_msg( m_info, _( "Select a visible point ahead and to one side to define the turning arc." ) );
+    const std::optional<tripoint_bub_ms> target = look_around();
+    if( !target || !lifetime || controlled_vehicle( u, here ) != veh ) {
+        return;
+    }
+    const tripoint_bub_ms origin = veh->pos_bub( here );
+    if( target->z() != origin.z() || !here.inbounds( *target ) || !u.sees( here, *target ) ) {
+        add_msg( m_info, _( "Choose a visible point on the same level as your vehicle." ) );
+        return;
+    }
+    const tripoint_rel_ms delta = *target - origin;
+    const double heading = to_radians( veh->turn_dir );
+    const double forward = delta.x() * std::cos( heading ) + delta.y() * std::sin( heading );
+    const double lateral = -delta.x() * std::sin( heading ) + delta.y() * std::cos( heading );
+    const std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( forward, lateral );
+    if( !arc ) {
+        add_msg( m_info, _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
+        return;
+    }
+    veh->pldrive( here, u, 0, 0, 0, arc );
+    if( lifetime && veh->turning_arc ) {
+        vehicle_guidance = true;
+        add_msg( m_info, _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
+    }
+}
+
+void game::draw_vehicle_guidance()
+{
+    map &here = get_map();
+    const vehicle *veh = controlled_vehicle( u, here );
+    if( !vehicle_guidance || !veh || is_looking || u.view_offset.z() != 0 ||
+        veh->skidding || veh->is_flying_in_air() || veh->is_on_ramp ) {
+        return;
+    }
+    const tripoint_bub_ms origin = veh->pos_bub( here );
+    const tripoint_bub_ms center = u.pos_bub( here ) + u.view_offset;
+    const double heading = to_radians( veh->face.dir() );
+    double left = 0.0;
+    double right = 0.0;
+    double front = 0.0;
+    double rear = 0.0;
+    for( const tripoint_abs_ms &p : veh->get_points() ) {
+        const tripoint_rel_ms d = here.get_bub( p ) - origin;
+        const double longitudinal = d.x() * std::cos( heading ) + d.y() * std::sin( heading );
+        const double lateral = -d.x() * std::sin( heading ) + d.y() * std::cos( heading );
+        left = std::min( left, lateral );
+        right = std::max( right, lateral );
+        rear = std::min( rear, longitudinal );
+        front = std::max( front, longitudinal );
+    }
+    // Match the movement engine's tile-step budget for one second.  Drag,
+    // acceleration, terrain and collisions can change the actual endpoint.
+    const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
+                                 vehicles::vmiph_per_tile ) ), 0, 60 );
+    const double skill = u.get_skill_level( skill_id( "driving" ) );
+    const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
+                                       ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
+    std::set<tripoint_bub_ms> guides;
+    std::set<tripoint_bub_ms> estimate;
+    tripoint_bub_ms predicted = origin;
+    tileray ray = veh->face;
+    std::optional<vehicle_turning_arc> arc = veh->turning_arc;
+    if( !arc && veh->turn_dir != ray.dir() ) {
+        ray.init( veh->turn_dir );
+    }
+    for( int step = 0; step <= steps; ++step ) {
+        const double angle = to_radians( ray.dir() );
+        // Project the two sides of the vehicle along its predicted heading.
+        for( const double side : { left - 1.0, right + 1.0 } ) {
+            const tripoint_bub_ms p = predicted + point(
+                                         std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
+                                         std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
+            guides.insert( p );
+        }
+        if( step == steps ) {
+            int min_x = INT_MAX;
+            int max_x = INT_MIN;
+            int min_y = INT_MAX;
+            int max_y = INT_MIN;
+            for( const double along : { rear, front } ) {
+                for( const double side : { left, right } ) {
+                    const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
+                    const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
+                    min_x = std::min( min_x, x - uncertainty );
+                    max_x = std::max( max_x, x + uncertainty );
+                    min_y = std::min( min_y, y - uncertainty );
+                    max_y = std::max( max_y, y + uncertainty );
+                }
+            }
+            for( int x = min_x; x <= max_x; ++x ) {
+                estimate.insert( predicted + point( x, min_y ) );
+                estimate.insert( predicted + point( x, max_y ) );
+            }
+            for( int y = min_y; y <= max_y; ++y ) {
+                estimate.insert( predicted + point( min_x, y ) );
+                estimate.insert( predicted + point( max_x, y ) );
+            }
+            break;
+        }
+        if( arc ) {
+            const units::angle next = ray.dir() + units::from_radians( arc->advance( angle ) );
+            ray.redirect( next );
+            if( arc->finished() ) {
+                arc.reset();
+            }
+        }
+        ray.advance( veh->velocity < 0 ? -1 : 1 );
+        predicted += point( ray.dx(), ray.dy() );
+    }
+    guides.insert( estimate.begin(), estimate.end() );
+    for( const tripoint_bub_ms &p : guides ) {
+        if( !here.inbounds( p ) || !is_in_viewport( p ) || !u.sees( here, p ) ) {
+            continue;
+        }
+        if( use_tiles ) {
+            draw_highlight( p );
+        } else {
+            const point screen = p.xy().raw() - center.xy().raw() + point( POSX, POSY );
+            mvwputch( w_terrain, screen, estimate.count( p ) ? c_yellow : c_light_cyan,
+                      estimate.count( p ) ? '?' : '+' );
+        }
+    }
+}
+
 void game::draw( ui_adaptor &ui )
 {
     // Skip drawing while an in-place reload (quickload / snapshot restore) is
@@ -3714,6 +3864,7 @@ void game::draw( ui_adaptor &ui )
     werase( w_terrain );
     void_blink_curses();
     draw_ter();
+    draw_vehicle_guidance();
     for( auto it = draw_callbacks.begin(); it != draw_callbacks.end(); ) {
         shared_ptr_fast<draw_callback_t> cb = it->lock();
         if( cb ) {

@@ -1,5 +1,6 @@
 #include "tileray.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdlib>
@@ -63,6 +64,18 @@ void tileray::init( const units::angle &adir )
     abs_d = delta.abs();
     steps = 0;
     infinite = true;
+}
+
+void tileray::redirect( units::angle adir )
+{
+    const int major = std::max( abs_d.x(), abs_d.y() );
+    const double fraction = major > 0 ? static_cast<double>( leftover ) / major : 0.0;
+    const bool vertical = mostly_vertical();
+    const int old_quadrant = quadrant();
+    init( adir );
+    if( vertical == mostly_vertical() && old_quadrant == quadrant() ) {
+        leftover = static_cast<int>( std::round( fraction * std::max( abs_d.x(), abs_d.y() ) ) );
+    }
 }
 
 void tileray::clear_advance()

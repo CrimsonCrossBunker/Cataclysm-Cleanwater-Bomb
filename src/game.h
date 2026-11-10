@@ -989,6 +989,9 @@ class game
         // Draw a highlight graphic at p, for example when examining something.
         // TILES only, in curses this does nothing
         void draw_highlight( const tripoint_bub_ms &p );
+        void vehicle_turning_assist();
+        void draw_vehicle_guidance();
+        bool vehicle_guidance = false; // NOLINT(cata-serialize)
         // Draws an asynchronous animation at p with tile_id as its sprite. If ncstr is specified, it will also be displayed in curses.
         void draw_async_anim( const tripoint_bub_ms &p, std::string_view tile_id,
                               const std::string &ncstr = "",
