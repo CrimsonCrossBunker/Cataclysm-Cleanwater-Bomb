@@ -2053,7 +2053,7 @@ void item_pocket::process( map &here, Character *carrier, const tripoint_bub_ms 
                            // spoil multipliers on pockets are not additive or multiplicative, they choose the best
                            std::min( spoil_multiplier_parent, spoil_multiplier() ),
                            watertight_container || can_contain_liquid( false ) ) ) {
-            iter->spill_contents( pos );
+            iter->spill_contents( &here, pos );
             iter = contents.erase( iter );
         } else {
             ++iter;
