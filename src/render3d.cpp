@@ -61,6 +61,8 @@
 #include "weather.h"
 #include "weather_type.h"
 
+static const vpart_location_id vpart_location_on_roof( "on_roof" );
+
 namespace render3d
 {
 
@@ -133,8 +135,6 @@ constexpr float VEH_WSH_GLASS_FRAC = 12.0f / 32.0f;
 // wing mirror flat decal height (TP-26): door beltline, where the stalk
 // meets the panel
 constexpr float VEH_MIRROR_Z = 0.80f;
-
-static const vpart_location_id vpart_location_on_roof( "on_roof" );
 
 // the whole rendered z range must be inside map memory's prepared region; the
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
