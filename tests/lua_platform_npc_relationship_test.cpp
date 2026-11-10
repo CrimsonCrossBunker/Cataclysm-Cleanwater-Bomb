@@ -539,7 +539,10 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     CHECK( beta_snapshot["opinion"]["owed"].get<int>() == 8 );
     CHECK( alpha_faction_snapshot["reputation"]["trusts"].get<int>() == 1 );
     CHECK( faction_snapshot["reputation"]["trusts"].get<int>() == 8 );
-    CHECK( owed_condition( context ) == owed_from_platform );
+    const dialogue player_debt_context( get_talker_for( player ), get_talker_for( beta ) );
+    CHECK( owed_condition( player_debt_context ) == owed_from_platform );
+    CHECK_FALSE( owed_condition( context ) );
+    CHECK( beta.opinion_of( alpha.getID() ).owed == 0 );
     CHECK( owed_from_platform );
     CHECK( trust_condition( context ) == trust_from_platform );
     CHECK( trust_from_platform );
