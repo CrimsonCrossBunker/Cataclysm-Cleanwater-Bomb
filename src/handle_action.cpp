@@ -132,6 +132,7 @@
 #include "line.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_melee.h"
 #include "mp_equipment.h"
 #include "npc.h"
 
@@ -1366,7 +1367,7 @@ static void sleep()
     }
 
     // check for deactivating any currently played music instrument.
-    for( item*&item : player_character.inv_dump() ) {
+    for( item *&item : player_character.inv_dump() ) {
         if( item->active && item->get_use( "musical_instrument" ) != nullptr ) {
             player_character.add_msg_if_player( _( "You stop playing your %s before trying to sleep." ),
                                                 item->tname() );
