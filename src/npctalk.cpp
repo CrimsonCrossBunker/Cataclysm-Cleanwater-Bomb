@@ -9449,10 +9449,8 @@ talk_topic talk_effect_t::apply( dialogue &d ) const
     if( d.has_beta ) {
         // Need to get the selected mission value before effects are applied, because effects can remove the mission
         const mission *miss = d.actor( true )->selected_mission();
-        std::optional<int> selected_mission_value;
-        if( miss != nullptr ) {
-            selected_mission_value = miss->get_value();
-        }
+        const bool had_selected_mission = miss != nullptr;
+        const int selected_mission_value = had_selected_mission ? miss->get_value() : 0;
         for( const talk_effect_fun_t &effect : effects ) {
             effect( d );
             if( !mission_dialogue::participants_live( d ) ) {
@@ -9460,10 +9458,10 @@ talk_topic talk_effect_t::apply( dialogue &d ) const
             }
         }
         d.actor( true )->add_opinion( opinion );
-        if( selected_mission_value.has_value() &&
+        if( had_selected_mission &&
             ( mission_opinion.trust || mission_opinion.fear ||
               mission_opinion.value || mission_opinion.anger ) ) {
-            const int m_value = d.actor( true )->cash_to_favor( *selected_mission_value );
+            const int m_value = d.actor( true )->cash_to_favor( selected_mission_value );
             npc_opinion op;
             op.trust = mission_opinion.trust ? m_value / mission_opinion.trust : 0;
             op.fear = mission_opinion.fear ? m_value / mission_opinion.fear : 0;

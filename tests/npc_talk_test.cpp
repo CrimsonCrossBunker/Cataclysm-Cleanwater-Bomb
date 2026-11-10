@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -20,11 +21,13 @@
 #include "character_id.h"
 #include "condition.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "dialogue.h"
 #include "dialogue_chatbin.h"
 #include "dialogue_helpers.h"
 #include "dialogue_win.h"
 #include "effect.h"
+#include "effect_on_condition.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
@@ -1670,6 +1673,92 @@ TEST_CASE( "dialogue_opinions_belong_to_the_interlocutor", "[npc_talk][multiplay
     const const_dialogue readonly( get_talker_for( remote )->const_clone(),
                                    get_talker_for( provider )->const_clone() );
     CHECK( readonly.const_actor( true )->get_npc_trust() == -4 );
+}
+
+TEST_CASE( "event_eoc_with_monster_and_fake_shooter_preserves_npc_opinions",
+           "[npc_talk][eoc][npc_opinion_event]" )
+{
+    dialogue setup;
+    prep_test( setup );
+    monster target( mon_zombie );
+    standard_npc shooter( "temporary monster shooter" );
+    shooter.set_fake( true );
+    shooter.personality.aggression = 0;
+    shooter.personality.bravery = 0;
+    dialogue event_dialogue( get_talker_for( target ), get_talker_for( shooter ) );
+    REQUIRE( mission_dialogue::participants_live( event_dialogue ) );
+    REQUIRE( event_dialogue.const_actor( false )->get_const_character() == nullptr );
+
+    std::ostringstream before;
+    JsonOut before_json( before );
+    shooter.serialize( before_json );
+    int applications = 0;
+    effect_on_condition eoc;
+    eoc.type = ACTIVATION;
+    eoc.true_effect.set_effect( talk_effect_fun_t( [&applications, &target, &shooter]( dialogue & d ) {
+        CHECK( d.actor( false )->get_monster() == &target );
+        CHECK( d.actor( true )->get_npc() == &shooter );
+        ++applications;
+    } ) );
+
+    // Even the default zero opinion used to assert after applying the effect.
+    CHECK( eoc.activate( event_dialogue, false ) );
+    eoc.true_effect.opinion.trust = 7;
+    CHECK( eoc.activate( event_dialogue, false ) );
+    CHECK( applications == 2 );
+    std::ostringstream after;
+    JsonOut after_json( after );
+    shooter.serialize( after_json );
+    CHECK( ( before.str() == after.str() ) );
+}
+
+TEST_CASE( "npc_opinion_writes_require_a_live_character_interlocutor",
+           "[npc_talk][npc_opinion_event]" )
+{
+    dialogue setup;
+    npc &provider = prep_test( setup );
+    provider.op_of_u.trust = 19;
+    provider.op_of_u.owed = 123;
+    monster target( mon_zombie );
+    npc speaker;
+    speaker.normalize();
+    speaker.setID( character_id( 700091 ) );
+    dialogue d;
+    SECTION( "monster has no character identity" ) {
+        d = dialogue( get_talker_for( target ), get_talker_for( provider ) );
+    }
+    SECTION( "character identity changed after binding" ) {
+        d = dialogue( get_talker_for( speaker ), get_talker_for( provider ) );
+        speaker.setID( character_id( 700092 ), true );
+    }
+    std::ostringstream before;
+    JsonOut before_json( before );
+    provider.serialize( before_json );
+    // Snapshot the shared engine to check that the writes do not advance it.
+    // NOLINTNEXTLINE(cata-determinism)
+    const cata_default_random_engine rng_before = rng_get_engine();
+    talker &receiver = *d.actor( true );
+    receiver.set_npc_trust( 3 );
+    receiver.set_npc_fear( 4 );
+    receiver.set_npc_value( 5 );
+    receiver.set_npc_anger( 6 );
+    receiver.add_debt( 100 );
+    receiver.add_sold( 200 );
+    npc_opinion delta;
+    delta.trust = 10;
+    delta.owed = 20;
+    receiver.add_opinion( delta );
+    CHECK( receiver.get_npc_trust() == 0 );
+    CHECK( receiver.get_npc_fear() == 0 );
+    CHECK( receiver.get_npc_value() == 0 );
+    CHECK( receiver.get_npc_anger() == 0 );
+    CHECK( receiver.debt() == 0 );
+    CHECK( receiver.sold() == 0 );
+    std::ostringstream after;
+    JsonOut after_json( after );
+    provider.serialize( after_json );
+    CHECK( ( before.str() == after.str() ) );
+    CHECK( rng_get_engine() == rng_before );
 }
 
 TEST_CASE( "dialogue_trials_and_hostility_use_the_same_player_opinion", "[npc_talk][multiplayer]" )
