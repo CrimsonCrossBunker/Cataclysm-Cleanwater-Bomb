@@ -1296,6 +1296,9 @@ std::vector<item_location> destroy_the_carcass( const butchery_data &bd, Charact
         return {};
     }
     const item original( *target );
+    // A corpse may contain items that intentionally never stack. Display
+    // stacking is not a state comparison for the source of a completed action.
+    const std::string original_state = serialize( *target );
     const item_source source = capture_item_source( you, target );
     const auto corpse_pos = target.pos_bub( here );
     const butcher_type action = bd.b_type;
@@ -1322,8 +1325,7 @@ std::vector<item_location> destroy_the_carcass( const butchery_data &bd, Charact
     // Training/proficiency callbacks retain their native calculation order.
     // If they interrupt preparation, the original corpse is still untouched.
     if( !result || !continuing() || !target || resolve_item_source( you, here, source ) != target ||
-        target->count() != original.count() ||
-        !target->stacks_with( original, true, false, false, 0, 999, true ) ) {
+        serialize( *target ) != original_state ) {
         return {};
     }
     bool field_dress_success = false;

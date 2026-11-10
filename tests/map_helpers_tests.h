@@ -8,7 +8,7 @@
 #include "type_id.h"
 
 class map;
-class mongroup;
+struct mongroup;
 class monster;
 class submap;
 class time_point;
