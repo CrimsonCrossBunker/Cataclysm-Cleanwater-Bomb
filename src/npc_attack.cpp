@@ -14,6 +14,7 @@
 
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -687,30 +688,37 @@ void npc_attack_throw::use( npc &source, const tripoint_bub_ms &location ) const
         return;
     }
 
+    const character_action_guard lifetime( source );
+    map &here = get_map();
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = source.pos_abs();
+    const tripoint_abs_ms destination = here.get_abs( location );
     if( keep_wielded ) {
         add_msg_debug( debugmode::debug_filter::DF_NPC, "%s throws the %s with the %s",
                        source.disp_name(), thrown_item.display_name(),
                        wielded_item->display_name() );
-        item thrown( thrown_item );
-        if( thrown_item.count_by_charges() && thrown_item.charges > 1 ) {
-            thrown_item.mod_charges( -1 );
-            thrown.charges = 1;
-        } else {
-            source.i_rem( &thrown_item );
-        }
-        source.throw_item( location, thrown );
     } else {
-        item_location weapon = source.get_wielded_item();
         add_msg_debug( debugmode::debug_filter::DF_NPC, "%s throws the %s", source.disp_name(),
-                       weapon->display_name() );
-        item thrown( *weapon );
-        if( weapon->count_by_charges() && weapon->charges > 1 ) {
-            weapon->mod_charges( -1 );
-            thrown.charges = 1;
-        } else {
-            source.remove_weapon();
-        }
-        source.throw_item( location, thrown );
+                       thrown_item.display_name() );
+    }
+
+    item thrown;
+    if( thrown_item.count_by_charges() && thrown_item.charges > 1 ) {
+        thrown = thrown_item;
+        thrown_item.mod_charges( -1 );
+        thrown.charges = 1;
+    } else {
+        thrown = keep_wielded ? source.i_rem( &thrown_item ) : source.remove_weapon();
+    }
+    if( !context || thrown.is_null() ) {
+        return;
+    }
+    // Removing a wielded item emits an event that may retire or move the NPC.
+    if( lifetime && context.get() == &get_map() && source.pos_abs() == origin &&
+        context->inbounds( destination ) ) {
+        source.throw_item( context->get_bub( destination ), thrown );
+    } else if( context->inbounds( origin ) ) {
+        context->add_item_or_charges( context->get_bub( origin ), std::move( thrown ) );
     }
 }
 

@@ -1555,9 +1555,14 @@ void npc::move()
         } else {
             // No unobstructed throw exists. Leave the live item on the map,
             // where the existing explosion-avoidance code can flee from it.
-            item dropped = remove_weapon();
-            get_map().add_item_or_charges( pos_bub(), std::move( dropped ) );
+            const character_action_guard lifetime( *this );
+            const auto context = get_map().get_context_reference();
+            const tripoint_abs_ms origin = pos_abs();
             mod_moves( -100 );
+            item dropped = remove_weapon();
+            if( context && context->inbounds( origin ) ) {
+                context->add_item_or_charges( context->get_bub( origin ), std::move( dropped ) );
+            }
         }
         return;
     }
@@ -4746,7 +4751,7 @@ bool npc::would_take_that( const item &it, const tripoint_bub_ms &p )
         }
         std::vector<npc *> followers;
         overmap_buffer.populate_followers_vec( followers );
-        for( npc*&elem : followers ) {
+        for( npc *&elem : followers ) {
             if( elem->sees( here, this->pos_bub( here ) ) || elem->sees( here,  p ) ) {
                 return false;
             }

@@ -8,6 +8,9 @@
 #include "character_id.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
+#include "event.h"
+#include "event_bus.h"
+#include "event_subscriber.h"
 #include "flag.h"
 #include "game.h"
 #include "item.h"
@@ -185,6 +188,51 @@ TEST_CASE( "npc_drops_armed_grenade_when_surrounded_by_walls",
     REQUIRE( at_feet.size() == 1 );
     CHECK( at_feet.only_item().typeId() == itype_grenade_act );
     CHECK( at_feet.only_item().active );
+}
+
+TEST_CASE( "npc_leaves_armed_grenade_at_its_feet_if_retired_during_disposal",
+           "[npc_attack][npc_explosive]" )
+{
+    npc &model = npc_attack_setup::spawn_armed_grenade_npc();
+    map &here = get_map();
+    const tripoint_bub_ms origin = model.pos_bub();
+    const bool surrounded = GENERATE( false, true );
+    CAPTURE( surrounded );
+    if( surrounded ) {
+        for( const tripoint_bub_ms &point : here.points_in_radius( origin, 1 ) ) {
+            if( point != origin ) {
+                here.ter_set( point, ter_id( "t_wall" ) );
+            }
+        }
+    }
+
+    class retire_on_unwield : public event_subscriber
+    {
+        public:
+            using event_subscriber::notify;
+
+            explicit retire_on_unwield( character_id id ) : id( id ) {
+                get_event_bus().subscribe( this );
+            }
+            void notify( const cata::event &event ) override {
+                if( event.type() == event_type::character_wields_item &&
+                    event.get<character_id>( "character" ) == id ) {
+                    fired = true;
+                    g->remove_npc( id );
+                }
+            }
+
+            const character_id id;
+            bool fired = false;
+    } callback( model.getID() );
+
+    model.move();
+    REQUIRE( callback.fired );
+    CHECK( get_creature_tracker().creature_at<npc>( origin ) == nullptr );
+    map_stack at_origin = here.i_at( origin );
+    REQUIRE( at_origin.size() == 1 );
+    CHECK( at_origin.only_item().typeId() == itype_grenade_act );
+    CHECK( at_origin.only_item().active );
 }
 
 TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
