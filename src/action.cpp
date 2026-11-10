@@ -12,6 +12,7 @@
 
 #if defined(TILES)
     #include "adaptive_imgui_dialog.h"
+    #include "render3d.h"
 #endif
 #if defined(__ANDROID__)
     #include "android_ui_mode.h"
@@ -43,7 +44,6 @@
 #include "path_info.h"
 #include "point.h"
 #include "popup.h"
-#include "render3d.h"
 #include "ret_val.h"
 #include "sling.h"
 #include "translations.h"
