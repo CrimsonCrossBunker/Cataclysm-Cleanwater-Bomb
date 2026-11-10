@@ -159,6 +159,7 @@ static const activity_id ACT_TRAIN( "ACT_TRAIN" );
 static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
+
 static const bionic_id bio_flashbang( "bio_flashbang" );
 static const bionic_id bio_magnet( "bio_magnet" );
 static const bionic_id bio_remote( "bio_remote" );
@@ -166,11 +167,14 @@ static const bionic_id bio_resonator( "bio_resonator" );
 static const bionic_id bio_shockwave( "bio_shockwave" );
 static const bionic_id bio_teleport( "bio_teleport" );
 static const bionic_id bio_water_extractor( "bio_water_extractor" );
+
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
 static const itype_id itype_guidebook( "guidebook" );
+
 static const json_character_flag json_flag_BIONIC_GUN( "BIONIC_GUN" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
 
 namespace cata_mp
@@ -1449,7 +1453,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 state.refresh_observers = zone_edit_session::apply( who, zone_manager::get_manager(), batch );
                 if( !state.refresh_observers ) {
                     who.add_msg_if_player( m_warning,
-                                           _( "The zones could not be changed.  Reopen the zone manager to refresh them." ) );
+                                           _( "The zones could not be changed.  "
+                                              "Reopen the zone manager to refresh them." ) );
                 }
             } else if( kind == "zone_sort" ) {
                 const int scope = request.get_int( "scope", -1 );
@@ -1625,6 +1630,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             }
         } else if( owns_inventory_activity( who ) && request.get_string( "activity" ) ==
                    std::to_string( who.activity.identity_generation() ) ) {
+            // Cancellation covers every actor; reload accessibility is checked only later.
+            // NOLINTNEXTLINE(bugprone-branch-clone)
             if( operation == "cancel" ) {
                 // This must work with exhausted AP, and a replay cannot cancel
                 // a replacement activity with a different identity.
@@ -1993,7 +2000,7 @@ bool apply_inventory_activity_result( const JsonObject &response )
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    cata_mp::world_session &session = g->multiplayer_session();
+    world_session &session = g->multiplayer_session();
     inventory_activity_client_state &view = session.client_inventory_activity;
 
     JsonObject combat = response.get_object( "combat" );
@@ -3187,7 +3194,8 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
             ui_manager::redraw();
             action = ctxt.handle_input();
             if( get_avatar().is_dead_state() ) {
-                inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
+                inventory_activity_client_state &view =
+                    g->multiplayer_session().client_inventory_activity;
                 view.cancel_requested = true;
                 send_inventory_activity( "cancel" );
                 return;
@@ -3238,7 +3246,8 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
 
 void client_step_inventory_activity()
 {
-    const inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
+    const inventory_activity_client_state &view =
+        g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active ) {
         get_avatar().activity.set_to_null();
         return;
@@ -3352,8 +3361,8 @@ void client_update_inventory_activity_view()
                 const on_out_of_scope clear_peek( [&]() {
                     view.peek.reset();
                 } );
-                const look_around_result result = g->look_from( here.get_bub( peek->viewpoint ), peek->standing,
-                                                  peek->z_range );
+                const look_around_result result = g->look_from(
+                                                      here.get_bub( peek->viewpoint ), peek->standing, peek->z_range );
                 if( view.peek && view.peek->request == peek->request && result.selection ) {
                     g->apply_view_action( *result.selection );
                 }
@@ -3481,7 +3490,8 @@ void client_update_inventory_activity_view()
             const auto controls = target->get_avail_parts( "REMOTE_CONTROLS" );
             const auto electronics = target->get_avail_parts( "CTRL_ELECTRONIC" );
             if( !empty( controls ) || !empty( electronics ) ) {
-                const tripoint_abs_ms position = empty( controls ) ? electronics.begin()->pos_abs() :
+                const tripoint_abs_ms position = empty( controls ) ?
+                                                 electronics.begin()->pos_abs() :
                                                  controls.begin()->pos_abs();
                 selection = query_owned_vehicle_menu( who, here, *target, position, &source );
             }
@@ -3498,8 +3508,8 @@ void client_update_inventory_activity_view()
                get_avatar().get_moves() > 0 ) {
         const restore_on_out_of_scope restore_rng( rng_get_engine() );
         const item water = *view.preview;
-        const unload_liquid_choice choice = query_liquid_destination( water, nullptr,
-                                            view.liquid_source_uid, true );
+        const unload_liquid_choice choice = query_liquid_destination(
+                                                water, nullptr, view.liquid_source_uid, true );
         if( choice.kind == LD_NULL ) {
             view.cancel_requested = true;
             send_inventory_activity( "cancel" );
