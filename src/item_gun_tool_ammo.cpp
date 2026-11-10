@@ -714,6 +714,22 @@ std::map<gunmod_location, int> item::get_mod_locations() const
         }
     }
 
+    // A support and a foregrip can share the lower mounting surface without
+    // allowing two foregrips or two underbarrel weapons.  Explicit capacities
+    // take precedence, including a zero capacity that disables the support.
+    const gunmod_location bipod( "bipod" );
+    if( mod_locations.count( bipod ) == 0 ) {
+        for( const char *mount : {
+                 "underbarrel", "underbarrel mount"
+             } ) {
+            const auto found = mod_locations.find( gunmod_location( mount ) );
+            if( found != mod_locations.end() && found->second > 0 ) {
+                mod_locations.emplace( bipod, 1 );
+                break;
+            }
+        }
+    }
+
     return mod_locations;
 }
 
@@ -3227,7 +3243,8 @@ ret_val<void> item::is_gunmod_compatible( const item &mod ) const
                !mod.type->gunmod->usable.count( pistol_gun_type ) ) {
         return ret_val<void>::make_failure( _( "isn't big enough to use that mod" ) );
 
-    } else if( mod.type->gunmod->location.str() == "underbarrel" &&
+    } else if( ( mod.type->gunmod->location.str() == "underbarrel" ||
+                 mod.type->gunmod->location.str() == "bipod" ) &&
                !mod.has_flag( flag_PUMP_RAIL_COMPATIBLE ) && has_flag( flag_PUMP_RAIL ) ) {
         return ret_val<void>::make_failure( _( "can only accept small mods on that slot" ) );
 

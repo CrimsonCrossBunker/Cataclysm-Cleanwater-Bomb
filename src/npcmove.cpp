@@ -1544,6 +1544,23 @@ void npc::move()
         move_pause();
         return;
     }
+    item_location held = get_wielded_item();
+    if( held && held->has_flag( flag_NPC_THROW_NOW ) && !is_hallucination() ) {
+        // Disposing of an already armed explosive cannot depend on having a
+        // combat target or on the combat/needs decision chosen this turn.
+        npc_attack_throw emergency_throw( *held, nullptr, speed_rating() );
+        const npc_attack_rating destination = emergency_throw.evaluate( *this, current_target() );
+        if( destination.value() ) {
+            emergency_throw.use( *this, destination.target() );
+        } else {
+            // No unobstructed throw exists. Leave the live item on the map,
+            // where the existing explosion-avoidance code can flee from it.
+            item dropped = remove_weapon();
+            get_map().add_item_or_charges( pos_bub(), std::move( dropped ) );
+            mod_moves( -100 );
+        }
+        return;
+    }
     act_on_danger_assessment();
     // Forage/harvest activities skip BT re-evaluation to prevent backlog
     // flooding, but must yield to danger so the NPC can fight or flee.
