@@ -2139,7 +2139,11 @@
     },
     "responses": [
       {
-        "text": "Actually, I'm familiar with these cybernetics.  I already have one.",
+        "truefalsetext": {
+          "condition": { "mod_is_loaded": "catalegacy_future" },
+          "true": "<fcl_hub_has_interface>",
+          "false": "Actually, I'm familiar with these cybernetics.  I already have one."
+        },
         "condition": {
           "and": [
             { "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('14 d')" ] },
