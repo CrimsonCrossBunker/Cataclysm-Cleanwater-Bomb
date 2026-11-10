@@ -1290,7 +1290,8 @@ std::optional<view_action> surroundings_menu::execute( bool defer_action )
             }
         } else if( action == "look" && defer_action ) {
             tripoint_bub_ms center = observation_origin;
-            const auto result = g->look_around( { true, center, center, false, false, true, true } );
+            const look_around_result result =
+                g->look_around( { true, center, center, false, false, true, true } );
             selection = result.selection;
             if( result.peek_action && ( *result.peek_action == PA_BLIND_THROW ||
                                         *result.peek_action == PA_BLIND_THROW_WIELDED ) ) {

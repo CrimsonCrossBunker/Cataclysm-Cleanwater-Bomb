@@ -93,7 +93,6 @@ constexpr float FURN_QUAD_HEIGHT = 1.2f;
 constexpr float PANEL_HEIGHT = 1.4f;
 constexpr float PANEL_THICK = 0.1f;
 constexpr float FENCE_HEIGHT = 1.5f;
-constexpr float FENCE_THICK = 0.15f;
 constexpr float CREATURE_BASE_HEIGHT = 1.8f;
 // Human paper dolls include many equipment layers; keep the whole doll slightly
 // smaller than medium monsters without changing the monster size curve.
@@ -134,6 +133,8 @@ constexpr float VEH_WSH_GLASS_FRAC = 12.0f / 32.0f;
 // wing mirror flat decal height (TP-26): door beltline, where the stalk
 // meets the panel
 constexpr float VEH_MIRROR_Z = 0.80f;
+
+static const vpart_location_id vpart_location_on_roof( "on_roof" );
 
 // the whole rendered z range must be inside map memory's prepared region; the
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
@@ -313,10 +314,10 @@ bool bounds_in_frustum( const view_frustum &f, const float x0, const float y0,
     { x1 + CULL_XY_MARGIN, y1 + CULL_XY_MARGIN, wz + CULL_Z_ABOVE } );
 }
 
-bool tile_in_frustum( const view_frustum &f, const int dx, const int dy, const float wz )
+bool tile_in_frustum( const view_frustum &f, const point d, const float wz )
 {
-    return bounds_in_frustum( f, static_cast<float>( dx ), static_cast<float>( dy ),
-                              static_cast<float>( dx + 1 ), static_cast<float>( dy + 1 ), wz );
+    return bounds_in_frustum( f, static_cast<float>( d.x ), static_cast<float>( d.y ),
+                              static_cast<float>( d.x + 1 ), static_cast<float>( d.y + 1 ), wz );
 }
 
 // Unit cube, corner at origin, spanning [0,1]^3; 36 verts, pos(3f) + normal(3f).
@@ -324,22 +325,29 @@ const std::array<float, 36 * 6> &cube_vertices()
 {
     static const std::array<float, 36 * 6> verts = [] {
         std::array<float, 36 * 6> v{};
-        // face: origin corner, two edge vectors, normal
-        const float faces[6][4][3] = {
-            { {0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, -1} }, // bottom (z-)
-            { {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {0, 0, 1} },  // top (z+)
-            { {0, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0} }, // south (y-)
-            { {0, 1, 0}, {1, 1, 0}, {0, 1, 1}, {0, 1, 0} },  // north (y+)
-            { {0, 0, 0}, {0, 1, 0}, {0, 0, 1}, { -1, 0, 0} }, // west (x-)
-            { {1, 0, 0}, {1, 1, 0}, {1, 0, 1}, {1, 0, 0} },  // east (x+)
+        struct face_definition {
+            vec3 origin;
+            vec3 edge_1_end;
+            vec3 edge_2_end;
+            vec3 normal;
+        };
+        // face: origin corner, two edge endpoints, normal
+        const std::array<face_definition, 6> faces = {{
+                { {0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, -1} }, // bottom (z-)
+                { {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {0, 0, 1} },  // top (z+)
+                { {0, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0} }, // south (y-)
+                { {0, 1, 0}, {1, 1, 0}, {0, 1, 1}, {0, 1, 0} },  // north (y+)
+                { {0, 0, 0}, {0, 1, 0}, {0, 0, 1}, { -1, 0, 0} }, // west (x-)
+                { {1, 0, 0}, {1, 1, 0}, {1, 0, 1}, {1, 0, 0} },  // east (x+)
+            }
         };
         int i = 0;
-        for( const auto &f : faces )
+        for( const face_definition &f : faces )
         {
-            const vec3 o{ f[0][0], f[0][1], f[0][2] };
-            const vec3 e1{ f[1][0] - o.x, f[1][1] - o.y, f[1][2] - o.z };
-            const vec3 e2{ f[2][0] - o.x, f[2][1] - o.y, f[2][2] - o.z };
-            const vec3 n{ f[3][0], f[3][1], f[3][2] };
+            const vec3 o = f.origin;
+            const vec3 e1{ f.edge_1_end.x - o.x, f.edge_1_end.y - o.y, f.edge_1_end.z - o.z };
+            const vec3 e2{ f.edge_2_end.x - o.x, f.edge_2_end.y - o.y, f.edge_2_end.z - o.z };
+            const vec3 n = f.normal;
             // two triangles: (o, o+e1, o+e1+e2) and (o, o+e1+e2, o+e2)
             const vec3 quad[6] = {
                 o,
@@ -552,7 +560,7 @@ float g_fov_y = 40.0f * 3.14159265f / 180.0f;
 float g_aspect = 1.0f;
 tripoint_bub_ms g_center;
 bool g_cam_valid = false;
-point g_last_mouse{ -1, -1 };
+point g_last_mouse = point::north_west;
 // game-driven cursors forwarded from cata_tiles (targeting, construction...);
 // cleared after each frame's gather
 std::vector<std::pair<tripoint_bub_ms, bool>> g_game_cursors;
@@ -2371,7 +2379,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     panels.clear();
     static bucket_index_map bucket_index;
     bucket_index.clear();
-    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
+    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float>& {
         const bucket_key key{ mode, atlas };
         const auto it = bucket_index.find( key );
         if( it != bucket_index.end() )
@@ -2494,17 +2502,15 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     constexpr int DOLLHOUSE_RADIUS = 12;
     std::array<bool, REGION_SIZE *REGION_SIZE> dollhouse{};
     {
-        const int pdx = upos.x() - center.x();
-        const int pdy = upos.y() - center.y();
+        const point pd( upos.x() - center.x(), upos.y() - center.y() );
         for( int dy = -REGION_RADIUS; dy <= REGION_RADIUS; ++dy ) {
             for( int dx = -REGION_RADIUS; dx <= REGION_RADIUS; ++dx ) {
                 const tripoint_bub_ms p = center + tripoint( dx, dy, 0 );
-                if( !here.inbounds( p ) || !tile_in_frustum( frustum, dx, dy, 0.0f ) ) {
+                if( !here.inbounds( p ) || !tile_in_frustum( frustum, point( dx, dy ), 0.0f ) ) {
                     continue;
                 }
-                const int rx = dx - pdx;
-                const int ry = dy - pdy;
-                if( rx * rx + ry * ry <= DOLLHOUSE_RADIUS * DOLLHOUSE_RADIUS &&
+                const point r( dx - pd.x, dy - pd.y );
+                if( r.x * r.x + r.y * r.y <= DOLLHOUSE_RADIUS * DOLLHOUSE_RADIUS &&
                     tile_visible( center_cache, p ) &&
                     !center_cache.outside_cache[p.x()][p.y()] &&
                     here.move_cost( p ) > 0 ) {
@@ -2528,9 +2534,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         lookup_sprite_layers_3d( tiles, id, cat, p, subtile, rota, force, l );
         return l;
     };
-    const auto push_fog_slab = [&]( const int dx, const int dy, const float wz ) {
+    const auto push_fog_slab = [&]( const point d, const float wz ) {
         std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
-        push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+        push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
                        wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, sprite_info{},
                        0.02f, 0.02f, 0.028f, true, 0, false, -1.0f, false,
                        nv_tint ? 0.0f : 1.0f );
@@ -2541,8 +2547,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // with_furniture is false above the view level: remembered floors and walls
     // read as structure there, while remembered furniture would only clutter
     // the cross-level view.
-    const auto gather_memory_tile = [&]( const tripoint_bub_ms & p, const int dx,
-    const int dy, const float wz, const bool with_furniture ) -> bool {
+    const auto gather_memory_tile = [&]( const tripoint_bub_ms & p, const point d,
+    const float wz, const bool with_furniture ) -> bool {
+        const int &dx = d.x;
+        const int &dy = d.y;
         const memorized_tile &mt = get_avatar().get_memorized_tile( here.get_abs( p ) );
         const std::string &mem_ter = mt.get_ter_id();
         const std::string &dec_id = mt.get_dec_id();
@@ -2613,7 +2621,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         {
             // stale memory id (content removed): nothing faithful to draw
             if( furn_ok && with_furniture ) {
-                push_fog_slab( dx, dy, wz );
+                push_fog_slab( point( dx, dy ), wz );
                 push_memory_furniture();
                 return true;
             }
@@ -2626,7 +2634,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             // remembered open air stays open, as the live path draws it; a
             // remembered decoration still gets its dark backdrop
             if( !dec_id.empty() && with_furniture ) {
-                push_fog_slab( dx, dy, wz );
+                push_fog_slab( point( dx, dy ), wz );
                 push_memory_furniture();
             }
             return true;
@@ -3018,7 +3026,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     ++g_profile.coarse_tiles;
                     continue;
                 }
-                if( !tile_in_frustum( frustum, dx, dy, wz ) ) {
+                if( !tile_in_frustum( frustum, point( dx, dy ), wz ) ) {
                     ++g_profile.frustum_tiles;
                     continue;
                 }
@@ -3050,8 +3058,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // levels draw memory only, nothing where there is none.
                 if( !visible ) {
                     if( dz == 0 ) {
-                        if( !gather_memory_tile( p, dx, dy, wz, true ) ) {
-                            push_fog_slab( dx, dy, wz );
+                        if( !gather_memory_tile( p, point( dx, dy ), wz, true ) ) {
+                            push_fog_slab( point( dx, dy ), wz );
                         }
                     } else if( !( dz > 0 &&
                                   dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) ) {
@@ -3059,7 +3067,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         // the floors above an interior must not block it.
                         // upper floors keep their remembered structure only:
                         // remembered furniture there is deliberately not drawn
-                        gather_memory_tile( p, dx, dy, wz, dz < 0 );
+                        gather_memory_tile( p, point( dx, dy ), wz, dz < 0 );
                     }
                     continue;
                 }
@@ -3541,23 +3549,21 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             {
                                 return -1;
                             }
-                            const int qdx = q.x() - center.x();
-                            const int qdy = q.y() - center.y();
-                            const int qdz = q.z() - cz;
-                            if( std::abs( qdx ) > VIEW_RADIUS || std::abs( qdy ) > VIEW_RADIUS )
+                            const tripoint qd( q.x() - center.x(), q.y() - center.y(), q.z() - cz );
+                            if( std::abs( qd.x ) > VIEW_RADIUS || std::abs( qd.y ) > VIEW_RADIUS )
                             {
                                 return -1;
                             }
-                            if( qdz != 0 && ( std::abs( qdx ) > REGION_RADIUS ||
-                                              std::abs( qdy ) > REGION_RADIUS ) )
+                            if( qd.z != 0 && ( std::abs( qd.x ) > REGION_RADIUS ||
+                                               std::abs( qd.y ) > REGION_RADIUS ) )
                             {
                                 return -1;
                             }
                             const level_cache &qc = here.get_cache_ref( q.z() );
                             lit_level qll = lit_level::BLANK;
-                            if( !( qdz < 0 && q.z() < lowest_vis_z ) )
+                            if( !( qd.z < 0 && q.z() < lowest_vis_z ) )
                             {
-                                qll = qdz > 0 ? upper_lit_at( qc, q )
+                                qll = qd.z > 0 ? upper_lit_at( qc, q )
                                 : qc.visibility_cache[q.x()][q.y()];
                             }
                             if( qll != lit_level::LOW && qll != lit_level::LIT &&
@@ -3952,8 +3958,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                         return point( -dm.x, -dm.y ); // facing W
                                 }
                             };
-                            const point front_dir = rot_mount( point( 1, 0 ), vrota );
-                            const point rear_dir = rot_mount( point( -1, 0 ), vrota );
+                            const point front_dir = rot_mount( point::east, vrota );
+                            const point rear_dir = rot_mount( point::west, vrota );
                             // a flank is exterior when no real part sits on that
                             // side (fake parts project out of turned wheels and
                             // must not punch holes in the hull)
@@ -4146,7 +4152,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             bool got_side_panel = false;
                             if( vdrew && has_elevation && !near_hide ) {
                                 for( const point dm : {
-                                         point( 0, -1 ), point( 0, 1 )
+                                         point::north, point::south
                                      } ) {
                                     if( !exterior( dm ) ) {
                                         continue;
@@ -4210,9 +4216,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // N,E,S,W = vrota 0,1,2,3 need k = (vrota+2)&3;
                             // fg additionally carries the lookup's own
                             // quarter-turn, like the skin does)
-                            const point left_dir = rot_mount( point( 0, -1 ), vrota );
-                            const point front_axis = front_dir.x != 0 ? point( 0, 1 )
-                                                     : point( 1, 0 );
+                            const point left_dir = rot_mount( point::north, vrota );
+                            const point front_axis = front_dir.x != 0 ? point::south
+                                                     : point::east;
                             const bool front_swap = front_axis != left_dir;
                             // TP-28: a tightened corner tile draws NO hood
                             // art — its decal shifted onto the middle column
@@ -4221,7 +4227,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // cover art is simply omitted (user decision);
                             // the cover's width is the middle columns' own
                             if( vdrew && has_elevation && !near_hide && !flank_tightened &&
-                                exterior( point( 1, 0 ) ) ) {
+                                exterior( point::east ) ) {
                                 // hood cover: front-exterior tile, laid flat on
                                 // the body box top
                                 sprite_lookup_3d ql;
@@ -4297,9 +4303,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // rear (sedans' rear windshield) uses the
                             // rear-facing frame and sticks to the cabin box's
                             // rear face
-                            const point right_dir = rot_mount( point( 0, 1 ), vrota );
-                            const point rear_axis = rear_dir.x != 0 ? point( 0, 1 )
-                                                    : point( 1, 0 );
+                            const point right_dir = rot_mount( point::south, vrota );
+                            const point rear_axis = rear_dir.x != 0 ? point::south
+                                                    : point::east;
                             const bool rear_swap = rear_axis != right_dir;
                             const bool is_windshield = vd.id.is_valid() &&
                                                        vd.id->has_flag( VPFLAG_WINDOW ) &&
@@ -4383,7 +4389,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // art is simply omitted (user decision); the rear
                             // face's width is the middle columns' own
                             if( vdrew && has_elevation && !near_hide && !flank_tightened &&
-                                exterior( point( -1, 0 ) ) ) {
+                                exterior( point::west ) ) {
                                 sprite_lookup_3d rl;
                                 lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
                                                          TILE_CATEGORY::VEHICLE_PART, p, vsub,
@@ -4415,9 +4421,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // a pickup bed's tail row — and falls through to
                             // here, which is exactly the intent).
                             const bool hood_tile = has_elevation &&
-                                                   exterior( point( 1, 0 ) );
+                                                   exterior( point::east );
                             const bool rear_tile = has_elevation &&
-                                                   exterior( point( -1, 0 ) );
+                                                   exterior( point::west );
                             if( vdrew && !near_hide && !roof_covered &&
                                 !got_side_panel && !is_windshield &&
                                 !hood_tile && !rear_tile && !is_mirror ) {
@@ -4447,10 +4453,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // stalk. Falls back to the mirror's own tile if
                             // no inboard body tile exists
                             if( is_mirror && vdrew && !near_hide ) {
-                                point minv( 0, 0 );
+                                point minv;
                                 for( const point dm : {
-                                         point( 0, -1 ), point( 0, 1 ),
-                                         point( -1, 0 ), point( 1, 0 )
+                                         point::north, point::south,
+                                         point::west, point::east
                                      } ) {
                                     if( !veh.parts_at_relative( mount + point_rel_ms( dm.x, dm.y ),
                                                                 true, false ).empty() ) {
@@ -4538,9 +4544,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // centered on the tile. N/S frames keep their art
                             // inside the tile already, so they keep the 2D
                             // footprint unchanged
-                            static const vpart_location_id on_roof_loc( "on_roof" );
                             if( roof_covered && vdrew && !near_hide &&
-                                vd.id->location == on_roof_loc ) {
+                                vd.id->location == vpart_location_on_roof ) {
                                 const float eq_oy = ( vrota & 1 ) ? 0.0f : oy;
                                 if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
                                     push_decal( vl.bg.atlas, static_cast<float>( dx ) + ox,
@@ -4728,22 +4733,21 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     for( const Creature &candidate : g->all_creatures() ) {
         const tripoint_bub_ms p = candidate.pos_bub();
         const int dz = p.z() - cz;
-        const int dx = p.x() - center.x();
-        const int dy = p.y() - center.y();
-        if( p.z() < zmin || p.z() > zmax || std::abs( dx ) > VIEW_RADIUS ||
-            std::abs( dy ) > VIEW_RADIUS || !here.inbounds( p ) ) {
+        const point d( p.x() - center.x(), p.y() - center.y() );
+        if( p.z() < zmin || p.z() > zmax || std::abs( d.x ) > VIEW_RADIUS ||
+            std::abs( d.y ) > VIEW_RADIUS || !here.inbounds( p ) ) {
             continue;
         }
-        if( dz != 0 && ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS ) ) {
+        if( dz != 0 && ( std::abs( d.x ) > REGION_RADIUS || std::abs( d.y ) > REGION_RADIUS ) ) {
             continue;
         }
         if( dz < 0 && p.z() < lowest_vis_z ) {
             continue;
         }
-        if( dz > 0 && dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) {
+        if( dz > 0 && dollhouse[( d.y + REGION_RADIUS ) * REGION_SIZE + ( d.x + REGION_RADIUS )] ) {
             continue;
         }
-        if( !tile_in_frustum( frustum, dx, dy, dz * LEVEL_HEIGHT ) ) {
+        if( !tile_in_frustum( frustum, d, dz * LEVEL_HEIGHT ) ) {
             continue;
         }
         occupied.insert( p );

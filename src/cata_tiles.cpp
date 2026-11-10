@@ -3173,8 +3173,10 @@ bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY 
         loc_rand = sprite_variation::mix_seed( resolve_sprite_seed( get_map(), res->id(), category, p ) );
         if( ttype.animated ) {
             has_animated_tiles_ = true;
-            const auto now = std::chrono::steady_clock::now();
-            const auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>( now );
+            const std::chrono::steady_clock::time_point now =
+                std::chrono::steady_clock::now();
+            const std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>
+            now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>( now );
             int animation_frame = static_cast<int>( now_ms.time_since_epoch().count() / 17 );
             animation_frame += loc_rand;
             int frames_in_loop = ttype.fg.get_weight();

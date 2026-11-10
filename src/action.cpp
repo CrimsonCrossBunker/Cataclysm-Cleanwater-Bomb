@@ -574,10 +574,7 @@ action_id get_movement_action_from_delta( const tripoint_rel_ms &d, const iso_ro
     // the world delta back into it first. the camera transform replaces the
     // isometric 45-degree approximation.
     if( rot == iso_rotate::yes ) {
-        int dx = xy.x();
-        int dy = xy.y();
-        if( render3d::camera_map_to_screen_delta( dx, dy ) ) {
-            xy = point_rel_ms( dx, dy );
+        if( render3d::camera_map_to_screen_delta( xy.x(), xy.y() ) ) {
             iso_mode = false;
         }
     }
@@ -648,10 +645,8 @@ point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rota
     if( rot == iso_rotate::yes ) {
 #if defined(TILES)
         // 3D: screen direction -> map direction for the orbit camera
-        int dx = delta.x();
-        int dy = delta.y();
-        if( render3d::camera_screen_to_map_delta( dx, dy ) ) {
-            return point_rel_ms( dx, dy );
+        if( render3d::camera_screen_to_map_delta( delta.x(), delta.y() ) ) {
+            return delta;
         }
 #endif
         if( g->is_tileset_isometric() ) {
