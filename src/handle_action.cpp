@@ -1,24 +1,18 @@
-#include "vertical_movement.h"
-#include "radio_car_control.h"
-#include "grab.h"
-#include "hauling.h"
-#include "walking.h"
-#include "character_action_guard.h"
-#include "vehicle_control.h"
 #include "game.h" // IWYU pragma: associated
 
 #include <coordinates.h>
 #include <creature.h>
 #include <enums.h>
 #include <item_location.h>
+#include <item_source.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <pimpl.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <cstdlib>
 #include <initializer_list>
 #include <list>
 #include <map>
@@ -36,15 +30,13 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "bionics.h"
-#include "mp_inventory_activity.h"
-#include "mp_world_session.h"
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "clzones.h"
@@ -67,7 +59,9 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gamemode.h"
+#include "grab.h"
 #include "gun_mode.h"
+#include "hauling.h"
 #include "help.h"
 #include "input_context.h"
 #include "input_enums.h"
@@ -91,6 +85,8 @@
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
+#include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "options.h"
@@ -102,9 +98,13 @@
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
+#include "radio_car_control.h"
 #include "ranged.h"
 #include "rng.h"
 #include "safemode_ui.h"
+#include "vehicle_control.h"
+#include "vertical_movement.h"
+#include "walking.h"
 #if defined(TILES)
     #include "sdl_gamepad.h"
 #endif
@@ -123,17 +123,18 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
-#include "vpart_range.h"
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
 
 #define MP_ENABLED
-#include "line.h"
 #include "mp_client_conn.h"
-#include "mp_gamestate.h"
 #include "mp_equipment.h"
+#include "mp_gamestate.h"
+#include "mp_melee.h"
 #include "npc.h"
+
+enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
@@ -147,13 +148,7 @@
     #include "sdl_wrappers.h"
 #endif
 
-static const activity_id ACT_PICKUP( "ACT_PICKUP" );
-static const activity_id ACT_WAIT( "ACT_WAIT" );
-static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
-static const activity_id ACT_WAIT_STAMINA( "ACT_WAIT_STAMINA" );
-static const activity_id ACT_WAIT_WEATHER( "ACT_WAIT_WEATHER" );
 static const activity_id ACT_WEAR( "ACT_WEAR" );
-
 
 static const character_modifier_id
 character_modifier_move_mode_move_cost_mod( "move_mode_move_cost_mod" );
@@ -163,8 +158,8 @@ static const damage_type_id damage_cut( "cut" );
 static const efftype_id effect_alarm_clock( "alarm_clock" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_laserlocked( "laserlocked" );
-static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_stunned( "stunned" );
 
 static const flag_id json_flag_ALLOWS_REMOTE_USE( "ALLOWS_REMOTE_USE" );
 static const flag_id json_flag_MOP( "MOP" );
@@ -173,14 +168,10 @@ static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 
-static const itype_id fuel_type_animal( "animal" );
-
 static const json_character_flag json_flag_ALARMCLOCK( "ALARMCLOCK" );
 static const json_character_flag json_flag_BIONIC_SLEEP_FRIENDLY( "BIONIC_SLEEP_FRIENDLY" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_HANDS_CANNOT_USE_FIREARMS( "HANDS_CANNOT_USE_FIREARMS" );
-static const json_character_flag json_flag_LEVITATION( "LEVITATION" );
-static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
 static const json_character_flag json_flag_SUBTLE_SPELL( "SUBTLE_SPELL" );
 static const json_character_flag
 json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
@@ -198,21 +189,6 @@ static const trait_id trait_PROF_CHURL( "PROF_CHURL" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHELL3( "SHELL3" );
 static const trait_id trait_WAYFARER( "WAYFARER" );
-
-static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
-static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
-static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
-static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
-static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
-static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
-static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
-static const zone_type_id zone_type_MINING( "MINING" );
-static const zone_type_id zone_type_MOPPING( "MOPPING" );
-static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
-static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
-static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
-static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
-static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -1366,7 +1342,7 @@ static void sleep()
     }
 
     // check for deactivating any currently played music instrument.
-    for( item*&item : player_character.inv_dump() ) {
+    for( item *&item : player_character.inv_dump() ) {
         if( item->active && item->get_use( "musical_instrument" ) != nullptr ) {
             player_character.add_msg_if_player( _( "You stop playing your %s before trying to sleep." ),
                                                 item->tname() );
@@ -2293,7 +2269,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             const int direction = act == ACTION_MOVE_UP ? 1 : -1;
             if( vehicle *craft = controlled_vehicle( player_character, here ); craft &&
                 craft->is_aircraft( here ) ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"pldrive\",\"dz\":" +
+                mp_dispatch( R"({"type":"action","action":"pldrive","dz":)" +
                              std::to_string( direction ) + "}" );
             } else {
                 cata_mp::client_query_vertical_move( direction );

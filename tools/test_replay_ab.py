@@ -247,7 +247,8 @@ class ReplayProcessTest(unittest.TestCase):
             report["runs"][0]["native_completion"], native_summary())
 
     def test_recorded_zero_overrides_distinct_invocation_seeds(self):
-        self.replay.write_text(self.replay.read_text().replace("SEED 123", "SEED 0"))
+        self.replay.write_text(
+            self.replay.read_text().replace("SEED 123", "SEED 0"))
         self.binary = self.native_executable("native", native_summary(seed=0))
         code, report = self.execute([
             "--expected-turns", "2", "--invocation-seeds", "first", "second",
@@ -265,11 +266,13 @@ class ReplayProcessTest(unittest.TestCase):
         )
         code, report = self.execute(["--invocation-seeds", "first", "second"])
         self.assertEqual(code, 1)
-        self.assertEqual(report["differences"], ["differs:   world/player.sav"])
+        self.assertEqual(report["differences"], [
+                         "differs:   world/player.sav"])
 
     def test_conflicting_invocation_seeds_fail_before_copying(self):
         for extra in (["--seed", "shared"], ["--seed=shared"]):
-            self.assert_invalid(["--invocation-seeds", "first", "second", "--", *extra])
+            self.assert_invalid(
+                ["--invocation-seeds", "first", "second", "--", *extra])
 
     def test_different_native_positions_fail_even_with_equal_save_bytes(self):
         self.binary = self.native_executable("native", native_summary())
@@ -282,7 +285,8 @@ class ReplayProcessTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("native differs: final_position", report["differences"])
 
-    def test_different_routes_fail_even_with_equal_final_positions_and_saves(self):
+    def test_different_routes_fail_even_with_equal_final_positions_and_saves(
+            self):
         self.binary = self.native_executable("native", native_summary())
         candidate = self.native_executable(
             "candidate", native_summary(turn_positions=[[2, 2, 0], [1, 2, 0]]))
@@ -397,8 +401,8 @@ class ReplayProcessTest(unittest.TestCase):
         self.assertNotIn("profile_seed", legacy)
         seed = "0123456789abcdef0123456789abcdef"
         self.replay.write_text(
-            f"CATA_REPLAY 2\nSEED 123\nPROFILE_SEED {seed}\nEV 1 0 1 46 0 0 - -\n"
-        )
+            f"CATA_REPLAY 2\nSEED 123\nPROFILE_SEED {seed}\n"
+            "EV 1 0 1 46 0 0 - -\n")
         current = replay_ab.replay_metadata(self.replay)
         self.assertEqual(current["profile_seed"], seed)
         self.assertEqual(current["seed"], legacy["seed"])

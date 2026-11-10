@@ -8,6 +8,11 @@
 #include "mp_inventory_activity.h"
 #include "iuse_actor.h"
 
+#include <cstdlib>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -30,7 +35,6 @@
 #include "remote_vehicle_activity.h"
 #include "martial_style_selection.h"
 #include "character.h"
-#include "character_martial_arts.h"
 #include "martialarts.h"
 #include "help.h"
 #include "activity_handlers.h"
@@ -46,10 +50,8 @@
 #include "construction.h"
 #include "dialogue.h"
 #include "dialogue_win.h"
-#include "input.h"
 #include "input_context.h"
 #include "input_popup.h"
-#include "line.h"
 #include "creature_tracker.h"
 #include "flag.h"
 #include "event.h"
@@ -72,12 +74,10 @@
 #include "iuse.h"
 #include "json.h"
 #include "map.h"
-#include "mapdata.h"
 #include "magic.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
-#include "npctalk.h"
 #include "output.h"
 #include "spell_casting_choice.h"
 #include "messages.h"
@@ -103,6 +103,37 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vpart_position.h"
+#include "action.h"
+#include "activity_actor.h"
+#include "calendar.h"
+#include "character_id.h"
+#include "clone_ptr.h"
+#include "coordinates.h"
+#include "craft_result_state.h"
+#include "crafting_enums.h"
+#include "creature.h"
+#include "enums.h"
+#include "flexbuffer_json.h"
+#include "handle_liquid.h"
+#include "input_enums.h"
+#include "item_components.h"
+#include "item_source.h"
+#include "item_unload.h"
+#include "lua_platform_state.h"
+#include "map_iterator.h"
+#include "map_scale_constants.h"
+#include "mp_actor_binding.h"
+#include "mp_peek.h"
+#include "mp_world_state.h"
+#include "pimpl.h"
+#include "player_identity.h"
+#include "point.h"
+#include "recipe.h"
+#include "translation.h"
+#include "type_id.h"
+#include "units.h"
+#include "view_action.h"
+#include "vpart_range.h"
 
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_CHOP_LOGS( "ACT_CHOP_LOGS" );
@@ -1745,42 +1776,43 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 if( operation == "step" && who.get_moves() > 0 ) {
                     who.activity.do_turn( who );
                 }
-            } else if( !reload_locations_accessible( who, here, *native_reload( who ) ) ) {
-                who.cancel_activity();
-                state.needs_placement = false;
-            } else if( who.get_moves() > 0 && operation == "step" ) {
+            } else {
                 reload_activity_actor *actor = native_reload( who );
-                const uint64_t identity = who.activity.identity_generation();
-                const bool ready = actor->prepare_owned_turn( who );
-                if( lifetime && who.activity.identity_generation() == identity ) {
-                    state.needs_placement = !ready;
-                    if( ready ) {
-                        who.activity.do_turn( who );
-                    } else if( !actor->preview_remaining() ) {
-                        who.cancel_activity();
+                if( !reload_locations_accessible( who, here, *actor ) ) {
+                    who.cancel_activity();
+                    state.needs_placement = false;
+                } else if( who.get_moves() > 0 && operation == "step" ) {
+                    const std::uint64_t identity = who.activity.identity_generation();
+                    const bool ready = actor->prepare_owned_turn( who );
+                    if( lifetime && who.activity.identity_generation() == identity ) {
+                        state.needs_placement = !ready;
+                        if( ready ) {
+                            who.activity.do_turn( who );
+                        } else if( !actor->preview_remaining() ) {
+                            who.cancel_activity();
+                            state.needs_placement = false;
+                        }
+                    }
+                } else if( who.get_moves() > 0 && operation == "place" && state.needs_placement ) {
+                    const std::string placement = request.get_string( "placement" );
+                    const std::uint64_t identity = who.activity.identity_generation();
+                    const auto preview = actor->preview_remaining();
+                    bool ready = preview && ( placement != "wield" || reload_wield_allowed( who, *actor, *preview ) );
+                    if( ready && placement == "wield" && who.has_wield_conflicts( *preview ) ) {
+                        const item_location weapon = who.get_wielded_item();
+                        ready = who.can_wield( *preview ).success() && request.has_object( "disposition" );
+                        if( ready ) {
+                            const JsonObject selected = request.get_object( "disposition" );
+                            const item_disposition choice{ selected.get_string( "action" ),
+                                                           selected.get_int64( "container" ), selected.get_int64( "pocket" ) };
+                            ready = execute_item_disposition( who, weapon, choice );
+                        }
+                    }
+                    if( lifetime && who.activity.identity_generation() == identity && ready &&
+                        ( placement == "wield" || placement == "drop" ) &&
+                        actor->place_target( who, placement == "wield" ) ) {
                         state.needs_placement = false;
                     }
-                }
-            } else if( who.get_moves() > 0 && operation == "place" && state.needs_placement ) {
-                const std::string placement = request.get_string( "placement" );
-                reload_activity_actor *actor = native_reload( who );
-                const uint64_t identity = who.activity.identity_generation();
-                const auto preview = actor->preview_remaining();
-                bool ready = preview && ( placement != "wield" || reload_wield_allowed( who, *actor, *preview ) );
-                if( ready && placement == "wield" && who.has_wield_conflicts( *preview ) ) {
-                    const item_location weapon = who.get_wielded_item();
-                    ready = who.can_wield( *preview ).success() && request.has_object( "disposition" );
-                    if( ready ) {
-                        const JsonObject selected = request.get_object( "disposition" );
-                        const item_disposition choice{ selected.get_string( "action" ),
-                                                       selected.get_int64( "container" ), selected.get_int64( "pocket" ) };
-                        ready = execute_item_disposition( who, weapon, choice );
-                    }
-                }
-                if( lifetime && who.activity.identity_generation() == identity && ready &&
-                    ( placement == "wield" || placement == "drop" ) &&
-                    actor->place_target( who, placement == "wield" ) ) {
-                    state.needs_placement = false;
                 }
             }
         }
@@ -3047,38 +3079,40 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
     return true;
 }
 
-static bool client_choose_dialogue_response( std::size_t index )
+bool client_choose_dialogue_response( uint64_t session_id, uint64_t response_revision,
+                                      std::size_t index )
 {
     inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
-        !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        !view.dialogue_prompt || view.dialogue_prompt->session_id != session_id ||
+        view.dialogue_prompt->response_revision != response_revision ||
+        is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
         index >= view.dialogue_prompt->options.size() ||
         !view.dialogue_prompt->options[index].selectable ) {
         return false;
     }
-    const uint64_t session_id = view.dialogue_prompt->session_id;
-    const uint64_t revision = view.dialogue_prompt->response_revision;
     send_inventory_activity( "choose", [&]( JsonOut & out ) {
         out.member( "dialogue_session", static_cast<int64_t>( session_id ) );
-        out.member( "response_revision", static_cast<int64_t>( revision ) );
+        out.member( "response_revision", static_cast<int64_t>( response_revision ) );
         out.member( "response_index", static_cast<int>( index ) );
     } );
     return view.pending_request != 0;
 }
 
-static bool client_dialogue_special_action( const std::string &action )
+bool client_dialogue_special_action( uint64_t session_id, uint64_t response_revision,
+                                     const std::string &action )
 {
     inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
     if( !is_client_mode() || !view.active || view.pending_request != 0 ||
-        !view.dialogue_prompt || is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        !view.dialogue_prompt || view.dialogue_prompt->session_id != session_id ||
+        view.dialogue_prompt->response_revision != response_revision ||
+        is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
         action.empty() ) {
         return false;
     }
-    const uint64_t session_id = view.dialogue_prompt->session_id;
-    const uint64_t revision = view.dialogue_prompt->response_revision;
     send_inventory_activity( "choose", [&]( JsonOut & out ) {
         out.member( "dialogue_session", static_cast<int64_t>( session_id ) );
-        out.member( "response_revision", static_cast<int64_t>( revision ) );
+        out.member( "response_revision", static_cast<int64_t>( response_revision ) );
         out.member( "special_action", action );
     } );
     return view.pending_request != 0;
@@ -3175,7 +3209,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
                 ( action == "LOOK_AT" || action == "SIZE_UP_STATS" ||
                   action == "ASSESS_PERSONALITY" || action == "YELL" ||
                   action == "CHECK_OPINION" ) ) {
-                client_dialogue_special_action( action );
+                client_dialogue_special_action( prompt.session_id, prompt.response_revision, action );
                 return;
             }
             if( action == "HELP_KEYBINDINGS" ) {
@@ -3207,7 +3241,7 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
         }
     } while( !okay );
 
-    client_choose_dialogue_response( response_ind );
+    client_choose_dialogue_response( prompt.session_id, prompt.response_revision, response_ind );
 }
 
 void client_step_inventory_activity()
@@ -3328,7 +3362,7 @@ void client_update_inventory_activity_view()
                     view.peek.reset();
                 } );
                 const look_around_result result = g->look_from(
-                        here.get_bub( peek->viewpoint ), peek->standing, peek->z_range );
+                                                      here.get_bub( peek->viewpoint ), peek->standing, peek->z_range );
                 if( view.peek && view.peek->request == peek->request && result.selection ) {
                     g->apply_view_action( *result.selection );
                 }

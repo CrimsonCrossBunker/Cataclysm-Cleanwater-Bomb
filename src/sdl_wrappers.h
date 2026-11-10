@@ -403,7 +403,7 @@ void SetWindowTitle( SDL_Window *window, const char *title );
 // SDL3: takes name string instead of index, flags removed. Vsync via SDL_SetRenderVSync.
 // When software == true, SDL3 path passes "software" as driver name.
 SDL_Renderer_Ptr CreateRenderer( const SDL_Window_Ptr &window, const char *driver_name,
-                                 bool software, bool vsync, bool allow_gpu_d3d12 = false );
+                                 bool software, bool vsync );
 
 // Touch finger events emit normalized [0,1] values; the wrappers multiply by the
 // supplied window dimension to recover window-pixel coordinates.

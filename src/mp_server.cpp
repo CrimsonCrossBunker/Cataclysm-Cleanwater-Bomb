@@ -1,5 +1,7 @@
 #include "mp_server.h"
+#include "mp_log.h"
 
+#include <exception>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -14,18 +16,20 @@
 #include "mp_protocol.h"
 #include "mp_queue.h"
 #include "mp_renet_transport.h"
+#include "mp_admission.h"
+#include "mp_player_identity.h"
+#include "player_identity.h"
+#include "world_identity.h"
 
 namespace cata_mp
 {
-void mp_log_host( const std::string &msg ); // NOLINT(cata-static-declarations)
-
 namespace
 {
 using clock = std::chrono::steady_clock;
 // Lift only after the engine's per-player simulation state is migrated.
 constexpr size_t max_game_peers = 3;
 
-}
+} // namespace
 
 struct server::impl {
     renet_context transport;
@@ -79,13 +83,13 @@ server::~server() = default;
 
 void server::stop()
 {
-    std::lock_guard<std::mutex> lock( impl_->mutex );
+    std::scoped_lock lock( impl_->mutex );
     impl_->end();
 }
 
 void server::post( const peer_admission *admission, const std::string &msg, bool close )
 {
-    std::lock_guard<std::mutex> lock( impl_->mutex );
+    std::scoped_lock lock( impl_->mutex );
     if( impl_->stopping ) {
         return;
     }
@@ -135,7 +139,7 @@ void server::broadcast( const std::string &msg )
 
 void server::post_reject( const peer_admission &admission, const std::string &reason )
 {
-    post( &admission, "{\"type\":\"error\",\"message\":" + wire_quote( reason ) + "}", true );
+    post( &admission, R"({"type":"error","message":)" + wire_quote( reason ) + "}", true );
 }
 
 void server::post_broadcast( const std::string &msg )
@@ -154,13 +158,13 @@ void server::on_disconnected( uint64_t id )
     if( peer.admission.peer_id() != 0 ) {
         peer.admission.retire();
         {
-            std::lock_guard<std::mutex> lock( impl_->mutex );
+            std::scoped_lock lock( impl_->mutex );
             impl_->published.erase( id );
         }
         if( !impl_->events->push( { mp_event::type::disconnect, peer.name, "", peer.admission } ) ) {
             throw std::runtime_error( "Missing reserved multiplayer disconnect event" );
         }
-        post_broadcast( "{\"type\":\"player_left\",\"name\":" + wire_quote( peer.name ) + "}" );
+        post_broadcast( R"({"type":"player_left","name":)" + wire_quote( peer.name ) + "}" );
     }
 }
 
@@ -175,13 +179,13 @@ void server::on_message( uint64_t id, const std::string &msg )
         return impl_->transport.send( id, renet_channel::reliable_ordered, encode_game_packet( reply ) );
     };
     const auto reject = [&]( const std::string & reason ) {
-        send( "{\"type\":\"error\",\"message\":" + wire_quote( reason ) + "}" );
+        send( R"({"type":"error","message":)" + wire_quote( reason ) + "}" );
         // Allow the reliable error to leave before netcode tears down the peer.
         peer.closing = clock::now() + std::chrono::seconds( 1 );
     };
     const auto enqueue_action = [&]() {
         if( !impl_->events->push( { mp_event::type::action, peer.name, msg, peer.admission } ) ) {
-            reject( "Host incoming action queue is full; this message was not accepted. Reconnect to resynchronize." );
+            reject( "Host incoming action queue is full; this message was not accepted.  Reconnect to resynchronize." );
         }
     };
     std::map<std::string, std::string> fields;
@@ -205,7 +209,7 @@ void server::on_message( uint64_t id, const std::string &msg )
             return;
         }
         if( !version_.empty() && version_commit_id( fields["version"] ) != version_commit_id( version_ ) ) {
-            reject( "Version mismatch. Host: " + version_ + " Client: " + fields["version"] );
+            reject( "Version mismatch.  Host: " + version_ + " Client: " + fields["version"] );
             return;
         }
         if( fields["password"] != password_ ) {
@@ -240,7 +244,7 @@ void server::on_message( uint64_t id, const std::string &msg )
         }
         server_welcome welcome;
         {
-            std::lock_guard<std::mutex> lock( impl_->mutex );
+            std::scoped_lock lock( impl_->mutex );
             welcome = impl_->welcome;
         }
         if( !welcome.world.valid() ) {
@@ -258,18 +262,18 @@ void server::on_message( uint64_t id, const std::string &msg )
                                      std::to_string( ( *welcome.host_omt )[1] ) + "," +
                                      std::to_string( ( *welcome.host_omt )[2] ) + "]" : "";
         const std::string welcome_packet =
-            "{\"type\":\"welcome\",\"transport\":\"ccb-renet-2\",\"player_id\":" +
+            R"({"type":"welcome","transport":"ccb-renet-2","player_id":)" +
             wire_quote( type == "join" ? credentials.id.str() : "probe" ) +
             ",\"peer_id\":" + std::to_string( id ) +
             ",\"world\":" + wire_quote( welcome.world_name ) +
             ",\"world_id\":" + wire_quote( welcome.world.str() ) +
             ",\"host_name\":" + wire_quote( welcome.player_name ) +
-            ",\"current_turn\":0,\"seed\":" + std::to_string( welcome.seed ) + position + "}";
+            R"(,"current_turn":0,"seed":)" + std::to_string( welcome.seed ) + position + "}";
         if( type == "join" ) {
             peer.name = name;
             peer.admission = peer_admission::create( id );
             {
-                std::lock_guard<std::mutex> lock( impl_->mutex );
+                std::scoped_lock lock( impl_->mutex );
                 if( impl_->stopping ) {
                     peer.admission.retire();
                     return;
@@ -282,12 +286,12 @@ void server::on_message( uint64_t id, const std::string &msg )
                 }
                 impl_->published[id] = peer.admission;
             }
-            post_broadcast( "{\"type\":\"player_joined\",\"name\":" + wire_quote( name ) + "}" );
+            post_broadcast( R"({"type":"player_joined","name":)" + wire_quote( name ) + "}" );
             mp_log_host( "[ccb-mp] peer joined: " + std::to_string( id ) );
         }
         send( welcome_packet );
     } else if( type == "quit" ) {
-        send( "{\"type\":\"goodbye\"}" );
+        send( R"({"type":"goodbye"})" );
         peer.closing = clock::now() + std::chrono::milliseconds( 100 );
     } else if( peer.admission.active() ) {
         enqueue_action();
@@ -313,7 +317,7 @@ void server::run()
                 }
                 std::vector<uint64_t> removed;
                 for( const auto &entry : impl_->peers ) {
-                    const auto &peer = entry.second;
+                    const cata_mp::server::impl::peer &peer = entry.second;
                     if( std::find( connected.begin(), connected.end(), entry.first ) == connected.end() ) {
                         removed.push_back( entry.first );
                     } else if( clock::now() >= peer.closing ||
@@ -337,11 +341,11 @@ void server::run()
             }
             std::deque<impl::delivery> outgoing;
             {
-                std::lock_guard<std::mutex> lock( impl_->mutex );
+                std::scoped_lock lock( impl_->mutex );
                 outgoing.swap( impl_->outgoing );
                 impl_->outgoing_bytes = 0;
             }
-            for( const auto &message : outgoing ) {
+            for( const cata_mp::server::impl::delivery &message : outgoing ) {
                 const std::string packet = encode_game_packet( message.message );
                 if( packet.empty() ) {
                     mp_log_host( "[ccb-mp] invalid or oversized outgoing packet; ending session" );
@@ -383,7 +387,7 @@ bool server::running() const
 
 void server::update_welcome( server_welcome welcome )
 {
-    std::lock_guard<std::mutex> lock( impl_->mutex );
+    std::scoped_lock lock( impl_->mutex );
     if( !impl_->stopping ) {
         impl_->welcome = std::move( welcome );
     }
