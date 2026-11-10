@@ -4904,9 +4904,9 @@ static bool can_place_monster( const monster &mon, const tripoint_bub_ms &p )
             return false;
         }
     }
-    // Although monsters can sometimes exist on the same place as a Character (e.g. ridden horse),
-    // it is usually wrong. So don't allow it.
-    if( creatures.creature_at<Character>( p ) ) {
+    if( const Character *rider = creatures.creature_at<Character>( p );
+        rider && ( !mon.has_effect( effect_ridden ) || !rider->has_effect( effect_riding ) ||
+                   mon.mounted_player_id != rider->getID() ) ) {
         return false;
     }
     return mon.will_move_to( p ) && mon.know_danger_at( p );
@@ -4922,9 +4922,9 @@ static bool can_place_monster( const monster &mon, map *here, const tripoint_bub
             return false;
         }
     }
-    // Although monsters can sometimes exist on the same place as a Character (e.g. ridden horse),
-    // it is usually wrong. So don't allow it.
-    if( creatures.creature_at<Character>( pos ) ) {
+    if( const Character *rider = creatures.creature_at<Character>( pos );
+        rider && ( !mon.has_effect( effect_ridden ) || !rider->has_effect( effect_riding ) ||
+                   mon.mounted_player_id != rider->getID() ) ) {
         return false;
     }
     return mon.will_move_to( here, p ) && mon.know_danger_at( here, p );

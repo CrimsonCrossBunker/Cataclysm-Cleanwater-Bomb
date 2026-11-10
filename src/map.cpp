@@ -2041,6 +2041,7 @@ void map::unboard_vehicle( const vpart_reference &vp, Character *passenger, bool
 {
     // Mark the part as un-occupied regardless of whether there's a live passenger here.
     vp.part().remove_flag( vp_flag::passenger_flag );
+    vp.part().passenger_id = character_id();
     vp.vehicle().invalidate_mass();
 
     if( !passenger ) {
@@ -2062,18 +2063,21 @@ void map::unboard_vehicle( const vpart_reference &vp, Character *passenger, bool
 void map::unboard_vehicle( const tripoint_bub_ms &p, bool dead_passenger )
 {
     const std::optional<vpart_reference> vp = veh_at( p ).part_with_feature( VPFLAG_BOARDABLE, false );
-    Character *passenger = nullptr;
+    Character *occupant = get_creature_tracker().creature_at<Character>( p );
     if( !vp ) {
-        debugmsg( "map::unboard_vehicle: vehicle not found" );
-        // Try and force unboard the player anyway.
-        passenger = get_creature_tracker().creature_at<Character>( p );
-        if( passenger ) {
-            passenger->in_vehicle = false;
-            passenger->controlling_vehicle = false;
+        if( occupant && occupant->in_vehicle ) {
+            DebugLog( D_WARNING, D_MAP ) << "Clearing stale passenger state without a vehicle at " << p;
+            occupant->in_vehicle = false;
+            occupant->controlling_vehicle = false;
+        } else {
+            debugmsg( "map::unboard_vehicle: vehicle not found" );
         }
         return;
     }
-    passenger = vp->get_passenger();
+    Character *passenger = vp->get_passenger();
+    if( !passenger && occupant && occupant->in_vehicle ) {
+        passenger = occupant;
+    }
     unboard_vehicle( *vp, passenger, dead_passenger );
 }
 
@@ -6768,7 +6772,7 @@ void map::spawn_item( const tripoint_bub_ms &p, const itype_id &type_id, const u
 
 std::optional<item> map::prepare_spawn_item( const tripoint_bub_ms &p, const itype_id &type_id,
         const int charges, const time_point &birthday, const int damlevel, const std::set<flag_id> &flags,
-        const std::string &variant, const std::string &faction )
+        const std::string &variant, const std::string &faction ) const
 {
     if( type_id.is_null() || item_is_blacklisted( type_id ) ) {
         return std::nullopt;
@@ -6835,7 +6839,7 @@ item_location map::add_item_or_charges_ret_loc( const tripoint_bub_ms &pos, item
 int map::transfer_item_or_charges( const tripoint_bub_ms &pos, item_location source,
                                    item prepared, Character &dropper, int source_range, bool overflow, item_location *placed )
 {
-    return transfer_item_or_charges_impl( pos, source, std::move( prepared ), &dropper,
+    return transfer_item_or_charges_impl( pos, std::move( source ), std::move( prepared ), &dropper,
                                           source_range, overflow, placed, false );
 }
 
@@ -12957,7 +12961,7 @@ bool map::try_fall( const tripoint_bub_ms &p, Creature *c )
     if( !lifetime ) {
         return false;
     }
-    const auto landing = get_abs( where );
+    const tripoint_abs_ms landing = get_abs( where );
     if( you->has_flag( json_flag_WALL_CLING ) &&  this->is_wall_adjacent( p ) ) {
         you->add_msg_player_or_npc( _( "You attach yourself to the nearby wall." ),
                                     _( "<npcname> clings to the wall." ) );

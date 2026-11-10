@@ -1,0 +1,39 @@
+[
+  {
+    "id": "TALK_EXODI_INTERCOM_AUTODOC_B",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('14 d')" ],
+      "yes": "&The intercom clicks off and there is a long moment of silence, before it clicks back on again with a new person on the other end.  \"Yes, hello.  Right.  Yes.  Indeed, we have been able to reconstruct the automatic medical device.  Thanks to your efforts, and those of other contractors and Hub scientists, we now understand how the Exodii use neural interfaces to control their mechanical bodies.  We have drawn on that work to develop a new interface for our existing CBM technology.  You can find a new, public medical suite across the street, in the old basement of the weather station - you should be able to find the stairs just inside the entrance.  Please feel free to make use of its services.  As previously discussed, we would like to invite you to join our new program, where select mercenaries will be allowed to field test new cybernetic enhancements.  Doctor Stevens at the facility will give you more information.  In fact, as a reward for your service, we are prepared to install this new interface and its supporting equipment at no charge.\"",
+      "no": {
+        "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('12 d')" ],
+        "yes": "Our newest project will be ready for field testing within days.  We suggest checking back regularly.",
+        "no": {
+          "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('7 d')" ],
+          "yes": "We expect the surgical suite to be ready in approximately one week.",
+          "no": "The project is ongoing, and we expect it will take weeks or months until it is ready for testing.  We suggest you check back in next week."
+        }
+      }
+    }
+  },
+  {
+    "type": "snippet",
+    "category": "<fcl_hub_has_interface>",
+    "text": [ "Actually, I already have one of the Exodii CBM interfaces installed." ]
+  },
+  {
+    "type": "snippet",
+    "category": "<fcl_hub_new_cybernetics>",
+    "text": [ "Cybernetics?  What exactly have you developed?" ]
+  },
+  {
+    "id": "TALK_EXODI_INTERCOM_AUTODOC_B_EXODII_INTERFACE",
+    "type": "talk_topic",
+    "dynamic_line": "&The intercom is silent for a long moment, then it clicks off, then back on, with the same voice as before:  \"Interesting.  We'll inform Doc Stevens.  We would be willing to pay you to study this device, whether you wish to participate in the field testing units or not.  Unfortunately, based on our research, this Exodii technology was a complete dead end, with no room for improvement, and it carries significant risks, including cancer and increased risk of internal bleeding.  In fact, that technology has not considered making one exist as a human being at all.  Our improved interface is completely safe and will be of great benefit to u- to mankind.  To boot, it will work with local CBMs and remain compatible with whatever bionic modules we can continue to recover from the Exodii.  We suggest you have Doc Stevens swap it out immediately.\""
+  },
+  {
+    "id": "TALK_EXODI_INTERCOM_AUTODOC_B_CYBERNETICS_INFO",
+    "type": "talk_topic",
+    "dynamic_line": "The Exodii made their \"workers\" out of human beings, each implanted with a computer-brain interface.  This is similar to CBMs technology before the cataclysm, but with more integrated interfaces.  Integrated tools and radios are familiar enough.  We have used that research to develop our own new interface.  Unfortunately, the Exodii interfaces are not particularly advanced or safe, and come with serious cancer risks, among other problems.  In fact, that technology has not considered making one exist as a human being at all.  Our improved interface is completely safe and will be of great benefit to u- to mankind.  To boot, it will work with local CBMs and remain compatible with whatever bionic modules we can continue to recover from the Exodii."
+  }
+]

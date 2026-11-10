@@ -1406,7 +1406,7 @@ class map
                                                 int charges = 0,
                                                 const time_point &birthday = calendar::start_of_cataclysm,
                                                 int damlevel = 0, const std::set<flag_id> &flags = {},
-                                                const std::string &variant = "", const std::string &faction = "" );
+                                                const std::string &variant = "", const std::string &faction = "" ) const;
         void spawn_item( const tripoint_bub_ms &p, const itype_id &type_id,
                          unsigned quantity = 1, int charges = 0,
                          const time_point &birthday = calendar::start_of_cataclysm, int damlevel = 0,
