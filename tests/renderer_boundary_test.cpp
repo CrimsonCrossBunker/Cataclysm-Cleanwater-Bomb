@@ -29,12 +29,16 @@
 #include "sdltiles.h"
 #include "type_id.h"
 
+static const itype_id itype_rock( "rock" );
+
+static const mtype_id mon_zombie( "mon_zombie" );
+
 static std::array<std::uint32_t, 4096> draw_boundary_pixels( const tripoint_bub_ms &center,
         int extent = 64, std::multimap<point, formatted_text> *annotations = nullptr )
 {
     display_buffer_draw_scope scope;
     REQUIRE_FALSE( display_buffer_scope_is_invalid() );
-    const auto &renderer = get_sdl_renderer();
+    const SDL_Renderer_Ptr &renderer = get_sdl_renderer();
     SetRenderDrawColor( renderer, 0, 0, 0, 255 );
     RenderClear( renderer );
     std::multimap<point, formatted_text> text;
@@ -90,9 +94,8 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
             return ( p & 0xffffff ) != 0;
         } ) );
         REQUIRE( here.add_field( center + point::east, field_type_id( "fd_smoke" ), 1 ) );
-        here.add_item_or_charges( center + point::south, item( itype_id( "rock" ), calendar::turn ) );
-        // The public dirty notifier intentionally ignores test_mode. This
-        // renderer fixture explicitly publishes changed owner inputs instead.
+        here.add_item_or_charges( center + point::south, item( itype_rock, calendar::turn ) );
+        // The renderer fixture explicitly publishes changed owner inputs.
         tilecontext->set_draw_cache_dirty();
         const auto dynamic = draw_boundary_pixels( center );
         CHECK( dynamic != plain );
@@ -148,8 +151,9 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         const auto remembered = draw_boundary_pixels( center );
         CHECK( you.get_memorized_tile( absolute ).get_ter_id() == "t_wall" );
         bool captured_hidden = false;
-        for( const auto &row : renderer_recovery_test_support::tile_draw_rows( *tilecontext, 0 ) ) {
-            for( const auto &tile : row ) {
+        for( const draw_points_cache_t::row_vec &row :
+             renderer_recovery_test_support::cached_map_rows( *tilecontext, 0 ) ) {
+            for( const tile_render_info &tile : row ) {
                 if( tile.view.pos == hidden ) {
                     const auto *sprite = std::get_if<tile_render_info::sprite>( &tile.var );
                     REQUIRE( sprite );
@@ -182,14 +186,14 @@ TEST_CASE( "draw_cache_sprite_indices_follow_append_relocation_and_rebuild",
                               tile_render_info::vision_effect{ visibility_type::HIDDEN } );
         }
     };
-    auto &row = cache[0][10];
+    draw_points_cache_t::row_vec &row = cache[0][10];
     for( int i = 0; i < 80; ++i ) {
         add( row, i, i % 3 == 1 );
     }
     const auto verify = [&]( draw_points_cache_t::row_vec & values ) {
         std::vector<std::size_t> expected;
         std::size_t index = 0;
-        for( const auto &entry : values ) {
+        for( const tile_render_info &entry : values ) {
             if( std::holds_alternative<tile_render_info::sprite>( entry.var ) ) {
                 expected.push_back( index );
             }
@@ -253,8 +257,9 @@ TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
         CHECK( renderer_recovery_test_support::tile_preparation_used_workers() == ( workers != 0 ) );
         std::size_t sprites = 0;
         std::size_t effects = 0;
-        for( const auto &row : renderer_recovery_test_support::tile_draw_rows( *tilecontext, 0 ) ) {
-            for( const auto &tile : row ) {
+        for( const draw_points_cache_t::row_vec &row :
+             renderer_recovery_test_support::cached_map_rows( *tilecontext, 0 ) ) {
+            for( const tile_render_info &tile : row ) {
                 if( std::holds_alternative<tile_render_info::sprite>( tile.var ) ) {
                     ++sprites;
                 } else {
@@ -269,7 +274,7 @@ TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
         } else {
             CHECK( pixels == serial );
         }
-        tilecontext->init_draw_monster_override( center + point::east, mtype_id( "mon_zombie" ),
+        tilecontext->init_draw_monster_override( center + point::east, mon_zombie,
                 3, false, Creature::Attitude::HOSTILE );
         std::multimap<point, formatted_text> annotations;
         draw_boundary_pixels( center, 1024, &annotations );

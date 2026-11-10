@@ -94,9 +94,15 @@ const npc_opinion &talker_npc_const::opinion() const
     return me_npc->opinion_of( interlocutor_id() );
 }
 
-npc_opinion &talker_npc::opinion()
+npc_opinion *talker_npc::mutable_opinion()
 {
-    return me_npc->opinion_of( interlocutor_id() );
+    if( !is_valid() ) {
+        return nullptr;
+    }
+    // Event dialogues can bind a monster, or outlive their Character interlocutor.
+    // Neither owns a character opinion, and neither may inherit the avatar's.
+    const character_id who = interlocutor_id();
+    return who.is_valid() ? &me_npc->opinion_of( who ) : nullptr;
 }
 
 std::string talker_npc_const::distance_to_goal() const
@@ -155,7 +161,7 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
     std::vector<std::string> add_topics;
     // For each active mission we have, let the mission know we talked to this NPC.
     if( interlocutor_char != nullptr ) {
-        for( mission*&mission : interlocutor_char->get_active_missions() ) {
+        for( mission *&mission : interlocutor_char->get_active_missions() ) {
             if( mission_dialogue::is_live_mission( mission ) ) {
                 mission->on_talk_with_npc( me_npc->getID() );
             }
@@ -374,7 +380,9 @@ int talker_npc_const::debt() const
 
 void talker_npc::add_debt( const int cost )
 {
-    opinion().owed += cost;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->owed += cost;
+    }
 }
 
 int talker_npc_const::sold() const
@@ -384,7 +392,9 @@ int talker_npc_const::sold() const
 
 void talker_npc::add_sold( const int value )
 {
-    opinion().sold += value;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->sold += value;
+    }
 }
 
 int talker_npc_const::cash_to_favor( const int value ) const
@@ -1016,7 +1026,9 @@ std::string talker_npc_const::opinion_text() const
 
 void talker_npc::add_opinion( const npc_opinion &op )
 {
-    opinion() += op;
+    if( npc_opinion *const current = mutable_opinion() ) {
+        *current += op;
+    }
 }
 
 bool talker_npc::enslave_mind()
@@ -1055,7 +1067,9 @@ void talker_npc::die( map *here )
 
 void talker_npc::set_npc_trust( const int trust )
 {
-    opinion().trust = trust;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->trust = trust;
+    }
 }
 
 int talker_npc_const::get_npc_trust() const
@@ -1065,7 +1079,9 @@ int talker_npc_const::get_npc_trust() const
 
 void talker_npc::set_npc_fear( const int fear )
 {
-    opinion().fear = fear;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->fear = fear;
+    }
 }
 
 int talker_npc_const::get_npc_fear() const
@@ -1075,7 +1091,9 @@ int talker_npc_const::get_npc_fear() const
 
 void talker_npc::set_npc_value( const int value )
 {
-    opinion().value = value;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->value = value;
+    }
 }
 
 int talker_npc_const::get_npc_value() const
@@ -1085,7 +1103,9 @@ int talker_npc_const::get_npc_value() const
 
 void talker_npc::set_npc_anger( const int anger )
 {
-    opinion().anger = anger;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->anger = anger;
+    }
 }
 
 int talker_npc_const::get_npc_anger() const

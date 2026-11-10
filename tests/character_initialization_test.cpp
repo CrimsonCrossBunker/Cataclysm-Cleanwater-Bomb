@@ -40,14 +40,12 @@ void omit_saved_integer( std::string &saved, const std::string &name )
     REQUIRE( end != std::string::npos );
     saved.erase( begin, end - begin + 1 );
 }
-} // namespace
 
-TEMPLATE_TEST_CASE( "character_defaults_do_not_depend_on_previous_storage",
-                    "[character][initialization][regression]", avatar, npc )
+template<typename TestType>
+void check_character_storage_defaults( const unsigned char fill )
 {
     // Reused memory exposed these fields in a saved remote NPC. Test both fills
     // instead of relying on a fresh allocation accidentally containing zeroes.
-    const unsigned char fill = GENERATE( 0x55, 0xaa );
     CAPTURE( static_cast<int>( fill ) );
     alignas( TestType ) std::array<unsigned char, sizeof( TestType )> storage;
     storage.fill( fill );
@@ -58,6 +56,19 @@ TEMPLATE_TEST_CASE( "character_defaults_do_not_depend_on_previous_storage",
     who->normalize();
     CHECK( who->get_free_dodges_left() == 0 );
     CHECK( who->avg_nat_bpm == 80 );
+}
+} // namespace
+
+TEST_CASE( "character_defaults_do_not_depend_on_previous_storage_avatar",
+           "[character][initialization][regression]" )
+{
+    check_character_storage_defaults<avatar>( GENERATE( 0x55, 0xaa ) );
+}
+
+TEST_CASE( "character_defaults_do_not_depend_on_previous_storage_npc",
+           "[character][initialization][regression]" )
+{
+    check_character_storage_defaults<npc>( GENERATE( 0x55, 0xaa ) );
 }
 
 TEST_CASE( "character_save_defaults_and_explicit_values_roundtrip",

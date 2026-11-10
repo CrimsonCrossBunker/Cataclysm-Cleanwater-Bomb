@@ -38,6 +38,8 @@
 #include "type_id.h"
 #include "weighted_list.h"
 
+static const efftype_id effect_boomered( "boomered" );
+
 static const furn_str_id furn_f_chair( "f_chair" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
@@ -241,9 +243,8 @@ TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
     REQUIRE( fx.available_ );
     avatar &you = get_avatar();
     map &here = get_map();
-    const efftype_id boomered( "boomered" );
     on_out_of_scope remove_effect( [&]() {
-        you.remove_effect( boomered );
+        you.remove_effect( effect_boomered );
     } );
     struct effect_case {
         lit_level level;
@@ -261,9 +262,9 @@ TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
     };
     for( const effect_case &example : cases ) {
         INFO( example.id );
-        you.remove_effect( boomered );
+        you.remove_effect( effect_boomered );
         if( example.boomered ) {
-            you.add_effect( boomered, 1_hours );
+            you.add_effect( effect_boomered, 1_hours );
         }
         policy_fixture::refresh_caches();
         // Supply controlled visibility to the real map draw path. Repeated
@@ -271,7 +272,7 @@ TEST_CASE( "visibility_effects_keep_their_ids_and_fixed_light_across_redraws",
         for( const tripoint_bub_ms &pos : around( player_pos ) ) {
             here.access_cache( 0 ).visibility_cache[pos.x()][pos.y()] = example.level;
         }
-        const auto before = rng_get_engine(); // NOLINT(cata-determinism)
+        const cata_default_random_engine before = rng_get_engine(); // NOLINT(cata-determinism)
         for( int repeat = 0; repeat < 2; ++repeat ) {
             fx.draw();
             CHECK( fx.drew( example.id, example.level == lit_level::LIT ?
@@ -609,11 +610,8 @@ TEST_CASE( "colored_lighting_option_changes_pixels_without_changing_world_light"
         RenderClear( get_sdl_renderer() );
         // Include more than the worker threshold's 16384 viewport slots.
         fx.draw( MAPSIZE_X + 1 );
-        std::size_t prepared_tiles = 0;
-        for( const draw_points_cache_t::row_vec &row : renderer_recovery_test_support::tile_draw_rows(
-                 *fx.tiles_, 0 ) ) {
-            prepared_tiles += row.size();
-        }
+        const std::size_t prepared_tiles =
+            renderer_recovery_test_support::cached_map_tile_count( *fx.tiles_, 0 );
         REQUIRE( prepared_tiles >= 16384 );
         const SDL_Rect probe = { 32, 32, 1, 1 };
         Uint32 pixel = 0;
