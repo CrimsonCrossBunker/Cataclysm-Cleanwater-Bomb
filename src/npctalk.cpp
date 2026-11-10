@@ -2307,7 +2307,7 @@ void dialogue::gen_responses( const talk_topic &the_topic )
             add_response( _( "Tell me about it." ), "TALK_MISSION_OFFER",
                           actor( true )->available_missions().front(), true );
         } else {
-            for( mission*&mission : actor( true )->available_missions() ) {
+            for( mission *&mission : actor( true )->available_missions() ) {
                 add_response( mission->get_type().tname(), "TALK_MISSION_OFFER", mission, true );
             }
         }
@@ -2315,7 +2315,7 @@ void dialogue::gen_responses( const talk_topic &the_topic )
         if( missions_assigned.size() == 1 ) {
             add_response( _( "I have news." ), "TALK_MISSION_INQUIRE", missions_assigned.front() );
         } else {
-            for( mission*&miss_it : missions_assigned ) {
+            for( mission *&miss_it : missions_assigned ) {
                 add_response( miss_it->get_type().tname(), "TALK_MISSION_INQUIRE", miss_it );
             }
         }
@@ -9448,8 +9448,8 @@ talk_topic talk_effect_t::apply( dialogue &d ) const
     if( d.has_beta ) {
         // Need to get the selected mission value before effects are applied, because effects can remove the mission
         const mission *miss = d.actor( true )->selected_mission();
-        const std::optional < int > selected_mission_value =
-            miss != nullptr ? std::optional < int > ( miss->get_value() ) : std::nullopt;
+        const bool had_selected_mission = miss != nullptr;
+        const int selected_mission_value = had_selected_mission ? miss->get_value() : 0;
         for( const talk_effect_fun_t &effect : effects ) {
             effect( d );
             if( !mission_dialogue::participants_live( d ) ) {
@@ -9457,10 +9457,10 @@ talk_topic talk_effect_t::apply( dialogue &d ) const
             }
         }
         d.actor( true )->add_opinion( opinion );
-        if( selected_mission_value.has_value() &&
+        if( had_selected_mission &&
             ( mission_opinion.trust || mission_opinion.fear ||
               mission_opinion.value || mission_opinion.anger ) ) {
-            const int m_value = d.actor( true )->cash_to_favor( *selected_mission_value );
+            const int m_value = d.actor( true )->cash_to_favor( selected_mission_value );
             npc_opinion op;
             op.trust = mission_opinion.trust ? m_value / mission_opinion.trust : 0;
             op.fear = mission_opinion.fear ? m_value / mission_opinion.fear : 0;
@@ -9498,7 +9498,7 @@ void talk_effect_t::update_missions( dialogue &d )
             : character_id();
         // Update the missions we can talk about (must only be current, non-complete ones)
         if( owner_id.is_valid() ) {
-            for( mission*&mission : d.actor( true )->assigned_missions() ) {
+            for( mission *&mission : d.actor( true )->assigned_missions() ) {
                 if( mission != nullptr && mission->get_assigned_player_id() == owner_id ) {
                     ma.push_back( mission );
                 }

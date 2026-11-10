@@ -1,5 +1,3 @@
-#include <initializer_list>
-#include <random>
 #include <array>
 #include <memory>
 #include <new>
@@ -14,7 +12,6 @@
 #include "json_loader.h"
 #include "npc.h"
 #include "rng.h"
-#include "flexbuffer_json.h"
 
 namespace
 {
@@ -43,17 +40,17 @@ void omit_saved_integer( std::string &saved, const std::string &name )
     REQUIRE( end != std::string::npos );
     saved.erase( begin, end - begin + 1 );
 }
-template<typename CharacterType>
-void check_character_storage_defaults()
+
+template<typename TestType>
+void check_character_storage_defaults( const unsigned char fill )
 {
     // Reused memory exposed these fields in a saved remote NPC. Test both fills
     // instead of relying on a fresh allocation accidentally containing zeroes.
-    const unsigned char fill = GENERATE( 0x55, 0xaa );
     CAPTURE( static_cast<int>( fill ) );
-    alignas( CharacterType ) std::array<unsigned char, sizeof( CharacterType )> storage;
+    alignas( TestType ) std::array<unsigned char, sizeof( TestType )> storage;
     storage.fill( fill );
-    const std::unique_ptr<CharacterType, decltype( &destroy_character<CharacterType> )> who(
-        ::new( storage.data() ) CharacterType(), destroy_character<CharacterType> );
+    const std::unique_ptr<TestType, decltype( &destroy_character<TestType> )> who(
+        ::new( storage.data() ) TestType(), destroy_character<TestType> );
     CHECK( who->get_free_dodges_left() == 0 );
     CHECK( who->avg_nat_bpm == 80 );
     who->normalize();
@@ -62,15 +59,16 @@ void check_character_storage_defaults()
 }
 } // namespace
 
-TEST_CASE( "character_defaults_do_not_depend_on_previous_storage",
+TEST_CASE( "character_defaults_do_not_depend_on_previous_storage_avatar",
            "[character][initialization][regression]" )
 {
-    SECTION( "avatar" ) {
-        check_character_storage_defaults<avatar>();
-    }
-    SECTION( "npc" ) {
-        check_character_storage_defaults<npc>();
-    }
+    check_character_storage_defaults<avatar>( GENERATE( 0x55, 0xaa ) );
+}
+
+TEST_CASE( "character_defaults_do_not_depend_on_previous_storage_npc",
+           "[character][initialization][regression]" )
+{
+    check_character_storage_defaults<npc>( GENERATE( 0x55, 0xaa ) );
 }
 
 TEST_CASE( "character_save_defaults_and_explicit_values_roundtrip",

@@ -14,6 +14,7 @@
 
 #include "flexbuffer_json.h"
 #include "json.h"
+#include "point.h"
 
 namespace cata::lua_platform
 {
@@ -26,9 +27,9 @@ void script_null_value::serialize( JsonOut &json ) const
 void script_persistent_tripoint::serialize( JsonOut &json ) const
 {
     json.start_array();
-    json.write( x );
-    json.write( y );
-    json.write( z );
+    json.write( value.x );
+    json.write( value.y );
+    json.write( value.z );
     json.end_array();
 }
 
@@ -225,7 +226,9 @@ static script_persistent_value read_persistent_value_impl( const JsonObject &ent
             }
             return value.get_int_exact();
         };
-        result = script_persistent_tripoint{ component( 0 ), component( 1 ), component( 2 ) };
+        result = script_persistent_tripoint{
+            tripoint( component( 0 ), component( 1 ), component( 2 ) )
+        };
     } else if( type == "array" ) {
         script_persistent_array array;
         for( const JsonObject child : entry.get_array( "value" ) ) {
@@ -346,8 +349,9 @@ script_persistent_state &character_script_state::for_mod( const std::string &mod
     return mods_[mod_id];
 }
 
+// try_emplace forwards and moves this state when the mod has no existing entry.
 void character_script_state::migrate_legacy( const std::string &mod_id,
-        script_persistent_state values )
+        script_persistent_state values ) // NOLINT(performance-unnecessary-value-param)
 {
     mods_.try_emplace( mod_id, std::move( values ) );
 }

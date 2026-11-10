@@ -163,6 +163,6 @@ class talker_npc : virtual public talker_npc_const,
     private:
         npc *me_npc{};
         using talker_npc_const::opinion;
-        npc_opinion &opinion();
+        npc_opinion *mutable_opinion();
 };
 #endif // CATA_SRC_TALKER_NPC_H

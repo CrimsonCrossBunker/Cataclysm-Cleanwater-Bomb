@@ -215,7 +215,9 @@ static script_persistent_value read_value( const sol::object &value, const std::
         if( coordinate.origin() != "abs" || coordinate.scale() != "ms" ) {
             throw std::invalid_argument( api_name + " persistent coordinates must be absolute map squares" );
         }
-        return script_persistent_tripoint{ coordinate.x(), coordinate.y(), coordinate.z() };
+        return script_persistent_tripoint{
+            tripoint( coordinate.x(), coordinate.y(), coordinate.z() )
+        };
     }
     switch( value.get_type() ) {
         case sol::type::boolean:
@@ -283,7 +285,8 @@ sol::object script_persistent_value_to_lua( sol::state_view lua,
         } else if constexpr( std::is_same_v<value_type, script_persistent_tripoint> )
         {
             return sol::make_object( lua, script_tripoint_coord::from(
-                                         "abs", "ms", entry.x, entry.y, entry.z ) );
+                                         "abs", "ms",
+                                         entry.value.x, entry.value.y, entry.value.z ) );
         } else
         {
             return sol::make_object( lua, entry );

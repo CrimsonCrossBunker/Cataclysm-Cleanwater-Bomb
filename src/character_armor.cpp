@@ -234,20 +234,20 @@ void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bo
     }
 }
 
-void Character::armor_use_power_when_hit( damage_unit &du, item &armor ) const
+void Character::armor_use_power_when_hit( damage_unit &du, item &armor )
 {
     const auto amount = units::from_kilojoule( du.amount );
-    if( amount > armor.energy_remaining( nullptr, true ) ) {
-        armor.deactivate( nullptr, false );
+    if( amount > armor.energy_remaining( this ) ) {
+        armor.deactivate( this, false );
         add_msg_if_player( _( "Your %s doesn't have enough power to absorb the blow and shuts down!" ),
                            armor.tname() );
     } else {
-        armor.energy_consume( amount, pos_bub(), nullptr );
+        armor.energy_consume( amount, pos_bub(), this );
     }
 }
 
 bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp,
-                              const sub_bodypart_id &sbp, int roll, bool damage_armor ) const
+                              const sub_bodypart_id &sbp, int roll, bool damage_armor )
 {
     item::cover_type ctype = item::get_cover_type( du.type );
 
@@ -287,7 +287,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
 }
 
 bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll,
-                              bool damage_armor ) const
+                              bool damage_armor )
 {
     item::cover_type ctype = item::get_cover_type( du.type );
 

@@ -7433,7 +7433,7 @@ static bool process_map_items( map &here, item_stack &items, safe_reference<item
         // Item is to be destroyed so erase it from the map stack
         // unless it was already destroyed by processing.
         if( item_ref ) {
-            item_ref->spill_contents( location );
+            item_ref->spill_contents( &here, location );
             if( parent != nullptr ) {
                 parent->remove_item( *item_ref );
             } else {
@@ -7454,10 +7454,8 @@ static void process_auto_cooker( vehicle &cur_veh, int part, map &here )
     cur_veh.process_auto_cooker_part( here, part );
 }
 
-static void process_vehicle_items( vehicle &cur_veh, int part )
+static void process_vehicle_items( vehicle &cur_veh, int part, map &here )
 {
-    map &here = get_map();
-
     vehicle_part &vp = cur_veh.part( part );
     const vpart_info &vpi = vp.info();
 
@@ -7930,7 +7928,7 @@ void map::process_items_in_vehicle( vehicle &cur_veh, submap &current_submap )
 
     auto cargo_parts = cur_veh.get_parts_including_carried( VPFLAG_CARGO );
     for( const vpart_reference &vp : cargo_parts ) {
-        process_vehicle_items( cur_veh, vp.part_index() );
+        process_vehicle_items( cur_veh, vp.part_index(), *this );
     }
 
     for( item_reference &active_item_ref : cur_veh.active_items.get_for_processing() ) {
