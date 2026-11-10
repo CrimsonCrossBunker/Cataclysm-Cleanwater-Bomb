@@ -148,13 +148,7 @@
     #include "sdl_wrappers.h"
 #endif
 
-static const activity_id ACT_PICKUP( "ACT_PICKUP" );
-static const activity_id ACT_WAIT( "ACT_WAIT" );
-static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
-static const activity_id ACT_WAIT_STAMINA( "ACT_WAIT_STAMINA" );
-static const activity_id ACT_WAIT_WEATHER( "ACT_WAIT_WEATHER" );
 static const activity_id ACT_WEAR( "ACT_WEAR" );
-
 
 static const character_modifier_id
 character_modifier_move_mode_move_cost_mod( "move_mode_move_cost_mod" );
@@ -164,8 +158,8 @@ static const damage_type_id damage_cut( "cut" );
 static const efftype_id effect_alarm_clock( "alarm_clock" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_laserlocked( "laserlocked" );
-static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_stunned( "stunned" );
 
 static const flag_id json_flag_ALLOWS_REMOTE_USE( "ALLOWS_REMOTE_USE" );
 static const flag_id json_flag_MOP( "MOP" );
@@ -174,14 +168,10 @@ static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 
-static const itype_id fuel_type_animal( "animal" );
-
 static const json_character_flag json_flag_ALARMCLOCK( "ALARMCLOCK" );
 static const json_character_flag json_flag_BIONIC_SLEEP_FRIENDLY( "BIONIC_SLEEP_FRIENDLY" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_HANDS_CANNOT_USE_FIREARMS( "HANDS_CANNOT_USE_FIREARMS" );
-static const json_character_flag json_flag_LEVITATION( "LEVITATION" );
-static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
 static const json_character_flag json_flag_SUBTLE_SPELL( "SUBTLE_SPELL" );
 static const json_character_flag
 json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
@@ -199,21 +189,6 @@ static const trait_id trait_PROF_CHURL( "PROF_CHURL" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHELL3( "SHELL3" );
 static const trait_id trait_WAYFARER( "WAYFARER" );
-
-static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
-static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
-static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
-static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
-static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
-static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
-static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
-static const zone_type_id zone_type_MINING( "MINING" );
-static const zone_type_id zone_type_MOPPING( "MOPPING" );
-static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
-static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
-static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
-static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
-static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -2294,7 +2269,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             const int direction = act == ACTION_MOVE_UP ? 1 : -1;
             if( vehicle *craft = controlled_vehicle( player_character, here ); craft &&
                 craft->is_aircraft( here ) ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"pldrive\",\"dz\":" +
+                mp_dispatch( R"({"type":"action","action":"pldrive","dz":)" +
                              std::to_string( direction ) + "}" );
             } else {
                 cata_mp::client_query_vertical_move( direction );
