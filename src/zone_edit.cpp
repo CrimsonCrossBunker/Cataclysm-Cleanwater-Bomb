@@ -1,8 +1,7 @@
 #include "zone_edit.h"
 
-#include <stddef.h>
-#include <unordered_map>
 #include <algorithm>
+#include <limits>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -10,28 +9,20 @@
 
 #include "character.h"
 #include "construction.h"
+#include "construction_group.h"
 #include "debug.h"
+#include "game_constants.h"
 #include "item_group.h"
 #include "itype.h"
 #include "json_loader.h"
 #include "mp_client_conn.h"
 #include "map_scale_constants.h"
+#include "skill.h"
 #include "json.h"
 #include "map.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
-#include "character_id.h"
-#include "clzones.h"
-#include "coordinates.h"
-#include "flexbuffer_json.h"
-#include "item.h"
-#include "item_uid.h"
-#include "memory_fast.h"
-#include "player_activity.h"
-#include "safe_reference.h"
-#include "value_ptr.h"
-#include "vehicle_uid.h"
 
 static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
 static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
@@ -419,19 +410,21 @@ shared_ptr_fast<zone_options> read_edit_options( const zone_edit_definition &def
 bool bounded_edit_geometry( const Character &who, const zone_edit_definition &definition )
 {
     const tripoint origin = definition.personal ? tripoint::zero : who.pos_abs().raw();
-    const auto in_bounds = [&]( const tripoint & point ) {
+    const auto within_bounds = [&]( const tripoint & point ) {
+        // Coordinate differences can exceed the int components of point.
+        // NOLINTNEXTLINE(cata-combine-locals-into-point)
+        const int64_t dx = static_cast<int64_t>( point.x ) - origin.x;
+        const int64_t dy = static_cast<int64_t>( point.y ) - origin.y;
         const int64_t z = definition.personal ? static_cast<int64_t>( point.z ) + who.pos_abs().z() :
                           point.z;
-        return static_cast<int64_t>( point.x ) >= static_cast<int64_t>( origin.x ) - MAX_VIEW_DISTANCE &&
-               static_cast<int64_t>( point.x ) <= static_cast<int64_t>( origin.x ) + MAX_VIEW_DISTANCE &&
-               static_cast<int64_t>( point.y ) >= static_cast<int64_t>( origin.y ) - MAX_VIEW_DISTANCE &&
-               static_cast<int64_t>( point.y ) <= static_cast<int64_t>( origin.y ) + MAX_VIEW_DISTANCE &&
+        return dx >= -MAX_VIEW_DISTANCE && dx <= MAX_VIEW_DISTANCE &&
+               dy >= -MAX_VIEW_DISTANCE && dy <= MAX_VIEW_DISTANCE &&
                z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT;
     };
     // Native zone overlays and menus describe a single floor.
     return definition.start.x <= definition.end.x && definition.start.y <= definition.end.y &&
-           definition.start.z == definition.end.z && in_bounds( definition.start ) &&
-           in_bounds( definition.end );
+           definition.start.z == definition.end.z && within_bounds( definition.start ) &&
+           within_bounds( definition.end );
 }
 
 vehicle *resolve_zone_vehicle( const zone_edit_definition &definition, const faction_id &faction,
