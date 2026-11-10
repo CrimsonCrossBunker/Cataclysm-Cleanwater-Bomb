@@ -4,6 +4,7 @@
 #include "vehicle_uid.h"
 #include "character_action_guard.h"
 #include "mp_gamestate.h"
+#include "mp_melee.h"
 #include "mp_unload.h"
 #include "mp_client_conn.h"
 #include "mp_inventory_activity.h"
