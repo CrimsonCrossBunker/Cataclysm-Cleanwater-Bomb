@@ -1461,6 +1461,14 @@
   },
   {
     "type": "effect_type",
+    "id": "melatonin_sleep",
+    "name": [ "" ],
+    "desc": [ "" ],
+    "//": "Protects the first half hour of melatonin-assisted catch-up sleep from low-sleepiness wakeups.",
+    "max_duration": "30 m"
+  },
+  {
+    "type": "effect_type",
     "id": "mutagen",
     "name": [ "Changing", "Warping", "Mutagen Overdose" ],
     "desc": [

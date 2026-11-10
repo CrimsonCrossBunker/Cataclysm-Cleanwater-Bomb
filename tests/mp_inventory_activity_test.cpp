@@ -219,6 +219,8 @@ struct reload_fixture {
 class reload_events : public event_subscriber
 {
     public:
+        using event_subscriber::notify;
+
         int starts = 0;
         int finishes = 0;
         std::optional<cata_default_random_engine> rng_at_finish;
@@ -1053,6 +1055,8 @@ struct consumption_fixture : reload_fixture {
 class consumption_events : public event_subscriber
 {
     public:
+        using event_subscriber::notify;
+
         std::vector<character_id> actors;
         consumption_events() {
             get_event_bus().subscribe( this );
@@ -4587,6 +4591,8 @@ TEST_CASE( "magnetic_attraction_restores_unlaunched_items_when_a_hit_retires_the
     class retire_on_damage : public event_subscriber
     {
         public:
+            using event_subscriber::notify;
+
             character_id source;
             character_id target;
             bool retired = false;
@@ -4795,6 +4801,8 @@ TEST_CASE( "water_extraction_drinks_as_owner_and_survives_callback_cancellation"
     fixture.run( who, water_start_request( fixture, who, uid, capture_item_source( who, corpse ) ) );
     class cancel_on_drink : public event_subscriber {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             item_location corpse;
             int count = 0;
@@ -5224,6 +5232,8 @@ TEST_CASE( "unfold_start_events_cannot_leave_a_second_folded_source",
     who.set_wielded_item( item( itype_id( "folded_bicycle" ) ) );
     class cancel_on_unfold : public event_subscriber {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             bool fired = false;
             explicit cancel_on_unfold( Character &who ) : who( who ) {
@@ -5471,6 +5481,8 @@ TEST_CASE( "vehicle_start_assignment_handles_removed_owner_or_vehicle",
     class remove_on_start : public event_subscriber
     {
         public:
+            using event_subscriber::notify;
+
             character_id owner;
             vehicle *target;
             bool retire;
@@ -9271,6 +9283,8 @@ TEST_CASE( "saw_resume_progress_is_set_before_callbacks_and_does_not_overwrite_r
     fixture.run( who, fixture.request( who, "cancel" ) );
     class replace_on_resume : public event_subscriber {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             int expected;
             bool fired = false;
@@ -10015,6 +10029,8 @@ TEST_CASE( "spellbook_callbacks_run_once_for_the_requesting_player_and_views_kee
     class spellbook_events : public event_subscriber {
             Character &owner;
         public:
+            using event_subscriber::notify;
+
             int count = 0;
             explicit spellbook_events( Character &who ) : owner( who ) {
                 get_event_bus().subscribe( this );
@@ -10844,6 +10860,8 @@ TEST_CASE( "sorting_auto_wield_commits_its_source_before_acquisition_events",
     } ) );
     class replace_on_wield : public event_subscriber {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             tripoint_bub_ms source;
             bool replace_weapon;
@@ -11810,6 +11828,8 @@ TEST_CASE( "read_completion_stops_when_a_read_event_removes_the_book",
     REQUIRE( who.activity );
     class remove_book_on_read : public event_subscriber {
         public:
+            using event_subscriber::notify;
+
             item_location target;
             character_id owner;
             remove_book_on_read( item_location target, character_id owner ) : target( target ), owner( owner ) {
@@ -13620,6 +13640,8 @@ TEST_CASE( "glide_start_callback_preserves_its_replacement_activity_and_removes_
     who.set_moves( 1000 );
     class replace_on_start : public event_subscriber {
         public:
+            using event_subscriber::notify;
+
             Character &owner;
             bool replaced = false;
             explicit replace_on_start( Character &owner ) : owner( owner ) {
@@ -14119,8 +14141,8 @@ TEST_CASE( "ordinary_peek_rechecks_adjacent_geometry_and_preserves_crouching",
     CHECK( who.pos_abs() == origin );
     CHECK( rng_get_engine() == rng );
     who.set_moves( 1000 );
-    const auto far = origin + tripoint_rel_ms( 3, 0, 0 );
-    CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, far, 0, 2 ) );
+    const auto distant_target = origin + tripoint_rel_ms( 3, 0, 0 );
+    CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, distant_target, 0, 2 ) );
     const auto adjacent = origin + tripoint_rel_ms::east;
     here.ter_set( here.get_bub( adjacent ), ter_id( "t_wall" ) );
     CHECK_FALSE( cata_mp::authorize_peek( who, here, origin, adjacent, 0, 3 ) );
@@ -14419,6 +14441,8 @@ TEST_CASE( "destination_activity_start_callbacks_keep_their_new_route",
     class route_on_start : public event_subscriber
     {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             tripoint_bub_ms target;
             bool fired = false;
@@ -14907,6 +14931,8 @@ TEST_CASE( "salvage_yield_survives_a_wield_event_replacing_or_retiring_the_opera
     class on_unwield : public event_subscriber
     {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             bool retire;
             bool fired = false;
@@ -15896,6 +15922,8 @@ TEST_CASE( "disassembly_publishes_workpiece_and_removed_mod_before_unwield_callb
     class on_unwield : public event_subscriber
     {
         public:
+            using event_subscriber::notify;
+
             Character &who;
             bool retire;
             bool fired = false;
@@ -16107,6 +16135,8 @@ TEST_CASE( "remote_tree_chopping_waits_for_saved_owner_direction_then_finishes_o
     class tree_events : public event_subscriber {
             character_id owner;
         public:
+            using event_subscriber::notify;
+
             int cuts = 0;
             explicit tree_events( const Character &who ) : owner( who.getID() ) {
                 get_event_bus().subscribe( this );
@@ -16479,6 +16509,8 @@ TEST_CASE( "plank_start_does_not_overwrite_an_activity_created_by_consuming_the_
     class replace_on_unwield : public event_subscriber {
             Character &owner;
         public:
+            using event_subscriber::notify;
+
             bool called = false;
             explicit replace_on_unwield( Character &who ) : owner( who ) {
                 get_event_bus().subscribe( this );

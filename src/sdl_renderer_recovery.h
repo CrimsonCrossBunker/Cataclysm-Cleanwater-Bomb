@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "cata_tiles.h"
+#include "view_snapshot.h"
 
 class Font;
 namespace cataimgui
@@ -419,7 +420,6 @@ struct renderer_recovery_test_support {
     static bool install_character_preview_targets();
     static bool has_character_preview_targets();
     static bool tile_preparation_used_workers();
-    static const view_snapshot &draw_snapshot( const cata_tiles &tiles );
     static void remove_character_preview_context();
     // Reverse setup: drain the quarantine and release atlases on the live
     // renderer, destroy variant_pass before the renderer, reset globals and the
@@ -536,6 +536,8 @@ struct renderer_recovery_test_support {
     static std::unique_ptr<cata_tiles> make_test_tiles( const std::shared_ptr<const tileset> &ts );
     static void draw_test_map( cata_tiles &tiles, const tripoint_bub_ms &center, int w, int h );
     static SDL_Texture *tint_mask( const cata_tiles &tiles );
+    static std::size_t cached_map_tile_count( cata_tiles &tiles, int z );
+    static const draw_points_cache_t::level_rows &cached_map_rows( cata_tiles &tiles, int z );
     static void draw_test_overmap( cata_tiles &tiles, const tripoint_abs_omt &center );
     static void set_has_animated_tiles( cata_tiles &tiles, bool animated );
 

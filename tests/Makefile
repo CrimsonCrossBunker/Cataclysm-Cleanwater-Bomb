@@ -116,7 +116,8 @@ $(ODIR)/%.o: %.cpp $(PCH_P)
 	$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -MMD -MP $(subst main-pch,tests-pch,$(PCHFLAGS)) -c ../tests/$< -o $@
 
 $(ODIR)/%.inc: %.cpp
-	$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -H -E $< -o /dev/null 2> $@ || { cat $@ >&2; rm -f $@; exit 1; }
+	$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -H -E $< -o /dev/null 2> $@ || \
+		{ grep -m10 -C3 'error:' "$@" >&2 || tail -n20 "$@" >&2; exit 1; }
 
 .PHONY: includes
 includes: $(OBJS:.o=.inc)

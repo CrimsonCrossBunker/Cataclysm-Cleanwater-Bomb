@@ -13,6 +13,7 @@
 #include <atomic>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -91,6 +92,7 @@
 #include "string_formatter.h"
 #include "uistate.h"
 #include "ui_manager.h"
+#include "view_snapshot.h"
 #include "wcwidth.h"
 #include "worldfactory.h"
 #include "cata_imgui.h"
@@ -2774,6 +2776,21 @@ SDL_Texture *renderer_recovery_test_support::tint_mask( const cata_tiles &tiles 
     return tiles.tint_mask_tex.get();
 }
 
+std::size_t renderer_recovery_test_support::cached_map_tile_count( cata_tiles &tiles, const int z )
+{
+    std::size_t count = 0;
+    for( const draw_points_cache_t::row_vec &row : tiles.draw_points_cache_.tiles[z] ) {
+        count += row.size();
+    }
+    return count;
+}
+
+const draw_points_cache_t::level_rows &renderer_recovery_test_support::cached_map_rows(
+    cata_tiles &tiles, const int z )
+{
+    return tiles.draw_points_cache_.tiles[z];
+}
+
 void renderer_recovery_test_support::draw_test_overmap( cata_tiles &tiles,
         const tripoint_abs_omt &center )
 {
@@ -2898,11 +2915,6 @@ bool renderer_recovery_test_support::has_character_preview_targets()
 bool renderer_recovery_test_support::tile_preparation_used_workers()
 {
     return tilecontext && tilecontext->preparation_ && tilecontext->preparation_->used_workers();
-}
-
-const view_snapshot &renderer_recovery_test_support::draw_snapshot( const cata_tiles &tiles )
-{
-    return tiles.draw_points_cache_;
 }
 
 void renderer_recovery_test_support::remove_character_preview_context()
