@@ -20,5 +20,10 @@
     "type": "snippet",
     "category": "<fcl_hub_has_interface>",
     "text": [ "Actually, I already have one of the Exodii CBM interfaces installed." ]
+  },
+  {
+    "type": "snippet",
+    "category": "<fcl_hub_new_cybernetics>",
+    "text": [ "Cybernetics?  What exactly have you developed?" ]
   }
 ]
