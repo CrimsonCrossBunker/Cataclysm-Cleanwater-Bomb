@@ -1,20 +1,13 @@
-#include "item_consumption.h"
-#include "avatar_action.h"
-#include "walking.h"
-#include "vehicle_uid.h"
-#include "character_action_guard.h"
-#include "mp_gamestate.h"
-#include "mp_melee.h"
-#include "mp_unload.h"
-#include "mp_client_conn.h"
-#include "mp_inventory_activity.h"
-#include "mp_throw.h"
-
 #include <coordinates.h>
 #include <input_enums.h>
+#include <item_disposition.h>
 #include <item_uid.h>
+#include <memory_fast.h>
 #include <monster_uid.h>
+#include <mp_peek.h>
 #include <player_activity.h>
+#include <safe_reference.h>
+#include <stdint.h>
 #include <translation.h>
 #include <algorithm>
 #include <climits>
@@ -32,10 +25,12 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "avatar_action.h"
 #include "body_part_set.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -52,13 +47,13 @@
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
-#include "lua_platform_runtime.h"
+#include "item_consumption.h"
 #include "item_healing.h"
-#include "tool_activity_target.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -70,6 +65,12 @@
 #include "monster.h"
 #include "mounted_charge.h"
 #include "move_mode.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
+#include "mp_melee.h"
+#include "mp_throw.h"
+#include "mp_unload.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -84,6 +85,7 @@
 #include "sling.h"
 #include "sounds.h"
 #include "string_formatter.h"
+#include "tool_activity_target.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -92,7 +94,9 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_turret_control.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
+#include "walking.h"
 
 static const efftype_id effect_amigara( "amigara" );
 static const efftype_id effect_berserk( "berserk" );

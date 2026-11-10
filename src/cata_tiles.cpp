@@ -1838,15 +1838,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
                             // Simple: all recorded sprites fit inside the tile rect,
                             // so a flat colored rect matches the sprite extent exactly.
-                            // On the SDL3 gpu/D3D12 backend, ALSO force the simple path:
-                            // the complex silhouette-mask path switches render target
-                            // mid-frame (scoped_render_target), whose command-queue flush
-                            // SIGSEGVs in D3D12_PushFragmentUniformData. The flat rect
-                            // tint is a minor visual downgrade for oversized sprites
-                            // (boxy glow instead of outline-hugging) but avoids the crash;
-                            // other backends keep the precise silhouette mask.
-                            const bool simple = gpu_d3d12_mode ||
-                                                !tint.bounds.valid ||
+                            const bool simple = !tint.bounds.valid ||
                                                 tint.sprites.empty() ||
                                                 ( tint.bounds.x >= tile_rect.x &&
                                                   tint.bounds.y >= tile_rect.y &&
