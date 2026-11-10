@@ -191,6 +191,7 @@
 #include "thread_pool.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
+    #include "mp_melee.h"
     #include "mp_unload.h"
     #include "mp_equipment.h"
 #endif
