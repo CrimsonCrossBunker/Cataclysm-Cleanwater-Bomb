@@ -1,0 +1,19 @@
+[
+  {
+    "id": "TALK_EXODI_INTERCOM_AUTODOC_B",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('14 d')" ],
+      "yes": "&The intercom clicks off and there is a long moment of silence, before it clicks back on again with a new person on the other end.  \"Yes, hello.  Right.  Yes.  Indeed, we have been able to reconstruct the automatic medical device.  Thanks to your efforts, and those of other contractors and Hub scientists, we now understand how the Exodii use neural interfaces to control their mechanical bodies.  We have drawn on that work to develop a new interface for our existing CBM technology.  You can find a new, public medical suite across the street, in the old basement of the weather station - you should be able to find the stairs just inside the entrance.  Please feel free to make use of its services.  As previously discussed, we would like to invite you to join our new program, where select mercenaries will be allowed to field test new cybernetic enhancements.  Doctor Stevens at the facility will give you more information.  In fact, as a reward for your service, we are prepared to install this new interface and its supporting equipment at no charge.\"",
+      "no": {
+        "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('12 d')" ],
+        "yes": "Our newest project will be ready for field testing within days.  We suggest checking back regularly.",
+        "no": {
+          "math": [ "time_since(u_timer_hub_waiting_on_autodoc) >= time('7 d')" ],
+          "yes": "We expect the surgical suite to be ready in approximately one week.",
+          "no": "The project is ongoing, and we expect it will take weeks or months until it is ready for testing.  We suggest you check back in next week."
+        }
+      }
+    }
+  }
+]
