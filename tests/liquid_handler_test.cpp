@@ -7,6 +7,7 @@
 
 #include "avatar.h"
 #include "cached_options.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"

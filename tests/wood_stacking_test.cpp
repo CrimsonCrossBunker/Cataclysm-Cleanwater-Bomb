@@ -1,10 +1,14 @@
+#include <functional>
 #include <list>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_utility.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "item_stack.h"
@@ -14,6 +18,7 @@
 #include "player_helpers.h"
 #include "requirements.h"
 #include "type_id.h"
+#include "units.h"
 
 static const faction_id faction_free_merchants( "free_merchants" );
 static const faction_id faction_your_followers( "your_followers" );
@@ -33,12 +38,11 @@ TEST_CASE( "legacy_wood_pieces_stack_without_losing_material", "[item][save][woo
     deserialize_from_string( unit, serialize( legacy ) );
     REQUIRE( unit.count_by_charges() );
     REQUIRE( unit.charges == 1 );
-    const auto weight = unit.weight();
-    const auto volume = unit.volume();
+    const units::mass weight = unit.weight();
+    const units::volume volume = unit.volume();
     item stack = unit;
     for( int i = 1; i < 1300; ++i ) {
-        item next = unit;
-        REQUIRE( stack.merge_charges( next ) );
+        REQUIRE( stack.merge_charges( unit ) );
     }
     CHECK( stack.charges == 1300 );
     CHECK( stack.weight() == weight * 1300 );

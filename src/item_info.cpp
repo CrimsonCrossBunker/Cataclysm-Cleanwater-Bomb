@@ -36,6 +36,7 @@
 #include "character_martial_arts.h"
 #include "color.h"
 #include "craft_reservation.h"
+#include "crafting.h"
 #include "damage.h"
 #include "debug.h"
 #include "dialogue.h"

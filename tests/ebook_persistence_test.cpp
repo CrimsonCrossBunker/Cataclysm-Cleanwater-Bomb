@@ -1,3 +1,4 @@
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "cata_catch.h"
 #include "cata_utility.h"
 #include "character_id.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "item_action.h"
@@ -23,6 +25,8 @@
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
+
+class recipe;
 
 static const activity_id ACT_READ( "ACT_READ" );
 static const bionic_id bio_ar( "bio_ar" );

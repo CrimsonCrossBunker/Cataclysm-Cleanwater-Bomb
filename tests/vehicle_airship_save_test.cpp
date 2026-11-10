@@ -1,10 +1,13 @@
 #include <cstdint>
+#include <functional>
 #include <set>
+#include <string>
 
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "mapbuffer.h"
@@ -14,6 +17,10 @@
 #include "units.h"
 #include "vehicle.h"
 #include "vehicle_uid.h"
+
+static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
+
+static const vproto_id vehicle_prototype_airship( "airship" );
 
 static void airship_bubble_reload_after_descending()
 {
@@ -35,14 +42,14 @@ static void airship_bubble_reload_after_descending()
     const int z = GENERATE( 0, 1 );
     CAPTURE( z );
     const tripoint_bub_ms parking( 60, 60, z );
-    vehicle *airship = here.add_vehicle( vproto_id( "airship" ), parking, 0_degrees, 0,
+    vehicle *airship = here.add_vehicle( vehicle_prototype_airship, parking, 0_degrees, 0,
                                          veh_spawn_status::UNDAMAGED );
     REQUIRE( airship );
     airship->set_flying( z != 0 );
     const int64_t uid = airship->uid().get_value();
     const int parts = airship->part_count();
     const std::set<tripoint_abs_ms> footprint = airship->get_points();
-    here.ter_set( tripoint_bub_ms( 60, 60, -2 ), ter_id( "t_rock_floor" ) );
+    here.ter_set( tripoint_bub_ms( 60, 60, -2 ), ter_t_rock_floor.id() );
     you.setpos( here, tripoint_bub_ms( 60, 60, -2 ) );
     here.vertical_shift( -2 );
     here.save();
@@ -99,7 +106,7 @@ TEST_CASE( "airship_survives_an_underground_visit_and_mapbuffer_save_reload",
                               furn_str_id::NULL_ID() );
                 }
             }
-            vehicle *airship = surface.add_vehicle( vproto_id( "airship" ),
+            vehicle *airship = surface.add_vehicle( vehicle_prototype_airship,
                                                     tripoint_omt_ms( 13, 12, z ), 0_degrees, 0, veh_spawn_status::UNDAMAGED );
             REQUIRE( airship );
             REQUIRE( airship->is_airship( here ) );
@@ -123,7 +130,7 @@ TEST_CASE( "airship_survives_an_underground_visit_and_mapbuffer_save_reload",
         {
             tinymap loaded;
             loaded.load( parking, true );
-            const auto vehicles = loaded.get_vehicles();
+            const VehicleList vehicles = loaded.get_vehicles();
             REQUIRE( vehicles.size() == 1 );
             const vehicle &airship = *vehicles.front().v;
             CHECK( airship.uid().get_value() == uid );

@@ -1,6 +1,9 @@
 #include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -20,15 +23,15 @@
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "requirements.h"
-#include "rng.h"
+#include "rng_helpers.h"
 #include "string_formatter.h"
 #include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "type_id.h"
 #include "visitable.h"
 
-static const itype_id itype_leather( "leather" );
 static const itype_id itype_hammer( "hammer" );
+static const itype_id itype_leather( "leather" );
 static const itype_id itype_plant_fibre( "plant_fibre" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_sinew( "sinew" );
@@ -174,14 +177,14 @@ TEST_CASE( "boolean_recipe_queries_preserve_results_and_random_state",
     scoped_provider_quality_cache qualities( inv );
     for( const recipe *r : you.get_group_available_recipes().of_component( type ) ) {
         CAPTURE( type.str(), r->ident().str() );
-        const auto initial_rng = rng_get_engine();
+        const std::string initial_rng = capture_rng_state();
         const bool complete = r->deduped_requirements().can_make_with_inventory(
                                   &you, inv, r->get_component_filter() );
-        const auto expected_rng = rng_get_engine();
-        rng_get_engine() = initial_rng;
+        const std::string expected_rng = capture_rng_state();
+        restore_rng_state( initial_rng );
         CHECK( r->deduped_requirements().can_make_with_inventory(
                    &you, inv, r->get_component_filter(), 1, craft_flags::stop_on_failure ) == complete );
-        CHECK( rng_get_engine() == expected_rng );
+        CHECK( capture_rng_state() == expected_rng );
     }
 }
 

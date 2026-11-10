@@ -1,9 +1,5 @@
 #include "npc_attack.h"
 
-#include <coordinates.h>
-#include <gun_mode.h>
-#include <map_iterator.h>
-#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -32,7 +28,9 @@
 #include "magic_spell_effect_helpers.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "mapdata.h"
+#include "memory_fast.h"
 #include "messages.h"
 #include "npc.h"
 #include "pimpl.h"
@@ -41,6 +39,7 @@
 #include "ranged.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
 #include "type_id.h"

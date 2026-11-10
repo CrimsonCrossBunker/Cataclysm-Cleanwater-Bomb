@@ -3,8 +3,10 @@
 #include <cctype>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <list>
 #include <map>
@@ -3822,9 +3824,9 @@ std::optional<bool> reload_copy_capacity( const item &root, int64_t target )
 
 } // namespace
 
-bool item::reload( Character &who, item_location ammo, int qty, int pocket_index )
+bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
 {
-    return reload_contents( *this, &who, std::move( ammo ), qty, pocket_index, nullptr );
+    return reload_contents( *this, &u, std::move( ammo ), qty, pocket_index, nullptr );
 }
 
 std::optional<item> preview_reload( const item &target, item_location ammo, int qty,

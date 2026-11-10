@@ -1,6 +1,8 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "cata_catch.h"
 #include "calendar.h"
@@ -36,8 +38,8 @@ static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_combat_exoskeleton_medium( "combat_exoskeleton_medium" );
 static const itype_id itype_combat_exoskeleton_medium_on( "combat_exoskeleton_medium_on" );
-static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_grenade_act( "grenade_act" );
+static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_knife_large( "knife_large" );
 static const itype_id itype_modular_m16a4( "modular_m16a4" );
 static const itype_id itype_rock( "rock" );
@@ -48,6 +50,8 @@ static const mtype_id mon_zombie( "mon_zombie" );
 static const skill_id skill_throw( "throw" );
 
 static const string_id<npc_template> npc_template_test_talker( "test_talker" );
+
+static const ter_str_id ter_t_wall( "t_wall" );
 
 static const weather_type_id weather_sunny( "sunny" );
 
@@ -125,7 +129,7 @@ TEST_CASE( "armed_grenade_chooses_a_throwable_tile_past_an_obstructed_corner",
     REQUIRE( range > 2 );
     for( const tripoint_bub_ms &point : here.points_in_radius( model.pos_bub(), range ) ) {
         if( point.x() == model.pos_bub().x() - 1 ) {
-            here.ter_set( point, ter_id( "t_wall" ) );
+            here.ter_set( point, ter_t_wall.id() );
         }
     }
     npc_attack_throw attack( grenade, best_weapon ? &grenade : nullptr, model.speed_rating() );
@@ -181,7 +185,7 @@ TEST_CASE( "npc_drops_armed_grenade_when_surrounded_by_walls",
     map &here = get_map();
     for( const tripoint_bub_ms &point : here.points_in_radius( model.pos_bub(), 1 ) ) {
         if( point != model.pos_bub() ) {
-            here.ter_set( point, ter_id( "t_wall" ) );
+            here.ter_set( point, ter_t_wall.id() );
         }
     }
     model.move();
@@ -203,7 +207,7 @@ TEST_CASE( "npc_leaves_armed_grenade_at_its_feet_if_retired_during_disposal",
     if( surrounded ) {
         for( const tripoint_bub_ms &point : here.points_in_radius( origin, 1 ) ) {
             if( point != origin ) {
-                here.ter_set( point, ter_id( "t_wall" ) );
+                here.ter_set( point, ter_t_wall.id() );
             }
         }
     }

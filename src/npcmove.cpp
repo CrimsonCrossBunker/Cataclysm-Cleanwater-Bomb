@@ -101,6 +101,7 @@
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "simple_pathfinding.h"
 #include "sleep.h"
 #include "sounds.h"

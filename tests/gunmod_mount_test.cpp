@@ -1,5 +1,8 @@
+#include <memory>
+#include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
@@ -19,8 +22,11 @@
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "type_id.h"
+#include "units.h"
+#include "value_ptr.h"
 
-static const item_group_id item_group_m27iar( "m27iar" );
+static const item_group_id Item_spawn_data_m27iar( "m27iar" );
+
 static const itype_id itype_bipod( "bipod" );
 static const itype_id itype_butt_hook( "butt_hook" );
 static const itype_id itype_cheek_pad( "cheek_pad" );
@@ -42,7 +48,7 @@ static void remove_and_reinstall_gunmod( item_location gun, const itype_id &mod_
     item *installed = gun->gunmod_find( mod_type );
     REQUIRE( installed );
     REQUIRE_FALSE( installed->is_irremovable() );
-    const auto before_weight = gun->weight();
+    const units::mass before_weight = gun->weight();
     REQUIRE( you.gunmod_remove( gun, *installed ) );
     process_activity( you, true );
     REQUIRE_FALSE( gun->gunmod_find( mod_type ) );
@@ -102,7 +108,7 @@ TEST_CASE( "spawned_m27_keeps_its_bipod_and_foregrip_after_reinstallation",
     const itype_id removed = GENERATE( itype_bipod, itype_grip );
     CAPTURE( removed.str() );
     prepare_gunmod_owner();
-    item_location gun = get_avatar().i_add( item_group::item_from( item_group_m27iar ) );
+    item_location gun = get_avatar().i_add( item_group::item_from( Item_spawn_data_m27iar ) );
     REQUIRE( gun );
     REQUIRE( gun->gunmod_find( itype_bipod ) );
     REQUIRE( gun->gunmod_find( itype_grip ) );
