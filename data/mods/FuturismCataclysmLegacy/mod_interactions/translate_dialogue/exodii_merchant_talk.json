@@ -9,5 +9,16 @@
         "Right, let's see what we can do for you.  Well, well, well.  Looks like you got your interface swapped out.  I won't hear any excuses.  We've had some tech and some workers go missing, and we've heard from a few trade partners that a certain bunker is stealing our technology and integrating the pilfered cybernetics into its own indigenous systems.  You've got two minutes to get out of here.  Got it?\""
       ]
     }
+  },
+  {
+    "id": "TALK_EXODII_MERCHANT_Hates_Hub_Cyborgs",
+    "type": "talk_topic",
+    "dynamic_line": {
+      "concatenate": [
+        "Shinies an' stompers missin', an' escoltin' a bunker offerin' stolen steelies.  Thine steelies.  Ne.  Ye ain't tassed such steelies from around here.  The steelie tech here oughta been different.  Ye've two minutes to traipse out o'here.  Ken it.",
+        "\"\n\n[TRANSLATE:] \"",
+        "We've had some tech and some workers go missing, and we've heard from a few trade partners that a certain bunker is offering stolen cybernetics.  Your bionics.  You didn't get such bionics from around here.  The bionics technology here should have been different.  You've got two minutes to get out of here.  You are not welcome here.  Got it?"
+      ]
+    }
   }
 ]
