@@ -7,7 +7,6 @@
 #include <memory_fast.h>
 #include <player_identity.h>
 
-#define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <cmath>

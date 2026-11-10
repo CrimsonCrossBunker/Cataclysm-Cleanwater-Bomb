@@ -2379,26 +2379,23 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     panels.clear();
     static bucket_index_map bucket_index;
     bucket_index.clear();
-    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
+    auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> decltype( auto ) {
         const bucket_key key{ mode, atlas };
         const auto it = bucket_index.find( key );
-        if( it != bucket_index.end() )
-        {
-            return buckets[it->second].data;
+        if( it != bucket_index.end() ) {
+            return ( buckets[it->second].data );
         }
         const size_t index = bucket_count++;
         bucket_index[key] = index;
-        if( index < buckets.size() )
-        {
+        if( index < buckets.size() ) {
             instance_bucket &bucket = buckets[index];
             bucket.mode = mode;
             bucket.atlas = atlas;
             bucket.data.clear();
-        } else
-        {
+        } else {
             buckets.push_back( instance_bucket{ mode, atlas, {} } );
         }
-        return buckets[index].data;
+        return ( buckets[index].data );
     };
     // total instances pushed (all kinds), capped at the buffer capacity
     int count = 0;
