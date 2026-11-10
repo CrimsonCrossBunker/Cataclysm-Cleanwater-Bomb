@@ -1,19 +1,13 @@
-#include "item_consumption.h"
-#include "avatar_action.h"
-#include "walking.h"
-#include "vehicle_uid.h"
-#include "character_action_guard.h"
-#include "mp_gamestate.h"
-#include "mp_unload.h"
-#include "mp_client_conn.h"
-#include "mp_inventory_activity.h"
-#include "mp_throw.h"
-
 #include <coordinates.h>
 #include <input_enums.h>
+#include <item_disposition.h>
 #include <item_uid.h>
+#include <memory_fast.h>
 #include <monster_uid.h>
+#include <mp_peek.h>
 #include <player_activity.h>
+#include <safe_reference.h>
+#include <stdint.h>
 #include <translation.h>
 #include <algorithm>
 #include <climits>
@@ -31,10 +25,12 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "avatar_action.h"
 #include "body_part_set.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -51,13 +47,13 @@
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
-#include "lua_platform_runtime.h"
+#include "item_consumption.h"
 #include "item_healing.h"
-#include "tool_activity_target.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
 #include "line.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -69,6 +65,12 @@
 #include "monster.h"
 #include "mounted_charge.h"
 #include "move_mode.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
+#include "mp_melee.h"
+#include "mp_throw.h"
+#include "mp_unload.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -83,6 +85,7 @@
 #include "sling.h"
 #include "sounds.h"
 #include "string_formatter.h"
+#include "tool_activity_target.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -91,7 +94,9 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_turret_control.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
+#include "walking.h"
 
 static const efftype_id effect_amigara( "amigara" );
 static const efftype_id effect_berserk( "berserk" );
@@ -283,8 +288,8 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
     }
     walk_move_choices choices;
     choices.destination = m.get_abs( destination );
-    const auto terrain = m.ter( destination );
-    const auto furniture = m.furn( destination );
+    const ter_id terrain = m.ter( destination );
+    const furn_id furniture = m.furn( destination );
     const auto unchanged = [&]() {
         return lifetime && you.pos_abs() == origin && m.inbounds( *choices.destination ) &&
                m.ter( m.get_bub( *choices.destination ) ) == terrain &&
@@ -295,7 +300,7 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
                                                    m.get_abs( you.pos_bub( m ) + you.grab_point )
                                                  };
     for( const auto &target : targets ) {
-        const auto vp = m.veh_at( m.get_bub( target ) );
+        const optional_vpart_position vp = m.veh_at( m.get_bub( target ) );
         if( !vp || !vp->vehicle().has_owner() || vp->vehicle().is_owned_by( you ) ||
             choices.permits_theft( vp->vehicle() ) ) {
             continue;
@@ -308,14 +313,14 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
             !unchanged() ) {
             return std::nullopt;
         }
-        const auto current = m.veh_at( m.get_bub( target ) );
+        const optional_vpart_position current = m.veh_at( m.get_bub( target ) );
         if( !current || current->vehicle().uid().get_value() != identity ) {
             return std::nullopt;
         }
         choices.allow_theft = true;
         choices.theft_vehicles.push_back( identity );
     }
-    const auto from = m.veh_at( you.pos_bub( m ) );
+    const optional_vpart_position from = m.veh_at( you.pos_bub( m ) );
     const bool dive_from_vehicle = from && std::abs( from->vehicle().velocity ) > 100 &&
                                    !m.veh_at( destination );
     if( dive_from_vehicle ) {
@@ -340,8 +345,8 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
         auto dangers = g->get_dangerous_tile( you, destination );
         if( !dangers.empty() ) {
             const std::string policy = get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" );
-            const auto mode = you.can_switch_to( you.get_desired_move_mode() ) ?
-                              you.get_desired_move_mode() : you.current_movement_mode();
+            const move_mode_id mode = you.can_switch_to( you.get_desired_move_mode() ) ?
+                                      you.get_desired_move_mode() : you.current_movement_mode();
             if( ( ( policy == "RUNNING" || policy == "NEVER" ) && mode->type() != move_mode_type::RUNNING ) ||
                 ( policy == "CROUCHING" && mode->type() != move_mode_type::CROUCHING ) ) {
                 you.add_msg_if_player( m_warning,
@@ -874,7 +879,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
                 return false;
             }
             // Theft callbacks can remove or replace a vehicle; don't retain it.
-            const auto refreshed = m.veh_at( dest_loc );
+            const optional_vpart_position refreshed = m.veh_at( dest_loc );
             if( !refreshed || refreshed->vehicle().uid().get_value() != door_vehicle_id ) {
                 return false;
             }
@@ -1372,7 +1377,7 @@ void avatar_action::fire_ranged_bionic( avatar &you, const item &fake_gun, unsig
 
 bool avatar_action::fire_turret_manual( avatar &you, map &m, turret_data &turret )
 {
-    const auto at = m.veh_at( you.pos_abs() );
+    const optional_vpart_position at = m.veh_at( you.pos_abs() );
     return turret && at && use_vehicle_turrets( you, m, at->vehicle(), you.pos_abs(), "fire_direct" );
 }
 
@@ -1562,8 +1567,8 @@ void avatar_action::plthrow( avatar &you, item_location loc,
         }
         const int z_range = peek && intent.blind_from && peek->origin == intent.origin &&
                             peek->viewpoint == *intent.blind_from ? peek->z_range : -1;
-        const auto trajectory = target_handler::mode_throw( you, preview,
-                                blind_throw_from_pos, z_range );
+        const target_handler::trajectory trajectory = target_handler::mode_throw( you, preview,
+                blind_throw_from_pos, z_range );
         if( !trajectory.empty() ) {
             intent.target = here.get_abs( trajectory.back() );
         }
@@ -1638,7 +1643,7 @@ void avatar_action::plthrow( avatar &you, item_location loc,
     const on_out_of_scope restore_view( [&]() {
         g->reenter_fullscreen();
     } );
-    const auto throw_origin = you.pos_abs();
+    const tripoint_abs_ms throw_origin = you.pos_abs();
     item &relevant = thrown;
     const target_handler::trajectory trajectory = target_handler::mode_throw( you, relevant,
             blind_throw_from_pos );

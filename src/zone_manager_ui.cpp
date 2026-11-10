@@ -13,7 +13,6 @@
 #include "color.h"
 #include "cursesdef.h"
 #include "debug.h"
-#include "faction.h"
 #include "game.h"
 #include "input_context.h"
 #include "line.h"
@@ -36,15 +35,16 @@
 #include "translations.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "enums.h"
+#include "item.h"
+#include "item_uid.h"
+#include "messages.h"
+#include "vehicle_uid.h"
 
 static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
-
 static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
-
 static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
-
 static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
-
 static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
 
 static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );

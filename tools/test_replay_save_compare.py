@@ -11,7 +11,8 @@ import replay_save_compare as compare
 
 def player():
     return {"player": {"traits": ["STRONG", "QUICK"], "hp": 100,
-                       "local_player_id": "abc", "inventory": ["rope", "knife"]},
+                       "local_player_id": "abc",
+                       "inventory": ["rope", "knife"]},
             "achievements_tracker": {"initial_achievements": ["one", "two"]},
             "player_messages": {"messages": ["first", "second"]}}
 
@@ -30,21 +31,23 @@ class PersistedStateTest(unittest.TestCase):
         self.assertEqual(b, before)
         self.assertFalse(compare.compare_documents("json", a, b)["match"])
 
-    def test_player_values_identity_messages_and_other_arrays_remain_significant(self):
+    def test_player_values_identity_and_arrays_remain_significant(self):
         changes = [("hp", 99), ("local_player_id", "different"),
                    ("traits", ["QUICK"]), ("inventory", ["knife", "rope"])]
         for key, value in changes:
             with self.subTest(key=key):
                 a, b = player(), player()
                 b["player"][key] = value
-                self.assertFalse(compare.compare_documents("player", a, b)["match"])
+                self.assertFalse(compare.compare_documents(
+                    "player", a, b)["match"])
         a, b = player(), player()
         b["player_messages"]["messages"].reverse()
         self.assertFalse(compare.compare_documents("player", a, b)["match"])
         b = player()
         b["new_unknown_field"] = None
-        self.assertEqual(compare.compare_documents("player", a, b)["differences"],
-                         [{"path": "/new_unknown_field", "reason": "missing"}])
+        self.assertEqual(
+            compare.compare_documents("player", a, b)["differences"],
+            [{"path": "/new_unknown_field", "reason": "missing"}])
 
     def test_set_corruption_fails_instead_of_being_deduplicated(self):
         for bad in (["QUICK", "QUICK"], ["QUICK", 1], {}, [None], "QUICK"):
@@ -80,14 +83,16 @@ class PersistedStateTest(unittest.TestCase):
         for a, b in [(1, True), (1, 1.0), ({"version": 1}, {"version": 2}),
                      ({"a": None}, {}), ([1, 2], [2, 1])]:
             with self.subTest(a=a, b=b):
-                self.assertFalse(compare.compare_documents("json", a, b)["match"])
+                self.assertFalse(
+                    compare.compare_documents("json", a, b)["match"])
         self.assertTrue(compare.compare_documents("json", {"a": 1, "b": 2},
                                                   {"b": 2, "a": 1})["match"])
         result = compare.compare_documents("json", {"a~/b": 1}, {"a~/b": 2})
         self.assertEqual(result["differences"][0]["path"], "/a~0~1b")
 
     def test_diagnostic_output_is_bounded_without_accepting_a_mismatch(self):
-        result = compare.compare_documents("json", list(range(1000)), [-1] * 1000)
+        result = compare.compare_documents(
+            "json", list(range(1000)), [-1] * 1000)
         self.assertFalse(result["match"])
         self.assertTrue(result["truncated"])
         self.assertEqual(len(result["differences"]), compare.MAX_DIFFERENCES)
@@ -105,22 +110,25 @@ class MemoryStateTest(unittest.TestCase):
             with self.subTest(index=index):
                 a, b = memory(), memory()
                 b["data"][0] = [[1, 46, "t_floor", 0, 0, "", 0, 0],
-                                 [143, 46, "t_floor", 0, 0]]
+                                [143, 46, "t_floor", 0, 0]]
                 b["data"][0][0][index] = value
                 result = compare.compare_documents("map-memory", a, b)
                 self.assertFalse(result["match"])
                 self.assertEqual(len(result["differences"]), 1)
         b = memory()
         b["data"].reverse()
-        self.assertFalse(compare.compare_documents("map-memory", memory(), b)["match"])
+        self.assertFalse(compare.compare_documents(
+            "map-memory", memory(), b)["match"])
 
     def test_unknown_fields_and_allocated_submaps_are_not_dropped(self):
         b = memory()
         b["extension"] = 7
-        self.assertFalse(compare.compare_documents("map-memory", memory(), b)["match"])
+        self.assertFalse(compare.compare_documents(
+            "map-memory", memory(), b)["match"])
         b = memory()
         b["data"][1] = [[144, 0, "", 0, 0]]
-        self.assertFalse(compare.compare_documents("map-memory", memory(), b)["match"])
+        self.assertFalse(compare.compare_documents(
+            "map-memory", memory(), b)["match"])
 
     def test_malformed_or_unsupported_memory_fails_closed(self):
         bad = [{"version": True, "data": memory()["data"]},
@@ -144,15 +152,18 @@ class InputAndCliTest(unittest.TestCase):
             a, b = Path(directory) / "a.json", Path(directory) / "b.json"
             a.write_text('# version 34\n{"hp":100}\n')
             for content, code in (("{\"hp\":100}", 0), ("{\"hp\":99}", 1),
-                                  ("{\"hp\":1,\"hp\":2}", 2), ("{\"hp\":NaN}", 2),
+                                  ("{\"hp\":1,\"hp\":2}",
+                                   2), ("{\"hp\":NaN}", 2),
                                   ("{\"hp\":1e999}", 2), ("not JSON", 2)):
                 b.write_text('# version 34\n' + content)
                 before = (a.read_bytes(), b.read_bytes())
                 output = io.StringIO()
                 with self.subTest(content=content), redirect_stdout(output):
-                    self.assertEqual(compare.main(["--kind", "json", str(a), str(b)]), code)
+                    self.assertEqual(compare.main(
+                        ["--kind", "json", str(a), str(b)]), code)
                 self.assertEqual((a.read_bytes(), b.read_bytes()), before)
-                self.assertEqual(json.loads(output.getvalue())["schema_version"], 1)
+                self.assertEqual(json.loads(output.getvalue())
+                                 ["schema_version"], 1)
 
     def test_cli_preserves_save_version_header(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -162,7 +173,8 @@ class InputAndCliTest(unittest.TestCase):
                 b.write_text(prefix + '{"hp":100}')
                 output = io.StringIO()
                 with redirect_stdout(output):
-                    self.assertEqual(compare.main(["--kind", "json", str(a), str(b)]), 1)
+                    self.assertEqual(compare.main(
+                        ["--kind", "json", str(a), str(b)]), 1)
                 report = json.loads(output.getvalue())
                 self.assertFalse(report["match"])
                 self.assertFalse(report["preamble_match"])
