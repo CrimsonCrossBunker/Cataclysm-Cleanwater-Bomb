@@ -1,24 +1,18 @@
-#include "vertical_movement.h"
-#include "radio_car_control.h"
-#include "grab.h"
-#include "hauling.h"
-#include "walking.h"
-#include "character_action_guard.h"
-#include "vehicle_control.h"
 #include "game.h" // IWYU pragma: associated
 
 #include <coordinates.h>
 #include <creature.h>
 #include <enums.h>
 #include <item_location.h>
+#include <item_source.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <pimpl.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <cstdlib>
 #include <initializer_list>
 #include <list>
 #include <map>
@@ -36,15 +30,13 @@
 #include "avatar.h"
 #include "avatar_action.h"
 #include "bionics.h"
-#include "mp_inventory_activity.h"
-#include "mp_world_session.h"
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "clzones.h"
@@ -67,7 +59,9 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gamemode.h"
+#include "grab.h"
 #include "gun_mode.h"
+#include "hauling.h"
 #include "help.h"
 #include "input_context.h"
 #include "input_enums.h"
@@ -91,6 +85,8 @@
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
+#include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "options.h"
@@ -102,9 +98,13 @@
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
+#include "radio_car_control.h"
 #include "ranged.h"
 #include "rng.h"
 #include "safemode_ui.h"
+#include "vehicle_control.h"
+#include "vertical_movement.h"
+#include "walking.h"
 #if defined(TILES)
     #include "sdl_gamepad.h"
 #endif
@@ -123,18 +123,18 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
-#include "vpart_range.h"
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
 
 #define MP_ENABLED
-#include "line.h"
 #include "mp_client_conn.h"
+#include "mp_equipment.h"
 #include "mp_gamestate.h"
 #include "mp_melee.h"
-#include "mp_equipment.h"
 #include "npc.h"
+
+enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner

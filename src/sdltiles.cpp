@@ -486,12 +486,6 @@ static void detect_renderer_backend()
     const char *actual_name = props != 0
                               ? SDL_GetStringProperty( props, SDL_PROP_RENDERER_NAME_STRING, "" )
                               : "";
-    // Diagnostic: the selected renderer name alone is not enough to predict the
-    // mid-frame render-target-switch crash. When the renderer is "gpu", the real
-    // culprit is the backing SDL_gpu device driver (direct3d12 vs vulkan): the
-    // crash was only seen on direct3d12. Use DebugLog(..., DC_ALL) rather than the
-    // file-local dbg() macro: dbg() logs under category D_SDL, which is filtered
-    // out of debug.log by default, so it would never land. DC_ALL always shows.
     const char *gpu_driver = "n/a";
     SDL_GPUDevice *gpu_dev = props != 0
                              ? static_cast<SDL_GPUDevice *>( SDL_GetPointerProperty(
@@ -509,12 +503,6 @@ static void detect_renderer_backend()
     if( actual_name && std::string( actual_name ).find( "direct3d" ) != std::string::npos ) {
         direct3d_mode = true;
     }
-    // The "gpu" renderer on the D3D12 driver crashes on mid-frame render-target
-    // switches (see gpu_d3d12_mode doc). Detect that exact combination so the
-    // tint overlay can avoid its render-target-switching path on this backend.
-    gpu_d3d12_mode = actual_name &&
-                     std::string( actual_name ) == "gpu" &&
-                     std::string( gpu_driver ).find( "direct3d12" ) != std::string::npos;
 }
 
 // Pick the geometry renderer matching the live renderer's capabilities:
@@ -2373,6 +2361,9 @@ bool renderer_resource_coordinator::install_renderer_with_fallback()
         if( check_pause_abort() ) {
             return false;
         }
+        if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
+            vp->release_gpu_resources( true );
+        }
         renderer.reset();
         if( check_pause_abort() ) {
             return false;
@@ -2780,6 +2771,11 @@ void renderer_recovery_test_support::draw_test_map( cata_tiles &tiles,
                 color_blocks );
 }
 
+SDL_Texture *renderer_recovery_test_support::tint_mask( const cata_tiles &tiles )
+{
+    return tiles.tint_mask_tex.get();
+}
+
 std::size_t renderer_recovery_test_support::cached_map_tile_count( cata_tiles &tiles, const int z )
 {
     std::size_t count = 0;
@@ -2827,6 +2823,11 @@ void renderer_recovery_test_support::set_has_animated_tiles( cata_tiles &tiles,
 
 bool renderer_recovery_test_support::setup_software_renderer()
 {
+    return setup_renderer( "software" );
+}
+
+bool renderer_recovery_test_support::setup_renderer( const std::string &driver )
+{
     if( renderer || window ) {
         return false;
     }
@@ -2835,7 +2836,9 @@ bool renderer_recovery_test_support::setup_software_renderer()
     const char *const prior = SDL_getenv( "SDL_VIDEODRIVER" );
     test_fixture_had_prior_driver = prior != nullptr;
     test_fixture_prior_driver = prior != nullptr ? prior : std::string();
-    set_videodriver_env( "dummy" );
+    if( driver == "software" ) {
+        set_videodriver_env( "dummy" );
+    }
 
     test_fixture_acquired_video = !SDL_WasInit( SDL_INIT_VIDEO );
     if( test_fixture_acquired_video ) {
@@ -2867,7 +2870,7 @@ bool renderer_recovery_test_support::setup_software_renderer()
         teardown_software_renderer();
         return false;
     }
-    renderer = create_game_renderer( {}, true );
+    renderer = create_game_renderer( driver, driver == "software" );
     if( !renderer ) {
         teardown_software_renderer();
         return false;
@@ -2886,7 +2889,7 @@ bool renderer_recovery_test_support::setup_software_renderer()
     // Seed the drawable track from the hidden fixture window before tests consume
     // it; production seeds it in WinCreate.
     refresh_drawable_dims();
-    renderer_coordinator.seed_renderer_policy( {} );
+    renderer_coordinator.seed_renderer_policy( driver );
     renderer_coordinator.finish_bootstrap();
     return true;
 }

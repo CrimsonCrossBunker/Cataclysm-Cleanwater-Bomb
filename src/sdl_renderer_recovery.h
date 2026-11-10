@@ -416,6 +416,7 @@ struct renderer_recovery_test_support {
     // and geometry on the file-static globals, then seed and bootstrap the
     // coordinator. False (globals clean) if the dummy backend fails or a window is up.
     static bool setup_software_renderer();
+    static bool setup_renderer( const std::string &driver );
     static bool install_character_preview_targets();
     static bool has_character_preview_targets();
     static bool tile_preparation_used_workers();
@@ -534,6 +535,7 @@ struct renderer_recovery_test_support {
     // Test fixture tile contexts exercise the real overmap animation state.
     static std::unique_ptr<cata_tiles> make_test_tiles( const std::shared_ptr<const tileset> &ts );
     static void draw_test_map( cata_tiles &tiles, const tripoint_bub_ms &center, int w, int h );
+    static SDL_Texture *tint_mask( const cata_tiles &tiles );
     static std::size_t cached_map_tile_count( cata_tiles &tiles, int z );
     static const draw_points_cache_t::level_rows &cached_map_rows( cata_tiles &tiles, int z );
     static void draw_test_overmap( cata_tiles &tiles, const tripoint_abs_omt &center );
@@ -555,6 +557,7 @@ struct renderer_recovery_test_support {
     static void simulate_draw_bind_failure();
     // number of variant_pass probe runs since fixture setup
     static int variant_probe_count();
+    static std::size_t variant_shader_count( const cata_shader::variant_pass &pass );
     // run refresh_display's presentation decision that refresh_display can't
     // reach under test_mode
     static bool run_present_gate();
@@ -603,7 +606,7 @@ class software_render_fixture
             }
         }
         software_render_fixture( const software_render_fixture & ) = delete;
-        software_render_fixture &operator=( const software_render_fixture & ) = delete;
+        software_render_fixture &operator = ( const software_render_fixture & ) = delete;
         bool available() const {
             return available_;
         }
