@@ -1,10 +1,11 @@
 #include "surroundings_menu.h"
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
+#include <view_action.h>
 #include <algorithm>
 #include <cfloat>
 #include <functional>
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -45,7 +46,9 @@
 #include "output.h"
 #include "panels.h"
 #include "point.h"
-#include "render3d.h"
+#if defined(TILES)
+    #include "render3d.h"
+#endif
 #include "safemode_ui.h"
 #include "string_formatter.h"
 #include "text.h"
