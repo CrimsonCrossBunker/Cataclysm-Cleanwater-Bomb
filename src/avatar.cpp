@@ -1,16 +1,17 @@
 #include "avatar.h"
 
 #include <coordinates.h>
+#include <kill_statistics.h>
 #include <magic_teleporter_list.h>
 #include <mdarray.h>
 #include <memory_fast.h>
+#include <player_identity.h>
 
 #define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <functional>
 #include <iterator>
 #include <list>
 #include <map>
@@ -23,13 +24,8 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "avatar_action.h"
-#include "mp_inventory_activity.h"
 #include "bodypart.h"
-#ifdef MP_ENABLED
-    #include "mp_client_conn.h"
-#endif
 #include "calendar.h"
-#include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -58,9 +54,9 @@
 #include "itype.h"
 #include "iuse.h"
 #include "json.h"
+#include "level_cache.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
-#include "level_cache.h"
 #include "map.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
@@ -69,18 +65,16 @@
 #include "mission.h"
 #include "move_mode.h"
 #include "mp_actor_binding.h"
-#include "player_control.h"
+#include "mp_inventory_activity.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "output.h"
 #include "overmapbuffer.h"
-#include "pathfinding.h"
 #include "pimpl.h"
+#include "player_control.h"
 #include "point.h"
 #include "ranged.h"
-#include "recipe.h"
 #include "ret_val.h"
-#include "rng.h"
 #include "skill.h"
 #include "stomach.h"
 #include "string_formatter.h"
