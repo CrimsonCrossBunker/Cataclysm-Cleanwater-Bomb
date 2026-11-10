@@ -130,7 +130,10 @@ static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
 static const widget_id widget_sound_num( "sound_num" );
 static const widget_id widget_speed_num( "speed_num" );
 static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
+static const widget_id widget_style_desc( "style_desc" );
 static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
+static const widget_id widget_weapon_style_layout( "weapon_style_layout" );
+static const widget_id widget_wielding_desc( "wielding_desc" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
@@ -269,8 +272,8 @@ TEST_CASE( "row_layout_skips_disabled_empty_cooldown_widgets", "[widget][layout]
     player.set_wielded_item( item( itype_test_weapon1 ) );
     const int cooldown_position = GENERATE( 0, 1, 2 );
     CAPTURE( cooldown_position );
-    widget rows = widget_id( "weapon_style_layout" ).obj();
-    rows._widgets = { widget_id( "wielding_desc" ), widget_id( "style_desc" ) };
+    widget rows = widget_weapon_style_layout.obj();
+    rows._widgets = { widget_wielding_desc, widget_style_desc };
     rows._widgets.insert( rows._widgets.begin() + cooldown_position, widget_technique_cooldowns );
 
     const std::string empty = rows.layout( player, 80 );
