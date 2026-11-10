@@ -12,6 +12,7 @@
 #include "cata_variant.h"
 #include "creature.h"
 #include "debug.h"
+#include "event.h"
 #include "event_subscriber.h"
 #include "item_location.h"
 #include "talker.h"  // IWYU pragma: keep
