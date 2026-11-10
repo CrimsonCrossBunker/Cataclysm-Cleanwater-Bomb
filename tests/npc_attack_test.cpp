@@ -96,6 +96,8 @@ static npc &spawn_armed_grenade_npc()
     clear_map_and_put_player_underground();
     clear_vehicles();
     npc &model = respawn_main_npc();
+    // Respawning can leave the previous NPC's corpse and gear on this tile.
+    get_map().i_clear( model.pos_bub() );
     model.set_fac( faction_your_followers );
     model.set_attitude( NPCATT_FOLLOW );
     model.set_knowledge_level( skill_throw, 10 );
