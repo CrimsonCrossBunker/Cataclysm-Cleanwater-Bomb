@@ -6284,7 +6284,9 @@ std::vector < item_location > Character::complete_disassemble( item_location &ta
     const auto continuing = [&]() {
         return lifetime && context && activity.identity_generation() == generation && pos_abs() == origin;
     };
-    const item original_workpiece( *target );
+    // Workpieces never stack, even with an unchanged copy. Compare their saved
+    // state instead, including the recipe, progress and original components.
+    const std::string original_workpiece = ::serialize( *target );
     const item_source source = capture_item_source( *this, target );
     const int quantity = target->get_making_batch_size();
     if( quantity <= 0 ) {
@@ -6440,8 +6442,7 @@ std::vector < item_location > Character::complete_disassemble( item_location &ta
     }
 
     if( !continuing() || !target || resolve_item_source( *this, here, source ) != target ||
-        target->count() != original_workpiece.count() ||
-        !target->stacks_with( original_workpiece, true, false, false, 0, 999, true ) ) {
+        ::serialize( *target ) != original_workpiece ) {
         return {};
     }
     std::vector < item_location > solids;

@@ -339,8 +339,13 @@ jobs:
       if: ${{ env.SKIP == 'false' && runner.os == 'Linux' }}
       run: |
           ccache --version
+          archive="$RUNNER_TEMP/ccache-4.10.2-linux-x86_64.tar.xz"
+          url="https://github.com/ccache/ccache/releases/download/v4.10.2"
+          curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+            --output "$archive" "$url/ccache-4.10.2-linux-x86_64.tar.xz"
           sudo apt-get remove --purge -y ccache
-          curl -sL https://github.com/ccache/ccache/releases/download/v4.10.2/ccache-4.10.2-linux-x86_64.tar.xz | sudo tar Jxvf - --strip-components 1 -C /usr/bin ccache-4.10.2-linux-x86_64/ccache
+          sudo tar Jxvf "$archive" --strip-components 1 -C /usr/bin \
+            ccache-4.10.2-linux-x86_64/ccache
           ccache --version
     - name: install build dependencies (mac)
       if: ${{ env.SKIP == 'false' && runner.os == 'macOS' }}
@@ -389,7 +394,7 @@ jobs:
 
     - name: Set up JDK (android)
       if: ${{ env.SKIP == 'false' && runner.os == 'Linux' && matrix.android != '' }}
-      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
       with:
         java-version: '17'
         distribution: 'temurin'

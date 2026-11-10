@@ -13,6 +13,7 @@
 #include <atomic>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -91,6 +92,7 @@
 #include "string_formatter.h"
 #include "uistate.h"
 #include "ui_manager.h"
+#include "view_snapshot.h"
 #include "wcwidth.h"
 #include "worldfactory.h"
 #include "cata_imgui.h"
@@ -2776,6 +2778,21 @@ void renderer_recovery_test_support::draw_test_map( cata_tiles &tiles,
     color_block_overlay_container color_blocks;
     tiles.draw( point::zero, center, w * tiles.tile_width, h * tiles.tile_height, overlay_strings,
                 color_blocks );
+}
+
+std::size_t renderer_recovery_test_support::cached_map_tile_count( cata_tiles &tiles, const int z )
+{
+    std::size_t count = 0;
+    for( const draw_points_cache_t::row_vec &row : tiles.draw_points_cache_.tiles[z] ) {
+        count += row.size();
+    }
+    return count;
+}
+
+const draw_points_cache_t::level_rows &renderer_recovery_test_support::cached_map_rows(
+    cata_tiles &tiles, const int z )
+{
+    return tiles.draw_points_cache_.tiles[z];
 }
 
 void renderer_recovery_test_support::draw_test_overmap( cata_tiles &tiles,

@@ -29,7 +29,10 @@ static const matype_id style_none( "style_none" );
 TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
            "[lua][platform][martial_arts][semantic]" )
 {
-    const auto previous_runtimes = cata::lua_platform::detail::active_runtime_values();
+    const std::vector<std::shared_ptr<cata::lua_platform::runtime>> &active_runtimes =
+                cata::lua_platform::detail::active_runtime_values();
+    const std::vector<std::shared_ptr<cata::lua_platform::runtime>> previous_runtimes(
+                active_runtimes.begin(), active_runtimes.end() );
     const on_out_of_scope verify_runtime_restoration( [previous_runtimes]() {
         CHECK( cata::lua_platform::detail::active_runtime_values() == previous_runtimes );
     } );
