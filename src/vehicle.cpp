@@ -6842,7 +6842,7 @@ std::optional < vehicle_stack::iterator > vehicle::add_item( map &here, vehicle_
     if( itm_copy.is_bucket_nonempty() ) {
         // this is a vehicle, so there is only one pocket.
         // so if it will spill, spill all of it
-        itm_copy.spill_contents( bub_part_pos( here, vp ) );
+        itm_copy.spill_contents( &here, bub_part_pos( here, vp ) );
     }
 
     itm_copy.preserve_location( pos_abs() );

@@ -253,6 +253,7 @@ static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_masked_scent( "masked_scent" );
 static const efftype_id effect_mech_recon_vision( "mech_recon_vision" );
 static const efftype_id effect_melatonin( "melatonin" );
+static const efftype_id effect_melatonin_sleep( "melatonin_sleep" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_no_sight( "no_sight" );
@@ -262,6 +263,7 @@ static const efftype_id effect_recover( "recover" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
 static const efftype_id effect_sleep( "sleep" );
+static const efftype_id effect_sleep_deprived( "sleep_deprived" );
 static const efftype_id effect_stumbled_into_invisible( "stumbled_into_invisible" );
 static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_subaquatic_sonar( "subaquatic_sonar" );
@@ -6050,7 +6052,7 @@ void Character::fall_asleep()
         so shorter naps are already handled. */
         time_duration sleep_duration = 12_hours;
         if( has_effect( effect_melatonin ) ) {
-            sleep_duration = 13_hours;  // Artificial sleep hormone boost allows you to sleep longer
+            sleep_duration = 14_hours;  // Artificial sleep hormone boost allows you to sleep longer
         }
         fall_asleep( sleep_duration );
     }
@@ -6073,8 +6075,22 @@ void Character::fall_asleep( const time_duration &duration )
         add_msg_if_player( m_info, _( "You cannot sleep!" ) );
         cancel_activity();
     } else {
+        // Remember eligibility even if sleep debt falls below the threshold during the nap.
+        if( has_effect( effect_melatonin ) &&
+            ( get_sleep_deprivation() >= SLEEP_DEPRIVATION_HARMLESS ||
+              has_effect( effect_sleep_deprived ) ) ) {
+            add_effect( effect_melatonin_sleep, 30_minutes );
+        } else if( has_effect( effect_melatonin_sleep ) ) {
+            get_effect( effect_melatonin_sleep ).set_duration( 0_turns );
+        }
+        if( !lifetime ) {
+            return;
+        }
         add_effect( effect_sleep, duration );
         if( lifetime ) {
+            if( !has_effect( effect_sleep ) && has_effect( effect_melatonin_sleep ) ) {
+                get_effect( effect_melatonin_sleep ).set_duration( 0_turns );
+            }
             get_event_bus().send < event_type::character_falls_asleep > ( getID(),
                     to_seconds < int > ( duration ) );
         }
@@ -6300,6 +6316,10 @@ units::energy Character::available_ups() const
     }
 
     cache_visit_items_with( flag_IS_UPS, [&available_charges]( const item_location & it ) {
+        if( it->uses_energy() ) {
+            available_charges += it->energy_remaining( nullptr );
+            return;
+        }
         available_charges += units::from_kilojoule( static_cast < std::int64_t >
                              ( it->ammo_remaining( ) ) );
     } );
@@ -6333,10 +6353,14 @@ units::energy Character::consume_ups( units::energy qty, const int radius )
 
     // UPS from inventory
     if( qty != 0_kJ ) {
-        cache_visit_items_with( flag_IS_UPS, [&qty]( item_location & it ) {
+        cache_visit_items_with( flag_IS_UPS, [this, &qty]( item_location & it ) {
             if( it->is_tool() && it->type->tool->fuel_efficiency >= 0 ) {
                 qty -= it->energy_consume( qty, tripoint_bub_ms::zero, nullptr,
                                            it->type->tool->fuel_efficiency );
+            } else if( !it->uses_energy() ) {
+                const int charges = divide_round_up( units::to_millijoule( qty ),
+                                                     units::to_millijoule( 1_kJ ) );
+                qty -= std::min( qty, it->ammo_consume( charges, pos_bub(), nullptr ) * 1_kJ );
             } else {
                 qty -= it->energy_consume( qty, tripoint_bub_ms::zero, nullptr );
             }
@@ -7844,10 +7868,16 @@ bool Character::can_sleep()
         sleepy -= 1;
     }
     sleepy = enchantment_cache->modify_value( enchant_vals::mod::SLEEPY, sleepy );
-    if( get_sleepiness() < sleepiness_levels::TIRED + 1 ) {
-        sleepy -= int( ( sleepiness_levels::TIRED + 1 - get_sleepiness() ) / 4 );
+    int sleepiness_for_sleep = get_sleepiness();
+    if( has_effect( effect_melatonin ) &&
+        ( get_sleep_deprivation() >= SLEEP_DEPRIVATION_HARMLESS ||
+          has_effect( effect_sleep_deprived ) ) ) {
+        sleepiness_for_sleep = std::max( sleepiness_for_sleep, sleepiness_levels::TIRED + 1 );
+    }
+    if( sleepiness_for_sleep < sleepiness_levels::TIRED + 1 ) {
+        sleepy -= int( ( sleepiness_levels::TIRED + 1 - sleepiness_for_sleep ) / 4 );
     } else {
-        sleepy += int( ( get_sleepiness() - sleepiness_levels::TIRED + 1 ) / 16 );
+        sleepy += int( ( sleepiness_for_sleep - sleepiness_levels::TIRED + 1 ) / 16 );
     }
     const int current_stim = get_stim();
     if( current_stim > 0 || !has_trait( trait_INSOMNIA ) ) {
