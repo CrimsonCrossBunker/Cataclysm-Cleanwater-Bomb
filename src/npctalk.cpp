@@ -5,6 +5,7 @@
 #include <climits>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <iterator>
@@ -86,7 +87,7 @@
 #include "item_group.h"
 #include "item_location.h"
 #include "itype.h"
-#include "kill_tracker.h"
+#include "kill_statistics.h"
 #include "line.h"
 #include "localized_comparator.h"
 #include "lua_platform_hooks.h"
