@@ -34,7 +34,7 @@ enum class repair_repeat : int {
     CANCEL = 7,
 };
 
-repair_repeat query_repair_repeat( Character &who, const item &tool, const item &target,
+repair_repeat query_repair_repeat( Character &who, const item &tool, const item &fix,
                                    const repair_item_actor &actor, repair_repeat previous );
 
 // A portable source or a particular tool supplied by particular vehicle hardware.
