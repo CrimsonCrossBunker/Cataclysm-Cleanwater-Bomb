@@ -1,41 +1,73 @@
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
 #include <limits>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "avatar_action.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
+#include "clone_ptr.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "gates.h"
 #include "game.h"
+#include "item.h"
+#include "item_uid.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
+#include "map_iterator.h"
 #include "mapdata.h"
+#include "monster.h"
+#include "mp_actor_binding.h"
+#include "mp_admission.h"
 #include "mp_gamestate.h"
+#include "mp_player_identity.h"
 #include "mp_queue.h"
 #include "mp_world_session.h"
+#include "mp_world_state.h"
 #include "mp_test_helpers.h"
 #include "npc.h"
 #include "player_activity.h"
+#include "player_control.h"
 #include "player_helpers.h"
+#include "player_identity.h"
 #include "point.h"
 #include "sounds.h"
 #include "type_id.h"
+#include "units.h"
+#include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 
+static const activity_id ACT_OPEN_TILE( "ACT_OPEN_TILE" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
+static const efftype_id effect_incorporeal( "incorporeal" );
 static const ter_str_id ter_t_door_c( "t_door_c" );
 static const ter_str_id ter_t_door_locked( "t_door_locked" );
 static const ter_str_id ter_t_door_o( "t_door_o" );
 static const ter_str_id ter_t_window_no_curtains( "t_window_no_curtains" );
 static const ter_str_id ter_t_window_no_curtains_open( "t_window_no_curtains_open" );
+static const vpart_id vpart_aisle_curtain( "aisle_curtain" );
+static const vpart_id vpart_door( "door" );
+static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_horn_bicycle( "horn_bicycle" );
+static const vproto_id vehicle_prototype_none( "none" );
 
 TEST_CASE( "doors_should_be_able_to_open_and_close", "[gates]" )
 {
@@ -267,8 +299,7 @@ TEST_CASE( "synchronous_door_close_uses_the_actual_actor", "[gates][network]" )
     remote.setpos( here, you.pos_bub() );
     remote.set_moves( 1000 );
     you.set_moves( 2000 );
-    const activity_id waiting( "ACT_WAIT" );
-    remote.activity = player_activity( waiting, 500 );
+    remote.activity = player_activity( ACT_WAIT, 500 );
     const tripoint_bub_ms target = you.pos_bub() + point::east;
 
     SECTION( "close completes without replacing a remote activity" ) {
@@ -282,8 +313,15 @@ TEST_CASE( "synchronous_door_close_uses_the_actual_actor", "[gates][network]" )
         CHECK_FALSE( close_tile_activity_actor::close_immediately( remote, target ) );
         CHECK( remote.get_moves() == 1000 );
     }
+    SECTION( "an unreachable target costs no moves" ) {
+        const tripoint_bub_ms distant = remote.pos_bub() + tripoint_rel_ms( 5, 0, 0 );
+        here.ter_set( distant, ter_t_door_o );
+        CHECK_FALSE( close_tile_activity_actor::close_immediately( remote, distant ) );
+        CHECK( here.ter( distant ) == ter_t_door_o );
+        CHECK( remote.get_moves() == 1000 );
+    }
     CHECK( you.get_moves() == 2000 );
-    CHECK( remote.activity.id() == waiting );
+    CHECK( remote.activity.id() == ACT_WAIT );
     CHECK( remote.activity.moves_left == 500 );
 }
 
@@ -302,8 +340,7 @@ TEST_CASE( "shared_open_uses_actual_actor_and_charges_only_success",
     you.set_moves( 2000 );
     remote.set_moves( 1000 );
     const int moves = actor.get_moves();
-    const activity_id waiting( "ACT_WAIT" );
-    actor.activity = player_activity( waiting, 500 );
+    actor.activity = player_activity( ACT_WAIT, 500 );
     sounds::reset_sounds();
 
     SECTION( "a closed door opens once" ) {
@@ -349,7 +386,7 @@ TEST_CASE( "shared_open_uses_actual_actor_and_charges_only_success",
     } else {
         CHECK( remote.get_moves() == 1000 );
     }
-    CHECK( actor.activity.id() == waiting );
+    CHECK( actor.activity.id() == ACT_WAIT );
     CHECK( actor.activity.moves_left == 500 );
     sounds::reset_sounds();
 }
@@ -377,7 +414,7 @@ TEST_CASE( "open_activity_keeps_delayed_settlement_and_rechecks_target",
         you.activity.serialize( output );
         you.activity.set_to_null();
         you.activity.deserialize( json_loader::from_string( saved.str() ).get_object() );
-        REQUIRE( you.activity.id() == activity_id( "ACT_OPEN_TILE" ) );
+        REQUIRE( you.activity.id() == ACT_OPEN_TILE );
         REQUIRE( you.activity.moves_total == 100 );
         REQUIRE( you.activity.moves_left == 100 );
         REQUIRE( here.ter( target ) == ter_t_door_c );
@@ -414,11 +451,11 @@ TEST_CASE( "shared_vehicle_open_checks_live_parts_and_inside_access",
     avatar &you = get_avatar();
     you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
     const tripoint_bub_ms target = you.pos_bub( here ) + point::east;
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, target, 0_degrees, 0,
                                      veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-    const int part = veh->install_part( here, point_rel_ms::zero, vpart_id( "aisle_curtain" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int part = veh->install_part( here, point_rel_ms::zero, vpart_aisle_curtain );
     REQUIRE( part >= 0 );
     veh->refresh();
     here.add_vehicle_to_cache( veh );
@@ -438,7 +475,7 @@ TEST_CASE( "shared_vehicle_open_checks_live_parts_and_inside_access",
     }
     SECTION( "incorporeal actors cannot bypass the terrain interaction restriction" ) {
         you.setpos( here, target );
-        you.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+        you.add_effect( effect_incorporeal, 1_minutes );
         CHECK_FALSE( doors::open_immediately( here, you, target ) );
         CHECK_FALSE( veh->part( part ).open );
         CHECK( you.get_moves() == 1000 );
@@ -462,11 +499,201 @@ TEST_CASE( "shared_vehicle_open_checks_live_parts_and_inside_access",
     clear_vehicles();
 }
 
+TEST_CASE( "close_activity_revalidates_vehicle_identity_and_parts",
+           "[gates][close][vehicle][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    const on_out_of_scope cleanup( []() {
+        clear_vehicles();
+    } );
+    map &here = get_map();
+    avatar &you = get_avatar();
+    standard_npc companion;
+    Character &actor = GENERATE( false, true ) ? static_cast<Character &>( companion ) : you;
+    const tripoint_bub_ms target( 61, 60, 0 );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    actor.setpos( here, tripoint_bub_ms( 61, 61, 0 ) );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, target, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int horn = veh->install_part( here, point_rel_ms::zero, vpart_horn_bicycle );
+    REQUIRE( horn >= 0 );
+    int door = veh->install_part( here, point_rel_ms::zero, vpart_door );
+    REQUIRE( door > horn );
+    veh->set_owner( actor );
+    veh->open( here, door );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    actor.assign_activity( close_tile_activity_actor( target ) );
+    REQUIRE_FALSE( actor.activity.is_null() );
+    REQUIRE( veh->part( door ).open );
+
+    if( GENERATE( false, true ) ) {
+        std::ostringstream saved;
+        JsonOut output( saved );
+        actor.activity.serialize( output );
+        actor.activity.set_to_null();
+        actor.activity.deserialize( json_loader::from_string( saved.str() ).get_object() );
+        REQUIRE( actor.activity.id() == activity_id( "ACT_CLOSE_TILE" ) );
+    }
+
+    SECTION( "unchanged target closes" ) {
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK_FALSE( veh->part( door ).open );
+    }
+    SECTION( "removing an earlier part preserves the intended door" ) {
+        const int64_t door_uid = veh->part( door ).get_base().uid().get_value();
+        veh->remove_part( veh->part( horn ) );
+        veh->part_removal_cleanup( here );
+        door = veh->next_part_to_close( 0 );
+        REQUIRE( door >= 0 );
+        REQUIRE( veh->part( door ).get_base().uid().get_value() == door_uid );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK_FALSE( veh->part( door ).open );
+    }
+    SECTION( "removing the door cancels safely" ) {
+        veh->remove_part( veh->part( door ) );
+        veh->part_removal_cleanup( here );
+        actor.activity.actor->finish( actor.activity, actor );
+    }
+    SECTION( "a replacement door is not the original target" ) {
+        veh->remove_part( veh->part( door ) );
+        veh->part_removal_cleanup( here );
+        door = veh->install_part( here, point_rel_ms::zero, vpart_id( "door" ) );
+        REQUIRE( door >= 0 );
+        veh->open( here, door );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK( veh->part( door ).open );
+    }
+    SECTION( "a missing vehicle cancels safely" ) {
+        here.destroy_vehicle( veh );
+        actor.activity.actor->finish( actor.activity, actor );
+    }
+    SECTION( "a vehicle that moved away is not closed" ) {
+        here.displace_vehicle( *veh, tripoint_rel_ms::east );
+        REQUIRE_FALSE( here.veh_at( target ) );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK( veh->part( door ).open );
+    }
+    SECTION( "a different vehicle at the same tile is not closed" ) {
+        const int64_t original_uid = veh->uid().get_value();
+        here.destroy_vehicle( veh );
+        veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+                                veh_spawn_status::UNDAMAGED );
+        REQUIRE( veh != nullptr );
+        REQUIRE( veh->uid().get_value() != original_uid );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+        door = veh->install_part( here, point_rel_ms::zero, vpart_id( "door" ) );
+        REQUIRE( door >= 0 );
+        veh->open( here, door );
+        here.add_vehicle_to_cache( veh );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK( veh->part( door ).open );
+    }
+    SECTION( "an actor who moved away cannot close the door" ) {
+        actor.setpos( here, tripoint_bub_ms( 65, 65, 0 ) );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK( veh->part( door ).open );
+    }
+    SECTION( "a new obstacle prevents completion" ) {
+        monster &obstacle = spawn_test_monster( "mon_zombie", target );
+        REQUIRE( obstacle.pos_bub() == target );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK( veh->part( door ).open );
+    }
+    SECTION( "another actor already closed the door" ) {
+        veh->close( here, door );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK_FALSE( veh->part( door ).open );
+    }
+    SECTION( "legacy activities without a target identity cancel safely" ) {
+        const int saved_index = GENERATE( -1, 2, std::numeric_limits<int>::max() );
+        std::ostringstream saved;
+        JsonOut output( saved );
+        output.start_object();
+        output.member( "tile_location", target );
+        output.member( "close_success", close_tile_result::CLOSE_VEHICLE );
+        output.member( "closed_vehicle_part", saved_index );
+        output.end_object();
+        JsonValue data = json_loader::from_string( saved.str() );
+        const auto legacy = close_tile_activity_actor::deserialize( data );
+        actor.activity = player_activity( *legacy );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK( veh->part( door ).open );
+    }
+    SECTION( "modern activities ignore stale bubble coordinates and indices" ) {
+        std::ostringstream saved;
+        JsonOut output( saved );
+        output.start_object();
+        output.member( "tile_location", target + tripoint_rel_ms( 10, 0, 0 ) );
+        output.member( "close_success", close_tile_result::CLOSE_VEHICLE );
+        output.member( "closed_vehicle_part", std::numeric_limits<int>::max() );
+        output.member( "target_location", here.get_abs( target ) );
+        output.member( "vehicle_uid", veh->uid().get_value() );
+        output.member( "part_uid", veh->part( door ).get_base().uid().get_value() );
+        output.end_object();
+        JsonValue data = json_loader::from_string( saved.str() );
+        const auto restored = close_tile_activity_actor::deserialize( data );
+        actor.activity = player_activity( *restored );
+        actor.activity.actor->finish( actor.activity, actor );
+        CHECK_FALSE( veh->part( door ).open );
+    }
+    CHECK( actor.activity.is_null() );
+}
+
+TEST_CASE( "close_activity_resolves_fake_vehicle_doors", "[gates][close][vehicle][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    const on_out_of_scope cleanup( []() {
+        clear_vehicles();
+    } );
+    map &here = get_map();
+    avatar &you = get_avatar();
+    vehicle *veh = here.add_vehicle( vproto_id( "test_van" ), tripoint_bub_ms( 60, 60, 0 ),
+                                     315_degrees, 100, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    veh->set_owner( you );
+    int tested = 0;
+    for( const int index : veh->fake_parts ) {
+        const vehicle_part &part = veh->part( index );
+        if( !part.is_active_fake || !part.info().has_flag( "OPENABLE" ) ) {
+            continue;
+        }
+        const int real_part = part.fake_part_to;
+        veh->open( here, real_part );
+        const tripoint_bub_ms target = veh->bub_part_pos( here, index );
+        bool reachable = false;
+        for( const tripoint_bub_ms &position : here.points_in_radius( target, 1 ) ) {
+            if( !here.veh_at( position ) ) {
+                you.setpos( here, position );
+                if( veh->can_close( index, you ) ) {
+                    reachable = true;
+                    break;
+                }
+            }
+        }
+        REQUIRE( reachable );
+        you.assign_activity( close_tile_activity_actor( target ) );
+        REQUIRE_FALSE( you.activity.is_null() );
+        you.activity.actor->finish( you.activity, you );
+        CHECK( you.activity.is_null() );
+        CHECK_FALSE( veh->part( real_part ).open );
+        CHECK_FALSE( veh->part( index ).open );
+        ++tested;
+    }
+    CHECK( tested > 0 );
+}
+
 TEST_CASE( "door_intents_ignore_attached_client_mutations", "[gates][multiplayer][regression]" )
 {
     clear_avatar();
     clear_map_without_vision();
-    auto &session = g->multiplayer_session();
+    cata_mp::world_session &session = g->multiplayer_session();
     session.reset();
     const on_out_of_scope cleanup( [&]() {
         session.reset();
@@ -490,8 +717,8 @@ TEST_CASE( "door_intents_ignore_attached_client_mutations", "[gates][multiplayer
     const tripoint_abs_ms absolute = here.get_abs( target );
     const ter_str_id before = opening ? ter_t_door_c : ter_t_door_o;
     here.ter_set( target, before );
-    const auto name = remote.name;
-    const auto position = remote.pos_abs();
+    const std::string name = remote.name;
+    const tripoint_abs_ms position = remote.pos_abs();
     std::ostringstream text;
     JsonOut out( text );
     out.start_object();
