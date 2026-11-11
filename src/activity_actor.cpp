@@ -13957,10 +13957,10 @@ void zone_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
 
-    jsout.member( "scope", static_cast<int>( scope ) );
     jsout.member( "moves", moves );
     jsout.member( "num_processed", num_processed );
     jsout.member( "stage", stage );
+    jsout.member( "scope", static_cast<int>( scope ) );
     jsout.member( "coord_set", coord_set );
     jsout.member( "placement", placement );
     jsout.member( "personal_origin", personal_origin );
@@ -13975,14 +13975,14 @@ std::unique_ptr<activity_actor> unload_loot_activity_actor::deserialize( JsonVal
 
     JsonObject data = jsin.get_object();
 
-    const int scope = data.get_int( "scope", 0 );
-    if( scope < 0 || scope > static_cast<int>( zone_scope::personal_only ) ) {
-        data.throw_error_at( "scope", "Invalid unloading scope" );
-    }
-    actor.scope = static_cast<zone_scope>( scope );
     data.read( "moves", actor.moves );
     data.read( "num_processed", actor.num_processed );
     data.read( "stage", actor.stage );
+    const int scope = data.get_int( "scope", 0 );
+    if( scope < 0 || scope > static_cast<int>( zone_scope::personal_only ) ) {
+        data.throw_error_at( "scope", "Invalid sorting scope" );
+    }
+    actor.scope = static_cast<zone_scope>( scope );
     data.read( "coord_set", actor.coord_set );
     data.read( "placement", actor.placement );
     data.read( "personal_origin", actor.personal_origin );
