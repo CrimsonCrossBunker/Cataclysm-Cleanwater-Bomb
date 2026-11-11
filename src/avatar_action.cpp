@@ -1,4 +1,5 @@
 #include <coordinates.h>
+#include <cstdint>
 #include <input_enums.h>
 #include <item_disposition.h>
 #include <item_uid.h>
@@ -7,10 +8,10 @@
 #include <mp_peek.h>
 #include <player_activity.h>
 #include <safe_reference.h>
-#include <stdint.h>
 #include <translation.h>
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <map>
@@ -43,6 +44,7 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gun_mode.h"
+#include "gunmod_ui.h"
 #include "input.h"
 #include "input_context.h"
 #include "inventory.h"
@@ -1723,6 +1725,27 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
         if( !loc ) {
             add_msg( _( "Never mind." ) );
+            return;
+        }
+    }
+
+    if( loc->is_gun() && !loc->is_gunmod() && method.empty() ) {
+        bool manage = true;
+        if( loc->type->has_use() || loc->has_relic_activation() ) {
+            uilist actions;
+            actions.text = loc->tname();
+            actions.addentry( 0, true, 'm', _( "Manage gun modifications" ) );
+            actions.addentry( 1, true, 'a', _( "Activate item" ) );
+            actions.query();
+            if( actions.ret < 0 ) {
+                return;
+            }
+            manage = actions.ret == 0;
+        }
+        if( manage ) {
+            if( avatar_action::check_stealing( get_player_character(), *loc.get_item() ) ) {
+                gunmod_ui::show( you, loc );
+            }
             return;
         }
     }

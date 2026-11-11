@@ -1,8 +1,3 @@
-#include "item_consumption.h"
-#include "item_activation.h"
-#include "character.h"
-#include "character_action_guard.h"
-
 #include <activity_tracker.h>
 #include <body_part_set.h>
 #include <bodypart.h>
@@ -13,18 +8,29 @@
 #include <damage.h>
 #include <flat_set.h>
 #include <global_vars.h>
+#include <grab.h>
 #include <item.h>
+#include <item_source.h>
+#include <kill_statistics.h>
+#include <lua_platform_state.h>
 #include <memory_fast.h>
 #include <pimpl.h>
 #include <player_activity.h>
 #include <pocket_type.h>
 #include <point.h>
 #include <ranged.h>
+#include <safe_reference.h>
 #include <sleep.h>
 #include <subbodypart.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <visitable.h>
 #include <weighted_list.h>
+
+#include "character.h"
+#include "character_action_guard.h"
+#include "item_activation.h"
+#include "item_consumption.h"
 
 #define MP_ENABLED
 #include <algorithm>
@@ -80,20 +86,17 @@
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
-#include "input_context.h"
-#include "input_enums.h"
+#include "gunmod_ui.h"
 #include "inventory.h"
 #include "item_location.h"
-#include "item_reload.h"
 #include "item_pocket.h"
+#include "item_reload.h"
 #include "item_repair.h"
 #include "item_stack.h"
 #include "itype.h"
 #include "iuse_actor.h"
-#include "kill_tracker.h"
 #include "lightmap.h"
 #include "line.h"
-#include "localized_comparator.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
@@ -157,6 +160,7 @@
 #include "worldfactory.h"
 
 static const activity_id ACT_AUTODRIVE( "ACT_AUTODRIVE" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
 static const activity_id ACT_FISH( "ACT_FISH" );
 static const activity_id ACT_GAME( "ACT_GAME" );
 static const activity_id ACT_HAND_CRANK( "ACT_HAND_CRANK" );
@@ -166,6 +170,7 @@ static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_OPERATION( "ACT_OPERATION" );
 static const activity_id ACT_READ( "ACT_READ" );
+static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 static const activity_id ACT_SOCIALIZE( "ACT_SOCIALIZE" );
 static const activity_id ACT_STUDY_SPELL( "ACT_STUDY_SPELL" );
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
@@ -5055,7 +5060,7 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
     const auto used_reference = actually_used->get_safe_reference();
     const itype_id used_type = actually_used->typeId();
     const auto context = get_map().get_context_reference();
-    const auto activity_generation = activity.identity_generation();
+    const std::uint64_t activity_generation = activity.identity_generation();
     std::optional < int > charges_used = actually_used->type->invoke( this, *actually_used,
                                          &get_map(), pt, method, choices );
     if( !lifetime || !context ) {
@@ -5860,8 +5865,8 @@ void Character::assign_activity( const activity_id &type, int moves, int index, 
     // This is not a perfect safety net, but I don't know of another way to get all activity actors and what activity_ids might be associated with them.
     for( const auto &actor_ptr : activity_actors::deserialize_functions ) {
         // Liquid transfers and repair retain actorless activities for legacy callers and saves.
-        if( actor_ptr.first == type && type != activity_id( "ACT_FILL_LIQUID" ) &&
-            type != activity_id( "ACT_REPAIR_ITEM" ) ) {
+        if( actor_ptr.first == type && type != ACT_FILL_LIQUID &&
+            type != ACT_REPAIR_ITEM ) {
             debugmsg( "Tried to assign generic activity %s to activity that has an actor!", type.c_str() );
             return;
         }
@@ -5892,7 +5897,7 @@ void Character::assign_activity( const player_activity &act )
         add_msg_if_player( _( "You resume your task." ) );
         activity = backlog.front();
         backlog.pop_front();
-        const auto identity = activity.identity_generation();
+        const std::uint64_t identity = activity.identity_generation();
         activity.set_resume_values( act, *this );
         if( !lifetime || activity.identity_generation() != identity ) {
             return;
@@ -5911,7 +5916,7 @@ void Character::assign_activity( const player_activity &act )
     if( authoritative && activity.execution() != activity_execution::presentation ) {
         activity.set_execution( activity_execution::authoritative );
     }
-    const auto identity = activity.identity_generation();
+    const std::uint64_t identity = activity.identity_generation();
     activity.start_or_resume( *this, resuming );
     if( !lifetime || activity.identity_generation() != identity ) {
         return;
@@ -5946,7 +5951,7 @@ bool Character::has_activity( const std::vector < activity_id > &types ) const
 void Character::cancel_activity()
 {
     const character_action_guard lifetime( *this, true );
-    const auto identity = activity.identity_generation();
+    const std::uint64_t identity = activity.identity_generation();
     activity.canceled( *this );
     if( !lifetime || ( activity && activity.identity_generation() != identity ) ) {
         return;
@@ -6687,7 +6692,7 @@ bool execute_crush_frozen_liquid( Character &who, item_location loc, bool allow_
 bool Character::crush_frozen_liquid( item_location loc )
 {
     return query_crush_frozen_liquid( *this, loc ) &&
-           execute_crush_frozen_liquid( *this, loc, true );
+           execute_crush_frozen_liquid( *this, std::move( loc ), true );
 }
 
 float Character::power_rating() const
@@ -7021,7 +7026,7 @@ bool Character::is_visible_in_range( const Creature &critter, const int range ) 
 std::vector < Creature * > Character::get_visible_creatures( const int range ) const
 {
     const map &here = get_map();
-    const auto origin = here.get_abs( here.observer_position( *this ) );
+    const tripoint_abs_ms origin = here.get_abs( here.observer_position( *this ) );
 
     return g->get_creatures_if( [this, range, &here, origin]( const Creature & critter ) -> bool {
         return this != &critter && origin != critter.pos_abs() &&
@@ -7032,7 +7037,7 @@ std::vector < Creature * > Character::get_visible_creatures( const int range ) c
 std::vector < vehicle * > Character::get_visible_vehicles( const int range ) const
 {
     const map &here = get_map();
-    const auto origin = here.get_abs( here.observer_position( *this ) );
+    const tripoint_abs_ms origin = here.get_abs( here.observer_position( *this ) );
 
     return g->get_vehicles_if( [this, range, &here, origin]( const vehicle & veh ) -> bool {
         return rl_dist( origin, veh.pos_abs() ) <= range && sees( here, veh.pos_bub( here ) );
@@ -7042,7 +7047,7 @@ std::vector < vehicle * > Character::get_visible_vehicles( const int range ) con
 std::vector < Creature * > Character::get_targetable_creatures( const int range, bool melee ) const
 {
     map &here = get_map();
-    const auto origin = here.get_abs( here.observer_position( *this ) );
+    const tripoint_abs_ms origin = here.get_abs( here.observer_position( *this ) );
     return g->get_creatures_if( [this, range, melee, &here,
           origin]( const Creature & critter ) -> bool {
         //the call to map.sees is to make sure that even if we can see it through walls
@@ -8939,6 +8944,13 @@ void Character::knock_back_to( const tripoint_bub_ms &to )
 
 void Character::use_wielded()
 {
+    if( avatar *you = as_avatar() ) {
+        item_location source = get_wielded_item();
+        if( source && source->is_gun() && !source->is_gunmod() ) {
+            avatar_action::use_item( *you, source );
+            return;
+        }
+    }
     if( is_avatar() && cata_mp::is_client_mode() ) {
         item_location source = get_wielded_item();
         std::string method;
@@ -8980,6 +8992,16 @@ void Character::use( item_location loc, int pre_obtain_moves, std::string const 
 
     item &used = *loc;
     last_item = used.typeId();
+
+    if( is_avatar() && used.is_gun() && !used.is_gunmod() && method.empty() &&
+        !used.type->has_use() && !used.has_relic_activation() ) {
+        const int menu_moves = get_moves();
+        gunmod_ui::show( *this, loc );
+        if( !activity && get_moves() == menu_moves ) {
+            set_moves( pre_obtain_moves );
+        }
+        return;
+    }
 
     if( used.is_tool() ) {
         if( !used.type->has_use() ) {
