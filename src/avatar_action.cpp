@@ -7,10 +7,10 @@
 #include <mp_peek.h>
 #include <player_activity.h>
 #include <safe_reference.h>
-#include <stdint.h>
 #include <translation.h>
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <map>
