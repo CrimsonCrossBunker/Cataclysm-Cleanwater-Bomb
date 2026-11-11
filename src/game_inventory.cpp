@@ -36,6 +36,7 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "gunmod_ui.h"
 #include "input.h"
 #include "input_context.h"
 #include "inventory.h"
@@ -1137,14 +1138,19 @@ class activatable_inventory_preset : public pickup_inventory_preset
         }
 
         bool is_shown( const item_location &loc ) const override {
-            return ( loc->is_craft() || ( ( loc->type->has_use() || loc->has_relic_activation() ) &&
-                                          ( !loc->is_comestible() || loc->type->can_use( "PETFOOD" ) ) ) ) &&
+            return ( ( loc->is_gun() && !loc->is_gunmod() ) || loc->is_craft() ||
+                     ( ( loc->type->has_use() || loc->has_relic_activation() ) &&
+                       ( !loc->is_comestible() || loc->type->can_use( "PETFOOD" ) ) ) ) &&
                    !loc.is_invisible_installed_gunmod();
         }
 
         std::string get_denial( const item_location &loc ) const override {
             const item &it = *loc;
             const auto &uses = it.type->use_methods;
+
+            if( it.is_gun() && !it.is_gunmod() ) {
+                return pickup_inventory_preset::get_denial( loc );
+            }
 
             if( it.has_relic_activation() && !it.can_use_relic( you ) ) {
                 return string_format( _( "The %s can't be used like that." ), it.tname() );
@@ -1221,6 +1227,9 @@ class activatable_inventory_preset : public pickup_inventory_preset
 
     protected:
         std::string get_action_name( const item &it ) const {
+            if( it.is_gun() && !it.is_gunmod() ) {
+                return _( "Manage gun modifications" );
+            }
             const auto &uses = it.type->use_methods;
 
             if( uses.size() == 1 ) {
@@ -1346,26 +1355,7 @@ class gunmod_remove_inventory_preset : public inventory_selector_preset
         // a sight mod location, both are removable. Ideally one should not be removable, to
         // represent the mod that has the other mod attached to its added sight mod location.
         std::string get_denial( const item_location &loc ) const override {
-            item mod = *loc.get_item();
-            if( ( mod.type->gunmod->location.name() == "magazine" ||
-                  mod.type->gunmod->location.name() == "mechanism" ||
-                  mod.type->gunmod->location.name() == "loading port" ||
-                  mod.type->gunmod->location.name() == "bore" ) &&
-                ( gun.ammo_remaining( ) > 0 || gun.magazine_current() ) ) {
-                return _( "must be unloaded before removing this mod" );
-            }
-
-            if( !loc->type->gunmod->add_mod.empty() ) {
-                std::map<gunmod_location, int> mod_locations_added = loc->type->gunmod->add_mod;
-
-                for( const std::pair<const gunmod_location, int> &slot : mod_locations_added ) {
-                    if( slot.second > 0 && this->gun.get_free_mod_locations( slot.first ) <= 0 ) {
-                        return _( "has mods attached" );
-                    }
-                }
-            }
-
-            return std::string();
+            return gunmod_ui::removal_denial( gun, *loc );
         }
 
     private:
