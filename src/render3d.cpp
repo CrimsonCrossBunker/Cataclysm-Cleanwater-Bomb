@@ -103,8 +103,8 @@ constexpr float ITEM_HEIGHT = 0.5f;
 // fields: liquid/solid traces (blood, bile, acid, web...) draw as thin decals
 // just above the floor; gas/plasma effects (smoke, fire, gas...) draw as
 // camera-facing billboards. Co-tile entries stagger so they never share a plane.
-constexpr float FIELD_DECAL_Z = 0.001f;
-constexpr float FIELD_DECAL_STAGGER = 0.0003f;
+constexpr float FIELD_DECAL_Z = 0.002f;
+constexpr float FIELD_DECAL_STAGGER = 0.0005f;
 constexpr float FIELD_RISER_HEIGHT = 1.4f;
 constexpr float FIELD_RISER_OFFSET = 0.008f;
 // ground-level utility runs sit above the floor and the existing low decals
@@ -140,6 +140,11 @@ constexpr float VEH_MIRROR_Z = 0.80f;
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
 static_assert( fov_3d_z_range >= OVERMAP_DEPTH &&fov_3d_z_range >= OVERMAP_HEIGHT,
                "map memory region must cover every rendered z-level" );
+
+constexpr int COMPASS_ATLAS_SIZE = 256;
+constexpr float COMPASS_ARC_RADIUS_UV = 0.78f;
+constexpr float COMPASS_QUAD_SIZE = 3.0f;
+constexpr float COMPASS_WAIST_Z = 0.82f;
 
 // geometry kind of an instance batch (matches `params.x` in terrain3d.vert)
 enum draw_mode : int {
@@ -533,6 +538,8 @@ struct context {
     int glyph_cell_h = 0;
     int glyph_atlas_w = 0;
     int glyph_atlas_h = 0;
+    // Procedural north-arc texture, rebuilt with the renderer.
+    SDL_Texture *compass_tex = nullptr;
     int tex_w = 0;
     int tex_h = 0;
 
@@ -843,6 +850,10 @@ void context::teardown()
             SDL_DestroyTexture( glyph_tex );
             glyph_tex = nullptr;
         }
+        if( compass_tex ) {
+            SDL_DestroyTexture( compass_tex );
+            compass_tex = nullptr;
+        }
         if( fallback_tex ) {
             SDL_ReleaseGPUTexture( device, fallback_tex );
             fallback_tex = nullptr;
@@ -1030,6 +1041,51 @@ bool build_glyph_atlas( SDL_Renderer *renderer )
     g_ctx.glyph_atlas_h = atlas_h;
     write_status( "glyph atlas: built " + std::to_string( atlas_w ) + "x" +
                   std::to_string( atlas_h ) );
+    return true;
+}
+
+// A northern semicircle in texture space (negative world y). The arc ends and
+// radial edge fade through the existing soft-alpha dither in the fragment shader.
+bool build_compass_atlas( SDL_Renderer *renderer )
+{
+    constexpr int size = COMPASS_ATLAS_SIZE;
+    constexpr float half = size * 0.5f;
+    std::vector<Uint8> pixels( static_cast<size_t>( size ) * size * 4, 0 );
+    const auto smooth01 = []( float value ) {
+        const float t = std::clamp( value, 0.0f, 1.0f );
+        return t * t * ( 3.0f - 2.0f * t );
+    };
+    for( int y = 0; y < size; ++y ) {
+        for( int x = 0; x < size; ++x ) {
+            const float nx = ( x + 0.5f - half ) / half;
+            const float ny = ( y + 0.5f - half ) / half;
+            const float radius = std::hypot( nx, ny );
+            const float radial = 1.0f - smooth01(
+                                     ( std::abs( radius - COMPASS_ARC_RADIUS_UV ) - 0.015f ) / 0.045f );
+            if( ny >= 0.0f || radial <= 0.0f ) {
+                continue;
+            }
+            const float end_fade = smooth01( -ny / ( COMPASS_ARC_RADIUS_UV * 0.65f ) );
+            const size_t i = ( static_cast<size_t>( y ) * size + x ) * 4;
+            pixels[i] = 110;
+            pixels[i + 1] = 215;
+            pixels[i + 2] = 255;
+            pixels[i + 3] = static_cast<Uint8>( radial * end_fade * 0.9f * 255.0f );
+        }
+    }
+    g_ctx.compass_tex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_RGBA32,
+                                           SDL_TEXTUREACCESS_STATIC, size, size );
+    if( !g_ctx.compass_tex ) {
+        write_status( "compass atlas: texture creation failed: " + std::string( SDL_GetError() ) );
+        return false;
+    }
+    if( !SDL_UpdateTexture( g_ctx.compass_tex, nullptr, pixels.data(), size * 4 ) ) {
+        write_status( "compass atlas: texture upload failed: " + std::string( SDL_GetError() ) );
+        SDL_DestroyTexture( g_ctx.compass_tex );
+        g_ctx.compass_tex = nullptr;
+        return false;
+    }
+    write_status( "compass atlas: built " + std::to_string( size ) + "x" + std::to_string( size ) );
     return true;
 }
 
@@ -1322,6 +1378,7 @@ bool probe( SDL_Renderer *renderer )
     SDL_ReleaseGPUTransferBuffer( device, tb );
 
     build_glyph_atlas( renderer );
+    build_compass_atlas( renderer );
 
     g_available = true;
     DebugLog( D_INFO, DC_ALL ) << "render3d: probe OK";
@@ -4826,6 +4883,33 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                      static_cast<float>( p.y() - center.y() ), wz, tone );
     }
 
+    // World-space north compass: a waist-height northern arc and a camera-facing
+    // N at negative map y. Orbiting the camera never changes their orientation.
+    if( upos.z() == center.z() && g_ctx.compass_tex && count + 2 <= MAX_DRAW_INSTANCES ) {
+        const float pcx = static_cast<float>( upos.x() - center.x() ) + 0.5f;
+        const float pcy = static_cast<float>( upos.y() - center.y() ) + 0.5f;
+        const float compass_z = ( upos.z() - cz ) * LEVEL_HEIGHT + COMPASS_WAIST_Z;
+        sprite_info arc;
+        arc.atlas = g_ctx.compass_tex;
+        arc.u1 = 1.0f;
+        arc.v1 = 1.0f;
+        std::vector<float> &av = bucket_for( MODE_FLATQUAD_DECAL, arc.atlas );
+        push_instance( av, pcx - COMPASS_QUAD_SIZE * 0.5f, pcy - COMPASS_QUAD_SIZE * 0.5f,
+                       compass_z, COMPASS_QUAD_SIZE, COMPASS_QUAD_SIZE, 1.0f, arc,
+                       1.0f, 1.0f, 1.0f, false, 0, false, -1.0f, false, 1.0f, false, true );
+        ++count;
+        sprite_info north;
+        if( glyph_sprite( U'N', north ) ) {
+            const float height = 0.45f;
+            const float width = height * std::clamp( north.aspect, 0.5f, 2.0f );
+            const float radius = COMPASS_QUAD_SIZE * 0.5f * COMPASS_ARC_RADIUS_UV;
+            std::vector<float> &nv = bucket_for( MODE_BILLBOARD, north.atlas );
+            push_instance( nv, pcx, pcy - radius, compass_z, width, height, 1.0f, north,
+                           1.0f, 1.0f, 1.0f, false, 0, false, -1.0f, false, 1.0f, false, true );
+            ++count;
+        }
+    }
+
     // hover preselection box + game-driven cursors (targeting, construction...):
     // a thin slab carrying the tileset's highlight/cursor sprite
     auto push_cursor_slab = [&]( const tripoint_bub_ms & tp, const char *sprite ) {
@@ -5096,9 +5180,11 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                     target.y - dir.y * g_cam_dist,
                     target.z - dir.z * g_cam_dist };
     const mat4 view = mat4_lookat( eye, target, { 0.0f, 0.0f, 1.0f } );
+    // The orbit camera stays at least 6 units away; near=0.5 preserves far-depth
+    // precision for ground decals viewed from upper levels.
     const mat4 proj = mat4_perspective( 40.0f * 3.14159265f / 180.0f,
                                         static_cast<float>( w ) / static_cast<float>( h ),
-                                        0.05f, 300.0f );
+                                        0.5f, 300.0f );
     const mat4 mvp = mat4_mul( proj, view );
     const view_frustum frustum = make_view_frustum( mvp );
 
