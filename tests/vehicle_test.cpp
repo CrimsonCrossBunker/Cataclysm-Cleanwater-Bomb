@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -33,11 +34,13 @@
 #include "point.h"
 #include "ret_val.h"
 #include "string_formatter.h"
+#include "tileray.h"
 #include "type_id.h"
 #include "units.h"
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_turning.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -80,6 +83,57 @@ static const vproto_id vehicle_prototype_unicycle_armored_wheel( "unicycle_armor
 static const vproto_id vehicle_prototype_unicycle_bike_wheel( "unicycle_bike_wheel" );
 static const vproto_id vehicle_prototype_unicycle_normal_wheel( "unicycle_normal_wheel" );
 static const vproto_id vehicle_prototype_wheelchair( "wheelchair" );
+
+TEST_CASE( "turning_control_point_defines_a_tangent_arc", "[vehicle][turning_assist]" )
+{
+    const std::optional<vehicle_turning_arc> right = vehicle_turning_arc::through( 20.0, 5.0 );
+    const std::optional<vehicle_turning_arc> left = vehicle_turning_arc::through( 20.0, -5.0 );
+    REQUIRE( right );
+    REQUIRE( left );
+    CHECK( right->remaining == Approx( -left->remaining ) );
+    CHECK( right->curvature == Approx( -left->curvature ) );
+    // The circle starts tangent to +x and intersects the selected control point.
+    CHECK( std::sin( right->remaining ) / right->curvature == Approx( 20.0 ) );
+    CHECK( ( 1.0 - std::cos( right->remaining ) ) / right->curvature == Approx( 5.0 ) );
+    CHECK_FALSE( vehicle_turning_arc::through( -20.0, 5.0 ) );
+    CHECK_FALSE( vehicle_turning_arc::through( 0.0, 0.0 ) );
+    CHECK_FALSE( vehicle_turning_arc::through( 20.0, 0.0 ) );
+    CHECK_FALSE( vehicle_turning_arc::through( 5.0, 20.0 ) );
+    CHECK_FALSE( vehicle_turning_arc::through( 2.0, 2.0 ) );
+}
+
+TEST_CASE( "assisted_turn_preserves_subtile_progress", "[vehicle][turning_assist]" )
+{
+    for( const int side : { -1, 1 } ) {
+        std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( 40.0, side * 10.0 );
+        REQUIRE( arc );
+        tileray ray( 0_degrees );
+        point travelled;
+        for( int step = 0; !arc->finished() && step < 100; ++step ) {
+            const double change = arc->advance( to_radians( ray.dir() ) );
+            CHECK( std::abs( change ) <= to_radians( 15_degrees ) );
+            ray.redirect( ray.dir() + units::from_radians( change ) );
+            ray.advance();
+            travelled += point( ray.dx(), ray.dy() );
+        }
+        CHECK( arc->finished() );
+        CHECK( std::abs( travelled.x - 40 ) <= 2 );
+        CHECK( std::abs( travelled.y - side * 10 ) <= 2 );
+    }
+}
+
+TEST_CASE( "manual_turn_and_stop_cancel_assisted_steering", "[vehicle][turning_assist]" )
+{
+    vehicle veh( vehicle_prototype_bicycle );
+    veh.turning_arc = vehicle_turning_arc::through( 20.0, 5.0 );
+    REQUIRE( veh.turning_arc );
+    veh.turn( 15_degrees );
+    CHECK_FALSE( veh.turning_arc );
+    CHECK( veh.turn_dir == 15_degrees );
+    veh.turning_arc = vehicle_turning_arc::through( 20.0, 5.0 );
+    veh.stop( get_map() );
+    CHECK_FALSE( veh.turning_arc );
+}
 
 TEST_CASE( "vehicle_uid_construction_and_move_assignment", "[vehicle]" )
 {

@@ -49,6 +49,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "veh_type.h"
+#include "vehicle_turning.h"
 #include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -2014,7 +2015,8 @@ class vehicle
          * @param acceleration is acceleration
          * @param z for vertical movement - e.g helicopters
          */
-        void pldrive( map &here, Character &driver, int trn, int acceleration, int z = 0 );
+        void pldrive( map &here, Character &driver, int trn, int acceleration, int z = 0,
+                      std::optional<vehicle_turning_arc> assisted_arc = std::nullopt );
 
         /**
         * Flags item \p tool with PSEUDO, if it has MOD pocket then a `pseudo_magazine_mod` is
@@ -2562,8 +2564,10 @@ class vehicle
         // id of the om_vehicle struct corresponding to this vehicle
         int om_id = 0;
         // direction, to which vehicle is turning (player control). will rotate frame on next move
-        // must be a multiple of 15 degrees
+        // Manual steering uses 15 degree increments; assisted arcs use smaller steps.
         units::angle turn_dir = 0_degrees;
+        // A local driving gesture, deliberately not restored from a save.
+        std::optional<vehicle_turning_arc> turning_arc; // NOLINT(cata-serialize)
         // amount of last turning (for calculate skidding due to handbrake)
         units::angle last_turn = 0_degrees;
         // goes from ~1 to ~0 while proceeding every turn
