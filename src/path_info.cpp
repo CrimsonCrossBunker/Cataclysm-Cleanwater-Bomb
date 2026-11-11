@@ -499,6 +499,14 @@ std::string PATH_INFO::motd()
 
 std::string PATH_INFO::title( const holiday current_holiday )
 {
+    // Menu redraws and loading screens must not perturb simulation choices.
+    const bool alternate = get_option<bool>( "ENABLE_ASCII_TITLE" ) &&
+                           rng_visual( 0, 99 ) < get_option<int>( "ALT_TITLE" );
+    return title( current_holiday, alternate );
+}
+
+std::string PATH_INFO::title( const holiday current_holiday, const bool alternate )
+{
     std::string theme_basepath = datadir_value + "title/";
     std::string theme_extension = ".title";
     std::string theme_fallback = theme_basepath + "en.title";
@@ -507,7 +515,7 @@ std::string PATH_INFO::title( const holiday current_holiday )
         return _( "Cataclysm: Cleanwater Bomb" );
     }
 
-    if( x_in_y( get_option<int>( "ALT_TITLE" ), 100 ) ) {
+    if( alternate ) {
         theme_extension = ".alt1";
         theme_fallback = datadir_value + "title/" + "en.alt1";
     }

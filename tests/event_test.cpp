@@ -1,6 +1,9 @@
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_variant.h"
 #include "cata_catch.h"
@@ -8,7 +11,11 @@
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "talker.h"
 #include "type_id.h"
+#include "vehicle.h"
+
+class Creature;
 
 static const mtype_id zombie( "zombie" );
 
@@ -36,6 +43,21 @@ struct test_subscriber : public event_subscriber {
     }
 
     std::vector<cata::event> events;
+};
+
+struct talker_subscriber : public event_subscriber {
+    void notify( const cata::event & ) override {
+        FAIL( "Expected an event with talkers" );
+    }
+
+    void notify( const cata::event &, std::unique_ptr<talker> event_alpha,
+                 std::unique_ptr<talker> event_beta ) override {
+        alpha = std::move( event_alpha );
+        beta = std::move( event_beta );
+    }
+
+    std::unique_ptr<talker> alpha;
+    std::unique_ptr<talker> beta;
 };
 
 } // namespace
@@ -83,6 +105,45 @@ TEST_CASE( "destroy_bus_before_subscriber", "[event]" )
     bus.send( cata::event::make<event_type::character_kills_monster>(
                   character_id( 5 ), zombie, 0 ) );
     CHECK( sub.events.size() == 1 );
+}
+
+TEST_CASE( "event_talkers_preserve_optional_creature", "[event]" )
+{
+    event_bus bus;
+    talker_subscriber subscriber;
+    bus.subscribe( &subscriber );
+    avatar &actor = get_avatar();
+    Creature *secondary = nullptr;
+
+    SECTION( "vehicle_actor" ) {
+        vehicle source{ vproto_id() };
+        SECTION( "without_driver" ) {}
+        SECTION( "with_driver" ) {
+            secondary = &actor;
+        }
+        bus.send_with_talker( &source, secondary, cata::event::make<event_type::vehicle_moves>(
+                                  false, false, false, false, false, true, false, false, false, 100, 0 ) );
+        REQUIRE( subscriber.alpha );
+        CHECK( subscriber.alpha->get_vehicle() == &source );
+    }
+
+    SECTION( "creature_actor" ) {
+        SECTION( "without_source" ) {}
+        SECTION( "with_source" ) {
+            secondary = &actor;
+        }
+        bus.send_with_talker( &actor, secondary,
+                              cata::event::make<event_type::character_kills_monster>( character_id( 5 ), zombie, 0 ) );
+        REQUIRE( subscriber.alpha );
+        CHECK( subscriber.alpha->get_creature() == &actor );
+    }
+
+    if( secondary ) {
+        REQUIRE( subscriber.beta );
+        CHECK( subscriber.beta->get_creature() == secondary );
+    } else {
+        CHECK_FALSE( subscriber.beta );
+    }
 }
 
 namespace

@@ -1,6 +1,69 @@
 [
   {
     "type": "keybinding",
+    "id": "SLOT_UP",
+    "name": "Scroll slot preview up",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "," } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "SLOT_DOWN",
+    "name": "Scroll slot preview down",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "." } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "CHANGE_TOOL",
+    "name": "Change installation tool",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "t" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "AVAILABILITY",
+    "name": "Cycle modification availability filter",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "v" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "ALL_STATS",
+    "name": "Toggle all or changed statistics",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "s" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "DETAIL_UP",
+    "name": "Scroll modification details up",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "[" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "DETAIL_DOWN",
+    "name": "Scroll modification details down",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "]" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "EXAMINE",
+    "name": "Examine modification and requirements",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "e" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "COMPARE",
+    "name": "Compare current and preview gun",
+    "category": "GUNMOD_MANAGER",
+    "bindings": [ { "input_method": "keyboard_any", "key": "c" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "UILIST.UP",
     "name": "Pan up",
     "bindings": [
@@ -3316,6 +3379,18 @@
     "name": "Toggle auto travel mode",
     "category": "DEFAULTMODE",
     "id": "auto_travel_mode"
+  },
+  {
+    "type": "keybinding",
+    "name": "Choose/cancel vehicle turning control point",
+    "category": "DEFAULTMODE",
+    "id": "vehicle_turning_assist"
+  },
+  {
+    "type": "keybinding",
+    "name": "Toggle vehicle driving guidance",
+    "category": "DEFAULTMODE",
+    "id": "vehicle_guidance"
   },
   {
     "type": "keybinding",

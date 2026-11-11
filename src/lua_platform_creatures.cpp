@@ -61,6 +61,7 @@ extern "C" {
 #include "magic_enchantment.h"
 #include "martialarts.h"
 #include "map.h"
+#include "memory_fast.h"
 #include "mongroup.h"
 #include "monster.h"
 #include "npctalk.h"
@@ -70,6 +71,7 @@ extern "C" {
 #include "overmapbuffer.h"
 #include "profession.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "translation.h"
 #include "uilist.h"
 #include "units.h"
@@ -2922,7 +2924,8 @@ sol::table explosion_character(
     }
     if( options.flashbang ) {
         explosion_handler::flashbang(
-            target, options.flashbang_avatar_is_immune, options.flashbang_radius );
+            target, options.flashbang_avatar_is_immune ? &get_player_character() : nullptr,
+            options.flashbang_radius );
     }
     sol::table value = state.create_table();
     value["queued"] = true;
@@ -3192,11 +3195,28 @@ sol::table die_character(
             character_npc->quiet_death = *options.suppress_message;
         }
     }
-    const bool was_dead = character->is_dead_state();
+    // Fatal/death handlers may remove an NPC. Retain active storage through
+    // the call and verify the native identity before reading its result.
+    const shared_ptr_fast<Character> retained = g->shared_from( *character );
+    const safe_reference<Creature> reference = character->get_safe_reference();
+    const character_id identity = character->getID();
+    const auto is_dead = []( const Character & who ) {
+        const npc *value = who.as_npc();
+        return value ? value->is_dead() : who.is_dead_state();
+    };
+    const bool was_dead = is_dead( *character );
     character->die( &get_map(), nullptr );
+    Creature *remaining = reference.get();
+    character = remaining ? remaining->as_character() : nullptr;
+    if( !character || character->getID() != identity ) {
+        return make_game_error_result( state, {
+            "stale_handle", "Death callback removed or replaced its character"
+        } );
+    }
+    const bool dead = is_dead( *character );
     sol::table value = state.create_table();
-    value["dead"] = character->is_dead_state();
-    value["changed"] = !was_dead && character->is_dead_state();
+    value["dead"] = dead;
+    value["changed"] = !was_dead && dead;
     if( options.remove_corpse ) {
         value["remove_corpse"] = *options.remove_corpse;
     }

@@ -75,10 +75,10 @@ class recipe;
 static const activity_id ACT_ADD_VARIABLE_COMPLETE( "ACT_ADD_VARIABLE_COMPLETE" );
 static const activity_id ACT_ADD_VARIABLE_DURING( "ACT_ADD_VARIABLE_DURING" );
 static const activity_id ACT_GENERIC_EOC( "ACT_GENERIC_EOC" );
+
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
-static const effect_on_condition_id
-effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR( "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
+
 static const effect_on_condition_id
 effect_on_condition_EOC_MARLOSS_BERRY_CONSUME( "EOC_MARLOSS_BERRY_CONSUME" );
 static const effect_on_condition_id
@@ -95,6 +95,8 @@ static const effect_on_condition_id
 effect_on_condition_EOC_MARLOSS_WINE_CONSUME( "EOC_MARLOSS_WINE_CONSUME" );
 static const effect_on_condition_id
 effect_on_condition_EOC_MYCUS_CONSUME( "EOC_MYCUS_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR( "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
 static const effect_on_condition_id
 effect_on_condition_EOC_TEST_PURIFIABILITY_FALSE( "EOC_TEST_PURIFIABILITY_FALSE" );
 static const effect_on_condition_id
@@ -211,8 +213,10 @@ static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_sleep( "sleep" );
 
 static const flag_id json_flag_FILTHY( "FILTHY" );
+
 static const furn_str_id furn_f_cardboard_box( "f_cardboard_box" );
 static const furn_str_id furn_test_f_eoc( "test_f_eoc" );
+
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_marloss_berry( "marloss_berry" );
@@ -226,11 +230,11 @@ static const itype_id itype_test_eoc_armor_suit( "test_eoc_armor_suit" );
 static const itype_id itype_test_glock( "test_glock" );
 static const itype_id itype_test_knife_combat( "test_knife_combat" );
 static const itype_id itype_test_whiskey_caffenated( "test_whiskey_caffenated" );
-static const matype_id style_aikido( "style_aikido" );
-static const matype_id style_none( "style_none" );
 static const itype_id itype_wine_marloss( "wine_marloss" );
 static const itype_id itype_wine_mycus( "wine_mycus" );
 
+static const matype_id style_aikido( "style_aikido" );
+static const matype_id style_none( "style_none" );
 
 static const morale_type morale_marloss( "morale_marloss" );
 
@@ -238,9 +242,13 @@ static const mtype_id mon_triffid( "mon_triffid" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const mtype_id mon_zombie_smoker( "mon_zombie_smoker" );
 static const mtype_id mon_zombie_tough( "mon_zombie_tough" );
+
 static const recipe_id recipe_cattail_jelly( "cattail_jelly" );
+
 static const skill_id skill_survival( "survival" );
+
 static const spell_id spell_test_eoc_spell( "test_eoc_spell" );
+
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_marloss( "t_marloss" );
@@ -258,13 +266,9 @@ static const trait_id trait_process_mutation_two( "process_mutation_two" );
 static const trait_id trait_purifiability_first( "purifiability_first" );
 static const trait_id trait_purifiability_second( "purifiability_second" );
 
-#if defined(LOCALIZE)
-    #include "translation_manager.h"
-#endif
-
 namespace
 {
-void complete_activity( Character & u )
+void complete_activity( Character &u )
 {
     while( !u.activity.is_null() ) {
         u.set_moves( u.get_speed() );
@@ -272,7 +276,7 @@ void complete_activity( Character & u )
     }
 }
 
-void check_ter_in_radius( tripoint_abs_ms const & center, int range, ter_id const & ter )
+void check_ter_in_radius( tripoint_abs_ms const &center, int range, ter_id const &ter )
 {
     map tm;
     tm.load( project_to<coords::sm>( center - point{ range, range } ), false, false );
@@ -284,8 +288,8 @@ void check_ter_in_radius( tripoint_abs_ms const & center, int range, ter_id cons
     }
 }
 
-void check_ter_in_line( tripoint_abs_ms const & first, tripoint_abs_ms const & second,
-                        ter_id const & ter )
+void check_ter_in_line( tripoint_abs_ms const &first, tripoint_abs_ms const &second,
+                        ter_id const &ter )
 {
     map tm;
     tripoint_abs_ms const orig = coord_min( first, second );
@@ -295,9 +299,9 @@ void check_ter_in_line( tripoint_abs_ms const & first, tripoint_abs_ms const & s
     }
 }
 
-void set_marloss_context( dialogue & d, const std::string & color, const std::string & addiction,
-                          const std::string & other_addiction_1,
-                          const std::string & other_addiction_2 )
+void set_marloss_context( dialogue &d, const std::string &color, const std::string &addiction,
+                          const std::string &other_addiction_1,
+                          const std::string &other_addiction_2 )
 {
     d.set_value( "marloss_color", color );
     d.set_value( "marloss_addiction", addiction );
@@ -522,21 +526,29 @@ TEST_CASE( "EOC_activation_topic_item_uses_copied_dialogue_value", "[eoc][condit
     eoc.has_condition = true;
     std::string evaluated_topic_item;
     int condition_evaluations = 0;
-    eoc.condition = [&legacy_condition, &evaluated_topic_item, &condition_evaluations](
+    bool clear_topic_item = false;
+    eoc.condition = [&legacy_condition, &evaluated_topic_item, &condition_evaluations,
+                                        &clear_topic_item](
     const const_dialogue & condition_dialogue ) {
         ++condition_evaluations;
         evaluated_topic_item = condition_dialogue.cur_item.str();
-        return legacy_condition( condition_dialogue );
+        const bool condition_matches = legacy_condition( condition_dialogue );
+        if( clear_topic_item ) {
+            condition_dialogue.cur_item = itype_id();
+        }
+        return condition_matches;
     };
 
     CHECK( eoc.test_condition( d ) );
     CHECK( evaluated_topic_item == topic_item );
     condition_evaluations = 0;
     evaluated_topic_item.clear();
+    clear_topic_item = true;
 
-    CHECK_FALSE( eoc.activate( d, false ) );
+    CHECK( eoc.activate( d, false ) );
     REQUIRE( condition_evaluations == 1 );
-    CHECK( evaluated_topic_item.empty() );
+    CHECK( evaluated_topic_item == topic_item );
+    CHECK( d.cur_item.str() == topic_item );
 }
 
 TEST_CASE( "EOC_run_unique_npc_skips_removed_target", "[eoc][npc]" )
@@ -952,7 +964,7 @@ TEST_CASE( "EOC_math_spell", "[eoc][math_parser]" )
     CHECK( globvars.get_global_value( "key_spell_count" ) == 2 );
     CHECK( globvars.get_global_value( "key_spell_count_test_trait" ) == 1 );
 
-    get_avatar().magic->evaluate_opens_spellbook_data();
+    get_avatar().magic->evaluate_opens_spellbook_data( get_avatar() );
 
     CHECK( get_avatar().magic->get_spell( spell_test_eoc_spell ).get_effective_level() == 4 );
 }
@@ -1157,7 +1169,7 @@ TEST_CASE( "EOC_meta_test", "[eoc]" )
 
     CHECK( effect_on_condition_EOC_meta_test_message->activate( d_empty ) );
 
-    std::vector<std::pair<std::string, std::string>> messages = Messages::recent_messages( 0 );
+    std::vector<std::pair<std::string, std::string>> messages = Messages::recent_messages( 1 );
 
     REQUIRE( !messages.empty() );
     CHECK( messages.back().second == "message ok." );
@@ -1548,7 +1560,7 @@ TEST_CASE( "EOC_event_test", "[eoc]" )
 
     // character_wears_item
     std::list<item>::iterator armor = *get_avatar().worn.wear_item( get_avatar(),
-        item( itype_backpack ), false, true, true );
+                                      item( itype_backpack ), false, true, true );
 
     CHECK( get_avatar().get_value( "test_event_last_event" ) == "character_wears_item" );
     CHECK( armor->get_var( "test_event_last_event" ) == "character_wears_item" );
@@ -1581,7 +1593,7 @@ TEST_CASE( "EOC_combat_event_test", "[eoc]" )
     // character_melee_attacks_monster
     clear_map_without_vision();
     monster &mon_dst_melee = spawn_test_monster( "mon_zombie",
-        get_avatar().pos_bub() + tripoint::east );
+                             get_avatar().pos_bub() + tripoint::east );
     get_avatar().melee_attack( mon_dst_melee, false );
 
     CHECK( get_avatar().get_value( "test_event_last_event" ) ==

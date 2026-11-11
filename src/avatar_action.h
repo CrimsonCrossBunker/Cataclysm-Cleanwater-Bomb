@@ -6,13 +6,16 @@
 #include <string>
 
 #include "coordinates.h"
+#include "walking.h"
 
 class Character;
 class avatar;
 class item;
 class item_location;
 class map;
+class monster;
 class turret_data;
+struct walk_move_choices;
 
 namespace avatar_action
 {
@@ -28,9 +31,16 @@ void eat_or_use( avatar &you, item_location loc );
 // Standard movement; handles attacks, traps, &c. Returns false if auto move
 // should be canceled
 bool move( avatar &you, map &m, const tripoint_rel_ms &d );
+// Shared native simulation. Explicit choices never open the host player's UI.
+bool move( Character &you, map &m, const tripoint_rel_ms &d,
+           const walk_move_choices *choices );
+std::optional<walk_move_choices> query_walk( avatar &you, map &m, const tripoint_rel_ms &d );
 /** Handles swimming by the player. Called by avatar_action::move(). */
 void swim( map &m, avatar &you, const tripoint_bub_ms &p );
+void swim( map &m, Character &you, const tripoint_bub_ms &p,
+           const walk_move_choices *choices );
 
+bool confirm_non_hostile_melee_attack( avatar &you, const monster &critter );
 void autoattack( avatar &you, map &m );
 void active_technique( avatar &you, map &m );
 /** Whether the currently wielded weapon offers a usable mounted charge. */
@@ -53,7 +63,7 @@ void fire_wielded_weapon( avatar &you );
 void fire_ranged_mutation( Character &you, const item &fake_gun );
 
 /** Stores fake gun specified by the bionic and starts interactive aiming */
-void fire_ranged_bionic( avatar &you, const item &fake_gun );
+void fire_ranged_bionic( avatar &you, const item &fake_gun, unsigned int uid );
 
 /**
  * Checks if the player can manually (with their 2 hands, not via vehicle controls)

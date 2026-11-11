@@ -888,3 +888,56 @@ TEST_CASE( "consume_inventory_finds_nearby_vehicle_tanks", "[inventory][vehicle]
         CHECK( selector.item_entry_count() == 1 );
     }
 }
+
+TEST_CASE( "vehicle_tank_combines_different_water_batches_without_losing_ownership",
+           "[vehicle][liquid][ownership]" )
+{
+    const bool owned_first = GENERATE( false, true );
+    const bool theft_history = GENERATE( false, true );
+    CAPTURE( owned_first, theft_history );
+    vehicle_part tank( vpart_tank_test, item( itype_metal_tank_test ) );
+    item initial( itype_water_clean, calendar::turn_zero, 1 );
+    item incoming( itype_water_clean, calendar::turn_zero + 1_days, 61 );
+    initial.cold_up();
+    incoming.heat_up();
+    item &owned = owned_first ? initial : incoming;
+    owned.set_owner( faction_your_followers );
+    if( theft_history ) {
+        owned.set_old_owner( faction_free_merchants );
+    }
+    REQUIRE( tank.fill_with( initial ) );
+    REQUIRE( initial.charges == 0 );
+    REQUIRE( tank.ammo_remaining() == 1 );
+    const double energy_before = tank.get_base().legacy_front().get_item_thermal_energy() +
+                                 incoming.get_item_thermal_energy();
+
+    REQUIRE( tank.can_reload( incoming ) );
+    REQUIRE( tank.fill_with( incoming, 5 ) );
+    CHECK( tank.ammo_remaining() == 6 );
+    CHECK( incoming.charges == 56 );
+    REQUIRE( tank.get_base().all_items_top().size() == 1 );
+    const item &mixed = tank.get_base().legacy_front();
+    CHECK( mixed.get_owner() == faction_your_followers );
+    CHECK( mixed.get_old_owner() == ( theft_history ? faction_free_merchants :
+                                      faction_id::NULL_ID() ) );
+    CHECK( mixed.get_item_thermal_energy() + incoming.get_item_thermal_energy() ==
+           Approx( energy_before ).epsilon( 0.00001 ) );
+}
+
+TEST_CASE( "vehicle_tank_does_not_offer_conflicting_liquid_ownership",
+           "[vehicle][liquid][ownership]" )
+{
+    vehicle_part tank( vpart_tank_test, item( itype_metal_tank_test ) );
+    item initial( itype_water_clean, calendar::turn_zero, 1 );
+    item incoming( itype_water_clean, calendar::turn_zero, 61 );
+    initial.set_owner( faction_your_followers );
+    incoming.set_owner( faction_free_merchants );
+    REQUIRE( tank.fill_with( initial ) );
+
+    CHECK_FALSE( tank.can_reload( incoming ) );
+    CHECK_FALSE( tank.fill_with( incoming, 5 ) );
+    CHECK( tank.ammo_remaining() == 1 );
+    CHECK( incoming.charges == 61 );
+    CHECK( tank.get_base().legacy_front().get_owner() == faction_your_followers );
+    CHECK( incoming.get_owner() == faction_free_merchants );
+}

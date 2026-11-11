@@ -263,7 +263,8 @@ void run_plant_lifecycle_event(
     const std::string &old_stage,
     const std::string &new_stage,
     const std::map<std::string, std::string> &string_context = {},
-    const std::map<std::string, double> &num_context = {} );
+    const std::map<std::string, double> &num_context = {},
+    std::optional<furn_str_id> source_furniture = std::nullopt );
 
 // Skill training common functions
 void practice_survival_while_foraging( Character &who );
@@ -272,8 +273,10 @@ void practice_survival_while_foraging( Character &who );
 
 namespace iexamine_helper
 {
+bool can_drink_nectar( const Character &you );
 bool drink_nectar( Character &you );
 void handle_harvest( Character &you, const itype_id &itemid, bool force_drop );
+void handle_harvest( Character &you, item_location source, bool force_drop );
 } // namespace iexamine_helper
 
 using iexamine_examine_function = void ( * )( Character &, const tripoint_bub_ms & );

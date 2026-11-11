@@ -183,7 +183,7 @@ BENCHMARK_TEST_CASE( "map_memory_first_exploration_compressed_archive",
             ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path();
         {
             const std::shared_ptr<zzip_stack> packed = zzip_stack::create_from_folder(
-                    archive, source, dictionary );
+                        archive, source, dictionary );
             REQUIRE( packed != nullptr );
             REQUIRE( packed->get_entries().size() == archive_regions );
         }
@@ -320,6 +320,21 @@ TEST_CASE( "map_memory_published_region_supports_independent_const_queries", "[m
     CHECK( first.get() == 1000 * U'Q' );
     CHECK( second.get() == 1000 * U'Q' );
     CHECK( view.get_tile( p2 ).symbol == U'Q' );
+}
+
+TEST_CASE( "map_memory_region_presence", "[map_memory]" )
+{
+    map_memory memory;
+    CHECK_FALSE( memory.has_memory_in_region( p1, p2 ) );
+    memory.prepare_region( p1, p2 );
+    CHECK_FALSE( memory.has_memory_in_region( p1, p2 ) );
+
+    memory.set_tile_symbol( p2, 1 );
+    CHECK( memory.has_memory_in_region( p2, p2 ) );
+    CHECK( memory.has_memory_in_region( p1, p2 ) );
+    CHECK_FALSE( memory.has_memory_in_region( p1, p1 ) );
+    CHECK_FALSE( memory.has_memory_in_region( tripoint_abs_ms( p2.xy(), p2.z() + 1 ),
+                 tripoint_abs_ms( p2.xy(), p2.z() + 1 ) ) );
 }
 
 TEST_CASE( "map_memory_remembers", "[map_memory]" )

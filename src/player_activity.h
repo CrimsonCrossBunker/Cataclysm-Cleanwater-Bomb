@@ -31,10 +31,19 @@ class avatar;
 class monster;
 class translation;
 
+// Execution belongs to the simulation; presentation activities only display
+// progress and submit owner choices. This is not a network authorization token.
+enum class activity_execution {
+    local,
+    authoritative,
+    presentation
+};
+
 class player_activity
 {
     private:
         activity_id type;
+        activity_execution execution_ = activity_execution::local;
 
         struct identity_token {
             static std::uint64_t next_value() noexcept;
@@ -59,6 +68,13 @@ class player_activity
 
     public:
         cata::clone_ptr<activity_actor> actor;
+
+        activity_execution execution() const {
+            return execution_;
+        }
+        void set_execution( activity_execution value ) {
+            execution_ = value;
+        }
 
         /** Total number of moves (1/100th of a second) required to complete the activity */
         int moves_total = 0;

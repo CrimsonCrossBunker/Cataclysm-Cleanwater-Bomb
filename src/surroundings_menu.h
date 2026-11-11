@@ -18,6 +18,7 @@
 #include "item.h"
 #include "map_entity_stack.h"
 #include "translations.h"
+#include "view_action.h"
 
 class avatar;
 class Character;
@@ -139,12 +140,13 @@ class monster_tab_data : public tab_data
         void find_nearby_monsters( const Character &you );
 };
 
-class terfurn_tab_data : public tab_data
+class terfurn_tab_data :
+    public tab_data
 {
     public:
         explicit terfurn_tab_data( const std::string &title = _( "Terrain/Furniture" ) );
         void init( const Character &you, map &m );
-        std::vector<map_entity_stack<map_data_common_t>*> terfurn_list;
+        std::vector<map_entity_stack<map_data_common_t> * > terfurn_list;
         std::vector<map_entity_stack<map_data_common_t>*> filtered_list;
         map_entity_stack<map_data_common_t> *selected_entry = nullptr;
 
@@ -172,7 +174,7 @@ class surroundings_menu : public cataimgui::window
 {
     public:
         surroundings_menu( avatar &you, map &m, std::optional<tripoint_bub_ms> &path_end, int width );
-        void execute();
+        std::optional<view_action> execute( bool defer_action = false );
 
     protected:
         void draw_controls() override;
@@ -226,6 +228,9 @@ class surroundings_menu : public cataimgui::window
         avatar &you;
         std::optional<tripoint_bub_ms> &path_end;
         const tripoint_rel_ms stored_view_offset;
+        const tripoint_bub_ms observation_origin;
+        const tripoint_abs_ms real_origin;
+        const safe_reference<map> map_context;
         const int min_width;
 
         cataimgui::scroll info_scroll = cataimgui::scroll::none;

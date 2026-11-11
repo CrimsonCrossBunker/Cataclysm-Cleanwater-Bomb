@@ -3,10 +3,14 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <iosfwd>
 #include <memory>
+#include <limits>
+#include <new>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -25,6 +29,7 @@
 #include <zstd/common/xxhash.h>
 
 #include "filesystem.h"
+#include "compute_budget.h"
 #include "flexbuffer_cache.h"
 #include "flexbuffer_json.h"
 #include "mmap_file.h"
@@ -476,19 +481,65 @@ std::optional<zzip> zzip::load_readonly_unshared( std::filesystem::path const &p
     return std::optional<zzip> { std::in_place, zzip{ std::move( file ), std::move( footer ) } };
 }
 
-void *zzip::create_private_dctx( std::filesystem::path const &dictionary )
+namespace
 {
-    ZSTD_DCtx *dctx = ZSTD_createDCtx();
+struct alignas( std::max_align_t ) budget_allocation {
+    std::size_t bytes;
+};
+
+void *budget_zstd_allocate( void *opaque, std::size_t size ) noexcept
+{
+    auto &budget = *static_cast<byte_budget *>( opaque );
+    if( size > std::numeric_limits<std::size_t>::max() - sizeof( budget_allocation ) ) {
+        return nullptr;
+    }
+    const std::size_t bytes = size + sizeof( budget_allocation );
+    if( !budget.acquire( bytes ) ) {
+        return nullptr;
+    }
+    void *raw = std::malloc( bytes );
+    if( !raw ) {
+        budget.release( bytes );
+        return nullptr;
+    }
+    auto *header = new( raw ) budget_allocation{ bytes };
+    return header + 1;
+}
+
+void budget_zstd_free( void *opaque, void *allocation ) noexcept
+{
+    if( allocation ) {
+        auto &budget = *static_cast<byte_budget *>( opaque );
+        auto *header = static_cast<budget_allocation *>( allocation ) - 1;
+        const std::size_t bytes = header->bytes;
+        std::free( header );
+        budget.release( bytes );
+    }
+}
+} // namespace
+
+void *zzip::create_private_dctx( std::filesystem::path const &dictionary, byte_budget *budget )
+{
+    std::unique_ptr<ZSTD_DCtx, decltype( &ZSTD_freeDCtx )> dctx(
+        budget ? ZSTD_createDCtx_advanced( ZSTD_customMem{ budget_zstd_allocate, budget_zstd_free, budget } ) :
+        ZSTD_createDCtx(), ZSTD_freeDCtx );
+    if( !dctx ) {
+        return nullptr;
+    }
     if( !dictionary.empty() ) {
         std::shared_ptr<const mmap_file> dictionary_file = mmap_file::map_file( dictionary );
         if( dictionary_file ) {
             // ZSTD_DCtx_loadDictionary takes a COPY of the dictionary into the DCtx,
             // so the mmap can be released right after this call (unlike the
             // _byReference variant used by the shared-context path).
-            ZSTD_DCtx_loadDictionary( dctx, dictionary_file->base(), dictionary_file->len() );
+            if( ( budget && dictionary_file->len() > budget->limit() ) ||
+                ZSTD_isError( ZSTD_DCtx_loadDictionary( dctx.get(), dictionary_file->base(),
+                        dictionary_file->len() ) ) ) {
+                return nullptr;
+            }
         }
     }
-    return dctx;
+    return dctx.release();
 }
 
 void zzip::destroy_private_dctx( void *dctx )
@@ -594,12 +645,16 @@ size_t zzip::get_file_size( std::filesystem::path const &zzip_relative_path ) co
 {
     zzip_footer footer{ footer_ };
     std::optional<zzip_file_entry> fparams = footer.get_entry( zzip_relative_path );
-    if( !fparams.has_value() ) {
+    if( !fparams.has_value() || fparams->offset >= file_->len() ||
+        fparams->len > file_capacity_at( fparams->offset ) ) {
         return 0;
     }
     void *base = file_base_plus( fparams->offset );
     size_t len = fparams->len;
     std::tie( base, len ) = read_and_skip_entry_metadata( base, len );
+    if( !base || len == 0 ) {
+        return 0;
+    }
     size_t size = ZSTD_decompressBound( base, len );
     if( ZSTD_isError( size ) ) {
         return 0;
@@ -634,7 +689,7 @@ size_t zzip::get_file_to_with_dctx( std::filesystem::path const &zzip_relative_p
     ZSTD_DCtx *dctx = static_cast<ZSTD_DCtx *>( dctx_void );
     zzip_footer footer{ footer_ };
     std::optional<zzip_file_entry> fparams = footer.get_entry( zzip_relative_path );
-    if( !fparams.has_value() ) {
+    if( !dctx || !fparams.has_value() || fparams->offset >= file_->len() ) {
         return 0;
     }
     size_t file_len = fparams->len;

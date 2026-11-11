@@ -1,5 +1,17 @@
 [
   {
+    "id": "bio_shock_absorber",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Kinetic Shock Absorbers CBM" },
+    "looks_like": "bio_int_enhancer",
+    "description": "A set of hydraulic springs and foldable padding equipped with microgravity offset sensors can be implanted into the flesh of the limbs and upper torso.  While active, these absorbers will negate damage from severe impacts such as falling, at the cost of reducing the user's ability to move effectively.",
+    "price": "100 USD",
+    "weight": "3000 g",
+    "difficulty": 8
+  },
+  {
     "id": "fcl_bio_neurosoft_aeronautics",
     "copy-from": "bionic_general",
     "type": "ITEM",
@@ -32,6 +44,90 @@
     "price": "2200 USD",
     "price_postapoc": "950 USD",
     "weight": "1000 g",
+    "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_linguistic_coprocessor",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Linguistic Coprocessor CBM" },
+    "description": "A microcomputer installed into the left hemisphere of your brain to increase the speed that it processes language.  When installed, it provides a passive boost to reading speed.",
+    "price": "1 kUSD",
+    "price_postapoc": "500 USD",
+    "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_dopamine_stimulators",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Dopamine Stimulators CBM" },
+    "description": "A set of tiny bionic nerve stimulators that install into the reward center of your brain.  When run with bionic power, it periodically releases a hit of dopamine and other reward chemicals, inducing a state of euphoria and suppressing fear.",
+    "price": "10 kUSD",
+    "price_postapoc": "1 kUSD",
+    "difficulty": 8
+  },
+  {
+    "id": "fcl_bio_deck",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Military Infolink CBM" },
+    "description": "An implanted miniaturized computer isolated from the rest of your systems by military-grade firewalls.  An accompanying jack allows you to interface with external computer systems with minimal risk.  Skill in computers is important, and a failed use may damage your circuits.",
+    "price_postapoc": "10 kUSD",
+    "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_missiles",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Deployable Grenade Launcher CBM" },
+    "description": "A small, folding tube that attaches to your right arm.  Once implanted, it can serve as a portable, integrated tool for firing 40mm grenades and canisters.",
+    "price": "1 kUSD",
+    "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_monowhip",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Monofilament Whip CBM" },
+    "description": "A carbon nanotube wire covertly installed in your right arm.  When activated, it extends to its full length and can be used to strike enemies both at close and long range.",
+    "price": "15 kUSD",
+    "difficulty": 5
+  },
+  {
+    "id": "fcl_bio_melee_counteraction",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Counteractive Reflexes CBM" },
+    "description": "Cybernetic stimulators installed across your nervous system boost your reflexes whenever you are hit in melee, granting you an extra action.  This bionic must be active to function.",
+    "price": "10 kUSD",
+    "price_postapoc": "1 kUSD",
+    "difficulty": 9
+  },
+  {
+    "id": "fcl_bio_melee_optimization_unit",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Melee Optimization Unit CBM" },
+    "description": "An implanted AI module calculates the optimal followup to each of your melee strikes, allowing you to chain them with unnatural speed and grace.  This bionic must be active to function.",
+    "price": "10 kUSD",
+    "price_postapoc": "1 kUSD",
+    "difficulty": 10
+  },
+  {
+    "id": "fcl_bio_blood_brain",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Blood Neurology CBM" },
+    "description": "A radical nanite treatment that allows its host's circulatory system to function as a secondary nervous system, greatly increasing their mental acuity and allowing them to survive trauma that would otherwise be fatal.  A cybernetic enhancement of this category is a rare find and could be easily traded for significant favors and resources.",
+    "price_postapoc": "475 kUSD",
     "difficulty": 5
   }
 ]

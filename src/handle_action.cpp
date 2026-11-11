@@ -4,14 +4,15 @@
 #include <creature.h>
 #include <enums.h>
 #include <item_location.h>
+#include <item_source.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <pimpl.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <cstdlib>
 #include <initializer_list>
 #include <list>
 #include <map>
@@ -33,9 +34,9 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "clzones.h"
@@ -58,7 +59,9 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gamemode.h"
+#include "grab.h"
 #include "gun_mode.h"
+#include "hauling.h"
 #include "help.h"
 #include "input_context.h"
 #include "input_enums.h"
@@ -82,6 +85,8 @@
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
+#include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "options.h"
@@ -93,9 +98,13 @@
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
+#include "radio_car_control.h"
 #include "ranged.h"
 #include "rng.h"
 #include "safemode_ui.h"
+#include "vehicle_control.h"
+#include "vertical_movement.h"
+#include "walking.h"
 #if defined(TILES)
     #include "sdl_gamepad.h"
 #endif
@@ -114,16 +123,18 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
-#include "vpart_range.h"
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
 
 #define MP_ENABLED
-#include "line.h"
 #include "mp_client_conn.h"
+#include "mp_equipment.h"
 #include "mp_gamestate.h"
+#include "mp_melee.h"
 #include "npc.h"
+
+enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
@@ -137,14 +148,7 @@
     #include "sdl_wrappers.h"
 #endif
 
-static const activity_id ACT_PICKUP( "ACT_PICKUP" );
-static const activity_id ACT_WAIT( "ACT_WAIT" );
-static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
-static const activity_id ACT_WAIT_STAMINA( "ACT_WAIT_STAMINA" );
-static const activity_id ACT_WAIT_WEATHER( "ACT_WAIT_WEATHER" );
 static const activity_id ACT_WEAR( "ACT_WEAR" );
-
-static const bionic_id bio_remote( "bio_remote" );
 
 static const character_modifier_id
 character_modifier_move_mode_move_cost_mod( "move_mode_move_cost_mod" );
@@ -154,6 +158,7 @@ static const damage_type_id damage_cut( "cut" );
 static const efftype_id effect_alarm_clock( "alarm_clock" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_laserlocked( "laserlocked" );
+static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_stunned( "stunned" );
 
 static const flag_id json_flag_ALLOWS_REMOTE_USE( "ALLOWS_REMOTE_USE" );
@@ -163,15 +168,10 @@ static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 
-static const itype_id fuel_type_animal( "animal" );
-static const itype_id itype_radiocontrol( "radiocontrol" );
-
 static const json_character_flag json_flag_ALARMCLOCK( "ALARMCLOCK" );
 static const json_character_flag json_flag_BIONIC_SLEEP_FRIENDLY( "BIONIC_SLEEP_FRIENDLY" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_HANDS_CANNOT_USE_FIREARMS( "HANDS_CANNOT_USE_FIREARMS" );
-static const json_character_flag json_flag_LEVITATION( "LEVITATION" );
-static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
 static const json_character_flag json_flag_SUBTLE_SPELL( "SUBTLE_SPELL" );
 static const json_character_flag
 json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
@@ -189,21 +189,6 @@ static const trait_id trait_PROF_CHURL( "PROF_CHURL" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHELL3( "SHELL3" );
 static const trait_id trait_WAYFARER( "WAYFARER" );
-
-static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
-static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
-static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
-static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
-static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
-static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
-static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
-static const zone_type_id zone_type_MINING( "MINING" );
-static const zone_type_id zone_type_MOPPING( "MOPPING" );
-static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
-static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
-static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
-static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
-static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -625,130 +610,11 @@ input_context game::get_player_input( std::string &action )
     return ctxt;
 }
 
-static void rcdrive( const point_rel_ms &d )
-{
-    Character &player_character = get_player_character();
-    map &here = get_map();
-    diag_value const *car_location = player_character.maybe_get_value( "remote_controlling" );
-
-    if( !car_location ) {
-        //no turned radio car found
-        add_msg( m_warning, _( "No radio car connected." ) );
-        return;
-    }
-    // FIXME: migrate to abs
-    tripoint_bub_ms c{ car_location->tripoint().raw() };
-
-    auto rc_pairs = here.get_rc_items( c );
-    auto rc_pair = rc_pairs.begin();
-    for( ; rc_pair != rc_pairs.end(); ++rc_pair ) {
-        if( rc_pair->second->has_flag( flag_RADIOCAR ) && rc_pair->second->active ) {
-            break;
-        }
-    }
-    if( rc_pair == rc_pairs.end() ) {
-        add_msg( m_warning, _( "No radio car connected." ) );
-        player_character.remove_value( "remote_controlling" );
-        return;
-    }
-    item *rc_car = rc_pair->second;
-
-    tripoint_bub_ms dest( c + d );
-    if( here.impassable( dest ) || !here.can_put_items_ter_furn( dest ) ||
-        here.has_furn( dest ) ) {
-        sounds::sound( dest, 7, sounds::sound_t::combat,
-                       _( "sound of a collision with an obstacle." ), true, "misc", "rc_car_hits_obstacle" );
-        return;
-    } else if( !here.add_item_or_charges( dest, *rc_car ).is_null() ) {
-        tripoint_bub_ms src( c );
-        //~ Sound of moving a remote controlled car
-        sounds::sound( src, 6, sounds::sound_t::movement, _( "zzz…" ), true, "misc", "rc_car_drives" );
-        player_character.mod_moves( -to_moves<int>( 1_seconds ) * 0.5 );
-        here.i_rem( src, rc_car );
-        // FIXME: migrate to abs
-        player_character.set_value( "remote_controlling", tripoint_abs_ms{ dest.raw() } );
-        return;
-    }
-}
-
 static void pldrive( const tripoint_rel_ms &p )
 {
-    if( !g->check_safe_mode_allowed() ) {
-        return;
+    if( g->check_safe_mode_allowed() ) {
+        drive_vehicle( get_avatar(), get_map(), p );
     }
-    vehicle *veh = g->remoteveh();
-    bool remote = true;
-    int part = -1;
-    Character &player_character = get_player_character();
-    map &here = get_map();
-    if( !veh ) {
-        if( const optional_vpart_position vp = here.veh_at( player_character.pos_bub() ) ) {
-            veh = &vp->vehicle();
-            part = vp->part_index();
-        }
-        remote = false;
-    }
-    if( !veh ) {
-        dbg( D_ERROR ) << "game::pldrive: can't find vehicle!  Drive mode is now off.";
-        debugmsg( "game::pldrive error: can't find vehicle!  Drive mode is now off." );
-        player_character.in_vehicle = false;
-        return;
-    }
-    if( veh->is_on_ramp && p.x() != 0 ) {
-        add_msg( m_bad, _( "You can't turn the vehicle while on a ramp." ) );
-        return;
-    }
-    if( !remote ) {
-        const vehicle_part &vp = veh->part( part );
-        const bool has_animal_controls = veh->part_with_feature( vp.mount, "CONTROL_ANIMAL", true ) >= 0;
-        const bool has_controls = veh->part_with_feature( vp.mount, "CONTROLS", true ) >= 0;
-        const bool has_animal = veh->has_engine_type( fuel_type_animal, false ) &&
-                                veh->get_harnessed_animal( here );
-        if( !has_controls && !has_animal_controls ) {
-            add_msg( m_info, _( "You can't drive the vehicle from here.  You need controls!" ) );
-            player_character.controlling_vehicle = false;
-            return;
-        } else if( !has_controls && has_animal_controls && !has_animal ) {
-            add_msg( m_info, _( "You can't drive this vehicle without an animal to pull it." ) );
-            player_character.controlling_vehicle = false;
-            return;
-        }
-    } else {
-        if( empty( veh->get_avail_parts( "REMOTE_CONTROLS" ) ) ) {
-            add_msg( m_info, _( "Can't drive this vehicle remotely.  It has no working controls." ) );
-            return;
-        }
-    }
-    if( p.z() != 0 ) {
-        if( !veh->can_control_in_air( player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle fly." ) );
-            return;
-        }
-        if( !veh->is_flyable() ) {
-            player_character.add_msg_if_player( m_info, _( "This vehicle doesn't look very airworthy." ) );
-            return;
-        }
-    }
-    if( p.z() == -1 ) {
-        if( veh->check_heli_descend( here, player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You steer the vehicle into a descent." ) );
-        } else {
-            return;
-        }
-    } else if( p.z() == 1 ) {
-        if( veh->check_heli_ascend( here,  player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You steer the vehicle into an ascent." ) );
-        } else {
-            return;
-        }
-    }
-    if( !veh->is_flying_in_air() ) {
-        if( !veh->can_control_on_land( player_character ) ) {
-            player_character.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle move." ) );
-            return;
-        }
-    }
-    veh->pldrive( here, get_avatar(), p.x(), p.y(), p.z() );
 }
 
 static void pldrive( point_rel_ms d )
@@ -795,114 +661,30 @@ static void auto_features_warn()
     }
 }
 
-// Establish or release a grab on a vehicle
+// Collect UI choices without changing the world. Local and remote players use
+// the same native operation; remote clients wait for its authoritative result.
 static void grab( const std::optional<tripoint_bub_ms> &p = std::nullopt )
 {
-    avatar &you = get_avatar();
-    map &here = get_map();
-
-    if( you.get_grab_type() != object_type::NONE ) {
-        if( const optional_vpart_position vp = here.veh_at( you.pos_bub() + you.grab_point ) ) {
-            add_msg( _( "You release the %s." ), vp->vehicle().name );
-        } else if( here.has_furn( you.pos_bub() + you.grab_point ) ) {
-            add_msg( _( "You release the %s." ), here.furnname( you.pos_bub() + you.grab_point ) );
-        }
-
-        you.grab( object_type::NONE );
+    avatar &who = get_avatar();
+    std::optional<tripoint_bub_ms> target = p;
+    if( who.get_grab_type() != object_type::NONE ) {
+        target = who.pos_bub();
+    } else if( !target ) {
+        target = choose_adjacent( _( "Grab where?" ) );
+    }
+    if( !target ) {
         return;
     }
-
-    std::optional<tripoint_bub_ms> grabp_ = p;
-    if( !grabp_ ) {
-        grabp_ = choose_adjacent( _( "Grab where?" ) );
-    }
-    if( !grabp_ ) {
-        add_msg( _( "Never mind." ) );
+    const auto choice = query_grab( who, get_map(), *target );
+    if( !choice ) {
         return;
     }
-    tripoint_bub_ms grabp = *grabp_;
-
-    if( grabp == you.pos_bub() ) {
-        add_msg( _( "You get a hold of yourself." ) );
-        you.grab( object_type::NONE );
+#ifdef MP_ENABLED
+    if( cata_mp::client_grab( *choice ) ) {
         return;
     }
-
-    const optional_vpart_position &vp = here.veh_at( grabp );
-    // Object might not be on the same z level if on a ramp.
-    if( !( vp || here.has_furn( grabp ) ) ) {
-        if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, grabp ) ||
-            here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, you.pos_bub() ) ) {
-            grabp.z() += 1;
-        } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, grabp ) ||
-                   here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, you.pos_bub() ) ) {
-            grabp.z() -= 1;
-        }
-    }
-
-    if( vp ) {
-        std::string veh_name = vp->vehicle().name;
-        if( !vp->vehicle().handle_potential_theft( you ) ) {
-            return;
-        }
-        if( vp.part_with_feature( VPFLAG_WALL_MOUNTED, false ) ) {
-            add_msg( m_info, _( "You can't move that, it's attached to the wall." ) );
-            return;
-        }
-        // Powergrids with more than one part are undraggable.
-        // Offer to split the targeted part off onto its own, making it draggable.
-        if( vp->vehicle().is_powergrid() && vp->vehicle().part_count() > 1 ) {
-            if( !query_yn(
-                    _( "That's part of a power grid.  Separate it from the grid so you can move it?" ) ) ) {
-                return;
-            }
-            get_player_character().pause();
-            vp->vehicle().separate_from_grid( &here, vp.value().mount_pos() );
-            if( const optional_vpart_position &split_vp = here.veh_at( grabp ) ) {
-                veh_name = split_vp->vehicle().name;
-            } else {
-                debugmsg( "Lost the part to drag after splitting power grid!" );
-                return;
-            }
-        }
-        if( vp->has_loaded_furniture() ) {
-            furn_str_id furn( vp->part_with_feature( "FURNITURE_TIEDOWN",
-                              true )->part().get_base().get_var( "tied_down_furniture" ) );
-            //~ %1$s - furniture name, %2$s - vehicle name
-            if( query_yn( _( "Grab %1$s on %2$s?" ), furn->name(), veh_name ) ) {
-                you.grab( object_type::FURNITURE_ON_VEHICLE, grabp - you.pos_bub() );
-                add_msg( m_info, _( "You grab the %1$s loaded on the %2$s." ), furn->name(), veh_name );
-                return;
-            }
-        }
-        //solid vehicles can't be grabbed while boarded
-        const optional_vpart_position vp_boarded = here.veh_at( you.pos_bub() );
-        if( vp_boarded ) {
-            if( &vp_boarded->vehicle() == &vp->vehicle() &&
-                !empty( vp->vehicle().get_avail_parts( VPFLAG_OBSTACLE ) ) ) {
-                add_msg( m_info, _( "You can't move the %s while you're boarding it." ), veh_name );
-                return;
-            }
-        }
-        you.grab( object_type::VEHICLE, grabp - you.pos_bub() );
-        add_msg( _( "You grab the %s." ), veh_name );
-    } else if( here.has_furn( grabp ) ) { // If not, grab furniture if present
-        if( !here.furn( grabp ).obj().is_movable() ) {
-            add_msg( _( "You can not grab the %s." ), here.furnname( grabp ) );
-            return;
-        }
-        if( !g->warn_player_maybe_anger_local_faction( true ) ) {
-            return; // player declined to mess with faction's stuff
-        }
-        you.grab( object_type::FURNITURE, grabp - you.pos_bub() );
-        if( !here.can_move_furniture( grabp, &you ) ) {
-            add_msg( _( "You grab the %s. It feels really heavy." ), here.furnname( grabp ) );
-        } else {
-            add_msg( _( "You grab the %s." ), here.furnname( grabp ) );
-        }
-    } else { // TODO: grab mob? Captured squirrel = pet (or meat that stays fresh longer).
-        add_msg( m_info, _( "There's nothing to grab there!" ) );
-    }
+#endif
+    execute_grab( who, get_map(), *choice );
 }
 
 static void haul()
@@ -973,12 +755,14 @@ static void haul()
 
     menu.query();
 
+    hauling_selection choice;
+    choice.position = player_character.pos_abs();
     switch( menu.ret ) {
         case 0:
-            player_character.stop_hauling();
+            choice.action = "stop";
             break;
         case 1:
-            player_character.start_hauling( haulable_items );
+            choice.action = "all";
             break;
         case 2: {
             inventory_haul_selector selector( player_character );
@@ -986,51 +770,50 @@ static void haul()
             selector.apply_selection( player_character.haul_list );
             selector.set_title( _( "Select items to haul" ) );
             selector.set_hint( _( "To select items, type a number before selecting." ) );
-            drop_locations result = selector.execute( true );
-            haulable_items.clear();
-            for( const drop_location &dl : result ) {
-                if( dl.first->count_by_charges() && dl.second < dl.first->charges ) {
-                    // Partial stack selected: split the item on the ground so the haul
-                    // list gets a correctly-sized item_location.
-                    item_location loc = dl.first;
-                    item_location split_loc = loc.split_stack( dl.second );
-                    if( split_loc ) {
-                        haulable_items.push_back( split_loc );
-                    } else {
-                        debugmsg( "Failed to split %s for hauling, hauling entire stack.",
-                                  dl.first->display_name() );
-                        haulable_items.push_back( dl.first );
-                    }
-                } else {
-                    haulable_items.push_back( dl.first );
-                }
+            const drop_locations result = selector.execute( true );
+            choice.action = "select";
+            for( const drop_location &entry : result ) {
+                choice.items.push_back( { capture_item_source( player_character, entry.first ), entry.second } );
             }
-            if( haulable_items != player_character.haul_list ) {
-                player_character.suppress_autohaul = true;
-            }
-            player_character.start_hauling( haulable_items );
+            break;
         }
-        break;
         case 3:
-            autohaul ? player_character.stop_autohaul() : player_character.start_autohaul();
+            choice.action = "autohaul";
+            choice.enable_autohaul = !autohaul;
             break;
         case 4: {
             string_input_popup_imgui filter_popup( 50, player_character.hauling_filter );
             filter_popup.set_label( _( "Filter:" ) );
             filter_popup.set_description( item_filter_rule_string( item_filter_type::FILTER ), c_white, true );
             filter_popup.set_identifier( "item_filter" );
-            player_character.hauling_filter = filter_popup.query();
-        }
-        break;
-        case 9:
-        default:
+            choice.action = "filter";
+            choice.filter = filter_popup.query();
             break;
+        }
+        default:
+            return;
     }
+#ifdef MP_ENABLED
+    if( cata_mp::client_hauling( choice ) ) {
+        return;
+    }
+#endif
+    execute_hauling( player_character, get_map(), choice );
 }
 
 static void haul_toggle()
 {
-    get_avatar().toggle_hauling();
+    Character &who = get_player_character();
+    hauling_selection choice;
+    choice.position = who.pos_abs();
+    choice.action = who.is_hauling() ? "stop" : "all";
+    choice.enable_autohaul = !who.is_hauling();
+#ifdef MP_ENABLED
+    if( cata_mp::client_hauling( choice ) ) {
+        return;
+    }
+#endif
+    execute_hauling( who, get_map(), choice );
 }
 
 static void smash( const std::optional<tripoint_bub_ms> &p = std::nullopt )
@@ -1110,11 +893,15 @@ void game::execute_contextual_action( const action_id action, const tripoint_bub
             chat( target );
             break;
         case ACTION_MOVE_UP:
-            vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
+        case ACTION_MOVE_DOWN: {
+            const int direction = action == ACTION_MOVE_UP ? 1 : -1;
+            if( !cata_mp::client_query_vertical_move( direction ) ) {
+                if( const auto choice = query_vertical_move( player_character, here, direction ) ) {
+                    execute_vertical_move( player_character, here, *choice );
+                }
+            }
             break;
-        case ACTION_MOVE_DOWN:
-            vertical_move( -1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
-            break;
+        }
         default:
             add_msg( m_info, _( "That action cannot be queued." ) );
             break;
@@ -1647,232 +1434,18 @@ static void sleep()
     player_character.try_to_sleep( try_sleep_dur );
 }
 
-static void loot()
-{
-    enum ZoneFlags {
-        None = 1,
-        SortLoot = 2,
-        SortLootStatic = 4,
-        SortLootPersonal = 8,
-        ConstructPlots = 64,
-        MultiFarmPlots = 128,
-        Multichoptrees = 256,
-        Multichopplanks = 512,
-        Multideconvehicle = 1024,
-        Multirepairvehicle = 2048,
-        MultiButchery = 4096,
-        MultiMining = 8192,
-        MultiDis = 16384,
-        MultiMopping = 32768,
-        MultiStudy = 131072,
-        UnloadLoot = 65536
-    };
-
-    Character &player_character = get_player_character();
-    int flags = 0;
-    zone_manager &mgr = zone_manager::get_manager();
-
-    // reset any potentially disabled zones from a past activity
-    mgr.reset_disabled();
-
-    // cache should only happen if we have personal zones defined
-    if( mgr.has_personal_zones() ) {
-        mgr.cache_data();
-    }
-
-    // Manually update vehicle cache.
-    // In theory this would be handled by the related activity (zone_sort_activity_actor())
-    // but with a stale cache we never get that far.
-    mgr.cache_vzones();
-
-    flags |= g->check_near_zone( zone_type_LOOT_UNSORTED,
-                                 player_character.pos_bub() ) ? SortLoot : 0;
-    flags |= g->check_near_zone( zone_type_UNLOAD_ALL, player_character.pos_bub() ) ||
-             g->check_near_zone( zone_type_STRIP_CORPSES, player_character.pos_bub() ) ? UnloadLoot : 0;
-    if( g->check_near_zone( zone_type_FARM_PLOT, player_character.pos_bub() ) ) {
-        flags |= MultiFarmPlots;
-    }
-    flags |= g->check_near_zone( zone_type_CONSTRUCTION_BLUEPRINT,
-                                 player_character.pos_bub() ) ? ConstructPlots : 0;
-
-    flags |= g->check_near_zone( zone_type_CHOP_TREES,
-                                 player_character.pos_bub() ) ? Multichoptrees : 0;
-    flags |= g->check_near_zone( zone_type_LOOT_WOOD,
-                                 player_character.pos_bub() ) ? Multichopplanks : 0;
-    flags |= g->check_near_zone( zone_type_VEHICLE_DECONSTRUCT,
-                                 player_character.pos_bub() ) ? Multideconvehicle : 0;
-    flags |= g->check_near_zone( zone_type_VEHICLE_REPAIR,
-                                 player_character.pos_bub() ) ? Multirepairvehicle : 0;
-    flags |= g->check_near_zone( zone_type_LOOT_CORPSE,
-                                 player_character.pos_bub() ) ? MultiButchery : 0;
-    flags |= g->check_near_zone( zone_type_MINING, player_character.pos_bub() ) ? MultiMining : 0;
-    flags |= g->check_near_zone( zone_type_DISASSEMBLE,
-                                 player_character.pos_bub() ) ? MultiDis : 0;
-    flags |= g->check_near_zone( zone_type_MOPPING, player_character.pos_bub() ) ? MultiMopping : 0;
-    flags |= g->check_near_zone( zone_type_STUDY_ZONE, player_character.pos_bub() ) ? MultiStudy : 0;
-    if( flags == 0 ) {
-        add_msg( m_info, _( "There is no compatible zone nearby." ) );
-        add_msg( m_info, _( "Compatible zones are %s and %s" ),
-                 mgr.get_name_from_type( zone_type_LOOT_UNSORTED ),
-                 mgr.get_name_from_type( zone_type_FARM_PLOT ) );
-        return;
-    }
-
-    auto wrap60 = []( const std::string & text ) {
-        return string_join( foldstring( text, 60 ), "\n" );
-    };
-
-    uilist menu;
-    menu.title = _( "Pick action:" );
-    menu.desc_enabled = true;
-
-    if( flags & SortLoot ) {
-        menu.addentry_desc( SortLootStatic, true, 'o', _( "Sort out my loot (static zones only)" ),
-                            wrap60( _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones ignoring personal zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) ) );
-        menu.addentry_desc( SortLootPersonal, true, 'O', _( "Sort out my loot (personal zones only)" ),
-                            wrap60( _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones ignoring static zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) ) );
-        menu.addentry_desc( SortLoot, true, 'I', _( "Sort out my loot (all)" ),
-                            wrap60( _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) ) );
-    }
-
-    if( flags & UnloadLoot ) {
-        menu.addentry_desc( UnloadLoot, true, 'U', _( "Unload nearby containers" ),
-                            wrap60( _( "Unloads any corpses or containers that are in their respective zones." ) ) );
-    }
-    if( flags & ConstructPlots ) {
-        menu.addentry_desc( ConstructPlots, true, 'c', _( "Construct plots" ),
-                            wrap60( _( "Work on any nearby Blueprint: construction zones." ) ) );
-    }
-    if( flags & MultiFarmPlots ) {
-        menu.addentry_desc( MultiFarmPlots, true, 'm', _( "Farm plots" ),
-                            wrap60( _( "Till and plant on any nearby farm plots - auto-fetch seeds and tools." ) ) );
-    }
-    if( flags & Multichoptrees ) {
-        menu.addentry_desc( Multichoptrees, true, 'C', _( "Chop trees" ),
-                            wrap60( _( "Chop down any trees in the designated zone - auto-fetch tools." ) ) );
-    }
-    if( flags & Multichopplanks ) {
-        menu.addentry_desc( Multichopplanks, true, 'P', _( "Chop planks" ),
-                            wrap60( _( "Auto-chop logs in wood loot zones into planks - auto-fetch tools." ) ) );
-    }
-    if( flags & Multideconvehicle ) {
-        menu.addentry_desc( Multideconvehicle, true, 'v', _( "Deconstruct vehicle" ),
-                            wrap60( _( "Auto-deconstruct vehicle in designated zone - auto-fetch tools." ) ) );
-    }
-    if( flags & Multirepairvehicle ) {
-        menu.addentry_desc( Multirepairvehicle, true, 'V', _( "Repair vehicle" ),
-                            wrap60( _( "Auto-repair vehicle in designated zone - auto-fetch tools." ) ) );
-    }
-    if( flags & MultiButchery ) {
-        menu.addentry_desc( MultiButchery, true, 'B', _( "Butcher corpses" ),
-                            wrap60( _( "Auto-butcher anything in corpse loot zones - auto-fetch tools." ) ) );
-    }
-    if( flags & MultiMining ) {
-        menu.addentry_desc( MultiMining, true, 'M', _( "Mine Area" ),
-                            wrap60( _( "Auto-mine anything in mining zone - auto-fetch tools." ) ) );
-    }
-    if( flags & MultiDis ) {
-        menu.addentry_desc( MultiDis, true, 'D', _( "Disassemble items" ),
-                            wrap60( _( "Auto-disassemble anything in disassembly zone - auto-fetch tools." ) ) );
-
-    }
-    if( flags & MultiMopping ) {
-        menu.addentry_desc( MultiMopping, true, 'p', _( "Mop area" ), _( "Mop clean the area." ) );
-    }
-    if( flags & MultiStudy ) {
-        menu.addentry_desc( MultiStudy, true, 's', _( "Study from books in study zones" ),
-                            wrap60( _( "Find and read books from study zones." ) ) );
-    }
-
-    menu.query();
-    flags = ( menu.ret >= 0 ) ? menu.ret : None;
-    bool recache = false;
-
-    switch( flags ) {
-        case None:
-            add_msg( _( "Never mind." ) );
-            break;
-        case SortLoot:
-            player_character.assign_activity( zone_sort_activity_actor() );
-            break;
-        case SortLootStatic:
-            //temporarily disable personal zones
-            for( const auto &i : mgr.get_zones() ) {
-                zone_data &zone = i.get();
-                if( zone.get_is_personal() && zone.get_enabled() ) {
-                    zone.set_enabled( false );
-                    zone.set_temporary_disabled( true );
-                    recache = true;
-                }
-            }
-            if( recache ) {
-                mgr.cache_data();
-            }
-            player_character.assign_activity( zone_sort_activity_actor() );
-            break;
-        case SortLootPersonal:
-            //temporarily disable non personal zones
-            for( const auto &i : mgr.get_zones() ) {
-                zone_data &zone = i.get();
-                if( !zone.get_is_personal() && zone.get_enabled() ) {
-                    zone.set_enabled( false );
-                    zone.set_temporary_disabled( true );
-                    recache = true;
-                }
-            }
-            if( recache ) {
-                mgr.cache_data();
-            }
-            player_character.assign_activity( zone_sort_activity_actor() );
-            break;
-        case UnloadLoot:
-            player_character.assign_activity( unload_loot_activity_actor() );
-            break;
-        case ConstructPlots:
-            player_character.assign_activity( multi_build_construction_activity_actor() );
-            break;
-        case MultiFarmPlots:
-            player_character.assign_activity( multi_farm_activity_actor() );
-            break;
-        case Multichoptrees:
-            player_character.assign_activity( multi_chop_trees_activity_actor() );
-            break;
-        case Multichopplanks:
-            player_character.assign_activity( multi_chop_planks_activity_actor() );
-            break;
-        case Multideconvehicle:
-            player_character.assign_activity( multi_vehicle_deconstruct_activity_actor() );
-            break;
-        case Multirepairvehicle:
-            player_character.assign_activity( multi_vehicle_repair_activity_actor() );
-            break;
-        case MultiButchery:
-            player_character.assign_activity( multi_butchery_activity_actor() );
-            break;
-        case MultiMining:
-            player_character.assign_activity( multi_mine_activity_actor() );
-            break;
-        case MultiDis:
-            player_character.assign_activity( multi_disassemble_activity_actor() );
-            break;
-        case MultiMopping:
-            player_character.assign_activity( multi_mop_activity_actor() );
-            break;
-        case MultiStudy:
-            player_character.assign_activity( multi_study_activity_actor() );
-            break;
-        default:
-            debugmsg( "Unsupported flag" );
-            break;
-    }
-}
-
 static void wear()
 {
     avatar &player_character = get_avatar();
     item_location loc = game_menus::inv::wear( player_character );
 
     if( loc ) {
+#ifdef MP_ENABLED
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_select_equipment( "wear", loc );
+            return;
+        }
+#endif
         player_character.wear( loc );
     } else {
         add_msg( _( "Never mind." ) );
@@ -1885,6 +1458,12 @@ static void takeoff()
     item_location loc = game_menus::inv::take_off();
 
     if( loc ) {
+#ifdef MP_ENABLED
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_select_equipment( "takeoff", loc );
+            return;
+        }
+#endif
         player_character.takeoff( loc.obtain( player_character ) );
     } else {
         add_msg( _( "Never mind." ) );
@@ -1939,7 +1518,11 @@ static void reach_attack( avatar &you )
     }
 
     if( !traj.empty() ) {
-        you.reach_attack( traj.back() );
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_request_melee( traj.back(), cata_mp::melee_action::reach );
+        } else {
+            you.reach_attack( traj.back() );
+        }
     }
     g->reenter_fullscreen();
 }
@@ -1954,25 +1537,26 @@ static void fire()
         return;
     }
 
-    if( !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
+    const item_location weapon = you.get_wielded_item();
+    const bool reach = weapon ? !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 :
+                       static_cast<int>( you.calculate_by_enchantment( 1,
+                                         enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1;
+    const bool remote_attack = ( cata_mp::is_client_mode() &&
+                                 ( reach || ( weapon && is_sling_launcher( *weapon ) ) ) ) ||
+                               ( weapon && cata_mp::client_uses_firearm_intents( *weapon ) );
+    if( !remote_attack &&
+        !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
                                   _( "You're too pacified to strike anything…" ) ) ) {
         return;
     }
 
-    const item_location weapon = you.get_wielded_item();
     // try reach weapon
     // used_weapon() returns null location if force unarmed is selected
     if( weapon && !you.used_weapon() && !weapon->is_gun() ) {
         add_msg( m_info, _( "You can't use reach attacks while forcing yourself to fight unarmed." ) );
         return;
     }
-    if( weapon && !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 ) {
-        reach_attack( you );
-        return;
-    }
-    if( !weapon &&
-        static_cast<int>( you.calculate_by_enchantment( 1,
-                          enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1 ) {
+    if( reach ) {
         reach_attack( you );
         return;
     }
@@ -2072,10 +1656,13 @@ static void open_movement_mode_menu()
 
 static void cast_spell( bool recast_spell = false )
 {
+    if( cata_mp::client_query_spellbook( recast_spell ) ) {
+        return;
+    }
     Character &player_character = get_player_character();
     player_character.magic->clear_opens_spellbook_data();
     get_event_bus().send<event_type::opens_spellbook>( player_character.getID() ); // trigger EoC
-    player_character.magic->evaluate_opens_spellbook_data();
+    player_character.magic->evaluate_opens_spellbook_data( player_character );
     std::vector<spell_id> spells = player_character.magic->spells();
 
     if( player_character.has_flag( json_flag_CANNOT_ATTACK ) ) {
@@ -2119,6 +1706,14 @@ static void cast_spell( bool recast_spell = false )
 bool Character::cast_spell( spell &sp, bool fake_spell,
                             const std::optional<tripoint_bub_ms> &target = std::nullopt )
 {
+    if( is_avatar() && !fake_spell ) {
+        const auto handled = cata_mp::client_cast_spell( sp.id(),
+                             target ? std::make_optional( get_map().get_abs( *target ) ) : std::nullopt );
+        if( handled ) {
+            return *handled;
+        }
+    }
+
     if( is_armed() && !sp.no_hands() && !has_flag( json_flag_SUBTLE_SPELL ) &&
         !get_wielded_item()->has_flag( flag_MAGIC_FOCUS ) && !sp.check_if_component_in_hand( *this ) ) {
         add_msg( game_message_params{ m_bad, gmf_bypass_cooldown },
@@ -2185,7 +1780,8 @@ bool Character::cast_spell( spell &sp, bool fake_spell,
 // this is here because it shares some things in common with cast_spell
 bool bionic::activate_spell( Character &caster ) const
 {
-    if( !caster.is_avatar() || !id->spell_on_activate ) {
+    if( ( !caster.is_avatar() && caster.activity.execution() != activity_execution::authoritative ) ||
+        !id->spell_on_activate ) {
         // the return value tells us if the spell fails. if it has no spell it can't fail
         return true;
     }
@@ -2410,6 +2006,7 @@ static std::map<action_id, std::string> get_actions_disabled_in_shell()
         { ACTION_DISASSEMBLE,        _( "You can't disassemble while you're in your shell." ) },
         { ACTION_CONSTRUCT,          _( "You can't construct while you're in your shell." ) },
         { ACTION_CONTROL_VEHICLE,    _( "You can't operate a vehicle while you're in your shell." ) },
+        { ACTION_VEHICLE_TURNING_ASSIST, _( "You can't operate a vehicle while you're in your shell." ) },
     };
 }
 
@@ -2432,6 +2029,7 @@ static const std::set<action_id> actions_disabled_in_incorporeal {
     ACTION_DISASSEMBLE,
     ACTION_CONSTRUCT,
     ACTION_CONTROL_VEHICLE,
+    ACTION_VEHICLE_TURNING_ASSIST,
 };
 
 static std::map<action_id, std::string> get_actions_disabled_in_handless_temporary_shapeshift()
@@ -2454,6 +2052,7 @@ static std::map<action_id, std::string> get_actions_disabled_in_handless_tempora
         { ACTION_DISASSEMBLE,        _( "You can't disassemble while shapeshifted." ) },
         { ACTION_CONSTRUCT,          _( "You can't construct while shapeshifted." ) },
         { ACTION_CONTROL_VEHICLE,    _( "You can't operate a vehicle while shapeshifted." ) },
+        { ACTION_VEHICLE_TURNING_ASSIST, _( "You can't operate a vehicle while shapeshifted." ) },
     };
 }
 
@@ -2571,9 +2170,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
     // this at the start of do_regular_action before local variable declarations.
     // CCB's surrounding context (mount/shell/incorporeal/shapeshift checks) is
     // moved after the MP block; verify these still gate correctly for MP actions.
-    // In client mode, intercept movement: predict locally then send to server.
-    // The server's delta response (received via client_process_incoming next turn)
-    // corrects the position if prediction was wrong (e.g. attack triggered instead of move).
+    // Movement collects choices here; the server executes the common native
+    // movement path. Never predict stamina, traps, theft or gameplay RNG here.
     if( cata_mp::is_client_mode() ) {
         const bool mp_locked = player_character.get_moves() <= 0;
 
@@ -2648,14 +2246,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             { ACTION_MOVE_BACK_RIGHT,  "se" },
             { ACTION_MOVE_BACK_LEFT,   "sw" },
         };
-        int mp_dispatch_pre_moves = 0;
-        const auto mp_dispatch = [&]( std::string_view json, bool charge_from_caller = false ) {
+        const auto mp_dispatch = [&]( std::string_view json ) {
             const std::string full_json = std::string( json.substr( 0, json.size() - 1 ) )
                                           + R"(,"move_mode":")" + player_character.move_mode.str() + "\""
                                           + "}";
-            const bool had_grant = charge_from_caller
-                                   ? mp_dispatch_pre_moves > 0
-                                   : player_character.get_moves() > 0;
+            const bool had_grant = player_character.get_moves() > 0;
             cata_mp::mp_log( std::string( "[cdda-mp] mp_dispatch act=" ) +
                              action_ident( act ) + " path=" +
                              ( had_grant && !cata_mp::is_client_waiting_for_ack() ? "SEND" : "DROP" ) +
@@ -2664,12 +2259,26 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                              " json=" + full_json.substr( 0, 60 ) );
             if( had_grant && !cata_mp::is_client_waiting_for_ack() ) {
                 cata_mp::client_send( cata_mp::client_enrich_action( full_json ) );
-                if( !charge_from_caller ) {
-                    player_character.set_moves( 0 );
-                }
+                player_character.set_moves( 0 );
                 cata_mp::client_mark_action_sent();
             }
         };
+
+        if( act == ACTION_MOVE_UP || act == ACTION_MOVE_DOWN ) {
+            if( mp_locked || cata_mp::is_client_waiting_for_ack() || player_character.activity ) {
+                return false;
+            }
+            map &here = get_map();
+            const int direction = act == ACTION_MOVE_UP ? 1 : -1;
+            if( vehicle *craft = controlled_vehicle( player_character, here ); craft &&
+                craft->is_aircraft( here ) ) {
+                mp_dispatch( R"({"type":"action","action":"pldrive","dz":)" +
+                             std::to_string( direction ) + "}" );
+            } else {
+                cata_mp::client_query_vertical_move( direction );
+            }
+            return true;
+        }
 
         auto it = action_to_dir.find( act );
         if( it != action_to_dir.end() ) {
@@ -2682,12 +2291,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 { "se", tripoint::south_east }, { "sw", tripoint::south_west },
             };
             map &here = get_map();
-            const tripoint_bub_ms cur_pos = player_character.pos_bub();
             const auto offset_it = dir_to_offset.find( dir );
-            const tripoint_bub_ms next_pos = offset_it != dir_to_offset.end()
-                                             ? cur_pos + offset_it->second
-                                             : cur_pos;
 
+
+            if( has_radio_car_binding( player_character ) ) {
+                cata_mp::client_drive_radio_car( get_delta_from_movement_action( act, iso_rotate::yes ) );
+                return true;
+            }
             // Vehicle control mode: route movement to pldrive instead of walk.
             if( cata_mp::client_ctrl_veh() ) {
                 cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: ctrl_veh path" );
@@ -2716,163 +2326,53 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 return true;
             }
 
-            if( offset_it != dir_to_offset.end() ) {
-                if( here.impassable( next_pos ) ) {
-                    const tripoint_abs_ms next_abs = here.get_abs( next_pos );
-                    const bool has_creature = static_cast<bool>(
-                                                  get_creature_tracker().find( next_abs ) );
-                    const bool openable = here.open_door( player_character, next_pos,
-                                                          true, true );
-                    const object_type cur_grab = player_character.get_grab_type();
-                    const tripoint_bub_ms grab_target =
-                        player_character.pos_bub() + player_character.grab_point;
-                    const bool next_is_grab_target =
-                        cur_grab != object_type::NONE && grab_target == next_pos;
-                    cata_mp::mp_log( "[cdda-mp] MOVE-IMPASS-CHECK: dir=" + dir +
-                                     " next=(" + std::to_string( next_pos.x() ) + "," +
-                                     std::to_string( next_pos.y() ) + ")" +
-                                     " grab_type=" + std::to_string( static_cast<int>( cur_grab ) ) +
-                                     " grab_target=(" + std::to_string( grab_target.x() ) + "," +
-                                     std::to_string( grab_target.y() ) + ")" +
-                                     " has_creature=" + std::to_string( has_creature ) +
-                                     " openable=" + std::to_string( openable ) +
-                                     " next_is_grab_target=" + std::to_string( next_is_grab_target ) );
-                    if( !has_creature && !openable && !next_is_grab_target ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: wall bump dir=" + dir +
-                                         " moves=" + std::to_string( player_character.get_moves() ) );
-                        return false;
-                    }
-                }
-                const tripoint_abs_ms next_abs = here.get_abs( next_pos );
-                npc *hnpc = g->critter_by_id<npc>(
-                                cata_mp::get_host_npc_character_id() );
-                if( hnpc && here.get_abs( hnpc->pos_bub() ) == next_abs ) {
-                    if( player_character.get_moves() <= 0 ) {
-                        cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-BLOCKED: locked, moves<=0" );
-                        return true;
-                    }
-                    cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-OPEN: moves=" +
-                                     std::to_string( player_character.get_moves() ) );
-                    g->npc_menu( *hnpc );
-                    cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-CLOSE: moves=" +
-                                     std::to_string( player_character.get_moves() ) );
+            if( mp_locked || cata_mp::is_client_waiting_for_ack() || player_character.activity ) {
+                return false;
+            }
+            const tripoint_rel_ms direction( get_delta_from_movement_action( act, iso_rotate::yes ), 0 );
+            const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
+            if( !here.inbounds( target_pos ) ) {
+                return false;
+            }
+            if( cata_mp::client_auto_mine( here.get_abs( target_pos ) ) ) {
+                return true;
+            }
+            if( Creature *target = get_creature_tracker().creature_at( target_pos, true ) ) {
+                if( target->as_npc() && player_character.is_auto_moving() ) {
+                    player_character.add_msg_if_player( _( "NPC in the way, Auto move canceled." ) );
+                    player_character.abort_automove();
                     return true;
                 }
-
-                if( const auto dvp =
-                        here.veh_at( next_pos ).part_with_feature( "BOARDABLE", true ) ) {
-                    if( !dvp->vehicle().handle_potential_theft( player_character ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: declined boardable theft" );
+                if( npc *person = target->as_npc(); person && !person->is_enemy() ) {
+                    npc_menu( *person );
+                    return true;
+                }
+                const monster *mon = target->as_monster();
+                const bool submerged = mon && mon->is_underwater() &&
+                                       here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, target_pos );
+                if( !submerged && ( !mon || ( mon->friendly == 0 && !mon->has_effect( effect_pet ) ) ) ) {
+                    if( player_character.is_auto_moving() ) {
+                        player_character.add_msg_if_player( m_warning, _( "Monster in the way.  Auto move canceled." ) );
+                        player_character.abort_automove();
                         return true;
                     }
-                }
-            }
-
-            {
-                const player_activity &pact = player_character.activity;
-                if( pact && ( pact.id() == ACT_WAIT || pact.id() == ACT_WAIT_STAMINA ||
-                              pact.id() == ACT_WAIT_WEATHER || pact.id() == ACT_WAIT_NPC ) ) {
-                    cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: blocked by wait-activity " +
-                                     pact.id().str() );
-                    player_character.set_moves( 0 );
+                    if( !mon || avatar_action::confirm_non_hostile_melee_attack( player_character, *mon ) ) {
+                        cata_mp::client_request_melee( target_pos, cata_mp::melee_action::strike );
+                    }
                     return true;
                 }
             }
-
-            if( player_character.is_waiting_to_change_mode_mode() ) {
-                const move_mode_id desired = player_character.get_desired_move_mode();
-                player_character.set_movement_mode( desired );
-                if( player_character.move_mode != desired ) {
-                    player_character.cycle_desired_move_mode();
-                }
+            const auto hazards = get_dangerous_tile( player_character, target_pos );
+            if( hazards.size() == 1 && hazards.front() == "ledge" ) {
+                cata_mp::client_query_ledge_move( here.get_abs( target_pos ) );
+                return true;
             }
-
-            if( offset_it != dir_to_offset.end() ) {
-                std::vector<std::string> harmful_stuff = g->get_dangerous_tile( next_pos );
-                if( !harmful_stuff.empty() ) {
-                    const std::string opt = get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" );
-                    if( opt == "ALWAYS" &&
-                        !g->prompt_dangerous_tile( next_pos, &harmful_stuff ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt ALWAYS declined" );
-                        return true;
-                    } else if( opt == "RUNNING" &&
-                               ( !player_character.is_running() ||
-                                 !g->prompt_dangerous_tile( next_pos, &harmful_stuff ) ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt RUNNING blocked" );
-                        add_msg( m_warning,
-                                 _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
-                                 enumerate_as_string( harmful_stuff ) );
-                        return true;
-                    } else if( opt == "CROUCHING" &&
-                               ( !player_character.is_crouching() ||
-                                 !g->prompt_dangerous_tile( next_pos, &harmful_stuff ) ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt CROUCHING blocked" );
-                        add_msg( m_warning,
-                                 _( "Stepping into that %1$s looks risky.  Crouch and move into it if you wish to enter anyway." ),
-                                 enumerate_as_string( harmful_stuff ) );
-                        return true;
-                    } else if( opt == "NEVER" && !player_character.is_running() ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt NEVER blocked" );
-                        add_msg( m_warning,
-                                 _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
-                                 enumerate_as_string( harmful_stuff ) );
-                        return true;
-                    }
-                }
+            const auto choices = avatar_action::query_walk( player_character, here, direction );
+            if( choices ) {
+                cata_mp::client_walk( direction, *choices );
+            } else if( player_character.is_auto_moving() ) {
+                player_character.abort_automove();
             }
-
-            if( offset_it != dir_to_offset.end() ) {
-                mp_dispatch_pre_moves = player_character.get_moves();
-                const bool will_send = player_character.get_moves() > 0 &&
-                                       !cata_mp::is_client_waiting_for_ack();
-                if( will_send ) {
-                    const bool diag = ( std::abs( offset_it->second.x ) +
-                                        std::abs( offset_it->second.y ) ) == 2;
-                    const int mcost   = here.combined_movecost( cur_pos, next_pos );
-                    const int ap_cost = player_character.run_cost( mcost, diag );
-                    const int pre_moves = player_character.get_moves();
-                    const int pre_stam = player_character.get_stamina();
-                    player_character.mod_moves( -ap_cost );
-                    player_character.burn_move_stamina( pre_moves - player_character.get_moves() );
-                    cata_mp::mp_log( "[cdda-mp] CLI-MOVE-COST dir=" + dir +
-                                     " trigdist=" + std::to_string( trigdist ) +
-                                     " circ_opt=" + std::to_string( get_option<bool>( "CIRCLEDIST" ) ) +
-                                     " diag=" + std::to_string( diag ) +
-                                     " mcost=" + std::to_string( mcost ) +
-                                     " ap_cost=" + std::to_string( ap_cost ) +
-                                     " moves=" + std::to_string( pre_moves ) + "->" +
-                                     std::to_string( player_character.get_moves() ) +
-                                     " stam=" + std::to_string( pre_stam ) + "->" +
-                                     std::to_string( player_character.get_stamina() ) +
-                                     " ter=" + here.ter( next_pos ).id().str() );
-                    player_character.set_activity_level(
-                        player_character.current_movement_mode()->exertion_level() );
-                    if( player_character.is_running() && !player_character.can_run() ) {
-                        player_character.reset_move_mode();
-                    }
-                }
-            }
-            if( !mp_locked && offset_it != dir_to_offset.end() &&
-                !g->is_tileset_isometric() ) {
-                if( offset_it->second.x > 0 ) {
-                    player_character.facing = FacingDirection::RIGHT;
-                } else if( offset_it->second.x < 0 ) {
-                    player_character.facing = FacingDirection::LEFT;
-                }
-            }
-            int ramp_dz = 0;
-            if( offset_it != dir_to_offset.end() ) {
-                if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, next_pos ) ) {
-                    ramp_dz = 1;
-                } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, next_pos ) ) {
-                    ramp_dz = -1;
-                }
-            }
-            const std::string json = ramp_dz == 0
-                                     ? R"({"type":"action","action":"move","dir":")" + dir + "\"}"
-                                     : R"({"type":"action","action":"move","dir":")" + dir + R"(","dz":)"
-                                     + std::to_string( ramp_dz ) + "}";
-            mp_dispatch( json, /*charge_from_caller=*/true );
             return true;
         }
         if( act == ACTION_PAUSE ) {
@@ -2927,7 +2427,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            get_map().open_door( player_character, *doorpos, true, false );
+            // Submit the target; only the server mutates the door and charges
+            // the action. Prediction must not duplicate sounds or gameplay RNG.
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"open","x":)" + std::to_string( abs_target.x() ) +
@@ -2942,7 +2443,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            close_tile_activity_actor::close_immediately( player_character, *doorpos );
+            // Closing, like opening, is settled by the server only.
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"close","x":)" + std::to_string( abs_target.x() ) +
@@ -2968,58 +2469,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         }
 
         if( act == ACTION_PICKUP || act == ACTION_PICKUP_ALL ) {
-            map &phere = get_map();
-            const tripoint_bub_ms ppos = player_character.pos_bub();
-            const tripoint_abs_ms abs_pos = phere.get_abs( ppos );
-            std::vector<std::string> before_types;
-            for( const item &it : phere.i_at( ppos ) ) {
-                before_types.push_back( it.typeId().str() );
-            }
-
             if( act == ACTION_PICKUP_ALL ) {
                 pickup_all();
             } else {
                 pickup();
-            }
-
-            {
-                if( player_character.activity.id() == ACT_PICKUP ) {
-                    const int saved_moves = player_character.get_moves();
-                    player_character.set_moves( 100000 );
-                    while( player_character.activity.id() == ACT_PICKUP ) {
-                        player_character.activity.do_turn( player_character );
-                    }
-                    player_character.set_moves( saved_moves );
-                }
-            }
-
-            std::vector<std::string> after_types;
-            for( const item &it : phere.i_at( ppos ) ) {
-                after_types.push_back( it.typeId().str() );
-            }
-            std::multiset<std::string> remaining( after_types.begin(), after_types.end() );
-            std::string items_json;
-            bool first = true;
-            for( const std::string &t : before_types ) {
-                auto rem_it = remaining.find( t );
-                if( rem_it != remaining.end() ) {
-                    remaining.erase( rem_it );
-                } else {
-                    if( !first ) {
-                        items_json += ',';
-                    }
-                    first = false;
-                    items_json += R"({"t":")" + t + "\"}";
-                }
-            }
-
-            if( !items_json.empty() ) {
-                const std::string json =
-                    R"({"type":"action","action":"pickup","x":)" + std::to_string( abs_pos.x() ) +
-                    ",\"y\":" + std::to_string( abs_pos.y() ) +
-                    ",\"z\":" + std::to_string( abs_pos.z() ) +
-                    ",\"items\":[" + items_json + "]}";
-                mp_dispatch( json );
             }
             return true;
         }
@@ -3101,45 +2554,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         }
 
         if( act == ACTION_CONTROL_VEHICLE ) {
-            if( cata_mp::client_ctrl_veh() ) {
-                map &vmap = get_map();
-                const tripoint_abs_ms vabs = cata_mp::client_ctrl_veh_abs();
-                if( vmap.inbounds( vabs ) ) {
-                    const tripoint_bub_ms vbub = vmap.get_bub( vabs );
-                    if( const optional_vpart_position ovp = vmap.veh_at( vbub ) ) {
-                        vehicle &veh = ovp->vehicle();
-                        tripoint_bub_ms ctrl_pos = vbub;
-                        for( const vpart_reference &vpr : veh.get_avail_parts( "CONTROLS" ) ) {
-                            ctrl_pos = vpr.pos_bub( vmap );
-                            break;
-                        }
-                        veh.interact_with( &vmap, ctrl_pos );
-                    }
-                }
-            } else {
-                cata_mp::mp_log( "[cdda-mp] ^: client ctrl_veh hit, moves=" +
-                                 std::to_string( player_character.get_moves() ) +
-                                 " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) );
-                map &cv_map = get_map();
-                const tripoint_bub_ms cv_pos = player_character.pos_bub();
-                if( const optional_vpart_position ovp = cv_map.veh_at( cv_pos ) ) {
-                    vehicle &veh = ovp->vehicle();
-                    if( !veh.handle_potential_theft( player_character ) ) {
-                        return true;
-                    }
-                    if( veh.is_locked ) {
-                        veh.interact_with( &cv_map, cv_pos );
-                        return true;
-                    }
-                }
-                mp_dispatch( R"({"type":"action","action":"control_vehicle"})" );
-            }
+            cata_mp::client_query_vehicle_control();
             return true;
         }
 
-        if( act == ACTION_PICK_STYLE ) {
-            cata_mp::mp_log( "[cdda-mp] client local-only action: pick_style" );
-        }
     }
 
     // Host waiting for client action: allow pure UI actions, block everything else.
@@ -3265,10 +2683,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_MOVE_BACK_LEFT:
         case ACTION_MOVE_LEFT:
         case ACTION_MOVE_FORTH_LEFT:
-            if( player_character.maybe_get_value( "remote_controlling" ) &&
-                ( player_character.has_active_item( itype_radiocontrol ) ||
-                  player_character.has_active_bionic( bio_remote ) ) ) {
-                rcdrive( get_delta_from_movement_action( act, iso_rotate::yes ) );
+            if( has_radio_car_binding( player_character ) ) {
+                if( const auto binding = read_radio_car_binding( player_character, here ) ) {
+                    drive_radio_car( player_character, here,
+                                     get_delta_from_movement_action( act, iso_rotate::yes ), *binding );
+                } else {
+                    disconnect_radio_car( player_character );
+                }
             } else if( has_vehicle_control( player_character ) ) {
                 // vehicle control uses x for steering and y for ac/deceleration,
                 // so no rotation needed
@@ -3307,52 +2728,20 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                     dest_delta = dest_next;
                 }
-                const tripoint_bub_ms pos_before = player_character.pos_bub();
-                const tripoint_bub_ms dest_tile = pos_before +
-                                                  tripoint_rel_ms( dest_delta, 0 );
-                const ter_id ter_before = here.ter( dest_tile );
-                const furn_id furn_before = here.furn( dest_tile );
-                int veh_door_part_before = -1;
-                if( const optional_vpart_position ovp = here.veh_at( dest_tile ) ) {
-                    veh_door_part_before = ovp->vehicle().next_part_to_open(
-                                               ovp->part_index(), true );
+                const auto pending_move = capture_automove_step( player_character, here,
+                                          player_character.pos_abs() + tripoint_rel_ms( dest_delta, 0 ) );
+                const character_action_guard mover( player_character );
+                const auto move_context = here.get_context_reference();
+                const bool moved = avatar_action::move( player_character, here,
+                                                        tripoint_rel_ms( dest_delta, 0 ) );
+                if( !mover ) {
+                    return true;
                 }
-                if( !avatar_action::move( player_character, here, tripoint_rel_ms( dest_delta, 0 ) ) ) {
-                    // auto-move should be canceled due to a failed move or obstacle
-                    add_msg_debug( debugmode::DF_ACTIVITY,
-                                   "auto_move: move(%d,%d) FAILED at pos=(%d,%d), aborting",
-                                   dest_delta.x(), dest_delta.y(),
-                                   player_character.pos_bub().x(), player_character.pos_bub().y() );
-                    player_character.abort_automove();
-                } else if( player_character.pos_bub() == pos_before &&
-                           dest_delta != point_rel_ms::zero ) {
-                    // General auto-move safety: catches cases where move() returns true
-                    // ("handled") but the player didn't actually move. Covers grabbed
-                    // vehicle collisions, NPC interactions, and any future similar cases.
-                    // Check if terrain, furniture, or a vehicle part changed (door/trunk
-                    // opened) - if so, next step will walk through, so don't abort.
-                    const ter_id ter_after = here.ter( dest_tile );
-                    const furn_id furn_after = here.furn( dest_tile );
-                    bool veh_part_opened = false;
-                    if( const optional_vpart_position ovp = here.veh_at( dest_tile ) ) {
-                        // If there was an openable part before but not now, a vehicle
-                        // door/trunk/hatch was opened by avatar_action::move.
-                        const int openable_now = ovp->vehicle().next_part_to_open(
-                                                     ovp->part_index(), true );
-                        veh_part_opened = ( veh_door_part_before >= 0 && openable_now < 0 ) ||
-                                          ( veh_door_part_before >= 0 && openable_now != veh_door_part_before );
-                    }
-                    if( ter_before != ter_after || furn_before != furn_after || veh_part_opened ) {
-                        add_msg_debug( debugmode::DF_ACTIVITY,
-                                       "auto_move: pos unchanged but ter/furn/veh changed at (%d,%d), continuing",
-                                       dest_tile.x(), dest_tile.y() );
-                    } else {
-                        add_msg_debug( debugmode::DF_ACTIVITY,
-                                       "auto_move: move(%d,%d) returned OK but pos unchanged at (%d,%d), aborting",
-                                       dest_delta.x(), dest_delta.y(),
-                                       pos_before.x(), pos_before.y() );
-                        player_character.abort_automove();
-                    }
+                if( pending_move ) {
+                    pending_move->finish( player_character, here, !moved );
+                }
+                if( !move_context ) {
+                    return true;
                 }
 
                 // QQ#183: while auto-moving (auto travel mode or destination
@@ -3427,132 +2816,34 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             }
             break;
-        case ACTION_MOVE_DOWN: {
-                if( player_character.is_mounted() ) {
-                    auto *mon = player_character.mounted_creature.get();
-                    if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
-                        add_msg( m_info, _( "You can't go down stairs while you're riding." ) );
-                        break;
+        case ACTION_MOVE_DOWN:
+        case ACTION_MOVE_UP: {
+                const int direction = act == ACTION_MOVE_UP ? 1 : -1;
+                // Aircraft controls take priority over ladders under the pilot.
+                if( vehicle *craft = controlled_vehicle( player_character, here ); craft &&
+                    craft->is_aircraft( here ) ) {
+                    pldrive( tripoint_rel_ms( 0, 0, direction ) );
+                } else {
+                    const auto pending_move = capture_automove_step( player_character, here,
+                                              player_character.pos_abs() + tripoint_rel_ms( 0, 0, direction ) );
+                    const character_action_guard mover( player_character );
+                    const auto move_context = here.get_context_reference();
+                    const auto choice = query_vertical_move( player_character, here, direction );
+                    if( choice && mover && move_context ) {
+                        execute_vertical_move( player_character, here, *choice );
                     }
-                }
-
-                // Remote controls take priority over whatever the operator is
-                // standing on.  pldrive() already selects the remote vehicle
-                // first, so mirror that behavior for vertical movement.
-                if( vehicle *remote_veh = g->remoteveh();
-                    remote_veh && remote_veh->is_aircraft( here ) ) {
-                    pldrive( tripoint_rel_ms::below );
-                    break;
-                }
-
-                // While piloting an aircraft, "descend" means fly down rather
-                // than climb a vehicle ladder mounted on the same tile.  Mirror
-                // the ACTION_MOVE_UP ordering: aircraft control wins over the
-                // ladder, and ladder climbing remains available on foot.
-                if( has_vehicle_control( player_character ) ) {
-                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                    if( vp && vp->vehicle().is_aircraft( here ) ) {
-                        pldrive( tripoint_rel_ms::below );
-                        break;
+                    if( !mover ) {
+                        return true;
                     }
-                }
-
-                const tripoint_bub_ms pos = player_character.pos_bub();
-                const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
-                if( const std::optional<tripoint_bub_ms> ladder_dest =
-                        here.vehicle_ladder_destination( pos, -1 ) ) {
-                    if( here.is_open_air( *ladder_dest ) &&
-                        !here.veh_at( *ladder_dest ) &&
-                        !query_yn( _( "The vehicle ladder does not reach a safe landing.  "
-                                      "If you climb down, you will fall from the end of it.  Continue?" ) ) ) {
-                        break;
+                    if( pending_move ) {
+                        pending_move->finish( player_character, here, !choice );
                     }
-                    if( player_character.in_vehicle ) {
-                        here.unboard_vehicle( pos );
+                    if( !move_context ) {
+                        return true;
                     }
-                    vertical_move( ladder_dest->z() - pos.z(), true );
-                    break;
-                }
-
-                if( has_vehicle_ladder ) {
-                    add_msg( m_info, _( "You can't climb down any farther from here." ) );
-                    break;
-                }
-
-                if( !player_character.in_vehicle ) {
-                    // We're NOT standing on tiles with stairs, ropes, ladders etc
-                    if( !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, player_character.pos_bub() ) &&
-                        !u.has_flag( json_flag_PHASE_MOVEMENT ) ) {
-                        std::vector<tripoint_bub_ms> pts;
-
-                        // If levitating, just move straight down if possible.
-                        if( player_character.has_flag( json_flag_LEVITATION ) &&
-                            here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, player_character.pos_bub() ) ) {
-                            pts.push_back( player_character.pos_bub() );
-                        }
-
-                        if( pts.empty() ) {
-                            // Check tiles around player character for open air
-                            for( const tripoint_bub_ms &p : here.points_in_radius( player_character.pos_bub(), 1 ) ) {
-                                if( here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, p ) ) {
-                                    pts.push_back( p );
-                                }
-                            }
-                        }
-
-                        // If we found tiles with open air, prompt player with query on direction they want to climb
-                        if( !pts.empty() ) {
-                            const std::optional<tripoint_bub_ms> pnt = point_selection_menu( pts, false );
-                            if( !pnt ) {
-                                break;
-                            }
-
-                            // If player selected direction, climb down there, and exit from the whole ACTION_MOVE_DOWN case
-                            climb_down( *pnt );
-                            break;
-                        }
-                    }
-
-                    // If we're here, we might or might not be standing on tiles with stairs, ropes, ladders etc
-                    // In any case, attempt a descend
-                    vertical_move( -1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
                 }
                 break;
             }
-
-        case ACTION_MOVE_UP:
-            if( player_character.is_mounted() ) {
-                auto *mon = player_character.mounted_creature.get();
-                if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
-                    add_msg( m_info, _( "You can't go up stairs while you're riding." ) );
-                    break;
-                }
-            }
-            // As with horizontal remote driving, route vertical input to the
-            // remote aircraft before considering movement by the operator.
-            if( vehicle *remote_veh = g->remoteveh();
-                remote_veh && remote_veh->is_aircraft( here ) ) {
-                pldrive( tripoint_rel_ms::above );
-                break;
-            }
-            if( !player_character.in_vehicle ) {
-                if( const std::optional<tripoint_bub_ms> ladder_dest =
-                        here.vehicle_ladder_destination( player_character.pos_bub(), 1 ) ) {
-                    vertical_move( ladder_dest->z() - player_character.pos_bub().z(), true );
-                    if( !player_character.in_vehicle &&
-                        here.veh_at( player_character.pos_bub() ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
-                        here.board_vehicle( player_character.pos_bub(), &player_character );
-                    }
-                    break;
-                }
-                vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
-            } else if( has_vehicle_control( player_character ) ) {
-                const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                if( vp && vp->vehicle().is_aircraft( here ) ) {
-                    pldrive( tripoint_rel_ms::above );
-                }
-            }
-            break;
 
         case ACTION_OPEN:
             player_character.assign_activity( open_tile_activity_actor( std::nullopt ) );
@@ -3604,39 +2895,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
             break;
 
-        case ACTION_GRAB: {
-#ifdef MP_ENABLED
-                object_type mp_pre_grab_type = player_character.get_grab_type();
-                tripoint_rel_ms mp_pre_grab_point = player_character.grab_point;
-#endif
-                grab( mouse_target );
-#ifdef MP_ENABLED
-                cata_mp::mp_client_dispatch_grab_if_changed( mp_pre_grab_type, mp_pre_grab_point );
-#endif
-                break;
-            }
-
-        case ACTION_HAUL: {
-#ifdef MP_ENABLED
-                const bool mp_pre_hauling = player_character.is_hauling();
-#endif
-                haul();
-#ifdef MP_ENABLED
-                cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
-#endif
-                break;
-            }
-
-        case ACTION_HAUL_TOGGLE: {
-#ifdef MP_ENABLED
-                const bool mp_pre_hauling = player_character.is_hauling();
-#endif
-                haul_toggle();
-#ifdef MP_ENABLED
-                cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
-#endif
-                break;
-            }
+        case ACTION_GRAB:
+            grab( mouse_target );
+            break;
+        case ACTION_HAUL:
+            haul();
+            break;
+        case ACTION_HAUL_TOGGLE:
+            haul_toggle();
+            break;
 
         case ACTION_BUTCHER:
             butcher( mouse_target );
@@ -3666,11 +2933,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_ZONES:
-            zone_manager_ui::display_zone_manager();
+            if( !cata_mp::client_query_zones() ) {
+                zone_manager_ui::display_zone_manager();
+            }
             break;
 
         case ACTION_LOOT:
-            loot();
+            zone_manager_ui::display_zone_actions();
             break;
 
         case ACTION_INVENTORY:
@@ -3737,6 +3006,12 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_WIELD: {
                 item_location loc = game_menus::inv::wield();
                 if( loc ) {
+#ifdef MP_ENABLED
+                    if( cata_mp::is_client_mode() ) {
+                        cata_mp::client_select_equipment( "wield", loc );
+                        break;
+                    }
+#endif
                     player_character.wield( loc );
 #ifdef MP_ENABLED
                     cata_mp::mp_client_post_action();
@@ -3761,18 +3036,9 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_PICK_STYLE:
             player_character.martial_arts_data->pick_style( player_character );
-#ifdef MP_ENABLED
-            cata_mp::client_resync_worn();
-#endif
             break;
 
         case ACTION_ACTIVE_TECHNIQUE:
-#ifdef MP_ENABLED
-            if( cata_mp::is_client_mode() ) {
-                add_msg( m_info, _( "Active techniques are not available to remote players yet." ) );
-                break;
-            }
-#endif
             avatar_action::active_technique( player_character, here );
             break;
 
@@ -4033,6 +3299,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_SLEEP:
             sleep();
+            break;
+
+        case ACTION_VEHICLE_TURNING_ASSIST:
+            vehicle_turning_assist();
+            break;
+
+        case ACTION_VEHICLE_GUIDANCE:
+            vehicle_guidance = !vehicle_guidance;
+            add_msg( m_info, vehicle_guidance ? _( "Driving guidance ON." ) :
+                     _( "Driving guidance OFF." ) );
             break;
 
         case ACTION_CONTROL_VEHICLE:
@@ -4378,6 +3654,13 @@ bool game::handle_action()
     action_id act = ACTION_NULL;
     user_turn current_turn;
     avatar &player_character = get_avatar();
+    if( cata_mp::is_client_mode() &&
+        player_character.is_auto_moving() &&
+        ( cata_mp::is_client_waiting_for_ack() || player_character.get_moves() <= 0 ||
+          multiplayer_session().client_inventory_activity.active ) ) {
+        handle_key_blocking_activity();
+        return false;
+    }
     // Check if we have an auto-move destination
     if( player_character.has_destination() ) {
         // Poll before consuming a route step: cancellation can clear the route,
@@ -4410,7 +3693,11 @@ bool game::handle_action()
         open_menu_tmp.value()();
         return false;
     } else {
-        // No auto-move, ask player for input
+        // A consumed final step is not proof of arrival. With no pending
+        // authoritative reply, retire an exhausted route before manual input.
+        if( player_character.is_auto_moving() ) {
+            player_character.abort_automove();
+        }
         ctxt = get_player_input( action );
     }
 

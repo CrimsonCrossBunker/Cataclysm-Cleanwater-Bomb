@@ -80,6 +80,7 @@
 #include "safemode_ui.h"
 #include "save_snapshot.h"
 #if defined(TILES)
+    #include "cata_tiles.h"
     #include "sdltiles.h"
 #endif
 #include "stats_tracker.h"
@@ -508,6 +509,11 @@ bool game::load( const save_t &name )
                         }
                     }
 
+                    // Old saves acquire an identity once; the normal player
+                    // save persists it alongside its current Character.
+                    u.ensure_player_id();
+                    bind_local_player_control();
+
                     // populate calendar caches now, after active world is set, but before we do
                     // anything else, to ensure they pick up the correct value from the save's
                     // worldoptions
@@ -671,7 +677,7 @@ bool game::save_maps()
     try {
         here.save();
         overmap_buffer.save(); // can throw
-        MAPBUFFER.save(); // can throw
+        MAPBUFFER.save( false, &here ); // can throw
         return true;
     } catch( const std::exception &err ) {
         popup( _( "Failed to save the maps: %s" ), err.what() );
@@ -692,6 +698,9 @@ bool game::save_player_data()
         std::filesystem::path tmp_path = save_path;
         tmp_path.concat( ".tmp" ); // NOLINT(cata-u8-path)
         std::optional<zzip> z = zzip::load( save_path );
+        if( !z ) {
+            return false;
+        }
         saved_data = z->add_file( ( playerfile + SAVE_EXTENSION ).get_unrelative_path().filename(),
                                   save.str() );
         if( saved_data && z->compact_to( tmp_path, 2.0 ) ) {
@@ -839,7 +848,8 @@ bool game::save()
     }
     events().send<event_type::game_save>( time_since_load, total_time_played );
     try {
-        if( !save_player_data() ||
+        if( !cata_mp::mp_save_remote_player() ||
+            !save_player_data() ||
             !save_achievements() ||
             !save_factions_missions_npcs() ||
             !save_external_options_record() ||

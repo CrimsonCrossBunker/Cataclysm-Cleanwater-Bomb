@@ -1764,8 +1764,7 @@ void overmap::move_hordes()
 }
 
 /**
- * Move the nemesis horde towards the player.
- * Currently only works for the first nemesis horde. If there are multiple, only the first one will be moved.
+ * Move each nemesis horde towards its own last signaled player position.
  *
  */
 void overmap::move_nemesis()
@@ -1780,9 +1779,16 @@ void overmap::move_nemesis()
             continue;
         }
 
-        point_abs_om omp;
-        tripoint_om_sm local_sm;
-        std::tie( omp, local_sm ) = project_remain<coords::om>( mg.abs_pos );
+        if( mg.nemesis_orphaned() ) {
+            it = zg.erase( it );
+            continue;
+        }
+        if( mg.nemesis_mission_id < 0 &&
+            !get_avatar().has_trait( trait_id( "HAS_NEMESIS" ) ) ) {
+            ++it;
+            continue;
+        }
+        const tripoint_om_sm local_sm = project_remain<coords::om>( mg.abs_pos ).remainder_tripoint;
 
         // Decrease movement chance according to the terrain we're currently on.
         // Hordes will tend toward roads / open fields and path around specials.
@@ -1815,25 +1821,12 @@ void overmap::move_nemesis()
                 mg.abs_pos.y()++;
             }
 
-            //if the nemesis horde is on the same overmap as its target
-            //update the horde's om_sm coords from the abs_sm so it can spawn in correctly
-            if( project_to<coords::om>( mg.nemesis_target ) == omp ) {
-
-                // Erase the group at its old location, add the group with the new location
-                tmpzg.emplace( mg.rel_pos(), mg );
-                zg.erase( it++ );
-
-                //there is only one nemesis horde, so we can stop looping after we move it
-                break;
-
-            }
-
-            //only one nemesis, so we break after moving it
-            break;
-
+            // Reindex each moved group once. Boundary transfer is performed
+            // after every loaded overmap has had its movement pass.
+            tmpzg.emplace( mg.rel_pos(), mg );
+            it = zg.erase( it );
         } else {
-            //and we also break if it doesnt move
-            break;
+            ++it;
         }
     }
     // and now back into the monster group map.
@@ -1841,18 +1834,18 @@ void overmap::move_nemesis()
 
 }
 
-bool overmap::remove_nemesis()
+bool overmap::remove_nemesis( const character_id who )
 {
-    //cycle through zombie groups, find nemesis horde
-    for( std::multimap<tripoint_om_sm, mongroup>::iterator it = zg.begin(); it != zg.end(); ) {
-        mongroup &mg = it->second;
-        if( mg.behaviour == mongroup::horde_behaviour::nemesis ) {
-            zg.erase( it++ );
-            return true;
+    bool removed = false;
+    for( auto it = zg.begin(); it != zg.end(); ) {
+        if( it->second.nemesis_targets( who ) || it->second.nemesis_orphaned() ) {
+            it = zg.erase( it );
+            removed = true;
+        } else {
+            ++it;
         }
-        ++it;
     }
-    return false;
+    return removed;
 }
 
 /**
@@ -1916,13 +1909,13 @@ void overmap::alert_entity( const tripoint_om_ms &location, const tripoint_abs_m
     }
 }
 
-void overmap::signal_nemesis( const tripoint_abs_sm &p_abs_sm )
+void overmap::signal_nemesis( const tripoint_abs_sm &p_abs_sm, const character_id who )
 {
     for( std::pair<const tripoint_om_sm, mongroup> &elem : zg ) {
         mongroup &mg = elem.second;
 
-        if( mg.behaviour == mongroup::horde_behaviour::nemesis ) {
-            // if the horde is a nemesis, we set its target directly on the player
+        if( mg.nemesis_targets( who ) ) {
+            // A player's signal must not redirect another player's pursuer.
             mg.set_target( p_abs_sm.xy() );
             mg.set_nemesis_target( p_abs_sm.xy() );
 
@@ -1941,7 +1934,7 @@ void overmap::populate_connections_out_from_neighbors( const std::vector<const o
             return;
         }
 
-        for( const std::pair<const string_id<overmap_connection>, std::vector<tripoint_om_omt>> &kv :
+        for( const std::pair<const string_id<overmap_connection>, std::vector<tripoint_om_omt >> &kv :
              adjacent->connections_out ) {
             std::vector<tripoint_om_omt> &out = connections_out[kv.first];
             const auto adjacent_out = adjacent->connections_out.find( kv.first );
@@ -2574,7 +2567,7 @@ void overmap::place_ravines()
     // We dont really care about the paths each ravine takes, so this can be whatever
     // The random return value was chosen because it easily produces decent looking windy ravines
     const pf::two_node_scoring_fn<point_om_omt> estimate =
-    [&]( pf::directed_node<point_om_omt>, const std::optional<pf::directed_node<point_om_omt>> & ) {
+    [&]( pf::directed_node<point_om_omt>, const std::optional<pf::directed_node<point_om_omt >> & ) {
         return pf::node_score( 0, rng( 1, 2 ) );
     };
     // A path is generated for each of ravine, and all its constituent points are stored within the
@@ -2637,7 +2630,7 @@ pf::directed_path<point_om_omt> overmap::lay_out_connection(
     int z, const bool must_be_unexplored ) const
 {
     const pf::two_node_scoring_fn<point_om_omt> estimate =
-    [&]( pf::directed_node<point_om_omt> cur, std::optional<pf::directed_node<point_om_omt>> prev ) {
+    [&]( pf::directed_node<point_om_omt> cur, std::optional<pf::directed_node<point_om_omt >> prev ) {
         const oter_id id = ter( tripoint_om_omt( cur.pos, z ) );
 
         const overmap_connection::subtype *subtype = connection.pick_subtype_for( id );
@@ -3843,13 +3836,14 @@ void overmap::place_mongroups()
     }
 }
 
-void overmap::place_nemesis( const tripoint_abs_omt &p )
+void overmap::place_nemesis( const tripoint_abs_omt &p, const int mission_id )
 {
     tripoint_abs_sm pos_sm = project_to<coords::sm>( p );
 
     mongroup nemesis = mongroup( GROUP_NEMESIS, pos_sm, 1 );
     nemesis.horde = true;
     nemesis.behaviour = mongroup::horde_behaviour::nemesis;
+    nemesis.nemesis_mission_id = mission_id;
     add_mon_group( nemesis );
 }
 

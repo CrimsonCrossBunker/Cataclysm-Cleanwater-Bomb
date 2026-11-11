@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -10,6 +11,7 @@
 #include "avatar.h"
 #include "cata_assert.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "city.h"
 #include "coordinates.h"
 #include "debug.h"
@@ -36,9 +38,9 @@
 #include "translations.h"
 #include "type_id.h"
 
-static tripoint_abs_omt reveal_destination( const std::string &type )
+static tripoint_abs_omt reveal_destination( const std::string &type, const Character &who )
 {
-    const tripoint_abs_omt your_pos = get_player_character().pos_abs_omt();
+    const tripoint_abs_omt your_pos = who.pos_abs_omt();
     const tripoint_abs_omt center_pos =
         overmap_buffer.find_random( your_pos, type, rng( 40, 80 ), false );
 
@@ -50,7 +52,7 @@ static tripoint_abs_omt reveal_destination( const std::string &type )
     return tripoint_abs_omt::invalid;
 }
 
-static void reveal_route( mission *miss, const tripoint_abs_omt &destination )
+static void reveal_route( mission *miss, const tripoint_abs_omt &destination, const Character &who )
 {
     const npc *p = g->find_npc( miss->get_npc_id() );
     if( p == nullptr ) {
@@ -58,17 +60,17 @@ static void reveal_route( mission *miss, const tripoint_abs_omt &destination )
         return;
     }
 
-    const tripoint_abs_omt source = get_player_character().pos_abs_omt();
+    const tripoint_abs_omt source = who.pos_abs_omt();
 
     const tripoint_abs_omt source_road = overmap_buffer.find_closest( source, "road", 3, false );
     const tripoint_abs_omt dest_road = overmap_buffer.find_closest( destination, "road", 3, false );
 
     if( overmap_buffer.reveal_route( source_road, dest_road ) ) {
-        add_msg( _( "%s also marks the road that leads to it…" ), p->get_name() );
+        who.add_msg_if_player( _( "%s also marks the road that leads to it…" ), p->get_name() );
     }
 }
 
-static void reveal_target( mission *miss, const std::string &omter_id )
+static void reveal_target( mission *miss, const std::string &omter_id, const Character &who )
 {
     const npc *p = g->find_npc( miss->get_npc_id() );
     if( p == nullptr ) {
@@ -76,21 +78,22 @@ static void reveal_target( mission *miss, const std::string &omter_id )
         return;
     }
 
-    const tripoint_abs_omt destination = reveal_destination( omter_id );
+    const tripoint_abs_omt destination = reveal_destination( omter_id, who );
     if( !destination.is_invalid() ) {
         const oter_id oter = overmap_buffer.ter( destination );
-        add_msg( _( "%s has marked the only %s known to them on your map." ), p->get_name(),
-                 oter->get_name( om_vision_level::full ) );
+        who.add_msg_if_player( _( "%s has marked the only %s known to them on your map." ), p->get_name(),
+                               oter->get_name( om_vision_level::full ) );
         miss->set_target( destination );
         if( one_in( 3 ) ) {
-            reveal_route( miss, destination );
+            reveal_route( miss, destination, who );
         }
     }
 }
 
-static void reveal_any_target( mission *miss, const std::vector<std::string> &omter_ids )
+static void reveal_any_target( mission *miss, const std::vector<std::string> &omter_ids,
+                               const Character &who )
 {
-    reveal_target( miss, random_entry( omter_ids ) );
+    reveal_target( miss, random_entry( omter_ids ), who );
 }
 
 bool mission_util::reveal_road( const tripoint_abs_omt &source, const tripoint_abs_omt &dest,
@@ -136,7 +139,11 @@ static tripoint_abs_omt random_house_in_city( const city_reference &cref )
 
 tripoint_abs_omt mission_util::random_house_in_closest_city()
 {
-    Character &player_character = get_player_character();
+    return random_house_in_closest_city( get_player_character() );
+}
+
+tripoint_abs_omt mission_util::random_house_in_closest_city( const Character &player_character )
+{
     const tripoint_abs_sm center = player_character.pos_abs_sm();
     const city_reference cref = overmap_buffer.closest_city( center );
     if( !cref ) {
@@ -251,7 +258,8 @@ static std::optional<tripoint_abs_omt> find_or_create_om_terrain(
 static tripoint_abs_omt get_mission_om_origin( const mission_target_params &params, dialogue &d )
 {
     // use the player or NPC's current position, adjust for the z value if any
-    tripoint_abs_omt origin_pos = get_player_character().pos_abs_omt();
+    tripoint_abs_omt origin_pos = d.has_actor( false ) ? d.const_actor( false )->pos_abs_omt() :
+                                  tripoint_abs_omt::invalid;
     if( !params.origin_u ) {
         npc *guy = nullptr;
 
@@ -275,6 +283,9 @@ std::optional<tripoint_abs_omt> mission_util::assign_mission_target(
 {
     // use the player or NPC's current position, adjust for the z value if any
     tripoint_abs_omt origin_pos = get_mission_om_origin( params, d );
+    if( origin_pos.is_invalid() && !params.target_var ) {
+        return std::nullopt;
+    }
 
     std::optional<tripoint_abs_omt> target_pos = find_or_create_om_terrain( origin_pos, params, d );
     if( target_pos ) {
@@ -299,6 +310,9 @@ tripoint_abs_omt mission_util::get_om_terrain_pos( const mission_target_params &
 {
     // use the player or NPC's current position, adjust for the z value if any
     tripoint_abs_omt origin_pos = get_mission_om_origin( params, d );
+    if( origin_pos.is_invalid() && !params.target_var ) {
+        return origin_pos;
+    }
     tripoint_abs_omt target_pos = origin_pos;
     if( !params.overmap_terrain.evaluate( d ).empty() ) {
         std::optional<tripoint_abs_omt> temp_pos = find_or_create_om_terrain( origin_pos, params, d );
@@ -414,41 +428,41 @@ mission_target_params mission_util::parse_mission_om_target( const JsonObject &j
 }
 
 void mission_util::set_reveal( const std::string &terrain,
-                               std::vector<std::function<void( mission *miss )>> &funcs )
+                               std::vector<std::function<void( mission *, Character & )>> &funcs )
 {
-    auto mission_func = [ terrain ]( mission * miss ) {
-        reveal_target( miss, terrain );
+    auto mission_func = [ terrain ]( mission * miss, Character & who ) {
+        reveal_target( miss, terrain, who );
     };
     funcs.emplace_back( std::move( mission_func ) );
 }
 
 void mission_util::set_reveal_any( const JsonArray &ja,
-                                   std::vector<std::function<void( mission *miss )>> &funcs )
+                                   std::vector<std::function<void( mission *, Character & )>> &funcs )
 {
     std::vector<std::string> terrains;
     for( const std::string terrain : ja ) {
         terrains.push_back( terrain );
     }
-    auto mission_func = [ terrains = std::move( terrains ) ]( mission * miss ) {
-        reveal_any_target( miss, terrains );
+    auto mission_func = [ terrains = std::move( terrains ) ]( mission * miss, Character & who ) {
+        reveal_any_target( miss, terrains, who );
     };
     funcs.emplace_back( std::move( mission_func ) );
 }
 
 void mission_util::set_assign_om_target( const JsonObject &jo,
-        std::vector<std::function<void( mission *miss )>> &funcs )
+        std::vector<std::function<void( mission *, Character & )>> &funcs )
 {
     mission_target_params p = parse_mission_om_target( jo );
-    auto mission_func = [p = std::move( p )]( mission * miss ) mutable {
+    auto mission_func = [p = std::move( p )]( mission * miss, Character & who ) mutable {
         p.mission_pointer = miss;
-        dialogue d( get_talker_for( get_avatar() ), nullptr );
+        dialogue d( get_talker_for( who ), nullptr );
         assign_mission_target( p, d );
     };
     funcs.emplace_back( std::move( mission_func ) );
 }
 
 bool mission_util::set_update_mapgen( const JsonObject &jo,
-                                      std::vector<std::function<void( mission *miss )>> &funcs )
+                                      std::vector<std::function<void( mission *, Character & )>> &funcs )
 {
     bool defer = false;
     mapgen_update_func update_map = add_mapgen_update_func( jo, defer );
@@ -459,14 +473,15 @@ bool mission_util::set_update_mapgen( const JsonObject &jo,
 
     if( jo.has_member( "om_terrain" ) ) {
         const std::string om_terrain = jo.get_string( "om_terrain" );
-        auto mission_func = [update_map = std::move( update_map ), om_terrain]( mission * miss ) {
+        auto mission_func = [update_map = std::move( update_map ), om_terrain]( mission * miss,
+        Character & who ) {
             tripoint_abs_omt update_pos3 = mission_util::reveal_om_ter( miss->has_target() ? miss->get_target()
-                                           : get_player_character().pos_abs_omt(), om_terrain, 1, false );
+                                           : who.pos_abs_omt(), om_terrain, 1, false );
             update_map( update_pos3, miss );
         };
         funcs.emplace_back( std::move( mission_func ) );
     } else {
-        auto mission_func = [update_map = std::move( update_map )]( mission * miss ) {
+        auto mission_func = [update_map = std::move( update_map )]( mission * miss, Character & ) {
             tripoint_abs_omt update_pos3 = miss->get_target();
             update_map( update_pos3, miss );
         };
@@ -476,7 +491,7 @@ bool mission_util::set_update_mapgen( const JsonObject &jo,
 }
 
 bool mission_util::load_funcs( const JsonObject &jo,
-                               std::vector<std::function<void( mission *miss )>> &funcs )
+                               std::vector<std::function<void( mission *, Character & )>> &funcs )
 {
     if( jo.has_string( "reveal_om_ter" ) ) {
         const std::string target_terrain = jo.get_string( "reveal_om_ter" );
@@ -505,9 +520,9 @@ bool mission_util::load_funcs( const JsonObject &jo,
 }
 
 bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
-                                std::function<void( mission * )> &phase_func )
+                                std::function<void( mission *, Character & )> &phase_func )
 {
-    std::vector<std::function<void( mission *miss )>> funcs;
+    std::vector<std::function<void( mission *, Character & )>> funcs;
     if( !mission_util::load_funcs( jo, funcs ) ) {
         return false;
     }
@@ -517,15 +532,35 @@ bool mission_type::parse_funcs( const JsonObject &jo, std::string_view src,
      */
     talk_effect_t talk_effects;
     talk_effects.load_effect( jo, "effect", src );
-    phase_func = [ funcs, talk_effects ]( mission * miss ) {
+    phase_func = [ funcs, talk_effects ]( mission * miss, Character & who ) {
+        const int mission_id = miss->get_id();
+        const std::size_t generation = miss->identity_generation();
+        const character_action_guard owner( who );
         npc *beta_npc = g->find_npc( miss->get_npc_id() );
-        ::dialogue d( get_talker_for( get_avatar() ),
+        std::optional<character_action_guard> giver;
+        if( beta_npc ) {
+            // A giver's death is itself a native mission-failure trigger.
+            // Retain that dead instance for the phase's beta dialogue without
+            // suppressing the surviving owner's failure effects.
+            giver.emplace( *beta_npc, beta_npc->is_dead() );
+        }
+        const auto live = [&]() {
+            return owner && ( !giver || *giver ) && mission::find( mission_id, true ) == miss &&
+                   miss->identity_generation() == generation;
+        };
+        ::dialogue d( get_talker_for( who ),
                       beta_npc == nullptr ? nullptr : get_talker_for( beta_npc ) );
         for( const talk_effect_fun_t &effect : talk_effects.effects ) {
+            if( !live() ) {
+                return;
+            }
             effect( d );
         }
         for( const auto &mission_function : funcs ) {
-            mission_function( miss );
+            if( !live() ) {
+                return;
+            }
+            mission_function( miss, who );
         }
     };
 

@@ -1,0 +1,43 @@
+[
+  {
+    "type": "mapgen",
+    "om_terrain": [ "construction_site" ],
+    "weight": 10,
+    "object": {
+      "fill_ter": "t_region_soil",
+      "rows": [
+        "    c --      --        ",
+        " XcTT             --  --",
+        "   TTc                X ",
+        "  c                 X  X",
+        " .......                ",
+        " .......         22 22  ",
+        " .......         22 22  ",
+        " .......                ",
+        " |||.||||###||      11  ",
+        " |...........|      11  ",
+        " #...........|{         ",
+        " #...........#{    ss   ",
+        " #...........|    ssss  ",
+        " ............|    ssss  ",
+        " |.....||||||||||  sss  ",
+        " |......|.......|       ",
+        " |...............       ",
+        " |......|.......|    @@ ",
+        " ||#||||||.|....|  @@@@@",
+        "     ...|..|....# @@@@@@",
+        "     ......|....| @@@@@ ",
+        "        |..|....|  @@@  ",
+        "        |||||##||       ",
+        "                        "
+      ],
+      "palettes": [ "construction_site_palette" ],
+      "place_monsters": [ { "monster": "FCL_GROUP_UTILIBOT_SITE", "x": [ 0, 23 ], "y": [ 0, 23 ], "chance": 5 } ],
+      "place_loot": [
+        { "item": "con_mix_foldable", "x": [ 0, 8 ], "y": [ 5, 7 ] },
+        { "item": "diesel_generator", "x": [ 0, 8 ], "y": [ 5, 7 ], "chance": 70 }
+      ],
+      "place_vehicles": [ { "vehicle": "small_utility_vehicles", "x": 12, "y": 4, "chance": 70, "rotation": 180 } ]
+    }
+  }
+]

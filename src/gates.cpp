@@ -13,6 +13,7 @@
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "bodypart.h"
+#include "calendar.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -25,6 +26,7 @@
 #include "iexamine.h"
 #include "item.h"
 #include "itype.h"
+#include "line.h"
 #include "lua_platform_content.h"
 #include "map.h"
 #include "mapdata.h"
@@ -42,6 +44,10 @@
 #include "vpart_position.h"
 
 static const fault_id fault_broken_window( "fault_broken_window" );
+
+static const efftype_id effect_incorporeal( "incorporeal" );
+static const json_character_flag
+json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
 
 static const material_id material_glass( "glass" );
 
@@ -257,6 +263,127 @@ void gates::open_gate( const tripoint_bub_ms &pos, Character &p )
 
 // Doors namespace
 // TODO: move door functions from maps namespace here, or vice versa.
+
+namespace
+{
+bool can_reach_open_target( map &here, const Character &who,
+                            const tripoint_bub_ms &target )
+{
+    const tripoint_bub_ms position = who.pos_bub( here );
+    return !who.is_dead_state() && here.inbounds( who.pos_abs() ) && here.inbounds( target ) &&
+           position.z() == target.z() && square_dist( position.xy(), target.xy() ) <= 1 &&
+           !who.has_effect( effect_incorporeal ) &&
+           !who.has_flag( json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS ) &&
+           !here.impassable_field_at( target );
+}
+} // namespace
+
+int doors::opening_moves()
+{
+    return to_moves<int>( 1_seconds );
+}
+
+doors::opening doors::begin_open( map &here, Character &who, const tripoint_bub_ms &target )
+{
+    if( !can_reach_open_target( here, who, target ) ) {
+        return {};
+    }
+
+    if( const optional_vpart_position vp = here.veh_at( target ) ) {
+        vehicle &veh = vp->vehicle();
+        // Keep the existing ownership/consent interaction at activity start,
+        // never at completion where it could be applied a second time.
+        if( !veh.handle_potential_theft( who ) ) {
+            return {};
+        }
+        const int part = veh.next_part_to_open( vp->part_index() );
+        if( part >= 0 ) {
+            const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub( here ) ) ) != &veh;
+            if( !outside ) {
+                return { open_tile_result::OPEN_VEHICLE_SINGLE, part };
+            }
+            if( veh.next_part_to_open( vp->part_index(), true ) >= 0 ) {
+                return { open_tile_result::OPEN_VEHICLE_ALL, part };
+            }
+            who.add_msg_if_player( m_info, _( "That %s can only be opened from the inside." ),
+                                   veh.part( part ).name() );
+        } else if( const std::optional<vpart_reference> openable = vp.part_with_feature( "OPENABLE",
+                   true ) ) {
+            const std::string name = openable->info().name();
+            if( veh.part( openable->part_index() ).locked ) {
+                who.add_msg_if_player( m_info, _( "That %s is locked." ), name );
+            } else {
+                who.add_msg_if_player( m_info, _( "That %s is already open." ), name );
+            }
+        }
+        return {};
+    }
+
+    if( here.open_door( who, target, !here.is_outside( who.pos_bub( here ) ), true ) ) {
+        return { open_tile_result::OPEN_DOOR, -1 };
+    }
+    if( here.has_flag( ter_furn_flag::TFLAG_LOCKED, target ) ) {
+        who.add_msg_if_player( m_info, _( "The door is locked!" ) );
+    } else if( here.ter( target ).obj().close ) {
+        who.add_msg_if_player( m_info, _( "The door is already open." ) );
+    } else {
+        who.add_msg_if_player( m_info, _( "No door there." ) );
+    }
+    return {};
+}
+
+bool doors::finish_open( map &here, Character &who, const tripoint_bub_ms &target,
+                         const opening &started )
+{
+    if( !can_reach_open_target( here, who, target ) ) {
+        return false;
+    }
+    if( started.result == open_tile_result::OPEN_DOOR ) {
+        const bool inside = !here.is_outside( who.pos_bub( here ) );
+        // Another actor may have changed the target while this activity ran.
+        if( here.veh_at( target ) || !here.open_door( who, target, inside, true ) ) {
+            return false;
+        }
+        who.add_msg_if_player( _( "You open the %s." ), here.name( target ) );
+        return here.open_door( who, target, inside );
+    }
+    if( started.result != open_tile_result::OPEN_VEHICLE_SINGLE &&
+        started.result != open_tile_result::OPEN_VEHICLE_ALL ) {
+        return false;
+    }
+    const optional_vpart_position vp = here.veh_at( target );
+    if( !vp ) {
+        return false;
+    }
+    vehicle &veh = vp->vehicle();
+    const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub( here ) ) ) != &veh;
+    const int current_part = veh.next_part_to_open( vp->part_index() );
+    // Never dereference a saved part index before proving it still names the
+    // live openable part at this target. Removed/reordered/locked parts fail.
+    if( current_part < 0 || current_part != started.vehicle_part ||
+        outside != ( started.result == open_tile_result::OPEN_VEHICLE_ALL ) ||
+        ( outside && veh.next_part_to_open( vp->part_index(), true ) < 0 ) ) {
+        return false;
+    }
+    who.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh.name,
+                           veh.part( current_part ).name() );
+    if( outside ) {
+        veh.open_all_at( here, current_part );
+    } else {
+        veh.open( here, current_part );
+    }
+    return true;
+}
+
+bool doors::open_immediately( map &here, Character &who, const tripoint_bub_ms &target )
+{
+    const opening started = begin_open( here, who, target );
+    if( !finish_open( here, who, target, started ) ) {
+        return false;
+    }
+    who.mod_moves( -opening_moves() );
+    return true;
+}
 
 bool doors::check_mon_blocking_door( const Creature &who, const tripoint_abs_ms &p )
 {

@@ -35,6 +35,7 @@
 #include "cata_algo.h"
 #include "lua_platform_hooks.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
 #include "character_oracle.h"
@@ -100,6 +101,7 @@
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "simple_pathfinding.h"
 #include "sleep.h"
 #include "sounds.h"
@@ -1543,6 +1545,28 @@ void npc::move()
         move_pause();
         return;
     }
+    item_location held = get_wielded_item();
+    if( held && held->has_flag( flag_NPC_THROW_NOW ) && !is_hallucination() ) {
+        // Disposing of an already armed explosive cannot depend on having a
+        // combat target or on the combat/needs decision chosen this turn.
+        npc_attack_throw emergency_throw( *held, nullptr, speed_rating() );
+        const npc_attack_rating destination = emergency_throw.evaluate( *this, current_target() );
+        if( destination.value() ) {
+            emergency_throw.use( *this, destination.target() );
+        } else {
+            // No unobstructed throw exists. Leave the live item on the map,
+            // where the existing explosion-avoidance code can flee from it.
+            const character_action_guard lifetime( *this );
+            const auto context = get_map().get_context_reference();
+            const tripoint_abs_ms origin = pos_abs();
+            mod_moves( -100 );
+            item dropped = remove_weapon();
+            if( context && context->inbounds( origin ) ) {
+                context->add_item_or_charges( context->get_bub( origin ), std::move( dropped ) );
+            }
+        }
+        return;
+    }
     act_on_danger_assessment();
     // Forage/harvest activities skip BT re-evaluation to prevent backlog
     // flooding, but must yield to danger so the NPC can fight or flee.
@@ -2663,7 +2687,7 @@ void npc::evaluate_best_attack( const Creature *target )
     if( magic->spells().empty() ) {
         magic->clear_opens_spellbook_data();
         get_event_bus().send<event_type::opens_spellbook>( getID() );
-        magic->evaluate_opens_spellbook_data();
+        magic->evaluate_opens_spellbook_data( *this );
     }
     for( const spell_id &sp : magic->spells() ) {
         compare( std::make_shared<npc_attack_spell>( sp ), sp.c_str(), nullptr );
@@ -3952,6 +3976,9 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     if( moved ) {
         make_footstep_noise();
         const tripoint_bub_ms old_pos = pos;
+        if( in_vehicle ) {
+            here.unboard_vehicle( old_pos );
+        }
         setpos( here, p );
         if( old_pos.x() - p.x() < 0 ) {
             facing = FacingDirection::RIGHT;
@@ -3978,10 +4005,6 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
             add_effect( effect_no_sight, 1_turns, true );
         } else if( has_effect( effect_no_sight ) ) {
             remove_effect( effect_no_sight );
-        }
-
-        if( in_vehicle ) {
-            here.unboard_vehicle( old_pos );
         }
 
         // Close doors behind self (if you can)
@@ -4861,6 +4884,10 @@ bool npc::can_do_pulp()
 
 bool npc::do_player_activity()
 {
+    const character_action_guard lifetime( *this );
+    if( !lifetime ) {
+        return true;
+    }
     const bool mute_activity = activity.is_null() ? false :
                                activity.id()->mute_npc_completion_message();
     int old_moves = moves;
@@ -4878,7 +4905,7 @@ bool npc::do_player_activity()
     const int moves_before = moves;
     while( moves > 0 && activity && !has_destination() ) {
         activity.do_turn( *this );
-        if( !is_active() ) {
+        if( !lifetime || !is_active() ) {
             return true;
         }
     }
@@ -7899,6 +7926,10 @@ bool outfit::adjust_worn( npc &guy )
 
 void npc::set_movement_mode( const move_mode_id &new_mode )
 {
+    if( is_player_controlled() ) {
+        set_player_movement_mode( new_mode );
+        return;
+    }
     // Enchantments based on move modes can stack inappropriately without a recalc here
     recalculate_enchantment_cache();
     mod_moves( -move_mode_switch_cost( move_mode, new_mode ) );

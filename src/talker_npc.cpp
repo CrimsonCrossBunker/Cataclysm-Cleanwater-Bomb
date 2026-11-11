@@ -64,6 +64,47 @@ static const trait_id trait_PROF_CHURL( "PROF_CHURL" );
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
 static const trait_id trait_SAPROVORE( "SAPROVORE" );
 
+void talker_npc_const::bind_interlocutor( const character_id who, Character *const who_char )
+{
+    interlocutor = who;
+    has_bound_interlocutor_ = true;
+    interlocutor_lifetime_.reset();
+    if( who_char && who_char->getID() == who ) {
+        interlocutor_lifetime_.emplace( *who_char );
+    }
+}
+
+character_id talker_npc_const::interlocutor_id() const
+{
+    Character *who = interlocutor_character();
+    return who ? who->getID() : character_id();
+}
+
+Character *talker_npc_const::interlocutor_character() const
+{
+    if( !has_bound_interlocutor_ ) {
+        // Explicit local compatibility for talkers created outside a dialogue.
+        return &get_player_character();
+    }
+    return interlocutor_lifetime_ ? interlocutor_lifetime_->get() : nullptr;
+}
+
+const npc_opinion &talker_npc_const::opinion() const
+{
+    return me_npc->opinion_of( interlocutor_id() );
+}
+
+npc_opinion *talker_npc::mutable_opinion()
+{
+    if( !is_valid() ) {
+        return nullptr;
+    }
+    // Event dialogues can bind a monster, or outlive their Character interlocutor.
+    // Neither owns a character opinion, and neither may inherit the avatar's.
+    const character_id who = interlocutor_id();
+    return who.is_valid() ? &me_npc->opinion_of( who ) : nullptr;
+}
+
 std::string talker_npc_const::distance_to_goal() const
 {
     // TODO: this ignores the z-component
@@ -112,11 +153,19 @@ bool talker_npc::will_talk_to_u( const Character &you, bool force ) const
 
 std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
 {
-    avatar &player_character = get_avatar();
+    if( !is_valid() || !interlocutor_character() ) {
+        return { "TALK_DONE" };
+    }
+    Character *interlocutor_char = interlocutor_character();
+    const character_id current_interlocutor_id = interlocutor_id();
     std::vector<std::string> add_topics;
     // For each active mission we have, let the mission know we talked to this NPC.
-    for( mission *&mission : player_character.get_active_missions() ) {
-        mission->on_talk_with_npc( me_npc->getID() );
+    if( interlocutor_char != nullptr ) {
+        for( mission *&mission : interlocutor_char->get_active_missions() ) {
+            if( mission_dialogue::is_live_mission( mission ) ) {
+                mission->on_talk_with_npc( me_npc->getID() );
+            }
+        }
     }
 
     add_topics.push_back( me_npc->chatbin.first_topic );
@@ -130,27 +179,24 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
         add_topics.emplace_back( me_npc->chatbin.talk_stole_item );
     }
     int most_difficult_mission = 0;
-    for( mission *&mission : me_npc->chatbin.missions ) {
+    for( mission *mission : mission_dialogue::filter_available_missions( *me_npc ) ) {
         const mission_type &type = mission->get_type();
         if( type.urgent && type.difficulty > most_difficult_mission ) {
             add_topics.emplace_back( me_npc->chatbin.talk_mission_describe_urgent );
-            me_npc->chatbin.mission_selected = mission;
+            selected_mission_ = mission_dialogue::identify_mission( mission );
             most_difficult_mission = type.difficulty;
         }
     }
     most_difficult_mission = 0;
     bool chosen_urgent = false;
-    for( mission *&mission : me_npc->chatbin.missions_assigned ) {
-        if( mission->get_assigned_player_id() != player_character.getID() ) {
-            // Not assigned to the player that is currently talking to the npc
-            continue;
-        }
+    for( mission *mission : mission_dialogue::filter_assigned_missions_for( *me_npc,
+            current_interlocutor_id ) ) {
         const mission_type &type = mission->get_type();
         if( ( type.urgent && !chosen_urgent ) || ( type.difficulty > most_difficult_mission &&
                 ( type.urgent || !chosen_urgent ) ) ) {
             chosen_urgent = type.urgent;
             add_topics.emplace_back( me_npc->chatbin.talk_mission_inquire );
-            me_npc->chatbin.mission_selected = mission;
+            selected_mission_ = mission_dialogue::identify_mission( mission );
             most_difficult_mission = type.difficulty;
         }
     }
@@ -167,12 +213,12 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
         }
     }
 
-    if( add_topics.back() == "TALK_NONE" ) {
-        add_topics.back() = me_npc->pick_talk_topic( player_character );
+    if( add_topics.back() == "TALK_NONE" && interlocutor_char != nullptr ) {
+        add_topics.back() = me_npc->pick_talk_topic( *interlocutor_char );
     }
     me_npc->mod_moves( -to_moves<int>( 1_seconds ) );
 
-    if( player_character.is_deaf() ) {
+    if( interlocutor_char != nullptr && interlocutor_char->is_deaf() ) {
         if( add_topics.back() == me_npc->chatbin.talk_mug ||
             add_topics.back() == me_npc->chatbin.talk_stranger_aggressive ) {
             me_npc->make_angry();
@@ -181,7 +227,7 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
             add_topics.emplace_back( "TALK_DEAF" );
         }
     }
-    if( player_character.is_mute() ) {
+    if( interlocutor_char != nullptr && interlocutor_char->is_mute() ) {
         if( add_topics.back() == me_npc->chatbin.talk_mug ||
             add_topics.back() == me_npc->chatbin.talk_stranger_aggressive ) {
             me_npc->make_angry();
@@ -190,12 +236,12 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
             add_topics.emplace_back( "TALK_MUTE" );
         }
     }
-    if( player_character.has_trait( trait_PROF_CHURL ) ) {
+    if( interlocutor_char != nullptr && interlocutor_char->has_trait( trait_PROF_CHURL ) ) {
         if( add_topics.back() == me_npc->chatbin.talk_mug ||
             add_topics.back() == me_npc->chatbin.talk_stranger_aggressive ) {
             me_npc->make_angry();
             add_topics.emplace_back( "TALK_CHURL_ANGRY" );
-        } else if( ( me_npc->op_of_u.trust >= 0 ) && ( me_npc->op_of_u.anger <= 0 ) &&
+        } else if( ( opinion().trust >= 0 ) && ( opinion().anger <= 0 ) &&
                    ( me_npc->get_int() >= 9 ) ) {
             add_topics.emplace_back( "TALK_CHURL_TRADE" );
         } else {
@@ -220,19 +266,26 @@ void talker_npc::check_missions()
 
 void talker_npc::update_missions( const std::vector<mission *> &missions_assigned )
 {
-    if( me_npc->chatbin.mission_selected == nullptr ) {
+    if( selected_mission() == nullptr ) {
         // if possible, select a mission to talk about
-        if( !me_npc->chatbin.missions.empty() ) {
-            me_npc->chatbin.mission_selected = me_npc->chatbin.missions.front();
-        } else if( !missions_assigned.empty() ) {
-            me_npc->chatbin.mission_selected = missions_assigned.front();
+        const std::vector<mission *> available = available_missions();
+        if( !available.empty() ) {
+            select_mission( available.front() );
+        } else {
+            for( mission *miss : missions_assigned ) {
+                if( mission_dialogue::is_assigned_chatbin_mission_for(
+                        *me_npc, interlocutor_id(), miss ) ) {
+                    select_mission( miss );
+                    break;
+                }
+            }
         }
     }
 }
 
 bool talker_npc_const::check_hostile_response( const int anger ) const
 {
-    return me_npc->op_of_u.anger + anger > me_npc->hostile_anger_level();
+    return opinion().anger + anger > me_npc->hostile_anger_level( interlocutor_id() );
 }
 
 // Every OWED_VAL that the NPC owes you counts as +1 towards convincing
@@ -241,15 +294,15 @@ int talker_npc_const::parse_mod( const std::string &attribute, const int factor 
 {
     int modifier = 0;
     if( attribute == "ANGER" ) {
-        modifier = me_npc->op_of_u.anger;
+        modifier = opinion().anger;
     } else if( attribute == "FEAR" ) {
-        modifier = me_npc->op_of_u.fear;
+        modifier = opinion().fear;
     } else if( attribute == "TRUST" ) {
-        modifier = me_npc->op_of_u.trust;
+        modifier = opinion().trust;
     } else if( attribute == "VALUE" ) {
-        modifier = me_npc->op_of_u.value;
+        modifier = opinion().value;
     } else if( attribute == "POS_FEAR" ) {
-        modifier = std::max( 0, me_npc->op_of_u.fear );
+        modifier = std::max( 0, opinion().fear );
     } else if( attribute == "AGGRESSION" ) {
         // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
         modifier = me_npc->personality.aggression;
@@ -283,12 +336,12 @@ int talker_npc_const::trial_chance_mod( const std::string &trial_type ) const
 {
     int chance = 0;
     if( trial_type == "lie" ) {
-        chance += - me_npc->lie_skill() + me_npc->op_of_u.trust * 3;
+        chance += - me_npc->lie_skill() + opinion().trust * 3;
     } else if( trial_type == "persuade" ) {
         chance += - static_cast<int>( me_npc->persuade_skill() * 0.5 ) +
-                  me_npc->op_of_u.trust * 2 + me_npc->op_of_u.value;
+                  opinion().trust * 2 + opinion().value;
     } else if( trial_type == "intimidate" ) {
-        chance += - me_npc->intimidation() + me_npc->op_of_u.fear * 2 -
+        chance += - me_npc->intimidation() + opinion().fear * 2 -
                   me_npc->personality.bravery * 2;
     }
     return chance;
@@ -297,27 +350,51 @@ int talker_npc_const::trial_chance_mod( const std::string &trial_type ) const
 void talker_npc::store_chosen_training( const skill_id &c_skill, const matype_id &c_style,
                                         const spell_id &c_spell, const proficiency_id &c_proficiency )
 {
-    me_npc->chatbin.store_chosen_training( c_skill, c_style, c_spell, c_proficiency );
+    if( c_skill == skill_id() && c_style == matype_id() &&
+        c_spell == spell_id() && c_proficiency == proficiency_id() ) {
+        return;
+    }
+    has_chosen_training_ = true;
+    chosen_skill_ = skill_id();
+    chosen_style_ = matype_id();
+    chosen_spell_ = spell_id();
+    chosen_proficiency_ = proficiency_id();
+    if( c_skill != skill_id() ) {
+        chosen_skill_ = c_skill;
+    } else if( c_style != matype_id() ) {
+        chosen_style_ = c_style;
+    } else if( c_spell != spell_id() ) {
+        chosen_spell_ = c_spell;
+    } else if( c_proficiency != proficiency_id() ) {
+        chosen_proficiency_ = c_proficiency;
+    }
+    if( is_valid() ) {
+        me_npc->chatbin.store_chosen_training( c_skill, c_style, c_spell, c_proficiency );
+    }
 }
 
 int talker_npc_const::debt() const
 {
-    return me_npc->op_of_u.owed;
+    return opinion().owed;
 }
 
 void talker_npc::add_debt( const int cost )
 {
-    me_npc->op_of_u.owed += cost;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->owed += cost;
+    }
 }
 
 int talker_npc_const::sold() const
 {
-    return me_npc->op_of_u.sold;
+    return opinion().sold;
 }
 
 void talker_npc::add_sold( const int value )
 {
-    me_npc->op_of_u.sold += value;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->sold += value;
+    }
 }
 
 int talker_npc_const::cash_to_favor( const int value ) const
@@ -454,6 +531,9 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
 
 std::string talker_npc::give_item_to( const bool to_use )
 {
+    if( interlocutor_character() != &get_avatar() ) {
+        return _( "Offering items is not available in remote dialogue yet." );
+    }
     avatar &player_character = get_avatar();
     if( me_npc->is_hallucination() ) {
         return me_npc->chat_snippets().snip_give_to_hallucination.translated();
@@ -469,6 +549,9 @@ std::string talker_npc::give_item_to( const bool to_use )
 std::string talker_npc::give_item_to(
     item_location loc, const bool to_use )
 {
+    if( interlocutor_character() != &get_avatar() ) {
+        return _( "Offering items is not available in remote dialogue yet." );
+    }
     avatar &player_character = get_avatar();
     if( me_npc->is_hallucination() ) {
         return me_npc->chat_snippets().snip_give_to_hallucination.translated();
@@ -573,34 +656,83 @@ std::string talker_npc::give_item_to(
 
 bool talker_npc::buy_from( const int amount )
 {
-    return npc_trading::pay_npc( *me_npc, amount );
+    if( !is_valid() ) {
+        return false;
+    }
+    if( Character *buyer = interlocutor_character() ) {
+        return npc_trading::pay_npc( *me_npc, *buyer, amount );
+    }
+    return false;
 }
 
 std::vector<mission *> talker_npc_const::available_missions() const
 {
-    return me_npc->chatbin.missions;
+    if( !is_valid() || !interlocutor_character() ) {
+        return {};
+    }
+    return mission_dialogue::filter_available_missions( *me_npc );
 }
 
 std::vector<mission *> talker_npc_const::assigned_missions() const
 {
-    return me_npc->chatbin.missions_assigned;
+    if( !is_valid() || !interlocutor_character() ) {
+        return {};
+    }
+    return mission_dialogue::filter_assigned_missions_for( *me_npc, interlocutor_id() );
 }
 
 mission *talker_npc_const::selected_mission() const
 {
-    return me_npc->chatbin.mission_selected;
+    if( !is_valid() || !interlocutor_character() ) {
+        selected_mission_.reset();
+        return nullptr;
+    }
+    return mission_dialogue::resolve_selected_mission(
+               *me_npc, interlocutor_id(), selected_mission_ );
 }
 
 void talker_npc::select_mission( mission *selected )
 {
-    me_npc->chatbin.mission_selected = selected;
+    if( !is_valid() || !interlocutor_character() ||
+        !mission_dialogue::is_authorized_dialogue_mission(
+            *me_npc, interlocutor_id(), selected ) ) {
+        selected_mission_.reset();
+        return;
+    }
+    selected_mission_ = mission_dialogue::identify_mission( selected );
 }
 
 void talker_npc::add_mission( const mission_type_id &mission_id )
 {
+    Character *interlocutor_char = interlocutor_character();
+    if( !is_valid() || interlocutor_char == nullptr || !mission_id.is_valid() ) {
+        return;
+    }
+    const character_action_guard interlocutor_guard( *interlocutor_char );
+    const character_action_guard npc_guard( *me_npc );
+    if( !interlocutor_guard || !npc_guard ) {
+        return;
+    }
     mission *miss = mission::reserve_new( mission_id, me_npc->getID() );
-    miss->assign( get_avatar() );
-    me_npc->chatbin.missions_assigned.push_back( miss );
+    if( miss == nullptr ) {
+        return;
+    }
+    const mission_dialogue::mission_selection_identity identity =
+        mission_dialogue::identify_mission( miss );
+    miss->assign( *interlocutor_char );
+    if( !interlocutor_guard || !npc_guard ) {
+        return;
+    }
+    mission *live_miss = mission_dialogue::resolve_live_mission( identity );
+    if( live_miss == nullptr || live_miss->get_assigned_player_id() != interlocutor_char->getID() ||
+        live_miss->get_npc_id() != me_npc->getID() ) {
+        return;
+    }
+    if( std::find( me_npc->chatbin.missions_assigned.begin(),
+                   me_npc->chatbin.missions_assigned.end(), live_miss ) ==
+        me_npc->chatbin.missions_assigned.end() ) {
+        me_npc->chatbin.missions_assigned.push_back( live_miss );
+    }
 }
 
 void talker_npc::set_companion_mission( const std::string &role_id )
@@ -645,7 +777,7 @@ bool talker_npc_const::is_player_ally()  const
 
 bool talker_npc_const::turned_hostile() const
 {
-    return me_npc->turned_hostile();
+    return me_npc->turned_hostile( interlocutor_id() );
 }
 
 void talker_npc::make_angry()
@@ -889,19 +1021,28 @@ void talker_npc::say( const std::string &speech )
 
 std::string talker_npc_const::opinion_text() const
 {
-    return me_npc->opinion_text();
+    return me_npc->opinion_text( interlocutor_id() );
 }
 
 void talker_npc::add_opinion( const npc_opinion &op )
 {
-    me_npc->op_of_u += op;
+    if( npc_opinion *const current = mutable_opinion() ) {
+        *current += op;
+    }
 }
 
 bool talker_npc::enslave_mind()
 {
+    if( !is_valid() ) {
+        return false;
+    }
     bool not_following = g->get_follower_list().count( me_npc->getID() ) == 0;
     me_npc->companion_mission_role_id.clear();
-    talk_function::follow( *me_npc );
+    if( Character *master = interlocutor_character() ) {
+        talk_function::follow( *me_npc, *master );
+    } else {
+        talk_function::follow( *me_npc );
+    }
     return not_following;
 }
 
@@ -926,40 +1067,48 @@ void talker_npc::die( map *here )
 
 void talker_npc::set_npc_trust( const int trust )
 {
-    me_npc->op_of_u.trust = trust;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->trust = trust;
+    }
 }
 
 int talker_npc_const::get_npc_trust() const
 {
-    return me_npc->op_of_u.trust;
+    return opinion().trust;
 }
 
 void talker_npc::set_npc_fear( const int fear )
 {
-    me_npc->op_of_u.fear = fear;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->fear = fear;
+    }
 }
 
 int talker_npc_const::get_npc_fear() const
 {
-    return me_npc->op_of_u.fear;
+    return opinion().fear;
 }
 
 void talker_npc::set_npc_value( const int value )
 {
-    me_npc->op_of_u.value = value;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->value = value;
+    }
 }
 
 int talker_npc_const::get_npc_value() const
 {
-    return me_npc->op_of_u.value;
+    return opinion().value;
 }
 
 void talker_npc::set_npc_anger( const int anger )
 {
-    me_npc->op_of_u.anger = anger;
+    if( npc_opinion *const op = mutable_opinion() ) {
+        op->anger = anger;
+    }
 }
 
 int talker_npc_const::get_npc_anger() const
 {
-    return me_npc->op_of_u.anger;
+    return opinion().anger;
 }

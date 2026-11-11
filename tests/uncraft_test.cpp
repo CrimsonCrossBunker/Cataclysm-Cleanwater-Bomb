@@ -19,6 +19,7 @@
 #include "type_id.h"
 #include "units.h"
 
+static const itype_id itype_boltcutters( "boltcutters" );
 static const itype_id itype_cable( "cable" );
 static const itype_id itype_circuit( "circuit" );
 static const itype_id
@@ -100,10 +101,33 @@ static std::map<itype_id, int> repeat_uncraft( Character &they, const itype_id &
     return yield_items;
 }
 
+TEST_CASE( "completed_disassembly_delivers_materials_and_consumes_the_workpiece",
+           "[uncraft][activity_completion]" )
+{
+    Character &they = setup_uncraft_character();
+    item_location original = they.i_add( item( itype_test_rag_bundle ) );
+    item_location workpiece = they.create_in_progress_disassembly( original );
+    REQUIRE( workpiece );
+    workpiece->item_counter = 10000000;
+    const recipe &rec = workpiece->get_making();
+    REQUIRE( rec.difficulty == 0 );
+    they.complete_disassemble( workpiece, rec );
+    CHECK_FALSE( workpiece );
+    int cotton = 0;
+    for( const item &value : get_map().i_at( they.pos_bub() ) ) {
+        if( value.typeId() == itype_cotton_patchwork ) {
+            cotton += value.count();
+        }
+    }
+    CHECK( cotton == 100 );
+}
+
 TEST_CASE( "combat_exoskeleton_mk2_disassembly_preserves_its_model",
            "[uncraft][exoskeleton]" )
 {
     Character &they = setup_uncraft_character();
+    // Supply the recipe's named tool as well as the fixture's tool qualities.
+    they.i_add( item( itype_boltcutters ) );
     recipe dis = recipe_dictionary::get_uncraft( itype_combat_exoskeleton_medium );
     // Test the actual recovered items without a random skill recovery failure.
     dis.difficulty = 0;

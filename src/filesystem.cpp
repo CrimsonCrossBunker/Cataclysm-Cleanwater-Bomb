@@ -20,6 +20,7 @@
 
 #include "cata_utility.h"
 #include "debug.h"
+#include "native_file_path.h"
 
 #if defined(_WIN32)
 #   include "platform_win.h"
@@ -84,19 +85,20 @@ bool assure_dir_exist( const std::filesystem::path &path )
     bool exists{false};
     bool created{false};
     const std::filesystem::path p = std::filesystem::u8path( as_norm_dir( path ) );
-    bool is_dir{ std::filesystem::is_directory( p, ec ) };
+    const std::filesystem::path native = native_file_path( p );
+    bool is_dir{ std::filesystem::is_directory( native, ec ) };
     if( !is_dir ) {
-        exists = std::filesystem::exists( p, ec );
+        exists = std::filesystem::exists( native, ec );
         if( !exists ) {
             if( !is_lexically_valid( p ) ) {
                 return false;
             }
-            created = std::filesystem::create_directories( p, ec );
+            created = std::filesystem::create_directories( native, ec );
             if( !created ) {
                 // TEMPORARY until we drop VS2019 support
                 // VS2019 std::filesystem doesn't handle trailing slashes well in this
                 // situation.  We think this is a bug.  Work around it by checking again
-                created = std::filesystem::exists( p, ec );
+                created = std::filesystem::exists( native, ec );
             }
         }
     }
@@ -111,7 +113,7 @@ bool dir_exist( const std::string &path )
 
 bool dir_exist( const std::filesystem::path &path )
 {
-    return std::filesystem::is_directory( path );
+    return std::filesystem::is_directory( native_file_path( path ) );
 }
 
 bool file_exist( const std::string &path )
@@ -121,14 +123,13 @@ bool file_exist( const std::string &path )
 
 bool file_exist( const std::filesystem::path &path )
 {
-    return std::filesystem::exists( path ) && !std::filesystem::is_directory( path );
+    const std::filesystem::path native = native_file_path( path );
+    return std::filesystem::exists( native ) && !std::filesystem::is_directory( native );
 }
 
 bool file_exist( const cata_path &path )
 {
-    const std::filesystem::path unrelative_path = path.get_unrelative_path();
-    return std::filesystem::exists( unrelative_path ) &&
-           !std::filesystem::is_directory( unrelative_path );
+    return file_exist( path.get_unrelative_path() );
 }
 
 std::string as_norm_dir( const std::string &path )
@@ -161,7 +162,7 @@ bool remove_file( const std::filesystem::path &path )
 {
     setFsNeedsSync();
     std::error_code ec;
-    return std::filesystem::remove( path, ec );
+    return std::filesystem::remove( native_file_path( path ), ec );
 }
 
 bool rename_file( const std::string &old_path, const std::string &new_path )
@@ -180,7 +181,7 @@ bool rename_file( const std::filesystem::path &old_path, const std::filesystem::
     std::error_code ec;
     int attempts = 0;
     do {
-        std::filesystem::rename( old_path, new_path, ec );
+        std::filesystem::rename( native_file_path( old_path ), native_file_path( new_path ), ec );
     } while( ec && ++attempts < 3 );
     return !ec;
 }
@@ -204,7 +205,7 @@ bool remove_directory( const std::filesystem::path &path )
 {
     std::error_code ec;
     setFsNeedsSync();
-    return std::filesystem::remove( path, ec );
+    return std::filesystem::remove( native_file_path( path ), ec );
 }
 
 const char *cata_files::eol()
@@ -220,16 +221,38 @@ const char *cata_files::eol()
     return local_eol;
 }
 
+std::filesystem::path native_file_path( const std::filesystem::path &path,
+                                        const bool allow_long_children )
+{
+#if defined(_WIN32)
+    if( path.empty() ) {
+        return path;
+    }
+    std::error_code error;
+    std::filesystem::path absolute = std::filesystem::absolute( path, error );
+    if( error ) {
+        return path;
+    }
+    const std::wstring native = absolute.lexically_normal().make_preferred().native();
+    if( ( allow_long_children || native.size() >= MAX_PATH ) &&
+        native.compare( 0, 4, L"\\\\?\\" ) != 0 &&
+        native.compare( 0, 4, L"\\\\.\\" ) != 0 ) {
+        return std::filesystem::path( native.compare( 0, 2, L"\\\\" ) == 0 ?
+                                      L"\\\\?\\UNC\\" + native.substr( 2 ) : L"\\\\?\\" + native );
+    }
+#endif
+    static_cast<void>( allow_long_children );
+    return path;
+}
+
 std::string read_entire_file( const std::string &path )
 {
-    std::ifstream infile( std::filesystem::u8path( path ), std::ifstream::in | std::ifstream::binary );
-    return std::string( std::istreambuf_iterator<char>( infile ),
-                        std::istreambuf_iterator<char>() );
+    return read_entire_file( std::filesystem::u8path( path ) );
 }
 
 std::string read_entire_file( const std::filesystem::path &path )
 {
-    std::ifstream infile( path, std::ifstream::in | std::ifstream::binary );
+    std::ifstream infile( native_file_path( path ), std::ifstream::in | std::ifstream::binary );
     return std::string( std::istreambuf_iterator<char>( infile ),
                         std::istreambuf_iterator<char>() );
 }

@@ -597,6 +597,7 @@ TEST_CASE( "reading_chapter_time_uses_the_activity_owner_speed", "[reading][book
         dummy.identify( book );
         dummy.set_speed_base( 80 );
         npc reader;
+        reader.set_fake( true );
         reader.set_body();
         reader.set_int_base( 8 );
         reader.setpos( get_map(), dummy.pos_bub() );
@@ -645,6 +646,7 @@ TEST_CASE( "ebook_reading_ignores_only_ambient_darkness", "[reading][book][eread
     REQUIRE( dummy.fine_detail_vision_mod() > 4 );
 
     npc npc_reader;
+    npc_reader.set_fake( true );
     npc_reader.set_body();
     npc_reader.set_int_base( 8 );
     npc_reader.setpos( get_map(), dummy.pos_bub() );

@@ -1,16 +1,16 @@
 #include "avatar.h"
 
 #include <coordinates.h>
+#include <kill_statistics.h>
 #include <magic_teleporter_list.h>
 #include <mdarray.h>
 #include <memory_fast.h>
+#include <player_identity.h>
 
-#define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <functional>
 #include <iterator>
 #include <list>
 #include <map>
@@ -24,11 +24,7 @@
 #include "activity_actor_definitions.h"
 #include "avatar_action.h"
 #include "bodypart.h"
-#ifdef MP_ENABLED
-    #include "mp_client_conn.h"
-#endif
 #include "calendar.h"
-#include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -50,15 +46,16 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "help.h"
+#include "input_replay.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
 #include "iuse.h"
 #include "json.h"
+#include "level_cache.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
-#include "level_cache.h"
 #include "map.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
@@ -66,17 +63,17 @@
 #include "messages.h"
 #include "mission.h"
 #include "move_mode.h"
+#include "mp_actor_binding.h"
+#include "mp_inventory_activity.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "output.h"
 #include "overmapbuffer.h"
-#include "pathfinding.h"
 #include "pimpl.h"
+#include "player_control.h"
 #include "point.h"
 #include "ranged.h"
-#include "recipe.h"
 #include "ret_val.h"
-#include "rng.h"
 #include "skill.h"
 #include "stomach.h"
 #include "string_formatter.h"
@@ -102,7 +99,6 @@ static const efftype_id effect_irradiated( "irradiated" );
 static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pkill( "pkill" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
-static const efftype_id effect_relax_gas( "relax_gas" );
 static const efftype_id effect_sad( "sad" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_sleep_deprived( "sleep_deprived" );
@@ -152,8 +148,6 @@ static const trait_id trait_WHISKERS_RAT( "WHISKERS_RAT" );
 avatar::avatar()
 {
     player_map_memory = std::make_unique<map_memory>();
-    active_mission = nullptr;
-    grab_type = object_type::NONE;
     calorie_diary.emplace_front( );
     a_diary = nullptr;
     desired_move_mode = move_mode_walk;
@@ -165,26 +159,49 @@ avatar::avatar( avatar && ) = default;
 // NOLINTNEXTLINE(performance-noexcept-move-constructor)
 avatar &avatar::operator=( avatar && ) = default;
 
+void avatar::assign_new_player_id()
+{
+    const auto replay_identity = input_replay::next_profile_identity( get_save_id() );
+    local_player_id = replay_identity ? player_id( *replay_identity ) : create_player_id();
+}
+
+void avatar::ensure_player_id()
+{
+    if( !local_player_id.valid() ) {
+        assign_new_player_id();
+    }
+}
+
 void avatar::control_npc( npc &np, const bool debug )
 {
+    // Ally status also covers remote players and the client's host view.
+    // Their ownership survives disconnect; local takeover must not exchange
+    // their identities, inventories or missions with the local avatar.
+    if( cata_mp::is_player_proxy( np ) ) {
+        debugmsg( "control_npc() called on multiplayer actor %s", np.name );
+        return;
+    }
     if( !np.is_player_ally() ) {
         debugmsg( "control_npc() called on non-allied npc %s", np.name );
         return;
     }
-    const character_id new_character = np.getID();
-    const character_id previous_character = getID();
-    const std::function<void( npc & )> update_npc =
-    [previous_character, new_character]( npc & guy ) {
-        guy.update_missions_target( previous_character, new_character );
-    };
-    overmap_buffer.foreach_npc( update_npc );
-    mission().update_world_missions_character( previous_character, new_character );
+    if( g->player_controls().is_claimed( np ) ) {
+        debugmsg( "control_npc() called on a controlled actor %s", np.name );
+        return;
+    }
     // move avatar character data into shadow npc
     swap_character( get_shadow_npc() );
     // swap target npc with shadow npc
     std::swap( get_shadow_npc(), np );
     // move shadow npc character data into avatar
     swap_character( get_shadow_npc() );
+    // Missions travel with the Character during the swaps. This explicit local
+    // takeover keeps the player's quests with the newly controlled body.
+    np.transfer_missions_to( *this );
+    // Preserve the local playthrough's collective count without adding the
+    // follower's personal kills a second time.
+    get_kill_statistics().take_over( np.get_kill_statistics() );
+    g->bind_local_player_control();
     // the avatar character is no longer a follower NPC
     follower_ids.erase( getID() );
     // the previous avatar character is now a follower
@@ -218,7 +235,8 @@ void avatar::control_npc_menu( const bool debug )
     int charnum = 0;
     for( const character_id &elem : g->get_follower_list() ) {
         shared_ptr_fast<npc> follower = overmap_buffer.find_npc( elem );
-        if( follower ) {
+        if( follower && !cata_mp::is_player_proxy( *follower ) &&
+            !g->player_controls().is_claimed( *follower ) ) {
             followers.emplace_back( follower );
             charmenu.addentry( charnum++, true, MENU_AUTOASSIGN, follower->get_name() );
         }
@@ -238,7 +256,7 @@ void avatar::longpull( const std::string &name )
 {
     item wtmp( itype_mut_longpull );
     g->temp_exit_fullscreen();
-    target_handler::trajectory traj = target_handler::mode_throw( *this, wtmp, false );
+    target_handler::trajectory traj = target_handler::mode_throw( *this, wtmp );
     g->reenter_fullscreen();
     if( traj.empty() ) {
         return; // cancel
@@ -294,6 +312,12 @@ bool avatar::has_memory_at( const tripoint_abs_ms &p ) const
     return !mt.get_ter_id().empty() || !mt.get_dec_id().empty();
 }
 
+bool avatar::has_map_memory_in_region( const tripoint_abs_ms &p1,
+                                       const tripoint_abs_ms &p2 ) const
+{
+    return should_show_map_memory() && player_map_memory->has_memory_in_region( p1, p2 );
+}
+
 void avatar::memorize_terrain( const tripoint_abs_ms &p, std::string_view id,
                                int subtile, int rotation )
 {
@@ -316,43 +340,20 @@ void avatar::memorize_clear_decoration( const tripoint_abs_ms &p, std::string_vi
     player_map_memory->clear_tile_decoration( p, prefix );
 }
 
-std::vector<mission *> avatar::get_active_missions() const
-{
-    return active_missions;
-}
 
-std::vector<mission *> avatar::get_completed_missions() const
-{
-    return completed_missions;
-}
 
-std::vector<mission *> avatar::get_failed_missions() const
-{
-    return failed_missions;
-}
 
 std::vector<point_of_interest> avatar::get_points_of_interest() const
 {
     return points_of_interest;
 }
 
-mission *avatar::get_active_mission() const
-{
-    return active_mission;
-}
 
 point_of_interest avatar::get_active_point_of_interest() const
 {
     return active_point_of_interest;
 }
 
-void avatar::reset_all_missions()
-{
-    active_mission = nullptr;
-    active_missions.clear();
-    completed_missions.clear();
-    failed_missions.clear();
-}
 
 tripoint_abs_omt avatar::get_active_mission_target() const
 {
@@ -366,12 +367,8 @@ tripoint_abs_omt avatar::get_active_mission_target() const
 
 void avatar::set_active_mission( mission &cur_mission )
 {
-    const auto iter = std::find( active_missions.begin(), active_missions.end(), &cur_mission );
-    if( iter == active_missions.end() ) {
-        debugmsg( "new objective %s is not in the active_missions list",
-                  cur_mission.mission_id().c_str() );
-    } else {
-        active_mission = &cur_mission;
+    Character::set_active_mission( cur_mission );
+    if( get_active_mission() == &cur_mission ) {
         active_point_of_interest.pos = tripoint_abs_omt::invalid;
     }
 }
@@ -393,79 +390,10 @@ void avatar::set_active_point_of_interest( const point_of_interest &active_point
               active_point_of_interest.text.c_str() );
 }
 
-void avatar::update_active_mission()
-{
-    if( active_missions.empty() ) {
-        active_mission = nullptr;
-    } else {
-        active_mission = active_missions.front();
-    }
-}
 
-void avatar::on_mission_assignment( mission &new_mission )
-{
-    active_missions.push_back( &new_mission );
-    set_active_mission( new_mission );
-}
 
-void avatar::on_mission_finished( mission &cur_mission )
-{
-    if( cur_mission.has_failed() ) {
-        if( !cur_mission.get_type().invisible_on_complete ) {
-            failed_missions.push_back( &cur_mission );
-        }
-        add_msg_if_player( m_bad, _( "Mission \"%s\" is failed." ), cur_mission.name() );
-    } else {
-        if( !cur_mission.get_type().invisible_on_complete ) {
-            completed_missions.push_back( &cur_mission );
-        }
-        add_msg_if_player( m_good, _( "Mission \"%s\" is successfully completed." ),
-                           cur_mission.name() );
-    }
-    const auto iter = std::find( active_missions.begin(), active_missions.end(), &cur_mission );
-    if( iter == active_missions.end() ) {
-#ifdef MP_ENABLED
-        if( !cata_mp::is_client_mode() ) {
-            debugmsg( "completed mission %s was not in the active_missions list",
-                      cur_mission.mission_id().c_str() );
-        }
-#else
-        debugmsg( "completed mission %s was not in the active_missions list",
-                  cur_mission.mission_id().c_str() );
-#endif
-    } else {
-        active_missions.erase( iter );
-    }
-    if( &cur_mission == active_mission ) {
-        update_active_mission();
-    }
-}
 
-bool avatar::has_mission_id( const mission_type_id &miss_id )
-{
-    for( mission *miss : active_missions ) {
-        if( miss->mission_id() == miss_id ) {
-            return true;
-        }
-    }
-    return false;
-}
 
-void avatar::remove_active_mission( mission &cur_mission )
-{
-    cur_mission.remove_active_world_mission( cur_mission );
-    const auto iter = std::find( active_missions.begin(), active_missions.end(), &cur_mission );
-    if( iter == active_missions.end() ) {
-        debugmsg( "removed mission %s was not in the active_missions list",
-                  cur_mission.mission_id().c_str() );
-    } else {
-        active_missions.erase( iter );
-    }
-
-    if( &cur_mission == active_mission ) {
-        update_active_mission();
-    }
-}
 
 void avatar::add_point_of_interest( const point_of_interest &new_point_of_interest )
 {
@@ -552,11 +480,16 @@ bool avatar::read( item_location &book, item_location ereader )
             add_msg( m_info, _( "%s reads aloud…" ), reader->disp_name() );
         }
 
-        assign_activity( read_activity_actor( time_taken, book, ereader, false ) );
+        if( !cata_mp::client_start_read( book, ereader ) ) {
+            assign_activity( read_activity_actor( time_taken, book, ereader, false ) );
+        }
         return true;
     }
 
     if( book->typeId() == itype_guidebook ) {
+        if( cata_mp::client_start_read( book, ereader ) ) {
+            return true;
+        }
         // special guidebook effect: print a misc. hint when read
         if( reader != this ) {
             add_msg( m_info, fail_messages[0] );
@@ -780,12 +713,21 @@ bool avatar::read( item_location &book, item_location ereader )
         return false;
     }
 
-    assign_activity( read_activity_actor( time_taken, book, ereader, continuous, learner_id ) );
+    if( !cata_mp::client_start_read( book, ereader, continuous, learner_id ) ) {
+        assign_activity( read_activity_actor( time_taken, book, ereader, continuous, learner_id ) );
+    }
 
     return true;
 }
 
 void avatar::grab( object_type grab_type_new, const tripoint_rel_ms &grab_point_new )
+{
+    refresh_grab_memory( false );
+    Character::grab( grab_type_new, grab_point_new );
+    refresh_grab_memory();
+}
+
+void avatar::refresh_grab_memory( bool erase )
 {
     const auto update_memory =
     [this]( const object_type gtype, const tripoint_rel_ms & gpoint, const bool erase ) {
@@ -806,104 +748,10 @@ void avatar::grab( object_type grab_type_new, const tripoint_rel_ms &grab_point_
             m.memory_cache_dec_set_dirty( pos_bub() + gpoint, true );
         }
     };
-    // Mark the area covered by the previous vehicle/furniture/etc for re-memorizing.
-    update_memory( grab_type, grab_point, /* erase = */ false );
-
-    grab_type = grab_type_new;
-    grab_point = grab_point_new;
-
     // Clear the map memory for the area covered by the vehicle/furniture/etc to
     // eliminate ghost vehicles/furnitures/etc.
-    update_memory( grab_type, grab_point, /* erase = */ true );
+    update_memory( get_grab_type(), grab_point, erase );
 
-    path_settings->avoid_rough_terrain = grab_type != object_type::NONE;
-}
-
-object_type avatar::get_grab_type() const
-{
-    return grab_type;
-}
-
-bool avatar::has_identified( const itype_id &item_id ) const
-{
-    return items_identified.count( item_id ) > 0;
-}
-
-void avatar::identify( const item &item )
-{
-    if( has_identified( item.typeId() ) ) {
-        return;
-    }
-    if( !item.is_identifiable() ) {
-        debugmsg( "tried to identify non-book item" );
-        return;
-    }
-
-    const ::item &book = item; // alias
-    cata_assert( !has_identified( item.typeId() ) );
-    items_identified.insert( item.typeId() );
-    cata_assert( has_identified( item.typeId() ) );
-
-    const auto &reading = item.type->book;
-    const skill_id &skill = reading->skill;
-
-    add_msg( _( "You skim %s to find out what's in it." ), book.type_name() );
-    if( skill && get_skill_level_object( skill ).can_train() ) {
-        add_msg( m_info, _( "Can bring your %s knowledge to %d." ),
-                 skill.obj().name(), reading->level );
-        if( reading->req != 0 ) {
-            add_msg( m_info, _( "Requires %1$s knowledge level %2$d to understand." ),
-                     skill.obj().name(), reading->req );
-        }
-    }
-
-    if( reading->intel != 0 ) {
-        add_msg( m_info, _( "Requires intelligence of %d to easily read." ), reading->intel );
-    }
-    //It feels wrong to use a pointer to *this, but I can't find any other player pointers in this method.
-    if( book_fun_for( book, *this ) != 0 ) {
-        add_msg( m_info, _( "Reading this book affects your morale by %d." ), book_fun_for( book, *this ) );
-    }
-
-    if( book.type->use_methods.count( "MA_MANUAL" ) ) {
-        const matype_id style_to_learn = martial_art_learned_from( *book.type );
-        add_msg( m_info, _( "You can learn %s style from it." ), style_to_learn->name );
-        add_msg( m_info, _( "This fighting style is %s to learn." ),
-                 martialart_difficulty( style_to_learn ) );
-        add_msg( m_info, _( "It would be easier to master if you'd have skill expertise in %s." ),
-                 style_to_learn->primary_skill->name() );
-        add_msg( m_info, _( "A training session with this book takes %s." ),
-                 to_string_clipped( reading->time ) );
-    } else {
-        add_msg( m_info, _( "A chapter of this book takes %s to read." ),
-                 to_string_clipped( reading->time ) );
-    }
-
-    std::vector<std::string> crafting_recipes;
-    std::vector<std::string> practice_recipes;
-    for( const islot_book::recipe_with_description_t &elem : reading->recipes ) {
-        // If the player knows it, they recognize it even if it's not clearly stated.
-        if( elem.is_hidden() && !knows_recipe( elem.recipe ) ) {
-            continue;
-        }
-        if( elem.recipe->is_practice() ) {
-            practice_recipes.emplace_back( elem.recipe->result_name() );
-        } else {
-            crafting_recipes.emplace_back( elem.name() );
-        }
-    }
-    if( !crafting_recipes.empty() ) {
-        add_msg( m_info, string_format( _( "This book can help you craft: %s" ),
-                                        enumerate_as_string( crafting_recipes ) ) );
-    }
-    if( !practice_recipes.empty() ) {
-        add_msg( m_info, string_format( _( "This book can help you practice: %s" ),
-                                        enumerate_as_string( practice_recipes ) ) );
-    }
-    const std::size_t num_total_recipes = crafting_recipes.size() + practice_recipes.size();
-    if( num_total_recipes < reading->recipes.size() ) {
-        add_msg( m_info, _( "It might help you figuring out some more recipes." ) );
-    }
 }
 
 void avatar::clear_nutrition()
@@ -911,11 +759,6 @@ void avatar::clear_nutrition()
     calorie_diary.clear();
     calorie_diary.emplace_front();
     consumption_history.clear();
-}
-
-void avatar::clear_identified()
-{
-    items_identified.clear();
 }
 
 void avatar::wake_up()
@@ -973,20 +816,6 @@ void avatar::vomit()
     Character::vomit();
 }
 
-bool avatar::try_break_relax_gas( const std::string &msg_success, const std::string &msg_failure )
-{
-    const effect &pacify = get_effect( effect_relax_gas, body_part_mouth );
-    if( pacify.is_null() ) {
-        return true;
-    } else if( one_in( pacify.get_intensity() ) ) {
-        add_msg( m_good, msg_success );
-        return true;
-    } else {
-        mod_moves( std::max( 0, pacify.get_intensity() * 10 + rng( -30, 30 ) ) );
-        add_msg( m_bad, msg_failure );
-        return false;
-    }
-}
 
 nc_color avatar::basic_symbol_color() const
 {
@@ -1253,7 +1082,7 @@ void avatar::rebuild_aim_cache() const
     double pi = 2 * acos( 0.0 );
 
     const tripoint_bub_ms local_last_target = here.get_bub(
-            last_target_pos.value() );
+                last_target_pos.value() );
     const tripoint_bub_ms pos = pos_bub( here );
     float base_angle = atan2f( local_last_target.y() - pos.y(),
                                local_last_target.x() - pos.x() );
@@ -1309,24 +1138,7 @@ void avatar::rebuild_aim_cache() const
 
 void avatar::set_movement_mode( const move_mode_id &new_mode )
 {
-    map &here = get_map();
-
-    if( can_switch_to( new_mode ) ) {
-        if( is_hauling() && new_mode->stop_hauling() ) {
-            stop_hauling();
-        }
-        add_msg( new_mode->change_message( true, get_steed_type() ) );
-        move_mode = new_mode;
-        // Enchantments based on move modes can stack inappropriately without a recalc here
-        recalculate_enchantment_cache();
-        // crouching affects visibility
-        //TODO: Replace with dirtying vision_transparency_cache
-        here.set_transparency_cache_dirty( pos_bub() );
-        here.set_seen_cache_dirty( posz() );
-        recoil = MAX_RECOIL;
-    } else {
-        add_msg( new_mode->change_message( false, get_steed_type() ) );
-    }
+    set_player_movement_mode( new_mode );
 }
 
 void avatar::activate_crouch_mode()

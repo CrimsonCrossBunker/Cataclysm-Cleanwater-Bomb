@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <fstream>
 #include <iomanip>
 #include <iterator>
 #include <limits>
@@ -44,6 +45,7 @@ extern "C" {
 #include "lua_platform_sol.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
+#include "native_file_path.h"
 #include "generic_factory.h"
 #include "item_factory.h"
 #include "itype.h"
@@ -315,6 +317,29 @@ void install_mod_definition( sol::table &ccb )
     } );
 }
 
+sol::load_result load_platform_file( sol::state &lua, const fs::path &path )
+{
+    std::ifstream input( native_file_path( path ), std::ios::binary );
+    if( !input ) {
+        throw std::runtime_error( "Cannot open Lua file: " + path.generic_u8string() );
+    }
+    std::string source( std::istreambuf_iterator<char> { input }, std::istreambuf_iterator<char> {} );
+    if( input.bad() ) {
+        throw std::runtime_error( "Cannot read Lua file: " + path.generic_u8string() );
+    }
+    if( source.compare( 0, 3, "\xef\xbb\xbf" ) == 0 ) {
+        source.erase( 0, 3 );
+    }
+    if( !source.empty() && source.front() == '#' ) {
+        const size_t newline = source.find( '\n' );
+        source.erase( 0, newline == std::string::npos ? source.size() : newline + 1 );
+        if( source.empty() || source.front() != '\x1b' ) {
+            source.insert( source.begin(), '\n' );
+        }
+    }
+    return lua.load( source, "@" + path.generic_u8string() );
+}
+
 struct file_execution_result {
     int return_count = 0;
     std::optional<sol::object> first;
@@ -323,7 +348,7 @@ struct file_execution_result {
 file_execution_result execute_file( sol::state &lua, const fs::path &path,
                                     const std::string &context )
 {
-    sol::load_result loaded = lua.load_file( path.generic_u8string() );
+    sol::load_result loaded = load_platform_file( lua, path );
     if( !loaded.valid() ) {
         const sol::error error = loaded;
         throw std::runtime_error( context + " [" + path.generic_u8string() + "]: " + error.what() );
@@ -396,7 +421,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
             result.push_back( sol::make_object( lua, "\n\tno Mod-local module '" + module_name + "'" ) );
             return result;
         }
-        sol::load_result loaded_file = lua.load_file( path->generic_u8string() );
+        sol::load_result loaded_file = load_platform_file( lua, *path );
         if( !loaded_file.valid() ) {
             const sol::error error = loaded_file;
             throw std::runtime_error( path->generic_u8string() + ": " + error.what() );

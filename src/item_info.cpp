@@ -36,6 +36,7 @@
 #include "character_martial_arts.h"
 #include "color.h"
 #include "craft_reservation.h"
+#include "crafting.h"
 #include "damage.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -4137,7 +4138,7 @@ static bool can_craft_recipe( const recipe *r, const temp_crafting_inventory &cr
     }
     can_craft_recipe_cache[r] = r->deduped_requirements().can_make_with_inventory(
                                     &get_player_character(), crafting_inv,
-                                    r->get_component_filter() );
+                                    r->get_component_filter(), 1, craft_flags::stop_on_failure );
     return can_craft_recipe_cache.at( r );
 }
 

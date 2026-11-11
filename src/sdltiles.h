@@ -125,6 +125,10 @@ bool display_buffer_scope_is_invalid();
 // clears it. Sticky across scopes, unlike display_buffer_scope_is_invalid.
 bool display_buffer_scope_recovery_pending();
 
+// A recovered display buffer was cleared and must be repainted before present.
+void renderer_recovery_redraw_complete();
+bool renderer_recovery_redraw_pending();
+
 // Raise the recovery latch from outside a draw scope (e.g. the present-time
 // bind in refresh_display); most helper failures already latch internally.
 void display_buffer_scope_signal_recovery_required();
