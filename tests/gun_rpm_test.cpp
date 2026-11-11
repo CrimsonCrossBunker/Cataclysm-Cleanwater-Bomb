@@ -8,6 +8,7 @@
 #include "itype.h"
 #include "json_error.h"
 #include "json_loader.h"
+#include "ranged.h"
 #include "translations.h"
 #include "type_id.h"
 
@@ -99,4 +100,26 @@ TEST_CASE( "gun_rpm_allowance_is_per_gun_and_shared_by_its_rpm_modes", "[ranged]
     CHECK( single.start_firing( now ) == 1 );
     CHECK( single.start_firing( now ) == 1 );
     CHECK( faster.start_firing( now + 11_seconds ) == 13 );
+}
+
+TEST_CASE( "selected_burst_round_count_depends_on_weapon_skill", "[ranged][gun_rpm]" )
+{
+    const auto beginner = firearm_burst_round_range( 11, 1 );
+    CHECK( beginner.first == 8 );
+    CHECK( beginner.second == 14 );
+    const auto master = firearm_burst_round_range( 11, 10 );
+    CHECK( master.first == 11 );
+    CHECK( master.second == 11 );
+    CHECK( firearm_burst_round_range( 2, 1 ).first == 2 );
+    CHECK( firearm_burst_round_range( 30, 1 ).second == 30 );
+}
+
+TEST_CASE( "selected_burst_cost_scales_with_rpm_and_full_turn_ap", "[ranged][gun_rpm]" )
+{
+    CHECK( firearm_burst_move_cost( 11, 750, 100 ) == 88 );
+    CHECK( firearm_burst_move_cost( 11, 750, 50 ) == 44 );
+    CHECK( firearm_burst_move_cost( 30, 750, 100 ) == 240 );
+    CHECK( firearm_burst_move_cost( 7, 750, 160 ) == 90 );
+    CHECK( firearm_burst_move_cost( 3, 900, 100 ) == 20 );
+    CHECK( firearm_burst_move_cost( 0, 750, 100 ) == 0 );
 }

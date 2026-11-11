@@ -206,7 +206,7 @@ void client_finish_ready_firearm_activity();
 firearm_view_phase client_firearm_phase();
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action );
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action,
-                             const item_location &ammo );
+                             const item_location &ammo, int burst_rounds = 0 );
 void client_cancel_firearm_activity( bool unload_ras );
 void client_request_throw( const throw_intent &intent );
 

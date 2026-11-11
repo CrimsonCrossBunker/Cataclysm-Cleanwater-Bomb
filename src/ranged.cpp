@@ -7,12 +7,14 @@
 #include "fault.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <coordinates.h>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -385,6 +387,8 @@ class target_ui
         catacurses::window w_target;
         // Input context
         input_context ctxt;
+        input_context burst_ctxt{ "TARGET" };
+        int burst_rounds = 0;
 
         /* These members are relevant for TargetMode::Fire */
         // Weapon sight dispersion
@@ -526,6 +530,9 @@ class target_ui
 
         // Aim and shoot. Returns 'false' if ran out of moves
         bool action_aim_and_shoot( const std::string &action );
+
+        int select_burst_rounds();
+        void panel_burst_selection( int text_y );
 
         // Draw UI-specific terrain overlays
         void draw_terrain_overlay();
@@ -1255,6 +1262,27 @@ bool prepare_gun_to_fire( Character &who, item &it )
     return true;
 }
 
+std::pair<int, int> firearm_burst_round_range( int rounds, float skill )
+{
+    const float level = std::clamp( skill, 0.0f, static_cast<float>( MAX_SKILL ) );
+    // A beginner can miss their estimate by about 30%. A master releases exactly on time.
+    const int spread = static_cast<int>( std::lround( rounds * 0.3f *
+                                         ( static_cast<float>( MAX_SKILL ) - level ) / ( MAX_SKILL - 1 ) ) );
+    return { std::max( min_firearm_burst_rounds, rounds - spread ),
+             std::min( max_firearm_burst_rounds, rounds + spread ) };
+}
+
+int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second )
+{
+    if( rounds <= 0 || rpm <= 0 ) {
+        return 0;
+    }
+    const int64_t scaled_rounds = static_cast<int64_t>( rounds ) * to_seconds<int>( 1_minutes ) *
+                                  std::max( 1, moves_per_second );
+    return static_cast<int>( std::min<int64_t>( ( scaled_rounds + rpm - 1 ) / rpm,
+                             std::numeric_limits<int>::max() ) );
+}
+
 int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 {
     map &here = get_map();
@@ -1268,10 +1296,23 @@ int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
-                         item_location ammo )
+                         item_location ammo, int burst_rounds )
 {
     if( !mode || mode.melee() ) {
         return 0;
+    }
+    if( burst_rounds != 0 ) {
+        if( mode.rpm <= 0 || !valid_firearm_burst_rounds( burst_rounds ) ) {
+            return 0;
+        }
+        const auto [minimum, maximum] = firearm_burst_round_range( burst_rounds,
+                                        get_skill_level( mode->gun_skill() ) );
+        const int planned = minimum == maximum ? minimum : rng( minimum, maximum );
+        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm );
+        if( fired > 0 ) {
+            add_msg_if_player( n_gettext( "You fire %d round.", "You fire %d rounds.", fired ), fired );
+        }
+        return fired;
     }
     const int shots = mode.start_firing( calendar::turn );
     const bool uses_game_second = mode.rpm > 0 && !mode->has_flag( flag_VEHICLE );
@@ -1295,7 +1336,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
 }
 
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
-                              item_location ammo, bool spend_attack_moves )
+                              item_location ammo, bool spend_attack_moves, int burst_rpm )
 {
     if( !gun.is_gun() ) {
         debugmsg( "%s tried to fire non-gun (%s).", get_name(), gun.tname() );
@@ -1370,6 +1411,7 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
                              ? time_to_attack( *this, *gun_id ) + action_time( *this, *gun_id )
                              : 0;
     const int reload_moves = reload_and_shoot_time( *this, ammo );
+    const int burst_speed = burst_rpm > 0 ? get_speed() : 0;
     skill_id gun_skill = gun.gun_skill();
     add_msg_debug( debugmode::DF_RANGED, "Gun skill (%s) %g", gun_skill.c_str(),
                    get_skill_level( gun_skill ) ) ;
@@ -1534,7 +1576,10 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             continue; // skip retargeting for launchers
         }
     }
-    mod_moves( -attack_moves - reload_moves );
+    // Interrupted bursts only occupy the time spent firing, with one interval for a failed trigger.
+    const int burst_moves = firearm_burst_move_cost( std::max( 1, curshot ), burst_rpm, burst_speed );
+    const int64_t total_moves = static_cast<int64_t>( attack_moves ) + reload_moves + burst_moves;
+    mod_moves( -static_cast<int>( std::min<int64_t>( total_moves, std::numeric_limits<int>::max() ) ) );
 
     const islot_gun *firing = original_gun;
     if( !firing && gun.is_gun() ) {
@@ -3439,6 +3484,7 @@ target_handler::trajectory target_ui::run()
     ExitCode loop_exit_code;
     std::string timed_out_action;
     bool skip_redraw = false;
+    int requested_burst = mode == TargetMode::Fire && !action.empty() ? activity->burst_rounds : 0;
     for( ;; action.clear() ) {
         if( !skip_redraw ) {
             g->invalidate_main_ui_adaptor();
@@ -3448,6 +3494,7 @@ target_handler::trajectory target_ui::run()
 
         // Wait for user input (or use value retrieved from activity)
         if( action.empty() ) {
+            requested_burst = 0;
             int timeout = get_option < int > ( "EDGE_SCROLL" );
             action = ctxt.handle_input( timeout );
         }
@@ -3468,6 +3515,18 @@ target_handler::trajectory target_ui::run()
         // If an aiming mode is selected, use "*_SHOT" instead of "FIRE"
         if( mode == TargetMode::Fire && action == "FIRE" && aim_mode->has_threshold ) {
             action = aim_mode->action;
+        }
+
+        if( mode == TargetMode::Fire && status == Status::Good && attempted_shot ) {
+            if( relevant->gun_current_mode().rpm <= 0 ) {
+                requested_burst = 0;
+            } else if( !valid_firearm_burst_rounds( requested_burst ) ) {
+                requested_burst = select_burst_rounds();
+                if( requested_burst == 0 ) {
+                    attack_was_confirmed = false;
+                    continue;
+                }
+            }
         }
 
         // Handle received input
@@ -3515,7 +3574,7 @@ target_handler::trajectory target_ui::run()
             }
             set_last_target();
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
-                cata_mp::client_request_firearm( dst, "FIRE", activity->reload_loc );
+                cata_mp::client_request_firearm( dst, "FIRE", activity->reload_loc, requested_burst );
                 timed_out_action = "AIM";
                 loop_exit_code = ExitCode::Timeout;
                 break;
@@ -3574,7 +3633,7 @@ target_handler::trajectory target_ui::run()
 
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
                 set_last_target();
-                cata_mp::client_request_firearm( dst, action, activity->reload_loc );
+                cata_mp::client_request_firearm( dst, action, activity->reload_loc, requested_burst );
                 timed_out_action = action;
                 loop_exit_code = ExitCode::Timeout;
                 break;
@@ -3599,6 +3658,9 @@ target_handler::trajectory target_ui::run()
             break;
         }
         case ExitCode::Fire: {
+            if( mode == TargetMode::Fire ) {
+                activity->burst_rounds = requested_burst;
+            }
             if( mode != TargetMode::SelectOnly && !defer_target_effects ) {
                 bool harmful = !( mode == TargetMode::Spell && casting->damage( player_character ) <= 0 );
                 on_target_accepted( harmful );
@@ -3610,6 +3672,7 @@ target_handler::trajectory target_ui::run()
             activity->acceptable_losses = list_friendlies_in_lof();
             traj.clear();
             activity->action = timed_out_action;
+            activity->burst_rounds = requested_burst;
             activity->should_unload_RAS = unload_RAS_weapon;
             activity->snap_to_target = snap_to_target;
             activity->shifting_view = shifting_view;
@@ -4567,6 +4630,74 @@ bool target_ui::action_aim_and_shoot( const std::string &action )
     return aim_gun_until_threshold( *you, *relevant, dst, action );
 }
 
+static constexpr std::array<std::pair<const char *, int>, 3> burst_presets = {{
+        { "AIMED_SHOT", 3 }, { "CAREFUL_SHOT", 7 }, { "PRECISE_SHOT", 11 }
+    }};
+
+int target_ui::select_burst_rounds()
+{
+    burst_rounds = min_firearm_burst_rounds;
+    on_out_of_scope reset( [&]() {
+        burst_rounds = 0;
+    } );
+    burst_ctxt = input_context( "TARGET" );
+    burst_ctxt.register_action( "FIRE" );
+    burst_ctxt.register_action( "AIM" );
+    burst_ctxt.register_action( "QUIT" );
+    burst_ctxt.register_action( "HELP_KEYBINDINGS" );
+    for( const auto &preset : burst_presets ) {
+        burst_ctxt.register_action( preset.first );
+    }
+
+    for( ;; ) {
+        g->invalidate_main_ui_adaptor();
+        ui_manager::redraw();
+        const std::string action = burst_ctxt.handle_input();
+        if( action == "QUIT" ) {
+            return 0;
+        }
+        if( action == "AIM" ) {
+            burst_rounds = std::min( burst_rounds + 1, max_firearm_burst_rounds );
+        } else if( action == "FIRE" ) {
+            return burst_rounds;
+        } else {
+            for( const auto &[preset, rounds] : burst_presets ) {
+                if( action == preset ) {
+                    return rounds;
+                }
+            }
+        }
+    }
+}
+
+void target_ui::panel_burst_selection( int text_y )
+{
+    const gun_mode gun = relevant->gun_current_mode();
+    if( !gun || gun.rpm <= 0 ) {
+        return;
+    }
+    const auto print_line = [&]( const std::string &line ) {
+        if( text_y < getmaxy( w_target ) - 1 ) {
+            trim_and_print( w_target, point( 1, text_y++ ), getmaxx( w_target ) - 2, c_white, line );
+        }
+    };
+    const auto [minimum, maximum] = firearm_burst_round_range( burst_rounds,
+                                    you->get_skill_level( gun->gun_skill() ) );
+    const double seconds = burst_rounds * to_seconds<double>( 1_minutes ) / gun.rpm;
+    print_line( string_format( _( "Estimated: %d rounds (%.2f s)" ), burst_rounds, seconds ) );
+    if( minimum != maximum ) {
+        print_line( string_format( _( "Trigger estimate: %d to %d rounds" ), minimum, maximum ) );
+    }
+    std::string presets;
+    for( const auto &[action, rounds] : burst_presets ) {
+        presets += string_format( "[%s] %d  ", burst_ctxt.get_desc( action, 1 ), rounds );
+    }
+    print_line( presets );
+    print_line( string_format( _( "[%s] +1 round  [%s] Fire" ), burst_ctxt.get_desc( "AIM", 1 ),
+                               burst_ctxt.get_desc( "FIRE", 1 ) ) );
+    print_line( string_format( _( "[%s] Back to aiming" ), burst_ctxt.get_desc( "QUIT", 1 ) ) );
+}
+
 void target_ui::draw_terrain_overlay()
 {
     tripoint_bub_ms center = you->pos_bub() + you->view_offset;
@@ -4667,6 +4798,12 @@ void target_ui::draw_ui_window()
         text_y += compact ? 0 : 1;
     }
 
+    if( burst_rounds > 0 ) {
+        panel_burst_selection( text_y );
+        wnoutrefresh( w_target );
+        return;
+    }
+
     bool fill_with_blank_if_no_target = !tiny;
     panel_target_info( text_y, fill_with_blank_if_no_target );
     text_y++;
@@ -4712,6 +4849,9 @@ double target_ui::get_predicted_recoil() const
 
 std::string target_ui::uitext_title() const
 {
+    if( burst_rounds > 0 ) {
+        return string_format( _( "Burst length: %s" ), relevant->tname() );
+    }
     switch( mode ) {
         case TargetMode::Fire:
         case TargetMode::TurretManual:

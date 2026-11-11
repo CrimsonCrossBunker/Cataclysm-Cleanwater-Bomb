@@ -3553,9 +3553,9 @@ class Character : public Creature, public visitable
          */
 
         int fire_gun( const tripoint_bub_ms &target, int shots = 1 );
-        /** Fire a selected mode using the current game second's shot allowance. */
+        /** Fire a selected mode. A nonzero burst request uses a skill-adjusted count and RPM timing. */
         int fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
-                      item_location ammo = item_location() );
+                      item_location ammo = item_location(), int burst_rounds = 0 );
         /**
          *  Fires a gun or auxiliary gunmod (ignoring any current mode)
          *  @param target where the first shot is aimed at (may vary for later shots)
@@ -3572,7 +3572,7 @@ class Character : public Creature, public visitable
 
     private:
         int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
-                           item_location ammo, bool spend_attack_moves );
+                           item_location ammo, bool spend_attack_moves, int burst_rpm = 0 );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,
