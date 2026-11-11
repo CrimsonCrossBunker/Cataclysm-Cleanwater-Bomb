@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,17 +26,20 @@
 #include "type_id.h"
 #include "weather_type.h"
 
-static const efftype_id effect_grabbed( "grabbed" );
-static const efftype_id effect_crowd_crushed( "crowd_crushed" );
-
 static const damage_type_id damage_bash( "bash" );
-static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
+
+static const efftype_id effect_crowd_crushed( "crowd_crushed" );
+static const efftype_id effect_grabbed( "grabbed" );
 
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_longshirt( "test_longshirt" );
 static const itype_id itype_test_sunglasses( "test_sunglasses" );
 static const itype_id itype_test_umbrella( "test_umbrella" );
 static const itype_id itype_test_zentai( "test_zentai" );
+
+static const limb_score_id limb_score_breathing( "breathing" );
+
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 
 static const ter_str_id ter_t_rock_wall( "t_rock_wall" );
 
@@ -493,8 +498,10 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             dummy.oxygen = 0;
 
             THEN( "they recover oxygen instead of suffocating" ) {
+                const float breathing = dummy.get_limb_score( limb_score_breathing );
+                REQUIRE( breathing > 0.0f );
                 test_suffer( dummy, 3_turns, true );
-                CHECK( dummy.oxygen == 15 );
+                CHECK( dummy.oxygen == 3 * std::max( 1, static_cast<int>( 5 * breathing ) ) );
                 CHECK_FALSE( dummy.has_effect( effect_crowd_crushed ) );
             }
         }

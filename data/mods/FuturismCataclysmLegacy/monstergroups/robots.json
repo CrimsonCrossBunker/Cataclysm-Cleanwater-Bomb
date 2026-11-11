@@ -16,5 +16,13 @@
       { "monster": "mon_fcl_copbot", "weight": 100, "cost_multiplier": 40 },
       { "monster": "mon_fcl_riotbot", "weight": 100, "cost_multiplier": 100 }
     ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "FCL_GROUP_UTILIBOT_SITE",
+    "monsters": [
+      { "monster": "mon_utilibot_hostile", "weight": 50, "cost_multiplier": 0 },
+      { "monster": "mon_utilibot_const", "weight": 50, "cost_multiplier": 0 }
+    ]
   }
 ]

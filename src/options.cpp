@@ -1962,6 +1962,11 @@ void options_manager::add_options_general()
              false
            );
 
+        add( "AUTO_INSERT_POCKETS_DISABLED", page_id,
+             to_translation( "Disable automatic pocket insertion by default" ),
+             to_translation( "If true, pockets without an explicit automatic insertion setting will not accept items automatically.  Enable individual pockets in pocket settings.  Manually inserting items is still allowed." ),
+             false );
+
         add( "AUTO_PICKUP_ADJACENT", page_id, to_translation( "Auto pickup adjacent" ),
              to_translation( "If true, enable auto pickup items one tile around to the player.  You can assign No Auto Pickup zones with the Zones manager for e.g. your homebase." ),
              false
@@ -3130,6 +3135,11 @@ void options_manager::add_options_graphics()
              true, COPT_CURSES_HIDE
            );
 
+        add( "RENDER3D_EXPERIMENTAL", page_id, to_translation( "Experimental 3D renderer" ),
+             to_translation( "If true, renders the map with an experimental 3D backend instead of the 2D tileset.  Requires the GPU renderer and a restart; falls back to 2D tiles when unavailable." ),
+             false, COPT_CURSES_HIDE
+           );
+
         add( "SWAP_ZOOM", page_id, to_translation( "Zoom Threshold" ),
              to_translation( "Choose when you should swap tileset (lower is more zoomed out)." ),
              1, 4, 2, COPT_CURSES_HIDE
@@ -3143,6 +3153,7 @@ void options_manager::add_options_graphics()
         get_option( "VEHICLE_EDIT_TILES" ).setPrerequisite( "USE_TILES" );
         get_option( "VEHICLE_PART_COLOR" ).setPrerequisite( "USE_TILES" );
         get_option( "USE_CHARACTER_PREVIEW" ).setPrerequisite( "USE_TILES" );
+        get_option( "RENDER3D_EXPERIMENTAL" ).setPrerequisite( "USE_TILES" );
 
         add( "USE_OVERMAP_TILES", page_id, to_translation( "Use tiles to display overmap" ),
              to_translation( "If true, replaces some TTF-rendered text with tiles for overmap display." ),
@@ -3454,19 +3465,13 @@ void options_manager::add_options_performance()
                          "higher values mainly cost background I/O, not main-thread time." ),
          0, 6, 2
        );
-#if defined(TILES)
-    add( "HUD_STYLE", "performance",
-         to_translation( "菜单样式" ),
-         to_translation( "Choose the gameplay HUD layout.  Classic keeps the original sidebar; "
-                         "Gu Yuan Yongning HUD displays a compact, tabbed character panel over the map." ),
-         { { "classic", to_translation( "经典" ) },
-             { "guyuan_hud", to_translation( "古缘永宁 HUD" ) }
-         }, "classic" );
 
+#if defined(TILES)
     add( "RENDER_PREPARATION_WORKERS", "performance",
          to_translation( "Render preparation workers" ),
-         to_translation( "Prepare tile layers and lighting on dedicated workers.  "
-                         "0 keeps serial preparation.  Requires a restart." ),
+         to_translation( "Prepare large map views using the shared worker pool.  "
+                         "Small views stay serial.  0 keeps all preparation serial.  "
+                         "Requires a restart." ),
          0, 4, 0
        );
 #endif
@@ -3480,36 +3485,34 @@ void options_manager::add_options_performance()
 #endif
     add( "VISION_PREPARATION_WORKERS", "performance",
          to_translation( "Visibility calculation workers" ),
-         to_translation( "Use workers for expensive visibility updates.  "
+         to_translation( "Use the shared worker pool for expensive visibility updates.  "
                          "Small updates and multiplayer stay serial.  "
                          "0 disables workers.  Requires a restart." ),
          0, 4, vision_workers_default );
 
     add( "AI_REACHABILITY_WORKERS", "performance",
          to_translation( "Monster reachability preparation workers" ),
-         to_translation( "Prepare expensive monster reachability geometry from captured values.  "
-                         "0 keeps the original path; 1 prepares on the main thread; "
-                         "2 to 4 use dedicated workers.  Multiplayer stays on the original path.  "
+         to_translation( "Prepare reachability checks for monsters.  "
+                         "0 calculates on demand; 1 prepares on the main thread; "
+                         "2 to 4 allow parallel preparation using the shared worker pool.  "
+                         "Multiplayer keeps on-demand calculation.  "
                          "Requires a restart." ),
          0, 4, 0 );
 
     add( "MULTITHREADING_ENABLED", "performance",
-         to_translation( "Enable multithreading (highly unstable)" ),
-         to_translation( "Enable the persistent worker thread pool for parallelizing "
-                         "game-logic work (cache rebuilds, monster AI, etc.).  "
-                         "Highly unstable: most subsystems are not yet wired to the pool, "
-                         "and multiplayer mode may cause data races.  "
-                         "Requires a restart after changing." ),
+         to_translation( "Legacy multithreading" ),
+         to_translation( "Enable legacy parallel work and the custom shared pool size.  "
+                         "AI, visibility and render preparation have separate options and "
+                         "can use workers even when this is off.  Requires a restart." ),
          false
        );
 
     add( "THREAD_POOL_WORKERS", "performance",
-         to_translation( "Thread pool workers" ),
-         to_translation( "Number of worker threads in the pool when multithreading is enabled.  "
-                         "0 = auto (hardware_concurrency - 1, leaving one core for the main / "
-                         "SDL thread).  Lower this if the game stutters from worker contention "
-                         "or you want to reserve cores for other programs.  Requires a restart "
-                         "after changing." ),
+         to_translation( "Shared worker pool size" ),
+         to_translation( "Number of shared compute workers when legacy multithreading is enabled.  "
+                         "When it is off, independently enabled preparations share up to 4 workers.  "
+                         "0 = auto (one fewer than the available hardware threads).  "
+                         "Lower this to reserve capacity for other programs.  Requires a restart." ),
          0, 64, 0
        );
 }

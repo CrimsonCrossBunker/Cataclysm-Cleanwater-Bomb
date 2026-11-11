@@ -4,13 +4,11 @@
 #include <memory>
 #include <string>
 
-#include "avatar.h"
 #include "cached_options.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cursesdef.h"
 #include "game.h"
-#include "guyuan_hud.h"
 #include "map.h"
 #include "options.h"
 #include "output.h"
@@ -47,8 +45,6 @@ void live_view::show( const tripoint &p )
     if( !ui ) {
         ui = std::make_unique<ui_adaptor>();
         ui->on_screen_resize( [this, &here]( ui_adaptor & ui ) {
-            // Mouse View hosts the graphical HUD while it is above the main UI.
-            ui.is_imgui = guyuan_hud::enabled();
             panel_manager &mgr = panel_manager::get_manager();
             const bool sidebar_right = get_option<std::string>( "SIDEBAR_POSITION" ) == "right";
             const int width = sidebar_right ? mgr.get_width_right() : mgr.get_width_left();
@@ -66,7 +62,7 @@ void live_view::show( const tripoint &p )
                                       point( sidebar_right ? TERMX - width : 0, 0 ) );
             ui.position_from_window( win );
         } );
-        ui->on_redraw( [this, &here]( const ui_adaptor & ui ) {
+        ui->on_redraw( [this, &here]( const ui_adaptor & ) {
             werase( win );
             const visibility_variables &cache = here.get_visibility_variables_cache();
             int line_out = START_LINE;
@@ -75,9 +71,6 @@ void live_view::show( const tripoint &p )
             draw_border( win );
             center_print( win, 0, c_white, _( "< <color_green>Mouse view</color> >" ) );
             wnoutrefresh( win );
-            if( ui.is_on_top && g->isdraw && g->should_draw && guyuan_hud::enabled() ) {
-                guyuan_hud::draw( get_avatar() );
-            }
         } );
     }
     // Always mark ui for resize as the required box height may have changed.

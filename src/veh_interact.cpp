@@ -226,7 +226,8 @@ void veh_interact::assign_activity( map &here )
     player_character.set_moves( 0 );
     player_character.assign_activity(
         vehicle_activity_actor( sel_cmd, time, veh, veh->abs_part_pos( *vpt ),
-                                tripoint_rel_ms( cursor_vp_mount, -cursor_level ), veh->index_of_part( vpt ), vp->id, refill_target ) );
+                                tripoint_rel_ms( cursor_vp_mount, -cursor_level ), veh->index_of_part( vpt ), vp->id,
+                                refill_target ) );
 }
 
 void orient_part( map &here, vehicle *veh, const vpart_info &vpinfo, int partnum,
@@ -1402,7 +1403,8 @@ bool veh_interact::update_part_requirements( map &here )
     }
     nmsg += res.second;
 
-    const ret_val<void> can_mount = veh->can_mount( tripoint_rel_ms( -cursor_vp_mount, cursor_level ), *sel_vpart_info );
+    const ret_val<void> can_mount = veh->can_mount( tripoint_rel_ms( -cursor_vp_mount, cursor_level ),
+                                    *sel_vpart_info );
     if( !can_mount.success() ) {
         ok = false;
         nmsg += _( "<color_white>Cannot install due to:</color>\n> " ) +
@@ -2780,7 +2782,7 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
     cpart = part_at( point_rel_ms::zero );
     const point_rel_ms vd = -cursor_vp_mount;
     const tripoint_bub_ms vehp = veh->mount_to_tripoint( &here,
-                                    tripoint_rel_ms( vd, cursor_level ) );
+                                 tripoint_rel_ms( vd, cursor_level ) );
     const bool has_critter = get_creature_tracker().creature_at( vehp );
     terrain_here = here.ter( vehp ).obj();
     bool obstruct = here.impassable_ter_furn( vehp );
@@ -2897,7 +2899,8 @@ void veh_interact::display_veh( map &here )
             selection = std::make_pair( *service_area_start,
                                         service_area_end.value_or( -cursor_vp_mount ) );
         }
-        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart, selection, cursor_level ) ) {
+        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart, selection,
+                                               cursor_level ) ) {
             return;
         }
     }
@@ -2978,7 +2981,7 @@ void veh_interact::display_veh( map &here )
 
     const point pt_disp( getmaxx( w_disp ) / 2, getmaxy( w_disp ) / 2 );
     const tripoint_bub_ms pos_at_cursor = veh->mount_to_tripoint( &here,
-                                         tripoint_rel_ms( -cursor_vp_mount, cursor_level ) );
+                                          tripoint_rel_ms( -cursor_vp_mount, cursor_level ) );
     const optional_vpart_position ovp = here.veh_at( pos_at_cursor );
     col_at_cursor = hilite( col_at_cursor );
     if( here.impassable_ter_furn( pos_at_cursor ) || ( ovp && &ovp->vehicle() != veh ) ) {

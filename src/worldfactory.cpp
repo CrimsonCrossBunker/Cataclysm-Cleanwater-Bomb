@@ -1,4 +1,5 @@
 #include "worldfactory.h"
+#include "world_identity_store.h"
 
 #include <algorithm>
 #include <array>
@@ -30,6 +31,7 @@
 #include "debug.h"
 #include "enums.h"
 #include "filesystem.h"
+#include "native_file_path.h"
 #include "input.h"
 #include "input_context.h"
 #include "input_popup.h"
@@ -881,6 +883,7 @@ WORLD::WORLD( const std::string &name )
 
 void WORLD::COPY_WORLD( const WORLD *world_to_copy )
 {
+    identity_ = {};
     world_name = world_to_copy->world_name + "_copy";
     WORLD_OPTIONS = world_to_copy->WORLD_OPTIONS;
     active_mod_order = world_to_copy->active_mod_order;
@@ -1167,6 +1170,13 @@ bool WORLD::save() const
         return false;
     }
 
+    try {
+        identity();
+    } catch( const std::exception &error ) {
+        debugmsg( "Unable to persist world identity: %s", error.what() );
+        return false;
+    }
+
     if( !save_timestamp() ) {
         return false;
     }
@@ -1199,6 +1209,14 @@ bool WORLD::save() const
 
     world_generator->get_mod_manager().save_mods_list( this );
     return true;
+}
+
+const world_id &WORLD::identity() const
+{
+    if( !identity_.valid() ) {
+        identity_ = load_or_create_world_identity( folder_path() );
+    }
+    return identity_;
 }
 
 void worldfactory::init()
@@ -3789,10 +3807,11 @@ static bool remove_world_directory( const std::filesystem::path &worldpath,
                                     std::error_code &result_error )
 {
     std::error_code remove_error;
-    std::filesystem::remove_all( worldpath, remove_error );
+    const std::filesystem::path native_path = native_file_path( worldpath, true );
+    std::filesystem::remove_all( native_path, remove_error );
 
     std::error_code exists_error;
-    bool directory_remains = std::filesystem::exists( worldpath, exists_error );
+    bool directory_remains = std::filesystem::exists( native_path, exists_error );
     if( !directory_remains && !exists_error ) {
         return true;
     }
@@ -3800,12 +3819,12 @@ static bool remove_world_directory( const std::filesystem::path &worldpath,
     // Windows refuses to delete read-only files.  A failed remove_all may also
     // leave only the now-empty world directory behind, so make any remaining
     // entries writable and retry the complete operation.
-    make_world_tree_writable( worldpath );
+    make_world_tree_writable( native_path );
     remove_error.clear();
-    std::filesystem::remove_all( worldpath, remove_error );
+    std::filesystem::remove_all( native_path, remove_error );
 
     exists_error.clear();
-    directory_remains = std::filesystem::exists( worldpath, exists_error );
+    directory_remains = std::filesystem::exists( native_path, exists_error );
     if( !directory_remains && !exists_error ) {
         return true;
     }

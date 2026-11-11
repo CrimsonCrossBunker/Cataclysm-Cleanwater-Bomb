@@ -44,14 +44,12 @@ class talker_avatar: virtual public talker_avatar_const,
         talker_avatar &operator=( talker_avatar && ) = delete;
         explicit talker_avatar( avatar *new_me )
             : talker_character_const( new_me ), talker_avatar_const( new_me ),
-              talker_character( new_me ), me_chr( new_me ) {};
+              talker_character( new_me ) {};
         ~talker_avatar() override = default;
 
         bool buy_monster( talker &seller, const mtype_id &mtype, int cost,
                           int count, bool pacified, const translation &name ) override;
 
-    private:
-        avatar *me_chr{};
 };
 #endif // CATA_SRC_TALKER_AVATAR_H
 

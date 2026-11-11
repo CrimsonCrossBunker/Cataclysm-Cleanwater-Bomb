@@ -1,5 +1,4 @@
 #include "inventory_ui.h"
-#include "guyuan_hud.h"
 
 #include <color.h>
 #include <coordinates.h>
@@ -1202,7 +1201,7 @@ void inventory_column::expand_to_fit( inventory_entry &entry, bool with_denial )
 
     if( with_denial && !denial.empty() ) {
         reserved_width = std::max( get_entry_cell_width( entry, 0 ) + min_denial_gap + utf8_width( denial,
-            true ),
+                                   true ),
                                    reserved_width );
     }
 }
@@ -1228,7 +1227,7 @@ size_t inventory_column::page_of( size_t index ) const
 size_t inventory_column::page_of( const inventory_entry &entry ) const
 {
     return page_of( std::distance( entries.begin(), std::find( entries.begin(), entries.end(),
-            entry ) ) );
+                                   entry ) ) );
 }
 bool inventory_column::has_available_choices() const
 {
@@ -1505,10 +1504,10 @@ bool inventory_column::collated_sort_compare( inventory_entry const &lhs,
 
     inventory_entry ep_lhs(
     { p_lhs }, nullptr, lhs.is_collated() ? lhs.collation_meta->enabled : lhs.is_selectable(),
-                       0, lhs.generation );
+    0, lhs.generation );
     inventory_entry ep_rhs(
     { p_rhs }, nullptr, rhs.is_collated() ? rhs.collation_meta->enabled : rhs.is_selectable(),
-                       0, rhs.generation );
+    0, rhs.generation );
     ep_lhs.update_cache();
     ep_rhs.update_cache();
     if( indent_entries() ) {
@@ -1763,7 +1762,7 @@ void inventory_column::draw( const catacurses::window &win, const point &p,
 
         const int hx_max = p.x + get_width();
         inclusive_rectangle<point> rect = inclusive_rectangle<point>( point( x1, yy ),
-            point( hx_max - 1, yy ) );
+                                          point( hx_max - 1, yy ) );
         rect_entry_map.emplace_back( rect,
                                      &entry );
 
@@ -1777,11 +1776,11 @@ void inventory_column::draw( const catacurses::window &win, const point &p,
         if( !denial.empty() ) {
             // Determine the width available for the first cell to print, then use that to trim the denial
             const size_t first_cell_width = std::min( get_entry_cell_width( entry, 0 ),
-                x2 + cells[0].current_width - min_denial_gap );
+                                            x2 + cells[0].current_width - min_denial_gap );
             const size_t max_denial_width = std::max( static_cast<int>( get_width() - ( min_denial_gap +
-                first_cell_width ) ), 0 );
+                                            first_cell_width ) ), 0 );
             const size_t denial_width = std::min( max_denial_width, static_cast<size_t>( utf8_width( denial,
-                true ) ) );
+                                                  true ) ) );
 
             if( denial_width > 0 ) {
                 /* Need to determine exact point to start printing from the left, since just trimming produces
@@ -1986,7 +1985,7 @@ const item_category *inventory_selector::naturalize_category( const item_categor
     if( dist != 0 ) {
         const std::string suffix = direction_suffix( u.pos_bub(), pos );
         const item_category_id id = item_category_id( string_format( "%s_%s", category.get_id().c_str(),
-            suffix.c_str() ) );
+                                    suffix.c_str() ) );
 
         const auto *existing = find_cat_by_id( id );
         if( existing != nullptr ) {
@@ -2065,7 +2064,7 @@ bool inventory_selector::add_entry_rec( inventory_column &entry_column,
     }
     inventory_entry *const nentry = shown
                                     ? add_shown_entry( entry_column, std::vector<item_location>( 1, loc ),
-                                        entry_category, 0, topmost_parent )
+                                            entry_category, 0, topmost_parent )
                                     : nullptr;
     if( nentry != nullptr ) {
         nentry->chevron = vis_contents;
@@ -2099,8 +2098,8 @@ bool inventory_selector::drag_drop_item( item *sourceItem, item *destItem )
     bool any_containable = false;
     for( item_pocket *pocket : pockets ) {
         std::string pocket_text = string_format( _( "%s - %s/%s | %d moves" ),
-            pocket->get_description().translated(), vol_to_info( "", "", pocket->contents_volume() ).sValue,
-            vol_to_info( "", "", pocket->volume_capacity() ).sValue, pocket->moves() + base_move_cost );
+                                  pocket->get_description().translated(), vol_to_info( "", "", pocket->contents_volume() ).sValue,
+                                  vol_to_info( "", "", pocket->volume_capacity() ).sValue, pocket->moves() + base_move_cost );
         action_menu.addentry( index++, true, std::optional<input_event>(), pocket_text );
         ret_val<item_pocket::contain_code> contain = pocket->can_contain( *sourceItem );
         if( contain.success() ) {
@@ -2302,7 +2301,7 @@ void inventory_selector::add_vehicle_tank_items()
     const auto add_tank = [this]( vehicle & veh, int part_index ) {
         item_location base_loc = veh.part_base( part_index );
         add_entry( map_column, std::vector<item_location>( 1, item_location( base_loc,
-                &base_loc->only_item() ) ) );
+                   &base_loc->only_item() ) ) );
     };
 
     // Preserve the existing behavior for the vehicle the character is standing on: a hose or a
@@ -2656,12 +2655,7 @@ shared_ptr_fast<ui_adaptor> inventory_selector::create_or_get_ui_adaptor()
 {
     shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
     if( !current_ui ) {
-        if( guyuan_hud::enabled() && !native_view_only ) {
-            ui = current_ui = make_shared_fast<ui_adaptor>( ui_adaptor::disable_uis_below{} );
-            current_ui->is_imgui = true;
-        } else {
-            ui = current_ui = make_shared_fast<ui_adaptor>();
-        }
+        ui = current_ui = make_shared_fast<ui_adaptor>();
         current_ui->on_screen_resize( [this]( ui_adaptor & ) {
             prepare_layout();
         } );
@@ -2868,7 +2862,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                                                            other_spaces[i].first->is_restricted()
                                                          );
                     other_space_strings.push_back( string_format( "%s %s%s", str1, str2,
-                            ( other_spaces_copies[i] > 1 ? string_format( " (%d)", other_spaces_copies[i] ) : "" ) )
+                                                   ( other_spaces_copies[i] > 1 ? string_format( " (%d)", other_spaces_copies[i] ) : "" ) )
                                                  );
                 }
                 if( other_spaces_display_truncated ) {
@@ -2883,7 +2877,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
             // 'ignore_restrict' check makes it so we don't report a smaller 'max' space than 'free' space if we selected a restricted pocket for that.
             if( show_unconstrained_max_space ) {
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = large_free_space.first &&
-                    large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                                           large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict || a.first->is_restricted(), b.first->volume_capacity() )
                            < std::tuple( ignore_restrict || b.first->is_restricted(), a.first->volume_capacity() );
@@ -2891,7 +2885,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                 large_max_space = pockets[0];
 
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = long_free_space.first &&
-                    long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                                           long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict ||
                                        a.first->is_restricted(), b.first->max_containable_length(), b.first->volume_capacity() )
@@ -2901,7 +2895,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                 long_max_space = pockets[0];
             } else {
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = large_free_space.first &&
-                    large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                                           large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict || a.first->is_restricted(), b.second.volume_capacity )
                            < std::tuple( ignore_restrict || b.first->is_restricted(), a.second.volume_capacity );
@@ -2909,7 +2903,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                 large_max_space = pockets[0];
 
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = long_free_space.first &&
-                    long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                                           long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict ||
                                        a.first->is_restricted(), b.second.max_containable_length, b.second.volume_capacity )
@@ -2923,12 +2917,12 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
 
     inventory_selector::header_stats ret = {
         build_weight_and_volume_stats_line( weight_carried,
-        weight_capacity,
-        weight_label_override ? *weight_label_override : _( "Total Weight:" ),
-        volume_in_pockets,
-        volume_of_pockets,
-        volume_label_override ? *volume_label_override : _( "Total Volume:" )
-        )
+                                            weight_capacity,
+                                            weight_label_override ? *weight_label_override : _( "Total Weight:" ),
+                                            volume_in_pockets,
+                                            volume_of_pockets,
+                                            volume_label_override ? *volume_label_override : _( "Total Volume:" )
+                                          )
     };
     bool show_large_max = show_max_space_opt &&
                           large_free_space.second.remaining_volume != large_max_space.second.volume_capacity;
@@ -3058,8 +3052,8 @@ inventory_selector::header_stats_line inventory_selector::build_pocket_stats_lin
 {
     const nc_color &color_label = c_dark_gray;
     auto [free_pocket_str1, free_pocket_str2] = free_pocket ? build_space_stats( free_pocket_volume,
-        free_pocket->min_containable_length(), free_pocket_length,
-        free_pocket->is_restricted() ) : build_invalid_space_stats();
+            free_pocket->min_containable_length(), free_pocket_length,
+            free_pocket->is_restricted() ) : build_invalid_space_stats();
     return {
         prefix.empty() ? "" : ( prefix + " " ) + colorize( _( "Free: " ), color_label ),
         header_stats_tab_stop,
@@ -3087,11 +3081,11 @@ inventory_selector::header_stats_line inventory_selector::build_pocket_stats_lin
 {
     const nc_color &color_label = c_dark_gray;
     auto [free_pocket_str1, free_pocket_str2] = free_pocket ? build_space_stats( free_pocket_volume,
-        free_pocket->min_containable_length(), free_pocket_length,
-        free_pocket->is_restricted() ) : build_invalid_space_stats();
+            free_pocket->min_containable_length(), free_pocket_length,
+            free_pocket->is_restricted() ) : build_invalid_space_stats();
     auto [max_pocket_str1, max_pocket_str2] = max_pocket ? build_space_stats( max_pocket_volume,
-        max_pocket->min_containable_length(), max_pocket_length,
-        max_pocket->is_restricted() ) : build_invalid_space_stats();
+            max_pocket->min_containable_length(), max_pocket_length,
+            max_pocket->is_restricted() ) : build_invalid_space_stats();
     return {
         prefix.empty() ? "" : ( prefix + " " ) + colorize( _( "Free: " ), color_label ),
         header_stats_tab_stop,
@@ -3152,7 +3146,7 @@ inventory_selector::header_stats inventory_selector::get_raw_stats() const
                && item_pocket::ok_for_solids( pocket );
     },
     check_pocket_tree
-        );
+            );
 
     std::string volume_label_override = _( "Bulk Volume:" );
     return get_pocket_summary_header_stats(
@@ -3272,20 +3266,13 @@ void inventory_selector::resize_window( int width, int height )
     }
     shared_ptr_fast<ui_adaptor> current_ui = ui.lock();
     if( current_ui ) {
-        if( guyuan_hud::enabled() && !native_view_only ) {
-            current_ui->position( point::zero, point( TERMX, TERMY ) );
-        } else {
-            current_ui->position_from_window( w_inv );
-        }
+        current_ui->position_from_window( w_inv );
     }
 }
 
 void inventory_selector::refresh_window()
 {
     cata_assert( w_inv );
-    if( draw_guyuan_window() ) {
-        return;
-    }
 
     if( get_option<std::string>( "INVENTORY_HIGHLIGHT" ) != "disable" ) {
         highlight();
@@ -3394,7 +3381,7 @@ void inventory_selector::draw_columns( const catacurses::window &w )
 
     const int free_space = screen_width - get_columns_width( columns );
     const int max_gap = ( columns.size() > 1 ) ? free_space / ( static_cast<int>
-        ( columns.size() ) - 1 ) :
+                        ( columns.size() ) - 1 ) :
                         free_space;
     const int gap = centered ? max_gap : std::min<int>( max_gap, normal_column_gap );
     const int gap_rounding_error = centered && columns.size() > 1
@@ -3594,51 +3581,10 @@ drop_location inventory_selector::get_only_choice() const
     return drop_location();
 }
 
-void inventory_selector::selection_error( const std::string &message )
-{
-    if( guyuan_visible ) {
-        guyuan_message = message;
-        if( const auto current_ui = ui.lock() ) {
-            current_ui->invalidate_ui();
-        }
-    } else {
-        popup( message, PF_GET_KEY );
-    }
-}
-
 inventory_input inventory_selector::get_input()
 {
-    // A short timeout lets graphical commands wake the native input loop.
-    std::string action = guyuan_action.empty() ?
-                         ctxt.handle_input( guyuan_visible ? 50 : -1 ) : "TIMEOUT";
-    if( !guyuan_action.empty() ) {
-        action = std::move( guyuan_action );
-        guyuan_action.clear();
-        guyuan_message.clear();
-        inventory_entry *entry = nullptr;
-        if( guyuan_item && highlight( guyuan_item ) ) {
-            entry = &get_active_column().get_highlighted();
-        }
-        guyuan_item = item_location();
-        if( action == "HELP_KEYBINDINGS" ) {
-            ctxt.display_menu();
-            return { "TIMEOUT", 0, nullptr };
-        }
-        if( action != "SELECT" && action != "MOUSE_MOVE" ) {
-            entry = nullptr;
-        }
-        return { action, 0, entry };
-    }
-    if( guyuan_visible && ( action == "SELECT" || action == "COORDINATE" ||
-                           action == "MOUSE_MOVE" || action == "CLICK_AND_DRAG" ||
-                           action == "SCROLL_UP" || action == "SCROLL_DOWN" ) ) {
-        // ImGui owns the pixel hitboxes and scrollbar, not the old text rectangles.
-        return { "TIMEOUT", 0, nullptr };
-    }
+    std::string const &action = ctxt.handle_input();
     int const ch = ctxt.get_raw_input().get_first_input();
-    if( action != "TIMEOUT" ) {
-        guyuan_message.clear();
-    }
     return process_input( action, ch );
 }
 
@@ -4690,9 +4636,8 @@ void inventory_multiselector::toggle_entries( int &count, const toggle_mode mode
         if( !denial.empty() ) {
             const std::string assembled = highlighted_entry.any_item().get_item()->display_name() + ":\n"
                                           + colorize( denial, c_red );
-            if( guyuan_hud::enabled() ||
-                static_cast<size_t>( utf8_width( denial ) ) > highlighted_entry.cached_denial_space ) {
-                selection_error( assembled );
+            if( static_cast<size_t>( utf8_width( denial ) ) > highlighted_entry.cached_denial_space ) {
+                popup( assembled, PF_GET_KEY );
             }
         }
         count = 0;
@@ -4775,8 +4720,8 @@ drop_locations inventory_multiselector::execute( bool allow_empty )
 
         if( input.action == "CONFIRM" ) {
             if( to_use.empty() && !allow_empty ) {
-                selection_error( string_format( _( "No items were selected.  Use %s to select them." ),
-                                                ctxt.get_desc( "TOGGLE_ENTRY" ) ) );
+                popup_getkey( _( "No items were selected.  Use %s to select them." ),
+                              ctxt.get_desc( "TOGGLE_ENTRY" ) );
                 continue;
             }
             break;
@@ -5323,7 +5268,7 @@ bool pickup_selector::wear()
     if( u.can_wear( *items.front() ).success() ) {
         remove_from_to_use( items.front() );
         const item_location next_item = get_item_to_highlight_after_use( get_active_column(),
-            items.front() );
+                                        items.front() );
         reopen_menu( next_item );
         u.assign_activity( wear_activity_actor( items, quantities ) );
         return true;
@@ -5598,7 +5543,6 @@ trade_selector::trade_selector( trade_ui *parent, Character &u,
     ctxt.register_action( ACTION_SWITCH_PANES );
     ctxt.register_action( ACTION_AUTOBALANCE );
     ctxt.register_action( ACTION_BANKBALANCE );
-    native_view_only = true;
     resize( size, origin );
     _ui = create_or_get_ui_adaptor();
 }

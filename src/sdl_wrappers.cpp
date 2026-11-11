@@ -13,6 +13,7 @@
 #include "cata_shader.h"
 #include "debug.h"
 #include "point.h"
+#include "sdl_renderer_policy.h"
 
 #include <SDL3_image/SDL_image.h>
 
@@ -61,23 +62,23 @@ static SDL_ScaleMode scale_quality_to_mode( const std::string &quality )
     return SDL_SCALEMODE_LINEAR;
 }
 
-void RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
+bool RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
                  const SDL_Rect *srcrect, const SDL_Rect *dstrect )
 {
     if( !renderer ) {
         dbg( D_ERROR ) << "Tried to render to a null renderer";
-        return;
+        return false;
     }
     if( !texture ) {
         dbg( D_ERROR ) << "Tried to render a null texture";
-        return;
+        return false;
     }
     SDL_FRect fsrc;
     SDL_FRect fdst;
     const SDL_FRect *fsrcp = srcrect ? &( fsrc = to_frect( *srcrect ) ) : nullptr;
     const SDL_FRect *fdstp = dstrect ? &( fdst = to_frect( *dstrect ) ) : nullptr;
-    printErrorIf( !SDL_RenderTexture( renderer.get(), texture.get(), fsrcp, fdstp ),
-                  "SDL_RenderTexture failed" );
+    return !printErrorIf( !SDL_RenderTexture( renderer.get(), texture.get(), fsrcp, fdstp ),
+                          "SDL_RenderTexture failed" );
 }
 
 bool RenderTexturedMesh( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
@@ -110,8 +111,8 @@ SDL_Texture_Ptr CreateTexture( const SDL_Renderer_Ptr &renderer, Uint32 format, 
         return SDL_Texture_Ptr();
     }
     SDL_Texture_Ptr result( SDL_CreateTexture( renderer.get(),
-            static_cast<SDL_PixelFormat>( format ),
-            static_cast<SDL_TextureAccess>( access ), w, h ) );
+                            static_cast<SDL_PixelFormat>( format ),
+                            static_cast<SDL_TextureAccess>( access ), w, h ) );
     printErrorIf( !result, "SDL_CreateTexture failed" );
     if( result ) {
         SDL_SetTextureScaleMode( result.get(),
@@ -348,22 +349,6 @@ scoped_render_target::scoped_render_target( const SDL_Renderer_Ptr &renderer,
     }
     renderer_ = renderer.get();
     vp_ = vp;
-    // Drain queued draw commands NOW, while the prior render target is still
-    // bound and the variant_pass shader state is still consistent. SDL forces a
-    // queue flush inside SDL_SetRenderTarget; on the SDL3 gpu/D3D12 backend that
-    // late flush has crashed (SIGSEGV in D3D12_PushFragmentUniformData) when the
-    // queue still held sprite draws referencing custom GPU render state that the
-    // vp_->flush() unbind below would invalidate first. Flushing here -- before
-    // the unbind and the target switch -- executes those draws against valid
-    // state, leaving an empty queue for the switch. Other SDL3 backends are
-    // unaffected (a clean flush before a target switch is always correct).
-    if( !SDL_FlushRenderer( renderer_ ) ) {
-        dbg( D_ERROR ) << "scoped_render_target: SDL_FlushRenderer failed: " << SDL_GetError();
-        mark_boundary_lost();
-        renderer_ = nullptr;
-        vp_ = nullptr;
-        return;
-    }
     // Flush the pass FIRST so an embargoed pass refuses before any SDL call;
     // only then capture prior_target_ and switch.
     if( vp_ && !vp_->flush() ) {
@@ -397,15 +382,6 @@ bool scoped_render_target::restore()
     if( renderer_boundary_recovery_pending() ) {
         // Already latched; do not issue another SDL_SetRenderTarget.
         boundary_intact_ = false;
-        return false;
-    }
-    // Drain queued draws against the current (scratch) target before switching
-    // back, for the same reason as the ctor: SDL_SetRenderTarget's implicit
-    // flush has crashed on the gpu/D3D12 backend. See the ctor comment.
-    if( !SDL_FlushRenderer( renderer_ ) ) {
-        dbg( D_ERROR ) << "scoped_render_target::restore: SDL_FlushRenderer failed: "
-                       << SDL_GetError();
-        mark_boundary_lost();
         return false;
     }
     if( vp_ && !vp_->flush() ) {
@@ -450,6 +426,9 @@ bind_result permanent_render_target_bind( const SDL_Renderer_Ptr &renderer, SDL_
     if( !renderer ) {
         dbg( D_ERROR ) << "permanent_render_target_bind: null renderer";
         // No SDL call issued, so no embargo: pre-switch refusal.
+        return bind_result::refused_pre_switch;
+    }
+    if( renderer_boundary_recovery_pending() ) {
         return bind_result::refused_pre_switch;
     }
     if( vp && !vp->flush() ) {
@@ -527,7 +506,7 @@ void RenderCopyEx( const SDL_Renderer_Ptr &renderer, SDL_Texture *const texture,
     const SDL_FRect *fdstp = dstrect ? &( fdst = to_frect( *dstrect ) ) : nullptr;
     const SDL_FPoint *fcenterp = center ? &( fcenter = to_fpoint( *center ) ) : nullptr;
     printErrorIf( !SDL_RenderTextureRotated( renderer.get(), texture, fsrcp, fdstp, angle,
-            fcenterp, flip ),
+                  fcenterp, flip ),
                   "SDL_RenderTextureRotated failed" );
 }
 
@@ -678,7 +657,7 @@ SDL_Surface_Ptr ConvertSurfaceFormat( const SDL_Surface_Ptr &surface, const Uint
         return SDL_Surface_Ptr();
     }
     SDL_Surface_Ptr result( SDL_ConvertSurface( surface.get(),
-            static_cast<SDL_PixelFormat>( pixel_format ) ) );
+                            static_cast<SDL_PixelFormat>( pixel_format ) ) );
     printErrorIf( !result, "SDL_ConvertSurface failed" );
     return result;
 }
@@ -892,11 +871,11 @@ bool GetRendererMaxTextureSize( const SDL_Renderer_Ptr &renderer, int *max_w, in
     }
     if( max_w ) {
         *max_w = static_cast<int>( SDL_GetNumberProperty( props,
-            SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
+                                   SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
     }
     if( max_h ) {
         *max_h = static_cast<int>( SDL_GetNumberProperty( props,
-            SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
+                                   SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
     }
     return true;
 }
@@ -937,7 +916,7 @@ void RenderSetLogicalSize( const SDL_Renderer_Ptr &renderer, const int w, const 
         return;
     }
     printErrorIf( !SDL_SetRenderLogicalPresentation( renderer.get(), w, h,
-            SDL_LOGICAL_PRESENTATION_LETTERBOX ),
+                  SDL_LOGICAL_PRESENTATION_LETTERBOX ),
                   "SDL_SetRenderLogicalPresentation failed" );
 }
 
@@ -963,7 +942,7 @@ bool RenderReadPixels( const SDL_Renderer_Ptr &renderer, const SDL_Rect *rect,
     // SDL3 chooses the surface format. Honor the caller's requested format
     // and pitch instead of copying bytes from a potentially different layout.
     const bool converted = SDL_ConvertPixels( surf->w, surf->h, surf->format,
-        surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
+                           surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
     SDL_DestroySurface( surf );
     return converted;
 }
@@ -1258,7 +1237,7 @@ SDL_Renderer_Ptr CreateRenderer( const SDL_Window_Ptr &window, const char *drive
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_SPIRV_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_DXIL_BOOLEAN, true );
     SDL_SetBooleanProperty( props, SDL_PROP_RENDERER_CREATE_GPU_SHADERS_MSL_BOOLEAN, true );
-    SDL_Renderer_Ptr result( SDL_CreateRendererWithProperties( props ) );
+    SDL_Renderer_Ptr result( create_compatible_renderer( props ) );
     SDL_DestroyProperties( props );
     printErrorIf( !result, "SDL_CreateRendererWithProperties failed" );
     return result;

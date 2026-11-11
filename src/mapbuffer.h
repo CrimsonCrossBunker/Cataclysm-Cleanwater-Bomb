@@ -2,7 +2,7 @@
 #ifndef CATA_SRC_MAPBUFFER_H
 #define CATA_SRC_MAPBUFFER_H
 
-#include <cstddef>
+#include <functional>
 #include <list>
 #include <map>
 #include <memory>
@@ -12,9 +12,13 @@
 #include <unordered_set>
 
 #include "coordinates.h"
+#include "submap_prefetch.h"
+#include "type_id.h"
 
 class JsonArray;
 class cata_path;
+class map;
+class map_storage_context;
 class submap;
 
 /**
@@ -23,18 +27,22 @@ class submap;
 class mapbuffer
 {
     public:
+        // Compatibility adapter for the single active world. Its namespace is
+        // captured on first use, including memory-only insertion, until clear().
         mapbuffer();
+        using uniform_terrain_lookup = std::function<oter_id( const tripoint_abs_omt & )>;
+        // Explicit owners never consult the active world for storage. The optional
+        // resolver belongs to the same world and is called only on the owner thread.
+        explicit mapbuffer( map_storage_context storage, uniform_terrain_lookup uniform = {} );
         ~mapbuffer();
 
         /** Store all submaps in this instance into savefiles.
          * @param delete_after_save If true, the saved submaps are removed
          * from the mapbuffer (and deleted).
          **/
-        void save( bool delete_after_save = false );
-        void save( bool delete_after_save, bool outside_reality_bubble_only,
-                   bool show_progress );
-
-        std::size_t size() const;
+        // With a residency map, evict successfully saved quads outside that map.
+        // Without one, retain them unless delete_after_save was requested.
+        void save( bool delete_after_save = false, const map *resident_map = nullptr );
 
         /** Delete all buffered submaps. **/
         void clear();
@@ -87,6 +95,11 @@ class mapbuffer
         // Forward to the background prefetcher: drop buffered/queued quads farther
         // than `max_dist` submaps from `center`, bounding memory by locality.
         void prefetch_evict_beyond( const tripoint_abs_omt &center, int max_dist );
+        submap_prefetcher::status prefetch_status() const;
+
+        // Uniform generation must insert into the buffer whose file was read.
+        bool generate_uniform( const tripoint_abs_sm &p, const ter_str_id &terrain );
+        bool generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &terrain );
 
     private:
         using submap_map_t = std::map<tripoint_abs_sm, std::unique_ptr<submap>>;
@@ -105,6 +118,9 @@ class mapbuffer
         void remove_submap( const tripoint_abs_sm &addr );
         submap *unserialize_submaps( const tripoint_abs_sm &p );
         bool submap_file_exists( const tripoint_abs_sm &p );
+        const map_storage_context &storage();
+        cata_path find_dirname( const tripoint_abs_omt &om_addr );
+        bool add_uniform_submap( const tripoint_abs_sm &p, const ter_str_id &terrain );
 
         /** Guards all accesses to submaps that may overlap with background
          *  worker threads. recursive_mutex allows mapgen code (running under
@@ -132,6 +148,11 @@ class mapbuffer
         // caching it. Returns nullptr if the archive does not exist / fails to open.
         const std::unordered_set<std::string> *zzip_listing( const cata_path &zzip_path );
         submap_map_t submaps; // NOLINT(cata-serialize)
+        const bool active_world_adapter_;
+        std::unique_ptr<const map_storage_context> storage_;
+        uniform_terrain_lookup uniform_terrain_;
+        // Destroy/join the worker before releasing its owner's context and maps.
+        submap_prefetcher prefetcher_;
 };
 
 extern mapbuffer MAPBUFFER;

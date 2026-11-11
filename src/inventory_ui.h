@@ -417,16 +417,6 @@ class inventory_column
         get_entries_t get_entries( const ffilter_t &filter_func,
                                    bool include_hidden = false ) const;
 
-        const std::vector<inventory_entry> &display_entries() const {
-            return entries;
-        }
-        const inventory_selector_preset &display_preset() const {
-            return preset;
-        }
-        bool is_multiselect() const {
-            return multiselect;
-        }
-
         inventory_entry *find_by_invlet( int invlet ) const;
         inventory_entry *find_by_location( item_location const &loc, bool hidden = false ) const;
 
@@ -889,7 +879,6 @@ class inventory_selector
          * @param sitem the item to examine.
          */
         void action_examine( const item_location &sitem );
-        void selection_error( const std::string &message );
 
         virtual void reassign_custom_invlets();
         std::vector<inventory_column *> columns;
@@ -907,7 +896,6 @@ class inventory_selector
 
         void resize_window( int width, int height );
         void refresh_window();
-        bool draw_guyuan_window();
 
         void draw_header( const catacurses::window &w ) const;
         void draw_footer( const catacurses::window &w ) const;
@@ -961,9 +949,6 @@ class inventory_selector
         };
 
     protected:
-        // Embedded selectors with their own input loop retain native hitboxes.
-        bool native_view_only = false;
-
         size_t get_columns_width( const std::vector<inventory_column *> &columns ) const;
         /** @return Percentage of the window occupied by columns. */
         double get_columns_occupancy_ratio( size_t client_width ) const;
@@ -999,13 +984,6 @@ class inventory_selector
         weak_ptr_fast<ui_adaptor> ui;
 
         std::unique_ptr<string_input_popup> spopup;
-
-        // UI callbacks queue commands; the input loop applies them to the native selector.
-        std::string guyuan_action;
-        std::string guyuan_message;
-        item_location guyuan_item;
-        item_location guyuan_scrolled_item;
-        bool guyuan_visible = false;
 
         std::string title;
         std::string hint;

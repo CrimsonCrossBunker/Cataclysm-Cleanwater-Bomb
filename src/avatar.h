@@ -10,22 +10,20 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "bodypart.h"
-#include "calendar.h"
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
-#include "enums.h"
 #include "game_constants.h"
 #include "item.h"
 #include "item_location.h"
 #include "magic_teleporter_list.h"
 #include "mdarray.h"
 #include "memory_fast.h"
+#include "player_identity.h"
 #include "point.h"
 #include "type_id.h"
 #include "units.h"
@@ -39,18 +37,14 @@ class cata_path;
 class diary;
 class map_memory;
 class memorized_tile;
-class mission;
 class monster;
 class npc;
 class talker;
+class time_duration;
+enum class character_type : int;
+enum class pool_type;
 struct bionic;
 struct mtype;
-
-namespace debug_menu
-{
-class mission_debug;
-}  // namespace debug_menu
-enum class pool_type;
 
 // Monster visible in different directions (safe mode & compass)
 // Suppressions due to a bug in clang-tidy 12
@@ -63,7 +57,7 @@ struct monster_visible_info {
     // 7 0 1    unique_types uses these indices;
     // 6 8 2    0-7 are provide by direction_from()
     // 5 4 3    8 is used for local monsters (for when we explain them below)
-    std::array<std::vector<npc *>, 9> unique_types;
+    std::array<std::vector<npc *>, 9 > unique_types;
     std::array<std::vector<std::pair<const mtype *, int>>, 9> unique_mons;
 
     // If the monster visible in this direction is dangerous
@@ -148,6 +142,13 @@ class avatar : public Character
         void set_save_id( const std::string &id ) {
             save_id = id;
         }
+        // This world's local save profile; independent of Character swaps and
+        // of the endpoint-scoped credentials used to join a remote server.
+        const player_id &get_player_id() const {
+            return local_player_id;
+        }
+        void assign_new_player_id();
+        void ensure_player_id();
         /**
          * Makes the avatar "take over" the given NPC, while the current avatar character
          * becomes an NPC.
@@ -166,6 +167,8 @@ class avatar : public Character
         void prepare_map_memory_region( const tripoint_abs_ms &p1, const tripoint_abs_ms &p2 );
         const memorized_tile &get_memorized_tile( const tripoint_abs_ms &p ) const;
         bool has_memory_at( const tripoint_abs_ms &p ) const;
+        bool has_map_memory_in_region( const tripoint_abs_ms &p1,
+                                       const tripoint_abs_ms &p2 ) const;
         void memorize_terrain( const tripoint_abs_ms &p, std::string_view id,
                                int subtile, int rotation );
         void memorize_decoration( const tripoint_abs_ms &p, std::string_view id,
@@ -179,17 +182,7 @@ class avatar : public Character
 
         /** Resets stats, and applies effects in an idempotent manner */
         void reset_stats() override;
-        /** Resets all missions before saving character to template */
-        void reset_all_missions();
-
-        std::vector<mission *> get_active_missions() const;
-        std::vector<mission *> get_completed_missions() const;
-        std::vector<mission *> get_failed_missions() const;
         std::vector<point_of_interest> get_points_of_interest() const;
-        /**
-         * Returns the mission that is currently active. Returns null if no mission is active.
-         */
-        mission *get_active_mission() const;
         /**
          * Returns the point of interest that is currently active. Returns null if no mission is active.
          */
@@ -202,27 +195,11 @@ class avatar : public Character
         /**
          * Set which mission is active. The mission must be listed in @ref active_missions.
          */
-        void set_active_mission( mission &cur_mission );
+        void set_active_mission( mission &cur_mission ) override;
         /**
          * Set which point of interest is active. The point of interest must be listed in @ref points_of_interest.
          */
         void set_active_point_of_interest( const point_of_interest &active_point_of_interest );
-        /**
-         * Called when a mission has been assigned to the player.
-         */
-        void on_mission_assignment( mission &new_mission );
-        /**
-         * Called when a mission has been completed or failed. Either way it's finished.
-         * Check @ref mission::has_failed to see which case it is.
-         */
-        void on_mission_finished( mission &cur_mission );
-        /**
-         * Returns true if character has the mission in their active missions list.
-         */
-        bool has_mission_id( const mission_type_id &miss_id );
-
-        void remove_active_mission( mission &cur_mission );
-
         /**
         * Despite the name, this operation also makes an existing point of interest active.
         */
@@ -262,10 +239,6 @@ class avatar : public Character
         void set_pos_abs_only( const tripoint_abs_ms &loc );
         /** Handles reading effects and returns true if activity started */
         bool read( item_location &book, item_location ereader = {} );
-        /** Note that we've read a book at least once. **/
-        bool has_identified( const itype_id &item_id ) const override;
-        void identify( const item &item ) override;
-        void clear_identified();
         // clears nutrition related values e.g. calorie_diary, consumption_history...
         void clear_nutrition();
 
@@ -288,14 +261,11 @@ class avatar : public Character
 
         void wake_up() override;
         // Grab furniture / vehicle
-        void grab( object_type grab_type, const tripoint_rel_ms &grab_point = tripoint_rel_ms::zero );
-        object_type get_grab_type() const;
+        void grab( object_type grab_type,
+                   const tripoint_rel_ms &grab_point = tripoint_rel_ms::zero ) override;
+        void refresh_grab_memory( bool erase = true );
         /** Handles player vomiting effects */
         void vomit();
-        // if avatar is affected by relax_gas this rolls chance to overcome it at cost of moves
-        // prints messages for success/failure
-        // @return true if no relax_gas effect or rng roll to ignore it was successful
-        bool try_break_relax_gas( const std::string &msg_success, const std::string &msg_failure );
         void add_pain_msg( int val, const bodypart_id &bp ) const;
         /**
          * Try to steal an item from the NPC's inventory. May result in fail attempt, when NPC not notices you,
@@ -427,9 +397,6 @@ class avatar : public Character
         // balance/net power generation/loss during the last turn
         units::energy power_balance = 0_kJ;
 
-        // amount of turns since last check for pocket noise
-        time_point last_pocket_noise = time_point( 0 );
-
         vproto_id starting_vehicle = vproto_id::NULL_ID();
         std::vector<mtype_id> starting_pets;
         std::set<character_id> follower_ids;
@@ -453,36 +420,17 @@ class avatar : public Character
 
         // The name used to generate save filenames for this avatar. Not serialized in json.
         std::string save_id;
+        player_id local_player_id;
 
         std::unique_ptr<map_memory> player_map_memory;
 
-        friend class debug_menu::mission_debug;
-        /**
-         * Missions that the player has accepted and that are not finished (one
-         * way or the other).
-         */
-        std::vector<mission *> active_missions;
-        /**
-         * Missions that the player has successfully completed.
-         */
-        std::vector<mission *> completed_missions;
-        /**
-         * Missions that have failed while being assigned to the player.
-         */
-        std::vector<mission *> failed_missions;
-        /**
-         * The currently active mission, or null if no mission is currently in progress.
-         */
         /**
         * Points of interest added by the player.
         */
         std::vector<point_of_interest> points_of_interest;
 
-        mission *active_mission;
-
         point_of_interest active_point_of_interest;
 
-        void update_active_mission();
         /**
         * diary to track player progression and to write the players story
         */
@@ -493,13 +441,9 @@ class avatar : public Character
          */
         std::list<daily_calories> calorie_diary;
 
-        // Items the player has identified.
-        std::unordered_set<itype_id> items_identified;
-
         // Snippets the player has seen
         std::set<snippet_id> snippets_read;
 
-        object_type grab_type;
 
         monster_visible_info mon_visible;
 

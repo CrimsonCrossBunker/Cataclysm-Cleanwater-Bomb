@@ -29,6 +29,7 @@
 #include "cata_utility.h"
 #include "lua_platform_hooks.h"
 #include "character_attire.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -145,6 +146,7 @@ static const efftype_id effect_jetinjector( "jetinjector" );
 static const efftype_id effect_lack_sleep( "lack_sleep" );
 static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_melatonin( "melatonin" );
+static const efftype_id effect_melatonin_sleep( "melatonin_sleep" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_nausea( "nausea" );
@@ -437,6 +439,19 @@ void Character::conduct_blood_analysis()
         }
         effect_descriptions.emplace_back( elem.first->get_blood_analysis_description() );
         colors.emplace_back( elem.first->get_rating() == m_good ? c_green : c_red );
+    }
+
+    if( !is_avatar() ) {
+        // A controlled body reports to its owner without opening a modal on
+        // the host. The player's message log keeps the full result readable.
+        add_msg_if_player( m_info, _( "Blood Test Results" ) );
+        if( effect_descriptions.empty() ) {
+            add_msg_if_player( m_info, _( "No effects." ) );
+        }
+        for( size_t i = 0; i < effect_descriptions.size(); ++i ) {
+            add_msg_if_player( colors[i] == c_green ? m_good : m_bad, effect_descriptions[i] );
+        }
+        return;
     }
 
     const int win_w = 46;
@@ -1456,7 +1471,7 @@ float Character::exertion_adjusted_move_multiplier( float level ) const
 
 bool Character::needs_food() const
 {
-    return !( is_npc() && get_option<bool>( "NO_NPC_FOOD" ) );
+    return !( is_npc() && !has_native_player_control() && get_option<bool>( "NO_NPC_FOOD" ) );
 }
 
 void Character::update_sensitive()
@@ -1564,13 +1579,19 @@ void Character::update_needs( int rate_multiplier )
 
                 // Note: Since needs are updated in 5-minute increments, we have to multiply the roll again by
                 // 5. If rate_multiplier is > 1, sleepiness_roll will be higher and this will work out.
-                mod_sleep_deprivation( sleepiness_roll * 5 );
+                const float sleepiness_modifier = enchantment_cache->modify_value(
+                                                      enchant_vals::mod::SLEEPINESS, 1.0f );
+                const float deprivation_modifier = 1.0f - std::clamp(
+                                                       ( 1.0f - sleepiness_modifier ) * 0.25f, 0.0f, 0.25f );
+                mod_sleep_deprivation( roll_remainder( sleepiness_roll * 5 * deprivation_modifier ) );
             }
         }
     } else if( asleep ) {
         if( rates.recovery > 0.0f ) {
             int recovered = roll_remainder( rates.recovery * rate_multiplier );
-            if( get_sleepiness() - recovered < 10 ) {
+            const bool melatonin_sleep = get_effect_dur( effect_melatonin_sleep ) > 0_turns &&
+                                         calendar::turn - sleep.get_start_time() < 30_minutes;
+            if( get_sleepiness() - recovered < 0 && !melatonin_sleep ) {
                 // Should be wake up, but that could prevent some retroactive regeneration
                 sleep.set_duration( 1_turns );
                 mod_sleepiness( -25 );
@@ -1603,7 +1624,10 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 0.75f;
                     }
                 }
-                sleepiness_multiplier += comfort * 0.05f;
+                sleepiness_multiplier += comfort * 0.025f;
+                if( comfort >= 5 ) {
+                    rest_modifier += std::min( 1.0f, ( comfort - 5 ) * 0.025f );
+                }
                 int current_sleepiness = get_sleepiness();
                 if( current_sleepiness >= sleepiness_levels::TIRED ) {
                     if( current_sleepiness >= sleepiness_levels::EXHAUSTED ) {
@@ -2403,9 +2427,9 @@ void Character::invalidate_leak_level_cache()
 int Character::get_stamina() const
 {
 #ifdef MP_ENABLED
-    if( is_npc() && !cata_mp::is_remote_player( getID() ) ) {
+    if( is_npc() && !has_native_player_control() && !cata_mp::is_remote_player( getID() ) ) {
 #else
-    if( is_npc() ) {
+    if( is_npc() && !has_native_player_control() ) {
 #endif
         // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
         return get_stamina_max();
@@ -2416,9 +2440,9 @@ int Character::get_stamina() const
 int Character::get_stamina_max() const
 {
 #ifdef MP_ENABLED
-    if( is_npc() && !cata_mp::is_remote_player( getID() ) ) {
+    if( is_npc() && !has_native_player_control() && !cata_mp::is_remote_player( getID() ) ) {
 #else
-    if( is_npc() ) {
+    if( is_npc() && !has_native_player_control() ) {
 #endif
         // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
         return 10000;
@@ -2447,9 +2471,10 @@ void Character::mod_stamina( int mod )
 {
     // TODO: Make NPCs smart enough to use stamina
 #ifdef MP_ENABLED
-    if( ( is_npc() && !cata_mp::is_remote_player( getID() ) ) || has_trait( trait_DEBUG_STAMINA ) ) {
+    if( ( is_npc() && !has_native_player_control() &&
+          !cata_mp::is_remote_player( getID() ) ) || has_trait( trait_DEBUG_STAMINA ) ) {
 #else
-    if( is_npc() || has_trait( trait_DEBUG_STAMINA ) ) {
+    if( ( is_npc() && !has_native_player_control() ) || has_trait( trait_DEBUG_STAMINA ) ) {
 #endif
         return;
     }
@@ -2597,7 +2622,7 @@ void Character::update_stamina( int turns )
 
 int Character::get_cardiofit() const
 {
-    if( is_npc() ) {
+    if( is_npc() && !has_native_player_control() ) {
         // No point in doing a bunch of checks on NPCs for now since they can't use cardio.
         return 2 * get_cardio_acc_base();
     }
@@ -2701,6 +2726,9 @@ void Character::wake_up()
     if( has_effect( effect_sleep ) ) {
         get_effect( effect_sleep ).set_duration( 0_turns );
         get_event_bus().send<event_type::character_wakes_up>( getID() );
+    }
+    if( has_effect( effect_melatonin_sleep ) ) {
+        get_effect( effect_melatonin_sleep ).set_duration( 0_turns );
     }
     remove_effect( effect_slept_through_alarm );
     remove_effect( effect_lying_down );
@@ -2808,6 +2836,11 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         return;
     }
 
+    // Damage events can unload this character or start unrelated work. Retain
+    // the original body until the callback returns, including a lethal hit.
+    const character_action_guard lifetime( *this, true );
+    const auto activity_generation = activity.identity_generation();
+
     if( hurt == bodypart_str_id::NULL_ID() ) {
         debugmsg( "Wacky body part hurt!" );
         hurt = body_part_torso;
@@ -2846,12 +2879,18 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
         get_event_bus().send<event_type::character_takes_damage>( getID(), dam_to_bodypart,
                 part_to_damage.id(), pain );
     }
+    if( !lifetime || activity.identity_generation() != activity_generation ) {
+        return;
+    }
 
     if( !weapon.is_null() && !can_wield( weapon ).success() &&
         can_drop( weapon ).success() ) {
         add_msg_if_player( _( "You are no longer able to wield your %s and drop it!" ),
                            weapon.display_name() );
         put_into_vehicle_or_drop( *this, item_drop_reason::tumbling, { weapon } );
+        if( !lifetime || activity.identity_generation() != activity_generation ) {
+            return;
+        }
         i_rem( &weapon );
     }
     if( has_effect( effect_mending, part_to_damage.id() ) && ( source == nullptr ||
@@ -2863,6 +2902,9 @@ void Character::apply_damage( Creature *source, bodypart_id hurt, int dam,
 
     if( dam > get_painkiller() ) {
         on_hurt( source );
+        if( !lifetime ) {
+            return;
+        }
     }
 
     if( !bypass_med ) {

@@ -119,10 +119,14 @@ void item::update_modified_pockets()
     std::vector<const pocket_data *> container_pockets;
 
     // Mods that supply magazine pockets via pocket_mods replace the base
-    // item's mag wells (e.g. battery adapter mods). Without a mag-supplying
-    // mod, the base item's wells are preserved as-is.
+    // item's mag wells (e.g. battery adapter mods).
     bool mod_supplies_mag_pockets = false;
+    bool external_power_mod = false;
     for( const item *mod : mods() ) {
+        if( is_tool() && ( mod->has_flag( flag_USE_UPS ) ||
+                           mod->has_flag( flag_USES_BIONIC_POWER ) ) ) {
+            external_power_mod = true;
+        }
         if( mod->type->mod ) {
             for( const pocket_data &pocket : mod->type->mod->add_pockets ) {
                 if( pocket.type == pocket_type::MAGAZINE ||
@@ -131,9 +135,6 @@ void item::update_modified_pockets()
                     break;
                 }
             }
-        }
-        if( mod_supplies_mag_pockets ) {
-            break;
         }
     }
 
@@ -144,7 +145,10 @@ void item::update_modified_pockets()
         } else if( !mod_supplies_mag_pockets &&
                    ( pocket.type == pocket_type::MAGAZINE ||
                      pocket.type == pocket_type::MAGAZINE_WELL ) ) {
-            mag_or_mag_wells.push_back( &pocket );
+            const item_pocket base_pocket( &pocket );
+            if( !external_power_mod || !pocket_accepts_battery( &base_pocket ) ) {
+                mag_or_mag_wells.push_back( &pocket );
+            }
         }
     }
 

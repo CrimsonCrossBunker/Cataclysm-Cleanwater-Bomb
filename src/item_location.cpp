@@ -29,6 +29,7 @@
 #include "item.h"
 #include "item_pocket.h"
 #include "item_uid.h"
+#include "vehicle_uid.h"
 #include "item_wakeup.h"
 #include "itype.h"
 #include "json.h"
@@ -632,6 +633,8 @@ class item_location::impl::item_on_vehicle : public item_location::impl
             }
             js.start_object();
             js.member( "type", "vehicle" );
+            js.member( "vehicle_uid", cur.veh.uid().get_value() );
+            js.member( "part_uid", cur.veh.part( cur.part ).get_base().uid().get_value() );
             js.member( "position", pos_abs() );
             js.member( "part", cur.part );
             if( !is_base_item ) {
@@ -962,7 +965,7 @@ class item_location::impl::item_in_container : public item_location::impl
 
             int primary_cost = ch.item_handling_cost( *target(), true, container_mv, qty );
             primary_cost = ch.enchantment_cache->modify_value( enchant_vals::mod::OBTAIN_COST_MULTIPLIER,
-                primary_cost );
+                           primary_cost );
             int parent_obtain_cost = container.obtain_cost( ch, qty );
             if( container->get_use( "holster" ) ) {
                 if( ch.is_worn( *container ) ) {
@@ -1006,6 +1009,13 @@ item_location::item_location( Character &ch, item *which )
 
 item_location::item_location( const vehicle_cursor &vc, item *which )
     : ptr( new impl::item_on_vehicle( vc, which ) ) {}
+
+item_location item_location::from_vehicle_part( const vehicle_cursor &vc )
+{
+    item_location result;
+    result.ptr.reset( new impl::item_on_vehicle( vc, -1 ) );
+    return result;
+}
 
 item_location::item_location( const item_location &container, item *which )
     : ptr( new impl::item_in_container( container, which ) ) {}
@@ -1052,7 +1062,7 @@ void item_location::serialize( JsonOut &js ) const
 
 void item_location::deserialize( const JsonObject &obj )
 {
-    const map &here = get_map();
+    map &here = get_map();
 
     std::string type = obj.get_string( "type" );
 
@@ -1084,9 +1094,28 @@ void item_location::deserialize( const JsonObject &obj )
         ptr = std::make_shared<impl::item_on_map>( map_cursor( position ), idx, uid );
 
     } else if( type == "vehicle" ) {
-        vehicle *const veh = veh_pointer_or_null( here.veh_at( position ) );
+        ptr = std::make_shared<impl::nowhere>();
+        int64_t vehicle_id = 0;
+        int64_t part_id = 0;
+        const bool identified = obj.has_member( "vehicle_uid" );
+        obj.read( "vehicle_uid", vehicle_id );
+        obj.read( "part_uid", part_id );
+        vehicle *const veh = identified ? vehicle::find_vehicle_by_uid( here, vehicle_id ) :
+                             veh_pointer_or_null( here.veh_at( position ) );
         int part = obj.get_int( "part" );
-        if( veh && part >= 0 && part < veh->part_count() ) {
+        if( identified ) {
+            part = -1;
+            if( veh && part_id > 0 ) {
+                for( int candidate = 0; candidate < veh->part_count(); ++candidate ) {
+                    if( !veh->part( candidate ).removed &&
+                        veh->part( candidate ).get_base().uid().get_value() == part_id ) {
+                        part = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+        if( veh && part >= 0 && part < veh->part_count() && !veh->part( part ).removed ) {
             ptr = std::make_shared<impl::item_on_vehicle>( vehicle_cursor( *veh, part ), idx, uid );
         }
     } else if( type == "in_container" ) {
@@ -1538,19 +1567,19 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
     // in-bounds.  Owners must call rebuild_for_item once back in range.
     auto try_map_at = [uid, &here]( const tripoint_abs_ms & abs ) -> item_location {
         if( !here.inbounds( here.get_bub( abs ) ) )
-    {
-        return item_location::nowhere;
-    }
-    map_cursor mc( abs );
-    item *found = retrieve_by_uid( mc, uid );
-    if( found == nullptr )
-    {
-        return item_location::nowhere;
-    }
-    return item_location( mc, found );
-};
+        {
+            return item_location::nowhere;
+        }
+        map_cursor mc( abs );
+        item *found = retrieve_by_uid( mc, uid );
+        if( found == nullptr )
+        {
+            return item_location::nowhere;
+        }
+        return item_location( mc, found );
+    };
 
-switch( hint.where ) {
+    switch( hint.where ) {
         case item_locator_hint::place::character: {
             const character_id *cid = std::get_if<character_id>( &hint.location );
             if( cid != nullptr && cid->is_valid() ) {

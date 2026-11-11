@@ -124,8 +124,12 @@ std::optional<tripoint_bub_ms> vehicle::deck_transition( const map &here,
         return std::nullopt;
     }
     const tripoint_bub_ms dest = bub_part_pos( here, destination_parts.front() );
-    if( !here.inbounds( dest ) || !here.passable( dest ) ||
-        !here.veh_at( dest ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+    if( !here.inbounds( dest ) || dest.z() != from.z() + dz || !here.passable( dest ) ) {
+        return std::nullopt;
+    }
+    const auto landing = here.veh_at( dest );
+    if( !landing || &landing->vehicle() != this ||
+        !landing.part_with_feature( VPFLAG_BOARDABLE, true ) ) {
         return std::nullopt;
     }
     return dest;

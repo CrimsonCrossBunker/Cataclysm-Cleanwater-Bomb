@@ -17,9 +17,12 @@
 #endif
 
 #include <filesystem>
+#include <cstdlib>
+#include <cstring>
 
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "native_file_path.h"
 
 #ifdef __clang__
     #define CLANG_REINITIALIZES [[clang::reinitializes]]
@@ -45,7 +48,7 @@ namespace
 {
 struct malloc_impl : mmap_file::impl {
     explicit malloc_impl( size_t size ) {
-        if( ( base_ = malloc( size ) ) ) {
+        if( ( base_ = calloc( 1, size ) ) ) {
             len_ = size;
         }
     }
@@ -79,8 +82,16 @@ struct malloc_impl : mmap_file::impl {
     }
 
     bool resize_file( size_t desired_size ) override {
+        if( desired_size == 0 ) {
+            free( base_ );
+            reset();
+            return true;
+        }
         void *new_base = realloc( base_, desired_size );
         if( new_base ) {
+            if( desired_size > len_ ) {
+                memset( static_cast<char *>( new_base ) + len_, 0, desired_size - len_ );
+            }
             base_ = new_base;
             len_ = desired_size;
             return true;
@@ -302,7 +313,7 @@ std::unique_ptr<mmap_file> mmap_file::map_file_generic(
 #ifdef _WIN32
     HANDLE file_handle;
     file_handle = CreateFileW(
-                      file_path.native().c_str(),
+                      native_file_path( file_path ).c_str(),
                       ( writeable ? GENERIC_WRITE : 0 ) | GENERIC_READ,
                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                       nullptr,

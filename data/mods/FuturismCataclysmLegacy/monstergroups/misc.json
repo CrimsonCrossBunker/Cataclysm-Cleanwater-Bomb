@@ -26,5 +26,15 @@
       { "monster": "mon_zombie_static", "weight": 3, "cost_multiplier": 5 },
       { "monster": "mon_zombie_electric", "weight": 2, "cost_multiplier": 5 }
     ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "GROUP_MI-GO_BASE_COMMON",
+    "monsters": [ { "monster": "fcl_mon_migoturret", "weight": 120 } ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "GROUP_MI-GO_BASE_BOSS",
+    "monsters": [ { "monster": "fcl_mon_migoturret", "weight": 150, "pack_size": [ 2, 3 ] } ]
   }
 ]

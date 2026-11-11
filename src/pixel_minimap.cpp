@@ -574,7 +574,7 @@ void pixel_minimap::render_cache( const tripoint_bub_ms &center )
     std::tie( quotient, remainder ) = coords::project_remain<coords::sm>( center );
 
     point_sm_ms ms_base_offset = point_sm_ms( ( total_tiles_count.x / 2 ) % SEEX,
-        ( total_tiles_count.y / 2 ) % SEEY );
+                                 ( total_tiles_count.y / 2 ) % SEEY );
     ms_offset = ms_base_offset - remainder;
 
     for( const auto &elem : cache ) {

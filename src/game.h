@@ -36,11 +36,19 @@
 #include "type_id.h"
 #include "units_fwd.h"
 #include "weather.h"
+#include "view_action.h"
 
 // The reference to the one and only game instance.
 class game;
 
 class render_backend;
+struct walk_move_choices;
+struct vertical_move_choices;
+
+namespace cata_mp
+{
+struct world_session;
+} // namespace cata_mp
 
 extern std::unique_ptr<game> g;
 
@@ -80,13 +88,17 @@ class field_entry;
 class inventory_selector_preset;
 class item;
 class kill_tracker;
+class kill_statistics;
 class live_view;
 class map;
 class memorial_logger;
 class monster;
 class npc;
+class npc_lifetime_registry;
 class npc_template;
 class overmap;
+class player_control;
+class player_control_registry;
 class power_network_manager;
 class save_t;
 class scenario;
@@ -119,6 +131,7 @@ enum peek_act : int {
 struct look_around_result {
     std::optional<tripoint_bub_ms> position;
     std::optional<peek_act> peek_action;
+    std::optional<view_action> selection;
 };
 struct look_around_params {
     const bool show_window;
@@ -180,6 +193,7 @@ class game
         friend class exosuit_interact;
         friend class swap_map;
         friend struct starting_vehicle_test_access;
+        friend struct grabbed_vehicle_test_access;
         friend achievements_tracker &get_achievements();
         friend event_bus &get_event_bus();
         friend map &get_map();
@@ -201,6 +215,23 @@ class game
     public:
         game();
         ~game();
+
+        cata_mp::world_session &multiplayer_session() {
+            return *multiplayer_session_ptr;
+        }
+
+        npc_lifetime_registry &npc_lifetimes() {
+            return *npc_lifetimes_ptr;
+        }
+
+        player_control_registry &player_controls() {
+            return *player_controls_ptr;
+        }
+        player_control &local_player_controller() {
+            return *local_player_control_ptr;
+        }
+        // Called after a local profile is loaded/created or changes character.
+        void bind_local_player_control();
 
         /*
         * MAIN GAME LOOP
@@ -380,7 +411,10 @@ class game
          * If peeking == true, forbids some exotic movement options
          */
         void vertical_move( int z, bool force, bool peeking = false );
+        void vertical_move( Character &who, int z, bool force, bool peeking = false,
+                            const vertical_move_choices *choices = nullptr );
         void start_hauling( const tripoint_bub_ms &pos );
+        void start_hauling( Character &who, const tripoint_bub_ms &pos );
 
         /**
          * Moves the player to an alternate dimension.
@@ -407,6 +441,9 @@ class game
                 const tripoint_bub_ms &pos );
         std::optional<tripoint_bub_ms> find_or_make_stairs( map &mp, int z_after, bool &rope_ladder,
                 bool peeking, const tripoint_bub_ms &pos );
+        std::optional<tripoint_bub_ms> find_or_make_stairs( Character &who, map &mp,
+                int z_after, bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos,
+                const vertical_move_choices *choices );
         /*
         * Prompt player on direction they want to climb up or down.
         */
@@ -644,6 +681,7 @@ class game
         bool portal_storm_query( distraction_type type, const std::string &text );
         /** Handles players exiting from moving vehicles. */
         void moving_vehicle_dismount( const tripoint_bub_ms &dest_loc );
+        void moving_vehicle_dismount( Character &who, const tripoint_bub_ms &dest_loc );
 
         /** Returns the current remotely controlled vehicle. */
         vehicle *remoteveh();
@@ -663,6 +701,7 @@ class game
         /** NPCs who saw player interacting with their stuff (disassembling, cutting etc)
         * will notify the player that thievery was witnessed and make angry at the player. */
         void on_witness_theft( const item &target );
+        void on_witness_theft( const item &target, Character &p );
     private:
         /** Unloads all NPCs.
          *
@@ -676,7 +715,7 @@ class game
         /** Unloads, then loads the NPCs */
         void reload_npcs();
         void remove_npc( character_id const &id );
-        const kill_tracker &get_kill_tracker() const;
+        const kill_statistics &get_kill_tracker() const;
         stats_tracker &stats();
         achievements_tracker &achievements();
         /** Add follower id to set of followers. */
@@ -732,11 +771,15 @@ class game
         unsigned char light_level( int zlev ) const;
         void reset_light_level();
         character_id assign_npc_id();
+        // Reserve a persisted character ID before later allocations can reuse it.
+        void observe_npc_id( character_id id );
         int64_t assign_item_uid();
         int64_t assign_monster_uid();
         void observe_monster_uid( int64_t uid );
         int64_t assign_vehicle_uid();
         void observe_vehicle_uid( int64_t uid );
+        int64_t assign_construction_uid();
+        void observe_construction_uid( int64_t uid );
         Creature *is_hostile_nearby();
         Creature *is_hostile_very_close( bool dangerous = false );
         field_entry *is_in_dangerous_field();
@@ -748,6 +791,10 @@ class game
 
         void peek();
         void peek( const tripoint_bub_ms &p );
+        // Pure local presentation after native/server authorization has paid for the peek.
+        look_around_result look_from( const tripoint_bub_ms &p, bool standing = false,
+                                      int z_range = -1 );
+        bool apply_view_action( const view_action &selection );
         std::optional<tripoint_bub_ms> look_debug();
 
         bool check_zone( const zone_type_id &type, const tripoint_bub_ms &where ) const;
@@ -766,7 +813,8 @@ class game
         /// @return safe route if one was found, or std::nullopt
         std::optional<std::vector<tripoint_bub_ms>> safe_route_to( Character &who,
                 const tripoint_bub_ms &target, int threshold,
-                const std::function<void( const std::string &msg )> &report ) const;
+                const std::function<void( const std::string &msg )> &report,
+                bool observed_destination = false ) const;
 
         // Look at nearby terrain ';', or select zone points
         std::optional<tripoint_bub_ms> look_around();
@@ -941,6 +989,9 @@ class game
         // Draw a highlight graphic at p, for example when examining something.
         // TILES only, in curses this does nothing
         void draw_highlight( const tripoint_bub_ms &p );
+        void vehicle_turning_assist();
+        void draw_vehicle_guidance();
+        bool vehicle_guidance = false; // NOLINT(cata-serialize)
         // Draws an asynchronous animation at p with tile_id as its sprite. If ncstr is specified, it will also be displayed in curses.
         void draw_async_anim( const tripoint_bub_ms &p, std::string_view tile_id,
                               const std::string &ncstr = "",
@@ -980,12 +1031,18 @@ class game
 
         // Handle phasing through walls, returns true if it handled the move
         bool phasing_move( const tripoint_bub_ms &dest, bool via_ramp = false );
+        bool phasing_move( Character &who, const tripoint_bub_ms &dest, bool via_ramp = false );
         // Handle shifting through terrain and walls, with distance defined by enchantment.
         bool phasing_move_enchant( const tripoint_bub_ms &dest, int phase_distance = 0 );
+        bool phasing_move_enchant( Character &who, const tripoint_bub_ms &dest, int phase_distance );
         bool can_move_furniture( tripoint_bub_ms fdest, const tripoint_rel_ms &dp );
+        bool can_move_furniture( Character &who, tripoint_bub_ms fdest, const tripoint_rel_ms &dp );
         // Regular movement. Returns false if it failed for any reason
         bool walk_move( const tripoint_bub_ms &dest, bool via_ramp = false, bool furniture_move = false );
+        bool walk_move( Character &who, const tripoint_bub_ms &dest, bool via_ramp = false,
+                        bool furniture_move = false, const walk_move_choices *choices = nullptr );
         void on_move_effects();
+        void on_move_effects( Character &who );
     private:
         // Game-start procedures
         bool load( const save_t &name ); // Load a player-specific save file
@@ -1017,15 +1074,20 @@ class game
             const vproto_id &id, const point_abs_omt &origin, int min_distance,
             int max_distance, const std::vector<std::string> &omt_search_types = {} );
         // V Menu Functions and helpers:
-        void list_surroundings(); // Called when you invoke the `V`-menu
+        std::optional<view_action> list_surroundings( bool defer_action = false );
 
         /** Check for dangerous stuff at dest_loc, return false if the player decides
         not to step there */
         // Handle pushing during move, returns true if it handled the move
         bool grabbed_move( const tripoint_rel_ms &dp, bool via_ramp, bool stairs_move = false );
+        bool grabbed_move( Character &who, const tripoint_rel_ms &dp, bool via_ramp,
+                           bool stairs_move = false, const walk_move_choices *choices = nullptr );
         bool grabbed_veh_move_helper( const tripoint_rel_ms &dp, bool stairs_move );
+        bool grabbed_veh_move_helper( Character &who, const tripoint_rel_ms &dp, bool stairs_move );
         bool grabbed_veh_move_stairs( const tripoint_rel_ms &dp );
+        bool grabbed_veh_move_stairs( Character &who, const tripoint_rel_ms &dp );
         bool grabbed_veh_move( const tripoint_rel_ms &dp );
+        bool grabbed_veh_move( Character &who, const tripoint_rel_ms &dp );
 
         void control_vehicle( const std::optional<tripoint_bub_ms> &p =
                                   std::nullopt ); // Use vehicle controls  '^'
@@ -1054,9 +1116,14 @@ class game
         * to the faction, like merely using the examine_action of furniture.
         */
         bool warn_player_maybe_anger_local_faction( bool really_bad_offense = false,
-                bool asking_for_public_goods = false );
+                bool asking_for_public_goods = false ) const;
+        std::string local_faction_action_warning( Character &who, bool public_goods = false ) const;
+        bool warn_character_maybe_anger_local_faction( Character &who, bool really_bad_offense,
+                bool public_goods, std::optional<bool> consent ) const;
         int grabbed_furn_move_time( const tripoint_rel_ms &dp );
+        int grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp );
         bool grabbed_furn_move( const tripoint_rel_ms &dp );
+        bool grabbed_furn_move( Character &who, const tripoint_rel_ms &dp );
 
         void reload_item(); // Reload an item
         void reload_wielded( bool prompt = false );
@@ -1065,6 +1132,7 @@ class game
         void insert_item( drop_locations &targets );
         // Places the player at the specified point; hurts feet, lists items etc.
         point_rel_sm place_player( const tripoint_bub_ms &dest, bool quick = false );
+        point_rel_sm place_character( Character &who, const tripoint_bub_ms &dest, bool quick = false );
         void place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player = true );
         void perhaps_add_random_npc( bool ignore_spawn_timers_and_rates );
         static void display_om_pathfinding_progress( size_t open_set, size_t known_size );
@@ -1083,6 +1151,10 @@ class game
         bool is_dangerous_tile( const tripoint_bub_ms &dest_loc ) const;
         std::vector<std::string> get_dangerous_tile( const tripoint_bub_ms &dest_loc,
                 size_t max = 0 ) const;
+        std::vector<std::string> get_dangerous_tile( const Character &who,
+                const tripoint_bub_ms &dest_loc, size_t max = 0 ) const;
+        bool prompt_dangerous_tile( Character &who, const tripoint_bub_ms &dest_loc,
+                                    std::vector<std::string> *harmful_stuff = nullptr ) const;
         bool prompt_dangerous_tile( const tripoint_bub_ms &dest_loc,
                                     std::vector<std::string> *harmful_stuff = nullptr ) const;
         // Queue contextual actions after safely walking to a selected map tile.
@@ -1242,6 +1314,10 @@ class game
         pimpl<spell_events> spell_events_ptr; // NOLINT(cata-serialize)
         pimpl<eoc_events> eoc_events_ptr; // NOLINT(cata-serialize)
         pimpl<power_network_manager> power_networks_ptr;
+        pimpl<cata_mp::world_session> multiplayer_session_ptr; // NOLINT(cata-serialize)
+        pimpl<npc_lifetime_registry> npc_lifetimes_ptr; // NOLINT(cata-serialize)
+        pimpl<player_control_registry> player_controls_ptr; // NOLINT(cata-serialize)
+        pimpl<player_control> local_player_control_ptr; // NOLINT(cata-serialize)
 
         map &m; // NOLINT(cata-serialize)
         // 'current_map' will be identical to 'm' as you can save only at the top of the main loop.
@@ -1350,6 +1426,7 @@ class game
         int64_t next_item_uid = 1; // NOLINT(cata-serialize)
         int64_t next_monster_uid = 1; // NOLINT(cata-serialize)
         int64_t next_vehicle_uid = 1; // NOLINT(cata-serialize)
+        int64_t next_construction_uid = 1; // NOLINT(cata-serialize)
 
         std::chrono::seconds time_played_at_last_load; // NOLINT(cata-serialize)
         // NOLINTNEXTLINE(cata-serialize)
@@ -1358,9 +1435,6 @@ class game
         std::time_t last_save_timestamp = 0; // NOLINT(cata-serialize)
 
         mutable std::array<float, OVERMAP_LAYERS> latest_lightlevels; // NOLINT(cata-serialize)
-        // remoteveh() cache
-        time_point remoteveh_cache_time; // NOLINT(cata-serialize)
-        vehicle *remoteveh_cache; // NOLINT(cata-serialize)
         /** Has an NPC been spawned since last load? */
         bool npcs_dirty = false; // NOLINT(cata-serialize)
         /** Has anything died in this turn and needs to be cleaned up? */
@@ -1443,6 +1517,10 @@ class game
             climbing_aid_id aid = climbing_aid_id::NULL_ID(),
             bool show_chance_messages = true );
 
+        bool slip_down( Character &who, climb_maneuver maneuver,
+                        climbing_aid_id aid = climbing_aid_id::NULL_ID(),
+                        bool show_chance_messages = true );
+
         /**
         Calculates the chance that slip_down will return true.
         @param maneuver Type & direction of climbing maneuver.  Affects chance and whether traps trigger.
@@ -1455,6 +1533,10 @@ class game
             climbing_aid_id aid = climbing_aid_id::NULL_ID(),
             bool show_chance_messages = true );
 
+        float slip_down_chance( const Character &who, climb_maneuver maneuver,
+                                climbing_aid_id aid = climbing_aid_id::NULL_ID(),
+                                bool show_chance_messages = true );
+
         /**
         * Climb down from a ledge.
         * Player is prompted to deploy grappling hook, webs or detach vines if applicable.
@@ -1464,11 +1546,18 @@ class game
         void climb_down( const tripoint_bub_ms &examp );
 
         void climb_down_menu_gen( const tripoint_bub_ms &examp, uilist &cmenu );
+        void climb_down_menu_gen( Character &you, const tripoint_bub_ms &examp, uilist &cmenu );
         bool climb_down_menu_pick( const tripoint_bub_ms &examp, int retval );
         void climb_down_using(
             const tripoint_bub_ms &examp,
             climbing_aid_id aid,
             bool deploy_affordance = false );
+        bool can_climb_down_using( Character &who, const tripoint_bub_ms &examp,
+                                   climbing_aid_id aid );
+        std::optional<std::string> climb_down_prompt( Character &you,
+                const tripoint_bub_ms &examp, climbing_aid_id aid );
+        void climb_down_using( Character &you, const tripoint_bub_ms &examp,
+                               climbing_aid_id aid, bool deploy_affordance, bool confirmed );
 
         pulp_data calculate_character_ability_to_pulp( const Character &you );
         pulp_data calculate_pulpability( const Character &you, const mtype &corpse_mtype );
@@ -1502,7 +1591,8 @@ namespace cata_event_dispatch
 // @param p The point the avatar moved from in absolute coordinates
 // @param u The avatar (should have already moved to the new pos)
 // @param m The map the avatar is moving on
-void avatar_moves( const tripoint_abs_ms &old_abs_pos, const avatar &u, const map &m );
+void avatar_moves( const tripoint_abs_ms &old_abs_pos, avatar &u, const map &m );
+void character_moves( const tripoint_abs_ms &old_abs_pos, Character &who, const map &m );
 } // namespace cata_event_dispatch
 
 #endif // CATA_SRC_GAME_H

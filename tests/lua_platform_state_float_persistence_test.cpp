@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "avatar.h"
 #include <array>
 #include <cata_scope_helpers.h>
 #include <json_loader.h>
@@ -83,6 +84,8 @@ TEST_CASE( "lua_platform_runtime_scope_files_preserve_small_and_adjacent_doubles
 {
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
+    const restore_on_out_of_scope restore_character_state( get_avatar().lua_character_state );
+    get_avatar().lua_character_state = {};
     REQUIRE( world_generator != nullptr );
     const platform_lua_test_directory temporary;
     const std::string old_savedir = PATH_INFO::savedir();
@@ -112,8 +115,10 @@ TEST_CASE( "lua_platform_runtime_scope_files_preserve_small_and_adjacent_doubles
     platform::set_active_runtimes( { after } );
     platform::runtime_world_ready( false );
     REQUIRE( after->world_state.size() == 1 );
-    REQUIRE( after->character_state.size() == 1 );
+    REQUIRE( after->character_state.empty() );
+    const auto &character_state = get_avatar().lua_character_state.for_mod( "float-owner" );
+    REQUIRE( character_state.size() == 1 );
     CHECK( std::get<double>( after->world_state.at( "tiny" ) ) == 1.0e-20 );
-    CHECK( std::get<double>( after->character_state.at( "adjacent" ) ) == adjacent );
+    CHECK( std::get<double>( character_state.at( "adjacent" ) ) == adjacent );
 }
 #endif

@@ -142,7 +142,7 @@ struct pathfinding_workspace::state {
     std::vector<bool> grab_open;
     std::vector<int> grab_gscore;
     std::vector<int> grab_parent;
-    reusable_queue<std::pair<int, int>, std::greater<>> grab_queue;
+    reusable_queue<std::pair<int, int>, std::greater< >> grab_queue;
     bool active = false;
 };
 
@@ -640,7 +640,9 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
 
         if( settings.allow_climb_stairs ) {
             if( const optional_vpart_position source = veh_at( cur ) ) {
-                for( int dz : { -1, 1 } ) {
+                for( int dz : {
+                         -1, 1
+                         } ) {
                     const auto dest = source->vehicle().deck_transition( *this, cur, dz );
                     if( !dest || dest->z() < min.z() || dest->z() > max.z() ||
                         !inbounds( *dest ) ||
@@ -666,7 +668,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
         if( settings.allow_climb_stairs && cur.z() > min.z() &&
             parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ) {
             std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                cur.z() - 1, rope_ladder, false, cur );
+                    cur.z() - 1, rope_ladder, false, cur );
             if( !opt_dest ) {
                 continue;
             }
@@ -685,7 +687,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
         if( settings.allow_climb_stairs && cur.z() < max.z() &&
             parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ) {
             std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                cur.z() + 1, rope_ladder, false, cur );
+                    cur.z() + 1, rope_ladder, false, cur );
             if( !opt_dest ) {
                 continue;
             }
@@ -970,10 +972,10 @@ static std::vector<tripoint_bub_ms> try_straight_grab_path(
 
 bool has_grabbed_single_tile_vehicle( const Character &you, const map &here )
 {
-    if( !you.is_avatar() || you.as_avatar()->get_grab_type() != object_type::VEHICLE ) {
+    if( you.get_grab_type() != object_type::VEHICLE || !you.grab_matches( here ) ) {
         return false;
     }
-    const tripoint_bub_ms veh_pos = you.pos_bub() + you.as_avatar()->grab_point;
+    const tripoint_bub_ms veh_pos = you.pos_bub() + you.grab_point;
     const optional_vpart_position ovp = here.veh_at( veh_pos );
     return ovp && ovp->vehicle().get_points().size() == 1;
 }
@@ -989,12 +991,12 @@ std::vector<tripoint_bub_ms> route_with_grab(
 {
     std::vector<tripoint_bub_ms> ret;
 
-    if( !you.is_avatar() || you.as_avatar()->get_grab_type() != object_type::VEHICLE ) {
+    if( you.get_grab_type() != object_type::VEHICLE || !you.grab_matches( here ) ) {
         return ret;
     }
 
     const tripoint_bub_ms start = you.pos_bub();
-    const tripoint_rel_ms start_grab = you.as_avatar()->grab_point;
+    const tripoint_rel_ms start_grab = you.grab_point;
     const tripoint_bub_ms veh_pos = start + start_grab;
     const optional_vpart_position ovp = here.veh_at( veh_pos );
     if( !ovp ) {

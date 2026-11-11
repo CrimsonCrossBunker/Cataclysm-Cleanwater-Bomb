@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dissect_CBM_DOG",
+    "type": "harvest",
+    "entries": [
+      {
+        "drop": "bio_power_storage_mkII",
+        "type": "bionic",
+        "flags": [ "FILTHY", "NO_STERILE", "NO_PACKED" ],
+        "faults": [ "fault_bionic_salvaged" ]
+      },
+      {
+        "drop": "bionics_op",
+        "type": "bionic_group",
+        "flags": [ "FILTHY", "NO_STERILE", "NO_PACKED" ],
+        "faults": [ "fault_bionic_salvaged" ]
+      }
+    ]
+  }
+]

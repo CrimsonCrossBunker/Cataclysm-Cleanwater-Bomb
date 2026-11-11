@@ -1702,7 +1702,8 @@ void vehicles::finalize_prototypes()
                 }
             }
 
-            const int part_idx = blueprint.install_part( here, tripoint_rel_ms( pt.pos, pt.mount_level ), pt.part );
+            const int part_idx = blueprint.install_part( here, tripoint_rel_ms( pt.pos, pt.mount_level ),
+                                 pt.part );
             if( part_idx < 0 ) {
                 debugmsg( "init_vehicles: '%s' part '%s'(%d) can't be installed to %d,%d",
                           blueprint.name, pt.part.c_str(),

@@ -1,5 +1,16 @@
 [
   {
+    "id": "bio_shock_absorber",
+    "type": "bionic",
+    "name": { "str": "Kinetic Shock Absorbers" },
+    "description": "The flesh in your arms, legs, and upper torso has been implanted with industrial-strength springs and protective padding  equipped with microgravity offset sensors.  Clenching your fist allows you to fold and unfold this padding; while active, the hydraulic absorbers will prevent damage to your body from severe impacts, at the cost of impaired movement.",
+    "occupied_bodyparts": [ [ "torso", 1 ], [ "arm_l", 1 ], [ "arm_r", 1 ], [ "leg_l", 1 ], [ "leg_r", 1 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "act_cost": "2 kJ",
+    "react_cost": "2 kJ",
+    "time": "10 s"
+  },
+  {
     "id": "fcl_bio_neurosoft_aeronautics",
     "type": "bionic",
     "name": { "str": "Neurosoft: Aeronautics" },
@@ -26,5 +37,95 @@
     "react_cost": "100 J",
     "trigger_cost": "200 kJ",
     "time": "1 s"
+  },
+  {
+    "id": "fcl_bio_linguistic_coprocessor",
+    "type": "bionic",
+    "name": { "str": "Linguistic Coprocessor" },
+    "description": "The left hemisphere of your brain has been augmented with a microcomputer that moderately increases the speed that language and written words are processed, granting a 15% increase to reading speed.",
+    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.15 } ] } ],
+    "occupied_bodyparts": [ [ "head", 2 ] ]
+  },
+  {
+    "id": "fcl_bio_dopamine_stimulators",
+    "type": "bionic",
+    "name": { "str": "Dopamine Stimulators" },
+    "description": "Tiny cybernetic stimulators have been installed throughout your ventral tegmental area, and trigger at set intervals using bionic power.  This slowly releases a stream of reward chemicals and hormones into your brain, inducing a state of euphoria that notably elevates mood.",
+    "occupied_bodyparts": [ [ "head", 5 ] ],
+    "flags": [ "BIONIC_TOGGLED", "BIONIC_SLEEP_FRIENDLY" ],
+    "act_cost": "5 J",
+    "react_cost": "5 J",
+    "time": "200 s"
+  },
+  {
+    "id": "fcl_bio_deck",
+    "type": "bionic",
+    "name": { "str": "Military Infolink" },
+    "description": "An implanted miniaturized computer isolated from the rest of your systems by military-grade firewalls.  An accompanying jack allows you to interface with external computer systems with minimal risk.  Skill in computers is important, and a failed use may damage your circuits.",
+    "occupied_bodyparts": [ [ "arm_l", 1 ], [ "arm_r", 1 ] ],
+    "passive_pseudo_items": [ "fcl_bio_deck_jack" ]
+  },
+  {
+    "id": "fcl_bio_missiles",
+    "type": "bionic",
+    "//": "Watch those wrist rockets!",
+    "name": { "str": "Deployable Grenade Launcher" },
+    "description": "Your right hand can fold inward to reveal a mechanism capable of igniting and firing 40mm grenades across medium distances.",
+    "occupied_bodyparts": [ [ "hand_r", 3 ] ],
+    "fake_weapon": "fcl_bionic_rocket",
+    "flags": [ "BIONIC_TOGGLED", "BIONIC_WEAPON", "NO_UNWIELD" ],
+    "act_cost": "35 J"
+  },
+  {
+    "id": "fcl_bio_monowhip",
+    "type": "bionic",
+    "name": { "str": "Monofilament Whip" },
+    "description": "A carbon nanotube wire covertly installed in your right arm.  When activated, it extends to its full length and can be used to strike enemies both at close and long range.",
+    "occupied_bodyparts": [ [ "arm_r", 4 ], [ "hand_r", 1 ] ],
+    "act_cost": "50 J",
+    "fake_weapon": "fcl_bio_whip_weapon",
+    "flags": [ "BIONIC_TOGGLED", "BIONIC_WEAPON", "BIONIC_NPC_USABLE" ]
+  },
+  {
+    "id": "fcl_bio_melee_counteraction",
+    "type": "bionic",
+    "name": { "str": "Counteractive Reflexes" },
+    "description": "Cybernetic stimulators installed across your nervous system boost your reflexes whenever you are hit in melee, granting you an extra action.  This bionic must be active to function.",
+    "occupied_bodyparts": [ [ "head", 4 ], [ "arm_l", 5 ], [ "arm_r", 5 ], [ "leg_l", 6 ], [ "leg_r", 6 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "enchantments": [ "fcl_melee_counteraction" ],
+    "act_cost": "12 kJ",
+    "react_cost": "12 kJ",
+    "time": "1 s"
+  },
+  {
+    "id": "fcl_bio_melee_optimization_unit",
+    "type": "bionic",
+    "name": { "str": "Melee Optimization Unit" },
+    "description": "An implanted AI module calculates the optimal followup to each of your melee strikes, allowing you to chain them with unnatural speed and grace.  This bionic must be active to function.",
+    "occupied_bodyparts": [ [ "head", 10 ], [ "arm_l", 5 ], [ "arm_r", 5 ], [ "leg_l", 10 ], [ "leg_r", 10 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "enchantments": [ "fcl_melee_optimization" ],
+    "act_cost": "12 kJ",
+    "react_cost": "12 kJ",
+    "time": "1 s"
+  },
+  {
+    "id": "fcl_bio_blood_brain",
+    "type": "bionic",
+    "name": { "str": "Blood Neurology" },
+    "description": "Your blood is laced with neuron-analogue nanites, allowing your entire circulatory system to function as a secondary brain.  This radical modification increases your intelligence, reflexes and perception by 4, increases your pain tolerance and allows you to survive brain damage that would otherwise prove fatal.",
+    "occupied_bodyparts": [ [ "leg_l", 2 ], [ "leg_r", 2 ] ],
+    "enchantments": [
+      {
+        "values": [
+          { "value": "INTELLIGENCE", "add": 4 },
+          { "value": "PERCEPTION", "add": 4 },
+          { "value": "DEXTERITY", "add": 4 },
+          { "value": "PAIN", "multiply": -0.33 },
+          { "value": "PAIN_PENALTY_MOD_INT", "add": -4 }
+        ]
+      }
+    ]
   }
 ]

@@ -1,14 +1,17 @@
+#include <algorithm>
 #include <bodypart.h>
 #include <coordinates.h>
-#include <item_location.h>
-#include <item_uid.h>
-#include <monster_uid.h>
-#include <player_activity.h>
-#include <point.h>
-#include <algorithm>
 #include <cstdint>
 #include <initializer_list>
+#include <item_location.h>
+#include <item_uid.h>
+#include <memory>
+#include <monster_uid.h>
 #include <optional>
+#include <pimpl.h>
+#include <player_activity.h>
+#include <point.h>
+#include <ret_val.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,7 +21,12 @@
 #include "avatar_action.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_path.h"
+#include "cata_scope_helpers.h"
+#include "character_martial_arts.h"
+#include "creature.h"
 #include "damage.h"
+#include "faction.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "item.h"
@@ -26,14 +34,18 @@
 #include "json.h"
 #include "json_loader.h"
 #include "lua_platform_loader.h"
+#include "lua_platform_runtime_internal.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "martialarts.h"
+#include "mod_manager.h"
 #include "monster.h"
 #include "mounted_charge.h"
+#include "mtype.h"
 #include "npc.h"
 #include "player_helpers.h"
+#include "rng.h"
 #include "type_id.h"
 
 static const damage_type_id damage_bash( "bash" );
@@ -57,17 +69,29 @@ namespace
 monster &setup_mounted_weapon( avatar &player, const itype_id &weapon_type )
 {
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    static bool platform_world_ready = false;
-    if( !platform_world_ready ) {
-        cata::lua_platform::on_world_ready( true );
-        platform_world_ready = true;
+    const std::string runtime_mod = tec_mounted_charge->lua_platform_mod;
+    if( !cata::lua_platform::detail::find_active_runtime( runtime_mod ) ) {
+        const mod_id core( runtime_mod );
+        REQUIRE( core.is_valid() );
+        const MOD_INFORMATION &mod = *core;
+        const cata::lua_platform::mod_source source = {
+            mod.ident.str(), mod.mod_root_path.get_unrelative_path(),
+            mod.lua_platform_entry.get_unrelative_path()
+        };
+        std::string error;
+        INFO( error );
+        REQUIRE( cata::lua_platform::prepare_mods( { source }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+        cata::lua_platform::commit_prepared_mods();
     }
+    cata::lua_platform::on_world_ready( true );
 #endif
     clear_avatar();
     clear_map_without_vision();
     clear_creatures();
 
-    monster &horse = spawn_test_monster( "mon_horse", player.pos_bub() + tripoint::east );
+    monster &horse = spawn_test_monster( "mon_horse_police", player.pos_bub() + tripoint::east );
     horse.friendly = -1;
     player.mount_creature( horse );
     player.set_wielded_item( item( weapon_type ) );
@@ -92,6 +116,71 @@ void start_mounted_charge( avatar &player, monster &horse )
 }
 
 } // namespace
+
+TEST_CASE( "mounted_charge_cooldown_commits_once_and_does_not_cancel_its_activity",
+           "[mounted][charge][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    start_mounted_charge( player, horse );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) == 0_turns );
+    player.activity.do_turn( player );
+    const time_duration cooldown = player.martial_arts_data->technique_cooldown_remaining(
+                                       tec_mounted_charge );
+    REQUIRE( cooldown == tec_mounted_charge->cooldown );
+    REQUIRE( cooldown > 0_turns );
+    REQUIRE_FALSE( player.activity.is_null() );
+    calendar::turn += 1_seconds;
+    player.set_moves( 10000 );
+    player.activity.do_turn( player );
+    CHECK_FALSE( player.activity.is_null() );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) ==
+           cooldown - 1_seconds );
+    std::ostringstream output;
+    JsonOut writer( output );
+    player.activity.serialize( writer );
+    JsonObject activity = json_loader::from_string( output.str() ).get_object();
+    activity.allow_omitted_members();
+    JsonObject actor = activity.get_object( "actor" );
+    actor.allow_omitted_members();
+    JsonObject actor_data = actor.get_object( "actor_data" );
+    actor_data.allow_omitted_members();
+    CHECK( actor_data.get_bool( "cooldown_started" ) );
+    player.activity.deserialize( json_loader::from_string( output.str() ).get_object() );
+    player.set_moves( 10000 );
+    player.activity.do_turn( player );
+    CHECK_FALSE( player.activity.is_null() );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) ==
+           cooldown - 1_seconds );
+    player.cancel_activity();
+    start_mounted_charge( player, horse );
+    CHECK( player.activity.is_null() );
+    calendar::turn += cooldown;
+    start_mounted_charge( player, horse );
+    CHECK_FALSE( player.activity.is_null() );
+    player.cancel_activity();
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) == 0_turns );
+    player.forced_dismount();
+}
+
+TEST_CASE( "mounted_charge_combat_mount_does_not_refuse_hostile_approach",
+           "[mounted][charge][regression]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    REQUIRE( horse.has_flag( mon_flag_COMBAT_MOUNT ) );
+    REQUIRE( horse.type->has_fear_trigger( mon_trigger::HOSTILE_CLOSE ) );
+    map &here = get_map();
+    monster &threat = spawn_test_monster( "mon_zombie_hulk",
+                                          player.pos_bub() + tripoint::east );
+    here.build_map_cache( player.pos_bub().z() );
+    REQUIRE( player.sees( here, threat ) );
+    REQUIRE( threat.attitude_to( player ) == Creature::Attitude::HOSTILE );
+    CHECK( player.mount_move_refusal_chance( threat ) == 0.0 );
+    CHECK( player.check_mount_will_move( threat.pos_bub() ) );
+    player.forced_dismount();
+}
 
 TEST_CASE( "mounted_charge_profile_has_bounded_momentum", "[mounted][charge]" )
 {
@@ -264,6 +353,9 @@ TEST_CASE( "mounted_charge_is_provided_by_the_weapon_technique_list",
     const std::vector<matec_id> unmounted_techniques = player.active_techniques();
     CHECK( std::find( unmounted_techniques.begin(), unmounted_techniques.end(), tec_mounted_charge ) ==
            unmounted_techniques.end() );
+    const std::vector<matec_id> visible = player.active_techniques( true );
+    CHECK( std::find( visible.begin(), visible.end(), tec_mounted_charge ) != visible.end() );
+    CHECK_FALSE( player.active_technique_availability( tec_mounted_charge ).success() );
 }
 
 TEST_CASE( "mounted_charge_stops_at_heavy_monster", "[mounted][charge][activity]" )
@@ -295,6 +387,8 @@ TEST_CASE( "mounted_charge_stops_at_heavy_monster", "[mounted][charge][activity]
 TEST_CASE( "mounted_charge_knocks_light_survivor_aside_and_continues",
            "[mounted][charge][activity]" )
 {
+    restore_on_out_of_scope restore_random_engine( rng_get_engine() );
+    rng_set_engine_seed( 20261102 );
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     player.set_dex_base( 30 );
@@ -473,12 +567,19 @@ TEST_CASE( "mounted_charge_attacks_friendly_creature", "[mounted][charge][activi
 
 TEST_CASE( "mounted_charge_attacks_non_hostile_npc", "[mounted][charge][activity]" )
 {
+    restore_on_out_of_scope restore_random_engine( rng_get_engine() );
+    rng_set_engine_seed( 20261102 );
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
+    player.set_dex_base( 30 );
     player.set_skill_level( skill_melee, 10 );
     player.set_skill_level( skill_stabbing, 10 );
     const tripoint_bub_ms start = player.pos_bub();
     npc &target = spawn_npc( ( start + tripoint::east ).xy(), "test_talker" );
+    faction &target_faction = *target.get_faction();
+    restore_on_out_of_scope restore_faction_likes( target_faction.likes_u );
+    restore_on_out_of_scope restore_faction_respect( target_faction.respects_u );
+    restore_on_out_of_scope restore_faction_trust( target_faction.trusts_u );
     REQUIRE_FALSE( target.is_enemy() );
     const int hp_before = target.get_hp();
 

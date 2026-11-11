@@ -58,6 +58,10 @@
 #include "weather_type.h"
 #include "worldfactory.h"
 
+#if defined(TILES)
+    #include "sdl_wrappers.h"
+#endif
+
 static const mod_id MOD_INFORMATION_ccb( "ccb" );
 
 using name_value_pair_t = std::pair<std::string, std::string>;
@@ -267,7 +271,7 @@ struct CataListener : Catch::TestEventListenerBase {
         if( !sectionStats.assertions.allPassed() ||
             m_config->includeSuccessfulResults() ) {
             std::vector<std::pair<std::string, std::string>> messages =
-                Messages::recent_messages( 0 );
+                        Messages::recent_messages( Messages::size() );
             if( !messages.empty() ) {
                 if( !sectionStats.assertions.allPassed() ) {
                     std::cerr << "Log messages during failed test:\n";
@@ -358,6 +362,10 @@ int main( int argc, const char *argv[] )
             Json::globally_report_unvisited_members( false );
             // Destroy the game before function-local Lua registries are torn down.
             g.reset();
+#if defined(TILES)
+            // Options query SDL even without a window; release its error/TLS state.
+            SDL_Quit();
+#endif
             deinitDebug();
         } };
     Catch::Session session;
@@ -500,7 +508,7 @@ int main( int argc, const char *argv[] )
     } catch( const std::exception &err ) {
         DebugLog( D_ERROR, DC_ALL ) << "Terminated:\n" << err.what();
         DebugLog( D_INFO, DC_ALL ) <<
-        "Make sure that you're in the correct working directory and your data isn't corrupted.";
+                                   "Make sure that you're in the correct working directory and your data isn't corrupted.";
         return EXIT_FAILURE;
     }
 
@@ -532,7 +540,7 @@ int main( int argc, const char *argv[] )
 
     if( error_during_initialization ) {
         DebugLog( D_INFO, DC_ALL ) <<
-        "Treating result as failure due to error logged during initialization.";
+                                   "Treating result as failure due to error logged during initialization.";
         return 1;
     }
 
@@ -546,6 +554,9 @@ int main( int argc, const char *argv[] )
     test_shutdown_guard.cancel();
     Json::globally_report_unvisited_members( false );
     g.reset();
+#if defined(TILES)
+    SDL_Quit();
+#endif
     deinitDebug();
     std::cout.flush();
     std::cerr.flush();

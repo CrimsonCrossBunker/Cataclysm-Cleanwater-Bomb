@@ -33,6 +33,7 @@
       {
         "id": "battery",
         "pocket_type": "MAGAZINE_WELL",
+        "holster": true,
         "rigid": true,
         "item_restriction": [ "rm13_battery" ],
         "default_magazine": "rm13_battery"
@@ -40,6 +41,7 @@
       {
         "id": "rebreather",
         "pocket_type": "MAGAZINE_WELL",
+        "holster": true,
         "rigid": true,
         "flag_restriction": [ "REBREATHER_CART" ],
         "default_magazine": "rebreather_cartridge_regen"

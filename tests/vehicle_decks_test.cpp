@@ -22,6 +22,7 @@
 #include "type_id.h"
 #include "veh_interact.h"
 #include "vehicle.h"
+#include "vertical_movement.h"
 #include "vpart_position.h"
 
 namespace
@@ -31,7 +32,7 @@ vehicle &make_deck_vehicle()
     clear_map_without_vision();
     map &here = get_map();
     vehicle *veh = here.add_vehicle( vproto_id( "none" ), tripoint_bub_ms( 60, 60, 0 ),
-                                    0_degrees, 0, veh_spawn_status::UNDAMAGED );
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
     REQUIRE( veh->install_part( here, tripoint_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
     REQUIRE( veh->install_part( here, tripoint_rel_ms::above, vpart_id( "frame" ) ) >= 0 );
@@ -47,7 +48,9 @@ TEST_CASE( "vehicle_decks_separate_stacked_components", "[vehicle][decks]" )
     const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "trunk" ) );
     REQUIRE( lower >= 0 );
     REQUIRE( upper >= 0 );
-    for( const bool cached : { false, true } ) {
+    for( const bool cached : {
+             false, true
+         } ) {
         const auto downstairs = veh.parts_at_relative( tripoint_rel_ms::zero, cached );
         const auto upstairs = veh.parts_at_relative( tripoint_rel_ms::above, cached );
         REQUIRE( downstairs.size() == 2 );
@@ -55,6 +58,8 @@ TEST_CASE( "vehicle_decks_separate_stacked_components", "[vehicle][decks]" )
         CHECK( veh.part( downstairs.front() ).mount_level == 0 );
         CHECK( veh.part( upstairs.front() ).mount_level == 1 );
     }
+    CHECK( veh.get_points().count( veh.abs_part_pos( lower ) ) == 1 );
+    CHECK( veh.get_points().count( veh.abs_part_pos( upper ) ) == 1 );
     CHECK( veh.part_with_feature( lower, VPFLAG_CARGO, true ) == lower );
     CHECK( veh.part_with_feature( upper, VPFLAG_CARGO, true ) == upper );
     CHECK_FALSE( veh.can_mount( tripoint_rel_ms::above, vpart_id( "trunk" ).obj() ).success() );
@@ -68,6 +73,22 @@ TEST_CASE( "vehicle_decks_separate_stacked_components", "[vehicle][decks]" )
     vpart_position( veh, 1 ).set_label( "upper" );
     CHECK( vpart_position( veh, 0 ).get_label() == "lower" );
     CHECK( vpart_position( veh, 1 ).get_label() == "upper" );
+}
+
+TEST_CASE( "opening_a_deck_door_keeps_the_other_deck_closed", "[vehicle][decks]" )
+{
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    const int lower = veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "door" ) );
+    const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "door" ) );
+    REQUIRE( lower >= 0 );
+    REQUIRE( upper >= 0 );
+    REQUIRE_FALSE( veh.part( lower ).open );
+    REQUIRE_FALSE( veh.part( upper ).open );
+
+    veh.open_all_at( here, upper );
+    CHECK( veh.part( upper ).open );
+    CHECK_FALSE( veh.part( lower ).open );
 }
 
 TEST_CASE( "vehicle_deck_stairs_connect_only_the_same_vehicle", "[vehicle][decks]" )
@@ -89,6 +110,26 @@ TEST_CASE( "vehicle_deck_stairs_connect_only_the_same_vehicle", "[vehicle][decks
     CHECK_FALSE( here.valid_move( lower, upper, false, true ) );
     CHECK( can_interact_at( ACTION_MOVE_UP, here, lower ) );
     CHECK( can_interact_at( ACTION_MOVE_DOWN, here, upper ) );
+
+    clear_avatar();
+    avatar &who = get_avatar();
+    const tripoint_abs_ms expected_landing = here.get_abs( upper );
+    who.setpos( here, lower, false );
+    here.board_vehicle( lower, &who );
+    REQUIRE( who.in_vehicle );
+    const vertical_move_prompt prompt = make_vertical_move_prompt( who, here, 1 );
+    REQUIRE( prompt.options.size() == 1 );
+    CHECK( prompt.options.front().selection.target == here.get_abs( upper ) );
+    REQUIRE( execute_vertical_move( who, here, prompt.options.front().selection ) );
+    CHECK( who.pos_abs() == expected_landing );
+    CHECK( who.in_vehicle );
+    const vertical_move_prompt return_prompt = make_vertical_move_prompt( who, here, -1 );
+    REQUIRE( return_prompt.options.size() == 1 );
+    REQUIRE( execute_vertical_move( who, here, return_prompt.options.front().selection ) );
+    CHECK( who.pos_abs() == here.get_abs( lower ) );
+    CHECK( who.in_vehicle );
+    here.unboard_vehicle( who.pos_bub( here ) );
+
     veh.remove_part( veh.part( stairs ) );
     veh.part_removal_cleanup( here );
     CHECK_FALSE( veh.deck_transition( here, lower, 1 ).has_value() );
@@ -96,7 +137,21 @@ TEST_CASE( "vehicle_deck_stairs_connect_only_the_same_vehicle", "[vehicle][decks
     CHECK_FALSE( can_interact_at( ACTION_MOVE_DOWN, here, upper ) );
 }
 
-TEST_CASE( "vehicle_decks_preserve_height_when_turning_moving_and_loading", "[vehicle][decks][save]" )
+TEST_CASE( "double_decker_rv_has_usable_stairs", "[vehicle][decks]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    vehicle *veh = here.add_vehicle( vproto_id( "rv_double_decker" ), tripoint_bub_ms( 60, 60, 0 ),
+                                     90_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    const tripoint_bub_ms lower = veh->mount_to_tripoint( &here, tripoint_rel_ms( -2, 1, 0 ) );
+    const tripoint_bub_ms upper = veh->mount_to_tripoint( &here, tripoint_rel_ms( -2, 1, 1 ) );
+    CHECK( veh->deck_transition( here, lower, 1 ) == upper );
+    CHECK( veh->deck_transition( here, upper, -1 ) == lower );
+}
+
+TEST_CASE( "vehicle_decks_preserve_height_when_turning_moving_and_loading",
+           "[vehicle][decks][save]" )
 {
     vehicle &veh = make_deck_vehicle();
     map &here = get_map();
@@ -111,6 +166,8 @@ TEST_CASE( "vehicle_decks_preserve_height_when_turning_moving_and_loading", "[ve
     veh.serialize( out );
     vehicle loaded{ vproto_id() };
     loaded.deserialize( json_loader::from_string( buffer.str() ).get_object() );
+    // The containing submap supplies the vehicle's absolute origin when loading.
+    loaded.set_submap_moved( &here, project_to<coords::sm>( veh.pos_bub( here ) ) );
     CHECK( loaded.part( 0 ).mount_level == 0 );
     CHECK( loaded.part( 1 ).mount_level == 1 );
     CHECK( loaded.abs_part_pos( 1 ) == veh.abs_part_pos( 1 ) );
@@ -144,18 +201,21 @@ TEST_CASE( "vehicle_deck_switch_bindings", "[vehicle][decks][input]" )
     ctxt.register_action( "VEHICLE_DECK_DOWN" );
     const bool down = GENERATE( false, true );
     const std::string action = down ? "VEHICLE_DECK_DOWN" : "VEHICLE_DECK_UP";
-    for( const input_event_t type : { input_event_t::keyboard_char, input_event_t::keyboard_code } ) {
-        CHECK( ctxt.input_to_action( input_event( { keymod_t::ctrl }, down ? KEY_NPAGE : KEY_PPAGE,
-                                     type ) ) == action );
-    }
+    const int char_page = down ? KEY_NPAGE : KEY_PPAGE;
+    const int code_page = down ? keycode::npage : keycode::ppage;
+    CHECK( ctxt.input_to_action( input_event( { keymod_t::ctrl }, char_page,
+                                 input_event_t::keyboard_char ) ) == action );
+    CHECK( ctxt.input_to_action( input_event( { keymod_t::ctrl }, code_page,
+                                 input_event_t::keyboard_code ) ) == action );
     CHECK( ctxt.input_to_action( input_event( { keymod_t::shift }, down ? '.' : ',',
                                  input_event_t::keyboard_code ) ) ==
            ( down ? "DESC_LIST_DOWN" : "DESC_LIST_UP" ) );
-    CHECK( ctxt.input_to_action( input_event( down ? KEY_NPAGE : KEY_PPAGE,
+    CHECK( ctxt.input_to_action( input_event( code_page,
                                  input_event_t::keyboard_code ) ) == ( down ? "PAGE_DOWN" : "PAGE_UP" ) );
 }
 
-TEST_CASE( "vehicle_deck_modification_activities_keep_the_selected_deck", "[vehicle][decks][activity]" )
+TEST_CASE( "vehicle_deck_modification_activities_keep_the_selected_deck",
+           "[vehicle][decks][activity]" )
 {
     clear_avatar();
     vehicle &veh = make_deck_vehicle();
@@ -163,25 +223,26 @@ TEST_CASE( "vehicle_deck_modification_activities_keep_the_selected_deck", "[vehi
     avatar &you = get_avatar();
     you.set_mutation( trait_id( "DEBUG_HS" ) );
     you.setpos( here, veh.bub_part_pos( here, 0 ) );
-    REQUIRE( veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "aisle" ) ) >= 0 );
+    const vpart_id trunk( "trunk" );
+    REQUIRE( veh.install_part( here, tripoint_rel_ms::zero, trunk ) >= 0 );
     here.add_vehicle_to_cache( &veh );
 
     vehicle_activity_actor install( VEHICLE_INSTALL, 1_seconds, &veh, veh.abs_part_pos( 1 ),
-                                    -tripoint_rel_ms::above, 1, vpart_id( "aisle" ) );
+                                    -tripoint_rel_ms::above, 1, trunk );
     player_activity installing( install );
     install.complete_vehicle( installing, you );
-    const int upper = veh.part_with_feature( tripoint_rel_ms::above, "AISLE", true );
+    const int upper = veh.part_with_feature( tripoint_rel_ms::above, "CARGO", true );
     REQUIRE( upper >= 0 );
-    const int lower = veh.part_with_feature( tripoint_rel_ms::zero, "AISLE", true );
+    const int lower = veh.part_with_feature( tripoint_rel_ms::zero, "CARGO", true );
     REQUIRE( lower >= 0 );
     CHECK( upper != lower );
 
     vehicle_activity_actor remove( VEHICLE_REMOVE, 1_seconds, &veh, veh.abs_part_pos( upper ),
-                                   -tripoint_rel_ms::above, upper, vpart_id( "aisle" ) );
+                                   -tripoint_rel_ms::above, upper, trunk );
     player_activity removing( remove );
     remove.complete_vehicle( removing, you );
-    CHECK( veh.part_with_feature( tripoint_rel_ms::above, "AISLE", true ) == -1 );
-    CHECK( veh.part_with_feature( tripoint_rel_ms::zero, "AISLE", true ) >= 0 );
+    CHECK( veh.part_with_feature( tripoint_rel_ms::above, "CARGO", true ) == -1 );
+    CHECK( veh.part_with_feature( tripoint_rel_ms::zero, "CARGO", true ) >= 0 );
     clear_avatar();
 }
 

@@ -31,6 +31,8 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "iuse.h"
+#include "iuse_actor.h"
+#include "mp_inventory_activity.h"
 #include "map.h"
 #include "output.h"
 #include "pimpl.h"
@@ -140,8 +142,20 @@ item_action_map item_action_generator::map_actions_to_items( Character &you,
     // Default behavior
     if( use_player_inventory ) {
         items = you.inv_dump();
+        // inv_dump omits integrated equipment because it cannot be dropped.
+        // Actions must use its persistent worn instance, not the bionic's
+        // temporary pseudo-item: e.g. scanned AR books belong in the save.
+        for( item_location &worn : you.top_items_loc() ) {
+            if( worn->has_flag( flag_INTEGRATED ) ) {
+                items.push_back( worn.get_item() );
+            }
+        }
         items.reserve( items.size() + pseudos.size() );
-        items.insert( items.end(), pseudos.begin(), pseudos.end() );
+        for( item *pseudo : pseudos ) {
+            if( !pseudo->has_flag( flag_INTEGRATED ) ) {
+                items.push_back( pseudo );
+            }
+        }
     } else {
         items = pseudos;
     }
@@ -424,7 +438,12 @@ void game::item_action_menu( item_location loc )
     const item_action_id action = std::get<0>( menu_items[kmenu.ret] );
     item *it = iactions[action];
 
-    u.invoke_item( it, action );
+    std::string method = action;
+    if( it && u.has_item( *it ) &&
+        cata_mp::client_activate_item( form_loc_recursive<Character>( u, *it ), method ) ) {
+        return;
+    }
+    u.invoke_item( it, method );
 
     u.inv->restack( u );
     u.inv->unsort();
@@ -443,6 +462,11 @@ ret_val<void> iuse_actor::can_use( const Character &, const item &, map *,
                                    const tripoint_bub_ms & ) const
 {
     return ret_val<void>::make_success();
+}
+
+bool iuse_actor::is_immediate_consumption() const
+{
+    return false;
 }
 
 bool iuse_actor::is_valid() const

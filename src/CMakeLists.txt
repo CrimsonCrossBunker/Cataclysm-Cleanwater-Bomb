@@ -1,3 +1,4 @@
+include(${CMAKE_SOURCE_DIR}/CMakeModules/CoopRuntime.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party)
 if (CATA_ENABLE_LUA_PLATFORM)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lua)
@@ -52,7 +53,6 @@ set(LUA_PLATFORM_ENABLED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_snapshots.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_registry.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_services.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_state.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_values.cpp)
 if (CATA_ENABLE_LUA_PLATFORM)
     list(REMOVE_ITEM CATACLYSM_DDA_SOURCES
@@ -62,7 +62,10 @@ else()
 endif()
 
 if (MSVC)
+    set(LUA_PLATFORM_MSVC_SOURCES ${CATACLYSM_DDA_SOURCES})
+    list(FILTER LUA_PLATFORM_MSVC_SOURCES INCLUDE REGEX "/lua_platform_.*\\.cpp$")
     set_source_files_properties(
+        ${LUA_PLATFORM_MSVC_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/mapgen.cpp
         PROPERTIES COMPILE_OPTIONS "/bigobj"
     )
@@ -172,6 +175,7 @@ if (TILES)
     add_dependencies(cataclysm-tiles-common get_version)
 
     target_link_libraries(cataclysm-tiles PRIVATE cataclysm-tiles-common)
+    configure_coop_runtime(cataclysm-tiles cataclysm-tiles-common)
     target_compile_definitions(cataclysm-tiles-common PUBLIC TILES )
     if(NOT "${CMAKE_EXPORT_COMPILE_COMMANDS}")
         target_precompile_headers(cataclysm-tiles-common PUBLIC
@@ -383,6 +387,7 @@ if (CURSES)
 
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
+    configure_coop_runtime(cataclysm cataclysm-common)
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC
@@ -452,6 +457,10 @@ if (HEADLESS)
     target_link_libraries(cataclysm-common PUBLIC third-party)
     configure_lua_platform(cataclysm-common)
     target_compile_definitions(cataclysm-common PUBLIC HEADLESS)
+    if(NOT "${CMAKE_EXPORT_COMPILE_COMMANDS}")
+        target_precompile_headers(cataclysm-common PUBLIC
+            "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/pch/main-pch.hpp>")
+    endif ()
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-common PUBLIC cata_tracy)
@@ -463,6 +472,7 @@ if (HEADLESS)
 
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
+    configure_coop_runtime(cataclysm cataclysm-common)
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC

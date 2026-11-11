@@ -21,11 +21,13 @@
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "input_context.h" // IWYU pragma: keep
+#include "input_enums.h"
 #include "json.h"
 #include "json_loader.h"
 #include "path_info.h"
 #include "sdltiles.h" // IWYU pragma: keep
 #include "string_formatter.h"
+#include "translation.h"
 #include "translations.h"
 
 static const std::string default_context_id( "default" );

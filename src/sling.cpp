@@ -12,6 +12,7 @@
 #include "avatar.h"
 #include "ballistics.h"
 #include "character.h"
+#include "cata_scope_helpers.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "dispersion.h"
@@ -31,6 +32,9 @@
 #include "map.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "mp_throw.h"
 #include "mtype.h"
 #include "pocket_type.h"
 #include "projectile.h"
@@ -127,7 +131,7 @@ int sling_launch_moves( const Character &who, const item_location &ammo )
            ( activation ? activation->moves : 0 );
 }
 
-std::optional<dealt_projectile_attack> launch_sling( avatar &who, item_location ammo,
+std::optional<dealt_projectile_attack> launch_sling( Character &who, item_location ammo,
         const std::optional<tripoint_bub_ms> &target )
 {
     if( !target ) {
@@ -236,6 +240,19 @@ std::optional<dealt_projectile_attack> launch_sling( avatar &who, item_location 
 
 void aim_sling( avatar &who )
 {
+    if( cata_mp::is_client_mode() &&
+        cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::aiming ) {
+        cata_mp::client_start_firearm_activity();
+        cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
+        return;
+    }
+    const on_out_of_scope cancel_preparation( [&]() {
+        if( cata_mp::is_client_mode() &&
+            cata_mp::client_firearm_phase() == cata_mp::firearm_view_phase::aiming ) {
+            cata_mp::client_cancel_firearm_activity( false );
+            cata_mp::client_finish_firearm_activity();
+        }
+    } );
     std::vector<item_location> candidates;
     for( const item_location &loc : who.all_items_loc() ) {
         if( is_sling_ammunition( *loc ) ) {
@@ -268,10 +285,20 @@ void aim_sling( avatar &who )
         return;
     }
     item round = single_round( *ammo );
+    auto intent = cata_mp::make_throw_intent( who, ammo );
+    intent.method = cata_mp::throw_method::sling;
     g->temp_exit_fullscreen();
     const target_handler::trajectory trajectory = target_handler::mode_sling( who, round,
             sling_launch_moves( who, ammo ) );
-    launch_sling( who, ammo, trajectory.empty() ? std::nullopt :
-                  std::make_optional( trajectory.back() ) );
+    if( cata_mp::is_client_mode() ) {
+        if( !trajectory.empty() ) {
+            intent.target = get_map().get_abs( trajectory.back() );
+            cata_mp::client_request_throw( intent );
+            cata_mp::client_finish_firearm_activity();
+        }
+    } else {
+        launch_sling( who, ammo, trajectory.empty() ? std::nullopt :
+                      std::make_optional( trajectory.back() ) );
+    }
     g->reenter_fullscreen();
 }

@@ -47,7 +47,7 @@
     "difficulty": 1,
     "time": "2 h",
     "autolearn": true,
-    "byproducts": [ [ "splinter", 20 ] ],
+    "byproducts": [ [ "splinter", 74 ] ],
     "qualities": [ { "id": "AXE", "level": 2 } ],
     "//": "Eventually, smoothing tools should also be required, or we should distinguish between rough-hewn and finished beams",
     "components": [ [ [ "log", 2 ] ] ]
@@ -63,7 +63,7 @@
     "difficulty": 1,
     "time": "1 h",
     "autolearn": true,
-    "byproducts": [ [ "splinter", 10 ] ],
+    "byproducts": [ [ "splinter", 69 ] ],
     "qualities": [ { "id": "SAW_W", "level": 2 } ],
     "//": "Hopefully a balanced method of crafting planks without going through interface hoops",
     "result_mult": 8,
@@ -80,7 +80,7 @@
     "difficulty": 2,
     "time": "10 m",
     "autolearn": true,
-    "byproducts": [ [ "splinter", 20 ] ],
+    "byproducts": [ [ "splinter", 74 ] ],
     "tools": [ [ [ "planer_tool", 250 ] ] ],
     "components": [ [ [ "log", 2 ] ] ]
   },
@@ -126,6 +126,7 @@
     "autolearn": true,
     "proficiencies": [ { "proficiency": "prof_carpentry_basic" } ],
     "qualities": [ { "id": "SAW_W", "level": 2 }, { "id": "HAMMER", "level": 2 } ],
+    "byproducts": [ [ "splinter", 50 ] ],
     "components": [ [ [ "2x4", 8 ] ], [ [ "nails", 36, "LIST" ] ] ]
   },
   {
@@ -140,6 +141,7 @@
     "autolearn": true,
     "using": [ [ "power_saw_long", 5 ] ],
     "result_mult": 8,
+    "byproducts": [ [ "splinter", 65 ] ],
     "components": [ [ [ "wood_beam", 1 ] ] ]
   },
   {
@@ -238,6 +240,7 @@
     "autolearn": true,
     "using": [ [ "power_saw_long", 4 ] ],
     "result_mult": 4,
+    "byproducts": [ [ "splinter", 22 ] ],
     "components": [ [ [ "wood_beam", 1 ] ] ]
   },
   {
@@ -402,7 +405,7 @@
     "time": "6 h",
     "autolearn": true,
     "proficiencies": [ { "proficiency": "prof_carpentry_basic" }, { "proficiency": "prof_carving" } ],
-    "byproducts": [ [ "splinter", 7 ] ],
+    "byproducts": [ [ "splinter", 225 ] ],
     "qualities": [ { "id": "SAW_W", "level": 2 }, { "id": "CUT", "level": 2 }, { "id": "CHISEL_WOOD", "level": 1 } ],
     "components": [ [ [ "wood_beam", 1 ] ] ]
   },
@@ -663,7 +666,7 @@
     "difficulty": 2,
     "time": "10 m",
     "autolearn": true,
-    "byproducts": [ [ "splinter", 10 ] ],
+    "byproducts": [ [ "splinter", 69 ] ],
     "using": [ [ "power_saw_long", 5 ] ],
     "result_mult": 8,
     "components": [ [ [ "log", 1 ] ] ]

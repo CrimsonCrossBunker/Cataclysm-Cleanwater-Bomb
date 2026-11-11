@@ -21,15 +21,10 @@ class npc_attack_rating
         std::optional<int> _value = std::nullopt;
         // the target tile of the attack
         tripoint_bub_ms _target;
-        int _expected_damage = 0;
     public:
         npc_attack_rating() = default;
         npc_attack_rating( const std::optional<int> &_value,
-                           const tripoint_bub_ms &_target, int expected_damage = 0 ) :
-            _value( _value ), _target( _target ), _expected_damage( expected_damage ) {}
-        int expected_damage() const {
-            return _expected_damage;
-        }
+                           const tripoint_bub_ms &_target ) : _value( _value ), _target( _target ) {}
         std::optional<int> value() const {
             return _value;
         }
@@ -110,7 +105,6 @@ class npc_attack_gun : public npc_attack
                 const Creature *target ) const override;
         void use( npc &source, const tripoint_bub_ms &location ) const override;
     private:
-        std::vector<tripoint_bub_ms> targetable_creatures( const npc &source ) const;
         tripoint_range<tripoint_bub_ms> targetable_points( const npc &source ) const;
         bool can_use( const npc &source ) const;
         int base_time_penalty( const npc &source ) const;

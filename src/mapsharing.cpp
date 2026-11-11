@@ -7,6 +7,7 @@
 
 #include "filesystem.h"
 #include "ofstream_wrapper.h"
+#include "native_file_path.h"
 
 #if defined(__linux__)
     #include <unistd.h>
@@ -131,12 +132,13 @@ void ofstream_wrapper::open( const std::ios::openmode mode )
         throw std::runtime_error( "path has an invalid name" );
     }
 
-    if( std::filesystem::exists( temp_path ) && !std::filesystem::is_directory( temp_path ) ) {
+    const std::filesystem::path native_temp = native_file_path( temp_path );
+    if( std::filesystem::exists( native_temp ) && !std::filesystem::is_directory( native_temp ) ) {
         std::error_code ec;
-        std::filesystem::remove( temp_path, ec );
+        std::filesystem::remove( native_temp, ec );
     }
 
-    file_stream.open( temp_path, mode );
+    file_stream.open( native_file_path( temp_path ), mode );
     if( !file_stream.is_open() ) {
         throw std::runtime_error( "opening file failed" );
     }
@@ -155,11 +157,11 @@ void ofstream_wrapper::close()
         // Remove the incomplete or otherwise faulty file (if possible).
         // Failures from it are ignored as we can't really do anything about them.
         std::error_code ec;
-        std::filesystem::remove( temp_path, ec );
+        std::filesystem::remove( native_file_path( temp_path ), ec );
         throw std::runtime_error( "writing to file failed" );
     }
     std::error_code ec2;
-    std::filesystem::rename( temp_path, path, ec2 );
+    std::filesystem::rename( native_file_path( temp_path ), native_file_path( path ), ec2 );
     if( ec2 ) {
         // Leave the temp path, so the user can move it if possible.
         throw std::runtime_error( "moving temporary file \"" + temp_path.u8string() + "\" failed" );

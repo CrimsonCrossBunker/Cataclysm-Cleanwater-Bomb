@@ -260,12 +260,22 @@ def parse_json_registrations(contents: str) -> list[dict[str, object]]:
 def initializer_entries(
     contents: str, marker: str, source_path: str
 ) -> list[tuple[str, int]]:
-    marker_offset = contents.find(marker)
-    if marker_offset < 0:
+    # Formatting tools may wrap declarations or pad template brackets. Match
+    # the C++ tokens while preserving offsets in the original source text.
+    tokens = re.findall(r"\w+|::|[^\w\s]", marker)
+    pattern = r"(?<!\w)" + re.escape(tokens[0])
+    for previous, token in zip(tokens, tokens[1:]):
+        adjacent_words = (
+            re.match(r"\w", previous[-1]) and re.match(r"\w", token[0])
+        )
+        separator = r"\s+" if adjacent_words else r"\s*"
+        pattern += separator + re.escape(token)
+    match = re.search(pattern, mask_comments(contents))
+    if match is None:
         raise RuntimeError(
-            f"initializer marker not found in {source_path}: {
-                marker!r}")
-    opening = contents.find("{", marker_offset + len(marker))
+            f"initializer marker not found in {source_path}: {marker!r}"
+        )
+    opening = contents.find("{", match.end())
     closing = find_matching(contents, opening, "{", "}")
     body = contents[opening + 1: closing]
     masked = mask_comments(body)

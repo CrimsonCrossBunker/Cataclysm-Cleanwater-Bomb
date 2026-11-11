@@ -1461,6 +1461,14 @@
   },
   {
     "type": "effect_type",
+    "id": "melatonin_sleep",
+    "name": [ "" ],
+    "desc": [ "" ],
+    "//": "Protects the first half hour of melatonin-assisted catch-up sleep from low-sleepiness wakeups.",
+    "max_duration": "30 m"
+  },
+  {
+    "type": "effect_type",
     "id": "mutagen",
     "name": [ "Changing", "Warping", "Mutagen Overdose" ],
     "desc": [
@@ -4069,6 +4077,27 @@
     "enchantments": [
       { "values": [ { "value": "STRENGTH", "add": { "math": [ "max( 10, 20 - u_bio_hydraulics_strength_adjustment )" ] } } ] }
     ]
+  },
+  {
+    "id": "effect_bio_noise_quiet_burn_cooldown",
+    "type": "effect_type",
+    "//": "cooldown mark of bio_noise_quiet_burn eoc",
+    "name": [ "" ],
+    "desc": [ "" ]
+  },
+  {
+    "id": "effect_bio_noise_digestive_cooldown",
+    "type": "effect_type",
+    "//": "cooldown mark of bio_noise_digestive eoc",
+    "name": [ "" ],
+    "desc": [ "" ]
+  },
+  {
+    "id": "effect_bio_noise_gasoline_cooldown",
+    "type": "effect_type",
+    "//": "cooldown mark of bio_noise_gasoline eoc",
+    "name": [ "" ],
+    "desc": [ "" ]
   },
   {
     "type": "effect_type",

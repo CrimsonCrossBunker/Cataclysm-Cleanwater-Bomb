@@ -82,6 +82,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -89,6 +90,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 30,
         "coverage": 100,
@@ -96,7 +98,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 30,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 30,
         "coverage": 100,
         "material": [
@@ -110,6 +127,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -122,6 +140,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -144,6 +163,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -151,7 +171,8 @@
         "material": [ { "type": "rubber", "thickness": 6 } ]
       }
     ],
-    "passive_effects": [ { "id": "combat_exoskeleton_inactive" } ]
+    "passive_effects": [ { "id": "combat_exoskeleton_inactive" } ],
+    "use_action": [ { "type": "attach_molle", "size": 10 }, { "type": "detach_molle" } ]
   },
   {
     "id": "combat_exoskeleton_heavy",
@@ -161,13 +182,17 @@
     "name": { "str": "combat exoskeleton mk1", "str_pl": "combat exoskeletons mk1" },
     "description": "Colloquially known as a 'tank suit' in the media, these first-generation exoskeletons were tested in military service a few years back and determined to be too expensive for regular use.  The exoskeleton itself is strapped on an environmental suit with an integrated life-support system.  A variety of webbing, magnets, and clips allows the attachment of special armor plating onto the frame.",
     "looks_like": "power_armor_heavy",
-    "use_action": {
-      "type": "transform",
-      "msg": "You turn the exoskeleton on.\n>>Initiating boot sequence…\n//Loading DoubleOS v1.38…\n//Loading calibration profile…\n//Activating atmospheric filtration…\n//Activating liquid cooling…\n//Activating sound dampeners…\n>>Boot successful.",
-      "target": "combat_exoskeleton_heavy_on",
-      "need_charges": 1,
-      "need_charges_msg": "The batteries are dead."
-    },
+    "use_action": [
+      {
+        "type": "transform",
+        "msg": "You turn the exoskeleton on.\n>>Initiating boot sequence…\n//Loading DoubleOS v1.38…\n//Loading calibration profile…\n//Activating atmospheric filtration…\n//Activating liquid cooling…\n//Activating sound dampeners…\n>>Boot successful.",
+        "target": "combat_exoskeleton_heavy_on",
+        "need_charges": 1,
+        "need_charges_msg": "The batteries are dead."
+      },
+      { "type": "attach_molle", "size": 10 },
+      { "type": "detach_molle" }
+    ],
     "tool_ammo": "battery",
     "passive_effects": [ { "id": "combat_exoskeleton_heavy_active" } ]
   },
@@ -180,16 +205,21 @@
     "extend": { "flags": [ "GAS_PROOF", "WATCH", "PARTIAL_DEAF", "TWO_WAY_RADIO", "SPAWN_ACTIVE" ] },
     "power_draw": "200 W",
     "revert_to": "combat_exoskeleton_heavy",
-    "use_action": {
-      "type": "transform",
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "msg": "You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down.",
-      "target": "combat_exoskeleton_heavy"
-    },
+    "use_action": [
+      {
+        "type": "transform",
+        "ammo_scale": 0,
+        "menu_text": "Turn off",
+        "msg": "You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down.",
+        "target": "combat_exoskeleton_heavy"
+      },
+      { "type": "attach_molle", "size": 10 },
+      { "type": "detach_molle" }
+    ],
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -197,6 +227,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 100,
@@ -204,7 +235,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 14,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 14,
         "coverage": 100,
         "material": [
@@ -218,6 +264,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -230,6 +277,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -252,6 +300,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -268,13 +317,17 @@
     "name": { "str": "combat exoskeleton mk2", "str_pl": "combat exoskeletons mk2" },
     "description": "These were the second wave of military combat exoskeleton, and got a lot of media attention, with popular Navy commercials featuring them heavily.  The exoskeleton itself is strapped on an environmental suit with an integrated life-support system.  A variety of webbing, magnets, and clips allows the attachment of special armor plating onto the frame.",
     "looks_like": "combat_exoskeleton_medium",
-    "use_action": {
-      "type": "transform",
-      "msg": "You turn the exoskeleton on.\n>>Initiating boot sequence…\n//Loading DoubleOS v2.86…\n//Loading calibration profile…\n//Activating atmospheric filtration…\n//Activating liquid cooling…\n//Activating sound dampeners…\n>>Boot successful.",
-      "target": "combat_exoskeleton_medium_on",
-      "need_charges": 1,
-      "need_charges_msg": "The batteries are dead."
-    },
+    "use_action": [
+      {
+        "type": "transform",
+        "msg": "You turn the exoskeleton on.\n>>Initiating boot sequence…\n//Loading DoubleOS v2.86…\n//Loading calibration profile…\n//Activating atmospheric filtration…\n//Activating liquid cooling…\n//Activating sound dampeners…\n>>Boot successful.",
+        "target": "combat_exoskeleton_medium_on",
+        "need_charges": 1,
+        "need_charges_msg": "The batteries are dead."
+      },
+      { "type": "attach_molle", "size": 10 },
+      { "type": "detach_molle" }
+    ],
     "tool_ammo": "battery",
     "passive_effects": [ { "id": "combat_exoskeleton_medium_active" } ]
   },
@@ -287,16 +340,21 @@
     "extend": { "flags": [ "GAS_PROOF", "WATCH", "PARTIAL_DEAF", "TWO_WAY_RADIO", "SPAWN_ACTIVE" ] },
     "power_draw": "175 W",
     "revert_to": "combat_exoskeleton_medium",
-    "use_action": {
-      "type": "transform",
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "msg": "You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down.",
-      "target": "combat_exoskeleton_medium"
-    },
+    "use_action": [
+      {
+        "type": "transform",
+        "ammo_scale": 0,
+        "menu_text": "Turn off",
+        "msg": "You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down.",
+        "target": "combat_exoskeleton_medium"
+      },
+      { "type": "attach_molle", "size": 10 },
+      { "type": "detach_molle" }
+    ],
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -304,6 +362,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 100,
@@ -311,7 +370,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 12,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 12,
         "coverage": 100,
         "material": [
@@ -325,6 +399,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -337,6 +412,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -359,6 +435,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -375,13 +452,17 @@
     "name": { "str": "combat exoskeleton mk3", "str_pl": "combat exoskeletons mk3" },
     "description": "The final iteration of military power armor before the fall of civilization, this version was designed for actual widespread combat use and was seen on the front lines during the last days of the Cataclysm, unfortunately, the world ended before it could roll out in significant numbers.  The exoskeleton itself is strapped on an environmental suit with an integrated life-support system.  A variety of webbing, magnets, and clips allows the attachment of special armor plating onto the frame.",
     "looks_like": "power_armor_light",
-    "use_action": {
-      "type": "transform",
-      "msg": "You turn the exoskeleton on.\n>>Initiating boot sequence…\n//Loading DoubleOS v3.51…\n//Loading calibration profile…\n//Activating atmospheric filtration…\n//Activating liquid cooling…\n//Activating sound dampeners…\n>>Boot successful.",
-      "target": "combat_exoskeleton_light_on",
-      "need_charges": 1,
-      "need_charges_msg": "The batteries are dead."
-    },
+    "use_action": [
+      {
+        "type": "transform",
+        "msg": "You turn the exoskeleton on.\n>>Initiating boot sequence…\n//Loading DoubleOS v3.51…\n//Loading calibration profile…\n//Activating atmospheric filtration…\n//Activating liquid cooling…\n//Activating sound dampeners…\n>>Boot successful.",
+        "target": "combat_exoskeleton_light_on",
+        "need_charges": 1,
+        "need_charges_msg": "The batteries are dead."
+      },
+      { "type": "attach_molle", "size": 10 },
+      { "type": "detach_molle" }
+    ],
     "tool_ammo": "battery",
     "passive_effects": [ { "id": "combat_exoskeleton_light_active" } ]
   },
@@ -394,16 +475,21 @@
     "extend": { "flags": [ "GAS_PROOF", "WATCH", "PARTIAL_DEAF", "TWO_WAY_RADIO", "SPAWN_ACTIVE" ] },
     "power_draw": "150 W",
     "revert_to": "combat_exoskeleton_light",
-    "use_action": {
-      "type": "transform",
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "msg": "You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down.",
-      "target": "combat_exoskeleton_light"
-    },
+    "use_action": [
+      {
+        "type": "transform",
+        "ammo_scale": 0,
+        "menu_text": "Turn off",
+        "msg": "You turn the exoskeleton off.\n>>Initiating shutdown sequence…\n>>Shutting down.",
+        "target": "combat_exoskeleton_light"
+      },
+      { "type": "attach_molle", "size": 10 },
+      { "type": "detach_molle" }
+    ],
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -411,6 +497,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 100,
@@ -418,7 +505,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 10,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 10,
         "coverage": 100,
         "material": [
@@ -432,6 +534,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -444,6 +547,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -466,6 +570,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -491,6 +596,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 50,
@@ -498,6 +604,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 50,
@@ -505,7 +612,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 10,
+        "coverage": 50,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 10,
         "coverage": 50,
         "material": [
@@ -519,6 +641,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 50,
@@ -531,6 +654,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 50,
         "covers": [ "foot_l", "foot_r" ],
@@ -553,6 +677,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 50,
         "covers": [ "foot_l", "foot_r" ],

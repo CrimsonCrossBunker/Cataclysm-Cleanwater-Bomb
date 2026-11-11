@@ -143,8 +143,11 @@ TEST_CASE( "native_fidget_spinner_inline_eoc_returns_zero_for_avatar_and_null_al
 
     Messages::clear_messages();
     item local_spinner( itype_fidget_spinner );
-    const std::optional<int> null_alpha_result = local_spinner.type->invoke(
-                nullptr, local_spinner, &here, use_position );
+    std::optional<int> null_alpha_result;
+    const std::string diagnostic = capture_debugmsg_during( [&]() {
+        null_alpha_result = local_spinner.type->invoke( nullptr, local_spinner, &here, use_position );
+    } );
+    CHECK_THAT( diagnostic, Catch::Contains( "Tried to use an invalid alpha talker" ) );
     REQUIRE( null_alpha_result.has_value() );
     CHECK( *null_alpha_result == 0 );
     CHECK( Messages::recent_messages_with_formatting( 1 ).empty() );

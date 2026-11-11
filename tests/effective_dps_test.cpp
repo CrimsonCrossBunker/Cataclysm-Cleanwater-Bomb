@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <string>
@@ -9,6 +10,7 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "damage.h"
 #include "flag.h"
 #include "item.h"
 #include "item_factory.h"
@@ -23,6 +25,9 @@
 #include "test_data.h"
 #include "type_id.h"
 
+static const damage_type_id damage_cut( "cut" );
+
+static const itype_id itype_katana( "katana" );
 static const itype_id itype_test_balanced_sword( "test_balanced_sword" );
 static const itype_id itype_test_clumsy_sword( "test_clumsy_sword" );
 static const itype_id itype_test_normal_sword( "test_normal_sword" );
@@ -301,6 +306,47 @@ static void make_experienced_tester( avatar &test_guy )
  * shifts in the lwer tiers of weapons.
  * Used expected_dps(), which should make actual dps because of the calculations above.
  */
+TEST_CASE( "cutting_critical_bonus_respects_armor_and_stat_boundaries", "[melee][dps]" )
+{
+    avatar &attacker = get_avatar();
+    make_experienced_tester( attacker );
+    const item weapon( itype_katana );
+    const float raw_damage = weapon.damage_melee( damage_cut );
+    REQUIRE( raw_damage > 0 );
+
+    for( const std::pair<int, int> &stats : std::vector<std::pair<int, int>> {
+    { 8, 8 }, { 8, 40 }, { 40, 8 }, { 10, 10 }, { 28, 28 }, { 40, 40 }
+} ) {
+        attacker.set_str_base( stats.first );
+        attacker.set_dex_base( stats.second );
+        CAPTURE( stats.first, stats.second );
+        for( const bool critical : {
+                 false, true
+             } ) {
+            const auto damage_at_armor = [&]( const float armor ) {
+                damage_instance damage;
+                attacker.roll_damage( damage_cut, critical, damage, true, weapon,
+                                      attack_vector_id::NULL_ID(), sub_bodypart_str_id::NULL_ID(), 1.0f, armor );
+                return damage.type_damage( damage_cut );
+            };
+            const float threshold = raw_damage / 2.5f;
+            const float unboosted = damage_at_armor( threshold + 1.0f );
+            const float boosted = damage_at_armor( threshold );
+            REQUIRE( unboosted > 0 );
+            CAPTURE( critical );
+            CHECK( damage_at_armor( 0 ) == Approx( boosted ) );
+            if( !critical || stats.first <= 8 || stats.second <= 8 ) {
+                CHECK( boosted == Approx( unboosted ) );
+            } else if( stats.first + stats.second >= 56 ) {
+                CHECK( boosted == Approx( unboosted * 1.5f ) );
+            } else {
+                CHECK( boosted > unboosted );
+                CHECK( boosted < unboosted * 1.5f );
+            }
+        }
+    }
+}
+
 TEST_CASE( "expected_weapon_dps", "[expected][dps]" )
 {
     avatar &test_guy = get_avatar();

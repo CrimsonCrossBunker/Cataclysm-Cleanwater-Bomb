@@ -25,6 +25,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "ofstream_wrapper.h"
+#include "native_file_path.h"
 #include "options.h"
 #include "output.h"
 #include "pinyin.h"
@@ -491,7 +492,7 @@ static bool is_gzipped( std::ifstream &fin )
 std::unique_ptr<std::istream> read_maybe_compressed_file( const std::filesystem::path &path )
 {
     try {
-        std::ifstream fin( path, std::ios::binary );
+        std::ifstream fin( native_file_path( path ), std::ios::binary );
         if( !fin ) {
             throw std::runtime_error( "opening file failed" );
         }
@@ -528,7 +529,7 @@ std::optional<std::string> read_whole_file( const std::filesystem::path &path )
 {
     std::string outstring;
     try {
-        std::ifstream fin( path, std::ios::binary );
+        std::ifstream fin( native_file_path( path ), std::ios::binary );
         if( !fin ) {
             throw std::runtime_error( "opening file failed" );
         }
