@@ -5105,12 +5105,14 @@ void target_ui::panel_gun_info( int &text_y )
     } else if( status == Status::OutOfAmmo ) {
         mvwprintz( w_target, point( 1, text_y++ ), c_red, _( "OUT OF AMMO" ) );
     } else if( ammo ) {
-        bool is_favorite = relevant->is_ammo_container() && relevant->first_ammo().is_favorite;
-        str = string_format( m->ammo_remaining( ) ? _( "Ammo: %s%s (%d/%d)" ) : _( "Ammo: %s%s" ),
-                             colorize( ammo->nname( std::max( m->ammo_remaining( ), 1 ) ), ammo->color ),
-                             colorize( is_favorite ? " *" : "", ammo->color ), m->ammo_remaining( ),
-                             m->ammo_capacity( ammo->ammo->type ) );
-        print_colored_text( w_target, point( 1, text_y++ ), clr, clr, str );
+        const bool is_favorite = relevant->is_ammo_container() && relevant->first_ammo().is_favorite;
+        const int rounds_left = m->ammo_remaining();
+        const std::string ammo_str = string_format(
+                                         rounds_left ? _( "Ammo: %s%s (%d/%d)" ) : _( "Ammo: %s%s" ),
+                                         colorize( ammo->nname( std::max( rounds_left, 1 ) ), ammo->color ),
+                                         colorize( is_favorite ? " *" : "", ammo->color ), rounds_left,
+                                         m->ammo_capacity( ammo->ammo->type ) );
+        print_colored_text( w_target, point( 1, text_y++ ), clr, clr, ammo_str );
     } else {
         // Weapon doesn't use ammunition
         text_y++;
