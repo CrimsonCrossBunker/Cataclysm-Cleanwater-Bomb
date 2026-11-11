@@ -21,6 +21,7 @@
 #include "color.h"
 #include "cursesdef.h"
 #include "damage.h"
+#include "game.h"
 #include "game_inventory.h"
 #include "gun_mode.h"
 #include "input_context.h"
@@ -30,6 +31,9 @@
 #include "item_search.h"
 #include "itype.h"
 #include "localized_comparator.h"
+#include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "options.h"
 #include "output.h"
 #include "player_activity.h"
@@ -466,6 +470,12 @@ std::vector<std::string> folded_lines( const std::vector<std::string> &lines, in
 void show( Character &who, item_location gun, bool resume )
 {
     if( !who.is_avatar() || !gun || !gun->is_gun() || gun->is_gunmod() ) {
+        return;
+    }
+    // Local management must not overlap an authoritative client action.
+    if( cata_mp::is_client_mode() &&
+        ( cata_mp::is_client_waiting_for_ack() || who.get_moves() <= 0 ||
+          g->multiplayer_session().client_inventory_activity.active ) ) {
         return;
     }
     menu_state state = resume && saved_gun == gun ? saved_state : menu_state();
