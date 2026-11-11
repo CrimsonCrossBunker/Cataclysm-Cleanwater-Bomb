@@ -72,6 +72,7 @@
 #include "mp_melee.h"
 #include "mp_throw.h"
 #include "mp_unload.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -1729,6 +1730,12 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
     }
 
     if( loc->is_gun() && !loc->is_gunmod() && method.empty() ) {
+        // Keep the client activation guard ahead of either gun action.
+        if( cata_mp::is_client_mode() &&
+            ( cata_mp::is_client_waiting_for_ack() || you.get_moves() <= 0 ||
+              g->multiplayer_session().client_inventory_activity.active ) ) {
+            return;
+        }
         bool manage = true;
         if( loc->type->has_use() || loc->has_relic_activation() ) {
             uilist actions;
