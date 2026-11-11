@@ -3475,7 +3475,7 @@ TEST_CASE( "native_variable_reads_distinguish_const_and_mutable_dialogues",
     avatar alpha;
     alpha.set_value( "key", diag_value( 11.0 ) );
     dialogue conversation( get_talker_for( alpha ), nullptr );
-    const const_dialogue read_only_conversation( conversation );
+    const const_dialogue read_only_conversation( get_talker_for( alpha ), nullptr );
     const var_info info{ var_type::npc, "key" };
     const diag_value *read = nullptr;
     const std::string read_diagnostic = capture_debugmsg_during( [&]() {
