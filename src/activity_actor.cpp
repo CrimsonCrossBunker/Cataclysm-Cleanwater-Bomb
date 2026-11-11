@@ -6837,6 +6837,14 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
 
     const bool inside = !here.is_outside( who.pos_bub() );
     const tripoint_bub_ms closep = tile_location;
+    target_location = here.get_abs( closep );
+
+    if( !here.inbounds( closep ) || !here.inbounds( who.pos_abs() ) ||
+        who.pos_bub().z() != closep.z() ||
+        square_dist( who.pos_bub().xy(), closep.xy() ) > 1 || who.is_dead_state() ) {
+        act.set_to_null();
+        return;
+    }
 
     if( doors::check_mon_blocking_door( who, here.get_abs( closep ) ) ) {
         act.set_to_null();
@@ -6857,6 +6865,8 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
                 return;
             }
             if( veh->can_close( closed_vehicle_part, who ) ) {
+                vehicle_uid = veh->uid().get_value();
+                part_uid = veh->part( veh->get_non_fake_part( closed_vehicle_part ) ).get_base().uid().get_value();
                 close_success = close_tile_result::CLOSE_VEHICLE;
                 act.moves_left = act.moves_total;
                 return;
@@ -6917,7 +6927,13 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
 void close_tile_activity_actor::finish( player_activity &act, Character &who )
 {
     map &here = get_map();
-    const tripoint_bub_ms closep = tile_location;
+    const tripoint_bub_ms closep = target_location ? here.get_bub( *target_location ) : tile_location;
+    if( !here.inbounds( closep ) || !here.inbounds( who.pos_abs() ) ||
+        who.pos_bub().z() != closep.z() ||
+        square_dist( who.pos_bub().xy(), closep.xy() ) > 1 || who.is_dead_state() ) {
+        act.set_to_null();
+        return;
+    }
     const bool inside = !here.is_outside( who.pos_bub() );
     map_stack items_in_way = here.i_at( closep );
 
@@ -6929,12 +6945,31 @@ void close_tile_activity_actor::finish( player_activity &act, Character &who )
 
     if( close_success == close_tile_result::CLOSE_VEHICLE ) {
         optional_vpart_position vp = here.veh_at( closep );
-        // There is a vehicle part here; see if it has anything that can be closed
+        if( !vp || vehicle_uid <= 0 || part_uid <= 0 ||
+            vp->vehicle().uid().get_value() != vehicle_uid ) {
+            act.set_to_null();
+            return;
+        }
         vehicle *const veh = &vp->vehicle();
+        int target_part = -1;
+        for( int index = 0; index < veh->part_count(); ++index ) {
+            const vehicle_part &part = veh->part( index );
+            if( !part.removed && !part.is_fake && part.get_base().uid().get_value() == part_uid ) {
+                target_part = index;
+                break;
+            }
+        }
+        const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh;
+        const int closing_part = veh->next_part_to_close( vp->part_index(), outside );
+        if( target_part < 0 || closing_part < 0 ||
+            veh->get_non_fake_part( closing_part ) != target_part || !veh->can_close( closing_part, who ) ) {
+            act.set_to_null();
+            return;
+        }
         who.add_msg_if_player( _( "You close the %1$s's %2$s." ), veh->name,
-                               veh->part( closed_vehicle_part ).name() );
+                               veh->part( closing_part ).name() );
         // close vehicle part
-        veh->close( here, closed_vehicle_part );
+        veh->close( here, closing_part );
     } else if( close_success == close_tile_result::CLOSE_DOOR ) {
 
         const std::string door_name = here.obstacle_name( closep );
@@ -6965,6 +7000,9 @@ void close_tile_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "tile_location", tile_location );
     jsout.member( "close_success", close_success );
     jsout.member( "closed_vehicle_part", closed_vehicle_part );
+    jsout.member( "target_location", target_location );
+    jsout.member( "vehicle_uid", vehicle_uid );
+    jsout.member( "part_uid", part_uid );
 
     jsout.end_object();
 }
@@ -6978,6 +7016,9 @@ std::unique_ptr<activity_actor> close_tile_activity_actor::deserialize( JsonValu
     data.read( "tile_location", actor.tile_location );
     data.read( "close_success", actor.close_success );
     data.read( "closed_vehicle_part", actor.closed_vehicle_part );
+    data.read( "target_location", actor.target_location );
+    data.read( "vehicle_uid", actor.vehicle_uid );
+    data.read( "part_uid", actor.part_uid );
 
     return actor.clone();
 }

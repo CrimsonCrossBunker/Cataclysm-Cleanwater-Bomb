@@ -55,6 +55,7 @@
 #include "mission.h"
 #include "mission_dialogue.h"
 #include "monster.h"
+#include "mutation.h"
 #include "npc.h"
 #include "npc_lifetime.h"
 #include "npc_opinion.h"
@@ -1090,6 +1091,46 @@ TEST_CASE( "npc_test_tags", "[npc_talk]" )
     CHECK( d.responses[7].create_option_line( d, input_event() ).text ==
            "Context tag is set to It's context." );
     globvars.clear_global_values();
+}
+
+TEST_CASE( "trait_description_tags_resolve_character_context", "[npc_talk][regression]" )
+{
+    clear_avatar();
+    dialogue d;
+    npc &partner = prep_test( d );
+    avatar &you = get_avatar();
+    const trait_id eyes( "eye_color" );
+    you.set_mutation( eyes, &eyes->variants.at( "blue" ) );
+    you.set_mut_variant( eyes, &eyes->variants.at( "blue" ) );
+    partner.set_mutation( eyes, &eyes->variants.at( "brown" ) );
+    monster target( mon_zombie );
+    std::string expected;
+
+    SECTION( "character beta keeps its own variant" ) {
+        expected = eyes->desc( "brown" );
+    }
+    SECTION( "topic-only beta uses the speaker variant" ) {
+        d = dialogue( get_talker_for( you ),
+                      get_talker_for( std::vector<std::string> { "TALK_TEST_TAGS" } ) );
+        expected = eyes->desc( "blue" );
+    }
+    SECTION( "monster beta uses the speaker variant" ) {
+        d = dialogue( get_talker_for( you ), get_talker_for( target ) );
+        expected = eyes->desc( "blue" );
+    }
+    SECTION( "non-character participants use the base description" ) {
+        d = dialogue( get_talker_for( target ),
+                      get_talker_for( std::vector<std::string> { "TALK_TEST_TAGS" } ) );
+        expected = eyes->desc();
+    }
+
+    std::string text = "<trait_description:eye_color>";
+    parse_tags( text, *d.const_actor( false ), *d.const_actor( true ), d );
+    CHECK( text == expected );
+    d.set_value( "description_trait", "eye_color" );
+    text = "<trait_description:<context_val:description_trait>>";
+    parse_tags( text, *d.const_actor( false ), *d.const_actor( true ), d );
+    CHECK( text == expected );
 }
 
 TEST_CASE( "npc_compare_int", "[npc_talk]" )

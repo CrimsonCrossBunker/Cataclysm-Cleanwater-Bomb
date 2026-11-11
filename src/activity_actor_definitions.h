@@ -2024,6 +2024,9 @@ class close_tile_activity_actor : public activity_actor
         tripoint_bub_ms tile_location;
         close_tile_result close_success = close_tile_result::CLOSE_FAIL;
         int closed_vehicle_part = -1;
+        std::optional<tripoint_abs_ms> target_location;
+        int64_t vehicle_uid = 0;
+        int64_t part_uid = 0;
 };
 
 class consume_activity_actor : public activity_actor

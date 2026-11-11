@@ -2899,8 +2899,9 @@ void parse_tags( std::string &phrase, const_talker const &u, const_talker const 
             var.pop_back();
             // resolve nest
             parse_tags( var, u, me, d, item_type );
-            // this probably will benefit from grabbing alpha/beta talker instead of avatar
-            phrase.replace( fa, l, me_chr->mutation_desc( trait_id( var ) ) );
+            const trait_id trait( var );
+            const Character *const character = me_chr ? me_chr : u_chr;
+            phrase.replace( fa, l, character ? character->mutation_desc( trait ) : trait->desc() );
         } else if( tag.find( "<spell_name:" ) == 0 ) {
             std::string var = tag.substr( tag.find( ':' ) + 1 );
             // remove the trailing >
