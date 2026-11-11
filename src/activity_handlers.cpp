@@ -715,20 +715,25 @@ void activity_handlers::travel_do_turn( player_activity *act, Character *you )
             return;
         }
         const tripoint_abs_omt next_omt = you->omt_path.back();
+        constexpr int waypoint_radius = 2;
         tripoint_abs_ms waypoint;
         if( you->omt_path.size() == 1 ) {
             // if next omt is the final one, target its midpoint
             waypoint = midpoint( project_bounds<coords::ms>( next_omt ) );
         } else {
-            // otherwise target the middle of the edge nearest to our current location
+            // keep the target radius inside the next OMT near its closest edge
             const tripoint_abs_ms cur_omt_mid = midpoint( project_bounds<coords::ms>
                                                 ( you->pos_abs_omt() ) );
-            waypoint = clamp( cur_omt_mid, project_bounds<coords::ms>( next_omt ) );
+            half_open_cuboid<tripoint_abs_ms> bounds = project_bounds<coords::ms>( next_omt );
+            const tripoint_rel_ms margin( waypoint_radius, waypoint_radius, 0 );
+            bounds.p_min += margin;
+            bounds.p_max -= margin;
+            waypoint = clamp( cur_omt_mid, bounds );
         }
         map &here = get_map();
         tripoint_bub_ms centre_sub = here.get_bub( waypoint );
         const std::vector<tripoint_bub_ms> route_to =
-            here.route( *you, pathfinding_target::radius( centre_sub, 2 ) );
+            here.route( *you, pathfinding_target::radius( centre_sub, waypoint_radius ) );
         if( !route_to.empty() ) {
             const activity_id act_travel = ACT_TRAVELLING;
             you->set_destination( route_to, player_activity( act_travel ) );
