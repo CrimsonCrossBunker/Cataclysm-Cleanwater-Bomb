@@ -2260,11 +2260,15 @@ std::string widget::layout_internal( const avatar &ava,
             for( std::size_t i = 0; i < wgts.size(); ++i ) {
                 const widget_id &wid = wgts[i];
                 widget cur_child = wid.obj();
-                ret += sep + cur_child.layout_internal(
-                           ava, max_width, layout_label_width,
-                           skip_pad || wid->has_flag( json_flag_W_NO_PADDING ),
-                           label_override, child_paths[i],
-                           effective_separator, effective_padding );
+                const std::string child_text = cur_child.layout_internal(
+                                                   ava, max_width, layout_label_width,
+                                                   skip_pad || wid->has_flag( json_flag_W_NO_PADDING ),
+                                                   label_override, child_paths[i],
+                                                   effective_separator, effective_padding );
+                if( wid->has_flag( json_flag_W_DISABLED_WHEN_EMPTY ) && child_text.empty() ) {
+                    continue;
+                }
+                ret += sep + child_text;
                 sep = "\n";
                 h += wid->_height < 0 ? 0 : wid->_height;
             }
