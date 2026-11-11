@@ -31,6 +31,7 @@
 #include "item_search.h"
 #include "itype.h"
 #include "localized_comparator.h"
+#include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
 #include "mp_world_session.h"
