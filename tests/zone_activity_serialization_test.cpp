@@ -5,6 +5,7 @@
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "cata_catch.h"
+#include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
 
