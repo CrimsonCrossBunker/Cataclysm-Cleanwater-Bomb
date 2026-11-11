@@ -204,14 +204,14 @@ TEST_CASE( "vehicle_deck_switch_bindings", "[vehicle][decks][input]" )
     const int char_page = down ? KEY_NPAGE : KEY_PPAGE;
     const int code_page = down ? keycode::npage : keycode::ppage;
     CHECK( ctxt.input_to_action( input_event( { keymod_t::ctrl }, char_page,
-            input_event_t::keyboard_char ) ) == action );
+                                 input_event_t::keyboard_char ) ) == action );
     CHECK( ctxt.input_to_action( input_event( { keymod_t::ctrl }, code_page,
-            input_event_t::keyboard_code ) ) == action );
+                                 input_event_t::keyboard_code ) ) == action );
     CHECK( ctxt.input_to_action( input_event( { keymod_t::shift }, down ? '.' : ',',
-            input_event_t::keyboard_code ) ) ==
+                                 input_event_t::keyboard_code ) ) ==
            ( down ? "DESC_LIST_DOWN" : "DESC_LIST_UP" ) );
     CHECK( ctxt.input_to_action( input_event( code_page,
-            input_event_t::keyboard_code ) ) == ( down ? "PAGE_DOWN" : "PAGE_UP" ) );
+                                 input_event_t::keyboard_code ) ) == ( down ? "PAGE_DOWN" : "PAGE_UP" ) );
 }
 
 TEST_CASE( "vehicle_deck_modification_activities_keep_the_selected_deck",
