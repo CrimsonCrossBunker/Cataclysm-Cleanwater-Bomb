@@ -1724,6 +1724,27 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
         }
     }
 
+    if( loc->is_gun() && !loc->is_gunmod() && method.empty() ) {
+        bool manage = true;
+        if( loc->type->has_use() || loc->has_relic_activation() ) {
+            uilist actions;
+            actions.text = loc->tname();
+            actions.addentry( 0, true, 'm', _( "Manage gun modifications" ) );
+            actions.addentry( 1, true, 'a', _( "Activate item" ) );
+            actions.query();
+            if( actions.ret < 0 ) {
+                return;
+            }
+            manage = actions.ret == 0;
+        }
+        if( manage ) {
+            if( avatar_action::check_stealing( get_player_character(), *loc.get_item() ) ) {
+                gunmod_ui::show( you, loc );
+            }
+            return;
+        }
+    }
+
     // Submit the original source before obtain/overflow can mutate the replica.
     // Native medication use already follows the consumption activity path.
     if( cata_mp::is_client_mode() && loc->is_craft() ) {
@@ -1747,25 +1768,6 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
     if( !avatar_action::check_stealing( get_player_character(), *loc.get_item() ) ) {
         return;
-    }
-
-    if( loc->is_gun() && !loc->is_gunmod() && method.empty() ) {
-        bool manage = true;
-        if( loc->type->has_use() || loc->has_relic_activation() ) {
-            uilist actions;
-            actions.text = loc->tname();
-            actions.addentry( 0, true, 'm', _( "Manage gun modifications" ) );
-            actions.addentry( 1, true, 'a', _( "Activate item" ) );
-            actions.query();
-            if( actions.ret < 0 ) {
-                return;
-            }
-            manage = actions.ret == 0;
-        }
-        if( manage ) {
-            gunmod_ui::show( you, loc );
-            return;
-        }
     }
 
     loc.overflow( here );
