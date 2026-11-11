@@ -12,6 +12,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "clone_ptr.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -27,6 +28,7 @@
 #include "ret_val.h"
 #include "type_id.h"
 #include "value_ptr.h"
+#include "visitable.h"
 
 static const activity_id ACT_GUNMOD_ADD( "ACT_GUNMOD_ADD" );
 static const itype_id itype_223( "223" );
@@ -268,6 +270,66 @@ TEST_CASE( "gunmod_installation_keeps_selected_item_instance", "[gunmod][activit
     const item *installed = you.get_wielded_item()->gunmod_find( itype_shoulder_strap );
     REQUIRE( installed );
     CHECK( installed->damage() == 2000 );
+}
+
+TEST_CASE( "gunmod_installation_preserves_mod_inside_relocated_gun", "[gunmod][activities]" )
+{
+    std::unique_ptr<itype> gun_type = std::make_unique<itype>( *itype_sl8 );
+    gun_type->pockets.insert( gun_type->pockets.end(), itype_backpack->pockets.begin(),
+                              itype_backpack->pockets.end() );
+    clear_avatar();
+    const on_out_of_scope cleanup( clear_avatar );
+    avatar &you = get_avatar();
+    REQUIRE( you.wear_item( item( itype_backpack ), false, false ) );
+    you.set_mutation( trait_DEBUG_HS );
+    item first( itype_shoulder_strap );
+    first.set_damage( 1000 );
+    you.i_add( first );
+    item gun( gun_type.get(), calendar::turn );
+    item second( itype_shoulder_strap );
+    second.set_damage( 2000 );
+    REQUIRE( gun.put_in( second, pocket_type::CONTAINER ).success() );
+    item_location stored_gun = you.i_add( gun );
+    REQUIRE( stored_gun );
+    REQUIRE_FALSE( you.get_wielded_item() );
+    item &selected = *stored_gun->all_items_top( pocket_type::CONTAINER ).front();
+    you.gunmod_add( *stored_gun, selected, itype_id::NULL_ID() );
+    REQUIRE( you.activity.id() == ACT_GUNMOD_ADD );
+    REQUIRE( you.activity.targets.size() == 2 );
+    CHECK( you.activity.targets[1]->damage() == 2000 );
+    CHECK( you.get_wielded_item()->all_items_top( pocket_type::CONTAINER ).empty() );
+    you.activity.actor->finish( you.activity, you );
+    const item *installed = you.get_wielded_item()->gunmod_find( itype_shoulder_strap );
+    REQUIRE( installed );
+    CHECK( installed->damage() == 2000 );
+}
+
+TEST_CASE( "gunmod_installation_stages_mod_outside_wielded_container", "[gunmod][activities]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    const bool storage_available = GENERATE( false, true );
+    item gun( itype_sl8 );
+    if( storage_available ) {
+        REQUIRE( you.wear_item( item( itype_backpack ), false, false ) );
+    }
+    you.set_mutation( trait_DEBUG_HS );
+    item bag( itype_backpack );
+    item mod( itype_shoulder_strap );
+    mod.set_damage( 2000 );
+    REQUIRE( bag.put_in( mod, pocket_type::CONTAINER ).success() );
+    REQUIRE( you.wield( bag ) );
+    item_location held_bag = you.get_wielded_item();
+    item &selected = *held_bag->all_items_top( pocket_type::CONTAINER ).front();
+    you.gunmod_add( gun, selected, itype_id::NULL_ID() );
+    CHECK_FALSE( you.activity );
+    REQUIRE( held_bag );
+    CHECK( held_bag->all_items_top( pocket_type::CONTAINER ).empty() == storage_available );
+    const std::vector<item *> mods = you.items_with( []( const item & candidate ) {
+        return candidate.typeId() == itype_shoulder_strap;
+    } );
+    REQUIRE( mods.size() == 1 );
+    CHECK( mods.front()->damage() == 2000 );
 }
 
 TEST_CASE( "gunmod_installation_rechecks_tool_charges_at_completion", "[gunmod][activities]" )
