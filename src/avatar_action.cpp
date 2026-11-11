@@ -5,7 +5,6 @@
 #include <memory_fast.h>
 #include <monster_uid.h>
 #include <mp_peek.h>
-#include <mp_world_session.h>
 #include <player_activity.h>
 #include <safe_reference.h>
 #include <stdint.h>
@@ -22,6 +21,8 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "mp_world_session.h"
 
 #include "action.h"
 #include "activity_actor_definitions.h"
