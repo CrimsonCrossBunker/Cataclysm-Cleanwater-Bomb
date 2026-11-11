@@ -1,5 +1,17 @@
 [
   {
+    "id": "bio_shock_absorber",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Kinetic Shock Absorbers CBM" },
+    "looks_like": "bio_int_enhancer",
+    "description": "A set of hydraulic springs and foldable padding equipped with microgravity offset sensors can be implanted into the flesh of the limbs and upper torso.  While active, these absorbers will negate damage from severe impacts such as falling, at the cost of reducing the user's ability to move effectively.",
+    "price": "100 USD",
+    "weight": "3000 g",
+    "difficulty": 8
+  },
+  {
     "id": "fcl_bio_neurosoft_aeronautics",
     "copy-from": "bionic_general",
     "type": "ITEM",
