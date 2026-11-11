@@ -5,6 +5,7 @@
 #include <memory_fast.h>
 #include <monster_uid.h>
 #include <mp_peek.h>
+#include <mp_world_session.h>
 #include <player_activity.h>
 #include <safe_reference.h>
 #include <stdint.h>
@@ -72,7 +73,6 @@
 #include "mp_melee.h"
 #include "mp_throw.h"
 #include "mp_unload.h"
-#include "mp_world_session.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
