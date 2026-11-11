@@ -8942,6 +8942,13 @@ void Character::knock_back_to( const tripoint_bub_ms &to )
 
 void Character::use_wielded()
 {
+    if( avatar *you = as_avatar() ) {
+        item_location source = get_wielded_item();
+        if( source && source->is_gun() && !source->is_gunmod() ) {
+            avatar_action::use_item( *you, source );
+            return;
+        }
+    }
     if( is_avatar() && cata_mp::is_client_mode() ) {
         item_location source = get_wielded_item();
         std::string method;
