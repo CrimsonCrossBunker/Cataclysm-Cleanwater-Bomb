@@ -2,6 +2,10 @@
 #ifndef CATA_SRC_REPAIR_ACTIVITY_H
 #define CATA_SRC_REPAIR_ACTIVITY_H
 
+#include <coordinates.h>
+#include <point.h>
+#include <requirements.h>
+#include <type_id.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -18,7 +22,6 @@ class JsonValue;
 class item;
 class item_location;
 class map;
-class player_activity;
 class repair_item_actor;
 class vehicle;
 struct vehicle_control_selection;
