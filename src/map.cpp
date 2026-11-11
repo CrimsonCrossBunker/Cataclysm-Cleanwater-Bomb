@@ -2206,7 +2206,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
                 next_pos = veh_part.precalc[1];
             }
             const tripoint_bub_ms chassis_point = src + dp + next_pos -
-                    tripoint( 0, 0, veh_part.mount_level );
+                                                  tripoint( 0, 0, veh_part.mount_level );
             if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
                 psg_offset_z += 1;
             } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {

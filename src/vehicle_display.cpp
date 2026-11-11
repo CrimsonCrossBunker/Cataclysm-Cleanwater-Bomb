@@ -67,7 +67,8 @@ std::string vpart_display::get_tileset_id() const
     return res;
 }
 
-vpart_display vehicle::get_display_of_tile( const tripoint_rel_ms &dp, bool rotate, bool include_fake,
+vpart_display vehicle::get_display_of_tile( const tripoint_rel_ms &dp, bool rotate,
+        bool include_fake,
         bool below_roof, bool roof ) const
 {
     const int part_idx = part_displayed_at( dp, include_fake, below_roof, roof );

@@ -3706,7 +3706,8 @@ void game::vehicle_turning_assist()
         veh->can_use_rails( here ) || !veh->valid_wheel_config( here ) ||
         veh->steering_effectiveness( here ) <= 0.0f || !veh->can_control_on_land( u ) ||
         veh->is_autodriving || veh->autopilot_on ) {
-        add_msg( m_info, _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
+        add_msg( m_info,
+                 _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
         return;
     }
     const safe_reference<vehicle> lifetime = veh->get_safe_reference();
@@ -3726,13 +3727,15 @@ void game::vehicle_turning_assist()
     const double lateral = -delta.x() * std::sin( heading ) + delta.y() * std::cos( heading );
     const std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( forward, lateral );
     if( !arc ) {
-        add_msg( m_info, _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
+        add_msg( m_info,
+                 _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
         return;
     }
     veh->pldrive( here, u, 0, 0, 0, arc );
     if( lifetime && veh->turning_arc ) {
         vehicle_guidance = true;
-        add_msg( m_info, _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
+        add_msg( m_info,
+                 _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
     }
 }
 
@@ -3763,10 +3766,10 @@ void game::draw_vehicle_guidance()
     // Match the movement engine's tile-step budget for one second.  Drag,
     // acceleration, terrain and collisions can change the actual endpoint.
     const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
-                                 vehicles::vmiph_per_tile ) ), 0, 60 );
+                                  vehicles::vmiph_per_tile ) ), 0, 60 );
     const double skill = u.get_skill_level( skill_id( "driving" ) );
     const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
-                                       ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
+                                        ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
     std::set<tripoint_bub_ms> guides;
     std::set<tripoint_bub_ms> estimate;
     tripoint_bub_ms predicted = origin;
@@ -3778,10 +3781,12 @@ void game::draw_vehicle_guidance()
     for( int step = 0; step <= steps; ++step ) {
         const double angle = to_radians( ray.dir() );
         // Project the two sides of the vehicle along its predicted heading.
-        for( const double side : { left - 1.0, right + 1.0 } ) {
+        for( const double side : {
+                 left - 1.0, right + 1.0
+             } ) {
             const tripoint_bub_ms p = predicted + point(
-                                         std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
-                                         std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
+                                          std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
+                                          std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
             guides.insert( p );
         }
         if( step == steps ) {
@@ -3789,8 +3794,12 @@ void game::draw_vehicle_guidance()
             int max_x = INT_MIN;
             int min_y = INT_MAX;
             int max_y = INT_MIN;
-            for( const double along : { rear, front } ) {
-                for( const double side : { left, right } ) {
+            for( const double along : {
+                     rear, front
+                 } ) {
+                for( const double side : {
+                         left, right
+                     } ) {
                     const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
                     const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
                     min_x = std::min( min_x, x - uncertainty );
@@ -10633,7 +10642,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
             vehicle_here->vehicle().deck_transition( here, pos, movez ) : std::nullopt;
     const auto deck_vehicle_uid = vehicle_stairs ? vehicle_here->vehicle().uid() : vehicle_uid();
     if( vehicle_stairs && ( who.is_mounted() ||
-                           get_creature_tracker().creature_at( *vehicle_stairs ) ) ) {
+                            get_creature_tracker().creature_at( *vehicle_stairs ) ) ) {
         who.add_msg_if_player( m_info, _( "The vehicle stairs are blocked." ) );
         return;
     }
@@ -10643,11 +10652,12 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     climbing_aid_id climbing_aid = climbing_aid_default;
     int move_cost = 100;
     tripoint_bub_ms stairs = vehicle_stairs.value_or(
-                                tripoint_bub_ms( pos.xy(), pos.z() + movez ) );
+                                 tripoint_bub_ms( pos.xy(), pos.z() + movez ) );
     bool wall_cling = who.has_flag( json_flag_WALL_CLING );
     bool adjacent_climb = false;
     bool climb_flying = who.has_flag( json_flag_CLIMB_FLYING );
-    if( !force && !vehicle_stairs && movez == 1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) &&
+    if( !force && !vehicle_stairs && movez == 1 &&
+        !here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) &&
         !who.is_underwater() ) {
         // Climbing
 
@@ -10741,7 +10751,8 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         }
     }
 
-    if( !force && !vehicle_stairs && movez == -1 && !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos ) &&
+    if( !force && !vehicle_stairs && movez == -1 &&
+        !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos ) &&
         !who.is_underwater() && !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR_WATER, pos ) &&
         !who.has_effect( effect_gliding ) ) {
         tripoint_bub_ms dest_phase = pos;

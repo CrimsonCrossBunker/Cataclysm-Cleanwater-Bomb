@@ -640,7 +640,9 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
 
         if( settings.allow_climb_stairs ) {
             if( const optional_vpart_position source = veh_at( cur ) ) {
-                for( int dz : { -1, 1 } ) {
+                for( int dz : {
+                         -1, 1
+                         } ) {
                     const auto dest = source->vehicle().deck_transition( *this, cur, dz );
                     if( !dest || dest->z() < min.z() || dest->z() > max.z() ||
                         !inbounds( *dest ) ||

@@ -14350,9 +14350,9 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             const ret_val<void> valid_mount = veh.can_mount( deck_mount, vpinfo );
             if( !valid_mount.success() ) {
                 you.add_msg_player_or_npc( m_info,
-                                         _( "You cannot install %2$s on vehicle deck %1$d: %3$s" ),
-                                         _( "<npcname> cannot install %2$s on vehicle deck %1$d: %3$s" ),
-                                         deck_mount.z() + 1, vpinfo.name(), valid_mount.str() );
+                                           _( "You cannot install %2$s on vehicle deck %1$d: %3$s" ),
+                                           _( "<npcname> cannot install %2$s on vehicle deck %1$d: %3$s" ),
+                                           deck_mount.z() + 1, vpinfo.name(), valid_mount.str() );
                 break;
             }
             const temp_crafting_inventory &inv = you.crafting_inventory();
@@ -14394,7 +14394,8 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             }
 
             you.invalidate_crafting_inventory();
-            const int partnum = veh.install_part( here, deck_mount, part_id, std::move( base ), installed_with );
+            const int partnum = veh.install_part( here, deck_mount, part_id, std::move( base ),
+                                                  installed_with );
             if( partnum < 0 ) {
                 debugmsg( "complete_vehicle install part fails dx=%d dy=%d dz=%d id=%s",
                           d.x(), d.y(), deck_mount.z(), part_id.c_str() );

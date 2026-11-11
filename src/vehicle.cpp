@@ -1319,7 +1319,8 @@ void vehicle::add_chat_topic( const std::string &topic )
 static constexpr std::array<tripoint, 6> vehicle_structure_neighbors = {{
         tripoint( 1, 0, 0 ), tripoint( -1, 0, 0 ), tripoint( 0, 1, 0 ),
         tripoint( 0, -1, 0 ), tripoint::above, tripoint::below
-    }};
+    }
+};
 
 bool vehicle::has_structural_part( const point &dp ) const
 {
@@ -1510,13 +1511,14 @@ ret_val<void> vehicle::can_unmount( const vehicle_part &vp_to_remove, bool allow
     }
 
     if( vp_to_remove.mount_level == 0 &&
-        std::any_of( parts.begin(), parts.end(), []( const vehicle_part & part ) {
-            return !part.removed && !part.is_fake && part.mount_level > 0;
-        } ) && std::none_of( parts.begin(), parts.end(), [&]( const vehicle_part & part ) {
-            return &part != &vp_to_remove && !part.removed && !part.is_fake &&
-                   part.mount_level == 0 && part.info().location == vpart_location_structure;
-        } ) ) {
-        return ret_val<void>::make_failure( _( "请先拆卸上层，再拆卸最后一块底层车架。" ) );
+    std::any_of( parts.begin(), parts.end(), []( const vehicle_part & part ) {
+    return !part.removed && !part.is_fake && part.mount_level > 0;
+} ) && std::none_of( parts.begin(), parts.end(), [&]( const vehicle_part & part ) {
+    return &part != &vp_to_remove && !part.removed && !part.is_fake &&
+           part.mount_level == 0 && part.info().location == vpart_location_structure;
+    } ) ) {
+        return ret_val<void>::make_failure(
+                   _( "请先拆卸上层，再拆卸最后一块底层车架。" ) );
     }
 
     // structure parts can only be removed when no non-structure/non-cable parts are on tile
@@ -1539,7 +1541,8 @@ ret_val<void> vehicle::can_unmount( const vehicle_part &vp_to_remove, bool allow
     // find all the vehicle's tiles adjacent to the one we're removing
     std::vector<vehicle_part> adjacent_parts;
     for( const tripoint &offset : vehicle_structure_neighbors ) {
-        const std::vector<int> parts_over_there = parts_at_relative( vp_to_remove.mount_pos3() + offset, false );
+        const std::vector<int> parts_over_there = parts_at_relative( vp_to_remove.mount_pos3() + offset,
+                false );
         if( !parts_over_there.empty() ) {
             //Just need one part from the square to track the x/y
             adjacent_parts.push_back( parts[parts_over_there[0]] );
@@ -7518,7 +7521,7 @@ void vehicle::refresh( const bool remove_fakes )
 
 vpart_edge_info vehicle::get_edge_info( const tripoint_rel_ms &mount ) const
 {
-    const auto neighbor = [&]( const point &offset ) {
+    const auto neighbor = [&]( const point & offset ) {
         const auto found = parts_at_relative( mount + offset, true );
         return found.empty() ? -1 : found.front();
     };
@@ -9619,7 +9622,7 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
             prt.precalc[0].z() += dp.z();
         }
         const tripoint_bub_ms chassis_point = src + dp + prt.precalc[0] -
-                tripoint( 0, 0, prt.mount_level );
+                                              tripoint( 0, 0, prt.mount_level );
         if( here->has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
             prt.precalc[0].z() += 1;
         } else if( here->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {

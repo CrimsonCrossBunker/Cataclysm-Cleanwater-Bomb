@@ -1265,7 +1265,7 @@ void vehicle::open_or_close( map &here, const int part_index, const bool opening
         if( opening && prt.locked ) {
             unlock( parti );
         }
-        const auto set_open = [&]( vehicle_part &vp ) {
+        const auto set_open = [&]( vehicle_part & vp ) {
             vp.open = opening;
             const tripoint_bub_ms location = bub_part_pos( here, vp );
             if( here.inbounds( location ) ) {
