@@ -2003,7 +2003,9 @@ TEST_CASE( "interleaved_dialogues_isolate_selected_missions_and_preserve_clones"
     CHECK( remote_dialogue.const_actor( true )->assigned_missions() ==
            std::vector<mission *> { remote_available } );
 
-    remote.wield( remote.i_add( item( itype_test_rock ) ) );
+    item rock( itype_test_rock );
+    REQUIRE( remote.wield( rock ) );
+    REQUIRE( remote.has_amount( itype_test_rock, 1 ) );
     const conditional_t cond_complete( "mission_complete" );
     const conditional_t cond_incomplete( "mission_incomplete" );
     const conditional_t cond_has_remote(
@@ -2258,12 +2260,16 @@ TEST_CASE( "native_talk_effects_and_lua_dialogue_context_share_session_mission_s
     const cata::lua_platform::game_handle_runtime runtime_identity( runtime_owner, 991 );
     cata::lua_platform::runtime_world_ready( true );
     const std::size_t world_generation = cata::lua_platform::runtime_world_generation();
+    cata::lua_platform::dialogue::begin_session(
+        remote_dialogue, runtime_identity, world_generation );
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
         cata::lua_platform::dialogue::session_for(
             remote_dialogue, "TALK_TEST", runtime_identity, world_generation );
+    REQUIRE( session != nullptr );
     cata::lua_platform::dialogue::context lua_ctx(
         lua.lua_state(), remote_dialogue, "TALK_TEST", true,
         "stale", {}, session, runtime_identity, world_generation, true );
+    REQUIRE( lua_ctx.valid() );
 
     const int remote_value_before = provider.opinion_of( remote.getID() ).value;
     const int host_value_before = provider.opinion_of( host.getID() ).value;
@@ -2283,6 +2289,7 @@ TEST_CASE( "native_talk_effects_and_lua_dialogue_context_share_session_mission_s
     CHECK( failed->has_failed() );
     CHECK( failed->get_assigned_player_id() == remote.getID() );
     cata::lua_platform::dialogue::end_session( remote_dialogue );
+    CHECK_FALSE( lua_ctx.valid() );
 #endif
 }
 
@@ -2506,16 +2513,20 @@ TEST_CASE( "dialogue_choice_revalidates_and_commits_only_once", "[npc_talk][owne
 
     SECTION( "changed_condition_rejects_without_gameplay_randomness_or_effects" ) {
         permitted = false;
+        rng( 1, 100 );
+        const std::string before_choice = gameplay_rng_state();
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 0 );
-        CHECK( gameplay_rng_state() == before );
+        CHECK( gameplay_rng_state() == before_choice );
     }
     SECTION( "success_cannot_repeat_or_reenter" ) {
+        rng( 1, 100 );
+        const std::string before_choice = gameplay_rng_state();
         const auto next = conversation.select_response( 0, revision );
         REQUIRE( next );
         CHECK( next->id == "TALK_DONE" );
         CHECK( executions == 1 );
-        CHECK( gameplay_rng_state() != before );
+        CHECK( gameplay_rng_state() != before_choice );
         const std::string after = gameplay_rng_state();
         CHECK_FALSE( conversation.select_response( 0, revision ) );
         CHECK( executions == 1 );
@@ -2553,6 +2564,7 @@ TEST_CASE( "dialogue_choice_rejects_mission_taken_by_another_player",
     mission::clear_all();
     npc &provider = create_test_talker();
     npc remote;
+    remote.normalize();
     remote.setID( character_id( 87433 ) );
     const on_out_of_scope cleanup( [&]() {
         remote.reset_all_missions();
