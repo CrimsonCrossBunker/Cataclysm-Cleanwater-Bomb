@@ -2414,7 +2414,7 @@ void avatar::deserialize( const JsonObject &data )
     load( data );
 }
 
-void avatar::load( const JsonObject &data )
+void avatar::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
     // Validate before mutating the Character. A corrupt identity must not
     // silently become a new player, and an old save must clear any prior ID.
@@ -2426,7 +2426,7 @@ void avatar::load( const JsonObject &data )
             data.throw_error_at( "local_player_id", "Invalid local player identity" );
         }
     }
-    Character::load( data );
+    Character::load( data, legacy_kills );
     local_player_id = restored_player;
 
     std::string prof_ident = "(null)";
