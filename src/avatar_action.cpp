@@ -1,4 +1,5 @@
 #include <coordinates.h>
+#include <cstdint>
 #include <input_enums.h>
 #include <item_disposition.h>
 #include <item_uid.h>
@@ -7,7 +8,6 @@
 #include <mp_peek.h>
 #include <player_activity.h>
 #include <safe_reference.h>
-#include <stdint.h>
 #include <translation.h>
 #include <algorithm>
 #include <climits>
