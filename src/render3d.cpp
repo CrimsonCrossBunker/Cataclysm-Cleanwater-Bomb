@@ -1560,6 +1560,18 @@ bool upright_equipment_terrain( const ter_t &t )
     return std::find( ids.begin(), ids.end(), std::string_view( t.id.str() ) ) != ids.end();
 }
 
+// Spriteless treetops and canvas roofs are open surfaces, not hash-colored
+// floors. Callers still draw them when a tileset supplies a real fg/bg sprite.
+bool skip_untextured_terrain_surface( const ter_t &t )
+{
+    static constexpr std::array<std::string_view, 5> ids = {{
+            "t_canvas_roof", "t_treetop", "t_treetop_evergreen",
+            "t_treetop_dead", "t_treetop_giant_fern"
+        }
+    };
+    return std::find( ids.begin(), ids.end(), std::string_view( t.id.str() ) ) != ids.end();
+}
+
 // Furniture that is genuinely a ground covering or horizontal walking surface.
 // Do not infer this from FLAT_SURF or looks_like: tables and beds have height,
 // and cardboard roofs use the same FLAT flag as cardboard floors.
@@ -2740,7 +2752,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                            wz - 0.001f, 1.0f, 1.0f, 1.0f, ground_spr, gr, gg, gb,
                            false, ground_rot4, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) )
+        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) &&
+                   ( ground_tex || !skip_untextured_terrain_surface( t ) ) )
         {
             // Horizontal objects without a bg must not acquire an unrelated
             // hash-colored floor box beneath their textured top and silhouette.
@@ -3255,7 +3268,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // canopies are spriteless terrain) — skip instead of painting a
                 // hash-colored floor in the sky. Horizontal utilities likewise
                 // get no hash-colored base when their tile has no real bg.
-                if( !is_empty_frame && ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) ) {
+                if( !is_empty_frame && ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) &&
+                    ( ground_tex || !skip_untextured_terrain_surface( *t ) ) ) {
                     // the base-id / wood-floor fallbacks have no connection
                     // rotation: only a shaped fg sprite carries one
                     const int ground_rot4 = ( !btex && !dtex ) ? frot4 : 0;

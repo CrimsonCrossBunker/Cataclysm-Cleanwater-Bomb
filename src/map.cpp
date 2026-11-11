@@ -673,6 +673,8 @@ void map::update_map_memory( avatar &you )
     CATA_PROFILE_SCOPE();
     map &here = *this;
     const int z = you.posz();
+    const bool cross_level_memory = is_draw_tiles_mode() &&
+                                    get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && here.supports_zlevels();
 
     // Map memory must use visibility from the avatar's current position.  The
     // final step of ordinary movement and activity-driven vehicle movement can
@@ -692,7 +694,12 @@ void map::update_map_memory( avatar &you )
     const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
-    const level_cache &ch = here.access_cache( z );
+    // update_visibility_cache refreshes the requested level and the observer's
+    // downward range. Lower stale caches must never become new memories.
+    const int lowest_vis_z = cross_level_memory ?
+                             std::max( std::min( z, here.observer_position( you ).z() -
+                                                 here.observer_z_range( you ) ), -OVERMAP_DEPTH ) : z;
+    const int highest_mem_z = cross_level_memory ? OVERMAP_HEIGHT : z;
 
     // Ensure the player's map-memory cache covers the window this pass is about
     // to memorize. The render paths (map::draw for curses, cata_tiles for tiles)
@@ -702,30 +709,59 @@ void map::update_map_memory( avatar &you )
     // (region edge / freshly entered area), and the dirty flag is still cleared
     // afterwards — so non-connecting terrain such as grass, which is memorized
     // exactly once and never re-dirtied, is lost permanently and renders black.
+    // Anchoring at z=0 makes prepare_region cover every level rendered by 3D.
+    // Other modes retain their existing single-level preparation window.
+    const int memory_region_z = cross_level_memory ? 0 : z;
     you.prepare_map_memory_region(
-        here.get_abs( tripoint_bub_ms( min_visible.x, min_visible.y, z ) ),
-        here.get_abs( tripoint_bub_ms( max_visible.x, max_visible.y, z ) ) );
+        here.get_abs( tripoint_bub_ms( min_visible.x, min_visible.y, memory_region_z ) ),
+        here.get_abs( tripoint_bub_ms( max_visible.x, max_visible.y, memory_region_z ) ) );
 
-    // Mirrors cata_tiles::apply_visible: a neighbour is "invisible" for
-    // orientation purposes if it falls outside the view window or fails the
-    // visibility test (anything other than a CLEAR view).
-    const auto neighbour_invisible = [&]( const tripoint_bub_ms & np ) -> bool {
-        return np.y() < min_visible.y || np.y() > max_visible.y ||
-        np.x() < min_visible.x || np.x() > max_visible.x ||
-        here.get_visibility( ch.visibility_cache[np.x()][np.y()], cache ) !=
-        visibility_type::CLEAR;
+    const auto any_visibility = []( const auto & values ) {
+        const float *const first = &values[0][0];
+        return std::any_of( first, first + MAPSIZE_X * MAPSIZE_Y, []( const float value ) {
+            return value > 0.0f;
+        } );
     };
 
     // Memorize everything the character can currently see, even if it was not
-    // displayed this frame.
-    for( int mem_y = min_visible.y; mem_y <= max_visible.y; mem_y++ ) {
-        for( int mem_x = min_visible.x; mem_x <= max_visible.x; mem_x++ ) {
-            const tripoint_bub_ms p( mem_x, mem_y, z );
-            const lit_level lighting = ch.visibility_cache[p.x()][p.y()];
+    // displayed this frame. Experimental 3D also records the other visible
+    // levels; its renderer remains a pure reader of this simulation-side pass.
+    for( int mem_z = lowest_vis_z; mem_z <= highest_mem_z; mem_z++ ) {
+        const level_cache &ch = here.access_cache( mem_z );
+        // A level with no direct or camera sight coverage cannot contain a new
+        // visible memory. Clairvoyance remains a per-tile decision below.
+        if( cross_level_memory && mem_z != z && cache.u_clairvoyance <= 0 &&
+            !cache.clairvoyance_field && !any_visibility( ch.seen_cache ) &&
+            !any_visibility( ch.camera_cache ) ) {
+            continue;
+        }
+        const auto lighting_at = [&]( const tripoint_bub_ms & p ) -> lit_level {
+            if( mem_z <= z ) {
+                return ch.visibility_cache[p.x()][p.y()];
+            }
+            // Upper levels have no freshly rebuilt visibility_cache. Match the
+            // 3D renderer: cheap sight rejection, then apparent light on demand.
+            if( ch.seen_cache[p.x()][p.y()] <= 0.0f &&
+                ch.camera_cache[p.x()][p.y()] <= 0.0f &&
+                cache.u_clairvoyance <= 0 && !cache.clairvoyance_field ) {
+                return lit_level::BLANK;
+            }
+            return here.apparent_light_at( p, cache );
+        };
+        // Mirrors cata_tiles::apply_visible: a neighbour is "invisible" for
+        // orientation purposes if it falls outside the view window or fails the
+        // visibility test (anything other than a CLEAR view).
+        const auto neighbour_invisible = [&]( const tripoint_bub_ms & np ) -> bool {
+            return np.y() < min_visible.y || np.y() > max_visible.y ||
+            np.x() < min_visible.x || np.x() > max_visible.x ||
+            here.get_visibility( lighting_at( np ), cache ) != visibility_type::CLEAR;
+        };
+        const auto memorize_visible_tile = [&]( const tripoint_bub_ms & p ) {
+            const lit_level lighting = lighting_at( p );
             // Skip tiles that would have vision effects applied (i.e. not a
             // CLEAR view); those are never memorized.
             if( here.get_visibility( lighting, cache ) != visibility_type::CLEAR ) {
-                continue;
+                return;
             }
             std::array<bool, 5> invisible;
             invisible[0] = false;
@@ -760,6 +796,11 @@ void map::update_map_memory( avatar &you )
                 const const_maptile tile = here.maptile_at_internal( p );
                 here.draw_maptile( catacurses::window(), p, tile,
                                    drawsq_params().memorize( true ).output( false ).show_items( false ) );
+            }
+        };
+        for( int mem_y = min_visible.y; mem_y <= max_visible.y; mem_y++ ) {
+            for( int mem_x = min_visible.x; mem_x <= max_visible.x; mem_x++ ) {
+                memorize_visible_tile( tripoint_bub_ms( mem_x, mem_y, mem_z ) );
             }
         }
     }
