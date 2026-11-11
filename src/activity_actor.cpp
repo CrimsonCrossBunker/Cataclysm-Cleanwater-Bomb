@@ -51,9 +51,8 @@
 #include "advanced_inv.h"
 #include "avatar.h"
 #include "avatar_action.h"
-#include "bionics.h"
 #include "bionic_water_activity.h"
-#include "remote_vehicle_activity.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "butchery.h"
 #include "butchery_requirements.h"
@@ -91,22 +90,23 @@
 #include "game_inventory.h"
 #include "gates.h"
 #include "gun_mode.h"
+#include "gunmod_ui.h"
 #include "handle_liquid.h"
 #include "harvest.h"
 #include "iexamine.h"
 #include "input_popup.h"
 #include "inventory_ui.h"
 #include "item.h"
-#include "item_healing.h"
-#include "item_consumption.h"
 #include "item_category.h"
 #include "item_components.h"
+#include "item_consumption.h"
 #include "item_contents.h"
 #include "item_factory.h"
 #include "item_group.h"
+#include "item_healing.h"
 #include "item_location.h"
-#include "item_reload.h"
 #include "item_pocket.h"
+#include "item_reload.h"
 #include "item_uid.h"
 #include "item_wakeup.h"
 #include "itype.h"
@@ -127,11 +127,11 @@
 #include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
+#include "mongroup.h"
+#include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
-#include "mongroup.h"
-#include "monster.h"
 #include "mtype.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -152,6 +152,8 @@
 #include "ranged_actions.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
+#include "remote_vehicle_activity.h"
+#include "repair_activity.h"
 #include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
@@ -178,10 +180,9 @@
 #include "veh_utils.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
-#include "vehicle_water.h"
 #include "vehicle_heating.h"
-#include "repair_activity.h"
 #include "vehicle_selector.h"
+#include "vehicle_water.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -196,6 +197,7 @@ static const activity_id ACT_BASH( "ACT_BASH" );
 static const activity_id ACT_BIKERACK_RACKING( "ACT_BIKERACK_RACKING" );
 static const activity_id ACT_BIKERACK_UNRACKING( "ACT_BIKERACK_UNRACKING" );
 static const activity_id ACT_BINDER_COPY_RECIPE( "ACT_BINDER_COPY_RECIPE" );
+static const activity_id ACT_BIONIC_WATER( "ACT_BIONIC_WATER" );
 static const activity_id ACT_BLEED( "ACT_BLEED" );
 static const activity_id ACT_BOLTCUTTING( "ACT_BOLTCUTTING" );
 static const activity_id ACT_BUILD( "ACT_BUILD" );
@@ -222,6 +224,7 @@ static const activity_id ACT_E_FILE( "ACT_E_FILE" );
 static const activity_id ACT_FERTILIZE_PLANT( "ACT_FERTILIZE_PLANT" );
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
 static const activity_id ACT_FIELD_DRESS( "ACT_FIELD_DRESS" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
 static const activity_id ACT_FIND_MOUNT( "ACT_FIND_MOUNT" );
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
 static const activity_id ACT_FISH( "ACT_FISH" );
@@ -279,6 +282,8 @@ static const activity_id ACT_QUARTER( "ACT_QUARTER" );
 static const activity_id ACT_READ( "ACT_READ" );
 static const activity_id ACT_REEL_CABLE( "ACT_REEL_CABLE" );
 static const activity_id ACT_RELOAD( "ACT_RELOAD" );
+static const activity_id ACT_REMOTE_VEHICLE( "ACT_REMOTE_VEHICLE" );
+static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 static const activity_id ACT_ROBOT_CONTROL( "ACT_ROBOT_CONTROL" );
 static const activity_id ACT_SHAVE( "ACT_SHAVE" );
 static const activity_id ACT_SHEARING( "ACT_SHEARING" );
@@ -322,9 +327,9 @@ static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_money( "money" );
 static const ammotype ammo_plutonium( "plutonium" );
-
+static const bionic_id bio_lockpick( "bio_lockpick" );
 static const bionic_id bio_painkiller( "bio_painkiller" );
-
+static const bionic_id bio_remote( "bio_remote" );
 static const efftype_id effect_asocial_dissatisfied( "asocial_dissatisfied" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
@@ -335,6 +340,7 @@ static const efftype_id effect_currently_busy( "currently_busy" );
 static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_gliding( "gliding" );
+static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_magic_channeling( "magic_channeling" );
 static const efftype_id effect_narcosis( "narcosis" );
@@ -351,11 +357,9 @@ static const efftype_id effect_socialized_recently( "socialized_recently" );
 static const efftype_id effect_tied( "tied" );
 static const efftype_id effect_under_operation( "under_operation" );
 static const efftype_id effect_worked_on( "worked_on" );
-
 static const faction_id faction_your_followers( "your_followers" );
 static const flag_id json_flag_ALWAYS_AIMED( "ALWAYS_AIMED" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
-
 static const furn_str_id furn_f_counter( "f_counter" );
 static const furn_str_id furn_f_crate_o( "f_crate_o" );
 static const furn_str_id furn_f_gunsafe_mj( "f_gunsafe_mj" );
@@ -368,18 +372,14 @@ static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 static const furn_str_id furn_f_safe_c( "f_safe_c" );
 static const furn_str_id furn_f_safe_o( "f_safe_o" );
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
-
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
-
 static const item_category_id item_category_veh_parts( "veh_parts" );
-
 static const item_group_id
 Item_spawn_data_SUS_trash_forest_no_manmade( "SUS_trash_forest_no_manmade" );
 static const item_group_id Item_spawn_data_forage_autumn( "forage_autumn" );
 static const item_group_id Item_spawn_data_forage_spring( "forage_spring" );
 static const item_group_id Item_spawn_data_forage_summer( "forage_summer" );
 static const item_group_id Item_spawn_data_forage_winter( "forage_winter" );
-
 static const itype_id itype_animal( "animal" );
 static const itype_id itype_attachable_ear_muffs( "attachable_ear_muffs" );
 static const itype_id itype_attached_ear_plugs_off( "attached_ear_plugs_off" );
@@ -397,12 +397,12 @@ static const itype_id itype_paper( "paper" );
 static const itype_id itype_powered_earmuffs( "powered_earmuffs" );
 static const itype_id itype_powered_earplugs( "powered_earplugs" );
 static const itype_id itype_pseudo_bio_picklock( "pseudo_bio_picklock" );
+static const itype_id itype_remotevehcontrol( "remotevehcontrol" );
 static const itype_id
 itype_robofac_yrax_trifacet_deactivation_manual( "robofac_yrax_trifacet_deactivation_manual" );
 static const itype_id itype_soap( "soap" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
-
 static const json_character_flag json_flag_ASOCIAL1( "ASOCIAL1" );
 static const json_character_flag json_flag_ASOCIAL2( "ASOCIAL2" );
 static const json_character_flag json_flag_DEAF( "DEAF" );
@@ -416,9 +416,7 @@ static const json_character_flag json_flag_SAFECRACK_NO_TOOL( "SAFECRACK_NO_TOOL
 static const json_character_flag json_flag_SILENT_SPELL( "SILENT_SPELL" );
 static const json_character_flag json_flag_SOCIAL1( "SOCIAL1" );
 static const json_character_flag json_flag_SOCIAL2( "SOCIAL2" );
-
 static const mongroup_id GROUP_FISH( "GROUP_FISH" );
-
 static const morale_type morale_book( "morale_book" );
 static const morale_type morale_chat( "morale_chat" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -427,19 +425,16 @@ static const morale_type morale_haircut( "morale_haircut" );
 static const morale_type morale_play_with_pet( "morale_play_with_pet" );
 static const morale_type morale_shave( "morale_shave" );
 static const morale_type morale_tree_communion( "morale_tree_communion" );
-
 static const move_mode_id move_mode_prone( "prone" );
 static const move_mode_id move_mode_walk( "walk" );
-
 static const mtype_id mon_yrax_trifacet( "mon_yrax_trifacet" );
-
 static const proficiency_id proficiency_prof_lockpicking( "prof_lockpicking" );
 static const proficiency_id proficiency_prof_lockpicking_expert( "prof_lockpicking_expert" );
 static const proficiency_id proficiency_prof_safecracking( "prof_safecracking" );
 static const proficiency_id proficiency_prof_wound_care( "prof_wound_care" );
 static const proficiency_id proficiency_prof_wound_care_expert( "prof_wound_care_expert" );
-
 static const quality_id qual_CUT( "CUT" );
+static const quality_id qual_DIG( "DIG" );
 static const quality_id qual_FISHING_ROD( "FISHING_ROD" );
 static const quality_id qual_HACK( "HACK" );
 static const quality_id qual_LOCKPICK( "LOCKPICK" );
@@ -447,7 +442,6 @@ static const quality_id qual_PRY( "PRY" );
 static const quality_id qual_PRYING_NAIL( "PRYING_NAIL" );
 static const quality_id qual_SAW_M( "SAW_M" );
 static const quality_id qual_SHEAR( "SHEAR" );
-
 static const skill_id skill_computer( "computer" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_fabrication( "fabrication" );
@@ -458,9 +452,7 @@ static const skill_id skill_speech( "speech" );
 static const skill_id skill_survival( "survival" );
 static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_traps( "traps" );
-
 static const species_id species_ZOMBIE( "ZOMBIE" );
-
 static const ter_str_id ter_t_card_reader_broken( "t_card_reader_broken" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
@@ -474,15 +466,10 @@ static const ter_str_id ter_t_tree( "t_tree" );
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 static const trait_id trait_SPIRITUAL( "SPIRITUAL" );
 static const trait_id trait_STOCKY_TROGLO( "STOCKY_TROGLO" );
-
 static const trap_str_id tr_target_spinner( "tr_target_spinner" );
-
 static const vpart_id vpart_ap_wall_wiring( "ap_wall_wiring" );
-
 static const vpart_location_id vpart_location_structure( "structure" );
-
 static const vproto_id vehicle_prototype_none( "none" );
-
 static const zone_type_id zone_type_LOOT_IGNORE( "LOOT_IGNORE" );
 static const zone_type_id zone_type_LOOT_IGNORE_FAVORITES( "LOOT_IGNORE_FAVORITES" );
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
@@ -1056,6 +1043,8 @@ void gunmod_remove_activity_actor::start( player_activity &act, Character & )
 
 void gunmod_remove_activity_actor::finish( player_activity &act, Character &who )
 {
+    const bool show_menu = reopen_menu;
+    const item_location gun_location = gun;
     item *it_gun = gun.get_item();
     if( !it_gun ) {
         debugmsg( "ACT_GUNMOD_REMOVE lost target gun" );
@@ -1074,6 +1063,9 @@ void gunmod_remove_activity_actor::finish( player_activity &act, Character &who 
     act.set_to_null();
     gunmod_remove( who, *it_gun, *it_mod );
     it_gun->on_contents_changed();
+    if( show_menu ) {
+        gunmod_ui::show( who, gun_location, true );
+    }
 }
 
 bool gunmod_remove_activity_actor::gunmod_unload( Character &who, item &gunmod )
@@ -1147,6 +1139,7 @@ void gunmod_remove_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "moves_total", moves_total );
     jsout.member( "gun", gun );
     jsout.member( "gunmod", gunmod_idx );
+    jsout.member( "reopen_menu", reopen_menu );
 
     jsout.end_object();
 }
@@ -1160,6 +1153,7 @@ std::unique_ptr<activity_actor> gunmod_remove_activity_actor::deserialize( JsonV
     data.read( "moves_total", actor.moves_total );
     data.read( "gun", actor.gun );
     data.read( "gunmod", actor.gunmod_idx );
+    data.read( "reopen_menu", actor.reopen_menu );
 
     return actor.clone();
 }
@@ -1713,7 +1707,7 @@ bool hacksaw_activity_actor::continue_work( player_activity &act, Character &who
         return false;
     }
     if( act.execution() == activity_execution::authoritative ) {
-        if( who.is_mounted() || who.has_effect( efftype_id( "incorporeal" ) ) ||
+        if( who.is_mounted() || who.has_effect( effect_incorporeal ) ||
             !continue_owned_tool_activity( act, who, mounted ? std::nullopt :
                                            std::make_optional( tool ), owned_target ) ) {
             act.set_to_null();
@@ -4182,7 +4176,7 @@ bool lockpick_activity_actor::check_bionic( player_activity &act, Character &who
         return true;
     }
     const auto bio = who.find_bionic_by_uid( bionic_uid );
-    if( !bio || ( *bio )->id != bionic_id( "bio_lockpick" ) ||
+    if( !bio || ( *bio )->id != bio_lockpick ||
         ( *bio )->incapacitated_time > 0_turns ) {
         act.set_to_null();
         return false;
@@ -12385,7 +12379,7 @@ bool churn_activity_actor::continue_work( player_activity &act, Character &who )
     const tripoint_bub_ms position = here.get_bub( source->target.position );
     const bool valid = source->target.tool_source ?
                        source->valid( who, tool, adjacent_tool_action::till ) :
-                       source->matches( who ) && who.has_unreserved_quality( quality_id( "DIG" ), 1 ) &&
+                       source->matches( who ) && who.has_unreserved_quality( qual_DIG, 1 ) &&
                        source->target.position.z() == who.pos_abs().z() &&
                        rl_dist( who.pos_abs(), source->target.position ) <= 1 &&
                        here.has_flag( ter_furn_flag::TFLAG_PLOWABLE, position ) && !here.has_furn( position );
@@ -13550,6 +13544,7 @@ void gunmod_add_activity_actor::start( player_activity &act, Character & )
 
 void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
 {
+    const bool show_menu = reopen_menu;
     act.set_to_null();
     // first unpack all of our arguments
     if( act.values.size() != 4 ) {
@@ -13557,6 +13552,11 @@ void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
 
+    if( act.targets.size() != 2 || !act.targets[0] || !act.targets[1] ) {
+        add_msg( m_info, _( "The gun or modification is no longer available." ) );
+        return;
+    }
+    const item_location gun_location = act.targets[0];
     item &gun = *act.targets.at( 0 );
     item &mod = *act.targets.at( 1 );
 
@@ -13568,6 +13568,14 @@ void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
     // any tool charges used during installation
     const itype_id tool( act.name );
     const int qty = act.values[3];
+
+    if( !tool.is_empty() && qty > 0 && !who.has_charges( tool, qty ) ) {
+        add_msg( m_info, _( "The installation tool no longer has enough charges." ) );
+        if( show_menu ) {
+            gunmod_ui::show( who, gun_location, true );
+        }
+        return;
+    }
 
     if( !gun.is_gunmod_compatible( mod ).success() ) {
         debugmsg( "Invalid arguments in ACT_GUNMOD_ADD" );
@@ -13603,6 +13611,9 @@ void gunmod_add_activity_actor::finish( player_activity &act, Character &who )
     } else {
         add_msg( m_info, _( "You failed at installing the %s." ), mod.tname() );
     }
+    if( show_menu ) {
+        gunmod_ui::show( who, gun_location, true );
+    }
 }
 
 void gunmod_add_activity_actor::serialize( JsonOut &jsout ) const
@@ -13611,6 +13622,7 @@ void gunmod_add_activity_actor::serialize( JsonOut &jsout ) const
 
     jsout.member( "moves", moves );
     jsout.member( "name", name );
+    jsout.member( "reopen_menu", reopen_menu );
 
     jsout.end_object();
 }
@@ -13623,6 +13635,7 @@ std::unique_ptr<activity_actor> gunmod_add_activity_actor::deserialize( JsonValu
 
     data.read( "moves", actor.moves );
     data.read( "name", actor.name );
+    data.read( "reopen_menu", actor.reopen_menu );
 
     return actor.clone();
 }
@@ -15145,9 +15158,9 @@ vehicle *start_engines_activity_actor::target_vehicle( Character &who ) const
     }
     if( remote_bionic ) {
         const auto bio = who.find_bionic_by_uid( remote_bionic );
-        item controller( itype_id( "remotevehcontrol" ), calendar::turn_zero );
+        item controller( itype_remotevehcontrol, calendar::turn_zero );
         controller.set_flag( flag_USES_BIONIC_POWER );
-        return bio && ( *bio )->id == bionic_id( "bio_remote" ) &&
+        return bio && ( *bio )->id == bio_remote &&
                ( *bio )->incapacitated_time == 0_turns && !target->is_locked &&
                remote_vehicle_accessible( who, here, *target, item_location( who, &controller ) ) ?
                target : nullptr;
@@ -19508,7 +19521,7 @@ deserialize_functions = {
     { ACT_FERTILIZE_PLANT, &fertilize_plant_activity_actor::deserialize },
     { ACT_FETCH_REQUIRED, &fetch_required_activity_actor::deserialize },
     { ACT_FIELD_DRESS, &butchery_activity_actor::deserialize },
-    { activity_id( "ACT_FILL_LIQUID" ), &deserialize_vehicle_water_activity },
+    { ACT_FILL_LIQUID, &deserialize_vehicle_water_activity },
     { ACT_FIND_MOUNT, &find_mount_activity_actor::deserialize },
     { ACT_FIRSTAID, &firstaid_activity_actor::deserialize },
     { ACT_FISH, &fish_activity_actor::deserialize },
@@ -19525,12 +19538,12 @@ deserialize_functions = {
     { ACT_HAND_CRANK, &hand_crank_activity_actor::deserialize },
     { ACT_HARVEST, &harvest_activity_actor::deserialize},
     { ACT_HEATING, &heat_activity_actor::deserialize },
-    { activity_id( "ACT_REPAIR_ITEM" ), &repair_activity_actor::deserialize },
+    { ACT_REPAIR_ITEM, &repair_activity_actor::deserialize },
     { ACT_HOTWIRE_CAR, &hotwire_car_activity_actor::deserialize },
     { ACT_INSERT_ITEM, &insert_item_activity_actor::deserialize },
     { ACT_INVOKE_ITEM, &invoke_item_activity_actor::deserialize },
-    { activity_id( "ACT_BIONIC_WATER" ), &bionic_water_activity_actor::deserialize },
-    { activity_id( "ACT_REMOTE_VEHICLE" ), &remote_vehicle_activity_actor::deserialize },
+    { ACT_BIONIC_WATER, &bionic_water_activity_actor::deserialize },
+    { ACT_REMOTE_VEHICLE, &remote_vehicle_activity_actor::deserialize },
     { ACT_JACKHAMMER, &jackhammer_activity_actor::deserialize },
     { ACT_LOCKPICK, &lockpick_activity_actor::deserialize },
     { ACT_LONGSALVAGE, &longsalvage_activity_actor::deserialize },

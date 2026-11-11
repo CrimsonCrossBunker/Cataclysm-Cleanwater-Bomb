@@ -742,6 +742,8 @@ class gunmod_remove_activity_actor : public activity_actor
         int gunmod_idx;
 
     public:
+        bool reopen_menu = false;
+
         gunmod_remove_activity_actor(
             int moves_total,
             const item_location &gun,
@@ -4144,7 +4146,7 @@ class forage_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
 
     private:
         int moves = 0;
@@ -4222,6 +4224,8 @@ class fix_wound_activity_actor : public activity_actor
 class gunmod_add_activity_actor : public activity_actor
 {
     public:
+        bool reopen_menu = false;
+
         gunmod_add_activity_actor() = default;
         gunmod_add_activity_actor( int moves, std::string name ) : moves( moves ),
             name( std::move( name ) ) {}

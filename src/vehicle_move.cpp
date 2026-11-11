@@ -753,6 +753,7 @@ void vehicle::cruise_thrust( map &here, int amount )
 
 void vehicle::turn( units::angle deg )
 {
+    turning_arc.reset();
     if( deg == 0_degrees ) {
         return;
     }
@@ -767,6 +768,7 @@ void vehicle::turn( units::angle deg )
 
 void vehicle::stop( map &here )
 {
+    turning_arc.reset();
     velocity = 0;
     skidding = false;
     move = face;
@@ -1649,8 +1651,11 @@ bool vehicle::check_heli_ascend( map &here, Character &p ) const
 }
 
 void vehicle::pldrive( map &here, Character &driver, const int trn, const int acceleration,
-                       const int z )
+                       const int z, std::optional<vehicle_turning_arc> assisted_arc )
 {
+    if( trn != 0 || acceleration > 0 || z != 0 || assisted_arc ) {
+        turning_arc.reset();
+    }
     const character_action_guard driver_lifetime( driver );
     const safe_reference<vehicle> vehicle_lifetime = get_safe_reference();
     bool is_non_proficient = false;
@@ -1690,7 +1695,8 @@ void vehicle::pldrive( map &here, Character &driver, const int trn, const int ac
             return;
         }
     }
-    units::angle turn_delta = vehicles::steer_increment * trn;
+    units::angle turn_delta = assisted_arc ? units::from_radians( assisted_arc->remaining ) :
+                              vehicles::steer_increment * trn;
     const float handling_diff = handling_difficulty( here ) + non_prof_penalty;
     if( turn_delta != 0_degrees ) {
         float eff = steering_effectiveness( here );
@@ -1763,7 +1769,16 @@ void vehicle::pldrive( map &here, Character &driver, const int trn, const int ac
             }
         }
 
-        turn( turn_delta );
+        if( assisted_arc && turn_delta != 0_degrees ) {
+            // Apply the same fumble/oversteer result as manual steering, but
+            // spread the accepted turn over the arc's travelled distance.
+            const double factor = to_radians( turn_delta ) / assisted_arc->remaining;
+            assisted_arc->remaining *= factor;
+            assisted_arc->curvature *= factor;
+            turning_arc = assisted_arc;
+        } else {
+            turn( turn_delta );
+        }
 
         // At most 3 turns per turn, because otherwise it looks really weird and jumpy
         driver.mod_moves( -std::max( cost, driver.get_speed() / 3 + 1 ) );
@@ -2196,12 +2211,31 @@ vehicle *vehicle::act_on_map( map &here )
         }
     }
 
+    bool assisted_step = false;
+    if( turning_arc ) {
+        if( !operator_character || skidding || should_fall || falling_only ||
+            is_flying || is_on_ramp || can_use_rails || is_autodriving || autopilot_on ||
+            velocity <= 0 || steering_effectiveness( here ) <= 0.0f ) {
+            turning_arc.reset();
+        } else {
+            assisted_step = true;
+            last_turn = units::from_radians( turning_arc->advance( to_radians( turn_dir ) ) );
+            turn_dir = normalize( turn_dir + last_turn );
+            if( turning_arc->finished() ) {
+                turning_arc.reset();
+            }
+        }
+    }
+
     // The direction we're moving
     tileray mdir;
     if( skidding || should_fall ) {
         // If skidding, it's the move vector
         // Same for falling - no air control
         mdir = move;
+    } else if( assisted_step ) {
+        mdir = face;
+        mdir.redirect( turn_dir );
     } else if( turn_dir != face.dir() && ( !can_use_rails || allow_turn_on_rail ) ) {
         // Driver turned vehicle, get turn_dir
         mdir.init( turn_dir );
