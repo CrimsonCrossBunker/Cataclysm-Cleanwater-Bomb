@@ -55,6 +55,7 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 
+static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 static const furn_str_id furn_f_planter_seed( "f_planter_seed" );
 static const furn_str_id furn_test_f_plant_harvest( "test_f_plant_harvest" );
 static const furn_str_id furn_test_f_plant_mature( "test_f_plant_mature" );
@@ -81,6 +82,7 @@ static const itype_id itype_fungal_seeds( "fungal_seeds" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
 static const itype_id itype_test_seed_eoc( "test_seed_eoc" );
 static const itype_id itype_test_seed_simple( "test_seed_simple" );
+static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const skill_id skill_survival( "survival" );
@@ -513,17 +515,67 @@ TEST_CASE( "plant_water_eoc_and_event", "[plant][water]" )
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.add_item( plot, item( itype_test_seed_eoc ) );
-    here.furn_set( plot, furn_f_planter_seed );
-    item water( itype_water_clean, calendar::turn, 1 );
+    const furn_str_id furniture = GENERATE( furn_f_plant_seed, furn_f_planter_seed );
+    const itype_id water_type = GENERATE( itype_water, itype_water_clean );
+    CAPTURE( furniture, water_type );
+    here.furn_set( plot, furniture );
+    item water( water_type, calendar::turn, 1 );
     item bottle( itype_bottle_plastic );
     REQUIRE( bottle.put_in( water, pocket_type::CONTAINER ).success() );
     u.i_add( bottle );
 
-    iexamine::water_plant( u, plot );
+    REQUIRE( here.has_flag_furn( ter_furn_flag::TFLAG_SEALED, plot ) );
+    u.set_moves( 100 );
+    const farming_command command = capture_farming_command( u, here, here.get_abs( plot ),
+                                    farming_action::water );
+    REQUIRE( command.seed );
+    SECTION( "water the selected seed" ) {
+        REQUIRE( execute_farming_command( u, command ) );
+        CHECK( u.charges_of( water_type ) == 0 );
+        REQUIRE( iexamine::get_seed_at( here, plot ) );
+        CHECK( iexamine::get_plant_water( *iexamine::get_seed_at( here, plot ) ) > 0 );
+        const std::string water_added = get_globals().get_global_value( "test_water_added" ).to_string();
+        REQUIRE( !water_added.empty() );
+        CHECK( std::stoi( water_added ) > 0 );
+    }
+    SECTION( "reject an identical replacement seed without consuming water" ) {
+        here.i_clear( plot );
+        here.add_item( plot, item( itype_test_seed_eoc ) );
+        CHECK_FALSE( execute_farming_command( u, command ) );
+        CHECK( u.charges_of( water_type ) == 1 );
+        REQUIRE( iexamine::get_seed_at( here, plot ) );
+        CHECK( iexamine::get_plant_water( *iexamine::get_seed_at( here, plot ) ) == 0 );
+    }
+}
 
-    const std::string water_added = get_globals().get_global_value( "test_water_added" ).to_string();
-    REQUIRE( !water_added.empty() );
-    CHECK( std::stoi( water_added ) > 0 );
+TEST_CASE( "newly_planted_crop_can_be_watered", "[plant][water]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms plot = you.pos_bub() + tripoint::east;
+    here.ter_set( plot, ter_t_dirtmound );
+    you.i_add( item( itype_test_seed_eoc, calendar::turn, 1 ) );
+
+    iexamine::plant_seed( you, plot, itype_test_seed_eoc );
+    REQUIRE( you.activity );
+    process_activity( you );
+    REQUIRE( here.furn( plot ) == furn_f_plant_seed );
+    REQUIRE( iexamine::get_seed_at( here, plot ) );
+    CHECK( you.charges_of( itype_test_seed_eoc ) == 0 );
+
+    item bottle( itype_bottle_plastic );
+    REQUIRE( bottle.put_in( item( itype_water_clean, calendar::turn, 1 ),
+                            pocket_type::CONTAINER ).success() );
+    you.i_add( bottle );
+    you.set_moves( 100 );
+    const farming_command command = capture_farming_command( you, here, here.get_abs( plot ),
+                                    farming_action::water );
+    REQUIRE( execute_farming_command( you, command ) );
+    CHECK( iexamine::get_plant_water( *iexamine::get_seed_at( here, plot ) ) > 0 );
+    CHECK( you.charges_of( itype_water_clean ) == 0 );
 }
 
 TEST_CASE( "plant_vehicle_operations", "[plant][vehicle]" )
@@ -1702,6 +1754,7 @@ TEST_CASE( "fertilizing_revalidates_the_original_plant_before_spending_material"
         JsonOut actor_out( actor_json );
         restored.actor->serialize( actor_out );
         const JsonObject saved = json_loader::from_string( actor_json.str() ).get_object();
+        saved.allow_omitted_members();
         tripoint_abs_ms position;
         saved.read( "position_abs", position );
         CHECK( position == here.get_abs( plot ) );
