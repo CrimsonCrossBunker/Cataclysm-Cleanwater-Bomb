@@ -77,6 +77,9 @@ class mapbuffer
          * submap object, don't delete it on your own.
          */
         submap *lookup_submap( const tripoint_abs_sm &p );
+        // Return a resident submap without disk I/O, parsing, or map generation.
+        // The pointer is borrowed and must only be used while the buffer is stable.
+        submap *get_submap_if_loaded( const tripoint_abs_sm &p );
         // Cheaper version of the above for when you only care about whether the
         // submap exists or not.
         bool submap_exists( const tripoint_abs_sm &p );

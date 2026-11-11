@@ -3140,6 +3140,11 @@ void options_manager::add_options_graphics()
              false, COPT_CURSES_HIDE
            );
 
+        add( "RENDER3D_FAR_TERRAIN", page_id, to_translation( "3D distant generated terrain" ),
+             to_translation( "If true, displays generated terrain and map memory beyond the normal 60-tile range in the experimental 3D renderer.  Additional loading and rendering cost applies." ),
+             false, COPT_CURSES_HIDE
+           );
+
         add( "SWAP_ZOOM", page_id, to_translation( "Zoom Threshold" ),
              to_translation( "Choose when you should swap tileset (lower is more zoomed out)." ),
              1, 4, 2, COPT_CURSES_HIDE
@@ -3154,6 +3159,7 @@ void options_manager::add_options_graphics()
         get_option( "VEHICLE_PART_COLOR" ).setPrerequisite( "USE_TILES" );
         get_option( "USE_CHARACTER_PREVIEW" ).setPrerequisite( "USE_TILES" );
         get_option( "RENDER3D_EXPERIMENTAL" ).setPrerequisite( "USE_TILES" );
+        get_option( "RENDER3D_FAR_TERRAIN" ).setPrerequisite( "RENDER3D_EXPERIMENTAL" );
 
         add( "USE_OVERMAP_TILES", page_id, to_translation( "Use tiles to display overmap" ),
              to_translation( "If true, replaces some TTF-rendered text with tiles for overmap display." ),

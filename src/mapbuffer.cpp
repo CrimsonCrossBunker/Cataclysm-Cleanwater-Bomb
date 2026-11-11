@@ -171,6 +171,13 @@ void mapbuffer::remove_submap( const tripoint_abs_sm &addr )
     submaps.erase( m_target );
 }
 
+submap *mapbuffer::get_submap_if_loaded( const tripoint_abs_sm &p )
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    const auto iter = submaps.find( p );
+    return iter == submaps.end() ? nullptr : iter->second.get();
+}
+
 submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )
 {
     storage();
