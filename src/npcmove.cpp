@@ -101,6 +101,7 @@
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "simple_pathfinding.h"
 #include "sleep.h"
 #include "sounds.h"
@@ -1542,6 +1543,28 @@ void npc::move()
     // Stasis NPCs are completely inert until activated via dialogue.
     if( has_trait( trait_NPC_STASIS ) ) {
         move_pause();
+        return;
+    }
+    item_location held = get_wielded_item();
+    if( held && held->has_flag( flag_NPC_THROW_NOW ) && !is_hallucination() ) {
+        // Disposing of an already armed explosive cannot depend on having a
+        // combat target or on the combat/needs decision chosen this turn.
+        npc_attack_throw emergency_throw( *held, nullptr, speed_rating() );
+        const npc_attack_rating destination = emergency_throw.evaluate( *this, current_target() );
+        if( destination.value() ) {
+            emergency_throw.use( *this, destination.target() );
+        } else {
+            // No unobstructed throw exists. Leave the live item on the map,
+            // where the existing explosion-avoidance code can flee from it.
+            const character_action_guard lifetime( *this );
+            const auto context = get_map().get_context_reference();
+            const tripoint_abs_ms origin = pos_abs();
+            mod_moves( -100 );
+            item dropped = remove_weapon();
+            if( context && context->inbounds( origin ) ) {
+                context->add_item_or_charges( context->get_bub( origin ), std::move( dropped ) );
+            }
+        }
         return;
     }
     act_on_danger_assessment();
@@ -3953,6 +3976,9 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     if( moved ) {
         make_footstep_noise();
         const tripoint_bub_ms old_pos = pos;
+        if( in_vehicle ) {
+            here.unboard_vehicle( old_pos );
+        }
         setpos( here, p );
         if( old_pos.x() - p.x() < 0 ) {
             facing = FacingDirection::RIGHT;
@@ -3979,10 +4005,6 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
             add_effect( effect_no_sight, 1_turns, true );
         } else if( has_effect( effect_no_sight ) ) {
             remove_effect( effect_no_sight );
-        }
-
-        if( in_vehicle ) {
-            here.unboard_vehicle( old_pos );
         }
 
         // Close doors behind self (if you can)
@@ -4729,7 +4751,7 @@ bool npc::would_take_that( const item &it, const tripoint_bub_ms &p )
         }
         std::vector<npc *> followers;
         overmap_buffer.populate_followers_vec( followers );
-        for( npc*&elem : followers ) {
+        for( npc *&elem : followers ) {
             if( elem->sees( here, this->pos_bub( here ) ) || elem->sees( here,  p ) ) {
                 return false;
             }

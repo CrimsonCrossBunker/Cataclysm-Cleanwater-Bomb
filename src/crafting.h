@@ -27,6 +27,9 @@ inline constexpr int crafting_batch_input_max = 9999;
 enum class craft_flags : int {
     none = 0,
     start_only = 1, // Only require 5% (plus remainder) of tool charges
+    // Boolean queries may stop at the first missing requirement.  Callers
+    // displaying individual requirement colors need the default full update.
+    stop_on_failure = 2,
 };
 
 template<>

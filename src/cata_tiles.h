@@ -82,7 +82,7 @@ struct entity_render_view;
 namespace tile_preparation
 {
 class frame;
-}
+} // namespace tile_preparation
 
 namespace catacurses
 {
@@ -145,6 +145,20 @@ class tile_lookup_res
         }
 };
 
+// 3D-only silhouette metadata captured during the tileset's existing alpha
+// scan. Indices are sprite-local pixels; -1 means that row/column is empty.
+struct sprite_alpha_profile {
+    std::vector<int> top;
+    std::vector<int> bottom;
+    std::vector<int> left;
+    std::vector<int> right;
+};
+
+struct sprite_alpha_scan {
+    SDL_Rect bounds = { 0, 0, 0, 0 };
+    std::shared_ptr<const sprite_alpha_profile> profile;
+};
+
 class texture
 {
     private:
@@ -153,14 +167,17 @@ class texture
         // Tightest rect containing non-transparent pixels, relative to srcrect origin.
         // Used for tint overlay bounds so transparent padding is excluded.
         SDL_Rect opaque_rect = { 0, 0, 0, 0 };
+        std::shared_ptr<const sprite_alpha_profile> alpha_profile;
 
     public:
         texture( std::shared_ptr<SDL_Texture> ptr,
                  const SDL_Rect &rect ) : sdl_texture_ptr( std::move( ptr ) ),
             srcrect( rect ), opaque_rect( { 0, 0, rect.w, rect.h } ) { }
         texture( std::shared_ptr<SDL_Texture> ptr,
-                 const SDL_Rect &rect, const SDL_Rect &opaque ) : sdl_texture_ptr( std::move( ptr ) ),
-            srcrect( rect ), opaque_rect( opaque ) { }
+                 const SDL_Rect &rect, const SDL_Rect &opaque,
+                 std::shared_ptr<const sprite_alpha_profile> profile = nullptr ) :
+            sdl_texture_ptr( std::move( ptr ) ), srcrect( rect ), opaque_rect( opaque ),
+            alpha_profile( std::move( profile ) ) { }
         texture() = default;
 
         /// Returns the width (first) and height (second) of the stored texture.
@@ -170,6 +187,9 @@ class texture
         /// Returns the opaque pixel bounding box relative to the sprite origin.
         const SDL_Rect &get_opaque_rect() const {
             return opaque_rect;
+        }
+        const std::shared_ptr<const sprite_alpha_profile> &get_alpha_profile_3d() const {
+            return alpha_profile;
         }
         /// Returns the underlying SDL_Texture pointer (for blend mode changes).
         const std::shared_ptr<SDL_Texture> &get_texture_ptr() const {
@@ -684,6 +704,46 @@ struct formatted_text {
     formatted_text( const std::string &text, int color, direction text_direction );
 };
 
+struct texture_draw_data {
+    SDL_Texture *texture;
+    SDL_Rect dimensions;
+    // avoiding ImVec2 here
+    std::pair<float, float> uv0;
+    std::pair<float, float> uv1;
+    // tightest non-transparent pixel bounds, relative to the dimensions origin
+    SDL_Rect opaque_rect = { 0, 0, 0, 0 };
+    // shared silhouette metadata for 3D ground-level edge extrusion
+    std::shared_ptr<const sprite_alpha_profile> alpha_profile;
+};
+
+// One tile's fg/bg sprite resolution for the 3D renderer, as produced by
+// cata_tiles::resolve_sprite_layers_3d (a faithful port of the selection
+// draw_from_id_string_internal + draw_sprite_at perform for 2D).
+struct sprite_layers_3d {
+    std::optional<texture_draw_data> fg;
+    std::optional<texture_draw_data> bg;
+    bool fg_found = false;
+    bool bg_found = false;
+    bool multitile = false;   // the (pre-subtile) tile is multitile
+    int fg_count = 0;         // picked fg list size: 1 = rotated, >1 = variants
+    int fg_index = -1;
+    int bg_count = 0;
+    int bg_index = -1;
+    // Weighted-list sizes decide whether a position seed is used. They are not
+    // the picked list sizes above (several weighted rows can each hold one id).
+    int fg_variant_count = 0;
+    int bg_variant_count = 0;
+    int rot4 = 0;             // clockwise quarter turns applied to a single fg sprite
+    // the resolved tile's sheet sprite offset in sprite pixels (tile_type::offset);
+    // 2D places a sprite at tile origin + this, the 3D paper doll uses it to
+    // align overlay layers with the base body canvas
+    point offset = point::zero;
+    const std::string *resolved_id = nullptr; // tileset key actually used
+    // 3D frame slots retain these until the GPU fence completes. The 2D draw
+    // path does not use sprite_layers_3d or these ownership links.
+    std::shared_ptr<SDL_Texture> fg_owner;
+    std::shared_ptr<SDL_Texture> bg_owner;
+};
 /** type used for color blocks overlays.
  * first: The SDL blend mode used for the color.
  * second:
@@ -734,6 +794,11 @@ class cata_tiles
          * escape the current UI frame.
          */
         const texture *ui_sprite( const std::string &id ) const;
+        // 3D-only cache identity. Holding the shared_ptr also prevents address
+        // reuse from making a reloaded tileset look like the previous one.
+        const std::shared_ptr<const tileset> &get_tileset_3d() const {
+            return tileset_ptr;
+        }
 
         /** Draw to screen */
         void draw( const point &dest, const tripoint_bub_ms &center, int width, int height,
@@ -752,6 +817,41 @@ class cata_tiles
          * renderer (e.g. per-ammo bullet sprite lookup in ballistics).
          */
         std::string find_bullet_sprite_id( const std::string &id, TILE_CATEGORY category );
+
+        // 3D-only: resolves the fg/bg sprites with exactly the selection logic
+        // 2D's draw_from_id_string_internal + draw_sprite_at use for a tile:
+        // looks_like/season resolution, multitile subtile re-resolution on the
+        // RESOLVED id (variant dropped there, as 2D does), the `rotates` gate,
+        // the shared variant seed, and the single-sprite rotation vs
+        // multi-sprite variant-index rule. variant is the draw-time variant
+        // (vehicle part variants, e.g. "wood" -> vp_frame_wood with the
+        // progressive tail-stripping find_tile_looks_like does). The 2D draw
+        // path never calls this, so 2D rendering is unaffected.
+        bool resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
+                                       const tripoint_bub_ms &p, int subtile, int rota,
+                                       bool force_rota, sprite_layers_3d &out,
+                                       const std::string &variant = "" );
+
+        // 3D-only: the paper-doll overlay lookup 2D's draw_entity_with_overlays
+        // performs through find_overlay_looks_like (gender prefix, `_var_`
+        // variant, then the looks_like fallback chain). The 2D path never calls
+        // this wrapper, so 2D rendering is unaffected.
+        bool find_overlay_looks_like_3d( bool male, const std::string &overlay,
+                                         const std::string &variant, std::string &draw_id );
+
+        // Multitile subtile + rotation for the terrain/furniture at p, using the
+        // same dispatch as draw_terrain/draw_furniture. Read-only; subtile is a
+        // MULTITILE_TYPE (enums.h), rota is quarter-turns (use rota % 4).
+        void get_terrain_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
+        void get_furniture_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
+
+        // 3D-only: the connection subtile/rotation draw_field_or_item derives
+        // from neighboring tiles carrying the same field (get_tile_values).
+        // neighborhood is the S,E,W,N field id per direction (absent = -1).
+        // The 2D draw path never calls this wrapper, so 2D rendering is
+        // unaffected.
+        void get_field_rota_subtile_3d( int field_id, const std::array<int, 4> &neighborhood,
+                                        int &subtile, int &rotation );
 
     protected:
         /** How many rows and columns of tiles fit into given dimensions, fully
@@ -1642,7 +1742,7 @@ class cata_tiles
         // int, angle, bool represents part_mod, veh_dir, and highlight respectively
         // point represents the mount direction
         std::map<tripoint_bub_ms, std::tuple<vpart_id, int, units::angle, bool, point_rel_ms>>
-        vpart_override;
+                vpart_override;
         // int represents spawn count
         std::map<tripoint_bub_ms, std::tuple<mtype_id, int, bool, Creature::Attitude>> monster_override;
 

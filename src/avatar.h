@@ -10,16 +10,13 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "bodypart.h"
-#include "calendar.h"
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
-#include "enums.h"
 #include "game_constants.h"
 #include "item.h"
 #include "item_location.h"
@@ -40,18 +37,14 @@ class cata_path;
 class diary;
 class map_memory;
 class memorized_tile;
-class mission;
 class monster;
 class npc;
 class talker;
+class time_duration;
+enum class character_type : int;
+enum class pool_type;
 struct bionic;
 struct mtype;
-
-namespace debug_menu
-{
-class mission_debug;
-}  // namespace debug_menu
-enum class pool_type;
 
 // Monster visible in different directions (safe mode & compass)
 // Suppressions due to a bug in clang-tidy 12
@@ -174,6 +167,8 @@ class avatar : public Character
         void prepare_map_memory_region( const tripoint_abs_ms &p1, const tripoint_abs_ms &p2 );
         const memorized_tile &get_memorized_tile( const tripoint_abs_ms &p ) const;
         bool has_memory_at( const tripoint_abs_ms &p ) const;
+        bool has_map_memory_in_region( const tripoint_abs_ms &p1,
+                                       const tripoint_abs_ms &p2 ) const;
         void memorize_terrain( const tripoint_abs_ms &p, std::string_view id,
                                int subtile, int rotation );
         void memorize_decoration( const tripoint_abs_ms &p, std::string_view id,

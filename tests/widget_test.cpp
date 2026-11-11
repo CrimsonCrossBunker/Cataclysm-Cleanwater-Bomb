@@ -130,6 +130,7 @@ static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
 static const widget_id widget_sound_num( "sound_num" );
 static const widget_id widget_speed_num( "speed_num" );
 static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
+static const widget_id widget_style_desc( "style_desc" );
 static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
@@ -206,6 +207,8 @@ static const widget_id widget_test_weather_text_height5( "test_weather_text_heig
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
 static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
+static const widget_id widget_weapon_style_layout( "weapon_style_layout" );
+static const widget_id widget_wielding_desc( "wielding_desc" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
 // Scrapes the window w at origin, reading the number of cols and rows.
@@ -257,6 +260,34 @@ TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
     CHECK( cooldowns.layout( player ).find( to_string( 8_seconds ) ) != std::string::npos );
     calendar::turn += 8_seconds;
     CHECK( player.active_technique_cooldowns_text().empty() );
+}
+
+TEST_CASE( "row_layout_skips_disabled_empty_cooldown_widgets", "[widget][layout][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.martial_arts_data->add_martialart( test_style_cooldown );
+    player.martial_arts_data->set_style( test_style_cooldown );
+    player.set_wielded_item( item( itype_test_weapon1 ) );
+    const int cooldown_position = GENERATE( 0, 1, 2 );
+    CAPTURE( cooldown_position );
+    widget rows = widget_weapon_style_layout.obj();
+    rows._widgets = { widget_wielding_desc, widget_style_desc };
+    rows._widgets.insert( rows._widgets.begin() + cooldown_position, widget_technique_cooldowns );
+
+    const std::string empty = rows.layout( player, 80 );
+    REQUIRE_FALSE( empty.empty() );
+    CHECK( empty.front() != '\n' );
+    CHECK( empty.back() != '\n' );
+    CHECK( string_split( empty, '\n' ).size() == 2 );
+
+    player.martial_arts_data->start_technique_cooldown( test_active_cooldown_strike, 8_seconds );
+    const std::string active = rows.layout( player, 80 );
+    CHECK( string_split( active, '\n' ).size() == 3 );
+    CHECK( active.find( test_active_cooldown_strike->name.translated() ) != std::string::npos );
+    calendar::turn += 8_seconds;
+    CHECK( rows.layout( player, 80 ) == empty );
 }
 
 TEST_CASE( "widget_value_strings", "[widget][value][string]" )
