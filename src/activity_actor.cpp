@@ -81,6 +81,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
+#include "farming.h"
 #include "fault.h"
 #include "field_type.h"
 #include "flag.h"
@@ -8856,6 +8857,7 @@ bool plant_seed_activity_actor::continue_work( player_activity &act, Character &
     map &here = get_map();
     const tripoint_bub_ms position = here.get_bub( plant_location );
     if( !seed_type.is_valid() || !seed_type->seed || !here.i_at( position ).empty() ||
+        here.has_flag( ter_furn_flag::TFLAG_DESTROY_ITEM, position ) ||
         !here.has_flag_ter_or_furn( seed_type->seed->required_terrain_flag, position ) ) {
         act.set_to_null();
         return false;
@@ -8883,7 +8885,6 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     map &here = get_map();
     const auto context = here.get_context_reference();
     const character_action_guard lifetime( who );
-    const tripoint_bub_ms examp = here.get_bub( plant_location );
     const itype_id seed_id = seed_type;
     const tool_activity_target expected = *target;
     // Retire before item placement/events, which may replace the activity.
@@ -8891,8 +8892,11 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     std::list<item> used_seed = item::count_by_charges( seed_id ) ?
                                 who.use_charges( seed_id, 1, craft_reservation::usable_by_automation ) :
                                 who.use_amount( seed_id, 1, craft_reservation::usable_by_automation );
-    if( used_seed.empty() || !lifetime || !context || !expected.matches( here ) ||
-        !here.i_at( examp ).empty() ) {
+    if( used_seed.empty() || !lifetime || !context || !expected.matches( here ) ) {
+        return;
+    }
+    const tripoint_bub_ms examp = here.get_bub( expected.position );
+    if( !here.i_at( examp ).empty() ) {
         return;
     }
     item &seed = used_seed.front();
@@ -8904,7 +8908,14 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     iexamine::set_plant_water( seed, 0 );
     iexamine::set_plant_last_water_check( seed, calendar::turn );
     iexamine::set_plant_effective_growth_turns( seed, 0 );
-    // Occupy the plot before placement callbacks can attempt another planting.
+    // Store the seed directly in the plot. Crop furniture rejects ordinary drops.
+    item &planted = here.add_item_unprocessed( examp, std::move( seed ) );
+    if( planted.is_null() ) {
+        return;
+    }
+    const item_source planted_source = capture_item_source( who,
+                                       item_location( map_cursor( expected.position ), &planted ) );
+    // Finish occupying the plot before notifying listeners.
     if( here.has_flag_furn( seed_id->seed->required_terrain_flag, examp ) &&
         here.furn( examp )->plant != nullptr ) {
         here.furn_set( examp, here.furn( examp )->plant->transform );
@@ -8922,12 +8933,6 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     }
     const tool_activity_target planted_plot = tool_activity_target::capture( here,
             here.get_abs( examp ) );
-    const item_location planted = here.add_item_or_charges_ret_loc( examp, std::move( seed ),
-                                  false, &who );
-    if( !lifetime || !context || !planted_plot.matches( here ) || !planted ) {
-        return;
-    }
-    const item_source planted_source = capture_item_source( who, planted );
     who.add_msg_player_or_npc( _( "You plant some %s." ), _( "<npcname> plants some %s." ),
                                item::nname( seed_id ) );
     get_event_bus().send<event_type::character_plants_seed>(
@@ -8935,8 +8940,8 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     if( !lifetime || !context || !planted_plot.matches( here ) ) {
         return;
     }
-    const item_location current = resolve_item_source( who, here, planted_source );
-    if( current && current->is_seed() && current->typeId() == seed_id ) {
+    item *current = resolve_planted_seed( here, planted_source );
+    if( current && current->typeId() == seed_id ) {
         const std::string seed_stage( "GROWTH_SEED" );
         iexamine::run_plant_lifecycle_event(
             "plant", who, here, here.get_bub( planted_plot.position ), *current,
@@ -12467,16 +12472,13 @@ bool fertilize_plant_activity_actor::continue_work( player_activity &act, Charac
     if( here.ter( position )->terrain_growth ) {
         return true;
     }
-    item *seed = iexamine::get_seed_at( here, position );
-    if( capture_seed && seed ) {
-        seed_source = capture_item_source( who, item_location( map_cursor( plant_position ), seed ) );
+    if( capture_seed ) {
+        if( item *seed = iexamine::get_seed_at( here, position ) ) {
+            seed_source = capture_item_source( who, item_location( map_cursor( plant_position ), seed ) );
+        }
     }
-    if( !seed || !here.furn( position )->plant || !seed_source ) {
-        act.set_to_null();
-        return false;
-    }
-    const item_location original = resolve_item_source( who, here, *seed_source );
-    if( !original || original.get_item() != seed ) {
+    if( !seed_source || seed_source->position != plant_position ||
+        !resolve_planted_seed( here, *seed_source ) ) {
         act.set_to_null();
         return false;
     }
@@ -12522,7 +12524,7 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         return;
     }
     if( !eligible.success() || !expected.matches( here ) ||
-        ( original_seed && !resolve_item_source( who, here, *original_seed ) ) ) {
+        ( original_seed && !resolve_planted_seed( here, *original_seed ) ) ) {
         act.set_to_null();
         return;
     }
@@ -12623,8 +12625,8 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     if( !lifetime || !context || !expected.matches( here ) || !original_seed ) {
         return;
     }
-    item_location spent_seed = resolve_item_source( who, here, *original_seed );
-    if( !spent_seed || !spent_seed->is_seed() ) {
+    item *spent_seed = resolve_planted_seed( here, *original_seed );
+    if( !spent_seed ) {
         return;
     }
 
@@ -12650,17 +12652,19 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     who.add_msg_if_player( m_info, _( "You fertilize the %1$s with the %2$s." ),
                            plant_name, planted.front().tname() );
     // Growth can run scripts, so reacquire the original plant before notifying.
-    here.grow_plant( plant_position, &who );
-    if( !lifetime || !context || !original_seed ) {
+    here.grow_plant( here.get_bub( expected.position ), &who );
+    if( !lifetime || !context ) {
         return;
     }
-    const item_location fertilized_seed = resolve_item_source( who, here, *original_seed );
-    if( !fertilized_seed || !fertilized_seed->is_seed() ) {
+    const item *fertilized_seed = resolve_planted_seed( here, *original_seed );
+    if( !fertilized_seed ) {
         return;
     }
-    const furn_str_id furniture = here.furn( plant_position ).id();
+    const tripoint_bub_ms fertilized_position = here.get_bub( expected.position );
+    const furn_str_id furniture = here.furn( fertilized_position ).id();
     const itype_id seed_id = fertilized_seed->typeId();
-    const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, plant_position );
+    const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here,
+                          fertilized_position );
     const std::string stage = stage_idx >= 0 ?
                               fertilized_seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
     get_event_bus().send<event_type::character_fertilizes_plant>(
@@ -12669,10 +12673,11 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     if( !lifetime || !context ) {
         return;
     }
-    const item_location current = resolve_item_source( who, here, *original_seed );
-    if( current && current->typeId() == seed_id && here.furn( plant_position ).id() == furniture ) {
+    item *current = resolve_planted_seed( here, *original_seed );
+    const tripoint_bub_ms current_position = here.get_bub( expected.position );
+    if( current && current->typeId() == seed_id && here.furn( current_position ).id() == furniture ) {
         iexamine::run_plant_lifecycle_event(
-            "fertilize", who, here, plant_position, *current, stage, stage,
+            "fertilize", who, here, current_position, *current, stage, stage,
         { { "fertilizer_id", fertilizer.str() } }, {
             { "reduction_turns", static_cast<double>( to_turns<int>( reduction ) ) },
             { "actor_is_npc", who.is_npc() ? 1.0 : 0.0 }

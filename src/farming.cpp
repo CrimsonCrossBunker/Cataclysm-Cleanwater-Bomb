@@ -19,6 +19,7 @@
 #include "iexamine.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "json.h"
 #include "liquid_transfer.h"
@@ -508,6 +509,21 @@ farming_command capture_farming_command( Character &who, map &here,
     return result;
 }
 
+item *resolve_planted_seed( map &here, const item_source &source )
+{
+    if( source.kind != "map" || source.path.size() != 1 || !here.inbounds( source.position ) ) {
+        return nullptr;
+    }
+    const tripoint_bub_ms position = here.get_bub( source.position );
+    if( !here.furn( position )->plant ) {
+        return nullptr;
+    }
+    // Crop furniture is sealed to keep its seed out of pickup and crafting.
+    // Resolve only the planted seed, never other contents of the sealed tile.
+    item *seed = iexamine::get_seed_at( here, position );
+    return seed && seed->uid().get_value() == source.path.front() ? seed : nullptr;
+}
+
 bool execute_farming_command( Character &who, const farming_command &command )
 {
     map &here = get_map();
@@ -520,13 +536,11 @@ bool execute_farming_command( Character &who, const farming_command &command )
     }
     const tripoint_bub_ms tile = here.get_bub( position );
     if( command.seed ) {
-        if( command.seed->kind != "map" || command.seed->position != position ||
-            command.seed->path.size() != 1 ) {
+        if( command.seed->position != position ) {
             return false;
         }
-        const item_location original = resolve_item_source( who, here, *command.seed );
-        if( !original || original.get_item() != iexamine::get_seed_at( here, tile ) ||
-            original->typeId() != command.seed_type ) {
+        const item *original = resolve_planted_seed( here, *command.seed );
+        if( !original || original->typeId() != command.seed_type ) {
             return false;
         }
     } else if( here.furn( tile )->plant && iexamine::get_seed_at( here, tile ) ) {
@@ -607,19 +621,20 @@ bool execute_farming_command( Character &who, const farming_command &command )
             const auto generation = who.activity.identity_generation();
             here.grow_plant( tile, &who );
             if( !lifetime || !context || who.activity.identity_generation() != generation ||
-                !resolve_item_source( who, here, *command.seed ) ) {
+                !resolve_planted_seed( here, *command.seed ) ) {
                 return false;
             }
+            const tripoint_bub_ms current_tile = here.get_bub( position );
             if( command.action == farming_action::harvest ) {
-                if( !iexamine::is_plant_harvestable( here, tile ) ) {
+                if( !iexamine::is_plant_harvestable( here, current_tile ) ) {
                     return false;
                 }
-                iexamine::harvest_plant( who, tile, false );
+                iexamine::harvest_plant( who, current_tile, false );
             } else {
-                if( !iexamine::is_plant_overgrown( here, tile ) ) {
+                if( !iexamine::is_plant_overgrown( here, current_tile ) ) {
                     return false;
                 }
-                iexamine::clear_overgrown( who, tile );
+                iexamine::clear_overgrown( who, current_tile );
             }
             return true;
         }

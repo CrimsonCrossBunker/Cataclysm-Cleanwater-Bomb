@@ -3385,16 +3385,18 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     if( !lifetime || !context || !plot.matches( here ) ) {
         return;
     }
-    item_location watered = resolve_item_source( you, here, original );
-    if( !watered || !watered->is_seed() ) {
+    item *watered = resolve_planted_seed( here, original );
+    if( !watered ) {
         return;
     }
     if( !watered->has_var( "seed_last_water_check" ) ) {
         set_plant_last_water_check( *watered, calendar::turn );
     }
-    set_plant_water( *watered, std::min( max_water, current_water + irrigation::WATER_PER_POUR ) );
+    set_plant_water( *watered, std::min( max_water,
+                                         get_plant_water( *watered ) + irrigation::WATER_PER_POUR ) );
     const itype_id seed_type = watered->typeId();
-    const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
+    const int stage_idx = get_plant_current_stage_idx_from_effective( here,
+                          here.get_bub( plot.position ) );
     const std::string stage = stage_idx >= 0 ?
                               seed_type->seed->get_growth_stages()[stage_idx].first.str() : "";
     you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), watered->get_plant_name() );
@@ -3403,7 +3405,7 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     if( !lifetime || !context || !plot.matches( here ) ) {
         return;
     }
-    const item_location current = resolve_item_source( you, here, original );
+    item *current = resolve_planted_seed( here, original );
     if( current && current->typeId() == seed_type ) {
         run_plant_lifecycle_event( "water", you, here, here.get_bub( plot.position ), *current,
         stage, stage, {},
@@ -5084,7 +5086,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         std::vector<std::string> drink_names;
         std::vector<double> drink_rot;
         std::vector<time_point> drink_bday;
-        for( item*&drink : drinks_inv ) {
+        for( item *&drink : drinks_inv ) {
             auto found_drink = std::find( drink_types.begin(), drink_types.end(), drink->typeId() );
             if( found_drink == drink_types.end() ) {
                 drink_types.push_back( drink->typeId() );
