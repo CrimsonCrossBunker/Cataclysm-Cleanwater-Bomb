@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CHARACTER_H
 #define CATA_SRC_CHARACTER_H
 
+#include <crafting_enums.h>
 #include <item_components.h>
 #include <algorithm>
 #include <bitset>
@@ -31,8 +32,6 @@
 #include "cata_utility.h"
 #include "character_attire.h"
 #include "character_id.h"
-#include "kill_statistics.h"
-#include "lua_platform_state.h"
 #include "city.h"  // IWYU pragma: keep
 #include "compatibility.h"
 #include "coordinates.h"
@@ -47,6 +46,8 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "kill_statistics.h"
+#include "lua_platform_state.h"
 #include "memory_fast.h"
 #include "monster.h"
 #include "pimpl.h"
@@ -67,8 +68,6 @@
 #include "weakpoint.h"
 #include "weighted_list.h"
 
-struct item_activation_choices;
-
 class JsonObject;
 class JsonOut;
 class SkillLevel;
@@ -87,6 +86,7 @@ class known_magic;
 class ma_technique;
 class map;
 class mission;
+struct item_activation_choices;
 
 namespace debug_menu
 {
@@ -100,7 +100,6 @@ class spell;
 class ui_adaptor;
 class vehicle;
 class vpart_reference;
-
 enum scaling_stat : int;
 
 namespace catacurses
@@ -117,17 +116,15 @@ enum class magic_energy_type : int;
 enum class recipe_filter_flags : int;
 enum class steed_type : int;
 enum npc_attitude : int;
-struct attention_plan;
 struct bionic;
+struct bionic_activation_choices;
 struct construction;
 struct crafting_cost_context;
-struct bionic_activation_choices;
 struct dealt_projectile_attack;
 struct disassembly_preparation;
 /// @brief Item slot used to apply modifications from food and meds
 struct islot_comestible;
 struct item_comp;
-struct vitamin_resource_cost;
 struct itype;
 struct mutation_branch;
 struct mutation_category_trait;
@@ -139,6 +136,7 @@ struct requirement_data;
 struct tool_comp;
 struct trait_and_var;
 struct trap;
+struct vitamin_resource_cost;
 struct w_point;
 template <typename E> struct enum_traits;
 

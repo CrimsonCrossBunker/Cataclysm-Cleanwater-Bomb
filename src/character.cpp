@@ -1,8 +1,3 @@
-#include "item_consumption.h"
-#include "item_activation.h"
-#include "character.h"
-#include "character_action_guard.h"
-
 #include <activity_tracker.h>
 #include <body_part_set.h>
 #include <bodypart.h>
@@ -13,18 +8,29 @@
 #include <damage.h>
 #include <flat_set.h>
 #include <global_vars.h>
+#include <grab.h>
 #include <item.h>
+#include <item_source.h>
+#include <kill_statistics.h>
+#include <lua_platform_state.h>
 #include <memory_fast.h>
 #include <pimpl.h>
 #include <player_activity.h>
 #include <pocket_type.h>
 #include <point.h>
 #include <ranged.h>
+#include <safe_reference.h>
 #include <sleep.h>
 #include <subbodypart.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <visitable.h>
 #include <weighted_list.h>
+
+#include "character.h"
+#include "character_action_guard.h"
+#include "item_activation.h"
+#include "item_consumption.h"
 
 #define MP_ENABLED
 #include <algorithm>
@@ -81,20 +87,16 @@
 #include "game.h"
 #include "game_constants.h"
 #include "gunmod_ui.h"
-#include "input_context.h"
-#include "input_enums.h"
 #include "inventory.h"
 #include "item_location.h"
-#include "item_reload.h"
 #include "item_pocket.h"
+#include "item_reload.h"
 #include "item_repair.h"
 #include "item_stack.h"
 #include "itype.h"
 #include "iuse_actor.h"
-#include "kill_tracker.h"
 #include "lightmap.h"
 #include "line.h"
-#include "localized_comparator.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
