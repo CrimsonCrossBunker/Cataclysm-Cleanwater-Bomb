@@ -4496,7 +4496,7 @@ class Character : public Creature, public visitable
         mutable std::optional < units::mass > cached_weight_carried = std::nullopt;
 
         void store( JsonOut &json ) const;
-        void load( const JsonObject &data );
+        void load( const JsonObject &data, const JsonObject *legacy_kills = nullptr );
 
         // --------------- Values ---------------
         pimpl < SkillLevelMap > _skills;

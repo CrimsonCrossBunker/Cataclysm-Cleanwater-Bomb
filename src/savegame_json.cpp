@@ -850,11 +850,15 @@ void Character::load_mission_state( const JsonObject &data )
     }
 }
 
-void Character::load( const JsonObject &data )
+void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
     data.allow_omitted_members();
     kill_statistics_.clear();
-    data.read( "kill_tracker", kill_statistics_ );
+    if( data.has_member( "kill_tracker" ) ) {
+        data.read( "kill_tracker", kill_statistics_ );
+    } else if( legacy_kills ) {
+        kill_statistics_.deserialize( *legacy_kills );
+    }
     Creature::load( data );
 
     // stats
