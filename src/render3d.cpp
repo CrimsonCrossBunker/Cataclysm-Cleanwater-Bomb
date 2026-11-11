@@ -2262,7 +2262,19 @@ region_cull_mask build_region_cull_mask( map &here, const avatar &you,
                 }
             }
 
-            if( !potentially_visible || uniform_open_air ) {
+            bool vehicle_in_open_air = false;
+            if( uniform_open_air && cache.get_veh_in_active_range() ) {
+                for( int y = y0; y <= y1 && !vehicle_in_open_air; ++y ) {
+                    for( int x = x0; x <= x1; ++x ) {
+                        if( cache.get_veh_exists_at( tripoint_bub_ms( x, y, zlev ) ) ) {
+                            vehicle_in_open_air = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if( !potentially_visible || ( uniform_open_air && !vehicle_in_open_air ) ) {
                 const tripoint_bub_ms first( x0, y0, zlev );
                 const tripoint_bub_ms last( x1, y1, zlev );
                 if( !you.has_map_memory_in_region( here.get_abs( first ), here.get_abs( last ) ) ) {
@@ -3096,11 +3108,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( t == t_null ) {
                     continue;
                 }
-                // open air / holes: nothing stands here on this level (water is
-                // NO_FLOOR_WATER, not NO_FLOOR, and still draws). furniture can
-                // bridge a gap, so its tile is not open air
-                if( t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
-                    f == furn_str_id::NULL_ID() ) {
+                // Open air / holes have no terrain surface (water is
+                // NO_FLOOR_WATER, not NO_FLOOR, and still draws). Furniture can
+                // bridge a gap, and a flying vehicle still needs its object pass.
+                const optional_vpart_position ovp = here.veh_at( p );
+                const bool open_air = t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
+                                      f == furn_str_id::NULL_ID();
+                if( open_air && !ovp ) {
                     continue;
                 }
                 // the whole tile shares one light tone, from the same light
@@ -3137,7 +3151,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // walls, ordinary fences and panels keep the straight "edge" middle
                 // segment since they are drawn as vertical faces; flat utility runs
                 // instead use their true top-down connection shape
-                const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
+                const bool plain_floor = !open_air && !is_tree && !is_shrub && !is_panel && !is_fence &&
                                          !is_wall && !is_upright_equipment;
                 const bool shaped = plain_floor || is_flat_utility || is_upright_equipment;
                 int rota = 0;
@@ -3268,7 +3282,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // canopies are spriteless terrain) — skip instead of painting a
                 // hash-colored floor in the sky. Horizontal utilities likewise
                 // get no hash-colored base when their tile has no real bg.
-                if( !is_empty_frame && ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) &&
+                if( !open_air && !is_empty_frame &&
+                    ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) &&
                     ( ground_tex || !skip_untextured_terrain_surface( *t ) ) ) {
                     // the base-id / wood-floor fallbacks have no connection
                     // rotation: only a shaped fg sprite carries one
@@ -3843,7 +3858,6 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // stream (no depth write, painter order = 2D's row order), so
                 // coplanar overlaps resolve exactly like 2D and never z-fight.
                 if( !roof_unseen && count < MAX_DRAW_INSTANCES ) {
-                    const optional_vpart_position ovp = here.veh_at( p );
                     if( ovp ) {
                         const vehicle &veh = ovp->vehicle();
                         const point_rel_ms mount = ovp->mount_pos();
@@ -4633,6 +4647,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             sprite_id = m->type->id.str();
             cat = TILE_CATEGORY::MONSTER;
             size_scale = creature_size_scale( m->get_size() );
+            // Skitterbot's 108500 ml volume is only 500 ml over the medium
+            // threshold. Keep this small-dog robot from becoming a 2.52m giant.
+            if( m->type->id.str() == "mon_skitterbot" ) {
+                size_scale = creature_size_scale( creature_size::small );
+            }
             overlays = m->get_overlay_ids();
         } else if( const Character *ch = critter.as_character() ) {
             size_scale = CHARACTER_SIZE_SCALE;
@@ -4821,6 +4840,16 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                        0.002f, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
         ++count;
     };
+    // Match the native tiles vehicle indicator: the next facing, ten tiles
+    // ahead, using the same game option, map-level anchor and cursor sprite.
+    if( you.controlling_vehicle ) {
+        const std::optional<tripoint_rel_ms> indicator_offset =
+            g->get_veh_dir_indicator_location( true );
+        if( indicator_offset ) {
+            push_cursor_slab( tripoint_bub_ms( upos.xy(), center.z() ) + indicator_offset->xy(),
+                              "cursor" );
+        }
+    }
     // forward movement marker: the tile the "up" key steps to, i.e. screen
     // forward. the tileset's line_target brackets (yellow in UC) mark it as a
     // destination, visibly distinct from the white mouse hover below; its
