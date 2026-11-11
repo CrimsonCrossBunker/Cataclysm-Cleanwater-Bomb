@@ -319,7 +319,6 @@ static const activity_id ACT_WORKOUT_ACTIVE( "ACT_WORKOUT_ACTIVE" );
 static const activity_id ACT_WORKOUT_HARD( "ACT_WORKOUT_HARD" );
 static const activity_id ACT_WORKOUT_LIGHT( "ACT_WORKOUT_LIGHT" );
 static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
-
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_money( "money" );
 static const ammotype ammo_plutonium( "plutonium" );
@@ -354,7 +353,6 @@ static const efftype_id effect_under_operation( "under_operation" );
 static const efftype_id effect_worked_on( "worked_on" );
 
 static const faction_id faction_your_followers( "your_followers" );
-
 static const flag_id json_flag_ALWAYS_AIMED( "ALWAYS_AIMED" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 
@@ -473,7 +471,6 @@ static const ter_str_id ter_t_door_metal_locked( "t_door_metal_locked" );
 static const ter_str_id ter_t_greenhouse( "t_greenhouse" );
 static const ter_str_id ter_t_greenhouse_tilled( "t_greenhouse_tilled" );
 static const ter_str_id ter_t_tree( "t_tree" );
-
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 static const trait_id trait_SPIRITUAL( "SPIRITUAL" );
 static const trait_id trait_STOCKY_TROGLO( "STOCKY_TROGLO" );
@@ -18325,9 +18322,8 @@ void zone_sort_activity_actor::return_items_to_source( Character &you,
                     continue;
                 }
             }
-            // Keep a local handle: a drop callback can destroy this activity.
-            item_location source;
-            source = item;
+            // Keep a local handle: a drop callback can destroy this activity. NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+            item_location source = item;
             const int count = source->count();
             const int returned = transfer_sorted_item( you, source, src_bub, false );
             if( !lifetime || !context || you.activity.identity_generation() != activity_generation ||
