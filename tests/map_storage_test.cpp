@@ -13,6 +13,7 @@
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "game.h"
+#include "map.h"
 #include "map_storage_context.h"
 #include "mapbuffer.h"
 #include "path_info.h"
@@ -264,6 +265,31 @@ TEST_CASE( "failed_map_save_retains_owned_submaps_for_retry", "[map_storage][sav
     buffer.save( true );
     REQUIRE( buffer.begin() == buffer.end() );
     check_quad( buffer, base, ter_t_floor );
+}
+
+TEST_CASE( "resident_map_save_releases_only_outside_submaps", "[map_storage][save]" )
+{
+    const bool compressed = GENERATE( false, true );
+    storage_fixture fixture;
+    mapbuffer buffer( fixture.context( "a", "default", compressed ) );
+    const map &resident = get_map();
+    const auto center = project_to<coords::omt>( resident.get_abs_sub() ) + point_rel_omt( 1, 1 );
+    const auto distant = center + point_rel_omt( resident.getmapsize(), 0 );
+    const auto inside = project_to<coords::sm>( center );
+    const auto outside = project_to<coords::sm>( distant );
+    REQUIRE( resident.inbounds( center ) );
+    REQUIRE_FALSE( resident.inbounds( distant ) );
+
+    insert_quad( buffer, inside, ter_t_floor );
+    insert_quad( buffer, outside, ter_t_dirt );
+    REQUIRE( buffer.submap_count() == 8 );
+
+    buffer.save( false, &resident );
+    CHECK( buffer.submap_count() == 4 );
+    check_quad( buffer, inside, ter_t_floor );
+    CHECK( buffer.submap_count() == 4 );
+    check_quad( buffer, outside, ter_t_dirt );
+    CHECK( buffer.submap_count() == 8 );
 }
 
 TEST_CASE( "owned_uniform_maps_persist_without_a_terrain_resolver", "[map_storage][save]" )

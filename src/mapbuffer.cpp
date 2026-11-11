@@ -88,6 +88,12 @@ mapbuffer::mapbuffer( map_storage_context context, uniform_terrain_lookup unifor
 
 mapbuffer::~mapbuffer() = default;
 
+std::size_t mapbuffer::submap_count() const
+{
+    std::scoped_lock lock( submaps_mutex_ );
+    return submaps.size();
+}
+
 const map_storage_context &mapbuffer::storage()
 {
     if( !storage_ ) {

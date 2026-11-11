@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
@@ -661,7 +662,7 @@ void overmap_npc_move()
         }
     }
     bool npcs_need_reload = false;
-    for( npc*&elem : travelling_npcs ) {
+    for( npc *&elem : travelling_npcs ) {
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->pos_abs_omt() ) > 2 ) {
@@ -964,12 +965,15 @@ void game::simulate_turn_prefix()
 
     local_player_controller().update_body();
 
-    // Auto-save if autosave is enabled (suppressed in client mode — server owns saves)
-    if( !cata_mp::is_client_mode() &&
-        get_option<bool>( "AUTOSAVE" ) &&
-        calendar::once_every( 1_turns * get_option<int>( "AUTOSAVE_TURNS" ) ) &&
-        !u.is_dead_state() ) {
-        autosave();
+    // Use the normal character and map save cycle for eviction. Check cache
+    // pressure at most once per game minute.
+    if( !cata_mp::is_client_mode() && get_option<bool>( "AUTOSAVE" ) && !u.is_dead_state() ) {
+        constexpr std::size_t map_cache_limit =
+            2 * static_cast<std::size_t>( MAPSIZE ) * MAPSIZE * OVERMAP_LAYERS;
+        if( calendar::once_every( 1_turns * get_option<int>( "AUTOSAVE_TURNS" ) ) ||
+            ( calendar::once_every( 1_minutes ) && MAPBUFFER.submap_count() > map_cache_limit ) ) {
+            autosave();
+        }
     }
 
     weather.update_weather();
