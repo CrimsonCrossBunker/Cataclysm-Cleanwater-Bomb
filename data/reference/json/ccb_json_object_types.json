@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:a8e3cce387814a823040a024b6c572bb18845c4b9118ec8e840e5f55cf3eb1a6",
+    "source_fingerprint": "sha256:3f6d9553d2a08d24ad3f63f93e232bebedfc134772c43b499632cbb2de541fdc",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6849,
-    "top_level_objects": 95442,
+    "tracked_json_files": 6853,
+    "top_level_objects": 95449,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -4155,7 +4155,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1069,
+        "occurrences": 1070,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -4971,7 +4971,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9640,
+        "occurrences": 9645,
         "examples": [
           {
             "path": "data/json/effects_on_condition/npc_eocs/ref_center_exodii_updater.json",
@@ -6792,7 +6792,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 667,
+        "occurrences": 668,
         "examples": [
           {
             "path": "data/json/mapgen/abandoned_shopping_plaza.json",
