@@ -14293,6 +14293,7 @@ void vehicle_activity_actor::finish( player_activity &act, Character &you )
     const safe_reference<vehicle> target_ref = target ? target->get_safe_reference() :
             safe_reference<vehicle>();
     const point_rel_ms mount_loc = vp_mount_location.xy();
+    const int deck = vp_mount_location_opp.z();
     complete_vehicle( act, you );
     if( !lifetime || ( act && act.identity_generation() != identity ) ) {
         return;
@@ -14312,13 +14313,11 @@ void vehicle_activity_actor::finish( player_activity &act, Character &you )
     if( !you.is_npc() ) {
         if( target_ref ) {
             here.invalidate_map_cache( here.get_abs_sub().z() );
-            // TODO: Z (and also where the activity is queued)
-            // Or not, because the vehicle coordinates are dropped anyway
             if( you.backlog.empty() || !you.backlog.front().is_multi_type() ) {
                 if( target_ref->is_appliance() ) {
                     g->exam_appliance( *target_ref, mount_loc );
                 } else {
-                    g->exam_vehicle( *target_ref, mount_loc );
+                    g->exam_vehicle( *target_ref, mount_loc, deck );
                 }
             }
             return;
@@ -14341,12 +14340,21 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
     const tripoint_abs_ms act_pos = vp_location;
     vehicle &veh = *target;
     const point_rel_ms d = vp_mount_location_opp.xy();
+    const tripoint_rel_ms deck_mount = vp_mount_location_opp;
     const vpart_id part_id = vp_id;
     const vpart_info &vpinfo = part_id.obj();
     const int vp_ind = vp_index;
 
     switch( sub_activity ) {
         case VEHICLE_INSTALL: {
+            const ret_val<void> valid_mount = veh.can_mount( deck_mount, vpinfo );
+            if( !valid_mount.success() ) {
+                you.add_msg_player_or_npc( m_info,
+                                         _( "You cannot install %2$s on vehicle deck %1$d: %3$s" ),
+                                         _( "<npcname> cannot install %2$s on vehicle deck %1$d: %3$s" ),
+                                         deck_mount.z() + 1, vpinfo.name(), valid_mount.str() );
+                break;
+            }
             const temp_crafting_inventory &inv = you.crafting_inventory();
             const requirement_data reqs = vpinfo.install_requirements();
             if( !reqs.can_make_with_inventory( &you, inv, is_crafting_component, 1, craft_flags::none,
@@ -14386,10 +14394,10 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             }
 
             you.invalidate_crafting_inventory();
-            const int partnum = veh.install_part( here, d, part_id, std::move( base ), installed_with );
+            const int partnum = veh.install_part( here, deck_mount, part_id, std::move( base ), installed_with );
             if( partnum < 0 ) {
-                debugmsg( "complete_vehicle install part fails dx=%d dy=%d id=%s",
-                          d.x(), d.y(), part_id.c_str() );
+                debugmsg( "complete_vehicle install part fails dx=%d dy=%d dz=%d id=%s",
+                          d.x(), d.y(), deck_mount.z(), part_id.c_str() );
                 break;
             }
             ::vehicle_part &vp_new = veh.part( partnum );
@@ -14408,7 +14416,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 orient_part( here, &veh, vpinfo, partnum, q );
             }
 
-            const tripoint_bub_ms vehp = veh.pos_bub( here ) + tripoint_rel_ms( q, 0 );
+            const tripoint_bub_ms vehp = veh.bub_part_pos( here, partnum );
             // TODO: allow boarding for non-players as well.
             Character *const pl = get_creature_tracker().creature_at<Character>( vehp );
             if( vpinfo.has_flag( VPFLAG_BOARDABLE ) && pl ) {
@@ -14611,7 +14619,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             }
 
             // Save these values now so they aren't lost when parts or vehicles are destroyed.
-            const point_rel_ms part_mount = vp->mount;
+            const tripoint_rel_ms part_mount = vp->mount_pos3();
             const tripoint_bub_ms part_pos = veh.bub_part_pos( here, *vp );
 
             veh.unlink_cables( here, part_mount, you,

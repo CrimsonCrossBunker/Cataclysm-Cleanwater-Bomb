@@ -155,7 +155,7 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
     const std::string startdurability = pt.get_base().damage_indicator();
     if( pt.is_broken() ) {
         const vpart_id vpid = pt.info().id;
-        const point_rel_ms mount = pt.mount;
+        const tripoint_rel_ms mount = pt.mount_pos3();
         const units::angle direction = pt.direction;
         const std::string variant = pt.variant;
         here.spawn_items( who.pos_bub( here ), pt.pieces_for_broken_part() );

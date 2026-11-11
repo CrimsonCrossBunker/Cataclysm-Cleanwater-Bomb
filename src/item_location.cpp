@@ -1623,7 +1623,7 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
                         candidates.push_back( vh->part_index );
                     }
                     const std::vector<int> at_mount = veh.parts_at_relative(
-                                                          vh->mount_offset, true, false );
+                                                          tripoint_rel_ms( vh->mount_offset, vp->mount_pos3().z() ), true, false );
                     for( int p : at_mount ) {
                         if( p != vh->part_index ) {
                             candidates.push_back( p );

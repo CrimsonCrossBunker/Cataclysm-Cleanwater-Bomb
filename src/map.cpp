@@ -653,7 +653,7 @@ void memorize_vpart_at( map &here, avatar &you, const tripoint_bub_ms &p,
         return;
     }
     const vehicle &veh = ovp->vehicle();
-    const vpart_display vd = veh.get_display_of_tile( ovp->mount_pos() );
+    const vpart_display vd = veh.get_display_of_tile( ovp->mount_pos3() );
     if( vd.id.is_null() ) {
         return;
     }
@@ -873,12 +873,14 @@ void map::add_vehicle_to_cache( vehicle *veh )
 
     erase_cached_vehicle_ladders( cached_veh_ladders, veh );
 
+    std::set<int> occupied_levels;
     // Get parts
     for( const vpart_reference &vpr : veh->get_all_parts_with_fakes() ) {
         if( vpr.part().removed ) {
             continue;
         }
         const tripoint_bub_ms p = veh->bub_part_pos( *this, vpr.part() );
+        occupied_levels.insert( p.z() );
         level_cache &ch = get_cache( p.z() );
         ch.set_veh_cached_parts( p, *veh, static_cast<int>( vpr.part_index() ) );
         if( inbounds( p ) ) {
@@ -899,6 +901,9 @@ void map::add_vehicle_to_cache( vehicle *veh )
                 }
             }
         }
+    }
+    for( int level : occupied_levels ) {
+        on_vehicle_moved( level );
     }
 }
 
@@ -2200,9 +2205,11 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
             if( parts_to_move.empty() ) {
                 next_pos = veh_part.precalc[1];
             }
-            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
+            const tripoint_bub_ms chassis_point = src + dp + next_pos -
+                    tripoint( 0, 0, veh_part.mount_level );
+            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, chassis_point ) ) {
                 psg_offset_z += 1;
-            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + next_pos ) ) {
+            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, chassis_point ) ) {
                 psg_offset_z -= 1;
             }
 
@@ -3688,6 +3695,15 @@ bool map::valid_move( const tripoint_bub_ms &from, const tripoint_bub_ms &to,
         return false;
     }
 
+    if( !bash && !flying && from.xy() == to.xy() ) {
+        if( const optional_vpart_position source = veh_at( from ) ) {
+            const auto dest = source->vehicle().deck_transition( *this, from, to.z() - from.z() );
+            if( dest && *dest == to ) {
+                return true;
+            }
+        }
+    }
+
     const bool going_up = from.z() < to.z();
 
     const tripoint_bub_ms &up_p = going_up ? to : from;
@@ -5007,7 +5023,7 @@ bool map::terrain_moppable( const tripoint_bub_ms &p )
     // Moppable vehicles ( blood splatter )
     if( const optional_vpart_position ovp = veh_at( p ) ) {
         vehicle *const veh = &ovp->vehicle();
-        for( const int elem : veh->parts_at_relative( ovp->mount_pos(), true ) ) {
+        for( const int elem : veh->parts_at_relative( ovp->mount_pos3(), true ) ) {
             const vehicle_part &vp = veh->part( elem );
             if( vp.blood > 0 ) {
                 return true;
@@ -5052,7 +5068,7 @@ bool map::mop_spills( const tripoint_bub_ms &p )
 
     if( const optional_vpart_position ovp = veh_at( p ) ) {
         vehicle *const veh = &ovp->vehicle();
-        for( const int elem : veh->parts_at_relative( ovp->mount_pos(), true ) ) {
+        for( const int elem : veh->parts_at_relative( ovp->mount_pos3(), true ) ) {
             vehicle_part &vp = veh->part( elem );
             if( vp.blood > 0 ) {
                 vp.blood = 0;
@@ -7944,7 +7960,8 @@ void map::process_items_in_vehicle( vehicle &cur_veh, submap &current_submap )
         }
         const auto it = std::find_if( begin( cargo_parts ),
         end( cargo_parts ), [&]( const vpart_reference & part ) {
-            return active_item_ref.location == part.mount_pos();
+            return active_item_ref.location == part.mount_pos() &&
+                   active_item_ref.mount_level == part.part().mount_level;
         } );
 
         if( it == end( cargo_parts ) ) {
@@ -8910,7 +8927,7 @@ void map::add_splatter( const field_type_id &type, const tripoint_bub_ms &where,
         if( const optional_vpart_position vp = veh_at( where ) ) {
             vehicle *const veh = &vp->vehicle();
             // Might be -1 if all the vehicle's parts at where are marked for removal
-            const int part = veh->part_displayed_at( vp->mount_pos(), true );
+            const int part = veh->part_displayed_at( vp->mount_pos3(), true );
             if( part != -1 ) {
                 veh->part( part ).blood += 200 * std::min( intensity, 3 ) / 3;
                 return;
@@ -9480,7 +9497,7 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     int veh_part = 0;
     const vehicle *veh = veh_at_internal( p, veh_part );
     if( veh != nullptr ) {
-        const vpart_display vd = veh->get_display_of_tile( veh->part( veh_part ).mount );
+        const vpart_display vd = veh->get_display_of_tile( veh->part( veh_part ).mount_pos3() );
         sym = vd.symbol_curses;
         tercol = vd.color;
         item_sym.clear(); // clear the item symbol so `sym` is used instead.
@@ -9569,7 +9586,7 @@ void map::draw_from_above( const catacurses::window &w, const tripoint_bub_ms &p
         tercol = curr_furn->color();
     } else if( ( veh = veh_at_internal( p, part_below ) ) != nullptr ) {
         const vpart_position vpp( const_cast<vehicle &>( *veh ), part_below );
-        const vpart_display vd = veh->get_display_of_tile( vpp.mount_pos(), true, true, true );
+        const vpart_display vd = veh->get_display_of_tile( vpp.mount_pos3(), true, true, true );
         const int roof = veh->roof_at_part( part_below );
         sym = vd.symbol_curses;
         tercol = roof >= 0 || vpp.obstacle_at_part() ? c_light_gray : c_light_gray_cyan;

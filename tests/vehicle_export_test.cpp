@@ -22,7 +22,7 @@ static const vproto_id vehicle_prototype_veh_export_test( "veh_export_test" );
 
 static bool operator==( const vehicle_item_spawn &l, const vehicle_item_spawn &r )
 {
-    return l.pos == r.pos && l.chance == r.chance &&
+    return l.pos == r.pos && l.mount_level == r.mount_level && l.chance == r.chance &&
            l.with_ammo == r.with_ammo && l.with_magazine == r.with_magazine && l.item_ids == r.item_ids &&
            // NOLINTNEXTLINE(misc-redundant-expression)
            l.item_groups == r.item_groups;

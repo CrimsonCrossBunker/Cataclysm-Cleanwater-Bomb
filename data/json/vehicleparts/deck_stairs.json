@@ -1,0 +1,13 @@
+[
+  {
+    "id": "deck_stairs",
+    "copy-from": "ladder_3",
+    "type": "vehicle_part",
+    "name": "车内楼梯",
+    "item": "rope_30",
+    "location": "under",
+    "looks_like": "f_rope_up",
+    "flags": [ "DECK_STAIRS", "SHOCK_IMMUNE" ],
+    "description": "连接当前车内楼层与上一层的可拆卸通道。上下两层都需要可站立的车内部件。"
+  }
+]

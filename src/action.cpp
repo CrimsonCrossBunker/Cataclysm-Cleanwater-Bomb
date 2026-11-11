@@ -739,6 +739,10 @@ bool can_move_vertical_at( const map &here, const tripoint_bub_ms &p, int movez 
     if( p.z() + movez < -OVERMAP_DEPTH || p.z() + movez > OVERMAP_HEIGHT ) {
         return false;
     }
+    if( const optional_vpart_position vp = here.veh_at( p );
+        vp && vp->vehicle().deck_transition( here, p, movez ) ) {
+        return true;
+    }
     Character &player_character = get_player_character();
     // TODO: unify this with game::move_vertical
     if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, p ) &&

@@ -1021,7 +1021,7 @@ class game
         void exam_appliance( vehicle &veh, const point_rel_ms &cp = point_rel_ms::zero );
 
         /** open vehicle interaction screen */
-        void exam_vehicle( vehicle &veh, const point_rel_ms &cp = point_rel_ms::zero );
+        void exam_vehicle( vehicle &veh, const point_rel_ms &cp = point_rel_ms::zero, int deck = -1 );
 
         /** Attempt to load first valid save (if any) in world */
         bool load( const std::string &world );

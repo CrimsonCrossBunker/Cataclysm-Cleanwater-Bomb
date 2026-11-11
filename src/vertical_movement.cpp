@@ -643,6 +643,20 @@ vertical_move_prompt make_vertical_move_prompt( Character &who, map &here, int d
             append( std::move( entry ) );
         }
     };
+    if( const auto source = here.veh_at( pos ) ) {
+        if( const auto destination = source->vehicle().deck_transition( here, pos, direction ) ) {
+            if( who.is_mounted() || get_creature_tracker().creature_at( *destination ) ) {
+                prompt.title = _( "The vehicle stairs are blocked." );
+                return prompt;
+            }
+            selection.action = "vehicle_deck";
+            selection.target = here.get_abs( *destination );
+            selection.vehicle = source->vehicle().uid().get_value();
+            choices.landing = selection.target;
+            append( std::move( option ) );
+            return prompt;
+        }
+    }
     if( const auto destination = here.vehicle_ladder_destination( pos, direction ) ) {
         const auto ladder = here.vehicle_ladder_at( pos );
         if( !ladder ) {
@@ -802,6 +816,21 @@ bool execute_vertical_move( Character &who, map &here, const vertical_move_selec
         }
         g->climb_down_using( who, here.get_bub( selection.target ), selection.aid, true, true );
         return true;
+    }
+    if( selection.action == "vehicle_deck" ) {
+        const auto pos = who.pos_bub( here );
+        const auto source = here.veh_at( pos );
+        if( !source || source->vehicle().uid().get_value() != selection.vehicle || who.is_mounted() ) {
+            return false;
+        }
+        const auto destination = source->vehicle().deck_transition( here, pos, selection.direction );
+        if( !destination || here.get_abs( *destination ) != selection.target ||
+            get_creature_tracker().creature_at( *destination ) ||
+            ( here.dangerous_field_at( *destination ) && !selection.choices.allow_danger ) ) {
+            return false;
+        }
+        g->vertical_move( who, selection.direction, false, false, &selection.choices );
+        return lifetime && who.pos_abs() == selection.target;
     }
     if( selection.action == "ladder" ) {
         const auto pos = who.pos_bub( here );

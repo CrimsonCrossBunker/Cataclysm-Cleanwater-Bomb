@@ -1241,7 +1241,7 @@ bool vehicle::can_close( int part_index, Character &who )
 
 void vehicle::open_all_at( map &here, int p )
 {
-    for( const int elem : parts_at_relative( parts[p].mount, true, true ) ) {
+    for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
         const vehicle_part &vp = parts[elem];
         if( vp.info().has_flag( VPFLAG_OPENABLE ) ) {
             // Note that this will open multi-square and non-multipart parts in the tile. This
@@ -1265,19 +1265,25 @@ void vehicle::open_or_close( map &here, const int part_index, const bool opening
         if( opening && prt.locked ) {
             unlock( parti );
         }
-        prt.open = opening;
+        const auto set_open = [&]( vehicle_part &vp ) {
+            vp.open = opening;
+            const tripoint_bub_ms location = bub_part_pos( here, vp );
+            if( here.inbounds( location ) ) {
+                here.set_transparency_cache_dirty( location );
+                here.set_seen_cache_dirty( location );
+            }
+        };
+        set_open( prt );
         if( prt.is_fake ) {
-            parts.at( prt.fake_part_to ).open = opening;
+            set_open( parts.at( prt.fake_part_to ) );
         } else if( prt.has_fake ) {
-            parts.at( prt.fake_part_at ).open = opening;
+            set_open( parts.at( prt.fake_part_at ) );
         }
     };
     //find_lines_of_parts() doesn't return the part_index we passed, so we set it on its own
     part_open_or_close( part_index, opening );
     insides_dirty = true;
-    here.set_transparency_cache_dirty( sm_pos.z() );
-    const tripoint_abs_ms part_location = mount_to_tripoint_abs( parts[part_index].mount );
-    here.set_seen_cache_dirty( here.get_bub( part_location ) );
+    const tripoint_abs_ms part_location = abs_part_pos( part_index );
     const int dist = rl_dist( get_player_character().pos_abs(), part_location );
     if( dist < 20 ) {
         sfx::play_variant_sound( opening ? "vehicle_open" : "vehicle_close",
@@ -2043,7 +2049,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .on_submit( [this, vp] {
             const vpart_position non_fake( *this, get_non_fake_part( vp.part_index() ) );
             const point_rel_ms start_pos = non_fake.mount_pos().rotate( 2 );
-            g->exam_vehicle( *this, start_pos );
+            g->exam_vehicle( *this, start_pos, non_fake.mount_pos3().z() );
         } );
 
         menu.add( tracking_on ? _( "Forget vehicle position" ) : _( "Remember vehicle position" ) )

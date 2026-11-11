@@ -47,6 +47,12 @@ bool active_item_cache::add( item &it, point_sm_ms location, item *parent,
 bool active_item_cache::add( item &it, point_rel_ms location, item *parent,
                              std::vector<item_pocket const *> const &pocket_chain )
 {
+    return add( it, tripoint_rel_ms( location, 0 ), parent, pocket_chain );
+}
+
+bool active_item_cache::add( item &it, tripoint_rel_ms location, item *parent,
+                             std::vector<item_pocket const *> const &pocket_chain )
+{
     std::vector<item_pocket const *> pockets = pocket_chain;
     bool ret = false;
     for( item_pocket *pk : it.get_standard_pockets() ) {
@@ -78,7 +84,7 @@ bool active_item_cache::add( item &it, point_rel_ms location, item *parent,
             return true;
         }
     }
-    item_reference ref{ location, it.get_safe_reference(), parent, pocket_chain };
+    item_reference ref{ location.xy(), it.get_safe_reference(), parent, pocket_chain, location.z() };
     if( it.can_revive() ) {
         special_items[special_item_type::corpse].emplace_back( ref );
     }

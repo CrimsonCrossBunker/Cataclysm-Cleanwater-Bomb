@@ -2350,7 +2350,7 @@ void inventory_selector::add_vehicle_tank_items()
             vehicles_with_faucet.insert( &veh );
         }
 
-        for( const int part_index : veh.parts_at_relative( vp->mount_pos(), false ) ) {
+        for( const int part_index : veh.parts_at_relative( vp->mount_pos3(), false ) ) {
             if( veh.part( part_index ).contains_liquid() ) {
                 nearby_tanks.emplace_back( &veh, part_index );
             }
