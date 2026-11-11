@@ -53,7 +53,8 @@
     "longest_side": "130 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "neutral" },
     "category": "spare_parts",
-    "melee_damage": { "bash": 14 }
+    "melee_damage": { "bash": 14 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -72,7 +73,8 @@
     "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "uneven" },
     "use_action": [ "BREAK_STICK" ],
     "category": "spare_parts",
-    "melee_damage": { "bash": 18 }
+    "melee_damage": { "bash": 18 },
+    "stackable": true
   },
   {
     "type": "ITEM",

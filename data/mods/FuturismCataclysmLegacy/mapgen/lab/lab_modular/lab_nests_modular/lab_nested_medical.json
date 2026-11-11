@@ -1,0 +1,70 @@
+[
+  {
+    "type": "mapgen",
+    "//": "A nested map for a 9x9 medical room, includes door and north wall.",
+    "nested_mapgen_id": "lab_medical_9x9_S",
+    "object": {
+      "mapgensize": [ 9, 9 ],
+      "rows": [
+        "A...|Z...",
+        "pppp|A.ƨ.",
+        ".ɔ.J|..ƨ.",
+        "ƃë.Z|.ëƨ.",
+        "...J|ƃ.ƨ.",
+        ".h.Y|y...",
+        "||+|||+||",
+        ".........",
+        "....ë...."
+      ],
+      "palettes": [ "lab_common_palette", "fcl_vanilla_lab_medical_palette" ],
+      "vehicles": { "ƃ": { "vehicle": "wheelchair", "rotation": 90 } },
+      "flags": [ "ALLOW_TERRAIN_UNDER_FURNITURE" ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "//": "A nested map for a 9x9 medical room, includes door and south wall.",
+    "nested_mapgen_id": "lab_medical_9x9_S_autodoc",
+    "weight": 2500,
+    "object": {
+      "mapgensize": [ 9, 9 ],
+      "rows": [
+        "J.o...|SJ",
+        "k.ɔЯ..⁸..",
+        "J..ë..|.9",
+        "XXXXXX|⁸|",
+        "rrrɱrr|.L",
+        "A..A..|.L",
+        "|]⁸⁸]||+|",
+        "j........",
+        "j...ë...."
+      ],
+      "palettes": [ "lab_common_palette", "fcl_vanilla_lab_medical_palette" ],
+      "place_monster": [ { "monster": [ "mon_nursebot", "mon_nursebot_defective" ], "x": 4, "y": 2, "chance": 100 } ],
+      "items": { "L": [ { "item": "hazmat_masks", "chance": 70 }, { "item": "hazmat_suits", "chance": 70 } ] }
+    }
+  },
+  {
+    "type": "mapgen",
+    "//": "A nested map for a 9x9 medical room, includes door and north wall.",
+    "nested_mapgen_id": "lab_medical_9x9_N_autodoc",
+    "weight": 2500,
+    "object": {
+      "mapgensize": [ 9, 9 ],
+      "rows": [
+        "j....ë...",
+        "j........",
+        "|]⁸⁸]||+|",
+        ".A..A.|.L",
+        "rrrɱrr|.L",
+        "XXXXXX|+|",
+        "J..ë..|.9",
+        "k.ɔЯ..+..",
+        "J....o|SJ"
+      ],
+      "palettes": [ "lab_common_palette", "fcl_vanilla_lab_medical_palette" ],
+      "place_monster": [ { "monster": [ "mon_nursebot", "mon_nursebot_defective" ], "x": 4, "y": 6, "chance": 100 } ],
+      "items": { "L": [ { "item": "hazmat_masks", "chance": 70 }, { "item": "hazmat_suits", "chance": 70 } ] }
+    }
+  }
+]

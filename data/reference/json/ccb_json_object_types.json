@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:a90862657b77dc566d2d3de2180856d47dd57bbfdc9f2a9d92c26b06bb519c9e",
+    "source_fingerprint": "sha256:a8e3cce387814a823040a024b6c572bb18845c4b9118ec8e840e5f55cf3eb1a6",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6844,
-    "top_level_objects": 95428,
+    "tracked_json_files": 6849,
+    "top_level_objects": 95442,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -9117,7 +9117,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 925,
+        "occurrences": 929,
         "examples": [
           {
             "path": "data/core/tips.json",
@@ -9574,7 +9574,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4672,
+        "occurrences": 4682,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mapgen_eocs/furniture_eocs.json",

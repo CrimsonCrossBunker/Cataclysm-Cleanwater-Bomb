@@ -1,10 +1,11 @@
 #include "surroundings_menu.h"
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
+#include <view_action.h>
 #include <algorithm>
 #include <cfloat>
 #include <functional>
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -45,6 +46,9 @@
 #include "output.h"
 #include "panels.h"
 #include "point.h"
+#if defined(TILES)
+    #include "render3d.h"
+#endif
 #include "safemode_ui.h"
 #include "string_formatter.h"
 #include "text.h"
@@ -1289,7 +1293,8 @@ std::optional<view_action> surroundings_menu::execute( bool defer_action )
             }
         } else if( action == "look" && defer_action ) {
             tripoint_bub_ms center = observation_origin;
-            const auto result = g->look_around( { true, center, center, false, false, true, true } );
+            const look_around_result result =
+                g->look_around( { true, center, center, false, false, true, true } );
             selection = result.selection;
             if( result.peek_action && ( *result.peek_action == PA_BLIND_THROW ||
                                         *result.peek_action == PA_BLIND_THROW_WIELDED ) ) {
@@ -1369,6 +1374,14 @@ void surroundings_menu::update_path_end()
 
     if( p ) {
         path_end = observation_origin + *p;
+        // The 3D view centers on the selected entry (SHIFT_LIST_ITEM_VIEW) and
+        // the camera follows the view center, so the raw mouse hover would
+        // sweep across the map while the list pans. Push the selection as a
+        // game cursor: the renderer draws it on the selected tile and skips
+        // the stale hover marker.
+#if defined(TILES)
+        render3d::push_cursor( *path_end, true );
+#endif
     } else {
         path_end = std::nullopt;
     }

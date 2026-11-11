@@ -945,11 +945,11 @@ std::vector<std::string> requirement_data::get_folded_tools_list( const Characte
     }
 
     std::vector<std::string> folded_qualities = get_folded_list( actor, width, crafting_inv,
-        return_true<item>, qualities );
+            return_true<item>, qualities );
     output_buffer.insert( output_buffer.end(), folded_qualities.begin(), folded_qualities.end() );
 
     std::vector<std::string> folded_tools = get_folded_list( actor, width, crafting_inv,
-        return_true<item>, tools, batch );
+                                            return_true<item>, tools, batch );
     output_buffer.insert( output_buffer.end(), folded_tools.begin(), folded_tools.end() );
     return output_buffer;
 }
@@ -965,14 +965,25 @@ bool requirement_data::can_make_with_inventory( const Character *actor,
     }
 
     bool retval = true;
-    // All functions must be called to update the available settings in the components.
-    if( !has_comps( actor, crafting_inv, qualities, return_true<item> ) ) {
+    const bool stop_on_failure = ( flags & craft_flags::stop_on_failure ) != craft_flags::none;
+    // Requirement displays need every availability status.  Boolean previews
+    // can stop as soon as one required group is unavailable.
+    if( !has_comps( actor, crafting_inv, qualities, return_true<item>, 1, flags ) ) {
+        if( stop_on_failure ) {
+            return false;
+        }
         retval = false;
     }
     if( !has_comps( actor, crafting_inv, tools, return_true<item>, batch, flags ) ) {
+        if( stop_on_failure ) {
+            return false;
+        }
         retval = false;
     }
-    if( !has_comps( actor, crafting_inv, components, filter, batch ) ) {
+    if( !has_comps( actor, crafting_inv, components, filter, batch, flags ) ) {
+        if( stop_on_failure ) {
+            return false;
+        }
         retval = false;
     }
     if( !check_enough_materials( actor, crafting_inv, filter, batch, restrict_volume ) ) {
@@ -1010,6 +1021,9 @@ bool requirement_data::has_comps( const Character *actor,
             has_tool_in_set = has_tool_in_set || tool.available == available_status::a_true;
         }
         if( !has_tool_in_set ) {
+            if( ( flags & craft_flags::stop_on_failure ) != craft_flags::none ) {
+                return false;
+            }
             retval = false;
         }
         if( UPS_charges_used != std::numeric_limits<int>::max() ) {
@@ -1501,7 +1515,7 @@ requirement_data requirement_data::continue_requirements( const std::vector<item
 
 template<typename T, typename Accum>
 static std::vector<std::vector<T>> consolidate( std::vector<std::vector<T>> old_vec,
-        const Accum &accum )
+                                const Accum &accum )
 {
     const auto type_lt = []( const T & lhs, const T & rhs ) -> bool {
         //TODO change to use localized sorting
@@ -1519,7 +1533,7 @@ static std::vector<std::vector<T>> consolidate( std::vector<std::vector<T>> old_
     std::sort( old_vec.begin(), old_vec.end(),
     [&type_lt]( const std::vector<T> &lhs, const std::vector<T> &rhs ) -> bool {
         return std::lexicographical_compare( lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-        type_lt );
+                                             type_lt );
     } );
 
     std::vector<std::vector<T>> new_vec;

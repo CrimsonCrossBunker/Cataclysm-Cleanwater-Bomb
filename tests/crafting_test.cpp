@@ -1,7 +1,10 @@
 #include <algorithm>
 #include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <functional>
+#include <initializer_list>
 #include <iostream>
 #include <list>
 #include <map>
@@ -13,29 +16,36 @@
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
+#include "avatar.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
+#include "clone_ptr.h"
 #include "coordinates.h"
 #include "craft_command.h"
+#include "craft_result_state.h"
 #include "crafting.h"
+#include "crafting_enums.h"
 #include "enums.h"
 #include "faction.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "game_inventory.h"
+#include "handle_liquid.h"
 #include "inventory.h"
 #include "item.h"
-#include "item_unload.h"
 #include "item_components.h"
 #include "item_contents.h"
 #include "item_location.h"
+#include "item_source.h"
+#include "item_uid.h"
+#include "item_unload.h"
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
@@ -58,8 +68,8 @@
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "requirements.h"
-#include "rng.h"
 #include "ret_val.h"
+#include "rng_helpers.h"
 #include "skill.h"
 #include "string_formatter.h"
 #include "temp_crafting_inventory.h"
@@ -80,6 +90,7 @@ static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
 static const faction_id faction_free_merchants( "free_merchants" );
 
+static const flag_id json_flag_HIDDEN_POISON( "HIDDEN_POISON" );
 static const flag_id json_flag_ITEM_BROKEN( "ITEM_BROKEN" );
 static const flag_id json_flag_USE_UPS( "USE_UPS" );
 
@@ -104,11 +115,13 @@ static const itype_id itype_charcoal( "charcoal" );
 static const itype_id itype_cheese( "cheese" );
 static const itype_id itype_chisel( "chisel" );
 static const itype_id itype_craft( "craft" );
+static const itype_id itype_cudgel( "cudgel" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_dehydrator( "dehydrator" );
 static const itype_id itype_eink_tablet_pc( "eink_tablet_pc" );
 static const itype_id itype_fake_anvil( "fake_anvil" );
 static const itype_id itype_fake_solar_cooker( "fake_solar_cooker" );
+static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_hacksaw( "hacksaw" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_heavy_atomic_battery_cell( "heavy_atomic_battery_cell" );
@@ -3683,7 +3696,7 @@ TEST_CASE( "craft_liquid_warning_keeps_original_container_identity",
             for( int i = 0; i < 3; ++i ) {
                 item bottle( itype_bottle_plastic );
                 if( filled ) {
-                    REQUIRE( bottle.put_in( item( itype_id( "water_clean" ), calendar::turn, 1 ),
+                    REQUIRE( bottle.put_in( item( itype_water_clean, calendar::turn, 1 ),
                                             pocket_type::CONTAINER ).success() );
                 }
                 item_location source = here.add_item_or_charges_ret_loc( crafter.pos_bub(), bottle );
@@ -3726,15 +3739,15 @@ TEST_CASE( "craft_component_preference_uses_the_crafters_survival_skill",
     clear_avatar();
     npc remote;
     clear_character( remote );
-    item material( itype_id( "meat" ) );
-    material.set_flag( flag_id( "HIDDEN_POISON" ) );
-    get_avatar().set_skill_level( skill_id( "survival" ), 0 );
-    remote.set_skill_level( skill_id( "survival" ), 6 );
+    item material( itype_meat );
+    material.set_flag( json_flag_HIDDEN_POISON );
+    get_avatar().set_skill_level( skill_survival, 0 );
+    remote.set_skill_level( skill_survival, 6 );
     CHECK_FALSE( is_preferred_component( material, remote ) );
     CHECK( is_preferred_component( material, get_avatar() ) );
-    get_avatar().set_skill_level( skill_id( "survival" ), 6 );
-    remote.set_skill_level( skill_id( "survival" ), 0 );
-    remote.set_knowledge_level( skill_id( "survival" ), 0 );
+    get_avatar().set_skill_level( skill_survival, 6 );
+    remote.set_skill_level( skill_survival, 0 );
+    remote.set_knowledge_level( skill_survival, 0 );
     CHECK( is_preferred_component( material, remote ) );
     CHECK_FALSE( is_preferred_component( material, get_avatar() ) );
 }
@@ -3831,9 +3844,9 @@ TEST_CASE( "craft_completion_waits_for_delivery_and_survives_save_reload_once",
     REQUIRE( craft.get_craft_results().pending.size() == 1 );
     CHECK( craft.get_craft_results().stage == craft_completion_stage::primary_results );
     const int64_t result_id = craft.get_craft_results().pending.front().uid().get_value();
-    const auto before_retry = rng_get_engine();
+    const std::string before_retry = capture_rng_state();
     CHECK_FALSE( crafter.advance_craft_completion( craft, wait_for_destination ) );
-    CHECK( rng_get_engine() == before_retry );
+    CHECK( capture_rng_state() == before_retry );
     CHECK( craft.get_craft_results().pending.front().uid().get_value() == result_id );
     std::ostringstream encoded;
     JsonOut out( encoded );
@@ -3843,7 +3856,7 @@ TEST_CASE( "craft_completion_waits_for_delivery_and_survives_save_reload_once",
     restored.deserialize( value.get_object() );
     REQUIRE( restored.is_craft() );
     REQUIRE( restored.get_craft_results().pending.size() == 1 );
-    CHECK( restored.get_craft_results().pending.front().typeId() == itype_id( "cudgel" ) );
+    CHECK( restored.get_craft_results().pending.front().typeId() == itype_cudgel );
     int received = 0;
     const auto receive = [&]( std::vector<item> &items, bool ) {
         received += items.size();
@@ -3853,10 +3866,10 @@ TEST_CASE( "craft_completion_waits_for_delivery_and_survives_save_reload_once",
     REQUIRE( crafter.advance_craft_completion( restored, receive ) );
     CHECK( received == 1 );
     CHECK( restored.get_craft_results().stage == craft_completion_stage::done );
-    const auto completed_rng = rng_get_engine();
+    const std::string completed_rng = capture_rng_state();
     REQUIRE( crafter.advance_craft_completion( restored, receive ) );
     CHECK( received == 1 );
-    CHECK( rng_get_engine() == completed_rng );
+    CHECK( capture_rng_state() == completed_rng );
 }
 
 
@@ -3886,11 +3899,11 @@ TEST_CASE( "owned_craft_completion_keeps_native_single_result_wielding",
     crafter.activity.do_turn( crafter );
     CHECK_FALSE( crafter.activity );
     REQUIRE( crafter.get_wielded_item() );
-    CHECK( crafter.get_wielded_item()->typeId() == itype_id( "cudgel" ) );
+    CHECK( crafter.get_wielded_item()->typeId() == itype_cudgel );
     CHECK_FALSE( workpiece );
-    const auto after_completion = rng_get_engine();
+    const std::string after_completion = capture_rng_state();
     CHECK_FALSE( deliver_owned_craft( crafter, workpiece, {} ) );
-    CHECK( rng_get_engine() == after_completion );
+    CHECK( capture_rng_state() == after_completion );
 }
 
 TEST_CASE( "owned_craft_consumes_a_wielded_ingredient_before_freeing_the_hand",
@@ -3994,16 +4007,16 @@ TEST_CASE( "owned_craft_retains_partially_delivered_liquid_without_regenerating_
     craft_result_state &completion = workpiece->get_craft_results();
     completion.stage = craft_completion_stage::primary_results;
     completion.primary_had_results = true;
-    completion.pending.emplace_back( itype_id( "gasoline" ), calendar::turn, 20 );
+    completion.pending.emplace_back( itype_gasoline, calendar::turn, 20 );
     const int64_t liquid_id = completion.pending.front().uid().get_value();
     item &bottle = get_map().add_item_or_charges( crafter.pos_bub(), item( itype_bottle_plastic ) );
-    item supply( itype_id( "gasoline" ), calendar::turn, 10000 );
+    item supply( itype_gasoline, calendar::turn, 10000 );
     const int capacity = bottle.get_remaining_capacity_for_liquid( supply, true );
     REQUIRE( capacity > 5 );
     REQUIRE( bottle.fill_with( supply, capacity - 5 ) == capacity - 5 );
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     REQUIRE_FALSE( deliver_owned_craft( crafter, workpiece, {} ) );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     REQUIRE( workpiece );
     CHECK( workpiece->get_craft_results().pending.front().uid().get_value() == liquid_id );
     unload_liquid_choice choice;
@@ -4015,10 +4028,10 @@ TEST_CASE( "owned_craft_retains_partially_delivered_liquid_without_regenerating_
     REQUIRE( workpiece );
     CHECK( bottle.legacy_front().charges == capacity );
     CHECK( workpiece->get_craft_results().pending.front().charges == 15 );
-    const auto after_partial = rng_get_engine();
+    const std::string after_partial = capture_rng_state();
     REQUIRE_FALSE( deliver_owned_craft( crafter, workpiece, { choice } ) );
     CHECK( workpiece->get_craft_results().pending.front().charges == 15 );
-    CHECK( rng_get_engine() == after_partial );
+    CHECK( capture_rng_state() == after_partial );
     item &second = get_map().add_item_or_charges( crafter.pos_bub(), item( itype_bottle_plastic ) );
     choice.container = capture_item_source( crafter, item_location( map_cursor( crafter.pos_bub() ),
                                             &second ) );

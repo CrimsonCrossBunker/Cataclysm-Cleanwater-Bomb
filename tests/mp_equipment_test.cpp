@@ -1,39 +1,66 @@
-#include "cata_catch.h"
-
+#include <functional>
+#include <list>
+#include <memory>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature_tracker.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "item.h"
 #include "item_disposition.h"
 #include "item_location.h"
-#include "item_stack.h"
-#include "item_uid.h"
+#include "item_source.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "mp_actor_binding.h"
+#include "mp_admission.h"
 #include "mp_client_conn.h"
 #include "mp_combat_result.h"
 #include "mp_equipment.h"
 #include "mp_gamestate.h"
+#include "mp_item_source.h"
 #include "mp_pickup.h"
+#include "mp_player_identity.h"
 #include "mp_queue.h"
 #include "mp_test_helpers.h"
+#include "mp_world_session.h"
+#include "mp_world_state.h"
 #include "npc.h"
+#include "player_control.h"
 #include "player_helpers.h"
+#include "player_identity.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "rng_helpers.h"
+#include "type_id.h"
+
+static const faction_id faction_hells_raiders( "hells_raiders" );
+static const faction_id faction_your_followers( "your_followers" );
+
+static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_bat( "bat" );
+static const itype_id itype_bucket( "bucket" );
+static const itype_id itype_glock_19( "glock_19" );
+static const itype_id itype_tshirt( "tshirt" );
+static const itype_id itype_water( "water" );
 
 namespace
 {
@@ -63,7 +90,7 @@ class equipment_fixture
             const cata_mp::player_id owner( std::string( 32, '8' ) );
             who.set_value( "mp_proxy", std::string( "1" ) );
             who.set_value( "mp_player_id", owner.str() );
-            auto &peer = make_test_remote( g->multiplayer_session() );
+            cata_mp::remote_player_session &peer = make_test_remote( g->multiplayer_session() );
             peer.actor.bind_player( who, owner, g->npc_lifetimes(),
                                     g->player_controls().claim( owner, who ) );
             peer.connected = true;
@@ -104,7 +131,7 @@ item_location ground_item( Character &who, const itype_id &type )
 
 item_location bag_item( Character &who, const itype_id &type )
 {
-    const auto worn = who.wear_item( item( itype_id( "backpack" ) ), false );
+    const auto worn = who.wear_item( item( itype_backpack ), false );
     REQUIRE( worn );
     item_location bag( who, & **worn );
     REQUIRE( bag->put_in( item( type ), pocket_type::CONTAINER ).success() );
@@ -124,28 +151,28 @@ TEST_CASE( "owned_equipment_wear_takeoff_matches_native_cost_and_callbacks",
     item_location source;
     item_location reference;
     if( held ) {
-        who.set_wielded_item( item( itype_id( "tshirt" ) ) );
-        local.set_wielded_item( item( itype_id( "tshirt" ) ) );
+        who.set_wielded_item( item( itype_tshirt ) );
+        local.set_wielded_item( item( itype_tshirt ) );
         source = who.get_wielded_item();
         reference = local.get_wielded_item();
     } else {
-        source = ground_item( who, itype_id( "tshirt" ) );
-        reference = ground_item( local, itype_id( "tshirt" ) );
+        source = ground_item( who, itype_tshirt );
+        reference = ground_item( local, itype_tshirt );
     }
     REQUIRE( local.wear( reference ) );
     equipment_events events;
-    auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
+    cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wear" );
     REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     CHECK( who.get_moves() == local.get_moves() );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 1 );
+    CHECK( who.amount_worn( itype_tshirt ) == 1 );
     CHECK( events.wear == 1 );
     CHECK( events.wield == ( held ? 1 : 0 ) );
     CHECK_FALSE( source );
     item *remote_shirt = who.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "tshirt" );
+        return it.typeId() == itype_tshirt;
     } ).front();
     item *local_shirt = local.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "tshirt" );
+        return it.typeId() == itype_tshirt;
     } ).front();
     who.set_moves( 1000 );
     local.set_moves( 1000 );
@@ -154,9 +181,9 @@ TEST_CASE( "owned_equipment_wear_takeoff_matches_native_cost_and_callbacks",
     CHECK( events.takeoff == 1 );
     REQUIRE( local.takeoff( item_location( local, local_shirt ).obtain( local ) ) );
     CHECK( who.get_moves() == local.get_moves() );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 0 );
+    CHECK( who.amount_worn( itype_tshirt ) == 0 );
     CHECK( who.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "tshirt" );
+        return it.typeId() == itype_tshirt;
     } ).size() == 1 );
 }
 
@@ -166,16 +193,16 @@ TEST_CASE( "owned_wield_uses_native_retrieval_and_selected_old_weapon_destinatio
     equipment_fixture fixture;
     npc &who = fixture.remote();
     avatar &local = get_avatar();
-    who.set_wielded_item( item( itype_id( "bat" ) ) );
-    local.set_wielded_item( item( itype_id( "bat" ) ) );
+    who.set_wielded_item( item( itype_bat ) );
+    local.set_wielded_item( item( itype_bat ) );
     const bool nested = GENERATE( false, true );
-    const auto source = nested ? bag_item( who, itype_id( "glock_19" ) ) :
-                        ground_item( who, itype_id( "glock_19" ) );
-    const auto reference = nested ? bag_item( local, itype_id( "glock_19" ) ) :
-                           ground_item( local, itype_id( "glock_19" ) );
+    const item_location source = nested ? bag_item( who, itype_glock_19 ) :
+                                 ground_item( who, itype_glock_19 );
+    const item_location reference = nested ? bag_item( local, itype_glock_19 ) :
+                                    ground_item( local, itype_glock_19 );
     const cata_mp::equipment_intent base = cata_mp::make_equipment_intent( who, source, "wield",
                                            nested );
-    auto intent = base;
+    cata_mp::equipment_intent intent = base;
     intent.disposition = item_disposition{ "drop", 0, 0 };
     equipment_events events;
     REQUIRE( execute_item_disposition( local, local.get_wielded_item(), *intent.disposition ) );
@@ -186,16 +213,17 @@ TEST_CASE( "owned_wield_uses_native_retrieval_and_selected_old_weapon_destinatio
     REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     CHECK( who.get_moves() == local.get_moves() );
     REQUIRE( who.get_wielded_item() );
-    CHECK( who.get_wielded_item()->typeId() == itype_id( "glock_19" ) );
+    CHECK( who.get_wielded_item()->typeId() == itype_glock_19 );
     CHECK_FALSE( source );
     CHECK( events.wield == expected_wield_events );
     bool found = false;
     for( const item &it : get_map().i_at( who.pos_bub() ) ) {
-        found = found || it.typeId() == itype_id( "bat" );
+        found = found || it.typeId() == itype_bat;
     }
     CHECK( found );
     who.set_moves( 1000 );
-    auto put_away = cata_mp::make_equipment_intent( who, who.get_wielded_item(), "wield" );
+    cata_mp::equipment_intent put_away = cata_mp::make_equipment_intent( who, who.get_wielded_item(),
+                                         "wield" );
     put_away.disposition = item_disposition{ "drop", 0, 0 };
     REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), put_away ) );
     CHECK_FALSE( who.get_wielded_item() );
@@ -206,8 +234,8 @@ TEST_CASE( "owned_equipment_rejects_inaccessible_stale_and_forbidden_items",
 {
     equipment_fixture fixture;
     npc &who = fixture.remote();
-    item_location source = bag_item( who, itype_id( "tshirt" ) );
-    auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
+    item_location source = bag_item( who, itype_tshirt );
+    cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wear" );
     SECTION( "stale_uid" ) {
         ++intent.source.path.back();
     }
@@ -218,12 +246,12 @@ TEST_CASE( "owned_equipment_rejects_inaccessible_stale_and_forbidden_items",
         ++intent.wielded;
     }
     SECTION( "other_player" ) {
-        auto foreign = bag_item( get_avatar(), itype_id( "tshirt" ) );
+        item_location foreign = bag_item( get_avatar(), itype_tshirt );
         intent.source = cata_mp::capture_item_source( get_avatar(), foreign );
     }
     SECTION( "out_of_reach" ) {
         intent.source = cata_mp::capture_item_source( get_avatar(),
-                        ground_item( get_avatar(), itype_id( "tshirt" ) ) );
+                        ground_item( get_avatar(), itype_tshirt ) );
     }
     SECTION( "unknown_operation" ) {
         intent.operation = "delete";
@@ -234,13 +262,13 @@ TEST_CASE( "owned_equipment_rejects_inaccessible_stale_and_forbidden_items",
     SECTION( "no_moves" ) {
         who.set_moves( 0 );
     }
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     const int moves = who.get_moves();
     CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     CHECK( who.get_moves() == moves );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     CHECK( source );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 0 );
+    CHECK( who.amount_worn( itype_tshirt ) == 0 );
 }
 
 TEST_CASE( "owned_equipment_does_not_implicitly_spill_or_remove_integrated_armor",
@@ -249,12 +277,12 @@ TEST_CASE( "owned_equipment_does_not_implicitly_spill_or_remove_integrated_armor
     equipment_fixture fixture;
     npc &who = fixture.remote();
     SECTION( "open_bucket_disposal" ) {
-        who.set_wielded_item( item( itype_id( "bucket" ) ) );
-        auto bucket = who.get_wielded_item();
-        REQUIRE( bucket->put_in( item( itype_id( "water" ), calendar::turn, 4 ),
+        who.set_wielded_item( item( itype_bucket ) );
+        item_location bucket = who.get_wielded_item();
+        REQUIRE( bucket->put_in( item( itype_water, calendar::turn, 4 ),
                                  pocket_type::CONTAINER ).success() );
-        const auto source = ground_item( who, itype_id( "bat" ) );
-        auto intent = cata_mp::make_equipment_intent( who, source, "wield" );
+        const item_location source = ground_item( who, itype_bat );
+        cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wield" );
         intent.disposition = item_disposition{ "inventory", 0, 0 };
         CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
         REQUIRE( bucket );
@@ -263,11 +291,11 @@ TEST_CASE( "owned_equipment_does_not_implicitly_spill_or_remove_integrated_armor
         CHECK( who.get_moves() == 1000 );
     }
     SECTION( "integrated_armor" ) {
-        const auto worn = who.wear_item( item( itype_id( "tshirt" ) ), false );
+        const auto worn = who.wear_item( item( itype_tshirt ), false );
         REQUIRE( worn );
         item_location shirt( who, & **worn );
         shirt->set_flag( flag_INTEGRATED );
-        auto intent = cata_mp::make_equipment_intent( who, shirt, "takeoff" );
+        cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, shirt, "takeoff" );
         CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
         CHECK( who.is_worn( *shirt ) );
         CHECK( who.get_moves() == 1000 );
@@ -279,9 +307,9 @@ TEST_CASE( "equipment_requests_reject_retries_and_client_inventory_or_stats",
 {
     equipment_fixture fixture;
     npc &who = fixture.remote();
-    const auto source = ground_item( who, itype_id( "tshirt" ) );
-    const auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
-    auto &peer = only_test_remote( g->multiplayer_session() );
+    const item_location source = ground_item( who, itype_tshirt );
+    const cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wear" );
+    cata_mp::remote_player_session &peer = only_test_remote( g->multiplayer_session() );
     const auto encode = [&]( int revision ) {
         std::ostringstream buffer;
         JsonOut out( buffer );
@@ -306,19 +334,19 @@ TEST_CASE( "equipment_requests_reject_retries_and_client_inventory_or_stats",
     };
     send( encode( peer.pickup.revision + 1 ) );
     CHECK( source );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 0 );
+    CHECK( who.amount_worn( itype_tshirt ) == 0 );
     const std::string request = encode( peer.pickup.revision );
     equipment_events events;
     send( request );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 1 );
+    CHECK( who.amount_worn( itype_tshirt ) == 1 );
     CHECK( who.get_str_base() == 8 );
     CHECK( events.wear == 1 );
     const int moves = peer.turn.remote_moves;
-    const auto after = rng_get_engine();
+    const std::string after = capture_rng_state();
     send( request );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 1 );
+    CHECK( who.amount_worn( itype_tshirt ) == 1 );
     CHECK( peer.turn.remote_moves == moves );
-    CHECK( rng_get_engine() == after );
+    CHECK( capture_rng_state() == after );
     CHECK( events.wear == 1 );
 }
 
@@ -328,24 +356,24 @@ TEST_CASE( "equipment_client_selection_and_replication_never_rerun_gameplay",
     equipment_fixture fixture;
     npc &who = fixture.remote();
     avatar &client = get_avatar();
-    auto source = ground_item( who, itype_id( "tshirt" ) );
-    auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
+    item_location source = ground_item( who, itype_tshirt );
+    cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wear" );
     REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     cata_mp::pickup_host_state host_state;
     cata_mp::pickup_client_state client_state;
     const std::string result = cata_mp::make_combat_result( who, host_state );
     equipment_events events;
-    const auto before = rng_get_engine();
+    const std::string before = capture_rng_state();
     JsonValue value = json_loader::from_string( result );
     JsonObject message = value.get_object();
     REQUIRE( message.get_string( "type" ) == "combat_result" );
     REQUIRE( cata_mp::apply_combat_result( client, message, client_state ) );
-    CHECK( client.amount_worn( itype_id( "tshirt" ) ) == 1 );
+    CHECK( client.amount_worn( itype_tshirt ) == 1 );
     CHECK( events.wear == 0 );
     CHECK( events.wield == 0 );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     item *shirt = client.items_with( []( const item & it ) {
-        return it.typeId() == itype_id( "tshirt" );
+        return it.typeId() == itype_tshirt;
     } ).front();
     intent = cata_mp::make_equipment_intent( client, item_location( client, shirt ), "takeoff" );
     cata_mp::set_client_mode( true );
@@ -353,7 +381,7 @@ TEST_CASE( "equipment_client_selection_and_replication_never_rerun_gameplay",
     cata_mp::client_request_equipment( intent );
     CHECK( client.is_worn( *shirt ) );
     CHECK( events.takeoff == 0 );
-    CHECK( rng_get_engine() == before );
+    CHECK( capture_rng_state() == before );
     CHECK( cata_mp::is_client_waiting_for_ack() );
     CHECK( client.get_moves() == 0 );
 }
@@ -362,16 +390,16 @@ TEST_CASE( "equipment_wear_retains_native_hand_validation_order", "[multiplayer]
 {
     equipment_fixture fixture;
     npc &who = fixture.remote();
-    item armor( itype_id( "tshirt" ) );
+    item armor( itype_tshirt );
     armor.set_flag( flag_RESTRICT_HANDS );
     armor.set_flag( flag_ALWAYS_TWOHAND );
     who.set_wielded_item( armor );
     item_location source = who.get_wielded_item();
     REQUIRE_FALSE( who.can_wear( *source ).success() );
-    const auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
+    const cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wear" );
     REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     CHECK_FALSE( who.get_wielded_item() );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 1 );
+    CHECK( who.amount_worn( itype_tshirt ) == 1 );
 }
 
 TEST_CASE( "equipment_wear_uses_explicit_theft_consent_without_host_prompt",
@@ -379,16 +407,16 @@ TEST_CASE( "equipment_wear_uses_explicit_theft_consent_without_host_prompt",
 {
     equipment_fixture fixture;
     npc &who = fixture.remote();
-    who.set_fac( faction_id( "your_followers" ) );
-    item_location source = ground_item( who, itype_id( "tshirt" ) );
-    source->set_owner( faction_id( "hells_raiders" ) );
+    who.set_fac( faction_your_followers );
+    item_location source = ground_item( who, itype_tshirt );
+    source->set_owner( faction_hells_raiders );
     REQUIRE_FALSE( source->is_owned_by( who, true ) );
-    auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
+    cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wear" );
     CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     REQUIRE( source );
     CHECK( who.get_moves() == 1000 );
     intent.allow_theft = true;
     REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
     CHECK_FALSE( source );
-    CHECK( who.amount_worn( itype_id( "tshirt" ) ) == 1 );
+    CHECK( who.amount_worn( itype_tshirt ) == 1 );
 }

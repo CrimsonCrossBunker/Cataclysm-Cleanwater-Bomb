@@ -191,6 +191,7 @@
 #include "thread_pool.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
+    #include "mp_melee.h"
     #include "mp_unload.h"
     #include "mp_equipment.h"
 #endif
@@ -335,7 +336,6 @@ static const furn_str_id furn_f_web_up( "f_web_up" );
 
 static const itype_id fuel_type_animal( "animal" );
 static const itype_id fuel_type_muscle( "muscle" );
-static const itype_id itype_battery( "battery" );
 static const itype_id itype_disassembly( "disassembly" );
 static const itype_id itype_grapnel( "grapnel" );
 static const itype_id itype_manhole_cover( "manhole_cover" );
@@ -362,6 +362,8 @@ static const json_character_flag json_flag_WALL_CLING( "WALL_CLING" );
 static const json_character_flag json_flag_WEB_RAPPEL( "WEB_RAPPEL" );
 
 static const mongroup_id GROUP_BLACK_ROAD( "GROUP_BLACK_ROAD" );
+
+static const move_mode_id move_mode_walk( "walk" );
 
 static const mtype_id mon_manhack( "mon_manhack" );
 
@@ -2460,9 +2462,9 @@ int game::inventory_item_menu( item_location locThisItem,
                 case 'a': {
                     contents_change_handler handler;
                     handler.unseal_pocket_containing( locThisItem );
-                    if( locThisItem.get_item()->type->has_use() &&
-                        !locThisItem.get_item()->item_has_uses_recursive( true ) ) { // NOLINT(bugprone-branch-clone)
-                        // Item has uses and none of its contents (if any) has uses.
+                    if( ( locThisItem->is_gun() && !locThisItem->is_gunmod() ) ||
+                        ( locThisItem.get_item()->type->has_use() &&
+                          !locThisItem.get_item()->item_has_uses_recursive( true ) ) ) { // NOLINT(bugprone-branch-clone)
                         avatar_action::use_item( u, locThisItem );
                     } else if( locThisItem.get_item()->item_has_uses_recursive() ) {
                         game::item_action_menu( locThisItem );
@@ -4902,9 +4904,9 @@ static bool can_place_monster( const monster &mon, const tripoint_bub_ms &p )
             return false;
         }
     }
-    // Although monsters can sometimes exist on the same place as a Character (e.g. ridden horse),
-    // it is usually wrong. So don't allow it.
-    if( creatures.creature_at<Character>( p ) ) {
+    if( const Character *rider = creatures.creature_at<Character>( p );
+        rider && ( !mon.has_effect( effect_ridden ) || !rider->has_effect( effect_riding ) ||
+                   mon.mounted_player_id != rider->getID() ) ) {
         return false;
     }
     return mon.will_move_to( p ) && mon.know_danger_at( p );
@@ -4920,9 +4922,9 @@ static bool can_place_monster( const monster &mon, map *here, const tripoint_bub
             return false;
         }
     }
-    // Although monsters can sometimes exist on the same place as a Character (e.g. ridden horse),
-    // it is usually wrong. So don't allow it.
-    if( creatures.creature_at<Character>( pos ) ) {
+    if( const Character *rider = creatures.creature_at<Character>( pos );
+        rider && ( !mon.has_effect( effect_ridden ) || !rider->has_effect( effect_riding ) ||
+                   mon.mounted_player_id != rider->getID() ) ) {
         return false;
     }
     return mon.will_move_to( here, p ) && mon.know_danger_at( here, p );
@@ -6308,7 +6310,7 @@ std::string game::local_faction_action_warning( Character &who, bool public_good
 }
 
 bool game::warn_character_maybe_anger_local_faction( Character &who, bool really_bad_offense,
-        bool public_goods, std::optional<bool> consent )
+        bool public_goods, std::optional<bool> consent ) const
 {
     faction *owner = forbidden_local_faction( who, public_goods );
     if( !owner ) {
@@ -6324,7 +6326,7 @@ bool game::warn_character_maybe_anger_local_faction( Character &who, bool really
 }
 
 bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
-        bool asking_for_public_goods )
+        bool asking_for_public_goods ) const
 {
     return warn_character_maybe_anger_local_faction( get_player_character(), really_bad_offense,
             asking_for_public_goods, std::nullopt );
@@ -6386,7 +6388,7 @@ void game::pickup( const tripoint_bub_ms &p )
 void game::peek()
 {
     map &here = get_map();
-    const auto origin = u.pos_abs();
+    const tripoint_abs_ms origin = u.pos_abs();
     const std::optional<tripoint_rel_ms> p = choose_direction( _( "Peek where?" ), true );
     if( !p || u.pos_abs() != origin ) {
         return;
@@ -6395,7 +6397,7 @@ void game::peek()
         if( cata_mp::client_query_peek( p->z() ) ) {
             return;
         }
-        const auto prompt = make_peek_prompt( u, here, p->z() );
+        const vertical_move_prompt prompt = make_peek_prompt( u, here, p->z() );
         if( const auto choice = prompt.query( u ) ) {
             const auto current = peek_destinations( u, here, p->z() );
             if( std::find( current.begin(), current.end(), choice->target ) != current.end() ) {
@@ -6433,8 +6435,8 @@ void game::peek( const tripoint_bub_ms &p )
     if( !here.inbounds( p ) ) {
         return;
     }
-    const auto origin = u.pos_abs();
-    const auto peek_position = here.get_abs( p );
+    const tripoint_abs_ms origin = u.pos_abs();
+    const tripoint_abs_ms peek_position = here.get_abs( p );
     u.mod_moves( -u.get_speed() * 2 );
     const look_around_result result = look_from( p, p == u.pos_bub( here ) && u.is_crouching() );
     if( u.pos_abs() != origin || !here.inbounds( peek_position ) ) {
@@ -6889,7 +6891,7 @@ look_around_result game::look_around(
             creature_tracker &creatures = get_creature_tracker();
             monster *const mon = creatures.creature_at<monster>( lp, true );
             if( mon && u.sees( here, *mon ) ) {
-                auto selected = select_view_action( view_action::kind::rename, u, here, lp, mon );
+                view_action selected = select_view_action( view_action::kind::rename, u, here, lp, mon );
                 string_input_popup_imgui popup( 50, mon->nickname );
                 popup.set_label( _( "Nickname:" ) );
                 selected.name = popup.query();
@@ -7263,7 +7265,7 @@ bool game::apply_view_action( const view_action &selection )
     } else if( selection.action == view_action::kind::blind_throw ||
                selection.action == view_action::kind::blind_throw_wielded ) {
         if( selection.observation ) {
-            const auto from = here.get_bub( selection.observation->position );
+            const tripoint_bub_ms from = here.get_bub( selection.observation->position );
             if( selection.action == view_action::kind::blind_throw_wielded ) {
                 avatar_action::plthrow_wielded( u, from );
             } else {
@@ -7706,6 +7708,7 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
                 const std::optional<butcher_type> bt = butcher_submenu( corpses );
                 if( bt.has_value() ) {
                     std::vector<item_location> targets;
+                    targets.reserve( corpses.size() );
                     for( const map_stack::iterator &it : corpses ) {
                         targets.emplace_back( map_cursor( pos ), &*it );
                     }
@@ -8432,10 +8435,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     optional_vpart_position vp_grab = here.veh_at( pos + who.grab_point );
     const vehicle *grabbed_vehicle = veh_pointer_or_null( vp_grab );
     const int64_t expected_grab_vehicle = grabbed_vehicle ? grabbed_vehicle->uid().get_value() : 0;
-    const auto expected_grab_type = who.get_grab_type();
-    const auto expected_grab_generation = who.grab_generation();
-    const auto expected_grab_point = who.grab_point;
-    const auto expected_grab_furniture = here.furn( pos + who.grab_point );
+    const object_type expected_grab_type = who.get_grab_type();
+    const uint64_t expected_grab_generation = who.grab_generation();
+    const tripoint_rel_ms expected_grab_point = who.grab_point;
+    const furn_id expected_grab_furniture = here.furn( pos + who.grab_point );
 
     bool pushing = false; // moving -into- grabbed tile; skip check for move_cost > 0
     bool pulling = false; // moving -away- from grabbed tile; check for move_cost > 0
@@ -9070,7 +9073,7 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             return point_rel_sm::zero;
         }
     }
-    const auto original_position = who.pos_abs();
+    const tripoint_abs_ms original_position = who.pos_abs();
     const auto still_at_origin = [&]() {
         return lifetime && who.pos_abs() == original_position;
     };
@@ -10125,7 +10128,7 @@ void game::on_move_effects( Character &who )
     if( who.is_running() ) {
         // If mounted, don't break trot
         if( !who.is_mounted() && !who.can_run() ) {
-            who.set_movement_mode( move_mode_id( "walk" ) );
+            who.set_movement_mode( move_mode_walk );
         }
         if( !lifetime ) {
             return;
@@ -11210,7 +11213,7 @@ std::optional<tripoint_bub_ms> game::find_or_make_stairs( Character &who, map &m
 {
     const bool is_actor = who.pos_bub( mp ) == pos;
     const bool local_input = who.is_avatar() && !choices;
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     const character_action_guard lifetime( who );
     if( !lifetime || !mp.inbounds_z( z_after ) ) {
         return std::nullopt;
@@ -12517,8 +12520,8 @@ bool game::can_climb_down_using( Character &who, const tripoint_bub_ms &examp,
         return false;
     }
     const climbing_aid &aid = aid_id.obj();
-    const auto conditions = climbing_aid::detect_conditions( who, examp );
-    const auto available = climbing_aid::list_all( conditions );
+    const climbing_aid::condition_list conditions = climbing_aid::detect_conditions( who, examp );
+    const climbing_aid::aid_list available = climbing_aid::list_all( conditions );
     if( std::none_of( available.begin(), available.end(), [&]( const climbing_aid * entry ) {
     return entry->id == aid_id;
 } ) ) {
@@ -12542,7 +12545,7 @@ std::optional<std::string> game::climb_down_prompt( Character &you,
     const climbing_aid &aid = aid_id.obj();
     map &here = get_map();
     const climbing_aid::fall_scan fall( examp );
-    const auto conditions = climbing_aid::detect_conditions( you, examp );
+    const climbing_aid::condition_list conditions = climbing_aid::detect_conditions( you, examp );
     const int effective_max_height = effective_vehicle_ladder_climb_height( aid, conditions,
                                      aid.down.max_height );
     const int effective_easy_climb_back_up = effective_vehicle_ladder_climb_height( aid, conditions,
@@ -12680,7 +12683,7 @@ void game::climb_down_using( Character &you, const tripoint_bub_ms &examp,
         !can_climb_down_using( you, examp, aid_id ) ) {
         return;
     }
-    const auto origin = you.pos_abs();
+    const tripoint_abs_ms origin = you.pos_abs();
     const auto at_origin = [&]() {
         return lifetime && you.pos_abs() == origin;
     };
@@ -12739,7 +12742,7 @@ void game::climb_down_using( Character &you, const tripoint_bub_ms &examp,
     // Pay for a deployed aid before publishing its first furniture tile. A later
     // slip must not leave both a usable rope ladder and its unconsumed item.
     bool aid_paid = false;
-    const auto ledge_position = you.pos_abs();
+    const tripoint_abs_ms ledge_position = you.pos_abs();
     const auto still_at_ledge = [&]() {
         return lifetime && you.pos_abs() == ledge_position;
     };
