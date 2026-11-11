@@ -11056,6 +11056,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     if( who.is_avatar() && !force ) {
         update_map( who, z_level_changed );
     }
+    const auto landing_context = here.get_context_reference();
     pos = who.pos_bub( here );
     old_pos = here.get_bub( old_abs_pos );
     stairs = here.get_bub( destination );
@@ -11128,7 +11129,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     }
     here.invalidate_map_cache( who.posz() );
     here.build_map_cache( who.posz() );
-    if( vehicle_stairs && map_context && !who.in_vehicle ) {
+    if( vehicle_stairs && landing_context && !who.in_vehicle && who.pos_abs() == destination ) {
         const auto landing = here.veh_at( who.pos_bub( here ) );
         if( landing && landing->vehicle().uid() == deck_vehicle_uid &&
             landing.part_with_feature( VPFLAG_BOARDABLE, true ) ) {
