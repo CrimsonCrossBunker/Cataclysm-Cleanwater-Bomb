@@ -1,4 +1,5 @@
 #include <coordinates.h>
+#include <cstdint>
 #include <input_enums.h>
 #include <item_disposition.h>
 #include <item_uid.h>

@@ -1,5 +1,6 @@
 #include <vehicle_uid.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -46,6 +47,7 @@ static const damage_type_id damage_pure( "pure" );
 
 static const efftype_id effect_grabbed( "grabbed" );
 
+static const flag_id json_flag_GIBBED( "GIBBED" );
 static const flag_id json_flag_PUNCTURE_VEHICLE_WHEELS( "PUNCTURE_VEHICLE_WHEELS" );
 
 static const itype_id itype_corpse_fake_TEST( "corpse_fake_TEST" );
@@ -63,6 +65,9 @@ static const itype_id itype_test_guarantee_wheel_dmg( "test_guarantee_wheel_dmg"
 static const itype_id itype_test_power_cord( "test_power_cord" );
 static const itype_id itype_test_squishy_fruit( "test_squishy_fruit" );
 static const itype_id itype_test_standing_lamp( "test_standing_lamp" );
+
+static const mtype_id mon_zombie( "mon_zombie" );
+static const mtype_id mon_zombie_soldier( "mon_zombie_soldier" );
 
 static const vpart_id vpart_ap_test_standing_lamp( "ap_test_standing_lamp" );
 static const vpart_id vpart_bike_rack( "bike_rack" );
@@ -1137,6 +1142,56 @@ static void run_squish_test( const std::map<itype_id, double> &to_squish,
         CAPTURE( damage_chance );
         CHECK( damage_chance == Approx( expected_chance ).epsilon( allowed_variance ) );
     }
+}
+
+TEST_CASE( "vehicle_wheels_gib_the_crushed_corpse", "[vehicle][map][smash_items]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms test_point( 60, 60, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_unicycle_normal_wheel,
+                                     test_point, 0_degrees, 100, veh_spawn_status::UNDAMAGED, false );
+    REQUIRE( veh != nullptr );
+    vehicle_part *wheel = setup_squish_test_return_wheel( here, test_point, veh );
+    const item corpse = item::make_corpse( mon_zombie, calendar::turn );
+    REQUIRE( corpse.can_revive() );
+    REQUIRE( vehicle::hit_probability( corpse, wheel ) > 0.0 );
+    here.add_item_or_charges( test_point, corpse );
+
+    std::optional<item> following_item;
+    SECTION( "corpse_is_the_last_item" ) {
+    }
+    SECTION( "corpse_is_followed_by_a_non_corpse" ) {
+        following_item = item( itype_qt_steel_chunk );
+    }
+    SECTION( "corpse_is_followed_by_a_different_monster_corpse" ) {
+        following_item = item::make_corpse( mon_zombie_soldier, calendar::turn );
+    }
+    if( following_item ) {
+        here.add_item_or_charges( test_point, *following_item );
+    }
+    REQUIRE( here.i_at( test_point ).begin()->get_corpse_mon() == corpse.get_corpse_mon() );
+
+    const float material_factor = corpse.chip_resistance( true );
+    REQUIRE( material_factor > 0 );
+    const int power = static_cast<int>( std::ceil( material_factor ) );
+    here.smash_items( test_point, power, "test wheel", wheel, veh );
+
+    int gibbed_corpses = 0;
+    int following_items = 0;
+    for( const item &ground_item : here.i_at( test_point ) ) {
+        if( ground_item.is_corpse() && ground_item.get_corpse_mon() == corpse.get_corpse_mon() ) {
+            ++gibbed_corpses;
+            CHECK( ground_item.has_flag( json_flag_GIBBED ) );
+            CHECK_FALSE( ground_item.can_revive() );
+        } else if( following_item && ground_item.typeId() == following_item->typeId() &&
+                   ground_item.get_corpse_mon() == following_item->get_corpse_mon() ) {
+            ++following_items;
+            CHECK( ground_item.damage() == following_item->damage() );
+        }
+    }
+    CHECK( gibbed_corpses == 1 );
+    CHECK( following_items == ( following_item ? 1 : 0 ) );
 }
 
 TEST_CASE( "vehicle_wheels_damaged_by_running_over_items", "[vehicle]" )
