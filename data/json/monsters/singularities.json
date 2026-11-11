@@ -1437,7 +1437,7 @@
     "vision_night": 15,
     "melee_damage": [ { "damage_type": "cut", "amount": 0 } ],
     "upgrades": { "half_life": 1, "into": "mon_devourer" },
-    "special_attacks": [ [ "ABSORB_ITEMS", 0 ], [ "ABSORB_MEAT", 0 ], [ "SPLIT", 5 ] ],
+    "special_attacks": [ [ "ABSORB_ITEMS", 5 ], [ "ABSORB_MEAT", 5 ], [ "SPLIT", 5 ] ],
     "absorb_ml_per_hp": 250,
     "split_move_cost": 100,
     "absorb_move_cost_max": 300,
