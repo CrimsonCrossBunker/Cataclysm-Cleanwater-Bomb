@@ -657,7 +657,7 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
     gun_mode gun = weapon->gun_current_mode();
     if( !remote ) {
-        who.fire_gun( here, fin_trajectory.back(), gun.qty, *gun, reload_loc );
+        who.fire_gun( here, fin_trajectory.back(), gun, reload_loc );
     }
 
     if( !get_option<bool>( "AIM_AFTER_FIRING" ) ||

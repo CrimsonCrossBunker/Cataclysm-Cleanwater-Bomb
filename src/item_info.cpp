@@ -1510,7 +1510,7 @@ void item::gun_info( const item *mod, std::vector<iteminfo> &info, const iteminf
         std::vector<std::string> fm;
         for( const std::pair<const gun_mode_id, gun_mode> &e : fire_modes ) {
             if( e.second.target == this && !e.second.melee() ) {
-                fm.emplace_back( string_format( "%s (%i)", e.second.tname(), e.second.qty ) );
+                fm.emplace_back( e.second.firing_label( e.second.tname() ) );
             }
         }
         if( !fm.empty() ) {

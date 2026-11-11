@@ -1169,11 +1169,19 @@ static int get_action_penalty( const map &here, const Character &guy, const item
     return action_penalty;
 }
 
-void npc::pretend_fire( npc *source, int shots, item &gun )
+void npc::pretend_fire( const gun_mode &mode )
 {
+    const int shots = mode.start_firing( calendar::turn );
+    if( mode.rpm > 0 ) {
+        set_moves( std::min( get_moves(), 0 ) );
+    }
+    if( shots <= 0 ) {
+        return;
+    }
+    item &gun = *mode.target;
     int curshot = 0;
     if( one_in( 50 ) ) {
-        add_msg_if_player_sees( *source, m_info, _( "%s shoots something." ), source->disp_name() );
+        add_msg_if_player_sees( *this, m_info, _( "%s shoots something." ), disp_name() );
     }
     map &here = get_map();
     while( curshot != shots ) {
@@ -1193,9 +1201,11 @@ void npc::pretend_fire( npc *source, int shots, item &gun )
         item *weapon = &gun;
         const item::sound_data data = weapon->gun_noise( shots > 1 );
 
-        add_msg_if_player_sees( *source, m_warning, _( "You hear %s." ), data.sound );
+        add_msg_if_player_sees( *this, m_warning, _( "You hear %s." ), data.sound );
         curshot++;
-        mod_moves( -get_speed() );
+        if( mode.rpm == 0 ) {
+            mod_moves( -get_speed() );
+        }
     }
 }
 
@@ -1257,8 +1267,35 @@ int Character::fire_gun( const tripoint_bub_ms &target, int shots )
     return fire_gun( here, target, shots, *gun, item_location() );
 }
 
+int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
+                         item_location ammo )
+{
+    if( !mode || mode.melee() ) {
+        return 0;
+    }
+    const int shots = mode.start_firing( calendar::turn );
+    const bool uses_game_second = mode.rpm > 0 && !mode->has_flag( flag_VEHICLE );
+    if( uses_game_second ) {
+        // Holding the trigger for this second ends the turn regardless of character speed.
+        set_moves( std::min( get_moves(), 0 ) );
+    }
+    if( shots <= 0 ) {
+        if( mode.rpm > 0 ) {
+            add_msg_if_player( _( "Your %s is not ready to fire this second." ), mode->tname() );
+        }
+        return 0;
+    }
+    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second );
+}
+
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                          item_location ammo )
+{
+    return fire_gun_impl( here, target, shots, gun, ammo, true );
+}
+
+int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
+                              item_location ammo, bool spend_attack_moves )
 {
     if( !gun.is_gun() ) {
         debugmsg( "%s tried to fire non-gun (%s).", get_name(), gun.tname() );
@@ -1329,8 +1366,10 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
                               static_cast<float>( MAX_SKILL ) ) / static_cast<double>( MAX_SKILL * 2 );
 
     itype_id gun_id = gun.typeId();
-    int attack_moves = time_to_attack( *this, *gun_id ) +
-                       reload_and_shoot_time( *this, ammo ) + action_time( *this, *gun_id ) ;
+    const int attack_moves = spend_attack_moves
+                             ? time_to_attack( *this, *gun_id ) + action_time( *this, *gun_id )
+                             : 0;
+    const int reload_moves = reload_and_shoot_time( *this, ammo );
     skill_id gun_skill = gun.gun_skill();
     add_msg_debug( debugmode::DF_RANGED, "Gun skill (%s) %g", gun_skill.c_str(),
                    get_skill_level( gun_skill ) ) ;
@@ -1495,8 +1534,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
             continue; // skip retargeting for launchers
         }
     }
-    // Use different amounts of time depending on the type of gun and our skill
-    mod_moves( -attack_moves );
+    mod_moves( -attack_moves - reload_moves );
 
     const islot_gun *firing = original_gun;
     if( !firing && gun.is_gun() ) {
@@ -4364,10 +4402,11 @@ bool target_ui::action_switch_mode()
         for( auto it = gun_modes.begin(); it != gun_modes.end(); ++it ) {
             const bool active_gun_mode = relevant->gun_get_mode_id() == it->first;
 
-            // If gun mode is from a gunmod use gunmod's name, pay attention to the "->" on tname
-            std::string text = ( it->second.target == relevant )
-                               ? it->second.tname()
-                               : it->second->tname() + " (" + std::to_string( it->second.qty ) + ")";
+            const gun_mode &firing_mode = it->second;
+            std::string text = firing_mode.target == relevant ? firing_mode.tname() : firing_mode->tname();
+            if( firing_mode.rpm > 0 || firing_mode.target != relevant ) {
+                text = firing_mode.firing_label( text );
+            }
 
             text += ( active_gun_mode ? _( " (active)" ) : "" );
 
@@ -4892,9 +4931,8 @@ void target_ui::panel_gun_info( int &text_y )
         // Gun mode comes from a gunmod, not base gun. Add gunmod's name
         gunmod_name = m->tname() + " ";
     }
-    std::string str = string_format( _( "Firing mode: <color_cyan>%s%s (%d)</color>" ),
-                                     gunmod_name, mode_name, m.qty
-                                   );
+    const std::string str = string_format( _( "Firing mode: <color_cyan>%s</color>" ),
+                                          m.firing_label( gunmod_name + mode_name ) );
     nc_color clr = c_light_gray;
     print_colored_text( w_target, point( 1, text_y++ ), clr, clr, str );
 

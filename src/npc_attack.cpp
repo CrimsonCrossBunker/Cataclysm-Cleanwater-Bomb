@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
@@ -465,6 +466,10 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         return;
     }
 
+    if( !gun.gun_set_mode( mode_id ) ) {
+        source.move_pause();
+        return;
+    }
     if( !gun.ammo_sufficient( &source ) ) {
         // todo: make gun an item_location instead of getting wielded item here
         // but since wielding is required before this, it should be fine
@@ -495,11 +500,11 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is aiming", source.disp_name() );
         source.aim( Target_attributes( source.pos_bub(), location ) );
     } else {
+        const gun_mode mode = gun.gun_current_mode();
         if( source.is_hallucination() ) {
-            gun_mode mode = source.get_wielded_item()->gun_current_mode();
-            source.pretend_fire( &source, mode.qty, *mode );
+            source.pretend_fire( mode );
         } else {
-            source.fire_gun( location );
+            source.fire_gun( get_map(), location, mode );
         }
         add_msg_debug( debugmode::debug_filter::DF_NPC, "%s fires %s", source.disp_name(),
                        gun.display_name() );
@@ -510,7 +515,7 @@ bool npc_attack_gun::can_use( const npc &source ) const
 {
     // can't attack with something you can't wield or which lacks ammo.
     return ( source.is_wielding( *gunmode ) || source.can_wield( *gunmode ).success() )
-           && gun.has_ammo();
+           && gun.has_ammo() && gunmode.shots_available( calendar::turn ) > 0;
 }
 
 int npc_attack_gun::base_time_penalty( const npc &source ) const
@@ -579,7 +584,7 @@ npc_attack_rating npc_attack_gun::evaluate_tripoint(
     const npc &source, const Creature *target, const tripoint_bub_ms &location ) const
 {
     const item &gun = *gunmode.target;
-    const int damage = gun.gun_damage().total_damage() * gunmode.qty;
+    const int damage = gun.gun_damage().total_damage() * gunmode.shots_available( calendar::turn );
     double potential = damage;
 
     const Creature *critter = get_creature_tracker().creature_at( location );

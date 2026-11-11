@@ -45,6 +45,7 @@
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
+#include "math_parser_diag_value.h"
 #include "melee.h"
 #include "messages.h"
 #include "monster.h"
@@ -1489,6 +1490,20 @@ bool gun_actor::shoot( monster &z, const tripoint_bub_ms &target, const gun_mode
     itype_id mig_gun_type = item_controller->migrate_id( gun_type );
     item gun( mig_gun_type );
     gun.gun_set_mode( mode );
+    const bool throwing = fake_skills.count( skill_throw ) != 0;
+    const gun_mode firing_mode = gun.gun_current_mode();
+    const bool uses_rpm = !throwing && firing_mode.rpm > 0;
+    std::string firing_turn_key;
+    const double second = to_seconds<double>( calendar::turn - calendar::turn_zero );
+    if( uses_rpm ) {
+        // The gun is a temporary item for each attack. Store its cadence on the monster.
+        firing_turn_key = "gun_rpm_fired_turn:" + mig_gun_type.str();
+        const diag_value *previous = z.maybe_get_value( firing_turn_key );
+        if( ( previous && previous->dbl() == second ) ||
+            firing_mode.shots_available( calendar::turn ) == 0 ) {
+            return false;
+        }
+    }
 
     itype_id ammo = item_controller->migrate_id( ammo_type );
     if( ammo.is_null() ) {
@@ -1531,10 +1546,8 @@ bool gun_actor::shoot( monster &z, const tripoint_bub_ms &target, const gun_mode
     tmp.set_attitude( z.friendly ? NPCATT_FOLLOW : NPCATT_KILL );
 
     tmp.recoil = inital_recoil; // set initial recoil
-    bool throwing = false;
     for( const auto &pr : fake_skills ) {
         tmp.set_skill_level( pr.first, pr.second );
-        throwing |= pr.first == skill_throw;
     }
 
     tmp.set_wielded_item( gun );
@@ -1552,7 +1565,11 @@ bool gun_actor::shoot( monster &z, const tripoint_bub_ms &target, const gun_mode
         tmp.throw_item( target, item( ammo, calendar::turn, 1 ) );
         z.ammo[ammo_type]--;
     } else {
-        z.ammo[ammo_type] -= tmp.fire_gun( target, gun.gun_current_mode().qty );
+        if( uses_rpm ) {
+            z.set_value( firing_turn_key, second );
+        }
+        const gun_mode active_mode = tmp.get_wielded_item()->gun_current_mode();
+        z.ammo[ammo_type] -= tmp.fire_gun( get_map(), target, active_mode );
     }
     return true;
 }

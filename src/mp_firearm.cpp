@@ -328,7 +328,7 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
     if( gun->has_flag( flag_RELOAD_AND_SHOOT ) && !gun->ammo_remaining() && !ammo ) {
         return firearm_outcome::rejected;
     }
-    who.fire_gun( here, target, gun.qty, *gun, ammo );
+    who.fire_gun( here, target, gun, ammo );
     return firearm_outcome::finished;
 }
 } // namespace cata_mp

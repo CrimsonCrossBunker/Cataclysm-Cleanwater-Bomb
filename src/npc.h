@@ -964,7 +964,7 @@ class npc : public Character
         std::string get_specified_talk_topic( std::string const &topic_id );
         float character_danger( const Character &u ) const;
         float vehicle_danger( int radius ) const;
-        void pretend_fire( npc *source, int shots, item &gun ); // fake ranged attack for hallucination
+        void pretend_fire( const gun_mode &mode ); // fake ranged attack for hallucination
         // True if our anger is at least equal to...
         bool turned_hostile() const;
         bool turned_hostile( character_id who ) const;
