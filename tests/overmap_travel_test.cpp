@@ -4,13 +4,16 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "cuboid_rectangle.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_iterator.h"
 #include "pathfinding.h"
-#include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
+
+static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
 
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
@@ -60,7 +63,7 @@ TEST_CASE( "overmap_travel_near_blocked_waypoint", "[pathfinding][overmap][activ
     if( final_waypoint ) {
         dummy.omt_path.erase( dummy.omt_path.begin() );
     }
-    dummy.assign_activity( activity_id( "ACT_TRAVELLING" ) );
+    dummy.assign_activity( ACT_TRAVELLING );
     activity_handlers::travel_do_turn( &dummy.activity, &dummy );
     CHECK( dummy.has_destination() );
     const std::vector<tripoint_bub_ms> &route = dummy.get_auto_move_route();
