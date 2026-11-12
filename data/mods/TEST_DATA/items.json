@@ -98,6 +98,29 @@
   },
   {
     "type": "ITEM",
+    "id": "test_throw_correction",
+    "name": "TEST throw correction",
+    "description": "An item for testing conditional throw corrections.",
+    "weight": "100 g",
+    "volume": "100 ml",
+    "symbol": "(",
+    "color": "white",
+    "throw_correction_data": {
+      "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "BOMB" ] ],
+      "min_weight": "100 g",
+      "max_weight": "700 g",
+      "max_volume": "600 ml",
+      "max_length": "20 cm",
+      "throw_damage_multiplier": 1.1,
+      "throw_range_multiplier": 1.2,
+      "throw_stamina_multiplier": 1.3,
+      "throw_dispersion_multiplier": 1.4,
+      "throw_speed_multiplier": 1.5,
+      "throw_weight_multiplier": 1.6
+    }
+  },
+  {
+    "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
     "id": "test_ring_strength_1",
     "weight": "4 g",
