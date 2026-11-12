@@ -184,7 +184,7 @@
     "skill": "smg",
     "range": 4,
     "dispersion": 240,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ], [ "AUTO", "auto-rpm", "800" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -426,7 +426,7 @@
     "dispersion": 360,
     "durability": 6,
     "built_in_mods": [ "under_folding_stock" ],
-    "modes": [ [ "DEFAULT", "burst", 4 ] ],
+    "modes": [ [ "DEFAULT", "auto-rpm", "500" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -595,7 +595,7 @@
     "skill": "smg",
     "dispersion": 590,
     "durability": 4,
-    "modes": [ [ "DEFAULT", "burst", 5 ] ],
+    "modes": [ [ "DEFAULT", "auto-rpm", "600" ] ],
     "loudness": 25,
     "barrel_volume": "250 ml",
     "valid_mod_locations": [
@@ -627,7 +627,7 @@
     "range": 2,
     "dispersion": 360,
     "durability": 5,
-    "modes": [ [ "DEFAULT", "burst", 4 ] ],
+    "modes": [ [ "DEFAULT", "auto-rpm", "550" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -683,7 +683,7 @@
     "skill": "smg",
     "range": 7,
     "dispersion": 360,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
     "built_in_mods": [ "wire_stock" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -756,7 +756,7 @@
     "weight": "620 g",
     "price": "1 kUSD",
     "price_postapoc": "25 USD",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 6 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ],
     "built_in_mods": [ "barrel_ported" ]
   },
   {
@@ -1029,7 +1029,7 @@
     "skill": "smg",
     "range": 5,
     "dispersion": 240,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "850" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "bayonet lug", 1 ],
@@ -1066,7 +1066,7 @@
     "range": 1,
     "skill": "smg",
     "dispersion": 300,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1000" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],

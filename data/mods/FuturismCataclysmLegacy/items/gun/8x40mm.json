@@ -22,7 +22,7 @@
     "ranged_damage": { "damage_type": "bullet", "amount": 10 },
     "dispersion": 90,
     "durability": 9,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 6 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1800" ] ],
     "reload": 400,
     "barrel_volume": "1500 ml",
     "valid_mod_locations": [
@@ -69,7 +69,7 @@
     "durability": 9,
     "reload": 200,
     "barrel_volume": "500 ml",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "4 rd.", 4 ], [ "AUTO", "auto", 6 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "4 rd.", 4 ], [ "AUTO", "auto-rpm", "1800" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "grip", 1 ],

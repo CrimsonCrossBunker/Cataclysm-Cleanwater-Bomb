@@ -81,7 +81,7 @@
     "ammo": [ "NULL" ],
     "dispersion": 180,
     "min_cycle_recoil": 1350,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "850" ] ],
     "valid_mod_locations": [ [ "barrel", 1 ], [ "bore", 1 ], [ "mechanism", 2 ], [ "sling", 1 ], [ "stock accessory", 1 ], [ "stock", 1 ] ],
     "flags": [ "NO_TURRET" ]
   },
@@ -100,7 +100,7 @@
     "price": "5 kUSD 400 USD",
     "material": [ "steel", "aluminum", "plastic" ],
     "dispersion": 180,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
     "default_mods": [ "high_end_folding_stock" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -216,7 +216,7 @@
     "material": [ "steel", "plastic" ],
     "dispersion": 200,
     "reload": 400,
-    "modes": [ [ "DEFAULT", "burst", 4 ] ],
+    "modes": [ [ "DEFAULT", "auto-rpm", "850" ] ],
     "built_in_mods": [ "bipod" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -299,7 +299,7 @@
     "ammo": [ "NULL" ],
     "dispersion": 180,
     "min_cycle_recoil": 1350,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "750" ] ],
     "valid_mod_locations": [ [ "barrel", 1 ], [ "bore", 1 ], [ "mechanism", 2 ], [ "sling", 1 ], [ "stock accessory", 1 ], [ "stock", 1 ] ],
     "flags": [ "NO_TURRET" ],
     "//2": "This should be removed once vehicle turrets are capable of mounting guns with mods attached. As it stands, trying to mount this style of weapon would require the player to remove the conversion kit, thus rendering it unusable anyhow."
@@ -346,7 +346,7 @@
         "description": "The M16 is a very common assault rifle descended from the AR-15, used by militaries across the world for over 50 years.  It is a gas-operated, rotating bolt rifle known for its accuracy and controllable recoil.  This model is a relatively rare M16A3, with full auto capability."
       }
     ],
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "750" ] ],
     "flags": [ "NO_TURRET" ],
     "//2": "This should be removed once vehicle turrets are capable of mounting guns with mods attached. As it stands, trying to mount this style of weapon would require the player to remove the conversion kit, thus rendering it unusable anyhow."
   },
@@ -459,7 +459,7 @@
     ],
     "material": [ "steel", "plastic" ],
     "dispersion": 140,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "700" ] ],
     "built_in_mods": [ "grip" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
