@@ -13782,6 +13782,7 @@ std::unique_ptr<activity_actor> longsalvage_activity_actor::deserialize( JsonVal
     data.read( "tool", actor.tool );
     data.read( "tool_type", actor.tool_type );
     data.read( "pending", actor.pending );
+    static_cast<void>( data.get_int( "index", -1 ) );
     // Index-only old activities cannot identify their tool. They cancel on
     // continuation without touching inventory or ground items.
     return actor.clone();
