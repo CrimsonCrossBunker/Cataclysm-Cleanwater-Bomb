@@ -22,7 +22,7 @@
     "dispersion": 220,
     "durability": 9,
     "barrel_volume": "250 ml",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "5 rd.", 5 ], [ "AUTO", "auto", 8 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "5 rd.", 5 ], [ "AUTO", "auto-rpm", "2400" ] ],
     "valid_mod_locations": [
       [ "accessories", 3 ],
       [ "barrel", 1 ],
@@ -76,7 +76,7 @@
     "skill": "pistol",
     "dispersion": 280,
     "durability": 9,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ], [ "AUTO", "auto", 5 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ], [ "AUTO", "auto-rpm", "1500" ] ],
     "valid_mod_locations": [
       [ "accessories", 3 ],
       [ "grip", 1 ],
