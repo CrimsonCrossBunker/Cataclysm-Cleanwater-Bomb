@@ -279,9 +279,11 @@ void overmap_ui::draw_overmap_chunk_imgui( const avatar &you, const tripoint_abs
             if( !drew_mission && targ.xy() == omp.xy() ) {
                 // If there is a mission target, and it's not on the same
                 // overmap terrain as the player character, mark it.
-                // TODO: Inform player if the mission is above or below
                 drew_mission = true;
-                if( i != 0 || j != 0 ) {
+                if( targ.z() != omp.z() ) {
+                    ter_sym = targ.z() > omp.z() ? "^" : "v";
+                    ter_color = c_red;
+                } else if( i != 0 || j != 0 ) {
                     ter_color = red_background( ter_color );
                 }
             }
