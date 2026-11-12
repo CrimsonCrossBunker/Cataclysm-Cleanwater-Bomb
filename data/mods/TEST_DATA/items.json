@@ -3793,7 +3793,7 @@
     "price": "10 USD",
     "price_postapoc": "0 cent",
     "material": [ "leather" ],
-    "flags": [ "NPC_THROWN" ],
+    "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ],
     "weight": "150 g",
     "volume": "250 ml"
   },
@@ -3809,7 +3809,7 @@
     "price_postapoc": "0 cent",
     "material": [ "leather", "lc_steel" ],
     "repairs_with": [ "lc_steel" ],
-    "flags": [ "NPC_THROWN" ],
+    "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ],
     "weight": "150 g",
     "volume": "250 ml"
   },
@@ -3824,7 +3824,7 @@
     "price": "10 USD",
     "price_postapoc": "0 cent",
     "material": [ "leather" ],
-    "flags": [ "NPC_THROWN" ],
+    "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ],
     "weight": "150 g",
     "volume": "250 ml",
     "degradation_multiplier": 0.5
@@ -3840,7 +3840,7 @@
     "price": "10 USD",
     "price_postapoc": "0 cent",
     "material": [ "leather" ],
-    "flags": [ "NPC_THROWN" ],
+    "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ],
     "weight": "150 g",
     "volume": "250 ml",
     "degradation_multiplier": 2
@@ -5421,7 +5421,7 @@
     "symbol": "*",
     "color": "yellow",
     "use_action": [ "ACIDBOMB_ACT" ],
-    "flags": [ "ACT_ON_RANGED_HIT", "NPC_THROWN" ],
+    "flags": [ "ACT_ON_RANGED_HIT", "NPC_THROWN", "SLING_PROJECTILE" ],
     "ammo_type": "sling-ready_grenade",
     "damage": { "damage_type": "bash", "amount": 4 },
     "range": 11,
