@@ -11,6 +11,7 @@
     "price": "10 USD",
     "price_postapoc": "10 cent",
     "material": [ "plastic" ],
+    "flags": [ "SLING_PROJECTILE" ],
     "symbol": "o",
     "color": "white",
     "use_action": [ "MAGIC_8_BALL" ]
