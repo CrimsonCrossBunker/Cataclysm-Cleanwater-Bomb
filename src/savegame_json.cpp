@@ -787,7 +787,7 @@ void Character::load_grab_state( const JsonObject &data )
     data.read( "grab_point", point );
     const std::string type = data.get_string( "grab_type",
                              point == tripoint_rel_ms::zero ? "OBJECT_NONE" : "OBJECT_VEHICLE" );
-    const auto *const found = std::find( obj_type_name.begin(), obj_type_name.end(), type );
+    const auto found = std::find( obj_type_name.begin(), obj_type_name.end(), type );
     // Projection/save restoration must not invoke local view or gameplay callbacks.
     grab_type = point == tripoint_rel_ms::zero || found == obj_type_name.end() ? object_type::NONE :
                 static_cast<object_type>( std::distance( obj_type_name.begin(), found ) );
