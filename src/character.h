@@ -3572,7 +3572,8 @@ class Character : public Creature, public visitable
 
     private:
         int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
-                           item_location ammo, bool spend_attack_moves, int burst_rpm = 0 );
+                           item_location ammo, bool spend_attack_moves, int firing_rpm = 0,
+                           bool spend_burst_moves = false );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,

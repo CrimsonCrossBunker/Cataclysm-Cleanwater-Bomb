@@ -39,6 +39,22 @@ std::pair<int, int> firearm_burst_round_range( int rounds, float skill );
 /** AP corresponding to rounds / RPM at the character's current moves per game second. */
 int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second );
 
+/** Additional aim dispersion accumulated during one continuous trigger pull. */
+class firearm_burst_recoil
+{
+    public:
+        firearm_burst_recoil( int arm_strength, float skill, int rpm );
+        /** Record a shot's kick and return the recoil that carries into the next shot. */
+        double after_shot( int gun_recoil );
+
+    private:
+        double opening_scale;
+        double steady_scale;
+        double settling_rounds;
+        double opening_recoil = 0.0;
+        int shots_fired = 0;
+};
+
 namespace target_handler
 {
 // Trajectory to target. Empty if selection was aborted or player ran out of moves
