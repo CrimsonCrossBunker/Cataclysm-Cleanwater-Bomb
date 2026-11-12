@@ -407,7 +407,7 @@ Certain entries like the snippets above are taken from the game state as opposed
 | `<item_description:ID>`                       | N/A            | gets replaced with the description of the item from ID
 | `<vehicle_name:ID>`                           | N/A            | gets replaced with the name of the vehicle prototype from ID
 | `<trait_name:ID>`                             | N/A            | gets replaced with the name of the trait from ID
-| `<trait_description:ID>`                      | N/A            | gets replaced with the description of the trait from ID (avatar variant of trait is used, if avatar has such trait)
+| `<trait_description:ID>`                      | beta, or alpha | gets replaced with the description of the trait from ID, using beta's variant when beta is a Character, otherwise alpha's variant when alpha is a Character. If neither participant is a Character, uses the base description.
 | `<spell_name:ID>`                             | N/A            | gets replaced with the name of the spell from ID
 | `<spell_description:ID>`                      | N/A            | gets replaced with the description of the spell from id
 | `<u_spell_level:ID>`                          | alpha          | gets replaced with the spell level of corresponding spell alpha talker has. If alpha talker has no such spell, it returns -1

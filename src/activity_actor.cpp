@@ -81,6 +81,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
+#include "farming.h"
 #include "fault.h"
 #include "field_type.h"
 #include "flag.h"
@@ -6836,6 +6837,14 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
 
     const bool inside = !here.is_outside( who.pos_bub() );
     const tripoint_bub_ms closep = tile_location;
+    target_location = here.get_abs( closep );
+
+    if( !here.inbounds( closep ) || !here.inbounds( who.pos_abs() ) ||
+        who.pos_bub().z() != closep.z() ||
+        square_dist( who.pos_bub().xy(), closep.xy() ) > 1 || who.is_dead_state() ) {
+        act.set_to_null();
+        return;
+    }
 
     if( doors::check_mon_blocking_door( who, here.get_abs( closep ) ) ) {
         act.set_to_null();
@@ -6856,6 +6865,8 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
                 return;
             }
             if( veh->can_close( closed_vehicle_part, who ) ) {
+                vehicle_uid = veh->uid().get_value();
+                part_uid = veh->part( veh->get_non_fake_part( closed_vehicle_part ) ).get_base().uid().get_value();
                 close_success = close_tile_result::CLOSE_VEHICLE;
                 act.moves_left = act.moves_total;
                 return;
@@ -6916,7 +6927,13 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
 void close_tile_activity_actor::finish( player_activity &act, Character &who )
 {
     map &here = get_map();
-    const tripoint_bub_ms closep = tile_location;
+    const tripoint_bub_ms closep = target_location ? here.get_bub( *target_location ) : tile_location;
+    if( !here.inbounds( closep ) || !here.inbounds( who.pos_abs() ) ||
+        who.pos_bub().z() != closep.z() ||
+        square_dist( who.pos_bub().xy(), closep.xy() ) > 1 || who.is_dead_state() ) {
+        act.set_to_null();
+        return;
+    }
     const bool inside = !here.is_outside( who.pos_bub() );
     map_stack items_in_way = here.i_at( closep );
 
@@ -6928,12 +6945,31 @@ void close_tile_activity_actor::finish( player_activity &act, Character &who )
 
     if( close_success == close_tile_result::CLOSE_VEHICLE ) {
         optional_vpart_position vp = here.veh_at( closep );
-        // There is a vehicle part here; see if it has anything that can be closed
+        if( !vp || vehicle_uid <= 0 || part_uid <= 0 ||
+            vp->vehicle().uid().get_value() != vehicle_uid ) {
+            act.set_to_null();
+            return;
+        }
         vehicle *const veh = &vp->vehicle();
+        int target_part = -1;
+        for( int index = 0; index < veh->part_count(); ++index ) {
+            const vehicle_part &part = veh->part( index );
+            if( !part.removed && !part.is_fake && part.get_base().uid().get_value() == part_uid ) {
+                target_part = index;
+                break;
+            }
+        }
+        const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh;
+        const int closing_part = veh->next_part_to_close( vp->part_index(), outside );
+        if( target_part < 0 || closing_part < 0 ||
+            veh->get_non_fake_part( closing_part ) != target_part || !veh->can_close( closing_part, who ) ) {
+            act.set_to_null();
+            return;
+        }
         who.add_msg_if_player( _( "You close the %1$s's %2$s." ), veh->name,
-                               veh->part( closed_vehicle_part ).name() );
+                               veh->part( closing_part ).name() );
         // close vehicle part
-        veh->close( here, closed_vehicle_part );
+        veh->close( here, closing_part );
     } else if( close_success == close_tile_result::CLOSE_DOOR ) {
 
         const std::string door_name = here.obstacle_name( closep );
@@ -6964,6 +7000,9 @@ void close_tile_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "tile_location", tile_location );
     jsout.member( "close_success", close_success );
     jsout.member( "closed_vehicle_part", closed_vehicle_part );
+    jsout.member( "target_location", target_location );
+    jsout.member( "vehicle_uid", vehicle_uid );
+    jsout.member( "part_uid", part_uid );
 
     jsout.end_object();
 }
@@ -6977,6 +7016,9 @@ std::unique_ptr<activity_actor> close_tile_activity_actor::deserialize( JsonValu
     data.read( "tile_location", actor.tile_location );
     data.read( "close_success", actor.close_success );
     data.read( "closed_vehicle_part", actor.closed_vehicle_part );
+    data.read( "target_location", actor.target_location );
+    data.read( "vehicle_uid", actor.vehicle_uid );
+    data.read( "part_uid", actor.part_uid );
 
     return actor.clone();
 }
@@ -8815,6 +8857,7 @@ bool plant_seed_activity_actor::continue_work( player_activity &act, Character &
     map &here = get_map();
     const tripoint_bub_ms position = here.get_bub( plant_location );
     if( !seed_type.is_valid() || !seed_type->seed || !here.i_at( position ).empty() ||
+        here.has_flag( ter_furn_flag::TFLAG_DESTROY_ITEM, position ) ||
         !here.has_flag_ter_or_furn( seed_type->seed->required_terrain_flag, position ) ) {
         act.set_to_null();
         return false;
@@ -8842,7 +8885,6 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     map &here = get_map();
     const auto context = here.get_context_reference();
     const character_action_guard lifetime( who );
-    const tripoint_bub_ms examp = here.get_bub( plant_location );
     const itype_id seed_id = seed_type;
     const tool_activity_target expected = *target;
     // Retire before item placement/events, which may replace the activity.
@@ -8850,8 +8892,11 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     std::list<item> used_seed = item::count_by_charges( seed_id ) ?
                                 who.use_charges( seed_id, 1, craft_reservation::usable_by_automation ) :
                                 who.use_amount( seed_id, 1, craft_reservation::usable_by_automation );
-    if( used_seed.empty() || !lifetime || !context || !expected.matches( here ) ||
-        !here.i_at( examp ).empty() ) {
+    if( used_seed.empty() || !lifetime || !context || !expected.matches( here ) ) {
+        return;
+    }
+    const tripoint_bub_ms examp = here.get_bub( expected.position );
+    if( !here.i_at( examp ).empty() ) {
         return;
     }
     item &seed = used_seed.front();
@@ -8863,7 +8908,14 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     iexamine::set_plant_water( seed, 0 );
     iexamine::set_plant_last_water_check( seed, calendar::turn );
     iexamine::set_plant_effective_growth_turns( seed, 0 );
-    // Occupy the plot before placement callbacks can attempt another planting.
+    // Store the seed directly in the plot. Crop furniture rejects ordinary drops.
+    item &planted = here.add_item_unprocessed( examp, std::move( seed ) );
+    if( planted.is_null() ) {
+        return;
+    }
+    const item_source planted_source = capture_item_source( who,
+                                       item_location( map_cursor( expected.position ), &planted ) );
+    // Finish occupying the plot before notifying listeners.
     if( here.has_flag_furn( seed_id->seed->required_terrain_flag, examp ) &&
         here.furn( examp )->plant != nullptr ) {
         here.furn_set( examp, here.furn( examp )->plant->transform );
@@ -8881,12 +8933,6 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     }
     const tool_activity_target planted_plot = tool_activity_target::capture( here,
             here.get_abs( examp ) );
-    const item_location planted = here.add_item_or_charges_ret_loc( examp, std::move( seed ),
-                                  false, &who );
-    if( !lifetime || !context || !planted_plot.matches( here ) || !planted ) {
-        return;
-    }
-    const item_source planted_source = capture_item_source( who, planted );
     who.add_msg_player_or_npc( _( "You plant some %s." ), _( "<npcname> plants some %s." ),
                                item::nname( seed_id ) );
     get_event_bus().send<event_type::character_plants_seed>(
@@ -8894,8 +8940,8 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
     if( !lifetime || !context || !planted_plot.matches( here ) ) {
         return;
     }
-    const item_location current = resolve_item_source( who, here, planted_source );
-    if( current && current->is_seed() && current->typeId() == seed_id ) {
+    item *current = resolve_planted_seed( here, planted_source );
+    if( current && current->typeId() == seed_id ) {
         const std::string seed_stage( "GROWTH_SEED" );
         iexamine::run_plant_lifecycle_event(
             "plant", who, here, here.get_bub( planted_plot.position ), *current,
@@ -12261,7 +12307,8 @@ std::unique_ptr<activity_actor> wear_activity_actor::deserialize( JsonValue &jsi
 void invoke_item_activity_actor::do_turn( player_activity &, Character &who )
 {
     const character_action_guard lifetime( who );
-    item_location source = item;
+    item_location source;
+    source = item;
     const std::string selected_method = method;
     const activity_execution execution = who.activity.execution();
     who.cancel_activity();
@@ -12425,16 +12472,13 @@ bool fertilize_plant_activity_actor::continue_work( player_activity &act, Charac
     if( here.ter( position )->terrain_growth ) {
         return true;
     }
-    item *seed = iexamine::get_seed_at( here, position );
-    if( capture_seed && seed ) {
-        seed_source = capture_item_source( who, item_location( map_cursor( plant_position ), seed ) );
+    if( capture_seed ) {
+        if( item *seed = iexamine::get_seed_at( here, position ) ) {
+            seed_source = capture_item_source( who, item_location( map_cursor( plant_position ), seed ) );
+        }
     }
-    if( !seed || !here.furn( position )->plant || !seed_source ) {
-        act.set_to_null();
-        return false;
-    }
-    const item_location original = resolve_item_source( who, here, *seed_source );
-    if( !original || original.get_item() != seed ) {
+    if( !seed_source || seed_source->position != plant_position ||
+        !resolve_planted_seed( here, *seed_source ) ) {
         act.set_to_null();
         return false;
     }
@@ -12480,7 +12524,7 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         return;
     }
     if( !eligible.success() || !expected.matches( here ) ||
-        ( original_seed && !resolve_item_source( who, here, *original_seed ) ) ) {
+        ( original_seed && !resolve_planted_seed( here, *original_seed ) ) ) {
         act.set_to_null();
         return;
     }
@@ -12581,8 +12625,8 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     if( !lifetime || !context || !expected.matches( here ) || !original_seed ) {
         return;
     }
-    item_location spent_seed = resolve_item_source( who, here, *original_seed );
-    if( !spent_seed || !spent_seed->is_seed() ) {
+    item *spent_seed = resolve_planted_seed( here, *original_seed );
+    if( !spent_seed ) {
         return;
     }
 
@@ -12608,17 +12652,19 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     who.add_msg_if_player( m_info, _( "You fertilize the %1$s with the %2$s." ),
                            plant_name, planted.front().tname() );
     // Growth can run scripts, so reacquire the original plant before notifying.
-    here.grow_plant( plant_position, &who );
-    if( !lifetime || !context || !original_seed ) {
+    here.grow_plant( here.get_bub( expected.position ), &who );
+    if( !lifetime || !context ) {
         return;
     }
-    const item_location fertilized_seed = resolve_item_source( who, here, *original_seed );
-    if( !fertilized_seed || !fertilized_seed->is_seed() ) {
+    const item *fertilized_seed = resolve_planted_seed( here, *original_seed );
+    if( !fertilized_seed ) {
         return;
     }
-    const furn_str_id furniture = here.furn( plant_position ).id();
+    const tripoint_bub_ms fertilized_position = here.get_bub( expected.position );
+    const furn_str_id furniture = here.furn( fertilized_position ).id();
     const itype_id seed_id = fertilized_seed->typeId();
-    const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, plant_position );
+    const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here,
+                          fertilized_position );
     const std::string stage = stage_idx >= 0 ?
                               fertilized_seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
     get_event_bus().send<event_type::character_fertilizes_plant>(
@@ -12627,10 +12673,11 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     if( !lifetime || !context ) {
         return;
     }
-    const item_location current = resolve_item_source( who, here, *original_seed );
-    if( current && current->typeId() == seed_id && here.furn( plant_position ).id() == furniture ) {
+    item *current = resolve_planted_seed( here, *original_seed );
+    const tripoint_bub_ms current_position = here.get_bub( expected.position );
+    if( current && current->typeId() == seed_id && here.furn( current_position ).id() == furniture ) {
         iexamine::run_plant_lifecycle_event(
-            "fertilize", who, here, plant_position, *current, stage, stage,
+            "fertilize", who, here, current_position, *current, stage, stage,
         { { "fertilizer_id", fertilizer.str() } }, {
             { "reduction_turns", static_cast<double>( to_turns<int>( reduction ) ) },
             { "actor_is_npc", who.is_npc() ? 1.0 : 0.0 }
@@ -13240,7 +13287,7 @@ void forage_activity_actor::finish( player_activity &act, Character &who )
         who.add_msg_if_player( _( "You didn't find anything." ) );
         who.add_msg_if_npc( _( "<npcname> didn't find anything." ) );
     }
-    for( item_location product : products ) {
+    for( const item_location &product : products ) {
         if( !lifetime || !context || who.pos_abs() != origin ||
             who.activity.identity_generation() != generation ) {
             return;

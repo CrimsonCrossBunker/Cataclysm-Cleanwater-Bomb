@@ -3382,6 +3382,18 @@
   },
   {
     "type": "keybinding",
+    "name": "Choose/cancel vehicle turning control point",
+    "category": "DEFAULTMODE",
+    "id": "vehicle_turning_assist"
+  },
+  {
+    "type": "keybinding",
+    "name": "Toggle vehicle driving guidance",
+    "category": "DEFAULTMODE",
+    "id": "vehicle_guidance"
+  },
+  {
+    "type": "keybinding",
     "name": "Toggle safe mode",
     "category": "DEFAULTMODE",
     "id": "safemode",

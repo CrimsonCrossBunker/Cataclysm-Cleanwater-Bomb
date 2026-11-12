@@ -82,6 +82,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -89,6 +90,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 30,
         "coverage": 100,
@@ -96,7 +98,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 30,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 30,
         "coverage": 100,
         "material": [
@@ -110,6 +127,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -122,6 +140,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -144,6 +163,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -199,6 +219,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -206,6 +227,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 100,
@@ -213,7 +235,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 14,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 14,
         "coverage": 100,
         "material": [
@@ -227,6 +264,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -239,6 +277,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -261,6 +300,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -314,6 +354,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -321,6 +362,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 100,
@@ -328,7 +370,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 12,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 12,
         "coverage": 100,
         "material": [
@@ -342,6 +399,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -354,6 +412,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -376,6 +435,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -429,6 +489,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 100,
@@ -436,6 +497,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 100,
@@ -443,7 +505,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 10,
+        "coverage": 100,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 10,
         "coverage": 100,
         "material": [
@@ -457,6 +534,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 100,
@@ -469,6 +547,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -491,6 +570,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "foot_l", "foot_r" ],
@@ -516,6 +596,7 @@
     "armor": [
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "eyes" ],
         "encumbrance": 5,
         "coverage": 50,
@@ -523,6 +604,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "mouth" ],
         "encumbrance": 10,
         "coverage": 50,
@@ -530,7 +612,22 @@
       },
       {
         "layers": [ "NORMAL", "OUTER" ],
-        "covers": [ "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r" ],
+        "covers": [ "torso" ],
+        "encumbrance": 10,
+        "coverage": 50,
+        "material": [
+          { "type": "lycra", "thickness": 0.2 },
+          { "type": "nylon", "thickness": 1 },
+          { "type": "nomex", "thickness": 1 },
+          { "type": "vinyl", "thickness": 0.1 },
+          { "type": "steel", "thickness": 5, "covered_by_mat": 5 },
+          { "type": "aluminum", "thickness": 5, "covered_by_mat": 5 }
+        ]
+      },
+      {
+        "layers": [ "NORMAL", "OUTER" ],
+        "volume_encumber_modifier": 0,
+        "covers": [ "head", "arm_l", "arm_r", "leg_l", "leg_r" ],
         "encumbrance": 10,
         "coverage": 50,
         "material": [
@@ -544,6 +641,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "covers": [ "hand_l", "hand_r" ],
         "encumbrance": 3,
         "coverage": 50,
@@ -556,6 +654,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 3,
         "coverage": 50,
         "covers": [ "foot_l", "foot_r" ],
@@ -578,6 +677,7 @@
       },
       {
         "layers": [ "NORMAL" ],
+        "volume_encumber_modifier": 0,
         "encumbrance": 0,
         "coverage": 50,
         "covers": [ "foot_l", "foot_r" ],

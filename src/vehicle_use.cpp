@@ -2158,6 +2158,16 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
             menu.add( _( "Pull handbrake" ) )
             .hotkey( "PULL_HANDBRAKE" )
             .on_submit( [here] { handbrake( *here ); } );
+
+            menu.add( turning_arc ? _( "Cancel turning assistance" ) :
+                      _( "Choose turning control point" ) )
+            .skip_theft_check()
+            .on_submit( [] { g->vehicle_turning_assist(); } );
+
+            menu.add( g->vehicle_guidance ? _( "Hide driving guidance" ) :
+                      _( "Show driving guidance" ) )
+            .skip_theft_check()
+            .on_submit( [] { g->vehicle_guidance = !g->vehicle_guidance; } );
         }
 
         const bool has_engine_or_fuel_controls = ( engines.size() > 1 ) ||

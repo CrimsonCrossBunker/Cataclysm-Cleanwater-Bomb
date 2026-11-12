@@ -1,5 +1,16 @@
 [
   {
+    "id": "bio_shock_absorber",
+    "type": "bionic",
+    "name": { "str": "Kinetic Shock Absorbers" },
+    "description": "The flesh in your arms, legs, and upper torso has been implanted with industrial-strength springs and protective padding  equipped with microgravity offset sensors.  Clenching your fist allows you to fold and unfold this padding; while active, the hydraulic absorbers will prevent damage to your body from severe impacts, at the cost of impaired movement.",
+    "occupied_bodyparts": [ [ "torso", 1 ], [ "arm_l", 1 ], [ "arm_r", 1 ], [ "leg_l", 1 ], [ "leg_r", 1 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "act_cost": "2 kJ",
+    "react_cost": "2 kJ",
+    "time": "10 s"
+  },
+  {
     "id": "fcl_bio_neurosoft_aeronautics",
     "type": "bionic",
     "name": { "str": "Neurosoft: Aeronautics" },

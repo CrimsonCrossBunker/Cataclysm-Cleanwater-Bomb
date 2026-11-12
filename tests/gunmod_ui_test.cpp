@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -19,6 +21,7 @@
 #include "gunmod_ui.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
@@ -28,7 +31,6 @@
 #include "ret_val.h"
 #include "type_id.h"
 #include "value_ptr.h"
-#include "visitable.h"
 
 static const activity_id ACT_GUNMOD_ADD( "ACT_GUNMOD_ADD" );
 static const itype_id itype_223( "223" );

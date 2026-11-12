@@ -14,6 +14,7 @@
 class Character;
 class JsonObject;
 class JsonOut;
+class item;
 class map;
 
 enum class farming_action {
@@ -42,6 +43,9 @@ struct farming_command {
 farming_command capture_farming_command( Character &who, map &here,
         const tripoint_abs_ms &position, farming_action action );
 bool execute_farming_command( Character &who, const farming_command &command );
+
+// Resolve the seed stored directly in a plot, including sealed crop furniture.
+item *resolve_planted_seed( map &here, const item_source &source );
 
 // The first collecting container matches map::produce_sap, even when other
 // unrelated items share the tree tile. These are short-lived frontend handles.

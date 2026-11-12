@@ -2006,6 +2006,7 @@ static std::map<action_id, std::string> get_actions_disabled_in_shell()
         { ACTION_DISASSEMBLE,        _( "You can't disassemble while you're in your shell." ) },
         { ACTION_CONSTRUCT,          _( "You can't construct while you're in your shell." ) },
         { ACTION_CONTROL_VEHICLE,    _( "You can't operate a vehicle while you're in your shell." ) },
+        { ACTION_VEHICLE_TURNING_ASSIST, _( "You can't operate a vehicle while you're in your shell." ) },
     };
 }
 
@@ -2028,6 +2029,7 @@ static const std::set<action_id> actions_disabled_in_incorporeal {
     ACTION_DISASSEMBLE,
     ACTION_CONSTRUCT,
     ACTION_CONTROL_VEHICLE,
+    ACTION_VEHICLE_TURNING_ASSIST,
 };
 
 static std::map<action_id, std::string> get_actions_disabled_in_handless_temporary_shapeshift()
@@ -2050,6 +2052,7 @@ static std::map<action_id, std::string> get_actions_disabled_in_handless_tempora
         { ACTION_DISASSEMBLE,        _( "You can't disassemble while shapeshifted." ) },
         { ACTION_CONSTRUCT,          _( "You can't construct while shapeshifted." ) },
         { ACTION_CONTROL_VEHICLE,    _( "You can't operate a vehicle while shapeshifted." ) },
+        { ACTION_VEHICLE_TURNING_ASSIST, _( "You can't operate a vehicle while shapeshifted." ) },
     };
 }
 
@@ -3296,6 +3299,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_SLEEP:
             sleep();
+            break;
+
+        case ACTION_VEHICLE_TURNING_ASSIST:
+            vehicle_turning_assist();
+            break;
+
+        case ACTION_VEHICLE_GUIDANCE:
+            vehicle_guidance = !vehicle_guidance;
+            add_msg( m_info, vehicle_guidance ? _( "Driving guidance ON." ) :
+                     _( "Driving guidance OFF." ) );
             break;
 
         case ACTION_CONTROL_VEHICLE:
