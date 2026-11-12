@@ -15,12 +15,19 @@
     "weight": "96 g",
     "volume": "80 ml",
     "price_postapoc": "2 USD 50 cent",
-    "throw_damage_multiplier": 1.25,
-    "throw_range_multiplier": 2.5,
-    "throw_stamina_multiplier": 2,
-    "throw_dispersion_multiplier": 0.9,
-    "throw_speed_multiplier": 3,
-    "throw_weight_multiplier": 1.5
+    "throw_correction_data": {
+      "required_flag": "SLING_PROJECTILE",
+      "min_weight": "1 g",
+      "max_weight": "500 g",
+      "max_volume": "500 ml",
+      "max_length": "15 cm",
+      "throw_damage_multiplier": 1.25,
+      "throw_range_multiplier": 2.5,
+      "throw_stamina_multiplier": 2,
+      "throw_dispersion_multiplier": 0.9,
+      "throw_speed_multiplier": 3,
+      "throw_weight_multiplier": 1.5
+    }
   },
   {
     "id": "slingshot",
@@ -69,12 +76,19 @@
     "longest_side": "150 cm",
     "price_postapoc": "2 USD 50 cent",
     "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "uneven" },
-    "throw_damage_multiplier": 1.5,
-    "throw_range_multiplier": 2,
-    "throw_stamina_multiplier": 1.5,
-    "throw_dispersion_multiplier": 0.9,
-    "throw_speed_multiplier": 3.5,
-    "throw_weight_multiplier": 1.2,
+    "throw_correction_data": {
+      "required_flag": "SLING_PROJECTILE",
+      "min_weight": "1 g",
+      "max_weight": "1200 g",
+      "max_volume": "1 L",
+      "max_length": "30 cm",
+      "throw_damage_multiplier": 1.5,
+      "throw_range_multiplier": 2,
+      "throw_stamina_multiplier": 1.5,
+      "throw_dispersion_multiplier": 0.9,
+      "throw_speed_multiplier": 3.5,
+      "throw_weight_multiplier": 1.2
+    },
     "melee_damage": { "bash": 14 }
   },
   {
@@ -120,11 +134,18 @@
     "weight": "90 g",
     "volume": "100 ml",
     "price_postapoc": "2 USD 50 cent",
-    "throw_damage_multiplier": 1.5,
-    "throw_range_multiplier": 3,
-    "throw_stamina_multiplier": 4.5,
-    "throw_dispersion_multiplier": 0.9,
-    "throw_speed_multiplier": 4,
-    "throw_weight_multiplier": 1.8
+    "throw_correction_data": {
+      "required_flag": "SLING_PROJECTILE",
+      "min_weight": "1 g",
+      "max_weight": "750 g",
+      "max_volume": "500 ml",
+      "max_length": "15 cm",
+      "throw_damage_multiplier": 1.5,
+      "throw_range_multiplier": 3,
+      "throw_stamina_multiplier": 4.5,
+      "throw_dispersion_multiplier": 0.9,
+      "throw_speed_multiplier": 4,
+      "throw_weight_multiplier": 1.8
+    }
   }
 ]
