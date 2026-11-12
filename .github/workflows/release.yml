@@ -484,6 +484,16 @@ jobs:
         with:
           path: msvc-full-features/vcpkg_installed
           key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
+      - name: Install vcpkg packages (Windows, SDL3)
+        if: runner.os == 'Windows' && matrix.sdl3 == 1
+        shell: pwsh
+        working-directory: msvc-full-features
+        env:
+          VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
+        run: |
+          vcpkg install --triplet x64-windows-static --host-triplet x64-windows-static `
+            --x-install-root="$env:GITHUB_WORKSPACE\msvc-full-features\vcpkg_installed\x64-windows-static" `
+            --x-feature=sdl3 --clean-after-build
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux' && matrix.android == 'none'
         timeout-minutes: 10
@@ -555,7 +565,7 @@ jobs:
           CDDA_RELEASE_BUILD: 1
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
         run: |
-          msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
+          msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
           .\build-scripts\windist.ps1
           mv cataclysmdda-0.J.zip ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.zip
       - name: Build CDDA (osx, curses)
