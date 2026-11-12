@@ -67,8 +67,8 @@ const std::vector<std::string> &snapshot_fields( const std::string_view kind )
         "transparent"
     };
     static const std::vector<std::string> item = {
-        "count_by_charges", "description", "flags", "name", "stackable",
-        "volume_ml", "weight_grams"
+        "book_skill", "count_by_charges", "description", "flags", "name",
+        "stackable", "volume_ml", "weight_grams"
     };
     static const std::vector<std::string> json_flag = {
         "craft_inherit", "info", "inherit", "item_prefix", "item_suffix",
@@ -196,6 +196,9 @@ sol::table item_snapshot( sol::state_view lua, const itype &definition )
     result["id"] = definition.id.str();
     result["name"] = definition.nname( 1 );
     result["description"] = definition.description.translated();
+    if( definition.book && !definition.book->skill.is_null() ) {
+        result["book_skill"] = definition.book->skill.str();
+    }
     result["weight_grams"] = units::to_gram( definition.weight );
     result["volume_ml"] = units::to_milliliter( definition.volume );
     result["stackable"] = definition.is_stackable();
