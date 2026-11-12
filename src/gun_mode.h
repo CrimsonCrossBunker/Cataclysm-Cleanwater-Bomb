@@ -18,9 +18,9 @@ class gun_mode
     public:
         /** pointer to item providing this mode - base gun or attached gunmod */
         item *target = nullptr;
-        /** Fixed shot count when rpm is zero, or reach for melee modes. */
+        /** Fixed shot count or melee reach. Zero for RPM modes with no fixed count. */
         int qty = 0;
-        /** Cyclic rate in rounds per game minute. Zero indicates a fixed quantity. */
+        /** Cyclic rate in rounds per game minute, when firing is timed by RPM. */
         int rpm = 0;
         /** flags change behavior of gun mode, e.g. MELEE for bayonets that make a reach attack instead of firing - these are **not** equivalent to item flags! */
         std::set<std::string> flags;
@@ -34,7 +34,15 @@ class gun_mode
             rpm( rpm ),
             flags( flags ) {}
 
-        /** Read or reserve this game second's burst. Unused shots expire at the end of the second. */
+        bool fixed_burst() const {
+            return rpm > 0 && qty > 0;
+        }
+
+        bool full_auto() const {
+            return rpm > 0 && qty == 0;
+        }
+
+        /** Get or reserve the shot count. Only full auto uses a per-second allowance. */
         int shots_available( time_point when ) const;
         int start_firing( time_point when ) const;
 

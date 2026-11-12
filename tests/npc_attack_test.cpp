@@ -44,6 +44,7 @@ class Creature;
 
 static const faction_id faction_your_followers( "your_followers" );
 
+static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 
 static const itype_id itype_backpack( "backpack" );
@@ -52,6 +53,7 @@ static const itype_id itype_combat_exoskeleton_medium_on( "combat_exoskeleton_me
 static const itype_id itype_grenade_act( "grenade_act" );
 static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_knife_large( "knife_large" );
+static const itype_id itype_modular_m16_auto_rifle( "modular_m16_auto_rifle" );
 static const itype_id itype_modular_m16a4( "modular_m16a4" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_wearable_light( "wearable_light" );
@@ -269,11 +271,13 @@ TEST_CASE( "NPC_automatic_fire_respects_distance_and_burst_orders", "[npc_attack
     clear_map_and_put_player_underground();
     scoped_weather_override sunny_weather( weather_sunny );
     npc &shooter = npc_attack_setup::respawn_main_npc();
-    arm_shooter( shooter, itype_modular_m16a4 );
+    arm_shooter( shooter, itype_modular_m16_auto_rifle );
     item &rifle = *shooter.get_wielded_item();
-    REQUIRE( rifle.gun_set_mode( gun_mode_BURST ) );
+    REQUIRE( rifle.gun_set_mode( gun_mode_AUTO ) );
     const gun_mode mode = rifle.gun_current_mode();
-    REQUIRE( mode.rpm == 900 );
+    REQUIRE( mode.full_auto() );
+    const int turn_shots = mode.shots_available( calendar::turn );
+    REQUIRE( turn_shots > 7 );
     shooter.rules.burst = order;
     shooter.set_skill_level( rifle.gun_skill(), skill );
     monster *zombie = npc_attack_setup::spawn_zombie_at_range( distance );
@@ -285,12 +289,12 @@ TEST_CASE( "NPC_automatic_fire_respects_distance_and_burst_orders", "[npc_attack
     const int turn_moves = shooter.get_speed();
     shooter.set_moves( turn_moves );
     const int ammo_before = rifle.ammo_remaining();
-    REQUIRE( ammo_before >= 15 );
+    REQUIRE( ammo_before >= turn_shots );
 
-    npc_attack_gun( rifle, gun_mode_BURST, mode ).use( shooter, target );
+    npc_attack_gun( rifle, gun_mode_AUTO, mode ).use( shooter, target );
     const int fired = ammo_before - rifle.ammo_remaining();
     if( estimate == 0 ) {
-        CHECK( fired == 15 );
+        CHECK( fired == turn_shots );
         CHECK( shooter.get_moves() == 0 );
     } else {
         const auto [minimum, maximum] = firearm_burst_round_range( estimate, skill );
@@ -298,7 +302,7 @@ TEST_CASE( "NPC_automatic_fire_respects_distance_and_burst_orders", "[npc_attack
         CHECK( fired <= maximum );
         CHECK( shooter.get_moves() == turn_moves -
                firearm_burst_move_cost( fired, mode.rpm, turn_moves ) );
-        CHECK( mode.shots_available( calendar::turn ) == 15 );
+        CHECK( mode.shots_available( calendar::turn ) == turn_shots );
     }
 }
 
@@ -308,10 +312,11 @@ TEST_CASE( "NPC_automatic_bursts_use_remaining_moves_and_resume_aim",
     clear_map_and_put_player_underground();
     scoped_weather_override sunny_weather( weather_sunny );
     npc &shooter = npc_attack_setup::respawn_main_npc();
-    arm_shooter( shooter, itype_modular_m16a4 );
+    arm_shooter( shooter, itype_modular_m16_auto_rifle );
     item &rifle = *shooter.get_wielded_item();
-    REQUIRE( rifle.gun_set_mode( gun_mode_BURST ) );
+    REQUIRE( rifle.gun_set_mode( gun_mode_AUTO ) );
     const gun_mode mode = rifle.gun_current_mode();
+    REQUIRE( mode.full_auto() );
     shooter.rules.burst = burst_rule::SHORT;
     shooter.set_skill_level( rifle.gun_skill(), MAX_SKILL );
     monster *zombie = npc_attack_setup::spawn_zombie_at_range( 4 );
@@ -320,7 +325,7 @@ TEST_CASE( "NPC_automatic_bursts_use_remaining_moves_and_resume_aim",
     const tripoint_bub_ms target = zombie->pos_bub();
     shooter.last_target_pos = get_map().get_abs( target );
     const int ammo_before = rifle.ammo_remaining();
-    const npc_attack_gun burst( rifle, gun_mode_BURST, mode );
+    const npc_attack_gun burst( rifle, gun_mode_AUTO, mode );
 
     SECTION( "Aim continues on the next turn when moves run out" ) {
         shooter.recoil = MAX_RECOIL;
@@ -350,6 +355,47 @@ TEST_CASE( "NPC_automatic_bursts_use_remaining_moves_and_resume_aim",
         CHECK( moves_after_first - shooter.get_moves() >
                firearm_burst_move_cost( 3, mode.rpm, shooter.get_speed() ) );
     }
+}
+
+TEST_CASE( "NPC_fixed_bursts_keep_the_configured_count_under_full_auto_orders",
+           "[npc_attack][gun_rpm]" )
+{
+    clear_map_and_put_player_underground();
+    scoped_weather_override sunny_weather( weather_sunny );
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    arm_shooter( shooter, itype_modular_m16a4 );
+    item &rifle = *shooter.get_wielded_item();
+    rifle.set_flag( flag_id( "NEVER_JAMS" ) );
+    REQUIRE( rifle.gun_set_mode( gun_mode_BURST ) );
+    const gun_mode mode = rifle.gun_current_mode();
+    REQUIRE( mode.fixed_burst() );
+    REQUIRE( mode.qty == 3 );
+    REQUIRE( mode.rpm == 800 );
+    shooter.rules.burst = burst_rule::FULL_AUTO;
+    shooter.set_skill_level( rifle.gun_skill(), 0 );
+    monster *zombie = npc_attack_setup::spawn_zombie_at_range( 4 );
+    REQUIRE( zombie );
+    const tripoint_bub_ms target = zombie->pos_bub();
+    shooter.last_target_pos = get_map().get_abs( target );
+    const npc_attack_gun burst( rifle, gun_mode_BURST, mode );
+    const int ammo_before = rifle.ammo_remaining();
+    REQUIRE( ammo_before >= 3 );
+
+    shooter.recoil = MAX_RECOIL;
+    shooter.set_moves( 1 );
+    burst.use( shooter, target );
+    CHECK( rifle.ammo_remaining() == ammo_before );
+    CHECK( shooter.get_moves() == 0 );
+    CHECK( shooter.recoil < MAX_RECOIL );
+
+    shooter.recoil = 0;
+    shooter.set_moves( shooter.get_speed() );
+    const int moves_before = shooter.get_moves();
+
+    burst.use( shooter, target );
+    CHECK( rifle.ammo_remaining() == ammo_before - 3 );
+    CHECK( shooter.get_moves() == moves_before -
+           firearm_burst_move_cost( 3, mode.rpm, shooter.get_speed() ) );
 }
 
 TEST_CASE( "NPC_burst_orders_survive_save_load", "[npc_rules][gun_rpm]" )

@@ -540,8 +540,10 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
     if( mode.rpm > 0 ) {
         const npc_gun_range range = npc_gun_distance( source, *mode,
                                     rl_dist( source.pos_bub(), location ) );
-        burst_rounds = npc_burst_estimate( source.rules.burst, range );
-        if( burst_rounds > 0 ) {
+        if( mode.full_auto() ) {
+            burst_rounds = npc_burst_estimate( source.rules.burst, range );
+        }
+        if( mode.fixed_burst() || burst_rounds > 0 ) {
             std::optional<tripoint_bub_ms> previous;
             if( source.last_target_pos ) {
                 previous = here.get_bub( *source.last_target_pos );
@@ -671,7 +673,7 @@ npc_attack_rating npc_attack_gun::evaluate_tripoint(
     const bool avoids_friendly_fire = source.rules.has_flag( ally_rule::avoid_friendly_fire );
     const int distance_to_me = rl_dist( location, source.pos_bub() );
     const item &weapon = *gunmode;
-    const int estimate = gunmode.rpm > 0
+    const int estimate = gunmode.full_auto()
                          ? npc_burst_estimate( source.rules.burst, npc_gun_distance( source, weapon,
                                  distance_to_me ) )
                          : 0;
