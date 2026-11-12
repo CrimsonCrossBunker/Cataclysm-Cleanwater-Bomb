@@ -2149,7 +2149,7 @@
   {
     "id": "SLING_PROJECTILE",
     "type": "json_flag",
-    "info": "Can receive throw corrections from a compatible sling."
+    "info": "Can be thrown via a compatible sling."
   },
   {
     "id": "THROW_KEEP_WIELDED",
