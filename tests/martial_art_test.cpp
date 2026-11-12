@@ -506,6 +506,39 @@ TEST_CASE( "active_technique_accuracy_bonus_modifies_the_attack_roll",
     CHECK( melee::get_stats().hit_count == 1 );
 }
 
+TEST_CASE( "active_technique_notifies_allied_npc_once_on_hit_or_miss",
+           "[martial_arts][active_technique][npc]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    dude.martial_arts_data->add_martialart( test_style_ma1 );
+    dude.martial_arts_data->set_style( test_style_ma1 );
+    dude.set_moves( 1000 );
+
+    npc &target = spawn_npc( ( dude_pos + tripoint::east ).xy(), "test_talker" );
+    clear_character( target, true );
+    target.setpos( get_map(), dude_pos + tripoint::east );
+    target.set_attitude( NPCATT_FOLLOW );
+    target.op_of_u.trust = 20;
+    target.op_of_u.anger = 0;
+    REQUIRE( target.is_player_ally() );
+
+    const bool should_hit = GENERATE( false, true );
+    target.set_dodge_bonus( should_hit ? -10000 : 10000 );
+    melee::clear_stats();
+
+    REQUIRE( dude.use_active_technique( target, test_active_strike ) );
+    CHECK( melee::get_stats().attack_count == 1 );
+    CHECK( melee::get_stats().hit_count == ( should_hit ? 1 : 0 ) );
+    CHECK( target.hit_by_player );
+    CHECK( target.op_of_u.trust == 15 );
+    CHECK( target.op_of_u.anger == 5 );
+    CHECK( target.is_player_ally() );
+}
+
 TEST_CASE( "active_technique_cooldown_tracks_execution_and_game_time",
            "[martial_arts][active_technique][cooldown]" )
 {

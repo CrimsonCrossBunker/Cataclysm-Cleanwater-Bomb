@@ -935,6 +935,11 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
         // trigger martial arts on-miss effects
         martial_arts_data->ma_onmiss_effects( *this );
+        if( validated_technique ) {
+            if( npc *const person = t.as_npc() ) {
+                person->on_attacked( *this );
+            }
+        }
     } else {
         melee::melee_stats.hit_count += 1;
         // Remember if we see the monster at start - it may change
