@@ -82,13 +82,17 @@ extern "C" {
 #include "lua_platform_sol.h"
 
 static const damage_type_id damage_bash( "bash" );
-static const skill_id skill_unarmed( "unarmed" );
-static const skill_id skill_melee( "melee" );
-static const efftype_id effect_martial_grapple( "martial_grapple" );
+
 static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
+
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
+
+static const skill_id skill_melee( "melee" );
+static const skill_id skill_unarmed( "unarmed" );
+
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHELL3( "SHELL3" );
 

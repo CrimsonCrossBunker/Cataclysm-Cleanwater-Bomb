@@ -45,8 +45,37 @@
 #include "translation.h"
 #include "type_id.h"
 
+static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
+
+static const itype_id itype_i_staff( "i_staff" );
+static const itype_id itype_test_weapon1( "test_weapon1" );
+
 static const matec_id RAPID( "RAPID" );
+static const matec_id lua_cooldown_validation( "lua_cooldown_validation" );
+static const matec_id lua_local_strike( "lua_local_strike" );
+static const matec_id lua_position_authoring( "lua_position_authoring" );
+static const matec_id lua_style_grip( "lua_style_grip" );
+static const matec_id tec_grapple_hold( "tec_grapple_hold" );
+static const matec_id tec_lua_boxing_cross( "tec_lua_boxing_cross" );
+static const matec_id tec_lua_boxing_double_jab( "tec_lua_boxing_double_jab" );
+static const matec_id tec_lua_boxing_opening_cross( "tec_lua_boxing_opening_cross" );
+static const matec_id tec_lua_muay_clinch_knee( "tec_lua_muay_clinch_knee" );
+static const matec_id tec_lua_muay_push_kick( "tec_lua_muay_push_kick" );
+static const matec_id tec_lua_staff_long_thrust( "tec_lua_staff_long_thrust" );
+static const matec_id tec_rapid_window_break( "tec_rapid_window_break" );
+static const matec_id tec_shadow_combination( "tec_shadow_combination" );
+static const matec_id tec_weapon_breach( "tec_weapon_breach" );
 static const matec_id tech_base_headbutt( "tech_base_headbutt" );
+static const matec_id test_active_strike( "test_active_strike" );
+static const matec_id test_manual_cooldown_strike( "test_manual_cooldown_strike" );
+
+static const matype_id lua_local_style( "lua_local_style" );
+static const matype_id style_brawling( "style_brawling" );
+static const matype_id style_judo( "style_judo" );
+static const matype_id test_style_ma1( "test_style_ma1" );
+
+static const skill_id skill_unarmed( "unarmed" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
            "[lua][platform][martial_arts][semantic]" )
@@ -144,11 +173,11 @@ ccb.content.add(technique)
     CHECK( valid == expected );
     if( valid ) {
         REQUIRE( platform::apply_runtime_content( runtime, error ) );
-        const matec_id technique( "lua_cooldown_validation" );
-        REQUIRE( technique.is_valid() );
-        CHECK( technique->cooldown == time_duration::from_turns( cooldown ) );
+
+        REQUIRE( lua_cooldown_validation.is_valid() );
+        CHECK( lua_cooldown_validation->cooldown == time_duration::from_turns( cooldown ) );
         platform::rollback_runtime_content( runtime );
-        CHECK_FALSE( technique.is_valid() );
+        CHECK_FALSE( lua_cooldown_validation.is_valid() );
     } else {
         CHECK_FALSE( error.empty() );
     }
@@ -159,9 +188,9 @@ TEST_CASE( "lua_platform_technique_cooldown_replacement_restores_native_definiti
 {
     namespace platform = cata::lua_platform;
     const bool explicit_cooldown = GENERATE( false, true );
-    const matec_id technique( "test_manual_cooldown_strike" );
-    REQUIRE( technique.is_valid() );
-    const time_duration original_cooldown = technique->cooldown;
+
+    REQUIRE( test_manual_cooldown_strike.is_valid() );
+    const time_duration original_cooldown = test_manual_cooldown_strike->cooldown;
     REQUIRE( original_cooldown == 10_seconds );
     sol::state lua;
     sol::table ccb = lua.create_table();
@@ -187,10 +216,10 @@ ccb.content.replace(technique)
     INFO( error );
     REQUIRE( platform::validate_runtime( runtime, true, error ) );
     REQUIRE( platform::apply_runtime_content( runtime, error ) );
-    CHECK( technique->cooldown == ( explicit_cooldown ? 17_seconds : 0_turns ) );
+    CHECK( test_manual_cooldown_strike->cooldown == ( explicit_cooldown ? 17_seconds : 0_turns ) );
     platform::rollback_runtime_content( runtime );
-    REQUIRE( technique.is_valid() );
-    CHECK( technique->cooldown == original_cooldown );
+    REQUIRE( test_manual_cooldown_strike.is_valid() );
+    CHECK( test_manual_cooldown_strike->cooldown == original_cooldown );
 }
 
 TEST_CASE( "lua_platform_technique_cooldown_changes_content_fingerprint",
@@ -246,9 +275,9 @@ TEST_CASE( "lua_platform_grapple_authoring_validates_and_rolls_back",
                                          std::string( "grapple_cooldown_turns = 2147483648," ),
                                          std::string( "grapple_plan = 'missing'," ) );
     CAPTURE( fields );
-    const matec_id id( "tec_grapple_hold" );
-    REQUIRE( id.is_valid() );
-    const ma_technique original = ma_technique( id.obj() );
+
+    REQUIRE( tec_grapple_hold.is_valid() );
+    const ma_technique original = ma_technique( tec_grapple_hold.obj() );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "grapple-authoring", 1, lua );
@@ -276,15 +305,15 @@ ccb.content.replace(technique)
     REQUIRE( valid == fields.empty() );
     if( valid ) {
         REQUIRE( platform::apply_runtime_content( runtime, error ) );
-        CHECK( id->grapple_action == "hold" );
-        CHECK( id->grapple_power == 110 );
-        CHECK( id->grapple_stamina == 5 );
-        CHECK( id->grapple_cooldown == 2_seconds );
-        CHECK( id->lua_platform_grapple_handler == "plan" );
+        CHECK( tec_grapple_hold->grapple_action == "hold" );
+        CHECK( tec_grapple_hold->grapple_power == 110 );
+        CHECK( tec_grapple_hold->grapple_stamina == 5 );
+        CHECK( tec_grapple_hold->grapple_cooldown == 2_seconds );
+        CHECK( tec_grapple_hold->lua_platform_grapple_handler == "plan" );
         platform::rollback_runtime_content( runtime );
-        CHECK( id->grapple_power == original.grapple_power );
-        CHECK( id->lua_platform_grapple_handler == original.lua_platform_grapple_handler );
-        CHECK( id->lua_platform_mod == original.lua_platform_mod );
+        CHECK( tec_grapple_hold->grapple_power == original.grapple_power );
+        CHECK( tec_grapple_hold->lua_platform_grapple_handler == original.lua_platform_grapple_handler );
+        CHECK( tec_grapple_hold->lua_platform_mod == original.lua_platform_mod );
     }
 }
 
@@ -303,9 +332,9 @@ TEST_CASE( "lua_platform_grapple_execution_uses_plan_without_double_charging",
     attacker.setpos( get_map(), origin );
     attacker.set_all_skills( 5 );
     attacker.remove_weapon();
-    const matype_id style( "style_judo" );
-    attacker.martial_arts_data->add_martialart( style );
-    attacker.martial_arts_data->set_style( style );
+
+    attacker.martial_arts_data->add_martialart( style_judo );
+    attacker.martial_arts_data->set_style( style_judo );
     attacker.set_moves( 1000 );
     attacker.set_stamina( attacker.get_stamina_max() );
     monster &target = spawn_test_monster( "mon_zombie", origin + tripoint::east );
@@ -364,9 +393,9 @@ ccb.content.replace(technique)
     const int stamina = attacker.get_stamina();
     const int moves = attacker.get_moves();
     const int hitpoints = target.get_hp();
-    const matec_id technique( "tec_grapple_hold" );
+
     REQUIRE_FALSE( debug_has_error_been_observed() );
-    const bool executed = attacker.use_active_technique( target, technique );
+    const bool executed = attacker.use_active_technique( target, tec_grapple_hold );
     const bool expected_diagnostic = mode != "ok" && mode != "reject" && mode != "missing_runtime";
     CHECK( debug_has_error_been_observed() == expected_diagnostic );
     if( expected_diagnostic ) {
@@ -378,19 +407,19 @@ ccb.content.replace(technique)
     if( executed ) {
         CHECK( attacker.get_stamina() == stamina - 17 );
         CHECK( attacker.get_moves() == moves - 123 );
-        REQUIRE( target.has_effect( efftype_id( "martial_grapple" ) ) );
-        CHECK( target.get_effect( efftype_id( "martial_grapple" ) ).get_duration() == 7_seconds );
-        CHECK( attacker.has_effect( technique->grapple_cooldown_effect() ) );
+        REQUIRE( target.has_effect( effect_martial_grapple ) );
+        CHECK( target.get_effect( effect_martial_grapple ).get_duration() == 7_seconds );
+        CHECK( attacker.has_effect( tec_grapple_hold->grapple_cooldown_effect() ) );
         sol::table payload = lua["payload"];
-        CHECK( payload["technique_id"].get<std::string>() == technique.str() );
+        CHECK( payload["technique_id"].get<std::string>() == tec_grapple_hold.str() );
         CHECK( payload["strength"].get<int>() == attacker.get_str() );
         CHECK( payload["unarmed_skill"].get<double>() == Approx( 5.0 ) );
         CHECK( payload["target_weight_kg"].get<double>() > 0.0 );
     } else {
         CHECK( attacker.get_stamina() == stamina );
         CHECK( attacker.get_moves() == moves );
-        CHECK_FALSE( target.has_effect( efftype_id( "martial_grapple" ) ) );
-        CHECK_FALSE( attacker.has_effect( technique->grapple_cooldown_effect() ) );
+        CHECK_FALSE( target.has_effect( effect_martial_grapple ) );
+        CHECK_FALSE( attacker.has_effect( tec_grapple_hold->grapple_cooldown_effect() ) );
     }
 }
 
@@ -399,8 +428,8 @@ TEST_CASE( "lua_platform_technique_style_additions_preserve_and_rollback_native_
 {
     namespace platform = cata::lua_platform;
     const bool invalid_style = GENERATE( false, true );
-    const matype_id style( "style_brawling" );
-    const martialart original = martialart( *style );
+
+    const martialart original = martialart( *style_brawling );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "technique-styles", 1, lua );
@@ -409,7 +438,7 @@ TEST_CASE( "lua_platform_technique_style_additions_preserve_and_rollback_native_
     } );
     platform::install_runtime_api( runtime, lua, ccb );
     lua["ccb"] = ccb;
-    lua["style_id"] = invalid_style ? "missing_lua_style" : style.str();
+    lua["style_id"] = invalid_style ? "missing_lua_style" : style_brawling.str();
     const sol::protected_function_result call = lua.safe_script( R"lua(
 local technique = ccb.content.Technique { id = "lua_style_grip", name = "Style grip" }
 technique:attack_vector("vector_punch")
@@ -427,21 +456,21 @@ ccb.content.add(second)
     INFO( error );
     REQUIRE( valid == !invalid_style );
     if( !valid ) {
-        CHECK( style->techniques == original.techniques );
+        CHECK( style_brawling->techniques == original.techniques );
         return;
     }
     REQUIRE( platform::apply_runtime_content( runtime, error ) );
-    CHECK( style->techniques.size() == original.techniques.size() + 1 );
-    CHECK( style->techniques.count( matec_id( "lua_style_grip" ) ) == 1 );
-    CHECK( style->static_buffs == original.static_buffs );
-    CHECK( style->onpause_buffs == original.onpause_buffs );
-    CHECK( style->allow_all_weapons == original.allow_all_weapons );
-    CHECK( matype_id( "lua_local_style" )->techniques.count( matec_id( "lua_local_strike" ) ) == 1 );
+    CHECK( style_brawling->techniques.size() == original.techniques.size() + 1 );
+    CHECK( style_brawling->techniques.count( lua_style_grip ) == 1 );
+    CHECK( style_brawling->static_buffs == original.static_buffs );
+    CHECK( style_brawling->onpause_buffs == original.onpause_buffs );
+    CHECK( style_brawling->allow_all_weapons == original.allow_all_weapons );
+    CHECK( lua_local_style->techniques.count( lua_local_strike ) == 1 );
     platform::rollback_runtime_content( runtime );
-    CHECK( style->techniques == original.techniques );
-    CHECK( style->static_buffs == original.static_buffs );
-    CHECK_FALSE( matec_id( "lua_style_grip" ).is_valid() );
-    CHECK_FALSE( matype_id( "lua_local_style" ).is_valid() );
+    CHECK( style_brawling->techniques == original.techniques );
+    CHECK( style_brawling->static_buffs == original.static_buffs );
+    CHECK_FALSE( lua_style_grip.is_valid() );
+    CHECK_FALSE( lua_local_style.is_valid() );
 }
 
 TEST_CASE( "lua_platform_target_policy_rechecks_non_hostile_targets_before_costs",
@@ -455,11 +484,11 @@ TEST_CASE( "lua_platform_target_policy_rechecks_non_hostile_targets_before_costs
     avatar &attacker = get_avatar();
     const tripoint_bub_ms origin( 60, 60, 0 );
     attacker.setpos( get_map(), origin );
-    attacker.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    attacker.set_wielded_item( item( itype_test_weapon1 ) );
     attacker.set_all_skills( 5 );
-    const matype_id style( "test_style_ma1" );
-    attacker.martial_arts_data->add_martialart( style );
-    attacker.martial_arts_data->set_style( style );
+
+    attacker.martial_arts_data->add_martialart( test_style_ma1 );
+    attacker.martial_arts_data->set_style( test_style_ma1 );
     attacker.set_moves( 1000 );
     attacker.set_stamina( attacker.get_stamina_max() );
     monster &target = spawn_test_monster( "mon_zombie", origin + tripoint::east );
@@ -501,9 +530,9 @@ ccb.content.replace(technique)
     REQUIRE( platform::apply_runtime_content( runtime, error ) );
     platform::set_active_runtimes( { runtime } );
     platform::runtime_world_ready( true );
-    const matec_id technique( "test_active_strike" );
+
     if( mode == "changed" ) {
-        REQUIRE( technique->activation_allowed( attacker, "target", &target ) );
+        REQUIRE( test_active_strike->activation_allowed( attacker, "target", &target ) );
         lua["reject"] = true;
     }
     if( mode == "missing_runtime" ) {
@@ -513,7 +542,7 @@ ccb.content.replace(technique)
     const int moves = attacker.get_moves();
     const int hitpoints = target.get_hp();
     REQUIRE_FALSE( debug_has_error_been_observed() );
-    const bool executed = attacker.use_active_technique( target, technique );
+    const bool executed = attacker.use_active_technique( target, test_active_strike );
     const bool diagnostic = mode == "exception" || mode == "non_boolean";
     CHECK( debug_has_error_been_observed() == diagnostic );
     if( diagnostic ) {
@@ -583,17 +612,17 @@ ccb.content.add(technique)
     const bool valid = platform::validate_runtime( runtime, true, error );
     INFO( error );
     REQUIRE( valid == ( mode == "valid" ) );
-    const matec_id technique( "lua_position_authoring" );
-    CHECK_FALSE( technique.is_valid() );
+
+    CHECK_FALSE( lua_position_authoring.is_valid() );
     if( valid ) {
         REQUIRE( platform::apply_runtime_content( runtime, error ) );
-        REQUIRE( technique.is_valid() );
-        CHECK( technique->targets_position() );
-        CHECK( technique->move_cost_multiplier( get_avatar() ) == Approx( 1.3 ) );
-        CHECK( technique->damage_multiplier( get_avatar(), damage_type_id( "bash" ) ) == Approx( 1.4 ) );
-        CHECK( technique->bonuses.get_flat( get_avatar(), affected_stat::HIT ) == Approx( -1 ) );
+        REQUIRE( lua_position_authoring.is_valid() );
+        CHECK( lua_position_authoring->targets_position() );
+        CHECK( lua_position_authoring->move_cost_multiplier( get_avatar() ) == Approx( 1.3 ) );
+        CHECK( lua_position_authoring->damage_multiplier( get_avatar(), damage_type_id( "bash" ) ) == Approx( 1.4 ) );
+        CHECK( lua_position_authoring->bonuses.get_flat( get_avatar(), affected_stat::HIT ) == Approx( -1 ) );
         platform::rollback_runtime_content( runtime );
-        CHECK_FALSE( technique.is_valid() );
+        CHECK_FALSE( lua_position_authoring.is_valid() );
     }
 }
 
@@ -652,35 +681,33 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
     const tripoint_bub_ms position = origin + tripoint::east;
     attacker.setpos( here, origin );
     attacker.set_all_skills( 5 );
-    const matype_id style( "style_brawling" );
-    attacker.martial_arts_data->add_martialart( style );
-    attacker.martial_arts_data->set_style( style );
+
+    attacker.martial_arts_data->add_martialart( style_brawling );
+    attacker.martial_arts_data->set_style( style_brawling );
     attacker.set_moves( 1000 );
     attacker.set_stamina( attacker.get_stamina_max() );
-    const matec_id window( "tec_rapid_window_break" );
-    const matec_id shadow( "tec_shadow_combination" );
-    const matec_id breach( "tec_weapon_breach" );
-    REQUIRE( window.is_valid() );
-    REQUIRE( shadow.is_valid() );
-    REQUIRE( breach.is_valid() );
-    REQUIRE( window->targets_position() );
+
+    REQUIRE( tec_rapid_window_break.is_valid() );
+    REQUIRE( tec_shadow_combination.is_valid() );
+    REQUIRE( tec_weapon_breach.is_valid() );
+    REQUIRE( tec_rapid_window_break->targets_position() );
     SECTION( "ordinary_window_uses_native_bashing" ) {
         here.ter_set( position, ter_str_id( "t_window_domestic" ) );
-        REQUIRE( attacker.can_use_active_technique_at( position, window ) );
+        REQUIRE( attacker.can_use_active_technique_at( position, tec_rapid_window_break ) );
         const int stamina = attacker.get_stamina();
-        REQUIRE( attacker.use_active_technique( position, window ) );
+        REQUIRE( attacker.use_active_technique( position, tec_rapid_window_break ) );
         CHECK( here.ter( position ) != ter_str_id( "t_window_domestic" ) );
         CHECK( attacker.get_stamina() == stamina - 110 );
         CHECK( attacker.get_moves() == 930 );
-        CHECK( attacker.technique_cooldown_remaining( window ) == 3_turns );
+        CHECK( attacker.technique_cooldown_remaining( tec_rapid_window_break ) == 3_turns );
     }
     SECTION( "reinforced_glass_is_not_force_destroyed" ) {
         here.ter_set( position, ter_str_id( "t_reinforced_glass" ) );
         const ter_id before = here.ter( position );
-        if( attacker.can_use_active_technique_at( position, window ) ) {
-            REQUIRE( attacker.use_active_technique( position, window ) );
+        if( attacker.can_use_active_technique_at( position, tec_rapid_window_break ) ) {
+            REQUIRE( attacker.use_active_technique( position, tec_rapid_window_break ) );
         } else {
-            CHECK_FALSE( attacker.use_active_technique( position, window ) );
+            CHECK_FALSE( attacker.use_active_technique( position, tec_rapid_window_break ) );
             CHECK( attacker.get_moves() == 1000 );
         }
         CHECK( here.ter( position ) == before );
@@ -688,50 +715,50 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
     SECTION( "empty_space_consumes_resources_but_not_terrain_or_experience" ) {
         here.ter_set( position, ter_str_id( "t_pavement" ) );
         const ter_id before = here.ter( position );
-        const int experience = attacker.get_skill_level_object( skill_id( "unarmed" ) ).exercise();
+        const int experience = attacker.get_skill_level_object( skill_unarmed ).exercise();
         const int stamina = attacker.get_stamina();
-        REQUIRE( attacker.can_use_active_technique_at( position, shadow ) );
+        REQUIRE( attacker.can_use_active_technique_at( position, tec_shadow_combination ) );
         CHECK( attacker.get_moves() == 1000 );
         CHECK( attacker.get_stamina() == stamina );
-        REQUIRE( attacker.use_active_technique( position, shadow ) );
+        REQUIRE( attacker.use_active_technique( position, tec_shadow_combination ) );
         CHECK( attacker.get_moves() == 915 );
         CHECK( attacker.get_stamina() == stamina - 70 );
         CHECK( here.ter( position ) == before );
-        CHECK( attacker.get_skill_level_object( skill_id( "unarmed" ) ).exercise() == experience );
+        CHECK( attacker.get_skill_level_object( skill_unarmed ).exercise() == experience );
     }
     SECTION( "wrong_terrain_and_weapon_fail_without_cost" ) {
         here.ter_set( position, ter_str_id( "t_pavement" ) );
-        CHECK_FALSE( attacker.use_active_technique( position, window ) );
-        CHECK_FALSE( attacker.use_active_technique( position, breach ) );
+        CHECK_FALSE( attacker.use_active_technique( position, tec_rapid_window_break ) );
+        CHECK_FALSE( attacker.use_active_technique( position, tec_weapon_breach ) );
         CHECK( attacker.get_moves() == 1000 );
     }
     SECTION( "weapon_breach_requires_the_correct_weapon_and_charges_once" ) {
-        attacker.set_wielded_item( item( itype_id( "i_staff" ) ) );
+        attacker.set_wielded_item( item( itype_i_staff ) );
         here.ter_set( position, ter_str_id( "t_window_domestic" ) );
         const int stamina = attacker.get_stamina();
-        REQUIRE( attacker.can_use_active_technique_at( position, breach ) );
+        REQUIRE( attacker.can_use_active_technique_at( position, tec_weapon_breach ) );
         CHECK( attacker.get_stamina() == stamina );
-        REQUIRE( attacker.use_active_technique( position, breach ) );
+        REQUIRE( attacker.use_active_technique( position, tec_weapon_breach ) );
         CHECK( attacker.get_stamina() == stamina - 220 );
         CHECK( attacker.get_moves() == 850 );
         CHECK( here.ter( position ) != ter_str_id( "t_window_domestic" ) );
-        CHECK_FALSE( attacker.use_active_technique( position, breach ) );
+        CHECK_FALSE( attacker.use_active_technique( position, tec_weapon_breach ) );
         CHECK( attacker.get_moves() == 850 );
     }
     SECTION( "vehicle_positions_are_excluded" ) {
         REQUIRE( here.add_vehicle( vproto_id( "bicycle" ), position, 0_degrees ) );
         REQUIRE( here.veh_at( position ) );
-        CHECK_FALSE( attacker.can_use_active_technique_at( position, shadow ) );
-        CHECK_FALSE( attacker.use_active_technique( position, shadow ) );
+        CHECK_FALSE( attacker.can_use_active_technique_at( position, tec_shadow_combination ) );
+        CHECK_FALSE( attacker.use_active_technique( position, tec_shadow_combination ) );
         CHECK( attacker.get_moves() == 1000 );
     }
     SECTION( "occupied_positions_and_creature_overload_are_rejected" ) {
         monster &target = spawn_test_monster( "mon_zombie", position );
         target.friendly = -1;
-        CHECK_FALSE( attacker.can_use_active_technique_at( position, shadow ) );
-        CHECK_FALSE( attacker.use_active_technique( position, shadow ) );
-        CHECK_FALSE( attacker.use_active_technique( target, shadow ) );
-        CHECK_FALSE( attacker.evaluate_technique( shadow, target, attacker.used_weapon(),
+        CHECK_FALSE( attacker.can_use_active_technique_at( position, tec_shadow_combination ) );
+        CHECK_FALSE( attacker.use_active_technique( position, tec_shadow_combination ) );
+        CHECK_FALSE( attacker.use_active_technique( target, tec_shadow_combination ) );
+        CHECK_FALSE( attacker.evaluate_technique( tec_shadow_combination, target, attacker.used_weapon(),
                      false, false, false, false ) );
         CHECK( attacker.get_moves() == 1000 );
     }
@@ -747,16 +774,12 @@ TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
     attacker.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
     attacker.set_all_skills( 5 );
     attacker.set_stamina( attacker.get_stamina_max() );
-    const matec_id jab( "tec_lua_boxing_double_jab" );
-    const matec_id cross( "tec_lua_boxing_cross" );
-    const matec_id critical( "tec_lua_boxing_opening_cross" );
-    const matec_id knee( "tec_lua_muay_clinch_knee" );
-    const matec_id staff( "tec_lua_staff_long_thrust" );
-    REQUIRE( jab.is_valid() );
-    REQUIRE( cross.is_valid() );
-    REQUIRE( critical.is_valid() );
-    REQUIRE( knee.is_valid() );
-    REQUIRE( staff.is_valid() );
+
+    REQUIRE( tec_lua_boxing_double_jab.is_valid() );
+    REQUIRE( tec_lua_boxing_cross.is_valid() );
+    REQUIRE( tec_lua_boxing_opening_cross.is_valid() );
+    REQUIRE( tec_lua_muay_clinch_knee.is_valid() );
+    REQUIRE( tec_lua_staff_long_thrust.is_valid() );
     int library_count = 0;
     for( const ma_technique &technique : ma_technique::get_all() ) {
         if( technique.id.str().find( "tec_lua_" ) != 0 ) {
@@ -771,50 +794,50 @@ TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
         CHECK( technique.manual_activation != technique.crit_tec );
     }
     CHECK( library_count == 26 );
-    CHECK( jab->repeat_min == 2 );
-    CHECK( jab->repeat_max == 2 );
-    CHECK( jab->damage_multiplier( attacker, damage_type_id( "bash" ) ) == Approx( 0.65 ) );
-    CHECK( cross->damage_multiplier( attacker, damage_type_id( "bash" ) ) == Approx( 1.3 ) );
-    CHECK( jab->move_cost_multiplier( attacker ) < cross->move_cost_multiplier( attacker ) );
-    CHECK( jab->bonuses.get_flat( attacker, affected_stat::HIT ) == Approx( 1 ) );
-    CHECK( staff->reqs.weapon_categories_allowed == std::vector<weapon_category_id> {
+    CHECK( tec_lua_boxing_double_jab->repeat_min == 2 );
+    CHECK( tec_lua_boxing_double_jab->repeat_max == 2 );
+    CHECK( tec_lua_boxing_double_jab->damage_multiplier( attacker, damage_type_id( "bash" ) ) == Approx( 0.65 ) );
+    CHECK( tec_lua_boxing_cross->damage_multiplier( attacker, damage_type_id( "bash" ) ) == Approx( 1.3 ) );
+    CHECK( tec_lua_boxing_double_jab->move_cost_multiplier( attacker ) < tec_lua_boxing_cross->move_cost_multiplier( attacker ) );
+    CHECK( tec_lua_boxing_double_jab->bonuses.get_flat( attacker, affected_stat::HIT ) == Approx( 1 ) );
+    CHECK( tec_lua_staff_long_thrust->reqs.weapon_categories_allowed == std::vector<weapon_category_id> {
                weapon_category_id( "QUARTERSTAVES" )
            } );
-    CHECK( critical->crit_tec );
-    CHECK_FALSE( critical->can_activate() );
+    CHECK( tec_lua_boxing_opening_cross->crit_tec );
+    CHECK_FALSE( tec_lua_boxing_opening_cross->can_activate() );
     monster &target = spawn_test_monster( "mon_zombie", attacker.pos_bub() + tripoint::east );
     target.friendly = -1;
-    CHECK( jab->activation_allowed( attacker, "target", &target ) );
-    CHECK_FALSE( knee->activation_allowed( attacker, "target", &target ) );
-    target.add_effect( effect_source( &attacker ), efftype_id( "martial_grapple" ), 5_turns );
-    CHECK( knee->activation_allowed( attacker, "target", &target ) );
-    const matec_id push( "tec_lua_muay_push_kick" );
-    REQUIRE( push.is_valid() );
-    CHECK( push->activation_allowed( attacker, "target", &target ) );
-    target.add_effect( efftype_id( "downed" ), 1_turns );
-    CHECK_FALSE( push->activation_allowed( attacker, "target", &target ) );
+    CHECK( tec_lua_boxing_double_jab->activation_allowed( attacker, "target", &target ) );
+    CHECK_FALSE( tec_lua_muay_clinch_knee->activation_allowed( attacker, "target", &target ) );
+    target.add_effect( effect_source( &attacker ), effect_martial_grapple, 5_turns );
+    CHECK( tec_lua_muay_clinch_knee->activation_allowed( attacker, "target", &target ) );
+
+    REQUIRE( tec_lua_muay_push_kick.is_valid() );
+    CHECK( tec_lua_muay_push_kick->activation_allowed( attacker, "target", &target ) );
+    target.add_effect( effect_downed, 1_turns );
+    CHECK_FALSE( tec_lua_muay_push_kick->activation_allowed( attacker, "target", &target ) );
     monster &flying = spawn_test_monster( "mon_manhack", attacker.pos_bub() + tripoint::west );
-    CHECK_FALSE( push->activation_allowed( attacker, "target", &flying ) );
+    CHECK_FALSE( tec_lua_muay_push_kick->activation_allowed( attacker, "target", &flying ) );
     monster &large = spawn_test_monster( "mon_zombie_hulk", attacker.pos_bub() + tripoint::north );
-    CHECK_FALSE( push->activation_allowed( attacker, "target", &large ) );
-    const matype_id style( "style_brawling" );
-    attacker.martial_arts_data->add_martialart( style );
-    attacker.martial_arts_data->set_style( style );
-    CHECK_FALSE( staff->is_valid_character( attacker ) );
-    attacker.set_wielded_item( item( itype_id( "i_staff" ) ) );
-    CHECK( staff->is_valid_character( attacker ) );
-    attacker.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
-    CHECK_FALSE( staff->is_valid_character( attacker ) );
+    CHECK_FALSE( tec_lua_muay_push_kick->activation_allowed( attacker, "target", &large ) );
+
+    attacker.martial_arts_data->add_martialart( style_brawling );
+    attacker.martial_arts_data->set_style( style_brawling );
+    CHECK_FALSE( tec_lua_staff_long_thrust->is_valid_character( attacker ) );
+    attacker.set_wielded_item( item( itype_i_staff ) );
+    CHECK( tec_lua_staff_long_thrust->is_valid_character( attacker ) );
+    attacker.set_wielded_item( item( itype_test_weapon1 ) );
+    CHECK_FALSE( tec_lua_staff_long_thrust->is_valid_character( attacker ) );
     attacker.remove_weapon();
-    CHECK( attacker.evaluate_technique( critical, target, attacker.used_weapon(),
+    CHECK( attacker.evaluate_technique( tec_lua_boxing_opening_cross, target, attacker.used_weapon(),
                                         true, false, false, false ) );
-    CHECK_FALSE( attacker.evaluate_technique( critical, target, attacker.used_weapon(),
+    CHECK_FALSE( attacker.evaluate_technique( tec_lua_boxing_opening_cross, target, attacker.used_weapon(),
                  false, false, false, false ) );
-    CHECK_FALSE( attacker.evaluate_technique( critical, target, attacker.used_weapon(),
+    CHECK_FALSE( attacker.evaluate_technique( tec_lua_boxing_opening_cross, target, attacker.used_weapon(),
                  true, false, false, true ) );
     attacker.set_stamina( 0 );
-    CHECK_FALSE( jab->activation_allowed( attacker, "target", &target ) );
-    CHECK_FALSE( attacker.evaluate_technique( critical, target, attacker.used_weapon(),
+    CHECK_FALSE( tec_lua_boxing_double_jab->activation_allowed( attacker, "target", &target ) );
+    CHECK_FALSE( attacker.evaluate_technique( tec_lua_boxing_opening_cross, target, attacker.used_weapon(),
                  true, false, false, false ) );
 }
 
@@ -832,11 +855,11 @@ TEST_CASE( "lua_position_plan_rejects_invalid_results_without_native_costs",
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
     attacker.setpos( here, origin );
-    attacker.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    attacker.set_wielded_item( item( itype_test_weapon1 ) );
     attacker.set_all_skills( 5 );
-    const matype_id style( "test_style_ma1" );
-    attacker.martial_arts_data->add_martialart( style );
-    attacker.martial_arts_data->set_style( style );
+
+    attacker.martial_arts_data->add_martialart( test_style_ma1 );
+    attacker.martial_arts_data->set_style( test_style_ma1 );
     attacker.set_moves( 1000 );
     attacker.set_stamina( mode == "insufficient" ? 1 : attacker.get_stamina_max() );
     const auto previous_runtimes = std::vector( platform::detail::active_runtime_values() );
@@ -884,14 +907,14 @@ ccb.content.replace(technique)
     REQUIRE( platform::apply_runtime_content( runtime, error ) );
     platform::set_active_runtimes( { runtime } );
     platform::runtime_world_ready( true );
-    const matec_id technique( "test_active_strike" );
+
     tripoint_bub_ms position = origin + tripoint::east;
     if( mode == "missing_runtime" ) {
         platform::set_active_runtimes( {} );
     } else if( mode == "occupied" ) {
         monster &target = spawn_test_monster( "mon_zombie", position );
         target.friendly = -1;
-        CHECK_FALSE( attacker.use_active_technique( target, technique ) );
+        CHECK_FALSE( attacker.use_active_technique( target, test_active_strike ) );
     } else if( mode == "self" ) {
         position = origin;
     } else if( mode == "range" ) {
@@ -903,13 +926,13 @@ ccb.content.replace(technique)
     const int moves = attacker.get_moves();
     const ter_id terrain = here.ter( position );
     if( mode == "changed" ) {
-        REQUIRE( attacker.can_use_active_technique_at( position, technique ) );
+        REQUIRE( attacker.can_use_active_technique_at( position, test_active_strike ) );
         CHECK( lua["last_phase"].get<std::string>() == "target" );
         CHECK( attacker.get_moves() == moves );
         CHECK( attacker.get_stamina() == stamina );
     }
     REQUIRE_FALSE( debug_has_error_been_observed() );
-    const bool executed = attacker.use_active_technique( position, technique );
+    const bool executed = attacker.use_active_technique( position, test_active_strike );
     const bool diagnostic = mode == "exception" || mode == "boolean" || mode == "missing" ||
                             mode == "fraction" || mode == "negative" || mode == "overflow" ||
                             mode == "nan" || mode == "metatable" || mode == "zero_moves";
@@ -921,10 +944,10 @@ ccb.content.replace(technique)
     CHECK( attacker.get_stamina() == stamina - ( executed ? 80 : 0 ) );
     CHECK( attacker.get_moves() == moves - ( executed ? 90 : 0 ) );
     CHECK( here.ter( position ) == terrain );
-    CHECK( attacker.technique_cooldown_remaining( technique ) == ( executed ? 3_turns : 0_turns ) );
+    CHECK( attacker.technique_cooldown_remaining( test_active_strike ) == ( executed ? 3_turns : 0_turns ) );
     if( executed ) {
         CHECK( lua["last_phase"].get<std::string>() == "execute" );
-        CHECK_FALSE( attacker.use_active_technique( position, technique ) );
+        CHECK_FALSE( attacker.use_active_technique( position, test_active_strike ) );
         CHECK( attacker.get_moves() == moves - 90 );
     }
 }

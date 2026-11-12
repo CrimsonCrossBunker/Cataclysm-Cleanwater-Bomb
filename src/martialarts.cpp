@@ -58,15 +58,13 @@
 #include "value_ptr.h"
 #include "weighted_list.h"
 
-class json_flag;
-
-static const efftype_id effect_incorporeal( "incorporeal" );
-static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const bionic_id bio_armor_arms( "bio_armor_arms" );
 static const bionic_id bio_armor_legs( "bio_armor_legs" );
 static const bionic_id bio_cqb( "bio_cqb" );
 
 static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_incorporeal( "incorporeal" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
 
 static const flag_id json_flag_PROVIDES_TECHNIQUES( "PROVIDES_TECHNIQUES" );
 

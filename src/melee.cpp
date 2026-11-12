@@ -95,7 +95,6 @@
 #include "weakpoint.h"
 #include "weighted_list.h"
 
-static const efftype_id effect_relax_gas( "relax_gas" );
 static const anatomy_id anatomy_human_anatomy( "human_anatomy" );
 
 static const bionic_id bio_cqb( "bio_cqb" );
@@ -135,6 +134,7 @@ static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_natural_stance( "natural_stance" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_relax_gas( "relax_gas" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_tied( "tied" );

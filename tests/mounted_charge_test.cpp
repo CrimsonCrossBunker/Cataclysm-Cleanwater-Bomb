@@ -52,11 +52,22 @@
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_stab( "stab" );
+
+static const efftype_id effect_hit_by_player( "hit_by_player" );
 static const efftype_id effect_pet( "pet" );
+
+static const itype_id itype_cavalry_sabre_fake( "cavalry_sabre_fake" );
 static const itype_id itype_mc_cavalry_sabre( "mc_cavalry_sabre" );
+static const itype_id itype_megachette_folded( "megachette_folded" );
+static const itype_id itype_morningstar( "morningstar" );
 static const itype_id itype_spear_steel( "spear_steel" );
+
+static const matype_id style_taekwondo( "style_taekwondo" );
+
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
+
+static const skill_id skill_bashing( "bashing" );
 static const skill_id skill_cutting( "cutting" );
 static const skill_id skill_melee( "melee" );
 static const skill_id skill_stabbing( "stabbing" );
@@ -314,12 +325,12 @@ TEST_CASE( "mounted_charge_bundled_mod_variants_remain_usable",
 TEST_CASE( "mounted_charge_folded_mod_weapons_do_not_inherit_profiles",
            "[mounted][charge][json][mods]" )
 {
-    const itype_id folded_type( "megachette_folded" );
-    if( !item::type_is_defined( folded_type ) ) {
+
+    if(!item::type_is_defined( itype_megachette_folded ) ) {
         SUCCEED( "The optional mod providing this weapon is not loaded" );
         return;
     }
-    const item folded( folded_type );
+    const item folded( itype_megachette_folded );
     CHECK_FALSE( folded.has_technique( tec_mounted_charge ) );
     CHECK_FALSE( folded.type->mounted_charge );
 }
@@ -442,7 +453,7 @@ TEST_CASE( "mounted_charge_is_available_only_as_a_usable_weapon_technique",
     CHECK_FALSE( avatar_action::mounted_charge_available( player ) );
     player.set_moves( 1000 );
 
-    player.set_wielded_item( item( itype_id( "cavalry_sabre_fake" ) ) );
+    player.set_wielded_item( item( itype_cavalry_sabre_fake ) );
     CHECK_FALSE( avatar_action::mounted_charge_available( player ) );
 
     player.set_wielded_item( item( itype_spear_steel ) );
@@ -461,7 +472,7 @@ TEST_CASE( "cavalry_saber_charge_scales_cut_damage_only", "[mounted][charge][dam
     const auto roll = [&]() {
         damage_instance result;
         player.roll_all_damage( false, result, true, saber, attack_vector_id::NULL_ID(),
-                                sub_bodypart_str_id::NULL_ID(), nullptr, bodypart_id( "torso" ) );
+                                sub_bodypart_str_id::NULL_ID(), nullptr, body_part_torso );
         return result;
     };
     const damage_instance ordinary = roll();
@@ -510,9 +521,9 @@ TEST_CASE( "mounted_charge_blunt_weapons_scale_only_their_bash_damage",
            "[mounted][charge][damage]" )
 {
     avatar &player = get_avatar();
-    setup_mounted_weapon( player, itype_id( "morningstar" ) );
+    setup_mounted_weapon( player, itype_morningstar );
     player.set_str_base( 30 );
-    player.set_skill_level( skill_id( "bashing" ), 10 );
+    player.set_skill_level( skill_bashing, 10 );
     const item &weapon = *player.get_wielded_item();
     REQUIRE( weapon.type->mounted_charge );
     const mounted_charge_profile &profile = *weapon.type->mounted_charge;
@@ -520,7 +531,7 @@ TEST_CASE( "mounted_charge_blunt_weapons_scale_only_their_bash_damage",
     const auto roll = [&]() {
         damage_instance result;
         player.roll_all_damage( false, result, true, weapon, attack_vector_id::NULL_ID(),
-                                sub_bodypart_str_id::NULL_ID(), nullptr, bodypart_id( "torso" ) );
+                                sub_bodypart_str_id::NULL_ID(), nullptr, body_part_torso );
         return result;
     };
     const damage_instance ordinary = roll();
@@ -567,7 +578,7 @@ TEST_CASE( "mounted_charge_stops_at_heavy_monster", "[mounted][charge][activity]
     CHECK_FALSE( player.activity );
     CHECK( player.pos_bub() == start + tripoint::east );
     CHECK( melee::get_stats().attack_count == 1 );
-    CHECK( target.has_effect( efftype_id( "hit_by_player" ) ) );
+    CHECK( target.has_effect( effect_hit_by_player ) );
     player.forced_dismount();
 }
 
@@ -579,8 +590,8 @@ TEST_CASE( "mounted_charge_uses_the_weapon_with_a_force_unarmed_style",
     player.set_dex_base( 30 );
     player.set_skill_level( skill_melee, 10 );
     player.set_skill_level( skill_stabbing, 10 );
-    player.martial_arts_data->add_martialart( matype_id( "style_taekwondo" ) );
-    player.martial_arts_data->set_style( matype_id( "style_taekwondo" ) );
+    player.martial_arts_data->add_martialart( style_taekwondo );
+    player.martial_arts_data->set_style( style_taekwondo );
     REQUIRE_FALSE( player.used_weapon() );
     REQUIRE( player.get_wielded_item()->typeId() == itype_spear_steel );
     map &here = get_map();
@@ -780,7 +791,7 @@ TEST_CASE( "mounted_charge_attacks_friendly_creature", "[mounted][charge][activi
 
     CHECK( player.pos_bub() == start + tripoint::east );
     CHECK( melee::get_stats().attack_count == 1 );
-    CHECK( pet.has_effect( efftype_id( "hit_by_player" ) ) );
+    CHECK( pet.has_effect( effect_hit_by_player ) );
     CHECK( player.activity );
     player.cancel_activity();
     player.forced_dismount();
@@ -917,7 +928,6 @@ TEST_CASE( "mounted_charge_activity_serializes_route_identity", "[mounted][charg
     player.forced_dismount();
 }
 
-
 TEST_CASE( "charge_spear_retains_reach_with_an_explicit_charge_profile", "[mounted][charge][json]" )
 {
     const item spear( itype_spear_steel );
@@ -986,7 +996,7 @@ TEST_CASE( "mounted_saber_charge_scales_cut_damage_only", "[mounted][charge][dam
     const auto roll = [&]() {
         damage_instance result;
         player.roll_all_damage( false, result, true, saber, attack_vector_id::NULL_ID(),
-                                sub_bodypart_str_id::NULL_ID(), nullptr, bodypart_id( "torso" ) );
+                                sub_bodypart_str_id::NULL_ID(), nullptr, body_part_torso );
         return result;
     };
     const damage_instance ordinary = roll();
