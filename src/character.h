@@ -3117,7 +3117,7 @@ class Character : public Creature, public visitable
         void store_practice_state( JsonOut &json, bool include_recipes = false ) const;
         void load_practice_state( const JsonObject &data );
         void store_turn_state( JsonOut &out ) const;
-        void load_turn_state( const JsonObject &data );
+        void load_turn_state( const JsonObject &snapshot );
 
         int scent = 0;
         pimpl < bionic_collection > my_bionics;
