@@ -148,13 +148,20 @@ These fields can be read by any ITEM regardless of subtypes:
 "degradation_multiplier": 0.8,               // Controls how quickly an item degrades when taking damage. 0 = no degradation. Defaults to 1.0.
 "solar_efficiency": 0.3,                     // Efficiency of solar energy conversion for solarpacks; require SOLARPACK_ON to generate electricity; default 0
 "source_monster": "mon_zombie",               // This item is corpse of this monster (so it has weight and volume of this monster), and revive into this monster; require COPRSE flag
-"thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage, that would be dealt when you throw this item; lack of this field fall back to use melee damage, including player's str bonus applied to melee attack
-"throw_damage_multiplier": 1.1,              // (Optional, default = 1.0) Multiplier to thrown damage when this item is wielded.
-"throw_range_multiplier": 1.1,               // (Optional, default = 1.0) Multiplier to thrown range when this item is wielded.
-"throw_stamina_multiplier": 0.9,             // (Optional, default = 1.0) Multiplier to throwing stamina cost when this item is wielded.
-"throw_dispersion_multiplier": 0.9,          // (Optional, default = 1.0) Multiplier to throwing dispersion when this item is wielded.  Lower is more accurate.
-"throw_speed_multiplier": 0.9,               // (Optional, default = 1.0) Multiplier to throwing move cost when this item is wielded.  Lower is faster.
-"throw_weight_multiplier": 1.1,              // (Optional, default = 1.0) Multiplier to the thrown item's effective weight when this item is wielded.
+"thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage dealt when throwing this item; if omitted, melee damage is used, including the character's strength bonus.
+"throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. They apply only when every configured projectile restriction passes.
+  "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "SLING_AMMO" ] ], // String or array. Outer entries are alternatives; flags grouped in an inner array are all required. This example means (SLING_PROJECTILE and NPC_THROWN) or SLING_AMMO.
+  "min_weight": "1 g",                     // (Optional) Inclusive minimum projectile weight.
+  "max_weight": "750 g",                   // (Optional) Inclusive maximum projectile weight.
+  "max_volume": "500 ml",                  // (Optional) Inclusive maximum projectile volume.
+  "max_length": "15 cm",                   // (Optional) Inclusive maximum projectile length.
+  "throw_damage_multiplier": 1.1,           // (Optional, default = 1.0) Multiplier to thrown damage.
+  "throw_range_multiplier": 1.1,            // (Optional, default = 1.0) Multiplier to thrown range.
+  "throw_stamina_multiplier": 0.9,          // (Optional, default = 1.0) Multiplier to throwing stamina cost.
+  "throw_dispersion_multiplier": 0.9,       // (Optional, default = 1.0) Multiplier to throwing dispersion. Lower is more accurate.
+  "throw_speed_multiplier": 0.9,            // (Optional, default = 1.0) Multiplier to throwing move cost. Lower is faster.
+  "throw_weight_multiplier": 1.1            // (Optional, default = 1.0) Multiplier to the projectile's effective weight.
+},
 "material": [                                // Material types, can be as many as you want.  See materials.json for possible options
   { "type": "cotton", "portion": 9 },        // type indicates the material's ID, portion indicates proportionally how much of the item is composed of that material
   { "type": "plastic" }                      // portion can be omitted and will default to 1. In this case, the item is 90% cotton and 10% plastic.
@@ -962,13 +969,20 @@ Gun mods can be defined like this:
 "cooling_value_multiplier": 0.5,      // Multiply gun's "cooling_value" by this number; works the same as overheat_threshold_multiplier
 "heat_per_shot_modifier":  -2,        //  Add a flat amount to gun's "heat_per_shot"; works the same as overheat_threshold_modifier
 "heat_per_shot_multiplier": 2.0,      // Multiply the gun's "heat_per_shot" by this number; works the same as overheat_threshold_multiplier
-"throw_damage_multiplier": 1.1,       // Optional (default = 1.0) Multiplier to thrown damage while the gun with this mod installed is wielded
-"throw_range_multiplier": 1.1,        // Optional (default = 1.0) Multiplier to thrown range while the gun with this mod installed is wielded
-"throw_stamina_multiplier": 0.9,      // Optional (default = 1.0) Multiplier to throwing stamina cost while the gun with this mod installed is wielded
-"throw_dispersion_multiplier": 0.9,   // Optional (default = 1.0) Multiplier to throwing dispersion while the gun with this mod installed is wielded. Lower is more accurate
-"throw_speed_multiplier": 0.9,        // Optional (default = 1.0) Multiplier to throwing move cost while the gun with this mod installed is wielded. Lower is faster
-"throw_weight_multiplier": 0.9,       // Optional (default = 1.0) Multiplier to the thrown item's effective weight while the gun with this mod installed is wielded
-"throw_damage_add": 0.2,              // Optional (default = 0.0) Added to the final throwing damage coefficient after all multipliers
+"throw_correction_data": {            // Optional throw corrections from this mod. Projectile restrictions use the same format as ITEM throw_correction_data.
+  "required_flag": "SLING_PROJECTILE",
+  "min_weight": "1 g",
+  "max_weight": "750 g",
+  "max_volume": "500 ml",
+  "max_length": "15 cm",
+  "throw_damage_multiplier": 1.1,
+  "throw_range_multiplier": 1.1,
+  "throw_stamina_multiplier": 0.9,
+  "throw_dispersion_multiplier": 0.9,
+  "throw_speed_multiplier": 0.9,
+  "throw_weight_multiplier": 0.9
+},
+"throw_damage_add": 0.2,              // Optional (default = 0.0) Added to the final throwing damage coefficient after all applicable multipliers
 "throw_range_add": 0.2,               // Optional (default = 0.0) Added to the final throwing range coefficient after all multipliers
 "throw_stamina_add": -0.1,            // Optional (default = 0.0) Added to the final throwing stamina cost coefficient after all multipliers
 "throw_dispersion_add": -0.1,         // Optional (default = 0.0) Added to the final throwing dispersion coefficient after all multipliers
