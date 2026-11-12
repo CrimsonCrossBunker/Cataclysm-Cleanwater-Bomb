@@ -139,6 +139,7 @@ struct mutation_branch;
 struct oter_type_t;
 
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
 static const activity_id ACT_MIGRATION_CANCEL( "ACT_MIGRATION_CANCEL" );
 
 static const addiction_id addiction_alcohol( "alcohol" );
@@ -537,7 +538,7 @@ void player_activity::deserialize( const JsonObject &data )
     // ACT_MIGRATION_CANCEL will clear the backlog and reset npc state
     // this may cause inconvenience but should avoid any lasting damage to npcs
     // Vehicle faucets have an actor; other liquid sources retain their legacy handler.
-    const bool legacy_handler = type == activity_id( "ACT_FILL_LIQUID" ) ||
+    const bool legacy_handler = type == ACT_FILL_LIQUID ||
                                 type == activity_id( "ACT_REPAIR_ITEM" );
     if( is_obsolete || ( has_actor && !legacy_handler &&
                          ( data.has_null( "actor" ) || !data.has_member( "actor" ) ) ) ) {
