@@ -28,6 +28,13 @@
 static const itype_id itype_grenade( "grenade" );
 static const itype_id itype_javelin_iron( "javelin_iron" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_sling_bullet_stone_500( "sling_bullet_stone_500" );
+static const itype_id itype_sling_bullet_stone_750( "sling_bullet_stone_750" );
+static const itype_id itype_sling_ready_homemade_grenade_2(
+    "sling-ready_homemade_grenade_2" );
+static const itype_id itype_test_rock( "test_rock" );
+static const itype_id itype_test_throw_correction( "test_throw_correction" );
+static const itype_id itype_throwing_knife( "throwing_knife" );
 static const itype_id itype_throwing_stick_with_charges( "throwing_stick_with_charges" );
 
 static const skill_id skill_throw( "throw" );
@@ -343,16 +350,75 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
     }
 }
 
-TEST_CASE( "slings_reduce_throwing_time", "[throwing][sling]" )
+static void check_throw_correction( const Character &you, const item &projectile,
+                                    const float damage, const float range,
+                                    const float stamina, const float dispersion,
+                                    const float speed, const float weight )
+{
+    CHECK( you.throw_damage_multiplier( projectile ) == Approx( damage ) );
+    CHECK( you.throw_range_multiplier( projectile ) == Approx( range ) );
+    CHECK( you.throw_stamina_multiplier( projectile ) == Approx( stamina ) );
+    CHECK( you.throw_dispersion_multiplier( projectile ) == Approx( dispersion ) );
+    CHECK( you.throw_speed_multiplier( projectile ) == Approx( speed ) );
+    CHECK( you.throw_weight_multiplier( projectile ) == Approx( weight ) );
+}
+
+TEST_CASE( "throw_correction_flag_requirements", "[throwing]" )
 {
     clear_avatar();
     avatar &you = get_avatar();
-    item projectile( itype_rock );
-    const int unassisted_cost = throw_cost( you, projectile );
-    const std::string sling_id = GENERATE( "sling", "staff_sling", "sling_long" );
-    CAPTURE( sling_id );
-    item sling( itype_id{ sling_id } );
-    REQUIRE( you.wield( sling ) );
-    CHECK( throw_cost( you, projectile ) < unassisted_cost );
-    CHECK( throw_cost( you, projectile ) >= 25 );
+    item correction( itype_test_throw_correction );
+    REQUIRE( you.wield( correction ) );
+
+    SECTION( "all_flags_in_an_inner_group_are_required" ) {
+        item matching( itype_rock );
+        check_throw_correction( you, matching, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f );
+
+        item missing_one_flag( itype_test_rock );
+        check_throw_correction( you, missing_one_flag, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+    }
+
+    SECTION( "outer_groups_are_alternatives" ) {
+        item matching( itype_grenade );
+        check_throw_correction( you, matching, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f );
+    }
+}
+
+TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    item medium_bullet( itype_sling_bullet_stone_500 );
+    item heavy_bullet( itype_sling_bullet_stone_750 );
+    item rock( itype_rock );
+    item throwing_knife( itype_throwing_knife );
+
+    SECTION( "sling" ) {
+        const int unassisted_cost = throw_cost( you, medium_bullet );
+        item sling( itype_id( "sling" ) );
+        REQUIRE( you.wield( sling ) );
+
+        check_throw_correction( you, medium_bullet, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
+        CHECK( throw_cost( you, medium_bullet ) > unassisted_cost );
+        check_throw_correction( you, heavy_bullet, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+        check_throw_correction( you, rock, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+    }
+
+    SECTION( "long_sling" ) {
+        item sling( itype_id( "sling_long" ) );
+        REQUIRE( you.wield( sling ) );
+
+        check_throw_correction( you, heavy_bullet, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
+        check_throw_correction( you, rock, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
+        check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+    }
+
+    SECTION( "staff_sling" ) {
+        item heavy_grenade( itype_sling_ready_homemade_grenade_2 );
+        item sling( itype_id( "staff_sling" ) );
+        REQUIRE( you.wield( sling ) );
+
+        check_throw_correction( you, heavy_grenade, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
+        check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+    }
 }
