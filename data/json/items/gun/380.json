@@ -26,7 +26,7 @@
     ],
     "ammo": [ "380" ],
     "min_cycle_recoil": 270,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 6 ] ],
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "mac11mag" ] } ],
     "melee_damage": { "bash": 5 }
   },

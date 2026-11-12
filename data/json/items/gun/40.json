@@ -124,7 +124,7 @@
     "ranged_damage": { "damage_type": "bullet", "amount": -4 },
     "dispersion": 590,
     "durability": 4,
-    "modes": [ [ "DEFAULT", "auto-rpm", "600" ] ],
+    "modes": [ [ "DEFAULT", "burst", 5 ] ],
     "loudness": 25,
     "barrel_volume": "250 ml",
     "valid_mod_locations": [

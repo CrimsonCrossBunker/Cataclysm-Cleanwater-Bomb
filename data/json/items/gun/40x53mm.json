@@ -30,7 +30,7 @@
       [ "rail mount", 1 ],
       [ "underbarrel mount", 1 ]
     ],
-    "modes": [ [ "DEFAULT", "semi-auto", 1, "NPC_AVOID" ], [ "AUTO", "auto-rpm", "350", "NPC_AVOID" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1, "NPC_AVOID" ], [ "AUTO", "auto", 2, "NPC_AVOID" ] ],
     "flags": [ "MOUNTED_GUN" ],
     "faults": [
       { "fault": "fault_gun_blackpowder" },

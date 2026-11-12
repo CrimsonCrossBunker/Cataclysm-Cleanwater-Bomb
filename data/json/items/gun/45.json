@@ -31,7 +31,7 @@
     "range": 1,
     "skill": "smg",
     "dispersion": 280,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 6 ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -82,7 +82,7 @@
     "min_cycle_recoil": 540,
     "flags": [ "NO_TURRET" ],
     "//2": "NO_TURRET should be removed once vehicle turrets are capable of mounting guns with mods attached. As it stands, trying to mount this style of weapon would require the player to remove the conversion kit, thus rendering it unusable anyhow.",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "bore", 1 ],
@@ -168,7 +168,7 @@
     "skill": "smg",
     "dispersion": 520,
     "durability": 7,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1100" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 5 ] ],
     "built_in_mods": [ "wire_stock" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -277,7 +277,7 @@
     "skill": "smg",
     "dispersion": 360,
     "durability": 7,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "700" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
     "barrel_volume": "500 ml",
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -485,7 +485,7 @@
     "skill": "smg",
     "dispersion": 500,
     "durability": 7,
-    "modes": [ [ "DEFAULT", "auto-rpm", "450" ] ],
+    "modes": [ [ "DEFAULT", "auto", 2 ] ],
     "built_in_mods": [ "wire_stock" ],
     "valid_mod_locations": [ [ "barrel", 1 ], [ "brass catcher", 1 ], [ "mechanism", 2 ], [ "sights mount", 1 ], [ "sling", 1 ], [ "stock", 1 ] ],
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "greasegun30mag" ] } ]

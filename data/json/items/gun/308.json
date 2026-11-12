@@ -106,7 +106,7 @@
     "blackpowder_tolerance": 96,
     "energy_drain": "1 kJ",
     "reload": 400,
-    "modes": [ [ "DEFAULT", "low auto-rpm", "2000" ], [ "AUTO", "high auto-rpm", "3000" ] ],
+    "modes": [ [ "DEFAULT", "low auto", 50 ], [ "AUTO", "high auto", 100 ] ],
     "faults": [ { "fault": "fault_gun_blackpowder" }, { "fault": "fault_gun_dirt" } ],
     "flags": [ "NEVER_JAMS", "MOUNTED_GUN", "USE_UPS" ],
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "belt308" ] } ],
@@ -129,7 +129,7 @@
     "dispersion": 150,
     "material": [ "steel", "plastic" ],
     "//": "These *sometimes* have the mode selector disabled, but disabling it isn't difficult for operators.",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "750" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -198,7 +198,7 @@
     "dispersion": 200,
     "durability": 9,
     "reload": 1000,
-    "modes": [ [ "DEFAULT", "auto-rpm", "650" ] ],
+    "modes": [ [ "DEFAULT", "burst", 4 ] ],
     "built_in_mods": [ "bipod" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -232,7 +232,7 @@
     "dispersion": 180,
     "durability": 7,
     "reload": 400,
-    "modes": [ [ "DEFAULT", "auto-rpm", "550" ] ],
+    "modes": [ [ "DEFAULT", "burst", 4 ] ],
     "built_in_mods": [ "bipod" ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -404,7 +404,7 @@
       [ "stock accessory", 1 ],
       [ "underbarrel", 1 ]
     ],
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
     "default_mods": [ "adjustable_stock" ],
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "hk417mag_20rd", "hk417mag_10rd", "hk417_makeshiftmag" ] } ]
   },

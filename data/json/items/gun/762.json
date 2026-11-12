@@ -22,7 +22,7 @@
     "price": "2 kUSD 900 USD",
     "material": [ "steel", "wood" ],
     "dispersion": 180,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],

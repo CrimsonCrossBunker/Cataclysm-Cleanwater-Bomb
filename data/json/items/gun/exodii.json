@@ -231,7 +231,7 @@
     "ammo": [ "123ln" ],
     "dispersion": 190,
     "durability": 9,
-    "modes": [ [ "DEFAULT", "burst", 2 ], [ "SEMI", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1500" ] ],
+    "modes": [ [ "DEFAULT", "burst", 2 ], [ "SEMI", "semi-auto", 1 ], [ "AUTO", "auto", 5 ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "bayonet lug", 1 ],

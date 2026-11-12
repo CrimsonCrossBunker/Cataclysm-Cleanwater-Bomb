@@ -38,7 +38,7 @@
     "dispersion": 220,
     "durability": 9,
     "barrel_volume": "250 ml",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "5 rd.", 5 ], [ "AUTO", "auto-rpm", "1200" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "5 rd.", 5 ], [ "AUTO", "auto", 4 ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -77,7 +77,7 @@
     "skill": "pistol",
     "dispersion": 280,
     "durability": 9,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "2 rd.", 2 ], [ "AUTO", "auto-rpm", "1200" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "2 rd.", 2 ], [ "AUTO", "auto", 4 ] ],
     "valid_mod_locations": [
       [ "brass catcher", 1 ],
       [ "grip", 1 ],

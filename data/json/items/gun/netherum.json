@@ -21,7 +21,7 @@
     "range": 30,
     "dispersion": 40,
     "durability": 8,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "magazine_well": "50 ml", "item_restriction": [ "nl_chem_thrower_mag" ] } ],
     "overheat_threshold": 100,
     "cooling_value": 2,

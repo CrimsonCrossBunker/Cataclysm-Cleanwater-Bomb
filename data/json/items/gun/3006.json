@@ -143,7 +143,7 @@
     "price": "3 kUSD 500 USD",
     "material": [ "steel", "wood" ],
     "dispersion": 180,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 3 ] ],
     "barrel_volume": "1000 ml",
     "default_mods": [ "bipod" ],
     "valid_mod_locations": [
