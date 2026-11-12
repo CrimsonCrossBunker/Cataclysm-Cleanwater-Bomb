@@ -3,10 +3,12 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -403,7 +405,8 @@ turret_data::status turret_data::query() const
         }
     }
 
-    const units::energy energy_drain = gun.get_gun_energy_drain() * gun.gun_current_mode().qty;
+    const int shots = gun.gun_current_mode().shots_available( calendar::turn );
+    const units::energy energy_drain = gun.get_gun_energy_drain() * shots;
     if( energy_drain > units::from_kilojoule( veh->fuel_left( here, fuel_type_battery ) ) ) {
         return status::no_power;
     }
@@ -433,9 +436,10 @@ void turret_data::prepare_fire( Character &you )
     // set fuel tank fluid as ammo, if appropriate
     if( uses_vehicle_tanks_or_batteries() ) {
         gun_mode mode = base()->gun_current_mode();
-        int qty  = mode->ammo_required();
-        int fuel_left = veh->fuel_left( here, ammo_current() );
-        mode->ammo_set( ammo_current(), std::min( qty * mode.qty, fuel_left ) );
+        const int qty = mode->ammo_required();
+        const int fuel_left = veh->fuel_left( here, ammo_current() );
+        const int64_t requested = static_cast<int64_t>( qty ) * mode.shots_available( calendar::turn );
+        mode->ammo_set( ammo_current(), static_cast<int>( std::min<int64_t>( requested, fuel_left ) ) );
     }
 }
 
@@ -488,11 +492,13 @@ int turret_data::fire( Character &c, map *here, const tripoint_bub_ms &target )
     if( !veh || !part ) {
         return 0;
     }
-    int shots = 0;
-    gun_mode mode = base()->gun_current_mode();
+    const gun_mode mode = base()->gun_current_mode();
+    if( mode.shots_available( calendar::turn ) <= 0 ) {
+        return 0;
+    }
 
     prepare_fire( c );
-    shots = c.fire_gun( *here, target, mode.qty, *mode );
+    const int shots = c.fire_gun( *here, target, mode );
     post_fire( here, c, shots );
     return shots;
 }
