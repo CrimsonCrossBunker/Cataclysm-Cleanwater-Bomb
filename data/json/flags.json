@@ -2147,6 +2147,11 @@
     "info": "Can be automatically activated and launched with a staff sling."
   },
   {
+    "id": "SLING_PROJECTILE",
+    "type": "json_flag",
+    "info": "Can receive throw corrections from a compatible sling."
+  },
+  {
     "id": "THROW_KEEP_WIELDED",
     "type": "json_flag",
     "info": "Can be kept wielded while throwing another item, boosting the throw."
