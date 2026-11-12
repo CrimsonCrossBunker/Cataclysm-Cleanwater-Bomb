@@ -154,6 +154,7 @@ static const damage_type_id damage_bullet( "bullet" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 
+static const gun_mode_id gun_mode_BURST( "BURST" );
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 static const gun_mode_id gun_mode_MELEE( "MELEE" );
 
@@ -3585,6 +3586,18 @@ namespace
 {
 class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
 {
+    private:
+        static int read_rpm( const JsonValue &value ) {
+            const std::string text = value.get_string();
+            const char *const end = text.data() + text.size();
+            int rpm = 0;
+            const auto parsed = std::from_chars( text.data(), end, rpm );
+            if( parsed.ec != std::errc() || parsed.ptr != end || rpm <= 0 ) {
+                value.throw_error( "RPM must be a string containing a positive integer" );
+            }
+            return rpm;
+        }
+
     public:
         std::pair<gun_mode_id, gun_modifier_data> get_next( const JsonValue &val ) const {
             if( val.test_array() ) {
@@ -3592,7 +3605,8 @@ class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
                 int arr_size = arr.size();
                 if( !( arr_size == 3 || arr_size == 4 ) ) {
                     arr.throw_error(
-                        "gun mode must be [id, name, integer quantity or RPM string, optional flags]" );
+                        "gun mode must be [id, name, quantity or RPM string, optional flags] "
+                        "or [\"brust-rpm\", RPM string, quantity, optional flags]" );
                 }
                 std::set<std::string> flags;
                 // flags can be an array of strings or a single flag string
@@ -3606,33 +3620,46 @@ class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
                         flags.insert( arr[3].get_string() );
                     }
                 }
+                const std::string id = arr[0].get_string();
+                const bool fixed_quantity = flags.count( "MELEE" ) || flags.count( "VOLLEY" );
+                const JsonValue rate = arr[2];
+                if( id == "brust-rpm" ) {
+                    if( fixed_quantity ) {
+                        arr[3].throw_error( "brust-rpm cannot use MELEE or VOLLEY flags" );
+                    }
+                    const int rpm = read_rpm( arr[1] );
+                    const int qty = rate.get_int_exact();
+                    if( qty < 2 ) {
+                        rate.throw_error( "brust-rpm requires a burst of at least two rounds" );
+                    }
+                    return { gun_mode_BURST, gun_modifier_data( to_translation( "burst" ), qty, flags, rpm ) };
+                }
+
                 translation gmd_name;
                 gmd_name.deserialize( arr[1] );
-                const JsonValue rate = arr[2];
-                const bool fixed_quantity = flags.count( "MELEE" ) || flags.count( "VOLLEY" );
                 int qty = 0;
                 int rpm = 0;
                 if( rate.test_string() ) {
                     if( fixed_quantity ) {
                         rate.throw_error( "MELEE and VOLLEY modes require an integer quantity" );
                     }
-                    const std::string text = rate.get_string();
-                    const char *const end = text.data() + text.size();
-                    const std::from_chars_result parsed = std::from_chars( text.data(), end, rpm );
-                    if( parsed.ec != std::errc() || parsed.ptr != end || rpm <= 0 ) {
-                        rate.throw_error( "RPM must be a string containing a positive integer" );
-                    }
+                    rpm = read_rpm( rate );
                 } else {
                     qty = rate.get_int();
                     if( !fixed_quantity && qty > 1 ) {
-                        constexpr int legacy_rpm_per_round = 300;
-                        if( qty > std::numeric_limits<int>::max() / legacy_rpm_per_round ) {
-                            rate.throw_error( "legacy firing mode quantity is too large to convert to RPM" );
+                        if( id == gun_mode_BURST.str() ) {
+                            rpm = 900;
+                        } else {
+                            constexpr int legacy_rpm_per_round = 300;
+                            if( qty > std::numeric_limits<int>::max() / legacy_rpm_per_round ) {
+                                rate.throw_error( "legacy firing mode quantity is too large to convert to RPM" );
+                            }
+                            rpm = qty * legacy_rpm_per_round;
+                            qty = 0;
                         }
-                        rpm = qty * legacy_rpm_per_round;
                     }
                 }
-                return { gun_mode_id( arr[0].get_string() ), gun_modifier_data( gmd_name, qty, flags, rpm ) };
+                return { gun_mode_id( id ), gun_modifier_data( gmd_name, qty, flags, rpm ) };
             } else {
                 val.throw_error( "gun modes must be an array of arrays" );
             }
