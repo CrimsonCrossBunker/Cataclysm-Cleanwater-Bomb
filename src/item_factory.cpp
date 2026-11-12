@@ -4201,7 +4201,7 @@ void throw_correction_data::deserialize( const JsonObject &jo )
         }
     }
 
-    const auto load_optional_bound = [&jo]( const char *member, auto &target, const auto &reader ) {
+    const auto load_optional_bound = [&jo]( const char *member, auto & target, const auto & reader ) {
         if( !jo.has_member( member ) ) {
             return;
         }
