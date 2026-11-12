@@ -38,12 +38,16 @@ void automove_step::finish( Character &who, map &here, bool cancelled ) const
     if( who.getID() != owner || who.destination_generation() != generation ) {
         return;
     }
-    if( cancelled || !context || context.get() != &here || !here.inbounds( target ) ) {
+    if( cancelled ) {
         who.abort_automove();
         return;
     }
     if( who.pos_abs() != origin ) {
         return; // The next native route step checks displacement/ramp changes.
+    }
+    if( !context || context.get() != &here || !here.inbounds( target ) ) {
+        who.abort_automove();
+        return;
     }
     const auto p = here.get_bub( target );
     if( who.activity && who.has_destination() && who.get_auto_move_route().front() == p ) {
