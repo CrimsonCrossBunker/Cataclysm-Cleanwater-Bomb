@@ -136,6 +136,8 @@ jobs:
     - name: Install vcpkg packages
       shell: pwsh
       working-directory: msvc-full-features
+      env:
+        VCPKG_BINARY_SOURCES: clear;default,readwrite
       run: |
         vcpkg install --triplet x64-windows-static --host-triplet x64-windows-static `
           --x-install-root="$env:GITHUB_WORKSPACE\msvc-full-features\vcpkg_installed\x64-windows-static" `
