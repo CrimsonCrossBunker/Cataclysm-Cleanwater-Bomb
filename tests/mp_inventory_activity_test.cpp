@@ -238,8 +238,14 @@ class reload_events : public event_subscriber
         }
 };
 
-void save_reload_activity( Character &who )
+void save_activity( Character &who )
 {
+    REQUIRE( who.activity );
+    const auto type = who.activity.id();
+    const auto execution = who.activity.execution();
+    const bool owned = cata_mp::owns_inventory_activity( who );
+    const int moves_left = who.activity.moves_left;
+    const int moves_total = who.activity.moves_total;
     std::ostringstream encoded;
     JsonOut out( encoded );
     who.activity.serialize( out );
@@ -247,6 +253,16 @@ void save_reload_activity( Character &who )
     player_activity restored;
     restored.deserialize( value.get_object() );
     who.activity = std::move( restored );
+    REQUIRE( who.activity.id() == type );
+    REQUIRE( who.activity.execution() == execution );
+    REQUIRE( cata_mp::owns_inventory_activity( who ) == owned );
+    REQUIRE( who.activity.moves_left == moves_left );
+    REQUIRE( who.activity.moves_total == moves_total );
+}
+
+void save_reload_activity( Character &who )
+{
+    save_activity( who );
     REQUIRE( cata_mp::owns_inventory_activity( who ) );
 }
 
@@ -3074,6 +3090,9 @@ TEST_CASE( "mp_adjacent_tools_complete_once_and_cancel_competing_work",
     remote.activity.moves_left = 1;
     remote.set_moves( 100 );
     const std::string finish = fixture.request( remote, "step" );
+    if( method == "PICK_LOCK" ) {
+        rng_set_engine_seed( 424242 );
+    }
     fixture.run( remote, finish );
     CHECK_FALSE( remote.activity );
     CHECK( here.ter( target ) != original );
@@ -9862,8 +9881,8 @@ spell &prepare_owned_test_spell( Character &who, const spell_id &id )
     }
     who.magic->learn_spell( id, who, true );
     spell &selected = who.magic->get_spell( id );
-    selected.set_level( who, 1 );
-    who.set_skill_level( selected.skill(), 30 );
+    selected.set_level( who, 6 );
+    who.set_int_base( 30 );
     who.magic->set_mana( who.magic->max_mana( who ) );
     who.set_moves( 100 );
     return selected;
@@ -9941,7 +9960,8 @@ TEST_CASE( "owned_spell_waits_for_its_caster_and_finishes_once_after_save_restor
     view.pending_request = fixture.sequence;
     const auto rng_before_apply = rng_get_engine();
     REQUIRE( cata_mp::client_apply_message( reply ) );
-    CHECK( host.magic->knows_spell( id ) );
+    REQUIRE( cata_mp::is_client_mode() );
+    REQUIRE( host.magic->knows_spell( id ) );
     CHECK_FALSE( host.magic->knows_spell( spell_id( "test_spell_pew" ) ) );
     CHECK( host.magic->get_spell( id ).xp() == who.magic->get_spell( id ).xp() );
     CHECK( rng_get_engine() == rng_before_apply );
@@ -10502,6 +10522,8 @@ TEST_CASE( "saved_cart_sorting_batch_requires_the_same_operator_and_live_hold",
     reload_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
+    npc &other = fixture.remote();
+    other.setpos( here, tripoint_bub_ms( 90, 89, 0 ) );
     bind_feedback_player( who, 'a', 701 );
     get_avatar().setpos( here, tripoint_bub_ms( 90, 90, 0 ) );
     who.set_str_base( 50 );
@@ -10542,12 +10564,12 @@ TEST_CASE( "saved_cart_sorting_batch_requires_the_same_operator_and_live_hold",
     vehicle *replacement = nullptr;
     SECTION( "same saved batch" ) {}
     SECTION( "another body receives the old activity" ) {
-        npc &other = fixture.remote();
         bind_feedback_player( other, 'b', 702 );
         other.setpos( here, who.pos_bub() + tripoint::north );
         other.activity = who.activity;
         other.activity.actor->do_turn( other.activity, other );
         REQUIRE_FALSE( other.activity );
+        CHECK( cargo->items().size() == 1 );
         CHECK( here.i_at( destination ).empty() );
         CHECK( activity_handlers::activity_item_owned_by( (*cargo->items().begin()), who ) );
     }
@@ -10569,6 +10591,8 @@ TEST_CASE( "saved_cart_sorting_batch_requires_the_same_operator_and_live_hold",
     }
     SECTION( "the held cart already contains the batch at its destination" ) {
         deliver = false; // Finish in the cargo, without creating a ground copy.
+        REQUIRE( who.grab_matches( here ) );
+        cart->precalc_mounts( 1, cart->face.dir(), cart->pivot_point( here ) );
         here.displace_vehicle( *cart, tripoint_rel_ms( 4, 0, 0 ) );
         who.setpos( here, destination + tripoint::west, false );
         who.rebind_grab( here, destination );
@@ -12062,7 +12086,7 @@ TEST_CASE( "hauling_rejects_foreign_sources_and_reassigned_jobs",
                              tripoint_rel_ms::zero, true ) );
         who.set_moves( 0 );
         who.activity.actor->do_turn( who.activity, who );
-        save_reload_activity( who );
+        save_activity( who );
         other.activity = who.activity;
         other.set_moves( 100000 );
         other.activity.actor->do_turn( other.activity, other );
@@ -12403,7 +12427,9 @@ TEST_CASE( "moving_shared_furniture_invalidates_other_players_old_hold",
                             walk_move_choices{} ) );
     REQUIRE( first.activity );
     REQUIRE( second.activity );
-    save_reload_activity( second );
+    second.activity.set_execution( GENERATE( activity_execution::local,
+                                           activity_execution::authoritative ) );
+    save_activity( second );
     first.activity.actor->finish( first.activity, first );
     REQUIRE( here.furn( target + tripoint::east ) == furn_str_id( "f_chair" ) );
     REQUIRE( first.pos_bub() == target );
@@ -12434,7 +12460,9 @@ TEST_CASE( "saved_furniture_activity_does_not_take_over_a_new_grab",
     here.furn_set( target, furn_str_id( "f_chair" ) );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false ) );
-    save_reload_activity( who );
+    who.activity.set_execution( GENERATE( activity_execution::local,
+                                        activity_execution::authoritative ) );
+    save_activity( who );
     player_activity stale = who.activity;
     who.cancel_activity();
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
@@ -12534,7 +12562,9 @@ TEST_CASE( "furniture_activity_rejects_reassignment_and_replaced_target_after_re
     here.furn_set( target, furn_str_id( "f_chair" ) );
     who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false ) );
-    save_reload_activity( who );
+    who.activity.set_execution( GENERATE( activity_execution::local,
+                                        activity_execution::authoritative ) );
+    save_activity( who );
     SECTION( "another body receives the saved job" ) {
         npc &other = fixture.remote();
         bind_feedback_player( other, 'b', 702 );
@@ -12591,7 +12621,9 @@ TEST_CASE( "vehicle_loaded_furniture_uses_the_same_saved_activity_and_operator",
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false,
                          walk_move_choices{} ) );
     REQUIRE( who.activity );
-    save_reload_activity( who );
+    who.activity.set_execution( GENERATE( activity_execution::local,
+                                        activity_execution::authoritative ) );
+    save_activity( who );
     who.activity.actor->finish( who.activity, who );
     CHECK( who.pos_bub() == target );
     CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
@@ -12638,7 +12670,9 @@ TEST_CASE( "furniture_hold_follows_loading_and_unloading_across_consecutive_step
     who.assign_activity( move_furniture_activity_actor( tripoint_rel_ms::east, false,
                          walk_move_choices{} ) );
     REQUIRE( who.activity );
-    save_reload_activity( who );
+    who.activity.set_execution( GENERATE( activity_execution::local,
+                                        activity_execution::authoritative ) );
+    save_activity( who );
     who.activity.actor->finish( who.activity, who );
     CHECK( who.pos_bub() == deck );
     CHECK( who.get_grab_type() == object_type::FURNITURE );
@@ -12701,6 +12735,8 @@ TEST_CASE( "shared_walking_hooks_bind_the_operator_and_revalidate_hook_mutations
     here.ter_set( origin, ter_id( "t_floor" ) );
     here.ter_set( destination, ter_id( "t_floor" ) );
     const bool replace_destination = GENERATE( false, true );
+    const bool cancel_move = GENERATE( false, true );
+    lua["cancel_move"] = cancel_move;
     lua.set_function( "mutate_destination", [&]() {
         if( replace_destination ) {
             here.ter_set( destination, ter_id( "t_wall" ) );
@@ -12711,7 +12747,7 @@ ccb.runtime.handler("move_player", function(context)
     local state = ccb.state.character
     state.set("player_moves", state.get("player_moves", 0) + 1)
     mutate_destination()
-    return true
+    return not cancel_move
 end)
 ccb.runtime.handler("move_character", function(context)
     local state = ccb.state.character
@@ -12723,8 +12759,9 @@ ccb.runtime.hook("on_character_try_move", "move_character")
 )lua", sol::script_pass_on_error );
     REQUIRE( registered.valid() );
     const walk_move_choices choices;
-    CHECK( g->walk_move( who, destination, false, false, &choices ) == !replace_destination );
-    CHECK( who.pos_bub() == ( replace_destination ? origin : destination ) );
+    const bool moved = !replace_destination && !cancel_move;
+    CHECK( g->walk_move( who, destination, false, false, &choices ) == moved );
+    CHECK( who.pos_bub() == ( moved ? destination : origin ) );
     const auto &values = who.lua_character_state.for_mod( mod );
     REQUIRE( values.count( "player_moves" ) == 1 );
     REQUIRE( values.count( "character_moves" ) == 1 );
@@ -12917,6 +12954,8 @@ TEST_CASE( "walking_uses_native_injured_leg_and_player_mode_transition_rules",
     }
     const int switch_cost = who.move_mode_switch_cost( who.current_movement_mode(),
                             move_mode_id( requested_mode ) );
+    who.set_stamina( who.get_stamina_max() );
+    const int stamina = who.get_stamina();
     walk_move_choices choices;
     choices.destination = here.get_abs( destination );
     who.set_moves( 1000 );
@@ -12933,6 +12972,8 @@ TEST_CASE( "walking_uses_native_injured_leg_and_player_mode_transition_rules",
     } else {
         CHECK( who.is_crouching() );
     }
+    CHECK( who.get_stamina() < stamina );
+    who.set_stamina( stamina );
     const int walking_cost = who.run_cost( here.combined_movecost( origin, destination ), false );
     CHECK( who.get_moves() == 1000 - switch_cost - walking_cost );
     CHECK( get_avatar().is_walking() );
@@ -15373,7 +15414,9 @@ TEST_CASE( "saved_butchery_stops_for_wrong_body_location_or_corpse_and_releases_
     }
     SECTION( "cancel_after_source_disappeared" ) {
         corpse.remove_item();
-        fixture.run( who, fixture.request( who, "cancel" ) );
+        CHECK( capture_debugmsg_during( [&]() {
+            fixture.run( who, fixture.request( who, "cancel" ) );
+        } ) == "item_location lost its target item during a save/load cycle" );
     }
     SECTION( "activity_copied_to_another_body" ) {
         npc &other = spawn_npc( { 61, 60 }, "test_talker" );
@@ -15563,8 +15606,11 @@ TEST_CASE( "owned_bleeding_saves_real_liquid_and_revalidates_partial_destination
     who.set_skill_level( skill_id( "survival" ), 10 );
     who.set_dex_base( 12 );
     const auto position = who.pos_bub();
+    here.furn_set( position + tripoint::east, furn_str_id( "f_butcher_rack" ) );
+    who.invalidate_crafting_inventory();
     item_location corpse = here.add_item_or_charges_ret_loc( position,
                            item::make_corpse( mtype_id( "mon_deer" ), calendar::turn ) );
+    corpse->set_item_temperature( units::from_celsius( 20 ) );
     // Resume the native saved progress at completion; no timing shortcut in production.
     corpse->set_var( butcher_progress_var( butcher_type::BLEED ), 1.0 );
     fixture.run( who, butchery_request( fixture, who,
@@ -15741,6 +15787,8 @@ TEST_CASE( "owned_disassembly_saves_original_queue_and_preparation_without_host_
     const std::string choose = fixture.request( who, "choose", [&]( JsonOut &out ) {
         out.member( "disassembly_choice", preparation );
     } );
+    who.set_moves( 100 );
+    REQUIRE( validate_disassembly_preparation( who, first_choice, preparation ) );
     fixture.run( who, choose );
     REQUIRE( actor->target );
     const int64_t work_id = actor->target->uid().get_value();
@@ -15877,7 +15925,8 @@ TEST_CASE( "client_disassembly_selects_without_wielding_consuming_or_claiming",
     CHECK( cata_mp::inventory_activity_view( who.activity ) );
     CHECK_FALSE( activity_handlers::activity_item_owned_by( *original, who ) );
     CHECK_FALSE( who.has_weapon() );
-    CHECK( who.get_moves() == 100 );
+    CHECK( who.get_moves() == 0 );
+    CHECK( g->multiplayer_session().client_inventory_activity.pending_request > 0 );
     CHECK( rng_get_engine() == rng );
 }
 
@@ -15892,6 +15941,7 @@ item_location prepare_disassembly_work( reload_fixture &fixture, Character &who,
     disassembly_preparation choice;
     choice.source = original->uid().get_value();
     choice.placement = craft_placement::work_on_ground;
+    REQUIRE( validate_disassembly_preparation( who, capture_disassembly( who, original, 1 ), choice ) );
     who.set_moves( 100 );
     fixture.run( who, fixture.request( who, "choose", [&]( JsonOut &out ) {
         out.member( "disassembly_choice", choice );
@@ -16117,7 +16167,9 @@ TEST_CASE( "remote_tree_chopping_waits_for_saved_owner_direction_then_finishes_o
     REQUIRE( tree );
     CHECK( tree->pending_direction() );
     CHECK_FALSE( tree->ready_to_finish() );
-    CHECK( json_loader::from_string( pending ).get_object().get_bool( "tree_direction_prompt" ) );
+    const JsonObject pending_view = json_loader::from_string( pending ).get_object();
+    pending_view.allow_omitted_members();
+    CHECK( pending_view.get_bool( "tree_direction_prompt" ) );
     CHECK( here.ter( position ) == ter_str_id( "t_tree" ) );
     save_reload_activity( who );
     const int moves = who.get_moves();
@@ -16615,7 +16667,11 @@ TEST_CASE( "automatic_tilling_rechecks_native_capability_and_client_tilling_only
         std::string method = "MAKEMOUND";
         REQUIRE( cata_mp::client_activate_item( tool, method, here.get_abs( position ) ) );
         CHECK( here.ter( position ) == ter_str_id( "t_dirt" ) );
-        CHECK( who.get_moves() == 100 );
+        CHECK( who.get_moves() == 0 );
+        const auto pending = g->multiplayer_session().client_inventory_activity.pending_request;
+        REQUIRE( pending > 0 );
+        REQUIRE( cata_mp::client_activate_item( tool, method, here.get_abs( position ) ) );
+        CHECK( g->multiplayer_session().client_inventory_activity.pending_request == pending );
         CHECK( rng_get_engine() == rng );
         CHECK( who.activity.execution() == activity_execution::presentation );
         cata_mp::set_client_mode( false );

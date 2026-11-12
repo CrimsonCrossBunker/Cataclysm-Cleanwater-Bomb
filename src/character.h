@@ -81,6 +81,7 @@ class dispersion_sources;
 class effect;
 class enchant_cache;
 class faction;
+class gun_mode;
 class inventory;
 class known_magic;
 class ma_technique;
@@ -3558,6 +3559,9 @@ class Character : public Creature, public visitable
          */
 
         int fire_gun( const tripoint_bub_ms &target, int shots = 1 );
+        /** Fire a selected mode. A nonzero burst request uses a skill-adjusted count and RPM timing. */
+        int fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
+                      item_location ammo = item_location(), int burst_rounds = 0 );
         /**
          *  Fires a gun or auxiliary gunmod (ignoring any current mode)
          *  @param target where the first shot is aimed at (may vary for later shots)
@@ -3571,6 +3575,10 @@ class Character : public Creature, public visitable
         /** Execute a throw */
         dealt_projectile_attack throw_item( const tripoint_bub_ms &target, const item &to_throw,
                                             const std::optional < tripoint_bub_ms > &blind_throw_from_pos = std::nullopt );
+
+    private:
+        int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
+                           item_location ammo, bool spend_attack_moves, int burst_rpm = 0 );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,

@@ -5,6 +5,7 @@
 #include <type_id.h>
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cmath>
 #include <cstdio>
 #include <iterator>
@@ -12,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <unordered_set>
@@ -3577,7 +3579,7 @@ void firing_requirement_set::deserialize_consumption_per_use(
 
 /*
 * Reads an array of gun modes in the following format:
-* [ gun_mode_id, display name, shots, flag ]
+* [ gun_mode_id, display name, legacy quantity or RPM string, flags ]
 */
 namespace
 {
@@ -3589,7 +3591,8 @@ class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
                 JsonArray arr = val.get_array();
                 int arr_size = arr.size();
                 if( !( arr_size == 3 || arr_size == 4 ) ) {
-                    arr.throw_error( "gun mode array must be in format [ gun_mode_id, display name, shots, *flag ]" );
+                    arr.throw_error(
+                        "gun mode must be [id, name, integer quantity or RPM string, optional flags]" );
                 }
                 std::set<std::string> flags;
                 // flags can be an array of strings or a single flag string
@@ -3605,8 +3608,31 @@ class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
                 }
                 translation gmd_name;
                 gmd_name.deserialize( arr[1] );
-                gun_modifier_data gmd( gmd_name, arr[2].get_int(), flags );
-                return std::pair<gun_mode_id, gun_modifier_data>( gun_mode_id( arr[0].get_string() ), gmd );
+                const JsonValue rate = arr[2];
+                const bool fixed_quantity = flags.count( "MELEE" ) || flags.count( "VOLLEY" );
+                int qty = 0;
+                int rpm = 0;
+                if( rate.test_string() ) {
+                    if( fixed_quantity ) {
+                        rate.throw_error( "MELEE and VOLLEY modes require an integer quantity" );
+                    }
+                    const std::string text = rate.get_string();
+                    const char *const end = text.data() + text.size();
+                    const auto parsed = std::from_chars( text.data(), end, rpm );
+                    if( parsed.ec != std::errc() || parsed.ptr != end || rpm <= 0 ) {
+                        rate.throw_error( "RPM must be a string containing a positive integer" );
+                    }
+                } else {
+                    qty = rate.get_int();
+                    if( !fixed_quantity && qty > 1 ) {
+                        constexpr int legacy_rpm_per_round = 300;
+                        if( qty > std::numeric_limits<int>::max() / legacy_rpm_per_round ) {
+                            rate.throw_error( "legacy firing mode quantity is too large to convert to RPM" );
+                        }
+                        rpm = qty * legacy_rpm_per_round;
+                    }
+                }
+                return { gun_mode_id( arr[0].get_string() ), gun_modifier_data( gmd_name, qty, flags, rpm ) };
             } else {
                 val.throw_error( "gun modes must be an array of arrays" );
             }
