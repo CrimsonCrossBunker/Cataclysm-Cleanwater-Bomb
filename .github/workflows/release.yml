@@ -560,12 +560,17 @@ jobs:
           mv cataclysmdda-0.J.tar.gz ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.tar.gz
       - name: Build CDDA (windows msvc, SDL3)
         if: runner.os == 'Windows' && matrix.sdl3 == 1
+        shell: pwsh
         env:
           BACKTRACE: 1
           CDDA_RELEASE_BUILD: 1
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
         run: |
           msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
+      - name: Package CDDA (windows msvc, SDL3)
+        if: runner.os == 'Windows' && matrix.sdl3 == 1
+        shell: pwsh
+        run: |
           .\build-scripts\windist.ps1
           mv cataclysmdda-0.J.zip ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.zip
       - name: Build CDDA (osx, curses)
