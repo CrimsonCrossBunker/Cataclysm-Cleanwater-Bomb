@@ -34,5 +34,7 @@ void aim_gun_for_moves( Character &who, const item &gun, const tripoint_bub_ms &
                         int moves );
 bool aim_gun_until_threshold( Character &who, const item &gun,
                               const tripoint_bub_ms &target, const std::string &action );
+bool aim_gun_until_threshold( Character &who, const item &gun,
+                              const tripoint_bub_ms &target, int threshold );
 
 #endif // CATA_SRC_RANGED_ACTIONS_H

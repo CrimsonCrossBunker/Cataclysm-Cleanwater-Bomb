@@ -14,6 +14,7 @@
 #include "game.h"
 #include "item.h"
 #include "item_location.h"
+#include "magic_enchantment.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -484,7 +485,7 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     clear_map_without_vision();
     Character &guy = get_player_character();
     clear_avatar();
-    guy.wear_item( item( itype_debug_backpack ), false );
+    REQUIRE( guy.wear_item( item( itype_debug_backpack ), false ).has_value() );
 
     const bodypart_id bp_arm_l( "arm_l" );
     const bodypart_id bp_arm_r( "arm_r" );
@@ -496,12 +497,13 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     const int leg_r_hp_before = guy.get_part_hp_max( bp_leg_r );
     REQUIRE( arm_l_hp_before > 0 );
     REQUIRE( arm_l_hp_before == arm_r_hp_before );
+    REQUIRE( leg_r_hp_before > 0 );
 
     const float lift_before = guy.get_limb_score( limb_score_lift );
     const float balance_before = guy.get_limb_score( limb_score_balance );
 
     INFO( "Obtain item with per-bodypart max HP enchantment" );
-    guy.i_add( item( itype_test_MAX_HP_BP_ench_item ) );
+    REQUIRE( guy.i_add( item( itype_test_MAX_HP_BP_ench_item ) ).held_by( guy ) );
     guy.recalculate_enchantment_cache();
     INFO( "Left arm gains 20 max HP, right arm is unchanged, right leg is multiplied by 1.5" );
     CHECK( guy.get_part_hp_max( bp_arm_l ) == arm_l_hp_before + 20 );
@@ -509,23 +511,28 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     CHECK( guy.get_part_hp_max( bp_leg_r ) == static_cast<int>( leg_r_hp_before * 1.5 ) );
 
     INFO( "Obtain item with limb score enchantment" );
-    guy.i_add( item( itype_test_LIMB_SCORE_ench_item ) );
+    REQUIRE( guy.i_add( item( itype_test_LIMB_SCORE_ench_item ) ).held_by( guy ) );
     guy.recalculate_enchantment_cache();
+    CHECK( guy.enchantment_cache->get_limb_score_bp_multiply( bp_arm_l.id(),
+            limb_score_lift ) == Approx( 1.0 ) );
+    CHECK( guy.enchantment_cache->get_limb_score_add( limb_score_balance ) == Approx( 0.5 ) );
     INFO( "Left arm's lift contribution is doubled, balance gets a global +0.5" );
     CHECK( guy.get_limb_score( limb_score_lift ) == Approx( lift_before + 0.5f ) );
     CHECK( guy.get_limb_score( limb_score_balance ) == Approx( balance_before + 0.5f ) );
 
     INFO( "Obtain item that tries to add lift to torso, which does not provide the lift score" );
     const float lift_with_torso_bonus = guy.get_limb_score( limb_score_lift );
-    guy.i_add( item( itype_test_LIMB_SCORE_ZERO_BP_ench_item ) );
+    REQUIRE( guy.i_add( item( itype_test_LIMB_SCORE_ZERO_BP_ench_item ) ).held_by( guy ) );
     guy.recalculate_enchantment_cache();
     INFO( "Torso does not provide lift, so the per-part add must be a no-op" );
     CHECK( guy.get_limb_score( limb_score_lift ) == Approx( lift_with_torso_bonus ) );
 
     INFO( "Obtain item that adds manip to hand_l; the bonus must survive the group clamp" );
     const float manip_before = guy.get_limb_score( limb_score_manip );
-    guy.i_add( item( itype_test_LIMB_SCORE_MANIP_BP_ench_item ) );
+    REQUIRE( guy.i_add( item( itype_test_LIMB_SCORE_MANIP_BP_ench_item ) ).held_by( guy ) );
     guy.recalculate_enchantment_cache();
+    CHECK( guy.enchantment_cache->get_limb_score_bp_add( bodypart_str_id( "hand_l" ),
+            limb_score_manip ) == Approx( 0.5 ) );
     INFO( "hand_l's +0.5 manip must be fully applied on top of the clamped base score" );
     CHECK( guy.get_limb_score( limb_score_manip ) == Approx( manip_before + 0.5f ) );
 }

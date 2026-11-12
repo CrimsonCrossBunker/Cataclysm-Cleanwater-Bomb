@@ -658,7 +658,7 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
     gun_mode gun = weapon->gun_current_mode();
     if( !remote ) {
-        who.fire_gun( here, fin_trajectory.back(), gun.qty, *gun, reload_loc );
+        who.fire_gun( here, fin_trajectory.back(), gun, reload_loc, burst_rounds );
     }
 
     if( !get_option<bool>( "AIM_AFTER_FIRING" ) ||
@@ -712,6 +712,9 @@ void aim_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "bionic_uid", bionic_uid );
     jsout.member( "bionic_weapon_source", bionic_weapon_source );
     jsout.member( "fin_trajectory", fin_trajectory );
+    if( burst_rounds != 0 ) {
+        jsout.member( "burst_rounds", burst_rounds );
+    }
     jsout.member( "action", action );
     jsout.member( "aif_duration", aif_duration );
     jsout.member( "aiming_at_critter", aiming_at_critter );
@@ -739,6 +742,7 @@ std::unique_ptr<activity_actor> aim_activity_actor::deserialize( JsonValue &jsin
                                  data.get_int64( "bionic_weapon_source" ) :
                                  actor.fake_weapon ? actor.fake_weapon->uid().get_value() : 0;
     data.read( "fin_trajectory", actor.fin_trajectory );
+    actor.burst_rounds = data.get_int( "burst_rounds", 0 );
     data.read( "action", actor.action );
     data.read( "aif_duration", actor.aif_duration );
     data.read( "aiming_at_critter", actor.aiming_at_critter );
@@ -13782,6 +13786,7 @@ std::unique_ptr<activity_actor> longsalvage_activity_actor::deserialize( JsonVal
     data.read( "tool", actor.tool );
     data.read( "tool_type", actor.tool_type );
     data.read( "pending", actor.pending );
+    static_cast<void>( data.get_int( "index", -1 ) );
     // Index-only old activities cannot identify their tool. They cancel on
     // continuation without touching inventory or ground items.
     return actor.clone();
