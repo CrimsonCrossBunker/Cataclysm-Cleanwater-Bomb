@@ -74,7 +74,7 @@
     "category": "spare_parts",
     "material": [ "stone" ],
     "ammo_type": "rock",
-    "flags": [ "TRADER_AVOID" ],
+    "flags": [ "TRADER_AVOID", "SLING_PROJECTILE" ],
     "weight": "657 g",
     "volume": "250 ml",
     "damage": { "damage_type": "stab", "amount": 7 },
