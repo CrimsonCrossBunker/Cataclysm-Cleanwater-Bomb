@@ -3104,8 +3104,8 @@ class Character : public Creature, public visitable
         void refresh_carried_item_caches();
         // Portable body, abilities and carried state. Identity, position,
         // activities and other world relationships remain owned by the receiver.
-        void store_player_state( JsonOut &json ) const;
-        void load_player_state( const JsonObject &data );
+        void store_player_state( JsonOut &out ) const;
+        void load_player_state( const JsonObject &snapshot );
 
         // Replica-only needs/morale state; no ingestion, digestion or gameplay hooks.
         void store_needs_state( JsonOut &json ) const;
@@ -3116,8 +3116,8 @@ class Character : public Creature, public visitable
         // Activity result projection; restore progress without practicing again.
         void store_practice_state( JsonOut &json, bool include_recipes = false ) const;
         void load_practice_state( const JsonObject &data );
-        void store_turn_state( JsonOut &json ) const;
-        void load_turn_state( const JsonObject &data );
+        void store_turn_state( JsonOut &out ) const;
+        void load_turn_state( const JsonObject &snapshot );
 
         int scent = 0;
         pimpl < bionic_collection > my_bionics;
@@ -4496,7 +4496,7 @@ class Character : public Creature, public visitable
         mutable std::optional < units::mass > cached_weight_carried = std::nullopt;
 
         void store( JsonOut &json ) const;
-        void load( const JsonObject &data );
+        void load( const JsonObject &data, const JsonObject *legacy_kills = nullptr );
 
         // --------------- Values ---------------
         pimpl < SkillLevelMap > _skills;

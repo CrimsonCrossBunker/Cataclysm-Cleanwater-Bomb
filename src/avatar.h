@@ -106,7 +106,7 @@ class avatar : public Character
         zone_sort_viewport_t zone_sort_viewport; // NOLINT(cata-serialize)
 
         void store( JsonOut &json ) const;
-        void load( const JsonObject &data );
+        void load( const JsonObject &data, const JsonObject *legacy_kills = nullptr );
         void export_as_npc( const cata_path &path );
         void serialize( JsonOut &json ) const override;
         void deserialize( const JsonObject &data ) override;

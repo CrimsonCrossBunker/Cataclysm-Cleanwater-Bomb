@@ -139,7 +139,9 @@ struct mutation_branch;
 struct oter_type_t;
 
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
 static const activity_id ACT_MIGRATION_CANCEL( "ACT_MIGRATION_CANCEL" );
+static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 
 static const addiction_id addiction_alcohol( "alcohol" );
 static const addiction_id addiction_amphetamine( "amphetamine" );
@@ -537,8 +539,7 @@ void player_activity::deserialize( const JsonObject &data )
     // ACT_MIGRATION_CANCEL will clear the backlog and reset npc state
     // this may cause inconvenience but should avoid any lasting damage to npcs
     // Vehicle faucets have an actor; other liquid sources retain their legacy handler.
-    const bool legacy_handler = type == activity_id( "ACT_FILL_LIQUID" ) ||
-                                type == activity_id( "ACT_REPAIR_ITEM" );
+    const bool legacy_handler = type == ACT_FILL_LIQUID || type == ACT_REPAIR_ITEM;
     if( is_obsolete || ( has_actor && !legacy_handler &&
                          ( data.has_null( "actor" ) || !data.has_member( "actor" ) ) ) ) {
         actor = std::make_unique<migration_cancel_activity_actor>( type );
@@ -786,7 +787,7 @@ void Character::load_grab_state( const JsonObject &data )
     data.read( "grab_point", point );
     const std::string type = data.get_string( "grab_type",
                              point == tripoint_rel_ms::zero ? "OBJECT_NONE" : "OBJECT_VEHICLE" );
-    const auto found = std::find( obj_type_name.begin(), obj_type_name.end(), type );
+    const auto *const found = std::find( obj_type_name.begin(), obj_type_name.end(), type );
     // Projection/save restoration must not invoke local view or gameplay callbacks.
     grab_type = point == tripoint_rel_ms::zero || found == obj_type_name.end() ? object_type::NONE :
                 static_cast<object_type>( std::distance( obj_type_name.begin(), found ) );
@@ -850,11 +851,15 @@ void Character::load_mission_state( const JsonObject &data )
     }
 }
 
-void Character::load( const JsonObject &data )
+void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
     data.allow_omitted_members();
     kill_statistics_.clear();
-    data.read( "kill_tracker", kill_statistics_ );
+    if( data.has_member( "kill_tracker" ) ) {
+        data.read( "kill_tracker", kill_statistics_ );
+    } else if( legacy_kills ) {
+        kill_statistics_.deserialize( *legacy_kills );
+    }
     Creature::load( data );
 
     // stats
@@ -2255,7 +2260,7 @@ void Character::load_player_state( const JsonObject &snapshot )
         morale->on_stat_change( "radiation", radiation );
         morale->load( data );
 
-        auto restored_values = values;
+        global_variables::impl_t restored_values = values;
         read( "values", restored_values );
         // Session ownership belongs to the destination, never to a snapshot.
         for( const std::string key : {
@@ -2410,7 +2415,7 @@ void avatar::deserialize( const JsonObject &data )
     load( data );
 }
 
-void avatar::load( const JsonObject &data )
+void avatar::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
     // Validate before mutating the Character. A corrupt identity must not
     // silently become a new player, and an old save must clear any prior ID.
@@ -2422,7 +2427,7 @@ void avatar::load( const JsonObject &data )
             data.throw_error_at( "local_player_id", "Invalid local player identity" );
         }
     }
-    Character::load( data );
+    Character::load( data, legacy_kills );
     local_player_id = restored_player;
 
     std::string prof_ident = "(null)";
@@ -5835,9 +5840,7 @@ void serialize( const recipe_subset &value, JsonOut &jsout )
     for( const recipe * const &entry : value ) {
         ids.push_back( entry->ident() );
     }
-    std::sort( ids.begin(), ids.end(), []( const recipe_id & lhs, const recipe_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
+    std::sort( ids.begin(), ids.end(), lexicographic<recipe>() );
     jsout.write( ids );
 }
 

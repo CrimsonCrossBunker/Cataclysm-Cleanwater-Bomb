@@ -227,7 +227,7 @@ void game::unserialize( std::istream &fin, const cata_path &path )
         unserialize_impl( data );
     } catch( const JsonError &jsonerr ) {
         debugmsg( "Bad save json\n%s", jsonerr.c_str() );
-        return;
+        throw;
     }
 }
 
@@ -239,7 +239,7 @@ void game::unserialize( std::string fin )
         unserialize_impl( data );
     } catch( const JsonError &jsonerr ) {
         debugmsg( "Bad save json\n%s", jsonerr.c_str() );
-        return;
+        throw;
     }
 }
 
@@ -312,15 +312,8 @@ void game::unserialize_impl( const JsonObject &data )
     // before native loading/cache reconstruction, which can query that count.
     const JsonObject player_data = data.get_object( "player" );
     if( !player_data.has_member( "kill_tracker" ) && data.has_object( "kill_tracker" ) ) {
-        player_data.allow_omitted_members();
-        // Preserve the complete object representation: individual JsonMember
-        // values intentionally do not expose raw JSON serialization.
-        std::string migrated = player_data.str();
-        const std::string legacy_kills = data.get_object( "kill_tracker" ).str();
-        migrated.insert( migrated.find_last_of( '}' ),
-                         std::string( player_data.size() == 0 ? "" : "," ) +
-                         "\"kill_tracker\":" + legacy_kills );
-        u.deserialize( json_loader::from_string( migrated ).get_object() );
+        const JsonObject legacy_kills = data.get_object( "kill_tracker" );
+        u.load( player_data, &legacy_kills );
     } else {
         u.deserialize( player_data );
     }
@@ -1779,7 +1772,7 @@ void game::unserialize_dimension_data( const JsonValue &jv )
 void mission::serialize_all( JsonOut &json )
 {
     json.start_array();
-    for( mission*&e : get_all_active() ) {
+    for( mission *&e : get_all_active() ) {
         e->serialize( json );
     }
     json.end_array();
