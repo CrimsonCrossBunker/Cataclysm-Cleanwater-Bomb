@@ -81,6 +81,7 @@
 #include "mp_player_feedback.h"
 #include "mp_test_helpers.h"
 #include "viewer.h"
+#include "mp_actor_binding.h"
 #include "mp_client_conn.h"
 #include "mp_combat_result.h"
 #include "mp_gamestate.h"
@@ -116,6 +117,7 @@
 #include "map_viewpoint.h"
 #include "view_action.h"
 #include "surroundings_menu.h"
+#include "translation.h"
 #include "itype.h"
 #include "grab.h"
 #include "hauling.h"
@@ -16936,7 +16938,10 @@ TEST_CASE( "server_owned_dialogue_session_drives_mission_assignment_and_synchron
     const mission_type_id test_mission_id( "TEST_MISSION_GENERIC_REWARD" );
     mission_type &definition = const_cast<mission_type &>( test_mission_id.obj() );
     const restore_on_out_of_scope restore_start( definition.start );
+    const restore_on_out_of_scope restore_dialogue( definition.dialogue );
     definition.start = []( mission *, Character & ) {};
+    definition.dialogue["offer"] = to_translation( "Please help me with this task." );
+    definition.dialogue["accepted"] = to_translation( "Thank you for helping." );
     mission *task = mission::reserve_new( test_mission_id, provider.getID() );
     REQUIRE( task != nullptr );
     provider.chatbin.missions = { task };
@@ -16954,6 +16959,7 @@ TEST_CASE( "server_owned_dialogue_session_drives_mission_assignment_and_synchron
     cata_mp::apply_npc_view( parsed_npc.get_object(), replica_entry );
     npc *replica_actor = replica_entry.actor.retained( g->npc_lifetimes() );
     REQUIRE( replica_actor != nullptr );
+    CHECK_FALSE( cata_mp::is_player_proxy( *replica_actor ) );
     CHECK( cata_mp::host_npc_identity( *replica_actor ) == provider.getID() );
     cata_mp::remove_npc_view( replica_entry );
     g->multiplayer_session().client_npc_views.clear();
