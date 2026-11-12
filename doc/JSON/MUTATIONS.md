@@ -247,6 +247,7 @@ Specific mutations are extremely versatile. A mutation only needs to have a few 
   "can_heal_with": [ "caramel_ointement" ],   // List of `MED` that will work for you but not for anyone else.  See `CANT_HEAL_EVERYONE` flag for items (default: empty).
   "allowed_category": [ "ALPHA" ],            // List of categories you can mutate into (default: empty).
   "no_cbm_on_bp": [ "torso", "head", "eyes", "mouth", "arm_l" ],  // List of body parts that can't receive CBMs (default: empty).
+  "universal_bionic_slots": 5,                // Bionic slots usable anywhere on the body, consumed only when a body part runs out of its own slots (default: 0).
   "lumination": [ [ "head", 20 ], [ "arm_l", 10 ] ],              // List of glowing bodypart and the intensity of the glow as a float (default: empty).
   "social_modifiers": { "persuade": -10 },    // Social modifiers.  Can be: intimidate, lie, persuade.
   "spells_learned": [ [ "spell_slime_spray", 1 ] ], // Spells learned and the level they're at after gaining the trait/mutation.

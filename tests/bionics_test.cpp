@@ -15,6 +15,7 @@
 #include "enums.h"
 #include "item.h"
 #include "item_location.h"
+#include "options_helpers.h"
 #include "pimpl.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -634,4 +635,25 @@ TEST_CASE( "fueled_bionics", "[bionics] [item]" )
         CHECK( units::to_joule( dummy.get_power_level() ) == 17100 );
         CHECK( dummy.deactivate_bionic( bio ) );
     }
+}
+
+TEST_CASE( "universal_bionic_slots_cover_installation_shortfall", "[bionics][mutations]" )
+{
+    const override_option cbm_slots( "CBM_SLOTS_ENABLED", "true" );
+    clear_avatar();
+    avatar &dummy = get_avatar();
+    const bionic_id probe( "test_bio_universal_probe" );
+    const bodypart_id torso( "torso" );
+    const int probe_slots = static_cast<int>( probe->occupied_bodyparts.at( torso.id() ) );
+    const int needed = probe_slots - dummy.get_free_bionics_slots( torso );
+    REQUIRE( needed > 3 );
+
+    CHECK( dummy.get_universal_bionic_slots() == 0 );
+    CHECK( dummy.bionic_installation_issues( probe ).at( torso ) == needed );
+
+    dummy.toggle_trait( trait_id( "TEST_UNIVERSAL_BIONIC_SLOTS" ) );
+    CHECK( dummy.get_universal_bionic_slots() == 3 );
+    CHECK( dummy.get_used_universal_bionic_slots() == 0 );
+    CHECK( dummy.get_free_universal_bionic_slots() == 3 );
+    CHECK( dummy.bionic_installation_issues( probe ).at( torso ) == needed - 3 );
 }
