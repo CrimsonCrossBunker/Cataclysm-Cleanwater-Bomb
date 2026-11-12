@@ -88,6 +88,7 @@ static const matec_id tec_grapple_drag( "tec_grapple_drag" );
 static const matec_id tec_grapple_hold( "tec_grapple_hold" );
 static const matec_id tec_judo_hip_throw( "tec_judo_hip_throw" );
 static const matec_id tec_sojutsu_jab( "tec_sojutsu_jab" );
+static const matec_id test_active_accurate_strike( "test_active_accurate_strike" );
 static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
 static const matec_id test_active_strike( "test_active_strike" );
 static const matec_id test_manual_cooldown_strike( "test_manual_cooldown_strike" );
@@ -482,6 +483,27 @@ TEST_CASE( "active_technique_rechecks_target_and_spends_one_melee_attack",
     REQUIRE( dude.use_active_technique( adjacent, test_active_strike ) );
     CHECK( dude.get_moves() < moves_before );
     CHECK( dude.get_stamina() < stamina_before );
+}
+
+TEST_CASE( "active_technique_accuracy_bonus_modifies_the_attack_roll",
+           "[martial_arts][active_technique]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    dude.martial_arts_data->add_martialart( test_style_ma1 );
+    dude.martial_arts_data->set_style( test_style_ma1 );
+    dude.set_moves( 1000 );
+
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    target.set_dodge_bonus( 1000 );
+    melee::clear_stats();
+
+    REQUIRE( dude.use_active_technique( target, test_active_accurate_strike ) );
+    CHECK( melee::get_stats().attack_count == 1 );
+    CHECK( melee::get_stats().hit_count == 1 );
 }
 
 TEST_CASE( "active_technique_cooldown_tracks_execution_and_game_time",

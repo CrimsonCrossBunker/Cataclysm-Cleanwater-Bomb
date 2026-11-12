@@ -795,7 +795,13 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
     recalculate_enchantment_cache();
 
     melee::melee_stats.attack_count += 1;
-    int hit_spread = t.deal_melee_attack( this, hit_roll() );
+    float attack_roll = hit_roll();
+    if( validated_technique ) {
+        attack_roll += std::get<0>( *validated_technique )->hit_bonus( *this );
+    } else if( force_technique.is_valid() ) {
+        attack_roll += force_technique->hit_bonus( *this );
+    }
+    int hit_spread = t.deal_melee_attack( this, attack_roll );
     // Optional visual lunge of the attacker toward the target (tiles build only).
     g->draw_creature_attack( *this, t );
     if( !t.is_avatar() ) {

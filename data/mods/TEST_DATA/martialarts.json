@@ -1,6 +1,13 @@
 [
   {
     "type": "technique",
+    "id": "test_active_accurate_strike",
+    "copy-from": "test_active_strike",
+    "name": "Test Accurate Strike",
+    "flat_bonuses": [ { "stat": "hit", "scale": 10000.0 } ]
+  },
+  {
+    "type": "technique",
     "id": "test_active_cooldown_strike",
     "copy-from": "test_active_strike",
     "name": "Test Cooldown Strike",
@@ -192,6 +199,7 @@
     "techniques": [
       "test_technique",
       "test_active_strike",
+      "test_active_accurate_strike",
       "test_manual_cooldown_strike",
       "test_tech_condition_sweep",
       "test_tech_condition_stun",

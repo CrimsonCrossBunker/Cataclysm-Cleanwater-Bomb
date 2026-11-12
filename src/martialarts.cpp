@@ -2260,6 +2260,11 @@ float ma_technique::damage_multiplier( const Character &u, const damage_type_id 
     return bonuses.get_mult( u, affected_stat::DAMAGE, type );
 }
 
+float ma_technique::hit_bonus( const Character &u ) const
+{
+    return bonuses.get_flat( u, affected_stat::HIT );
+}
+
 float ma_technique::move_cost_multiplier( const Character &u ) const
 {
     return bonuses.get_mult( u, affected_stat::MOVE_COST );

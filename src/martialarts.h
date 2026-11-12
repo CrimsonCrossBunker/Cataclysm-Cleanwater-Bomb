@@ -291,6 +291,7 @@ class ma_technique
 
         float damage_bonus( const Character &u, const damage_type_id &type ) const;
         float damage_multiplier( const Character &u, const damage_type_id &type ) const;
+        float hit_bonus( const Character &u ) const;
         float move_cost_multiplier( const Character &u ) const;
         float move_cost_penalty( const Character &u ) const;
         float armor_penetration( const Character &u, const damage_type_id &type ) const;
