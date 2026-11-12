@@ -891,11 +891,12 @@ Guns can be defined like this:
 "overheat_threshold": 100, // Heat value, at which fault may occur, see #Item faults; values below zero mean item won't be able to fault
 "ammo_to_fire" 1,          // Amount of ammo used
 "modes": [                        // Firing modes on this gun
-  [ "DEFAULT", "semi-auto", 1 ],             // One shot per trigger pull
-  [ "AUTO", "auto-rpm", "750" ],             // Full-auto with a cyclic rate of 750 RPM
-  [ "brust-rpm", "800", 3 ],                 // Mode ID BURST. Three shots per trigger pull at 800 RPM
-  [ "FOOBAR", "Volley", 2, "VOLLEY" ]        // Simultaneous volley; recoil applies after all shots
-],
+  [ "DEFAULT", "semi-auto", 1 ],  // First value is id of a fire more, and generally used for NPC stuff. Consider using AUTO, BURST or DEFAULT for modes intended for NPCs
+  [ "AUTO", "auto", 4 ]           // Second value is a name of a fire mod, that would be printed in the menu
+  [ "RANDOM_ID", "Mag dump", 30 ] // Third value is amount of rounds this fire mode will shoot
+  [ "FOOBAR", "Volley", 2, "VOLLEY" ] // Fourth value is an optional flags. Possible flags are:
+  [ "FOOBAR2", "alternative_notation", 3, [ "VOLLEY" ] ] // VOLLEY - all rounds shot by this mode would shoot at once, 
+],                                                       // in that the recoil would be applied not after each shot, but only in the end
 "firing_requirements": {          // Optional. Multimag per-shot consumption keyed by gun mode. Mutually exclusive with non-zero `energy_drain` unless `FIRING_EXT_POWER` is set, and mutually exclusive with non-default `ammo_to_fire`. Each entry references a `pocket_data.id` on a MAGAZINE_WELL pocket or an integral MAGAZINE pocket with `ammo_restriction`. Every base mode listed in `modes` must have an explicit entry; a gunmod-added mode (via `mode_modifier`) uses the gunmod's own `mode_firing_requirements` for that mode, or inherits DEFAULT cost when the gunmod provides none. `qty` must be >= 1. Local battery consumption must be represented by a battery pocket entry; `FIRING_EXT_POWER` only lets `energy_drain` draw one external source, either `USE_UPS` or `USES_BIONIC_POWER`.
   "DEFAULT": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "battery", "qty": 5 } ],
   "BURST":   [ { "pocket": "ammo", "qty": 3 }, { "pocket": "battery", "qty": 15 } ]
@@ -909,17 +910,6 @@ Guns can be defined like this:
 "valid_mod_locations": [ [ "brass catcher", 1 ], [ "grip", 1 ] ],  // The valid locations for gunmods and the mount of slots for that location.
 "loudness": 10             // Amount of noise produced by this gun when firing. If no value is defined, then it's calculated based on loudness value from loaded ammo. Final loudness is calculated as gun loudness + gunmod loudness + ammo loudness. If final loudness is 0, then the gun is completely silent.
 ```
-
-The `brust-rpm` form always defines mode ID `BURST` and works in both
-`modes` and `mode_modifier`. Its RPM is a positive integer string and its
-shot count is an integer of at least two. A fourth element can specify flags
-such as `NPC_AVOID`. Use `BURST` for references in `firing_requirements`,
-`mode_firing_requirements`, and `hide_modes`.
-
-A legacy entry such as `[ "BURST", "3 rd.", 3 ]` fires the same three shots
-at 900 RPM. Timed bursts spend action points on the rounds actually fired.
-Other legacy integer modes greater than one use quantity × 300 RPM, except
-for modes flagged `MELEE` or `VOLLEY`, which keep their fixed quantity.
 
 ### Gunmod
 

@@ -1190,12 +1190,11 @@ void npc::pretend_fire( const gun_mode &mode, int burst_rounds )
     }
     item &gun = *mode.target;
     map &here = get_map();
-    const bool selected_burst = mode.full_auto() && burst_rounds > 0;
-    const bool timed_burst = mode.fixed_burst() || selected_burst;
-    const int planned = selected_burst ? roll_firearm_burst_rounds( *this, gun, burst_rounds )
-                        : mode.start_firing( calendar::turn );
-    const int shots = timed_burst ? std::min( planned, gun.shots_remaining( here, this ) ) : planned;
-    if( mode.full_auto() && !selected_burst ) {
+    const int shots = burst_rounds > 0
+                      ? std::min( roll_firearm_burst_rounds( *this, gun, burst_rounds ),
+                                  gun.shots_remaining( here, this ) )
+                      : mode.start_firing( calendar::turn );
+    if( mode.rpm > 0 && burst_rounds == 0 ) {
         set_moves( std::min( get_moves(), 0 ) );
     }
     if( shots <= 0 ) {
@@ -1228,7 +1227,7 @@ void npc::pretend_fire( const gun_mode &mode, int burst_rounds )
             mod_moves( -get_speed() );
         }
     }
-    if( timed_burst ) {
+    if( burst_rounds > 0 ) {
         mod_moves( -firearm_burst_move_cost( std::max( 1, curshot ), mode.rpm, get_speed() ) );
         recoil = MAX_RECOIL;
     }
@@ -1319,12 +1318,11 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
     if( !mode || mode.melee() ) {
         return 0;
     }
-    if( burst_rounds != 0 && ( !mode.full_auto() || !valid_firearm_burst_rounds( burst_rounds ) ) ) {
-        return 0;
-    }
-    if( mode.fixed_burst() || burst_rounds != 0 ) {
-        const int planned = mode.fixed_burst() ? mode.qty : roll_firearm_burst_rounds( *this, *mode,
-                            burst_rounds );
+    if( burst_rounds != 0 ) {
+        if( mode.rpm <= 0 || !valid_firearm_burst_rounds( burst_rounds ) ) {
+            return 0;
+        }
+        const int planned = roll_firearm_burst_rounds( *this, *mode, burst_rounds );
         const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm );
         if( fired > 0 ) {
             add_msg_if_player( n_gettext( "You fire %d round.", "You fire %d rounds.", fired ), fired );
@@ -1332,13 +1330,13 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
         return fired;
     }
     const int shots = mode.start_firing( calendar::turn );
-    const bool uses_game_second = mode.full_auto() && !mode->has_flag( flag_VEHICLE );
+    const bool uses_game_second = mode.rpm > 0 && !mode->has_flag( flag_VEHICLE );
     if( uses_game_second ) {
         // Holding the trigger for this second ends the turn regardless of character speed.
         set_moves( std::min( get_moves(), 0 ) );
     }
     if( shots <= 0 ) {
-        if( mode.full_auto() ) {
+        if( mode.rpm > 0 ) {
             add_msg_if_player( _( "Your %s is not ready to fire this second." ), mode->tname() );
         }
         return 0;
@@ -3535,7 +3533,7 @@ target_handler::trajectory target_ui::run()
         }
 
         if( mode == TargetMode::Fire && status == Status::Good && attempted_shot ) {
-            if( !relevant->gun_current_mode().full_auto() ) {
+            if( relevant->gun_current_mode().rpm <= 0 ) {
                 requested_burst = 0;
             } else if( !valid_firearm_burst_rounds( requested_burst ) ) {
                 requested_burst = select_burst_rounds();
@@ -4702,7 +4700,7 @@ int target_ui::select_burst_rounds()
 void target_ui::panel_burst_selection( int text_y )
 {
     const gun_mode gun = relevant->gun_current_mode();
-    if( !gun || !gun.full_auto() ) {
+    if( !gun || gun.rpm <= 0 ) {
         return;
     }
     const auto print_line = [&]( const std::string & line ) {

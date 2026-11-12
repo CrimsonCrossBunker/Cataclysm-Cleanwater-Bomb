@@ -6,8 +6,7 @@ def parse_gun(json, origin):
     name = get_singular_name(json)
 
     for mode in json.get("modes", []):
-        if mode[0] != "brust-rpm":
-            write_text(mode[1], origin, comment="Firing mode of gun")
+        write_text(mode[1], origin, comment="Firing mode of gun")
 
     if "skill" in json:
         if json["skill"] != "archery":

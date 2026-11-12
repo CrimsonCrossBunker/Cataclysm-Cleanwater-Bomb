@@ -155,7 +155,7 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         ( !prepare && ( state.weapon != intent.weapon || state.bionic != intent.bionic ) ) ) {
         return firearm_outcome::rejected;
     }
-    const bool needs_burst = ( fire || threshold ) && selected->second.full_auto();
+    const bool needs_burst = ( fire || threshold ) && selected->second.rpm > 0;
     if( needs_burst ? !valid_firearm_burst_rounds( intent.burst_rounds ) : intent.burst_rounds != 0 ) {
         return firearm_outcome::rejected;
     }
@@ -329,7 +329,7 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         return firearm_outcome::rejected;
     }
     gun = weapon->gun_current_mode();
-    if( !gun || gun.melee() || gun.full_auto() != needs_burst ||
+    if( !gun || gun.melee() || ( gun.rpm > 0 ) != needs_burst ||
         weapon->gun_get_mode_id() != intent.mode ) {
         return firearm_outcome::rejected;
     }

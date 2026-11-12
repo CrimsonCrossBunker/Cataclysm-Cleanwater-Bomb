@@ -3313,7 +3313,7 @@ int gun_mode::shots_available( time_point when ) const
     if( !target || melee() ) {
         return 0;
     }
-    if( !full_auto() ) {
+    if( rpm == 0 ) {
         return qty;
     }
     const int64_t second = to_seconds<int64_t>( when - calendar::turn_zero );
@@ -3330,7 +3330,7 @@ int gun_mode::shots_available( time_point when ) const
 int gun_mode::start_firing( time_point when ) const
 {
     const int shots = shots_available( when );
-    if( full_auto() && shots > 0 ) {
+    if( rpm > 0 && shots > 0 ) {
         target->set_var( gun_rpm_turn_var, to_seconds<double>( when - calendar::turn_zero ) );
     }
     return shots;
@@ -3338,10 +3338,7 @@ int gun_mode::start_firing( time_point when ) const
 
 std::string gun_mode::firing_label( const std::string &name ) const
 {
-    if( fixed_burst() ) {
-        return string_format( _( "%s (%d rounds at %d RPM)" ), name, qty, rpm );
-    }
-    if( full_auto() ) {
+    if( rpm > 0 ) {
         return string_format( _( "%s (%d RPM)" ), name, rpm );
     }
     return string_format( "%s (%d)", name, qty );

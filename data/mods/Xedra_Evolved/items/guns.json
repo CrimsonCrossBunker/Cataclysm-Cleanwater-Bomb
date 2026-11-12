@@ -48,7 +48,7 @@
     "material": [ "lc_steel" ],
     "dispersion": 358,
     "durability": 7,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "300", 3 ], [ "AUTO", "auto-rpm", "300" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ], [ "AUTO", "auto-rpm", "300" ] ],
     "default_mods": [ "bars" ],
     "barrel_volume": "81 ml",
     "valid_mod_locations": [

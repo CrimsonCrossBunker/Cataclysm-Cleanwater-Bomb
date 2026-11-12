@@ -56,7 +56,6 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "projectile.h"
-#include "ranged.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "sounds.h"
@@ -1493,10 +1492,10 @@ bool gun_actor::shoot( monster &z, const tripoint_bub_ms &target, const gun_mode
     gun.gun_set_mode( mode );
     const bool throwing = fake_skills.count( skill_throw ) != 0;
     const gun_mode firing_mode = gun.gun_current_mode();
-    const bool full_auto = !throwing && firing_mode.full_auto();
+    const bool uses_rpm = !throwing && firing_mode.rpm > 0;
     std::string firing_turn_key;
     const double second = to_seconds<double>( calendar::turn - calendar::turn_zero );
-    if( full_auto ) {
+    if( uses_rpm ) {
         // The gun is a temporary item for each attack. Store its cadence on the monster.
         firing_turn_key = "gun_rpm_fired_turn:" + mig_gun_type.str();
         const diag_value *previous = z.maybe_get_value( firing_turn_key );
@@ -1566,15 +1565,11 @@ bool gun_actor::shoot( monster &z, const tripoint_bub_ms &target, const gun_mode
         tmp.throw_item( target, item( ammo, calendar::turn, 1 ) );
         z.ammo[ammo_type]--;
     } else {
-        if( full_auto ) {
+        if( uses_rpm ) {
             z.set_value( firing_turn_key, second );
         }
         const gun_mode active_mode = tmp.get_wielded_item()->gun_current_mode();
-        const int fired = tmp.fire_gun( get_map(), target, active_mode );
-        z.ammo[ammo_type] -= fired;
-        if( active_mode.fixed_burst() ) {
-            z.mod_moves( -firearm_burst_move_cost( std::max( 1, fired ), active_mode.rpm, z.get_speed() ) );
-        }
+        z.ammo[ammo_type] -= tmp.fire_gun( get_map(), target, active_mode );
     }
     return true;
 }

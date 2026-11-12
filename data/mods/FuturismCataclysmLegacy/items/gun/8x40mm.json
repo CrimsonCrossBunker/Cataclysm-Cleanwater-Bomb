@@ -69,7 +69,7 @@
     "durability": 9,
     "reload": 200,
     "barrel_volume": "500 ml",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "900", 4 ], [ "AUTO", "auto-rpm", "1800" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "4 rd.", 4 ], [ "AUTO", "auto-rpm", "1800" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "grip", 1 ],

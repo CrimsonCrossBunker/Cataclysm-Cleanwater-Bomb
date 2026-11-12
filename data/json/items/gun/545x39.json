@@ -72,7 +72,7 @@
     "ammo": [ "545x39" ],
     "dispersion": 120,
     "min_cycle_recoil": 1260,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "900", 2 ], [ "AUTO", "auto-rpm", "900" ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "burst", 2 ], [ "AUTO", "auto-rpm", "900" ] ],
     "barrel_volume": "250 ml",
     "default_mods": [ "bars", "wire_stock" ],
     "valid_mod_locations": [
