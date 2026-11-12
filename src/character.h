@@ -2469,13 +2469,13 @@ class Character : public Creature, public visitable
         /** How much dispersion does one point of target's dodge add when throwing at said target? */
         int throw_dispersion_per_dodge( bool add_encumbrance = true ) const;
 
-        /** Multipliers from the currently wielded item that affect throwing. */
-        float throw_damage_multiplier() const;
-        float throw_range_multiplier() const;
-        float throw_stamina_multiplier() const;
-        float throw_dispersion_multiplier() const;
-        float throw_speed_multiplier() const;
-        float throw_weight_multiplier() const;
+        /** Multipliers from the currently wielded item that affect a compatible thrown item. */
+        float throw_damage_multiplier( const item &thrown ) const;
+        float throw_range_multiplier( const item &thrown ) const;
+        float throw_stamina_multiplier( const item &thrown ) const;
+        float throw_dispersion_multiplier( const item &thrown ) const;
+        float throw_speed_multiplier( const item &thrown ) const;
+        float throw_weight_multiplier( const item &thrown ) const;
         bool is_fcl_railgun_throw( const item &thrown ) const;
 
         /** True if unarmed */

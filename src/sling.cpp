@@ -151,6 +151,7 @@ std::optional<dealt_projectile_attack> launch_sling( Character &who, item_locati
     const tripoint_bub_ms source = who.pos_bub();
     const int moves = sling_launch_moves( who, ammo );
     const int stamina = who.get_standard_stamina_cost( &round );
+    const float stamina_multiplier = who.throw_stamina_multiplier( round );
     const int dispersion = who.throwing_dispersion( round,
                            get_creature_tracker().creature_at( *target ), false );
     projectile proj = who.thrown_item_projectile( round );
@@ -184,7 +185,7 @@ std::optional<dealt_projectile_attack> launch_sling( Character &who, item_locati
         ammo.remove_item();
     }
     who.mod_moves( -( moves - activation.moves ) );
-    who.mod_stamina( static_cast<int>( std::round( stamina * who.throw_stamina_multiplier() ) ) );
+    who.mod_stamina( static_cast<int>( std::round( stamina * stamina_multiplier ) ) );
     if( round.has_flag( flag_ACT_ON_RANGED_HIT ) ) {
         proj.proj_effects.insert( ammo_effect_ACT_ON_RANGED_HIT );
     }

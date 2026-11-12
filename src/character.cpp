@@ -4027,7 +4027,7 @@ int Character::throw_range( const item &it ) const
     const bool do_railgun = is_fcl_railgun_throw( tmp );
 
     /** @ARM_STR determines maximum weight that can be thrown */
-    const float weight_mult = do_railgun ? 1.0f : throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : throw_weight_multiplier( tmp );
     const units::mass effective_weight = tmp.weight() * weight_mult;
     if( ( effective_weight / 113_gram ) > str * 15 )  {
         return 0;
@@ -4098,19 +4098,21 @@ int Character::throw_range( const item &it ) const
         const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
                 flag_RAILGUN_THROW_MULTIPLIER.is_valid();
         if( has_railgun_throw_multiplier && wielded &&
-            wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-            range_multiplier *= wielded->type->throw_range_multiplier;
+            wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+            wielded->type->throw_correction ) {
+            range_multiplier *= wielded->type->throw_correction->range_multiplier;
         }
         if( wielded && wielded->is_gun() ) {
             for( const item *mod : wielded->gunmods() ) {
                 if( has_railgun_throw_multiplier &&
-                    mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-                    range_multiplier *= mod->type->gunmod->throw_range_multiplier;
+                    mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+                    mod->type->gunmod->throw_correction ) {
+                    range_multiplier *= mod->type->gunmod->throw_correction->range_multiplier;
                 }
             }
         }
     } else {
-        range_multiplier = throw_range_multiplier();
+        range_multiplier = throw_range_multiplier( tmp );
     }
     ret = static_cast<int>( std::round( ret * range_multiplier ) );
 
@@ -4121,17 +4123,22 @@ int Character::throw_range( const item &it ) const
     return ret;
 }
 
-// Combines a wielded item's own throwing multiplier with the multiplicative and
-// additive bonuses of any installed gunmods:
+// Combines a wielded item's own throwing correction with the multiplicative and
+// additive bonuses of compatible installed gunmods:
 // final = base * product( mod multipliers ) + sum( mod adds ).
-static float throw_bonus_with_mods( const item_location &wielded, float base,
-                                    float islot_gunmod::*mult, float islot_gunmod::*add )
+static float throw_bonus_with_mods( const item_location &wielded, const item &thrown,
+                                    float throw_correction_data::*mult,
+                                    float islot_gunmod::*add )
 {
     const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
             flag_RAILGUN_THROW_MULTIPLIER.is_valid();
-    if( has_railgun_throw_multiplier && wielded &&
-        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-        base = 1.0f;
+    float base = 1.0f;
+    if( wielded &&
+        !( has_railgun_throw_multiplier &&
+           wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) &&
+        wielded->type->throw_correction &&
+        wielded->type->throw_correction->applies_to( thrown ) ) {
+        base = wielded->type->throw_correction.value().*mult;
     }
     float mult_total = 1.0f;
     float add_total = 0.0f;
@@ -4142,8 +4149,10 @@ static float throw_bonus_with_mods( const item_location &wielded, float base,
                 continue;
             }
             const islot_gunmod &slot = *mod->type->gunmod;
-            mult_total *= slot.*mult;
-            add_total += slot.*add;
+            if( slot.throw_correction && slot.throw_correction->applies_to( thrown ) ) {
+                mult_total *= slot.throw_correction.value().*mult;
+                add_total += slot.*add;
+            }
         }
     }
     return base * mult_total + add_total;
@@ -4158,57 +4167,45 @@ bool Character::is_fcl_railgun_throw( const item &thrown ) const
     return !is_mounted() || mounted_creature->mech_str_addition() == 0;
 }
 
-float Character::throw_damage_multiplier() const
+float Character::throw_damage_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_damage_multiplier : 1.0f,
-                                  &islot_gunmod::throw_damage_multiplier,
+    return throw_bonus_with_mods( get_wielded_item(), thrown,
+                                  &throw_correction_data::damage_multiplier,
                                   &islot_gunmod::throw_damage_add );
 }
 
-float Character::throw_range_multiplier() const
+float Character::throw_range_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_range_multiplier : 1.0f,
-                                  &islot_gunmod::throw_range_multiplier,
+    return throw_bonus_with_mods( get_wielded_item(), thrown,
+                                  &throw_correction_data::range_multiplier,
                                   &islot_gunmod::throw_range_add );
 }
 
-float Character::throw_stamina_multiplier() const
+float Character::throw_stamina_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_stamina_multiplier : 1.0f,
-                                  &islot_gunmod::throw_stamina_multiplier,
+    return throw_bonus_with_mods( get_wielded_item(), thrown,
+                                  &throw_correction_data::stamina_multiplier,
                                   &islot_gunmod::throw_stamina_add );
 }
 
-float Character::throw_dispersion_multiplier() const
+float Character::throw_dispersion_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_dispersion_multiplier : 1.0f,
-                                  &islot_gunmod::throw_dispersion_multiplier,
+    return throw_bonus_with_mods( get_wielded_item(), thrown,
+                                  &throw_correction_data::dispersion_multiplier,
                                   &islot_gunmod::throw_dispersion_add );
 }
 
-float Character::throw_speed_multiplier() const
+float Character::throw_speed_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_speed_multiplier : 1.0f,
-                                  &islot_gunmod::throw_speed_multiplier,
+    return throw_bonus_with_mods( get_wielded_item(), thrown,
+                                  &throw_correction_data::speed_multiplier,
                                   &islot_gunmod::throw_speed_add );
 }
 
-float Character::throw_weight_multiplier() const
+float Character::throw_weight_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_weight_multiplier : 1.0f,
-                                  &islot_gunmod::throw_weight_multiplier,
+    return throw_bonus_with_mods( get_wielded_item(), thrown,
+                                  &throw_correction_data::weight_multiplier,
                                   &islot_gunmod::throw_weight_add );
 }
 
