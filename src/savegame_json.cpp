@@ -2260,7 +2260,7 @@ void Character::load_player_state( const JsonObject &snapshot )
         morale->on_stat_change( "radiation", radiation );
         morale->load( data );
 
-        auto restored_values = values;
+        global_variables::impl_t restored_values = values;
         read( "values", restored_values );
         // Session ownership belongs to the destination, never to a snapshot.
         for( const std::string key : {
