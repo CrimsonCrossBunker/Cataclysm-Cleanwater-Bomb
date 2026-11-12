@@ -1772,7 +1772,7 @@ void game::unserialize_dimension_data( const JsonValue &jv )
 void mission::serialize_all( JsonOut &json )
 {
     json.start_array();
-    for( mission*&e : get_all_active() ) {
+    for( mission *&e : get_all_active() ) {
         e->serialize( json );
     }
     json.end_array();
