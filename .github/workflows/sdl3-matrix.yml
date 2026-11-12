@@ -248,6 +248,7 @@ jobs:
       shell: pwsh
       working-directory: msvc-full-features
       env:
+        VCPKG_BINARY_SOURCES: clear;default,readwrite
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
       run: |
         vcpkg install --triplet x64-windows-static --host-triplet x64-windows-static `
