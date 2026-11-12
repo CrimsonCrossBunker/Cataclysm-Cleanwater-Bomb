@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <set>
@@ -38,6 +39,7 @@
 #include "point.h"
 #include "projectile.h"
 #include "ranged.h"
+#include "ranged_actions.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "safe_reference.h"
@@ -457,6 +459,48 @@ npc_attack_rating npc_attack_melee::evaluate_critter( const npc &source,
     return npc_attack_rating( static_cast<int>( std::round( potential ) ), critter->pos_bub() );
 }
 
+enum class npc_gun_range : int {
+    CLOSE = 1,
+    MEDIUM,
+    LONG
+};
+
+static npc_gun_range npc_gun_distance( const npc &source, const item &weapon, int distance )
+{
+    const float skill = std::clamp( source.get_skill_level( weapon.gun_skill() ),
+                                    0.0f, static_cast<float>( MAX_SKILL ) );
+    // At maximum skill, the close and medium bands end at 4 and 12 tiles.
+    const int close = 1 + static_cast<int>( 3 * skill / MAX_SKILL );
+    const int medium = 4 + static_cast<int>( 8 * skill / MAX_SKILL );
+    if( distance <= close ) {
+        return npc_gun_range::CLOSE;
+    }
+    return distance <= medium ? npc_gun_range::MEDIUM : npc_gun_range::LONG;
+}
+
+// Zero selects the existing per-second full-auto allowance.
+static int npc_burst_estimate( burst_rule rule, npc_gun_range range )
+{
+    switch( rule ) {
+        case burst_rule::SHORT:
+            return 3;
+        case burst_rule::LONG:
+            return 7;
+        case burst_rule::FULL_AUTO:
+            return 0;
+        case burst_rule::ADAPTIVE:
+            switch( range ) {
+                case npc_gun_range::CLOSE:
+                    return 0;
+                case npc_gun_range::MEDIUM:
+                    return 7;
+                case npc_gun_range::LONG:
+                    return 3;
+            }
+    }
+    return 0;
+}
+
 void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
 {
     if( !source.is_wielding( gun ) ) {
@@ -470,7 +514,8 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         source.move_pause();
         return;
     }
-    if( !gun.ammo_sufficient( &source ) ) {
+    const gun_mode mode = gun.gun_current_mode();
+    if( !mode->ammo_sufficient( &source ) ) {
         // todo: make gun an item_location instead of getting wielded item here
         // but since wielding is required before this, it should be fine
         source.do_reload( source.get_wielded_item() );
@@ -490,32 +535,60 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         return;
     }
 
-    const Target_attributes target( source.pos_bub(), location );
-    const aim_mods_cache aim_cache = source.gen_aim_mods_cache( gun );
+    map &here = get_map();
+    int burst_rounds = 0;
+    if( mode.rpm > 0 ) {
+        const npc_gun_range range = npc_gun_distance( source, *mode,
+                                    rl_dist( source.pos_bub(), location ) );
+        burst_rounds = npc_burst_estimate( source.rules.burst, range );
+        if( burst_rounds > 0 ) {
+            std::optional<tripoint_bub_ms> previous;
+            if( source.last_target_pos ) {
+                previous = here.get_bub( *source.last_target_pos );
+            }
+            source.recoil = aim_turning_recoil( source, source.pos_bub(), previous, location );
+            source.last_target_pos = here.get_abs( location );
 
-    // Only aim if we aren't in risk of being hit
-    // TODO: Get distance to closest enemy
-    if( target.range > 1 && source.aim_per_move( gun, source.recoil, target, aim_cache ) > 0 &&
-        source.confident_gun_mode_range( gunmode, source.recoil ) < target.range ) {
-        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is aiming", source.disp_name() );
-        source.aim( Target_attributes( source.pos_bub(), location ) );
-    } else {
-        const gun_mode mode = gun.gun_current_mode();
-        if( source.is_hallucination() ) {
-            source.pretend_fire( mode );
+            const std::vector<aim_type> aims = source.get_aim_types( *mode );
+            // Some sights have identical thresholds, so the shared list may omit a preset.
+            const aim_type &aim = aims[std::min( static_cast<std::size_t>( range ), aims.size() - 1 )];
+            if( !aim_gun_until_threshold( source, *mode, location, aim.threshold ) ||
+                source.get_moves() <= 0 ) {
+                return;
+            }
         } else {
-            source.fire_gun( get_map(), location, mode );
+            source.last_target_pos = here.get_abs( location );
         }
-        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s fires %s", source.disp_name(),
-                       gun.display_name() );
+    } else {
+        const Target_attributes target( source.pos_bub(), location );
+        const aim_mods_cache aim_cache = source.gen_aim_mods_cache( gun );
+        // Only aim if we aren't in risk of being hit.
+        if( target.range > 1 && source.aim_per_move( gun, source.recoil, target, aim_cache ) > 0 &&
+            source.confident_gun_mode_range( gunmode, source.recoil ) < target.range ) {
+            add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is aiming", source.disp_name() );
+            source.aim( target );
+            return;
+        }
     }
+
+    const int moves = source.get_moves();
+    if( source.is_hallucination() ) {
+        source.pretend_fire( mode, burst_rounds );
+    } else {
+        source.fire_gun( here, location, mode, item_location(), burst_rounds );
+    }
+    if( source.get_moves() == moves ) {
+        source.set_moves( 0 );
+    }
+    add_msg_debug( debugmode::debug_filter::DF_NPC, "%s fires %s", source.disp_name(),
+                   gun.display_name() );
 }
 
 bool npc_attack_gun::can_use( const npc &source ) const
 {
     // can't attack with something you can't wield or which lacks ammo.
     return ( source.is_wielding( *gunmode ) || source.can_wield( *gunmode ).success() )
-           && gun.has_ammo() && gunmode.shots_available( calendar::turn ) > 0;
+           && gun.has_ammo() && ( gunmode.rpm > 0 || gunmode.shots_available( calendar::turn ) > 0 );
 }
 
 int npc_attack_gun::base_time_penalty( const npc &source ) const
@@ -583,10 +656,6 @@ std::vector<npc_attack_rating> npc_attack_gun::all_evaluations( const npc &sourc
 npc_attack_rating npc_attack_gun::evaluate_tripoint(
     const npc &source, const Creature *target, const tripoint_bub_ms &location ) const
 {
-    const item &gun = *gunmode.target;
-    const int damage = gun.gun_damage().total_damage() * gunmode.shots_available( calendar::turn );
-    double potential = damage;
-
     const Creature *critter = get_creature_tracker().creature_at( location );
     if( !critter ) {
         // TODO: AOE ammo effects
@@ -601,12 +670,23 @@ npc_attack_rating npc_attack_gun::evaluate_tripoint(
 
     const bool avoids_friendly_fire = source.rules.has_flag( ally_rule::avoid_friendly_fire );
     const int distance_to_me = rl_dist( location, source.pos_bub() );
+    const item &weapon = *gunmode;
+    const int estimate = gunmode.rpm > 0
+                         ? npc_burst_estimate( source.rules.burst, npc_gun_distance( source, weapon,
+                                 distance_to_me ) )
+                         : 0;
+    const int rounds = estimate > 0 ? estimate : gunmode.shots_available( calendar::turn );
+    if( rounds <= 0 ) {
+        return npc_attack_rating( std::nullopt, location );
+    }
+    const int damage = weapon.gun_damage().total_damage() * rounds;
+    double potential = damage;
 
     // Make attacks that involve moving to find clear LOS slightly less likely
     if( has_obstruction( source.pos_bub(), location, avoids_friendly_fire ) ) {
         potential *= 0.9f;
     } else if( avoids_friendly_fire &&
-               !source.wont_hit_friend( location, gun, false ) ) {
+               !source.wont_hit_friend( location, weapon, false ) ) {
         potential *= 0.95f;
     }
 

@@ -1176,21 +1176,34 @@ static int get_action_penalty( const map &here, const Character &guy, const item
     return action_penalty;
 }
 
-void npc::pretend_fire( const gun_mode &mode )
+static int roll_firearm_burst_rounds( const Character &shooter, const item &gun, int estimate )
 {
-    const int shots = mode.start_firing( calendar::turn );
-    if( mode.rpm > 0 ) {
+    const auto [minimum, maximum] = firearm_burst_round_range( estimate,
+                                    shooter.get_skill_level( gun.gun_skill() ) );
+    return minimum == maximum ? minimum : rng( minimum, maximum );
+}
+
+void npc::pretend_fire( const gun_mode &mode, int burst_rounds )
+{
+    if( !mode || mode.melee() ) {
+        return;
+    }
+    item &gun = *mode.target;
+    map &here = get_map();
+    const int shots = burst_rounds > 0
+                      ? std::min( roll_firearm_burst_rounds( *this, gun, burst_rounds ),
+                                  gun.shots_remaining( here, this ) )
+                      : mode.start_firing( calendar::turn );
+    if( mode.rpm > 0 && burst_rounds == 0 ) {
         set_moves( std::min( get_moves(), 0 ) );
     }
     if( shots <= 0 ) {
         return;
     }
-    item &gun = *mode.target;
     int curshot = 0;
     if( one_in( 50 ) ) {
         add_msg_if_player_sees( *this, m_info, _( "%s shoots something." ), disp_name() );
     }
-    map &here = get_map();
     while( curshot != shots ) {
         if( gun.uses_firing_requirements() ) {
             if( gun.consume_one_shot( here, pos_bub( here ), this ) != 1 ) {
@@ -1213,6 +1226,10 @@ void npc::pretend_fire( const gun_mode &mode )
         if( mode.rpm == 0 ) {
             mod_moves( -get_speed() );
         }
+    }
+    if( burst_rounds > 0 ) {
+        mod_moves( -firearm_burst_move_cost( std::max( 1, curshot ), mode.rpm, get_speed() ) );
+        recoil = MAX_RECOIL;
     }
 }
 
@@ -1305,9 +1322,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
         if( mode.rpm <= 0 || !valid_firearm_burst_rounds( burst_rounds ) ) {
             return 0;
         }
-        const auto [minimum, maximum] = firearm_burst_round_range( burst_rounds,
-                                        get_skill_level( mode->gun_skill() ) );
-        const int planned = minimum == maximum ? minimum : rng( minimum, maximum );
+        const int planned = roll_firearm_burst_rounds( *this, *mode, burst_rounds );
         const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm );
         if( fired > 0 ) {
             add_msg_if_player( n_gettext( "You fire %d round.", "You fire %d rounds.", fired ), fired );
@@ -4590,6 +4605,32 @@ bool target_ui::action_drop_aim()
     return true;
 }
 
+static bool aim_gun_until_recoil( Character &you, const item &weapon,
+                                  const tripoint_bub_ms &dst, int aim_threshold,
+                                  bool require_aim_move )
+{
+    const double sight_dispersion = you.most_accurate_aiming_method_limit( weapon );
+    const Target_attributes target( you.pos_bub(), dst );
+    const double min_recoil = calculate_aim_cap( you, dst );
+    const auto aimed = [&]() {
+        // Aim to the requested threshold or the best the sights and target allow.
+        return you.recoil <= aim_threshold || you.recoil - sight_dispersion <= min_recoil;
+    };
+    if( require_aim_move ) {
+        do_aim( you, weapon, target, min_recoil );
+    }
+    while( you.get_moves() > 0 && !aimed() ) {
+        do_aim( you, weapon, target, min_recoil );
+    }
+    return aimed() || ( !get_creature_tracker().creature_at( dst ) && you.recoil <= min_recoil );
+}
+
+bool aim_gun_until_threshold( Character &you, const item &weapon,
+                              const tripoint_bub_ms &dst, int threshold )
+{
+    return aim_gun_until_recoil( you, weapon, dst, threshold, false );
+}
+
 bool aim_gun_until_threshold( Character &you, const item &weapon,
                               const tripoint_bub_ms &dst, const std::string &action )
 {
@@ -4604,22 +4645,7 @@ bool aim_gun_until_threshold( Character &you, const item &weapon,
         debugmsg( "Could not find a valid aim_type for %s", action.c_str() );
         return false;
     }
-    const int aim_threshold = it->threshold;
-    const double sight_dispersion = you.most_accurate_aiming_method_limit( weapon );
-    const Target_attributes target( you.pos_bub(), dst );
-    const double min_recoil = calculate_aim_cap( you, dst );
-    do {
-        do_aim( you, weapon, target, min_recoil );
-    } while( you.get_moves() > 0 && you.recoil > aim_threshold &&
-             you.recoil - sight_dispersion > min_recoil );
-
-    // If we made it under the aim threshold, go ahead and fire.
-    // Also fire if we're at our best aim level already.
-    // If no critter is at dst then sight dispersion does not apply,
-    // so it would lock into an infinite loop.
-    bool done_aiming = you.recoil <= aim_threshold || you.recoil - sight_dispersion <= min_recoil ||
-                       ( !get_creature_tracker().creature_at( dst ) && you.recoil <= min_recoil );
-    return done_aiming;
+    return aim_gun_until_recoil( you, weapon, dst, it->threshold, true );
 }
 
 bool target_ui::action_aim_and_shoot( const std::string &action )
@@ -4632,7 +4658,8 @@ bool target_ui::action_aim_and_shoot( const std::string &action )
 
 static constexpr std::array<std::pair<const char *, int>, 3> burst_presets = {{
         { "AIMED_SHOT", 3 }, { "CAREFUL_SHOT", 7 }, { "PRECISE_SHOT", 11 }
-    }};
+    }
+};
 
 int target_ui::select_burst_rounds()
 {
@@ -4676,7 +4703,7 @@ void target_ui::panel_burst_selection( int text_y )
     if( !gun || gun.rpm <= 0 ) {
         return;
     }
-    const auto print_line = [&]( const std::string &line ) {
+    const auto print_line = [&]( const std::string & line ) {
         if( text_y < getmaxy( w_target ) - 1 ) {
             trim_and_print( w_target, point( 1, text_y++ ), getmaxx( w_target ) - 2, c_white, line );
         }
@@ -5072,7 +5099,7 @@ void target_ui::panel_gun_info( int &text_y )
         gunmod_name = m->tname() + " ";
     }
     const std::string str = string_format( _( "Firing mode: <color_cyan>%s</color>" ),
-                                          m.firing_label( gunmod_name + mode_name ) );
+                                           m.firing_label( gunmod_name + mode_name ) );
     nc_color clr = c_light_gray;
     print_colored_text( w_target, point( 1, text_y++ ), clr, clr, str );
 

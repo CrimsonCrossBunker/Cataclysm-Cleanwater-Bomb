@@ -283,6 +283,13 @@ enum class aim_rule : int {
     // If you can't aim, don't shoot
     STRICTLY_PRECISE
 };
+
+enum class burst_rule : int {
+    ADAPTIVE = 0,
+    SHORT,
+    LONG,
+    FULL_AUTO
+};
 const std::unordered_map<std::string, aim_rule> aim_rule_strs = { {
         { "AIM_WHEN_CONVENIENT", aim_rule::WHEN_CONVENIENT },
         { "AIM_SPRAY", aim_rule::SPRAY },
@@ -488,6 +495,7 @@ const std::unordered_map<std::string, ally_rule_data> ally_rule_strs = { {
 struct npc_follower_rules {
     combat_engagement engagement;
     aim_rule aim = aim_rule::WHEN_CONVENIENT;
+    burst_rule burst = burst_rule::ADAPTIVE;
     cbm_recharge_rule cbm_recharge = cbm_recharge_rule::CBM_RECHARGE_SOME;
     cbm_reserve_rule cbm_reserve = cbm_reserve_rule::CBM_RESERVE_SOME;
     ally_rule flags = ally_rule::DEFAULT; // NOLINT(cata-serialize)
@@ -964,7 +972,7 @@ class npc : public Character
         std::string get_specified_talk_topic( std::string const &topic_id );
         float character_danger( const Character &u ) const;
         float vehicle_danger( int radius ) const;
-        void pretend_fire( const gun_mode &mode ); // fake ranged attack for hallucination
+        void pretend_fire( const gun_mode &mode, int burst_rounds = 0 );
         // True if our anger is at least equal to...
         bool turned_hostile() const;
         bool turned_hostile( character_id who ) const;
