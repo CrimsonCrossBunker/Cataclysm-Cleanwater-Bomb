@@ -714,9 +714,9 @@ void Character::apply_murder_penalties( Creature *victim )
         if( morale_effect == 0 ) {
             // No morale effect
         } else if( morale_effect <= -50 ) {
-            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 14_days, 7_days );
+            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 10_days, 5_days );
         } else if( morale_effect > -50 && morale_effect < 0 ) {
-            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 10_days, 7_days );
+            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 7_days, 5_days );
         }
     }
 }
