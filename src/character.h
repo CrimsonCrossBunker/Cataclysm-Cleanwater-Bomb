@@ -3105,7 +3105,7 @@ class Character : public Creature, public visitable
         // Portable body, abilities and carried state. Identity, position,
         // activities and other world relationships remain owned by the receiver.
         void store_player_state( JsonOut &out ) const;
-        void load_player_state( const JsonObject &data );
+        void load_player_state( const JsonObject &snapshot );
 
         // Replica-only needs/morale state; no ingestion, digestion or gameplay hooks.
         void store_needs_state( JsonOut &json ) const;
