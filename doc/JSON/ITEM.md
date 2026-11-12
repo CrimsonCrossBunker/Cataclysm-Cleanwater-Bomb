@@ -149,7 +149,7 @@ These fields can be read by any ITEM regardless of subtypes:
 "solar_efficiency": 0.3,                     // Efficiency of solar energy conversion for solarpacks; require SOLARPACK_ON to generate electricity; default 0
 "source_monster": "mon_zombie",               // This item is corpse of this monster (so it has weight and volume of this monster), and revive into this monster; require COPRSE flag
 "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage dealt when throwing this item; if omitted, melee damage is used, including the character's strength bonus.
-"throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. They apply only when every configured projectile restriction passes.
+"throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. They apply only when every configured projectile restriction passes; charge-counted items use per-charge weight and volume.
   "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "SLING_AMMO" ] ], // String or array. Outer entries are alternatives; flags grouped in an inner array are all required. This example means (SLING_PROJECTILE and NPC_THROWN) or SLING_AMMO.
   "min_weight": "1 g",                     // (Optional) Inclusive minimum projectile weight.
   "max_weight": "750 g",                   // (Optional) Inclusive maximum projectile weight.
