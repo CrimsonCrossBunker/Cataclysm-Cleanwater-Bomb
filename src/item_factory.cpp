@@ -4185,13 +4185,15 @@ void throw_correction_data::deserialize( const JsonObject &jo )
                     std::vector<flag_id> clause;
                     for( const JsonValue flag : conjunction ) {
                         if( !flag.test_string() ) {
-                            flag.throw_error( "required_flag AND clauses must contain only strings" );
+                            flag.throw_error( "required_flag AND clauses must contain only "
+                                              "strings" );
                         }
                         clause.emplace_back( flag.get_string() );
                     }
                     required_flags.push_back( std::move( clause ) );
                 } else {
-                    alternative.throw_error( "required_flag alternatives must be strings or arrays of strings" );
+                    alternative.throw_error( "required_flag alternatives must be strings or arrays "
+                                             "of strings" );
                 }
             }
         } else {
