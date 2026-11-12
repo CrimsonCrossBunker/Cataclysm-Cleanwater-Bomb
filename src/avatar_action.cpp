@@ -11,7 +11,6 @@
 #include <translation.h>
 #include <algorithm>
 #include <climits>
-#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <map>

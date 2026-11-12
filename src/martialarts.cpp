@@ -60,6 +60,8 @@
 
 class json_flag;
 
+static const efftype_id effect_incorporeal( "incorporeal" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const bionic_id bio_armor_arms( "bio_armor_arms" );
 static const bionic_id bio_armor_legs( "bio_armor_legs" );
 static const bionic_id bio_cqb( "bio_cqb" );
@@ -1082,7 +1084,7 @@ bool ma_technique::activation_allowed( const Character &character,
           character.get_wielded_item() || character.get_working_arm_count() < 2 ||
           !character.has_two_arms_lifting() ||
           character.worn_with_flag( flag_RESTRICT_HANDS ) ||
-          character.has_effect( efftype_id( "incorporeal" ) ) ||
+          character.has_effect( effect_incorporeal ) ||
           character.has_effect( effect_downed ) || character.in_sleep_state() ||
           character.get_stamina() < grapple_stamina ) ) {
         return false;
@@ -1123,21 +1125,21 @@ float ma_technique::charge_damage_multiplier( const Character &character,
 
 bool martial_grapple_blocks_movement( Creature &target )
 {
-    const efftype_id grip( "martial_grapple" );
-    if( !target.has_effect( grip ) ) {
+    if( !target.has_effect( effect_martial_grapple ) ) {
         return false;
     }
-    Creature *const source = target.get_effect( grip ).get_source().resolve_creature();
+    Creature *const source = target.get_effect(
+                                 effect_martial_grapple ).get_source().resolve_creature();
     Character *const holder = source ? source->as_character() : nullptr;
     if( holder && !holder->is_dead_state() && target.is_adjacent( holder, false ) &&
         !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
         holder->has_two_arms_lifting() && !holder->worn_with_flag( flag_RESTRICT_HANDS ) &&
-        !holder->has_effect( efftype_id( "incorporeal" ) ) &&
-        !holder->has_effect( efftype_id( "downed" ) ) && !holder->in_sleep_state() &&
+        !holder->has_effect( effect_incorporeal ) &&
+        !holder->has_effect( effect_downed ) && !holder->in_sleep_state() &&
         holder->get_stamina() >= 100 ) {
         return true;
     }
-    target.remove_effect( grip );
+    target.remove_effect( effect_martial_grapple );
     return false;
 }
 

@@ -37,6 +37,7 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_missions.h"
 #include "map.h"
+#include "mapdata.h"
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
@@ -47,7 +48,6 @@
 #include "player_activity.h"
 #include "profession.h"
 #include "scenario.h"
-#include "skill.h"
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -81,6 +81,11 @@ extern "C" {
 #include <variant>
 #include "lua_platform_sol.h"
 
+static const damage_type_id damage_bash( "bash" );
+static const skill_id skill_unarmed( "unarmed" );
+static const skill_id skill_melee( "melee" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
+static const efftype_id effect_downed( "downed" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
@@ -2195,7 +2200,7 @@ void invoke_plant_lifecycle_handlers(
     const std::string furniture_id = captured_furniture != string_context.end() ?
                                      captured_furniture->second : here.furn( position ).id().str();
     const tripoint_abs_ms absolute = here.get_abs( position );
-    const auto runtimes = detail::active_runtime_values();
+    const auto runtimes = std::vector( detail::active_runtime_values() );
     for( auto iterator = runtimes.rbegin(); iterator != runtimes.rend(); ++iterator ) {
         if( !lifetime || !context ) {
             return;
@@ -2447,11 +2452,6 @@ std::optional<bool> invoke_technique_condition_handler(
         return std::nullopt;
     }
 
-    static const json_character_flag cannot_attack( "CANNOT_ATTACK" );
-    static const json_character_flag cannot_move( "CANNOT_MOVE" );
-    static const json_character_flag phase_movement( "PHASE_MOVEMENT" );
-    static const trait_id shell2( "SHELL2" );
-    static const trait_id shell3( "SHELL3" );
 
     const avatar *const player = character.as_avatar();
     const item_location weapon = character.used_weapon();
@@ -2482,18 +2482,18 @@ std::optional<bool> invoke_technique_condition_handler(
     payload["controlling_vehicle"] = character.controlling_vehicle;
     payload["crouching"] = character.is_crouching();
     payload["prone"] = character.is_prone();
-    payload["in_shell"] = character.has_active_mutation( shell2 ) ||
-                          character.has_active_mutation( shell3 );
-    payload["phase_movement"] = character.has_flag( phase_movement );
-    payload["can_attack"] = !character.has_flag( cannot_attack );
-    payload["can_move"] = !character.has_flag( cannot_move );
+    payload["in_shell"] = character.has_active_mutation( trait_SHELL2 ) ||
+                          character.has_active_mutation( trait_SHELL3 );
+    payload["phase_movement"] = character.has_flag( json_flag_PHASE_MOVEMENT );
+    payload["can_attack"] = !character.has_flag( json_flag_CANNOT_ATTACK );
+    payload["can_move"] = !character.has_flag( json_flag_CANNOT_MOVE );
     if( target ) {
         sol::table selected = owner->lua->create_table();
         selected["creature"] = platform_creature_handle( *owner, *target );
         selected["kind"] = target->is_npc() ? "npc" : target->is_monster() ? "monster" : "avatar";
         selected["hostile"] = target->attitude_to( character ) == Creature::Attitude::HOSTILE;
         selected["alive"] = !target->is_dead_state();
-        selected["downed"] = target->is_on_ground() || target->has_effect( efftype_id( "downed" ) );
+        selected["downed"] = target->is_on_ground() || target->has_effect( effect_downed );
         const monster *const creature = target->as_monster();
         selected["flying"] = creature && creature->flies();
         selected["bodytype"] = creature ? creature->type->bodytype : "human";
@@ -2502,10 +2502,9 @@ std::optional<bool> invoke_technique_condition_handler(
         selected["weight_kg"] = units::to_kilogram( target->get_weight() );
         selected["size_difference"] = static_cast<int>( target->get_size() ) -
                                       static_cast<int>( character.get_size() );
-        const efftype_id grip( "martial_grapple" );
-        selected["gripped"] = target->has_effect( grip );
-        selected["own_grip"] = target->has_effect( grip ) &&
-                               target->get_effect( grip ).get_source().get_character_id() == character.getID();
+        selected["gripped"] = target->has_effect( effect_martial_grapple );
+        selected["own_grip"] = target->has_effect( effect_martial_grapple ) &&
+                               target->get_effect( effect_martial_grapple ).get_source().get_character_id() == character.getID();
         payload["target"] = selected;
     }
 
@@ -2543,11 +2542,11 @@ std::optional<technique_position_plan> invoke_technique_position_handler(
     payload["technique_id"] = std::string( technique_id );
     payload["phase"] = std::string( phase );
     payload["strength"] = attacker.get_str();
-    payload["melee_skill"] = static_cast<float>( attacker.get_skill_level( skill_id( "melee" ) ) );
-    payload["unarmed_skill"] = static_cast<float>( attacker.get_skill_level( skill_id( "unarmed" ) ) );
+    payload["melee_skill"] = static_cast<float>( attacker.get_skill_level( skill_melee ) );
+    payload["unarmed_skill"] = static_cast<float>( attacker.get_skill_level( skill_unarmed ) );
     payload["armed"] = attacker.is_armed();
     payload["weapon_bash"] = attacker.is_armed() ?
-                             attacker.get_wielded_item()->damage_melee( damage_type_id( "bash" ) ) : 0;
+                             attacker.get_wielded_item()->damage_melee( damage_bash ) : 0;
     payload["terrain"] = here.ter( position ).id().str();
     payload["furniture"] = here.furn( position ).id().str();
     payload["window"] = here.has_flag( ter_furn_flag::TFLAG_WINDOW, position );
@@ -2623,7 +2622,7 @@ std::optional<grapple_plan> invoke_technique_grapple_handler(
     sol::table payload = owner->lua->create_table();
     payload["technique_id"] = std::string( technique_id );
     payload["strength"] = attacker.get_str();
-    payload["unarmed_skill"] = static_cast<float>( attacker.get_skill_level( skill_id( "unarmed" ) ) );
+    payload["unarmed_skill"] = static_cast<float>( attacker.get_skill_level( skill_unarmed ) );
     payload["size_difference"] = static_cast<int>( target.get_size() ) -
                                  static_cast<int>( attacker.get_size() );
     payload["target_weight_kg"] = units::to_kilogram( target.get_weight() );

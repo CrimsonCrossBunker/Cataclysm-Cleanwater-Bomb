@@ -1,5 +1,7 @@
+#include <item_source.h>
 #include <iuse.h>
 #include <mounted_charge.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>

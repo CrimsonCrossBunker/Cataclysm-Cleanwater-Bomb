@@ -2,6 +2,7 @@
 
 #include <addiction.h>
 #include <body_part_set.h>
+#include <bonuses.h>
 #include <coordinates.h>
 #include <damage.h>
 #include <enum_bitset.h>
@@ -16,12 +17,14 @@
 #include <sstream>
 #include <variant>
 
+#include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
 
 #include "lua_platform_content_text.h"
 #include "lua_platform_runtime_internal.h"
 
+class Character;
 class avatar;
 namespace sounds
 {

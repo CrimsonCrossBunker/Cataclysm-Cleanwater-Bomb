@@ -1,12 +1,14 @@
+#include <tuple>
+#include <initializer_list>
+#include <cstddef>
+#include "character_id.h"
 #include <algorithm>
 #include <item_location.h>
 #include <ret_val.h>
-#include <algorithm>
 #include <memory>
 #include <optional>
 #include <sstream>
 #include <set>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,7 +18,6 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "character.h"
 #include "character_martial_arts.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -80,7 +81,6 @@ static const matec_id tec_sojutsu_jab( "tec_sojutsu_jab" );
 static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
 static const matec_id test_tech_condition_knockback( "test_tech_condition_knockback" );
 static const matec_id test_active_strike( "test_active_strike" );
-static const matec_id rapid_strike( "RAPID" );
 static const matec_id test_tech_condition_stun( "test_tech_condition_stun" );
 static const matec_id test_tech_condition_sweep( "test_tech_condition_sweep" );
 static const matec_id test_technique( "test_technique" );
@@ -199,6 +199,7 @@ TEST_CASE( "active_grappling_controls_and_releases_npc_targets",
 {
     avatar &dude = prepare_grappler();
     npc &target = spawn_npc( ( dude_pos + tripoint::east ).xy(), "test_talker" );
+    clear_character( target, true );
     faction *const group = target.get_faction();
     REQUIRE( group );
     restore_on_out_of_scope restore_likes( group->likes_u );
@@ -730,8 +731,14 @@ TEST_CASE( "active_techniques_include_current_style_and_weapon_attacks",
     const std::vector<matec_id> critical_techniques = dude.active_techniques();
     const matec_id precise( PRECISE );
     REQUIRE_FALSE( precise->manual_activation );
-    CHECK( std::find( critical_techniques.begin(), critical_techniques.end(), precise ) !=
+    REQUIRE( precise->crit_tec );
+    CHECK_FALSE( precise->can_activate() );
+    CHECK( std::find( critical_techniques.begin(), critical_techniques.end(), precise ) ==
            critical_techniques.end() );
+    const std::vector<matec_id> automatic_techniques =
+        dude.martial_arts_data->get_all_techniques( dude.used_weapon(), dude );
+    CHECK( std::find( automatic_techniques.begin(), automatic_techniques.end(), precise ) !=
+           automatic_techniques.end() );
 
     dude.remove_weapon();
     const matype_id boxing( style_boxing );
@@ -963,7 +970,7 @@ TEST_CASE( "active_technique_cooldown_tracks_execution_and_game_time",
     dude.martial_arts_data->set_style( test_style_ma1 );
     CHECK( dude.technique_cooldown_remaining( technique ) == 0_turns );
     CHECK( dude.get_moves() == moves_before );
-    dude.start_technique_cooldown( rapid_strike );
+    dude.start_technique_cooldown( RAPID );
     CHECK( dude.active_technique_cooldowns().empty() );
 
     melee::clear_stats();
@@ -975,7 +982,9 @@ TEST_CASE( "active_technique_cooldown_tracks_execution_and_game_time",
     CHECK_FALSE( dude.use_active_technique( target, technique ) );
     CHECK( dude.get_moves() == moves_after );
     const std::vector<matec_id> available = dude.active_techniques();
-    CHECK( std::find( available.begin(), available.end(), technique ) != available.end() );
+    CHECK( std::find( available.begin(), available.end(), technique ) == available.end() );
+    const std::vector<matec_id> menu = dude.active_techniques( true );
+    CHECK( std::find( menu.begin(), menu.end(), technique ) != menu.end() );
     CHECK( technique->activation_allowed( dude, "menu" ) );
     CHECK_FALSE( technique->activation_allowed( dude, "start" ) );
 
@@ -991,7 +1000,7 @@ TEST_CASE( "active_technique_cooldown_tracks_execution_and_game_time",
     CHECK( dude.active_technique_cooldowns().empty() );
     CHECK( dude.use_active_technique( target, technique ) );
     CHECK( dude.technique_cooldown_remaining( technique ) == 10_seconds );
-    CHECK( rapid_strike->cooldown == 0_turns );
+    CHECK( RAPID->cooldown == 0_turns );
 }
 
 TEST_CASE( "active_technique_cooldown_survives_save_load",
@@ -1020,11 +1029,11 @@ TEST_CASE( "active_technique_cooldown_survives_save_load",
     SECTION( "older saves start with no cooldowns" ) {
         const size_t start = saved.find( "\"technique_cooldowns\"" );
         REQUIRE( start != std::string::npos );
-        const size_t end = saved.find( '}', start );
+        const size_t end = saved.find( ']', start );
         REQUIRE( end != std::string::npos );
-        const size_t comma = saved.find( ',', end );
+        const size_t comma = saved.rfind( ',', start );
         REQUIRE( comma != std::string::npos );
-        saved.erase( start, comma + 1 - start );
+        saved.erase( comma, end + 1 - comma );
         avatar restored;
         restored.start_technique_cooldown( technique );
         restored.deserialize( json_loader::from_string( saved ).get_object() );

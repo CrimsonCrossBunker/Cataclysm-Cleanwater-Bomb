@@ -1,10 +1,20 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <vector>
+#include <set>
+#include <memory>
+#include "units.h"
+#include "point.h"
+#include "pimpl.h"
+#include "item.h"
+#include "creature.h"
+#include "coordinates.h"
+#include "calendar.h"
+#include "bonuses.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
-#include <limits>
 #include <string>
 
 #include "cata_catch.h"
@@ -34,11 +44,9 @@
 #include "skill.h"
 #include "translation.h"
 #include "type_id.h"
-#include "vpart_position.h"
 
 static const matec_id RAPID( "RAPID" );
 static const matec_id tech_base_headbutt( "tech_base_headbutt" );
-static const matec_id tech_rapid( "RAPID" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
            "[lua][platform][martial_arts][semantic]" )
@@ -81,8 +89,8 @@ TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutat
     snapshot = call;
     CHECK( snapshot["cooldown_turns"].get<int>() == 10 );
 
-    REQUIRE( tech_rapid.is_valid() );
-    call = get( cata::lua_platform::script_game_id( "martial_art_technique", tech_rapid.str() ) );
+    REQUIRE( RAPID.is_valid() );
+    call = get( cata::lua_platform::script_game_id( "martial_art_technique", RAPID.str() ) );
     REQUIRE( call.valid() );
     snapshot = call;
     CHECK( snapshot["manual_activation"].get<bool>() );
@@ -240,7 +248,7 @@ TEST_CASE( "lua_platform_grapple_authoring_validates_and_rolls_back",
     CAPTURE( fields );
     const matec_id id( "tec_grapple_hold" );
     REQUIRE( id.is_valid() );
-    const ma_technique original = id.obj();
+    const ma_technique original = ma_technique( id.obj() );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "grapple-authoring", 1, lua );
@@ -302,7 +310,7 @@ TEST_CASE( "lua_platform_grapple_execution_uses_plan_without_double_charging",
     attacker.set_stamina( attacker.get_stamina_max() );
     monster &target = spawn_test_monster( "mon_zombie", origin + tripoint::east );
 
-    const auto previous_runtimes = platform::detail::active_runtime_values();
+    const auto previous_runtimes = std::vector( platform::detail::active_runtime_values() );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "grapple-execution", 1, lua );
@@ -392,7 +400,7 @@ TEST_CASE( "lua_platform_technique_style_additions_preserve_and_rollback_native_
     namespace platform = cata::lua_platform;
     const bool invalid_style = GENERATE( false, true );
     const matype_id style( "style_brawling" );
-    const martialart original = *style;
+    const martialart original = martialart( *style );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "technique-styles", 1, lua );
@@ -457,7 +465,7 @@ TEST_CASE( "lua_platform_target_policy_rechecks_non_hostile_targets_before_costs
     monster &target = spawn_test_monster( "mon_zombie", origin + tripoint::east );
     target.friendly = -1;
     REQUIRE( target.attitude_to( attacker ) != Creature::Attitude::HOSTILE );
-    const auto previous_runtimes = platform::detail::active_runtime_values();
+    const auto previous_runtimes = std::vector( platform::detail::active_runtime_values() );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "technique-targets", 1, lua );
@@ -594,7 +602,7 @@ TEST_CASE( "lua_technique_position_and_bonuses_change_content_fingerprint",
 {
     namespace platform = cata::lua_platform;
     std::string baseline;
-    for( const std::string &mode : { "baseline", "plan", "category", "damage", "moves", "accuracy" } ) {
+    for( const std::string mode : { "baseline", "plan", "category", "damage", "moves", "accuracy" } ) {
         CAPTURE( mode );
         sol::state lua;
         sol::table ccb = lua.create_table();
@@ -668,7 +676,7 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
     }
     SECTION( "reinforced_glass_is_not_force_destroyed" ) {
         here.ter_set( position, ter_str_id( "t_reinforced_glass" ) );
-        const auto before = here.ter( position );
+        const ter_id before = here.ter( position );
         if( attacker.can_use_active_technique_at( position, window ) ) {
             REQUIRE( attacker.use_active_technique( position, window ) );
         } else {
@@ -679,7 +687,7 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
     }
     SECTION( "empty_space_consumes_resources_but_not_terrain_or_experience" ) {
         here.ter_set( position, ter_str_id( "t_pavement" ) );
-        const auto before = here.ter( position );
+        const ter_id before = here.ter( position );
         const int experience = attacker.get_skill_level_object( skill_id( "unarmed" ) ).exercise();
         const int stamina = attacker.get_stamina();
         REQUIRE( attacker.can_use_active_technique_at( position, shadow ) );
@@ -831,7 +839,7 @@ TEST_CASE( "lua_position_plan_rejects_invalid_results_without_native_costs",
     attacker.martial_arts_data->set_style( style );
     attacker.set_moves( 1000 );
     attacker.set_stamina( mode == "insufficient" ? 1 : attacker.get_stamina_max() );
-    const auto previous_runtimes = platform::detail::active_runtime_values();
+    const auto previous_runtimes = std::vector( platform::detail::active_runtime_values() );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = platform::make_runtime( "technique-position", 1, lua );
@@ -893,7 +901,7 @@ ccb.content.replace(technique)
     }
     const int stamina = attacker.get_stamina();
     const int moves = attacker.get_moves();
-    const auto terrain = here.ter( position );
+    const ter_id terrain = here.ter( position );
     if( mode == "changed" ) {
         REQUIRE( attacker.can_use_active_technique_at( position, technique ) );
         CHECK( lua["last_phase"].get<std::string>() == "target" );

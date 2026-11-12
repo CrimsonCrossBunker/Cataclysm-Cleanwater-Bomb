@@ -15,6 +15,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -94,6 +95,7 @@
 #include "weakpoint.h"
 #include "weighted_list.h"
 
+static const efftype_id effect_relax_gas( "relax_gas" );
 static const anatomy_id anatomy_human_anatomy( "human_anatomy" );
 
 static const bionic_id bio_cqb( "bio_cqb" );
@@ -666,7 +668,7 @@ static void melee_train( Character &you, int lo, int hi, int training_level, con
 bool Character::try_break_relax_gas( const std::string &msg_success,
                                      const std::string &msg_failure )
 {
-    const effect &pacify = get_effect( efftype_id( "relax_gas" ), bodypart_str_id( "mouth" ).id() );
+    const effect &pacify = get_effect( effect_relax_gas, body_part_mouth.id() );
     if( pacify.is_null() ) {
         return true;
     } else if( one_in( pacify.get_intensity() ) ) {
@@ -1854,25 +1856,25 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         ( creature && ( creature->type->bodytype == "blob" || creature->type->bodytype == "snake" ||
                         creature->type->bodytype == "fish" ) ) ||
         ( person && ( person->is_mounted() || person->in_vehicle ||
-                      person->has_effect( efftype_id( "incorporeal" ) ) ) ) ||
-        victim->has_effect( efftype_id( "ridden" ) ) ||
-        victim->has_effect( efftype_id( "harnessed" ) ) ||
-        victim->has_effect( efftype_id( "tied" ) ) ) {
+                      person->has_effect( effect_incorporeal ) ) ) ||
+        victim->has_effect( effect_ridden ) ||
+        victim->has_effect( effect_harnessed ) ||
+        victim->has_effect( effect_tied ) ) {
         attacker.add_msg_if_player( m_info, _( "You cannot get a safe grappling grip on this target." ) );
         return false;
     }
-    const efftype_id grip( "martial_grapple" );
-    if( victim->is_immune_effect( grip ) ||
-        victim->has_flag( json_character_flag( "CANNOT_GAIN_EFFECTS" ) ) ) {
+    if( victim->is_immune_effect( effect_martial_grapple ) ||
+        victim->has_flag( json_flag_CANNOT_GAIN_EFFECTS ) ) {
         return false;
     }
-    const bool holding = victim->has_effect( grip ) &&
-                         victim->get_effect( grip ).get_source().get_character_id() == attacker.getID();
+    const bool holding = victim->has_effect( effect_martial_grapple ) &&
+                         victim->get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID();
     if( technique.grapple_action != "hold" && !holding ) {
         attacker.add_msg_if_player( m_info, _( "You must first establish your own grappling grip." ) );
         return false;
     }
-    if( technique.grapple_action == "hold" && victim->has_effect( grip ) && !holding ) {
+    if( technique.grapple_action == "hold" && victim->has_effect( effect_martial_grapple ) &&
+        !holding ) {
         return false;
     }
     const int size_difference = static_cast<int>( victim->get_size() ) -
@@ -1922,9 +1924,9 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     const tripoint_bub_ms retreat = attacker.pos_bub() - direction;
     if( technique.grapple_action != "hold" ) {
         for( const efftype_id &restraint : {
-                 efftype_id( "beartrap" ), efftype_id( "webbed" ),
-                 efftype_id( "lightsnare" ), efftype_id( "heavysnare" ),
-                 efftype_id( "crushed" ), efftype_id( "in_pit" )
+                 effect_beartrap, effect_webbed,
+                 effect_lightsnare, effect_heavysnare,
+                 effect_crushed, effect_in_pit
              } ) {
             if( attacker.has_effect( restraint ) || victim->has_effect( restraint ) ) {
                 attacker.add_msg_if_player( m_info,
@@ -1948,8 +1950,8 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
               ( person && here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, attacker.pos_bub() ) ) ||
               here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, retreat ) ||
               attacker.has_effect( effect_grabbed ) ||
-              attacker.has_effect( efftype_id( "beartrap" ) ) ||
-              attacker.has_effect( efftype_id( "tied" ) ) ||
+              attacker.has_effect( effect_beartrap ) ||
+              attacker.has_effect( effect_tied ) ||
               attacker.has_flag( json_flag_CANNOT_MOVE ) ) ) ) ) {
         attacker.add_msg_if_player( m_info,
                                     _( "There is no safe, clear space behind you for this technique." ) );
@@ -1967,12 +1969,12 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     }
     if( technique.grapple_action == "hold" ) {
         for( Creature &other : g->all_creatures() ) {
-            if( other.has_effect( grip ) &&
-                other.get_effect( grip ).get_source().get_character_id() == attacker.getID() ) {
-                other.remove_effect( grip );
+            if( other.has_effect( effect_martial_grapple ) &&
+                other.get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID() ) {
+                other.remove_effect( effect_martial_grapple );
             }
         }
-        victim->add_effect( effect_source( &attacker ), grip,
+        victim->add_effect( effect_source( &attacker ), effect_martial_grapple,
                             time_duration::from_turns( plan.duration_turns ) );
         attacker.add_msg_player_or_npc( _( "You establish a grappling grip on %s!" ),
                                         _( "<npcname> establishes a grappling grip on %s!" ), victim->disp_name() );
@@ -1986,7 +1988,7 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_player_or_npc( _( "You step back, dragging %s with you!" ),
                                         _( "<npcname> steps back, dragging %s along!" ), victim->disp_name() );
     } else {
-        victim->remove_effect( grip );
+        victim->remove_effect( effect_martial_grapple );
         victim->setpos( here, retreat );
         victim->add_effect( effect_source( &attacker ), effect_downed,
                             time_duration::from_turns( plan.duration_turns ) );
@@ -2022,7 +2024,7 @@ static std::optional<cata::lua_platform::technique_position_plan> prepare_positi
         !technique->is_valid_character( actor ) ||
         actor.technique_cooldown_remaining( technique ) > 0_turns ||
         actor.has_flag( json_flag_CANNOT_ATTACK ) || actor.is_mounted() ||
-        actor.in_sleep_state() || actor.has_effect( efftype_id( "incorporeal" ) ) ||
+        actor.in_sleep_state() || actor.has_effect( effect_incorporeal ) ||
         !here.inbounds( position ) || position.z() != actor.pos_bub().z() ||
         rl_dist( actor.pos_bub(), position ) != 1 || !actor.sees( here, position ) ||
         get_creature_tracker().creature_at( position, true ) || here.veh_at( position ) ) {

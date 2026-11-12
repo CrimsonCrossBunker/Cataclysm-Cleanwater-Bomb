@@ -133,7 +133,6 @@
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
-#include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -13156,11 +13155,11 @@ void firstaid_activity_actor::serialize( JsonOut &jsout ) const
     jsout.end_object();
 }
 
-std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue &jsin )
+std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue &input )
 {
     firstaid_activity_actor actor( {},  {}, {} );
 
-    JsonObject data = jsin.get_object();
+    JsonObject data = input.get_object();
 
     data.read( "moves", actor.moves );
     data.read( "name", actor.name );

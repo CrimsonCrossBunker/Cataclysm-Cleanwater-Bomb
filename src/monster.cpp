@@ -139,7 +139,6 @@ static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_lightsnare( "lightsnare" );
 static const efftype_id effect_maimed_arm( "maimed_arm" );
-static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_monster_armor( "monster_armor" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_nemesis_buff( "nemesis_buff" );
