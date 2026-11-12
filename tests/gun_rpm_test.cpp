@@ -35,6 +35,7 @@ TEST_CASE( "gun_modes_load_legacy_quantities_and_rpm_strings", "[ranged][gun_rpm
 
     CHECK( gun.modes.at( gun_mode_DEFAULT ).qty() == 1 );
     CHECK( gun.modes.at( gun_mode_DEFAULT ).rpm() == 0 );
+    CHECK( gun.modes.at( gun_mode_AUTO ).qty() == 0 );
     CHECK( gun.modes.at( gun_mode_AUTO ).rpm() == 600 );
     CHECK( gun.modes.at( gun_mode_id( "EXPLICIT" ) ).rpm() == 750 );
     CHECK( gun.modes.at( gun_mode_VOLLEY ).qty() == 2 );
@@ -46,7 +47,7 @@ TEST_CASE( "gun_modes_load_legacy_quantities_and_rpm_strings", "[ranged][gun_rpm
 TEST_CASE( "gun_modes_reject_invalid_rpm_strings", "[ranged][gun_rpm]" )
 {
     const std::string field = GENERATE( "\"0\"", "\"-1\"", "\"750'\"", "\"750 RPM\"",
-                                       "\"2147483648\"", "\"750\", \"MELEE\"", "\"750\", \"VOLLEY\"" );
+                                        "\"2147483648\"", "\"750\", \"MELEE\"", "\"750\", \"VOLLEY\"" );
     CAPTURE( field );
     islot_gun gun;
     const JsonObject definition = json_loader::from_string(
@@ -54,15 +55,72 @@ TEST_CASE( "gun_modes_reject_invalid_rpm_strings", "[ranged][gun_rpm]" )
     CHECK_THROWS_AS( gun.deserialize( definition ), JsonError );
 }
 
-TEST_CASE( "legacy_burst_uses_the_converted_rate_on_an_item", "[ranged][gun_rpm]" )
+TEST_CASE( "fixed_burst_loads_legacy_or_explicit_cyclic_rate", "[ranged][gun_rpm]" )
+{
+    islot_gun gun;
+    SECTION( "legacy burst preserves the name and count" ) {
+        gun.deserialize( json_loader::from_string(
+                             R"({"modes":[["BURST","2 rd.",2]]})" ).get_object() );
+        const gun_modifier_data &burst = gun.modes.at( gun_mode_BURST );
+        CHECK( burst.qty() == 2 );
+        CHECK( burst.rpm() == 900 );
+        CHECK( burst.tname() == to_translation( "2 rd." ).translated() );
+    }
+    SECTION( "explicit burst uses the same mode ID and preserves flags" ) {
+        gun.deserialize( json_loader::from_string(
+                             R"({"modes":[["brust-rpm","800",3,"NPC_AVOID"]]})" ).get_object() );
+        REQUIRE( gun.modes.size() == 1 );
+        const gun_modifier_data &burst = gun.modes.at( gun_mode_BURST );
+        CHECK( burst.qty() == 3 );
+        CHECK( burst.rpm() == 800 );
+        CHECK( burst.flags().count( "NPC_AVOID" ) == 1 );
+    }
+    SECTION( "volley keeps its untimed fixed shot count" ) {
+        gun.deserialize( json_loader::from_string(
+                             R"({"modes":[["BURST","volley",2,"VOLLEY"]]})" ).get_object() );
+        const gun_modifier_data &burst = gun.modes.at( gun_mode_BURST );
+        CHECK( burst.qty() == 2 );
+        CHECK( burst.rpm() == 0 );
+    }
+}
+
+TEST_CASE( "fixed_burst_rejects_invalid_rate_count_and_flags", "[ranged][gun_rpm]" )
+{
+    const std::string fields = GENERATE( R"(0,2)", R"("0",2)", R"("900 RPM",2)",
+                                         R"("2147483648",2)", R"("900","2")", R"("900",1)",
+                                         R"("900",2.5)", R"("900",4294967298)",
+                                         R"("900",2,"VOLLEY")", R"("900",2,["MELEE"])" );
+    CAPTURE( fields );
+    islot_gun gun;
+    const JsonObject definition = json_loader::from_string(
+                                      R"({"modes":[["brust-rpm",)" + fields + "]]}" ).get_object();
+    CHECK_THROWS_AS( gun.deserialize( definition ), JsonError );
+}
+
+TEST_CASE( "fixed_burst_gunmod_uses_burst_mode_id", "[ranged][gun_rpm]" )
+{
+    islot_gunmod mod;
+    mod.deserialize( json_loader::from_string( R"({
+        "install_time": "1 s",
+        "mod_targets": [ "rifle" ],
+        "mode_modifier": [["brust-rpm","1000",2]]
+    })" ).get_object() );
+    REQUIRE( mod.mode_modifier.size() == 1 );
+    const gun_modifier_data &burst = mod.mode_modifier.at( gun_mode_BURST );
+    CHECK( burst.qty() == 2 );
+    CHECK( burst.rpm() == 1000 );
+}
+
+TEST_CASE( "legacy_burst_has_a_fixed_count_on_every_trigger_pull", "[ranged][gun_rpm]" )
 {
     item gun( itype_test_multimag_gun_consume );
     REQUIRE( gun.gun_set_mode( gun_mode_BURST ) );
     const gun_mode burst = gun.gun_current_mode();
+    REQUIRE( burst.fixed_burst() );
     CHECK( burst.rpm == 900 );
-    CHECK( burst.start_firing( calendar::turn_zero ) == 15 );
-    CHECK( gun.gun_current_mode().shots_available( calendar::turn_zero ) == 0 );
-    CHECK( gun.gun_current_mode().shots_available( calendar::turn_zero + 1_seconds ) == 15 );
+    CHECK( burst.start_firing( calendar::turn_zero ) == 3 );
+    CHECK( burst.start_firing( calendar::turn_zero ) == 3 );
+    CHECK( burst.shots_available( calendar::turn_zero + 1_seconds ) == 3 );
 }
 
 TEST_CASE( "gun_rpm_is_distributed_over_game_seconds", "[ranged][gun_rpm]" )
