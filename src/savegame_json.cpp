@@ -5840,9 +5840,7 @@ void serialize( const recipe_subset &value, JsonOut &jsout )
     for( const recipe * const &entry : value ) {
         ids.push_back( entry->ident() );
     }
-    std::sort( ids.begin(), ids.end(), []( const recipe_id & lhs, const recipe_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
+    std::sort( ids.begin(), ids.end(), lexicographic<recipe>() );
     jsout.write( ids );
 }
 
