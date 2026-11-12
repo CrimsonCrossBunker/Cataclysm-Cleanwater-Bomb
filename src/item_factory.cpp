@@ -4834,8 +4834,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
             mounted_charge.emplace();
         }
         mounted_charge->deserialize( jo.get_object( "mounted_charge" ) );
-    } else if( jo.has_member( "mounted_charge" ) ) {
-        // A null member explicitly removes an inherited charge profile.
+    } else if( jo.has_member( "mounted_charge" ) && jo.has_null( "mounted_charge" ) ) {
+        jo.get_member( "mounted_charge" );
         mounted_charge.reset();
     }
     optional( jo, was_loaded, "thrown_damage", thrown_damage );

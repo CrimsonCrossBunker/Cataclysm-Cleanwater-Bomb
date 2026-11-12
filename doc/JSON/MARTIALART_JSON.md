@@ -136,6 +136,59 @@ Additionally, when read externally (such as, by EOCs), their syntax is `mabuff:I
 
 Techniques are special attacks performed while using a given MA style.  These are automatically used according to their specific requirements, as defined in their JSON blocks:
 
+An offensive, non-counter, non-critical-only technique with an attack vector can set
+`"manual_activation": true` to require explicit activation.  Such techniques may
+set `"cooldown": "10 s"`; the default is zero and negative durations are invalid.
+A positive cooldown requires `manual_activation`.  Cooldowns belong to the
+character and technique ID, so changing weapons or styles does not reset them.
+They use game time and survive saving and loading.
+Lua-authored `ccb.content.Technique` definitions use the integer `cooldown_turns`
+option with the same default and manual-activation requirement.  Replacements
+must set it explicitly when retaining a cooldown.
+
+An executed attack starts its cooldown even when it misses.  Canceling target
+selection or failing validation does not.  Mounted charge starts its cooldown
+on its first movement or executed attack; subsequent steps and resuming a saved
+charge do not restart it.  A running charge may continue during its own cooldown.
+The separate `grapple_cooldown` remains shared by grappling actions of the same
+kind; when both cooldowns apply, both must expire before another activation.
+
+Core grappling techniques are defined in `data/mods/dda/grappling.lua` using
+`require("ccb")`. Their stable technique IDs and style membership are unchanged.
+`grapple_action` (`hold`, `drag`, or `throw`), `grapple_power`, `grapple_stamina`,
+and `grapple_cooldown_turns` configure the native grappling action. Grappling
+requires manual activation, `strictly_unarmed`, an attack vector, no reach, and
+positive power, base stamina and shared cooldown.
+
+The optional `grapple_plan` names a registered Lua handler. It receives detached
+strength, Unarmed Combat level, relative size, target weight in kilograms, power,
+and base stamina values. Return `{ allowed = false }` to reject an action, or
+return `allowed = true` together with integer `stamina_cost`, `move_cost`,
+`duration_turns`, and numeric `damage`. Stamina must be nonnegative; move cost
+and duration must be positive. Integer fields must fit a native `int`; damage
+must be finite, nonnegative and fit a native `float`. Damage is bash damage
+before armor and is applied only by throws. Dragging never refreshes the hold.
+Handlers calculate a plan without changing the world. Native code checks grip
+ownership, usable limbs, target anatomy, space, restraints and available stamina
+before applying it, then handles movement, traps, damage and cooldowns once.
+Lua techniques can call `technique:style("style_brawling")` to append themselves
+to an existing or locally staged style without replacing its buffs, requirements
+or other techniques. These additions roll back with the content transaction.
+The core Brawling style uses this for its grip, drag and body-lock trip.
+
+`active_when` handlers receive a `target` phase during creature selection and
+again before execution. Its detached `target` snapshot includes a typed creature
+handle, category, hostility, adjacency, weight, size difference and grip ownership.
+Returning false rejects the target before costs. Manual techniques may target
+non-hostile monsters and NPCs; the avatar UI confirms non-hostile attacks before
+execution. NPC grapples use the same movement restraint and grip-release checks
+as monster grapples, but do not prevent the victim from attacking. Critical-only
+techniques, like counters, remain automatic and cannot be manually forced.
+
+Missing runtimes, callback errors and malformed plans reject the action without
+charging resources or falling back to an ordinary attack. Legacy JSON-defined
+grapples without a Lua plan retain their native formula.
+
 ```jsonc
 {
   "type": "technique",

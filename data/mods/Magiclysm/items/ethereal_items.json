@@ -134,7 +134,7 @@
     "symbol": "/",
     "looks_like": "warhammer",
     "material": [ "concentrated_mana" ],
-    "techniques": [ "WBLOCK_2", "BRUTAL", "SWEEP" ],
+    "techniques": [ "WBLOCK_2", "BRUTAL", "SWEEP", "MOUNTED_CHARGE" ],
     "copy-from": "warhammer",
     "light": 15,
     "flags": [ "NONCONDUCTIVE", "BELT_CLIP", "TRADER_AVOID", "UNBREAKABLE_MELEE", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ],

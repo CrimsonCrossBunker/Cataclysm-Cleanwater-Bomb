@@ -1710,6 +1710,34 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
                          sub_bodypart_str_id::NULL_ID() ) );
 }
 
+time_duration Character::technique_cooldown_remaining( const matec_id &technique ) const
+{
+    time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
+    if( technique.is_valid() && !technique->grapple_action.empty() &&
+        has_effect( technique->grapple_cooldown_effect() ) ) {
+        remaining = std::max( remaining,
+                              get_effect( technique->grapple_cooldown_effect() ).get_duration() );
+    }
+    return remaining;
+}
+
+void Character::start_technique_cooldown( const matec_id &technique )
+{
+    martial_arts_data->start_technique_cooldown( technique, technique->activation_cooldown( *this ) );
+}
+
+std::vector<std::pair<matec_id, time_duration>> Character::active_technique_cooldowns() const
+{
+    std::vector<std::pair<matec_id, time_duration>> result;
+    for( const ma_technique &technique : ma_technique::get_all() ) {
+        const time_duration remaining = technique_cooldown_remaining( technique.id );
+        if( remaining > 0_turns ) {
+            result.emplace_back( technique.id, remaining );
+        }
+    }
+    return result;
+}
+
 std::vector<matec_id> Character::active_techniques( const bool include_unavailable ) const
 {
     std::vector<matec_id> available;
@@ -1817,44 +1845,73 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_if_player( m_info, _( "Release the object you are dragging before grappling." ) );
         return false;
     }
-    monster *const victim = target.as_monster();
-    if( !victim || victim->is_hallucination() || victim->has_flag( mon_flag_IMMOBILE ) ||
+    Creature *const victim = &target;
+    const monster *const creature = target.as_monster();
+    const Character *const person = target.as_character();
+    if( victim->is_hallucination() || victim->has_flag( mon_flag_IMMOBILE ) ||
         victim->has_flag( json_flag_CANNOT_MOVE ) || victim->has_flag( mon_flag_PLASTIC ) ||
-        victim->has_flag( mon_flag_FLIES ) || victim->type->bodytype == "blob" ||
-        victim->type->bodytype == "snake" || victim->type->bodytype == "fish" ||
-        victim->has_effect( effect_ridden ) ||
-        victim->has_effect( effect_harnessed ) ||
-        victim->has_effect( effect_tied ) ) {
+        victim->has_flag( mon_flag_FLIES ) ||
+        ( creature && ( creature->type->bodytype == "blob" || creature->type->bodytype == "snake" ||
+                        creature->type->bodytype == "fish" ) ) ||
+        ( person && ( person->is_mounted() || person->in_vehicle ||
+                      person->has_effect( efftype_id( "incorporeal" ) ) ) ) ||
+        victim->has_effect( efftype_id( "ridden" ) ) ||
+        victim->has_effect( efftype_id( "harnessed" ) ) ||
+        victim->has_effect( efftype_id( "tied" ) ) ) {
         attacker.add_msg_if_player( m_info, _( "You cannot get a safe grappling grip on this target." ) );
         return false;
     }
-    if( victim->is_immune_effect( effect_martial_grapple ) ||
-        victim->has_flag( json_flag_CANNOT_GAIN_EFFECTS ) ) {
+    const efftype_id grip( "martial_grapple" );
+    if( victim->is_immune_effect( grip ) ||
+        victim->has_flag( json_character_flag( "CANNOT_GAIN_EFFECTS" ) ) ) {
         return false;
     }
-    const bool holding = victim->has_effect( effect_martial_grapple ) &&
-                         victim->get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID();
+    const bool holding = victim->has_effect( grip ) &&
+                         victim->get_effect( grip ).get_source().get_character_id() == attacker.getID();
     if( technique.grapple_action != "hold" && !holding ) {
         attacker.add_msg_if_player( m_info, _( "You must first establish your own grappling grip." ) );
         return false;
     }
-    if( technique.grapple_action == "hold" && victim->has_effect( effect_martial_grapple ) &&
-        !holding ) {
+    if( technique.grapple_action == "hold" && victim->has_effect( grip ) && !holding ) {
         return false;
     }
     const int size_difference = static_cast<int>( victim->get_size() ) -
                                 static_cast<int>( attacker.get_size() );
-    const float capacity = std::max( 1.0f, ( attacker.get_str() * 10.0f +
-                                     attacker.get_skill_level( skill_unarmed ) * 5.0f ) *
-                                     technique.grapple_power / 100.0f );
-    const float load = units::to_kilogram( victim->get_weight() ) / capacity;
-    if( size_difference > 1 || load > 1.0f ) {
+    cata::lua_platform::grapple_plan plan;
+    if( !technique.lua_platform_grapple_handler.empty() ) {
+        const std::optional<cata::lua_platform::grapple_plan> scripted =
+            cata::lua_platform::invoke_technique_grapple_handler(
+                technique.id.str(), technique.lua_platform_mod, technique.lua_platform_grapple_handler,
+                attacker, target, technique.grapple_power, technique.grapple_stamina );
+        if( !scripted ) {
+            return false;
+        }
+        plan = *scripted;
+    } else {
+        const float capacity = std::max( 1.0f, ( attacker.get_str() * 10.0f +
+                                         attacker.get_skill_level( skill_unarmed ) * 5.0f ) *
+                                         technique.grapple_power / 100.0f );
+        const float load = units::to_kilogram( victim->get_weight() ) / capacity;
+        plan.allowed = size_difference <= 1 && load <= 1.0f;
+        if( plan.allowed ) {
+            plan.stamina_cost = technique.grapple_stamina +
+                                static_cast<int>( technique.grapple_stamina * load );
+            plan.move_cost = static_cast<int>( 100 + 100 * load + std::max( 0, size_difference ) * 25 );
+            plan.duration_turns = technique.grapple_action == "hold" ?
+                                  std::max( 2, static_cast<int>( 6 - 3 * load ) - std::max( 0, size_difference ) ) :
+                                  std::max( 1, static_cast<int>( 4 - 2 * load ) - std::max( 0, size_difference ) );
+            plan.damage = std::max( 1.0f, ( attacker.get_str() +
+                                            attacker.get_skill_level( skill_unarmed ) ) *
+                                    technique.grapple_power / 100.0f * ( 1.0f - load * 0.5f ) *
+                                    technique.damage_multiplier( attacker, damage_bash ) /
+                                    ( 1.0f + 0.5f * std::max( 0, size_difference ) ) );
+        }
+    }
+    if( !plan.allowed ) {
         attacker.add_msg_if_player( m_info, _( "That target is too large or heavy for this technique." ) );
         return false;
     }
-    const int stamina = technique.grapple_stamina +
-                        static_cast<int>( technique.grapple_stamina * load );
-    if( attacker.get_stamina() < stamina ) {
+    if( attacker.get_stamina() < plan.stamina_cost ) {
         attacker.add_msg_if_player( m_info,
                                     _( "You lack the stamina to grapple a target of this weight." ) );
         return false;
@@ -1865,9 +1922,9 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     const tripoint_bub_ms retreat = attacker.pos_bub() - direction;
     if( technique.grapple_action != "hold" ) {
         for( const efftype_id &restraint : {
-                 effect_beartrap, effect_webbed,
-                 effect_lightsnare, effect_heavysnare,
-                 effect_crushed, effect_in_pit
+                 efftype_id( "beartrap" ), efftype_id( "webbed" ),
+                 efftype_id( "lightsnare" ), efftype_id( "heavysnare" ),
+                 efftype_id( "crushed" ), efftype_id( "in_pit" )
              } ) {
             if( attacker.has_effect( restraint ) || victim->has_effect( restraint ) ) {
                 attacker.add_msg_if_player( m_info,
@@ -1887,11 +1944,12 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
           here.veh_at( retreat ) || here.veh_at( attacker.pos_bub() ) ||
           here.veh_at( victim->pos_bub() ) ||
           ( technique.grapple_action == "drag" &&
-            ( !victim->can_move_to( attacker.pos_bub() ) ||
+            ( ( creature && !creature->can_move_to( attacker.pos_bub() ) ) ||
+              ( person && here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, attacker.pos_bub() ) ) ||
               here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, retreat ) ||
               attacker.has_effect( effect_grabbed ) ||
-              attacker.has_effect( effect_beartrap ) ||
-              attacker.has_effect( effect_tied ) ||
+              attacker.has_effect( efftype_id( "beartrap" ) ) ||
+              attacker.has_effect( efftype_id( "tied" ) ) ||
               attacker.has_flag( json_flag_CANNOT_MOVE ) ) ) ) ) {
         attacker.add_msg_if_player( m_info,
                                     _( "There is no safe, clear space behind you for this technique." ) );
@@ -1901,20 +1959,21 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_if_player( m_info, _( "This target cannot be thrown off its feet." ) );
         return false;
     }
-    attacker.mod_stamina( -stamina );
-    attacker.mod_moves( -static_cast<int>( 100 + 100 * load + std::max( 0, size_difference ) * 25 ) );
+    attacker.mod_stamina( -plan.stamina_cost );
+    attacker.mod_moves( -plan.move_cost );
     attacker.add_effect( technique.grapple_cooldown_effect(), technique.grapple_cooldown );
+    if( npc *const person = victim->as_npc() ) {
+        person->on_attacked( attacker );
+    }
     if( technique.grapple_action == "hold" ) {
-        for( monster &other : g->all_monsters() ) {
-            if( other.has_effect( effect_martial_grapple ) &&
-                other.get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID() ) {
-                other.remove_effect( effect_martial_grapple );
+        for( Creature &other : g->all_creatures() ) {
+            if( other.has_effect( grip ) &&
+                other.get_effect( grip ).get_source().get_character_id() == attacker.getID() ) {
+                other.remove_effect( grip );
             }
         }
-        const int duration = std::max( 2, static_cast<int>( 6 - 3 * load ) -
-                                       std::max( 0, size_difference ) );
-        victim->add_effect( effect_source( &attacker ), effect_martial_grapple,
-                            time_duration::from_turns( duration ) );
+        victim->add_effect( effect_source( &attacker ), grip,
+                            time_duration::from_turns( plan.duration_turns ) );
         attacker.add_msg_player_or_npc( _( "You establish a grappling grip on %s!" ),
                                         _( "<npcname> establishes a grappling grip on %s!" ), victim->disp_name() );
     } else if( technique.grapple_action == "drag" ) {
@@ -1927,18 +1986,12 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_player_or_npc( _( "You step back, dragging %s with you!" ),
                                         _( "<npcname> steps back, dragging %s along!" ), victim->disp_name() );
     } else {
-        victim->remove_effect( effect_martial_grapple );
+        victim->remove_effect( grip );
         victim->setpos( here, retreat );
-        const int duration = std::max( 1, static_cast<int>( 4 - 2 * load ) -
-                                       std::max( 0, size_difference ) );
         victim->add_effect( effect_source( &attacker ), effect_downed,
-                            time_duration::from_turns( duration ) );
-        const float damage = std::max( 1.0f, ( attacker.get_str() +
-                                               attacker.get_skill_level( skill_unarmed ) ) *
-                                       technique.grapple_power / 100.0f * ( 1.0f - load * 0.5f ) *
-                                       technique.damage_multiplier( attacker, damage_bash ) /
-                                       ( 1.0f + 0.5f * std::max( 0, size_difference ) ) );
-        victim->deal_damage( &attacker, bodypart_id( "torso" ), damage_instance( damage_bash, damage ) );
+                            time_duration::from_turns( plan.duration_turns ) );
+        victim->deal_damage( &attacker, bodypart_id( "torso" ), damage_instance( damage_bash,
+                             plan.damage ) );
         victim->check_dead_state( &here );
         here.creature_on_trap( *victim );
         attacker.add_msg_player_or_npc( _( "You throw %s to the ground!" ),
@@ -1957,12 +2010,69 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     return true;
 }
 
+
+
+static std::optional<cata::lua_platform::technique_position_plan> prepare_position_technique(
+    const Character &actor, const tripoint_bub_ms &position, const matec_id &technique,
+    const std::string_view phase )
+{
+    map &here = get_map();
+    if( !technique.is_valid() || !technique->targets_position() ||
+        !technique->can_activate() || !technique->activation_allowed( actor, "start" ) ||
+        !technique->is_valid_character( actor ) ||
+        actor.technique_cooldown_remaining( technique ) > 0_turns ||
+        actor.has_flag( json_flag_CANNOT_ATTACK ) || actor.is_mounted() ||
+        actor.in_sleep_state() || actor.has_effect( efftype_id( "incorporeal" ) ) ||
+        !here.inbounds( position ) || position.z() != actor.pos_bub().z() ||
+        rl_dist( actor.pos_bub(), position ) != 1 || !actor.sees( here, position ) ||
+        get_creature_tracker().creature_at( position, true ) || here.veh_at( position ) ) {
+        return std::nullopt;
+    }
+    const std::vector<matec_id> granted = actor.active_techniques();
+    if( std::find( granted.begin(), granted.end(), technique ) == granted.end() ||
+        !actor.martial_arts_data->choose_attack_vector( actor, technique ) ) {
+        return std::nullopt;
+    }
+    const auto plan = cata::lua_platform::invoke_technique_position_handler(
+                          technique.str(), technique->lua_platform_mod,
+                          technique->lua_platform_apply_handler, actor, position, phase );
+    if( !plan || !plan->allowed || plan->stamina_cost > actor.get_stamina() ||
+        get_creature_tracker().creature_at( position, true ) || here.veh_at( position ) ||
+        rl_dist( actor.pos_bub(), position ) != 1 || actor.pos_bub().z() != position.z() ) {
+        return std::nullopt;
+    }
+    return plan;
+}
+
+bool Character::can_use_active_technique_at( const tripoint_bub_ms &position,
+        const matec_id &technique ) const
+{
+    return prepare_position_technique( *this, position, technique, "target" ).has_value();
+}
+
+bool Character::use_active_technique( const tripoint_bub_ms &position,
+                                      const matec_id &technique )
+{
+    const auto plan = prepare_position_technique( *this, position, technique, "execute" );
+    if( !plan ) {
+        return false;
+    }
+    mod_stamina( -plan->stamina_cost );
+    mod_moves( -plan->move_cost );
+    start_technique_cooldown( technique );
+    add_msg_if_player( m_info, _( "You perform %s." ), technique->name.translated() );
+    if( plan->bash_power > 0 ) {
+        get_map().bash( position, plan->bash_power );
+    }
+    return true;
+}
+
 bool Character::use_active_technique( Creature &target, const matec_id &technique )
 {
-    if( !technique.is_valid() || technique == tec_mounted_charge ||
-        !technique->can_activate() || ( !technique->grapple_action.empty() &&
-                                        !technique->activation_allowed( *this, "start" ) ) ||
+    if( !technique.is_valid() || technique->targets_position() || technique == tec_mounted_charge ||
+        !technique->can_activate() || !technique->activation_allowed( *this, "start" ) ||
         &target == this || target.is_dead_state() ||
+        !technique->activation_allowed( *this, "target", &target ) ||
         has_flag( json_flag_CANNOT_ATTACK ) ||
         ( is_mounted() && mounted_creature && mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ||
         pos_bub().z() != target.pos_bub().z() ) {
@@ -1997,14 +2107,13 @@ bool Character::use_active_technique( Creature &target, const matec_id &techniqu
     reach_attacking = technique->reach_tec || distance > 1;
     const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>> selected =
                 evaluate_technique( technique, target, weapon, false, false, false, true );
-    if( selected && !technique->grapple_action.empty() ) {
-        return use_grapple_technique( *this, target, *technique );
-    }
     if( !selected || ( distance > 1 && !std::get<1>( *selected )->weapon ) ) {
         return false;
     }
     const time_duration cooldown = technique->activation_cooldown( *this );
-    const bool executed = melee_attack( target, false, technique, true, -1, selected );
+    const bool executed = !technique->grapple_action.empty() ?
+                          use_grapple_technique( *this, target, *technique ) :
+                          melee_attack( target, false, technique, true, -1, selected );
     if( executed ) {
         martial_arts_data->start_technique_cooldown( technique, cooldown );
     }
@@ -2018,6 +2127,13 @@ std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
 {
     // this could be more robust but for now it should work fine
     bool is_loaded = weap && weap->is_magazine_full();
+
+    if( tec_id->targets_position() ) {
+        return std::nullopt;
+    }
+    if( !manual_activation && !tec_id->activation_allowed( *this, "target", &t ) ) {
+        return std::nullopt;
+    }
 
     // ignore "dummy" techniques like WBLOCK_1
     if( tec_id->dummy ) {
@@ -2089,7 +2205,8 @@ std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
 
     // if critical then select only from critical tecs
     // but allow the technique if its crit ok
-    if( !manual_activation && !tec_id->crit_ok && ( crit != tec_id->crit_tec ) ) {
+    if( ( manual_activation && tec_id->crit_tec ) ||
+        ( !manual_activation && !tec_id->crit_ok && ( crit != tec_id->crit_tec ) ) ) {
         add_msg_debug( debugmode::DF_MELEE, "Attack is%s critical, attack discarded", crit ? "" : "n't" );
         return std::nullopt;
     }

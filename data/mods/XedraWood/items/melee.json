@@ -20,7 +20,7 @@
     "material": [ "wood" ],
     "symbol": "/",
     "color": "brown",
-    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
     "flags": [ "DURABLE_MELEE", "SHEATH_SPEAR", "TRADER_AVOID", "MAGIC_FOCUS", "WISE_SORCERY_AID" ],
     "melee_damage": { "bash": 20 }
   }

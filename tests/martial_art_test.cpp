@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <item_location.h>
 #include <ret_val.h>
 #include <algorithm>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <set>
 #include <sstream>
 #include <string>
@@ -14,17 +16,22 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
 #include "character_martial_arts.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "damage.h"
+#include "effect.h"
+#include "effect_source.h"
 #include "enums.h"
+#include "faction.h"
 // IWYU pragma: no_include <flexbuffer_json.h>
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
 #include "magic_enchantment.h"
+#include "lua_platform_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -38,6 +45,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
+#include "units.h"
 
 static const bodypart_str_id body_part_debug_tail( "debug_tail" );
 static const efftype_id effect_downed( "downed" );
@@ -70,8 +78,9 @@ static const matec_id tec_break( "tec_break" );
 static const matec_id tec_feint( "tec_feint" );
 static const matec_id tec_sojutsu_jab( "tec_sojutsu_jab" );
 static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
-static const matec_id test_active_strike( "test_active_strike" );
 static const matec_id test_tech_condition_knockback( "test_tech_condition_knockback" );
+static const matec_id test_active_strike( "test_active_strike" );
+static const matec_id rapid_strike( "RAPID" );
 static const matec_id test_tech_condition_stun( "test_tech_condition_stun" );
 static const matec_id test_tech_condition_sweep( "test_tech_condition_sweep" );
 static const matec_id test_technique( "test_technique" );
@@ -94,117 +103,601 @@ static const trait_id trait_DEBUG_TAIL( "DEBUG_TAIL" );
 
 static constexpr tripoint_bub_ms dude_pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
 
-TEST_CASE( "active_technique_cooldowns_follow_calendar_and_survive_style_changes_and_saves",
-           "[martial_arts][active_technique][cooldown][save]" )
+static avatar &prepare_grappler( const std::string &style = "style_judo" )
 {
-    restore_on_out_of_scope restore_time( calendar::turn );
-    calendar::turn = calendar::turn_zero + 1_hours;
-    character_martial_arts arts;
-    const matec_id &technique = test_active_cooldown_strike;
-    REQUIRE( technique.is_valid() );
-    CHECK( arts.technique_cooldown_remaining( technique ) == 0_turns );
-    arts.start_technique_cooldown( technique, 8_seconds );
-    CHECK( arts.technique_cooldown_remaining( technique ) == 8_seconds );
-    arts.reset_style();
-    arts.clear_styles();
-    arts.start_technique_cooldown( technique, 0_turns );
-    arts.start_technique_cooldown( technique, 1_seconds );
-    CHECK( arts.technique_cooldown_remaining( technique ) == 8_seconds );
-
-    calendar::turn += 3_seconds;
-    CHECK( arts.technique_cooldown_remaining( technique ) == 5_seconds );
-    std::ostringstream output;
-    JsonOut writer( output );
-    arts.serialize( writer );
-    character_martial_arts restored;
-    restored.deserialize( json_loader::from_string( output.str() ).get_object() );
-    CHECK( restored.technique_cooldown_remaining( technique ) == 5_seconds );
-    calendar::turn += 5_seconds;
-    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
-    calendar::turn += 1_days;
-    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
-    restored.deserialize( json_loader::from_string( "{}" ).get_object() );
-    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
-}
-
-TEST_CASE( "active_technique_cooldowns_commit_on_misses_but_not_rejected_attacks",
-           "[martial_arts][active_technique][cooldown]" )
-{
-    restore_on_out_of_scope restore_time( calendar::turn );
-    clear_avatar();
-    clear_map();
-    avatar &dude = get_avatar();
-    dude.setpos( get_map(), dude_pos );
-    dude.set_wielded_item( item( itype_test_weapon1 ) );
-    const matype_id &style = test_style_cooldown;
-    const matec_id &technique = test_active_cooldown_strike;
-    dude.martial_arts_data->add_martialart( style );
-    dude.martial_arts_data->set_style( style );
-    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
-    dude.set_moves( 1000 );
-    CHECK_FALSE( dude.use_active_technique( dude, technique ) );
-    CHECK( dude.get_moves() == 1000 );
-    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 0_turns );
-
-    target.set_dodge_bonus( 1000 );
-    REQUIRE( dude.active_technique_availability( technique ).success() );
-    REQUIRE( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false,
-                                      false, true ) );
-    melee::clear_stats();
-    const int hp_before = target.get_hp();
-    REQUIRE( dude.use_active_technique( target, technique ) );
-    CHECK( melee::get_stats().attack_count == 1 );
-    CHECK( melee::get_stats().hit_count == 0 );
-    CHECK( target.get_hp() == hp_before );
-    CHECK( dude.get_moves() < 1000 );
-    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
-    CHECK_FALSE( dude.active_technique_availability( technique ).success() );
-    const std::vector<matec_id> visible = dude.active_techniques( true );
-    CHECK( std::find( visible.begin(), visible.end(), technique ) != visible.end() );
-    const std::vector<matec_id> usable = dude.active_techniques();
-    CHECK( std::find( usable.begin(), usable.end(), technique ) == usable.end() );
-    const int moves_after = dude.get_moves();
-    CHECK_FALSE( dude.use_active_technique( target, technique ) );
-    CHECK( dude.get_moves() == moves_after );
-    dude.remove_weapon();
-    dude.set_wielded_item( item( itype_test_weapon1 ) );
-    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
-    calendar::turn += 8_seconds;
-    CHECK( dude.active_technique_availability( technique ).success() );
-    REQUIRE( dude.use_active_technique( target, technique ) );
-    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
-}
-
-TEST_CASE( "active_technique_cooldown_definitions_validate_durations",
-           "[martial_arts][active_technique][cooldown][json]" )
-{
-    const auto load = []( const std::string & duration ) {
-        ma_technique technique;
-        technique.load( json_loader::from_string(
-                            R"({"name":"Cooldown test","cooldown":")" + duration + R"("})" ).get_object(), "test" );
-        return technique.cooldown;
-    };
-    CHECK( load( "0 s" ) == 0_turns );
-    CHECK( load( "8 s" ) == 8_seconds );
-    CHECK( load( "1 d" ) == 1_days );
-    CHECK_THROWS( load( "-1 s" ) );
-    CHECK_THROWS( load( "2 d" ) );
-}
-
-TEST_CASE( "active_technique_cooldowns_do_not_disable_automatic_techniques",
-           "[martial_arts][active_technique][cooldown]" )
-{
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    static bool platform_world_ready = false;
+    if( !platform_world_ready ) {
+        cata::lua_platform::on_world_ready( true );
+        platform_world_ready = true;
+    }
+#endif
     clear_avatar();
     clear_map();
     avatar &dude = get_avatar();
     dude.setpos( get_map(), dude_pos );
     dude.set_all_skills( 5 );
-    dude.set_wielded_item( item( itype_sword_metal_fencing ) );
-    const matec_id technique( RAPID );
+    dude.remove_weapon();
+    const matype_id martial_art( style );
+    dude.martial_arts_data->add_martialart( martial_art );
+    dude.martial_arts_data->set_style( martial_art );
+    dude.set_moves( 1000 );
+    return dude;
+}
+
+TEST_CASE( "active_grappling_is_bound_to_appropriate_styles",
+           "[martial_arts][active_technique][grappling]" )
+{
+    const std::vector<std::pair<std::string, std::string>> styles = {
+        { "style_brawling", "tec_brawl_grapple_throw" },
+        { "style_judo", "tec_judo_hip_throw" },
+        { "style_aikido", "tec_aikido_projection" },
+        { "style_pankration", "tec_pankration_slam" },
+        { "style_tai_chi", "tec_taichi_unbalance" },
+        { "style_krav_maga", "tec_krav_grapple_takedown" },
+        { "style_muay_thai", "" }
+    };
+    for( const auto &entry : styles ) {
+        CAPTURE( entry.first );
+        avatar &dude = prepare_grappler( entry.first );
+        const std::vector<matec_id> available = dude.active_techniques();
+        for( const matec_id &technique : {
+                 matec_id( "tec_grapple_hold" ), matec_id( "tec_grapple_drag" )
+             } ) {
+            CHECK( std::find( available.begin(), available.end(), technique ) != available.end() );
+            CHECK( technique->manual_activation );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+            CHECK( technique->lua_platform_mod == "ccb" );
+            CHECK_FALSE( technique->lua_platform_grapple_handler.empty() );
+#endif
+        }
+        if( !entry.second.empty() ) {
+            CHECK( std::find( available.begin(), available.end(),
+                              matec_id( entry.second ) ) != available.end() );
+        }
+    }
+    for( const std::string &style : {
+             "style_boxing", "style_none"
+         } ) {
+        avatar &dude = prepare_grappler( style );
+        for( const matec_id &technique : dude.active_techniques() ) {
+            CHECK( technique->grapple_action.empty() );
+        }
+    }
+}
+
+TEST_CASE( "brawling_grapple_throw_uses_lua_and_preserves_existing_style",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler( "style_brawling" );
+    const matype_id style( "style_brawling" );
+    CHECK( style->allow_all_weapons );
+    CHECK( style->techniques.count( matec_id( "tec_brawl_power" ) ) == 1 );
+    CHECK_FALSE( style->static_buffs.empty() );
+    CHECK_FALSE( style->onpause_buffs.empty() );
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
-    dude.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
-    CHECK_FALSE( dude.active_technique_availability( technique ).success() );
-    CHECK( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false, false ) );
+    target.friendly = -1;
+    const matec_id finish( "tec_brawl_grapple_throw" );
+    REQUIRE( finish.is_valid() );
+    CHECK( finish->lua_platform_mod == "ccb" );
+    const int moves = dude.get_moves();
+    const int stamina = dude.get_stamina();
+    CHECK_FALSE( finish->activation_allowed( dude, "target", &target ) );
+    CHECK_FALSE( dude.use_active_technique( target, finish ) );
+    CHECK( dude.get_moves() == moves );
+    CHECK( dude.get_stamina() == stamina );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    CHECK( finish->activation_allowed( dude, "target", &target ) );
+    REQUIRE( dude.use_active_technique( target, finish ) );
+    CHECK( target.pos_bub() == dude_pos + tripoint::west );
+    CHECK( target.has_effect( effect_downed ) );
+    CHECK_FALSE( target.has_effect( efftype_id( "martial_grapple" ) ) );
+}
+
+TEST_CASE( "active_grappling_controls_and_releases_npc_targets",
+           "[martial_arts][active_technique][grappling][npc]" )
+{
+    avatar &dude = prepare_grappler();
+    npc &target = spawn_npc( ( dude_pos + tripoint::east ).xy(), "test_talker" );
+    faction *const group = target.get_faction();
+    REQUIRE( group );
+    restore_on_out_of_scope restore_likes( group->likes_u );
+    restore_on_out_of_scope restore_respect( group->respects_u );
+    restore_on_out_of_scope restore_trust( group->trusts_u );
+    group->likes_u = 0;
+    target.set_attitude( NPCATT_NULL );
+    target.setpos( get_map(), dude_pos + tripoint::east );
+    const tripoint_abs_ms origin = dude.pos_abs();
+    const efftype_id grip( "martial_grapple" );
+    REQUIRE_FALSE( target.is_enemy() );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    CHECK( target.hit_by_player );
+    CHECK( ( target.get_attitude() == NPCATT_KILL || target.get_attitude() == NPCATT_FLEE_TEMP ) );
+    CHECK_FALSE( target.move_effects( false ) );
+    CHECK( target.move_effects( true ) );
+    SECTION( "drag and throw" ) {
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK( target.pos_abs() == origin );
+        CHECK( dude.pos_abs() == origin + tripoint::west );
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+        CHECK( target.pos_abs() == origin + tripoint_rel_ms( -2, 0, 0 ) );
+        CHECK( target.has_effect( effect_downed ) );
+        CHECK_FALSE( target.has_effect( grip ) );
+    }
+    SECTION( "invalid holder" ) {
+        dude.set_wielded_item( item( itype_id( "stick" ) ) );
+        CHECK( target.move_effects( false ) );
+        CHECK_FALSE( target.has_effect( grip ) );
+    }
+    SECTION( "lethal finish still records the attack" ) {
+        target.set_attitude( NPCATT_NULL );
+        group->likes_u = 0;
+        target.hit_by_player = false;
+        target.clear_worn();
+        target.set_part_hp_cur( bodypart_id( "torso" ), 1 );
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+        CHECK( target.is_dead_state() );
+        CHECK( target.hit_by_player );
+    }
+    SECTION( "one grip across creature categories" ) {
+        monster &other = spawn_test_monster( "mon_zombie", dude_pos + tripoint::north );
+        dude.remove_effect( matec_id( "tec_grapple_hold" )->grapple_cooldown_effect() );
+        REQUIRE( dude.use_active_technique( other, matec_id( "tec_grapple_hold" ) ) );
+        CHECK_FALSE( target.has_effect( grip ) );
+        CHECK( other.has_effect( grip ) );
+    }
+}
+
+TEST_CASE( "critical_only_techniques_are_automatic_not_manually_forced",
+           "[martial_arts][active_technique]" )
+{
+    avatar &dude = prepare_grappler();
+    dude.martial_arts_data->reset_style();
+    dude.set_wielded_item( item( itype_id( "sword_metal_fencing" ) ) );
+    const matec_id precise( "PRECISE" );
+    monster &target = spawn_test_monster( "mon_feral_human_pipe", dude_pos + tripoint::east );
+    const int moves = dude.get_moves();
+    const int stamina = dude.get_stamina();
+    CHECK_FALSE( precise->can_activate() );
+    CHECK_FALSE( dude.evaluate_technique( precise, target, dude.used_weapon(), false, false,
+                                          false, true ) );
+    CHECK_FALSE( dude.evaluate_technique( precise, target, dude.used_weapon(), false, false,
+                                          false, false ) );
+    CHECK( dude.evaluate_technique( precise, target, dude.used_weapon(), true, false, false, false ) );
+    CHECK_FALSE( dude.use_active_technique( target, precise ) );
+    CHECK( dude.get_moves() == moves );
+    CHECK( dude.get_stamina() == stamina );
+}
+
+TEST_CASE( "active_grappling_hold_controls_without_punch_damage",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const matec_id hold( "tec_grapple_hold" );
+    const efftype_id grip( "martial_grapple" );
+    const int health = target.get_hp();
+    const int stamina = dude.get_stamina();
+    REQUIRE( dude.use_active_technique( target, hold ) );
+    CHECK( target.get_hp() == health );
+    CHECK( dude.get_stamina() <= stamina - hold->grapple_stamina );
+    CHECK( dude.get_moves() < 1000 );
+    REQUIRE( target.has_effect( grip ) );
+    CHECK( target.get_effect( grip ).get_source().get_character_id() == dude.getID() );
+    CHECK_FALSE( target.move_effects( false ) );
+    CHECK( dude.has_effect( hold->grapple_cooldown_effect() ) );
+    const int spent_stamina = dude.get_stamina();
+    const int spent_moves = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( target, hold ) );
+    CHECK( dude.get_stamina() == spent_stamina );
+    CHECK( dude.get_moves() == spent_moves );
+    const std::vector<matec_id> available = dude.active_techniques();
+    CHECK( std::find( available.begin(), available.end(), hold ) != available.end() );
+    CHECK_FALSE( hold->activation_allowed( dude, "start" ) );
+    for( int attempt = 0; attempt < 30; ++attempt ) {
+        const matec_id automatic = std::get<0>( dude.pick_technique( target, dude.used_weapon(), false,
+                                                false, false, {} ) );
+        CHECK( automatic->grapple_action.empty() );
+    }
+}
+
+TEST_CASE( "active_grappling_drag_and_throw_use_owned_grips",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const matec_id hold( "tec_grapple_hold" );
+    const matec_id drag( "tec_grapple_drag" );
+    const matec_id hip_throw( "tec_judo_hip_throw" );
+    const efftype_id grip( "martial_grapple" );
+    const tripoint_abs_ms origin = dude.pos_abs();
+    CHECK_FALSE( dude.use_active_technique( target, drag ) );
+    CHECK_FALSE( dude.use_active_technique( target, hip_throw ) );
+    CHECK( dude.get_moves() == 1000 );
+    REQUIRE( dude.use_active_technique( target, hold ) );
+    const time_duration duration = target.get_effect( grip ).get_duration();
+    const int stamina = dude.get_stamina();
+    REQUIRE( dude.use_active_technique( target, drag ) );
+    CHECK( dude.pos_abs() == origin + tripoint::west );
+    CHECK( target.pos_abs() == origin );
+    CHECK( target.get_effect( grip ).get_duration() == duration );
+    CHECK( dude.get_stamina() <= stamina - drag->grapple_stamina );
+    CHECK_FALSE( dude.use_active_technique( target, drag ) );
+    const int health = target.get_hp();
+    REQUIRE( dude.use_active_technique( target, hip_throw ) );
+    CHECK( dude.pos_abs() == origin + tripoint::west );
+    CHECK( target.pos_abs() == origin + tripoint::west * 2 );
+    CHECK_FALSE( target.has_effect( grip ) );
+    CHECK( target.has_effect( effect_downed ) );
+    CHECK( target.get_hp() < health );
+    CHECK( dude.has_effect( hip_throw->grapple_cooldown_effect() ) );
+}
+
+TEST_CASE( "active_grappling_drag_updates_underwater_state",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    map &here = get_map();
+    const bool stays_in_water = GENERATE( false, true );
+    here.ter_set( dude_pos, ter_id( "t_water_dp" ) );
+    if( stays_in_water ) {
+        here.ter_set( dude_pos + tripoint::west, ter_id( "t_water_dp" ) );
+    }
+    dude.set_underwater( true );
+    const tripoint_abs_ms origin = dude.pos_abs();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    if( stays_in_water ) {
+        CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK( dude.pos_abs() == origin );
+    } else {
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK( dude.pos_abs() == origin + tripoint::west );
+    }
+    CHECK( dude.is_underwater() == stays_in_water );
+}
+
+TEST_CASE( "active_grappling_requires_physical_and_unrestricted_hands",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const bool held = GENERATE( false, true );
+    if( held ) {
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    }
+    SECTION( "incorporeal" ) {
+        dude.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+    }
+    SECTION( "restricted_hands" ) {
+        REQUIRE( dude.wear_item( item( itype_id( "bindle" ) ), false, false ) );
+    }
+    const int moves = dude.get_moves();
+    const int stamina = dude.get_stamina();
+    const int health = target.get_hp();
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+    CHECK( dude.get_moves() == moves );
+    CHECK( dude.get_stamina() == stamina );
+    CHECK( dude.pos_bub() == dude_pos );
+    CHECK( target.pos_bub() == dude_pos + tripoint::east );
+    CHECK( target.get_hp() == health );
+}
+
+TEST_CASE( "active_grappling_mass_and_size_change_cost_and_control",
+           "[martial_arts][active_technique][grappling]" )
+{
+    int light_stamina = 0;
+    int light_moves = 0;
+    time_duration light_duration = 0_turns;
+    for( const int weight : {
+             30, 90
+         } ) {
+        avatar &dude = prepare_grappler();
+        monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+        mtype target_type = *target.type;
+        restore_on_out_of_scope restore_type( target.type );
+        target_type.weight = units::from_kilogram( weight );
+        target.type = &target_type;
+        const int stamina = dude.get_stamina();
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+        const int cost = stamina - dude.get_stamina();
+        const int moves = 1000 - dude.get_moves();
+        const time_duration duration = target.get_effect( efftype_id( "martial_grapple" ) ).get_duration();
+        if( weight == 30 ) {
+            light_stamina = cost;
+            light_moves = moves;
+            light_duration = duration;
+        } else {
+            CHECK( cost > light_stamina );
+            CHECK( moves > light_moves );
+            CHECK( duration < light_duration );
+        }
+    }
+    for( const bool oversized : {
+             false, true
+         } ) {
+        avatar &dude = prepare_grappler();
+        monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+        mtype target_type = *target.type;
+        restore_on_out_of_scope restore_type( target.type );
+        target_type.weight = oversized ? 30_kilogram : 1000_kilogram;
+        target_type.size = oversized ? creature_size::huge : creature_size::medium;
+        target.type = &target_type;
+        const int stamina = dude.get_stamina();
+        CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+        CHECK( dude.get_stamina() == stamina );
+        CHECK( dude.get_moves() == 1000 );
+    }
+}
+
+TEST_CASE( "active_grappling_size_limits_control_independently_of_weight",
+           "[martial_arts][active_technique][grappling]" )
+{
+    time_duration medium_duration = 0_turns;
+    int medium_moves = 0;
+    for( const creature_size size : {
+             creature_size::medium, creature_size::large
+         } ) {
+        avatar &dude = prepare_grappler();
+        monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+        mtype target_type = *target.type;
+        restore_on_out_of_scope restore_type( target.type );
+        target_type.weight = 30_kilogram;
+        target_type.size = size;
+        target.type = &target_type;
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+        const time_duration duration = target.get_effect( efftype_id( "martial_grapple" ) ).get_duration();
+        if( size == creature_size::medium ) {
+            medium_duration = duration;
+            medium_moves = dude.get_moves();
+        } else {
+            CHECK( duration < medium_duration );
+            CHECK( dude.get_moves() < medium_moves );
+        }
+    }
+}
+
+TEST_CASE( "active_grappling_heavy_targets_reduce_throw_effects",
+           "[martial_arts][active_technique][grappling]" )
+{
+    int light_damage = 0;
+    time_duration light_duration = 0_turns;
+    for( const int weight : {
+             30, 90
+         } ) {
+        avatar &dude = prepare_grappler();
+        monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+        mtype target_type = *target.type;
+        restore_on_out_of_scope restore_type( target.type );
+        target_type.weight = units::from_kilogram( weight );
+        target.type = &target_type;
+        target.set_hp( 1000 );
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+        const int damage = 1000 - target.get_hp();
+        const time_duration duration = target.get_effect( effect_downed ).get_duration();
+        if( weight == 30 ) {
+            light_damage = damage;
+            light_duration = duration;
+        } else {
+            CHECK( damage < light_damage );
+            CHECK( duration < light_duration );
+        }
+    }
+}
+
+TEST_CASE( "active_grappling_defensive_projection_and_wrestling_slam_differ",
+           "[martial_arts][active_technique][grappling]" )
+{
+    int projection_damage = 0;
+    int projection_stamina = 0;
+    for( const bool slam : {
+             false, true
+         } ) {
+        avatar &dude = prepare_grappler( slam ? "style_pankration" : "style_aikido" );
+        monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+        target.set_hp( 1000 );
+        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+        const int stamina = dude.get_stamina();
+        const matec_id technique( slam ? "tec_pankration_slam" : "tec_aikido_projection" );
+        REQUIRE( dude.use_active_technique( target, technique ) );
+        if( !slam ) {
+            projection_damage = 1000 - target.get_hp();
+            projection_stamina = stamina - dude.get_stamina();
+        } else {
+            CHECK( 1000 - target.get_hp() > projection_damage );
+            CHECK( stamina - dude.get_stamina() > projection_stamina );
+        }
+    }
+}
+
+TEST_CASE( "active_grappling_rejects_ungraspable_and_attached_targets",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    mtype target_type = *target.type;
+    restore_on_out_of_scope restore_type( target.type );
+    target.type = &target_type;
+    SECTION( "amorphous" ) {
+        target_type.bodytype = "blob";
+    }
+    SECTION( "flying" ) {
+        target_type.set_flag( mon_flag_FLIES );
+    }
+    SECTION( "immobile" ) {
+        target_type.set_flag( mon_flag_IMMOBILE );
+    }
+    SECTION( "slippery" ) {
+        target_type.set_flag( mon_flag_PLASTIC );
+    }
+    SECTION( "ridden" ) {
+        target.add_effect( efftype_id( "ridden" ), 1_minutes );
+    }
+    SECTION( "harnessed" ) {
+        target.add_effect( efftype_id( "harnessed" ), 1_minutes );
+    }
+    SECTION( "tied" ) {
+        target.add_effect( efftype_id( "tied" ), 1_minutes );
+    }
+    const int stamina = dude.get_stamina();
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    CHECK( dude.get_stamina() == stamina );
+    CHECK( dude.get_moves() == 1000 );
+}
+
+TEST_CASE( "active_grappling_rejects_blocked_retreats_without_charging",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    SECTION( "wall" ) {
+        get_map().ter_set( dude_pos + tripoint::west, ter_id( "t_wall" ) );
+    }
+    SECTION( "occupied_tile" ) {
+        spawn_test_monster( "mon_zombie", dude_pos + tripoint::west );
+    }
+    SECTION( "unsupported_tile" ) {
+        get_map().ter_set( dude_pos + tripoint::west, ter_id( "t_open_air" ) );
+        get_map().ter_set( dude_pos + tripoint::west + tripoint::below, ter_id( "t_open_air" ) );
+    }
+    const int stamina = dude.get_stamina();
+    const int moves = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+    CHECK( dude.get_stamina() == stamina );
+    CHECK( dude.get_moves() == moves );
+    CHECK( dude.pos_bub() == dude_pos );
+    CHECK( target.pos_bub() == dude_pos + tripoint::east );
+}
+
+TEST_CASE( "active_grappling_releases_when_holder_cannot_maintain_control",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const efftype_id grip( "martial_grapple" );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    SECTION( "separation" ) {
+        dude.setpos( get_map(), dude_pos + tripoint::west );
+    }
+    SECTION( "wielding_a_weapon" ) {
+        dude.set_wielded_item( item( itype_club_wooden ) );
+    }
+    SECTION( "exhaustion" ) {
+        dude.set_stamina( 0 );
+    }
+    SECTION( "knockdown" ) {
+        dude.add_effect( effect_downed, 1_minutes );
+    }
+    SECTION( "broken_arm" ) {
+        dude.set_part_hp_cur( bodypart_id( "arm_l" ), 0 );
+    }
+    SECTION( "incorporeal" ) {
+        dude.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+    }
+    SECTION( "restricted_hands" ) {
+        REQUIRE( dude.wear_item( item( itype_id( "bindle" ) ), false, false ) );
+    }
+    target.move_effects( false );
+    CHECK_FALSE( target.has_effect( grip ) );
+}
+
+TEST_CASE( "active_grappling_rechecks_stamina_and_grip_ownership",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const matec_id hold( "tec_grapple_hold" );
+    const efftype_id grip( "martial_grapple" );
+    SECTION( "actual_weight_cost_exceeds_remaining_stamina" ) {
+        dude.set_stamina( hold->grapple_stamina );
+        CHECK( hold->activation_allowed( dude, "start" ) );
+        CHECK_FALSE( dude.use_active_technique( target, hold ) );
+        CHECK( dude.get_stamina() == hold->grapple_stamina );
+    }
+    SECTION( "another_creatures_grip_cannot_be_stolen_or_used" ) {
+        target.add_effect( effect_source::empty(), grip, 5_turns );
+        const int stamina = dude.get_stamina();
+        CHECK_FALSE( dude.use_active_technique( target, hold ) );
+        CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+        CHECK( dude.get_stamina() == stamina );
+    }
+    CHECK( dude.get_moves() == 1000 );
+    CHECK_FALSE( dude.has_effect( hold->grapple_cooldown_effect() ) );
+}
+
+TEST_CASE( "active_grappling_only_holds_one_target_and_cooldowns_expire",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &first = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    monster &second = spawn_test_monster( "mon_zombie", dude_pos + tripoint::north );
+    const matec_id hold( "tec_grapple_hold" );
+    const efftype_id grip( "martial_grapple" );
+    REQUIRE( dude.use_active_technique( first, hold ) );
+    CHECK_FALSE( dude.use_active_technique( second, hold ) );
+    dude.remove_effect( hold->grapple_cooldown_effect() );
+    REQUIRE( dude.use_active_technique( second, hold ) );
+    CHECK_FALSE( first.has_effect( grip ) );
+    REQUIRE( second.has_effect( grip ) );
+    restore_on_out_of_scope restore_time( calendar::turn );
+    for( int turn = 0; turn < 8; ++turn ) {
+        calendar::turn += 1_turns;
+        dude.process_effects();
+        second.process_effects();
+    }
+    CHECK_FALSE( second.has_effect( grip ) );
+    CHECK_FALSE( dude.has_effect( hold->grapple_cooldown_effect() ) );
+    REQUIRE( dude.use_active_technique( first, hold ) );
+}
+
+TEST_CASE( "active_grappling_effects_preserve_sources_and_cooldowns_in_save_data",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    const matec_id hold( "tec_grapple_hold" );
+    REQUIRE( dude.use_active_technique( target, hold ) );
+    for( const effect &original : {
+             target.get_effect( efftype_id( "martial_grapple" ) ),
+             dude.get_effect( hold->grapple_cooldown_effect() )
+         } ) {
+        std::ostringstream stream;
+        JsonOut output( stream );
+        original.serialize( output );
+        effect restored;
+        restored.deserialize( json_loader::from_string( stream.str() ).get_object() );
+        CHECK( restored.get_id() == original.get_id() );
+        CHECK( restored.get_duration() == original.get_duration() );
+        CHECK( restored.get_source().get_character_id() == original.get_source().get_character_id() );
+    }
+}
+
+TEST_CASE( "active_grappling_throw_cooldown_cannot_be_bypassed_by_style_switch",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    const matec_id hip_throw( "tec_judo_hip_throw" );
+    REQUIRE( dude.use_active_technique( target, hip_throw ) );
+    dude.martial_arts_data->add_martialart( matype_id( "style_aikido" ) );
+    dude.martial_arts_data->set_style( matype_id( "style_aikido" ) );
+    const matec_id projection( "tec_aikido_projection" );
+    CHECK( hip_throw->grapple_cooldown_effect() == projection->grapple_cooldown_effect() );
+    CHECK( dude.technique_cooldown_remaining( hip_throw ) == hip_throw->grapple_cooldown );
+    CHECK( dude.technique_cooldown_remaining( projection ) == hip_throw->grapple_cooldown );
+    CHECK_FALSE( projection->activation_allowed( dude, "start" ) );
+    const int stamina = dude.get_stamina();
+    const int moves = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( target, projection ) );
+    CHECK( dude.get_stamina() == stamina );
+    CHECK( dude.get_moves() == moves );
 }
 
 TEST_CASE( "active_techniques_include_current_style_and_weapon_attacks",
@@ -262,10 +755,11 @@ TEST_CASE( "active_techniques_exclude_counters_and_passive_abilities",
     standard_npc dude( "TestCharacter", dude_pos, {}, 0, 8, 8, 8, 8 );
     clear_character( dude, true );
     dude.set_all_skills( 10 );
-    item weapon( itype_sword_metal_fencing );
+    item weapon( itype_id( "sword_metal_fencing" ) );
     const std::vector<matec_id> excluded = {
-        tec_bojutsu_frontstrike, WBLOCK_1,
-        tec_feint, tec_break
+        matec_id( "PRECISE" ), matec_id( "PENETRATE" ),
+        matec_id( "tec_bojutsu_frontstrike" ), matec_id( "WBLOCK_1" ),
+        matec_id( "tec_feint" ), matec_id( "tec_break" )
     };
     for( const matec_id &id : excluded ) {
         weapon.add_technique( id );
@@ -293,21 +787,23 @@ TEST_CASE( "active_techniques_preserve_target_conditions_and_attack_costs",
     avatar &dude = get_avatar();
     dude.setpos( get_map(), dude_pos );
     dude.set_all_skills( 5 );
-    dude.set_wielded_item( item( itype_sword_metal_fencing ) );
-    const matec_id precise( PRECISE );
+    item weapon( itype_id( "sword_wood" ) );
+    weapon.add_technique( test_tech_condition_stun );
+    dude.set_wielded_item( weapon );
     monster &target = spawn_test_monster( "mon_feral_human_pipe", dude_pos + tripoint::east );
     dude.set_moves( 1000 );
     const int stamina_before = dude.get_stamina();
     target.add_effect( effect_stunned, 1_minutes );
-    CHECK_FALSE( dude.use_active_technique( target, precise ) );
+    CHECK_FALSE( dude.use_active_technique( target, test_tech_condition_stun ) );
     CHECK( dude.get_moves() == 1000 );
     CHECK( dude.get_stamina() == stamina_before );
 
     target.remove_effect( effect_stunned );
-    REQUIRE( dude.evaluate_technique( precise, target, dude.used_weapon(), false, false,
+    REQUIRE( dude.evaluate_technique( test_tech_condition_stun, target, dude.used_weapon(), false,
+                                      false,
                                       false, true ) );
     melee::clear_stats();
-    REQUIRE( dude.use_active_technique( target, precise ) );
+    REQUIRE( dude.use_active_technique( target, test_tech_condition_stun ) );
     CHECK( melee::get_stats().attack_count == 1 );
     CHECK( dude.get_moves() < 1000 );
     CHECK( dude.get_stamina() < stamina_before );
@@ -335,11 +831,13 @@ TEST_CASE( "active_techniques_preserve_buffs_and_area_requirements",
 
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
     dude.set_moves( 1000 );
+    CHECK_FALSE( dude.evaluate_technique( wide, target, dude.used_weapon(), true, false, false ) );
     CHECK_FALSE( dude.use_active_technique( target, wide ) );
     CHECK( dude.get_moves() == 1000 );
     spawn_test_monster( "mon_zombie", dude_pos + tripoint_rel_ms( 1, 1, 0 ) );
-    REQUIRE( dude.use_active_technique( target, wide ) );
-    CHECK( dude.get_moves() < 1000 );
+    REQUIRE( dude.evaluate_technique( wide, target, dude.used_weapon(), true, false, false ) );
+    CHECK_FALSE( dude.use_active_technique( target, wide ) );
+    CHECK( dude.get_moves() == 1000 );
 }
 
 TEST_CASE( "active_reach_techniques_validate_range_and_obstructions",
@@ -382,13 +880,12 @@ TEST_CASE( "active_reach_techniques_validate_range_and_obstructions",
     CHECK_FALSE( dude.reach_attacking );
 }
 
-TEST_CASE( "active_technique_definitions_allow_conditional_critical_and_reach_attacks",
+TEST_CASE( "active_technique_definitions_allow_conditional_reach_but_not_critical_only_attacks",
            "[martial_arts][active_technique][json]" )
 {
     const JsonObject input = json_loader::from_string( R"({
         "name": "Conditional active reach strike",
         "manual_activation": true,
-        "crit_tec": true,
         "reach_tec": true,
         "weighting": -2,
         "melee_allowed": true,
@@ -399,6 +896,11 @@ TEST_CASE( "active_technique_definitions_allow_conditional_critical_and_reach_at
     REQUIRE_NOTHROW( technique.load( input, "test" ) );
     CHECK( technique.lua_platform_condition_handler.empty() );
     CHECK( technique.can_activate() );
+    const JsonObject critical_input = json_loader::from_string( R"({
+        "name": "Forced critical strike", "manual_activation": true,
+        "crit_tec": true, "melee_allowed": true, "attack_vectors": [ "vector_null" ]
+    })" ).get_object();
+    CHECK_THROWS( technique.load( critical_input, "test" ) );
 }
 
 TEST_CASE( "active_technique_rechecks_target_and_spends_one_melee_attack",
@@ -432,6 +934,103 @@ TEST_CASE( "active_technique_rechecks_target_and_spends_one_melee_attack",
     REQUIRE( dude.use_active_technique( adjacent, test_active_strike ) );
     CHECK( dude.get_moves() < moves_before );
     CHECK( dude.get_stamina() < stamina_before );
+}
+
+
+
+TEST_CASE( "active_technique_cooldown_tracks_execution_and_game_time",
+           "[martial_arts][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    dude.martial_arts_data->add_martialart( test_style_ma1 );
+    dude.martial_arts_data->set_style( test_style_ma1 );
+    const matec_id technique( "test_manual_cooldown_strike" );
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    target.set_dodge_bonus( 10000 );
+    dude.set_moves( 1000 );
+    const int moves_before = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( dude, technique ) );
+    target.setpos( get_map(), dude_pos + tripoint( 3, 0, 0 ) );
+    CHECK_FALSE( dude.use_active_technique( target, technique ) );
+    target.setpos( get_map(), dude_pos + tripoint::east );
+    dude.martial_arts_data->reset_style();
+    CHECK_FALSE( dude.use_active_technique( target, technique ) );
+    dude.martial_arts_data->set_style( test_style_ma1 );
+    CHECK( dude.technique_cooldown_remaining( technique ) == 0_turns );
+    CHECK( dude.get_moves() == moves_before );
+    dude.start_technique_cooldown( rapid_strike );
+    CHECK( dude.active_technique_cooldowns().empty() );
+
+    melee::clear_stats();
+    REQUIRE( dude.use_active_technique( target, technique ) );
+    CHECK( melee::get_stats().attack_count == 1 );
+    CHECK( melee::get_stats().hit_count == 0 );
+    CHECK( dude.technique_cooldown_remaining( technique ) == 10_seconds );
+    const int moves_after = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( target, technique ) );
+    CHECK( dude.get_moves() == moves_after );
+    const std::vector<matec_id> available = dude.active_techniques();
+    CHECK( std::find( available.begin(), available.end(), technique ) != available.end() );
+    CHECK( technique->activation_allowed( dude, "menu" ) );
+    CHECK_FALSE( technique->activation_allowed( dude, "start" ) );
+
+    calendar::turn += 4_seconds;
+    CHECK( dude.technique_cooldown_remaining( technique ) == 6_seconds );
+    dude.martial_arts_data->reset_style();
+    dude.remove_weapon();
+    CHECK( dude.technique_cooldown_remaining( technique ) == 6_seconds );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    dude.martial_arts_data->set_style( test_style_ma1 );
+    calendar::turn += 6_seconds;
+    CHECK( dude.technique_cooldown_remaining( technique ) == 0_turns );
+    CHECK( dude.active_technique_cooldowns().empty() );
+    CHECK( dude.use_active_technique( target, technique ) );
+    CHECK( dude.technique_cooldown_remaining( technique ) == 10_seconds );
+    CHECK( rapid_strike->cooldown == 0_turns );
+}
+
+TEST_CASE( "active_technique_cooldown_survives_save_load",
+           "[martial_arts][active_technique][cooldown][save]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &dude = get_avatar();
+    const matec_id technique( "test_manual_cooldown_strike" );
+    dude.start_technique_cooldown( technique );
+    calendar::turn += 3_seconds;
+    std::ostringstream serialized;
+    JsonOut output( serialized );
+    dude.serialize( output );
+    std::string saved = serialized.str();
+    SECTION( "saved deadline is preserved" ) {
+        avatar restored;
+        restored.deserialize( json_loader::from_string( saved ).get_object() );
+        CHECK( restored.technique_cooldown_remaining( technique ) == 7_seconds );
+        calendar::turn += 7_seconds;
+        avatar expired;
+        expired.deserialize( json_loader::from_string( saved ).get_object() );
+        CHECK( expired.technique_cooldown_remaining( technique ) == 0_turns );
+        CHECK( expired.active_technique_cooldowns().empty() );
+    }
+    SECTION( "older saves start with no cooldowns" ) {
+        const size_t start = saved.find( "\"technique_cooldowns\"" );
+        REQUIRE( start != std::string::npos );
+        const size_t end = saved.find( '}', start );
+        REQUIRE( end != std::string::npos );
+        const size_t comma = saved.find( ',', end );
+        REQUIRE( comma != std::string::npos );
+        saved.erase( start, comma + 1 - start );
+        avatar restored;
+        restored.start_technique_cooldown( technique );
+        restored.deserialize( json_loader::from_string( saved ).get_object() );
+        CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+        CHECK( restored.active_technique_cooldowns().empty() );
+    }
 }
 
 TEST_CASE( "martial_arts", "[martial_arts]" )
@@ -740,4 +1339,118 @@ TEST_CASE( "automatic_martial_style_weapon_preferences", "[martial_arts]" )
     arts.auto_style = false;
     dude.set_wielded_item( item( itype_test_weapon2 ) );
     CHECK( arts.selected_style() == none );
+}
+
+
+TEST_CASE( "active_technique_cooldowns_follow_calendar_and_survive_style_changes_and_saves",
+           "[martial_arts][active_technique][cooldown][save]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    calendar::turn = calendar::turn_zero + 1_hours;
+    character_martial_arts arts;
+    const matec_id &technique = test_active_cooldown_strike;
+    REQUIRE( technique.is_valid() );
+    CHECK( arts.technique_cooldown_remaining( technique ) == 0_turns );
+    arts.start_technique_cooldown( technique, 8_seconds );
+    CHECK( arts.technique_cooldown_remaining( technique ) == 8_seconds );
+    arts.reset_style();
+    arts.clear_styles();
+    arts.start_technique_cooldown( technique, 0_turns );
+    arts.start_technique_cooldown( technique, 1_seconds );
+    CHECK( arts.technique_cooldown_remaining( technique ) == 8_seconds );
+
+    calendar::turn += 3_seconds;
+    CHECK( arts.technique_cooldown_remaining( technique ) == 5_seconds );
+    std::ostringstream output;
+    JsonOut writer( output );
+    arts.serialize( writer );
+    character_martial_arts restored;
+    restored.deserialize( json_loader::from_string( output.str() ).get_object() );
+    CHECK( restored.technique_cooldown_remaining( technique ) == 5_seconds );
+    calendar::turn += 5_seconds;
+    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+    calendar::turn += 1_days;
+    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+    restored.deserialize( json_loader::from_string( "{}" ).get_object() );
+    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+}
+
+TEST_CASE( "active_technique_cooldowns_commit_on_misses_but_not_rejected_attacks",
+           "[martial_arts][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    const matype_id &style = test_style_cooldown;
+    const matec_id &technique = test_active_cooldown_strike;
+    dude.martial_arts_data->add_martialart( style );
+    dude.martial_arts_data->set_style( style );
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    dude.set_moves( 1000 );
+    CHECK_FALSE( dude.use_active_technique( dude, technique ) );
+    CHECK( dude.get_moves() == 1000 );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 0_turns );
+
+    target.set_dodge_bonus( 1000 );
+    REQUIRE( dude.active_technique_availability( technique ).success() );
+    REQUIRE( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false,
+                                      false, true ) );
+    melee::clear_stats();
+    const int hp_before = target.get_hp();
+    REQUIRE( dude.use_active_technique( target, technique ) );
+    CHECK( melee::get_stats().attack_count == 1 );
+    CHECK( melee::get_stats().hit_count == 0 );
+    CHECK( target.get_hp() == hp_before );
+    CHECK( dude.get_moves() < 1000 );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
+    CHECK_FALSE( dude.active_technique_availability( technique ).success() );
+    const std::vector<matec_id> visible = dude.active_techniques( true );
+    CHECK( std::find( visible.begin(), visible.end(), technique ) != visible.end() );
+    const std::vector<matec_id> usable = dude.active_techniques();
+    CHECK( std::find( usable.begin(), usable.end(), technique ) == usable.end() );
+    const int moves_after = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( target, technique ) );
+    CHECK( dude.get_moves() == moves_after );
+    dude.remove_weapon();
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
+    calendar::turn += 8_seconds;
+    CHECK( dude.active_technique_availability( technique ).success() );
+    REQUIRE( dude.use_active_technique( target, technique ) );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
+}
+
+TEST_CASE( "active_technique_cooldown_definitions_validate_durations",
+           "[martial_arts][active_technique][cooldown][json]" )
+{
+    const auto load = []( const std::string & duration ) {
+        ma_technique technique;
+        technique.load( json_loader::from_string(
+                            R"({"name":"Cooldown test","cooldown":")" + duration + R"("})" ).get_object(), "test" );
+        return technique.cooldown;
+    };
+    CHECK( load( "0 s" ) == 0_turns );
+    CHECK( load( "8 s" ) == 8_seconds );
+    CHECK( load( "1 d" ) == 1_days );
+    CHECK_THROWS( load( "-1 s" ) );
+    CHECK_THROWS( load( "2 d" ) );
+}
+
+TEST_CASE( "active_technique_cooldowns_do_not_disable_automatic_techniques",
+           "[martial_arts][active_technique][cooldown]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_all_skills( 5 );
+    dude.set_wielded_item( item( itype_sword_metal_fencing ) );
+    const matec_id technique( RAPID );
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    dude.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
+    CHECK_FALSE( dude.active_technique_availability( technique ).success() );
+    CHECK( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false, false ) );
 }

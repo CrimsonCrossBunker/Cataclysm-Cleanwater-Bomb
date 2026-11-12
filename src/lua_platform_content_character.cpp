@@ -13,7 +13,11 @@
 #include <units.h>
 #include <value_ptr.h>
 #include <exception>
+#include <sstream>
 #include <variant>
+
+#include "json.h"
+#include "json_loader.h"
 
 #include "lua_platform_content_text.h"
 #include "lua_platform_runtime_internal.h"
@@ -712,6 +716,17 @@ struct technique_definition_data {
     bool manual_activation = false;
     double cooldown_seconds = 0.0;
     std::string cooldown_handler;
+    std::int64_t cooldown_turns = 0;
+    std::string grapple_action;
+    std::int64_t grapple_power = 100;
+    std::int64_t grapple_stamina = 0;
+    std::int64_t grapple_cooldown_turns = 0;
+    std::string grapple_handler;
+    std::string position_handler;
+    std::set<std::string> weapon_categories;
+    std::map<std::string, double> damage_multipliers;
+    double move_cost_multiplier = 1.0;
+    double accuracy_bonus = 0.0;
     bool wall_adjacent = false;
     bool reach_tec = false;
     bool reach_ok = false;
@@ -736,6 +751,7 @@ struct technique_definition_data {
     std::string aoe;
     std::set<std::string> flags;
     std::vector<std::string> attack_vectors;
+    std::set<std::string> styles;
     bool unarmed_allowed = false;
     bool melee_allowed = false;
     bool strictly_unarmed = false;
@@ -1776,6 +1792,51 @@ struct profession_item_bonus_definition_handle {
 struct technique_definition_handle {
     std::shared_ptr < technique_definition_data > definition;
     std::shared_ptr < owner_token > token;
+
+    technique_definition_handle &weapon_category( const std::string &value ) {
+        require_building_handle( token, *definition, "technique" );
+        if( value.empty() ) {
+            throw std::runtime_error( "technique weapon category cannot be empty" );
+        }
+        definition->weapon_categories.insert( value );
+        return *this;
+    }
+
+    technique_definition_handle &damage_multiplier( const std::string &type, const double value ) {
+        require_building_handle( token, *definition, "technique" );
+        if( type.empty() || !std::isfinite( value ) || value <= 0 || value > 10 ) {
+            throw std::runtime_error( "technique damage multiplier must be in (0, 10]" );
+        }
+        definition->damage_multipliers[type] = value;
+        return *this;
+    }
+
+    technique_definition_handle &move_cost_multiplier( const double value ) {
+        require_building_handle( token, *definition, "technique" );
+        if( !std::isfinite( value ) || value <= 0 || value > 10 ) {
+            throw std::runtime_error( "technique move-cost multiplier must be in (0, 10]" );
+        }
+        definition->move_cost_multiplier = value;
+        return *this;
+    }
+
+    technique_definition_handle &accuracy_bonus( const double value ) {
+        require_building_handle( token, *definition, "technique" );
+        if( !std::isfinite( value ) || value < -20 || value > 20 ) {
+            throw std::runtime_error( "technique accuracy bonus must be in [-20, 20]" );
+        }
+        definition->accuracy_bonus = value;
+        return *this;
+    }
+
+    technique_definition_handle &style( const std::string &value ) {
+        require_building_handle( token, *definition, "technique" );
+        if( value.empty() ) {
+            throw std::runtime_error( "technique style id cannot be empty" );
+        }
+        definition->styles.insert( value );
+        return *this;
+    }
 
     technique_definition_handle &flag( const std::string &value ) {
         require_building_handle( token, *definition, "technique" );
@@ -3057,6 +3118,14 @@ void character_content_transaction::impl::install_technique( sol::table &content
         definition->manual_activation = options.get_or( "manual_activation", false );
         definition->cooldown_seconds = options.get_or( "cooldown_seconds", 0.0 );
         definition->cooldown_handler = options.get_or( "cooldown_duration", std::string() );
+        definition->cooldown_turns = options.get_or( "cooldown_turns", std::int64_t( 0 ) );
+        definition->grapple_action = options.get_or( "grapple_action", std::string() );
+        definition->grapple_power = options.get_or( "grapple_power", std::int64_t( 100 ) );
+        definition->grapple_stamina = options.get_or( "grapple_stamina", std::int64_t( 0 ) );
+        definition->grapple_cooldown_turns = options.get_or(
+                "grapple_cooldown_turns", std::int64_t( 0 ) );
+        definition->grapple_handler = options.get_or( "grapple_plan", std::string() );
+        definition->position_handler = options.get_or( "position_plan", std::string() );
         definition->wall_adjacent = options.get_or( "wall_adjacent", false );
         definition->reach_tec = options.get_or( "reach_tec", false );
         definition->reach_ok = options.get_or( "reach_ok", false );
@@ -3343,6 +3412,11 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "id", sol::property( &technique_definition_handle::id ),
         "flag", &technique_definition_handle::flag,
         "attack_vector", &technique_definition_handle::attack_vector,
+        "style", &technique_definition_handle::style,
+        "weapon_category", &technique_definition_handle::weapon_category,
+        "damage_multiplier", &technique_definition_handle::damage_multiplier,
+        "move_cost_multiplier", &technique_definition_handle::move_cost_multiplier,
+        "accuracy_bonus", &technique_definition_handle::accuracy_bonus,
         "requires_skill", &technique_definition_handle::requires_skill,
         "active_when", &technique_definition_handle::active_when,
         "cooldown_duration", &technique_definition_handle::cooldown_duration,
@@ -5035,6 +5109,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             require_valid_id( definition.id, "technique" );
             if( definition.name.empty() ||
                 !technique_ids.insert( definition.id ).second ||
+                definition.cooldown_turns < 0 ||
+                definition.cooldown_turns > to_turns<int>( 1_days ) ||
+                ( definition.cooldown_turns > 0 && !definition.manual_activation ) ||
                 definition.weighting < 0 ||
                 !std::isfinite( definition.cooldown_seconds ) ||
                 definition.cooldown_seconds < 0.0 || definition.cooldown_seconds > 86400.0 ||
@@ -5048,12 +5125,59 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "technique '" + definition.id +
                                           "' has invalid ranges or a duplicate registration" );
             }
-            if( definition.manual_activation && ( definition.defensive || definition.dummy ||
+            if( definition.manual_activation && ( definition.crit_tec || definition.defensive ||
+                                                  definition.dummy ||
                                                   definition.dodge_counter || definition.block_counter ||
                                                   definition.miss_recovery || definition.grab_break ||
                                                   definition.attack_vectors.empty() ) ) {
                 throw std::runtime_error( "technique '" + definition.id +
                                           "' cannot be activated manually" );
+            }
+            if( !definition.grapple_action.empty() ) {
+                if( ( definition.grapple_action != "hold" && definition.grapple_action != "drag" &&
+                      definition.grapple_action != "throw" ) ||
+                    !definition.manual_activation || !definition.strictly_unarmed ||
+                    definition.reach_tec || definition.reach_ok ||
+                    definition.grapple_power <= 0 || !fits_native_int( definition.grapple_power ) ||
+                    definition.grapple_stamina <= 0 || !fits_native_int( definition.grapple_stamina ) ||
+                    definition.grapple_cooldown_turns <= 0 ||
+                    !fits_native_int( definition.grapple_cooldown_turns ) ) {
+                    throw std::runtime_error( "technique '" + definition.id +
+                                              "' has invalid grappling parameters" );
+                }
+            }
+            if( !definition.grapple_handler.empty() &&
+                ( definition.grapple_action.empty() ||
+                  owner_runtime.handlers.count( definition.grapple_handler ) == 0 ) ) {
+                throw std::runtime_error( "technique '" + definition.id +
+                                          "' requires a grapple action and a registered grapple plan handler" );
+            }
+            if( definition.flags.count( "LUA_POSITION_TECHNIQUE" ) != 0 ) {
+                throw std::runtime_error( "use position_plan to author position techniques" );
+            }
+            for( const std::string &category : definition.weapon_categories ) {
+                if( check_engine_state && !index_defines( index.defines_weapon_category, category ) &&
+                    !weapon_category_id( category ).is_valid() ) {
+                    throw std::runtime_error( "technique references unknown weapon category '" + category + "'" );
+                }
+            }
+            for( const auto &[type, multiplier] : definition.damage_multipliers ) {
+                if( check_engine_state && !index_defines( index.defines_damage_type, type ) &&
+                    !damage_type_id( type ).is_valid() ) {
+                    throw std::runtime_error( "technique references unknown damage type '" + type + "'" );
+                }
+            }
+            if( !definition.position_handler.empty() &&
+                ( !definition.manual_activation || !definition.grapple_action.empty() ||
+                  !definition.apply_handler.empty() || !definition.aoe.empty() ||
+                  definition.disarms || definition.take_weapon || definition.side_switch ||
+                  definition.needs_ammo || definition.wall_adjacent ||
+                  definition.reach_tec || definition.reach_ok || definition.down_dur != 0 ||
+                  definition.stun_dur != 0 || definition.knockback_dist != 0 ||
+                  definition.repeat_min != 1 || definition.repeat_max != 1 ||
+                  owner_runtime.handlers.count( definition.position_handler ) == 0 ) ) {
+                throw std::runtime_error( "technique '" + definition.id +
+                                          "' requires a registered position plan and a manual single-position action" );
             }
             for( const std::string &vector : definition.attack_vectors ) {
                 if( vector.empty() ||
@@ -5093,6 +5217,15 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             validate_operation( entry.operation, matec_id( definition.id ).is_valid(),
                                 definition.id, "technique" );
+            for( const std::string &style : definition.styles ) {
+                require_valid_id( style, "martial art" );
+                if( check_engine_state &&
+                    !registration_id_exists( pimpl_->martial_arts, style ) &&
+                    !matype_id( style ).is_valid() ) {
+                    throw std::runtime_error( "technique '" + definition.id +
+                                              "' references an invalid martial art '" + style + "'" );
+                }
+            }
         }
 
         std::set < std::string > martial_art_ids;
@@ -5433,7 +5566,7 @@ void character_content_transaction::rollback_phase(
             for( auto it = pimpl_->martial_art_undo.rbegin();
                  it != pimpl_->martial_art_undo.rend(); ++it ) {
                 if( it->second ) {
-                    detail::martialart_registry().insert( *it->second );
+                    detail::martialart_registry().restore( *it->second );
                 } else {
                     detail::martialart_registry().erase( it->first );
                 }
@@ -6575,9 +6708,15 @@ void character_content_transaction::impl::apply_technique()
         native.crit_tec = source.crit_tec;
         native.crit_ok = source.crit_ok;
         native.manual_activation = source.manual_activation;
-        native.cooldown = time_duration::from_seconds(
-                              static_cast<int>( std::ceil( source.cooldown_seconds ) ) );
+        native.cooldown = source.cooldown_turns > 0 ?
+                          time_duration::from_turns( source.cooldown_turns ) :
+                          time_duration::from_seconds( static_cast<int>( std::ceil( source.cooldown_seconds ) ) );
         native.lua_platform_cooldown_handler = source.cooldown_handler;
+        native.grapple_action = source.grapple_action;
+        native.grapple_power = static_cast<int>( source.grapple_power );
+        native.grapple_stamina = static_cast<int>( source.grapple_stamina );
+        native.grapple_cooldown = time_duration::from_turns( source.grapple_cooldown_turns );
+        native.lua_platform_grapple_handler = source.grapple_handler;
         native.wall_adjacent = source.wall_adjacent;
         native.reach_tec = source.reach_tec;
         native.reach_ok = source.reach_ok;
@@ -6604,6 +6743,35 @@ void character_content_transaction::impl::apply_technique()
         native.reqs.unarmed_allowed = source.unarmed_allowed;
         native.reqs.melee_allowed = source.melee_allowed;
         native.reqs.strictly_unarmed = source.strictly_unarmed;
+        for( const std::string &category : source.weapon_categories ) {
+            native.reqs.weapon_categories_allowed.emplace_back( category );
+        }
+        std::ostringstream bonus_stream;
+        JsonOut bonuses( bonus_stream );
+        bonuses.start_object();
+        bonuses.member( "flat_bonuses" );
+        bonuses.start_array();
+        bonuses.start_object();
+        bonuses.member( "stat", "hit" );
+        bonuses.member( "scale", source.accuracy_bonus );
+        bonuses.end_object();
+        bonuses.end_array();
+        bonuses.member( "mult_bonuses" );
+        bonuses.start_array();
+        bonuses.start_object();
+        bonuses.member( "stat", "movecost" );
+        bonuses.member( "scale", source.move_cost_multiplier );
+        bonuses.end_object();
+        for( const auto &[type, multiplier] : source.damage_multipliers ) {
+            bonuses.start_object();
+            bonuses.member( "stat", "damage" );
+            bonuses.member( "type", type );
+            bonuses.member( "scale", multiplier );
+            bonuses.end_object();
+        }
+        bonuses.end_array();
+        bonuses.end_object();
+        native.bonuses.load( json_loader::from_string( bonus_stream.str() ).get_object() );
         for( const std::string &vector : source.attack_vectors ) {
             native.attack_vectors.emplace_back( vector );
         }
@@ -6615,6 +6783,10 @@ void character_content_transaction::impl::apply_technique()
         native.lua_platform_condition_handler = source.condition_handler;
         native.lua_platform_charge_damage_handler = source.charge_damage_handler;
         native.lua_platform_apply_handler = source.apply_handler;
+        if( !source.position_handler.empty() ) {
+            native.flags.insert( "LUA_POSITION_TECHNIQUE" );
+            native.lua_platform_apply_handler = source.position_handler;
+        }
         native.was_loaded = true;
         if( entry.operation == definition_operation::replace ) {
             detail::ma_technique_registry().restore( native );
@@ -6676,7 +6848,16 @@ void character_content_transaction::impl::apply_martial_art()
         native.was_loaded = true;
         detail::martialart_registry().insert( native );
     }
-    if( !this->martial_arts.empty() ) {
+    for( const technique_registration &entry : this->techniques ) {
+        for( const std::string &style : entry.definition->styles ) {
+            const matype_id id( style );
+            martialart native = id.obj();
+            this->martial_art_undo.emplace_back( id, native );
+            native.techniques.insert( matec_id( entry.definition->id ) );
+            detail::martialart_registry().restore( native );
+        }
+    }
+    if( !this->martial_art_undo.empty() ) {
         detail::martialart_registry().finalize();
     }
 }
@@ -6843,6 +7024,22 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.manual_activation ? "manual_activation" : "automatic_only" );
                 hash_part( state, std::to_string( value.cooldown_seconds ) );
                 hash_part( state, value.cooldown_handler );
+                hash_part( state, std::to_string( value.cooldown_turns ) );
+                hash_part( state, value.grapple_action );
+                hash_part( state, std::to_string( value.grapple_power ) );
+                hash_part( state, std::to_string( value.grapple_stamina ) );
+                hash_part( state, std::to_string( value.grapple_cooldown_turns ) );
+                hash_part( state, value.grapple_handler );
+                hash_part( state, value.position_handler );
+                hash_part( state, std::to_string( value.move_cost_multiplier ) );
+                hash_part( state, std::to_string( value.accuracy_bonus ) );
+                for( const std::string &category : value.weapon_categories ) {
+                    hash_part( state, category );
+                }
+                for( const auto &[type, multiplier] : value.damage_multipliers ) {
+                    hash_part( state, type );
+                    hash_part( state, std::to_string( multiplier ) );
+                }
                 hash_part( state, value.wall_adjacent ? "wall_adjacent" : "not_wall_adjacent" );
                 hash_part( state, value.reach_tec ? "reach_tec" : "not_reach_tec" );
                 hash_part( state, value.reach_ok ? "reach_ok" : "not_reach_ok" );
@@ -6873,6 +7070,10 @@ void character_content_transaction::append_fingerprint(
                 }
                 for( const std::string &vector : value.attack_vectors ) {
                     hash_part( state, vector );
+                }
+                hash_part( state, "styles" );
+                for( const std::string &style : value.styles ) {
+                    hash_part( state, style );
                 }
                 for( const auto &[skill, level] : value.min_skills ) {
                     hash_part( state, skill );

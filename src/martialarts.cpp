@@ -30,6 +30,7 @@
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
+#include "effect_source.h"
 #include "enums.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -396,7 +397,7 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
     bonuses.load( jo );
 
     if( manual_activation && !can_activate() ) {
-        jo.throw_error( "manual_activation requires an offensive technique with an attack vector and no counterattack trigger" );
+        jo.throw_error( "manual_activation requires an offensive technique with an attack vector and no critical-only or counterattack trigger" );
     }
     if( !grapple_action.empty() &&
         ( ( grapple_action != "hold" && grapple_action != "throw" && grapple_action != "drag" ) ||
@@ -1055,13 +1056,27 @@ bool ma_technique::is_valid_character( const Character &u ) const
 
 bool ma_technique::can_activate() const
 {
-    return !dummy && !defensive && !dodge_counter && !block_counter &&
+    return !crit_tec && !dummy && !defensive && !dodge_counter && !block_counter &&
            !miss_recovery && !grab_break && !attack_vectors.empty();
 }
 
 bool ma_technique::activation_allowed( const Character &character,
                                        const std::string_view phase ) const
 {
+    return activation_allowed( character, phase, nullptr );
+}
+
+bool ma_technique::targets_position() const
+{
+    return flags.count( "LUA_POSITION_TECHNIQUE" ) != 0;
+}
+
+bool ma_technique::activation_allowed( const Character &character,
+                                       const std::string_view phase, const Creature *target ) const
+{
+    if( phase == "start" && character.technique_cooldown_remaining( id ) > 0_turns ) {
+        return false;
+    }
     if( phase != "menu" && !grapple_action.empty() &&
         ( character.has_effect( grapple_cooldown_effect() ) || character.is_mounted() ||
           character.get_wielded_item() || character.get_working_arm_count() < 2 ||
@@ -1077,7 +1092,7 @@ bool ma_technique::activation_allowed( const Character &character,
     }
     return cata::lua_platform::invoke_technique_condition_handler(
                id.str(), lua_platform_mod, lua_platform_condition_handler,
-               character, phase ).value_or( false );
+               character, phase, target ).value_or( false );
 }
 
 time_duration ma_technique::activation_cooldown( const Character &character ) const
@@ -1104,6 +1119,26 @@ float ma_technique::charge_damage_multiplier( const Character &character,
     return static_cast<float>( cata::lua_platform::invoke_mounted_charge_damage_handler(
                                    id.str(), lua_platform_mod, lua_platform_charge_damage_handler,
                                    character, profile, completed_steps, speed ).value_or( fallback ) );
+}
+
+bool martial_grapple_blocks_movement( Creature &target )
+{
+    const efftype_id grip( "martial_grapple" );
+    if( !target.has_effect( grip ) ) {
+        return false;
+    }
+    Creature *const source = target.get_effect( grip ).get_source().resolve_creature();
+    Character *const holder = source ? source->as_character() : nullptr;
+    if( holder && !holder->is_dead_state() && target.is_adjacent( holder, false ) &&
+        !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
+        holder->has_two_arms_lifting() && !holder->worn_with_flag( flag_RESTRICT_HANDS ) &&
+        !holder->has_effect( efftype_id( "incorporeal" ) ) &&
+        !holder->has_effect( efftype_id( "downed" ) ) && !holder->in_sleep_state() &&
+        holder->get_stamina() >= 100 ) {
+        return true;
+    }
+    target.remove_effect( grip );
+    return false;
 }
 
 efftype_id ma_technique::grapple_cooldown_effect() const

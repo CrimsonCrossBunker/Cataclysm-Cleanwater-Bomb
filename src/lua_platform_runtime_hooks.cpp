@@ -26,6 +26,8 @@
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
+#include "effect.h"
+#include "effect_source.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
@@ -39,11 +41,13 @@
 #include "mission.h"
 #include "monster.h"
 #include "mounted_charge.h"
+#include "mtype.h"
 #include "move_mode.h"
 #include "npc.h"
 #include "player_activity.h"
 #include "profession.h"
 #include "scenario.h"
+#include "skill.h"
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -2340,71 +2344,7 @@ void invoke_technique_application_handler(
     }
 }
 
-std::optional<bool> invoke_technique_condition_handler(
-    const std::string_view technique_id, const std::string_view mod_id,
-    const std::string_view handler_id, const Character &character,
-    const std::string_view phase )
-{
-    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
-    if( !owner || !owner->world_is_ready ) {
-        return std::nullopt;
-    }
-    const auto handler = owner->handlers.find( std::string( handler_id ) );
-    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique condition unavailable for '"
-                                    << mod_id << ':' << handler_id << "'";
-        return std::nullopt;
-    }
 
-    const avatar *const player = character.as_avatar();
-    const item_location weapon = character.used_weapon();
-    std::string mount_kind = "none";
-    if( character.get_steed_type() == steed_type::ANIMAL ) {
-        mount_kind = "animal";
-    } else if( character.get_steed_type() == steed_type::MECH ) {
-        mount_kind = "mech";
-    }
-
-    sol::table payload = owner->lua->create_table();
-    payload["technique_id"] = std::string( technique_id );
-    payload["phase"] = std::string( phase );
-    payload["character"] = platform_creature_handle( *owner, character );
-    payload["weapon_id"] = weapon ? weapon->typeId().str() : std::string();
-    payload["moves"] = character.get_moves();
-    payload["mounted"] = character.is_mounted();
-    payload["mount_kind"] = std::move( mount_kind );
-    payload["activity_active"] = !character.activity.is_null();
-    payload["activity_id"] = character.activity.is_null() ? std::string() :
-                             character.activity.id().str();
-    payload["grabbed"] = player != nullptr &&
-                         player->get_grab_type() != object_type::NONE;
-    payload["auto_moving"] = character.is_auto_moving();
-    payload["hauling"] = character.is_hauling();
-    payload["in_vehicle"] = character.in_vehicle;
-    payload["controlling_vehicle"] = character.controlling_vehicle;
-    payload["crouching"] = character.is_crouching();
-    payload["prone"] = character.is_prone();
-    payload["in_shell"] = character.has_active_mutation( trait_SHELL2 ) ||
-                          character.has_active_mutation( trait_SHELL3 );
-    payload["phase_movement"] = character.has_flag( json_flag_PHASE_MOVEMENT );
-    payload["can_attack"] = !character.has_flag( json_flag_CANNOT_ATTACK );
-    payload["can_move"] = !character.has_flag( json_flag_CANNOT_MOVE );
-
-    sol::protected_function callback = handler->second.callback;
-    callback_scope scope( *owner );
-    const sol::protected_function_result result = callback( payload );
-    if( !result.valid() ) {
-        report_callback_error( *owner, handler_id, result );
-        return std::nullopt;
-    }
-    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique condition '"
-                                    << mod_id << ':' << handler_id
-                                    << "' must return exactly one boolean";
-        return std::nullopt;
-    }
-    return result.get<bool>();
-}
 
 std::optional<double> invoke_technique_cooldown_handler(
     const std::string_view technique_id, const std::string_view mod_id,
@@ -2489,6 +2429,259 @@ std::optional<double> invoke_mounted_charge_damage_handler(
         return std::nullopt;
     }
     return std::clamp( multiplier, 1.0, static_cast<double>( profile.max_multiplier ) );
+}
+
+std::optional<bool> invoke_technique_condition_handler(
+    const std::string_view technique_id, const std::string_view mod_id,
+    const std::string_view handler_id, const Character &character,
+    const std::string_view phase, const Creature *target )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique condition unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+
+    static const json_character_flag cannot_attack( "CANNOT_ATTACK" );
+    static const json_character_flag cannot_move( "CANNOT_MOVE" );
+    static const json_character_flag phase_movement( "PHASE_MOVEMENT" );
+    static const trait_id shell2( "SHELL2" );
+    static const trait_id shell3( "SHELL3" );
+
+    const avatar *const player = character.as_avatar();
+    const item_location weapon = character.used_weapon();
+    std::string mount_kind = "none";
+    if( character.get_steed_type() == steed_type::ANIMAL ) {
+        mount_kind = "animal";
+    } else if( character.get_steed_type() == steed_type::MECH ) {
+        mount_kind = "mech";
+    }
+
+    sol::table payload = owner->lua->create_table();
+    payload["technique_id"] = std::string( technique_id );
+    payload["phase"] = std::string( phase );
+    payload["character"] = platform_creature_handle( *owner, character );
+    payload["weapon_id"] = weapon ? weapon->typeId().str() : std::string();
+    payload["moves"] = character.get_moves();
+    payload["stamina"] = character.get_stamina();
+    payload["mounted"] = character.is_mounted();
+    payload["mount_kind"] = std::move( mount_kind );
+    payload["activity_active"] = !character.activity.is_null();
+    payload["activity_id"] = character.activity.is_null() ? std::string() :
+                             character.activity.id().str();
+    payload["grabbed"] = player != nullptr &&
+                         player->get_grab_type() != object_type::NONE;
+    payload["auto_moving"] = character.is_auto_moving();
+    payload["hauling"] = character.is_hauling();
+    payload["in_vehicle"] = character.in_vehicle;
+    payload["controlling_vehicle"] = character.controlling_vehicle;
+    payload["crouching"] = character.is_crouching();
+    payload["prone"] = character.is_prone();
+    payload["in_shell"] = character.has_active_mutation( shell2 ) ||
+                          character.has_active_mutation( shell3 );
+    payload["phase_movement"] = character.has_flag( phase_movement );
+    payload["can_attack"] = !character.has_flag( cannot_attack );
+    payload["can_move"] = !character.has_flag( cannot_move );
+    if( target ) {
+        sol::table selected = owner->lua->create_table();
+        selected["creature"] = platform_creature_handle( *owner, *target );
+        selected["kind"] = target->is_npc() ? "npc" : target->is_monster() ? "monster" : "avatar";
+        selected["hostile"] = target->attitude_to( character ) == Creature::Attitude::HOSTILE;
+        selected["alive"] = !target->is_dead_state();
+        selected["downed"] = target->is_on_ground() || target->has_effect( efftype_id( "downed" ) );
+        const monster *const creature = target->as_monster();
+        selected["flying"] = creature && creature->flies();
+        selected["bodytype"] = creature ? creature->type->bodytype : "human";
+        selected["armed"] = target->has_weapon();
+        selected["adjacent"] = character.is_adjacent( target, false );
+        selected["weight_kg"] = units::to_kilogram( target->get_weight() );
+        selected["size_difference"] = static_cast<int>( target->get_size() ) -
+                                      static_cast<int>( character.get_size() );
+        const efftype_id grip( "martial_grapple" );
+        selected["gripped"] = target->has_effect( grip );
+        selected["own_grip"] = target->has_effect( grip ) &&
+                               target->get_effect( grip ).get_source().get_character_id() == character.getID();
+        payload["target"] = selected;
+    }
+
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique condition '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return exactly one boolean";
+        return std::nullopt;
+    }
+    return result.get<bool>();
+}
+
+std::optional<technique_position_plan> invoke_technique_position_handler(
+    const std::string_view technique_id, const std::string_view mod_id,
+    const std::string_view handler_id, const Character &attacker,
+    const tripoint_bub_ms &position, const std::string_view phase )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        return std::nullopt;
+    }
+    map &here = get_map();
+    sol::table payload = owner->lua->create_table();
+    payload["technique_id"] = std::string( technique_id );
+    payload["phase"] = std::string( phase );
+    payload["strength"] = attacker.get_str();
+    payload["melee_skill"] = static_cast<float>( attacker.get_skill_level( skill_id( "melee" ) ) );
+    payload["unarmed_skill"] = static_cast<float>( attacker.get_skill_level( skill_id( "unarmed" ) ) );
+    payload["armed"] = attacker.is_armed();
+    payload["weapon_bash"] = attacker.is_armed() ?
+                             attacker.get_wielded_item()->damage_melee( damage_type_id( "bash" ) ) : 0;
+    payload["terrain"] = here.ter( position ).id().str();
+    payload["furniture"] = here.furn( position ).id().str();
+    payload["window"] = here.has_flag( ter_furn_flag::TFLAG_WINDOW, position );
+    payload["door"] = here.has_flag( ter_furn_flag::TFLAG_DOOR, position );
+    payload["bashable"] = here.is_bashable_ter_furn( position );
+    payload["passable"] = here.passable( position );
+    payload["bash_strength"] = here.bash_strength( position );
+    payload["bash_resistance"] = here.bash_resistance( position );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::table ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first position plan must return exactly one table";
+        return std::nullopt;
+    }
+    const sol::table value = result.get<sol::table>();
+    const sol::object allowed = value.raw_get<sol::object>( "allowed" );
+    if( allowed.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first position plan requires boolean allowed";
+        return std::nullopt;
+    }
+    technique_position_plan plan;
+    plan.allowed = allowed.as<bool>();
+    if( !plan.allowed ) {
+        return plan;
+    }
+    const auto read_cost = [&value]( const char *field, int minimum ) -> std::optional<int> {
+        const sol::object entry = value.raw_get<sol::object>( field );
+        if( entry.get_type() != sol::type::number )
+        {
+            return std::nullopt;
+        }
+        const double number = entry.as<double>();
+        if( !std::isfinite( number ) || number < minimum || number > 1000000 ||
+            std::floor( number ) != number )
+        {
+            return std::nullopt;
+        }
+        return static_cast<int>( number );
+    };
+    const std::optional<int> stamina = read_cost( "stamina_cost", 0 );
+    const std::optional<int> moves = read_cost( "move_cost", 1 );
+    const std::optional<int> bash = read_cost( "bash_power", 0 );
+    if( !stamina || !moves || !bash ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first position plan has invalid costs or bash power";
+        return std::nullopt;
+    }
+    plan.stamina_cost = *stamina;
+    plan.move_cost = *moves;
+    plan.bash_power = *bash;
+    return plan;
+}
+
+std::optional<grapple_plan> invoke_technique_grapple_handler(
+    const std::string_view technique_id, const std::string_view mod_id,
+    const std::string_view handler_id, const Character &attacker, const Creature &target,
+    const int power, const int base_stamina )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first grapple plan unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+    sol::table payload = owner->lua->create_table();
+    payload["technique_id"] = std::string( technique_id );
+    payload["strength"] = attacker.get_str();
+    payload["unarmed_skill"] = static_cast<float>( attacker.get_skill_level( skill_id( "unarmed" ) ) );
+    payload["size_difference"] = static_cast<int>( target.get_size() ) -
+                                 static_cast<int>( attacker.get_size() );
+    payload["target_weight_kg"] = units::to_kilogram( target.get_weight() );
+    payload["power"] = power;
+    payload["base_stamina"] = base_stamina;
+
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::table ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first grapple plan must return exactly one table";
+        return std::nullopt;
+    }
+    const sol::table value = result.get<sol::table>();
+    const sol::object allowed = value.raw_get<sol::object>( "allowed" );
+    if( allowed.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first grapple plan requires boolean allowed";
+        return std::nullopt;
+    }
+    grapple_plan plan;
+    plan.allowed = allowed.as<bool>();
+    if( !plan.allowed ) {
+        return plan;
+    }
+    const auto read_cost = [&value]( const char *field, const int minimum ) -> std::optional<int> {
+        const sol::object entry = value.raw_get<sol::object>( field );
+        if( entry.get_type() != sol::type::number )
+        {
+            return std::nullopt;
+        }
+        const double number = entry.as<double>();
+        if( !std::isfinite( number ) || number < minimum ||
+            number > std::numeric_limits<int>::max() || std::floor( number ) != number )
+        {
+            return std::nullopt;
+        }
+        return static_cast<int>( number );
+    };
+    const std::optional<int> stamina = read_cost( "stamina_cost", 0 );
+    const std::optional<int> moves = read_cost( "move_cost", 1 );
+    const std::optional<int> duration = read_cost( "duration_turns", 1 );
+    const sol::object damage = value.raw_get<sol::object>( "damage" );
+    if( !stamina || !moves || !duration || damage.get_type() != sol::type::number ||
+        !std::isfinite( damage.as<double>() ) || damage.as<double>() < 0.0 ||
+        damage.as<double>() > std::numeric_limits<float>::max() ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first grapple plan '" << mod_id << ':' << handler_id
+                                    << "' has invalid costs, duration or damage";
+        return std::nullopt;
+    }
+    plan.stamina_cost = *stamina;
+    plan.move_cost = *moves;
+    plan.duration_turns = *duration;
+    plan.damage = static_cast<float>( damage.as<double>() );
+    return plan;
 }
 
 void invoke_item_consumption_handler(
