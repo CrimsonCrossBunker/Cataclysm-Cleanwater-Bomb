@@ -3116,7 +3116,7 @@ class Character : public Creature, public visitable
         // Activity result projection; restore progress without practicing again.
         void store_practice_state( JsonOut &json, bool include_recipes = false ) const;
         void load_practice_state( const JsonObject &data );
-        void store_turn_state( JsonOut &json ) const;
+        void store_turn_state( JsonOut &out ) const;
         void load_turn_state( const JsonObject &data );
 
         int scent = 0;
