@@ -964,11 +964,12 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
     const int broken_direction = GENERATE( 0, 1, 2, 3 );
     const tripoint_om_omt missing_connection = GENERATE( tripoint_om_omt::zero,
             tripoint_om_omt::invalid );
-    CAPTURE( broken_direction, missing_connection );
+    const bool include_valid_neighbor = GENERATE( false, true );
+    CAPTURE( broken_direction, missing_connection, include_valid_neighbor );
     const int valid_direction = ( broken_direction + 2 ) % 4;
     const std::array<tripoint_om_omt, 4> border_points = {
-        tripoint_om_omt( 90, 0, 0 ), tripoint_om_omt( OMAPX - 1, 90, 0 ),
-        tripoint_om_omt( 90, OMAPY - 1, 0 ), tripoint_om_omt( 0, 90, 0 )
+        tripoint_om_omt( OMAPX / 2, 0, 0 ), tripoint_om_omt( OMAPX - 1, OMAPY / 2, 0 ),
+        tripoint_om_omt( OMAPX / 2, OMAPY - 1, 0 ), tripoint_om_omt( 0, OMAPY / 2, 0 )
     };
     auto victim = std::make_unique<overmap>( point_abs_om::zero );
     auto broken_neighbor = std::make_unique<overmap>( point_abs_om::zero );
@@ -979,10 +980,10 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
     overmap_test_helper::set_highway_connections( *valid_neighbor, border_points );
     std::vector<const overmap *> neighbors( 4, nullptr );
     neighbors[broken_direction] = broken_neighbor.get();
-    neighbors[valid_direction] = valid_neighbor.get();
+    neighbors[valid_direction] = include_valid_neighbor ? valid_neighbor.get() : nullptr;
     std::bitset<4> connections;
     connections.set( broken_direction );
-    connections.set( valid_direction );
+    connections.set( valid_direction, include_valid_neighbor );
     std::array<tripoint_om_omt, 4> end_points;
     end_points.fill( tripoint_om_omt::invalid );
 
@@ -993,9 +994,10 @@ TEST_CASE( "highway_neighbor_missing_connections_no_crash", "[overmap][highway]"
     CHECK( diagnostics.empty() );
     CHECK_FALSE( connections[broken_direction] );
     CHECK( end_points[broken_direction] == tripoint_om_omt::invalid );
-    CHECK( connections.count() == 1 );
-    CHECK( connections[valid_direction] );
-    CHECK( end_points[valid_direction] == border_points[valid_direction] );
+    CHECK( connections.count() == ( include_valid_neighbor ? 1 : 0 ) );
+    CHECK( connections[valid_direction] == include_valid_neighbor );
+    CHECK( end_points[valid_direction] == ( include_valid_neighbor ? border_points[valid_direction] :
+                                            tripoint_om_omt::invalid ) );
 }
 
 TEST_CASE( "overmap_generation_is_deterministic", "[overmap]" )
