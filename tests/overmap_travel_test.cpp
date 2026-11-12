@@ -1,3 +1,8 @@
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "action.h"
@@ -8,6 +13,7 @@
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
+#include "enums.h"
 #include "game.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -20,6 +26,7 @@
 #include "walking.h"
 
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
 
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
@@ -106,16 +113,16 @@ TEST_CASE( "automove_continues_and_arrives_across_map_shifts", "[automove][overm
     for( int step = 1; step <= distance; ++step ) {
         route.push_back( traveler.pos_bub() + direction * step );
     }
-    traveler.set_destination( route, player_activity( activity_id( "ACT_WAIT" ), 100 ) );
+    traveler.set_destination( route, player_activity( ACT_WAIT, 100 ) );
     int shifts = 0;
     for( int step = 0; step < distance; ++step ) {
         CAPTURE( step );
         REQUIRE( traveler.has_destination() );
-        const auto target = here.get_abs( traveler.get_auto_move_route().front() );
+        const tripoint_abs_ms target = here.get_abs( traveler.get_auto_move_route().front() );
         REQUIRE( traveler.get_next_auto_move_direction() != ACTION_NULL );
-        const auto pending = capture_automove_step( traveler, here, target );
+        const std::optional<automove_step> pending = capture_automove_step( traveler, here, target );
         REQUIRE( pending );
-        const auto before_map = here.get_abs_sub();
+        const tripoint_abs_sm before_map = here.get_abs_sub();
         traveler.set_moves( 100 );
         const bool moved = avatar_action::move( traveler, here, direction );
         REQUIRE( moved );
@@ -125,7 +132,7 @@ TEST_CASE( "automove_continues_and_arrives_across_map_shifts", "[automove][overm
             CHECK_FALSE( pending->context );
         }
         pending->finish( traveler, here, !moved );
-        CHECK( traveler.get_auto_move_route().size() == distance - step - 1 );
+        CHECK( traveler.get_auto_move_route().size() == static_cast<size_t>( distance - step - 1 ) );
     }
     CHECK( traveler.pos_abs() == destination );
     CHECK_FALSE( traveler.has_destination() );
@@ -146,12 +153,12 @@ TEST_CASE( "automove_map_context_checks_preserve_cancellation_and_replacement",
     const restore_on_out_of_scope restore_safe_mode( g->safe_mode );
     g->safe_mode = SAFE_MODE_OFF;
     traveler.setpos( here, tripoint_bub_ms( 71, 66, 0 ) );
-    const auto origin = traveler.pos_abs();
-    const auto target = origin + tripoint_rel_ms::east;
+    const tripoint_abs_ms origin = traveler.pos_abs();
+    const tripoint_abs_ms target = origin + tripoint_rel_ms::east;
     traveler.set_destination( { here.get_bub( target ),
                                 here.get_bub( target + tripoint_rel_ms::east ) } );
     REQUIRE( traveler.get_next_auto_move_direction() != ACTION_NULL );
-    const auto pending = capture_automove_step( traveler, here, target );
+    const std::optional<automove_step> pending = capture_automove_step( traveler, here, target );
     REQUIRE( pending );
 
     SECTION( "context_reset_without_movement" ) {
@@ -178,7 +185,7 @@ TEST_CASE( "automove_map_context_checks_preserve_cancellation_and_replacement",
             traveler.pos_bub() + tripoint_rel_ms::north * 2
         };
         traveler.set_destination( replacement );
-        const auto generation = traveler.destination_generation();
+        const uint64_t generation = traveler.destination_generation();
         pending->finish( traveler, here, false );
         CHECK( traveler.get_auto_move_route() == replacement );
         CHECK( traveler.destination_generation() == generation );
