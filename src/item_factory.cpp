@@ -54,6 +54,7 @@
 #include "item_transformation.h"
 #include "itype.h"
 #include "iuse_actor.h"
+#include "json_error.h"
 #include "lua_platform_content.h"
 #include "mapdata.h"
 #include "material.h"
