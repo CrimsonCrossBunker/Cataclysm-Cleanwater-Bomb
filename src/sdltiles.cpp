@@ -6577,7 +6577,7 @@ static bool can_control_3d_camera( float x, float y )
         return false;
     }
     const input_context *ctxt = input_context::input_context_stack.back();
-    if( !ctxt || !ctxt->is_action_registered( "COORDINATE" ) ) {
+    if( !ctxt || !ctxt->is_registered_action( "COORDINATE" ) ) {
         return false;
     }
     const SDL_Point logical = window_to_display_buffer_coords(
