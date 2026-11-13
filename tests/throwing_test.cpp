@@ -370,7 +370,7 @@ TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[
     CAPTURE( inherited_maximum );
     if( inherited_maximum ) {
         correction.deserialize( json_loader::from_string( R"({"max_weight":"1 g"})"
-                              ).get_object() );
+                                                        ).get_object() );
     }
     const std::string definition = inherited_maximum ?
                                    R"({"min_weight":"2 g","throw_damage_multiplier":1.5})" :
@@ -387,7 +387,7 @@ TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[
 TEST_CASE( "throw_correction_rejects_empty_flag_arrays", "[throwing]" )
 {
     const std::string definition = GENERATE( R"({"required_flag":[]})",
-                                            R"({"required_flag":[[]]})" );
+                                   R"({"required_flag":[[]]})" );
     CAPTURE( definition );
     throw_correction_data correction;
     CHECK_THROWS_AS( correction.deserialize( json_loader::from_string( definition ).get_object() ),
@@ -419,14 +419,14 @@ TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
     SECTION( "ammo_list_without_flags_requires_matching_ammo" ) {
         throw_correction_data ammo_only;
         ammo_only.deserialize( json_loader::from_string( R"({"allow_ammotype":["9mm"]})"
-                             ).get_object() );
+                                                       ).get_object() );
         CHECK( ammo_only.applies_to( ammo ) );
         CHECK_FALSE( ammo_only.applies_to( rock ) );
         CHECK_FALSE( ammo_only.applies_to( knife ) );
     }
     SECTION( "null_clears_inherited_flags_but_preserves_ammo_list" ) {
         correction.deserialize( json_loader::from_string( R"({"required_flag":null})"
-                              ).get_object() );
+                                                        ).get_object() );
         CHECK( correction.applies_to( ammo ) );
         CHECK_FALSE( correction.applies_to( rock ) );
         CHECK_FALSE( correction.applies_to( knife ) );
@@ -439,9 +439,9 @@ TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
     }
     SECTION( "both_matching_paths_still_check_physical_limits" ) {
         const std::string limit = GENERATE( R"({"min_weight":"1 kg"})",
-                                           R"({"max_weight":"0 g"})",
-                                           R"({"max_volume":"0 ml"})",
-                                           R"({"max_length":"0 mm"})" );
+                                            R"({"max_weight":"0 g"})",
+                                            R"({"max_volume":"0 ml"})",
+                                            R"({"max_length":"0 mm"})" );
         CAPTURE( limit );
         correction.deserialize( json_loader::from_string( limit ).get_object() );
         CHECK_FALSE( correction.applies_to( ammo ) );
