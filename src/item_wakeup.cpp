@@ -7,15 +7,20 @@
 #include <utility>
 
 #include "cata_assert.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
 #include "crafting.h"
+#include "current_map.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
+#include "game.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_uid.h"
 #include "json.h"
+#include "map.h"
+#include "mp_world_session.h"
 #include "type_id.h"
 #include "vehicle.h"
 #include "vehicle_selector.h"
@@ -436,6 +441,7 @@ item_wakeup_manager::stats item_wakeup_manager::get_stats() const
 void item_wakeup_manager::process( time_point now )
 {
     cata_assert( !processing_active );
+    const restore_on_out_of_scope restore_processing( processing_active );
     processing_active = true;
 
     std::vector<entry> snapshot;
@@ -469,11 +475,22 @@ void item_wakeup_manager::process( time_point now )
             }
             continue;
         }
+        std::optional<swap_map> context;
+        if( g->multiplayer_session().has_regions() ) {
+            map *const terrain = g->multiplayer_session().loaded_map_at(
+                                     reality_bubble(), project_to<coords::sm>( loc.pos_abs() ) );
+            if( !terrain ) {
+                // A later region load reconstructs the schedule from the item.
+                continue;
+            }
+            if( terrain != &get_map() ) {
+                context.emplace( *terrain );
+            }
+        }
         loc->actualize_scheduled( e.kind, now, loc );
     }
 
     clean_heap_top();
-    processing_active = false;
 }
 
 void item_wakeup_manager::clear()
