@@ -61,6 +61,7 @@ static const mtype_id mon_zombie( "mon_zombie" );
 static const skill_id skill_throw( "throw" );
 
 static const string_id<npc_template> npc_template_test_talker( "test_talker" );
+static const string_id<npc_template> npc_template_test_throwing( "test_throwing_npc" );
 
 static const ter_str_id ter_test_t_throwing_wall( "test_t_throwing_wall" );
 
@@ -71,13 +72,13 @@ static constexpr tripoint_bub_ms main_npc_start_tripoint{ main_npc_start, 0 };
 
 namespace npc_attack_setup
 {
-static npc &spawn_main_npc()
+static npc &spawn_main_npc( const string_id<npc_template> &template_id = npc_template_test_talker )
 {
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
     get_player_character().setpos( here, { main_npc_start, -1 } );
     REQUIRE( creatures.creature_at<Creature>( main_npc_start_tripoint ) == nullptr );
-    const character_id model_id = here.place_npc( main_npc_start, npc_template_test_talker );
+    const character_id model_id = here.place_npc( main_npc_start, template_id );
 
     npc &model_npc = *g->find_npc( model_id );
     clear_character( model_npc );
@@ -90,13 +91,13 @@ static npc &spawn_main_npc()
     return model_npc;
 }
 
-static npc &respawn_main_npc()
+static npc &respawn_main_npc( const string_id<npc_template> &template_id = npc_template_test_talker )
 {
     npc *guy = get_creature_tracker().creature_at<npc>( main_npc_start_tripoint );
     if( guy ) {
         guy->die( &get_map(), nullptr );
     }
-    return spawn_main_npc();
+    return spawn_main_npc( template_id );
 }
 
 static monster *spawn_zombie_at_range( const int range )
@@ -110,7 +111,7 @@ static npc &spawn_armed_grenade_npc()
     get_player_character().setpos( get_map(), main_npc_start_tripoint );
     clear_map_and_put_player_underground();
     clear_vehicles();
-    npc &model = respawn_main_npc();
+    npc &model = respawn_main_npc( npc_template_test_throwing );
     // Respawning can leave the previous NPC's corpse and gear on this tile.
     get_map().i_clear( model.pos_bub() );
     model.set_fac( faction_your_followers );
@@ -258,7 +259,7 @@ TEST_CASE( "npc_throw_attack_consumes_one_test_projectile", "[npc_attack][throwi
     clear_map_and_put_player_underground();
     clear_vehicles();
     scoped_weather_override sunny_weather( weather_sunny );
-    npc &model = npc_attack_setup::respawn_main_npc();
+    npc &model = npc_attack_setup::respawn_main_npc( npc_template_test_throwing );
     model.set_fac( faction_your_followers );
     model.set_skill_level( skill_throw, 10 );
     model.set_moves( 1000 );
