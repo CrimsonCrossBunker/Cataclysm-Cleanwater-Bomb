@@ -246,6 +246,13 @@ side of the interval.  When `min_weight` exceeds `max_weight`, loading emits a
 JSON warning but continues.  The bounds are not changed, so no projectile can
 satisfy that interval.
 
+`throw_weight_multiplier` scales effective weight for range, move cost,
+throwing difficulty, and weight-based bash damage.  Its positive bonus raises the
+weight-damage cap by half: `1 + max(0, multiplier - 1) / 2`.
+Railgun throwing uses the same cap rule with its virtual weight multiplier.
+`throw_damage_multiplier` scales the complete damage after the weight-damage cap,
+so the final cap receives that damage multiplier once.
+
 #### To hit object
 For additional clarity, an item's `to_hit` bonus can be encoded as string of 4 fields.  All the fields are mandatory:
 
