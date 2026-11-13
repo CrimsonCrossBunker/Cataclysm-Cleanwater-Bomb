@@ -1572,6 +1572,85 @@ TEST_CASE( "activated_mutation_flags_belong_to_the_queried_player",
 }
 
 // Requires the co-op runtime adjacent to the test executable, as for the game.
+TEST_CASE( "mp_wait_ack_serializes_only_the_grant_owner",
+           "[.multiplayer_runtime][turn_coordination][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        clear_avatar();
+    } );
+    const bool started = session.hosting.start( 0, "", "wait-ack-regression" );
+    INFO( session.hosting.error() );
+    REQUIRE( started );
+    auto &waiting = make_test_remote( session, 801 );
+    auto &observer = make_test_remote( session, 802 );
+    for( cata_mp::remote_player_session *peer : {
+             &waiting, &observer
+         } ) {
+        const bool first = peer == &waiting;
+        const cata_mp::player_id owner( std::string( 32, first ? '1' : '2' ) );
+        npc &actor = spawn_npc( { first ? 61 : 62, 60 }, "test_talker" );
+        actor.set_value( "mp_proxy", std::string( "1" ) );
+        actor.set_value( "mp_player_id", owner.str() );
+        peer->credentials.id = owner;
+        peer->actor.bind_player( actor, owner, g->npc_lifetimes(),
+                                 g->player_controls().claim( owner, actor ) );
+        peer->connected = true;
+    }
+    auto &queue = cata_mp::get_mp_queue();
+    const auto act = [&queue, &waiting]( const std::string & message ) {
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "player",
+                               test_granted_action( message, waiting.turn.grant_seq ), waiting.admission } ) );
+        cata_mp::process_mp_events();
+    };
+    act( R"({"action":"wait","client_activity":"ACT_WAIT","client_activity_pct":30})" );
+
+    CHECK( waiting.turn.client_acted_this_turn );
+    CHECK( waiting.turn.remote_moves == 0 );
+    CHECK( waiting.turn.character_revision == 1 );
+    CHECK_FALSE( observer.turn.client_acted_this_turn );
+    CHECK( observer.turn.remote_moves == 100 );
+    CHECK( observer.turn.character_revision == 0 );
+    CHECK_FALSE( cata_mp::client_acted_this_turn() );
+
+    const std::string next_snapshot = cata_mp::serialize_remote_player_state( observer );
+    const JsonValue snapshot = json_loader::from_string( next_snapshot );
+    const JsonObject state = snapshot.get_object();
+    state.allow_omitted_members();
+    const JsonArray players = state.get_array( "players" );
+    REQUIRE( players.size() == 1 );
+    const JsonObject peer = players.get_object( 0 );
+    peer.allow_omitted_members();
+    CHECK( peer.get_string( "player" ) == waiting.credentials.id.str() );
+    CHECK( peer.get_string( "activity" ) == "ACT_WAIT" );
+    CHECK( peer.get_int( "activity_pct" ) == 30 );
+
+    // A shared mutation still updates the observer before it takes its turn.
+    map &here = get_map();
+    const tripoint_bub_ms door( 61, 61, 0 );
+    here.ter_set( door, ter_str_id( "t_door_c" ) );
+    const tripoint_abs_ms target = here.get_abs( door );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "action", "open" );
+    out.member( "x", target.x() );
+    out.member( "y", target.y() );
+    out.member( "z", target.z() );
+    out.end_object();
+    next_test_remote_turn( waiting );
+    act( encoded.str() );
+
+    CHECK( here.ter( door ) == ter_str_id( "t_door_o" ).id() );
+    CHECK( observer.turn.character_revision == 2 );
+    CHECK( observer.replication.tile_baseline.at( target ).ter == "t_door_o" );
+}
+
 TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
            "[.multiplayer_runtime][turn_coordination][regression]" )
 {

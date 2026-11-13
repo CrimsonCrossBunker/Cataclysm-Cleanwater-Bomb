@@ -2330,20 +2330,25 @@ void host_capture_avatar_msgs( unsigned long long pre_msg )
     }
 }
 
+static void send_post_action_state( server &host, remote_player_session &recipient )
+{
+    if( !recipient.connected || recipient.detach_pending ) {
+        return;
+    }
+    if( mp_session().has_regions() ) {
+        const std::string terrain = build_map_sync( recipient );
+        if( !terrain.empty() ) {
+            host.post_send( recipient.admission, terrain + "\n" );
+        }
+    }
+    host.post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
+}
+
 void host_broadcast_post_action()
 {
     if( const auto srv = get_active_server() ) {
         for( const auto &entry : mp_session().remote_players ) {
-            cata_mp::remote_player_session &recipient = *entry.second;
-            if( recipient.connected && !recipient.detach_pending ) {
-                if( mp_session().has_regions() ) {
-                    const std::string terrain = build_map_sync( recipient );
-                    if( !terrain.empty() ) {
-                        srv->post_send( recipient.admission, terrain + "\n" );
-                    }
-                }
-                srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
-            }
+            send_post_action_state( *srv, *entry.second );
         }
     }
 }
@@ -2363,34 +2368,23 @@ static void send_inventory_activity_observers( const remote_player_session &init
     }
 }
 
-// Standard turn-ending broadcast for handlers in handle_remote_action.
-//
-// All actions that consume the client's full turn budget MUST end with this
-// (or the explicit equivalent): zero g_remote_moves, set the acted flag, log
-// SRV-ACK with the current grant_seq, and broadcast the new state so the
-// client receives a moves=0 ack and clears its ack-guard.
-//
-// The earlier "g_remote_moves -= remote->get_speed()" pattern relied on speed
-// equalling the grant amount; that's true today but fragile (encumbrance,
-// effects, mutations can change speed mid-turn).  Setting moves to exactly 0
-// removes the coupling entirely.  push_partner's "-= 20" was the canary that
-// exposed the latent bug: subtracting less than the grant left moves > 0 and
-// the client interpreted the broadcast as a new grant instead of an ack-clear,
-// wedging lockstep.
-static void srv_emit_ack( remote_player_session &recipient,  const char *action_name )
+// End the grant before taking a snapshot, so its owner receives moves=0
+// for the current sequence and clears the acknowledgement guard.
+static void finish_remote_grant( remote_player_session &recipient, const char *action_name )
 {
     recipient.turn.client_acted_this_turn = true;
     recipient.turn.remote_moves = 0;
     mp_log( std::string( "[cdda-mp] SRV-ACK: moves=0 (" ) + action_name
             + ") grant_seq=" + std::to_string( recipient.turn.grant_seq ) );
-    host_broadcast_post_action();
-    // The handler just mutated authoritative world state (positions, items,
-    // doors, vehicle flags, etc.) but the host may be sitting in a blocking
-    // wait_for_client_action poll where no normal turn boundary triggers a
-    // redraw. Force the main UI adaptor to redraw so swap/push/pickup/drop/
-    // open-close/etc. show up immediately on the host instead of lagging
-    // until the next turn cycle.
+    // The host can still be polling other grants, so update its world view
+    // and co-op HUD without waiting for the next simulation turn.
     g->invalidate_main_ui_adaptor();
+}
+
+static void srv_emit_ack( remote_player_session &recipient, const char *action_name )
+{
+    finish_remote_grant( recipient, action_name );
+    host_broadcast_post_action();
 }
 
 static void mp_handle_note_sync( const std::string &msg );
@@ -3281,7 +3275,12 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     if( action == "wait" ) {
         mp_log( "[cdda-mp] wait recv: ctrl_veh=" + std::to_string( remote->controlling_vehicle ) +
                 " g_remote_moves=" + std::to_string( recipient.turn.remote_moves ) );
-        srv_emit_ack( recipient, "wait" );
+        finish_remote_grant( recipient, "wait" );
+        // Wait updates the sender's observation and ends its grant. Other
+        // players receive the observation in their next normal snapshot.
+        if( const auto srv = get_active_server() ) {
+            send_post_action_state( *srv, recipient );
+        }
         return;
     }
 
