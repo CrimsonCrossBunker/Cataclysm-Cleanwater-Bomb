@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <coordinates.h>
 #include <cstdint>
@@ -1698,6 +1699,7 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
                    get_skill_level( gun_skill ) ) ;
     tripoint_bub_ms aim = target;
     int curshot = 0;
+    std::chrono::steady_clock::time_point sound_burst_start;
     int hits = 0; // total shots on target
     int delay = 0; // delayed recoil that has yet to be applied
     // Snapshot the gun slot. The wielded item can stop being a gun
@@ -1736,7 +1738,10 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 
         // Add gunshot noise
         make_gun_sound_effect( *this, shots > 1, &gun );
-        sfx::generate_gun_sound( *this, gun );
+        if( firing_rpm > 0 && curshot == 0 ) {
+            sound_burst_start = std::chrono::steady_clock::now();
+        }
+        sfx::generate_gun_sound( *this, gun, firing_rpm, curshot, sound_burst_start );
         // Muzzle flash light overlay (visible, loud firearms only).
         make_gun_flash_effect( *this, aim, gun );
 
