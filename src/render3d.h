@@ -65,9 +65,7 @@ void push_cursor( const tripoint_bub_ms &p, bool highlight );
 bool camera_screen_to_map_delta( int &dx, int &dy );
 // The inverse: a map-frame step to the movement keys' screen frame.
 bool camera_map_to_screen_delta( int &dx, int &dy );
-// Rotate a keyboard direction through the camera's full yaw and quantize it
-// to the shared horizontal movement intent.
-std::optional<point> camera_walk_delta( const point &screen );
+// Quantized direction of the currently presented camera.
 std::optional<camera_input> movement_camera();
 
 // Enable/disable relative mouse mode for FP look. Idempotent.

@@ -202,6 +202,7 @@ struct pick_camera {
     vec3 up{};
     vec3 forward{};
     float aspect = 1.0f;
+    camera_input movement{};
     tripoint_abs_ms center;
     safe_reference<map> terrain;
 };
@@ -589,11 +590,15 @@ int compass_index( const point_rel_ms &d )
 // direction the top of the screen points at. f = (cos yaw, sin yaw) is the
 // horizontal part of the view direction (eye -> target); bearing is measured
 // clockwise from north, as the compass table is.
-int camera_forward_octant()
+camera_input camera_from_yaw()
 {
-    const float bearing = std::atan2( std::cos( g_yaw ), -std::sin( g_yaw ) );
-    int k = static_cast<int>( std::lround( bearing / ( 3.14159265f / 4.0f ) ) ) % 8;
-    return k < 0 ? k + 8 : k;
+    constexpr int scale = camera_input::forward_limit;
+    static_assert( scale == fractional_walk::max_distance );
+    const float x = std::cos( g_yaw );
+    const float y = std::sin( g_yaw );
+    const float bearing = std::atan2( x, -y );
+    const int octant = ( static_cast<int>( std::lround( bearing / ( 3.14159265f / 4.0f ) ) ) + 8 ) % 8;
+    return camera_input{ octant, point( static_cast<int>( scale * x ), static_cast<int>( scale * y ) ) };
 }
 
 // P0 scaffolding: Release builds filter out D_INFO, so probe results go to a
@@ -4856,12 +4861,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     };
     std::optional<tripoint_bub_ms> move_marker;
     if( !you.controlling_vehicle && upos.z() == center.z() ) {
-        tripoint_bub_ms tp = upos + compass8[camera_forward_octant()];
+        tripoint_bub_ms tp = upos + compass8[camera.movement.octant];
         if( avatar_action::can_move_fractional( you, here ) ) {
-            if( const auto delta = camera_walk_delta( point::north ) ) {
-                if( const auto step = fractional_walk::resolve( you.pos_world(), *delta ) ) {
-                    tp = here.get_bub( step->target.tile() );
-                }
+            const point delta = fractional_walk::camera_delta( point::north, camera.movement.forward );
+            if( const auto step = fractional_walk::resolve( you.pos_world(), delta ) ) {
+                const tripoint_bub_ms next = here.get_bub( step->target.tile() );
+                tp = step->clears_obstacles( here, you, next ) ? next : upos;
             }
         }
         if( tp != upos && here.inbounds( tp ) && !has_game_cursor( tp ) ) {
@@ -4952,30 +4957,13 @@ bool camera_screen_to_map_delta( int &dx, int &dy )
     // (octant k), screen right sits two octants clockwise of it (up x forward;
     // facing east, screen right is south), so the movement key's octant a maps
     // to k + a.
-    return camera_rotate_step( dx, dy, camera_forward_octant() );
+    return camera_rotate_step( dx, dy, presented_camera.movement.octant );
 }
 
 bool camera_map_to_screen_delta( int &dx, int &dy )
 {
     // inverse of the above: map octant m -> key octant m - k
-    return camera_rotate_step( dx, dy, -camera_forward_octant() );
-}
-
-static camera_input camera_from_yaw()
-{
-    constexpr int scale = camera_input::forward_limit;
-    static_assert( scale == fractional_walk::max_distance );
-    return camera_input{ camera_forward_octant(),
-                         point( static_cast<int>( scale * std::cos( g_yaw ) ),
-                                static_cast<int>( scale * std::sin( g_yaw ) ) ) };
-}
-
-std::optional<point> camera_walk_delta( const point &screen )
-{
-    if( compass_index( point_rel_ms( screen ) ) < 0 ) {
-        return std::nullopt;
-    }
-    return fractional_walk::camera_delta( screen, camera_from_yaw().forward );
+    return camera_rotate_step( dx, dy, -presented_camera.movement.octant );
 }
 
 std::optional<camera_input> movement_camera()
@@ -4983,7 +4971,7 @@ std::optional<camera_input> movement_camera()
     if( !view_active() ) {
         return std::nullopt;
     }
-    return camera_from_yaw();
+    return presented_camera.movement;
 }
 
 void sync_mouse_capture( SDL_Renderer *renderer, const bool want )
@@ -5146,8 +5134,8 @@ bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // when an asynchronous submission is one frame behind current input.
     const vec3 right = vec3_normalize( vec3_cross( { 0.0f, 0.0f, 1.0f }, dir ) );
     const vec3 up = vec3_cross( dir, right );
-    const pick_camera camera{ dest, eye, right, up, dir, aspect, here.get_abs( center ),
-                              here.get_context_reference() };
+    const pick_camera camera{ dest, eye, right, up, dir, aspect, camera_from_yaw(),
+                              here.get_abs( center ), here.get_context_reference() };
 
     // top-down: anchor the scene to the view center (ter_view_p follows the
     // player; look-around mode pans it for free)
