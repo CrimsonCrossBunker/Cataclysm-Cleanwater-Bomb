@@ -429,6 +429,11 @@ TEST_CASE( "vehicle_subtile_travel_stops_before_an_unsettled_obstacle",
     CHECK( restored.fractional_offset() == car->fractional_offset() );
     CHECK( restored.of_turn_carry == car->of_turn_carry );
 
+    car->of_turn = 3.0f;
+    REQUIRE( car->act_on_map( here ) == car );
+    CHECK( car->pos_abs() == origin );
+    CHECK( car->fractional_offset() == point( 192, 0 ) );
+
     bool blocked_edge = false;
     for( const vpart_reference &part : car->get_all_parts() ) {
         const tripoint_bub_ms ahead = part.pos_bub( here ) + point::east;
@@ -438,9 +443,9 @@ TEST_CASE( "vehicle_subtile_travel_stops_before_an_unsettled_obstacle",
         }
     }
     REQUIRE( blocked_edge );
-    car->of_turn = 2.0f;
+    car->of_turn = 4.0f;
     REQUIRE( car->act_on_map( here ) == car );
     CHECK( car->pos_abs() == origin );
     CHECK( car->fractional_offset() == point::zero );
-    CHECK( car->of_turn_carry == 2.0f );
+    CHECK( car->of_turn_carry == 4.0f );
 }

@@ -2082,7 +2082,7 @@ point vehicle::fractional_offset() const
 
 void vehicle::set_fractional_offset( const point &offset )
 {
-    constexpr int limit = world_position::tile_center - 1;
+    constexpr int limit = world_position::units_per_tile - 1;
     motion_offset = point( std::clamp( offset.x, -limit, limit ),
                            std::clamp( offset.y, -limit, limit ) );
 }
@@ -2090,7 +2090,7 @@ void vehicle::set_fractional_offset( const point &offset )
 static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &offset )
 {
     // A structural part occupies its full tile. A translation of less than
-    // half a tile can touch at most three new cells from that tile. Check the
+    // one tile can touch at most three new cells from that tile. Check the
     // whole swept bounds so a thin diagonal gap cannot admit the chassis.
     const int sx = sgn( offset.x );
     const int sy = sgn( offset.y );
@@ -2099,8 +2099,8 @@ static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &
                !here.get_impassable_field_at( tile ) &&
                !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, tile ) &&
                !here.has_flag( ter_furn_flag::TFLAG_RAMP, tile ) &&
-               !here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tile ) &&
-               !here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, tile );
+               !here.has_flag( ter_furn_flag::TFLAG_RAMP_ENDPOINT, tile ) &&
+               here.ramp_z_offset( tile ) == 0;
     };
     const int base_level = veh.pos_abs().z();
     creature_tracker &creatures = get_creature_tracker();
@@ -2231,8 +2231,9 @@ vehicle *vehicle::act_on_map( map &here )
                 !wheelcache.empty() && rail_wheelcache.empty() && !is_flying &&
                 !is_towing() && !is_towed() && requested_z_change == 0 &&
                 turn_dir == face.dir() && !turning_arc ) {
-                const int distance = static_cast<int>( std::clamp( of_turn / turn_cost, 0.0f, 0.5f ) *
-                                                       world_position::units_per_tile );
+                constexpr int stride = world_position::units_per_tile;
+                const int distance = std::clamp( static_cast<int>( of_turn / turn_cost * stride ),
+                                                 0, stride - 1 );
                 tileray step = face;
                 step.advance( velocity < 0 ? -1 : 1 );
                 offset = point( distance * step.dx(), distance * step.dy() );
