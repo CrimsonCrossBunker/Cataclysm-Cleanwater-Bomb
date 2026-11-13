@@ -1593,6 +1593,7 @@
     "loudness": 0,
     "count": 7,
     "recovery_chance": 80,
+    "flags": [ "SLING_PROJECTILE" ],
     "use_action": [ "RPGDIE" ]
   },
   {
@@ -1616,6 +1617,7 @@
     "loudness": 0,
     "count": 7,
     "recovery_chance": 90,
+    "flags": [ "SLING_PROJECTILE" ],
     "use_action": [ "RPGDIE" ]
   },
   {
