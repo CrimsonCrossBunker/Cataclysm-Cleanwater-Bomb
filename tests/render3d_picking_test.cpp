@@ -75,6 +75,16 @@ TEST_CASE( "render3d_picks_the_first_visible_terrain_surface", "[render3d][picki
         CHECK( surfaces.trace( scene_point{ 0.25f, 0.5f, 2.0f }, down ) == tripoint( 0, 0, -1 ) );
     }
 
+    SECTION( "a ramp and a flat floor can cross the ray at different heights" ) {
+        surfaces.set_ramp( tripoint( 0, 0, 0 ), { 0.0f, 1.0f, 0.0f } );
+        surfaces.set( tripoint( 1, 0, 0 ), pick_surface::floor );
+        const scene_point shallow{ 1.0f, 0.0f, -0.5f };
+        CHECK( surfaces.trace( { -0.5f, 0.5f, 1.0f }, shallow ) == tripoint( 0, 0, 0 ) );
+        surfaces.reset( 0 );
+        surfaces.set( tripoint( 1, 0, 0 ), pick_surface::floor );
+        CHECK( surfaces.trace( { -0.5f, 0.5f, 1.0f }, shallow ) == tripoint( 1, 0, 0 ) );
+    }
+
     SECTION( "recycled frame storage contains only the new scene" ) {
         surfaces.reset( -1 );
         CHECK_FALSE( surfaces.trace( eye, down ) );

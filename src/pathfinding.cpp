@@ -553,19 +553,36 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                 continue;
             }
 
-            if( !target.contains( p ) && avoid( p ) ) {
-                layer.closed[index] = true;
-                continue;
-            }
-
-            if( layer.closed[index] ) {
-                continue;
-            }
-
             // Penalize for diagonals or the path will look "unnatural"
             int newg = layer.gscore[parent_index] + ( ( cur.x() != p.x() && cur.y() != p.y() ) ? 1 : 0 );
 
             const PathfindingFlags p_special = pf_cache.special[p.x()][p.y()];
+            if( p_special & ( PathfindingFlag::RampUp | PathfindingFlag::RampDown ) ) {
+                tripoint_bub_ms landing = p;
+                landing.z() += ramp_z_offset( p );
+                if( landing.z() != p.z() ) {
+                    if( landing.z() >= min.z() && landing.z() <= max.z() &&
+                        has_loaded_submap( landing ) && has_floor_or_support( landing ) &&
+                        valid_move( cur, landing, false, true, true ) &&
+                        ( target.contains( landing ) || !avoid( landing ) ) ) {
+                        const PathfindingFlags landing_flags = get_pathfinding_cache_ref(
+                                landing.z() ).special[landing.xy()];
+                        const int cost = extra_cost( cur, landing, settings, landing_flags );
+                        if( cost >= 0 ) {
+                            newg += cost;
+                            pf.add_point( newg, newg + 2 * rl_dist( landing, t ), cur, landing );
+                        }
+                    }
+                    continue;
+                }
+            }
+            if( !target.contains( p ) && avoid( p ) ) {
+                layer.closed[index] = true;
+                continue;
+            }
+            if( layer.closed[index] ) {
+                continue;
+            }
             const int cost = extra_cost( cur, p, settings, p_special );
             if( cost < 0 ) {
                 if( cost == PF_IMPASSABLE ) {
@@ -659,30 +676,6 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                 int new_g = layer.gscore[parent_index] + 4;
                 pf.add_point( new_g, new_g + 2 * rl_dist( above, t ),
                               cur, above );
-            }
-        }
-        if( cur.z() < max.z() && parent_terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) &&
-            valid_move( cur, cur + tripoint::above, false, true, true ) ) {
-            for( size_t it = 0; it < 8; it++ ) {
-                const tripoint_bub_ms above( cur.x() + x_offset[it], cur.y() + y_offset[it], cur.z() + 1 );
-                if( !inbounds( above ) ) {
-                    continue;
-                }
-                int new_g = layer.gscore[parent_index] + 4;
-                pf.add_point( new_g, new_g + 2 * rl_dist( above, t ),
-                              cur, above );
-            }
-        }
-        if( cur.z() > min.z() && parent_terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) &&
-            valid_move( cur, cur + tripoint::below, false, true, true ) ) {
-            for( size_t it = 0; it < 8; it++ ) {
-                const tripoint_bub_ms below( cur.x() + x_offset[it], cur.y() + y_offset[it], cur.z() - 1 );
-                if( !inbounds( below ) ) {
-                    continue;
-                }
-                int new_g = layer.gscore[parent_index] + 4;
-                pf.add_point( new_g, new_g + 2 * rl_dist( below, t ),
-                              cur, below );
             }
         }
 

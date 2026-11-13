@@ -2413,15 +2413,9 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     const tripoint_abs_sm old_submap = veh.sm_pos;
     const tripoint_bub_ms src = veh.pos_bub( *this );
     // handle vehicle ramps
-    int ramp_offset = 0;
-    if( adjust_pos ) {
-        if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp ) ) {
-            ramp_offset += 1;
-            veh.is_on_ramp = true;
-        } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp ) ) {
-            ramp_offset -= 1;
-            veh.is_on_ramp = true;
-        }
+    const int ramp_offset = adjust_pos ? ramp_z_offset( src + dp ) : 0;
+    if( ramp_offset != 0 ) {
+        veh.is_on_ramp = true;
     }
 
     const tripoint_bub_ms dst =
@@ -2531,11 +2525,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
             if( parts_to_move.empty() ) {
                 next_pos = veh_part.precalc[1];
             }
-            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
-                psg_offset_z += 1;
-            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + next_pos ) ) {
-                psg_offset_z -= 1;
-            }
+            psg_offset_z += ramp_z_offset( src + dp + next_pos );
 
             // Place passenger on the new part location
             tripoint_bub_ms psgp( dst + next_pos + tripoint( 0, 0, psg_offset_z ) );
@@ -4019,6 +4009,54 @@ bool map::impassable_ter_furn( const tripoint_bub_ms &p ) const
 bool map::passable_ter_furn( const tripoint_bub_ms &p ) const
 {
     return move_cost_ter_furn( p ) != 0;
+}
+
+int map::ramp_z_offset( const tripoint_bub_ms &p ) const
+{
+    if( !inbounds( p ) || ( !zlevels && p.z() != abs_sub.z() ) ) {
+        return 0;
+    }
+    point_sm_ms local;
+    const submap *const sm = unsafe_get_submap_at( p, local );
+    if( !sm ) {
+        return 0;
+    }
+    const ter_t &terrain = sm->get_ter( local ).obj();
+    const furn_t &furniture = sm->get_furn( local ).obj();
+    if( terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ||
+        furniture.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ) {
+        return 1;
+    }
+    return terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ||
+           furniture.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ? -1 : 0;
+}
+
+std::optional<map::ramp_segment> map::ramp_segment_at( const tripoint_bub_ms &p ) const
+{
+    const auto endpoint = [this]( const tripoint_bub_ms & tile ) {
+        return has_loaded_submap( tile ) && has_flag_ter( ter_furn_flag::TFLAG_RAMP_ENDPOINT, tile );
+    };
+    if( !endpoint( p ) ) {
+        return std::nullopt;
+    }
+    const bool lower = ramp_z_offset( p + tripoint::above ) == -1;
+    const bool upper = ramp_z_offset( p + tripoint::below ) == 1;
+    if( lower == upper ) {
+        return std::nullopt;
+    }
+    const int dz = upper ? -1 : 1;
+    std::optional<ramp_segment> result;
+    for( const point &direction : four_adjacent_offsets ) {
+        const tripoint_bub_ms proxy = p + direction;
+        if( ramp_z_offset( proxy ) != dz || !endpoint( proxy + tripoint( 0, 0, dz ) ) ) {
+            continue;
+        }
+        if( result ) {
+            return std::nullopt;
+        }
+        result = ramp_segment{ upper ? -direction : direction, upper };
+    }
+    return result;
 }
 
 int map::combined_movecost( const tripoint_bub_ms &from, const tripoint_bub_ms &to,
@@ -14018,11 +14056,13 @@ void map::update_pathfinding_cache( const tripoint_bub_ms &p ) const
     }
 
     if( terrain.has_flag( ter_furn_flag::TFLAG_RAMP ) ||
-        terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ) {
+        terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ||
+        furniture.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ) {
         cur_value |= PathfindingFlag::GoesUp | PathfindingFlag::RampUp;
     }
 
-    if( terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ) {
+    if( terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ||
+        furniture.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ) {
         cur_value |= PathfindingFlag::GoesDown | PathfindingFlag::RampDown;
     }
 

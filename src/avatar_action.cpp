@@ -271,15 +271,11 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
         return choices;
     }
     tripoint_bub_ms destination = you.pos_bub( m ) + d;
-    if( !m.inbounds( destination ) ) {
+    if( !m.has_loaded_submap( destination ) ) {
         return std::nullopt;
     }
-    if( m.has_flag( ter_furn_flag::TFLAG_RAMP_UP, destination ) ) {
-        destination.z() += 1;
-    } else if( m.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, destination ) ) {
-        destination.z() -= 1;
-    }
-    if( !m.inbounds( destination ) ) {
+    destination.z() += m.ramp_z_offset( destination );
+    if( !m.has_loaded_submap( destination ) ) {
         return std::nullopt;
     }
     walk_move_choices choices;
@@ -287,7 +283,8 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
     const ter_id terrain = m.ter( destination );
     const furn_id furniture = m.furn( destination );
     const auto unchanged = [&]() {
-        return lifetime && you.pos_world() == origin && m.inbounds( *choices.destination ) &&
+        return lifetime && you.pos_world() == origin &&
+               m.has_loaded_submap( m.get_bub( *choices.destination ) ) &&
                m.ter( m.get_bub( *choices.destination ) ) == terrain &&
                m.furn( m.get_bub( *choices.destination ) ) == furniture;
     };
@@ -434,19 +431,15 @@ static bool move_character( Character &you, map &m, const tripoint_rel_ms &d,
         // Well that sure was easy
         return true;
     }
-    if( !m.inbounds( dest_loc ) ) {
+    if( !m.has_loaded_submap( dest_loc ) ) {
         return false;
     }
-    bool via_ramp = false;
-    if( !within_cell && m.has_flag( ter_furn_flag::TFLAG_RAMP_UP, dest_loc ) ) {
-        dest_loc.z() += 1;
-        via_ramp = true;
-    } else if( !within_cell && m.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, dest_loc ) ) {
-        dest_loc.z() -= 1;
-        via_ramp = true;
-    }
+    const int ramp_z = within_cell ? 0 : m.ramp_z_offset( dest_loc );
+    dest_loc.z() += ramp_z;
+    const bool via_ramp = ramp_z != 0;
 
-    if( !m.inbounds( dest_loc ) || ( step && choices && !choices->confirms( m.get_abs( dest_loc ) ) ) ||
+    if( !m.has_loaded_submap( dest_loc ) ||
+        ( step && choices && !choices->confirms( m.get_abs( dest_loc ) ) ) ||
         ( step && !step->clears_obstacles( m, you, dest_loc ) ) ) {
         return false;
     }

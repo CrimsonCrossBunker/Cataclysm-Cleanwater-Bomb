@@ -3000,7 +3000,8 @@ bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &cho
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
         g->multiplayer_session().client_inventory_activity.pending_automove =
-            capture_automove_step( get_avatar(), get_map(), get_avatar().pos_abs() + direction );
+            capture_automove_step( get_avatar(), get_map(),
+                                   choices.destination.value_or( get_avatar().pos_abs() + direction ) );
         send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "walk" );
             out.member( "origin", get_avatar().pos_abs() );

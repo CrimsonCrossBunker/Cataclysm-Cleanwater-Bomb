@@ -61,6 +61,7 @@ void pick_surfaces::reset( int view_level )
 {
     view_level_ = view_level;
     vehicle_bodies_.clear();
+    ramps_.clear();
     vehicle_top_.fill( 0.0f );
     translated_bodies_.clear();
     actors_.clear();
@@ -81,6 +82,11 @@ std::size_t pick_surfaces::index( const tripoint &cell ) const
 void pick_surfaces::set( const tripoint &cell, pick_surface surface )
 {
     cells_[index( cell )] = surface;
+}
+
+void pick_surfaces::set_ramp( const tripoint &cell, ramp_surface surface )
+{
+    ramps_.emplace_back( cell, surface );
 }
 
 void pick_surfaces::set_vehicle_body( const tripoint &cell, float bottom, float top )
@@ -190,6 +196,24 @@ std::optional<tripoint> pick_surfaces::trace( const scene_point &origin,
                 y.advance();
             }
             cell_entry = crossing;
+        }
+    }
+    for( const auto &[cell, surface] : ramps_ ) {
+        const float velocity = ray.z - ray.x * surface.rise_x - ray.y * surface.rise_y;
+        if( std::abs( velocity ) < 1e-5f ) {
+            continue;
+        }
+        const float x = origin.x - cell.x;
+        const float y = origin.y - cell.y;
+        const float hit = ( surface.height_at( x, y ) - origin.z ) / velocity;
+        if( hit < entry || hit >= nearest ) {
+            continue;
+        }
+        const float u = x + hit * ray.x;
+        const float v = y + hit * ray.y;
+        if( u >= 0.0f && u < 1.0f && v >= 0.0f && v < 1.0f ) {
+            nearest = hit;
+            selected = cell;
         }
     }
     for( const vehicle_box &body : translated_bodies_ ) {

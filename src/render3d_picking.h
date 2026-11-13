@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "map_scale_constants.h"
@@ -32,6 +33,17 @@ struct scene_point {
     float z;
 };
 
+// Height at the northwest corner and the rise across one tile on each axis.
+struct ramp_surface {
+    float corner;
+    float rise_x;
+    float rise_y;
+
+    float height_at( float x, float y ) const {
+        return corner + rise_x * x + rise_y * y;
+    }
+};
+
 enum class pick_surface : std::uint8_t {
     open,
     floor,
@@ -47,6 +59,7 @@ class pick_surfaces
     public:
         void reset( int view_level );
         void set( const tripoint &cell, pick_surface surface );
+        void set_ramp( const tripoint &cell, ramp_surface surface );
         void set_vehicle_body( const tripoint &cell, float bottom, float top );
         void add_vehicle_box( const tripoint &cell, const scene_point &minimum,
                               const scene_point &maximum );
@@ -83,6 +96,7 @@ class pick_surfaces
         int view_level_ = 0;
         std::vector<pick_surface> cells_;
         std::unordered_map<std::size_t, height_range> vehicle_bodies_;
+        std::vector<std::pair<tripoint, ramp_surface>> ramps_;
         std::array<float, OVERMAP_LAYERS> vehicle_top_{};
         std::vector<vehicle_box> translated_bodies_;
         std::vector<actor_surface> actors_;

@@ -2044,9 +2044,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
             const tripoint_rel_ms direction = step ? step->target.tile() - player_character.pos_abs() :
                                               tripoint_rel_ms( get_delta_from_movement_action( act, iso_rotate::yes, camera ), 0 );
-            const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
-            if( !here.inbounds( target_pos ) ||
+            tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
+            if( direction != tripoint_rel_ms::zero ) {
+                target_pos.z() += here.ramp_z_offset( target_pos );
+            }
+            if( !here.has_loaded_submap( target_pos ) ||
                 ( step && !step->clears_obstacles( here, player_character, target_pos ) ) ) {
+                if( player_character.is_auto_moving() ) {
+                    player_character.abort_automove();
+                }
                 return false;
             }
             if( direction != tripoint_rel_ms::zero &&
@@ -2372,8 +2378,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                     dest_delta = dest_next;
                 }
+                tripoint_bub_ms landing = player_character.pos_bub( here ) + dest_delta;
+                if( player_character.is_auto_moving() && dest_delta != point_rel_ms::zero &&
+                    here.has_loaded_submap( landing ) ) {
+                    landing.z() += here.ramp_z_offset( landing );
+                }
                 const auto pending_move = capture_automove_step( player_character, here,
-                                          player_character.pos_abs() + tripoint_rel_ms( dest_delta, 0 ) );
+                    here.get_abs( landing ) );
                 const character_action_guard mover( player_character );
                 const auto move_context = here.get_context_reference();
                 const auto fractional = fractional_walk_input( player_character, here, act,

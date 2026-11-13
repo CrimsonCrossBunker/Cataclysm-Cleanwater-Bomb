@@ -79,6 +79,21 @@ float position_fraction( int offset )
     return static_cast<float>( offset ) / world_position::units_per_tile;
 }
 
+ramp_surface ramp_plane( const map::ramp_segment &ramp, float level )
+{
+    const float half_height = LEVEL_HEIGHT * 0.5f;
+    const bool rising_from_corner = ramp.uphill.x > 0 || ramp.uphill.y > 0;
+    const float lower = ramp.upper ? level - half_height : level;
+    return { rising_from_corner ? lower : lower + half_height,
+             ramp.uphill.x * half_height, ramp.uphill.y * half_height };
+}
+
+float ramp_elevation( const map &here, const tripoint_bub_ms &tile, float x, float y )
+{
+    const auto ramp = here.ramp_segment_at( tile );
+    return ramp ? ramp_plane( *ramp, 0.0f ).height_at( x, y ) : 0.0f;
+}
+
 point seated_vehicle_offset( const map &here, const Creature &actor )
 {
     const Character *who = actor.as_character();
@@ -166,7 +181,8 @@ enum draw_mode : int {
     // (vehicle side panels): corner sprites span two tiles, so neighbouring
     // panels share a plane and must resolve by painter's order. Shader-side
     // this is mode 4.
-    MODE_LINEQUAD_DECAL = 7
+    MODE_LINEQUAD_DECAL = 7,
+    MODE_RAMP = 8      // inclined ground quad
 };
 
 struct mat4 {
@@ -3029,7 +3045,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
     for( int zlev = zmin; zlev <= zmax; ++zlev ) {
         const int dz = zlev - cz;
-        const float wz = dz * LEVEL_HEIGHT;
+        const float level_z = dz * LEVEL_HEIGHT;
         const level_cache &cache = here.get_cache_ref( zlev );
         const region_cull_mask cull_mask = build_region_cull_mask( here, you, center, zlev,
                                            lowest_vis_z, vis_vars, frustum );
@@ -3063,7 +3079,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     ++g_profile.coarse_tiles;
                     continue;
                 }
-                if( !tile_in_frustum( frustum, point( dx, dy ), wz ) ) {
+                if( !tile_in_frustum( frustum, point( dx, dy ), level_z ) ) {
                     ++g_profile.frustum_tiles;
                     continue;
                 }
@@ -3095,8 +3111,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // levels draw memory only, nothing where there is none.
                 if( !visible ) {
                     if( dz == 0 ) {
-                        if( !gather_memory_tile( p, point( dx, dy ), wz, true ) ) {
-                            push_fog_slab( tripoint( dx, dy, p.z() ), wz );
+                        if( !gather_memory_tile( p, point( dx, dy ), level_z, true ) ) {
+                            push_fog_slab( tripoint( dx, dy, p.z() ), level_z );
                         }
                     } else if( !( dz > 0 &&
                                   dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) ) {
@@ -3104,7 +3120,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         // the floors above an interior must not block it.
                         // upper floors keep their remembered structure only:
                         // remembered furniture there is deliberately not drawn
-                        gather_memory_tile( p, point( dx, dy ), wz, dz < 0 );
+                        gather_memory_tile( p, point( dx, dy ), level_z, dz < 0 );
                     }
                     continue;
                 }
@@ -3166,6 +3182,21 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // instead use their true top-down connection shape
                 const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
                                          !is_wall && !is_upright_equipment;
+                std::optional<map::ramp_segment> ramp;
+                bool ramp_proxy = false;
+                if( plain_floor ) {
+                    if( t->has_flag( ter_furn_flag::TFLAG_RAMP_ENDPOINT ) ) {
+                        ramp = here.ramp_segment_at( p );
+                    } else if( t->has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ||
+                               t->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ) {
+                        const int dz_ramp = here.ramp_z_offset( p );
+                        ramp_proxy = dz_ramp != 0 &&
+                                     here.ramp_segment_at( p + tripoint( 0, 0, dz_ramp ) ).has_value();
+                    }
+                }
+                const auto slope = ramp ? std::optional<ramp_surface>( ramp_plane( *ramp, level_z ) ) :
+                                   std::nullopt;
+                const float wz = slope ? slope->height_at( 0.5f, 0.5f ) : level_z;
                 const bool shaped = plain_floor || is_flat_utility || is_upright_equipment;
                 int rota = 0;
                 int subtile = 0;
@@ -3295,7 +3326,24 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // canopies are spriteless terrain) — skip instead of painting a
                 // hash-colored floor in the sky. Horizontal utilities likewise
                 // get no hash-colored base when their tile has no real bg.
-                if( !is_empty_frame && ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) ) {
+                if( slope ) {
+                    sprite_info gspr = ground_spr;
+                    gspr.u0 = ground_spr.gu0;
+                    gspr.v0 = ground_spr.gv0;
+                    gspr.u1 = ground_spr.gu1;
+                    gspr.v1 = ground_spr.gv1;
+                    std::vector<float> &v = bucket_for( MODE_RAMP, ground_tex ? gspr.atlas : nullptr );
+                    // The quad's pad selects the world axis. Signed Z scale is the rise.
+                    push_instance( v, dx, dy, slope->corner, 1.0f, 1.0f,
+                                   slope->rise_x + slope->rise_y, gspr, gr, gg, gb, true,
+                                   ( !btex && !dtex ) ? frot4 : 0, false,
+                                   slope->rise_y == 0.0f ? 0.0f : 1.0f, ghost, tone.sat );
+                    if( !ghost ) {
+                        surfaces.set_ramp( tripoint( dx, dy, zlev ), *slope );
+                    }
+                    ++count;
+                } else if( !ramp_proxy && !is_empty_frame &&
+                           ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) ) {
                     if( !ghost ) {
                         surfaces.set( tripoint( dx, dy, zlev ), pick_surface::floor );
                     }
@@ -3348,7 +3396,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // cutout quad so the transparent parts show the bg through. flat —
                 // a box's side faces would sample transparent sprite rows and
                 // leave dark seams along every tile edge
-                if( plain_floor && ftex && btex && !roof_unseen &&
+                if( plain_floor && !ramp && !ramp_proxy && ftex && btex && !roof_unseen &&
                     count < MAX_DRAW_INSTANCES ) {
                     std::vector<float> &v = bucket_for( MODE_FLATQUAD, fspr.atlas );
                     push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
@@ -4187,7 +4235,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                     }
                                 }
                             }
-                            if( near_hide && vdrew && offset != point::zero ) {
+                            if( near_hide && vdrew && ( slope || offset != point::zero ) ) {
                                 surfaces.add_vehicle_box( tripoint( dx, dy, zlev ),
                                 { dx + shift_x, dy + shift_y, wz + VEH_DECAL_Z - 0.002f },
                                 { dx + shift_x + 1.0f, dy + shift_y + 1.0f, wz + VEH_DECAL_Z + 0.002f } );
@@ -4563,7 +4611,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 const tripoint cell( dx, dy, zlev );
                                 const float left = dx + shift_x;
                                 const float top = dy + shift_y;
-                                if( offset == point::zero ) {
+                                if( !slope && offset == point::zero ) {
                                     surfaces.set_vehicle_body( cell, body_bottom, box_top );
                                 } else {
                                     surfaces.add_vehicle_box( cell, { left, top, wz + body_bottom },
@@ -4856,9 +4904,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const tile_tone tone = cll_clear ? tone_for( cache, p, cll )
                                : tile_tone{ 1.0f, nv_tint ? 0.0f : 1.0f };
         const tripoint offset = critter->pos_world().offset() + seated_vehicle_offset( here, *critter );
+        const float lift = ramp_elevation( here, p, position_fraction( offset.x ),
+                                           position_fraction( offset.y ) );
         push_entity( *critter, p, p.x() - center.x() + position_fraction( offset.x ) - 0.5f,
                      p.y() - center.y() + position_fraction( offset.y ) - 0.5f,
-                     wz + position_fraction( offset.z ) * LEVEL_HEIGHT, tone );
+                     wz + lift + position_fraction( offset.z ) * LEVEL_HEIGHT, tone );
     }
 
     // hover preselection box + game-driven cursors (targeting, construction...):
@@ -4870,9 +4920,16 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const tripoint_rel_ms rel = tp - center;
         sprite_info cspr;
         const bool ctex = lookup_sprite( tiles, sprite, TILE_CATEGORY::NONE, tp, cspr );
-        std::vector<float> &v = bucket_for( MODE_BOX, ctex ? cspr.atlas : nullptr );
-        push_instance( v, static_cast<float>( rel.x() ), static_cast<float>( rel.y() ),
-                       rel.z() * LEVEL_HEIGHT + 0.002f, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
+        const float base = rel.z() * LEVEL_HEIGHT + 0.002f;
+        if( const auto ramp = here.ramp_segment_at( tp ) ) {
+            const ramp_surface plane = ramp_plane( *ramp, base );
+            std::vector<float> &v = bucket_for( MODE_RAMP, ctex ? cspr.atlas : nullptr );
+            push_instance( v, rel.x(), rel.y(), plane.corner, 1.0f, 1.0f, plane.rise_x + plane.rise_y,
+                           cspr, 1.0f, 1.0f, 1.0f, false, 0, false, plane.rise_y == 0.0f ? 0.0f : 1.0f );
+        } else {
+            std::vector<float> &v = bucket_for( MODE_BOX, ctex ? cspr.atlas : nullptr );
+            push_instance( v, rel.x(), rel.y(), base, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
+        }
         ++count;
     };
     if( tiles ) {
@@ -4904,7 +4961,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 tp = step->clears_obstacles( here, you, next ) ? next : upos;
             }
         }
-        if( tp != upos && here.inbounds( tp ) && !has_game_cursor( tp ) ) {
+        if( tp != upos ) {
+            tp.z() += here.ramp_z_offset( tp );
+        }
+        if( tp != upos && here.has_loaded_submap( tp ) && !has_game_cursor( tp ) ) {
             push_cursor_slab( tp, "line_target" );
             move_marker = tp;
         }
@@ -5144,10 +5204,12 @@ bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     const tripoint_bub_ms observer_tile = observer.pos_bub( here );
     const tripoint observer_offset = observer.pos_world().offset() + seated_vehicle_offset( here,
         observer );
+    const float ramp_lift = ramp_elevation( here, observer_tile, position_fraction( observer_offset.x ),
+                                            position_fraction( observer_offset.y ) );
     const vec3 player_position{ observer_tile.x() - center.x() + position_fraction( observer_offset.x ),
                                 observer_tile.y() - center.y() + position_fraction( observer_offset.y ),
                                 ( observer_tile.z() - center.z() + position_fraction( observer_offset.z ) ) *
-                                LEVEL_HEIGHT
+                                LEVEL_HEIGHT + ramp_lift
                               };
     const vec3 target = observer_tile == center ?
                         vec3{ player_position.x, player_position.y, player_position.z + 1.0f } :
@@ -5559,7 +5621,8 @@ bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         if( seg.mode == MODE_XQUAD ) {
             geom_bind.buffer = g_ctx.xquad_vb;
             verts_per_instance = 12;
-        } else if( seg.mode == MODE_FLATQUAD || seg.mode == MODE_FLATQUAD_DECAL ) {
+        } else if( seg.mode == MODE_FLATQUAD || seg.mode == MODE_FLATQUAD_DECAL ||
+                   seg.mode == MODE_RAMP ) {
             geom_bind.buffer = g_ctx.flatquad_vb;
             verts_per_instance = 6;
         } else if( seg.mode == MODE_BILLBOARD || seg.mode == MODE_BILLBOARD_SNAP ||
@@ -5587,7 +5650,7 @@ bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         // panels (the mask cuts a soft hole so the rider stays visible) and the
         // flat floor quads (roof corner cutouts above the player)
         frag_ub.mask_params[3] = ( seg.mode == MODE_BOX || seg.mode == MODE_LINEQUAD ||
-                                   seg.mode == MODE_FLATQUAD ||
+                                   seg.mode == MODE_FLATQUAD || seg.mode == MODE_RAMP ||
                                    seg.mode == MODE_LINEQUAD_DECAL )
                                  ? 1.0f : 0.0f;
         SDL_PushGPUFragmentUniformData( cmd, 0, &frag_ub, sizeof( frag_ub ) );

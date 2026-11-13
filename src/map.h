@@ -651,6 +651,16 @@ class map
         bool impassable_ter_furn( const tripoint_bub_ms &p ) const;
         bool passable_ter_furn( const tripoint_bub_ms &p ) const;
 
+        // Height change on entering a horizontal ramp tile.
+        int ramp_z_offset( const tripoint_bub_ms &p ) const;
+        struct ramp_segment {
+            point uphill;
+            bool upper;
+        };
+        // A complete two-cell ramp has an endpoint and a transition proxy at
+        // each level. Return the walkable half represented by this endpoint.
+        std::optional<ramp_segment> ramp_segment_at( const tripoint_bub_ms &p ) const;
+
         /**
         * Cost to move out of one tile and into the next.
         *
