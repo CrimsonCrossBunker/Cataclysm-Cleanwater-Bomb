@@ -1668,7 +1668,7 @@ void Character::update_needs( int rate_multiplier )
                 }
 
                 // Recovered is multiplied by 2 as well, since we spend 1/3 of the day sleeping
-                mod_sleep_deprivation( -rest_modifier * ( recovered * 2 ) );
+                mod_sleep_deprivation( -roll_remainder( rest_modifier * ( recovered * 2 ) ) );
 
             }
         }
