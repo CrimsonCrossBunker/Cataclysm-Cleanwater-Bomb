@@ -1,9 +1,14 @@
+if (-not (Test-Path -LiteralPath 'ccb_bevy_ecs_coop.dll' -PathType Leaf)) {
+  throw "Missing ccb_bevy_ecs_coop.dll. Build it with build-scripts/build-coop-runtime.py before packaging."
+}
+
 if (Test-path bindist) {
   rm -Force -Recurse bindist
 }
 
 mkdir bindist
 cp cataclysm-tiles.exe bindist/cataclysm-tiles.exe
+Copy-Item -LiteralPath 'ccb_bevy_ecs_coop.dll' -Destination bindist/
 cp cataclysm-tiles.stripped.pdb bindist/cataclysm-tiles.pdb
 cp tools/format/json_formatter.exe bindist/json_formatter.exe
 cp zzip.exe bindist/zzip.exe

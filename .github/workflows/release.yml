@@ -568,6 +568,9 @@ jobs:
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
         run: |
           msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
+      - name: Build Windows co-op runtime
+        if: runner.os == 'Windows' && matrix.sdl3 == 1
+        run: python build-scripts/build-coop-runtime.py --target x86_64-pc-windows-msvc --target-dir coop-rust --library-dir .
       - name: Package CDDA (windows msvc, SDL3)
         if: runner.os == 'Windows' && matrix.sdl3 == 1
         shell: pwsh
