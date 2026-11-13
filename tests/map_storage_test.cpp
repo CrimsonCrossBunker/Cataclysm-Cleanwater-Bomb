@@ -13,6 +13,7 @@
 #include "cata_catch.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
+#include "character_id.h"
 #include "coordinates.h"
 #include "game.h"
 #include "item.h"
@@ -20,7 +21,11 @@
 #include "map_simulation_regions.h"
 #include "map_storage_context.h"
 #include "mapbuffer.h"
+#include "memory_fast.h"
+#include "npc.h"
+#include "overmapbuffer.h"
 #include "path_info.h"
+#include "point.h"
 #include "rng.h"
 #include "scent_map.h"
 #include "submap.h"
@@ -278,6 +283,34 @@ TEST_CASE( "loading_an_already_active_submap_indexes_without_advancing_it",
     CHECK( shared.last_touched == last_touched );
     REQUIRE( joined.trap_locations( tr_beartrap ).size() == 1 );
     CHECK( joined.trap_locations( tr_beartrap ).front() == tile );
+}
+
+TEST_CASE( "npc_activation_uses_the_requested_map_and_shared_tracker",
+           "[map_storage][region_simulation][regression]" )
+{
+    const auto origin = get_map().get_abs_sub() + point_rel_sm( 20, 0 );
+    const tripoint_bub_ms tile( 4, 4, origin.z() );
+    submap empty;
+    empty.set_all_ter( ter_t_floor, true );
+    simulation_test_map remote( origin );
+    remote.attach( tripoint_rel_sm( 0, 0, origin.z() ), empty );
+    const auto inhabitant = make_shared_fast<npc>();
+    inhabitant->normalize();
+    const character_id id = g->assign_npc_id();
+    inhabitant->setID( id );
+    inhabitant->spawn_at_precise( remote.get_abs( tile ) );
+    REQUIRE_FALSE( get_map().inbounds( inhabitant->pos_abs() ) );
+    overmap_buffer.insert_npc( inhabitant );
+    const on_out_of_scope cleanup( [&]() {
+        g->remove_npc( id );
+        overmap_buffer.remove_npc( id );
+    } );
+
+    g->load_npcs( &remote );
+    REQUIRE( g->critter_by_id<npc>( id ) == inhabitant.get() );
+    CHECK( inhabitant->pos_abs() == remote.get_abs( tile ) );
+    g->load_npcs( &remote );
+    CHECK( g->critter_by_id<npc>( id ) == inhabitant.get() );
 }
 
 TEST_CASE( "legacy_map_buffer_binds_on_insertion_and_rebinds_only_after_clear", "[map_storage]" )

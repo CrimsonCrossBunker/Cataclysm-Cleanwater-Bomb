@@ -1318,7 +1318,7 @@ void npc::place_on_map( map *here )
     const tripoint_bub_ms pos = pos_bub( *here );
 
     for( const tripoint_bub_ms &p : closest_points_first( pos, 1, SEEX + 1 ) ) {
-        if( g->is_empty( p ) ) {
+        if( here->has_loaded_submap( p ) && g->is_empty( here, here->get_abs( p ) ) ) {
             setpos( *here, p );
             return;
         }

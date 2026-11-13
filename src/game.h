@@ -703,6 +703,7 @@ class game
         void on_witness_theft( const item &target );
         void on_witness_theft( const item &target, Character &p );
     private:
+        void activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby );
         /** Unloads all NPCs.
          *
          * If you call this you must later call load_npcs, lest caches get

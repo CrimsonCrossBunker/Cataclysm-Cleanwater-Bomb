@@ -1320,40 +1320,45 @@ vehicle *game::place_vehicle_nearby(
 void game::load_npcs()
 {
     map &here = get_map();
-    const int radius = HALF_MAPSIZE - 1;
-    const tripoint_abs_sm abs_sub( here.get_abs_sub() );
-    const half_open_rectangle<point_abs_sm> map_bounds( abs_sub.xy(), abs_sub.xy() + point( MAPSIZE,
-            MAPSIZE ) );
-    // uses submap coordinates
+    activate_npcs( here, overmap_buffer.get_npcs_near_player( HALF_MAPSIZE - 1 ) );
+    npcs_dirty = false;
+}
+
+void game::load_npcs( map *here )
+{
+    const int radius = here->getmapsize() / 2;
+    const tripoint_abs_sm center = here->get_abs_sub() + point_rel_sm( radius, radius );
+    const swap_map context( *here );
+    activate_npcs( *here, overmap_buffer.get_npcs_near( center, radius ) );
+    if( here == &reality_bubble() ) {
+        npcs_dirty = false;
+    }
+}
+
+void game::activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby )
+{
     std::vector<shared_ptr_fast<npc>> just_added;
-    for( const auto &temp : overmap_buffer.get_npcs_near_player( radius ) ) {
+    for( const auto &temp : nearby ) {
+        const tripoint_abs_sm sm_loc = temp->pos_abs_sm();
+        // Placement may find a nearby alternative. Only start it in a
+        // loaded submap of the view that activated this NPC.
+        if( !here.has_loaded_submap( sm_loc ) || temp->has_companion_mission() ) {
+            continue;
+        }
         const character_id &id = temp->getID();
         const auto found = std::find_if( critter_tracker->active_npc.begin(),
                                          critter_tracker->active_npc.end(),
         [id]( const shared_ptr_fast<npc> &n ) {
             return n->getID() == id;
         } );
-        if( found != critter_tracker->active_npc.end() ) {
-            continue;
-        }
-        if( temp->is_active() ) {
-            continue;
-        }
-        if( temp->has_companion_mission() ) {
-            continue;
-        }
-
-        const tripoint_abs_sm sm_loc = temp->pos_abs_sm();
-        // NPCs who are out of bounds before placement would be pushed into bounds
-        // This can cause NPCs to teleport around, so we don't want that
-        if( !map_bounds.contains( sm_loc.xy() ) ) {
+        if( found != critter_tracker->active_npc.end() || temp->is_active() ) {
             continue;
         }
 
         add_msg_debug( debugmode::DF_NPC, "game::load_npcs: Spawning static NPC, %s %s",
-                       abs_sub.to_string_writable(), sm_loc.to_string_writable() );
+                       here.get_abs_sub().to_string_writable(), sm_loc.to_string_writable() );
         temp->place_on_map( &here );
-        if( !reality_bubble().inbounds( temp->pos_bub() ) ) {
+        if( !here.has_loaded_submap( temp->pos_abs_sm() ) ) {
             continue;
         }
         // In the rare case the npc was marked for death while
@@ -1369,65 +1374,6 @@ void game::load_npcs()
     for( const auto &npc : just_added ) {
         npc->on_load( &here );
     }
-
-    npcs_dirty = false;
-}
-
-void game::load_npcs( map *here )
-{
-    const int mapsize = here->getmapsize();
-    const int radius = mapsize / 2 - 1;
-    const tripoint_abs_sm abs_sub( here->get_abs_sub() );
-    const tripoint_abs_sm center = abs_sub + point_rel_sm{radius, radius};
-    const half_open_rectangle<point_abs_sm> map_bounds( abs_sub.xy(), abs_sub.xy() + point( mapsize,
-            mapsize ) );
-    // uses submap coordinates
-    std::vector<shared_ptr_fast<npc>> just_added;
-    for( const auto &temp : overmap_buffer.get_npcs_near( center, radius ) ) {
-        const character_id &id = temp->getID();
-        const auto found = std::find_if( critter_tracker->active_npc.begin(),
-                                         critter_tracker->active_npc.end(),
-        [id]( const shared_ptr_fast<npc> &n ) {
-            return n->getID() == id;
-        } );
-        if( found != critter_tracker->active_npc.end() ) {
-            continue;
-        }
-        if( temp->is_active() ) {
-            continue;
-        }
-        if( temp->has_companion_mission() ) {
-            continue;
-        }
-
-        const tripoint_abs_sm sm_loc = temp->pos_abs_sm();
-        // NPCs who are out of bounds before placement would be pushed into bounds
-        // This can cause NPCs to teleport around, so we don't want that
-        if( !map_bounds.contains( sm_loc.xy() ) ) {
-            continue;
-        }
-
-        add_msg_debug( debugmode::DF_NPC, "game::load_npcs: Spawning static NPC, %s %s",
-                       abs_sub.to_string_writable(), sm_loc.to_string_writable() );
-        temp->place_on_map( here );
-        if( !here->inbounds( temp->pos_abs() ) ) {
-            continue;
-        }
-        // In the rare case the npc was marked for death while
-        // it was on the overmap. Kill it.
-        if( temp->marked_for_death ) {
-            temp->die( here, nullptr );
-        } else {
-            critter_tracker->active_npc.push_back( temp );
-            just_added.push_back( temp );
-        }
-    }
-
-    for( const auto &npc : just_added ) {
-        npc->on_load( here );
-    }
-
-    npcs_dirty = false;
 }
 
 void game::on_witness_theft( const item &target )
