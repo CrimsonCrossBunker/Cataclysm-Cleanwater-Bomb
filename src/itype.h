@@ -1540,6 +1540,7 @@ struct itype {
 
         /** Base damage output when thrown */
         damage_instance thrown_damage;
+        int thrown_recovery_chance = 100;
 
         /** Corrections applied to compatible items while this item is wielded. */
         std::optional<throw_correction_data> throw_correction;
