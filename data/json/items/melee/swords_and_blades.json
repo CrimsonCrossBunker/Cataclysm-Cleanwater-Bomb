@@ -1,5 +1,6 @@
 [
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "sword_wood",
     "symbol": "!",
@@ -14,7 +15,7 @@
     "price_postapoc": "50 cent",
     "flags": [ "BELT_CLIP" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "faults": [ { "fault_group": "staff_short" } ],
     "melee_damage": { "bash": 12, "cut": 1 }
   },
@@ -39,6 +40,7 @@
     "melee_damage": { "bash": 16, "cut": 2 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "sword_nail",
     "symbol": "!",
@@ -51,13 +53,14 @@
     "longest_side": "100 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "neutral" },
     "price_postapoc": "1 USD",
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
     "flags": [ "FRAGILE_MELEE", "BELT_CLIP" ],
     "faults": [ { "fault_group": "staff_short" } ],
     "melee_damage": { "bash": 12, "cut": 4 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "sword_crude",
     "symbol": "!",
@@ -73,7 +76,7 @@
     "flags": [ "BELT_CLIP", "NONCONDUCTIVE" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
     "qualities": [ [ "BUTCHER", -50 ] ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "faults": [ { "fault_group": "staff_short" } ],
     "melee_damage": { "bash": 6, "cut": 18 }
   },
@@ -99,6 +102,7 @@
     "melee_damage": { "bash": 12, "cut": 20 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "sword_sheets_welded",
     "symbol": "!",
@@ -128,7 +132,7 @@
     "flags": [ "SHEATH_SWORD" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -5 ] ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "faults": [ { "fault_group": "handle_short" }, { "fault_group": "blade_general", "weight_mult": 5 } ],
     "melee_damage": { "bash": 6, "cut": 22 }
   },
@@ -167,6 +171,7 @@
     "melee_damage": { "bash": 8, "cut": 32 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "sword_metal",
     "symbol": "!",
@@ -183,7 +188,7 @@
     "flags": [ "SHEATH_SWORD", "DURABLE_MELEE" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 2 ] ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "faults": [
       { "fault_group": "handle_short" },
       { "fault_group": "blade_general", "weight_mult": 5 },
@@ -219,6 +224,7 @@
     "melee_damage": { "bash": 20, "cut": 30 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "sword_metal_fencing",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -233,7 +239,7 @@
     "material": [ "budget_steel" ],
     "symbol": "/",
     "color": "light_gray",
-    "techniques": [ "RAPID", "WBLOCK_2", "PRECISE" ],
+    "techniques": [ "RAPID", "WBLOCK_2", "PRECISE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -8 ] ],
     "flags": [ "DURABLE_MELEE", "SHEATH_SWORD" ],
     "weapon_category": [ "FENCING_WEAPONRY" ],
@@ -856,6 +862,7 @@
     "melee_damage": { "cut": 16 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "machete",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -873,7 +880,7 @@
     "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
     "material": [ { "type": "wood", "portion": 0.85 }, { "type": "mc_steel", "portion": 80 } ],
     "repairs_with": [ "mc_steel" ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 2 ], [ "GRASS_CUT", 1 ], [ "BUTCHER", 15 ] ],
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "SHEATH_SWORD" ],
     "weapon_category": [ "SHORT_SWORDS" ],
@@ -956,15 +963,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
-    "id": "mounted_saber",
-    "copy-from": "mc_cavalry_sabre",
-    "type": "ITEM",
-    "name": { "str": "mounted saber" },
-    "description": "A cavalry saber balanced for a short, fast slashing charge from an animal mount.",
-    "extend": { "techniques": [ "MOUNTED_CHARGE" ] },
-    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 }
-  },
-  {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_cavalry_sabre",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -982,7 +981,7 @@
     "repairs_with": [ "mc_steel" ],
     "symbol": "/",
     "color": "dark_gray",
-    "techniques": [ "WBLOCK_2", "RAPID" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 2 ], [ "BUTCHER", 8 ] ],
     "flags": [ "SHEATH_SWORD", "CONDUCTIVE", "DURABLE_MELEE" ],
     "weapon_category": [ "MEDIUM_SWORDS", "FENCING_WEAPONRY" ],
@@ -1027,6 +1026,7 @@
     "relative": { "melee_damage": { "cut": 4 }, "qualities": [ [ "BUTCHER", 2 ] ] }
   },
   {
+    "mounted_charge": null,
     "id": "cavalry_sabre_fake",
     "copy-from": "mc_cavalry_sabre",
     "type": "ITEM",
@@ -1035,7 +1035,7 @@
     "description": "A dull, cheaply-made replica of a curved sword associated with cavalry from the Early Modern period onwards.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 1.8, "cut": 0.077 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -1175,6 +1175,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_jian",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1192,7 +1193,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 96 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "SHEATH_SWORD", "CONDUCTIVE", "DURABLE_MELEE" ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 8 ] ],
     "weapon_category": [ "MEDIUM_SWORDS", "FENCING_WEAPONRY" ],
@@ -1252,6 +1253,7 @@
     "replace_materials": { "mc_steel": "budget_steel" }
   },
   {
+    "mounted_charge": null,
     "id": "jian_fake",
     "looks_like": "jian",
     "copy-from": "mc_jian",
@@ -1259,7 +1261,7 @@
     "name": { "str_sp": "jian" },
     "description": "A dull, cheaply-made replica of an ancient Chinese doubled-edged straight sword, with an ornate guard.",
     "proportional": { "melee_damage": { "bash": 1.9, "cut": 0.07 }, "price_postapoc": 0.05, "price": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] },
     "replace_materials": { "mc_steel": "aluminum" }
   },
@@ -1287,6 +1289,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_scimitar",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1304,7 +1307,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 160 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "SHEATH_SWORD", "CONDUCTIVE", "DURABLE_MELEE" ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 8 ] ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
@@ -1360,13 +1363,14 @@
     "replace_materials": { "mc_steel": "budget_steel" }
   },
   {
+    "mounted_charge": null,
     "id": "scimitar_fake",
     "copy-from": "mc_scimitar",
     "type": "ITEM",
     "name": { "str": "shamshir" },
     "description": "A dull, cheaply-made replica of a curved sword associated with various Middle Eastern and Central Asian countries.",
     "proportional": { "melee_damage": { "bash": 1.9, "cut": 0.07 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] },
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" }
   },
@@ -1391,6 +1395,7 @@
     "relative": { "melee_damage": { "stab": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "mc_estoc",
     "type": "ITEM",
     "category": "weapons",
@@ -1406,7 +1411,7 @@
     "price_postapoc": "50 USD",
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 112 } ],
     "repairs_with": [ "mc_steel" ],
-    "techniques": [ "WBLOCK_2", "PRECISE" ],
+    "techniques": [ "WBLOCK_2", "PRECISE", "MOUNTED_CHARGE" ],
     "flags": [ "SHEATH_SWORD", "CONDUCTIVE", "DURABLE_MELEE" ],
     "weapon_category": [ "LONG_THRUSTING_SWORDS" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
@@ -1460,6 +1465,7 @@
     "replace_materials": { "mc_steel": "budget_steel" }
   },
   {
+    "mounted_charge": null,
     "id": "estoc_fake",
     "copy-from": "mc_estoc",
     "type": "ITEM",
@@ -1467,7 +1473,7 @@
     "description": "A dull, cheaply-made replica of a thin thrusting sword predating the rapier.  It requires a larger baldric or scabbard compared to smaller swords.",
     "proportional": { "melee_damage": { "bash": 1.2, "stab": 0.08 }, "price": 0.05, "price_postapoc": 0.05 },
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] },
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" }
   },
@@ -1494,6 +1500,7 @@
     "relative": { "melee_damage": { "cut": -5 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_longsword",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1511,7 +1518,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 112 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "WBLOCK_2", "BRUTAL", "RAPID" ],
+    "techniques": [ "WBLOCK_2", "BRUTAL", "RAPID", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 8 ] ],
     "weapon_category": [ "LONG_SWORDS", "LONG_THRUSTING_SWORDS" ],
@@ -1567,6 +1574,7 @@
     "delete": { "flags": [ "DURABLE_MELEE" ] }
   },
   {
+    "mounted_charge": null,
     "id": "longsword_fake",
     "copy-from": "mc_longsword",
     "type": "ITEM",
@@ -1575,7 +1583,7 @@
     "description": "A dull, cheaply-made replica of the classic medieval longsword.  It requires a larger baldric or scabbard compared to smaller swords.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 1.2, "cut": 0.08 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -1601,6 +1609,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_arming_sword",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1618,7 +1627,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 128 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 8 ] ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
@@ -1674,6 +1683,7 @@
     "delete": { "flags": [ "DURABLE_MELEE" ] }
   },
   {
+    "mounted_charge": null,
     "id": "arming_sword_fake",
     "copy-from": "mc_arming_sword",
     "type": "ITEM",
@@ -1681,7 +1691,7 @@
     "description": "A dull, cheaply-made replica of a classic medieval sword, just the right size to use one-handed.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 2.3, "cut": 0.07 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -1875,6 +1885,7 @@
     "relative": { "melee_damage": { "cut": 3 }, "qualities": [ [ "BUTCHER", 3 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "dao",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1890,7 +1901,7 @@
     "material": [ "bronze" ],
     "symbol": "/",
     "color": "yellow",
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 8 ] ],
     "flags": [ "DURABLE_MELEE", "SHEATH_SWORD" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
@@ -2036,6 +2047,7 @@
     "relative": { "melee_damage": { "cut": -5 }, "qualities": [ [ "BUTCHER", -2 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_wakizashi",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -2053,7 +2065,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 64 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "RAPID", "WBLOCK_2" ],
+    "techniques": [ "RAPID", "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 14 ] ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
@@ -2109,6 +2121,7 @@
     "delete": { "flags": [ "DURABLE_MELEE" ] }
   },
   {
+    "mounted_charge": null,
     "id": "wakizashi_fake",
     "copy-from": "mc_wakizashi",
     "type": "ITEM",
@@ -2117,7 +2130,7 @@
     "description": "A dull, cheap replica of the more common wakizashi.  Smaller and lighter than a katana, but still effective in combat.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 4, "cut": 0.066 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -2579,6 +2592,7 @@
     "melee_damage": { "bash": 3 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "sword_cane",
     "type": "ITEM",
     "symbol": "/",
@@ -2593,7 +2607,7 @@
     "longest_side": "80 cm",
     "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
     "looks_like": "rapier",
-    "techniques": [ "PRECISE", "RAPID", "WBLOCK_2" ],
+    "techniques": [ "PRECISE", "RAPID", "WBLOCK_2", "MOUNTED_CHARGE" ],
     "flags": [ "SHEATH_SWORD" ],
     "weapon_category": [ "MEDIUM_SWORDS", "FENCING_WEAPONRY" ],
     "faults": [ { "fault_group": "handle_short" }, { "fault_group": "blade_general", "weight_mult": 5 } ],
@@ -2613,6 +2627,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "broadsword",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -2630,7 +2645,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 112 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 9 ] ],
     "weapon_category": [ "MEDIUM_SWORDS", "FENCING_WEAPONRY" ],
@@ -2686,6 +2701,7 @@
     "delete": { "flags": [ "DURABLE_MELEE" ] }
   },
   {
+    "mounted_charge": null,
     "id": "broadsword_fake",
     "copy-from": "broadsword",
     "type": "ITEM",
@@ -2694,7 +2710,7 @@
     "description": "A dull, cheaply-made replica of an Early Modern sword that saw use in the 16th, 17th, and 18th centuries.  Called 'broad' to contrast with the slimmer rapiers.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 1.66, "cut": 0.11 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -2711,6 +2727,7 @@
     "relative": { "melee_damage": { "stab": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "rapier",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -2728,7 +2745,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 112 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "RAPID", "WBLOCK_2", "PRECISE" ],
+    "techniques": [ "RAPID", "WBLOCK_2", "PRECISE", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 9 ] ],
     "weapon_category": [ "FENCING_WEAPONRY" ],
@@ -2769,6 +2786,7 @@
     "relative": { "melee_damage": { "stab": 5 }, "qualities": [ [ "BUTCHER", 3 ] ] }
   },
   {
+    "mounted_charge": null,
     "id": "rapier_fake",
     "copy-from": "rapier",
     "type": "ITEM",
@@ -2777,7 +2795,7 @@
     "description": "A blunted, cheap replica of a thin sword with an ornate handguard.  It looks like the preferred weapon of gentlemen and swashbucklers.  Light and quick, it makes any battle a stylish battle.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 3, "stab": 0.071 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -2803,6 +2821,7 @@
     "relative": { "melee_damage": { "cut": -5 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_katana",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -2821,7 +2840,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 96 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "RAPID", "WBLOCK_2" ],
+    "techniques": [ "RAPID", "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 9 ] ],
     "weapon_category": [ "LONG_SWORDS" ],
@@ -2877,6 +2896,7 @@
     "delete": { "flags": [ "DURABLE_MELEE" ] }
   },
   {
+    "mounted_charge": null,
     "id": "katana_fake",
     "copy-from": "mc_katana",
     "type": "ITEM",
@@ -2885,10 +2905,11 @@
     "description": "A dull, cheaply-made replica of a rare sword from Japan.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 1.8, "cut": 0.064 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "jade_nagamaki",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],
@@ -2901,7 +2922,7 @@
     "material": [ "monolith" ],
     "//": "The stone blade isn't fully solid, and the idea is it gets AOE techniques and reach attacks from that (besides actually being quite long), should normally be inferior DPS wise vs a katana or nodachi.",
     "flags": [ "SPEAR", "REACH_ATTACK", "UNBREAKABLE_MELEE", "SHEATH_SWORD", "NONCONDUCTIVE" ],
-    "techniques": [ "WBLOCK_1", "WIDE", "SPIN" ],
+    "techniques": [ "WBLOCK_1", "WIDE", "SPIN", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "uneven" },
     "passive_effects": [ { "has": "WIELD", "values": [ { "value": "MELEE_STAMINA_CONSUMPTION", "multiply": -0.67 } ] } ],
     "melee_damage": { "bash": 10, "cut": 32 }
@@ -2956,6 +2977,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_cutlass",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -2973,7 +2995,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 144 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "WBLOCK_2" ],
+    "techniques": [ "WBLOCK_2", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 9 ] ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
@@ -3029,6 +3051,7 @@
     "delete": { "flags": [ "DURABLE_MELEE" ] }
   },
   {
+    "mounted_charge": null,
     "id": "cutlass_fake",
     "copy-from": "mc_cutlass",
     "type": "ITEM",
@@ -3037,7 +3060,7 @@
     "description": "A dull, cheaply-made replica of a broad saber known for its use by sailors and pirates.",
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
     "proportional": { "melee_damage": { "bash": 1.8, "cut": 0.076 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
@@ -3147,6 +3170,7 @@
     "relative": { "melee_damage": { "cut": -3 }, "qualities": [ [ "BUTCHER", -3 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_falx",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -3164,7 +3188,7 @@
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 80 } ],
     "repairs_with": [ "mc_steel" ],
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "SHEATH_SWORD" ],
-    "techniques": [ "WBLOCK_1", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "SWEEP", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -14 ] ],
     "weapon_category": [ "MEDIUM_SWORDS" ],
@@ -3209,6 +3233,7 @@
     "relative": { "melee_damage": { "cut": 4 }, "qualities": [ [ "BUTCHER", 3 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "//": "Do these even exist? Answer: yeah they did, at least there are two instances from ancient Egypt( although this one was more for ceremonies ) and by Shaolin(see Monk's spade')",
     "id": "lajatang",
@@ -3220,7 +3245,7 @@
     "price_postapoc": "12 USD 50 cent",
     "material": [ "wood", "iron" ],
     "ascii_picture": "lajatang",
-    "techniques": [ "WBLOCK_1", "SPIN" ],
+    "techniques": [ "WBLOCK_1", "SPIN", "MOUNTED_CHARGE" ],
     "weapon_category": [ "POLEARMS" ],
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "ALWAYS_TWOHAND" ],
     "weight": "2500 g",
@@ -3393,6 +3418,7 @@
     "relative": { "melee_damage": { "cut": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_talwar",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -3409,7 +3435,7 @@
     "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "neutral" },
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 144 } ],
     "repairs_with": [ "mc_steel" ],
-    "techniques": [ "WBLOCK_2", "RAPID", "BRUTAL" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "BRUTAL", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 2 ], [ "BUTCHER", 7 ] ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
     "weapon_category": [ "MEDIUM_SWORDS", "FENCING_WEAPONRY" ],
@@ -3467,6 +3493,7 @@
     "relative": { "melee_damage": { "cut": -5 }, "qualities": [ [ "BUTCHER", -1 ] ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "mc_kilij",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -3484,7 +3511,7 @@
     "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "neutral" },
     "material": [ { "type": "leather", "portion": 1.1 }, { "type": "mc_steel", "portion": 144 } ],
     "repairs_with": [ "mc_steel" ],
-    "techniques": [ "WBLOCK_2", "RAPID" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 2 ], [ "BUTCHER", 7 ] ],
     "flags": [ "DURABLE_MELEE", "CONDUCTIVE", "SHEATH_SWORD" ],
     "weapon_category": [ "MEDIUM_SWORDS" ],

@@ -1253,6 +1253,12 @@ class Character : public Creature, public visitable
         int active_technique_range( const matec_id &technique ) const;
         /** Executes one selected technique after checking its current target requirements. */
         bool use_active_technique( Creature &target, const matec_id &technique );
+        bool can_use_active_technique_at( const tripoint_bub_ms &position,
+                                          const matec_id &technique ) const;
+        bool use_active_technique( const tripoint_bub_ms &position, const matec_id &technique );
+        time_duration technique_cooldown_remaining( const matec_id &technique ) const;
+        void start_technique_cooldown( const matec_id &technique );
+        std::vector<std::pair<matec_id, time_duration>> active_technique_cooldowns() const;
         void perform_technique( const ma_technique &technique, Creature &t, damage_instance &di,
                                 int &move_cost, item_location &cur_weapon );
 

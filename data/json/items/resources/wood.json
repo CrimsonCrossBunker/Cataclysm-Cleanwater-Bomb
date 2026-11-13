@@ -38,6 +38,7 @@
     "stackable": true
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "stick",
     "symbol": "/",
@@ -45,7 +46,7 @@
     "name": { "str": "straight stick" },
     "description": "A respectable length of wood, just big enough to wrap your hand around.  Relatively straight and makes a decent melee weapon.",
     "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "flags": [ "TRADER_AVOID", "FIREWOOD" ],
     "weapon_category": [ "BATONS" ],
     "weight": "1500 g",

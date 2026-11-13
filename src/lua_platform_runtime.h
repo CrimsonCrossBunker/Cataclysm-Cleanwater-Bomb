@@ -361,7 +361,7 @@ std::optional<double> invoke_technique_cooldown_handler(
 std::optional<bool> invoke_technique_condition_handler(
     std::string_view technique_id, std::string_view mod_id,
     std::string_view handler_id, const Character &character,
-    std::string_view phase );
+    std::string_view phase, const Creature *target = nullptr );
 #else
 inline std::optional<double> invoke_technique_cooldown_handler(
     std::string_view, std::string_view, std::string_view, const Character &, double )
@@ -370,7 +370,7 @@ inline std::optional<double> invoke_technique_cooldown_handler(
 }
 inline std::optional<bool> invoke_technique_condition_handler(
     std::string_view, std::string_view, std::string_view,
-    const Character &, std::string_view )
+    const Character &, std::string_view, const Creature * = nullptr )
 {
     return std::nullopt;
 }
@@ -385,6 +385,45 @@ std::optional<double> invoke_mounted_charge_damage_handler(
 inline std::optional<double> invoke_mounted_charge_damage_handler(
     std::string_view, std::string_view, std::string_view, const Character &,
     const mounted_charge_profile &, int, double )
+{
+    return std::nullopt;
+}
+#endif
+struct grapple_plan {
+    bool allowed = false;
+    int stamina_cost = 0;
+    int move_cost = 0;
+    int duration_turns = 0;
+    float damage = 0.0f;
+};
+
+struct technique_position_plan {
+    bool allowed = false;
+    int stamina_cost = 0;
+    int move_cost = 0;
+    int bash_power = 0;
+};
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+std::optional<technique_position_plan> invoke_technique_position_handler(
+    std::string_view technique_id, std::string_view mod_id,
+    std::string_view handler_id, const Character &attacker,
+    const tripoint_bub_ms &position, std::string_view phase );
+
+std::optional<grapple_plan> invoke_technique_grapple_handler(
+    std::string_view technique_id, std::string_view mod_id,
+    std::string_view handler_id, const Character &attacker, const Creature &target,
+    int power, int base_stamina );
+#else
+inline std::optional<technique_position_plan> invoke_technique_position_handler(
+    std::string_view, std::string_view, std::string_view,
+    const Character &, const tripoint_bub_ms &, std::string_view )
+{
+    return std::nullopt;
+}
+inline std::optional<grapple_plan> invoke_technique_grapple_handler(
+    std::string_view, std::string_view, std::string_view,
+    const Character &, const Creature &, int, int )
 {
     return std::nullopt;
 }

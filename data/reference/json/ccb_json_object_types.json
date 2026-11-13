@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:064b25844b4ac2e4742a5a5393e1a65a9929b146b6d1e9f253e7b95f8f226805",
+    "source_fingerprint": "sha256:e89ad395c4edfe3f97c532135f8722a1387b2c07bc677377de1b7b0e5c252f4b",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6853,
-    "top_level_objects": 95455,
+    "top_level_objects": 95447,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15225,
+        "occurrences": 15223,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -339,7 +339,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1103,
+        "occurrences": 1105,
         "examples": [
           {
             "path": "data/json/items/comestibles/irradiated_fruit_migration.json",
@@ -1449,7 +1449,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MARTIALART_JSON.md",
-            "line": 277
+            "line": 330
           }
         ],
         "confidence": "lexical_only"
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8216,
+        "occurrences": 8214,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -9633,11 +9633,11 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 360,
+        "occurrences": 354,
         "examples": [
           {
-            "path": "data/json/martial_grappling.json",
-            "pointer": "/4"
+            "path": "data/json/martialarts_fictional.json",
+            "pointer": "/7"
           }
         ],
         "contract_roots": [
@@ -10006,7 +10006,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 1414
+            "line": 1424
           }
         ],
         "confidence": "lexical_only"

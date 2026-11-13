@@ -13185,11 +13185,11 @@ void firstaid_activity_actor::serialize( JsonOut &jsout ) const
     jsout.end_object();
 }
 
-std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue &jsin )
+std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue &input )
 {
     firstaid_activity_actor actor( {},  {}, {} );
 
-    JsonObject data = jsin.get_object();
+    JsonObject data = input.get_object();
 
     data.read( "moves", actor.moves );
     data.read( "name", actor.name );
@@ -19307,7 +19307,7 @@ void mounted_charge_activity_actor::start( player_activity &act, Character &who 
     if( !valid_state( who, weapon ) ||
         ( !cooldown_started &&
           who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ) ||
-        !tec_mounted_charge->activation_allowed( who, "start" ) ) {
+        !tec_mounted_charge->activation_allowed( who, cooldown_started ? "continue" : "start" ) ) {
         stop( act );
         return;
     }
@@ -19405,7 +19405,7 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
 
         who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
                 tec_mounted_charge->charge_damage_multiplier( who, profile, completed_steps ) );
-        const bool attacked = who.melee_attack( *target, false );
+        const bool attacked = who.melee_attack( *target, false, matec_id(), false );
         who.clear_mounted_charge_stab_multiplier();
         if( attacked && !cooldown_started ) {
             who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
@@ -19438,10 +19438,11 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
         }
     }
 
+    const tripoint_abs_ms before = who.pos_abs();
     const int moves_before = who.get_moves();
     const tripoint_rel_ms direction = next - current;
     avatar_action::move( *player, here, direction );
-    if( who.get_moves() < moves_before && !cooldown_started ) {
+    if( !cooldown_started && ( who.pos_abs() != before || who.get_moves() < moves_before ) ) {
         who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
         cooldown_started = true;
     }
@@ -19506,6 +19507,7 @@ std::unique_ptr<activity_actor> mounted_charge_activity_actor::deserialize( Json
     data.read( "weapon_uid", actor.weapon_uid );
     data.read( "origin", actor.origin );
     data.read( "charge_item_type", actor.charge_item_type );
+    actor.charge_item_type = item_controller->migrate_id( actor.charge_item_type );
     data.read( "completed_steps", actor.completed_steps );
     actor.cooldown_started = actor.completed_steps > 0;
     data.read( "cooldown_started", actor.cooldown_started );

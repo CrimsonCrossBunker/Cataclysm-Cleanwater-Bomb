@@ -18,6 +18,7 @@
 #include "uilist.h"
 
 class Character;
+class Creature;
 class JsonObject;
 class effect;
 class item;
@@ -37,6 +38,8 @@ class items_content_transaction;
 const matec_id tec_none( "tec_none" );
 /** Special weapon-provided active technique handled by the mounted charge action. */
 const matec_id tec_mounted_charge( "MOUNTED_CHARGE" );
+
+bool martial_grapple_blocks_movement( Creature &target );
 
 class weapon_category
 {
@@ -211,6 +214,9 @@ class ma_technique
         time_duration activation_cooldown( const Character &character ) const;
         time_duration cooldown = 0_turns;
         std::string lua_platform_cooldown_handler;
+        bool targets_position() const;
+        bool activation_allowed( const Character &character, std::string_view phase,
+                                 const Creature *target ) const;
 
         std::set<std::string> flags;
 
@@ -278,12 +284,14 @@ class ma_technique
         std::string lua_platform_condition_handler;
         std::string lua_platform_charge_damage_handler;
         std::string lua_platform_apply_handler;
+        std::string lua_platform_grapple_handler;
 
         float charge_damage_multiplier( const Character &character,
                                         const mounted_charge_profile &profile, int completed_steps ) const;
 
         float damage_bonus( const Character &u, const damage_type_id &type ) const;
         float damage_multiplier( const Character &u, const damage_type_id &type ) const;
+        float hit_bonus( const Character &u ) const;
         float move_cost_multiplier( const Character &u ) const;
         float move_cost_penalty( const Character &u ) const;
         float armor_penetration( const Character &u, const damage_type_id &type ) const;

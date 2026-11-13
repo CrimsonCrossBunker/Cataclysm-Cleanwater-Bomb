@@ -1,5 +1,6 @@
 [
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "pitchfork",
     "name": { "str": "pitchfork" },
@@ -9,7 +10,7 @@
     "color": "brown",
     "symbol": "/",
     "material": [ "steel", "wood" ],
-    "techniques": [ "WBLOCK_1", "DEF_DISARM" ],
+    "techniques": [ "WBLOCK_1", "DEF_DISARM", "MOUNTED_CHARGE" ],
     "volume": "1750 ml",
     "longest_side": "140 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -42,6 +43,7 @@
     "melee_damage": { "bash": 5, "stab": 9 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "pointy_stick_long",
     "name": { "str": "long pointy stick" },
@@ -52,7 +54,7 @@
     "looks_like": "spear_wood",
     "symbol": "/",
     "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "volume": "2500 ml",
     "longest_side": "205 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -64,6 +66,7 @@
     "melee_damage": { "bash": 5, "stab": 9 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_wood",
     "name": { "str": "fire-hardened wooden spear" },
@@ -73,7 +76,7 @@
     "color": "brown",
     "symbol": "/",
     "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1750 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -93,6 +96,7 @@
     "description": "A stout wooden pole with a whittled point."
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_shaft_sharpened",
     "name": { "str": "sharpened spear shaft" },
@@ -103,7 +107,7 @@
     "symbol": "/",
     "looks_like": "spear_wood",
     "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1250 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
@@ -116,6 +120,7 @@
     "melee_damage": { "bash": 4, "stab": 18 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "makeshift_scythe_war",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -131,7 +136,7 @@
     "material": [ "steel", "wood" ],
     "symbol": "/",
     "color": "light_gray",
-    "techniques": [ "WIDE", "BRUTAL" ],
+    "techniques": [ "WIDE", "BRUTAL", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -22 ] ],
     "flags": [ "FRAGILE_MELEE", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "REACH_ATTACK", "ALWAYS_TWOHAND" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 2 }, { "fault_group": "spearhead" } ],
@@ -139,6 +144,7 @@
     "melee_damage": { "bash": 16, "cut": 40 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "makeshift_halberd",
     "type": "ITEM",
     "name": { "str": "simple makeshift glaive" },
@@ -154,7 +160,7 @@
     "material": [ "steel", "wood" ],
     "symbol": "/",
     "color": "light_gray",
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -42 ] ],
     "flags": [ "REACH_ATTACK", "POLEARM", "NONCONDUCTIVE", "SHEATH_SPEAR", "FRAGILE_MELEE" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 2 }, { "fault_group": "blade_general" } ],
@@ -173,6 +179,7 @@
     "delete": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_spike",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -189,7 +196,7 @@
     "symbol": "/",
     "color": "brown",
     "looks_like": "spear_steel",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "NONCONDUCTIVE", "FRAGILE_MELEE", "SHEATH_SPEAR" ],
@@ -211,6 +218,7 @@
     "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_knife_superior",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -227,7 +235,7 @@
     "symbol": "/",
     "color": "brown",
     "looks_like": "spear_steel",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 1 ], [ "COOK", 1 ], [ "BUTCHER", -28 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "NONCONDUCTIVE", "SHEATH_SPEAR" ],
@@ -236,6 +244,7 @@
     "melee_damage": { "bash": 4, "stab": 26 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_knife_proper",
     "name": { "str": "knife spear" },
@@ -246,7 +255,7 @@
     "symbol": "/",
     "looks_like": "spear_steel",
     "material": [ "steel", "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1350 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
@@ -259,6 +268,7 @@
     "melee_damage": { "bash": 4, "stab": 26 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_homemade_halfpike",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -275,7 +285,7 @@
     "symbol": "/",
     "color": "brown",
     "looks_like": "spear_steel",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "NONCONDUCTIVE", "SHEATH_SPEAR" ],
@@ -284,6 +294,7 @@
     "melee_damage": { "bash": 4, "stab": 24 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_steel_crude",
     "name": { "str": "crude steel spear" },
@@ -294,7 +305,7 @@
     "symbol": "/",
     "looks_like": "spear_steel",
     "material": [ { "type": "wood", "portion": 95 }, { "type": "mc_steel", "portion": 5 } ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1350 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
@@ -310,7 +321,7 @@
     "id": "crude_goedendag",
     "copy-from": "spear_steel_crude",
     "relative": { "melee_damage": { "bash": 18, "stab": -14 }, "longest_side": "-30 cm" },
-    "techniques": [ "WBLOCK_1", "BRUTAL" ],
+    "techniques": [ "WBLOCK_1", "BRUTAL", "MOUNTED_CHARGE" ],
     "type": "ITEM",
     "name": { "str": "crude goedendag" },
     "description": "A stout wooden pole, slightly thicker at the end, with a metal cap and a spike protruding straight up from the top.",
@@ -318,6 +329,7 @@
     "faults": [ { "fault_group": "handle_long" } ]
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_copper",
     "name": { "str": "copper spear" },
@@ -327,7 +339,7 @@
     "color": "light_red",
     "symbol": "/",
     "material": [ "copper", "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1350 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
@@ -340,6 +352,7 @@
     "melee_damage": { "bash": 4, "stab": 28 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_steel",
     "name": { "str": "medium steel spear" },
@@ -349,7 +362,7 @@
     "color": "light_gray",
     "symbol": "/",
     "material": [ "mc_steel", "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1350 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
@@ -360,29 +373,6 @@
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "melee_damage": { "bash": 6, "stab": 30 }
-  },
-  {
-    "type": "ITEM",
-    "id": "mounted_lance",
-    "name": { "str": "mounted lance" },
-    "description": "A long, balanced lance built to deliver a concentrated thrust from an advancing animal mount.",
-    "weight": "2500 g",
-    "price": "220 USD",
-    "price_postapoc": "80 USD",
-    "color": "light_gray",
-    "symbol": "/",
-    "material": [ "mc_steel", "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
-    "volume": "2000 ml",
-    "longest_side": "220 cm",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "good" },
-    "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
-    "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "spearhead" } ],
-    "weapon_category": [ "SPEARS" ],
-    "qualities": [ [ "COOK", 1 ] ],
-    "use_action": [ "HEAT_SOLID_ITEMS" ],
-    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
-    "melee_damage": { "bash": 5, "stab": 32 }
   },
   {
     "id": "lc_spear_steel",
@@ -451,6 +441,7 @@
     "melee_damage": { "bash": 3, "stab": 13 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "simple_spear_pipe",
     "name": { "str": "basic pipe spear" },
@@ -461,7 +452,7 @@
     "looks_like": "spear_pipe",
     "symbol": "/",
     "material": [ "steel" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1130 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -474,6 +465,7 @@
     "melee_damage": { "bash": 6, "stab": 18 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_pipe",
     "name": { "str": "pipe spear" },
@@ -483,7 +475,7 @@
     "color": "light_gray",
     "symbol": "/",
     "material": [ "steel" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "1135 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -572,6 +564,7 @@
     "melee_damage": { "bash": 6, "stab": 13 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "spear_rebar",
     "symbol": "/",
@@ -586,7 +579,7 @@
     "longest_side": "165 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
     "faults": [ { "fault_group": "steel_pipe_long" } ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "FRAGILE_MELEE", "SHEATH_SPEAR" ],
     "weapon_category": [ "SPEARS" ],
     "qualities": [ [ "COOK", 1 ], [ "HAMMER", 1 ] ],
@@ -594,6 +587,7 @@
     "melee_damage": { "bash": 5, "stab": 16 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "qiang",
     "name": { "str_sp": "qiang" },
@@ -604,7 +598,7 @@
     "symbol": "/",
     "looks_like": "spear_steel",
     "material": [ "steel", "wood" ],
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "volume": "3 L",
     "longest_side": "250 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "point", "balance": "neutral" },
@@ -617,6 +611,7 @@
     "melee_damage": { "bash": 8, "stab": 43 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "halberd",
     "type": "ITEM",
     "symbol": "/",
@@ -628,7 +623,7 @@
     "ascii_picture": "halberd",
     "flags": [ "DURABLE_MELEE", "REACH_ATTACK", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
     "weapon_category": [ "HOOKING_WEAPONRY", "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "WIDE", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "WIDE", "SWEEP", "MOUNTED_CHARGE" ],
     "weight": "3175 g",
     "volume": "3750 ml",
     "longest_side": "180 cm",
@@ -641,13 +636,14 @@
     "melee_damage": { "bash": 15, "cut": 49 }
   },
   {
+    "mounted_charge": null,
     "id": "halberd_fake",
     "copy-from": "halberd",
     "type": "ITEM",
     "name": { "str": "halberd" },
     "description": "A dull, cheaply made replica of a polearm with an axe blade, a spike, and other fun things attached to a thick pole.",
     "proportional": { "melee_damage": { "bash": 1.2, "cut": 0.1 } },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] },
     "material": [ "aluminum", "wood" ],
     "weight": "1644 g",
@@ -656,6 +652,7 @@
     "price_postapoc": "5 USD"
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "halberd_crude",
     "type": "ITEM",
     "symbol": "/",
@@ -667,7 +664,7 @@
     "ascii_picture": "halberd",
     "flags": [ "DURABLE_MELEE", "REACH_ATTACK", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
     "weapon_category": [ "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "WIDE", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "WIDE", "SWEEP", "MOUNTED_CHARGE" ],
     "weight": "2930 g",
     "//": "Average weight of wood axe head (2.5lb) and fireaxe head (6lb) + 1kg spear shaft",
     "volume": "2 L",
@@ -680,6 +677,7 @@
     "melee_damage": { "bash": 14, "cut": 26 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "bill_hook",
     "type": "ITEM",
     "category": "weapons",
@@ -696,13 +694,14 @@
     "color": "brown",
     "looks_like": "glaive",
     "qualities": [ [ "AXE", 1 ], [ "CUT", 1 ], [ "BUTCHER", -70 ] ],
-    "techniques": [ "WBLOCK_1", "BRUTAL", "WIDE", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "BRUTAL", "WIDE", "SWEEP", "MOUNTED_CHARGE" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "flags": [ "DURABLE_MELEE", "REACH_ATTACK", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
     "weapon_category": [ "POLEARMS", "HOOKING_WEAPONRY" ],
     "melee_damage": { "bash": 18, "cut": 35 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "glaive",
     "type": "ITEM",
     "symbol": "/",
@@ -715,7 +714,7 @@
     "flags": [ "DURABLE_MELEE", "REACH_ATTACK", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "HOOKING_WEAPONRY", "POLEARMS" ],
-    "techniques": [ "WIDE", "WBLOCK_1" ],
+    "techniques": [ "WIDE", "WBLOCK_1", "MOUNTED_CHARGE" ],
     "weight": "2360 g",
     "volume": "2500 ml",
     "longest_side": "250 cm",
@@ -724,6 +723,7 @@
     "melee_damage": { "bash": 10, "cut": 40 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "naginata",
     "name": { "str_sp": "naginata" },
@@ -732,7 +732,7 @@
     "color": "light_gray",
     "symbol": "/",
     "material": [ "steel", "wood" ],
-    "techniques": [ "WIDE", "WBLOCK_1" ],
+    "techniques": [ "WIDE", "WBLOCK_1", "MOUNTED_CHARGE" ],
     "volume": "2500 ml",
     "longest_side": "180 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
@@ -758,13 +758,14 @@
     "price_postapoc": "15 USD"
   },
   {
+    "mounted_charge": null,
     "id": "naginata_fake",
     "copy-from": "naginata",
     "type": "ITEM",
     "name": { "str_sp": "naginata" },
     "description": "A dull, slightly floppy replica of a Japanese polearm with a curved blade.  With a little difficulty, you could use it administer a solid slap from a distance.",
     "proportional": { "melee_damage": { "bash": 1.5, "cut": 0.05 } },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] },
     "material": [ "aluminum", "wood" ],
     "weight": "1400 g",
@@ -773,6 +774,7 @@
     "price_postapoc": "5 USD"
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "naginata_machete",
     "name": { "str_sp": "machete naginata" },
@@ -781,7 +783,7 @@
     "color": "light_gray",
     "symbol": "/",
     "material": [ { "type": "wood", "portion": 25 }, { "type": "mc_steel", "portion": 21 } ],
-    "techniques": [ "WIDE", "WBLOCK_1" ],
+    "techniques": [ "WIDE", "WBLOCK_1", "MOUNTED_CHARGE" ],
     "volume": "2040 ml",
     "longest_side": "200 cm",
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
@@ -806,6 +808,7 @@
     "melee_damage": { "bash": 3, "cut": 35 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "javelin",
     "name": { "str": "wooden javelin" },
@@ -814,7 +817,7 @@
     "color": "brown",
     "symbol": "/",
     "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "volume": "1 L",
     "longest_side": "140 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -829,6 +832,7 @@
     "melee_damage": { "stab": 11 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "type": "ITEM",
     "id": "javelin_iron",
     "name": { "str": "iron javelin" },
@@ -837,7 +841,7 @@
     "color": "light_gray",
     "symbol": "/",
     "material": [ "wood", "iron" ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "volume": "1 L",
     "longest_side": "140 cm",
     "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
@@ -852,6 +856,7 @@
     "melee_damage": { "bash": 5, "stab": 19 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "pike_wood",
     "type": "ITEM",
     "category": "weapons",
@@ -867,7 +872,7 @@
     "symbol": "/",
     "color": "brown",
     "looks_like": "pike",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "DURABLE_MELEE", "POLEARM", "SPEAR", "REACH_ATTACK", "REACH3", "NONCONDUCTIVE", "ALWAYS_TWOHAND" ],
@@ -876,6 +881,7 @@
     "melee_damage": { "bash": 9, "stab": 16 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "pike_copper",
     "type": "ITEM",
     "category": "weapons",
@@ -891,7 +897,7 @@
     "symbol": "/",
     "color": "brown",
     "looks_like": "pike",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "DURABLE_MELEE", "POLEARM", "SPEAR", "REACH_ATTACK", "REACH3", "NONCONDUCTIVE", "ALWAYS_TWOHAND" ],
@@ -900,6 +906,7 @@
     "melee_damage": { "bash": 9, "stab": 23 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "pike_bronze",
     "type": "ITEM",
     "name": { "ctxt": "weapon", "str": "bronze pike" },
@@ -914,7 +921,7 @@
     "symbol": "/",
     "color": "brown",
     "looks_like": "pike_copper",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "DURABLE_MELEE", "POLEARM", "SPEAR", "REACH_ATTACK", "REACH3", "NONCONDUCTIVE", "ALWAYS_TWOHAND" ],
@@ -924,6 +931,7 @@
     "melee_damage": { "bash": 9, "stab": 28 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "pike",
     "type": "ITEM",
     "name": { "ctxt": "weapon", "str": "medium steel pike" },
@@ -937,7 +945,7 @@
     "material": [ "mc_steel", "wood" ],
     "symbol": "/",
     "color": "brown",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "DURABLE_MELEE", "POLEARM", "SPEAR", "REACH_ATTACK", "REACH3", "NONCONDUCTIVE", "ALWAYS_TWOHAND" ],
@@ -992,13 +1000,14 @@
     "relative": { "melee_damage": { "stab": 5 } }
   },
   {
+    "mounted_charge": null,
     "id": "pike_fake",
     "copy-from": "pike",
     "type": "ITEM",
     "name": { "str": "pike", "ctxt": "weapon" },
     "description": "A dull, cheaply made replica of a medieval weapon consisting of a very long wooden shaft tipped with an iron spearhead.",
     "proportional": { "melee_damage": { "bash": 1.44, "stab": 0.06 } },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
+    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
     "extend": { "flags": [ "FRAGILE_MELEE" ] },
     "material": [ "aluminum", "wood" ],
     "weight": "2000 g",
@@ -1019,6 +1028,7 @@
     "price_postapoc": "12 USD 50 cent"
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "scythe_war",
     "name": { "str": "war scythe" },
@@ -1032,7 +1042,7 @@
     "material": [ "steel", "wood" ],
     "symbol": "/",
     "color": "light_gray",
-    "techniques": [ "WIDE", "BRUTAL" ],
+    "techniques": [ "WIDE", "BRUTAL", "MOUNTED_CHARGE" ],
     "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -22 ] ],
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "REACH_ATTACK", "ALWAYS_TWOHAND" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
@@ -1040,6 +1050,7 @@
     "melee_damage": { "bash": 17, "cut": 42 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_dory",
     "type": "ITEM",
     "name": { "str": "dory", "str_pl": "dories" },
@@ -1053,7 +1064,7 @@
     "material": [ "bronze", "wood" ],
     "symbol": "/",
     "color": "yellow",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "DURABLE_MELEE", "SHEATH_SPEAR", "NONCONDUCTIVE", "POLEARM" ],
@@ -1085,6 +1096,7 @@
     "melee_damage": { "cut": 12, "stab": 35 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_bronze",
     "type": "ITEM",
     "name": { "str": "bronze spear" },
@@ -1099,7 +1111,7 @@
     "symbol": "/",
     "color": "yellow",
     "looks_like": "spear_dory",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "DURABLE_MELEE", "SHEATH_SPEAR", "NONCONDUCTIVE" ],
@@ -1108,6 +1120,7 @@
     "melee_damage": { "bash": 5, "stab": 29 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "poleaxe",
     "type": "ITEM",
     "symbol": "/",
@@ -1120,7 +1133,7 @@
     "flags": [ "DURABLE_MELEE", "REACH_ATTACK", "NONCONDUCTIVE", "POLEARM", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "HOOKING_WEAPONRY", "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "WIDE", "BRUTAL" ],
+    "techniques": [ "WBLOCK_1", "WIDE", "BRUTAL", "MOUNTED_CHARGE" ],
     "weight": "2200 g",
     "volume": "3000 ml",
     "longest_side": "160 cm",
@@ -1131,6 +1144,7 @@
     "melee_damage": { "bash": 28, "cut": 31 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "ji",
     "type": "ITEM",
     "name": { "str_sp": "ji" },
@@ -1145,13 +1159,14 @@
     "material": [ "wood", "bronze" ],
     "symbol": "/",
     "color": "yellow",
-    "techniques": [ "WBLOCK_1", "DEF_DISARM" ],
+    "techniques": [ "WBLOCK_1", "DEF_DISARM", "MOUNTED_CHARGE" ],
     "flags": [ "DURABLE_MELEE", "POLEARM", "REACH_ATTACK", "ALWAYS_TWOHAND", "NONCONDUCTIVE", "SHEATH_SPEAR", "SPEAR" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "HOOKING_WEAPONRY", "POLEARMS" ],
     "melee_damage": { "bash": 9, "cut": 53 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_stone",
     "type": "ITEM",
     "name": { "str": "stone spear" },
@@ -1166,7 +1181,7 @@
     "ascii_picture": "spear_stone",
     "symbol": "/",
     "color": "light_gray",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "SHEATH_SPEAR" ],
@@ -1175,6 +1190,7 @@
     "melee_damage": { "bash": 8, "stab": 20 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "spear_stone_simple",
     "type": "ITEM",
     "name": { "str": "simple stone spear" },
@@ -1190,7 +1206,7 @@
     "symbol": "/",
     "color": "light_gray",
     "looks_like": "spear_stone",
-    "techniques": [ "WBLOCK_1", "PENETRATE" ],
+    "techniques": [ "WBLOCK_1", "PENETRATE", "MOUNTED_CHARGE" ],
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "SPEAR", "REACH_ATTACK", "SHEATH_SPEAR" ],
@@ -1199,6 +1215,7 @@
     "melee_damage": { "bash": 8, "stab": 20 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "aztec_spear_scrap",
     "name": "makeshift tepoztopili",
@@ -1214,11 +1231,12 @@
     "flags": [ "NONCONDUCTIVE", "FRAGILE_MELEE", "REACH_ATTACK", "POLEARM", "SHEATH_SPEAR" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "SWEEP", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "uneven" },
     "melee_damage": { "bash": 10, "cut": 10 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "aztec_spear_glass",
     "name": "glass bladed tepoztopili",
@@ -1234,11 +1252,12 @@
     "flags": [ "NONCONDUCTIVE", "FRAGILE_MELEE", "REACH_ATTACK", "POLEARM", "SHEATH_SPEAR" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "SWEEP", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "uneven" },
     "melee_damage": { "bash": 10, "cut": 8 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "aztec_spear_stone",
     "name": "stone bladed tepoztopili",
@@ -1254,11 +1273,12 @@
     "flags": [ "NONCONDUCTIVE", "FRAGILE_MELEE", "REACH_ATTACK", "POLEARM", "SHEATH_SPEAR" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "SWEEP", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "uneven" },
     "melee_damage": { "bash": 14, "cut": 4 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "type": "ITEM",
     "id": "lc_aztec_spear",
     "name": "mild steel bladed tepoztopili",
@@ -1274,7 +1294,7 @@
     "flags": [ "NONCONDUCTIVE", "DURABLE_MELEE", "REACH_ATTACK", "POLEARM", "SHEATH_SPEAR", "SPEAR" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "weapon_category": [ "POLEARMS" ],
-    "techniques": [ "WBLOCK_1", "SWEEP", "WIDE" ],
+    "techniques": [ "WBLOCK_1", "SWEEP", "WIDE", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
     "melee_damage": { "bash": 18, "cut": 12 }
   },
