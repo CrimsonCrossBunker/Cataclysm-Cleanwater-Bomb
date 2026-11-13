@@ -17,6 +17,7 @@
     "price_postapoc": "2 USD 50 cent",
     "throw_correction_data": {
       "required_flag": "SLING_PROJECTILE",
+      "allow_ammotype": [ "pebble" ],
       "min_weight": "1 g",
       "max_weight": "700 g",
       "max_volume": "500 ml",
@@ -78,6 +79,7 @@
     "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "uneven" },
     "throw_correction_data": {
       "required_flag": "SLING_PROJECTILE",
+      "allow_ammotype": [ "pebble" ],
       "min_weight": "1 g",
       "max_weight": "1200 g",
       "max_volume": "1 L",
@@ -136,6 +138,7 @@
     "price_postapoc": "2 USD 50 cent",
     "throw_correction_data": {
       "required_flag": "SLING_PROJECTILE",
+      "allow_ammotype": [ "pebble" ],
       "min_weight": "1 g",
       "max_weight": "900 g",
       "max_volume": "500 ml",
