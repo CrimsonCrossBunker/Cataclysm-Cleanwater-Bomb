@@ -3,7 +3,7 @@
     "type": "item_group",
     "id": "test_throwing_empty_gear",
     "subtype": "collection",
-    "items": []
+    "items": [  ]
   },
   {
     "type": "npc_class",

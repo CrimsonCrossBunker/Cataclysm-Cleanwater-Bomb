@@ -248,7 +248,7 @@ TEST_CASE( "throw_correction_full_bonus_skill_loading", "[throwing]" )
     }
     SECTION( "invalid_requirements_are_rejected" ) {
         const std::string definition = GENERATE( R"({"full_bonus_skill":-1})",
-                                                R"({"full_bonus_skill":"3"})" );
+                                       R"({"full_bonus_skill":"3"})" );
         CHECK_THROWS_AS( correction.deserialize( json_loader::from_string( definition ).get_object() ),
                          JsonError );
     }
@@ -301,7 +301,7 @@ TEST_CASE( "throwing_aid_proficiency_preserves_penalties", "[throwing]" )
     you.set_skill_level( skill_throw, skill );
     const float proficiency = std::min( 1.0f, skill / 3.0f );
     item aid( itype_id( lighter ? "test_throw_correction_skill_light" :
-                       "test_throw_correction_skill" ) );
+                        "test_throw_correction_skill" ) );
     REQUIRE( aid.type->throw_correction );
     REQUIRE( aid.type->throw_correction->full_bonus_skill == 3 );
     REQUIRE( you.wield( aid ) );

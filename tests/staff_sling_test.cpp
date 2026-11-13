@@ -165,7 +165,7 @@ TEST_CASE( "sling_ignition_requirements_and_hand_activation", "[ranged][sling]" 
         CHECK_FALSE( ammo->active );
     }
     const item_location lighter = you.i_add( tool_with_ammo( itype_test_throwing_firestarter,
-                                            100 ) );
+                                  100 ) );
     REQUIRE( lighter );
     INFO( can_launch_sling( you, ammo ).str() );
     REQUIRE( can_launch_sling( you, ammo ).success() );

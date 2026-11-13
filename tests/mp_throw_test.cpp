@@ -350,9 +350,9 @@ TEST_CASE( "authoritative_sling_matches_native_ignition_damage_cost_and_rng",
     item_location ammo = add_projectile_to_backpack( who, ammo_id );
     item_location reference_ammo = add_projectile_to_backpack( reference, ammo_id );
     item_location lighter = who.i_add( tool_with_ammo( itype_id( "test_throwing_firestarter" ),
-                                      100 ) );
+                                       100 ) );
     item_location reference_lighter = reference.i_add( tool_with_ammo(
-                                         itype_id( "test_throwing_firestarter" ), 100 ) );
+                                          itype_id( "test_throwing_firestarter" ), 100 ) );
     REQUIRE( can_launch_sling( who, ammo ).success() );
     REQUIRE( can_launch_sling( reference, reference_ammo ).success() );
     who.set_moves( 1000 );
@@ -407,7 +407,7 @@ TEST_CASE( "authoritative_sling_rejections_do_not_light_or_consume_ammo",
     who.set_wielded_item( item( itype_id( "test_throwing_aid" ) ) );
     item_location ammo = add_projectile_to_backpack( who, itype_id( "test_sling_payload_fire" ) );
     item_location lighter = who.i_add( tool_with_ammo( itype_id( "test_throwing_firestarter" ),
-                                      100 ) );
+                                       100 ) );
     REQUIRE( can_launch_sling( who, ammo ).success() );
     auto intent = cata_mp::make_throw_intent( who, ammo );
     intent.method = cata_mp::throw_method::sling;

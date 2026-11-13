@@ -73,11 +73,7 @@
     "name": "TEST throwing launcher",
     "description": "A throwing aid that also launches test sling payloads.",
     "flags": [ "THROW_KEEP_WIELDED", "SLING_LAUNCHER" ],
-    "throw_correction_data": {
-      "throw_damage_multiplier": 1.5,
-      "throw_range_multiplier": 2.0,
-      "throw_weight_multiplier": 1.8
-    }
+    "throw_correction_data": { "throw_damage_multiplier": 1.5, "throw_range_multiplier": 2.0, "throw_weight_multiplier": 1.8 }
   },
   {
     "type": "ITEM",
@@ -161,7 +157,13 @@
     "symbol": "[",
     "color": "white",
     "pocket_data": [
-      { "pocket_type": "CONTAINER", "holster": true, "max_contains_volume": "1 L", "max_contains_weight": "1 kg", "moves": 50 }
+      {
+        "pocket_type": "CONTAINER",
+        "holster": true,
+        "max_contains_volume": "1 L",
+        "max_contains_weight": "1 kg",
+        "moves": 50
+      }
     ],
     "use_action": { "type": "holster", "holster_prompt": "Store test item", "holster_msg": "You store the test item." },
     "flags": [ "BELTED" ],
