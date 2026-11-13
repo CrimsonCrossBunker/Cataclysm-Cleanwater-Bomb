@@ -33,8 +33,10 @@
 #include "type_id.h"
 
 static const flag_id json_flag_SLING_PROJECTILE( "SLING_PROJECTILE" );
+static const flag_id json_flag_THROW_KEEP_WIELDED( "THROW_KEEP_WIELDED" );
 
 static const itype_id itype_9mm( "9mm" );
+static const itype_id itype_atlatl( "atlatl" );
 static const itype_id itype_grenade( "grenade" );
 static const itype_id itype_javelin_iron( "javelin_iron" );
 static const itype_id itype_pebble( "pebble" );
@@ -520,6 +522,41 @@ TEST_CASE( "throw_correction_flag_requirements", "[throwing]" )
     SECTION( "outer_groups_are_alternatives" ) {
         item matching( itype_grenade );
         check_throw_correction( you, matching, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f );
+    }
+}
+
+TEST_CASE( "atlatls_correct_darts_and_javelins", "[throwing][atlatl]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    item atlatl( itype_atlatl );
+    CHECK_FALSE( atlatl.is_gun() );
+    REQUIRE( atlatl.has_flag( json_flag_THROW_KEEP_WIELDED ) );
+
+    SECTION( "compatible_projectiles" ) {
+        const itype_id projectile_id = GENERATE( itype_id( "wood_atlatl_spear" ),
+                                                itype_id( "bronze_atlatl_spear" ),
+                                                itype_id( "steel_atlatl_spear" ),
+                                                itype_id( "javelin" ),
+                                                itype_id( "javelin_iron" ),
+                                                itype_id( "javelin_fletched" ),
+                                                itype_id( "javelin_fletched_bronze" ),
+                                                itype_id( "nether_huntsman_javelin" ) );
+        CAPTURE( projectile_id );
+        const item projectile( projectile_id, calendar::turn, 1 );
+        const int unassisted_range = you.throw_range( projectile );
+        const int unassisted_cost = throw_cost( you, projectile );
+        REQUIRE( you.wield( atlatl ) );
+
+        check_throw_correction( you, projectile, 1.5f, 2.0f, 1.25f, 1.0f, 1.25f, 1.25f );
+        CHECK( you.throw_range( projectile ) > unassisted_range );
+        CHECK( throw_cost( you, projectile ) > unassisted_cost );
+    }
+    SECTION( "unrelated_projectiles" ) {
+        REQUIRE( you.wield( atlatl ) );
+        const itype_id projectile_id = GENERATE( itype_rock, itype_throwing_knife );
+        const item projectile( projectile_id );
+        check_throw_correction( you, projectile, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 }
 
