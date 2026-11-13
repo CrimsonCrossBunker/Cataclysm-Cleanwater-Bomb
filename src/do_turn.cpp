@@ -1239,10 +1239,18 @@ void game::simulate_turn_suffix()
     m.build_floor_caches();
 
     m.process_falling();
-    m.vehmove();
     auto &session = multiplayer_session();
     if( session.has_regions() ) {
         const map_simulation_regions regions = session.simulation_regions( m );
+        const auto views = session.active_maps( m );
+        for( map &terrain : views ) {
+            if( &terrain != &m ) {
+                const swap_map context( terrain );
+                terrain.build_floor_caches();
+                terrain.process_falling();
+            }
+        }
+        m.vehmove( views, regions );
         m.process_fields( scent, regions );
         m.process_items( &regions );
         for( const auto &entry : session.active_regions() ) {
@@ -1258,13 +1266,12 @@ void game::simulate_turn_suffix()
                 }
                 region.scent->update( position, terrain );
             }
-            terrain.build_floor_caches();
-            terrain.process_falling();
             terrain.process_fields( *region.scent, regions );
             terrain.process_items( &regions );
             terrain.build_map_cache( terrain.get_abs_sub().z(), true );
         }
     } else {
+        m.vehmove();
         m.process_fields();
         m.process_items();
     }

@@ -2124,6 +2124,7 @@ void host_broadcast_vehicle_step()
     for( const auto &entry : mp_session().remote_players ) {
         cata_mp::remote_player_session &recipient = *entry.second;
         if( !recipient.connected || recipient.detach_pending ||
+            ( mp_session().has_regions() && &recipient_map( recipient ) != &vmap ) ||
             vehicles_json == recipient.replication.last_vehicle_step_payload ) {
             continue;
         }

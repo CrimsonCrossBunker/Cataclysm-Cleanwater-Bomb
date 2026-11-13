@@ -1190,6 +1190,21 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     CHECK( session.scent_for( *region.terrain ) == region.scent.get() );
     CHECK( session.scent_for( here ) == nullptr );
     CHECK( &session.load_region( *g, here, profile.id, center ) == &region );
+    const tripoint_abs_ms second_vehicle_pos = here.get_abs( tripoint_bub_ms( 74, 74, 0 ) );
+    vehicle *second_vehicle = here.add_vehicle( vproto_id( "bicycle" ),
+        here.get_bub( second_vehicle_pos ), 0_degrees, 0,
+        veh_spawn_status::UNDAMAGED );
+    REQUIRE( second_vehicle );
+    REQUIRE( veh_pointer_or_null( region.terrain->veh_at( second_vehicle_pos ) ) == second_vehicle );
+    const auto second_vehicle_lifetime = second_vehicle->get_safe_reference();
+    second_vehicle->summon_time_limit = 2_turns;
+    here.vehmove( session.active_maps( here ), session.simulation_regions( here ) );
+    REQUIRE( second_vehicle_lifetime );
+    REQUIRE( second_vehicle->summon_time_limit );
+    CHECK( *second_vehicle->summon_time_limit == 1_turns );
+    region.terrain->destroy_vehicle( second_vehicle );
+    CHECK_FALSE( here.veh_at( second_vehicle_pos ) );
+    CHECK_FALSE( region.terrain->veh_at( second_vehicle_pos ) );
 
     // Make the normal shared save fail after the guest record was written.
     const auto master = PATH_INFO::world_base_save_path() / SAVE_MASTER;

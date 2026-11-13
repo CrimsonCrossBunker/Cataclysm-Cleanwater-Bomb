@@ -95,3 +95,22 @@ void level_cache::clear_veh_from_veh_cached_parts( const tripoint_bub_ms &pt, ve
         veh_cached_parts.erase( it );
     }
 }
+
+bool level_cache::forget_vehicle( vehicle &veh )
+{
+    bool changed = vehicle_list.erase( &veh ) != 0;
+    zone_vehicles.erase( &veh );
+    for( auto it = veh_cached_parts.begin(); it != veh_cached_parts.end(); ) {
+        if( it->second.first != &veh ) {
+            ++it;
+            continue;
+        }
+        const tripoint_bub_ms &p = it->first;
+        if( p.x() >= 0 && p.x() < MAPSIZE_X && p.y() >= 0 && p.y() < MAPSIZE_Y ) {
+            set_veh_exists_at( p, false );
+        }
+        it = veh_cached_parts.erase( it );
+        changed = true;
+    }
+    return changed;
+}

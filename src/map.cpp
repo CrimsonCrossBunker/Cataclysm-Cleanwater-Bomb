@@ -93,6 +93,7 @@
 #include "mondeath.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "options.h"
 #include "output.h"
@@ -889,7 +890,7 @@ void map::rebuild_vehicle_level_caches()
 
         if( ch ) {
             for( vehicle * const &elem : ch->vehicle_list ) {
-                add_vehicle_to_cache( elem );
+                cache_vehicle_parts( *elem );
             }
         }
     }
@@ -901,32 +902,37 @@ void map::add_vehicle_to_cache( vehicle *veh )
         debugmsg( "Tried to add null vehicle to cache" );
         return;
     }
+    cache_vehicle_parts( *veh );
+    refresh_vehicle_in_shared_views( *veh, veh->sm_pos, nullptr );
+}
 
-    erase_cached_vehicle_ladders( cached_veh_ladders, veh );
+void map::cache_vehicle_parts( vehicle &veh )
+{
+    erase_cached_vehicle_ladders( cached_veh_ladders, &veh );
 
     // Get parts
-    for( const vpart_reference &vpr : veh->get_all_parts_with_fakes() ) {
+    for( const vpart_reference &vpr : veh.get_all_parts_with_fakes() ) {
         if( vpr.part().removed ) {
             continue;
         }
-        const tripoint_bub_ms p = veh->bub_part_pos( *this, vpr.part() );
+        const tripoint_bub_ms p = veh.bub_part_pos( *this, vpr.part() );
         level_cache &ch = get_cache( p.z() );
-        ch.set_veh_cached_parts( p, *veh, static_cast<int>( vpr.part_index() ) );
+        ch.set_veh_cached_parts( p, veh, static_cast<int>( vpr.part_index() ) );
         if( inbounds( p ) ) {
             ch.set_veh_exists_at( p, true );
             set_transparency_cache_dirty( p );
         }
-        const int part = veh->avail_part_with_feature( static_cast<int>( vpr.part_index() ),
-                         VPFLAG_LADDER );
+        const int part = veh.avail_part_with_feature( static_cast<int>( vpr.part_index() ),
+            VPFLAG_LADDER );
         if( part != -1 ) {
-            const vehicle_part &ladder_part = veh->part( part );
+            const vehicle_part &ladder_part = veh.part( part );
             const int length = ladder_part.info().ladder_length();
-            const tripoint_bub_ms ladder_top = veh->bub_part_pos( *this, ladder_part );
+            const tripoint_bub_ms ladder_top = veh.bub_part_pos( *this, ladder_part );
             for( int dz = 0; dz <= length; ++dz ) {
                 tripoint_bub_ms ladder_pos = ladder_top;
                 ladder_pos.z() -= dz;
                 if( inbounds_z( ladder_pos.z() ) ) {
-                    cached_veh_ladders[ladder_pos] = std::make_pair( veh, part );
+                    cached_veh_ladders[ladder_pos] = std::make_pair( &veh, part );
                 }
             }
         }
@@ -999,7 +1005,7 @@ void map::reset_vehicles_sm_pos()
                     for( auto const &elem : sm->vehicles ) {
                         // This should be redundant.
                         elem->sm_pos = abs_sub.xy() + grid;
-                        add_vehicle_to_cache( &*elem );
+                        cache_vehicle_parts( *elem );
                         _add_vehicle_to_list( ch, &*elem );
                     }
                 }
@@ -1023,6 +1029,62 @@ void map::update_vehicle_list( const submap *const to, const int zlev )
     level_cache &ch = get_cache( zlev );
     for( const auto &elem : to->vehicles ) {
         _add_vehicle_to_list( ch, elem.get() );
+    }
+}
+
+void map::forget_vehicle_projection( vehicle &veh )
+{
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        if( level_cache *cache = get_cache_lazy( z ); cache && cache->forget_vehicle( veh ) ) {
+            on_vehicle_moved( z );
+        }
+    }
+    erase_cached_vehicle_ladders( cached_veh_ladders, &veh );
+    dirty_vehicle_list.erase( &veh );
+}
+
+void map::refresh_vehicle_in_shared_views( vehicle &veh, const tripoint_abs_sm &old_pos,
+        const submap *old_storage )
+{
+    if( !g || !g->multiplayer_session().has_regions() ) {
+        return;
+    }
+    const auto submap_at = []( const map &view, const tripoint_abs_sm &pos ) -> const submap * {
+        return view.has_loaded_submap( pos ) ?
+               view.get_submap_at_grid( pos - view.abs_sub.xy() ) : nullptr;
+    };
+    const submap *new_storage = submap_at( *this, veh.sm_pos );
+    const auto stores_vehicle = [&veh]( const std::unique_ptr<vehicle> &entry ) {
+        return entry.get() == &veh;
+    };
+    if( new_storage && std::none_of( new_storage->vehicles.begin(), new_storage->vehicles.end(),
+                                    stores_vehicle ) ) {
+        new_storage = nullptr;
+    }
+    if( !old_storage && !new_storage ) {
+        return;
+    }
+    for( const auto &entry : g->multiplayer_session().active_maps( reality_bubble() ) ) {
+        map &view = entry.get();
+        if( &view == this ) {
+            continue;
+        }
+        const bool shared_before = old_storage && submap_at( view, old_pos ) == old_storage;
+        const bool shared_after = new_storage && submap_at( view, veh.sm_pos ) == new_storage;
+        if( shared_before || shared_after ) {
+            const bool needs_cleanup = dirty_vehicle_list.count( &veh ) ||
+                                       view.dirty_vehicle_list.count( &veh );
+            view.forget_vehicle_projection( veh );
+            if( shared_after ) {
+                _add_vehicle_to_list( view.get_cache( veh.sm_pos.z() ), &veh );
+                view.cache_vehicle_parts( veh );
+                view.on_vehicle_moved( veh.sm_pos.z() );
+                view.invalidate_max_populated_zlev( veh.sm_pos.z() );
+                if( needs_cleanup ) {
+                    view.dirty_vehicle_list.insert( &veh );
+                }
+            }
+        }
     }
 }
 
@@ -1069,6 +1131,7 @@ std::unique_ptr<vehicle> map::detach_vehicle( vehicle *veh )
             ch.zone_vehicles.erase( veh );
             std::unique_ptr<vehicle> result = std::move( current_submap->vehicles[i] );
             current_submap->vehicles.erase( current_submap->vehicles.begin() + i );
+            refresh_vehicle_in_shared_views( *veh, veh->sm_pos, current_submap );
             if( veh->tracking_on ) {
                 overmap_buffer.remove_vehicle( veh );
             }
@@ -1097,11 +1160,18 @@ void map::on_vehicle_moved( const int smz )
     set_pathfinding_cache_dirty( smz );
 }
 
-void map::resolve_off_map_grid_generation()
+void map::on_vehicle_opening_changed( vehicle &veh, const tripoint_abs_ms &part )
+{
+    set_transparency_cache_dirty( veh.sm_pos.z() );
+    set_seen_cache_dirty( get_bub( part ) );
+    refresh_vehicle_in_shared_views( veh, veh.sm_pos, nullptr );
+}
+
+void map::resolve_off_map_grid_generation( const map_simulation_regions *regions,
+        std::unordered_set<vehicle *> &resolved )
 {
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
-    std::unordered_set<vehicle *> resolved;
 
     // Build set of in-bubble vehicles for fast membership check
     std::unordered_set<vehicle *> in_bubble;
@@ -1114,7 +1184,9 @@ void map::resolve_off_map_grid_generation()
     }
 
     power_network_manager &pnm = g->power_networks();
-    pnm.begin_rebuild();
+    const auto is_loaded = [&]( vehicle * veh ) {
+        return regions ? regions->owner_at( veh->sm_pos ) != nullptr : in_bubble.count( veh ) != 0;
+    };
 
     std::vector<vehicle *> ordered_in_bubble( in_bubble.begin(), in_bubble.end() );
     std::sort( ordered_in_bubble.begin(), ordered_in_bubble.end(),
@@ -1129,7 +1201,7 @@ void map::resolve_off_map_grid_generation()
         bool has_off_map_renewables = false;
         for( const auto &[grid_veh, loss] : grid ) {
             resolved.insert( grid_veh );
-            if( !in_bubble.count( grid_veh ) &&
+            if( !is_loaded( grid_veh ) &&
                 ( !grid_veh->solar_panels.empty() ||
                   !grid_veh->wind_turbines.empty() ||
                   !grid_veh->water_wheels.empty() ) ) {
@@ -1146,7 +1218,7 @@ void map::resolve_off_map_grid_generation()
         // Process each off-map source individually so charge_battery()
         // computes the correct cable loss path from that source.
         for( const auto &[grid_veh, loss] : grid ) {
-            if( in_bubble.count( grid_veh ) ) {
+            if( is_loaded( grid_veh ) ) {
                 continue;
             }
             int energy = grid_veh->catchup_off_map_renewables( calendar::turn );
@@ -1155,15 +1227,12 @@ void map::resolve_off_map_grid_generation()
             }
         }
     }
-
-    pnm.finish_rebuild();
 }
 
-void map::resolve_appliance_grid_power()
+void map::resolve_appliance_grid_power( std::unordered_set<vehicle *> &resolved )
 {
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
-    std::unordered_set<vehicle *> resolved;
 
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
         const level_cache *cache = get_cache_lazy( zlev );
@@ -1227,53 +1296,150 @@ void map::resolve_appliance_grid_power()
 void map::vehmove()
 {
     CATA_PROFILE_SCOPE();
+    move_vehicles( nullptr );
+    idle_vehicles( nullptr, nullptr );
+    std::unordered_set<vehicle *> resolved;
+    power_network_manager &power = g->power_networks();
+    power.begin_rebuild();
+    resolve_off_map_grid_generation( nullptr, resolved );
+    power.finish_rebuild();
+    resolved.clear();
+    resolve_appliance_grid_power( resolved );
+    zone_manager::get_manager().cache_vzones( this );
+}
+
+void map::vehmove( const std::vector<std::reference_wrapper<map>> &views,
+                   const map_simulation_regions &regions )
+{
+    CATA_PROFILE_SCOPE();
+    std::unordered_set<int64_t> advanced;
+    for( map &view : views ) {
+        const swap_map context( view );
+        view.move_vehicles( &advanced );
+    }
+    std::vector<safe_reference<vehicle>> dirty;
+    for( map &view : views ) {
+        for( vehicle *veh : view.dirty_vehicle_list ) {
+            dirty.push_back( veh->get_safe_reference() );
+        }
+        view.dirty_vehicle_list.clear();
+    }
+    std::unordered_set<vehicle *> cleaned;
+    const auto &session = g->multiplayer_session();
+    for( const auto &candidate : dirty ) {
+        if( vehicle *const veh = candidate.get(); veh && cleaned.insert( veh ).second ) {
+            if( map *const owner = session.loaded_map_at( *this, veh->sm_pos ) ) {
+                const swap_map context( *owner );
+                veh->part_removal_cleanup( *owner );
+            }
+        }
+    }
+    advanced.clear();
+    for( map &view : views ) {
+        const swap_map context( view );
+        view.idle_vehicles( &advanced, &regions );
+    }
+    std::unordered_set<vehicle *> resolved;
+    power_network_manager &power = g->power_networks();
+    power.begin_rebuild();
+    for( map &view : views ) {
+        const swap_map context( view );
+        view.resolve_off_map_grid_generation( &regions, resolved );
+    }
+    power.finish_rebuild();
+    resolved.clear();
+    for( map &view : views ) {
+        const swap_map context( view );
+        view.resolve_appliance_grid_power( resolved );
+    }
+    zone_manager::get_manager().cache_vzones( this );
+}
+
+void map::move_vehicles( std::unordered_set<int64_t> *advanced )
+{
     // give vehicles movement points
-    VehicleList vehicle_list;
-    int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    std::vector<safe_reference<vehicle>> vehicle_list;
+    std::unordered_set<int64_t> assigned;
+    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    std::vector<safe_reference<vehicle>> candidates;
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
         level_cache *cache_lazy = get_cache_lazy( zlev );
         if( !cache_lazy ) {
             continue;
         }
-        level_cache &cache = *cache_lazy;
-        for( vehicle *veh : cache.vehicle_list ) {
-            if( veh->is_following ) {
-                veh->autopilot_follow( *this );
-            } else if( veh->is_patrolling ) {
-                veh->autopilot_patrol( this );
+        for( vehicle *veh : cache_lazy->vehicle_list ) {
+            candidates.push_back( veh->get_safe_reference() );
+        }
+    }
+    for( const safe_reference<vehicle> &candidate : candidates ) {
+        vehicle *const veh = candidate.get();
+        if( !veh ) {
+            continue;
+        }
+        if( advanced ) {
+            veh->ensure_uid();
+            if( !advanced->insert( veh->uid().get_value() ).second ) {
+                continue;
             }
+            assigned.insert( veh->uid().get_value() );
+        }
+        if( veh->is_following ) {
+            veh->autopilot_follow( *this );
+        } else if( veh->is_patrolling ) {
+            veh->autopilot_patrol( this );
+        }
+        if( candidate ) {
             veh->gain_moves( *this );
+        }
+        if( candidate ) {
             veh->slow_leak( *this );
-            wrapped_vehicle w;
-            w.v = veh;
-            vehicle_list.push_back( w );
+        }
+    }
+    for( const safe_reference<vehicle> &candidate : candidates ) {
+        if( vehicle *const veh = candidate.get();
+            veh && ( !advanced || assigned.count( veh->uid().get_value() ) > 0 ) ) {
+            vehicle_list.push_back( candidate );
         }
     }
 
     // 15 equals 3 >50mph vehicles, or up to 15 slow (1 square move) ones
     // But 15 is too low for V12 death-bikes, let's put 100 here
     for( int count = 0; count < 100; count++ ) {
-        if( !vehproceed( vehicle_list ) ) {
+        if( !vehproceed( vehicle_list, advanced ? &assigned : nullptr ) ) {
             break;
         }
 #ifdef MP_ENABLED
         cata_mp::host_broadcast_vehicle_step();
 #endif
     }
-    // Process item removal on the vehicles that were modified this turn.
-    // Use a copy because part_removal_cleanup can modify the container.
+    if( !advanced ) {
+        clean_vehicle_parts( vehicle_list );
+    }
+}
+
+void map::clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehicles )
+{
+    // Cleanup may destroy a vehicle and mutate the dirty set.
     auto temp = dirty_vehicle_list;
     for( vehicle * const &elem : temp ) {
-        auto same_ptr = [ elem ]( const struct wrapped_vehicle & tgt ) {
-            return elem == tgt.v;
+        auto same_ptr = [ elem ]( const safe_reference<vehicle> &tgt ) {
+            return elem == tgt.get();
         };
-        if( std::find_if( vehicle_list.begin(), vehicle_list.end(), same_ptr ) !=
-            vehicle_list.end() ) {
+        if( dirty_vehicle_list.count( elem ) &&
+            std::find_if( vehicles.begin(), vehicles.end(), same_ptr ) != vehicles.end() ) {
+            dirty_vehicle_list.erase( elem );
             elem->part_removal_cleanup( *this );
         }
     }
     dirty_vehicle_list.clear();
+}
+
+void map::idle_vehicles( std::unordered_set<int64_t> *advanced,
+                         const map_simulation_regions *regions )
+{
+    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
     std::map<vehicle *, bool> vehs; // value true means in on map
     std::unordered_set<vehicle *> connected_vehs;
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
@@ -1282,6 +1448,9 @@ void map::vehmove()
             continue;
         }
         for( vehicle *veh : cache->vehicle_list ) {
+            if( regions && !regions->owns( *this, veh->sm_pos ) ) {
+                continue;
+            }
             vehs[veh] = true; // force on map vehicles to true
             veh->get_connected_vehicles( *this, connected_vehs );
         }
@@ -1292,39 +1461,42 @@ void map::vehmove()
         return a->pos_abs() < b->pos_abs();
     } );
     for( vehicle *connected_veh : ordered_connected ) {
-        vehs.emplace( connected_veh, false ); // add with 'false' if does not exist (off map)
+        if( !regions || !regions->owner_at( connected_veh->sm_pos ) ) {
+            vehs.emplace( connected_veh, false ); // add with 'false' if does not exist (off map)
+        }
     }
     for( const std::pair<vehicle *const, bool> &veh_pair : vehs ) {
+        if( advanced ) {
+            veh_pair.first->ensure_uid();
+            if( !advanced->insert( veh_pair.first->uid().get_value() ).second ) {
+                continue;
+            }
+        }
         veh_pair.first->process_effects();
         veh_pair.first->recalculate_enchantment_cache();
         veh_pair.first->idle( *this, /* on_map = */ veh_pair.second );
     }
-
-    resolve_off_map_grid_generation();
-    resolve_appliance_grid_power();
-
-    // refresh vehicle zones for moved vehicles
-    zone_manager::get_manager().cache_vzones( this );
 }
 
-bool map::vehproceed( VehicleList &vehicle_list )
+bool map::vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
+                      const std::unordered_set<int64_t> *assigned )
 {
-    wrapped_vehicle *cur_veh = nullptr;
+    safe_reference<vehicle> *cur_veh = nullptr;
     float max_of_turn = 0.0f;
     // First horizontal movement
-    for( wrapped_vehicle &vehs_v : vehicle_list ) {
-        if( vehs_v.v->of_turn > max_of_turn ) {
-            cur_veh = &vehs_v;
-            max_of_turn = cur_veh->v->of_turn;
+    for( auto &candidate : vehicle_list ) {
+        if( candidate && candidate->of_turn > max_of_turn ) {
+            cur_veh = &candidate;
+            max_of_turn = candidate->of_turn;
         }
     }
 
     // Then vertical-only movement
     if( cur_veh == nullptr ) {
-        for( wrapped_vehicle &vehs_v : vehicle_list ) {
-            if( vehs_v.v->is_falling || ( vehs_v.v->is_aircraft( *this ) &&
-                                          vehs_v.v->get_z_change() != 0 ) ) {
-                cur_veh = &vehs_v;
+        for( auto &candidate : vehicle_list ) {
+            if( candidate && ( candidate->is_falling ||
+                               ( candidate->is_aircraft( *this ) && candidate->get_z_change() != 0 ) ) ) {
+                cur_veh = &candidate;
                 break;
             }
         }
@@ -1334,9 +1506,16 @@ bool map::vehproceed( VehicleList &vehicle_list )
         return false;
     }
 
-    cur_veh->v = cur_veh->v->act_on_map( *this );
-    if( cur_veh->v == nullptr ) {
-        vehicle_list = get_vehicles();
+    vehicle *const moved = ( *cur_veh )->act_on_map( *this );
+    if( moved ) {
+        *cur_veh = moved->get_safe_reference();
+    } else {
+        vehicle_list.clear();
+        for( const wrapped_vehicle &entry : get_vehicles() ) {
+            if( !assigned || assigned->count( entry.v->uid().get_value() ) > 0 ) {
+                vehicle_list.push_back( entry.v->get_safe_reference() );
+            }
+        }
     }
 
     return true;
@@ -2115,6 +2294,7 @@ void map::unboard_vehicle( const tripoint_bub_ms &p, bool dead_passenger )
 bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool adjust_pos,
                             const std::set<int> &parts_to_move )
 {
+    const tripoint_abs_sm old_submap = veh.sm_pos;
     const tripoint_bub_ms src = veh.pos_bub( *this );
     // handle vehicle ramps
     int ramp_offset = 0;
@@ -2153,6 +2333,9 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     size_t our_i = 0;
     bool found = false;
     for( submap *&smap : grid ) {
+        if( !smap ) {
+            continue;
+        }
         for( size_t i = 0; i < smap->vehicles.size(); i++ ) {
             if( smap->vehicles[i].get() == &veh ) {
                 our_i = i;
@@ -2274,13 +2457,13 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     if( need_update ) {
         g->update_map( player_character );
     }
-    add_vehicle_to_cache( &veh );
+    cache_vehicle_parts( veh );
 
     if( z_change || src.z() != dst.z() ) {
         if( z_change ) {
             g->vertical_move( z_change, true );
             // vertical moves can flush the caches, so make sure we're still in the cache
-            add_vehicle_to_cache( &veh );
+            cache_vehicle_parts( veh );
         }
         update_vehicle_list( dst_submap, dst.z() );
         // delete the vehicle from the source z-level vehicle cache set if it is no longer on
@@ -2308,6 +2491,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     for( int vsmz : smzs ) {
         on_vehicle_moved( dst.z() + vsmz );
     }
+    refresh_vehicle_in_shared_views( veh, old_submap, src_submap );
     return true;
 }
 

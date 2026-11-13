@@ -16,6 +16,7 @@
 #include <optional>
 #include <set>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -488,6 +489,7 @@ class map
          * Callback invoked when a vehicle has moved.
          */
         void on_vehicle_moved( int smz );
+        void on_vehicle_opening_changed( vehicle &veh, const tripoint_abs_ms &part );
 
         struct apparent_light_info {
             bool obstructed;
@@ -825,10 +827,21 @@ class map
                         PathfindingFlags p_special ) const;
         // Catches up renewable generation (solar/wind/water) for off-map vehicles
         // that are connected to in-bubble grids via cables.
-        void resolve_off_map_grid_generation();
+        void resolve_off_map_grid_generation( const map_simulation_regions *regions,
+                                              std::unordered_set<vehicle *> &resolved );
         // Re-enables appliance parts that were disabled by power_parts() deficit
         // when the connected grid actually has battery charge available.
-        void resolve_appliance_grid_power();
+        void resolve_appliance_grid_power( std::unordered_set<vehicle *> &resolved );
+        void cache_vehicle_parts( vehicle &veh );
+        void refresh_vehicle_in_shared_views( vehicle &veh, const tripoint_abs_sm &old_pos,
+                                              const submap *old_storage );
+        void forget_vehicle_projection( vehicle &veh );
+        void move_vehicles( std::unordered_set<int64_t> *advanced );
+        void clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehicles );
+        void idle_vehicles( std::unordered_set<int64_t> *advanced,
+                            const map_simulation_regions *regions );
+        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicles,
+                         const std::unordered_set<int64_t> *assigned );
     public:
 
         // Vehicles: Common to 2D and 3D
@@ -862,8 +875,8 @@ class map
         void destroy_vehicle( vehicle *veh );
         // Vehicle movement
         void vehmove();
-        // Selects a vehicle to move, returns false if no moving vehicles
-        bool vehproceed( VehicleList &vehicle_list );
+        void vehmove( const std::vector<std::reference_wrapper<map>> &views,
+                      const map_simulation_regions &regions );
 
         // Vehicles
         VehicleList get_vehicles( const tripoint_bub_ms &start, const tripoint_bub_ms &end );
