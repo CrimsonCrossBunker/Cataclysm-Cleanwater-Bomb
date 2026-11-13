@@ -630,6 +630,7 @@ TEST_CASE( "atlatls_correct_darts_and_javelins", "[throwing][atlatl]" )
 {
     clear_avatar();
     avatar &you = get_avatar();
+    you.set_skill_level( skill_throw, 2 );
     item atlatl( itype_atlatl );
     CHECK_FALSE( atlatl.is_gun() );
     REQUIRE( atlatl.has_flag( json_flag_THROW_KEEP_WIELDED ) );
