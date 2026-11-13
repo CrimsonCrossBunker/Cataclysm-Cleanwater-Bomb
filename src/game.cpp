@@ -2941,6 +2941,9 @@ input_context get_default_mode_input_context()
         ctxt.register_action( "diary" );
         ctxt.register_action( "action_menu" );
         ctxt.register_action( "main_menu" );
+#ifdef MP_ENABLED
+        ctxt.register_action( "coop_session" );
+#endif
         ctxt.register_action( "item_action_menu" );
         ctxt.register_action( "ANY_INPUT" );
         ctxt.register_action( "COORDINATE" );

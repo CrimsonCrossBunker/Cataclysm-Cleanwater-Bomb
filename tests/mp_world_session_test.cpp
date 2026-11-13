@@ -1,6 +1,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
+#include "debug.h"
 #include "character_martial_arts.h"
 #include "flag.h"
 #include "effect.h"
@@ -33,6 +34,9 @@
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "player_helpers.h"
+#include "vehicle.h"
+#include "vpart_position.h"
+#include "worldfactory.h"
 #include <filesystem>
 #include <map>
 #include <set>
@@ -1104,6 +1108,113 @@ TEST_CASE( "mp_deferred_host_intent_survives_setup_but_not_world_exit",
     CHECK_FALSE( cata_mp::is_session_active() );
     CHECK_FALSE( cata_mp::is_hosting() );
     CHECK( cata_mp::mp_menu_coop_status_text().empty() );
+}
+
+TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
+           "[.multiplayer_runtime][world_session][lifecycle][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    cata_mp::mp_on_world_exit();
+    WORLD isolated_world( "room_switch" );
+    const restore_on_out_of_scope restore_world( world_generator->active_world );
+    const restore_on_out_of_scope restore_last_world( world_generator->last_world_name );
+    const restore_on_out_of_scope restore_last_character( world_generator->last_character_name );
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const auto save_root = PATH_INFO::world_base_save_path() / "room_switch";
+    REQUIRE( std::filesystem::create_directory( save_root.get_unrelative_path() ) );
+    const std::string savedir = PATH_INFO::savedir();
+    const on_out_of_scope cleanup( [&]() {
+        cata_mp::mp_on_world_exit();
+        PATH_INFO::set_savedir( savedir );
+        clear_npcs();
+        clear_vehicles();
+        std::error_code error;
+        std::filesystem::remove_all( save_root.get_unrelative_path(), error );
+    } );
+    PATH_INFO::set_savedir( save_root.get_unrelative_path().generic_u8string() + "/" );
+    world_generator->active_world = &isolated_world;
+    REQUIRE( assure_dir_exist( isolated_world.folder_path() ) );
+    g->uquit = QUIT_NO;
+    avatar &host = get_avatar();
+    map &here = get_map();
+    host.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const auto local_id = host.getID();
+    const auto position = host.pos_abs();
+    const auto turn = calendar::turn;
+    auto &session = g->multiplayer_session();
+    const auto open_room = [&]() {
+        REQUIRE( cata_mp::mp_request_host_session( 0, "", "room-switch" ) );
+        cata_mp::process_mp_events();
+        INFO( session.hosting.error() );
+        REQUIRE( cata_mp::is_hosting() );
+    };
+    open_room();
+    CHECK( session.host_info.world == isolated_world.identity() );
+    CHECK( session.host_info.world_name == isolated_world.world_name );
+    CHECK( session.host_info.player_name == host.name );
+
+    const cata_mp::player_credentials profile{ player_id( std::string( 32, '8' ) ),
+            std::string( 64, 'd' ) };
+    const auto join = [&]( uint64_t id ) {
+        auto admission = cata_mp::peer_admission::create( id );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect,
+                                               "guest", "", admission, profile } ) );
+        cata_mp::process_mp_events();
+        REQUIRE( session.find_remote( admission ) );
+        return admission;
+    };
+    const auto first = join( 901 );
+    finish_player_creation( first, "room guest" );
+    npc *guest = session.find_remote( first )->actor.retained( g->npc_lifetimes() );
+    REQUIRE( guest );
+    const auto guest_id = guest->getID();
+    const auto seat_tile = guest->pos_bub( here );
+    REQUIRE( here.add_vehicle( vproto_id( "bicycle" ), seat_tile, 0_degrees, 0,
+                               veh_spawn_status::UNDAMAGED ) );
+    const auto seat = here.veh_at( seat_tile ).part_with_feature( VPFLAG_BOARDABLE, false );
+    REQUIRE( seat );
+    here.board_vehicle( seat_tile, guest );
+    REQUIRE( seat->part().passenger_id == guest_id );
+
+    // Make the normal shared save fail after the guest record was written.
+    const auto master = PATH_INFO::world_base_save_path() / SAVE_MASTER;
+    REQUIRE( std::filesystem::create_directory( master.get_unrelative_path() ) );
+    bool closed = true;
+    const std::string error = capture_debugmsg_during( [&]() {
+        closed = cata_mp::mp_close_host_session();
+    } );
+    CHECK_FALSE( closed );
+    CHECK( error.find( "game not saved" ) != std::string::npos );
+    CHECK( cata_mp::is_hosting() );
+    REQUIRE( session.find_remote( first ) );
+    CHECK( seat->part().passenger_id == guest_id );
+    REQUIRE( std::filesystem::remove( master.get_unrelative_path() ) );
+
+    REQUIRE( cata_mp::mp_close_host_session() );
+    CHECK_FALSE( cata_mp::is_session_active() );
+    CHECK_FALSE( cata_mp::is_hosting() );
+    CHECK( g->uquit == QUIT_NO );
+    CHECK( host.getID() == local_id );
+    CHECK( host.pos_abs() == position );
+    CHECK( calendar::turn == turn );
+    CHECK( session.remote_players.empty() );
+    CHECK_FALSE( g->player_controls().is_reserved( profile.id ) );
+    CHECK( g->critter_by_id<npc>( guest_id ) == nullptr );
+    CHECK_FALSE( overmap_buffer.find_npc( guest_id ) );
+    CHECK( g->get_follower_list().count( guest_id ) == 0 );
+    CHECK_FALSE( seat->part().passenger_id.is_valid() );
+
+    open_room();
+    const auto second = join( 901 );
+    CHECK_FALSE( session.find_remote( first ) );
+    const auto *restored = session.find_remote( second )->actor.retained( g->npc_lifetimes() );
+    REQUIRE( restored );
+    CHECK( restored->getID() == guest_id );
+    CHECK_FALSE( restored->in_vehicle );
+    CHECK_FALSE( restored->controlling_vehicle );
+    CHECK( cata_mp::mp_close_host_session() );
 }
 
 TEST_CASE( "mp_client_mode_and_teardown_belong_to_the_owning_world",

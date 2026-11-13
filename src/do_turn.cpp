@@ -317,6 +317,8 @@ void handle_key_blocking_activity( int timeout )
             get_help().display_help();
         } else if( action == "coop_chat" ) {
             cata_mp::mp_open_chat();
+        } else if( action == "coop_session" ) {
+            cata_mp::mp_open_session_menu();
         } else if( action != "HELP_KEYBINDINGS" ) {
             refresh = false;
         }

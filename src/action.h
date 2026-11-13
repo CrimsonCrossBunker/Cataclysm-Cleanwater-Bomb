@@ -367,6 +367,7 @@ enum action_id : int {
     /** Interact with the current or nearby tile */
     ACTION_INTERACT,
     ACTION_COOP_CHAT,
+    ACTION_COOP_SESSION,
     ACTION_PASS_ITEM,
     ACTION_HIGH_FIVE,
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,

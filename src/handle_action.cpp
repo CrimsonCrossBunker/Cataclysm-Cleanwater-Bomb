@@ -1839,6 +1839,7 @@ static const std::set<action_id> host_ui_actions = {
     ACTION_EXPORT_BUG_REPORT_ARCHIVE,
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,
     ACTION_COOP_CHAT,
+    ACTION_COOP_SESSION,
 };
 #endif
 
@@ -2640,6 +2641,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_COOP_CHAT:
             cata_mp::mp_open_chat();
             break;
+
+        case ACTION_COOP_SESSION:
+            cata_mp::mp_open_session_menu();
+            return false;
 #endif
 
         case ACTION_PICK_STYLE:

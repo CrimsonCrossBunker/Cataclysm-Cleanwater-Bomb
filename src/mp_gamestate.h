@@ -364,6 +364,10 @@ bool mp_menu_join_session();
 // host session.  No-op if host mode isn't armed.
 void mp_menu_cancel_host();
 
+// Switch a loaded local world back to solo play after saving its guests.
+bool mp_close_host_session();
+void mp_open_session_menu();
+
 // Co-op block appended to the debug "Generate game report" output (debug.cpp).
 std::string mp_game_report_section();
 

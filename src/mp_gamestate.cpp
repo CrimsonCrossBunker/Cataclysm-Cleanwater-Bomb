@@ -1264,6 +1264,19 @@ static void mp_save_npc_ids()
 
 static player_store &world_players();
 
+static void release_guest_seat( npc &guest )
+{
+    if( !guest.in_vehicle ) {
+        return;
+    }
+    map &here = get_map();
+    const auto seat = here.veh_at( guest.pos_bub( here ) ).part_with_feature( VPFLAG_BOARDABLE,
+                      false );
+    if( seat && seat->part().passenger_id == guest.getID() ) {
+        here.unboard_vehicle( *seat, &guest );
+    }
+}
+
 static void mp_cleanup_stale_npcs()
 {
     if( mp_session().stale_proxy_cleanup_done ) {
@@ -1275,6 +1288,8 @@ static void mp_cleanup_stale_npcs()
     std::vector<character_id> active;
     for( npc &candidate : g->all_npcs() ) {
         if( is_player_proxy( candidate ) ) {
+            release_guest_seat( candidate );
+            g->remove_npc_follower( candidate.getID() );
             active.push_back( candidate.getID() );
         }
     }
@@ -1284,6 +1299,8 @@ static void mp_cleanup_stale_npcs()
     std::vector<character_id> stored;
     for( const auto &candidate : overmap_buffer.get_npcs_near_player( 500 ) ) {
         if( candidate && is_player_proxy( *candidate ) ) {
+            release_guest_seat( *candidate );
+            g->remove_npc_follower( candidate->getID() );
             stored.push_back( candidate->getID() );
         }
     }
@@ -1639,6 +1656,8 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     recipient.credentials = player;
 
     // Always respawn near the host player regardless of saved position
+    remote->in_vehicle = false;
+    remote->controlling_vehicle = false;
     remote->spawn_at_precise( m.get_abs( spawn_pos ) );
     bool published = false;
     const on_out_of_scope rollback( [&]() {
@@ -1715,6 +1734,8 @@ static void release_remote_player( remote_player_session &recipient )
     }
     npc *remote = mp_remote_actor( recipient );
     if( remote ) {
+        release_guest_seat( *remote );
+        g->remove_npc_follower( remote->getID() );
         // Clean despawn — the partner quit/disconnected, they are NOT dead.
         // die() drops a corpse carrying all their gear (a pickup-able loot dupe).
         g->remove_npc( recipient.actor.id() );
@@ -4411,7 +4432,12 @@ static void mp_start_pending_host()
         if( !world_generator || !world_generator->active_world ) {
             throw std::runtime_error( "No active world" );
         }
-        mp_session().host_info.world = world_generator->active_world->identity();
+        WORLD &world = *world_generator->active_world;
+        const tripoint_abs_omt location = get_avatar().pos_abs_omt();
+        mp_session().host_info = {
+            world.world_name, get_avatar().name, g->get_seed(),
+            std::array<int, 3>{ location.x(), location.y(), location.z() }, world.identity()
+        };
     } catch( const std::exception &error ) {
         add_msg( m_bad, _( "Unable to start multiplayer host: %s" ), error.what() );
         set_host_mode( false );
@@ -4449,6 +4475,56 @@ void mp_menu_cancel_host()
     g_pending_host_start.reset();
     mp_session().hosting.stop();
     set_host_mode( false );
+}
+
+bool mp_close_host_session()
+{
+    if( !is_host_mode() || is_client_mode() || is_server_mode() || g->uquit != QUIT_NO ||
+        !world_generator || !world_generator->active_world || !g->save() ) {
+        return false;
+    }
+
+    // Save with the actors still bound. If any save step fails, they retain
+    // control and the owner can retry without discarding unsaved progress.
+    mp_notify_session_ending();
+    for( auto it = mp_session().remote_players.begin(); it != mp_session().remote_players.end(); ) {
+        remote_player_session &guest = *it++->second;
+        release_remote_player( guest );
+    }
+    mp_on_world_exit();
+    g->invalidate_main_ui_adaptor();
+    return true;
+}
+
+void mp_open_session_menu()
+{
+    if( is_client_mode() || is_server_mode() || g->uquit != QUIT_NO ||
+        !world_generator || !world_generator->active_world ) {
+        return;
+    }
+    uilist menu;
+    menu.title = _( "Co-op session" );
+    constexpr int change_mode = 1;
+    const bool hosting = is_host_mode();
+    menu.addentry( change_mode, true, hosting ? 's' : 'h',
+                   hosting ? _( "Close room and continue solo" ) : _( "Open this world to co-op" ) );
+    menu.query();
+    if( menu.ret != change_mode ) {
+        return;
+    }
+    if( hosting ) {
+        if( query_yn( _( "Save the world, disconnect the guests and continue solo?" ) ) &&
+            mp_close_host_session() ) {
+            add_msg( m_good, _( "Co-op room closed.  Continuing solo." ) );
+        }
+    } else if( mp_menu_start_host_session() ) {
+        mp_start_pending_host();
+        if( is_hosting() ) {
+            mp_world_marker_update();
+            ensure_mp_hud();
+            add_msg( m_good, _( "Co-op room open on port 8080." ) );
+        }
+    }
 }
 
 void mp_tick_proxy_activity( npc &guy )
