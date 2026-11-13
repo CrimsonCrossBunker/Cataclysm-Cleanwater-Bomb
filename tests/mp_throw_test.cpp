@@ -71,7 +71,7 @@ class throw_fixture
             clear_avatar();
         }
         npc &remote() {
-            npc &who = spawn_npc( { 60, 60 }, "test_talker" );
+            npc &who = spawn_npc( { 60, 60 }, "test_throwing_npc" );
             prepare_thrower( who, tripoint_bub_ms( 60, 60, 0 ) );
             const cata_mp::player_id owner( std::string( 32, '7' ) );
             who.set_value( "mp_proxy", std::string( "1" ) );
