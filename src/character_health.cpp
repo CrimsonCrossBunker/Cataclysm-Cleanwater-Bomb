@@ -1642,8 +1642,7 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 1.0f;
                     }
                 }
-                int sleepiness_recovered =
-                    static_cast<int>( std::round( recovered * sleepiness_multiplier ) );
+                int sleepiness_recovered = roll_remainder( recovered * sleepiness_multiplier );
                 mod_sleepiness( -sleepiness_recovered );
 
                 // REDUCE SLEEP DEPRIVATION
