@@ -101,6 +101,7 @@
 #include "mission.h"
 #include "monster.h"
 #include "morale.h"
+#include "mp_actor_binding.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -4839,6 +4840,10 @@ void vehicle_part::deserialize( const JsonObject &data )
 
 void vehicle_part::serialize( JsonOut &json ) const
 {
+    const npc *passenger = g && passenger_id.is_valid() && has_flag( vp_flag::passenger_flag )
+                           ? g->critter_by_id<npc>( passenger_id ) : nullptr;
+    // Co-op guests are restored by the player store, independently of vehicles.
+    const bool guest_seat = passenger && cata_mp::is_player_proxy( *passenger );
     json.start_object();
     json.member( "id", info_->id.str() );
     if( !variant.empty() ) {
@@ -4852,7 +4857,8 @@ void vehicle_part::serialize( JsonOut &json ) const
     json.member( "blood", blood );
     json.member( "enabled", enabled );
     json.member( "power_disabled", power_disabled );
-    json.member( "flags", flags );
+    json.member( "flags", guest_seat ? flags & ~static_cast<uint32_t>( vp_flag::passenger_flag )
+                 : flags );
     if( !carried_stack.empty() ) {
         std::stack<vehicle_part::carried_part_data> carried_copy = carried_stack;
         json.member( "carried_stack" );
@@ -4863,7 +4869,7 @@ void vehicle_part::serialize( JsonOut &json ) const
         }
         json.end_array();
     }
-    json.member( "passenger_id", passenger_id );
+    json.member( "passenger_id", guest_seat ? character_id() : passenger_id );
     json.member( "crew_id", crew_id );
     if( precalc[0].z() ) {
         json.member( "z_offset", precalc[0].z() );

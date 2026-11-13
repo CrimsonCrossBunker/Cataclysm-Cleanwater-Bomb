@@ -1183,6 +1183,13 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     REQUIRE( seat );
     here.board_vehicle( seat_tile, guest );
     REQUIRE( seat->part().passenger_id == guest_id );
+    const JsonObject seat_record = json_loader::from_string( serialize( seat->part() ) ).get_object();
+    seat_record.allow_omitted_members();
+    character_id saved_passenger;
+    REQUIRE( seat_record.read( "passenger_id", saved_passenger ) );
+    CHECK_FALSE( saved_passenger.is_valid() );
+    CHECK( ( seat_record.get_int( "flags" ) & static_cast<int>( vp_flag::passenger_flag ) ) == 0 );
+    CHECK( seat->part().passenger_id == guest_id );
 
     const auto center = here.get_abs_sub() + point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
     auto &region = session.load_region( *g, here, profile.id, center );
