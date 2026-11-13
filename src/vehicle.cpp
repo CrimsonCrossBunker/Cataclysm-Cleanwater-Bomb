@@ -7764,22 +7764,22 @@ void vehicle::do_towing_move( map &here )
 
         default:
             towed_veh->skidding = true;
-            std::vector < tripoint_bub_ms > lineto = line_to( here.get_bub( towed_tow_point ),
-                    here.get_bub( tower_tow_point ) );
-            tripoint_bub_ms nearby_destination;
-            if( lineto.size() >= 2 ) {
-                nearby_destination = lineto[1];
-            } else {
-                nearby_destination = here.get_bub( tower_tow_point );
+            // Pull laterally along the cable. A ramp changes the trailer's
+            // level when its own parts reach it, even if the tower is already above.
+            const point_bub_ms tow_point = here.get_bub( towed_tow_point ).xy();
+            const point_bub_ms target = here.get_bub( tower_tow_point ).xy();
+            if( tow_point == target ) {
+                break;
             }
-            const tripoint_rel_ms destination_delta( here.get_bub( tower_tow_point ).xy() -
-                    nearby_destination.xy() +
-                    tripoint_rel_ms( 0, 0, towed_veh->pos_abs().z() ) );
-            const tripoint_rel_ms move_destination( clamp( destination_delta.x(), -1, 1 ),
-                                                    clamp( destination_delta.y(), -1, 1 ),
-                                                    clamp( destination_delta.z(), -1, 1 ) );
-            here.move_vehicle( *towed_veh, move_destination, towed_veh->face );
-            towed_veh->move = tileray( destination_delta.xy() );
+            const auto path = line_to( tow_point, target );
+            const tripoint_rel_ms step( path.front() - tow_point, 0 );
+            const safe_reference<vehicle> trailer = towed_veh->get_safe_reference();
+            const auto context = here.get_context_reference();
+            here.move_vehicle( *towed_veh, step, towed_veh->face );
+            if( context && trailer ) {
+                trailer->move = tileray( step.xy() );
+            }
+            break;
     }
 }
 
@@ -8852,7 +8852,16 @@ const std::set < tripoint_abs_ms > &vehicle::get_points( const bool force_refres
     return occupied_points;
 }
 
-void vehicle::part_project_points( const tripoint_rel_ms &dp )
+tripoint_abs_ms vehicle::collision_part_position( const map &here, int index,
+        const tripoint_rel_ms &dp, bool bash_floor ) const
+{
+    if( bash_floor ) {
+        return pos_abs() + dp + part( index ).precalc[1];
+    }
+    return here.get_abs( displaced_part_position( here, index, pos_bub( here ), dp, {} ) );
+}
+
+void vehicle::part_project_points( const map &here, const tripoint_rel_ms &dp, bool bash_floor )
 {
     for( int p = 0; p < part_count(); p++ ) {
         vehicle_part &vp = parts.at( p );
@@ -8866,7 +8875,7 @@ void vehicle::part_project_points( const tripoint_rel_ms &dp )
         }
         // Coordinates of where part will go due to movement (dx/dy/dz)
         //  and turning (precalc[1])
-        vp.next_pos = pos_abs() + dp + vp.precalc[1];
+        vp.next_pos = collision_part_position( here, p, dp, bash_floor );
     }
 }
 
@@ -9608,57 +9617,31 @@ std::vector < std::reference_wrapper < const vehicle_part>> vehicle::real_parts(
     }
     return ret;
 }
+tripoint_bub_ms vehicle::displaced_part_position( const map &here, int index,
+        const tripoint_bub_ms &origin, const tripoint_rel_ms &dp,
+        const std::set<int> &parts_to_move ) const
+{
+    const vehicle_part &vp = part( index );
+    if( parts_to_move.empty() ) {
+        return here.ramp_landing( origin + dp + vp.precalc[1] );
+    }
+    const tripoint_bub_ms current = origin + vp.precalc[0];
+    return parts_to_move.count( index ) ? here.ramp_landing( current + dp ) : current;
+}
+
 std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
-        map *here, const tripoint_bub_ms &src,
-        const tripoint_rel_ms &dp, int ramp_offset, const bool adjust_pos,
-        std::set < int > parts_to_move )
+        map &here, const tripoint_bub_ms &src, const tripoint_bub_ms &dst,
+        const tripoint_rel_ms &dp, const bool adjust_pos, const std::set<int> &parts_to_move )
 {
     std::set < int > smzs;
-    // when a vehicle part enters the low end of a down ramp, or the high end of an up ramp,
-    // it immediately translates down or up a z-level, respectively, ending up on the low
-    // end of an up ramp or high end of a down ramp, respectively.  The two ends are set
-    // past each other, like so:
-    // (side view)  z+1   Rdh RDl
-    //              z+0   RUh Rul
-    // A vehicle moving left to right on z+1 drives down to z+0 by entering the ramp down low end.
-    // A vehicle moving right to left on z+0 drives up to z+1 by entering the ramp up high end.
-    // A vehicle moving left to right on z+0 should ideally collide into a wall before entering
-    //   the ramp up high end, but even if it does, it briefly transitions to z+1 before returning
-    //   to z0 by entering the ramp down low end.
-    // A vehicle moving right to left on z+1 drives down to z+0 by entering the ramp down low end,
-    //   then immediately returns to z+1 by entering the ramp up high end.
-    // When a vehicle's pivot point transitions a z-level via a ramp, all other pre-calc points
-    // make the opposite transition, so that points that were above an ascending pivot point are
-    // now level with it, and parts that were level with an ascending pivot point are now below
-    // it.
-    // parts that enter the translation portion of a ramp on the same displacement as the
-    // pivot point stay at the same relative z to the pivot point, as the ramp_offset adjustments
-    // cancel out.
-    // if a vehicle manages move partially up or down a ramp and then veers off course, it
-    // can get split across the z-levels and continue moving, enough though large parts of the
-    // vehicle are unsupported.  In that case, move the unsupported parts down until they are
-    // supported.
-    int index = -1;
-    for( vehicle_part &prt : parts ) {
-        index += 1;
+    // Each part follows its own ramp transition. Express those landings
+    // relative to the new pivot even while the chassis spans two levels.
+    for( int index = 0; index < part_count(); ++index ) {
+        vehicle_part &prt = part( index );
         if( prt.is_real_or_active_fake() ) {
-            here->clear_vehicle_point_from_cache( this, src + prt.precalc[0] );
+            here.clear_vehicle_point_from_cache( this, src + prt.precalc[0] );
         }
-        // no parts means this is a normal horizontal or vertical move
-        if( parts_to_move.empty() ) {
-            prt.precalc[0] = prt.precalc[1];
-            // partial part movement means we're zero-ing out after missing a ramp
-        } else if( adjust_pos && parts_to_move.find( index ) == parts_to_move.end() ) {
-            prt.precalc[0].z() -= dp.z();
-        } else if( !adjust_pos &&  parts_to_move.find( index ) != parts_to_move.end() ) {
-            prt.precalc[0].z() += dp.z();
-        }
-        if( here->has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + prt.precalc[0] ) ) {
-            prt.precalc[0].z() += 1;
-        } else if( here->has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + prt.precalc[0] ) ) {
-            prt.precalc[0].z() -= 1;
-        }
-        prt.precalc[0].z() -= ramp_offset;
+        prt.precalc[0] = displaced_part_position( here, index, src, dp, parts_to_move ) - dst;
         prt.precalc[1].z() = prt.precalc[0].z();
         smzs.insert( prt.precalc[0].z() );
     }

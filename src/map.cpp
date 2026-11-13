@@ -1733,7 +1733,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         }
 
         for( auto &pair : veh_collisions ) {
-            impulse += vehicle_vehicle_collision( veh, *pair.first, pair.second );
+            impulse += vehicle_vehicle_collision( veh, *pair.first, pair.second, vertical );
         }
 
         // Non-vehicle collisions
@@ -1845,7 +1845,13 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
             return &veh;
         }
         // Actually change position
-        displace_vehicle( veh, dp1 );
+        if( !displace_vehicle( veh, dp1 ) ) {
+            veh.stop( *this );
+            return &veh;
+        }
+        if( !moving_vehicle ) {
+            return nullptr;
+        }
         level_vehicle( veh );
     } else if( !vertical ) {
         veh.stop( *this );
@@ -1916,7 +1922,7 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
 }
 
 float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
-                                      const std::vector<veh_collision> &collisions )
+                                      const std::vector<veh_collision> &collisions, bool vertical )
 {
     if( &veh == &veh2 ) {
         debugmsg( "Vehicle %s collided with itself", veh.name );
@@ -1927,8 +1933,7 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
     //  transfers of momentum, skidding,
     //  parts are damaged/broken on both sides,
     //  remaining times are normalized
-    const veh_collision &c = collisions[0];
-    const bool vertical = veh.sm_pos.z() != veh2.sm_pos.z();
+    const veh_collision &c = collisions.front();
 
     if( c.part < 0 || c.part >= static_cast<int>( veh.part_count() ) ) {
         debugmsg( "invalid c.part %d", c.part );
@@ -2412,14 +2417,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
 {
     const tripoint_abs_sm old_submap = veh.sm_pos;
     const tripoint_bub_ms src = veh.pos_bub( *this );
-    // handle vehicle ramps
-    const int ramp_offset = adjust_pos ? ramp_z_offset( src + dp ) : 0;
-    if( ramp_offset != 0 ) {
-        veh.is_on_ramp = true;
-    }
-
-    const tripoint_bub_ms dst =
-        src + ( adjust_pos ? ( dp + tripoint( 0, 0, ramp_offset ) ) : tripoint_rel_ms::zero );
+    const tripoint_bub_ms dst = adjust_pos ? ramp_landing( src + dp ) : src;
 
     if( !inbounds( src ) ) {
         add_msg_debug( debugmode::DF_MAP,
@@ -2428,6 +2426,10 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         return false;
     }
 
+    // Reject a missing destination before touching the vehicle or its riders.
+    if( !has_loaded_submap( dst ) ) {
+        return false;
+    }
     point_sm_ms src_offset;
     point_sm_ms dst_offset;
     submap *src_submap = get_submap_at( src, src_offset );
@@ -2435,7 +2437,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     if( src_submap == nullptr || dst_submap == nullptr ) {
         debugmsg( "Tried to displace vehicle at (%d,%d) but the submap is not loaded", src_offset.x(),
                   src_offset.y() );
-        return true;
+        return false;
     }
     std::set<int> smzs;
 
@@ -2464,16 +2466,61 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         return false;
     }
 
-    // move the vehicle
-    // don't let it go off grid
-    if( !inbounds( dst ) ) {
-        veh.stop( *this );
-        // Silent debug
-        dbg( D_ERROR ) << "map:displace_vehicle: Stopping vehicle, displaced dp=("
-                       << dp.x() << ", " << dp.y() << ", " << dp.z() << ")";
-        return true;
+    for( const vpart_reference &part : veh.get_all_parts_with_fakes() ) {
+        if( !part.part().removed &&
+            !has_loaded_submap( veh.displaced_part_position( *this, part.part_index(), src, dp,
+                    parts_to_move ) ) ) {
+            return false;
+        }
     }
 
+    // Resolve every seat before moving anyone, including seats on a
+    // different z-level or seats entering a cell another rider will vacate.
+    const std::vector<rider_data> riders = veh.get_riders();
+    struct rider_landing {
+        Creature *rider;
+        tripoint_bub_ms cell;
+        const Creature *occupant;
+    };
+    std::vector<rider_landing> rider_landings;
+    rider_landings.reserve( riders.size() );
+    const creature_tracker &creatures = get_creature_tracker();
+    for( const rider_data &rider : riders ) {
+        const tripoint_bub_ms landing = veh.displaced_part_position( *this, rider.prt, src, dp,
+            parts_to_move );
+        const Creature *occupant = creatures.creature_at( landing );
+        const bool outside_riders = occupant && std::none_of( riders.begin(), riders.end(),
+        [&]( const rider_data & other ) {
+            return other.psg == occupant;
+        } );
+        const bool duplicate_landing = std::any_of( rider_landings.begin(), rider_landings.end(),
+        [&]( const auto & other ) {
+            return other.cell == landing;
+        } );
+        if( !has_loaded_submap( landing ) || outside_riders || duplicate_landing ) {
+            return false;
+        }
+        rider_landings.push_back( { rider.psg, landing, occupant == rider.psg ? nullptr : occupant } );
+    }
+
+    // Move riders in dependency order so the creature tracker never has
+    // two monsters in the same cell. Refuse a cyclic seat exchange.
+    for( auto current = rider_landings.begin(); current != rider_landings.end(); ++current ) {
+        const auto ready = std::find_if( current, rider_landings.end(), [&]( const rider_landing & entry ) {
+            return !entry.occupant ||
+            std::any_of( rider_landings.begin(), current, [&]( const rider_landing & moved ) {
+                return moved.rider == entry.occupant;
+            } );
+        } );
+        if( ready == rider_landings.end() ) {
+            return false;
+        }
+        std::iter_swap( current, ready );
+    }
+
+    if( adjust_pos && dst.z() != src.z() + dp.z() ) {
+        veh.is_on_ramp = true;
+    }
     veh.set_fractional_offset( point::zero );
     memory_clear_vehicle_points( veh );
 
@@ -2481,76 +2528,23 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     // Need old coordinates to check for remote control
     const bool remote = veh.remote_controlled( player_character );
 
-    // record every passenger and pet inside
-    std::vector<rider_data> riders = veh.get_riders();
-
     bool need_update = false;
-    int z_change = 0;
-    // Move passengers and pets
-    bool complete = false;
-    creature_tracker &creatures = get_creature_tracker();
-    // loop until everyone has moved or for each passenger
-    for( size_t i = 0; !complete && i < riders.size(); i++ ) {
-        complete = true;
-        for( rider_data &r : riders ) {
-            if( r.moved ) {
-                continue;
-            }
-            const int prt = r.prt;
-            if( !parts_to_move.empty() && parts_to_move.find( prt ) == parts_to_move.end() ) {
-                r.moved = true;
-                continue;
-            }
-            Creature *psg = r.psg;
-            const tripoint_bub_ms part_pos = veh.bub_part_pos( *this, prt );
-            if( psg == nullptr ) {
-                debugmsg( "Empty passenger for part #%d at %s player at %s?",
-                          prt, part_pos.to_string_writable(),
-                          player_character.pos_bub( *this ).to_string_writable() );
-                veh.part( prt ).remove_flag( vp_flag::passenger_flag );
-                r.moved = true;
-                continue;
-            }
-
-            if( psg->pos_bub() != part_pos ) {
-                add_msg_debug( debugmode::DF_MAP, "Part/passenger position mismatch: part #%d at %s "
-                               "passenger at %s", prt, part_pos.to_string_writable(),
-                               psg->pos_bub( *this ).to_string_writable() );
-            }
-            const vehicle_part &veh_part = veh.part( prt );
-
-            // ramps make everything super tricky
-            int psg_offset_z = -ramp_offset;
-            tripoint_rel_ms next_pos; // defaults to 0,0,0
-            if( parts_to_move.empty() ) {
-                next_pos = veh_part.precalc[1];
-            }
-            psg_offset_z += ramp_z_offset( src + dp + next_pos );
-
-            // Place passenger on the new part location
-            tripoint_bub_ms psgp( dst + next_pos + tripoint( 0, 0, psg_offset_z ) );
-            // someone is in the way so try again
-            if( creatures.creature_at( psgp ) ) {
-                complete = false;
-                continue;
-            }
-            if( psg->is_avatar() ) {
-                // If passenger is you, we need to update the map
-                need_update = true;
-                z_change = psgp.z() - part_pos.z();
-            }
-
-            // Riders and their supporting vehicle move together.  The vehicle
-            // cache still describes the old position here, so checking gravity
-            // now would drop monsters through the not-yet-moved deck.
-            psg->setpos( *this, psgp, false );
-            r.moved = true;
+    bool rider_changed_level = false;
+    for( const rider_landing &entry : rider_landings ) {
+        if( entry.rider->pos_bub( *this ) == entry.cell ) {
+            continue;
         }
+        if( entry.rider->is_avatar() ) {
+            need_update = true;
+            rider_changed_level = entry.cell.z() != entry.rider->posz();
+        }
+        // Gravity waits for the deck to move to the same destination.
+        entry.rider->setpos( *this, entry.cell, false );
     }
 
     veh.shed_loose_parts( trinary::SOME, this, &dst );
-    smzs = veh.advance_precalc_mounts( dst_offset, this, src, dp, ramp_offset,
-                                       adjust_pos, parts_to_move );
+    smzs = veh.advance_precalc_mounts( dst_offset, *this, src, dst, dp, adjust_pos,
+                                       parts_to_move );
     veh.update_active_fakes();
 
     if( src_submap != dst_submap ) {
@@ -2561,44 +2555,34 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         src_submap->vehicles.erase( src_submap_veh_it );
         invalidate_max_populated_zlev( dst.z() );
     }
-    if( need_update ) {
-        g->update_map( player_character );
-    }
     cache_vehicle_parts( veh );
-
-    if( z_change || src.z() != dst.z() ) {
-        if( z_change ) {
-            g->vertical_move( z_change, true );
-            // vertical moves can flush the caches, so make sure we're still in the cache
-            cache_vehicle_parts( veh );
-        }
+    if( src.z() != dst.z() ) {
         update_vehicle_list( dst_submap, dst.z() );
         // delete the vehicle from the source z-level vehicle cache set if it is no longer on
         // that z-level
-        if( src.z() != dst.z() ) {
-            level_cache &ch2 = get_cache( src.z() );
-            for( const vehicle *elem : ch2.vehicle_list ) {
-                if( elem == &veh ) {
-                    ch2.vehicle_list.erase( &veh );
-                    ch2.zone_vehicles.erase( &veh );
-                    break;
-                }
-            }
-        }
+        level_cache &old_level = get_cache( src.z() );
+        old_level.vehicle_list.erase( &veh );
+        old_level.zone_vehicles.erase( &veh );
         veh.check_is_heli_landed( *this );
     }
-
-    if( remote ) {
-        // Has to be after update_map or coordinates won't be valid
-        g->setremoteveh( &veh );
-    }
-
     veh.zones_dirty = true; // invalidate zone positions
 
     for( int vsmz : smzs ) {
         on_vehicle_moved( dst.z() + vsmz );
     }
     refresh_vehicle_in_shared_views( veh, old_submap, src_submap );
+    const auto displaced = veh.get_safe_reference();
+    if( need_update ) {
+        if( rider_changed_level ) {
+            // The rider has already reached the seat. Move the viewing
+            // level without performing another character movement.
+            g->vertical_shift( player_character.posz() );
+        }
+        g->update_map( player_character, rider_changed_level );
+    }
+    if( remote && displaced ) {
+        g->setremoteveh( displaced.get() );
+    }
     return true;
 }
 
@@ -4029,6 +4013,11 @@ int map::ramp_z_offset( const tripoint_bub_ms &p ) const
     }
     return terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ||
            furniture.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ? -1 : 0;
+}
+
+tripoint_bub_ms map::ramp_landing( const tripoint_bub_ms &p ) const
+{
+    return p + tripoint( 0, 0, ramp_z_offset( p ) );
 }
 
 std::optional<map::ramp_segment> map::ramp_segment_at( const tripoint_bub_ms &p ) const

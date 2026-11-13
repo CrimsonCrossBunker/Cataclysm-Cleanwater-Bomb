@@ -33,6 +33,7 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "world_position.h"
 
 namespace
 {
@@ -544,8 +545,13 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         return false;
     }
     const character_action_guard lifetime( who );
-    const auto operator_position = who.pos_abs();
+    const world_position operator_position = who.pos_world();
+    const auto context = here.get_context_reference();
     const auto generation = who.grab_generation();
+    const auto still_holding = [&]() {
+        return lifetime && context && &get_map() == &here &&
+               who.pos_world() == operator_position && who.grab_generation() == generation;
+    };
 
     const optional_vpart_position grabbed_vehicle_vp = here.veh_at( who.pos_bub(
                 here ) + who.grab_point );
@@ -557,12 +563,13 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     vehicle *grabbed_vehicle = &grabbed_vehicle_vp->vehicle();
     const int64_t vehicle_id = grabbed_vehicle->uid().get_value();
     const int grabbed_part = who.grabbed_vehicle_part( here );
+    if( grabbed_part < 0 ) {
+        who.grab( object_type::NONE );
+        return false;
+    }
     const int64_t part_id = grabbed_vehicle->part( grabbed_part ).get_base().uid().get_value();
     if( !grabbed_vehicle->handle_potential_theft( who, false,
-            !who.is_player_controlled() || who.is_avatar() ) || !lifetime ) {
-        return true;
-    }
-    if( who.pos_abs() != operator_position || who.grab_generation() != generation ) {
+            !who.is_player_controlled() || who.is_avatar() ) || !still_holding() ) {
         return true;
     }
     grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );
@@ -590,7 +597,6 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     tripoint_rel_ms dp_veh = - who.grab_point;
     const tripoint_rel_ms prev_grab = who.grab_point;
     tripoint_rel_ms next_grab = who.grab_point;
-    const tileray initial_veh_face = grabbed_vehicle->face;
 
     const bool veh_has_solid = !empty( grabbed_vehicle->get_avail_parts( VPFLAG_OBSTACLE ) );
     const bool veh_single_tile = grabbed_vehicle->get_points().size() == 1;
@@ -699,7 +705,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
             who.add_msg_if_player( m_bad, _( "You strain yourself to move the %s!" ), grabbed_vehicle->name );
             who.mod_moves( -to_moves<int>( 2_seconds ) );
             who.mod_pain( 1 );
-            if( !lifetime || !vehicle::find_vehicle_by_uid( here, vehicle_id ) ) {
+            if( !still_holding() || !vehicle::find_vehicle_by_uid( here, vehicle_id ) ) {
                 return true;
             }
         } else if( ex >= str ) {
@@ -726,8 +732,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         return true;
     }
 
-    if( !lifetime || who.pos_abs() != operator_position || who.grab_generation() != generation ||
-        who.get_grab_type() != object_type::VEHICLE ) {
+    if( !still_holding() || who.get_grab_type() != object_type::VEHICLE ) {
         return true;
     }
     grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );
@@ -738,8 +743,15 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         return true;
     }
     std::string blocker_name = _( "errors in movement code" );
-    const auto get_move_dir = [&]( const tripoint_rel_ms & md_dp_veh,
+    bool releases_grab = false;
+    const auto try_displace = [&]( const tripoint_rel_ms & md_dp_veh,
     const tripoint_rel_ms & md_next_grab ) {
+        const tileray previous_face = grabbed_vehicle->face;
+        const units::angle previous_turn = grabbed_vehicle->turn_dir;
+        const units::angle previous_last_turn = grabbed_vehicle->last_turn;
+        const auto previous_arc = grabbed_vehicle->turning_arc;
+        const units::angle previous_rotation = grabbed_vehicle->pivot_rotation[1];
+        const point_rel_ms previous_pivot = grabbed_vehicle->pivot_anchor[1];
         tileray mdir;
 
         mdir.init( md_dp_veh.xy() );
@@ -747,7 +759,8 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         if( grabbed_vehicle->is_on_ramp && turn == 180_degrees ) {
             who.add_msg_if_player( m_bad, _( "The %s can't be turned around while on a ramp." ),
                                    grabbed_vehicle->name );
-            return tripoint_rel_ms::zero;
+            blocker_name = _( "the ramp" );
+            return tripoint_rel_ms::invalid;
         }
         units::angle precalc_dir = grabbed_vehicle->face.dir();
         if( veh_has_solid && !bad_veh_angle && !veh_single_tile ) {
@@ -774,61 +787,74 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
             precalc_dir = mdir.dir();
         }
         grabbed_vehicle->precalc_mounts( 1, precalc_dir, grabbed_vehicle->pivot_point( here ) );
-        grabbed_vehicle->pos -= grabbed_vehicle->pivot_displacement().raw();
+        on_out_of_scope restore_pose( [&]() {
+            grabbed_vehicle->face = previous_face;
+            grabbed_vehicle->turn_dir = previous_turn;
+            grabbed_vehicle->last_turn = previous_last_turn;
+            grabbed_vehicle->turning_arc = previous_arc;
+            grabbed_vehicle->precalc_mounts( 1, previous_rotation, previous_pivot );
+        } );
 
-        // Grabbed part has to stay at distance 1 to the player
-        // and in roughly the same direction.
-        const tripoint_bub_ms new_part_pos = grabbed_vehicle->pos_bub( here ) +
+        // Solve for the new pivot position from the held part's intended
+        // landing. The current origin still owns the live parts and cache.
+        const tripoint_bub_ms vehicle_origin = grabbed_vehicle->pos_bub( here );
+        const tripoint_bub_ms new_part_pos = vehicle_origin +
                                              grabbed_vehicle->part( grabbed_part ).precalc[1];
         const tripoint_bub_ms expected_pos = who.pos_bub( here ) + dp + md_next_grab;
-        tripoint_rel_ms actual_dir = tripoint_rel_ms( ( expected_pos - new_part_pos ).xy(), 0 );
+        tripoint_rel_ms actual_dir( ( expected_pos - new_part_pos ).xy(), 0 );
 
-        bool failed = false;
-        bool actual_diff = false;
-        tripoint_rel_ms skip = pushing ? who.grab_point : dp;
+        bool shifted_away_from_operator = false;
         if( veh_has_solid ) {
-            //avoid player collision from vehicle turning
-            bool no_player_collision = false;
-            while( !no_player_collision ) {
-                no_player_collision = true;
-                for( const vpart_reference &vp : grabbed_vehicle->get_all_parts() ) {
-                    if( grabbed_vehicle->pos_bub( here ) +
-                        vp.part().precalc[1] + actual_dir == who.pos_bub( here ) + skip ) {
-                        no_player_collision = false;
-                        break;
+            const tripoint_bub_ms operator_landing = who.pos_bub( here ) +
+                ( pushing ? prev_grab : dp );
+            const auto overlaps_landing = [&]() {
+                for( const vpart_reference &part : grabbed_vehicle->get_all_parts() ) {
+                    if( vehicle_origin + part.part().precalc[1] + actual_dir == operator_landing ) {
+                        return true;
                     }
                 }
-                if( !no_player_collision ) {
-                    actual_dir += who.grab_point;
-                    no_player_collision = false;
-                    actual_diff = true;
+                return false;
+            };
+            while( overlaps_landing() ) {
+                // A handhold without a horizontal direction cannot clear this cell.
+                if( prev_grab.xy() == point_rel_ms::zero ) {
+                    blocker_name = who.disp_name();
+                    return tripoint_rel_ms::invalid;
                 }
-            }
-            if( actual_diff ) {
-                who.add_msg_if_player( _( "You let go of the %s as it turns." ), grabbed_vehicle->disp_name() );
-                who.grab( object_type::NONE );
-                who.grab_point = tripoint_rel_ms::zero;
+                actual_dir += prev_grab.xy().raw();
+                shifted_away_from_operator = true;
             }
         }
-        // Set player location to illegal value so it can't collide with vehicle.
-        const tripoint_abs_ms player_prev = who.pos_abs( );
-        who.setpos( here, tripoint_bub_ms::zero, false );
+        const tripoint_bub_ms proposed_origin = vehicle_origin + actual_dir;
+        const tripoint_bub_ms landing = here.ramp_landing( proposed_origin );
+        if( !here.has_loaded_submap( proposed_origin ) || !here.has_loaded_submap( landing ) ) {
+            blocker_name = _( "the edge of the loaded map" );
+            return tripoint_rel_ms::invalid;
+        }
+        // During a pull the vehicle can enter the operator's old cell.
+        // Keep the operator in the creature tracker at their exact position.
         std::vector<veh_collision> colls;
-        failed = grabbed_vehicle->collision( here, colls, actual_dir, true );
-        who.setpos( player_prev );
-        if( !colls.empty() ) {
-            blocker_name = colls.front().target_name;
+        if( grabbed_vehicle->collision( here, colls, actual_dir, true, false, &who ) ) {
+            if( !colls.empty() ) {
+                blocker_name = colls.front().target_name;
+            }
+            return tripoint_rel_ms::invalid;
         }
 
-        return failed ? tripoint_rel_ms::invalid : actual_dir;
+        if( !here.displace_vehicle( *grabbed_vehicle, actual_dir ) ) {
+            return tripoint_rel_ms::invalid;
+        }
+        restore_pose.cancel();
+        releases_grab = shifted_away_from_operator;
+        return actual_dir;
     };
 
     // First try the move as intended
     // But if that fails and the move is a zig-zag, try to recover:
     // Try to place the vehicle in the position player just left rather than "flattening" the zig-zag
-    tripoint_rel_ms final_dp_veh = get_move_dir( dp_veh, next_grab );
+    tripoint_rel_ms final_dp_veh = try_displace( dp_veh, next_grab );
     if( final_dp_veh == tripoint_rel_ms::invalid && zigzag ) {
-        final_dp_veh = get_move_dir( - prev_grab, - dp );
+        final_dp_veh = try_displace( - prev_grab, - dp );
         next_grab = - dp;
     }
 
@@ -837,26 +863,29 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         add_msg_debug( debugmode::DF_ACTIVITY,
                        "grabbed_veh_move: COLLISION with '%s' dp_veh=(%d,%d)",
                        blocker_name, dp_veh.x(), dp_veh.y() );
-        who.grab_point = prev_grab;
-        grabbed_vehicle->face = initial_veh_face;
         return true;
-    }
-
-    //if grab was already released, do not set grab again
-    if( who.grab_point != tripoint_rel_ms::zero ) {
-        who.grab_point = next_grab;
     }
 
     add_msg_debug( debugmode::DF_ACTIVITY,
                    "grabbed_veh_move: SUCCESS displacing veh by (%d,%d) new_grab=(%d,%d)",
                    final_dp_veh.x(), final_dp_veh.y(), next_grab.x(), next_grab.y() );
 
-    here.displace_vehicle( *grabbed_vehicle, final_dp_veh );
+    if( !context || &get_map() != &here ) {
+        return true;
+    }
     here.rebuild_vehicle_level_caches();
-    if( !lifetime ) {
+    if( !still_holding() ) {
         return true;
     }
     grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );
+    if( releases_grab ) {
+        if( grabbed_vehicle ) {
+            who.add_msg_if_player( _( "You let go of the %s as it turns." ), grabbed_vehicle->disp_name() );
+        }
+        who.grab( object_type::NONE );
+    } else {
+        who.grab_point = next_grab;
+    }
     if( grabbed_vehicle ) {
         here.level_vehicle( *grabbed_vehicle );
         grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );

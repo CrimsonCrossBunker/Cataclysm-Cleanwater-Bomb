@@ -160,6 +160,7 @@
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "vpart_position.h"
+#include "world_position.h"
 #include "submap.h"
 #include "weather.h"
 #include "weather_gen.h"
@@ -12702,6 +12703,71 @@ TEST_CASE( "native_vehicle_drag_bills_and_moves_the_actual_operator_object",
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
 }
 
+TEST_CASE( "vehicle_drag_preserves_the_operator_offset_and_rejects_blocked_turns",
+           "[grab_owned][walking_owned][multiplayer][vehicle]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const auto start = who.pos_bub( here );
+    const auto held = start + point::east;
+    const auto destination = start + point::west;
+    const auto initial = world_position::from_tile( here.get_abs( start ), tripoint( 147, 101, 0 ) );
+    REQUIRE( initial );
+    who.setpos( here, *initial, false );
+    who.set_str_base( 50 );
+    who.set_moves( 1000 );
+    for( const auto &tile : {
+             start, held, destination, held + point::east
+         } ) {
+        here.ter_set( tile, ter_id( "t_floor" ) );
+    }
+    vehicle *cart = here.add_vehicle( vproto_id( "none" ), held, 0_degrees, 0,
+                                      veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart );
+    cart->set_owner( who.get_faction_id() );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    cart->refresh();
+    here.add_vehicle_to_cache( cart );
+    who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
+    REQUIRE( who.validate_grab( here ) );
+
+    SECTION( "a pull can occupy the operator's previous cell" ) {
+        walk_move_choices choices;
+        choices.destination = here.get_abs( destination );
+        REQUIRE( avatar_action::move( who, here, tripoint_rel_ms::west, &choices ) );
+        CHECK( who.pos_abs() == here.get_abs( destination ) );
+        CHECK( who.pos_world().offset() == initial->offset() );
+        CHECK( cart->pos_bub( here ) == start );
+        CHECK( who.grab_matches( here ) );
+        CHECK_FALSE( here.veh_at( held ) );
+        CHECK( veh_pointer_or_null( here.veh_at( start ) ) == cart );
+    }
+
+    SECTION( "a blocked turn preserves the current pose and handhold" ) {
+        here.ter_set( held + point::east, ter_id( "t_wall" ) );
+        cart->turn_dir = 45_degrees;
+        cart->last_turn = 15_degrees;
+        cart->precalc_mounts( 1, 45_degrees, point_rel_ms::east );
+        const auto mount_preview = cart->part( 0 ).precalc[1];
+        const auto projected_position = cart->part( 0 ).next_pos;
+        const auto grab_generation = who.grab_generation();
+        REQUIRE( grabbed_vehicle_test_access::move( *g, who, tripoint_rel_ms::east ) );
+        CHECK( who.pos_world() == *initial );
+        CHECK( who.grab_generation() == grab_generation );
+        CHECK( who.grab_matches( here ) );
+        CHECK( cart->pos_bub( here ) == held );
+        CHECK( cart->face.dir() == 0_degrees );
+        CHECK( cart->turn_dir == 45_degrees );
+        CHECK( cart->last_turn == 15_degrees );
+        CHECK( cart->part( 0 ).precalc[1] == mount_preview );
+        CHECK( cart->part( 0 ).next_pos == projected_position );
+        CHECK( veh_pointer_or_null( here.veh_at( held ) ) == cart );
+    }
+}
+
 TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
            "[grab_owned][multiplayer][vehicle]" )
 {
@@ -13243,6 +13309,9 @@ TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_pla
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const auto origin = who.pos_bub();
+    const auto initial = world_position::from_tile( here.get_abs( origin ), tripoint( 147, 101, 0 ) );
+    REQUIRE( initial );
+    who.setpos( here, *initial, false );
     const auto chair = origin + tripoint::east;
     const auto destination = chair + tripoint::east;
     for( const auto &p : { origin, chair, destination } ) {
@@ -13264,10 +13333,25 @@ TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_pla
     REQUIRE( who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     save_reload_activity( who );
-    who.set_moves( 100000 );
-    fixture.run( who, fixture.request( who, "step" ) );
-    CHECK( who.pos_bub() == chair );
-    CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
+    SECTION( "move and keep the saved offset" ) {
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK( who.pos_bub() == chair );
+        CHECK( who.pos_world().offset() == initial->offset() );
+        CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "cancel if the operator changed position inside the same cell" ) {
+        const auto shifted = initial->translated( tripoint( 1, 0, 0 ) );
+        REQUIRE( shifted );
+        who.setpos( here, *shifted, false );
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK( who.pos_world() == *shifted );
+        CHECK( here.furn( chair ) == furn_str_id( "f_chair" ) );
+        CHECK_FALSE( here.has_furn( destination ) );
+        CHECK_FALSE( who.activity );
+    }
     CHECK_FALSE( get_avatar().activity );
     CHECK( get_avatar().pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
 }

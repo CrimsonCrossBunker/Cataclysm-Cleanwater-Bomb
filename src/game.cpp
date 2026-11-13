@@ -8968,8 +8968,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     bool moving = dest_loc != oldpos;
 
     std::optional<world_position> precise;
-    if( step ) {
-        tripoint offset = step->target.offset();
+    if( step || grabbed || furniture_move ) {
+        // Dragging is still a whole-cell operation. Translate the operator
+        // with the object without recentering their position inside the cell.
+        tripoint offset = step ? step->target.offset() : original_position.offset();
         if( via_ramp ) {
             offset.z = 0;
         }

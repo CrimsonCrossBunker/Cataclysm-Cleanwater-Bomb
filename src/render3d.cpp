@@ -3927,6 +3927,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         const point offset = veh.fractional_offset();
                         const float shift_x = position_fraction( offset.x );
                         const float shift_y = position_fraction( offset.y );
+                        const float vehicle_z = slope ? slope->height_at( 0.5f + shift_x, 0.5f + shift_y ) : wz;
                         const point_rel_ms mount = ovp->mount_pos();
                         // the identical call 2D makes: part stacking, hidden
                         // parts, fake parts and the passenger roof rule all
@@ -4073,7 +4074,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             };
                             const auto push_skin = [&]( const sprite_info & vspr, const int rot4 ) {
                                 push_decal( vspr.atlas, static_cast<float>( dx ) + ox,
-                                            static_cast<float>( dy ) + oy, wz + VEH_DECAL_Z,
+                                            static_cast<float>( dy ) + oy, vehicle_z + VEH_DECAL_Z,
                                             vspr.px_w / 32.0f, vspr.px_h / 32.0f, vspr,
                                             tone.shade, tone.shade, tone.shade, rot4 );
                             };
@@ -4226,7 +4227,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                         if( near_hide && count < MAX_DRAW_INSTANCES ) {
                                             const ImVec4 vc = vpid->color;
                                             push_decal( vspr.atlas, static_cast<float>( dx ),
-                                                        static_cast<float>( dy ), wz + VEH_DECAL_Z,
+                                                        static_cast<float>( dy ), vehicle_z + VEH_DECAL_Z,
                                                         1.0f, 1.0f, vspr,
                                                         vc.x * tone.shade, vc.y * tone.shade,
                                                         vc.z * tone.shade, 0 );
@@ -4237,8 +4238,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             }
                             if( near_hide && vdrew && ( slope || offset != point::zero ) ) {
                                 surfaces.add_vehicle_box( tripoint( dx, dy, zlev ),
-                                { dx + shift_x, dy + shift_y, wz + VEH_DECAL_Z - 0.002f },
-                                { dx + shift_x + 1.0f, dy + shift_y + 1.0f, wz + VEH_DECAL_Z + 0.002f } );
+                                { dx + shift_x, dy + shift_y, vehicle_z + VEH_DECAL_Z - 0.002f },
+                                { dx + shift_x + 1.0f, dy + shift_y + 1.0f, vehicle_z + VEH_DECAL_Z + 0.002f } );
                             }
                             // side panels on both exterior flanks (mount left
                             // (0,-1) and right (0,+1)), each resolved with its
@@ -4278,12 +4279,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                              is_left ? 3 : 1, false, pl,
                                                              vd.variant.id );
                                     if( pl.bg_tex ) {
-                                        push_panel( pl.bg, pd, swap_u, wz + VEH_PANEL_BASE_Z,
+                                        push_panel( pl.bg, pd, swap_u, vehicle_z + VEH_PANEL_BASE_Z,
                                                     pl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE, true,
                                                     pproud );
                                     }
                                     if( pl.fg_tex ) {
-                                        push_panel( pl.fg, pd, swap_u, wz + VEH_PANEL_BASE_Z,
+                                        push_panel( pl.fg, pd, swap_u, vehicle_z + VEH_PANEL_BASE_Z,
                                                     pl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE, true,
                                                     pproud );
                                     }
@@ -4371,14 +4372,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                                 if( ql.bg_tex ) {
                                     push_decal( ql.bg.atlas, hdx, hdy,
-                                                wz + box_top + 0.005f,
+                                                vehicle_z + box_top + 0.005f,
                                                 hsx, hsy, crop_spill( ql.bg, ql.offset ),
                                                 tone.shade, tone.shade, tone.shade,
                                                 hood_rot4 );
                                 }
                                 if( ql.fg_tex ) {
                                     push_decal( ql.fg.atlas, hdx, hdy,
-                                                wz + box_top + 0.005f,
+                                                vehicle_z + box_top + 0.005f,
                                                 hsx, hsy, crop_spill( ql.fg, ql.offset ),
                                                 tone.shade, tone.shade, tone.shade,
                                                 ( ql.fg_rot4 + hood_rot4 ) & 3 );
@@ -4441,8 +4442,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                         ? ( rear_glass ? front_dir : rear_dir )
                                                         : ( rear_glass ? rear_dir : front_dir );
                                 const bool glass_swap = rear_glass ? rear_swap : front_swap;
-                                const float glass_z = flush_cabin ? wz + box_top
-                                                      : wz + VEH_WSH_BASE_Z;
+                                const float glass_z = flush_cabin ? vehicle_z + box_top
+                                                      : vehicle_z + VEH_WSH_BASE_Z;
                                 const float glass_h = flush_cabin
                                                       ? VEH_ROOF_Z - box_top
                                                       : VEH_WSH_H;
@@ -4493,13 +4494,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                          0, false, rl, vd.variant.id );
                                 if( rl.bg_tex ) {
                                     push_panel( rl.bg, rear_dir, rear_swap,
-                                                wz + VEH_PANEL_BASE_Z + 0.30f,
+                                                vehicle_z + VEH_PANEL_BASE_Z + 0.30f,
                                                 rl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE,
                                                 false );
                                 }
                                 if( rl.fg_tex ) {
                                     push_panel( rl.fg, rear_dir, rear_swap,
-                                                wz + VEH_PANEL_BASE_Z + 0.30f,
+                                                vehicle_z + VEH_PANEL_BASE_Z + 0.30f,
                                                 rl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE,
                                                 false );
                                 }
@@ -4527,14 +4528,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 if( vl.bg_tex ) {
                                     push_decal( vl.bg.atlas, static_cast<float>( dx ),
                                                 static_cast<float>( dy ),
-                                                wz + box_top + 0.005f,
+                                                vehicle_z + box_top + 0.005f,
                                                 1.0f, 1.0f, crop_spill( vl.bg, vl.offset ),
                                                 tone.shade, tone.shade, tone.shade, 0 );
                                 }
                                 if( vl.fg_tex ) {
                                     push_decal( vl.fg.atlas, static_cast<float>( dx ),
                                                 static_cast<float>( dy ),
-                                                wz + box_top + 0.005f,
+                                                vehicle_z + box_top + 0.005f,
                                                 1.0f, 1.0f, crop_spill( vl.fg, vl.offset ),
                                                 tone.shade, tone.shade, tone.shade,
                                                 vl.fg_rot4 );
@@ -4565,13 +4566,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 const float mdy = static_cast<float>( dy + minv.y );
                                 if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
                                     push_decal( vl.bg.atlas, mdx, mdy,
-                                                wz + VEH_MIRROR_Z + 0.005f,
+                                                vehicle_z + VEH_MIRROR_Z + 0.005f,
                                                 1.0f, 1.0f, vl.bg,
                                                 tone.shade, tone.shade, tone.shade, 0 );
                                 }
                                 if( vl.fg_tex && count < MAX_DRAW_INSTANCES ) {
                                     push_decal( vl.fg.atlas, mdx, mdy,
-                                                wz + VEH_MIRROR_Z + 0.005f,
+                                                vehicle_z + VEH_MIRROR_Z + 0.005f,
                                                 1.0f, 1.0f, vl.fg,
                                                 tone.shade, tone.shade, tone.shade,
                                                 vl.fg_rot4 );
@@ -4614,12 +4615,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 if( !slope && offset == point::zero ) {
                                     surfaces.set_vehicle_body( cell, body_bottom, box_top );
                                 } else {
-                                    surfaces.add_vehicle_box( cell, { left, top, wz + body_bottom },
-                                    { left + 1.0f, top + 1.0f, wz + box_top } );
+                                    surfaces.add_vehicle_box( cell, { left, top, vehicle_z + body_bottom },
+                                    { left + 1.0f, top + 1.0f, vehicle_z + box_top } );
                                 }
                                 sprite_info rspr; // untextured -> white fallback x color
                                 std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
-                                push_instance( v, left, top, wz + body_bottom,
+                                push_instance( v, left, top, vehicle_z + body_bottom,
                                                1.0f, 1.0f, box_top - body_bottom, rspr,
                                                0.6f * tone.shade, 0.6f * tone.shade,
                                                0.6f * tone.shade,

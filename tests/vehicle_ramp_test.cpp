@@ -396,6 +396,100 @@ TEST_CASE( "vehicle_level_test", "[vehicle][ramp]" )
     }
 }
 
+TEST_CASE( "vehicle_ramp_collision_and_displacement_use_the_same_part_landings",
+           "[vehicle][ramp][collision]" )
+{
+    clear_avatar();
+    clear_game_and_set_ramp( 60, true, true );
+    const on_out_of_scope cleanup( [] {
+        clear_avatar();
+        clear_vehicles();
+    } );
+    map &here = get_map();
+    const tripoint_bub_ms start( 61, 60, 0 );
+    const tripoint_bub_ms entry = start + point::west;
+    const tripoint_bub_ms upper = entry + tripoint::above;
+    vehicle *const cart = here.add_vehicle( vproto_id( "none" ), start, 0_degrees, 0,
+                                            veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int rear = cart->install_part( here, point_rel_ms::east, vpart_id( "frame" ) );
+    REQUIRE( rear >= 0 );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "seat" ) ) >= 0 );
+    cart->refresh();
+    cart->precalc_mounts( 1, cart->pivot_rotation[0], cart->pivot_anchor[0] );
+    here.add_vehicle_to_cache( cart );
+    avatar &who = get_avatar();
+    here.board_vehicle( start, &who );
+    REQUIRE( who.in_vehicle );
+
+    SECTION( "probe and moving impact detect an obstacle above the entry proxy" ) {
+        here.ter_set( upper, ter_id( "t_rock" ) );
+        std::vector<veh_collision> collisions;
+        const int initial_speed = 100;
+        cart->velocity = initial_speed;
+        REQUIRE( cart->collision( here, collisions, tripoint_rel_ms::west, true ) );
+        CHECK( cart->velocity == initial_speed );
+        CHECK( who.pos_bub( here ) == start );
+        REQUIRE( here.move_vehicle( *cart, tripoint_rel_ms::west, cart->face ) == cart );
+        CHECK( cart->pos_bub( here ) == start );
+        CHECK( who.pos_bub( here ) == start );
+        CHECK( here.ter( upper ) == ter_id( "t_rock" ) );
+    }
+
+    SECTION( "front seat rises while the rear frame remains on the lower level" ) {
+        std::vector<veh_collision> collisions;
+        REQUIRE_FALSE( cart->collision( here, collisions, tripoint_rel_ms::west, true ) );
+        REQUIRE( here.displace_vehicle( *cart, tripoint_rel_ms::west ) );
+        CHECK( cart->pos_bub( here ) == upper );
+        CHECK( who.pos_bub( here ) == upper );
+        CHECK( here.get_abs_sub().z() == upper.z() );
+        CHECK( who.in_vehicle );
+        CHECK( cart->bub_part_pos( here, rear ) == start );
+        CHECK( veh_pointer_or_null( here.veh_at( upper ) ) == cart );
+        CHECK( veh_pointer_or_null( here.veh_at( start ) ) == cart );
+        CHECK_FALSE( here.veh_at( entry ) );
+    }
+}
+
+TEST_CASE( "side_towed_vehicle_changes_height_only_at_its_own_ramp",
+           "[vehicle][ramp][towing]" )
+{
+    clear_avatar();
+    clear_game_and_set_ramp( 60, true, true );
+    map &here = get_map();
+    const tripoint_bub_ms below_ramp( 61, 60, 0 );
+    const tripoint_bub_ms above_ramp( 60, 60, 1 );
+    get_avatar().setpos( here, tripoint_bub_ms( 66, 64, 0 ), false );
+    const auto make_cart = [&]( const tripoint_bub_ms & where ) {
+        vehicle *cart = here.add_vehicle( vproto_id( "none" ), where, 0_degrees, 0,
+                                          veh_spawn_status::UNDAMAGED );
+        REQUIRE( cart );
+        REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "hd_tow_cable" ) ) >= 0 );
+        cart->refresh();
+        here.add_vehicle_to_cache( cart );
+        return cart;
+    };
+    vehicle *const tower = make_cart( tripoint_bub_ms( 49, 60, 1 ) );
+    vehicle *const trailer = make_cart( below_ramp + point::east );
+    REQUIRE( tower->tow_data.set_towing( tower, trailer ) );
+    const on_out_of_scope cleanup( [&]() {
+        tower->tow_data.clear_towing();
+        trailer->tow_data.clear_towing();
+        clear_vehicles();
+        clear_avatar();
+    } );
+    trailer->tow_data.tow_direction = TOW_SIDE;
+    // Use a high enough speed to overcome the drag on a cart without wheels.
+    tower->velocity = 3000;
+    tower->do_towing_move( here );
+    REQUIRE( trailer->pos_bub( here ) == below_ramp );
+    tower->do_towing_move( here );
+    CHECK( trailer->pos_bub( here ) == above_ramp );
+    CHECK( veh_pointer_or_null( here.veh_at( above_ramp ) ) == trailer );
+}
+
 TEST_CASE( "vehicle_subtile_travel_stops_before_an_unsettled_obstacle",
            "[vehicle][render3d]" )
 {
@@ -435,15 +529,42 @@ TEST_CASE( "vehicle_subtile_travel_stops_before_an_unsettled_obstacle",
     CHECK( car->pos_abs() == origin );
     CHECK( car->fractional_offset() == point( 192, 0 ) );
 
-    bool blocked_edge = false;
+    car->turn_dir = 90_degrees;
+    car->of_turn = 3.0f;
+    REQUIRE( car->act_on_map( here ) == car );
+    CHECK( car->pos_abs() == origin );
+    CHECK( car->fractional_offset() == point( 0, 192 ) );
+    CHECK( car->face.dir() == 0_degrees );
+    car->turn_dir = car->face.dir();
+
+    std::vector<tripoint_bub_ms> leading_cells;
     for( const vpart_reference &part : car->get_all_parts() ) {
         const tripoint_bub_ms ahead = part.pos_bub( here ) + point::east;
         if( part.info().location == vpart_location_structure && !here.veh_at( ahead ) ) {
-            here.ter_set( ahead, ter_id( "t_wall" ) );
-            blocked_edge = true;
+            leading_cells.push_back( ahead );
         }
     }
-    REQUIRE( blocked_edge );
+    REQUIRE_FALSE( leading_cells.empty() );
+    SECTION( "flat obstacle" ) {
+        for( const auto &ahead : leading_cells ) {
+            here.ter_set( ahead, ter_id( "t_wall" ) );
+        }
+    }
+    SECTION( "a complete ramp allows approach until its landing is obstructed" ) {
+        for( const auto &ahead : leading_cells ) {
+            const tripoint_bub_ms approach = ahead + point::west;
+            here.ter_set( approach, ter_id( "t_ramp_up_low" ) );
+            here.ter_set( approach + tripoint::above, ter_id( "t_ramp_down_low" ) );
+            here.ter_set( ahead, ter_id( "t_ramp_up_high" ) );
+            here.ter_set( ahead + tripoint::above, ter_id( "t_ramp_down_high" ) );
+        }
+        car->of_turn = 2.0f;
+        REQUIRE( car->act_on_map( here ) == car );
+        CHECK( car->pos_abs() == origin );
+        CHECK( car->fractional_offset() == point( 128, 0 ) );
+        here.ter_set( leading_cells.front() + tripoint::above, ter_id( "t_wall" ) );
+    }
+
     car->of_turn = 4.0f;
     REQUIRE( car->act_on_map( here ) == car );
     CHECK( car->pos_abs() == origin );

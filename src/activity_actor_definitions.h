@@ -2791,6 +2791,7 @@ class move_furniture_activity_actor : public activity_actor
         character_id operator_id;
         uint64_t grab_generation = 0;
         tripoint_abs_ms origin;
+        std::optional<tripoint> origin_offset;
         grab_selection source;
         std::optional<walk_move_choices> choices;
         bool bind_target( Character &who );

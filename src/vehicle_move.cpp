@@ -785,7 +785,7 @@ void vehicle::stop( map &here )
 
 bool vehicle::collision( map &here, std::vector<veh_collision> &colls,
                          const tripoint_rel_ms &dp,
-                         bool just_detect, bool bash_floor )
+                         bool just_detect, bool bash_floor, const Creature *ignored_creature )
 {
     /*
      * Big TODO:
@@ -803,30 +803,57 @@ bool vehicle::collision( map &here, std::vector<veh_collision> &colls,
 
     if( dp.z() != 0 && ( dp.x() != 0 || dp.y() != 0 ) ) {
         // Split into horizontal + vertical
-        return collision( here, colls, tripoint_rel_ms( dp.xy(), 0 ), just_detect, bash_floor ) ||
-               collision( here, colls, tripoint_rel_ms( 0,    0,    dp.z() ), just_detect, bash_floor );
+        return collision( here, colls, tripoint_rel_ms( dp.xy(), 0 ), just_detect, bash_floor,
+                          ignored_creature ) ||
+               collision( here, colls, tripoint_rel_ms( 0, 0, dp.z() ), just_detect, bash_floor,
+                          ignored_creature );
     }
 
     if( dp.z() == -1 && !bash_floor ) {
         // First check current level, then the one below if current had no collisions
         // Bash floors on the current one, but not on the one below.
-        if( collision( here, colls, tripoint_rel_ms::zero, just_detect, true ) ) {
+        if( collision( here, colls, tripoint_rel_ms::zero, just_detect, true, ignored_creature ) ) {
             return true;
         }
     }
 
     const bool vertical = bash_floor || dp.z() != 0;
     const int &coll_velocity = vertical ? vertical_velocity : velocity;
-    // Skip collisions when there is no apparent movement, except verticially moving rotorcraft.
+    // Skip collisions when there is no apparent movement, except vertically moving rotorcraft.
     if( coll_velocity == 0 && !is_aircraft( here ) ) {
         just_detect = true;
+    }
+
+    const auto hits_boundary = [&]( const tripoint_bub_ms & entry,
+    const tripoint_bub_ms & landing, int part_index ) {
+        if( here.has_loaded_submap( entry ) &&
+            ( entry == landing || here.has_loaded_submap( landing ) ) &&
+            landing.z() < OVERMAP_HEIGHT ) {
+            return false;
+        }
+        veh_collision boundary;
+        boundary.type = veh_coll_other;
+        boundary.part = part_index;
+        boundary.target_name = _( "the edge of the loaded map" );
+        colls.push_back( boundary );
+        if( !just_detect ) {
+            ( vertical ? vertical_velocity : velocity ) = 0;
+        }
+        return true;
+    };
+    const tripoint_bub_ms origin = pos_bub( here ) + dp;
+    if( hits_boundary( origin, bash_floor ? origin : here.ramp_landing( origin ), 0 ) ) {
+        return true;
     }
 
     const int velocity_before = coll_velocity;
     int lowest_velocity = coll_velocity;
     const int sign_before = sgn( velocity_before );
     bool empty = true;
-    part_project_points( dp );
+    if( !just_detect ) {
+        part_project_points( here, dp, bash_floor );
+    }
+    const tripoint_abs_ms projected_origin = here.get_abs( origin );
     for( int p = 0; p < part_count(); p++ ) {
         const vehicle_part &vp = parts.at( p );
         if( vp.removed || !vp.is_real_or_active_fake() ) {
@@ -838,15 +865,28 @@ bool vehicle::collision( map &here, std::vector<veh_collision> &colls,
             continue;
         }
         empty = false;
-        // Coordinates of where part will go due to movement (dx/dy/dz)
-        //  and turning (precalc[1])
-        const tripoint_abs_ms dsp = vp.next_pos;
-        veh_collision coll = part_collision( here, p, dsp, just_detect, bash_floor );
+        const tripoint_abs_ms entry = projected_origin + vp.precalc[1];
+        const tripoint_abs_ms landing = just_detect ?
+                                        collision_part_position( here, p, dp, bash_floor ) : vp.next_pos;
+        if( hits_boundary( here.get_bub( entry ), here.get_bub( landing ), p ) ) {
+            return true;
+        }
+        veh_collision coll;
+        if( entry != landing ) {
+            // The transition proxy can hold furniture or an impassable field.
+            coll = resolve_part_collision( here, p, entry, just_detect, bash_floor, vertical,
+                                           ignored_creature );
+        }
+        if( coll.type == veh_coll_nothing ) {
+            coll = resolve_part_collision( here, p, landing, just_detect, bash_floor, vertical,
+                                           ignored_creature );
+        }
         if( coll.type == veh_coll_nothing && info.has_flag( VPFLAG_ROTOR ) ) {
             size_t radius = static_cast<size_t>( std::round( info.rotor_info->rotor_diameter / 2.0f ) );
-            for( const tripoint_bub_ms &rotor_point : here.points_in_radius( here.get_bub( dsp ), radius ) ) {
-                veh_collision rotor_coll = part_collision( here, p, here.get_abs( rotor_point ), just_detect,
-                                           false );
+            for( const tripoint_bub_ms &rotor_point : here.points_in_radius( here.get_bub( landing ),
+                    radius ) ) {
+                veh_collision rotor_coll = resolve_part_collision( here, p, here.get_abs( rotor_point ),
+                    just_detect, false, vertical, ignored_creature );
                 if( rotor_coll.type != veh_coll_nothing ) {
                     coll = rotor_coll;
                     if( just_detect ) {
@@ -884,7 +924,7 @@ bool vehicle::collision( map &here, std::vector<veh_collision> &colls,
         }
     }
 
-    if( vertical ) {
+    if( vertical && !just_detect ) {
         vertical_velocity = lowest_velocity;
         if( vertical_velocity == 0 ) {
             is_falling = false;
@@ -896,8 +936,10 @@ bool vehicle::collision( map &here, std::vector<veh_collision> &colls,
         veh_collision fake_coll;
         fake_coll.type = veh_coll_other;
         colls.push_back( fake_coll );
-        velocity = 0;
-        vertical_velocity = 0;
+        if( !just_detect ) {
+            velocity = 0;
+            vertical_velocity = 0;
+        }
         add_msg_debug( debugmode::DF_VEHICLE_MOVE, "Collision check on a dirty vehicle %s", name );
         return true;
     }
@@ -918,16 +960,22 @@ static void terrain_collision_data( map &here, const tripoint_bub_ms &p, bool ba
 }
 
 veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_ms &p,
-                                       bool just_detect, bool bash_floor )
+                                       bool just_detect, bool bash_floor,
+                                       const Creature *ignored_creature )
 {
-    tripoint_bub_ms pos = here.get_bub( p );
-    // Vertical collisions need to be handled differently
-    // All collisions have to be either fully vertical or fully horizontal for now
-    const bool vert_coll = bash_floor || p.z() != sm_pos.z();
-    Creature *critter = get_creature_tracker().creature_at( p, true );
-    Character *ph = dynamic_cast<Character *>( critter );
+    return resolve_part_collision( here, part, p, just_detect, bash_floor,
+                                   bash_floor || p.z() != sm_pos.z(), ignored_creature );
+}
 
-    Character *driver = get_driver( here );
+veh_collision vehicle::resolve_part_collision( map &here, int part, const tripoint_abs_ms &p,
+        bool just_detect, bool bash_floor, bool vert_coll, const Creature *ignored_creature )
+{
+    const tripoint_bub_ms pos = here.get_bub( p );
+    Creature *critter = get_creature_tracker().creature_at( p, true );
+    if( critter == ignored_creature ) {
+        critter = nullptr;
+    }
+    Character *ph = dynamic_cast<Character *>( critter );
 
     // If in a vehicle assume it's this one
     if( ph != nullptr && ph->in_vehicle ) {
@@ -972,7 +1020,7 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
             return ret;
         }
         // we just ran into a fish, so move it out of the way
-        if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, critter->pos_bub() ) ) {
+        if( !just_detect && here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos ) ) {
             tripoint_abs_ms end_pos = critter->pos_abs();
             tripoint_abs_ms start_pos;
             const std::set<tripoint_abs_ms> projected_points = get_projected_part_points();
@@ -1058,6 +1106,7 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
         // Hit nothing or we aren't actually hitting
         return ret;
     }
+    Character *driver = get_driver( here );
     stop_autodriving();
     // Calculate mass AFTER checking for collision
     //  because it involves iterating over all cargo
@@ -2094,16 +2143,21 @@ static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &
     // whole swept bounds so a thin diagonal gap cannot admit the chassis.
     const int sx = sgn( offset.x );
     const int sy = sgn( offset.y );
-    const auto flat_ground = [&here]( const tripoint_bub_ms & tile ) {
+    const auto has_surface = [&here]( const tripoint_bub_ms & tile ) {
         return here.has_loaded_submap( tile ) && here.move_cost_ter_furn( tile ) == 2 &&
-               !here.get_impassable_field_at( tile ) &&
-               !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, tile ) &&
-               !here.has_flag( ter_furn_flag::TFLAG_RAMP, tile ) &&
-               !here.has_flag( ter_furn_flag::TFLAG_RAMP_ENDPOINT, tile ) &&
-               here.ramp_z_offset( tile ) == 0;
+               !here.get_impassable_field_at( tile ) && here.has_floor( tile ) &&
+               ( !here.has_flag( ter_furn_flag::TFLAG_RAMP, tile ) ||
+                 here.ramp_segment_at( tile ).has_value() || here.ramp_z_offset( tile ) != 0 );
     };
-    const int base_level = veh.pos_abs().z();
     creature_tracker &creatures = get_creature_tracker();
+    const auto is_unoccupied = [&]( const tripoint_bub_ms & tile ) {
+        const optional_vpart_position existing = here.veh_at( tile );
+        if( existing && &existing->vehicle() != &veh ) {
+            return false;
+        }
+        const Creature *occupant = creatures.creature_at( here.get_abs( tile ), true );
+        return !occupant || ( existing && existing.part_with_feature( VPFLAG_BOARDABLE, true ) );
+    };
     bool has_hull = false;
     for( const vpart_reference &part : veh.get_all_parts_with_fakes() ) {
         if( part.part().removed ||
@@ -2111,7 +2165,7 @@ static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &
             continue;
         }
         const tripoint_bub_ms from = part.pos_bub( here );
-        if( from.z() != base_level || !flat_ground( from ) ) {
+        if( !has_surface( from ) ) {
             return false;
         }
         has_hull = true;
@@ -2120,16 +2174,13 @@ static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &
                 if( x == 0 && y == 0 ) {
                     continue;
                 }
-                const tripoint_bub_ms tile = from + point( x, y );
-                if( !here.has_loaded_submap( tile ) ) {
+                const tripoint_bub_ms entry = from + point( x, y );
+                if( !has_surface( entry ) || !is_unoccupied( entry ) ) {
                     return false;
                 }
-                const optional_vpart_position existing = here.veh_at( tile );
-                if( existing && &existing->vehicle() == &veh ) {
-                    continue;
-                }
-                if( existing || creatures.creature_at( here.get_abs( tile ), true ) ||
-                    !flat_ground( tile ) ) {
+                const tripoint_bub_ms landing = here.ramp_landing( entry );
+                if( landing != entry && ( !has_surface( landing ) ||
+                                          !here.ramp_segment_at( landing ) || !is_unoccupied( landing ) ) ) {
                     return false;
                 }
             }
@@ -2223,18 +2274,16 @@ vehicle *vehicle::act_on_map( map &here )
     if( turn_cost >= of_turn && ( ( !is_flying && requested_z_change == 0 ) ||
                                   !is_aircraft( here ) ) ) {
         if( !should_fall ) {
-            // Integrate the unspent part of the native stride for a grounded,
-            // straight-driving vehicle. Carry still determines when the
-            // collision/trap/boarding code settles the next map cell.
+            // Advance the current hull toward the next native landing. The
+            // native move still commits orientation, impact and wheel effects.
             point offset = point::zero;
-            if( controlled && !skidding && !is_on_ramp && !is_in_water() &&
+            if( controlled && !skidding && !is_in_water() &&
                 !wheelcache.empty() && rail_wheelcache.empty() && !is_flying &&
-                !is_towing() && !is_towed() && requested_z_change == 0 &&
-                turn_dir == face.dir() && !turning_arc ) {
+                !is_towing() && !is_towed() && requested_z_change == 0 && !turning_arc ) {
                 constexpr int stride = world_position::units_per_tile;
                 const int distance = std::clamp( static_cast<int>( of_turn / turn_cost * stride ),
                                                  0, stride - 1 );
-                tileray step = face;
+                tileray step = turn_dir == face.dir() ? face : tileray( turn_dir );
                 step.advance( velocity < 0 ? -1 : 1 );
                 offset = point( distance * step.dx(), distance * step.dy() );
                 if( distance > 0 && !vehicle_sweep_is_clear( here, *this, offset ) ) {
@@ -2398,8 +2447,7 @@ bool vehicle::level_vehicle( map &here )
         }
     }
     if( adjust_level ) {
-        here.displace_vehicle( *this, tripoint_rel_ms::below, center_drop, dropped_parts );
-        return false;
+        return !here.displace_vehicle( *this, tripoint_rel_ms::below, center_drop, dropped_parts );
     } else {
         return true;
     }
