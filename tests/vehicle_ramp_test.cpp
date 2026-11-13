@@ -28,6 +28,7 @@
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
 #include "monster.h"
+#include "player_helpers.h"
 #include "point.h"
 #include "tileray.h"
 #include "type_id.h"
