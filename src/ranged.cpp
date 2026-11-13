@@ -332,6 +332,8 @@ class target_ui
         bool no_mana = false;
         // Relevant activity
         aim_activity_actor *activity = nullptr;
+        bool sweeping = false;
+        std::optional<firearm_sweep> selected_sweep;
 
         enum class ExitCode : int {
             Abort,
@@ -389,6 +391,8 @@ class target_ui
         input_context ctxt;
         input_context burst_ctxt{ "TARGET" };
         int burst_rounds = 0;
+        std::optional<tripoint_bub_ms> sweep_start;
+        bool selecting_sweep_speed = false;
 
         /* These members are relevant for TargetMode::Fire */
         // Weapon sight dispersion
@@ -532,6 +536,8 @@ class target_ui
         bool action_aim_and_shoot( const std::string &action );
 
         int select_burst_rounds();
+        bool select_sweep();
+        void panel_sweep_selection( int text_y );
         void panel_burst_selection( int text_y );
 
         // Draw UI-specific terrain overlays
@@ -583,8 +589,13 @@ target_handler::trajectory target_handler::mode_fire( avatar &you, aim_activity_
     ui.you = &you;
     ui.mode = target_ui::TargetMode::Fire;
     ui.activity = &activity;
+    ui.sweeping = activity.sweeping;
     ui.relevant = &*activity.get_weapon();
     gun_mode gun = ui.relevant->gun_current_mode();
+    if( !gun || ( activity.sweeping && !gun.full_auto() ) ) {
+        activity.aborted = true;
+        return {};
+    }
     ui.range = gun.target->gun_range( &you );
     ui.ammo = gun->ammo_data();
 
@@ -653,19 +664,24 @@ target_handler::trajectory target_handler::mode_unarmed_reach( avatar &you )
 }
 
 target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turret_data &turret,
-        item &preview )
+        item &preview, std::optional<firearm_sweep> *sweep )
 {
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = target_ui::TargetMode::TurretManual;
     ui.turret = &turret;
     ui.relevant = &preview;
+    ui.sweeping = sweep != nullptr;
     ui.defer_target_effects = true;
     ui.range = turret.range();
     ui.ammo = turret.ammo_data();
 
     restore_on_out_of_scope view_offset_prev( you.view_offset );
-    return ui.run();
+    auto trajectory = ui.run();
+    if( sweep ) {
+        *sweep = ui.selected_sweep;
+    }
+    return trajectory;
 }
 
 target_handler::trajectory target_handler::mode_turrets( avatar &you, vehicle &veh,
@@ -1301,6 +1317,181 @@ int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second )
                              std::numeric_limits<int>::max() ) );
 }
 
+bool select_full_auto_mode( item &gun )
+{
+    if( const gun_mode current = gun.gun_current_mode(); current && current.full_auto() ) {
+        return true;
+    }
+    for( const auto &[id, mode] : gun.gun_all_modes() ) {
+        if( mode.full_auto() && !mode.melee() && gun.gun_set_mode( id ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static double sweep_bearing( const tripoint_bub_ms &origin, const tripoint_bub_ms &pos )
+{
+    return std::atan2( pos.y() - origin.y(), pos.x() - origin.x() );
+}
+
+static double sweep_angle( const tripoint_bub_ms &origin, const tripoint_bub_ms &start,
+                           const tripoint_bub_ms &end )
+{
+    return std::remainder( sweep_bearing( origin, end ) - sweep_bearing( origin, start ),
+                           2.0 * M_PI );
+}
+
+double firearm_sweep::duration( const tripoint_bub_ms &origin ) const
+{
+    if( speed < 1 || speed > 3 || start == origin || end == origin ||
+        start.z() != origin.z() || end.z() != origin.z() ) {
+        return 0.0;
+    }
+    static constexpr std::array<double, 3> degrees_per_second = { 100.0, 60.0, 30.0 };
+    const double angle = std::abs( sweep_angle( origin, start, end ) );
+    if( angle < 1e-9 ) {
+        return 0.0;
+    }
+    return angle * 180.0 /
+           ( M_PI * degrees_per_second[speed - 1] );
+}
+
+bool firearm_sweep::contains( const tripoint_bub_ms &origin, const tripoint_bub_ms &pos,
+                              double padding ) const
+{
+    if( pos == origin || pos.z() != origin.z() || duration( origin ) == 0.0 ) {
+        return false;
+    }
+    const double arc = sweep_angle( origin, start, end );
+    const double offset = sweep_angle( origin, arc > 0.0 ? start : end, pos );
+    const double wrapped = offset < -padding ? offset + 2.0 * M_PI : offset;
+    return wrapped <= std::abs( arc ) + padding;
+}
+
+int firearm_sweep::rounds( const tripoint_bub_ms &origin, int rpm ) const
+{
+    const double seconds = duration( origin );
+    if( rpm <= 0 || seconds <= 0.0 ) {
+        return 0;
+    }
+    // The first round leaves as the sweep starts. Bound the work for very high modded rates.
+    return static_cast<int>( std::clamp( std::ceil( seconds * rpm / 60.0 - 1e-9 ), 1.0, 120.0 ) );
+}
+
+static int sweep_move_cost( double seconds, int moves_per_second )
+{
+    return std::max( 1, static_cast<int>( std::ceil( seconds * moves_per_second - 1e-9 ) ) );
+}
+
+std::vector<tripoint_bub_ms> firearm_sweep::shot_targets( const tripoint_bub_ms &origin,
+        int rpm ) const
+{
+    const int count = rounds( origin, rpm );
+    if( count == 0 ) {
+        return {};
+    }
+    std::vector<tripoint_bub_ms> targets;
+    targets.reserve( count );
+    const double bearing = sweep_bearing( origin, start );
+    const double arc = sweep_angle( origin, start, end );
+    const double start_range = std::hypot( start.x() - origin.x(), start.y() - origin.y() );
+    const double end_range = std::hypot( end.x() - origin.x(), end.y() - origin.y() );
+    const int range = std::max( rl_dist( origin, start ), rl_dist( origin, end ) );
+    for( int i = 0; i < count; ++i ) {
+        const double fraction = i / static_cast<double>( std::max( 1, count - 1 ) );
+        const double angle = bearing + arc * fraction;
+        const double radius = start_range + ( end_range - start_range ) * fraction;
+        tripoint_bub_ms aim = origin + point( std::lround( radius * std::cos( angle ) ),
+                                              std::lround( radius * std::sin( angle ) ) );
+        if( rl_dist( origin, aim ) > range ) {
+            const auto ray = line_to( origin, aim );
+            const auto inside = std::find_if( ray.rbegin(), ray.rend(), [&]( const tripoint_bub_ms & p ) {
+                return p != origin && rl_dist( origin, p ) <= range;
+            } );
+            if( inside != ray.rend() ) {
+                aim = *inside;
+            }
+        }
+        targets.push_back( aim );
+    }
+    return targets;
+}
+
+std::optional<firearm_sweep> find_firearm_sweep( const Character &shooter, map &here,
+        const tripoint_bub_ms &primary, int range, int rpm, int max_rounds )
+{
+    constexpr int close_range = 8;
+    const tripoint_bub_ms origin = shooter.pos_bub( here );
+    const int limit = std::min( close_range, range );
+    if( rpm <= 0 || max_rounds < 3 || primary == origin || primary.z() != origin.z() ||
+        rl_dist( origin, primary ) > limit ) {
+        return std::nullopt;
+    }
+    static const species_id zombie_species( "ZOMBIE" );
+    std::vector<tripoint_bub_ms> zombies;
+    std::vector<tripoint_bub_ms> protected_positions;
+    for( const Creature &critter : g->all_creatures() ) {
+        const tripoint_bub_ms pos = critter.pos_bub( here );
+        if( pos == origin || pos.z() != origin.z() || critter.is_dead_state() ||
+            rl_dist( origin, pos ) > range ) {
+            continue;
+        }
+        if( shooter.attitude_to( critter ) != Creature::Attitude::HOSTILE ||
+            critter.attitude_to( shooter ) == Creature::Attitude::FRIENDLY ) {
+            protected_positions.push_back( pos );
+        } else if( rl_dist( origin, pos ) <= limit && critter.in_species( zombie_species ) &&
+                   shooter.sees( here, critter ) && here.clear_path( origin, pos, limit, 1, 100 ) ) {
+            zombies.push_back( pos );
+        }
+    }
+    if( zombies.size() < 3 || std::find( zombies.begin(), zombies.end(), primary ) == zombies.end() ) {
+        return std::nullopt;
+    }
+
+    std::optional<firearm_sweep> best;
+    int best_count = 2;
+    double best_angle = 2.0 * M_PI / 3.0;
+    for( const tripoint_bub_ms &start : zombies ) {
+        for( const tripoint_bub_ms &end : zombies ) {
+            firearm_sweep sweep{ start, end, 2 };
+            const double angle = std::abs( sweep_angle( origin, start, end ) );
+            if( angle < M_PI / 12.0 || angle > 2.0 * M_PI / 3.0 ||
+                !sweep.contains( origin, primary, 1e-9 ) ||
+                std::any_of( protected_positions.begin(), protected_positions.end(),
+            [&]( const tripoint_bub_ms & pos ) {
+            // Include misses and a margin for grid rounding at close range.
+            return sweep.contains( origin, pos, M_PI / 4.0 );
+            } ) ) {
+                continue;
+            }
+            const int depth = std::min( rl_dist( origin, start ), rl_dist( origin, end ) );
+            const int count = std::count_if( zombies.begin(), zombies.end(),
+            [&]( const tripoint_bub_ms & pos ) {
+                return rl_dist( origin, pos ) <= depth && sweep.contains( origin, pos, 1e-9 );
+            } );
+            if( rl_dist( origin, primary ) <= depth &&
+                ( count > best_count || ( count == best_count && best && angle < best_angle ) ) ) {
+                sweep.speed = count >= 5 ? 3 : count == 4 ? 2 : 1;
+                const int min_rounds = std::min( count, max_rounds );
+                while( sweep.speed < 3 && sweep.rounds( origin, rpm ) < min_rounds ) {
+                    ++sweep.speed;
+                }
+                while( sweep.speed > 1 && sweep.rounds( origin, rpm ) > max_rounds ) {
+                    --sweep.speed;
+                }
+                if( sweep.rounds( origin, rpm ) >= min_rounds &&
+                    sweep.rounds( origin, rpm ) <= max_rounds ) {
+                    best_count = count;
+                    best_angle = angle;
+                    best = sweep;
+                }
+            }
+        }
+    }
+    return best;
+}
+
 firearm_burst_recoil::firearm_burst_recoil( int arm_strength, float skill, int rpm )
 {
     const double level = std::clamp<double>( skill, 0.0, MAX_SKILL );
@@ -1380,9 +1571,47 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
     return fire_gun_impl( here, target, shots, gun, std::move( ammo ), true );
 }
 
+int Character::fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_mode &mode,
+                               int round_limit, bool protect_friendlies )
+{
+    if( !mode || !mode.full_auto() || mode.melee() || round_limit <= 0 ||
+        !here.inbounds( sweep.start ) || !here.inbounds( sweep.end ) ) {
+        return 0;
+    }
+    const tripoint_bub_ms origin = pos_bub( here );
+    const int range = mode->gun_range( this );
+    if( rl_dist( origin, sweep.start ) > range || rl_dist( origin, sweep.end ) > range ) {
+        return 0;
+    }
+    const auto targets = sweep.shot_targets( origin, mode.rpm );
+    const int shots = std::min( round_limit, static_cast<int>( targets.size() ) );
+    if( shots == 0 ) {
+        return 0;
+    }
+    const int fired = fire_gun_impl( here, sweep.start, shots, *mode.target, item_location(), false,
+                                     mode.rpm, false, &targets, protect_friendlies );
+    if( !is_fake() ) {
+        const double duration = sweep.duration( origin );
+        const double seconds = fired == static_cast<int>( targets.size() ) ? duration :
+                               std::min( duration, std::max( 1, fired ) * 60.0 / mode.rpm );
+        mod_moves( -sweep_move_cost( seconds, get_speed() ) );
+        if( fired > 0 ) {
+            last_target_pos = here.get_abs( targets[fired - 1] );
+            last_target.reset();
+            if( is_avatar() ) {
+                as_avatar()->mark_aim_cache_dirty();
+            }
+            add_msg_if_player( n_gettext( "You sweep with %d round.", "You sweep with %d rounds.", fired ),
+                               fired );
+        }
+    }
+    return fired;
+}
+
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                               item_location ammo, bool spend_attack_moves, int firing_rpm,
-                              bool spend_burst_moves )
+                              bool spend_burst_moves,
+                              const std::vector<tripoint_bub_ms> *sweep_targets, bool protect_friendlies )
 {
     if( !gun.is_gun() ) {
         debugmsg( "%s tried to fire non-gun (%s).", get_name(), gun.tname() );
@@ -1453,8 +1682,8 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
     const double absorb = std::min( gun_skill_level, static_cast<float>( MAX_SKILL ) ) /
                           static_cast<double>( MAX_SKILL * 2 );
     std::optional<firearm_burst_recoil> recoil_control;
-    if( firing_rpm > 0 && shots > 1 && !gun.has_flag( flag_VEHICLE ) &&
-        !is_fake() && !is_mech_weapon ) {
+    if( firing_rpm > 0 && shots > 1 &&
+        ( sweep_targets || ( !gun.has_flag( flag_VEHICLE ) && !is_fake() && !is_mech_weapon ) ) ) {
         recoil_control.emplace( get_arm_str(), gun_skill_level, firing_rpm );
     }
     double burst_recoil = 0.0;
@@ -1476,7 +1705,14 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
     // post-shot hurt_part / skill-practice blocks still need to read
     // it for the shots that already fired.
     const islot_gun *const original_gun = gun.is_gun() ? gun.type->gun.get() : nullptr;
+    const tripoint_bub_ms sweep_origin = pos_bub( here );
     while( curshot != shots ) {
+        if( sweep_targets ) {
+            aim = ( *sweep_targets )[curshot];
+            if( !here.inbounds( aim ) || aim == sweep_origin || pos_bub( here ) != sweep_origin ) {
+                break;
+            }
+        }
         // Special handling for weapons where we supply the ammo separately (i.e. ammo is populated)
         // instead of it being loaded into the weapon, reload right before firing.
         if( !!ammo && !gun.ammo_remaining( ) ) {
@@ -1506,6 +1742,8 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 
         weakpoint_attack wp_attack;
         wp_attack.weapon = &gun;
+        wp_attack.sweeping = sweep_targets != nullptr;
+        wp_attack.protect_friendlies = protect_friendlies;
         // get ammo_id in gun for event character_ranged_attacks_monster. If no ammo, use itype_id::NULL_ID()
         itype_id projectile_use_ammo_id = gun.has_ammo_data() ? gun.ammo_data()->get_id() :
                                           itype_id::NULL_ID();
@@ -3576,7 +3814,7 @@ target_handler::trajectory target_ui::run()
             action = aim_mode->action;
         }
 
-        if( mode == TargetMode::Fire && status == Status::Good && attempted_shot ) {
+        if( mode == TargetMode::Fire && !sweeping && status == Status::Good && attempted_shot ) {
             if( !relevant->gun_current_mode().full_auto() ) {
                 requested_burst = 0;
             } else if( !valid_firearm_burst_rounds( requested_burst ) ) {
@@ -3630,6 +3868,9 @@ target_handler::trajectory target_ui::run()
                                     casting->effect() == "pickup" || casting->effect() == "summon" );
             if( !can_skip_confirm && !confirm_non_enemy_target() ) {
                 continue;
+            }
+            if( sweeping && mode == TargetMode::Fire ) {
+                apply_aim_turning_penalty();
             }
             set_last_target();
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
@@ -3717,8 +3958,19 @@ target_handler::trajectory target_ui::run()
             break;
         }
         case ExitCode::Fire: {
+            if( sweeping && !select_sweep() ) {
+                traj.clear();
+                if( activity ) {
+                    activity->aborted = true;
+                }
+                break;
+            }
             if( mode == TargetMode::Fire ) {
                 activity->burst_rounds = requested_burst;
+                if( selected_sweep ) {
+                    activity->sweep_end = here.get_abs( selected_sweep->end );
+                    activity->sweep_speed = selected_sweep->speed;
+                }
             }
             if( mode != TargetMode::SelectOnly && !defer_target_effects ) {
                 bool harmful = !( mode == TargetMode::Spell && casting->damage( player_character ) <= 0 );
@@ -3802,13 +4054,15 @@ void target_ui::init_window_and_input()
     ctxt.register_action( "zoom_out" );
     ctxt.register_action( "zoom_in" );
     ctxt.register_action( "TOGGLE_MOVE_CURSOR_VIEW" );
-    if( get_map().observer_z_range( *you ) > 0 ) {
+    if( !sweeping && get_map().observer_z_range( *you ) > 0 ) {
         ctxt.register_action( "LEVEL_UP" );
         ctxt.register_action( "LEVEL_DOWN" );
     }
     if( mode == TargetMode::Fire || mode == TargetMode::TurretManual || ( mode == TargetMode::Reach &&
             ( relevant && relevant->is_gun() ) && you->get_aim_types( *relevant ).size() > 1 ) ) {
-        ctxt.register_action( "SWITCH_MODE" );
+        if( !sweeping ) {
+            ctxt.register_action( "SWITCH_MODE" );
+        }
         if( mode == TargetMode::Fire || mode == TargetMode::TurretManual ) {
             ctxt.register_action( "SWITCH_AMMO" );
         }
@@ -3907,6 +4161,9 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
     // Make sure new position is valid or find a closest valid position
     std::vector < tripoint_bub_ms > new_traj;
     tripoint_bub_ms valid_pos = new_pos;
+    if( sweeping && valid_pos.z() != src.z() ) {
+        return false;
+    }
     map &here = get_map();
     if( new_pos != src ) {
         // On Z axis, make sure we do not exceed map boundaries
@@ -4705,6 +4962,95 @@ static constexpr std::array<std::pair<const char *, int>, 3> burst_presets = {{
     }
 };
 
+bool target_ui::select_sweep()
+{
+    sweep_start = dst;
+    const auto initial_trajectory = traj;
+    const tripoint_bub_ms start = dst;
+    on_out_of_scope restore( [&]() {
+        sweep_start.reset();
+        selecting_sweep_speed = false;
+        set_cursor_pos( start );
+        traj = initial_trajectory;
+    } );
+
+    while( true ) {
+        g->invalidate_main_ui_adaptor();
+        ui_manager::redraw();
+        const std::string action = ctxt.handle_input();
+        bool skip_redraw = false;
+        if( action == "QUIT" ) {
+            return false;
+        }
+        if( handle_cursor_movement( action, skip_redraw ) ) {
+            continue;
+        }
+        if( action == "FIRE" && status == Status::Good &&
+            firearm_sweep{ start, dst, 2 }.duration( src ) > 0.0 ) {
+            break;
+        }
+    }
+
+    const tripoint_bub_ms end = dst;
+    selecting_sweep_speed = true;
+    burst_ctxt = input_context( "TARGET" );
+    burst_ctxt.register_action( "QUIT" );
+    burst_ctxt.register_action( "HELP_KEYBINDINGS" );
+    for( const auto &preset : burst_presets ) {
+        burst_ctxt.register_action( preset.first );
+    }
+    while( true ) {
+        g->invalidate_main_ui_adaptor();
+        ui_manager::redraw();
+        const std::string action = burst_ctxt.handle_input();
+        if( action == "QUIT" ) {
+            return false;
+        }
+        for( int i = 0; i < 3; ++i ) {
+            if( action != burst_presets[i].first ) {
+                continue;
+            }
+            const firearm_sweep sweep{ start, end, i + 1 };
+            bool friendly = false;
+            for( const Creature &critter : g->all_creatures() ) {
+                const tripoint_bub_ms pos = critter.pos_bub();
+                if( &critter != you && !critter.is_dead_state() && pl_sees( critter ) &&
+                    dist_fn( pos ) <= range && you->attitude_to( critter ) != Creature::Attitude::HOSTILE &&
+                    sweep.contains( src, pos, M_PI / 4.0 ) ) {
+                    friendly = true;
+                    break;
+                }
+            }
+            if( friendly && !query_yn( _( "Sweep through a non-hostile creature's line of fire?" ) ) ) {
+                continue;
+            }
+            selected_sweep = sweep;
+            return true;
+        }
+    }
+}
+
+void target_ui::panel_sweep_selection( int text_y )
+{
+    if( !selecting_sweep_speed ) {
+        trim_and_print( w_target, point( 1, text_y ), getmaxx( w_target ) - 2, c_white,
+                        string_format( _( "%s to set the end of the sweep" ), ctxt.get_desc( "FIRE" ) ) );
+        return;
+    }
+    const gun_mode gun = relevant->gun_current_mode();
+    const std::array<std::string, 3> labels = { _( "Fast" ), _( "Medium" ), _( "Slow" ) };
+    const int moves_per_second = you->get_speed();
+    for( int i = 0; i < 3; ++i ) {
+        const firearm_sweep sweep{ *sweep_start, dst, i + 1 };
+        const double seconds = sweep.duration( src );
+        trim_and_print( w_target, point( 1, text_y++ ), getmaxx( w_target ) - 2, c_white,
+                        string_format( _( "%s %s: %d AP, %d rounds (%.2f s)" ),
+                                       burst_ctxt.get_desc( burst_presets[i].first, 1 ),
+                                       labels[i], sweep_move_cost( seconds, moves_per_second ),
+                                       sweep.rounds( src, gun.rpm ), seconds ) );
+    }
+}
+
 int target_ui::select_burst_rounds()
 {
     burst_rounds = min_firearm_burst_rounds;
@@ -4808,6 +5154,27 @@ void target_ui::draw_terrain_overlay()
         g->draw_line( src, center, l, true );
     }
 
+    if( sweep_start ) {
+        const auto start_line = filter_this_z( get_map().find_clear_path( src, *sweep_start ) );
+        g->draw_line( *sweep_start, center, start_line );
+        if( dst.z() == center.z() && firearm_sweep{ *sweep_start, dst, 2 }.duration( src ) > 0.0 ) {
+            const firearm_sweep outline{ *sweep_start, dst, 2 };
+            drawsq_params params = drawsq_params().highlight( true ).center( center );
+            for( const tripoint_bub_ms &tile : outline.shot_targets( src, 2400 ) ) {
+                if( get_map().inbounds( tile ) && you->sees( get_map(), tile ) ) {
+#ifdef TILES
+                    if( use_tiles ) {
+                        g->draw_highlight( tile );
+                    } else {
+#endif
+                        get_map().drawsq( g->w_terrain, tile, params );
+#ifdef TILES
+                    }
+#endif
+                }
+            }
+        }
+    }
     // Draw trajectory
     if( mode != TargetMode::Turrets && dst != src ) {
         std::vector < tripoint_bub_ms > this_z = filter_this_z( traj );
@@ -4869,6 +5236,11 @@ void target_ui::draw_ui_window()
         text_y += compact ? 0 : 1;
     }
 
+    if( sweep_start ) {
+        panel_sweep_selection( text_y );
+        wnoutrefresh( w_target );
+        return;
+    }
     if( burst_rounds > 0 ) {
         panel_burst_selection( text_y );
         wnoutrefresh( w_target );
@@ -4920,6 +5292,10 @@ double target_ui::get_predicted_recoil() const
 
 std::string target_ui::uitext_title() const
 {
+    if( sweeping ) {
+        return sweep_start ? selecting_sweep_speed ? _( "Sweep speed" ) : _( "Sweep endpoint" ) :
+               _( "Aim at the sweep start" );
+    }
     if( burst_rounds > 0 ) {
         return string_format( _( "Burst length: %s" ), relevant->tname() );
     }

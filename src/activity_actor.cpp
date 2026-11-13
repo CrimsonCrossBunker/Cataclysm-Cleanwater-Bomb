@@ -31,6 +31,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <list>
 #include <map>
 #include <optional>
@@ -495,9 +496,11 @@ aim_activity_actor::aim_activity_actor()
     initial_view_offset = get_avatar().view_offset;
 }
 
-aim_activity_actor aim_activity_actor::use_wielded()
+aim_activity_actor aim_activity_actor::use_wielded( bool sweeping )
 {
-    return aim_activity_actor();
+    aim_activity_actor actor;
+    actor.sweeping = sweeping;
+    return actor;
 }
 
 aim_activity_actor aim_activity_actor::use_bionic( const item &fake_gun, unsigned int uid )
@@ -526,6 +529,11 @@ void aim_activity_actor::start( player_activity &act, Character &who )
     }
     item &it = *weapon.get_item();
 
+    if( sweeping && cata_mp::is_client_mode() ) {
+        aborted = true;
+        act.set_to_null();
+        return;
+    }
     if( cata_mp::client_uses_firearm_intents( it ) ) {
         cata_mp::client_start_firearm_activity( bionic_uid );
         cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
@@ -550,6 +558,11 @@ void aim_activity_actor::do_turn( player_activity &act, Character &who )
 
     if( !who.is_avatar() ) {
         debugmsg( "ACT_AIM not implemented for NPCs" );
+        aborted = true;
+        act.moves_left = 0;
+        return;
+    }
+    if( sweeping && cata_mp::is_client_mode() ) {
         aborted = true;
         act.moves_left = 0;
         return;
@@ -658,10 +671,15 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
     gun_mode gun = weapon->gun_current_mode();
     if( !remote ) {
-        who.fire_gun( here, fin_trajectory.back(), gun, reload_loc, burst_rounds );
+        if( sweeping && sweep_end && !fin_trajectory.empty() ) {
+            who.fire_gun_sweep( here, { fin_trajectory.back(), here.get_bub( *sweep_end ), sweep_speed },
+                                gun, std::numeric_limits<int>::max(), false );
+        } else if( !sweeping ) {
+            who.fire_gun( here, fin_trajectory.back(), gun, reload_loc, burst_rounds );
+        }
     }
 
-    if( !get_option<bool>( "AIM_AFTER_FIRING" ) ||
+    if( sweeping || !get_option<bool>( "AIM_AFTER_FIRING" ) ||
         weapon.get_item()->has_fault_of_type( gun_mechanical_simple ) ) {
         if( remote && bionic_uid ) {
             cata_mp::client_cancel_firearm_activity( false );
@@ -715,6 +733,11 @@ void aim_activity_actor::serialize( JsonOut &jsout ) const
     if( burst_rounds != 0 ) {
         jsout.member( "burst_rounds", burst_rounds );
     }
+    if( sweeping ) {
+        jsout.member( "sweeping", sweeping );
+        jsout.member( "sweep_end", sweep_end );
+        jsout.member( "sweep_speed", sweep_speed );
+    }
     jsout.member( "action", action );
     jsout.member( "aif_duration", aif_duration );
     jsout.member( "aiming_at_critter", aiming_at_critter );
@@ -743,6 +766,9 @@ std::unique_ptr<activity_actor> aim_activity_actor::deserialize( JsonValue &jsin
                                  actor.fake_weapon ? actor.fake_weapon->uid().get_value() : 0;
     data.read( "fin_trajectory", actor.fin_trajectory );
     actor.burst_rounds = data.get_int( "burst_rounds", 0 );
+    data.read( "sweeping", actor.sweeping );
+    data.read( "sweep_end", actor.sweep_end );
+    data.read( "sweep_speed", actor.sweep_speed );
     data.read( "action", actor.action );
     data.read( "aif_duration", actor.aif_duration );
     data.read( "aiming_at_critter", actor.aiming_at_critter );

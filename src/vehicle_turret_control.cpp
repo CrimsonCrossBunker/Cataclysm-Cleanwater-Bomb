@@ -1,6 +1,7 @@
 #include "vehicle_turret_control.h"
 
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <utility>
 
@@ -17,6 +18,7 @@
 #include "line.h"
 #include "map.h"
 #include "messages.h"
+#include "mp_client_conn.h"
 #include "mp_inventory_activity.h"
 #include "npc.h"
 #include "output.h"
@@ -140,6 +142,10 @@ void vehicle_turret_selection::serialize( JsonOut &out ) const
     out.member( "operator_position", operator_position );
     out.member( "turrets", turrets );
     out.member( "target", target );
+    if( sweep_end ) {
+        out.member( "sweep_end", sweep_end );
+        out.member( "sweep_speed", sweep_speed );
+    }
     out.end_object();
 }
 
@@ -150,6 +156,9 @@ void vehicle_turret_selection::deserialize( const JsonObject &data )
     data.read( "turrets", turrets, true );
     target.reset();
     data.read( "target", target );
+    sweep_end.reset();
+    data.read( "sweep_end", sweep_end );
+    sweep_speed = data.get_int( "sweep_speed", 0 );
 }
 
 vehicle_turret_choice capture_vehicle_turret( vehicle &target, vehicle_part &part )
@@ -170,6 +179,8 @@ bool valid_vehicle_turret_control( Character &who, map &here, vehicle &target,
         who.pos_abs() != choice.operator_position || choice.turrets.empty() ||
         ( !aim && choice.operation != "targeting" && choice.operation != "mode" ) ||
         ( aim != choice.target.has_value() ) ||
+        ( choice.sweep_end && ( !direct || !who.is_avatar() || !here.inbounds( *choice.sweep_end ) ) ) ||
+        ( !choice.sweep_end && choice.sweep_speed != 0 ) ||
         ( ( direct || choice.operation == "aim_single" ) && choice.turrets.size() != 1 ) ||
         ( aim && ( !can_aim( who, direct ) || !here.inbounds( *choice.target ) ||
                    *choice.target == who.pos_abs() ) ) ) {
@@ -212,6 +223,15 @@ bool valid_vehicle_turret_control( Character &who, map &here, vehicle &target,
         if( direct ) {
             std::vector<std::string> messages;
             if( !gunmode_checks_common( who, here, messages, preview.get_base().gun_current_mode() ) ) {
+                return false;
+            }
+        }
+        if( choice.sweep_end ) {
+            const firearm_sweep sweep{ here.get_bub( *choice.target ), here.get_bub( *choice.sweep_end ),
+                                       choice.sweep_speed };
+            const gun_mode mode = preview.get_base().gun_current_mode();
+            if( !mode.full_auto() || !data.in_range( *choice.sweep_end ) ||
+                sweep.rounds( here.get_bub( selected.position ), mode.rpm ) == 0 ) {
                 return false;
             }
         }
@@ -285,7 +305,11 @@ bool execute_vehicle_turret_control( Character &who, map &here, vehicle &target,
             continue;
         }
         if( direct ) {
-            data.fire( who, &here, here.get_bub( *choice.target ) );
+            const auto sweep = choice.sweep_end
+                               ? std::optional<firearm_sweep>( firearm_sweep{ here.get_bub( *choice.target ),
+                                       here.get_bub( *choice.sweep_end ), choice.sweep_speed } )
+                               : std::nullopt;
+            data.fire( who, &here, here.get_bub( *choice.target ), sweep ? &*sweep : nullptr );
         } else {
             npc &gunner = part->get_targeting_npc( *live );
             data.fire( gunner, &here, here.get_bub( *choice.target ) );
@@ -304,9 +328,9 @@ bool execute_vehicle_turret_control( Character &who, map &here, vehicle &target,
 
 std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position, const std::string &operation,
-        const item_location *remote_source )
+        const item_location *remote_source, bool sweeping )
 {
-    if( !who.is_avatar() ) {
+    if( !who.is_avatar() || ( sweeping && cata_mp::is_client_mode() ) ) {
         return std::nullopt;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
@@ -426,11 +450,21 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
         target_handler::trajectory trajectory;
         if( selected_operation == "fire_direct" ) {
             auto preview = preview_part( *options.front() );
+            if( sweeping && !select_full_auto_mode( preview_gun( preview ) ) ) {
+                who.add_msg_if_player( _( "This turret has no full-auto mode." ) );
+                return std::nullopt;
+            }
             auto data = target.turret_query( preview );
             data.ammo_select( choice.turrets.front().ammo );
+            std::optional<firearm_sweep> sweep;
             g->temp_exit_fullscreen();
-            trajectory = target_handler::mode_turret_manual( viewer, data, preview_gun( preview ) );
+            trajectory = target_handler::mode_turret_manual( viewer, data, preview_gun( preview ),
+                         sweeping ? &sweep : nullptr );
             g->reenter_fullscreen();
+            if( sweep ) {
+                choice.sweep_end = here.get_abs( sweep->end );
+                choice.sweep_speed = sweep->speed;
+            }
             choice.turrets.front().mode = preview.get_base().gun_get_mode_id();
             choice.turrets.front().ammo = data.ammo_current();
         } else {
@@ -449,7 +483,8 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
 }
 
 bool use_vehicle_turrets( Character &who, map &here, vehicle &target,
-                          const tripoint_abs_ms &position, const std::string &operation, bool show_message )
+                          const tripoint_abs_ms &position, const std::string &operation, bool show_message,
+                          bool sweeping )
 {
     if( aiming( operation ) && aim_options( target, operation, position ).empty() ) {
         if( show_message ) {
@@ -457,7 +492,8 @@ bool use_vehicle_turrets( Character &who, map &here, vehicle &target,
         }
         return false;
     }
-    if( auto choice = query_vehicle_turrets( who, here, target, position, operation ) ) {
+    if( auto choice = query_vehicle_turrets( who, here, target, position, operation, nullptr,
+                      sweeping ) ) {
         if( !cata_mp::client_vehicle_control( *choice ) ) {
             execute_vehicle_control( who, here, *choice );
         }

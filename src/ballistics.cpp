@@ -466,7 +466,9 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
     // If we were targeting a tile rather than a monster, don't overshoot
     // Unless the target was a wall, then we are aiming high enough to overshoot
     const bool no_overshoot = proj_effects.count( ammo_effect_NO_OVERSHOOT ) ||
-                              ( creatures.creature_at( here->get_abs( target_arg ) ) == nullptr && here->passable( target_arg ) );
+                              ( !wp_attack.sweeping &&
+                                creatures.creature_at( here->get_abs( target_arg ) ) == nullptr &&
+                                here->passable( target_arg ) );
 
     double extend_to_range = no_overshoot ? range : proj_arg.range;
 
@@ -673,6 +675,12 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
             if( origin == critter ) {
                 // No hitting self with "weird" attacks.
                 critter = nullptr;
+            }
+            if( wp_attack.protect_friendlies && origin && critter &&
+                ( origin->attitude_to( *critter ) != Creature::Attitude::HOSTILE ||
+                  critter->attitude_to( *origin ) == Creature::Attitude::FRIENDLY ) ) {
+                stop_idx = i;
+                break;
             }
 
             monster *mon = dynamic_cast<monster *>( critter );

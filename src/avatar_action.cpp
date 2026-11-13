@@ -1335,7 +1335,7 @@ bool avatar_action::can_fire_weapon( avatar &you, const map &m, const item &weap
     return false;
 }
 
-void avatar_action::fire_wielded_weapon( avatar &you )
+void avatar_action::fire_wielded_weapon( avatar &you, bool sweeping )
 {
     const item_location weapon = you.get_wielded_item();
 
@@ -1364,7 +1364,7 @@ void avatar_action::fire_wielded_weapon( avatar &you )
         return;
     }
 
-    you.assign_activity( aim_activity_actor::use_wielded() );
+    you.assign_activity( aim_activity_actor::use_wielded( sweeping ) );
 }
 
 void avatar_action::fire_ranged_mutation( Character &you, const item &fake_gun )
@@ -1377,10 +1377,11 @@ void avatar_action::fire_ranged_bionic( avatar &you, const item &fake_gun, unsig
     you.assign_activity( aim_activity_actor::use_bionic( fake_gun, uid ) );
 }
 
-bool avatar_action::fire_turret_manual( avatar &you, map &m, turret_data &turret )
+bool avatar_action::fire_turret_manual( avatar &you, map &m, turret_data &turret, bool sweeping )
 {
     const optional_vpart_position at = m.veh_at( you.pos_abs() );
-    return turret && at && use_vehicle_turrets( you, m, at->vehicle(), you.pos_abs(), "fire_direct" );
+    return turret && at && use_vehicle_turrets( you, m, at->vehicle(), you.pos_abs(), "fire_direct",
+            true, sweeping );
 }
 
 void avatar_action::mend( avatar &you, item_location loc )
