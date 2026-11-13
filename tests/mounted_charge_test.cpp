@@ -326,7 +326,7 @@ TEST_CASE( "mounted_charge_folded_mod_weapons_do_not_inherit_profiles",
            "[mounted][charge][json][mods]" )
 {
 
-    if(!item::type_is_defined( itype_megachette_folded ) ) {
+    if( !item::type_is_defined( itype_megachette_folded ) ) {
         SUCCEED( "The optional mod providing this weapon is not loaded" );
         return;
     }
