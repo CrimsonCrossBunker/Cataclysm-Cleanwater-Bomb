@@ -577,6 +577,9 @@ jobs:
         run: |
           .\build-scripts\windist.ps1
           mv cataclysmdda-0.J.zip ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.zip
+      - name: Install Rust targets for the universal macOS co-op runtime
+        if: runner.os == 'macOS'
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
       - name: Build CDDA (osx, curses)
         if: runner.os == 'macOS' && matrix.tiles != 1
         run: |
