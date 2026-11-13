@@ -1215,6 +1215,9 @@ bool game::do_avatar_action_loop()
 void game::simulate_turn_suffix()
 {
     CATA_PROFILE_SCOPE();
+    if( cata_mp::is_hosting() ) {
+        cata_mp::refresh_resident_regions();
+    }
     avatar &u = get_avatar();
     map &m = get_map();
 

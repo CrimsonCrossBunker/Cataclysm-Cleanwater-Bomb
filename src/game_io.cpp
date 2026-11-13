@@ -298,8 +298,13 @@ void game::load_map( const tripoint_abs_sm &pos_sm,
                      const bool pump_events )
 {
     map &here = get_map();
-
-    here.load( pos_sm, true, pump_events );
+    if( &here == &reality_bubble() && multiplayer_session().has_regions() ) {
+        const map_simulation_regions regions = multiplayer_session().simulation_regions( here );
+        here.save( &regions );
+        here.load( pos_sm, true, false, &regions );
+    } else {
+        here.load( pos_sm, true, pump_events );
+    }
 }
 
 void game::move_save_to_graveyard()

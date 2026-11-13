@@ -1,5 +1,7 @@
 #include "mp_world_session.h"
 
+#include <algorithm>
+#include <cstdlib>
 #include <stdexcept>
 #include <utility>
 
@@ -92,6 +94,58 @@ resident_region *world_session::find_region( const player_id &player ) const
 {
     const auto found = regions_.find( player );
     return found == regions_.end() ? nullptr : found->second.get();
+}
+
+void world_session::recenter_region( map &primary, resident_region &region,
+                                     const tripoint_abs_sm &center )
+{
+    map &terrain = *region.terrain;
+    const tripoint_abs_sm origin = center - point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+    const point_rel_sm displacement = origin.xy() - terrain.get_abs_sub().xy();
+    const swap_map context( terrain );
+    const map_simulation_regions loaded = simulation_regions( primary );
+    if( std::abs( displacement.x() ) >= MAPSIZE || std::abs( displacement.y() ) >= MAPSIZE ) {
+        // Preserve the old window until its cells have been stamped. The
+        // existing map object then takes ownership of the newly loaded window.
+        terrain.save( &loaded );
+        terrain.load( origin, true, false, &loaded );
+        region.scent->reset();
+        return;
+    }
+    for( point_rel_sm remaining = displacement; remaining != point_rel_sm::zero; ) {
+        const point_rel_sm step( std::clamp( remaining.x(), -1, 1 ),
+                                 std::clamp( remaining.y(), -1, 1 ) );
+        terrain.shift( step, &loaded );
+        remaining -= step;
+    }
+    if( displacement != point_rel_sm::zero ) {
+        region.scent->shift( project_to<coords::ms>( displacement ) );
+    }
+    if( terrain.get_abs_sub().z() != center.z() ) {
+        terrain.vertical_shift( center.z() );
+        region.scent->reset();
+    }
+}
+
+void world_session::retire_region( map &primary, const player_id &player )
+{
+    const auto retiring = regions_.find( player );
+    if( retiring == regions_.end() ) {
+        return;
+    }
+    map &terrain = *retiring->second->terrain;
+    std::vector<std::reference_wrapper<const map>> views;
+    views.reserve( 1 + regions_.size() );
+    visit_resident_maps( primary, [&]( const map &view ) {
+        if( &view != &terrain ) {
+            views.emplace_back( view );
+        }
+    } );
+    // Only stamp storage no longer covered by any other active window.
+    views.emplace_back( terrain );
+    const map_simulation_regions remaining( std::move( views ) );
+    terrain.save( &remaining );
+    regions_.erase( retiring );
 }
 
 scent_map *world_session::scent_for( const map &terrain ) const

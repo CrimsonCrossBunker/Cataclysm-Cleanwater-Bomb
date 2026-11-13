@@ -1335,6 +1335,27 @@ void game::load_npcs( map *here )
     }
 }
 
+void game::unload_creatures_outside_resident_maps()
+{
+    map &primary = reality_bubble();
+    const auto &session = multiplayer_session();
+    for( auto it = critter_tracker->active_npc.begin(); it != critter_tracker->active_npc.end(); ) {
+        npc &actor = **it;
+        if( actor.has_native_player_control() || session.loaded_map_at( primary, actor.pos_abs_sm() ) ) {
+            ++it;
+        } else {
+            actor.on_unload();
+            it = critter_tracker->active_npc.erase( it );
+        }
+    }
+    for( monster &actor : all_monsters() ) {
+        if( !session.loaded_map_at( primary, actor.pos_abs_sm() ) ) {
+            despawn_monster( actor );
+        }
+    }
+    critter_tracker->invalidate_reachability_cache();
+}
+
 void game::activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby )
 {
     std::vector<shared_ptr_fast<npc>> just_added;
@@ -9597,10 +9618,15 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
         u.mounted_creature->remove_effect( effect_ridden );
         u.mounted_creature = nullptr;
     }
-    // offload the active npcs.
-    unload_npcs();
-    for( monster &critter : all_monsters() ) {
-        despawn_monster( critter );
+    const bool hosting = cata_mp::is_hosting() && &here == &reality_bubble();
+    if( hosting ) {
+        cata_mp::refresh_resident_regions( true );
+    }
+    if( !hosting || !multiplayer_session().has_regions() ) {
+        unload_npcs();
+        for( monster &critter : all_monsters() ) {
+            despawn_monster( critter );
+        }
     }
     if( u.in_vehicle ) {
         here.unboard_vehicle( u.pos_bub() );
@@ -9617,8 +9643,16 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
         project_to<coords::sm>( om_dest ) - point( HALF_MAPSIZE, HALF_MAPSIZE );
     const tripoint_bub_ms player_pos( u.pos_bub().xy(), map_sm_pos.z() );
     load_map( map_sm_pos );
+    if( hosting ) {
+        unload_creatures_outside_resident_maps();
+    }
     load_npcs();
-    here.spawn_monsters( true ); // Static monsters
+    if( hosting && multiplayer_session().has_regions() ) {
+        const map_simulation_regions regions = multiplayer_session().simulation_regions( here );
+        here.spawn_monsters( true, false, &regions );
+    } else {
+        here.spawn_monsters( true ); // Static monsters
+    }
     update_overmap_seen();
     // update weather now as it could be different on the new location
     weather.set_nextweather( calendar::turn );
@@ -11060,6 +11094,10 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
                                 vehicle *veh )
 {
     if( cata_mp::is_client_mode() ) {
+        return false;
+    }
+    if( cata_mp::is_hosting() && !multiplayer_session().remote_players.empty() ) {
+        add_msg( m_info, _( "Close the co-op room before travelling to another dimension." ) );
         return false;
     }
     // Keep the last complete save before this trip writes source maps.  The

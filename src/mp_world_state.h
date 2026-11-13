@@ -3,9 +3,11 @@
 #define CATA_SRC_MP_WORLD_STATE_H
 
 #include <chrono>
+#include <array>
 #include <climits>
 #include <cstdint>
 #include <memory>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -16,6 +18,7 @@
 #include "calendar.h"
 #include "color.h"
 #include "coordinates.h"
+#include "map_scale_constants.h"
 #include "mp_entity_registry.h"
 #include "type_id.h"
 #include "world_identity.h"
@@ -146,9 +149,13 @@ struct client_replication_state {
     // Resolve removals by persistent identity even when the origin has no physical part.
     std::unordered_map<uint32_t, int64_t> vehicle_uids{};
     monster_mirrors monsters{};
-    // Client: true after the first successful long-range teleport to the host area.
-    // The heavy place_player_overmap() is only needed once per session.
-    bool initial_teleport_done = false;
+    struct terrain_chunk {
+        std::array<ter_id, SEEX * SEEY> terrain;
+        std::array<furn_id, SEEX * SEEY> furniture;
+    };
+    // Receive terrain before a state moves the local window over it.
+    std::map<tripoint_abs_sm, terrain_chunk> pending_terrain;
+    bool position_received = false;
     // Client: last known HP per bodypart string ID — used to synthesise "you were hit" messages.
     std::unordered_map<std::string, int> last_bodypart_hp{};
     // Client: fingerprint of the last host_worn list applied — avoids re-dressing every tick.
@@ -360,16 +367,6 @@ struct session_presentation {
     // not the client's (which was the previous, misleading behavior).
     std::string last_host_action_label = "\xe2\x80\x94";
     std::string partner_activity_prev{};
-    // Separation warning tier: 0=ok, 1=warn (≥50 tiles), 2=danger (≥57 tiles).
-    // Shared by both host and client; resets on connect/disconnect.
-    // Hysteresis: step up at 50/57, step down at 44/50.
-    int separation_tier = 0;
-    // False until the host+client have been confirmed close (<40 tiles) at least once
-    // this session. Suppresses the join transient: the client proxy spawns at its
-    // scenario start (far) and is teleported next to the host a beat later, so the
-    // first separation checks would otherwise fire "close the gap now" before the
-    // players are actually together. Reset on session end / world exit.
-    bool separation_settled = false;
     std::vector<mp_chat_line> mp_chat_overlay{};   // newest last
     // Smoother for the brief moves=0 gap between a sent action and the next grant.
     // Module-scope so the edge frame and the panel border pulse together.

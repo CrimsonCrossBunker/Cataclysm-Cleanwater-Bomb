@@ -410,6 +410,75 @@ static map &recipient_map( remote_player_session &recipient )
     return actor ? remote_actor_map( recipient, *actor ) : reality_bubble();
 }
 
+static void activate_resident_region( map &terrain )
+{
+    const map_simulation_regions loaded = mp_session().simulation_regions( reality_bubble() );
+    const swap_map context( terrain );
+    g->load_npcs( &terrain );
+    terrain.spawn_monsters( true, true, &loaded );
+}
+
+void refresh_resident_regions( bool before_primary_relocation )
+{
+    map &primary = reality_bubble();
+    if( !is_hosting() || &get_map() != &primary ) {
+        return;
+    }
+    world_session &session = mp_session();
+    if( session.refreshing_regions || ( session.remote_players.empty() && !session.has_regions() ) ) {
+        return;
+    }
+    const restore_on_out_of_scope restore_refresh( session.refreshing_regions );
+    session.refreshing_regions = true;
+    const point_abs_sm primary_center =
+        primary.get_abs_sub().xy() + point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+    std::set<player_id> keep;
+    bool coverage_changed = false;
+    for( const auto &entry : session.remote_players ) {
+        remote_player_session &peer = *entry.second;
+        const npc *const actor = mp_remote_actor( peer );
+        if( !actor ) {
+            continue;
+        }
+        const tripoint_abs_sm center = actor->pos_abs_sm();
+        const int distance = square_dist( center.xy(), primary_center );
+        resident_region *region = session.find_region( peer.credentials.id );
+        if( !before_primary_relocation && distance < HALF_MAPSIZE - ( region ? 3 : 2 ) &&
+            primary.has_loaded_submap( center ) ) {
+            continue;
+        }
+        keep.insert( peer.credentials.id );
+        if( !region ) {
+            try {
+                region = &session.load_region( *g, primary, peer.credentials.id, center );
+            } catch( const std::exception &error ) {
+                mp_log_host( std::string( "[ccb-mp] could not open guest region: " ) + error.what() );
+                continue;
+            }
+            activate_resident_region( *region->terrain );
+            coverage_changed = true;
+            continue;
+        }
+        const tripoint_abs_sm current = region->terrain->get_abs_sub() +
+                                        point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+        if( current != center ) {
+            session.recenter_region( primary, *region, center );
+            activate_resident_region( *region->terrain );
+            coverage_changed = true;
+        }
+    }
+    for( const auto &entry : session.active_regions() ) {
+        const player_id player = entry.get().player;
+        if( keep.count( player ) == 0 ) {
+            session.retire_region( primary, player );
+            coverage_changed = true;
+        }
+    }
+    if( coverage_changed ) {
+        g->unload_creatures_outside_resident_maps();
+    }
+}
+
 static const peer_observation &mp_partner_observation( character_id target = character_id() )
 {
     if( !target.is_valid() ) {
@@ -490,6 +559,7 @@ static std::pair<int, int> mp_worst_limb_hp( const Character &c )
 static const int g_map_sync_cap = 64;
 static std::string build_map_sync_z( remote_player_session &recipient, int az,
                                      bool complete = false );
+static std::string build_map_sync( remote_player_session &recipient, bool complete = false );
 
 static const peek_authorization *active_peek( remote_player_session &recipient )
 {
@@ -593,8 +663,6 @@ static void mp_partner_activity_transition_check()
 
 // Host: reset overmap-stream state so the next client gets a fresh bulk send.
 // Defined far below with the rest of the overmap-streaming code.
-
-static void check_separation_warning( const tripoint_abs_ms &a, const tripoint_abs_ms &b );
 
 static const efftype_id effect_sleep( "sleep" );
 
@@ -1570,7 +1638,7 @@ static bool guest_spawn_tile_is_free( const map &here, const tripoint_abs_ms &po
 {
     const tripoint_bub_ms local = here.get_bub( pos );
     return here.has_loaded_submap( local ) && !here.impassable( local ) &&
-           !get_creature_tracker().creature_at<Creature>( pos );
+           here.has_floor_or_water( local ) && !get_creature_tracker().creature_at<Creature>( pos );
 }
 
 static std::optional<tripoint_abs_ms> find_guest_spawn( const map &here,
@@ -1632,12 +1700,16 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     }
 
     avatar &u = get_avatar();
-    map &m = get_map();
+    map &primary = reality_bubble();
 
     shared_ptr_fast<npc> remote = make_shared_fast<npc>();
+    bool saved_in_current_dimension = false;
 
     if( saved ) {
-        remote->deserialize( json_loader::from_string( *saved ).get_object() );
+        const JsonObject record = json_loader::from_string( *saved ).get_object();
+        remote->deserialize( record );
+        const std::string dimension = remote->get_value( "mp_saved_dimension" ).str();
+        saved_in_current_dimension = dimension.empty() || dimension == g->get_dimension_prefix().str();
         if( remote->is_dead_state() || !remote->getID().is_valid() || remote->getID() == u.getID() ||
             overmap_buffer.find_npc( remote->getID() ) || g->critter_by_id<npc>( remote->getID() ) ) {
             throw std::runtime_error( "Saved multiplayer actor ID is already in use" );
@@ -1656,9 +1728,39 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // if the NPC pointer briefly becomes unresolvable (load/unload races).
     recipient.observation.partner_name_cached = remote->name;
 
-    const std::optional<tripoint_abs_ms> saved_pos = saved ? std::optional( remote->pos_abs() ) :
-            std::nullopt;
-    const auto spawn_pos = find_guest_spawn( m, u.pos_abs(), saved_pos );
+    map *spawn_map = &primary;
+    bool created_region = false;
+    bool published = false;
+    const on_out_of_scope retire_failed_region( [&]() {
+        if( created_region && !published ) {
+            try {
+                mp_session().retire_region( primary, player.id );
+                g->unload_creatures_outside_resident_maps();
+            } catch( const std::exception &error ) {
+                mp_log_host( std::string( "[ccb-mp] could not retire failed guest region: " ) + error.what() );
+            }
+        }
+    } );
+    std::optional<tripoint_abs_ms> spawn_pos;
+    if( saved_in_current_dimension && primary.inbounds_z( remote->posz() ) ) {
+        const tripoint_abs_ms saved_pos = remote->pos_abs();
+        if( is_hosting() && !primary.has_loaded_submap( remote->pos_abs_sm() ) ) {
+            created_region = !mp_session().find_region( player.id );
+            spawn_map = mp_session().load_region( *g, primary, player.id, remote->pos_abs_sm() ).terrain.get();
+            const swap_map context( *spawn_map );
+            g->load_npcs( spawn_map );
+        }
+        spawn_pos = find_guest_spawn( *spawn_map, saved_pos, saved_pos );
+    }
+    if( !spawn_pos ) {
+        if( created_region ) {
+            mp_session().retire_region( primary, player.id );
+            g->unload_creatures_outside_resident_maps();
+            created_region = false;
+        }
+        spawn_map = &primary;
+        spawn_pos = find_guest_spawn( primary, u.pos_abs(), std::nullopt );
+    }
     if( !spawn_pos ) {
         throw std::runtime_error( "No free spawn tile near the host" );
     }
@@ -1683,10 +1785,9 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     player_control control = g->player_controls().claim( player.id, *remote );
     remote->set_value( "mp_player_id", player.id.str() );
     remote->set_value( "mp_proxy", std::string( "1" ) );
-    world_players().save( player, serialize_player( *remote ) );
+    remote->set_value( "mp_saved_dimension", g->get_dimension_prefix().str() );
     recipient.credentials = player;
 
-    bool published = false;
     const on_out_of_scope rollback( [&]() {
         if( !published ) {
             if( g->shared_from( *remote ) ) {
@@ -1698,17 +1799,14 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         }
     } );
     overmap_buffer.insert_npc( remote );
-    g->load_npcs( &m );
+    g->load_npcs( spawn_map );
     if( !g->shared_from( *remote ) ) {
         throw std::runtime_error( "Could not activate the multiplayer actor at its selected tile" );
     }
 
     recipient.actor.bind_player( *remote, player.id, g->npc_lifetimes(),
                                  std::move( control ) );
-    // Tag the proxy so a load-time sweep can find and remove orphans from
-    // sessions where the cleanup file went missing (e.g. host saved while
-    // connected, then quit — the proxy ends up in the world save).
-    remote->set_value( "mp_proxy", std::string( "1" ) );
+    world_players().save( player, serialize_player( *remote ) );
     mp_log( "[cdda-mp] spawn: remote_player_npc_id=" +
             std::to_string( recipient.actor.id().get_value() ) +
             " valid=" + std::to_string( recipient.actor.id().is_valid() ) +
@@ -1730,10 +1828,13 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     recipient.turn.grant_seq = ++mp_session().grant_sequence;
     mp_session().remote_players.emplace( admission.peer_id(), std::move( pending ) );
     published = true;
+    if( spawn_map != &primary ) {
+        const map_simulation_regions regions = mp_session().simulation_regions( primary );
+        const swap_map context( *spawn_map );
+        spawn_map->spawn_monsters( true, true, &regions );
+    }
     recipient.turn.remote_moves = rn ? rn->get_speed() : 100;  // grant first turn immediately
     recipient.turn.client_acted_this_turn = false;
-    mp_session().presentation.separation_tier = 0;
-    mp_session().presentation.separation_settled = false;
     recipient.turn.last_forwarded_msg_count =
         Messages::size();  // don't forward pre-connect history
     mp_save_npc_ids();  // persist ID so next session can clean it up
@@ -1745,6 +1846,10 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     const std::string resumed = rn ? make_player_resume_result( *rn, recipient.pickup ) : "";
     auto srv = get_active_server();
     if( srv ) {
+        const std::string terrain = build_map_sync( recipient, true );
+        if( !terrain.empty() ) {
+            srv->post_send( recipient.admission, terrain + "\n" );
+        }
         if( !resumed.empty() ) {
             srv->post_send( recipient.admission, resumed + "\n" );
         }
@@ -1790,8 +1895,6 @@ static void release_remote_player( remote_player_session &recipient )
     recipient.detach_pending = false;
     recipient.actor.reset();
     recipient.turn.proxy_was_alive = false;
-    mp_session().presentation.separation_tier = 0;
-    mp_session().presentation.separation_settled = false;
     // Do NOT reset g_grant_seq here.  It must stay monotonically increasing so
     // that a reconnecting client (which resets g_client_last_grant_seq=0 via the
     // join path) always sees seq > 0 and accepts the first new grant.  Resetting
@@ -2201,6 +2304,12 @@ void host_broadcast_post_action()
         for( const auto &entry : mp_session().remote_players ) {
             cata_mp::remote_player_session &recipient = *entry.second;
             if( recipient.connected && !recipient.detach_pending ) {
+                if( mp_session().has_regions() ) {
+                    const std::string terrain = build_map_sync( recipient );
+                    if( !terrain.empty() ) {
+                        srv->post_send( recipient.admission, terrain + "\n" );
+                    }
+                }
                 srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
             }
         }
@@ -3506,7 +3615,7 @@ static std::string build_map_sync_z( remote_player_session &recipient, int az, b
 // except for the one synced floor (reported 2026-06-14, client a floor below the
 // host).  Fix: sync the union of the host's z and the remote player's z.  Same z
 // => one message (no extra cost); different floors => one message per floor.
-static std::string build_map_sync( remote_player_session &recipient )
+static std::string build_map_sync( remote_player_session &recipient, bool complete )
 {
     if( !is_hosting() || !recipient.connected ) {
         return std::string();
@@ -3539,9 +3648,9 @@ static std::string build_map_sync( remote_player_session &recipient )
     }
 
     const bool regional = &terrain != &reality_bubble();
-    std::string out = build_map_sync_z( recipient, host_z, regional );
+    std::string out = build_map_sync_z( recipient, host_z, complete || regional );
     if( two_floors ) {
-        const std::string client_msg = build_map_sync_z( recipient, client_z, regional );
+        const std::string client_msg = build_map_sync_z( recipient, client_z, complete || regional );
         if( !client_msg.empty() ) {
             if( !out.empty() ) {
                 out += '\n';
@@ -3652,7 +3761,6 @@ static void grant_remote_turn( remote_player_session &recipient )
             " host_act=" + ( ha ? ha.id().str() : "none" ) );
     // The owned-character world phase regenerates stamina once, independently
     // of grant delivery or AP debt; do not regenerate it again here.
-    check_separation_warning( get_avatar().pos_abs(), remote->pos_abs() );
     auto srv = get_active_server();
     if( srv ) {
         // NOTE: do NOT throttle this broadcast during fast-forward. The grant
@@ -4167,11 +4275,6 @@ void mark_partner_push_pending( character_id target )
         recipient->turn.push_from = get_avatar().name;
     }
 }
-int get_separation_tier()
-{
-    return mp_session().presentation.separation_tier;
-}
-
 npc *get_partner_npc( character_id target )
 {
     if( is_client_mode() ) {
@@ -4525,6 +4628,7 @@ bool mp_close_host_session()
         release_remote_player( guest );
     }
     mp_on_world_exit();
+    g->unload_creatures_outside_resident_maps();
     g->invalidate_main_ui_adaptor();
     return true;
 }
@@ -5016,64 +5120,11 @@ std::string mp_menu_coop_status_text()
     return std::string();
 }
 
-// Check separation between two absolute positions and update g_separation_tier.
-// Uses Chebyshev distance (same as rl_dist in 2D).  Tier thresholds, sized
-// for the MAPSIZE=15 bubble (~84-tile radius).  Tier 3 is the auto-pause
-// threshold; tier 2 is an 8-tile leeway zone above the warning so a driver
-// at highway speed gets braking room before time freezes.
-//   0 → 1 at ≥40 tiles  (mild warning)
-//   1 → 2 at ≥60 tiles  (urgent — brake/turn around, 8 tiles of leeway)
-//   2 → 3 at ≥68 tiles  (pause world clock until separation drops back)
-//   3 → 2 at <63 tiles, 2 → 1 at <55, 1 → 0 at <34   (hysteresis)
-static void check_separation_warning( const tripoint_abs_ms &a, const tripoint_abs_ms &b )
-{
-    const int dist = std::max( std::abs( a.x() - b.x() ), std::abs( a.y() - b.y() ) );
-    // Don't warn until the pair has first been confirmed together this session,
-    // so the spawn-far → teleport-close join sequence doesn't emit a spurious
-    // "close the gap now" / "close enough again" pair before play even starts.
-    if( !mp_session().presentation.separation_settled ) {
-        if( dist < 40 ) {
-            mp_session().presentation.separation_settled = true;
-        }
-        mp_session().presentation.separation_tier = 0;
-        return;
-    }
-    const int prev = mp_session().presentation.separation_tier;
-    if( dist >= 68 ) {
-        mp_session().presentation.separation_tier = 3;
-    } else if( dist >= 60 ) {
-        mp_session().presentation.separation_tier = std::max( mp_session().presentation.separation_tier,
-                2 );
-    } else if( dist >= 40 ) {
-        mp_session().presentation.separation_tier = std::max( std::min(
-                    mp_session().presentation.separation_tier, 2 ), 1 );
-    } else if( dist < 34 ) {
-        mp_session().presentation.separation_tier = 0;
-    } else if( dist < 55 ) {
-        mp_session().presentation.separation_tier = std::min( mp_session().presentation.separation_tier,
-                1 );
-    } else if( dist < 63 ) {
-        mp_session().presentation.separation_tier = std::min( mp_session().presentation.separation_tier,
-                2 );
-    }
-    if( mp_session().presentation.separation_tier != prev ) {
-        if( mp_session().presentation.separation_tier == 0 ) {
-            add_msg( m_good, "You and your partner are close enough again." );
-        } else if( mp_session().presentation.separation_tier == 1 ) {
-            add_msg( m_warning, "Your partner is getting far away (%d tiles). Max safe range is ~80.", dist );
-        } else if( mp_session().presentation.separation_tier == 2 ) {
-            add_msg( m_bad,
-                     "Your partner is near the edge of the simulated zone (%d tiles)! Brake or turn around.", dist );
-        } else {
-            add_msg( m_bad,
-                     "Your partner is past the edge (%d tiles)! Vehicle physics will break — close the gap now.",
-                     dist );
-        }
-    }
-}
-
 void process_mp_events()
 {
+    if( mp_session().refreshing_regions || ( is_hosting() && &get_map() != &reality_bubble() ) ) {
+        return;
+    }
     // Menu and CLI hosting both start on the first world turn, after the
     // avatar exists and an incoming client can be spawned into the world.
     mp_start_pending_host();
@@ -5084,6 +5135,7 @@ void process_mp_events()
 
     // Stamp this world as MP-touched so the world pickers can badge it.
     mp_world_marker_update();
+    refresh_resident_regions();
 
     // Queue depth is intentionally capped at 1 game-turn action per call.
     // Draining the whole queue in a loop caused unexpected back-to-back move
@@ -5157,6 +5209,7 @@ void process_mp_events()
                 }
                 break;
         }
+        refresh_resident_regions();
     }
 }
 
@@ -5181,83 +5234,70 @@ static void apply_monster_sync( JsonObject &jo );
 static void apply_tile_changes( JsonObject &jo );
 static void apply_vehicle_sync( JsonObject &jo );
 
-// Move the client avatar to an absolute position, loading the map chunk if needed.
+static void apply_pending_terrain()
+{
+    map &terrain = get_map();
+    auto &pending = mp_session().replication.client.pending_terrain;
+    for( auto it = pending.begin(); it != pending.end(); ) {
+        const tripoint_abs_sm &position = it->first;
+        if( !terrain.has_loaded_submap( position ) ) {
+            ++it;
+            continue;
+        }
+        const auto &chunk = it->second;
+        const tripoint_bub_ms origin = terrain.get_bub( project_to<coords::ms>( position ) );
+        for( int y = 0; y < SEEY; ++y ) {
+            for( int x = 0; x < SEEX; ++x ) {
+                const tripoint_bub_ms local = origin + point( x, y );
+                const int index = y * SEEX + x;
+                terrain.ter_set( local, chunk.terrain[index] );
+                terrain.furn_set( local, chunk.furniture[index], false, false, true );
+            }
+        }
+        it = pending.erase( it );
+        g->invalidate_main_ui_adaptor();
+    }
+}
+
+// Replica position comes from the authenticated server. Load the window,
+// install its terrain, and only then put the avatar on the destination tile.
 static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
 {
     avatar &u = get_avatar();
-    map &m = get_map();
-
-    const bool in = m.inbounds( abs_pos );
-    mp_log( "[cdda-mp] teleport: target_abs=" + std::to_string( abs_pos.x() ) + "," +
-            std::to_string( abs_pos.y() ) + " inbounds=" + std::to_string( in ) +
-            " initial_done=" + std::to_string( mp_session().replication.client.initial_teleport_done ) +
-            " avatar_abs=" + std::to_string( u.pos_abs().x() ) + "," +
-            std::to_string( u.pos_abs().y() ) );
-
-    if( !in ) {
-        if( !mp_session().replication.client.initial_teleport_done ) {
-            // Last chance to adopt the host's seed before the host-area overmap
-            // is generated — in case 'welcome' was drained in this same batch.
-            mp_client_apply_host_seed();
-            mp_log( "[cdda-mp] teleport: -> place_player_overmap (initial) seed=" +
-                    std::to_string( g->get_seed() ) );
-            g->place_player_overmap( project_to<coords::omt>( abs_pos ), true );
-            mp_session().replication.client.initial_teleport_done = true;
-        } else {
-            // The host moved out of the client's bubble and we already did the
-            // one-time overmap placement, so we refuse to chase it.  If the
-            // *initial* placement put us at the wrong spot (e.g. our own
-            // scenario start instead of the host), this is where we get stranded
-            // far from the partner — that's the "4560 tiles away" symptom.
-            mp_log( "[cdda-mp] teleport: -> OUT OF BUBBLE, skip (avatar stays put)" );
-            return;
-        }
-    } else {
-        mp_session().replication.client.initial_teleport_done = true;
+    map &terrain = get_map();
+    if( !terrain.inbounds_z( abs_pos.z() ) ) {
+        return;
     }
-
-    const tripoint_bub_ms new_pos = m.get_bub( abs_pos );
-    if( new_pos != u.pos_bub() ) {
-        // DIAGNOSTIC (resurrection #2): count live synced monsters before/after the
-        // map reload to prove whether update_map silently unloads them (the suspected
-        // source of MON-RESPAWN-DROPPED). Logs only when the count drops.
-        int mons_before = 0;
-        for( const auto &p : get_creature_tracker().get_monsters_list() ) {
-            if( p && mp_session().replication.client.monsters.known_id( *p ) != 0 &&
-                !p->is_dead() ) {
-                ++mons_before;
-            }
-        }
-        if( new_pos.z() != u.pos_bub().z() ) {
-            // Z-level change (ramp / bridge crossing).
-            // 1. Place avatar on the destination tile FIRST (no gravity check
-            //    yet — map z-submaps aren't loaded until after vertical_shift).
-            // 2. Shift the map view so abs_sub.z() matches new_pos.z().
-            // 3. update_map loads z=1 submaps; its own setpos fires gravity_check
-            //    in the correct context (avatar on ramp deck, submaps loaded).
-            mp_log( "[cdda-mp] teleport: -> setpos-then-vertical_shift z=" + std::to_string( new_pos.z() ) );
-            u.setpos( m, new_pos, /*check_gravity=*/false );
-            g->vertical_shift( new_pos.z() );
-        } else {
-            mp_log( "[cdda-mp] teleport: -> setpos+update_map z=" + std::to_string( new_pos.z() ) );
-            u.setpos( m, new_pos );
-        }
-        g->update_map( u );
-        int mons_after = 0;
-        for( const auto &p : get_creature_tracker().get_monsters_list() ) {
-            if( p && mp_session().replication.client.monsters.known_id( *p ) != 0 &&
-                !p->is_dead() ) {
-                ++mons_after;
-            }
-        }
-        if( mons_after < mons_before ) {
-            mp_log( "[cdda-mp] TELE-MON-DROP: synced monsters " + std::to_string( mons_before ) +
-                    " -> " + std::to_string( mons_after ) + " across update_map (delta=" +
-                    std::to_string( mons_before - mons_after ) + ")" );
-        }
-    } else {
-        mp_log( "[cdda-mp] teleport: -> already at target" );
+    const tripoint_abs_sm center = project_to<coords::sm>( abs_pos );
+    const tripoint_abs_sm origin = center - point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+    if( !terrain.has_loaded_submap( center ) ) {
+        mp_client_apply_host_seed();
+        g->place_player_overmap( project_to<coords::omt>( abs_pos ), false );
     }
+    if( !terrain.has_loaded_submap( center ) ) {
+        return;
+    }
+    if( terrain.get_abs_sub().z() != abs_pos.z() ) {
+        terrain.vertical_shift( abs_pos.z() );
+    }
+    const point_rel_sm displacement = origin.xy() - terrain.get_abs_sub().xy();
+    for( point_rel_sm remaining = displacement; remaining != point_rel_sm::zero; ) {
+        const point_rel_sm step( std::clamp( remaining.x(), -1, 1 ),
+                                 std::clamp( remaining.y(), -1, 1 ) );
+        terrain.shift( step );
+        remaining -= step;
+    }
+    apply_pending_terrain();
+    if( u.pos_abs() != abs_pos ) {
+        u.setpos( terrain, terrain.get_bub( abs_pos ), false );
+    }
+    auto &pending = mp_session().replication.client.pending_terrain;
+    for( auto it = pending.begin(); it != pending.end(); ) {
+        const point_abs_sm p = it->first.xy();
+        const bool nearby = square_dist( p, center.xy() ) <= MAPSIZE;
+        it = nearby ? std::next( it ) : pending.erase( it );
+    }
+    mp_session().replication.client.position_received = true;
 }
 
 static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::string &name,
@@ -5787,85 +5827,50 @@ bool client_apply_message( const std::string &msg )
             JsonObject jo = jv.get_object();
             jo.allow_omitted_members();
             const int z = jo.get_int( "z" );
-            std::vector<std::string> pal;
-            for( const JsonValue &pv : jo.get_array( "pal" ) ) {
-                pal.push_back( pv.get_string() );
+            if( !get_map().inbounds_z( z ) ) {
+                return true;
             }
-            // A palette entry is only ever used as ter OR furn within a given
-            // submap's t/f arrays; resolve both interpretations up front.
-            std::vector<ter_id> ter_pal( pal.size() );
-            std::vector<furn_id> furn_pal( pal.size() );
-            std::vector<bool> ter_ok( pal.size(), false );
-            std::vector<bool> furn_ok( pal.size(), false );
-            for( size_t i = 0; i < pal.size(); ++i ) {
-                const ter_str_id ts( pal[i] );
-                if( ts.is_valid() ) {
-                    ter_pal[i] = ts.id();
-                    ter_ok[i] = true;
-                }
-                const furn_str_id fs( pal[i] );
-                if( fs.is_valid() ) {
-                    furn_pal[i] = fs.id();
-                    furn_ok[i] = true;
-                }
+            std::vector<ter_str_id> terrain_palette;
+            std::vector<furn_str_id> furniture_palette;
+            for( const JsonValue &value : jo.get_array( "pal" ) ) {
+                terrain_palette.emplace_back( value.get_string() );
+                furniture_palette.emplace_back( value.get_string() );
             }
-            map &m = get_map();
-            int applied = 0;
-            int skipped = 0;
-            auto decode = [&]( const JsonArray & arr, std::vector<int> &out ) {
-                for( JsonValue rv : arr ) {
-                    JsonArray run = rv.get_array();
-                    const int cnt = run.get_int( 0 );
-                    const int idx = run.get_int( 1 );
-                    for( int k = 0; k < cnt; ++k ) {
-                        out.push_back( idx );
+            const auto decode = []( const JsonArray &runs, const auto &palette, auto &out ) {
+                size_t cursor = 0;
+                for( JsonValue value : runs ) {
+                    const JsonArray run = value.get_array();
+                    const int count = run.get_int( 0 );
+                    const int id = run.get_int( 1 );
+                    if( count <= 0 || id < 0 || static_cast<size_t>( id ) >= palette.size() ||
+                        static_cast<size_t>( count ) > out.size() - cursor || !palette[id].is_valid() ) {
+                        return false;
                     }
+                    std::fill_n( out.begin() + cursor, count, palette[id].id() );
+                    cursor += count;
                 }
+                return cursor == out.size();
             };
-            for( JsonValue sv : jo.get_array( "subs" ) ) {
-                JsonObject so = sv.get_object();
-                so.allow_omitted_members();
-                const point sm( so.get_int( "sx" ), so.get_int( "sy" ) );
-                const tripoint_abs_ms sm_ms0{ sm.x * SEEX, sm.y * SEEY, z };
-                const tripoint_bub_ms bub0 = m.get_bub( sm_ms0 );
-                if( !m.inbounds( bub0 ) ) {
-                    ++skipped;   // outside this client's loaded bubble (far from host)
-                    continue;
+            auto &pending = mp_session().replication.client.pending_terrain;
+            constexpr size_t pending_limit = MAPSIZE * MAPSIZE * OVERMAP_LAYERS;
+            for( JsonValue value : jo.get_array( "subs" ) ) {
+                if( pending.size() >= pending_limit ) {
+                    break;
                 }
-                std::vector<int> tcells;
-                std::vector<int> fcells;
-                decode( so.get_array( "t" ), tcells );
-                decode( so.get_array( "f" ), fcells );
-                for( int ly = 0; ly < SEEY; ++ly ) {
-                    for( int lx = 0; lx < SEEX; ++lx ) {
-                        const int ci = ly * SEEX + lx;
-                        const tripoint_bub_ms bub{ bub0.x() + lx, bub0.y() + ly, bub0.z() };
-                        if( ci < static_cast<int>( tcells.size() ) ) {
-                            const int pi = tcells[ci];
-                            if( pi >= 0 && pi < static_cast<int>( ter_ok.size() ) && ter_ok[pi] ) {
-                                m.ter_set( bub, ter_pal[pi] );
-                            }
-                        }
-                        if( ci < static_cast<int>( fcells.size() ) ) {
-                            const int pi = fcells[ci];
-                            if( pi >= 0 && pi < static_cast<int>( furn_ok.size() ) && furn_ok[pi] ) {
-                                m.furn_set( bub, furn_pal[pi] );
-                            }
-                        }
-                    }
+                JsonObject cell = value.get_object();
+                cell.allow_omitted_members();
+                const tripoint_abs_sm position( cell.get_int( "sx" ), cell.get_int( "sy" ), z );
+                client_replication_state::terrain_chunk chunk;
+                if( decode( cell.get_array( "t" ), terrain_palette, chunk.terrain ) &&
+                    decode( cell.get_array( "f" ), furniture_palette, chunk.furniture ) ) {
+                    pending.insert_or_assign( position, std::move( chunk ) );
                 }
-                ++applied;
             }
-            if( applied > 0 ) {
-                m.invalidate_map_cache( z );
-                g->invalidate_main_ui_adaptor();
-            }
-            const long apply_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                      std::chrono::steady_clock::now() - t0 ).count();
-            mp_log( "[cdda-mp] MAPSYNC recv: applied=" + std::to_string( applied ) +
-                    " skipped=" + std::to_string( skipped ) +
-                    " pal=" + std::to_string( pal.size() ) +
-                    " ms=" + std::to_string( apply_ms ) );
+            apply_pending_terrain();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now() - t0 ).count();
+            mp_log( "[ccb-mp] MAPSYNC recv: pending=" + std::to_string( pending.size() ) +
+                    " ms=" + std::to_string( elapsed ) );
         } catch( const JsonError &e ) {
             mp_log( "[cdda-mp] MAPSYNC parse error: " + std::string( e.what() ) );
         }
@@ -6601,13 +6606,6 @@ void client_process_incoming()
         if( msg != mp_session().presentation.client_drain_last ) {
             mp_log( msg );
             mp_session().presentation.client_drain_last = msg;
-        }
-    }
-    // Warn if the client is drifting too far from the host's reality bubble center.
-    if( mp_session().client_host_actor.id().is_valid() ) {
-        npc *hnpc = mp_host_view_actor();
-        if( hnpc ) {
-            check_separation_warning( get_avatar().pos_abs(), hnpc->pos_abs() );
         }
     }
     // Repaint when we processed incoming messages so calendar/time/messages/
@@ -9476,7 +9474,7 @@ void client_wait_for_initial_position()
 {
     using namespace std::chrono_literals;
     const auto deadline = std::chrono::steady_clock::now() + 5s;
-    while( !mp_session().replication.client.initial_teleport_done ) {
+    while( !mp_session().replication.client.position_received ) {
         if( std::chrono::steady_clock::now() >= deadline ) {
             std::cout << "[cdda-mp] Timed out waiting for initial position from server." << std::endl;
             break;

@@ -1297,12 +1297,47 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     open_room();
     const auto second = join( 901 );
     CHECK_FALSE( session.find_remote( first ) );
-    const auto *restored = session.find_remote( second )->actor.retained( g->npc_lifetimes() );
+    auto *restored = session.find_remote( second )->actor.retained( g->npc_lifetimes() );
     REQUIRE( restored );
     CHECK( restored->getID() == guest_id );
     CHECK( restored->pos_abs() == saved_guest_position );
     CHECK_FALSE( restored->in_vehicle );
     CHECK_FALSE( restored->controlling_vehicle );
+
+    // Walk one window away without changing the local player's map, then close
+    // and reopen the room. The guest's exact position and remote edits survive.
+    const tripoint_bub_ms edge( ( MAPSIZE - 2 ) * SEEX, HALF_MAPSIZE_Y, 0 );
+    here.ter_set( edge, ter_str_id( "t_floor" ).id() );
+    restored->setpos( here, edge, false );
+    cata_mp::refresh_resident_regions();
+    REQUIRE( session.find_region( profile.id ) != nullptr );
+    auto &distant_region = *session.find_region( profile.id );
+    const tripoint_abs_sm distant_center = center + point_rel_sm( MAPSIZE + 2, 0 );
+    restored->setpos( project_to<coords::ms>( distant_center ), false );
+    cata_mp::refresh_resident_regions();
+    map &distant = *distant_region.terrain;
+    const tripoint_bub_ms distant_tile( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+    const tripoint_abs_ms distant_position = distant.get_abs( distant_tile );
+    const tripoint_abs_ms marker = distant.get_abs( distant_tile + point::east );
+    REQUIRE_FALSE( here.inbounds( distant_position ) );
+    distant.furn_set( distant_tile, furn_str_id::NULL_ID() );
+    distant.ter_set( distant_tile, ter_str_id( "t_floor" ).id() );
+    distant.ter_set( distant.get_bub( marker ), ter_str_id( "t_wall" ).id() );
+    restored->setpos( distant, distant_tile, false );
+    REQUIRE( cata_mp::mp_close_host_session() );
+    CHECK_FALSE( session.has_regions() );
+    CHECK( host.pos_abs() == position );
+
+    open_room();
+    const auto third = join( 903 );
+    auto *distant_guest = session.find_remote( third )->actor.retained( g->npc_lifetimes() );
+    REQUIRE( distant_guest );
+    CHECK( distant_guest->getID() == guest_id );
+    CHECK( distant_guest->pos_abs() == distant_position );
+    map *const restored_map = session.loaded_map_at( here, distant_guest->pos_abs_sm() );
+    REQUIRE( restored_map != nullptr );
+    REQUIRE( restored_map != &here );
+    CHECK( restored_map->ter( restored_map->get_bub( marker ) ) == ter_str_id( "t_wall" ).id() );
     CHECK( cata_mp::mp_close_host_session() );
 }
 

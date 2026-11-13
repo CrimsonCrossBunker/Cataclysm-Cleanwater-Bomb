@@ -697,6 +697,7 @@ class game
         /** Makes any nearby NPCs on the overmap active. */
         void load_npcs();
         void load_npcs( map *here );
+        void unload_creatures_outside_resident_maps();
 
         /** NPCs who saw player interacting with their stuff (disassembling, cutting etc)
         * will notify the player that thievery was witnessed and make angry at the player. */

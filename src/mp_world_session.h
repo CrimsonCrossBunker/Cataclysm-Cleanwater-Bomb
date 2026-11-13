@@ -77,6 +77,7 @@ struct world_session {
         world_replication_state replication;
         std::map<uint64_t, std::unique_ptr<remote_player_session>> remote_players;
         bool host_waiting_for_clients = false;
+        bool refreshing_regions = false;
         int last_monmove_ms = 0;
         int host_wait_elapsed_ms = 0;
         uint32_t grant_sequence = 0;
@@ -105,6 +106,8 @@ struct world_session {
         resident_region &load_region( const game &owner, map &primary, const player_id &player,
                                       const tripoint_abs_sm &center );
         resident_region *find_region( const player_id &player ) const;
+        void recenter_region( map &primary, resident_region &region, const tripoint_abs_sm &center );
+        void retire_region( map &primary, const player_id &player );
         scent_map *scent_for( const map &terrain ) const;
         std::vector<std::reference_wrapper<resident_region>> active_regions() const;
         map_simulation_regions simulation_regions( const map &primary ) const;

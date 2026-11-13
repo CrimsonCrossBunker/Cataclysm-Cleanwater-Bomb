@@ -130,7 +130,6 @@ void mark_partner_push_pending( character_id target );
 // Current partner-separation tier (0 = close, 1 = mild warn, 2 = urgent
 // warn / leeway, 3 = pause).  Read by do_turn to auto-pause the calendar
 // at tier 3.
-int get_separation_tier();
 
 // Returns the partner NPC (proxy of the OTHER player) from this side's POV,
 // or nullptr if not connected. On the host that's the client's proxy; on
@@ -237,6 +236,7 @@ void set_host_mode( bool enabled );
 // True when this instance is hosting (listen server running), regardless of
 // whether it is also a headless dedicated server.
 bool is_hosting();
+void refresh_resident_regions( bool before_primary_relocation = false );
 
 // Called before unloading or replacing a world. Joins the host worker, closes
 // the client, and clears modes, proxy bindings, pending events and handshake

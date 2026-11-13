@@ -10596,6 +10596,7 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     }
     field_furn_locs.clear();
     field_ter_locs.clear();
+    support_cache_dirty.clear();
     submaps_with_active_items.clear();
     submaps_with_active_items_dirty.clear();
     set_abs_sub( w );
@@ -10856,7 +10857,11 @@ void map::shift( const point_rel_sm &sp, const map_simulation_regions *regions )
                 for( int gridz = zmin; gridz <= zmax; gridz++ ) {
                     const tripoint_rel_sm grid( gridx, gridy, gridz );
                     if( !regions || !regions->loaded_elsewhere( *this, abs.xy() + grid ) ) {
-                        on_unload( grid );
+                        if( regions && get_submap_at_grid( grid ) ) {
+                            saven( rebase_bub( grid ) );
+                        } else {
+                            on_unload( grid );
+                        }
                     }
                 }
             }

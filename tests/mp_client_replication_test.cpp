@@ -117,6 +117,46 @@ TEST_CASE( "mp_client_exits_replica_without_switching_to_solo",
     CHECK_FALSE( cata_mp::client_apply_message( packet ) );
 }
 
+TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_position",
+           "[multiplayer][client_replication][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_overmaps();
+    } );
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    g->uquit = QUIT_NO;
+    cata_mp::set_client_mode( true );
+    map &here = get_map();
+    const tripoint_bub_ms local( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+    get_avatar().setpos( here, local, false );
+    const tripoint_abs_sm start = get_avatar().pos_abs_sm();
+    const auto state = []( const tripoint_abs_ms &position ) {
+        return R"({"type":"state","connected":true,"pos":{"x":)" + std::to_string( position.x() ) +
+               ",\"y\":" + std::to_string( position.y() ) + ",\"z\":" +
+               std::to_string( position.z() ) + "}}";
+    };
+    REQUIRE( cata_mp::client_apply_message( state( get_avatar().pos_abs() ) ) );
+    const tripoint_abs_sm destination = start + point_rel_sm( MAPSIZE + 2, 0 );
+    const tripoint_abs_ms absolute = project_to<coords::ms>( destination );
+    REQUIRE_FALSE( here.inbounds( absolute ) );
+    const std::string prefix = R"({"type":"map_sync","z":0,"pal":["t_wall","f_null"],"subs":[{"sx":)" +
+                               std::to_string( destination.x() ) + ",\"sy\":" +
+                               std::to_string( destination.y() );
+    CHECK( cata_mp::client_apply_message( prefix + R"(,"t":[[99999999,0]],"f":[[144,1]]}]})" ) );
+    CHECK( session.replication.client.pending_terrain.empty() );
+    REQUIRE( cata_mp::client_apply_message( prefix + R"(,"t":[[144,0]],"f":[[144,1]]}]})" ) );
+    REQUIRE( session.replication.client.pending_terrain.count( destination ) == 1 );
+    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east ) ) );
+    CHECK( get_avatar().pos_abs() == absolute + point::east );
+    CHECK( here.ter( here.get_bub( absolute ) ) == ter_str_id( "t_wall" ).id() );
+    CHECK( session.replication.client.pending_terrain.empty() );
+}
+
 TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
            "[multiplayer][client_replication][entity_identity][regression]" )
 {
