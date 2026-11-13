@@ -1379,6 +1379,11 @@ int firearm_sweep::rounds( const tripoint_bub_ms &origin, int rpm ) const
     return static_cast<int>( std::clamp( std::ceil( seconds * rpm / 60.0 - 1e-9 ), 1.0, 120.0 ) );
 }
 
+static int sweep_move_cost( double seconds, int moves_per_second )
+{
+    return std::max( 1, static_cast<int>( std::ceil( seconds * moves_per_second - 1e-9 ) ) );
+}
+
 std::vector<tripoint_bub_ms> firearm_sweep::shot_targets( const tripoint_bub_ms &origin,
         int rpm ) const
 {
@@ -1589,7 +1594,7 @@ int Character::fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_
         const double duration = sweep.duration( origin );
         const double seconds = fired == static_cast<int>( targets.size() ) ? duration :
                                std::min( duration, std::max( 1, fired ) * 60.0 / mode.rpm );
-        mod_moves( -std::max( 1, static_cast<int>( std::ceil( seconds * get_speed() - 1e-9 ) ) ) );
+        mod_moves( -sweep_move_cost( seconds, get_speed() ) );
         if( fired > 0 ) {
             last_target_pos = here.get_abs( targets[fired - 1] );
             last_target.reset();
@@ -5034,12 +5039,15 @@ void target_ui::panel_sweep_selection( int text_y )
     }
     const gun_mode gun = relevant->gun_current_mode();
     const std::array<std::string, 3> labels = { _( "Fast" ), _( "Medium" ), _( "Slow" ) };
+    const int moves_per_second = you->get_speed();
     for( int i = 0; i < 3; ++i ) {
         const firearm_sweep sweep{ *sweep_start, dst, i + 1 };
+        const double seconds = sweep.duration( src );
         trim_and_print( w_target, point( 1, text_y++ ), getmaxx( w_target ) - 2, c_white,
-                        string_format( _( "%s %s: %d rounds (%.2f s)" ),
+                        string_format( _( "%s %s: %d AP, %d rounds (%.2f s)" ),
                                        burst_ctxt.get_desc( burst_presets[i].first, 1 ),
-                                       labels[i], sweep.rounds( src, gun.rpm ), sweep.duration( src ) ) );
+                                       labels[i], sweep_move_cost( seconds, moves_per_second ),
+                                       sweep.rounds( src, gun.rpm ), seconds ) );
     }
 }
 
