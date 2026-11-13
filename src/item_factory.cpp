@@ -3618,7 +3618,7 @@ class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
                     }
                     const std::string text = rate.get_string();
                     const char *const end = text.data() + text.size();
-                    const auto parsed = std::from_chars( text.data(), end, rpm );
+                    const std::from_chars_result parsed = std::from_chars( text.data(), end, rpm );
                     if( parsed.ec != std::errc() || parsed.ptr != end || rpm <= 0 ) {
                         rate.throw_error( "RPM must be a string containing a positive integer" );
                     }
