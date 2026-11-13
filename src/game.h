@@ -437,13 +437,9 @@ class game
             return dimension_prefix;
         }
 
-        /** Returns the other end of the stairs (if any). May query, affect u etc.
-        * @param pos Disable queries and msgs if not the same position as player.
-        */
+        // Finds an existing stair landing without querying the player or changing the map.
         std::optional<tripoint_bub_ms> find_stairs( const map &mp, int z_after,
                 const tripoint_bub_ms &pos );
-        std::optional<tripoint_bub_ms> find_or_make_stairs( map &mp, int z_after, bool &rope_ladder,
-                bool peeking, const tripoint_bub_ms &pos );
         std::optional<tripoint_bub_ms> find_or_make_stairs( Character &who, map &mp,
                 int z_after, bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos,
                 const vertical_move_choices *choices );

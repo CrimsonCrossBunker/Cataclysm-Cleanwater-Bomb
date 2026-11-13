@@ -8155,10 +8155,22 @@ action_id Character::get_next_auto_move_direction()
         }
     }
 
-    const tripoint_rel_ms dp = auto_move_route.front() - pos_bub();
+    const tripoint_bub_ms origin = pos_bub();
+    const tripoint_bub_ms target = auto_move_route.front();
+    const tripoint_rel_ms dp = target - origin;
+    action_id stair_action = ACTION_NULL;
+    if( std::abs( dp.z() ) == 1 && dp.xy() != point_rel_ms::zero ) {
+        const map &here = get_map();
+        const auto entry = dp.z() < 0 ? ter_furn_flag::TFLAG_GOES_DOWN : ter_furn_flag::TFLAG_GOES_UP;
+        if( here.has_loaded_submap( origin ) && here.has_flag( entry, origin ) &&
+            g->find_stairs( here, target.z(), origin ) == target ) {
+            stair_action = dp.z() < 0 ? ACTION_MOVE_DOWN : ACTION_MOVE_UP;
+        }
+    }
     // Keep invalid steps intact until the caller cancels the route. In
-    // particular, a distant XY tile with dz=1 must not become a stair action.
-    if( std::max( { std::abs( dp.x() ), std::abs( dp.y() ), std::abs( dp.z() ) } ) != 1 ) {
+    // particular, an offset stair step must match the actual landing.
+    if( stair_action == ACTION_NULL &&
+        std::max( { std::abs( dp.x() ), std::abs( dp.y() ), std::abs( dp.z() ) } ) != 1 ) {
         return ACTION_NULL;
     }
     next_expected_position.emplace( auto_move_route.front() );
@@ -8170,7 +8182,8 @@ action_id Character::get_next_auto_move_direction()
                    next_expected_position->x(), next_expected_position->y(),
                    auto_move_route.size() );
 
-    return get_movement_action_from_delta( dp, iso_rotate::yes );
+    return stair_action == ACTION_NULL ? get_movement_action_from_delta( dp, iso_rotate::yes ) :
+           stair_action;
 }
 
 int Character::intimidation() const

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "action.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
@@ -555,6 +556,33 @@ TEST_CASE( "map_route_player_up_down_stairs", "[map][pathfinding]" )
             }
         }
     }
+    clear_map_without_vision();
+}
+
+TEST_CASE( "automove_uses_the_native_landing_for_offset_stairs", "[map][pathfinding][automove]" )
+{
+    map &here = setup_map_without_obstacles();
+    const tripoint_abs_omt omt = project_to<coords::omt>( here.get_abs(
+            tripoint_bub_ms( 60, 60, 0 ) ) );
+    const tripoint_bub_ms origin = here.get_bub( project_to<coords::ms>( omt ) ) + point( 8, 8 );
+    Character &who = place_player_at( origin );
+    const tripoint_bub_ms start = who.pos_bub( here );
+    const int horizontal_offset = GENERATE( 1, 2 );
+    const tripoint_bub_ms landing = start + tripoint( horizontal_offset, 0, 1 );
+    here.ter_set( start, ter_id( "t_stairs_up" ) );
+    here.ter_set( landing, ter_id( "t_stairs_down" ) );
+    const auto path = here.route( who, pathfinding_target::point( landing ) );
+    REQUIRE( path == std::vector<tripoint_bub_ms> { landing } );
+    who.set_destination( path );
+    CHECK( who.get_next_auto_move_direction() == ACTION_MOVE_UP );
+
+    if( horizontal_offset == 2 ) {
+        here.ter_set( landing, ter_id( "t_floor" ) );
+        who.set_destination( path );
+        CHECK( who.get_next_auto_move_direction() == ACTION_NULL );
+        CHECK( who.get_auto_move_route() == path );
+    }
+    who.clear_destination();
     clear_map_without_vision();
 }
 

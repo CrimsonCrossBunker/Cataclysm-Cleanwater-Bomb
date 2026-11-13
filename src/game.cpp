@@ -11348,7 +11348,7 @@ void game::start_hauling( Character &who, const tripoint_bub_ms &pos )
 std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
         const tripoint_bub_ms &pos )
 {
-    if( !mp.inbounds( pos ) || !mp.inbounds_z( z_after ) ) {
+    if( !mp.has_loaded_submap( pos ) || !mp.inbounds_z( z_after ) ) {
         return std::nullopt;
     }
     const int movez = z_after - pos.z();
@@ -11356,11 +11356,12 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
     const bool going_up_1 = movez == 1;
 
     // If there are stairs on the same x and y as we currently are, use those
-    if( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos + tripoint::below ) ) {
-        return pos + tripoint::below;
-    }
-    if( going_up_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos + tripoint::above ) ) {
-        return pos + tripoint::above;
+    const tripoint_bub_ms aligned( pos.xy(), z_after );
+    if( mp.has_loaded_submap( aligned ) ) {
+        if( ( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, aligned ) ) ||
+            ( going_up_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, aligned ) ) ) {
+            return aligned;
+        }
     }
     // We did not find stairs directly above or below, so search the map for them
     // If there's empty space right below us, we can just go down that way.
@@ -11377,7 +11378,7 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
     if( !mp.is_open_air( pos ) ) {
         for( const tripoint_bub_ms &dest : mp.points_in_rectangle( omtile_align_start,
                 omtile_align_end ) ) {
-            if( rl_dist( pos, dest ) <= best &&
+            if( rl_dist( pos, dest ) <= best && mp.has_loaded_submap( dest ) &&
                 ( ( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, dest ) ) ||
                   ( going_up_1 && ( mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, dest ) ||
                                     mp.ter( dest ) == ter_t_manhole_cover ) ) ||
@@ -11389,12 +11390,6 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
     }
 
     return stairs;
-}
-
-std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_after,
-        bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos )
-{
-    return find_or_make_stairs( get_avatar(), mp, z_after, rope_ladder, peeking, pos, nullptr );
 }
 
 std::optional<tripoint_bub_ms> game::find_or_make_stairs( Character &who, map &mp,

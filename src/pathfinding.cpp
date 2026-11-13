@@ -177,24 +177,6 @@ pathfinding_workspace::lease pathfinding_workspace::acquire() const
     return lease( std::move( data ) );
 }
 
-// Modifies `t` to point to a tile with `flag` in a 1-submap radius of `t`'s original value,
-// searching nearest points first (starting with `t` itself).
-// return false if it could not find a suitable point
-static bool vertical_move_destination( const map &m, ter_furn_flag flag, tripoint_bub_ms &t )
-{
-    const pathfinding_cache &pf_cache = m.get_pathfinding_cache_ref( t.z() );
-    for( const point_bub_ms &p : closest_points_first( t.xy(), SEEX ) ) {
-        if( pf_cache.special[p.x()][p.y()] & ( PathfindingFlag::GoesDown | PathfindingFlag::GoesUp ) ) {
-            const tripoint_bub_ms t2( p, t.z() );
-            if( m.has_flag( flag, t2 ) ) {
-                t = t2;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 template<class Set1, class Set2>
 static bool is_disjoint( const Set1 &set1, const Set2 &set2 )
 {
@@ -645,43 +627,26 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
             continue;
         }
 
-        bool rope_ladder = false;
         const const_maptile &parent_tile = maptile_at_internal( cur );
         const ter_t &parent_terrain = parent_tile.get_ter_t();
-        if( settings.allow_climb_stairs && cur.z() > min.z() &&
-            parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ) {
-            std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                    cur.z() - 1, rope_ladder, false, cur );
-            if( !opt_dest ) {
+        for( const int direction : {
+                 -1, 1
+             } ) {
+            const int z = cur.z() + direction;
+            const auto entry = direction < 0 ? ter_furn_flag::TFLAG_GOES_DOWN :
+                               ter_furn_flag::TFLAG_GOES_UP;
+            const auto exit = direction < 0 ? ter_furn_flag::TFLAG_GOES_UP :
+                              ter_furn_flag::TFLAG_GOES_DOWN;
+            if( z < min.z() || z > max.z() || !parent_terrain.has_flag( entry ) ) {
                 continue;
             }
-            tripoint_bub_ms dest( opt_dest.value() );
-            if( vertical_move_destination( *this, ter_furn_flag::TFLAG_GOES_UP, dest ) ) {
-                if( !inbounds( dest ) ) {
-                    continue;
-                }
-                // Use outer layer (cur.z()) for gscore -- the destination
-                // layer may contain stale data at parent_index.
-                int new_g = layer.gscore[parent_index] + 2;
-                pf.add_point( new_g, new_g + 2 * rl_dist( dest, t ),
-                              cur, dest );
-            }
-        }
-        if( settings.allow_climb_stairs && cur.z() < max.z() &&
-            parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ) {
-            std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                    cur.z() + 1, rope_ladder, false, cur );
-            if( !opt_dest ) {
-                continue;
-            }
-            tripoint_bub_ms dest( opt_dest.value() );
-            if( vertical_move_destination( *this, ter_furn_flag::TFLAG_GOES_DOWN, dest ) ) {
-                if( !inbounds( dest ) ) {
-                    continue;
-                }
-                int new_g = layer.gscore[parent_index] + 2;
-                pf.add_point( new_g, new_g + 2 * rl_dist( dest, t ),
-                              cur, dest );
+            // Use the same landing that the vertical action will resolve.
+            // Route previews must not query the player or invent a different exit.
+            const auto dest = g->find_stairs( *this, z, cur );
+            if( dest && has_loaded_submap( *dest ) && has_flag( exit, *dest ) &&
+                ( target.contains( *dest ) || !avoid( *dest ) ) ) {
+                const int new_g = layer.gscore[parent_index] + 2;
+                pf.add_point( new_g, new_g + 2 * rl_dist( *dest, t ), cur, *dest );
             }
         }
         if( cur.z() < max.z() && parent_terrain.has_flag( ter_furn_flag::TFLAG_RAMP ) &&
