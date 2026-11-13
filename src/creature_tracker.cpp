@@ -597,7 +597,7 @@ creature_tracker::reachable_factions *creature_tracker::reachable_creatures(
 {
     if( g->multiplayer_session().has_regions() ) {
         map &terrain = get_map();
-        if( !terrain.has_loaded_submap( origin.pos_abs_sm() ) || origin.is_dead() ) {
+        if( !terrain.has_loaded_submap( origin.pos_abs_sm() ) || origin.is_dead_state() ) {
             return nullptr;
         }
         if( dirty_ ) {
