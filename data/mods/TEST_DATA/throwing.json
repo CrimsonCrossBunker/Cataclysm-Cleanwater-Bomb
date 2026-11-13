@@ -159,5 +159,17 @@
     "use_action": { "type": "holster", "holster_prompt": "Store test item", "holster_msg": "You store the test item." },
     "flags": [ "BELTED" ],
     "armor": [ { "coverage": 100, "encumbrance": 0, "covers": [ "torso" ] } ]
+  },
+  {
+    "type": "recipe",
+    "result": "test_throwing_plain",
+    "id_suffix": "test_unattended",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_BASHING",
+    "skill_used": "fabrication",
+    "difficulty": 1,
+    "autolearn": true,
+    "components": [ [ [ "test_2x4", 1 ] ] ],
+    "steps": [ { "name": "Wait", "time": "10 m", "activity_level": "NO_EXERCISE", "attention": "unattended" } ]
   }
 ]
