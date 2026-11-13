@@ -17,7 +17,6 @@
 #include "game_constants.h"
 #include "item.h"
 #include "itype.h"
-#include "json_error.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
