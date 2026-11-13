@@ -149,8 +149,9 @@ These fields can be read by any ITEM regardless of subtypes:
 "solar_efficiency": 0.3,                     // Efficiency of solar energy conversion for solarpacks; require SOLARPACK_ON to generate electricity; default 0
 "source_monster": "mon_zombie",               // This item is corpse of this monster (so it has weight and volume of this monster), and revive into this monster; require COPRSE flag
 "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage dealt when throwing this item; if omitted, melee damage is used, including the character's strength bonus.
-"throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. They apply only when every configured projectile restriction passes; charge-counted items use per-charge weight and volume.
-  "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "SLING_AMMO" ] ], // String or array. Outer entries are alternatives; flags grouped in an inner array are all required. This example means (SLING_PROJECTILE and NPC_THROWN) or SLING_AMMO.
+"throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. Match either required_flag or allow_ammotype, then pass all physical limits; see Throw corrections below.
+  "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "SLING_AMMO" ] ], // String, array, or null. Outer entries are alternatives; flags grouped in an inner array are all required. null clears the flag requirement; empty arrays are errors.
+  "allow_ammotype": [ "pebble" ],            // (Optional) Ammunition types accepted as an alternative to required_flag. Also accepts a single string.
   "min_weight": "1 g",                     // (Optional) Inclusive minimum projectile weight.
   "max_weight": "750 g",                   // (Optional) Inclusive maximum projectile weight.
   "max_volume": "500 ml",                  // (Optional) Inclusive maximum projectile volume.
@@ -222,6 +223,27 @@ These fields can be read by any ITEM regardless of subtypes:
     }
 },
 ```
+
+#### Throw corrections
+
+`throw_correction_data` accepts projectiles matching either `required_flag` or
+`allow_ammotype`.  The latter matches ammunition items by ammunition type, not by
+item ID.  With an ammo list but no flag requirement, only matching ammunition is
+accepted.  Without either selector, there is no item-type restriction.
+All accepted projectiles must still pass the configured weight, volume, and length
+limits.  Weight and volume use a single charge for charge-counted items.
+
+Omitted fields retain inherited values.  On a new definition, omitted selectors
+and bounds impose no restriction, and omitted multipliers default to 1.0.
+`required_flag: null` clears an inherited flag requirement; empty outer or inner
+flag arrays are errors.  `allow_ammotype: []` clears the ammo list.  A bound set to
+`null` clears that bound; setting the entire `throw_correction_data` to `null`
+removes the correction.
+
+Weight bounds are inclusive and independent: omitting one does not limit that
+side of the interval.  When `min_weight` exceeds `max_weight`, loading emits a
+JSON warning but continues.  The bounds are not changed, so no projectile can
+satisfy that interval.
 
 #### To hit object
 For additional clarity, an item's `to_hit` bonus can be encoded as string of 4 fields.  All the fields are mandatory:
@@ -971,6 +993,7 @@ Gun mods can be defined like this:
 "heat_per_shot_multiplier": 2.0,      // Multiply the gun's "heat_per_shot" by this number; works the same as overheat_threshold_multiplier
 "throw_correction_data": {            // Optional throw corrections from this mod. Projectile restrictions use the same format as ITEM throw_correction_data.
   "required_flag": "SLING_PROJECTILE",
+  "allow_ammotype": [ "pebble" ],
   "min_weight": "1 g",
   "max_weight": "750 g",
   "max_volume": "500 ml",
