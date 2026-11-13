@@ -433,7 +433,9 @@ bool game::load( const save_t &name )
             {
                 _( "Map memory" ), [&]()
                 {
-                    u.load_map_memory();
+                    if( !cata_mp::is_client_mode() ) {
+                        u.load_map_memory();
+                    }
                 }
             },
             {
@@ -832,6 +834,9 @@ bool game::save()
     }
     restore_on_out_of_scope restore_saving( save_in_progress );
     save_in_progress = true;
+    if( cata_mp::is_client_mode() ) {
+        return !u.has_guest_map_memory() || u.save_map_memory();
+    }
     // total_time_played accumulates real wall-clock seconds, which is inherently
     // non-deterministic. Under input replay we freeze the delta at 0 so the
     // persisted playtime (written to both .pt and the character .sav) is
@@ -1041,6 +1046,12 @@ void game::quicksave( bool automatic )
     }
     restore_on_out_of_scope restore_quicksaving( quicksave_in_progress );
     quicksave_in_progress = true;
+    if( cata_mp::is_client_mode() ) {
+        if( !save() ) {
+            add_msg( m_bad, _( "Could not save your exploration memory." ) );
+        }
+        return;
+    }
     const bool finishing_dimension_rollback = !automatic &&
         save_snapshot::dimension_rollback_exists( world_generator->active_world->folder_path() );
     //Don't autosave if the player hasn't done anything since the last autosave/quicksave,
@@ -1072,6 +1083,9 @@ void game::quicksave( bool automatic )
 
 void game::quickload()
 {
+    if( cata_mp::is_client_mode() ) {
+        return;
+    }
     WORLD *active_world = world_generator->active_world;
     if( active_world == nullptr ) {
         return;
@@ -1117,6 +1131,10 @@ void game::quickload()
 
 void game::snapshot_menu()
 {
+    if( cata_mp::is_client_mode() ) {
+        popup( _( "Only the co-op host can manage world snapshots." ) );
+        return;
+    }
     WORLD *active_world = world_generator->active_world;
     if( active_world == nullptr ) {
         return;
@@ -1188,6 +1206,10 @@ void game::snapshot_menu()
 
 void game::quit_to_last_snapshot()
 {
+    if( cata_mp::is_client_mode() ) {
+        popup( _( "Only the co-op host can restore a world snapshot." ) );
+        return;
+    }
     WORLD *active_world = world_generator->active_world;
     if( active_world == nullptr ) {
         return;

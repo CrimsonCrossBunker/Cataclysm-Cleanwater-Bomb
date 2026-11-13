@@ -2,6 +2,7 @@
 
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_world_session.h"
 #include "mp_inventory_activity.h"
 #include "translation.h"
 
@@ -135,6 +136,10 @@ bool cleanup_at_end()
     g->first_redraw_since_waiting_started = true;
 
     avatar &u = get_avatar();
+    const std::string &client_exit_reason = g->multiplayer_session().client_turn.exit_reason;
+    if( cata_mp::is_client_mode() && !client_exit_reason.empty() ) {
+        popup( client_exit_reason );
+    }
     if( g->uquit == QUIT_DIED || g->uquit == QUIT_SUICIDE ) {
         // Put (non-hallucinations) into the overmap so they are not lost.
         for( monster &critter : g->all_monsters() ) {
@@ -817,6 +822,9 @@ bool game::do_turn()
         // The host advances the world. View updates and input polling cannot
         // tick terrain, monsters, missions or world Lua hooks a second time.
         cata_mp::process_session_turn();
+        if( is_game_over() ) {
+            return turn_handler::cleanup_at_end();
+        }
         avatar &u = get_avatar();
         cata_mp::client_finish_ready_firearm_activity();
         cata_mp::client_update_inventory_activity_view();

@@ -25,6 +25,7 @@
 #include "avatar_action.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -290,6 +291,21 @@ void avatar::load_map_memory()
 void avatar::clear_map_memory()
 {
     player_map_memory->clear();
+}
+
+void avatar::use_guest_map_memory( const cata_path &directory )
+{
+    player_map_memory->set_private_store( directory );
+}
+
+void avatar::use_local_map_memory()
+{
+    player_map_memory->set_private_store( std::nullopt );
+}
+
+bool avatar::has_guest_map_memory() const
+{
+    return player_map_memory->has_private_store();
 }
 
 void avatar::prepare_map_memory_region( const tripoint_abs_ms &p1, const tripoint_abs_ms &p2 )

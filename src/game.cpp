@@ -783,6 +783,8 @@ bool game::setup()
 void game::reset_game_state()
 {
     multiplayer_session_ptr->prepare_for_world_load();
+    u.use_local_map_memory();
+    u.clear_map_memory();
     player_controls_ptr->reset();
     local_player_control_ptr->reset();
     npc_lifetimes_ptr->reset();
@@ -3182,6 +3184,13 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
 
 bool game::is_game_over()
 {
+    if( cata_mp::is_client_mode() ) {
+        if( uquit == QUIT_NO && !u.is_dead_state() ) {
+            return false;
+        }
+        uquit = QUIT_NOSAVED;
+        return true;
+    }
     map &here = get_map();
 
     if( uquit == QUIT_DIED || uquit == QUIT_WATCH ) {

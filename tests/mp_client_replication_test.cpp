@@ -90,6 +90,33 @@ TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
     CHECK_FALSE( session.admission.host_world.valid() );
 }
 
+TEST_CASE( "mp_client_exits_replica_without_switching_to_solo",
+           "[multiplayer][client_replication][regression]" )
+{
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    avatar &guest = get_avatar();
+    const int previous_moves = guest.get_moves();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        guest.set_moves( previous_moves );
+    } );
+    g->uquit = QUIT_NO;
+    guest.set_moves( 100 );
+    cata_mp::set_client_mode( true );
+    const std::string packet = GENERATE(
+                                   R"({"type":"session_ending","from":"host"})",
+                                   R"({"type":"state","connected":false})",
+                                   R"({"type":"inventory_update"})" );
+    REQUIRE( cata_mp::client_apply_message( packet ) );
+    CHECK( cata_mp::is_client_mode() );
+    CHECK( guest.get_moves() == 0 );
+    CHECK( g->uquit == QUIT_NOSAVED );
+    CHECK( g->is_game_over() );
+    CHECK_FALSE( cata_mp::client_apply_message( packet ) );
+}
+
 TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
            "[multiplayer][client_replication][entity_identity][regression]" )
 {

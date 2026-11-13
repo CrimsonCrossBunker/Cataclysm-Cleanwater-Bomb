@@ -1214,6 +1214,9 @@ static cata_path mp_npc_cleanup_path()
 // Called whenever we spawn or despawn MP NPCs.
 static void mp_save_npc_ids()
 {
+    if( is_client_mode() ) {
+        return;
+    }
     std::vector<int> ids;
     std::vector<std::string> names;
     for( const auto &entry : mp_session().remote_players ) {
@@ -1224,19 +1227,6 @@ static void mp_save_npc_ids()
             if( rn && !rn->name.empty() ) {
                 names.push_back( rn->name );
             }
-        }
-    }
-    if( mp_session().client_host_actor.id().is_valid() ) {
-        ids.push_back( mp_session().client_host_actor.id().get_value() );
-    }
-    for( const auto &entry : mp_session().client_player_views ) {
-        if( entry.second->actor.id().is_valid() ) {
-            ids.push_back( entry.second->actor.id().get_value() );
-        }
-    }
-    for( const auto &entry : mp_session().client_npc_views ) {
-        if( entry.second->actor.id().is_valid() ) {
-            ids.push_back( entry.second->actor.id().get_value() );
         }
     }
     if( ids.empty() && names.empty() ) {
@@ -1315,7 +1305,8 @@ static void mp_cleanup_stale_npcs()
 
 void mp_cleanup_stale_npcs_after_load()
 {
-    if( mp_session().stale_proxy_cleanup_done || !world_generator || !world_generator->active_world ) {
+    if( is_client_mode() || mp_session().stale_proxy_cleanup_done || !world_generator ||
+        !world_generator->active_world ) {
         return;
     }
 
@@ -1387,6 +1378,12 @@ static void mp_cull_local_npcs()
 void mp_on_world_exit()
 {
     g_pending_host_start.reset();
+    if( get_avatar().has_guest_map_memory() ) {
+        if( !get_avatar().save_map_memory() ) {
+            mp_log_client( "Could not save this player's map memory before disconnect" );
+        }
+    }
+    get_avatar().use_local_map_memory();
     // One owner stops/joins producers before discarding simulation and UI state.
     mp_session().reset();
 }
@@ -4219,19 +4216,16 @@ void notify_client_host_died()
     std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
 }
 
-// Co-op save handshake — called right after the SP quicksave() runs.  See the
-// "Co-op save model" section of ROADMAP.md.  Host: confirm the authoritative
-// save.  Client: the local save is already written; also ask the host to save
-// the shared world so the two stores stay at the same game-time, and surface
-// where each player's data lives.
+// A guest's quicksave only stores their local exploration memory. The host
+// handles the separate request to persist authoritative character and world state.
 void mp_after_quicksave()
 {
     if( is_host_mode() && is_hosting() ) {
         add_msg( m_good,
-                 _( "Co-op world saved — the authoritative save of the shared world and your partner's character.  (Your partner also keeps a local copy of their own character.)" ) );
+                 _( "The shared world and guest characters have been saved." ) );
     } else if( is_client_mode() ) {
         add_msg( m_info,
-                 _( "Saved your character locally.  Asking the host to save the shared world so you stay in sync…" ) );
+                 _( "Asking the host to save the shared world and your character…" ) );
         client_send( R"({"type":"action","action":"save_request"})" );
     }
 }
@@ -5227,37 +5221,6 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
     }
 }
 
-static void remove_client_host_npc()
-{
-    for( const auto &entry : mp_session().client_player_views ) {
-        remove_player_view( *entry.second );
-    }
-    mp_session().client_player_views.clear();
-    for( const auto &entry : mp_session().client_npc_views ) {
-        remove_npc_view( *entry.second );
-    }
-    mp_session().client_npc_views.clear();
-    mp_session().client_host_player_id = {};
-    if( !mp_session().client_host_spawned ) {
-        return;
-    }
-    // Clean despawn — the host left, they are NOT dead. die() would drop a
-    // corpse carrying all their gear (a pickup-able loot dupe). Remove the
-    // active copy and the overmap copy without a death.
-    npc *host_npc = mp_host_view_actor();
-    if( host_npc ) {
-        g->remove_npc( mp_session().client_host_actor.id() );
-    }
-    const auto retained = overmap_buffer.find_npc( mp_session().client_host_actor.id() );
-    if( mp_session().client_host_actor.owns_instance( retained.get(), g->npc_lifetimes() ) ) {
-        overmap_buffer.remove_npc( mp_session().client_host_actor.id() );
-    }
-    mp_session().client_host_spawned = false;
-    mp_session().client_host_actor.reset();
-    mp_session().replication.client.client_host_worn_sig.clear();
-    mp_save_npc_ids();
-}
-
 static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::string &name,
                                     bool host_in_vehicle, bool host_ctrl_veh )
 {
@@ -5275,7 +5238,6 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
         g->load_npcs();
         mp_session().client_host_actor.bind_view( *host_npc, g->npc_lifetimes() );
         mp_session().client_host_spawned = true;
-        mp_save_npc_ids();  // persist ID so next session can clean it up
 
         // Apply ally status AFTER load_npcs so the NPC is fully wired into the
         // game state (faction manager, critter tracker, etc.).
@@ -5396,7 +5358,6 @@ static void apply_player_roster( const JsonObject &message )
             ++it;
         }
     }
-    mp_save_npc_ids();
 }
 
 static void apply_npc_roster( const JsonObject &message )
@@ -5429,13 +5390,22 @@ static void apply_npc_roster( const JsonObject &message )
             ++it;
         }
     }
-    mp_save_npc_ids();
+}
+
+static void leave_client_replica( const std::string &reason )
+{
+    // Retain the client role until world cleanup. The loaded world contains
+    // replica state and must never fall through to the solo simulation.
+    get_avatar().set_moves( 0 );
+    g->uquit = QUIT_NOSAVED;
+    mp_log_client( reason );
+    mp_session().client_turn.exit_reason = reason;
 }
 
 // NOLINTNEXTLINE(readability-function-size)
 bool client_apply_message( const std::string &msg )
 {
-    if( !is_client_mode() ) {
+    if( !is_client_mode() || g->uquit != QUIT_NO ) {
         return false;
     }
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
@@ -5449,8 +5419,7 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            set_client_mode( false );
-            add_msg( m_bad, _( "Could not restore your saved character from the host.  Reconnect to retry." ) );
+            leave_client_replica( _( "Could not restore your saved character from the host.  Reconnect to retry." ) );
             return true;
         }
     }
@@ -5463,9 +5432,7 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            set_client_mode( false );
-            add_msg( m_bad,
-                     _( "Invalid inventory activity response.  Reconnect to synchronize your character." ) );
+            leave_client_replica( _( "Invalid inventory activity response.  Reconnect to synchronize your character." ) );
             return true;
         }
     }
@@ -5512,8 +5479,7 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            set_client_mode( false );
-            add_msg( m_bad, _( "Invalid firearm response.  Reconnect to synchronize your character." ) );
+            leave_client_replica( _( "Invalid firearm response.  Reconnect to synchronize your character." ) );
             return true;
         }
     }
@@ -5527,8 +5493,7 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            set_client_mode( false );
-            add_msg( m_bad, _( "Invalid combat response.  Reconnect to synchronize your character." ) );
+            leave_client_replica( _( "Invalid combat response.  Reconnect to synchronize your character." ) );
             return true;
         }
     }
@@ -5555,8 +5520,7 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            set_client_mode( false );
-            add_msg( m_bad, _( "Invalid pickup response.  Reconnect to synchronize your inventory." ) );
+            leave_client_replica( _( "Invalid pickup response.  Reconnect to synchronize your inventory." ) );
             return true;
         }
     }
@@ -5565,19 +5529,17 @@ bool client_apply_message( const std::string &msg )
         const size_t preview_len = std::min( msg.size(), static_cast<size_t>( 120 ) );
         mp_log( "[cdda-mp] recv-packet: " + msg.substr( 0, preview_len ) );
     }
-    // Server rejected our join — show the error and flag disconnect.
     if( msg.find( R"("type":"error")" ) != std::string::npos ) {
-        const std::string::size_type mpos = msg.find( R"("message":")" );
-        std::string errtxt = "Server rejected connection.";
-        if( mpos != std::string::npos ) {
-            const size_t start = mpos + 11;
-            const size_t end = msg.find( '"', start );
-            if( end != std::string::npos ) {
-                errtxt = msg.substr( start, end - start );
-            }
+        std::string reason = _( "The co-op host rejected the connection." );
+        try {
+            const JsonValue value = json_loader::from_string( msg );
+            const JsonObject error = value.get_object();
+            error.allow_omitted_members();
+            reason = error.get_string( "message", reason );
+        } catch( const JsonError & ) {
+            // Keep the generic reason if the host's error packet is malformed.
         }
-        mp_log( "[cdda-mp] SERVER ERROR: " + errtxt );
-        popup( errtxt );
+        leave_client_replica( reason );
         return true;
     }
 
@@ -5869,24 +5831,16 @@ bool client_apply_message( const std::string &msg )
         return true;
     }
 
-    // Host died gracefully — show once and stop processing further packets.
     if( msg.find( R"("type":"host_died")" ) != std::string::npos ) {
-        if( !mp_session().client_turn.server_died ) {
-            mp_session().client_turn.server_died = true;
-            remove_client_host_npc();
-            add_msg( m_bad, _( "Your partner has died.  Waiting for them to respawn…" ) );
-        }
+        leave_client_replica( _( "The co-op host has died.  Rejoin when their world is available." ) );
         return true;
     }
 
-    // Graceful session-end notification from the host (v1 save handshake).
-    // Host has saved their world; the client's local .sav isn't written by
-    // the current architecture, so this is messaging-only on this side.
-    // After this the server socket will close shortly — the existing
-    // disconnect handler takes over from there.
+    // The host saved the authoritative world and guest characters. Leave the
+    // replica through the normal menu cleanup, which saves its private memory.
     if( msg.find( R"("type":"session_ending")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SESSION-END RECV: host is leaving" );
-        add_msg( m_warning, _( "Your partner is leaving.  The session will end shortly." ) );
+        leave_client_replica( _( "The host saved and closed the co-op session." ) );
         return true;
     }
 
@@ -5955,11 +5909,7 @@ bool client_apply_message( const std::string &msg )
         return false;
     }
     if( msg.find( "\"connected\":false" ) != std::string::npos ) {
-        if( !mp_session().client_turn.server_died ) {
-            mp_session().client_turn.server_died = true;
-            remove_client_host_npc();
-            add_msg( m_bad, _( "Lost connection to server." ) );
-        }
+        leave_client_replica( _( "Lost connection to the co-op host.  Rejoin to resume your character." ) );
         return true;
     }
 
@@ -6531,11 +6481,7 @@ bool client_apply_message( const std::string &msg )
 
 void client_process_incoming()
 {
-    // After the host has died (or the socket dropped), drain the queue silently
-    // and do nothing else — prevents the lost-connection spam.
-    if( mp_session().client_turn.server_died ) {
-        std::string msg;
-        while( client_recv_pop( msg ) ) {}
+    if( g->uquit != QUIT_NO ) {
         return;
     }
 
@@ -6547,11 +6493,15 @@ void client_process_incoming()
                 mp_session().local_player = load_server_player_credentials(
                                                 PATH_INFO::config_dir_path(), client_identity_scope() );
             }
+            const world_id &host = mp_session().admission.host_world;
+            if( host.valid() ) {
+                get_avatar().use_guest_map_memory( PATH_INFO::config_dir_path() /
+                                                  "mp_map_memory" / host.str() /
+                                                  mp_session().local_player->id.str() );
+            }
             client_send_join( *mp_session().local_player );
         } catch( const std::exception & ) {
-            set_client_mode( false );
-            add_msg( m_bad,
-                     _( "Could not load or save your multiplayer identity.  Restore its configuration backup before reconnecting." ) );
+            leave_client_replica( _( "Could not load or save your multiplayer identity.  Restore its configuration backup before reconnecting." ) );
             return;
         }
     }
@@ -6585,6 +6535,9 @@ void client_process_incoming()
         mp_log( "[cdda-mp] CLI-RECV#" + std::to_string( recv_count ) + ": " + moves_str +
                 " pre_apply_moves=" + std::to_string( pre_apply_moves ) );
         client_apply_message( msg );
+        if( g->uquit != QUIT_NO ) {
+            return;
+        }
         const int post_apply_moves = get_avatar().get_moves();
         if( post_apply_moves != pre_apply_moves ) {
             mp_log( "[cdda-mp] CLI-RECV#" + std::to_string( recv_count ) +

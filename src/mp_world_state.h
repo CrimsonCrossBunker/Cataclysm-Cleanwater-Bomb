@@ -225,9 +225,7 @@ struct client_turn_state {
     time_point observed_host_turn = calendar::before_time_starts;
     time_point processed_host_turn = calendar::before_time_starts;
     bool group_fast_forward = false;
-    // Client: set when the host sends host_died or the socket drops.
-    // Suppresses further processing and the lost-connection spam.
-    bool server_died = false;
+    std::string exit_reason;
     // Client: an action is pending until a matching response or a newer grant.
     // Repeated positive-budget snapshots never restore spent moves.
     bool client_waiting_for_ack = false;

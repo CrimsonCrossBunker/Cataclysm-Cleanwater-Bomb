@@ -540,6 +540,9 @@ input_context game::get_player_input( std::string &action )
             // monsters move visually without advancing local game time.
             if( cata_mp::is_client_mode() && action == "TIMEOUT" ) {
                 cata_mp::client_process_incoming();
+                if( uquit != QUIT_NO ) {
+                    break;
+                }
                 g->invalidate_main_ui_adaptor();
             }
 #endif
@@ -590,6 +593,9 @@ input_context game::get_player_input( std::string &action )
                 }
                 if( cata_mp::is_client_mode() ) {
                     cata_mp::client_process_incoming();
+                    if( uquit != QUIT_NO ) {
+                        break;
+                    }
                     g->invalidate_main_ui_adaptor();
                     if( get_avatar().activity ) {
                         break;
@@ -1914,8 +1920,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             return false;
         }
 
-        // Quickload would trash the MP session by reloading from disk.
-        if( act == ACTION_QUICKLOAD ) {
+        if( act == ACTION_SUICIDE ) {
+            add_msg( m_info, _( "Abandoning a character is unavailable to co-op guests." ) );
             return false;
         }
 
@@ -3010,13 +3016,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_SAVE:
 #ifdef MP_ENABLED
             if( cata_mp::is_client_mode() ) {
-                if( query_yn(
-                        _( "Save and disconnect?  Your character will be saved locally so you can load it on rejoin." ) ) ) {
+                if( query_yn( _( "Disconnect from the co-op host?" ) ) ) {
                     if( save() ) {
-                        discard_dimension_rollback_snapshot();
-                        cata_mp::mp_notify_session_ending();
+                        player_character.use_local_map_memory();
                         player_character.set_moves( 0 );
-                        uquit = QUIT_SAVED;
+                        uquit = QUIT_NOSAVED;
+                        cata_mp::mp_notify_session_ending();
+                    } else {
+                        add_msg( m_bad, _( "Could not save your exploration memory.  Retry before disconnecting." ) );
                     }
                 }
             } else if( query_yn( _( "Save and quit?" ) ) ) {
@@ -3312,6 +3319,9 @@ bool game::handle_action()
             player_character.abort_automove();
         }
         ctxt = get_player_input( action );
+        if( cata_mp::is_client_mode() && uquit != QUIT_NO ) {
+            return false;
+        }
     }
 
 #ifdef MP_ENABLED
