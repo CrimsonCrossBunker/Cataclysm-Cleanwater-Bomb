@@ -17,6 +17,8 @@
     "//": "Leverage, not spring energy: Whittaker and Maginniss (2006), https://worldatlatl.org/wp-content/uploads/2017/12/2006-2-THE-ATLATL.pdf",
     "//2": "Bebber et al. (2023), https://doi.org/10.1038/s41598-023-40451-8, measured faster darts than hand-thrown javelins using different projectile masses. These multipliers are conservative game-balance values, not measured damage or range ratios. Bounds also admit existing JAVELIN items; heavy rigid javelins are not equivalent to the experimental darts.",
     "throw_correction_data": {
+      "//": "Full bonuses at throwing 2 are a balance choice informed by velocity gains after brief novice practice in Bebber et al. (2023), https://doi.org/10.1038/s41598-023-40451-8; the study does not measure a game skill threshold.",
+      "full_bonus_skill": 2,
       "required_flag": "JAVELIN",
       "allow_ammotype": [ "atlatl" ],
       "min_weight": "1 g",
