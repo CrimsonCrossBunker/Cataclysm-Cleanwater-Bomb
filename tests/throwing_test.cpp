@@ -367,6 +367,20 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
     }
 }
 
+TEST_CASE( "throw_cost_uses_half_attack_time_and_dexterity", "[throwing]" )
+{
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    reset_player( you, { 10, 8, 8, 8 }, { 30, 30, 0 } );
+    const item rock( itype_rock, calendar::turn, 1 );
+    const int base_cost = rock.attack_time( you ) / 2;
+    const int skill_cost = base_cost / 2;
+    CHECK( throw_cost( you, rock ) == base_cost + skill_cost - 8 );
+
+    you.set_dex_base( 12 );
+    CHECK( throw_cost( you, rock ) == base_cost + skill_cost - 12 );
+}
+
 TEST_CASE( "thrown_items_follow_recovery_chance", "[throwing]" )
 {
     clear_map_without_vision();
