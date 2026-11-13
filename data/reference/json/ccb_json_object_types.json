@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:7349ed9312a326af0833f9eaa342ec60a8df04cbbf1d4beee691c7568afa5e0a",
+    "source_fingerprint": "sha256:0b4de5dfe605ac6b8016f43f9f3de2b7f912a45670ece572ab843b03f954b59c",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6853,
-    "top_level_objects": 95455,
+    "tracked_json_files": 6856,
+    "top_level_objects": 95478,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15225,
+        "occurrences": 15239,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -1189,7 +1189,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 122,
+        "occurrences": 123,
         "examples": [
           {
             "path": "data/json/ammo_effects.json",
@@ -1248,7 +1248,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 230,
+        "occurrences": 231,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -1272,7 +1272,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 239
+            "line": 297
           }
         ],
         "confidence": "lexical_only"
@@ -1331,7 +1331,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 475
+            "line": 533
           }
         ],
         "confidence": "lexical_only"
@@ -3884,7 +3884,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 883
+            "line": 941
           }
         ],
         "confidence": "lexical_only"
@@ -3943,7 +3943,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 280
+            "line": 338
           }
         ],
         "confidence": "lexical_only"
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7816,
+        "occurrences": 7817,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 929,
+        "occurrences": 930,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -6035,7 +6035,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 305,
+        "occurrences": 306,
         "examples": [
           {
             "path": "data/json/npcs/Kindred/NPC_Brigitte_LaCroix.json",
@@ -6094,7 +6094,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 286,
+        "occurrences": 287,
         "examples": [
           {
             "path": "data/json/npcs/Kindred/NPC_Brigitte_LaCroix.json",
@@ -9869,7 +9869,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1646,
+        "occurrences": 1649,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -10006,7 +10006,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 1424
+            "line": 1490
           }
         ],
         "confidence": "lexical_only"
@@ -10994,7 +10994,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 163
+            "line": 172
           }
         ],
         "confidence": "lexical_only"
