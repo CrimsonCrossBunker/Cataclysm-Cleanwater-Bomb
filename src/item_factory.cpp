@@ -4198,10 +4198,11 @@ void throw_correction_data::deserialize( const JsonObject &jo )
                                              "of strings" );
                 }
             }
-        } else {
-            required.throw_error( "required_flag must be a string or an array" );
+        } else if( !required.test_null() ) {
+            required.throw_error( "required_flag must be a string, an array, or null" );
         }
     }
+    optional( jo, was_loaded, "allow_ammotype", allowed_ammo, auto_flags_reader<ammotype> {} );
 
     const auto load_optional_bound = [&jo]( const char *member, auto & target, const auto & reader ) {
         if( !jo.has_member( member ) ) {
@@ -4218,6 +4219,14 @@ void throw_correction_data::deserialize( const JsonObject &jo )
     load_optional_bound( "max_weight", max_weight, units_bound_reader<units::mass> { 0_gram } );
     load_optional_bound( "max_volume", max_volume, units_bound_reader<units::volume> { 0_ml } );
     load_optional_bound( "max_length", max_length, units_bound_reader<units::length> { 0_mm } );
+    if( min_weight && max_weight && *min_weight > *max_weight ) {
+        try {
+            jo.throw_error_at( "min_weight",
+                               "throw_correction_data: min_weight exceeds max_weight" );
+        } catch( const JsonError &err ) {
+            debugmsg( "Warning: %s", err.what() );
+        }
+    }
 
     optional( jo, was_loaded, "throw_damage_multiplier", damage_multiplier, 1.0f );
     optional( jo, was_loaded, "throw_range_multiplier", range_multiplier, 1.0f );
@@ -4230,14 +4239,15 @@ void throw_correction_data::deserialize( const JsonObject &jo )
 
 bool throw_correction_data::applies_to( const item &thrown ) const
 {
-    const bool flags_match = required_flags.empty() ||
-                             std::any_of( required_flags.begin(), required_flags.end(),
+    const bool unrestricted = required_flags.empty() && allowed_ammo.empty();
+    const bool ammo_match = thrown.is_ammo() && allowed_ammo.count( thrown.ammo_type() ) > 0;
+    const bool flags_match = std::any_of( required_flags.begin(), required_flags.end(),
     [&thrown]( const std::vector<flag_id> &clause ) {
         return std::all_of( clause.begin(), clause.end(), [&thrown]( const flag_id & flag ) {
             return thrown.has_flag( flag );
         } );
     } );
-    if( !flags_match ) {
+    if( !unrestricted && !flags_match && !ammo_match ) {
         return false;
     }
 
