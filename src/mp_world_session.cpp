@@ -116,11 +116,11 @@ std::vector<std::reference_wrapper<resident_region>> world_session::active_regio
 
 std::vector<std::reference_wrapper<map>> world_session::active_maps( map &primary ) const
 {
-    std::vector<std::reference_wrapper<map>> result{ std::ref( primary ) };
+    std::vector<std::reference_wrapper<map>> result;
     result.reserve( 1 + regions_.size() );
-    for( const auto &entry : regions_ ) {
-        result.emplace_back( *entry.second->terrain );
-    }
+    visit_resident_maps( primary, [&]( map & terrain ) {
+        result.emplace_back( terrain );
+    } );
     return result;
 }
 
@@ -179,6 +179,7 @@ void world_session::reset_state( bool preserve_pending_client )
     replication = {};
     remote_players.clear();
     regions_.clear();
+    pending_support.clear();
     host_waiting_for_clients = false;
     last_monmove_ms = 0;
     host_wait_elapsed_ms = 0;

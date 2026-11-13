@@ -1,6 +1,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
+#include "current_map.h"
 #include "debug.h"
 #include "character_martial_arts.h"
 #include "flag.h"
@@ -37,6 +38,7 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "worldfactory.h"
+#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -1190,6 +1192,63 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     CHECK( session.scent_for( *region.terrain ) == region.scent.get() );
     CHECK( session.scent_for( here ) == nullptr );
     CHECK( &session.load_region( *g, here, profile.id, center ) == &region );
+    const tripoint_bub_ms changed_tile( 72, 72, 0 );
+    const tripoint_bub_ms mirrored_tile = region.terrain->get_bub( here.get_abs( changed_tile ) );
+    const trap_str_id beartrap( "tr_beartrap" );
+    const trap_str_id pit( "tr_pit" );
+    region.terrain->trap_set( mirrored_tile, beartrap.id() );
+    const auto &beartraps = here.trap_locations( beartrap.id() );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 1 );
+    here.ter_set( changed_tile, ter_str_id( "t_pit" ).id() );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 0 );
+    const auto &remote_pits = region.terrain->trap_locations( pit.id() );
+    CHECK( std::count( remote_pits.begin(), remote_pits.end(), mirrored_tile ) == 1 );
+    region.terrain->ter_set( mirrored_tile, ter_str_id( "t_floor" ).id() );
+    CHECK( std::count( remote_pits.begin(), remote_pits.end(), mirrored_tile ) == 0 );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 1 );
+    region.terrain->remove_trap( mirrored_tile );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 0 );
+
+    const auto &emitters = here.get_furn_field_locations();
+    region.terrain->furn_set( mirrored_tile, furn_str_id( "f_fog" ).id() );
+    CHECK( std::count( emitters.begin(), emitters.end(), changed_tile ) == 1 );
+    region.terrain->furn_set( mirrored_tile, furn_str_id( "f_swamp_gas" ).id() );
+    CHECK( std::count( emitters.begin(), emitters.end(), changed_tile ) == 1 );
+    region.terrain->furn_set( mirrored_tile, furn_str_id::NULL_ID() );
+    CHECK( std::count( emitters.begin(), emitters.end(), changed_tile ) == 0 );
+
+    here.build_map_cache( changed_tile.z() );
+    REQUIRE( here.is_transparent_wo_fields( changed_tile ) );
+    region.terrain->ter_set( mirrored_tile, ter_str_id( "t_wall" ).id() );
+    here.build_map_cache( changed_tile.z() );
+    CHECK_FALSE( here.is_transparent_wo_fields( changed_tile ) );
+    region.terrain->ter_set( mirrored_tile, ter_str_id( "t_floor" ).id() );
+
+    // Query the same two actors from both view contexts. The wall changes in
+    // the guest window must invalidate the host's cached reachable members.
+    const tripoint_bub_ms isolated_tile( 78, 78, 0 );
+    auto &tracker = get_creature_tracker();
+    auto isolated_monster = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ), isolated_tile );
+    REQUIRE( tracker.add( isolated_monster ) );
+    const auto is_host = [&]( Creature * candidate ) {
+        return candidate == &host;
+    };
+    for( const tripoint_bub_ms &p : here.points_in_radius( isolated_tile, 1 ) ) {
+        if( p != isolated_tile ) {
+            region.terrain->ter_set( region.terrain->get_bub( here.get_abs( p ) ),
+                                     ter_str_id( "t_wall" ).id() );
+        }
+    }
+    CHECK( tracker.find_reachable( *isolated_monster, is_host ) == nullptr );
+    region.terrain->ter_set( region.terrain->get_bub( here.get_abs( isolated_tile + point::west ) ),
+                             ter_str_id( "t_floor" ).id() );
+    {
+        const swap_map context( *region.terrain );
+        CHECK( tracker.find_reachable( *isolated_monster, is_host ) == &host );
+    }
+    CHECK( tracker.find_reachable( *isolated_monster, is_host ) == &host );
+    tracker.remove( *isolated_monster );
+
     const tripoint_abs_ms second_vehicle_pos = here.get_abs( tripoint_bub_ms( 74, 74, 0 ) );
     vehicle *second_vehicle = here.add_vehicle( vproto_id( "bicycle" ),
         here.get_bub( second_vehicle_pos ), 0_degrees, 0,

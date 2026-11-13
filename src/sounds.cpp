@@ -505,14 +505,16 @@ static void deliver_sound( const centroid &cluster, const tripoint_abs_ms &sourc
             context.emplace( terrain );
         }
         for( const trap *trapType : trap::get_sound_triggered_traps() ) {
-            for( const tripoint_bub_ms &tp : terrain.trap_locations( trapType->id ) ) {
+            // Triggering can remove a trap and edit the shared tile index.
+            const auto locations = terrain.trap_locations( trapType->id );
+            for( const tripoint_bub_ms &tp : locations ) {
                 const int dist = sound_distance( local_source, tp );
                 if( vol * 2 <= dist || ( regions && !regions->owns( terrain,
                         project_to<coords::sm>( terrain.get_abs( tp ) ) ) ) ) {
                     continue;
                 }
                 const trap &tr = terrain.tr_at( tp );
-                if( tr.triggered_by_sound( vol, dist ) ) {
+                if( tr.loadid == trapType->loadid && tr.triggered_by_sound( vol, dist ) ) {
                     tr.trigger( tp );
                 }
             }

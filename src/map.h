@@ -989,7 +989,7 @@ class map
             return ter( tripoint_bub_ms( p, abs_sub.z() ) );
         }
 
-        void furniture_terrain_emit_fields();
+        void furniture_terrain_emit_fields( const map_simulation_regions *regions = nullptr );
 
         int get_map_damage( const tripoint_bub_ms &p ) const;
         void set_map_damage( const tripoint_bub_ms &p, int dmg );
@@ -1359,7 +1359,8 @@ class map
          * Moved here from weather.cpp for speed. Decays fire, washable fields and scent.
          * Washable fields are decayed only by 1/3 of the amount fire is.
          */
-        void decay_fields_and_scent( const time_duration &amount );
+        void decay_fields_and_scent( const time_duration &amount,
+                                     const map_simulation_regions *regions = nullptr );
 
         // Signs
         std::string get_signage( const tripoint_bub_ms &p ) const;
@@ -1773,6 +1774,14 @@ class map
         // Is called when field intensity is changed.
         // Invalidates relevan map caches, such as transparency cache.
         void on_field_modified( const tripoint_bub_ms &p, const field_type &fd_type );
+        template<typename Visitor>
+        void visit_tile_views( const tripoint_bub_ms &p, const Visitor &visit );
+        void refresh_furniture_cache( const tripoint_bub_ms &p, const furn_t &old_f,
+                                      const furn_t &new_f );
+        void refresh_terrain_cache( const tripoint_bub_ms &p, const ter_t &old_t,
+                                    const ter_t &new_t, const trap_id &placed_trap );
+        void refresh_trap_cache( const tripoint_bub_ms &p, const trap_id &old_trap,
+                                 const trap_id &new_trap );
 
         template<typename Map>
         static cata::copy_const<Map, field_entry> *get_field_helper(

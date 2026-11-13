@@ -2587,6 +2587,36 @@ furn_id map::furn( const tripoint_bub_ms p ) const
     return current_submap->get_furn( l );
 }
 
+template<typename Visitor>
+void map::visit_tile_views( const tripoint_bub_ms &p, const Visitor &visit )
+{
+    visit( *this, p );
+    if( !g || !g->multiplayer_session().has_regions() || !has_loaded_submap( p ) ) {
+        return;
+    }
+    const submap *const storage = unsafe_get_submap_at( p );
+    const tripoint_abs_ms absolute = get_abs( p );
+    g->multiplayer_session().visit_resident_maps( reality_bubble(), [&]( map & view ) {
+        const tripoint_bub_ms local = view.get_bub( absolute );
+        if( &view != this && view.has_loaded_submap( local ) &&
+            view.unsafe_get_submap_at( local ) == storage ) {
+            visit( view, local );
+        }
+    } );
+}
+
+// Keep the native insertion order. In particular, changing between two
+// emitting types should not add a second chance to emit on the same tick.
+static void update_tile_index( std::vector<tripoint_bub_ms> &locations,
+                               const tripoint_bub_ms &p, bool present )
+{
+    if( !present ) {
+        locations.erase( std::remove( locations.begin(), locations.end(), p ), locations.end() );
+    } else if( std::find( locations.begin(), locations.end(), p ) == locations.end() ) {
+        locations.push_back( p );
+    }
+}
+
 bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, const bool furn_reset,
                     bool avoid_creatures, bool allow_on_open_air )
 {
@@ -2671,8 +2701,29 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
             c->remove_effect( effect_crushed );
         }
     }
-    if( !new_f.emissions.empty() ) {
-        field_furn_locs.push_back( p );
+    visit_tile_views( p, [&]( map & view, const tripoint_bub_ms & local ) {
+        view.refresh_furniture_cache( local, old_f, new_f );
+    } );
+    avatar &player_character = get_avatar();
+    if( player_character.sees( *this, p ) ) {
+        player_character.memorize_clear_decoration( get_abs( p ), "f_" );
+    }
+    if( ( old_f.movecost < 0 ) != ( new_f.movecost < 0 ) ||
+        old_f.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) !=
+        new_f.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+        get_creature_tracker().invalidate_reachability_cache();
+    }
+    support_dirty( p );
+    support_dirty( p + tripoint::above );
+
+    return result;
+}
+
+void map::refresh_furniture_cache( const tripoint_bub_ms &p, const furn_t &old_f,
+                                   const furn_t &new_f )
+{
+    if( !old_f.emissions.empty() || !new_f.emissions.empty() ) {
+        update_tile_index( field_furn_locs, p, !new_f.emissions.empty() );
     }
     if( old_f.transparent != new_f.transparent ||
         old_f.has_flag( ter_furn_flag::TFLAG_TRANSLUCENT ) != new_f.has_flag(
@@ -2695,7 +2746,6 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
             ter_furn_flag::TFLAG_NO_FLOOR ) ) {
         set_floor_cache_dirty( p.z() );
         set_seen_cache_dirty( p );
-        get_creature_tracker().invalidate_reachability_cache();
     }
 
     if( old_f.has_flag( ter_furn_flag::TFLAG_SUN_ROOF_ABOVE ) != new_f.has_flag(
@@ -2706,24 +2756,8 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
     invalidate_max_populated_zlev( p.z() );
 
     memory_cache_dec_set_dirty( p, true );
-    avatar &player_character = get_avatar();
-    if( player_character.sees( *this, p ) ) {
-        player_character.memorize_clear_decoration( get_abs( p ), "f_" );
-    }
-
-    if( ( old_f.movecost < 0 ) != ( new_f.movecost < 0 ) ) {
-        get_creature_tracker().invalidate_reachability_cache();
-    }
-    // TODO: Limit to changes that affect move cost, traps and stairs
     set_pathfinding_cache_dirty( p );
-
-    // Make sure the furniture falls if it needs to
-    support_dirty( p );
-    tripoint_bub_ms above( p.xy(), p.z() + 1 );
-    // Make sure that if we supported something and no longer do so, it falls down
-    support_dirty( above );
-
-    return result;
+    set_draw_points_cache_dirty();
 }
 
 bool map::can_move_furniture( const tripoint_bub_ms &pos, Character *you ) const
@@ -3549,35 +3583,13 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         }
     }
 
-    if( new_t.trap != tr_null ) {
-        traplocs[new_t.trap.to_i()].push_back( p );
-    }
-    if( !new_t.emissions.empty() ) {
-        field_ter_locs.push_back( p );
-    }
-    if( old_t.transparent != new_t.transparent ||
-        old_t.has_flag( ter_furn_flag::TFLAG_TRANSLUCENT ) != new_t.has_flag(
-            ter_furn_flag::TFLAG_TRANSLUCENT ) ) {
-        set_transparency_cache_dirty( p );
-        set_seen_cache_dirty( p );
-    }
-
-    if( old_t.light_emitted != new_t.light_emitted ||
-        old_t.light_color != new_t.light_color ) {
-        set_lightmap_cache_dirty( p.z() );
-    }
-
-    if( old_t.has_flag( ter_furn_flag::TFLAG_INDOORS ) != new_t.has_flag(
-            ter_furn_flag::TFLAG_INDOORS ) ) {
-        set_outside_cache_dirty( p.z() );
-    }
-
-    if( new_t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) != old_t.has_flag(
-            ter_furn_flag::TFLAG_NO_FLOOR ) ) {
-        set_floor_cache_dirty( p.z() );
-        // It's a set, not a flag
-        support_cache_dirty.insert( p );
-        set_seen_cache_dirty( p );
+    const trap_id placed_trap = current_submap->get_trap( l );
+    visit_tile_views( p, [&]( map & view, const tripoint_bub_ms & local ) {
+        view.refresh_terrain_cache( local, old_t, new_t, placed_trap );
+    } );
+    if( new_t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) !=
+        old_t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+        support_dirty( p );
     }
 
     const bool hidden_finite_source = !new_t.liquid_source_item_id.is_null() &&
@@ -3646,10 +3658,6 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         }
     }
 
-    invalidate_max_populated_zlev( p.z() );
-
-    memory_cache_dec_set_dirty( p, true );
-    memory_cache_ter_set_dirty( p, true );
     avatar &player_character = get_avatar();
     if( player_character.sees( *this, p ) ) {
         player_character.memorize_clear_decoration( get_abs( p ), "t_" );
@@ -3658,14 +3666,50 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
     if( ( old_t.movecost == 0 ) != ( new_t.movecost == 0 ) ) {
         get_creature_tracker().invalidate_reachability_cache();
     }
-    // TODO: Limit to changes that affect move cost, traps and stairs
-    set_pathfinding_cache_dirty( tripoint_bub_ms( p ) );
-
-    tripoint_bub_ms above( p.xy(), p.z() + 1 );
-    // Make sure that if we supported something and no longer do so, it falls down
-    support_dirty( above );
+    support_dirty( p + tripoint::above );
 
     return true;
+}
+
+void map::refresh_terrain_cache( const tripoint_bub_ms &p, const ter_t &old_t,
+                                 const ter_t &new_t, const trap_id &placed_trap )
+{
+    const trap_id old_trap = old_t.trap == tr_null ? placed_trap : old_t.trap;
+    const trap_id new_trap = new_t.trap == tr_null ? placed_trap : new_t.trap;
+    if( old_trap != new_trap ) {
+        refresh_trap_cache( p, old_trap, new_trap );
+    }
+    if( !old_t.emissions.empty() || !new_t.emissions.empty() ) {
+        update_tile_index( field_ter_locs, p, !new_t.emissions.empty() );
+    }
+    if( old_t.transparent != new_t.transparent ||
+        old_t.has_flag( ter_furn_flag::TFLAG_TRANSLUCENT ) != new_t.has_flag(
+            ter_furn_flag::TFLAG_TRANSLUCENT ) ) {
+        set_transparency_cache_dirty( p );
+        set_seen_cache_dirty( p );
+    }
+
+    if( old_t.light_emitted != new_t.light_emitted ||
+        old_t.light_color != new_t.light_color ) {
+        set_lightmap_cache_dirty( p.z() );
+    }
+
+    if( old_t.has_flag( ter_furn_flag::TFLAG_INDOORS ) != new_t.has_flag(
+            ter_furn_flag::TFLAG_INDOORS ) ) {
+        set_outside_cache_dirty( p.z() );
+    }
+
+    if( new_t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) != old_t.has_flag(
+            ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+        set_floor_cache_dirty( p.z() );
+        set_seen_cache_dirty( p );
+    }
+
+    invalidate_max_populated_zlev( p.z() );
+    memory_cache_dec_set_dirty( p, true );
+    memory_cache_ter_set_dirty( p, true );
+    set_pathfinding_cache_dirty( p );
+    set_draw_points_cache_dirty();
 }
 
 void map::kill_creature( const tripoint_bub_ms &p, bool remove_corpse )
@@ -4535,9 +4579,21 @@ void map::drop_creature( const tripoint_bub_ms &p )
 
 void map::support_dirty( const tripoint_bub_ms &p )
 {
-    if( zlevels ) {
-        support_cache_dirty.insert( p );
+    if( !zlevels || !inbounds( p ) ) {
+        return;
     }
+    if( g && g->multiplayer_session().has_regions() && has_loaded_submap( p ) ) {
+        auto &session = g->multiplayer_session();
+        const tripoint_abs_ms absolute = get_abs( p );
+        const map *const owner = session.loaded_map_at( reality_bubble(), project_to<coords::sm>(
+                absolute ) );
+        if( owner && owner->unsafe_get_submap_at( owner->get_bub( absolute ) ) ==
+            unsafe_get_submap_at( p ) ) {
+            session.pending_support.insert( absolute );
+            return;
+        }
+    }
+    support_cache_dirty.insert( p );
 }
 
 void map::process_falling()
@@ -4548,6 +4604,34 @@ void map::process_falling()
         return;
     }
 
+    if( g && this == &reality_bubble() && g->multiplayer_session().has_regions() ) {
+        auto &session = g->multiplayer_session();
+        // Local queues can contain work scheduled just before a view joined.
+        // Collect all due cells before dropping anything. A drop can enqueue
+        // another cell for the next pass.
+        auto due = std::exchange( session.pending_support, {} );
+        session.visit_resident_maps( *this, [&]( map & view ) {
+            for( const tripoint_bub_ms &p : view.support_cache_dirty ) {
+                due.insert( view.get_abs( p ) );
+            }
+            view.support_cache_dirty.clear();
+        } );
+        for( const tripoint_abs_ms &absolute : due ) {
+            map *const owner = session.loaded_map_at( *this, project_to<coords::sm>( absolute ) );
+            if( !owner ) {
+                continue;
+            }
+            std::optional<swap_map> context;
+            if( owner != this ) {
+                context.emplace( *owner );
+            }
+            const tripoint_bub_ms p = owner->get_bub( absolute );
+            owner->build_floor_cache( p.z() );
+            owner->drop_everything( p );
+        }
+        return;
+    }
+
     if( !support_cache_dirty.empty() ) {
         add_msg_debug( debugmode::DF_MAP, "Checking %d tiles for falling objects",
                        support_cache_dirty.size() );
@@ -4555,7 +4639,9 @@ void map::process_falling()
         std::set<tripoint_bub_ms> last_cache = std::move( support_cache_dirty );
         support_cache_dirty.clear();
         for( const tripoint_bub_ms &p : last_cache ) {
-            drop_everything( p );
+            if( inbounds( p ) ) {
+                drop_everything( p );
+            }
         }
     }
 }
@@ -5053,7 +5139,8 @@ bool map::is_flammable( const tripoint_bub_ms &p )
     return false;
 }
 
-void map::decay_fields_and_scent( const time_duration &amount )
+void map::decay_fields_and_scent( const time_duration &amount,
+                                  const map_simulation_regions *regions )
 {
     // TODO: Make this happen on all z-levels
 
@@ -5066,6 +5153,9 @@ void map::decay_fields_and_scent( const time_duration &amount )
     const auto &outside_cache = get_cache_ref( smz ).outside_cache;
     for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
         for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+            if( regions && !regions->owns( *this, abs_sub.xy() + tripoint_rel_sm( smx, smy, smz ) ) ) {
+                continue;
+            }
             submap *cur_submap = get_submap_at_grid( tripoint_rel_sm{ smx, smy, smz } );
             if( cur_submap == nullptr ) {
                 debugmsg( "Tried to process field at (%d,%d,%d) but the submap is not loaded", smx, smy, smz );
@@ -8807,9 +8897,9 @@ void map::trap_set( const tripoint_bub_ms &p, const trap_id &type )
     }
 
     current_submap->set_trap( l, type );
-    if( type != tr_null ) {
-        traplocs[type.to_i()].push_back( p );
-    }
+    visit_tile_views( p, [&]( map & view, const tripoint_bub_ms & local ) {
+        view.refresh_trap_cache( local, tr_null, type );
+    } );
 }
 
 void map::remove_trap( const tripoint_bub_ms &p )
@@ -8838,11 +8928,10 @@ void map::remove_trap( const tripoint_bub_ms &p )
         }
 
         current_submap->set_trap( l, tr_null );
-        auto &traps = traplocs[tid.to_i()];
-        const auto iter = std::find( traps.begin(), traps.end(), p );
-        if( iter != traps.end() ) {
-            traps.erase( iter );
-        }
+        const trap_id builtin = current_submap->get_ter( l )->trap;
+        visit_tile_views( p, [&]( map & view, const tripoint_bub_ms & local ) {
+            view.refresh_trap_cache( local, tid, builtin );
+        } );
         // If this tile is a phased terrain placeholder (PHASE_BACK), restore
         // the original terrain stored for this tile when removing the trap.
         if( ter( p )->has_flag( "PHASE_BACK" ) ) {
@@ -8854,6 +8943,20 @@ void map::remove_trap( const tripoint_bub_ms &p )
             }
         }
     }
+}
+
+void map::refresh_trap_cache( const tripoint_bub_ms &p, const trap_id &old_trap,
+                              const trap_id &new_trap )
+{
+    if( old_trap != tr_null && old_trap != new_trap ) {
+        update_tile_index( traplocs[old_trap.to_i()], p, false );
+    }
+    if( new_trap != tr_null ) {
+        update_tile_index( traplocs[new_trap.to_i()], p, true );
+    }
+    set_pathfinding_cache_dirty( p );
+    memory_cache_dec_set_dirty( p, true );
+    set_draw_points_cache_dirty();
 }
 
 /*
@@ -9114,6 +9217,9 @@ void map::remove_field( const tripoint_bub_ms &p, const field_type_id &field_to_
 
 void map::delete_field( const tripoint_bub_ms &p, const field_type_id &field_to_remove )
 {
+    if( !has_loaded_submap( p ) ) {
+        return;
+    }
     submap *current_submap = this->unsafe_get_submap_at( p );
     field &curfield = this->get_field( p );
 
@@ -9127,8 +9233,7 @@ void map::delete_field( const tripoint_bub_ms &p, const field_type_id &field_to_
         if( it->second.get_field_type() == field_to_remove ) {
             --current_submap->field_count;
             curfield.remove_field( it );
-            set_lightmap_cache_dirty( p.z() );
-            set_transparency_cache_dirty( p, true );
+            on_field_modified( p, *field_to_remove );
             break;
         }
     }
@@ -9142,25 +9247,30 @@ void map::clear_fields( const tripoint_bub_ms &p )
 
     point_sm_ms l;
     submap *const current_submap = unsafe_get_submap_at( p, l );
+    if( !current_submap ) {
+        return;
+    }
+    for( const auto &entry : current_submap->get_field( l ) ) {
+        on_field_modified( p, *entry.second.get_field_type() );
+    }
     current_submap->clear_fields( l );
-    set_lightmap_cache_dirty( p.z() );
-    set_transparency_cache_dirty( p, true );
 }
 
 void map::on_field_modified( const tripoint_bub_ms &p, const field_type &fd_type )
 {
-    invalidate_max_populated_zlev( p.z() );
-    set_lightmap_cache_dirty( p.z() );
+    visit_tile_views( p, [&]( map & view, const tripoint_bub_ms & local ) {
+        view.invalidate_max_populated_zlev( local.z() );
+        view.set_lightmap_cache_dirty( local.z() );
 
-    // Dirty the transparency cache now that field processing doesn't always do it
-    if( fd_type.dirty_transparency_cache || !fd_type.is_transparent() ) {
-        set_transparency_cache_dirty( p, true );
-        set_seen_cache_dirty( p );
-    }
+        if( fd_type.dirty_transparency_cache || !fd_type.is_transparent() ) {
+            view.set_transparency_cache_dirty( local, true );
+            view.set_seen_cache_dirty( local );
+        }
 
-    if( fd_type.is_dangerous() ) {
-        set_pathfinding_cache_dirty( p );
-    }
+        if( fd_type.is_dangerous() ) {
+            view.set_pathfinding_cache_dirty( local );
+        }
+    } );
 
     // Ensure blood type fields don't hang in the air
     if( zlevels && fd_type.accelerated_decay ) {
@@ -11730,12 +11840,9 @@ void map::index_submap_location( const submap &sm, const point_sm_ms &local,
     if( !ter.emissions.empty() ) {
         field_ter_locs.push_back( p );
     }
-    const trap_id tr = sm.get_trap( local );
+    const trap_id tr = ter.trap == tr_null ? sm.get_trap( local ) : ter.trap;
     if( tr != tr_null ) {
         traplocs[tr.to_i()].push_back( p );
-    }
-    if( ter.trap != tr_null ) {
-        traplocs[ter.trap.to_i()].push_back( p );
     }
 }
 

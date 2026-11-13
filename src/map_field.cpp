@@ -381,22 +381,30 @@ void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_sp
     }
 }
 
-void map::furniture_terrain_emit_fields()
+void map::furniture_terrain_emit_fields( const map_simulation_regions *regions )
 {
-    if( calendar::once_every( 10_seconds ) ) {
-        for( const tripoint_bub_ms &elem : get_furn_field_locations() ) {
-            const furn_t &furn_to_emit = *furn( elem );
-            for( const emit_id &e : furn_to_emit.emissions ) {
-                emit_field( elem, e );
-            }
-        }
-        for( const tripoint_bub_ms &elem : get_ter_field_locations() ) {
-            const ter_t &ter_to_emit = *ter( elem );
-            for( const emit_id &e : ter_to_emit.emissions ) {
-                emit_field( elem, e );
-            }
-        }
+    if( !calendar::once_every( 10_seconds ) ) {
+        return;
     }
+    const auto emit_at = [&]( const std::vector<tripoint_bub_ms> &indexed, const auto & emissions ) {
+        // An emission's Lua handler may mutate the map and its index.
+        const auto positions = indexed;
+        for( const tripoint_bub_ms &p : positions ) {
+            if( !has_loaded_submap( p ) ||
+            ( regions && !regions->owns( *this, project_to<coords::sm>( get_abs( p ) ) ) ) {
+            continue;
+        }
+        for( const emit_id &source : emissions( p ) ) {
+            emit_field( p, source );
+            }
+        }
+    };
+    emit_at( get_furn_field_locations(), [&]( const tripoint_bub_ms & p ) -> const auto & {
+        return furn( p )->emissions;
+    } );
+    emit_at( get_ter_field_locations(), [&]( const tripoint_bub_ms & p ) -> const auto & {
+        return ter( p )->emissions;
+    } );
 }
 
 /*
@@ -1814,7 +1822,7 @@ void map::maybe_apply_field_effect( const std::vector<field_effect> &vfe, Creatu
     bool in_vehicle = false;
     bool inside_vehicle = false;
 
-    if( const optional_vpart_position vp = veh_at( critter.pos_bub() ) ; vp.has_value() ) {
+    if( const optional_vpart_position vp = veh_at( critter.pos_abs() ); vp.has_value() ) {
         in_vehicle = true;
         if( vp->is_inside() ) {
             inside_vehicle = true;

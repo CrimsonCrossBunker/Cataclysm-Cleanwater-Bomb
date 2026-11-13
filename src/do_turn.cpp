@@ -1247,7 +1247,6 @@ void game::simulate_turn_suffix()
             if( &terrain != &m ) {
                 const swap_map context( terrain );
                 terrain.build_floor_caches();
-                terrain.process_falling();
             }
         }
         m.vehmove( views, regions );
@@ -1299,7 +1298,15 @@ void game::simulate_turn_suffix()
     if( calendar::once_every( time_between_npc_OM_moves ) ) {
         overmap_npc_move();
     }
-    m.furniture_terrain_emit_fields();
+    if( session.has_regions() ) {
+        const map_simulation_regions regions = session.simulation_regions( m );
+        session.visit_resident_maps( m, [&]( map & terrain ) {
+            const swap_map context( terrain );
+            terrain.furniture_terrain_emit_fields( &regions );
+        } );
+    } else {
+        m.furniture_terrain_emit_fields();
+    }
     // required after monsters move and fields emit
     mon_info_update();
 
@@ -1311,7 +1318,7 @@ void game::simulate_turn_suffix()
     // Per-turn world-state updates previously ran inside present_turn().
     // Moving them here keeps simulation advancing every tick regardless of
     // whether the renderer is gated.
-    if( levz >= 0 && !u.is_underwater() ) {
+    if( session.has_regions() || ( levz >= 0 && !u.is_underwater() ) ) {
         handle_weather_effects( get_weather().weather_id );
     }
 

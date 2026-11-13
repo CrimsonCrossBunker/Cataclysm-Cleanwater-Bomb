@@ -6,6 +6,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "mp_actor_binding.h"
@@ -108,6 +109,15 @@ struct world_session {
         std::vector<std::reference_wrapper<resident_region>> active_regions() const;
         map_simulation_regions simulation_regions( const map &primary ) const;
         std::vector<std::reference_wrapper<map>> active_maps( map &primary ) const;
+        // Absolute positions keep pending support work valid when views scroll.
+        std::set<tripoint_abs_ms> pending_support;
+        template<typename Visitor>
+        void visit_resident_maps( map &primary, const Visitor &visit ) const {
+            visit( primary );
+            for( const auto &entry : regions_ ) {
+                visit( *entry.second->terrain );
+            }
+        }
         map *loaded_map_at( map &primary, const tripoint_abs_sm &position ) const;
         map &map_for( map &primary, const tripoint_abs_sm &position ) const;
         bool has_regions() const;
