@@ -1677,7 +1677,10 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
         }
     } );
     overmap_buffer.insert_npc( remote );
-    g->load_npcs();
+    g->load_npcs( &m );
+    if( !g->shared_from( *remote ) ) {
+        throw std::runtime_error( "Could not activate the multiplayer actor at its selected tile" );
+    }
 
     recipient.actor.bind_player( *remote, player.id, g->npc_lifetimes(),
                                  std::move( control ) );
