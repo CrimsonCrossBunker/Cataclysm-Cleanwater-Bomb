@@ -1748,7 +1748,7 @@ int throw_cost( const Character &c, const item &to_throw )
     // Differences:
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
-    const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
+    const int base_move_cost = to_throw.attack_time( c ) / 2;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
     const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier( to_throw );
@@ -1768,9 +1768,7 @@ int throw_cost( const Character &c, const item &to_throw )
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
-    if( do_railgun ) {
-        move_cost -= c.get_dex();
-    }
+    move_cost -= c.get_dex();
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
                                   ( do_railgun ? 1.0f : c.throw_speed_multiplier( to_throw ) ) ) );
@@ -1925,11 +1923,10 @@ static float throwing_skill_adjusted( const Character &guy )
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
-    const float weight_dmg = thrown.weight() *
-                             ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
-                                     &throw_correction_data::weight_multiplier ) :
-                               thrower.throw_weight_multiplier( thrown ) ) /
-                             100.0_gram;
+    const float weight_mult = do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
+                              &throw_correction_data::weight_multiplier ) :
+                              thrower.throw_weight_multiplier( thrown, true );
+    const float weight_dmg = thrown.weight() * weight_mult / 100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1945,7 +1942,9 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     }
 
     const double scaled_weight_dmg = weight_dmg * velocity_factor;
-    const double cap = thrower.thrown_item_adjusted_damage( thrown );
+    // Half of the effective-weight bonus raises the strength-based damage cap.
+    const double cap = thrower.thrown_item_adjusted_damage( thrown ) *
+                       ( 1.0f + 0.5f * std::max( 0.0f, weight_mult - 1.0f ) );
     double thrown_dmg = std::min( scaled_weight_dmg, cap );
 
     // RANGED_DAMAGE enchantment can used at railgun throwing
@@ -2010,7 +2009,7 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
         du.res_pen += skill_level / 2.0f;
     }
 
-    int total_damage = 0;
+    float total_damage = 0.0f;
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }

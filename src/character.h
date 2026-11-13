@@ -2475,7 +2475,8 @@ class Character : public Creature, public visitable
         float throw_stamina_multiplier( const item &thrown ) const;
         float throw_dispersion_multiplier( const item &thrown ) const;
         float throw_speed_multiplier( const item &thrown ) const;
-        float throw_weight_multiplier( const item &thrown ) const;
+        /** Weight has opposite benefit directions for damage and handling costs. */
+        float throw_weight_multiplier( const item &thrown, bool for_damage = false ) const;
         bool is_fcl_railgun_throw( const item &thrown ) const;
 
         /** True if unarmed */

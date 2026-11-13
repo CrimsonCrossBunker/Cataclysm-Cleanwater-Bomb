@@ -3883,6 +3883,12 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
     insert_separation_line( info );
     info.emplace_back( "DESCRIPTION", _( "<bold>Throwing aid bonuses</bold>" ) );
 
+    if( base_correction && base_correction->full_bonus_skill &&
+        *base_correction->full_bonus_skill > 0 ) {
+        info.emplace_back( "BASE", _( "Throwing skill for full bonuses: " ), "<num>",
+                           iteminfo::lower_is_better, *base_correction->full_bonus_skill );
+    }
+
     if( base_correction && base_correction->damage_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
                            iteminfo::is_decimal, base_correction->damage_multiplier );
@@ -3914,6 +3920,10 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
     if( has_mod_bonus ) {
         const islot_gunmod &mod = *t->gunmod;
         info.emplace_back( "DESCRIPTION", _( "When installed on a wielded gun:" ) );
+        if( mod_correction->full_bonus_skill && *mod_correction->full_bonus_skill > 0 ) {
+            info.emplace_back( "BASE", _( "Throwing skill for full bonuses: " ), "<num>",
+                               iteminfo::lower_is_better, *mod_correction->full_bonus_skill );
+        }
         if( mod_correction->damage_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
                                iteminfo::is_decimal, mod_correction->damage_multiplier );

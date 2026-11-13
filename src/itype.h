@@ -1033,6 +1033,7 @@ struct throw_correction_data {
     std::optional<units::mass> max_weight;
     std::optional<units::volume> max_volume;
     std::optional<units::length> max_length;
+    std::optional<int> full_bonus_skill;
 
     float damage_multiplier = 1.0f;
     float range_multiplier = 1.0f;
@@ -1043,6 +1044,8 @@ struct throw_correction_data {
 
     void deserialize( const JsonObject &jo );
     bool applies_to( const item &thrown ) const;
+    float skill_adjusted_bonus( float value, float throwing_skill, bool lower_is_better,
+                                float neutral = 1.0f ) const;
 };
 
 struct islot_gunmod : common_ranged_data {
@@ -1540,6 +1543,7 @@ struct itype {
 
         /** Base damage output when thrown */
         damage_instance thrown_damage;
+        int thrown_recovery_chance = 100;
 
         /** Corrections applied to compatible items while this item is wielded. */
         std::optional<throw_correction_data> throw_correction;

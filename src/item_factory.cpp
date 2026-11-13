@@ -3591,7 +3591,7 @@ class gun_modes_reader : public generic_typed_reader<gun_modes_reader>
             const std::string text = value.get_string();
             const char *const end = text.data() + text.size();
             int rpm = 0;
-            const auto parsed = std::from_chars( text.data(), end, rpm );
+            const std::from_chars_result parsed = std::from_chars( text.data(), end, rpm );
             if( parsed.ec != std::errc() || parsed.ptr != end || rpm <= 0 ) {
                 value.throw_error( "RPM must be a string containing a positive integer" );
             }
@@ -4246,6 +4246,7 @@ void throw_correction_data::deserialize( const JsonObject &jo )
     load_optional_bound( "max_weight", max_weight, units_bound_reader<units::mass> { 0_gram } );
     load_optional_bound( "max_volume", max_volume, units_bound_reader<units::volume> { 0_ml } );
     load_optional_bound( "max_length", max_length, units_bound_reader<units::length> { 0_mm } );
+    load_optional_bound( "full_bonus_skill", full_bonus_skill, numeric_bound_reader{ 0 } );
     if( min_weight && max_weight && *min_weight > *max_weight ) {
         try {
             jo.throw_error_at( "min_weight",
@@ -4262,6 +4263,17 @@ void throw_correction_data::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "throw_speed_multiplier", speed_multiplier, 1.0f );
     optional( jo, was_loaded, "throw_weight_multiplier", weight_multiplier, 1.0f );
     was_loaded = true;
+}
+
+float throw_correction_data::skill_adjusted_bonus( float value, float throwing_skill,
+        bool lower_is_better, float neutral ) const
+{
+    if( !full_bonus_skill || *full_bonus_skill == 0 || throwing_skill >= *full_bonus_skill ||
+        ( lower_is_better ? value >= neutral : value <= neutral ) ) {
+        return value;
+    }
+    const float proficiency = std::max( 0.0f, throwing_skill ) / *full_bonus_skill;
+    return neutral + ( value - neutral ) * proficiency;
 }
 
 bool throw_correction_data::applies_to( const item &thrown ) const
@@ -5004,6 +5016,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
         mounted_charge.reset();
     }
     optional( jo, was_loaded, "thrown_damage", thrown_damage );
+    optional( jo, was_loaded, "thrown_recovery_chance", thrown_recovery_chance,
+              numeric_bound_reader{ 0, 100 }, 100 );
     load_throw_correction( jo, throw_correction );
     optional( jo, was_loaded, "explosion", explosion );
     using_legacy_to_hit = false; //required for inherited but undefined "to_hit" field

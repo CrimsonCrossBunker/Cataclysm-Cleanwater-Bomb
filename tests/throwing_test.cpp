@@ -1,9 +1,6 @@
 #include <algorithm>
-#include <functional>
-#include <memory>
-#include <ostream>
+#include <cmath>
 #include <string>
-#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
@@ -13,82 +10,50 @@
 #include "damage.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
-#include "game.h"
-#include "game_constants.h"
 #include "item.h"
+#include "item_stack.h"
 #include "itype.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
-#include "monster.h"
-#include "npc.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "projectile.h"
 #include "ranged.h"
-#include "test_statistics.h"
 #include "type_id.h"
+#include "units.h"
+
+static const damage_type_id damage_bash( "bash" );
 
 static const flag_id json_flag_SLING_PROJECTILE( "SLING_PROJECTILE" );
-
-static const itype_id itype_9mm( "9mm" );
-static const itype_id itype_grenade( "grenade" );
-static const itype_id itype_javelin_iron( "javelin_iron" );
-static const itype_id itype_pebble( "pebble" );
-static const itype_id itype_rock( "rock" );
-static const itype_id itype_sling( "sling" );
-static const itype_id itype_sling_bullet_stone_500( "sling_bullet_stone_500" );
-static const itype_id itype_sling_bullet_stone_750( "sling_bullet_stone_750" );
-static const itype_id itype_sling_long( "sling_long" );
-static const itype_id itype_sling_ready_homemade_grenade_2(
-    "sling-ready_homemade_grenade_2" );
-static const itype_id itype_staff_sling( "staff_sling" );
-static const itype_id itype_test_rock( "test_rock" );
+static const itype_id itype_test_sling_payload( "test_sling_payload" );
 static const itype_id itype_test_throw_correction( "test_throw_correction" );
-static const itype_id itype_throwing_knife( "throwing_knife" );
-static const itype_id itype_throwing_stick_with_charges( "throwing_stick_with_charges" );
+static const itype_id itype_test_throwing_aid( "test_throwing_aid" );
+static const itype_id itype_test_throwing_ammo( "test_throwing_ammo" );
+static const itype_id itype_test_throwing_flagged( "test_throwing_flagged" );
+static const itype_id itype_test_throwing_plain( "test_throwing_plain" );
+static const itype_id itype_test_throwing_stack( "test_throwing_stack" );
+static const itype_id itype_test_throwing_unrecoverable( "test_throwing_unrecoverable" );
 
 static const skill_id skill_throw( "throw" );
 
-TEST_CASE( "throwing_distance_test", "[throwing], [balance]" )
-{
-    const standard_npc thrower( "Thrower", { 60, 60, 0 }, {}, 4, 10, 10, 10, 10 );
-    item grenade( itype_grenade );
-    CHECK( thrower.throw_range( grenade ) >= 30 );
-    CHECK( thrower.throw_range( grenade ) <= 35 );
-}
-
 namespace
 {
-struct throw_test_data {
-    statistics<bool> hits;
-    statistics<double> dmg;
-
-    throw_test_data() : dmg( Z95 ) {}
-};
-
 struct throw_test_pstats {
     int skill_lvl;
     int str;
     int dex;
     int per;
 };
-
-std::ostream &operator<<( std::ostream &stream, const throw_test_pstats &pstats )
-{
-    return stream << "STR: " << pstats.str << " DEX: " << pstats.dex <<
-           " PER: " << pstats.per << " SKL: " << pstats.skill_lvl;
-}
 } // namespace
 
 static void reset_player( Character &you, const throw_test_pstats &pstats,
                           const tripoint_bub_ms &pos )
 {
-    map &here = get_map();
     clear_character( you );
     CHECK( !you.in_vehicle );
-    you.setpos( here, pos );
+    you.setpos( get_map(), pos );
     you.set_str_base( pstats.str );
     you.set_dex_base( pstats.dex );
     you.set_per_base( pstats.per );
@@ -98,256 +63,12 @@ static void reset_player( Character &you, const throw_test_pstats &pstats,
     you.set_skill_level( skill_throw, pstats.skill_lvl );
 }
 
-// If tests are routinely failing you should:
-//  1. Make sure some change hasn't caused some regression
-//  2. Make sure test is accurate by testing with a large minimum iterations (min > 5000)
-//  3. Increase bounds on thresholds
-//  4. Increase max iterations which will make the CI smaller and more likely to
-//     fit inside the threshold but also increase the average test length
-// In that order.
-static constexpr int min_throw_test_iterations = 100;
-static constexpr int max_throw_test_iterations = 10000;
-
-// tighter thresholds here will increase accuracy but also increase average test
-// time since more samples are required to get a more accurate test
-static void test_throwing_player_versus(
-    Character &you, const std::string &mon_id, const itype_id &throw_id,
-    const int range, const throw_test_pstats &pstats,
-    const epsilon_threshold &hit_thresh, const epsilon_threshold &dmg_thresh,
-    const int min_throws = min_throw_test_iterations,
-    int max_throws = max_throw_test_iterations )
-{
-    const tripoint_bub_ms monster_start = { 30 + range, 30, 0 };
-    const tripoint_bub_ms player_start = { 30, 30, 0 };
-    bool hit_thresh_met = false;
-    bool dmg_thresh_met = false;
-    throw_test_data data;
-    item it( throw_id );
-
-    max_throws = std::max( min_throws, max_throws );
-    do {
-        reset_player( you, pstats, player_start );
-        you.set_moves( 1000 );
-        you.set_stamina( you.get_stamina_max() );
-
-        you.wield( it );
-        monster &mon = spawn_test_monster( mon_id, monster_start, false );
-        mon.set_moves( 0 );
-
-        dealt_projectile_attack atk = you.throw_item( mon.pos_bub(), it );
-        data.hits.add( atk.last_hit_critter != nullptr );
-        data.dmg.add( atk.dealt_dam.total_damage() );
-
-        if( data.hits.n() >= min_throws ) {
-            // ideally we should actually still checking the threshold after we
-            // meet it but we're busy people and don't have time for that
-            if( !hit_thresh_met ) {
-                hit_thresh_met = data.hits.test_threshold( hit_thresh );
-            }
-            // don't do an else here because it's possible we just made
-            // hit_thresh_met true
-            if( hit_thresh_met ) {
-                // commenting this out is a super easy way to force all the
-                // test to fail if you want to reset the baseline after
-                // making balance changes or if many of the tests are failing
-                // CCB deliberately raises throwing damage.  Retain the
-                // upstream lower bound, while allowing the rebalanced damage
-                // to reach 2.5 times the former upper bound.
-                const double lower = dmg_thresh.midpoint - dmg_thresh.epsilon;
-                const double upper = ( dmg_thresh.midpoint + dmg_thresh.epsilon ) * 2.5;
-                dmg_thresh_met = data.dmg.lower() >= lower && data.dmg.upper() <= upper;
-            }
-        }
-        g->remove_zombie( mon );
-        you.remove_weapon();
-        // only need to check dmg_thresh_met because it can only be true if
-        // hit_thresh_met first
-    } while( !dmg_thresh_met && data.hits.n() < max_throws );
-
-    INFO( "Monster: '" << mon_id << "' Item: '" << throw_id.c_str() );
-    INFO( "Range: " << range << " Pstats: " << pstats );
-    INFO( "Total throws: " << data.hits.n() );
-    INFO( "Ratio: " << data.hits.avg() * 100 << "%" );
-    INFO( "Hit Lower: " << data.hits.lower() * 100 << "% Hit Upper: " << data.hits.upper() * 100 <<
-          "%" );
-    INFO( "Hit Thresh: " << ( hit_thresh.midpoint - hit_thresh.epsilon ) * 100 << "% - " <<
-          ( hit_thresh.midpoint + hit_thresh.epsilon ) * 100 << "%" );
-    INFO( "Adj Wald error: " << data.hits.margin_of_error() );
-    INFO( "Avg total damage: " << data.dmg.avg() );
-    INFO( "Dmg Lower: " << data.dmg.lower() << " Dmg Upper: " << data.dmg.upper() );
-    INFO( "Dmg Thresh: " << dmg_thresh.midpoint - dmg_thresh.epsilon << " - " <<
-          dmg_thresh.midpoint + dmg_thresh.epsilon );
-    INFO( "Margin of error: " << data.hits.margin_of_error() );
-    CHECK( dmg_thresh_met );
-}
-
-// Debugging function to force a large sample count.  This will fail but will
-// dump an extremely accurate population sample that can be used to tune a
-// broken test.
-// WARNING: these will take a long time likely
-/*
-static void test_throwing_player_versus(
-    player &p, const std::string &mon_id, const itype_id &throw_id, const int range,
-    const throw_test_pstats &pstats )
-{
-    test_throwing_player_versus( p, mon_id, throw_id, range, pstats, { 0, 0 }, { 0, 0 }, 5000, 5000 );
-}
-*/
-
-static constexpr throw_test_pstats lo_skill_base_stats = { 0, 8, 8, 8 };
-static constexpr throw_test_pstats mid_skill_base_stats = { MAX_SKILL / 2, 8, 8, 8 };
-static constexpr throw_test_pstats hi_skill_base_stats = { MAX_SKILL, 8, 8, 8 };
-static constexpr throw_test_pstats hi_skill_athlete_stats = { MAX_SKILL, 12, 12, 12 };
-
-TEST_CASE( "basic_throwing_sanity_tests", "[throwing] [balance]" )
-{
-    avatar &p = get_avatar();
-    clear_map_without_vision();
-
-    SECTION( "test_player_vs_zombie_rock_basestats" ) {
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 1, lo_skill_base_stats, { 0.78, 0.10 }, { 5, 3 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 5, lo_skill_base_stats, { 0.07, 0.10 }, { 0.7, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 10, lo_skill_base_stats, { 0.04, 0.10 }, { 0.5, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 15, lo_skill_base_stats, { 0.03, 0.10 }, { 0.5, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 20, lo_skill_base_stats, { 0.03, 0.10 }, { 0.5, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 25, lo_skill_base_stats, { 0.03, 0.10 }, { 0.5, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 30, lo_skill_base_stats, { 0.03, 0.10 }, { 0.5, 2 } );
-    }
-
-    SECTION( "test_player_vs_zombie_javelin_iron_basestats" ) {
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 1, lo_skill_base_stats, { 0.64, 0.10 }, { 11, 5 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 5, lo_skill_base_stats, { 0.05, 0.10 }, { 1.5, 3 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 10, lo_skill_base_stats, { 0.04, 0.10 }, { 1.50, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 15, lo_skill_base_stats, { 0.03, 0.10 }, { 1.29, 3 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 20, lo_skill_base_stats, { 0.03, 0.10 }, { 1.66, 2 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 25, lo_skill_base_stats, { 0.03, 0.10 }, { 1.0, 2 } );
-    }
-
-    SECTION( "test_player_vs_zombie_rock_athlete" ) {
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 1, hi_skill_athlete_stats, { 1.00, 0.10 }, { 16.5, 8 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 5, hi_skill_athlete_stats, { 1.00, 0.10 }, { 16.5, 6 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 10, hi_skill_athlete_stats, { 1.00, 0.10 }, { 16.27, 6 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 15, hi_skill_athlete_stats, { 0.97, 0.10 }, { 12.83, 4 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 20, hi_skill_athlete_stats, { 0.82, 0.10 }, { 9.10, 4 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 25, hi_skill_athlete_stats, { 0.64, 0.10 }, { 6.54, 4 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 30, hi_skill_athlete_stats, { 0.47, 0.10 }, { 4.90, 3 } );
-    }
-
-    SECTION( "test_player_vs_zombie_javelin_iron_athlete" ) {
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 1, hi_skill_athlete_stats, { 1.00, 0.10 }, { 44.00, 8 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 5, hi_skill_athlete_stats, { 1.00, 0.10 }, { 44.00, 8 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 10, hi_skill_athlete_stats, { 1.00, 0.10 }, { 34.16, 8 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 15, hi_skill_athlete_stats, { 0.97, 0.10 }, { 25.21, 6 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 20, hi_skill_athlete_stats, { 0.82, 0.10 }, { 18.90, 5 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 25, hi_skill_athlete_stats, { 0.63, 0.10 }, { 13.59, 5 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_javelin_iron, 30, hi_skill_athlete_stats, { 0.48, 0.10 }, { 10.00, 4 } );
-    }
-}
-
-TEST_CASE( "throwing_skill_impact_test", "[throwing] [balance]" )
-{
-    avatar &p = get_avatar();
-    clear_map_without_vision();
-
-    // we already cover low stats in the sanity tests and we only cover a few
-    // ranges here because what we're really trying to capture is the effect
-    // the throwing skill has while the sanity tests are more explicit.
-    SECTION( "mid_skill_basestats_rock" ) {
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 5, mid_skill_base_stats, { 1.00, 0.10 }, { 12, 6 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 10, mid_skill_base_stats, { 0.86, 0.10 }, { 7.0, 4 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 15, mid_skill_base_stats, { 0.52, 0.10 }, { 3, 2 } );
-    }
-
-    SECTION( "hi_skill_basestats_rock" ) {
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 5, hi_skill_base_stats, { 1.00, 0.10 }, { 18, 5 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 10, hi_skill_base_stats, { 1.00, 0.10 }, { 14.7, 5 } );
-        test_throwing_player_versus( p, "mon_zombie", itype_rock, 15, hi_skill_base_stats, { 0.97, 0.10 }, { 10.5, 4 } );
-    }
-}
-
-static void test_player_kills_monster(
-    Character &you, const std::string &mon_id, const itype_id &item_id, const int range,
-    const int dist_thresh, const throw_test_pstats &pstats, const int iterations )
-{
-    const tripoint_bub_ms monster_start = { 30 + range, 30, 0 };
-    const tripoint_bub_ms player_start = { 30, 30, 0 };
-    int failure_turns = -1;
-    int failure_num_items = -1;
-    int failure_last_range = -1;
-    item it( item_id );
-    int num_failures = 0;
-
-    // We want to be real sure it isn't possible so do it a bunch of times
-    // until we manage to make it happen or if we hit iterations then we're
-    // good.
-    for( int i = 0; i < iterations; i++ ) {
-        bool mon_is_dead = false;
-        int turns = 0;
-        int num_items = 0;
-        int last_range = -1;
-
-        reset_player( you, pstats, player_start );
-
-        monster &mon = spawn_test_monster( mon_id, monster_start, false );
-        mon.set_moves( 0 );
-
-        while( !mon_is_dead ) {
-
-            ++turns;
-            mon.process_turn();
-            mon.set_dest( you.pos_abs() );
-            while( mon.get_moves() > 0 ) {
-                mon.move();
-            }
-
-            // zombie made it to player, we're done with this iteration
-            if( ( last_range = rl_dist( you.pos_abs(), mon.pos_abs() ) ) <= dist_thresh ) {
-                break;
-            }
-
-            you.mod_moves( you.get_speed() );
-            while( you.get_moves() > 0 ) {
-                you.wield( it );
-                you.throw_item( mon.pos_bub(), it );
-                you.remove_weapon();
-                ++num_items;
-            }
-            mon_is_dead = mon.is_dead();
-        }
-
-        if( !mon_is_dead ) {
-            g->remove_zombie( mon );
-        } else {
-            ++num_failures;
-            failure_turns = turns;
-            failure_num_items = num_items;
-            failure_last_range = last_range;
-        }
-    }
-
-    INFO( "You killed him :( He had kids you know." );
-    INFO( "Distance - Start: " << range << " End: " << failure_last_range );
-    INFO( "Turns: " << failure_turns );
-    INFO( "# Items thrown: " << failure_num_items );
-    CHECK( num_failures <= 1 );
-}
-
-TEST_CASE( "player_kills_zombie_before_reach", "[throwing] [balance] [scenario]" )
-{
-    avatar &p = get_avatar();
-    clear_map_without_vision();
-
-    SECTION( "test_player_kills_zombie_with_rock_basestats" ) {
-        test_player_kills_monster( p, "mon_zombie", itype_rock, 15, 1, lo_skill_base_stats, 500 );
-    }
-}
-
-TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [balance]" )
+TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing]" )
 {
     Character &you = get_avatar();
     clear_avatar();
 
-    item thrown( itype_throwing_stick_with_charges, calendar::turn, 10 );
+    item thrown( itype_test_throwing_stack, calendar::turn, 10 );
     REQUIRE( thrown.charges > 1 );
     you.wield( thrown );
     int initial_moves = -1;
@@ -360,6 +81,62 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
         }
         thrown.charges--;
     }
+}
+
+TEST_CASE( "throw_cost_uses_half_attack_time_and_dexterity", "[throwing]" )
+{
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    reset_player( you, { 10, 8, 8, 8 }, { 30, 30, 0 } );
+    const item rock( itype_test_throwing_stack, calendar::turn, 1 );
+    const int base_cost = rock.attack_time( you ) / 2;
+    const int skill_cost = base_cost / 2;
+    CHECK( throw_cost( you, rock ) == base_cost + skill_cost - 8 );
+
+    you.set_dex_base( 12 );
+    CHECK( throw_cost( you, rock ) == base_cost + skill_cost - 12 );
+}
+
+TEST_CASE( "thrown_items_follow_recovery_chance", "[throwing]" )
+{
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    reset_player( you, { 10, 8, 8, 8 }, { 30, 30, 0 } );
+    const bool recover = GENERATE( false, true );
+    const itype_id thrown_id = recover ? itype_test_throwing_stack : itype_test_throwing_unrecoverable;
+    const item thrown( thrown_id, calendar::turn, 1 );
+    REQUIRE( thrown.type->thrown_recovery_chance == ( recover ? 100 : 0 ) );
+
+    const dealt_projectile_attack attack = you.throw_item( { 31, 30, 0 }, thrown );
+    bool found = false;
+    for( const item &dropped : get_map().i_at( attack.end_point ) ) {
+        found = found || dropped.typeId() == thrown_id;
+    }
+    CHECK( found == recover );
+}
+
+TEST_CASE( "throwing_leverage_raises_weight_damage_cap", "[throwing]" )
+{
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    reset_player( you, { 10, 8, 8, 8 }, { 30, 30, 0 } );
+    const item projectile( itype_test_throwing_stack, calendar::turn, 1 );
+    const double base_cap = you.thrown_item_adjusted_damage( projectile );
+    const double base_damage = projectile.base_damage_thrown().type_damage( damage_bash );
+    REQUIRE( base_cap > 0 );
+    REQUIRE( base_cap < units::to_gram( projectile.weight() ) / 100.0 );
+    CHECK( you.thrown_item_total_damage_raw( projectile ) == std::round( base_damage + base_cap ) );
+
+    item aid( itype_test_throwing_aid );
+    REQUIRE( aid.type->throw_correction );
+    const throw_correction_data &correction = *aid.type->throw_correction;
+    REQUIRE( correction.weight_multiplier > 1.0f );
+    REQUIRE( you.wield( aid ) );
+    const double cap = base_cap * ( 1.0 + 0.5 * ( correction.weight_multiplier - 1.0 ) );
+    const double expected_damage = ( base_damage + cap ) * correction.damage_multiplier;
+    CHECK( you.thrown_item_total_damage_raw( projectile ) == std::round( expected_damage ) );
+    const dealt_projectile_attack attack = you.throw_item( { 31, 30, 0 }, projectile );
+    CHECK( attack.proj.impact.type_damage( damage_bash ) == Approx( expected_damage ) );
 }
 
 TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[throwing]" )
@@ -380,7 +157,7 @@ TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[
     CHECK( warning.find( "min_weight exceeds max_weight" ) != std::string::npos );
     CHECK( correction.was_loaded );
     CHECK( correction.damage_multiplier == Approx( 1.5f ) );
-    CHECK_FALSE( correction.applies_to( item( itype_9mm, calendar::turn, 1 ) ) );
+    CHECK_FALSE( correction.applies_to( item( itype_test_throwing_ammo, calendar::turn, 1 ) ) );
 }
 
 TEST_CASE( "throw_correction_rejects_empty_flag_arrays", "[throwing]" )
@@ -395,15 +172,17 @@ TEST_CASE( "throw_correction_rejects_empty_flag_arrays", "[throwing]" )
 
 TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
 {
-    const item ammo( itype_9mm, calendar::turn, 1 );
-    const item rock( itype_rock );
-    const item knife( itype_throwing_knife );
+    const item ammo( itype_test_throwing_ammo, calendar::turn, 1 );
+    const item rock( itype_test_throwing_flagged );
+    const item knife( itype_test_throwing_plain );
     REQUIRE( ammo.is_ammo() );
     REQUIRE_FALSE( ammo.has_flag( json_flag_SLING_PROJECTILE ) );
+    REQUIRE( rock.has_flag( json_flag_SLING_PROJECTILE ) );
+    REQUIRE_FALSE( rock.is_ammo() );
 
     throw_correction_data correction;
     correction.deserialize( json_loader::from_string( R"({
-        "required_flag": "SLING_PROJECTILE", "allow_ammotype": ["9mm"]
+        "required_flag": "SLING_PROJECTILE", "allow_ammotype": ["test_throwing"]
     })" ).get_object() );
     CHECK( correction.applies_to( ammo ) );
     CHECK( correction.applies_to( rock ) );
@@ -417,7 +196,7 @@ TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
     }
     SECTION( "ammo_list_without_flags_requires_matching_ammo" ) {
         throw_correction_data ammo_only;
-        ammo_only.deserialize( json_loader::from_string( R"({"allow_ammotype":["9mm"]})"
+        ammo_only.deserialize( json_loader::from_string( R"({"allow_ammotype":["test_throwing"]})"
                                                        ).get_object() );
         CHECK( ammo_only.applies_to( ammo ) );
         CHECK_FALSE( ammo_only.applies_to( rock ) );
@@ -448,6 +227,61 @@ TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
     }
 }
 
+TEST_CASE( "throw_correction_full_bonus_skill_loading", "[throwing]" )
+{
+    throw_correction_data correction;
+    CHECK_FALSE( correction.full_bonus_skill );
+    CHECK( correction.skill_adjusted_bonus( 1.6f, 0.0f, false ) == Approx( 1.6f ) );
+    correction.deserialize( json_loader::from_string( R"({"full_bonus_skill":3})"
+                                                    ).get_object() );
+    REQUIRE( correction.full_bonus_skill == 3 );
+    correction.deserialize( json_loader::from_string( "{}" ).get_object() );
+    CHECK( correction.full_bonus_skill == 3 );
+
+    SECTION( "zero_disables_the_requirement" ) {
+        correction.deserialize( json_loader::from_string( R"({"full_bonus_skill":0})"
+                                                        ).get_object() );
+        CHECK( correction.full_bonus_skill == 0 );
+        CHECK( correction.skill_adjusted_bonus( 1.6f, 0.0f, false ) == Approx( 1.6f ) );
+    }
+    SECTION( "null_clears_the_inherited_requirement" ) {
+        correction.deserialize( json_loader::from_string( R"({"full_bonus_skill":null})"
+                                                        ).get_object() );
+        CHECK_FALSE( correction.full_bonus_skill );
+        CHECK( correction.skill_adjusted_bonus( 1.6f, 0.0f, false ) == Approx( 1.6f ) );
+    }
+    SECTION( "invalid_requirements_are_rejected" ) {
+        const std::string definition = GENERATE( R"({"full_bonus_skill":-1})",
+                                       R"({"full_bonus_skill":"3"})" );
+        CHECK_THROWS_AS( correction.deserialize( json_loader::from_string( definition ).get_object() ),
+                         JsonError );
+    }
+}
+
+TEST_CASE( "throw_correction_scales_only_favorable_changes", "[throwing]" )
+{
+    throw_correction_data correction;
+    correction.full_bonus_skill = 3;
+    const float skill = GENERATE( 0.0f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f );
+    CAPTURE( skill );
+    const float proficiency = std::min( 1.0f, skill / 3.0f );
+    CHECK( correction.skill_adjusted_bonus( 1.6f, skill, false ) ==
+           Approx( 1.0f + 0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( 0.4f, skill, false ) == Approx( 0.4f ) );
+    CHECK( correction.skill_adjusted_bonus( 0.4f, skill, true ) ==
+           Approx( 1.0f - 0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( 1.6f, skill, true ) == Approx( 1.6f ) );
+    CHECK( correction.skill_adjusted_bonus( 1.0f, skill, false ) == Approx( 1.0f ) );
+    CHECK( correction.skill_adjusted_bonus( 1.0f, skill, true ) == Approx( 1.0f ) );
+
+    CHECK( correction.skill_adjusted_bonus( 0.6f, skill, false, 0.0f ) ==
+           Approx( 0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( -0.6f, skill, false, 0.0f ) == Approx( -0.6f ) );
+    CHECK( correction.skill_adjusted_bonus( -0.6f, skill, true, 0.0f ) ==
+           Approx( -0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( 0.6f, skill, true, 0.0f ) == Approx( 0.6f ) );
+}
+
 static void check_throw_correction( const Character &you, const item &projectile,
                                     const float damage, const float range,
                                     const float stamina, const float dispersion,
@@ -461,6 +295,38 @@ static void check_throw_correction( const Character &you, const item &projectile
     CHECK( you.throw_weight_multiplier( projectile ) == Approx( weight ) );
 }
 
+TEST_CASE( "throwing_aid_proficiency_preserves_penalties", "[throwing]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    const int skill = GENERATE( 0, 1, 2, 3, 4 );
+    const bool lighter = GENERATE( false, true );
+    CAPTURE( skill, lighter );
+    you.set_skill_level( skill_throw, skill );
+    const float proficiency = std::min( 1.0f, skill / 3.0f );
+    item aid( itype_id( lighter ? "test_throw_correction_skill_light" :
+                        "test_throw_correction_skill" ) );
+    REQUIRE( aid.type->throw_correction );
+    REQUIRE( aid.type->throw_correction->full_bonus_skill == 3 );
+    REQUIRE( you.wield( aid ) );
+    const item projectile( itype_test_throwing_stack );
+
+    if( lighter ) {
+        check_throw_correction( you, projectile, 0.7f, 0.8f, 1.3f, 1.6f,
+                                1.0f - 0.3f * proficiency, 1.0f - 0.3f * proficiency );
+        CHECK( you.throw_weight_multiplier( projectile, true ) == Approx( 0.7f ) );
+    } else {
+        check_throw_correction( you, projectile, 1.0f + 0.6f * proficiency,
+                                1.0f + 0.9f * proficiency, 1.0f - 0.3f * proficiency,
+                                1.0f - 0.6f * proficiency, 1.3f, 1.6f );
+        CHECK( you.throw_weight_multiplier( projectile, true ) ==
+               Approx( 1.0f + 0.6f * proficiency ) );
+    }
+    const item incompatible( itype_test_throwing_plain );
+    check_throw_correction( you, incompatible, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+    CHECK( you.throw_weight_multiplier( incompatible, true ) == Approx( 1.0f ) );
+}
+
 TEST_CASE( "throw_correction_flag_requirements", "[throwing]" )
 {
     clear_avatar();
@@ -469,58 +335,15 @@ TEST_CASE( "throw_correction_flag_requirements", "[throwing]" )
     REQUIRE( you.wield( correction ) );
 
     SECTION( "all_flags_in_an_inner_group_are_required" ) {
-        item matching( itype_rock );
+        item matching( itype_test_throwing_stack );
         check_throw_correction( you, matching, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f );
 
-        item missing_one_flag( itype_test_rock );
+        item missing_one_flag( itype_test_throwing_flagged );
         check_throw_correction( you, missing_one_flag, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 
     SECTION( "outer_groups_are_alternatives" ) {
-        item matching( itype_grenade );
+        item matching( itype_test_sling_payload );
         check_throw_correction( you, matching, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f );
-    }
-}
-
-TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
-{
-    clear_avatar();
-    avatar &you = get_avatar();
-    item medium_bullet( itype_sling_bullet_stone_500 );
-    item heavy_bullet( itype_sling_bullet_stone_750 );
-    item rock( itype_rock );
-    item pebble( itype_pebble, calendar::turn, 1 );
-    item throwing_knife( itype_throwing_knife );
-
-    SECTION( "sling" ) {
-        const int unassisted_cost = throw_cost( you, medium_bullet );
-        item sling( itype_sling );
-        REQUIRE( you.wield( sling ) );
-
-        check_throw_correction( you, medium_bullet, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
-        CHECK( throw_cost( you, medium_bullet ) > unassisted_cost );
-        check_throw_correction( you, heavy_bullet, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
-        check_throw_correction( you, rock, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
-        check_throw_correction( you, pebble, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
-    }
-
-    SECTION( "long_sling" ) {
-        item sling( itype_sling_long );
-        REQUIRE( you.wield( sling ) );
-
-        check_throw_correction( you, heavy_bullet, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
-        check_throw_correction( you, rock, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
-        check_throw_correction( you, pebble, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
-        check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
-    }
-
-    SECTION( "staff_sling" ) {
-        item heavy_grenade( itype_sling_ready_homemade_grenade_2 );
-        item sling( itype_staff_sling );
-        REQUIRE( you.wield( sling ) );
-
-        check_throw_correction( you, heavy_grenade, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
-        check_throw_correction( you, pebble, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
-        check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 }
