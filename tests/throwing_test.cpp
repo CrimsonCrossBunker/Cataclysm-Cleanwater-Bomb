@@ -28,10 +28,13 @@
 static const itype_id itype_grenade( "grenade" );
 static const itype_id itype_javelin_iron( "javelin_iron" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_sling( "sling" );
 static const itype_id itype_sling_bullet_stone_500( "sling_bullet_stone_500" );
 static const itype_id itype_sling_bullet_stone_750( "sling_bullet_stone_750" );
+static const itype_id itype_sling_long( "sling_long" );
 static const itype_id itype_sling_ready_homemade_grenade_2(
     "sling-ready_homemade_grenade_2" );
+static const itype_id itype_staff_sling( "staff_sling" );
 static const itype_id itype_test_rock( "test_rock" );
 static const itype_id itype_test_throw_correction( "test_throw_correction" );
 static const itype_id itype_throwing_knife( "throwing_knife" );
@@ -395,7 +398,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
 
     SECTION( "sling" ) {
         const int unassisted_cost = throw_cost( you, medium_bullet );
-        item sling( itype_id( "sling" ) );
+        item sling( itype_sling );
         REQUIRE( you.wield( sling ) );
 
         check_throw_correction( you, medium_bullet, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
@@ -405,7 +408,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
     }
 
     SECTION( "long_sling" ) {
-        item sling( itype_id( "sling_long" ) );
+        item sling( itype_sling_long );
         REQUIRE( you.wield( sling ) );
 
         check_throw_correction( you, heavy_bullet, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
@@ -415,7 +418,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
 
     SECTION( "staff_sling" ) {
         item heavy_grenade( itype_sling_ready_homemade_grenade_2 );
-        item sling( itype_id( "staff_sling" ) );
+        item sling( itype_staff_sling );
         REQUIRE( you.wield( sling ) );
 
         check_throw_correction( you, heavy_grenade, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
