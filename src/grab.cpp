@@ -18,6 +18,7 @@
 #include "pathfinding.h"
 #include "vehicle_uid.h"
 #include "cata_assert.h"
+#include "creature_tracker.h"
 #include "debug.h"
 #include "map.h"
 #include "messages.h"
@@ -33,6 +34,7 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "walking.h"
 #include "world_position.h"
 
 namespace
@@ -398,29 +400,6 @@ bool execute_grab( Character &who, map &here, const grab_selection &choice )
     return true;
 }
 
-bool game::grabbed_veh_move_helper( const tripoint_rel_ms &dp, bool stairs_move )
-{
-    return grabbed_veh_move_helper( get_avatar(), dp, stairs_move );
-}
-
-bool game::grabbed_veh_move_stairs( const tripoint_rel_ms &dp )
-{
-    return grabbed_veh_move_stairs( get_avatar(), dp );
-}
-
-bool game::grabbed_veh_move( const tripoint_rel_ms &dp )
-{
-    return grabbed_veh_move( get_avatar(), dp );
-}
-
-bool game::grabbed_veh_move_helper( Character &who, const tripoint_rel_ms &dp, bool stairs_move )
-{
-    if( stairs_move ) {
-        return grabbed_veh_move_stairs( who, dp );
-    }
-    return grabbed_veh_move( who, dp );
-}
-
 bool game::grabbed_veh_move_stairs( Character &who, const tripoint_rel_ms &dp )
 {
     map &here = get_map();
@@ -537,19 +516,21 @@ bool game::grabbed_veh_move_stairs( Character &who, const tripoint_rel_ms &dp )
     return true;
 }
 
-bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
+bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp,
+                             const walk_move_choices *choices, const fractional_walk *step )
 {
     map &here = get_map();
     if( who.get_grab_type() != object_type::VEHICLE || !who.validate_grab( here ) ) {
         who.grab( object_type::NONE );
-        return false;
+        return step != nullptr;
     }
     const character_action_guard lifetime( who );
     const world_position operator_position = who.pos_world();
     const auto context = here.get_context_reference();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const auto generation = who.grab_generation();
     const auto still_holding = [&]() {
-        return lifetime && context && &get_map() == &here &&
+        return lifetime && context && &get_map() == &here && here.get_abs_sub() == map_origin &&
                who.pos_world() == operator_position && who.grab_generation() == generation;
     };
 
@@ -558,22 +539,26 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     if( !grabbed_vehicle_vp ) {
         who.add_msg_if_player( m_info, _( "No vehicle at grabbed point." ) );
         who.grab( object_type::NONE );
-        return false;
+        return step != nullptr;
     }
     vehicle *grabbed_vehicle = &grabbed_vehicle_vp->vehicle();
     const int64_t vehicle_id = grabbed_vehicle->uid().get_value();
     const int grabbed_part = who.grabbed_vehicle_part( here );
     if( grabbed_part < 0 ) {
         who.grab( object_type::NONE );
-        return false;
+        return step != nullptr;
     }
     const int64_t part_id = grabbed_vehicle->part( grabbed_part ).get_base().uid().get_value();
+    if( choices && grabbed_vehicle->has_owner() && !grabbed_vehicle->is_owned_by( who ) &&
+        !choices->permits_theft( *grabbed_vehicle ) ) {
+        return true;
+    }
     if( !grabbed_vehicle->handle_potential_theft( who, false,
-            !who.is_player_controlled() || who.is_avatar() ) || !still_holding() ) {
+            !choices && ( !who.is_player_controlled() || who.is_avatar() ) ) || !still_holding() ) {
         return true;
     }
     grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );
-    const auto part_at_grab = here.veh_at( who.pos_bub() + who.grab_point );
+    const auto part_at_grab = here.veh_at( who.pos_bub( here ) + who.grab_point );
     if( !grabbed_vehicle || !part_at_grab || &part_at_grab->vehicle() != grabbed_vehicle ||
         !who.grab_matches( here ) || who.grabbed_vehicle_part( here ) != grabbed_part ) {
         who.grab( object_type::NONE );
@@ -583,12 +568,25 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         who.add_msg_if_player( m_info, _( "You cannot move this vehicle whilst your %s is harnessed!" ),
                                mon->get_name() );
         who.grab( object_type::NONE );
-        return false;
+        return step != nullptr;
     }
+    const tripoint_rel_ms motion = step ?
+                                   tripoint_rel_ms( sgn( step->displacement.x ), sgn( step->displacement.y ), 0 ) : dp;
+    if( step && ( !step->drags_vehicle( who ) ||
+                  !grabbed_vehicle->supports_fractional_drag( here, motion.raw().xy() ) ) ) {
+        return true;
+    }
+    const bool within_cell = step && dp == tripoint_rel_ms::zero;
+    const auto move_cost = [&]( int grid_cost ) {
+        return step && grid_cost > 0 ? step->scale_cost( grid_cost ) : grid_cost;
+    };
     const vehicle *veh_under_player = veh_pointer_or_null( here.veh_at( who.pos_bub( here ) ) );
     if( grabbed_vehicle == veh_under_player ) {
         // Walking across the vehicle deliberately transfers the handhold to
         // the tile being left, rather than implicitly accepting a new part.
+        if( step ) {
+            return true;
+        }
         who.rebind_grab( here, who.pos_bub( here ) );
         who.grab_point = - dp;
         return false;
@@ -604,11 +602,11 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     bool pushing = false;
     bool pulling = false;
 
-    if( dp == prev_grab ) {
+    if( motion == prev_grab ) {
         // We are pushing in the direction of vehicle
-        dp_veh = dp;
+        dp_veh = motion;
         pushing = true;
-    } else if( std::abs( dp.x() + dp_veh.x() ) != 2 && std::abs( dp.y() + dp_veh.y() ) != 2 ) {
+    } else if( std::abs( motion.x() + dp_veh.x() ) != 2 && std::abs( motion.y() + dp_veh.y() ) != 2 ) {
         // Not actually moving the vehicle, don't do the checks
         add_msg_debug( debugmode::DF_ACTIVITY,
                        "grabbed_veh_move: SIDEWAYS dp=(%d,%d) grab=(%d,%d)->(%d,%d)",
@@ -616,7 +614,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
                        -( dp.x() + dp_veh.x() ), -( dp.y() + dp_veh.y() ) );
         who.grab_point = - ( dp + dp_veh );
         return false;
-    } else if( ( dp.x() == prev_grab.x() || dp.y() == prev_grab.y() ) &&
+    } else if( ( motion.x() == prev_grab.x() || motion.y() == prev_grab.y() ) &&
                next_grab.x() != 0 && next_grab.y() != 0 ) {
         // Zig-zag (or semi-zig-zag) pull: player is diagonal to vehicle
         // and moves away from it, but not directly away
@@ -627,7 +625,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         zigzag = true;
     } else {
         // We are pulling the vehicle
-        next_grab = - dp;
+        next_grab = - motion;
         pulling = true;
     }
 
@@ -660,7 +658,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         //check for bad push/pull angle
         if( veh_has_solid && !veh_single_tile && grabbed_vehicle->steering_effectiveness( here ) > 0 ) {
             tileray my_dir;
-            my_dir.init( dp.xy() );
+            my_dir.init( motion.xy() );
             units::angle face_delta = angle_delta( grabbed_vehicle->face.dir(), my_dir.dir() );
 
             tileray my_pos_dir;
@@ -689,29 +687,29 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     //final strength check and outcomes
     ///\ARM_STR determines ability to drag vehicles
     if( str_req <= str ) {
-        if( str_req == max_str_req ) {
+        if( !within_cell && str_req == max_str_req ) {
             //if vehicle has no wheels, make a noise.
             sounds::sound( grabbed_vehicle->pos_bub( here ), str_req * 2, sounds::sound_t::movement,
                            _( "a scraping noise." ), true, "misc", "scraping" );
         }
         //calculate exertion factor and movement penalty
         ///\EFFECT_STR increases speed of dragging vehicles
-        who.mod_moves( -to_moves<int>( 4_seconds )  * str_req / std::max( 1, str ) );
+        who.mod_moves( -move_cost( to_moves<int>( 4_seconds ) * str_req / std::max( 1, str ) ) );
         ///\EFFECT_STR decreases stamina cost of dragging vehicles
-        who.burn_energy_all( -200 * str_req / std::max( 1, str ) );
-        const int ex = dice( 1, 6 ) - 1 + str_req;
-        if( ex > str + 1 ) {
+        who.burn_energy_all( -move_cost( 200 * str_req / std::max( 1, str ) ) );
+        const int ex = within_cell ? 0 : dice( 1, 6 ) - 1 + str_req;
+        if( !within_cell && ex > str + 1 ) {
             // Pain and movement penalty if exertion exceeds character strength
             who.add_msg_if_player( m_bad, _( "You strain yourself to move the %s!" ), grabbed_vehicle->name );
-            who.mod_moves( -to_moves<int>( 2_seconds ) );
+            who.mod_moves( -move_cost( to_moves<int>( 2_seconds ) ) );
             who.mod_pain( 1 );
             if( !still_holding() || !vehicle::find_vehicle_by_uid( here, vehicle_id ) ) {
                 return true;
             }
-        } else if( ex >= str ) {
+        } else if( !within_cell && ex >= str ) {
             // Movement is slow if exertion nearly equals character strength
             who.add_msg_if_player( _( "It takes some time to move the %s." ), grabbed_vehicle->name );
-            who.mod_moves( -to_moves<int>( 2_seconds ) );
+            who.mod_moves( -move_cost( to_moves<int>( 2_seconds ) ) );
         }
     } else {
         if( invalid_veh_face ) {
@@ -728,7 +726,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         add_msg_debug( debugmode::DF_ACTIVITY,
                        "grabbed_veh_move: STR FAIL str_req=%d str=%d angle=%d",
                        str_req, str, bad_veh_angle ? 1 : 0 );
-        who.mod_moves( -to_moves<int>( 1_seconds ) );
+        who.mod_moves( -move_cost( to_moves<int>( 1_seconds ) ) );
         return true;
     }
 
@@ -742,6 +740,45 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         who.grab( object_type::NONE );
         return true;
     }
+    const auto translate_held_vehicle = [&]() {
+        constexpr int stride = world_position::units_per_tile;
+        const point settled = grabbed_vehicle->fractional_offset() + step->displacement -
+                              dp.xy().raw() * stride;
+        if( std::abs( settled.x ) >= stride || std::abs( settled.y ) >= stride ||
+            !grabbed_vehicle->can_drag_fractionally( here, step->displacement, who ) ) {
+            who.add_msg_if_player( _( "The %s is blocked." ), grabbed_vehicle->name );
+            return false;
+        }
+        if( !within_cell ) {
+            const tripoint_bub_ms destination = who.pos_bub( here ) + dp;
+            const Creature *occupant = get_creature_tracker().creature_at( here.get_abs( destination ), true );
+            const auto vehicle_at_destination = here.veh_at( destination );
+            if( ( occupant && occupant != &who ) || !here.passable_ter_furn( destination ) ||
+                ( vehicle_at_destination && &vehicle_at_destination->vehicle() != grabbed_vehicle ) ) {
+                return false;
+            }
+            // Indexing still uses the entire native cell. A destination cell
+            // cannot be assigned to both the operator and their held vehicle.
+            for( const vpart_reference &part : grabbed_vehicle->get_all_parts_with_fakes() ) {
+                if( !part.part().removed && part.pos_bub( here ) + dp == destination ) {
+                    return false;
+                }
+            }
+            const auto old_rotation = grabbed_vehicle->pivot_rotation[1];
+            const auto old_anchor = grabbed_vehicle->pivot_anchor[1];
+            const auto vehicle_ref = grabbed_vehicle->get_safe_reference();
+            grabbed_vehicle->precalc_mounts( 1, grabbed_vehicle->pivot_rotation[0],
+                                             grabbed_vehicle->pivot_anchor[0] );
+            if( !here.displace_vehicle( *grabbed_vehicle, dp, true, {}, settled ) ) {
+                grabbed_vehicle->precalc_mounts( 1, old_rotation, old_anchor );
+                return false;
+            }
+            return vehicle_ref && still_holding();
+        }
+        grabbed_vehicle->set_fractional_offset( settled, vehicle::offset_kind::parked );
+        return true;
+    };
+
     std::string blocker_name = _( "errors in movement code" );
     bool releases_grab = false;
     const auto try_displace = [&]( const tripoint_rel_ms & md_dp_veh,
@@ -841,6 +878,10 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
             return tripoint_rel_ms::invalid;
         }
 
+        if( !grabbed_vehicle->clears_horizontal_sweep( here, actual_dir, &who ) ) {
+            blocker_name = _( "an obstacle in the turning path" );
+            return tripoint_rel_ms::invalid;
+        }
         if( !here.displace_vehicle( *grabbed_vehicle, actual_dir ) ) {
             return tripoint_rel_ms::invalid;
         }
@@ -852,10 +893,21 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     // First try the move as intended
     // But if that fails and the move is a zig-zag, try to recover:
     // Try to place the vehicle in the position player just left rather than "flattening" the zig-zag
-    tripoint_rel_ms final_dp_veh = try_displace( dp_veh, next_grab );
-    if( final_dp_veh == tripoint_rel_ms::invalid && zigzag ) {
-        final_dp_veh = try_displace( - prev_grab, - dp );
-        next_grab = - dp;
+    tripoint_rel_ms final_dp_veh;
+    if( step ) {
+        if( !translate_held_vehicle() ) {
+            return true;
+        }
+        if( within_cell ) {
+            return false;
+        }
+        final_dp_veh = dp;
+    } else {
+        final_dp_veh = try_displace( dp_veh, next_grab );
+        if( final_dp_veh == tripoint_rel_ms::invalid && zigzag ) {
+            final_dp_veh = try_displace( - prev_grab, - dp );
+            next_grab = - dp;
+        }
     }
 
     if( final_dp_veh == tripoint_rel_ms::invalid ) {
@@ -873,7 +925,9 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
     if( !context || &get_map() != &here ) {
         return true;
     }
-    here.rebuild_vehicle_level_caches();
+    if( !step ) {
+        here.rebuild_vehicle_level_caches();
+    }
     if( !still_holding() ) {
         return true;
     }
@@ -905,7 +959,19 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
         debugmsg( "Grabbed vehicle disappeared" );
         return false;
     }
+    // Fractional movement completes the operator's placement before wheel
+    // effects can damage parts or cause a scripted change to either body.
+    return step ? false : dragged_vehicle_wheel_traps( who, here, vehicle_id );
+}
 
+bool game::dragged_vehicle_wheel_traps( Character &who, map &here, int64_t vehicle_id )
+{
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    vehicle *grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );
+    if( !grabbed_vehicle ) {
+        return true;
+    }
     std::vector<int64_t> wheels;
     for( int index : grabbed_vehicle->wheelcache ) {
         wheels.push_back( grabbed_vehicle->part( index ).get_base().uid().get_value() );
@@ -919,7 +985,7 @@ bool game::grabbed_veh_move( Character &who, const tripoint_rel_ms &dp )
                     break;
                 }
             }
-            if( !lifetime ) {
+            if( !lifetime || !context || &get_map() != &here ) {
                 return true;
             }
             grabbed_vehicle = vehicle::find_vehicle_by_uid( here, vehicle_id );

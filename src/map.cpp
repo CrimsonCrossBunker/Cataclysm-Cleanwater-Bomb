@@ -1686,6 +1686,11 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
 
     // cancel out any movement of the vehicle due only to a change in pivot
     tripoint_rel_ms dp1 = dp - veh.pivot_displacement();
+    if( !vertical && !veh.is_on_ramp && !veh.is_in_water() &&
+        !veh.clears_horizontal_sweep( *this, dp1 ) ) {
+        veh.stop( *this );
+        return &veh;
+    }
 
     int impulse = 0;
 
@@ -1837,14 +1842,15 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         const auto moving_vehicle = veh.get_safe_reference();
         const auto movement_context = get_context_reference();
         const tripoint_abs_ms movement_origin = veh.pos_abs();
+        const point movement_offset = veh.fractional_offset();
         veh.on_move( *this );
         if( !movement_context || !moving_vehicle ) {
             return nullptr;
         }
-        if( veh.pos_abs() != movement_origin ) {
+        if( veh.pos_abs() != movement_origin || veh.fractional_offset() != movement_offset ) {
             return &veh;
         }
-        // Actually change position
+        // Actually change position.
         if( !displace_vehicle( veh, dp1 ) ) {
             veh.stop( *this );
             return &veh;
@@ -2413,7 +2419,7 @@ void map::unboard_vehicle( const tripoint_bub_ms &p, bool dead_passenger )
 }
 
 bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool adjust_pos,
-                            const std::set<int> &parts_to_move )
+                            const std::set<int> &parts_to_move, const std::optional<point> &resting_offset )
 {
     const tripoint_abs_sm old_submap = veh.sm_pos;
     const tripoint_bub_ms src = veh.pos_bub( *this );
@@ -2521,7 +2527,9 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
     if( adjust_pos && dst.z() != src.z() + dp.z() ) {
         veh.is_on_ramp = true;
     }
-    veh.set_fractional_offset( point::zero );
+    const point new_offset = resting_offset.value_or( veh.has_parked_offset() ?
+        veh.fractional_offset() : point::zero );
+    veh.set_fractional_offset( new_offset, vehicle::offset_kind::parked );
     memory_clear_vehicle_points( veh );
 
     Character &player_character = get_player_character();
@@ -2715,9 +2723,8 @@ point map::furniture_offset( const tripoint_bub_ms &p ) const
     return sm ? sm->furniture_offset( local ) : point::zero;
 }
 
-bool map::has_displaced_furniture_near( const tripoint_bub_ms &p ) const
+bool map::has_displaced_furniture_near( const tripoint_bub_ms &p, int radius ) const
 {
-    constexpr int radius = 2;
     const auto first = project_to<coords::sm>( p + point( -radius, -radius ) );
     const auto last = project_to<coords::sm>( p + point( radius, radius ) );
     for( int y = first.y(); y <= last.y(); ++y ) {

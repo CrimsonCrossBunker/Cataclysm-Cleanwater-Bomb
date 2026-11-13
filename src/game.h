@@ -1085,12 +1085,11 @@ class game
         bool grabbed_move( Character &who, const tripoint_rel_ms &dp, bool via_ramp,
                            bool stairs_move = false, const walk_move_choices *choices = nullptr,
                            const fractional_walk *step = nullptr );
-        bool grabbed_veh_move_helper( const tripoint_rel_ms &dp, bool stairs_move );
-        bool grabbed_veh_move_helper( Character &who, const tripoint_rel_ms &dp, bool stairs_move );
-        bool grabbed_veh_move_stairs( const tripoint_rel_ms &dp );
         bool grabbed_veh_move_stairs( Character &who, const tripoint_rel_ms &dp );
-        bool grabbed_veh_move( const tripoint_rel_ms &dp );
-        bool grabbed_veh_move( Character &who, const tripoint_rel_ms &dp );
+        bool grabbed_veh_move( Character &who, const tripoint_rel_ms &dp,
+                               const walk_move_choices *choices = nullptr,
+                               const fractional_walk *step = nullptr );
+        bool dragged_vehicle_wheel_traps( Character &who, map &here, int64_t vehicle_id );
 
         void control_vehicle( const std::optional<tripoint_bub_ms> &p =
                                   std::nullopt ); // Use vehicle controls  '^'
@@ -1137,7 +1136,8 @@ class game
         // Places the player at the specified point; hurts feet, lists items etc.
         point_rel_sm place_player( const tripoint_bub_ms &dest, bool quick = false );
         point_rel_sm place_character( Character &who, const tripoint_bub_ms &dest, bool quick = false,
-                                      const world_position *precise = nullptr );
+                                      const world_position *precise = nullptr,
+                                      const std::function<bool()> &before_placement = {} );
         void place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player = true );
         void perhaps_add_random_npc( bool ignore_spawn_timers_and_rates );
         static void display_om_pathfinding_progress( size_t open_set, size_t known_size );

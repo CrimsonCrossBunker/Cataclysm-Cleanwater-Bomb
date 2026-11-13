@@ -448,6 +448,7 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
         out.end_array();
         if( include_offset ) {
             out.member( "motion_offset", settled_offset );
+            out.member( "parked_offset", true );
         }
         out.end_object();
         out.end_array();
@@ -462,6 +463,7 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
     REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
     CHECK( car->pos_abs() == absolute );
     CHECK( car->fractional_offset() == settled_offset );
+    CHECK( car->has_parked_offset() );
     CHECK( car->face.dir() == units::from_degrees( heading ) );
     CHECK( car->pivot_anchor[0] == pivot );
     CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
@@ -474,5 +476,6 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
     CHECK( car->fractional_offset() == settled_offset );
     REQUIRE( cata_mp::client_apply_message( packet( levels, false ) ) );
     CHECK( car->fractional_offset() == point::zero );
+    CHECK_FALSE( car->has_parked_offset() );
     CHECK( rng_get_engine() == rng );
 }

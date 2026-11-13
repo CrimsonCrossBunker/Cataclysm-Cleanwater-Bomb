@@ -481,6 +481,22 @@ TEST_CASE( "side_towed_vehicle_changes_height_only_at_its_own_ramp",
         clear_avatar();
     } );
     trailer->tow_data.tow_direction = TOW_SIDE;
+
+    SECTION( "cable length includes the subcell position of both anchors" ) {
+        const auto origin = tower->pos_bub( here );
+        trailer->precalc_mounts( 1, trailer->pivot_rotation[0], trailer->pivot_anchor[0] );
+        const auto destination = origin + point( 8, 0 );
+        here.ter_set( destination, ter_id( "t_floor" ) );
+        REQUIRE( here.displace_vehicle( *trailer, destination - trailer->pos_bub( here ) ) );
+        REQUIRE( trailer->pos_bub( here ) == destination );
+        CHECK( tower->no_towing_slack() );
+        trailer->set_fractional_offset( point( -96, 0 ), vehicle::offset_kind::parked );
+        CHECK_FALSE( tower->no_towing_slack() );
+        tower->set_fractional_offset( point( -128, 0 ), vehicle::offset_kind::parked );
+        CHECK( tower->no_towing_slack() );
+        return;
+    }
+
     // Use a high enough speed to overcome the drag on a cart without wheels.
     tower->velocity = 3000;
     tower->do_towing_move( here );
@@ -488,6 +504,107 @@ TEST_CASE( "side_towed_vehicle_changes_height_only_at_its_own_ramp",
     tower->do_towing_move( here );
     CHECK( trailer->pos_bub( here ) == above_ramp );
     CHECK( veh_pointer_or_null( here.veh_at( above_ramp ) ) == trailer );
+}
+
+TEST_CASE( "airship_subtile_travel_respects_open_air_and_obstructions",
+           "[vehicle][airship][render3d]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    const on_out_of_scope cleanup( [] {
+        clear_vehicles();
+        clear_avatar();
+    } );
+    map &here = get_map();
+    const tripoint_bub_ms start( 60, 60, 1 );
+    const tripoint_bub_ms ahead = start + point::east;
+    here.ter_set( start, ter_id( "t_open_air" ) );
+    here.ter_set( ahead, ter_id( "t_open_air" ) );
+    vehicle *const airship = here.add_vehicle( vproto_id( "none" ), start, 0_degrees, 0,
+        veh_spawn_status::UNDAMAGED );
+    REQUIRE( airship );
+    REQUIRE( airship->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    REQUIRE( airship->install_part( here, point_rel_ms::zero, vpart_id( "airship_balloon" ) ) >= 0 );
+    airship->refresh();
+    here.add_vehicle_to_cache( airship );
+    REQUIRE( airship->is_airship( here ) );
+    airship->set_flying( true );
+    airship->tags.insert( "IN_CONTROL_OVERRIDE" );
+    airship->velocity = 100;
+    airship->of_turn = 1.0f;
+
+    REQUIRE( airship->act_on_map( here ) == airship );
+    CHECK( airship->pos_bub( here ) == start );
+    CHECK( airship->fractional_offset() == point( 64, 0 ) );
+
+    here.ter_set( ahead, ter_id( "t_wall" ) );
+    airship->of_turn = 2.0f;
+    REQUIRE( airship->act_on_map( here ) == airship );
+    CHECK( airship->pos_bub( here ) == start );
+    CHECK( airship->fractional_offset() == point::zero );
+    CHECK( airship->is_flying_in_air() );
+}
+
+TEST_CASE( "ground_vehicle_checks_cells_between_its_old_and_new_mounts",
+           "[vehicle][render3d][collision]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    const on_out_of_scope cleanup( [] {
+        clear_vehicles();
+        clear_avatar();
+    } );
+    map &here = get_map();
+    build_test_map( ter_id( "t_pavement" ) );
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const tripoint_bub_ms start( 60, 60, 0 );
+    vehicle *const car = here.add_vehicle( vproto_id( "none" ), start, 0_degrees, 0,
+                                           veh_spawn_status::UNDAMAGED );
+    REQUIRE( car );
+    REQUIRE( car->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    for( int x = 1; x <= 4; ++x ) {
+        for( const int side : {
+                 -1, 1
+             } ) {
+            REQUIRE( car->install_part( here, point_rel_ms( side * x, 0 ), vpart_id( "frame" ) ) >= 0 );
+        }
+    }
+    car->refresh();
+    REQUIRE( car->pivot_point( here ) == point_rel_ms::zero );
+    here.add_vehicle_to_cache( car );
+    const auto origin = car->pos_abs();
+    car->velocity = 100;
+    const tripoint_rel_ms advance = tripoint_rel_ms::east;
+
+    SECTION( "a mid-turn wall is outside both native poses" ) {
+        const tripoint_bub_ms obstruction = start + point( 4, 1 );
+        here.ter_set( obstruction, ter_id( "t_wall" ) );
+        const tileray turn( 90_degrees );
+        car->precalc_mounts( 1, turn.dir(), car->pivot_point( here ) );
+        const tripoint_rel_ms native_advance = advance - car->pivot_displacement();
+        std::vector<veh_collision> collisions;
+        REQUIRE_FALSE( car->collision( here, collisions, native_advance, true ) );
+        REQUIRE( here.move_vehicle( *car, advance, turn ) == car );
+        CHECK( car->pos_abs() == origin );
+        CHECK( car->face.dir() == 0_degrees );
+        CHECK( car->velocity == 0 );
+        CHECK_FALSE( here.veh_at( obstruction ) );
+    }
+    SECTION( "open pavement permits the same turn" ) {
+        const tileray turn( 90_degrees );
+        REQUIRE( here.move_vehicle( *car, advance, turn ) == car );
+        CHECK( car->pos_abs() != origin );
+        CHECK( car->face.dir() == 90_degrees );
+    }
+    SECTION( "driving away preserves the pose after hand translation" ) {
+        car->set_fractional_offset( point( 64, 0 ), vehicle::offset_kind::parked );
+        REQUIRE( here.move_vehicle( *car, advance, car->face ) == car );
+        CHECK( car->pos_abs() != origin );
+        CHECK( car->fractional_offset() == point( 64, 0 ) );
+        CHECK( car->has_parked_offset() );
+    }
 }
 
 TEST_CASE( "vehicle_subtile_travel_stops_before_an_unsettled_obstacle",

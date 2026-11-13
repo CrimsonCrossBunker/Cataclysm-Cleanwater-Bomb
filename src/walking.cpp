@@ -16,6 +16,7 @@
 #include "item.h"
 #include "item_uid.h"
 #include "json.h"
+#include "level_cache.h"
 #include "map.h"
 #include "monster.h"
 #include "player_activity.h"
@@ -94,20 +95,10 @@ std::optional<fractional_walk> fractional_walk::resolve( const world_position &f
     return fractional_walk{ *target, displacement, low };
 }
 
-namespace
-{
-
-int half_body_width( const Creature &who )
-{
-    // Keep every body narrower than a gameplay cell. Small passages
-    // and fitting checks for its destination remain with native walking.
-    return 32 + 16 * ( static_cast<int>( who.get_size() ) -
-                       static_cast<int>( creature_size::tiny ) );
-}
-
-// A line segment against an axis-aligned rectangle in fixed-point units.
-bool swept_rectangle_intersects( const point &start, const point &delta, int left, int bottom,
-                                 int right, int top )
+// A fixed-point translation against the open interior of a rectangle.
+// Touching an edge without entering it does not constitute a collision.
+bool swept_horizontal_rectangle_intersects( const point &start, const point &delta,
+        int left, int bottom, int right, int top )
 {
     const point end = start + delta;
     if( std::max( start.x, end.x ) <= left || std::min( start.x, end.x ) >= right ||
@@ -122,10 +113,21 @@ bool swept_rectangle_intersects( const point &start, const point &delta, int lef
     return delta == point::zero || normal_distance < extent;
 }
 
+namespace
+{
+
+int half_body_width( const Creature &who )
+{
+    // Keep every body narrower than a gameplay cell. Small passages
+    // and fitting checks for its destination remain with native walking.
+    return 32 + 16 * ( static_cast<int>( who.get_size() ) -
+                       static_cast<int>( creature_size::tiny ) );
+}
+
 bool swept_body_clear( const map &here, const tripoint_bub_ms &origin,
                        const tripoint_bub_ms &destination, const point &start,
                        const point &delta, int half_width,
-                       const std::optional<tripoint_bub_ms> &held )
+                       const std::optional<tripoint_bub_ms> &held, const vehicle *held_vehicle )
 {
     constexpr int tile = world_position::units_per_tile;
     for( int y = -1; y <= 1; ++y ) {
@@ -145,43 +147,59 @@ bool swept_body_clear( const map &here, const tripoint_bub_ms &origin,
                 const bool retreating = start.x > left && start.x < right &&
                                         start.y > bottom && start.y < top &&
                                         toward_x <= 0 && toward_y <= 0 && ( toward_x < 0 || toward_y < 0 );
-                if( !retreating && swept_rectangle_intersects( start, delta, left, bottom, right, top ) &&
-                    here.impassable( cell ) ) {
+                if( !retreating &&
+                    swept_horizontal_rectangle_intersects( start, delta, left, bottom, right, top ) &&
+                    here.move_cost( cell, held_vehicle ) == 0 ) {
                     return false;
                 }
             }
         }
     }
-    // Displaced obstacles also occupy the part of their footprint outside
-    // their native cell. Walkers approaching from a neighbor see that edge.
-    if( !here.has_displaced_furniture_near( origin ) ) {
+    // Obstacles can also extend outside their native cell.
+    const bool displaced_furniture = here.has_displaced_furniture_near( origin );
+    const bool has_vehicles = here.get_cache_ref( origin.z() ).get_veh_in_active_range();
+    if( !displaced_furniture && !has_vehicles ) {
         return true;
     }
+    const auto hits_obstacle = [&]( const point & corner ) {
+        const int left = corner.x - half_width;
+        const int bottom = corner.y - half_width;
+        const int right = left + tile + 2 * half_width;
+        const int top = bottom + tile + 2 * half_width;
+        if( !swept_horizontal_rectangle_intersects( start, delta, left, bottom, right, top ) ) {
+            return false;
+        }
+        if( start.x > left && start.x < right && start.y > bottom && start.y < top ) {
+            const point center( ( left + right ) / 2, ( bottom + top ) / 2 );
+            // Permit walking out of a footprint that already overlaps the character.
+            return ( start.x - center.x ) * delta.x + ( start.y - center.y ) * delta.y <= 0;
+        }
+        return true;
+    };
     for( int y = -2; y <= 2; ++y ) {
         for( int x = -2; x <= 2; ++x ) {
             const tripoint_bub_ms cell = origin + point( x, y );
-            if( cell == held ) {
+            const point corner( x * tile, y * tile );
+            const int reach = tile - 1 + half_width;
+            if( !swept_horizontal_rectangle_intersects( start, delta, corner.x - reach,
+                    corner.y - reach, corner.x + tile + reach, corner.y + tile + reach ) ) {
                 continue;
             }
-            const point offset = here.furniture_offset( cell );
-            if( offset == point::zero || here.furn( cell )->movecost >= 0 ) {
-                continue;
-            }
-            const point corner = point( x * tile, y * tile ) + offset;
-            const int left = corner.x - half_width;
-            const int bottom = corner.y - half_width;
-            const int right = left + tile + 2 * half_width;
-            const int top = bottom + tile + 2 * half_width;
-            if( !swept_rectangle_intersects( start, delta, left, bottom, right, top ) ) {
-                continue;
-            }
-            if( start.x > left && start.x < right && start.y > bottom && start.y < top ) {
-                const point center( ( left + right ) / 2, ( bottom + top ) / 2 );
-                if( ( start.x - center.x ) * delta.x + ( start.y - center.y ) * delta.y > 0 ) {
-                    continue;
+            if( displaced_furniture && cell != held ) {
+                const point offset = here.furniture_offset( cell );
+                if( offset != point::zero && here.furn( cell )->movecost < 0 &&
+                    hits_obstacle( corner + offset ) ) {
+                    return false;
                 }
             }
-            return false;
+            if( has_vehicles ) {
+                const auto part = here.veh_at( cell );
+                if( part && &part->vehicle() != held_vehicle &&
+                    part->vehicle().fractional_offset() != point::zero && part.obstacle_at_part() &&
+                    hits_obstacle( corner + part->vehicle().fractional_offset() ) ) {
+                    return false;
+                }
+            }
         }
     }
     return true;
@@ -189,9 +207,9 @@ bool swept_body_clear( const map &here, const tripoint_bub_ms &origin,
 
 } // namespace
 
-static bool furniture_drag_direction( const Character &who, const point &delta )
+static bool straight_drag_direction( const Character &who, const point &delta )
 {
-    const point direction( ( delta.x > 0 ) - ( delta.x < 0 ), ( delta.y > 0 ) - ( delta.y < 0 ) );
+    const point direction( sgn( delta.x ), sgn( delta.y ) );
     const point hold = who.grab_point.raw().xy();
     return hold != point::zero && ( hold == direction || hold == -direction );
 }
@@ -199,7 +217,33 @@ static bool furniture_drag_direction( const Character &who, const point &delta )
 bool fractional_walk::drags_furniture( const Character &who ) const
 {
     return who.get_grab_type() == object_type::FURNITURE && who.grab_point.z() == 0 &&
-           furniture_drag_direction( who, displacement );
+           straight_drag_direction( who, displacement );
+}
+
+bool fractional_walk::drags_vehicle( const Character &who ) const
+{
+    return who.get_grab_type() == object_type::VEHICLE && who.grab_point.z() == 0 &&
+           straight_drag_direction( who, displacement );
+}
+
+bool fractional_walk::supports_grab( const Character &who, const map &here ) const
+{
+    if( who.get_grab_type() == object_type::NONE || drags_furniture( who ) ) {
+        return true;
+    }
+    if( !drags_vehicle( who ) || who.is_mounted() ) {
+        return false;
+    }
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const auto part = here.veh_at( origin + who.grab_point );
+    const tripoint_bub_ms landing = here.get_bub( target.tile() );
+    const point direction( sgn( displacement.x ), sgn( displacement.y ) );
+    return part && veh_pointer_or_null( here.veh_at( origin ) ) != &part->vehicle() &&
+           here.has_loaded_submap( landing ) && here.has_floor( origin ) && here.has_floor( landing ) &&
+           !here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, origin ) &&
+           !here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, landing ) &&
+           here.ramp_z_offset( landing ) == 0 && !here.ramp_segment_at( landing ) &&
+           part->vehicle().supports_fractional_drag( here, direction );
 }
 
 point fractional_walk::furniture_landing_offset( const Character &who, const map &here ) const
@@ -218,7 +262,13 @@ bool fractional_walk::clears_obstacles( const map &here, const Character &who,
                            std::max( half_body_width( who ), half_body_width( *who.mounted_creature ) ) :
                            half_body_width( who );
     std::optional<tripoint_bub_ms> held;
-    if( drags_furniture( who ) ) {
+    const vehicle *held_vehicle = nullptr;
+    if( drags_vehicle( who ) ) {
+        held_vehicle = veh_pointer_or_null( here.veh_at( origin + who.grab_point ) );
+        if( !held_vehicle || landing.z() != origin.z() || !who.grab_matches( here ) ) {
+            return false;
+        }
+    } else if( drags_furniture( who ) ) {
         constexpr int tile = world_position::units_per_tile;
         held = origin + who.grab_point;
         if( landing.z() != origin.z() || !here.has_loaded_submap( *held ) ||
@@ -244,8 +294,8 @@ bool fractional_walk::clears_obstacles( const map &here, const Character &who,
             for( int x = -2; x <= 2; ++x ) {
                 const point delta( x, y );
                 const point edge = delta * tile;
-                if( !swept_rectangle_intersects( offset, displacement, edge.x - tile,
-                                                 edge.y - tile, edge.x + tile, edge.y + tile ) ) {
+                if( !swept_horizontal_rectangle_intersects( offset, displacement, edge.x - tile,
+                        edge.y - tile, edge.x + tile, edge.y + tile ) ) {
                     continue;
                 }
                 const tripoint_bub_ms cell = *held + delta;
@@ -263,10 +313,10 @@ bool fractional_walk::clears_obstacles( const map &here, const Character &who,
         }
     }
     return swept_body_clear( here, origin, destination, who.pos_world().offset().xy(),
-                             displacement, half_width, held ) &&
+                             displacement, half_width, held, held_vehicle ) &&
            ( landing.z() == origin.z() ||
              swept_body_clear( here, landing, landing, target.offset().xy(), point::zero, half_width,
-                               std::nullopt ) );
+                               std::nullopt, nullptr ) );
 }
 
 int fractional_walk::scale_cost( int full_tile_cost ) const

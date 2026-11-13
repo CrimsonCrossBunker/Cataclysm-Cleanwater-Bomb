@@ -51,6 +51,7 @@
 #include "veh_type.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "walking.h"
 #include "world_position.h"
 
 #define dbg(x) DebugLog((x),D_MAP) << __FILE__ << ":" << __LINE__ << ": "
@@ -775,7 +776,9 @@ void vehicle::stop( map &here )
     move = face;
     last_turn = 0_degrees;
     of_turn_carry = 0;
-    set_fractional_offset( point::zero );
+    if( !has_parked_offset() ) {
+        set_fractional_offset( point::zero );
+    }
     for( const tripoint_abs_ms &p : get_points() ) {
         if( here.inbounds( p ) ) {
             here.memory_cache_dec_set_dirty( here.get_bub( p ), true );
@@ -2129,23 +2132,35 @@ point vehicle::fractional_offset() const
     return motion_offset;
 }
 
-void vehicle::set_fractional_offset( const point &offset )
+void vehicle::set_fractional_offset( const point &offset, offset_kind kind )
 {
     constexpr int limit = world_position::units_per_tile - 1;
     motion_offset = point( std::clamp( offset.x, -limit, limit ),
                            std::clamp( offset.y, -limit, limit ) );
+    motion_offset_kind = motion_offset == point::zero ? offset_kind::driving_preview : kind;
 }
 
-static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &offset )
+bool vehicle::has_parked_offset() const
+{
+    return motion_offset_kind == offset_kind::parked;
+}
+
+static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &offset,
+                                    bool airborne )
 {
     // A structural part occupies its full tile. A translation of less than
     // one tile can touch at most three new cells from that tile. Check the
     // whole swept bounds so a thin diagonal gap cannot admit the chassis.
     const int sx = sgn( offset.x );
     const int sy = sgn( offset.y );
-    const auto has_surface = [&here]( const tripoint_bub_ms & tile ) {
-        return here.has_loaded_submap( tile ) && here.move_cost_ter_furn( tile ) == 2 &&
-               !here.get_impassable_field_at( tile ) && here.has_floor( tile ) &&
+    const auto can_enter = [&here, airborne]( const tripoint_bub_ms & tile ) {
+        if( !here.has_loaded_submap( tile ) || here.field_at( tile ).any_negative_move_cost() ) {
+            return false;
+        }
+        if( airborne ) {
+            return !here.has_floor( tile ) && here.passable_ter_furn( tile );
+        }
+        return here.move_cost_ter_furn( tile ) == 2 && here.has_floor( tile ) &&
                ( !here.has_flag( ter_furn_flag::TFLAG_RAMP, tile ) ||
                  here.ramp_segment_at( tile ).has_value() || here.ramp_z_offset( tile ) != 0 );
     };
@@ -2160,14 +2175,17 @@ static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &
     };
     bool has_hull = false;
     for( const vpart_reference &part : veh.get_all_parts_with_fakes() ) {
+        const bool rotor = airborne && part.info().has_flag( VPFLAG_ROTOR );
         if( part.part().removed ||
-            ( !part.part().is_fake && part.info().location != vpart_location_structure ) ) {
+            ( !part.part().is_fake && part.info().location != vpart_location_structure && !rotor ) ) {
             continue;
         }
         const tripoint_bub_ms from = part.pos_bub( here );
-        if( !has_surface( from ) ) {
+        if( !can_enter( from ) ) {
             return false;
         }
+        const int rotor_radius = rotor ?
+                                 std::lround( part.info().rotor_info->rotor_diameter / 2.0f ) : 0;
         has_hull = true;
         for( int y = std::min( 0, sy ); y <= std::max( 0, sy ); ++y ) {
             for( int x = std::min( 0, sx ); x <= std::max( 0, sx ); ++x ) {
@@ -2175,13 +2193,205 @@ static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &
                     continue;
                 }
                 const tripoint_bub_ms entry = from + point( x, y );
-                if( !has_surface( entry ) || !is_unoccupied( entry ) ) {
+                if( !can_enter( entry ) || !is_unoccupied( entry ) ) {
                     return false;
                 }
+                if( airborne ) {
+                    if( rotor ) {
+                        for( const tripoint_bub_ms &cell : here.points_in_radius( entry, rotor_radius ) ) {
+                            if( !can_enter( cell ) || !is_unoccupied( cell ) ) {
+                                return false;
+                            }
+                        }
+                    }
+                    continue;
+                }
                 const tripoint_bub_ms landing = here.ramp_landing( entry );
-                if( landing != entry && ( !has_surface( landing ) ||
+                if( landing != entry && ( !can_enter( landing ) ||
                                           !here.ramp_segment_at( landing ) || !is_unoccupied( landing ) ) ) {
                     return false;
+                }
+            }
+        }
+    }
+    return has_hull;
+}
+
+// The native tile pose uses tileray rounding. Interpolate the difference
+// between that pose and rigid rotation so the sweep joins both native poses.
+bool vehicle::clears_horizontal_sweep( map &here, const tripoint_rel_ms &dp,
+                                       const Creature *ignored )
+{
+    const units::angle from_heading = pivot_rotation[0];
+    const units::angle to_heading = pivot_rotation[1];
+    const point parked = has_parked_offset() ? fractional_offset() : point::zero;
+    if( from_heading == to_heading && parked == point::zero ) {
+        return true;
+    }
+    constexpr int stride = world_position::units_per_tile;
+    const double turn = to_radians( normalize( to_heading - from_heading + 180_degrees ) -
+                                    180_degrees );
+    const tripoint_bub_ms pivot = pos_bub( here );
+    const std::vector<rider_data> riders = get_riders();
+    const creature_tracker &creatures = get_creature_tracker();
+    for( const vpart_reference &part_ref : get_all_parts_with_fakes() ) {
+        const vehicle_part &part = part_ref.part();
+        if( part.removed || ( !part.is_fake && part_ref.info().location != vpart_location_structure &&
+                              !part_ref.info().has_flag( VPFLAG_ROTOR ) ) ) {
+            continue;
+        }
+        const tripoint_bub_ms from = part_ref.pos_bub( here );
+        const tripoint_bub_ms to = pivot + dp + part.precalc[1];
+        if( from.z() != to.z() || here.ramp_landing( to ) != to ) {
+            continue;
+        }
+
+        // Rotate the mount center about the original pivot, then interpolate
+        // the correction to the rounded old and new grid positions.
+        const point mount = ( part.mount - pivot_anchor[0] ).raw();
+        const auto rigid_center = [&]( double t ) {
+            const units::angle angle = from_heading + units::from_radians( turn * t );
+            return rl_vec2d( units::cos( angle ) * mount.x - units::sin( angle ) * mount.y,
+                             units::sin( angle ) * mount.x + units::cos( angle ) * mount.y ) * stride;
+        };
+        const point origin = ( from - pivot ).xy().raw() * stride;
+        const point travel = ( to - from ).xy().raw() * stride;
+        const rl_vec2d correction_from = rl_vec2d( origin.x, origin.y ) - rigid_center( 0.0 );
+        const rl_vec2d correction_to =
+            rl_vec2d( origin.x + travel.x, origin.y + travel.y ) - rigid_center( 1.0 );
+        const rl_vec2d correction_delta = correction_to - correction_from;
+        const double radius = std::hypot( mount.x, mount.y );
+        // Each chord covers at most a quarter tile of center travel. Bound
+        // the curved segment between samples by its sagitta as well.
+        const int segments = std::max( 1, static_cast<int>( std::ceil(
+                4.0 * ( radius * std::abs( turn ) +
+                        std::hypot( correction_delta.x, correction_delta.y ) / stride ) ) ) );
+        const int curvature_margin = static_cast<int>( std::ceil(
+                stride * radius * ( 1.0 - std::cos( turn / ( 2.0 * segments ) ) ) ) );
+        const int rotor_radius = part_ref.info().has_flag( VPFLAG_ROTOR ) ?
+                                 std::lround( part_ref.info().rotor_info->rotor_diameter / 2.0f ) : 0;
+        const int margin = stride * ( 1 + rotor_radius ) + curvature_margin;
+        point previous = parked;
+        for( int i = 1; i <= segments; ++i ) {
+            const double t = static_cast<double>( i ) / segments;
+            const rl_vec2d center = rigid_center( t ) + correction_from + correction_delta * t;
+            const point next( std::lround( center.x ) - origin.x + parked.x,
+                              std::lround( center.y ) - origin.y + parked.y );
+            const int min_x = divide_round_down( std::min( previous.x, next.x ) - margin, stride );
+            const int min_y = divide_round_down( std::min( previous.y, next.y ) - margin, stride );
+            const int max_x = divide_round_down( std::max( previous.x, next.x ) + margin, stride );
+            const int max_y = divide_round_down( std::max( previous.y, next.y ) + margin, stride );
+            for( int y = min_y; y <= max_y; ++y ) {
+                for( int x = min_x; x <= max_x; ++x ) {
+                    const tripoint_bub_ms cell = from + point( x, y );
+                    // Native destination impacts retain their regular damage and RNG.
+                    if( cell == from || cell == to ||
+                        ( rotor_radius > 0 && ( square_dist( cell.raw(), from.raw() ) <= rotor_radius ||
+                                                square_dist( cell.raw(), to.raw() ) <= rotor_radius ) ) ||
+                        !swept_horizontal_rectangle_intersects( previous, next - previous,
+                                x * stride - margin, y * stride - margin,
+                                x * stride + margin, y * stride + margin ) ) {
+                        continue;
+                    }
+                    if( !here.has_loaded_submap( cell ) ) {
+                        return false;
+                    }
+                    const auto absolute = here.get_abs( cell );
+                    const Creature *occupant = creatures.creature_at( absolute, true );
+                    const bool is_rider = occupant && std::any_of( riders.begin(), riders.end(),
+                    [&]( const rider_data & rider ) {
+                        return rider.psg == occupant;
+                    } );
+                    if( part_collision( here, part_ref.part_index(), absolute, true, false,
+                                        is_rider ? occupant : ignored ).type != veh_coll_nothing ) {
+                        return false;
+                    }
+                }
+            }
+            previous = next;
+        }
+    }
+    return true;
+}
+
+bool vehicle::supports_fractional_drag( const map &here, const point &direction ) const
+{
+    if( velocity != 0 || vertical_velocity != 0 || requested_z_change != 0 || is_flying ||
+        is_falling || is_on_ramp || is_in_water() || is_towing() || is_towed() ||
+        !rail_wheelcache.empty() || !rotors.empty() || !get_riders().empty() ) {
+        return false;
+    }
+    const tripoint_bub_ms pivot = pos_bub( here );
+    const auto on_ramp = [&]( const tripoint_bub_ms & cell ) {
+        return here.ramp_z_offset( cell ) != 0 || here.ramp_segment_at( cell ).has_value();
+    };
+    if( on_ramp( pivot ) || on_ramp( pivot + direction ) ) {
+        return false;
+    }
+    for( const vpart_reference &part : get_all_parts_with_fakes() ) {
+        const tripoint_bub_ms cell = part.pos_bub( here );
+        if( !part.part().removed &&
+            ( cell.z() != pivot.z() || on_ramp( cell ) || on_ramp( cell + direction ) ) ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool vehicle::can_drag_fractionally( const map &here, const point &delta,
+                                     const Character &who ) const
+{
+    constexpr int stride = world_position::units_per_tile;
+    const point start = fractional_offset();
+    const creature_tracker &creatures = get_creature_tracker();
+    bool has_hull = false;
+    for( const vpart_reference &part : get_all_parts_with_fakes() ) {
+        if( part.part().removed ||
+            ( !part.part().is_fake && part.info().location != vpart_location_structure ) ) {
+            continue;
+        }
+        has_hull = true;
+        const tripoint_bub_ms origin = part.pos_bub( here );
+        constexpr int radius = 3;
+        const bool displaced_furniture = here.has_displaced_furniture_near( origin, radius );
+        for( int y = -radius; y <= radius; ++y ) {
+            for( int x = -radius; x <= radius; ++x ) {
+                const point edge( x * stride, y * stride );
+                // A native footprint can itself be shifted by almost a tile.
+                const int margin = 2 * stride - 1;
+                if( !swept_horizontal_rectangle_intersects( start, delta, edge.x - margin,
+                        edge.y - margin, edge.x + margin, edge.y + margin ) ) {
+                    continue;
+                }
+                const tripoint_bub_ms cell = origin + point( x, y );
+                const auto overlaps = [&]( const point & low_corner ) {
+                    return swept_horizontal_rectangle_intersects( start, delta,
+                        low_corner.x - stride, low_corner.y - stride,
+                        low_corner.x + stride, low_corner.y + stride );
+                };
+                if( overlaps( edge ) ) {
+                    if( !here.has_loaded_submap( cell ) || !here.has_floor( cell ) ||
+                        !here.passable_ter_furn( cell ) || here.field_at( cell ).any_negative_move_cost() ||
+                        here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, cell ) ||
+                        here.ramp_z_offset( cell ) != 0 || here.ramp_segment_at( cell ) ) {
+                        return false;
+                    }
+                    const Creature *occupant = creatures.creature_at( here.get_abs( cell ), true );
+                    if( occupant && occupant != &who ) {
+                        return false;
+                    }
+                }
+                const auto existing = here.veh_at( cell );
+                if( existing && &existing->vehicle() != this &&
+                    overlaps( edge + existing->vehicle().fractional_offset() ) ) {
+                    return false;
+                }
+                if( displaced_furniture ) {
+                    const point offset = here.furniture_offset( cell );
+                    if( offset != point::zero && here.furn( cell )->movecost < 0 &&
+                        overlaps( edge + offset ) ) {
+                        return false;
+                    }
                 }
             }
         }
@@ -2271,14 +2481,16 @@ vehicle *vehicle::act_on_map( map &here )
     // Can't afford it this turn?
     // Low speed shouldn't prevent vehicle from falling, though
     bool falling_only = false;
-    if( turn_cost >= of_turn && ( ( !is_flying && requested_z_change == 0 ) ||
-                                  !is_aircraft( here ) ) ) {
+    const bool vertical_command = requested_z_change != 0 && is_aircraft( here );
+    if( turn_cost >= of_turn && !vertical_command ) {
         if( !should_fall ) {
             // Advance the current hull toward the next native landing. The
             // native move still commits orientation, impact and wheel effects.
             point offset = point::zero;
-            if( controlled && !skidding && !is_in_water() &&
-                !wheelcache.empty() && rail_wheelcache.empty() && !is_flying &&
+            const bool airborne = is_flying && is_aircraft( here );
+            const bool ground_drive = !is_flying && !is_in_water() && !wheelcache.empty() &&
+                                      rail_wheelcache.empty();
+            if( !has_parked_offset() && controlled && !skidding && ( airborne || ground_drive ) &&
                 !is_towing() && !is_towed() && requested_z_change == 0 && !turning_arc ) {
                 constexpr int stride = world_position::units_per_tile;
                 const int distance = std::clamp( static_cast<int>( of_turn / turn_cost * stride ),
@@ -2286,11 +2498,13 @@ vehicle *vehicle::act_on_map( map &here )
                 tileray step = turn_dir == face.dir() ? face : tileray( turn_dir );
                 step.advance( velocity < 0 ? -1 : 1 );
                 offset = point( distance * step.dx(), distance * step.dy() );
-                if( distance > 0 && !vehicle_sweep_is_clear( here, *this, offset ) ) {
+                if( distance > 0 && !vehicle_sweep_is_clear( here, *this, offset, airborne ) ) {
                     offset = point::zero;
                 }
             }
-            set_fractional_offset( offset );
+            if( !has_parked_offset() ) {
+                set_fractional_offset( offset );
+            }
             of_turn_carry = of_turn;
             of_turn = 0;
             return this;
@@ -2395,7 +2609,9 @@ vehicle *vehicle::act_on_map( map &here )
         }
     }
 
-    set_fractional_offset( point::zero );
+    if( !has_parked_offset() ) {
+        set_fractional_offset( point::zero );
+    }
     return here.move_vehicle( *this, dp, mdir );
 }
 

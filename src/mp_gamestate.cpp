@@ -2205,6 +2205,9 @@ static std::string vehicle_pose_fields( const vehicle &veh )
         stream << ",\"motion_offset\":";
         JsonOut offset_out( stream );
         offset_out.write( offset );
+        if( veh.has_parked_offset() ) {
+            stream << ",\"parked_offset\":true";
+        }
     }
     return ",\"pose\":" + stream.str();
 }
@@ -7944,6 +7947,8 @@ static void apply_vehicle_sync( JsonObject &jo )
 
         point_rel_ms pivot;
         point motion_offset = point::zero;
+        const vehicle::offset_kind offset_kind = vo.get_bool( "parked_offset", false ) ?
+            vehicle::offset_kind::parked : vehicle::offset_kind::driving_preview;
         double mount_heading = face_deg;
         std::vector<int> part_levels;
         const bool has_pose = vo.has_array( "pose" );
@@ -7982,7 +7987,7 @@ static void apply_vehicle_sync( JsonObject &jo )
                 if( has_pose && m.apply_vehicle_replica_pose( *restored, new_abs,
                         units::from_degrees( face_deg ), units::from_degrees( mount_heading ),
                         pivot, part_levels ) ) {
-                    restored->set_fractional_offset( motion_offset );
+                    restored->set_fractional_offset( motion_offset, offset_kind );
                 }
             }
             continue;
@@ -8001,7 +8006,7 @@ static void apply_vehicle_sync( JsonObject &jo )
                 continue;
             }
             found->turn_dir = units::from_degrees( turn_dir_deg );
-            found->set_fractional_offset( motion_offset );
+            found->set_fractional_offset( motion_offset, offset_kind );
         } else {
             found->set_fractional_offset( point::zero );
             const bool face_changed = ( found->face.dir() != face_angle );

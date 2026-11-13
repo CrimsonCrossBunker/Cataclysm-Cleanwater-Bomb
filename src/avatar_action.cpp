@@ -10,6 +10,7 @@
 #include <safe_reference.h>
 #include <translation.h>
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstdint>
 #include <cstdlib>
@@ -265,7 +266,8 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
         return std::nullopt;
     }
     const world_position origin = you.pos_world();
-    if( step && step->target.tile() == origin.tile() ) {
+    const bool within_cell = step && step->target.tile() == origin.tile();
+    if( within_cell && !step->drags_vehicle( you ) ) {
         walk_move_choices choices;
         choices.destination = origin.tile();
         return choices;
@@ -274,7 +276,9 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
     if( !m.has_loaded_submap( destination ) ) {
         return std::nullopt;
     }
-    destination.z() += m.ramp_z_offset( destination );
+    if( !within_cell ) {
+        destination.z() += m.ramp_z_offset( destination );
+    }
     if( !m.has_loaded_submap( destination ) ) {
         return std::nullopt;
     }
@@ -289,9 +293,9 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
                m.furn( m.get_bub( *choices.destination ) ) == furniture;
     };
     // Modal UI may pump network updates. Carry identities, never borrowed parts.
-    const std::vector<tripoint_abs_ms> targets = { *choices.destination,
-                                                   m.get_abs( you.pos_bub( m ) + you.grab_point )
-                                                 };
+    const std::array<tripoint_abs_ms, 2> targets = { *choices.destination,
+                                                     m.get_abs( you.pos_bub( m ) + you.grab_point )
+                                                   };
     for( const auto &target : targets ) {
         const optional_vpart_position vp = m.veh_at( m.get_bub( target ) );
         if( !vp || !vp->vehicle().has_owner() || vp->vehicle().is_owned_by( you ) ||
@@ -312,6 +316,9 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
         }
         choices.allow_theft = true;
         choices.theft_vehicles.push_back( identity );
+    }
+    if( within_cell ) {
+        return unchanged() ? std::optional<walk_move_choices>( choices ) : std::nullopt;
     }
     const optional_vpart_position from = m.veh_at( you.pos_bub( m ) );
     const bool dive_from_vehicle = from && std::abs( from->vehicle().velocity ) > 100 &&
@@ -964,8 +971,9 @@ bool avatar_action::can_move_fractional( const Character &you, const map &here )
 {
     const bool powered_mount = you.is_mounted() &&
                                you.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH );
+    const object_type grab = you.get_grab_type();
     return here.has_loaded_submap( you.pos_bub( here ) ) && !you.in_vehicle && !powered_mount &&
-           ( you.get_grab_type() == object_type::NONE || you.get_grab_type() == object_type::FURNITURE ) &&
+           ( grab == object_type::NONE || grab == object_type::FURNITURE || grab == object_type::VEHICLE ) &&
            !you.has_effect( effect_stunned ) && !you.has_effect( effect_psi_stunned );
 }
 
@@ -976,7 +984,7 @@ bool avatar_action::move_fractional( Character &you, map &m, const point &delta,
         return false;
     }
     const auto step = fractional_walk::resolve( you.pos_world(), delta );
-    return step && ( you.get_grab_type() == object_type::NONE || step->drags_furniture( you ) ) &&
+    return step && step->supports_grab( you, m ) &&
            move_character( you, m, step->target.tile() - you.pos_abs(), choices, &*step );
 }
 

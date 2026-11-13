@@ -4995,7 +4995,8 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "of_turn_carry", of_turn_carry );
     point offset;
     data.read( "motion_offset", offset );
-    set_fractional_offset( offset );
+    set_fractional_offset( offset, data.get_bool( "parked_offset", false ) ?
+                           offset_kind::parked : offset_kind::driving_preview );
     data.read( "is_locked", is_locked );
     data.read( "is_alarm_on", is_alarm_on );
     data.read( "camera_on", camera_on );
@@ -5122,6 +5123,9 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "of_turn_carry", of_turn_carry );
     if( fractional_offset() != point::zero ) {
         json.member( "motion_offset", fractional_offset() );
+        if( has_parked_offset() ) {
+            json.member( "parked_offset", true );
+        }
     }
     json.member( "name", name );
     json.member( "owner", owner );

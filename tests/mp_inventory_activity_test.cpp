@@ -12768,6 +12768,117 @@ TEST_CASE( "vehicle_drag_preserves_the_operator_offset_and_rejects_blocked_turns
     }
 }
 
+TEST_CASE( "fractional_vehicle_drag_settles_one_authoritative_hull",
+           "[grab_owned][fractional_walk][multiplayer][vehicle]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const auto held = origin + point::east;
+    const auto landing = held + point::east;
+    for( const auto &cell : {
+             origin + point::west, origin, held, landing
+         } ) {
+        here.ter_set( cell, ter_id( "t_floor" ) );
+    }
+    vehicle *const cart = here.add_vehicle( vproto_id( "none" ), held, 0_degrees, 0,
+                                            veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart );
+    cart->set_owner( who.get_faction_id() );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "board" ) ) >= 0 );
+    cart->refresh();
+    here.add_vehicle_to_cache( cart );
+    who.set_str_base( 50 );
+    who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
+    REQUIRE( who.validate_grab( here ) );
+    const auto handhold = who.grab_generation();
+
+    const auto request_step = [&]( const point & delta ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), delta );
+        REQUIRE( step );
+        walk_move_choices choices;
+        choices.destination = step->target.tile();
+        who.set_moves( 1000 );
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", who.pos_abs() );
+            out.member( "origin_offset", who.pos_world().offset() );
+            out.member( "direction", step->target.tile() - who.pos_abs() );
+            out.member( "fractional_delta", step->displacement );
+            out.member( "mode", "walk" );
+            out.member( "choices", choices );
+        } ) );
+    };
+
+    SECTION( "push survives an idle turn and a save, then crosses one cell" ) {
+        request_step( point( 64, 0 ) );
+        CHECK( who.pos_bub( here ) == origin );
+        CHECK( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+        CHECK( cart->pos_bub( here ) == held );
+        CHECK( cart->fractional_offset() == point( 64, 0 ) );
+        REQUIRE( cart->has_parked_offset() );
+        cart->of_turn = 1.0f;
+        REQUIRE( cart->act_on_map( here ) == cart );
+        CHECK( cart->fractional_offset() == point( 64, 0 ) );
+
+        std::ostringstream stream;
+        JsonOut out( stream );
+        cart->serialize( out );
+        const JsonValue saved = json_loader::from_string( stream.str() );
+        vehicle restored( vproto_id( "none" ) );
+        restored.deserialize( saved.get_object() );
+        CHECK( restored.fractional_offset() == point( 64, 0 ) );
+        CHECK( restored.has_parked_offset() );
+
+        request_step( point( 64, 0 ) );
+        CHECK( who.pos_bub( here ) == held );
+        CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
+        CHECK_FALSE( who.in_vehicle );
+        CHECK( cart->pos_bub( here ) == landing );
+        CHECK( cart->fractional_offset() == point( -128, 0 ) );
+        CHECK( cart->face.dir() == 0_degrees );
+        CHECK_FALSE( here.veh_at( held ) );
+        CHECK( veh_pointer_or_null( here.veh_at( landing ) ) == cart );
+        CHECK( who.grab_matches( here ) );
+        CHECK( who.grab_generation() == handhold );
+    }
+    SECTION( "blocked hull cannot advance even within its current cell" ) {
+        here.ter_set( landing, ter_id( "t_wall" ) );
+        const world_position before = who.pos_world();
+        request_step( point( 64, 0 ) );
+        CHECK( who.pos_world() == before );
+        CHECK( cart->pos_bub( here ) == held );
+        CHECK( cart->fractional_offset() == point::zero );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "a pull moves through the operator's vacated coordinates" ) {
+        request_step( point( -64, 0 ) );
+        request_step( point( -128, 0 ) );
+        CHECK( who.pos_bub( here ) == origin + point::west );
+        CHECK( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+        CHECK( cart->pos_bub( here ) == origin );
+        CHECK( cart->fractional_offset() == point( 64, 0 ) );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "another player collides with the part extending past the cached tile" ) {
+        request_step( point( 64, 0 ) );
+        REQUIRE( cart->fractional_offset() == point( 64, 0 ) );
+        npc &other = spawn_npc( landing.xy(), "test_talker" );
+        clear_character( other, true );
+        bind_feedback_player( other, 'b', 702 );
+        other.setpos( here, landing, false );
+        other.set_moves( 1000 );
+        const auto before = other.pos_world();
+        CHECK_FALSE( avatar_action::move_fractional( other, here, point( -32, 0 ) ) );
+        CHECK( other.pos_world() == before );
+        CHECK( avatar_action::move_fractional( other, here, point( 32, 0 ) ) );
+    }
+}
+
 TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
            "[grab_owned][multiplayer][vehicle]" )
 {

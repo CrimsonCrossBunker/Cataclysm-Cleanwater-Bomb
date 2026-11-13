@@ -920,9 +920,10 @@ class map
         bool has_vehicle_ladder_at( const tripoint_bub_ms &pt ) const;
         // Change vehicle coordinates and move vehicle's driver along.
         // WARNING: not checking collisions!
-        // optionally: include a list of parts to displace instead of the entire vehicle
+        // A supplied offset is the new resting pose, relative to the destination cell.
         bool displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, bool adjust_pos = true,
-                               const std::set<int> &parts_to_move = {} );
+                               const std::set<int> &parts_to_move = {},
+                               const std::optional<point> &resting_offset = std::nullopt );
 
         // make sure a vehicle that is split across z-levels is properly supported
         // calls displace_vehicle() and shouldn't be called from displace_vehicle
@@ -976,7 +977,7 @@ class map
         }
         furn_id furn( tripoint_bub_ms p ) const;
         point furniture_offset( const tripoint_bub_ms &p ) const;
-        bool has_displaced_furniture_near( const tripoint_bub_ms &p ) const;
+        bool has_displaced_furniture_near( const tripoint_bub_ms &p, int radius = 2 ) const;
         bool set_furniture_offset( const tripoint_bub_ms &p, const point &offset );
         furn_id furn( const point_bub_ms &p ) const {
             return furn( tripoint_bub_ms( p, abs_sub.z() ) );

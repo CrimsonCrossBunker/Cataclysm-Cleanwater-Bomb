@@ -4968,7 +4968,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             const point delta = fractional_walk::camera_delta( point::north, camera.movement.forward );
             if( const auto step = fractional_walk::resolve( you.pos_world(), delta ) ) {
                 const tripoint_bub_ms next = here.get_bub( step->target.tile() );
-                tp = step->clears_obstacles( here, you, next ) ? next : upos;
+                if( step->supports_grab( you, here ) ) {
+                    tp = step->clears_obstacles( here, you, next ) ? next : upos;
+                }
             }
         }
         if( tp != upos ) {

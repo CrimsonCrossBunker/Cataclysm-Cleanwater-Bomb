@@ -113,6 +113,7 @@
 #include "vehicle_palette.h"
 #include "vehicle_part_location.h"
 #include "vehicle_selector.h"
+#include "world_position.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
@@ -5328,6 +5329,24 @@ int vehicle::drag_str_req_at( map &here, const tripoint_bub_ms &tile_pos ) const
     return drag_str_req_at( here, tile_pos, total_mass( here ) );
 }
 
+// Express the distance in fixed-point tiles before applying the existing
+// vehicle towing thresholds. Both ends use the same authoritative pose.
+static int cable_distance( const vehicle &first, int first_part,
+                           const vehicle &second, int second_part )
+{
+    const tripoint_rel_ms cells = first.abs_part_pos( first_part ) - second.abs_part_pos( second_part );
+    constexpr int stride = world_position::units_per_tile;
+    const point offset = first.fractional_offset() - second.fractional_offset();
+    if( offset == point::zero ) {
+        return rl_dist( tripoint::zero, cells.raw() );
+    }
+    const double x = cells.x() + static_cast<double>( offset.x ) / stride;
+    const double y = cells.y() + static_cast<double>( offset.y ) / stride;
+    const double z = cells.z();
+    return static_cast<int>( trigdist ? std::hypot( x, y, z ) :
+                             std::max( { std::abs( x ), std::abs( y ), std::abs( z ) } ) );
+}
+
 units::power vehicle::static_drag( bool actual ) const
 {
     bool is_actively_towed = is_towed();
@@ -5344,10 +5363,7 @@ units::power vehicle::static_drag( bool actual ) const
                 if( other_tow_index == -1 ) {
                     is_actively_towed = false;
                 } else {
-                    const tripoint_abs_ms towed_tow_point = abs_part_pos( tow_index );
-                    const tripoint_abs_ms tower_tow_point =  towing_veh->abs_part_pos(
-                                other_tow_index );
-                    is_actively_towed = rl_dist( towed_tow_point, tower_tow_point ) >= 6;
+                    is_actively_towed = cable_distance( *this, tow_index, *towing_veh, other_tow_index ) >= 6;
                 }
             }
         }
@@ -7738,16 +7754,17 @@ void vehicle::do_towing_move( map &here )
     // same as above, but where the pulling vehicle is pulling from
     units::angle towing_veh_angle = towed_veh->get_angle_from_targ( tower_tow_point );
     const bool reverse = towed_veh->tow_data.tow_direction == TOW_BACK;
+    const int cable_length = cable_distance( *this, tow_index, *towed_veh, other_tow_index );
     int accel_y = 0;
     tripoint_abs_ms vehpos = pos_abs();
     int turn_x = get_turn_from_angle( towing_veh_angle, vehpos, tower_tow_point, reverse );
-    if( rl_dist( towed_tow_point, tower_tow_point ) < 6 ) {
+    if( cable_length < 6 ) {
         accel_y = reverse ? -1 : 1;
     }
-    if( towed_veh->velocity <= velocity && rl_dist( towed_tow_point, tower_tow_point ) >= 7 ) {
+    if( towed_veh->velocity <= velocity && cable_length >= 7 ) {
         accel_y = reverse ? 1 : -1;
     }
-    if( rl_dist( towed_tow_point, tower_tow_point ) >= 12 ) {
+    if( cable_length >= 12 ) {
         towed_veh->velocity = velocity * 1.8;
         if( reverse ) {
             towed_veh->velocity = -towed_veh->velocity;
@@ -7973,7 +7990,7 @@ bool vehicle::tow_cable_too_far() const
         debugmsg( "towing data exists but no towing part" );
         return false;
     }
-    return rl_dist( towing_point, towed_point ) >= 25;
+    return cable_distance( *this, index, *tow_data.get_towed_by(), other_index ) >= 25;
 }
 
 // the towing cable only starts pulling at a certain distance between the vehicles
@@ -8004,7 +8021,7 @@ bool vehicle::no_towing_slack() const
         debugmsg( "towing data exists but no towing part" );
         return false;
     }
-    return rl_dist( towing_point, towed_point ) >= 8;
+    return cable_distance( *this, index, *tow_data.get_towed(), other_index ) >= 8;
 
 }
 

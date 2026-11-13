@@ -1580,7 +1580,11 @@ class vehicle
         // Settled displacement from the center of the native map cell, in
         // world_position units. Cell ownership changes at the native move.
         point fractional_offset() const;
-        void set_fractional_offset( const point &offset );
+        enum class offset_kind : uint8_t { driving_preview, parked };
+        void set_fractional_offset( const point &offset, offset_kind kind = offset_kind::driving_preview );
+        bool has_parked_offset() const;
+        bool supports_fractional_drag( const map &here, const point &direction ) const;
+        bool can_drag_fractionally( const map &here, const point &delta, const Character &who ) const;
         // Returns the coordinates (in map squares) of the vehicle relative to the local map.
         // Warning: Don't assume this position contains a vehicle part
         tripoint_bub_ms pos_bub( const map &here ) const;
@@ -1986,6 +1990,11 @@ class vehicle
                         const tripoint_rel_ms &dp,
                         bool just_detect, bool bash_floor = false,
                         const Creature *ignored_creature = nullptr );
+
+        // Checks the ground hull between its cached and proposed native poses.
+        // The caller still resolves impacts in the native destination cells.
+        bool clears_horizontal_sweep( map &here, const tripoint_rel_ms &dp,
+                                      const Creature *ignored = nullptr );
 
         // Handle given part collision with vehicle, monster/NPC/player or terrain obstacle
         // Returns collision, which has type, impulse, part, & target.
@@ -2404,6 +2413,8 @@ class vehicle
         mutable double hull_height = 0.3; // NOLINT(cata-serialize)
 
         point motion_offset = point::zero; // NOLINT(cata-serialize)
+        // A push changes the resting pose. Stopping cancels only a driving preview.
+        offset_kind motion_offset_kind = offset_kind::driving_preview; // NOLINT(cata-serialize)
 
         // Absolute location when cache was last refreshed.
         mutable tripoint_abs_ms occupied_cache_pos = tripoint_abs_ms::invalid; // NOLINT(cata-serialize)

@@ -8490,6 +8490,9 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     if( !furniture_move && who.get_grab_type() != object_type::NONE &&
         !who.validate_grab( here ) ) {
         who.grab( object_type::NONE );
+        if( step ) {
+            return false;
+        }
     }
     if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
         if( occupant != &who ) {
@@ -8592,9 +8595,11 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
 
     bool grabbed = who.get_grab_type() != object_type::NONE;
     if( grabbed && !within_cell ) {
-        const tripoint_rel_ms dp = dest_loc - pos;
-        pushing = dp.xy() == who.grab_point.xy();
-        pulling = dp.xy() == -who.grab_point.xy();
+        const point direction = step && step->drags_vehicle( who ) ?
+                                point( sgn( step->displacement.x ), sgn( step->displacement.y ) ) :
+                                ( dest_loc - pos ).xy().raw();
+        pushing = direction == who.grab_point.xy().raw();
+        pulling = direction == -who.grab_point.xy().raw();
     }
 
     // Now make sure we're actually holding something
@@ -8796,6 +8801,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     }
     if( !still_at_origin() ||
         ( step && ( !avatar_action::can_move_fractional( who, here ) ||
+                    !step->supports_grab( who, here ) ||
                     !step->clears_obstacles( here, who, dest_loc ) ) ) ) {
         return false;
     }
@@ -8819,14 +8825,23 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const bool grabbed_has_wheels = grabbed && who.get_grab_type() == object_type::VEHICLE &&
                                     grabbed_vehicle && !grabbed_vehicle->wheelcache.empty();
     const int64_t grabbed_vehicle_id = grabbed_vehicle ? grabbed_vehicle->uid().get_value() : 0;
-    const int64_t grabbed_part_id = vp_grab ?
-                                    vp_grab->vehicle().part( vp_grab->part_index() ).get_base().uid().get_value() : 0;
+    const int held_part = grabbed && grabbed_vehicle && who.get_grab_type() == object_type::VEHICLE ?
+                          who.grabbed_vehicle_part( here ) : -1;
+    const int64_t grabbed_part_id = held_part >= 0 ?
+                                    grabbed_vehicle->part( held_part ).get_base().uid().get_value() : 0;
     const bool ignore_fields = !impassable_field_ids.empty() &&
                                who.is_immune_fields( impassable_field_ids );
     int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
         modifier, via_ramp, false, ignore_fields, !step );
 
-    if( !furniture_move && grabbed_move( who, dest_loc - pos, via_ramp, false, choices, step ) ) {
+    const bool fractional_vehicle_drag = step && step->drags_vehicle( who );
+    if( fractional_vehicle_drag &&
+        ( !grabbed_vehicle || !here.passable_ter_furn( dest_loc ) ||
+          !grabbed_vehicle->can_drag_fractionally( here, step->displacement, who ) ) ) {
+        return false;
+    }
+    if( !fractional_vehicle_drag && !furniture_move &&
+        grabbed_move( who, dest_loc - pos, via_ramp, false, choices, step ) ) {
         return true;
     } else if( mcost == 0 && !settle_furniture ) {
         return false;
@@ -8890,6 +8905,14 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     who.last_target_pos = std::nullopt;
     if( within_cell ) {
         const auto mount = who.is_mounted() ? who.mounted_creature : shared_ptr_fast<monster>();
+        if( fractional_vehicle_drag &&
+            ( who.grab_generation() != expected_grab_generation ||
+              grabbed_veh_move( who, tripoint_rel_ms::zero, choices, step ) ) ) {
+            return true;
+        }
+        if( !still_at_origin() ) {
+            return true;
+        }
         who.setpos( here, step->target, false );
         if( lifetime && mount && who.is_mounted() && who.mounted_creature == mount &&
             who.pos_world() == step->target ) {
@@ -8992,7 +9015,26 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         }
         precise = world_position::from_tile( dest_loc_abs, offset );
     }
-    point_rel_sm submap_shift = place_character( who, dest_loc, false, precise ? &*precise : nullptr );
+    std::function<bool()> settle_vehicle;
+    if( fractional_vehicle_drag ) {
+        settle_vehicle = [&]() {
+            if( !still_at_origin() || who.grab_generation() != expected_grab_generation ||
+                !step->supports_grab( who, here ) || !step->clears_obstacles( here, who, dest_loc ) ) {
+                return false;
+            }
+            return !grabbed_veh_move( who, dest_loc - pos, choices, step ) && still_at_origin();
+        };
+    }
+    point_rel_sm submap_shift = place_character( who, dest_loc, false, precise ? &*precise : nullptr,
+        settle_vehicle );
+    if( fractional_vehicle_drag && still_at_origin() ) {
+        return false;
+    }
+    if( fractional_vehicle_drag &&
+        ( !lifetime || !movement_context || &get_map() != &here ||
+          dragged_vehicle_wheel_traps( who, here, grabbed_vehicle_id ) ) ) {
+        return true;
+    }
     point_rel_ms ms_shift = coords::project_to<coords::ms>( submap_shift );
     oldpos = oldpos - ms_shift.raw();
 
@@ -9242,7 +9284,8 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
 }
 
 point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_loc, bool quick,
-                                    const world_position *precise )
+                                    const world_position *precise,
+                                    const std::function<bool()> &before_placement )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
@@ -9457,6 +9500,10 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
         } else {
             who.stop_hauling();
         }
+    }
+    // Settle coupled movement only after placement effects can no longer veto the step.
+    if( before_placement && !before_placement() ) {
+        return point_rel_sm::zero;
     }
     if( precise ) {
         who.setpos( here, *precise );
@@ -10263,7 +10310,8 @@ bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool v
 
     // vehicle: pulling, pushing, or moving around the grabbed object.
     if( who.get_grab_type() == object_type::VEHICLE ) {
-        return grabbed_veh_move_helper( who, dp, stairs_move );
+        return stairs_move ? grabbed_veh_move_stairs( who, dp ) :
+               grabbed_veh_move( who, dp, choices, step );
     }
 
     if( who.get_grab_type() == object_type::FURNITURE ||

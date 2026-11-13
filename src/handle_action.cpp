@@ -1889,7 +1889,7 @@ static std::optional<point> fractional_walk_input( const avatar &who, const map 
         iso_rotate::no ).raw(), camera->forward );
     if( who.get_grab_type() != object_type::NONE ) {
         const auto step = fractional_walk::resolve( who.pos_world(), delta );
-        if( !step || !step->drags_furniture( who ) ) {
+        if( !step || !step->supports_grab( who, here ) ) {
             return std::nullopt;
         }
     }
