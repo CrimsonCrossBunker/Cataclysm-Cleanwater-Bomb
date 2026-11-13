@@ -1663,7 +1663,11 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
 
             sol::protected_function callback = handler->second.callback;
             callback_scope scope( *owner );
-            const sol::optional<game_handle> character = payload["character"];
+            // Movement hooks retain their public player/npc field names. Both
+            // forms still bind character state to the actor attempting to move.
+            const char *actor_field = name == "on_player_try_move" ? "player" :
+                                      name == "on_npc_try_move" ? "npc" : "character";
+            const sol::optional<game_handle> character = payload[actor_field];
             if( character ) {
                 owner->callback_character = *character;
             }
