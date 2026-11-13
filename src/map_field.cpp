@@ -390,12 +390,12 @@ void map::furniture_terrain_emit_fields( const map_simulation_regions *regions )
         // An emission's Lua handler may mutate the map and its index.
         const auto positions = indexed;
         for( const tripoint_bub_ms &p : positions ) {
-            if( !has_loaded_submap( p ) ||
-            ( regions && !regions->owns( *this, project_to<coords::sm>( get_abs( p ) ) ) ) {
-            continue;
-        }
-        for( const emit_id &source : emissions( p ) ) {
-            emit_field( p, source );
+            const tripoint_abs_sm submap_position = project_to<coords::sm>( get_abs( p ) );
+            if( !has_loaded_submap( p ) || ( regions && !regions->owns( *this, submap_position ) ) ) {
+                continue;
+            }
+            for( const emit_id &source : emissions( p ) ) {
+                emit_field( p, source );
             }
         }
     };
