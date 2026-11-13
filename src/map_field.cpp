@@ -37,11 +37,11 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
-#include "level_cache.h"
 #include "map.h"
 #include "map_field.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
 #include "material.h"
@@ -164,20 +164,26 @@ int map::burn_body_part( Character &you, field_entry &cur, const bodypart_id &bp
 
 void map::process_fields()
 {
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
-        auto &field_cache = get_cache( z ).field_cache;
+    process_fields( get_scent(), nullptr );
+}
+
+void map::process_fields( scent_map &scents, const map_simulation_regions &regions )
+{
+    process_fields( scents, &regions );
+}
+
+void map::process_fields( scent_map &scents, const map_simulation_regions *regions )
+{
+    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    for( int z = minz; z <= maxz; z++ ) {
         for( int x = 0; x < my_MAPSIZE; x++ ) {
             for( int y = 0; y < my_MAPSIZE; y++ ) {
-                if( field_cache[ x + y * MAPSIZE ] ) {
-                    submap *const current_submap = get_submap_at_grid( tripoint_rel_sm{ x, y, z } );
-                    if( current_submap == nullptr ) {
-                        debugmsg( "Tried to process field at (%d,%d,%d) but the submap is not loaded", x, y, z );
-                        continue;
-                    }
-                    process_fields_in_submap( current_submap, { x, y, z } );
-                    if( current_submap->field_count == 0 ) {
-                        field_cache[ x + y * MAPSIZE ] = false;
-                    }
+                const tripoint_rel_sm local( x, y, z );
+                submap *const current_submap = get_submap_at_grid( local );
+                if( current_submap && current_submap->field_count > 0 &&
+                    ( !regions || regions->owns( *this, abs_sub.xy() + local ) ) ) {
+                    process_fields_in_submap( current_submap, { x, y, z }, scents );
                 }
             }
         }
@@ -444,12 +450,12 @@ This is the general update function for field effects. This should only be calle
 If you need to insert a new field behavior per unit time add a case statement in the switch below.
 */
 void map::process_fields_in_submap( submap *const current_submap,
-                                    const tripoint_bub_sm &submap )
+                                    const tripoint_bub_sm &submap, scent_map &scents )
 {
     const oter_id &om_ter = overmap_buffer.ter( coords::project_to<coords::omt>(
             abs_sub + rebase_rel( submap ) ) );
     Character &player_character = get_player_character();
-    scent_block sblk( submap, get_scent() );
+    scent_block sblk( submap, scents );
 
     // Initialize the map tile wrapper
     maptile map_tile( current_submap, point_sm_ms::zero );

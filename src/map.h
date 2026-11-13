@@ -79,8 +79,10 @@ class field;
 class field_entry;
 class item_location;
 class mapgendata;
+class map_simulation_regions;
 class monster;
 class relic_procgen_data;
+class scent_map;
 class submap;
 class vehicle;
 class zone_data;
@@ -1631,7 +1633,7 @@ class map
                                   const units::mass &burned_mass );
         // See fields.cpp
         void process_fields();
-        void process_fields_in_submap( submap *current_submap, const tripoint_bub_sm &submap_pos );
+        void process_fields( scent_map &scents, const map_simulation_regions &regions );
         /**
          * Apply field effects to the creature when it's on a square with fields.
          */
@@ -1954,6 +1956,7 @@ class map
         }
         bool inbounds( const tripoint_bub_ms &p ) const;
         bool has_loaded_submap( const tripoint_bub_ms &p ) const;
+        bool has_loaded_submap( const tripoint_abs_sm &p ) const;
         bool inbounds( const tripoint_abs_ms &p ) const;
         bool inbounds( const tripoint_abs_sm &p ) const {
             return inbounds( project_to<coords::omt>( p ) );
@@ -2311,10 +2314,13 @@ class map
         // handles all the bash results of specific terrain or furniture
         void drop_bash_results( const map_data_common_t &ter_furn, const tripoint_bub_ms &p );
 
-        void process_items();
+        void process_items( const map_simulation_regions *regions = nullptr );
         // All active items connected to the power_grid with their connection points.
         std::vector<item_reference> item_network_connections( vehicle *power_grid );
     private:
+        void process_fields( scent_map &scents, const map_simulation_regions *regions );
+        void process_fields_in_submap( submap *current_submap, const tripoint_bub_sm &submap_pos,
+                                       scent_map &scents );
         // Iterates over every item on the map, passing each item to the provided function.
         void process_items_in_submap( submap &current_submap, const tripoint_rel_sm &gridp );
         void process_items_in_vehicles( submap &current_submap );

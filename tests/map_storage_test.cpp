@@ -9,16 +9,20 @@
 #include <system_error>
 #include <thread>
 
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "game.h"
+#include "item.h"
 #include "map.h"
+#include "map_simulation_regions.h"
 #include "map_storage_context.h"
 #include "mapbuffer.h"
 #include "path_info.h"
 #include "rng.h"
+#include "scent_map.h"
 #include "submap.h"
 #include "type_id.h"
 #include "world_identity.h"
@@ -28,6 +32,8 @@ static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_soil( "t_soil" );
 static const ter_str_id ter_t_wall( "t_wall" );
+static const field_type_str_id field_fd_marker1( "fd_marker1" );
+static const itype_id itype_test_2x4( "test_2x4" );
 
 namespace
 {
@@ -72,6 +78,18 @@ class residency_map : public map
     public:
         explicit residency_map( const tripoint_abs_sm &origin ) {
             set_abs_sub( origin );
+        }
+};
+
+class simulation_test_map : public map
+{
+    public:
+        explicit simulation_test_map( const tripoint_abs_sm &origin ) : map( 2, false ) {
+            set_abs_sub( origin );
+        }
+
+        void attach( const tripoint_rel_sm &local, submap &sm ) {
+            setsubmap( get_nonant( local ), &sm );
         }
 };
 
@@ -181,6 +199,55 @@ TEST_CASE( "map_save_keeps_quads_resident_in_either_active_map", "[map_storage][
     CHECK( buffer.lookup_submap( primary_base ) == primary_before );
     CHECK( buffer.lookup_submap( remote_base ) == remote_before );
     check_quad( buffer, outside_base, ter_t_soil );
+}
+
+TEST_CASE( "overlapping_map_views_tick_shared_fields_and_items_once",
+           "[map_storage][region_simulation][regression]" )
+{
+    const tripoint_abs_sm shared_pos( -1, -1, 0 );
+    const tripoint_abs_sm distant_pos( 0, -1, 0 );
+    const tripoint_bub_ms primary_tile( 13, 1, 0 );
+    const tripoint_bub_ms other_tile( 1, 1, 0 );
+    const tripoint_bub_ms distant_tile( 13, 1, 0 );
+    submap shared;
+    submap distant;
+    shared.set_all_ter( ter_t_floor, true );
+    distant.set_all_ter( ter_t_floor, true );
+    simulation_test_map primary( tripoint_abs_sm( -2, -1, 0 ) );
+    simulation_test_map other( shared_pos );
+    primary.attach( tripoint_rel_sm( 1, 0, 0 ), shared );
+    other.attach( tripoint_rel_sm::zero, shared );
+    other.attach( tripoint_rel_sm( 1, 0, 0 ), distant );
+
+    const map_simulation_regions regions( { std::cref( primary ), std::cref( other ) } );
+    CHECK( regions.owner_at( shared_pos ) == &primary );
+    CHECK( regions.owner_at( distant_pos ) == &other );
+    CHECK( regions.owner_at( tripoint_abs_sm( -2, -1, 0 ) ) == nullptr );
+    CHECK( regions.owner_at( tripoint_abs_sm( -1, -1, 1 ) ) == nullptr );
+    REQUIRE( other.add_field( other_tile, field_fd_marker1, 1, 0_turns, false ) );
+    REQUIRE( other.add_field( distant_tile, field_fd_marker1, 1, 0_turns, false ) );
+    CHECK( primary.has_field_at( primary_tile, field_fd_marker1 ) );
+
+    item wet( itype_test_2x4 );
+    wet.wetness = 10;
+    item &shared_item = other.add_item( other_tile, wet );
+    item &distant_item = other.add_item( distant_tile, wet );
+    primary.process_fields( get_scent(), regions );
+    other.process_fields( get_scent(), regions );
+    primary.process_items( &regions );
+    other.process_items( &regions );
+    CHECK( primary.get_field_age( primary_tile, field_fd_marker1 ) == 1_turns );
+    CHECK( other.get_field_age( distant_tile, field_fd_marker1 ) == 1_turns );
+    CHECK( shared_item.wetness == 9 );
+    CHECK( distant_item.wetness == 9 );
+
+    // The same submap changes owner when the primary window leaves it.
+    const map_simulation_regions after_shift( { std::cref( other ) } );
+    CHECK( after_shift.owner_at( shared_pos ) == &other );
+    other.process_fields( get_scent(), after_shift );
+    other.process_items( &after_shift );
+    CHECK( other.get_field_age( other_tile, field_fd_marker1 ) == 2_turns );
+    CHECK( shared_item.wetness == 8 );
 }
 
 TEST_CASE( "legacy_map_buffer_binds_on_insertion_and_rebinds_only_after_clear", "[map_storage]" )

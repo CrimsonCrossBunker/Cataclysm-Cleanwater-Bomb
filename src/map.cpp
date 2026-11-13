@@ -78,6 +78,7 @@
 #include "map_visibility.h"
 #include "map_memory.h"
 #include "map_selector.h"
+#include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
 #include "mapgen.h"
@@ -4894,7 +4895,6 @@ void map::decay_fields_and_scent( const time_duration &amount )
                                    << ( abs_sub + point( smx, smy ) ).to_string()
                                    << "has " << to_proc << " field_count";
                 }
-                get_cache( smz ).field_cache.reset( smx + ( smy * MAPSIZE ) );
                 // This submap has no fields
                 continue;
             }
@@ -7845,7 +7845,7 @@ static void process_vehicle_items( vehicle &cur_veh, int part, map &here )
     }
 }
 
-void map::process_items()
+void map::process_items( const map_simulation_regions *regions )
 {
     CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
@@ -7858,7 +7858,11 @@ void map::process_items()
             submaps_with_vehicles.emplace( pos.x() / SEEX, pos.y() / SEEY, pos.z() );
         }
         for( const tripoint &pos : submaps_with_vehicles ) {
-            submap *const current_submap = get_submap_at_grid( tripoint_rel_sm( pos ) );
+            const tripoint_rel_sm local( pos );
+            if( regions && !regions->owns( *this, abs_sub.xy() + local ) ) {
+                continue;
+            }
+            submap *const current_submap = get_submap_at_grid( local );
             if( current_submap == nullptr ) {
                 debugmsg( "Tried to process items at (%d,%d,%d) but the submap is not loaded", pos.x, pos.y,
                           pos.z );
@@ -7867,6 +7871,23 @@ void map::process_items()
             // Vehicles first in case they get blown up and drop active items on the map.
             process_items_in_vehicles( *current_submap );
         }
+    }
+    if( regions ) {
+        // The usual active-submap index belongs to one view. A neighboring
+        // view can activate items in shared storage without touching it.
+        // Read the actual submaps in the same x, y, z order as that index.
+        for( int x = 0; x < my_MAPSIZE; ++x ) {
+            for( int y = 0; y < my_MAPSIZE; ++y ) {
+                for( int z = minz; z <= maxz; ++z ) {
+                    const tripoint_rel_sm local( x, y, z );
+                    submap *const sm = get_submap_at_grid( local );
+                    if( sm && !sm->active_items.empty() && regions->owns( *this, abs_sub.xy() + local ) ) {
+                        process_items_in_submap( *sm, local );
+                    }
+                }
+            }
+        }
+        return;
     }
     update_submaps_with_active_items();
     for( auto iter = submaps_with_active_items.begin(); iter != submaps_with_active_items.end(); ) {
@@ -8750,9 +8771,11 @@ int map::get_field_intensity( const tripoint_bub_ms &p, const field_type_id &typ
 
 bool map::has_field_at( const tripoint_bub_ms &p, bool check_bounds ) const
 {
-    const tripoint_bub_sm sm = coords::project_to<coords::sm>( p );
-    return ( !check_bounds || inbounds( p ) ) &&
-           get_cache( p.z() ).field_cache[sm.x() + sm.y() * MAPSIZE];
+    if( ( check_bounds && !inbounds( p ) ) || ( !zlevels && p.z() != abs_sub.z() ) ) {
+        return false;
+    }
+    const submap *const sm = unsafe_get_submap_at( p );
+    return sm && sm->field_count > 0;
 }
 
 bool map::has_field_at( const tripoint_bub_ms &p, const field_type_id &type ) const
@@ -8764,18 +8787,17 @@ template<typename Map>
 cata::copy_const<Map, field_entry> *map::get_field_helper(
     Map &m, const tripoint_bub_ms &p, const field_type_id &type )
 {
-    if( !m.inbounds( p ) || !m.has_field_at( p, false ) ) {
+    if( !m.inbounds( p ) || ( !m.zlevels && p.z() != m.abs_sub.z() ) ) {
         return nullptr;
     }
 
     point_sm_ms l;
     auto *const current_submap = m.unsafe_get_submap_at( tripoint_bub_ms( p ), l );
     if( current_submap == nullptr ) {
-        debugmsg( "Tried to get field at (%d,%d) but the submap is not loaded", l.x(), l.y() );
         return nullptr;
     }
 
-    return current_submap->get_field( l ).find_field( type );
+    return current_submap->field_count > 0 ? current_submap->get_field( l ).find_field( type ) : nullptr;
 }
 
 field_entry *map::get_field( const tripoint_bub_ms &p, const field_type_id &type )
@@ -8885,11 +8907,7 @@ bool map::add_field( const tripoint_bub_ms &p, const field_type_id &type_id, int
     invalidate_max_populated_zlev( p.z() );
 
     if( current_submap->get_field( l ).add_field( converted_type_id, intensity, age, source ) ) {
-        //Only adding it to the count if it doesn't exist.
-        if( !current_submap->field_count++ ) {
-            get_cache( p.z() ).field_cache.set(
-                static_cast<size_t>( p.x() / SEEX ) + ( ( p.y() / SEEX ) * MAPSIZE ) );
-        }
+        ++current_submap->field_count;
     }
 
     if( hit_player ) {
@@ -8949,9 +8967,6 @@ void map::on_field_modified( const tripoint_bub_ms &p, const field_type &fd_type
 {
     invalidate_max_populated_zlev( p.z() );
     set_lightmap_cache_dirty( p.z() );
-
-    get_cache( p.z() ).field_cache.set(
-        static_cast<size_t>( p.x() / SEEX ) + ( ( p.y() / SEEX ) * MAPSIZE ) );
 
     // Dirty the transparency cache now that field processing doesn't always do it
     if( fd_type.dirty_transparency_cache || !fd_type.is_transparent() ) {
@@ -10500,8 +10515,6 @@ void shift_bitset_cache( std::bitset<SIZE *SIZE> &cache, const point_rel_sm &s )
 template void
 shift_bitset_cache<MAPSIZE_X, SEEX>( std::bitset<MAPSIZE_X *MAPSIZE_X> &cache,
                                      const point_rel_sm &s );
-template void
-shift_bitset_cache<MAPSIZE, 1>( std::bitset<MAPSIZE *MAPSIZE> &cache, const point_rel_sm &s );
 
 void map::shift( const point_rel_sm &sp )
 {
@@ -10578,7 +10591,6 @@ void map::shift( const point_rel_sm &sp )
         if( cache ) {
             shift_bitset_cache<MAPSIZE_X, SEEX>( cache->map_memory_cache_dec, sp );
             shift_bitset_cache<MAPSIZE_X, SEEX>( cache->map_memory_cache_ter, sp );
-            shift_bitset_cache<MAPSIZE, 1>( cache->field_cache, sp );
         }
     }
 
@@ -10756,9 +10768,6 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles )
         setsubmap( get_nonant( tripoint_rel_sm{ grid.x(), grid.y(), z} ), tmpsub );
         if( !tmpsub->active_items.empty() ) {
             submaps_with_active_items_dirty.emplace( pos );
-        }
-        if( tmpsub->field_count > 0 ) {
-            get_cache( z ).field_cache.set( grid.x() + grid.y() * MAPSIZE );
         }
 
         // Destroy bugged no-part vehicles
@@ -12030,6 +12039,14 @@ bool map::inbounds( const tripoint_abs_omt &p ) const
 bool map::has_loaded_submap( const tripoint_bub_ms &p ) const
 {
     return inbounds( p ) && ( zlevels || p.z() == abs_sub.z() ) && unsafe_get_submap_at( p );
+}
+
+bool map::has_loaded_submap( const tripoint_abs_sm &p ) const
+{
+    const tripoint_rel_sm local = p - abs_sub.xy();
+    return local.x() >= 0 && local.x() < my_MAPSIZE &&
+           local.y() >= 0 && local.y() < my_MAPSIZE && inbounds_z( local.z() ) &&
+           ( zlevels || local.z() == abs_sub.z() ) && get_submap_at_grid( local );
 }
 
 tripoint_range<tripoint_omt_ms> tinymap::points_on_zlevel() const
