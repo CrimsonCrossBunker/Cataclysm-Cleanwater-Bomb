@@ -1546,6 +1546,36 @@ static std::optional<std::string> restore_player( const player_credentials &play
     return saved;
 }
 
+static bool guest_spawn_tile_is_free( const map &here, const tripoint_abs_ms &pos )
+{
+    const tripoint_bub_ms local = here.get_bub( pos );
+    return here.has_loaded_submap( local ) && !here.impassable( local ) &&
+           !get_creature_tracker().creature_at<Creature>( pos );
+}
+
+static std::optional<tripoint_abs_ms> find_guest_spawn( const map &here,
+        const tripoint_abs_ms &host_pos, const std::optional<tripoint_abs_ms> &saved_pos )
+{
+    if( saved_pos && guest_spawn_tile_is_free( here, *saved_pos ) ) {
+        return saved_pos;
+    }
+
+    for( int radius = 1; radius <= 20; ++radius ) {
+        for( int dy = -radius; dy <= radius; ++dy ) {
+            for( int dx = -radius; dx <= radius; ++dx ) {
+                if( std::abs( dx ) != radius && std::abs( dy ) != radius ) {
+                    continue;
+                }
+                const tripoint_abs_ms candidate = host_pos + tripoint( dx, dy, 0 );
+                if( guest_spawn_tile_is_free( here, candidate ) ) {
+                    return candidate;
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 static void spawn_remote_player( const std::string &name, const peer_admission &admission,
                                  const player_credentials &player, const JsonObject *initial = nullptr )
 {
@@ -1584,32 +1614,6 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     avatar &u = get_avatar();
     map &m = get_map();
 
-    // Find nearest passable tile that is NOT the host's own tile.
-    // Search outward from radius 1; expand up to 20 tiles if needed.
-    tripoint_bub_ms spawn_pos = u.pos_bub();
-    bool found = false;
-    for( int radius = 1; radius <= 20 && !found; ++radius ) {
-        for( int dy = -radius; dy <= radius && !found; ++dy ) {
-            for( int dx = -radius; dx <= radius && !found; ++dx ) {
-                if( std::abs( dx ) != radius && std::abs( dy ) != radius ) {
-                    continue; // only check the ring edge
-                }
-                tripoint_bub_ms candidate = u.pos_bub() + tripoint( dx, dy, 0 );
-                if( candidate == u.pos_bub() ) {
-                    continue; // never land on the host's exact tile
-                }
-                if( m.inbounds( candidate ) && !m.impassable( candidate ) &&
-                    !get_creature_tracker().creature_at<Creature>( candidate ) ) {
-                    spawn_pos = candidate;
-                    found = true;
-                }
-            }
-        }
-    }
-    if( !found ) {
-        throw std::runtime_error( "No free spawn tile near the host" );
-    }
-
     shared_ptr_fast<npc> remote = make_shared_fast<npc>();
 
     if( saved ) {
@@ -1632,6 +1636,12 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // if the NPC pointer briefly becomes unresolvable (load/unload races).
     recipient.observation.partner_name_cached = remote->name;
 
+    const auto spawn_pos = find_guest_spawn( m, u.pos_abs(),
+                                           saved ? std::optional( remote->pos_abs() ) : std::nullopt );
+    if( !spawn_pos ) {
+        throw std::runtime_error( "No free spawn tile near the host" );
+    }
+
     // Ensure the NPC has a valid character_id before inserting into the world.
     // make_shared_fast<npc>() + normalize() never calls setID(), so we must
     // assign one explicitly here. Loaded NPCs may already have a valid id from
@@ -1639,6 +1649,9 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     if( !remote->getID().is_valid() ) {
         remote->setID( g->assign_npc_id() );
     }
+    remote->in_vehicle = false;
+    remote->controlling_vehicle = false;
+    remote->spawn_at_precise( *spawn_pos );
 
     // Commit the identity/actor binding before inserting the live proxy. An I/O
     // failure rejects the join instead of creating an unpersisted character.
@@ -1652,10 +1665,6 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     world_players().save( player, serialize_player( *remote ) );
     recipient.credentials = player;
 
-    // Always respawn near the host player regardless of saved position
-    remote->in_vehicle = false;
-    remote->controlling_vehicle = false;
-    remote->spawn_at_precise( m.get_abs( spawn_pos ) );
     bool published = false;
     const on_out_of_scope rollback( [&]() {
         if( !published ) {

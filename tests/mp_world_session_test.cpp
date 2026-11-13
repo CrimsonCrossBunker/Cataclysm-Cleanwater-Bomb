@@ -1172,6 +1172,8 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     npc *guest = session.find_remote( first )->actor.retained( g->npc_lifetimes() );
     REQUIRE( guest );
     const auto guest_id = guest->getID();
+    guest->setpos( here, tripoint_bub_ms( 68, 68, 0 ) );
+    const tripoint_abs_ms saved_guest_position = guest->pos_abs();
     const auto seat_tile = guest->pos_bub( here );
     REQUIRE( here.add_vehicle( vproto_id( "bicycle" ), seat_tile, 0_degrees, 0,
                                veh_spawn_status::UNDAMAGED ) );
@@ -1214,6 +1216,7 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     const auto *restored = session.find_remote( second )->actor.retained( g->npc_lifetimes() );
     REQUIRE( restored );
     CHECK( restored->getID() == guest_id );
+    CHECK( restored->pos_abs() == saved_guest_position );
     CHECK_FALSE( restored->in_vehicle );
     CHECK_FALSE( restored->controlling_vehicle );
     CHECK( cata_mp::mp_close_host_session() );
