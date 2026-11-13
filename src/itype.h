@@ -1028,6 +1028,7 @@ struct throw_correction_data {
 
     /** Required item flags in disjunctive normal form (OR of AND clauses). */
     std::vector<std::vector<flag_id>> required_flags;
+    std::set<ammotype> allowed_ammo;
     std::optional<units::mass> min_weight;
     std::optional<units::mass> max_weight;
     std::optional<units::volume> max_volume;
