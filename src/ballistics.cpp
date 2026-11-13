@@ -136,7 +136,9 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
         return;
     }
 
-    if( is_thrown && !x_in_y( drop_item.type->thrown_recovery_chance, 100 ) ) {
+    const int recovery_chance = is_thrown ? drop_item.type->thrown_recovery_chance : 100;
+    if( recovery_chance == 0 ||
+        ( recovery_chance < 100 && !x_in_y( recovery_chance, 100 ) ) ) {
         item( drop_item ).spill_contents( here, pt );
         return;
     }
