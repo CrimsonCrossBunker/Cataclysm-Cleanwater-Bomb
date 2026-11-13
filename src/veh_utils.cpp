@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <cstdint>
 #include <color.h>
 #include <functional>
 #include <list>
@@ -21,6 +22,8 @@
 #include "debug.h"
 #include "enums.h"
 #include "game.h"
+#include "game_constants.h"
+#include "itype.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "item.h"
@@ -115,14 +118,14 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
                                   ? vp.install_requirements()
                                   : vp.repair_requirements() * pt.get_base().repairable_levels();
 
+    const bool require_reach = !who.is_npc() || who.is_player_controlled();
     const temp_crafting_inventory &inv = who.crafting_inventory( who.pos_bub(), pickup_range,
-                                         !who.is_npc() );
+                                         require_reach );
     temp_crafting_inventory map_inv;
     // allow NPCs to use welding rigs they can't see ( on the other side of a vehicle )
     // as they have the handicap of not being able to use the veh interaction menu
     // or able to drag a welding cart etc.
-    map_inv.form_from_map( who.pos_bub(), pickup_range, &who,
-                           !who.is_npc() );
+    map_inv.form_from_map( who.pos_bub(), pickup_range, &who, require_reach );
     if( !reqs.can_make_with_inventory( &who, inv, is_crafting_component ) ) {
         who.add_msg_if_player( m_info, _( "You don't meet the requirements to repair the %s." ),
                                pt.name() );
@@ -181,6 +184,30 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
         who.add_msg_if_player( m_good, _( "You repair the %1$s's %2$s. (was %3$s)" ),
                                veh.name, partname, startdurability );
     }
+    return true;
+}
+
+bool unload_solid_fuel( Character &who, map &here, vehicle &target, const itype_id &fuel )
+{
+    static const itype_id battery( "battery" );
+    static const itype_id plutonium( "plut_cell" );
+    if( !fuel.is_valid() || fuel == battery || fuel->phase != phase_id::SOLID ) {
+        return false;
+    }
+    const int per_item = fuel == plutonium ? PLUTONIUM_CHARGES : 1;
+    const auto store = []( const vehicle_part &part ) {
+        return !part.removed && !part.is_fake && !part.has_flag( vp_flag::carried_flag );
+    };
+    const int available = std::min<int64_t>( target.fuel_left( here, fuel, store ), INT_MAX );
+    const int drain = available - available % per_item;
+    if( drain <= 0 ) {
+        return false;
+    }
+    const int drained = target.drain( here, fuel, drain, store );
+    if( drained <= 0 ) {
+        return false;
+    }
+    who.i_add( item( fuel, calendar::turn, drained / per_item ) );
     return true;
 }
 

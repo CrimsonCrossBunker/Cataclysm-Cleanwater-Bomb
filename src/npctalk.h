@@ -186,5 +186,7 @@ std::vector<std::string> get_all_talk_topic_ids();
 std::vector<int> npcs_select_menu( const std::vector<Character *> &npc_list,
                                    const std::string &prompt,
                                    const std::function<bool( const Character * )> &exclude_func );
+std::vector<int> npcs_select_menu( const std::vector<std::string> &names, const std::string &prompt,
+                                   const std::vector<bool> &enabled = {} );
 
 #endif // CATA_SRC_NPCTALK_H

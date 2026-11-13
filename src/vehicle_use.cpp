@@ -599,7 +599,7 @@ void vehicle::enable_patrol( map &here, Character &who )
     }
 }
 
-void vehicle::honk_horn( map &here ) const
+void vehicle::honk_horn( map &here, const Character &who ) const
 {
     const bool no_power = !fuel_left( here, fuel_type_battery );
     bool honked = false;
@@ -611,7 +611,7 @@ void vehicle::honk_horn( map &here ) const
             continue;
         }
         if( !honked ) {
-            add_msg( _( "You honk the horn!" ) );
+            who.add_msg_if_player( _( "You honk the horn!" ) );
             honked = true;
         }
         //Get global position of horn
@@ -633,7 +633,7 @@ void vehicle::honk_horn( map &here ) const
     }
 
     if( !honked ) {
-        add_msg( _( "You honk the horn, but nothing happens." ) );
+        who.add_msg_if_player( _( "You honk the horn, but nothing happens." ) );
     }
 }
 
@@ -2284,9 +2284,10 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     if( controls_here ) {
         if( has_part( "HORN" ) ) {
             menu.add( _( "Honk horn" ) )
+            .skip_theft_check()
             .skip_locked_check()
             .hotkey( "SOUND_HORN" )
-            .on_submit( [this, here] { honk_horn( *here ); } );
+            .on_submit( [control_action] { control_action( "horn" ); } );
         }
     }
 

@@ -12,6 +12,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "mapdata.h"
+#include "mill.h"
 #include "point.h"
 #include "stomach.h"
 #include "translation.h"
@@ -79,7 +80,7 @@ TEST_CASE( "mill_finalize_counts_stackable_food_by_charges", "[iexamine][mill][s
     rice.charges = 240;
     here.add_item( mill_pos, rice );
 
-    iexamine::mill_finalize( you, here, mill_pos );
+    mill::finish( here, mill_pos );
 
     int rice_count = 0;
     int flour_count = 0;
@@ -101,7 +102,6 @@ TEST_CASE( "mill_finalize_leaves_incomplete_charge_batch", "[iexamine][mill][sta
 {
     clear_map_without_vision();
     map &here = get_map();
-    Character &you = get_player_character();
     const tripoint_bub_ms mill_pos = tripoint_bub_ms::zero;
     const furn_id wind_mill( "f_wind_mill" );
     const furn_id wind_mill_active( "f_wind_mill_active" );
@@ -112,7 +112,7 @@ TEST_CASE( "mill_finalize_leaves_incomplete_charge_batch", "[iexamine][mill][sta
     acorns.charges = 3;
     here.add_item( mill_pos, acorns );
 
-    iexamine::mill_finalize( you, here, mill_pos );
+    mill::finish( here, mill_pos );
 
     int acorn_count = 0;
     int flour_count = 0;

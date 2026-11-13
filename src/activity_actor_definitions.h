@@ -30,16 +30,21 @@
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_activation.h"
+#include "item_consumption.h"
 #include "item_insert.h"
 #include "item_location.h"
+#include "item_move.h"
+#include "item_repair.h"
 #include "item_source.h"
 #include "item_unload.h"
 #include "itype.h"
 #include "memory_fast.h"
+#include "mp_equipment.h"
 #include "npctalk.h"
 #include "pickup.h"
 #include "point.h"
 #include "recipe.h"
+#include "safecracking.h"
 #include "string_id.h"
 #include "spell_casting_choice.h"
 #include "type_id.h"
@@ -682,9 +687,31 @@ class bash_activity_actor : public activity_actor
 {
     private:
         tripoint_bub_ms target;
+        std::optional<tripoint_abs_ms> owned_target;
+        tripoint_abs_ms origin;
+        character_id operator_id;
+        ter_str_id terrain;
+        furn_str_id furniture;
+        int64_t vehicle = 0;
+        bool allow_vehicle_theft = false;
+        bool awaiting_confirmation = false;
 
     public:
         explicit bash_activity_actor( const tripoint_bub_ms &where ) : target( where ) {}
+        bash_activity_actor( const Character &who, const tripoint_abs_ms &where,
+                             const ter_str_id &terrain, const furn_str_id &furniture, int64_t vehicle,
+                             bool allow_vehicle_theft );
+
+        bool can_smash_at( const Character &who, map &here ) const;
+        const std::optional<tripoint_abs_ms> &work_location() const {
+            return owned_target;
+        }
+        bool needs_confirmation() const {
+            return awaiting_confirmation;
+        }
+        void confirm_continuation() {
+            awaiting_confirmation = false;
+        }
 
         const activity_id &get_type() const override {
             static const activity_id ACT_BASH( "ACT_BASH" );
@@ -1276,8 +1303,20 @@ class move_items_activity_actor : public activity_actor
         tripoint_rel_ms relative_destination;
         bool hauling_mode;
         character_id operator_id;
+        std::optional<item_move_selection> owned_selection;
 
     public:
+        move_items_activity_actor( item_move_selection selection, character_id who )
+            : to_vehicle( false ), hauling_mode( false ), operator_id( who ),
+              owned_selection( std::move( selection ) ) {}
+        const item_move_selection *selected_move() const {
+            return owned_selection ? &*owned_selection : nullptr;
+        }
+        float exertion_level() const override {
+            static const activity_id ACT_DROP( "ACT_DROP" );
+            return owned_selection && owned_selection->dropping ? ACT_DROP->exertion_level() :
+                   activity_actor::exertion_level();
+        }
         move_items_activity_actor( std::vector<item_location> target_items, std::vector<int> quantities,
                                    bool to_vehicle, tripoint_rel_ms relative_destination, bool hauling_mode = false ) :
             target_items( std::move( target_items ) ), quantities( std::move( quantities ) ),
@@ -2043,6 +2082,8 @@ class consume_activity_actor : public activity_actor
         bool allow_consequences = false;
         bool allow_theft = false;
         item_source owned_source;
+        std::optional<faction_id> vehicle_owner;
+        std::optional<ground_food_target> ground_continuation;
         // whether to show the consume menu after this activity finishes
         bool reprompt_consume_menu = false;
 
@@ -2062,8 +2103,20 @@ class consume_activity_actor : public activity_actor
             allow_consequences( consequences ), allow_theft( theft ),
             reprompt_consume_menu( reprompt_consume_menu ) {}
 
+        consume_activity_actor( item_source source, faction_id owner, bool consequences, bool theft ) :
+            server_owned( true ), allow_consequences( consequences ), allow_theft( theft ),
+            owned_source( std::move( source ) ), vehicle_owner( std::move( owner ) ) {}
+
         explicit consume_activity_actor( const item &consume_item, bool reprompt_consume_menu = false ) :
             consume_item( consume_item ), reprompt_consume_menu( reprompt_consume_menu ) {}
+
+        consume_activity_actor( const item &food, const ground_food_target &continuation,
+                                bool consequences ) :
+            consume_item( food ), allow_consequences( consequences ), ground_continuation( continuation ) {}
+
+        const std::optional<ground_food_target> &ground_food_after_harvest() const {
+            return ground_continuation;
+        }
 
         const activity_id &get_type() const override {
             static const activity_id ACT_CONSUME( "ACT_CONSUME" );
@@ -2082,9 +2135,8 @@ class consume_activity_actor : public activity_actor
         bool is_client_view() const {
             return view_only;
         }
-        bool consumes_vehicle_water() const {
-            return owned_source.kind == "vehicle_faucet";
-        }
+        bool consumes_vehicle_water() const;
+        std::optional<tripoint_abs_ms> ground_source() const;
         bool prepare_owned_turn( Character &who );
         void finish( player_activity &act, Character & ) override;
         void canceled( player_activity &, Character &who ) override;
@@ -2137,7 +2189,8 @@ class try_sleep_activity_actor : public activity_actor
 class safecracking_activity_actor : public activity_actor
 {
     public:
-        explicit safecracking_activity_actor( const tripoint_bub_ms &safe ) : safe( safe ) {};
+        safecracking_activity_actor( const safe_interaction &target, character_id operator_id )
+            : target_( target ), operator_id_( operator_id ) {}
 
         const activity_id &get_type() const override {
             static const activity_id ACT_CRACKING( "ACT_CRACKING" );
@@ -2145,6 +2198,7 @@ class safecracking_activity_actor : public activity_actor
         }
 
         static time_duration safecracking_time( const Character &who );
+        std::optional<tripoint_abs_ms> work_location() const;
 
         void start( player_activity &act, Character &who ) override;
         void do_turn( player_activity &act, Character &who ) override;
@@ -2158,15 +2212,17 @@ class safecracking_activity_actor : public activity_actor
         static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
 
     private:
-        tripoint_bub_ms safe;
+        safecracking_activity_actor() = default;
+
+        std::optional<safe_interaction> target_;
+        character_id operator_id_;
+        std::optional<tripoint_bub_ms> legacy_safe_;
         int exp_step = 0;
 
+        bool valid_work( const Character &who, map &here );
         bool can_resume_with_internal( const activity_actor &other,
-                                       const Character &/*who*/ ) const override {
-            const safecracking_activity_actor &actor = static_cast<const safecracking_activity_actor &>
-                    ( other );
-            return actor.safe == safe;
-        }
+                                       const Character &who ) const override;
+        void set_resume_values_internal( const activity_actor &other, const Character &who ) override;
 };
 
 // for unloading items from the inventory
@@ -3137,6 +3193,8 @@ class reel_cable_activity_actor : public activity_actor
     private:
         int moves_total;
         item_location cable;
+        std::optional<item_source> owned_cable;
+        character_id operator_id;
     public:
         reel_cable_activity_actor( int moves_total, const item_location &cable ) :
             moves_total( moves_total ), cable( cable ) {}
@@ -3149,9 +3207,14 @@ class reel_cable_activity_actor : public activity_actor
                                        const Character &/*who*/ ) const override {
             const reel_cable_activity_actor &actor = static_cast<const reel_cable_activity_actor &>
                     ( other );
-            return actor.cable == cable;
+            if( owned_cable || actor.owned_cable ) {
+                return owned_cable && actor.owned_cable && operator_id == actor.operator_id &&
+                       owned_cable->path == actor.owned_cable->path && cable == actor.cable;
+            }
+            return cable == actor.cable;
         }
 
+        void bind_owner( Character &who );
         void start( player_activity &act, Character & ) override;
         void do_turn( player_activity &, Character & ) override {}
         void finish( player_activity &act, Character &who ) override;
@@ -3239,6 +3302,14 @@ class vehicle_activity_actor : public activity_actor
          * out and the action is complete.
          */
         void complete_vehicle( player_activity &act, Character &you );
+        static bool start_owned_work( Character &who, map &here, vehicle_work_selection selection );
+        std::optional<tripoint_abs_ms> owned_work_position() const {
+            return owned_work ? std::optional<tripoint_abs_ms>( owned_work->position ) : std::nullopt;
+        }
+        int64_t changed_vehicle_snapshot() const {
+            return owned_work && sub_activity == VEHICLE_SHAPE ? vehicle_uid : 0;
+        }
+        bool can_continue_owned_work( const Character &who, map &here );
         // Used by other work orders to avoid claiming the same live part.
         std::optional<int> target_part_index( const vehicle &target ) const;
 
@@ -3258,6 +3329,9 @@ class vehicle_activity_actor : public activity_actor
         int64_t part_uid = 0;
         character_id operator_id;
         vehicle *resolve_target( map &here );
+        std::optional<time_duration> validate_owned_work( Character &who, map &here, vehicle &target );
+        std::optional<vehicle_work_selection> owned_work;
+        int initial_repair_damage = -1;
 
         //formerly coord_set
         std::unordered_set<tripoint_abs_ms> vehicle_points;
@@ -3680,6 +3754,7 @@ class fire_start_activity_actor : public activity_actor
             return ACT_START_FIRE;
         }
 
+        void append_work_tiles( std::vector<tripoint_abs_ms> &tiles ) const;
         void start( player_activity &act, Character & ) override;
         void do_turn( player_activity &act, Character &who ) override;
         void finish( player_activity &act, Character &who ) override;
@@ -3710,12 +3785,18 @@ class wear_activity_actor : public activity_actor
         wear_activity_actor( std::vector<item_location> target_items, std::vector<int> quantities ) :
             target_items( std::move( target_items ) ),
             quantities( std::move( quantities ) ) {};
+        explicit wear_activity_actor( std::vector<cata_mp::equipment_intent> selection ) :
+            owned_selection( std::move( selection ) ) {}
         const activity_id &get_type() const override {
             static const activity_id ACT_WEAR( "ACT_WEAR" );
             return ACT_WEAR;
         }
 
-        void start( player_activity &, Character & ) override {};
+        void start( player_activity &, Character &who ) override {
+            if( owned_selection && !operator_id.is_valid() ) {
+                operator_id = who.getID();
+            }
+        }
         void do_turn( player_activity &, Character &who ) override;
         void finish( player_activity &, Character & ) override {};
 
@@ -3730,6 +3811,8 @@ class wear_activity_actor : public activity_actor
         std::vector<item_location> target_items;
         std::vector<int> quantities;
         contents_change_handler handler;
+        character_id operator_id;
+        std::optional<std::vector<cata_mp::equipment_intent>> owned_selection;
 };
 
 class wield_activity_actor : public activity_actor
@@ -4165,6 +4248,11 @@ class mend_item_activity_actor : public activity_actor
                                   fault_id mended_fault, fault_fix_id mending_method ) :
             initial_moves( initial_moves ), mended_item( mended_item ),
             mended_fault( mended_fault ), mending_method( mending_method ) { }
+        mend_item_activity_actor( time_duration duration, item_repair::mending_selection selection,
+                                  character_id operator_id );
+        const item_repair::mending_selection *owned_selection() const {
+            return owned_mend ? &*owned_mend : nullptr;
+        }
 
         const activity_id &get_type() const override {
             static const activity_id ACT_MEND_ITEM( "ACT_MEND_ITEM" );
@@ -4188,6 +4276,8 @@ class mend_item_activity_actor : public activity_actor
         item_location mended_item;
         fault_id mended_fault;
         fault_fix_id mending_method;
+        std::optional<item_repair::mending_selection> owned_mend;
+        character_id operator_id;
 };
 
 class fix_wound_activity_actor : public activity_actor
@@ -4387,6 +4477,13 @@ class pulp_activity_actor : public activity_actor
         void finish( player_activity &, Character & ) override;
 
         bool can_pulp( item &corpse, Character &you );
+        const std::optional<tripoint_abs_ms> &work_location() const {
+            return owned_target;
+        }
+        bool needs_confirmation() const {
+            return awaiting_confirmation;
+        }
+        void confirm_long_pulp( bool accepted );
         void send_final_message( Character &you ) const;
 
         std::unique_ptr<activity_actor> clone() const override {
@@ -4405,7 +4502,11 @@ class pulp_activity_actor : public activity_actor
         // either single tripoint shoved into set, or 3x3 zone around u/npc
         std::set<tripoint_abs_ms> placement; // NOLINT(cata-serialize)
 
-        float float_corpse_damage_accum = 0.0f; // NOLINT(cata-serialize)
+        std::optional<tripoint_abs_ms> owned_target;
+        tripoint_abs_ms origin;
+        character_id operator_id;
+        bool awaiting_confirmation = false;
+        float float_corpse_damage_accum = 0.0f;
 
         int unpulped_corpses_qty = 0;
 

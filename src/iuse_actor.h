@@ -30,6 +30,7 @@ class JsonObject;
 class item;
 class item_location;
 class map;
+class vpart_position;
 class npc;
 class npc_template;
 struct furn_t;
@@ -547,7 +548,7 @@ class firestarter_actor : public iuse_actor
         static start_type prep_firestarter_use( Character &p, map *here, tripoint_bub_ms &pos,
                                                 bool preview = false, bool confirmed = false );
         /** Player here isn't const because pyromaniacs gain a mood boost from it */
-        static void resolve_firestarter_use( Character *p, map *here, const tripoint_bub_ms &pos,
+        static bool resolve_firestarter_use( Character *p, map *here, const tripoint_bub_ms &pos,
                                              start_type st );
 
         static bool resolve_start( Character *p, map *here, const tripoint_bub_ms &pos, start_type type );
@@ -568,6 +569,9 @@ class firestarter_actor : public iuse_actor
         std::optional<int> use_with_choices( Character *who, item &tool, map *here,
                                              const tripoint_bub_ms &position,
                                              const item_activation_choices &choices ) const override;
+        std::optional<int> use_with_tool( Character &who, const item_location &tool, map &here,
+                                          const tripoint_bub_ms &position,
+                                          const item_activation_choices &choices ) const;
 
         ~firestarter_actor() override = default;
         void load( const JsonObject &obj, const std::string & ) override;
@@ -585,6 +589,12 @@ class firestarter_actor : public iuse_actor
         // Returns true if fire was started (instant) or activity assigned.
         bool npc_start_fire( npc &who, item &tool,
                              const tripoint_bub_ms &fire_pos ) const;
+
+    private:
+        std::optional<int> use_firestarter( Character *who, item &tool, map *here,
+                                            const tripoint_bub_ms &position,
+                                            const item_activation_choices &choices,
+                                            const item_location &exact_tool ) const;
 };
 
 /**
@@ -1248,8 +1258,33 @@ class link_up_actor : public iuse_actor
         std::set<link_state> targets;
         std::set<std::string> can_extend;
 
+        int query_link_action( Character &who, const item &it ) const;
+        item_location query_supply_device( Character &who, link_state supply ) const;
+        bool can_attach_supply( Character &who, const item &cable, link_state supply,
+                                const item_location &device ) const;
+        std::optional<int> attach_supply( Character &who, item &cable, map &here,
+                                          link_state supply, item_location device ) const;
+        void detach_link( Character &who, item_location cable, bool owned ) const;
+        bool valid_activation_choices( const item_activation_choices &choices ) const override;
+        bool supports_owned_activation() const override {
+            return true;
+        }
+        std::optional<int> use_with_choices( Character *who, item &it, map *here,
+                                             const tripoint_bub_ms &pos,
+                                             const item_activation_choices &choices ) const override;
         std::optional<int> link_to_veh_app( Character *p, item &it, bool to_ports ) const;
+        // Native link transaction after the caller has selected and validated the endpoint.
+        std::optional<int> attach_to_vehicle( Character &who, item &it, map &here,
+                                             const vpart_position &endpoint, bool to_ports ) const;
         std::optional<int> link_tow_cable( Character *p, item &it, bool to_towing ) const;
+        std::optional<int> attach_tow_cable( Character &who, item &it, map &here,
+                                             const vpart_position &endpoint, bool to_towing ) const;
+        bool compatible_extension( const item &cable, const item &selected ) const;
+        item_location query_cable_extension( Character &who, const item_location &cable ) const;
+        bool confirm_cable_extension( Character &who, item_location cable, item_location selected,
+                                      bool &allow_spill ) const;
+        std::optional<int> extend_cable( Character &who, map &here, item_location cable,
+                                         item_location selected, bool allow_spill ) const;
         std::optional<int> link_extend_cable( Character *p, item &it, map *here,
                                               const tripoint_bub_ms &pnt ) const;
         std::optional<int> remove_extensions( Character *p, item &it ) const;

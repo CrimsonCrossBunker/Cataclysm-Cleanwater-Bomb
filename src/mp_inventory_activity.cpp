@@ -1,5 +1,7 @@
 #include "vertical_movement.h"
 #include "deployed_furniture.h"
+#include "terrain_examine.h"
+#include "safecracking.h"
 #include "mp_firearm.h"
 #include "radio_car_control.h"
 #include "grab.h"
@@ -19,8 +21,10 @@
 #include <limits>
 #include <sstream>
 #include <set>
+#include <tuple>
 #include <vector>
 #include <utility>
+#include <variant>
 
 #include "activity_actor_definitions.h"
 #include "butchery.h"
@@ -42,6 +46,18 @@
 #include "zone_edit.h"
 #include "zone_work.h"
 #include "farming.h"
+#include "fireplace.h"
+#include "arc_furnace.h"
+#include "stook.h"
+#include "autoclave.h"
+#include "mill.h"
+#include "iexamine_actors.h"
+#include "furniture_reload.h"
+#include "keg.h"
+#include "liquid_transfer.h"
+#include "charcoal_kiln.h"
+#include "smoking_rack.h"
+#include "fermentation_vessel.h"
 #include "character_action_guard.h"
 #include "cata_scope_helpers.h"
 #include "color.h"
@@ -66,6 +82,8 @@
 #include "item_healing.h"
 #include "item_disposition.h"
 #include "item_insert.h"
+#include "item_move.h"
+#include "mp_equipment.h"
 #include "item_consumption.h"
 #include "item_location.h"
 #include "item_reload.h"
@@ -73,11 +91,13 @@
 #include "itype.h"
 #include "iuse.h"
 #include "json.h"
-#include "map.h"
 #include "magic.h"
+#include "map.h"
+#include "melee.h"
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
+#include "npctalk.h"
 #include "output.h"
 #include "spell_casting_choice.h"
 #include "messages.h"
@@ -86,22 +106,30 @@
 #include "mp_combat_result.h"
 #include "mp_gamestate.h"
 #include "mp_item_source.h"
+#include "mp_npc_trade.h"
 #include "mp_pickup.h"
 #include "mp_player_view.h"
+#include "npc_radio.h"
 #include "mp_unload.h"
 #include "mp_world_session.h"
 #include "player_activity.h"
 #include "ret_val.h"
+#include "sleep.h"
 #include "rng.h"
 #include "safe_reference.h"
 #include "string_formatter.h"
 #include "talker.h"
+#include "talker_npc.h"
 #include "translations.h"
 #include "ui_manager.h"
 #include "uilist.h"
 #include "uistate.h"
+#include "veh_interact.h"
+#include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_power_connection.h"
 #include "vehicle_control.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "action.h"
 #include "activity_actor.h"
@@ -117,6 +145,7 @@
 #include "handle_liquid.h"
 #include "input_enums.h"
 #include "item_components.h"
+#include "item_repair.h"
 #include "item_source.h"
 #include "item_unload.h"
 #include "lua_platform_state.h"
@@ -147,6 +176,7 @@ static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );
 static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
 static const activity_id ACT_LONGSALVAGE( "ACT_LONGSALVAGE" );
 static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
+static const activity_id ACT_WEAR( "ACT_WEAR" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
 static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
@@ -202,6 +232,38 @@ void dialogue_view_option::deserialize( const JsonObject &data )
     data.read( "quit_candidate", quit_candidate, true );
 }
 
+void npc_seminar_prompt::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "id", id );
+    out.member( "status", status );
+    out.member( "candidates", candidates );
+    out.end_object();
+}
+
+void npc_seminar_prompt::deserialize( const JsonObject &data )
+{
+    data.allow_omitted_members();
+    data.read( "id", id, true );
+    data.read( "status", status, true );
+    data.read( "candidates", candidates, true );
+}
+
+void npc_item_offer_prompt::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "id", id );
+    out.member( "replacement_question", replacement_question );
+    out.end_object();
+}
+
+void npc_item_offer_prompt::deserialize( const JsonObject &data )
+{
+    data.allow_omitted_members();
+    data.read( "id", id, true );
+    data.read( "replacement_question", replacement_question, true );
+}
+
 void dialogue_view_prompt::serialize( JsonOut &out ) const
 {
     out.start_object();
@@ -217,6 +279,15 @@ void dialogue_view_prompt::serialize( JsonOut &out ) const
     out.member( "is_remote", is_remote );
     out.member( "append_challenge", append_challenge );
     out.member( "options", options );
+    if( trade ) {
+        out.member( "trade", *trade );
+    }
+    if( seminar ) {
+        out.member( "seminar", *seminar );
+    }
+    if( item_offer ) {
+        out.member( "item_offer", *item_offer );
+    }
     out.end_object();
 }
 
@@ -235,6 +306,83 @@ void dialogue_view_prompt::deserialize( const JsonObject &data )
     data.read( "is_remote", is_remote, true );
     data.read( "append_challenge", append_challenge, true );
     data.read( "options", options, true );
+    if( data.has_object( "trade" ) ) {
+        auto snapshot = std::make_shared<npc_trade_prompt>();
+        data.read( "trade", *snapshot, true );
+        trade = std::move( snapshot );
+    } else {
+        trade.reset();
+    }
+    if( data.has_object( "seminar" ) ) {
+        data.read( "seminar", seminar.emplace(), true );
+    } else {
+        seminar.reset();
+    }
+    if( data.has_object( "item_offer" ) ) {
+        data.read( "item_offer", item_offer.emplace(), true );
+    } else {
+        item_offer.reset();
+    }
+}
+
+static bool can_call_npc( const map &here, const Character &who, const npc &target )
+{
+    if( &target == &who || target.is_dead() || target.is_hallucination() ||
+        is_player_proxy( target ) ) {
+        return false;
+    }
+    const bool follower = target.is_ally( who ) && g->get_follower_list().count( target.getID() ) > 0;
+    if( !follower && !npc_radio::knows_representative( who, target ) ) {
+        return false;
+    }
+    return ( follower && npc_radio::can_contact( here, who, target ) ) ||
+           npc_radio::can_radio_contact( who, target ) == npc_radio::radio_contact_result::YES;
+}
+
+static bool can_address_dialogue_target( const map &here, const Character &who,
+        const Creature &target )
+{
+    return target.posz() == who.posz() && here.inbounds( target.pos_abs() ) &&
+           rl_dist( who.pos_abs(), target.pos_abs() ) <= SEEX * 2 &&
+           who.sees( here, target.pos_bub( here ) );
+}
+
+using npc_wardrobe = std::vector<std::tuple<int64_t, itype_id, side, int>>;
+
+static npc_wardrobe current_npc_wardrobe( npc &recipient )
+{
+    npc_wardrobe clothes;
+    for( const item_location &loc : recipient.top_items_loc() ) {
+        if( loc && recipient.is_worn( *loc ) ) {
+            clothes.emplace_back( loc->uid().get_value(), loc->typeId(), loc->get_side(), loc->damage() );
+        }
+    }
+    return clothes;
+}
+
+struct owned_npc_item_offer {
+    bool use_item;
+    std::optional<item_source> replacement_source;
+    itype_id offered_type;
+    int offered_count = 0;
+    npc_wardrobe wardrobe;
+    std::string refused_reason;
+};
+
+static void refresh_vehicles_at_changed_tiles( const map &here, inventory_activity_host_state &state )
+{
+    std::sort( state.changed_tiles.begin(), state.changed_tiles.end() );
+    state.changed_tiles.erase( std::unique( state.changed_tiles.begin(), state.changed_tiles.end() ),
+                               state.changed_tiles.end() );
+    for( const tripoint_abs_ms &position : state.changed_tiles ) {
+        const tripoint_bub_ms tile = here.get_bub( position );
+        if( !here.has_loaded_submap( tile ) ) {
+            continue;
+        }
+        if( const auto target = here.veh_at( tile ) ) {
+            state.refresh_vehicle_snapshots.push_back( target->vehicle().uid().get_value() );
+        }
+    }
 }
 
 struct owned_dialogue_session {
@@ -244,12 +392,18 @@ struct owned_dialogue_session {
     dialogue session;
     dialogue_window window;
     dialogue_view_prompt current_prompt;
+    std::variant<std::monostate, npc_trade_session, dialogue_seminar_request, owned_npc_item_offer> modal;
+    std::optional<talk_topic> after_modal;
+    std::string modal_response;
+    int64_t last_modal_id = 0;
+    bool trade_uses_delegate = false;
 
     owned_dialogue_session( uint64_t id, std::unique_ptr<talker> alpha,
                             std::unique_ptr<talker> beta, bool radio, bool is_computer,
                             bool is_not_conversation, std::string remote )
         : session_id( id ), radio_contact( radio ), remote_name( std::move( remote ) ),
           session( std::move( alpha ), std::move( beta ), {} ) {
+        session.enable_remote_prompts();
         window.is_computer = is_computer;
         window.is_not_conversation = is_not_conversation;
         if( !remote_name.empty() ) {
@@ -320,6 +474,7 @@ struct owned_dialogue_session {
     }
 
     void finish( Character &who ) {
+        modal.emplace<std::monostate>();
         const character_action_guard actor( who );
         const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
         const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
@@ -339,6 +494,7 @@ struct owned_dialogue_session {
     }
 
     void cancel() {
+        modal.emplace<std::monostate>();
         if( session.conversation_active() ) {
             const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
             const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
@@ -351,7 +507,164 @@ struct owned_dialogue_session {
         }
     }
 
-    bool start( Character &who ) {
+    npc *trade_provider() const {
+        npc *provider = session.actor( true )->get_npc();
+        return provider && trade_uses_delegate ? &provider->get_trade_delegate() : provider;
+    }
+
+    bool open_pending_prompt( Character &who, const map &here,
+                              const std::optional<talk_topic> &next, const std::string &chosen_text ) {
+        auto request = session.take_remote_request();
+        if( !request || !who.has_native_player_control() ||
+            last_modal_id == std::numeric_limits<int64_t>::max() ) {
+            return false;
+        }
+
+        dialogue_view_prompt prompt;
+        prompt.session_id = session_id;
+        prompt.response_revision = session.response_revision();
+        prompt.append_challenge = false;
+        const int64_t id = ++last_modal_id;
+        if( auto *trade_request = std::get_if<dialogue_trade_request>( &*request ) ) {
+            trade_uses_delegate = trade_request->use_delegate;
+            npc *provider = trade_provider();
+            if( !provider ) {
+                return false;
+            }
+            auto &trade = modal.emplace<npc_trade_session>( who, *provider, here, id,
+                std::move( *trade_request ) );
+            if( !trade.belongs_to( who, *provider, here ) || !participants_alive() ) {
+                modal.emplace<std::monostate>();
+                return false;
+            }
+            prompt.trade = std::make_shared<npc_trade_prompt>( trade.prompt() );
+        } else if( auto *seminar = std::get_if<dialogue_seminar_request>( &*request ) ) {
+            auto candidates = seminar->candidates();
+            if( candidates.empty() ) {
+                return false;
+            }
+            prompt.seminar = npc_seminar_prompt{ id, {}, std::move( candidates ) };
+            modal.emplace<dialogue_seminar_request>( std::move( *seminar ) );
+        } else {
+            npc *recipient = session.actor( true )->get_npc();
+            if( !recipient || !can_offer_npc_item( who, *recipient, here ) ) {
+                session.reason = _( "Move closer to hand over the item." );
+                return false;
+            }
+            prompt.item_offer = npc_item_offer_prompt{ id, {} };
+            owned_npc_item_offer offer{};
+            offer.use_item = std::get<dialogue_item_offer_request>( *request ).use_item;
+            modal.emplace<owned_npc_item_offer>( std::move( offer ) );
+        }
+        after_modal = next;
+        modal_response = chosen_text;
+        current_prompt = std::move( prompt );
+        return true;
+    }
+
+    bool finish_modal( Character &who, const map &here ) {
+        auto next = std::exchange( after_modal, std::nullopt );
+        std::string chosen_text = std::exchange( modal_response, std::string{} );
+        modal.emplace<std::monostate>();
+        return open_pending_prompt( who, here, next, chosen_text ) ||
+               resume( who, here, std::move( next ), chosen_text );
+    }
+
+    bool choose_item_offer( Character &who, map &here, const JsonObject &choice,
+                            owned_npc_item_offer &offer, inventory_activity_host_state &state ) {
+        if( !current_prompt.item_offer || !choice.has_member( "id" ) ||
+            choice.get_int64( "id" ) != current_prompt.item_offer->id ) {
+            return true;
+        }
+        if( choice.get_bool( "cancel", false ) ) {
+            session.reason = offer.replacement_source ? offer.refused_reason : _( "No item was offered." );
+            return finish_modal( who, here );
+        }
+        auto *interlocutor = dynamic_cast<talker_npc *>( session.actor( true ) );
+        npc *recipient = interlocutor ? interlocutor->get_npc() : nullptr;
+        if( !recipient || !can_offer_npc_item( who, *recipient, here ) ) {
+            session.reason = _( "Move closer to hand over the item." );
+            return finish_modal( who, here );
+        }
+
+        item_source source;
+        const bool replacing = offer.replacement_source.has_value();
+        if( replacing ) {
+            if( !choice.has_bool( "replace_armor" ) ) {
+                return true;
+            }
+            if( !choice.get_bool( "replace_armor" ) ) {
+                session.reason = offer.refused_reason;
+                return finish_modal( who, here );
+            }
+            source = *offer.replacement_source;
+        } else if( !choice.has_object( "source" ) || !choice.read( "source", source, true ) ) {
+            return true;
+        }
+
+        item_location loc = source.kind == "carried" ? resolve_item_source( who, here, source ) :
+                            item_location();
+        if( !loc || !loc.held_by( who ) ) {
+            session.reason = _( "You are not carrying that item." );
+            return finish_modal( who, here );
+        }
+        if( replacing && ( loc->typeId() != offer.offered_type || loc->count() != offer.offered_count ||
+                           current_npc_wardrobe( *recipient ) != offer.wardrobe ) ) {
+            session.reason = _( "The equipment changed before you could hand it over." );
+            return finish_modal( who, here );
+        }
+
+        const character_action_guard donor( who );
+        const character_action_guard recipient_lifetime( *recipient );
+        const tripoint_abs_ms recipient_position = recipient->pos_abs();
+        const npc_item_offer_result result = interlocutor->offer_item(
+                loc, offer.use_item, replacing ? std::optional<bool>( true ) : std::nullopt );
+        if( !donor || !recipient_lifetime || !participants_alive() ) {
+            cancel();
+            return false;
+        }
+        if( result.needs_replacement && loc && loc.held_by( who ) &&
+            last_modal_id < std::numeric_limits<int64_t>::max() ) {
+            offer.replacement_source = capture_item_source( who, loc );
+            offer.offered_type = loc->typeId();
+            offer.offered_count = loc->count();
+            offer.wardrobe = current_npc_wardrobe( *recipient );
+            offer.refused_reason = result.reason;
+            current_prompt.item_offer = npc_item_offer_prompt{
+                ++last_modal_id, result.reason + _( " Should I take something off?" )
+            };
+            return true;
+        }
+        state.changed_tiles.push_back( recipient_position );
+        refresh_vehicles_at_changed_tiles( here, state );
+        session.reason = result.reason;
+        return finish_modal( who, here );
+    }
+
+    bool resume( Character &who, const map &here, std::optional<talk_topic> next,
+                 const std::string &chosen_text ) {
+        const character_action_guard actor( who );
+        if( actor && participants_alive() &&
+            ( !next || session.advance_conversation( std::move( *next ) ) ) &&
+            !session.done && session.prepare_topic() && actor && participants_alive() ) {
+            if( !open_pending_prompt( who, here, std::nullopt, chosen_text ) ) {
+                if( !actor || !participants_alive() ) {
+                    cancel();
+                    return false;
+                }
+                snapshot_prompt( chosen_text, true );
+            }
+            return true;
+        }
+        if( actor ) {
+            finish( who );
+        } else {
+            cancel();
+        }
+        return false;
+    }
+
+    bool start( Character &who, const map &here ) {
         const character_action_guard actor( who );
         const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
         const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
@@ -368,36 +681,40 @@ struct owned_dialogue_session {
             dialogue_start_result::started ) {
             return false;
         }
-        if( !actor || session.done || !session.prepare_topic() ) {
-            if( actor ) {
-                finish( who );
-            } else {
-                cancel();
-            }
-            return false;
-        }
-        snapshot_prompt( {}, true );
-        return true;
+        return actor && resume( who, here, std::nullopt, {} );
     }
 
-    bool choose( Character &who, const JsonObject &request ) {
+    bool choose( Character &who, map &here, const JsonObject &request,
+                 inventory_activity_host_state &state ) {
         if( request.has_member( "debug" ) || request.has_member( "debug_topic" ) ||
             request.has_member( "force_debug_topic" ) ||
             request.has_member( "debug_allow_unavailable" ) ||
             request.has_member( "topic" ) || request.has_member( "effect" ) ) {
             return true;
         }
-        if( !participants_alive() ) {
+        if( !participants_alive() ||
+            session.const_actor( false )->get_const_character() != &who ) {
             finish( who );
             return false;
         }
+        const Creature &target = *session.const_actor( true )->get_const_creature();
         const int64_t raw_session = request.has_member( "dialogue_session" ) ?
                                     request.get_int64( "dialogue_session" ) : 0;
         const int64_t raw_revision = request.has_member( "response_revision" ) ?
                                      request.get_int64( "response_revision" ) : 0;
         if( raw_session <= 0 || static_cast<uint64_t>( raw_session ) != session_id ||
-            raw_revision <= 0 ) {
+            raw_revision <= 0 || static_cast<uint64_t>( raw_revision ) != session.response_revision() ) {
             return true;
+        }
+        if( radio_contact ) {
+            const npc *contact = session.const_actor( true )->get_const_npc();
+            if( contact == nullptr || !can_call_npc( here, who, *contact ) ) {
+                finish( who );
+                return false;
+            }
+        } else if( !can_address_dialogue_target( here, who, target ) ) {
+            finish( who );
+            return false;
         }
         const uint64_t revision = static_cast<uint64_t>( raw_revision );
         const character_action_guard actor( who );
@@ -413,6 +730,74 @@ struct owned_dialogue_session {
             }
         } );
 
+        if( auto *offer = std::get_if<owned_npc_item_offer>( &modal ) ) {
+            if( !request.has_object( "npc_item_offer" ) ) {
+                return true;
+            }
+            const JsonObject choice = request.get_object( "npc_item_offer" );
+            choice.allow_omitted_members();
+            return choose_item_offer( who, here, choice, *offer, state );
+        }
+
+        if( auto *seminar = std::get_if<dialogue_seminar_request>( &modal ) ) {
+            if( !request.has_object( "npc_seminar" ) || !current_prompt.seminar ) {
+                return true;
+            }
+            const JsonObject choice = request.get_object( "npc_seminar" );
+            choice.allow_omitted_members();
+            if( !choice.has_member( "id" ) || choice.get_int64( "id" ) != current_prompt.seminar->id ||
+                !choice.has_array( "participants" ) ||
+                choice.get_array( "participants" ).size() > current_prompt.seminar->candidates.size() ) {
+                return true;
+            }
+            std::vector<character_id> chosen;
+            if( !choice.read( "participants", chosen, true ) ) {
+                return true;
+            }
+            if( chosen.empty() ) {
+                return finish_modal( who, here );
+            }
+
+            const auto &candidates = current_prompt.seminar->candidates;
+            const bool was_offered = std::all_of( chosen.begin(), chosen.end(), [&]( character_id id ) {
+                return std::any_of( candidates.begin(), candidates.end(), [id]( const auto & candidate ) {
+                    return candidate.first == id;
+                } );
+            } );
+            dialogue_seminar_request enrollment = std::move( *seminar );
+            modal.emplace<std::monostate>();
+            const bool accepted = was_offered && enrollment.enroll( session, chosen );
+            if( !actor || !participants_alive() ) {
+                cancel();
+                return false;
+            }
+            if( accepted ) {
+                return finish_modal( who, here );
+            }
+            if( last_modal_id == std::numeric_limits<int64_t>::max() ) {
+                return finish_modal( who, here );
+            }
+            current_prompt.seminar = npc_seminar_prompt{
+                ++last_modal_id, _( "Those participants are no longer available." ), enrollment.candidates()
+            };
+            modal.emplace<dialogue_seminar_request>( std::move( enrollment ) );
+            return true;
+        }
+
+        if( auto *trade = std::get_if<npc_trade_session>( &modal ) ) {
+            npc_trade_choice choice;
+            if( !request.has_object( "npc_trade" ) || !request.read( "npc_trade", choice, true ) ) {
+                return true;
+            }
+            npc *provider = trade_provider();
+            if( provider && trade->apply( who, *provider, here, choice, state.changed_tiles ) ) {
+                current_prompt.trade = std::make_shared<npc_trade_prompt>( trade->prompt() );
+                return true;
+            }
+            refresh_vehicles_at_changed_tiles( here, state );
+            return actor && finish_modal( who, here );
+        }
+
         std::optional<talk_topic> selected;
         std::string chosen_text;
         if( request.has_string( "special_action" ) ) {
@@ -427,10 +812,11 @@ struct owned_dialogue_session {
                 return true;
             }
             const std::size_t index = static_cast<std::size_t>( raw_index );
-            if( revision == session.response_revision() &&
-                index < current_prompt.options.size() ) {
-                chosen_text = current_prompt.options[index].text;
+            if( index >= current_prompt.options.size() ||
+                !current_prompt.options[index].selectable ) {
+                return true;
             }
+            chosen_text = current_prompt.options[index].text;
             selected = session.select_response( index, revision, false );
             if( !selected ) {
                 if( !actor || !participants_alive() || session.done ) {
@@ -459,17 +845,12 @@ struct owned_dialogue_session {
             return true;
         }
 
-        if( !actor || !session.advance_conversation( *selected ) || session.done ||
-            !session.prepare_topic() ) {
-            if( actor ) {
-                finish( who );
-            } else {
-                cancel();
-            }
+        if( !actor ) {
+            cancel();
             return false;
         }
-        snapshot_prompt( chosen_text, true );
-        return true;
+        return open_pending_prompt( who, here, selected, chosen_text ) ||
+               ( actor && resume( who, here, std::move( selected ), chosen_text ) );
     }
 };
 
@@ -815,6 +1196,7 @@ bool begin_client_inventory_activity( const player_activity &activity )
     view.liquid_source_uid = 0;
     view.remote_security_prompt = false;
     view.tree_direction_prompt = false;
+    view.smash_prompt.clear();
     view.repair_prompt.reset();
     view.disassembly_prompt.reset();
     view.spell_prompt.reset();
@@ -916,6 +1298,17 @@ bool start_spell( Character &who, const JsonObject &request )
     return started;
 }
 
+void refresh_repaired_item( inventory_activity_host_state &state, const item_source &target )
+{
+    state.refresh_observers = true;
+    if( target.kind != "carried" ) {
+        state.changed_tiles.push_back( target.position );
+    }
+    if( target.kind == "vehicle_part" || target.kind == "vehicle" ) {
+        state.refresh_vehicle_snapshots.push_back( target.vehicle );
+    }
+}
+
 bool start_item_use( Character &who, map &here, const JsonObject &request,
                      inventory_activity_host_state &state, const std::string &kind )
 {
@@ -939,6 +1332,7 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     request.read( "lumber", choices.lumber );
     request.read( "salvage", choices.salvage );
     request.read( "salvage_batch", choices.salvage_batch );
+    request.read( "cable_link", choices.cable_link );
     if( kind == "examine_pry" ) {
         return execute_owned_prying( who, source, target,
                                      request.get_bool( "allow_theft", false ),
@@ -964,6 +1358,16 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     const bool used = execute_owned_item_activation( who, source, method, target,
                       request.get_bool( "allow_theft", false ),
                       request.get_bool( "allow_wet", false ), choices );
+    if( used && choices.cable_link ) {
+        state.refresh_observers = true;
+        const auto &link = *choices.cable_link;
+        for( const auto *endpoint : { &link.first, &link.destination } ) {
+            if( *endpoint ) {
+                state.changed_tiles.push_back( ( *endpoint )->position );
+                state.refresh_vehicle_snapshots.push_back( ( *endpoint )->vehicle_id );
+            }
+        }
+    }
     if( lifetime && automatic && used && who.activity &&
         ( who.activity.id() == ACT_PICKAXE ||
           who.activity.id() == ACT_JACKHAMMER ) ) {
@@ -1248,9 +1652,9 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
         return;
     }
     const bool radio_contact = request.get_bool( "radio_contact", false );
-    const bool is_computer = request.get_bool( "is_computer", false );
-    const bool is_not_conversation = request.get_bool( "is_not_conversation", false );
-    const std::string remote_name = request.get_string( "remote_name", "" );
+    const bool is_computer = !radio_contact && request.get_bool( "is_computer", false );
+    const bool is_not_conversation = !radio_contact && request.get_bool( "is_not_conversation", false );
+    std::string remote_name = radio_contact ? std::string() : request.get_string( "remote_name", "" );
 
     std::unique_ptr<talker> beta;
     if( request.has_int( "target_npc" ) ) {
@@ -1264,9 +1668,13 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
             is_player_proxy( *guy ) ) {
             return;
         }
-        if( !radio_contact &&
-            ( who.posz() != guy->posz() || !who.sees( here, guy->pos_bub( here ) ) ||
-              rl_dist( who.pos_abs(), guy->pos_abs() ) > SEEX * 2 ) ) {
+        if( radio_contact ) {
+            if( !can_call_npc( here, who, *guy ) ) {
+                who.add_msg_if_player( m_warning, _( "You cannot contact this NPC right now." ) );
+                return;
+            }
+            remote_name = guy->chatbin.talk_radio;
+        } else if( !can_address_dialogue_target( here, who, *guy ) ) {
             return;
         }
         beta = get_talker_for( *guy );
@@ -1279,17 +1687,13 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
         Creature *critter = get_creature_tracker().creature_at( here.get_bub( target_pos ) );
         if( npc *guy = critter ? critter->as_npc() : nullptr ) {
             if( guy == &who || guy->is_dead() || guy->is_hallucination() ||
-                is_player_proxy( *guy ) || who.posz() != guy->posz() ||
-                !who.sees( here, guy->pos_bub( here ) ) ||
-                rl_dist( who.pos_abs(), guy->pos_abs() ) > SEEX * 2 ) {
+                is_player_proxy( *guy ) || !can_address_dialogue_target( here, who, *guy ) ) {
                 return;
             }
             beta = get_talker_for( *guy );
         } else if( monster *mon = critter ? critter->as_monster() : nullptr ) {
             if( mon->is_dead() || !mon->has_flag( mon_flag_CONVERSATION ) ||
-                mon->type->chat_topics.empty() || who.posz() != mon->posz() ||
-                !who.sees( here, mon->pos_bub( here ) ) ||
-                rl_dist( who.pos_abs(), mon->pos_abs() ) > SEEX * 2 ) {
+                mon->type->chat_topics.empty() || !can_address_dialogue_target( here, who, *mon ) ) {
                 return;
             }
             beta = get_talker_for( *mon );
@@ -1302,7 +1706,7 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
     auto session = std::make_shared<owned_dialogue_session>(
                        ++state.next_dialogue_session, get_talker_for( who ), std::move( beta ),
                        radio_contact, is_computer, is_not_conversation, remote_name );
-    if( session->start( who ) ) {
+    if( session->start( who, here ) ) {
         state.dialogue_session = std::move( session );
     }
 }
@@ -1315,6 +1719,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     const std::string operation = request.get_string( "operation" );
     state.refresh_observers = false;
     state.changed_tiles.clear();
+    state.refresh_vehicle_snapshots.clear();
     bool zone_editor_requested = false;
     std::optional<vertical_move_prompt> vertical_prompt;
     bool zone_action_menu = false;
@@ -1357,6 +1762,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                                   who.activity.id() == ACT_MOVE_LOOT ||
                                   who.activity.id() == ACT_FURNITURE_MOVE ||
                                   who.activity.id() == ACT_MOVE_ITEMS ||
+                                  who.activity.id() == ACT_WEAR ||
                                   who.activity.id() == ACT_GLIDE ||
                                   who.activity.id() == ACT_TRAIN ||
                                   who.activity.id() == ACT_WAIT_NPC ||
@@ -1367,14 +1773,53 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                                   dynamic_cast<const multi_zone_activity_actor *>( who.activity.actor.get() ) ||
                                   is_vehicle_heating( who.activity ) ||
                                   dynamic_cast<repair_activity_actor *>( who.activity.actor.get() );
-        if( who.activity.id() == ACT_START_FIRE ) {
+        const auto *bash = dynamic_cast<const bash_activity_actor *>( who.activity.actor.get() );
+        const auto *pulp = dynamic_cast<const pulp_activity_actor *>( who.activity.actor.get() );
+        const auto *safe = dynamic_cast<const safecracking_activity_actor *>( who.activity.actor.get() );
+        const std::optional<tripoint_abs_ms> work = bash ? bash->work_location() :
+                pulp ? pulp->work_location() : safe ? safe->work_location() : std::nullopt;
+        if( work ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( *work );
+        }
+        if( const auto *consume = dynamic_cast<const consume_activity_actor *>( who.activity.actor.get() ) ) {
+            if( const auto &ground = consume->ground_food_after_harvest() ) {
+                state.refresh_observers = true;
+                state.changed_tiles.push_back( ground->position );
+            }
+        }
+        if( const auto *work = dynamic_cast<const vehicle_activity_actor *>( who.activity.actor.get() ) ) {
+            if( const auto position = work->owned_work_position() ) {
+                state.refresh_observers = true;
+                state.changed_tiles.push_back( *position );
+                state.changed_tiles.push_back( who.pos_abs() );
+            }
+        }
+        const auto *move = dynamic_cast<const move_items_activity_actor *>( who.activity.actor.get() );
+        if( move && move->selected_move() ) {
+            append_item_move_tiles( *move->selected_move(), state.changed_tiles );
+        }
+        if( who.activity.id() == ACT_START_FIRE || who.activity.id() == ACT_FILL_LIQUID ) {
             for( const tripoint_bub_ms &p : here.points_in_radius( who.pos_bub( here ), 1 ) ) {
                 state.changed_tiles.push_back( here.get_abs( p ) );
             }
         }
+        if( const auto *fire = dynamic_cast<const fire_start_activity_actor *>( who.activity.actor.get() ) ) {
+            fire->append_work_tiles( state.changed_tiles );
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+        if( who.activity.id() == ACT_FILL_LIQUID ) {
+            append_owned_liquid_transfer_changes( who.activity, state.changed_tiles,
+                                                  state.refresh_vehicle_snapshots );
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
     }
     if( const auto *consume = native_consume( who ) ) {
         state.refresh_observers = state.refresh_observers || consume->consumes_vehicle_water();
+        if( const auto position = consume->ground_source() ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( *position );
+        }
     }
     if( authorized && sequence > state.last_request && sequence < std::numeric_limits<int64_t>::max() &&
         ( operation == "cancel" || pickup_inventory_revision_matches( request, inventory ) ) ) {
@@ -1391,19 +1836,33 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             state.tracks_item_use = kind == "item_use" || kind == "auto_mine" || kind == "examine_pry" ||
                                     kind == "bionic_activation" || kind == "bionic_deactivation" ||
                                     kind == "spell" || kind == "spellbook" || kind == "read" || kind == "butcher" ||
-                                    kind == "disassemble" || kind == "farming";
+                                    kind == "disassemble" || kind == "farming" || kind == "kiln" || kind == "smoking_rack" ||
+                                    kind == "fermentation" || kind == "keg" || kind == "furniture_reload" ||
+                                    kind == "autoclave" || kind == "mill" ||
+                                    kind == "item_move" || kind == "wear" || kind == "smash" ||
+                                    kind == "vehicle_work" || kind == "mend_fault" || kind == "repair_selected";
             if( !who.activity ) {
                 state.automatic_mining_target.reset();
             }
             const bool construction_request = kind == "construction" || kind == "construction_auto" ||
                                               kind == "construction_resume" || kind == "construction_cancel";
-            state.tracks_body = kind == "firstaid" || state.tracks_crafting || construction_request ||
+            state.tracks_body = kind == "firstaid" || kind == "consume_ground" || kind == "sleep" ||
+                                kind == "wait" ||
+                                state.tracks_crafting || construction_request ||
                                 state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ||
-                                kind == "martial_style" || kind == "vehicle_control" ||
+                                kind == "martial_style" || kind == "vehicle_control" || kind == "plug_appliance" ||
                                 kind == "radio_car_drive" || kind == "zone_sort" || kind == "grab" || kind == "haul";
             state.tracks_needs = state.tracks_needs || construction_request || state.tracks_dialogue;
             state.healing_patient = character_id();
-            if( kind == "zone_query" ) {
+            if( kind == "sleep" ) {
+                sleep_selection choice;
+                request.read( "sleep", choice, true );
+                state.refresh_observers = start_sleep( who, here, choice, activity_execution::authoritative );
+            } else if( kind == "wait" ) {
+                wait_selection choice;
+                request.read( "wait", choice, true );
+                state.refresh_observers = start_wait( who, here, choice, activity_execution::authoritative );
+            } else if( kind == "zone_query" ) {
                 zone_editor_requested = !who.activity;
                 zone_action_menu = request.get_bool( "zone_actions", false );
             } else if( kind == "farming" ) {
@@ -1444,6 +1903,108 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     }
                 }
                 execute_farming_command( who, command );
+            } else if( kind == "kiln" ) {
+                charcoal_kiln::command command;
+                request.read( "kiln", command, true );
+                if( charcoal_kiln::execute( who, here, command ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( command.target.position );
+                }
+            } else if( kind == "smoking_rack" ) {
+                smoking_rack::command command;
+                request.read( "rack", command, true );
+                if( smoking_rack::execute( who, here, command, &state.changed_tiles ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( command.target.position );
+                }
+            } else if( kind == "fermentation" ) {
+                fermentation_vessel::command command;
+                request.read( "vessel", command, true );
+                if( fermentation_vessel::execute( who, here, command ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( command.target.position );
+                    state.changed_tiles.push_back( command.origin );
+                }
+            } else if( kind == "keg" ) {
+                keg::command command;
+                request.read( "keg", command, true );
+                if( keg::execute( who, here, command, true, &state.changed_tiles ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( command.target.position );
+                }
+            } else if( kind == "furniture_reload" ) {
+                furniture_reload::command command;
+                request.read( "reload", command, true );
+                if( furniture_reload::execute( who, here, command, &state.changed_tiles ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( command.target.position );
+                    refresh_vehicles_at_changed_tiles( here, state );
+                }
+            } else if( kind == "item_move" ) {
+                item_move_selection selection;
+                request.read( "move", selection, true );
+                start_owned_item_move( who, here, std::move( selection ) );
+            } else if( kind == "wear" ) {
+                if( request.get_array( "equipment" ).size() <= max_wear_selection ) {
+                    std::vector<equipment_intent> selection;
+                    request.read( "equipment", selection, true );
+                    start_owned_wear( who, here, std::move( selection ) );
+                }
+            } else if( kind == "vehicle_work" ) {
+                vehicle_work_selection selection;
+                request.read( "work", selection, true );
+                if( vehicle_activity_actor::start_owned_work( who, here, selection ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( selection.position );
+                    if( selection.allow_theft || selection.allow_flight_loss || selection.owner.is_null() ) {
+                        state.refresh_vehicle_snapshots.push_back( selection.vehicle_uid );
+                    }
+                } else if( lifetime ) {
+                    who.add_msg_if_player( m_info, _( "The vehicle work is no longer available or its requirements are unmet." ) );
+                }
+            } else if( kind == "smash" ) {
+                tripoint_abs_ms origin;
+                tripoint_abs_ms target;
+                ter_str_id terrain;
+                furn_str_id furniture;
+                request.read( "origin", origin, true );
+                request.read( "target", target, true );
+                request.read( "terrain", terrain, true );
+                request.read( "furniture", furniture, true );
+                const bool theft = request.get_bool( "allow_vehicle_theft", false );
+                bash_activity_actor continuation( who, target, terrain, furniture,
+                                                  request.get_int64( "vehicle" ), theft );
+                if( !who.activity && who.get_moves() > 0 && origin == who.pos_abs() &&
+                    continuation.can_smash_at( who, here ) ) {
+                    tripoint_bub_ms position = here.get_bub( target );
+                    if( melee::has_revivable_corpse( here, position ) ||
+                        g->warn_character_maybe_anger_local_faction( who, true, false,
+                                request.get_bool( "allow_faction_consequences", false ) ) ) {
+                        state.changed_tiles.push_back( target );
+                        state.refresh_observers = true;
+                        const auto context = here.get_context_reference();
+                        const auto activity = who.activity.identity_generation();
+                        const std::string name = here.has_furn( position ) ? here.furnname( position ) :
+                                                 here.tername( position );
+                        const auto result = who.smash( here, position, theft );
+                        if( lifetime && result.did_smash ) {
+                            if( result.success ) {
+                                who.add_msg_player_or_npc( m_good, _( "You smash the %s to pieces!" ),
+                                                           _( "<npcname> smashes the %s to pieces!" ), name );
+                            } else if( !result.can_smash ) {
+                                who.add_msg_player_or_npc( m_info, _( "You can't damage the %s." ),
+                                                           _( "<npcname> can't damage the %s." ), name );
+                            }
+                        }
+                        if( lifetime && context && who.activity.identity_generation() == activity &&
+                            result.did_smash && result.can_smash && !result.success &&
+                            continuation.can_smash_at( who, here ) ) {
+                            player_activity work{ continuation };
+                            work.set_execution( activity_execution::authoritative );
+                            who.assign_activity( work );
+                        }
+                    }
+                }
             } else if( kind == "zone_work" ) {
                 state.tracks_body = state.tracks_needs = state.refresh_observers = true;
                 start_owned_zone_work( who, request.get_string( "zone_action" ) );
@@ -1503,10 +2064,72 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 deployed_furniture_selection choice;
                 request.read( "furniture", choice, true );
                 if( !who.activity && who.get_moves() > 0 ) {
-                    state.refresh_observers = take_down_deployed_furniture( who, here, choice );
-                    if( state.refresh_observers ) {
-                        state.changed_tiles.push_back( choice.target );
+                    state.refresh_observers = take_down_deployed_furniture( who, here, choice,
+                                              &state.changed_tiles );
+                }
+            } else if( kind == "terrain_examine" ) {
+                terrain_examine_selection choice;
+                request.read( "examine", choice, true );
+                state.refresh_observers = execute_terrain_examine( who, here, choice, &state.changed_tiles );
+                if( state.refresh_observers ) {
+                    refresh_vehicles_at_changed_tiles( here, state );
+                }
+            } else if( kind == "safe_interaction" ) {
+                safe_interaction choice;
+                request.read( "safe", choice, true );
+                if( execute_safe_interaction( who, here, choice, activity_execution::authoritative ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( choice.position );
+                }
+            } else if( kind == "fireplace" ) {
+                fireplace_selection choice;
+                request.read( "fireplace", choice, true );
+                if( execute_fireplace_selection( who, here, choice, activity_execution::authoritative,
+                                                &state.changed_tiles ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( choice.target.position );
+                    refresh_vehicles_at_changed_tiles( here, state );
+                }
+            } else if( kind == "appliance_conversion" ) {
+                appliance_conversion_selection choice;
+                request.read( "conversion", choice, true );
+                if( appliance_convert_examine_actor::execute( who, here, choice ) ) {
+                    state.refresh_observers = true;
+                    const tripoint_bub_ms tile = here.get_bub( choice.target.position );
+                    for( const tripoint_bub_ms &affected : here.points_in_radius( tile, 1 ) ) {
+                        if( here.inbounds( affected ) ) {
+                            state.changed_tiles.push_back( here.get_abs( affected ) );
+                        }
                     }
+                    refresh_vehicles_at_changed_tiles( here, state );
+                }
+            } else if( kind == "finish_arc_furnace" ) {
+                arc_furnace::completion choice;
+                request.read( "furnace", choice, true );
+                if( arc_furnace::finish( who, here, choice ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( choice.target.position );
+                }
+            } else if( kind == "stook" ) {
+                stook::command choice;
+                request.read( "stook", choice, true );
+                if( stook::execute( who, here, choice ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles.push_back( choice.target.position );
+                }
+            } else if( kind == "autoclave" ) {
+                autoclave::command choice;
+                request.read( "autoclave", choice, true );
+                if( autoclave::execute( who, here, choice, &state.changed_tiles ) ) {
+                    state.refresh_observers = true;
+                    refresh_vehicles_at_changed_tiles( here, state );
+                }
+            } else if( kind == "mill" ) {
+                mill::command choice;
+                request.read( "mill", choice, true );
+                if( mill::execute( who, here, choice, &state.changed_tiles ) ) {
+                    state.refresh_observers = true;
+                    refresh_vehicles_at_changed_tiles( here, state );
                 }
             } else if( kind == "grab" ) {
                 grab_selection choice;
@@ -1524,6 +2147,14 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 request.read( "direction", direction, true );
                 state.refresh_observers = true;
                 drive_radio_car( who, here, direction, expected );
+            } else if( kind == "plug_appliance" ) {
+                appliance_connection_selection selection;
+                request.read( "connection", selection, true );
+                if( execute_appliance_connection( who, here, selection ) ) {
+                    state.refresh_observers = true;
+                    state.changed_tiles = { selection.source.position, selection.destination.position };
+                    state.refresh_vehicle_snapshots = { selection.source.vehicle_id, selection.destination.vehicle_id };
+                }
             } else if( kind == "vehicle_control" ) {
                 vehicle_control_selection selection;
                 request.read( "vehicle_control", selection, true );
@@ -1536,7 +2167,11 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                             who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
                         }
                     } );
-                    execute_vehicle_control( who, here, selection );
+                    if( execute_vehicle_control( who, here, selection ) && selection.management ) {
+                        state.refresh_vehicle_snapshots.push_back( selection.vehicle_id );
+                        state.changed_tiles.push_back( selection.position );
+                        state.changed_tiles.push_back( selection.management->origin );
+                    }
                 }
             } else if( kind == "martial_style" ) {
                 martial_style_choice choice;
@@ -1586,6 +2221,21 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     }
                 } );
                 start_owned_disassembly( who, selected, request.get_bool( "recursive", false ) );
+            } else if( kind == "mend_fault" ) {
+                item_repair::mending_selection selection;
+                request.read( "mend", selection, true );
+                if( item_repair::start_owned_mending( who, here, selection ) && selection.debug_toggle ) {
+                    refresh_repaired_item( state, selection.target.source );
+                }
+            } else if( kind == "repair_selected" ) {
+                if( !who.activity && who.get_moves() > 0 ) {
+                    item_source tool;
+                    item_repair::repair_target target;
+                    request.read( "tool", tool, true );
+                    request.read( "workpiece", target, true );
+                    start_owned_repair( who, resolve_item_source( who, here, tool ),
+                                        request.get_string( "method" ), std::move( target ) );
+                }
             } else if( state.tracks_item_use ) {
                 start_item_use( who, here, request, state, kind );
             } else if( kind == "reload" ) {
@@ -1594,6 +2244,15 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 start_owned_unload( who, here, request );
             } else if( kind == "insert" ) {
                 start_insert( who, here, request );
+            } else if( kind == "consume_ground" ) {
+                if( !who.activity && !who.is_dead_state() && who.get_moves() > 0 ) {
+                    ground_food_target target;
+                    request.read( "ground", target, true );
+                    if( start_ground_food( who, here, &target, request.get_bool( "allow_consequences", false ) ) ) {
+                        state.changed_tiles.push_back( target.position );
+                        state.refresh_observers = true;
+                    }
+                }
             } else if( kind == "consume" ) {
                 start_consume( who, here, request );
             } else if( construction_request ) {
@@ -1614,17 +2273,22 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             if( !lifetime ) {
                 return {};
             }
-            state.tracks_needs = kind == "consume" || state.tracks_crafting || state.tracks_dialogue ||
+            state.tracks_needs = kind == "consume" || kind == "consume_ground" || kind == "sleep" ||
+                                 state.tracks_crafting || state.tracks_dialogue ||
                                  state.tracks_item_use || state.tracks_walking || construction_request || kind == "grab" ||
                                  native_consume( who );
         } else if( state.dialogue_session &&
                    request.get_string( "activity" ) == state.dialogue_session->activity_id() ) {
+            const auto conversation = state.dialogue_session;
             if( operation == "cancel" ) {
-                state.dialogue_session->cancel();
-                state.dialogue_session.reset();
+                conversation->cancel();
+                if( lifetime && state.dialogue_session == conversation ) {
+                    state.dialogue_session.reset();
+                }
             } else if( operation == "choose" && who.get_moves() > 0 ) {
                 state.refresh_observers = true;
-                if( !state.dialogue_session->choose( who, request ) ) {
+                if( !conversation->choose( who, here, request, state ) && lifetime &&
+                    state.dialogue_session == conversation ) {
                     state.dialogue_session.reset();
                 }
             }
@@ -1666,13 +2330,65 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 } else if( operation == "step" && who.get_moves() > 0 && !tree->pending_direction() ) {
                     who.activity.do_turn( who );
                 }
+            } else if( auto *work = dynamic_cast<vehicle_activity_actor *>( who.activity.actor.get() );
+                       work && work->owned_work_position() ) {
+                if( !work->can_continue_owned_work( who, here ) ) {
+                    who.cancel_activity();
+                } else if( operation == "step" && who.get_moves() > 0 ) {
+                    const int64_t changed_vehicle = work->changed_vehicle_snapshot();
+                    const auto generation = who.activity.identity_generation();
+                    who.activity.do_turn( who );
+                    if( lifetime && who.activity.identity_generation() != generation ) {
+                        state.refresh_vehicle_snapshots.push_back( changed_vehicle );
+                    }
+                }
+            } else if( auto *mend = dynamic_cast<mend_item_activity_actor *>( who.activity.actor.get() );
+                       mend && mend->owned_selection() ) {
+                if( operation == "step" && who.get_moves() > 0 ) {
+                    const item_source target = mend->owned_selection()->target.source;
+                    const auto generation = who.activity.identity_generation();
+                    who.activity.do_turn( who );
+                    if( lifetime && who.activity.identity_generation() != generation ) {
+                        refresh_repaired_item( state, target );
+                    }
+                }
+            } else if( auto *bash = dynamic_cast<bash_activity_actor *>( who.activity.actor.get() ) ) {
+                if( !bash->can_smash_at( who, here ) ) {
+                    who.cancel_activity();
+                } else if( operation == "choose" && bash->needs_confirmation() &&
+                           request.has_bool( "confirm" ) ) {
+                    if( request.get_bool( "confirm" ) ) {
+                        bash->confirm_continuation();
+                    } else {
+                        who.cancel_activity();
+                    }
+                } else if( operation == "step" && who.get_moves() > 0 && !bash->needs_confirmation() ) {
+                    who.activity.do_turn( who );
+                }
+            } else if( auto *pulp = dynamic_cast<pulp_activity_actor *>( who.activity.actor.get() ) ) {
+                if( operation == "choose" && pulp->needs_confirmation() && request.has_bool( "confirm" ) ) {
+                    pulp->confirm_long_pulp( request.get_bool( "confirm" ) );
+                } else if( operation == "step" && who.get_moves() > 0 && !pulp->needs_confirmation() ) {
+                    who.activity.do_turn( who );
+                }
             } else if( auto *repair = dynamic_cast<repair_activity_actor *>( who.activity.actor.get() ) ) {
                 if( operation == "choose" && who.get_moves() > 0 && request.has_object( "repair_choice" ) ) {
                     repair_activity_choice choice;
                     request.read( "repair_choice", choice, true );
-                    repair->apply_choice( who, choice );
+                    if( repair->apply_choice( who, choice ) && choice.target.kind == "vehicle_part" ) {
+                        refresh_repaired_item( state, choice.target );
+                    }
                 } else if( operation == "step" && who.get_moves() > 0 && !repair->waiting ) {
+                    const auto target = repair->choice ? std::make_optional( repair->choice->target ) :
+                                        std::nullopt;
+                    const auto generation = who.activity.identity_generation();
+                    const int remaining = who.activity.moves_left;
                     who.activity.do_turn( who );
+                    if( target && lifetime &&
+                        ( who.activity.identity_generation() != generation || repair->waiting ||
+                          who.activity.moves_left >= remaining ) ) {
+                        refresh_repaired_item( state, *target );
+                    }
                 }
             } else if( auto *disassemble = dynamic_cast<disassemble_activity_actor *>
                                            ( who.activity.actor.get() ) ) {
@@ -1913,6 +2629,15 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                            ( who.activity.actor.get() ) ) {
         out.member( "tree_direction_prompt", tree->pending_direction() );
     }
+    if( active ) {
+        const auto *bash = dynamic_cast<const bash_activity_actor *>( who.activity.actor.get() );
+        const auto *pulp = dynamic_cast<const pulp_activity_actor *>( who.activity.actor.get() );
+        if( bash && bash->needs_confirmation() ) {
+            out.member( "smash_prompt", "continue" );
+        } else if( pulp && pulp->needs_confirmation() ) {
+            out.member( "smash_prompt", "long_pulp" );
+        }
+    }
     if( const auto *repair = dynamic_cast<const repair_activity_actor *>( who.activity.actor.get() ) ) {
         if( repair->waiting ) {
             out.member( "repair_prompt", *repair );
@@ -1983,6 +2708,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
     if( state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ) {
         out.member( "lua_character_state", who.lua_character_state );
     }
+    if( state.tracks_dialogue ) {
+        out.member( "radio_contacts" );
+        write_radio_contacts( out, who );
+    }
     if( state.tracks_dialogue || state.tracks_item_use ) {
         out.member( "casting_state" );
         who.magic->store_casting_state( out );
@@ -2033,6 +2762,10 @@ bool apply_inventory_activity_result( const JsonObject &response )
     }
     if( response.has_object( "missions" ) ) {
         apply_mission_view( response.get_object( "missions" ), get_avatar() );
+    }
+    if( response.has_array( "radio_contacts" ) ) {
+        apply_radio_contacts( response.get_array( "radio_contacts" ),
+                              g->multiplayer_session().client_radio_contacts );
     }
     if( view.active && response.get_int64( "request" ) == view.pending_request ) {
         view.pending_request = 0;
@@ -2102,6 +2835,7 @@ bool apply_inventory_activity_result( const JsonObject &response )
         response.read( "liquid_source_uid", view.liquid_source_uid );
         view.remote_security_prompt = response.get_bool( "remote_security_prompt", false );
         view.tree_direction_prompt = response.get_bool( "tree_direction_prompt", false );
+        view.smash_prompt = response.get_string( "smash_prompt", "" );
         view.repair_prompt.reset();
         view.disassembly_prompt.reset();
         if( response.has_object( "disassembly_prompt" ) ) {
@@ -2172,6 +2906,67 @@ bool apply_inventory_activity_result( const JsonObject &response )
         }
     }
     return true;
+}
+
+void client_start_sleep( const sleep_selection &choice )
+{
+    player_activity view{ try_sleep_activity_actor( 0_turns ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "sleep" );
+            out.member( "sleep", choice );
+        } );
+    }
+}
+
+void client_start_wait( const wait_selection &choice )
+{
+    player_activity view{ wait_activity_actor( 0_turns ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "wait" );
+            out.member( "wait", choice );
+        } );
+    }
+}
+
+void client_sync_rest_activity( const JsonObject &state )
+{
+    inventory_activity_client_state &view = g->multiplayer_session().client_inventory_activity;
+    avatar &who = get_avatar();
+    const bool rest_view = who.activity.execution() == activity_execution::presentation &&
+                           is_rest_activity( who.activity.id().str() );
+    if( !state.has_object( "rest_activity" ) ) {
+        if( view.active && view.pending_request == 0 && rest_view ) {
+            view.finished = true;
+        }
+        return;
+    }
+    if( view.finished || view.pending_request != 0 ||
+        ( view.active ? !rest_view : static_cast<bool>( who.activity ) ) ) {
+        return;
+    }
+    const JsonObject rest = state.get_object( "rest_activity" );
+    const std::string kind = rest.get_string( "kind" );
+    if( !is_rest_activity( kind ) ) {
+        return;
+    }
+    const int total = rest.get_int( "moves_total" );
+    const int left = rest.get_int( "moves_left" );
+    view.activity = rest.get_string( "activity" );
+    if( !view.active || who.activity.id().str() != kind ) {
+        // A reconnect or the selected wait mode can change the displayed actor.
+        player_activity presentation( activity_id( kind ), total );
+        presentation.set_execution( activity_execution::presentation );
+        view.active = true;
+        who.activity = std::move( presentation );
+        set_client_turn_activity( kind );
+    }
+    who.activity.moves_total = total;
+    who.activity.moves_left = left;
+    view.item_use_progress = who.activity.get_verb().translated();
 }
 
 bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &choices )
@@ -2307,6 +3102,134 @@ bool client_take_down_furniture( const deployed_furniture_selection &choice )
         send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "take_down_furniture" );
             out.member( "furniture", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_terrain_examine( const terrain_examine_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "terrain_examine" );
+            out.member( "examine", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_safe_interaction( const safe_interaction &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "safe_interaction" );
+            out.member( "safe", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_fireplace_selection( const fireplace_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "fireplace" );
+            out.member( "fireplace", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_appliance_conversion( const appliance_conversion_selection &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "appliance_conversion" );
+            out.member( "conversion", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_finish_arc_furnace( const arc_furnace::completion &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "finish_arc_furnace" );
+            out.member( "furnace", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_stook_command( const stook::command &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "stook" );
+            out.member( "stook", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_autoclave_command( const autoclave::command &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "autoclave" );
+            out.member( "autoclave", choice );
+        } );
+    }
+    return true;
+}
+
+bool client_mill_command( const mill::command &choice )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "mill" );
+            out.member( "mill", choice );
         } );
     }
     return true;
@@ -2525,6 +3448,19 @@ void client_start_consume( const item_location &source, bool allow_consequences,
     } );
 }
 
+void client_start_consume_ground( const ground_food_target &target, bool allow_consequences )
+{
+    if( !target.matches( get_avatar(), get_map() ) ||
+        !begin_client_inventory_activity( consume_activity_actor::client_view() ) ) {
+        return;
+    }
+    send_inventory_activity( "start", [&]( JsonOut &out ) {
+        out.member( "kind", "consume_ground" );
+        out.member( "ground", target );
+        out.member( "allow_consequences", allow_consequences );
+    } );
+}
+
 static bool client_activate_item_impl( const item_location &source, std::string &method,
                                        std::optional<tripoint_abs_ms> explicit_target, const std::string &kind,
                                        const item_activation_choices *selected_choices = nullptr )
@@ -2558,6 +3494,10 @@ static bool client_activate_item_impl( const item_location &source, std::string 
             method = std::next( methods.begin(), menu.ret )->first;
         }
     }
+    if( kind == "item_use" && method == "SIPHON" && source->get_use( method ) ) {
+        iuse::siphon( &who, nullptr, who.pos_bub() );
+        return true;
+    }
     const bool examine_pry = kind == "examine_pry";
     if( !examine_pry && !supports_owned_item_activation( *source, method ) ) {
         return false;
@@ -2576,7 +3516,10 @@ static bool client_activate_item_impl( const item_location &source, std::string 
     }
     const bool starting_fire = method == "firestarter";
     if( !selected_choices && !examine_pry && !starting_fire &&
-        !query_item_activation_choices( *source, method, choices ) ) {
+        !query_item_activation_choices( source, method, choices ) ) {
+        return true;
+    }
+    if( !source ) {
         return true;
     }
     const item_source identity = capture_item_source( who, source );
@@ -2641,6 +3584,9 @@ static bool client_activate_item_impl( const item_location &source, std::string 
         out.member( "allow_wet", wet );
         if( choices.timer_seconds ) {
             out.member( "timer_seconds", *choices.timer_seconds );
+        }
+        if( choices.cable_link ) {
+            out.member( "cable_link", *choices.cable_link );
         }
         if( choices.radio ) {
             out.member( "radio", *choices.radio );
@@ -2857,6 +3803,291 @@ bool client_farming_command( const farming_command &command )
     return true;
 }
 
+bool client_kiln_command( const charcoal_kiln::command &command )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "kiln" );
+            out.member( "kiln", command );
+        } );
+    }
+    return true;
+}
+
+bool client_smoking_rack_command( const smoking_rack::command &command )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
+            out.member( "kind", "smoking_rack" );
+            out.member( "rack", command );
+        } );
+    }
+    return true;
+}
+
+bool client_fermentation_command( const fermentation_vessel::command &command )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "fermentation" );
+            out.member( "vessel", command );
+        } );
+    }
+    return true;
+}
+
+bool client_keg_command( const keg::command &command )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "keg" );
+            out.member( "keg", command );
+        } );
+    }
+    return true;
+}
+
+bool client_furniture_reload( const furniture_reload::command &command )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "furniture_reload" );
+            out.member( "reload", command );
+        } );
+    }
+    return true;
+}
+
+void client_start_mending( const item_location &target, item_repair::mending_selection selection )
+{
+    if( !is_client_mode() || is_client_waiting_for_ack() ||
+        !item_repair::confirm_target_ownership( get_avatar(), target, selection.target ) ) {
+        return;
+    }
+    player_activity view( activity_id( "ACT_MEND_ITEM" ), 1 );
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "mend_fault" );
+            out.member( "mend", selection );
+        } );
+    }
+}
+
+bool client_start_selected_repair( const item_location &tool, const std::string &method,
+                                   const item_repair::repair_target &target )
+{
+    if( !tool ) {
+        return false;
+    }
+    const item_source source = capture_item_source( get_avatar(), tool );
+    player_activity view{ repair_activity_actor() };
+    view.set_execution( activity_execution::presentation );
+    if( !begin_client_inventory_activity( view ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut &out ) {
+        out.member( "kind", "repair_selected" );
+        out.member( "tool", source );
+        out.member( "method", method );
+        out.member( "workpiece", target );
+    } );
+    return true;
+}
+
+void client_start_item_move( const item_move_selection &selection )
+{
+    player_activity view{ move_items_activity_actor( {}, {}, false, tripoint_rel_ms::zero ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "item_move" );
+            out.member( "move", selection );
+        } );
+    }
+}
+
+void client_start_vehicle_work( map &here, vehicle_action action, vehicle &target,
+                                const point_rel_ms &mount, const vpart_info &info,
+                                const vehicle_part *part, const item_location &refill,
+                                bool allow_flight_loss, bool allow_fold_loss, const std::string &variant )
+{
+    avatar &who = get_avatar();
+    if( !is_client_mode() || is_client_waiting_for_ack() || who.get_moves() <= 0 ||
+        ( action != VEHICLE_INSTALL && !part ) ) {
+        return;
+    }
+    vehicle_work_selection selection;
+    selection.action = action;
+    selection.origin = who.pos_abs();
+    selection.position = action == VEHICLE_INSTALL ? target.mount_to_tripoint_abs( mount ) :
+                         target.abs_part_pos( *part );
+    selection.mount = mount;
+    selection.vehicle_uid = target.uid().get_value();
+    selection.part_uid = action == VEHICLE_INSTALL ? 0 : part->get_base().uid().get_value();
+    selection.owner = target.get_owner();
+    selection.part_type = info.id;
+    selection.allow_flight_loss = allow_flight_loss;
+    selection.allow_fold_loss = allow_fold_loss;
+    selection.variant = variant;
+
+    item_location fuel;
+    if( action == VEHICLE_REFILL ) {
+        if( !refill || !can_refill_vehicle_part( *part, *refill ) ) {
+            return;
+        }
+        item_location source = refill;
+        fuel = part->is_tank() ? item_location( source, &source->only_item() ) : source;
+        selection.refill = capture_item_source( who, fuel );
+        if( selection.refill.path.empty() ) {
+            return;
+        }
+    }
+
+    const character_action_guard actor( who );
+    const auto context = here.get_context_reference();
+    const auto vehicle_ref = target.get_safe_reference();
+    const auto current = [&]() {
+        return actor && context && vehicle_ref && who.pos_abs() == selection.origin;
+    };
+    if( target.has_owner() && !target.is_owned_by( who ) ) {
+        if( !who.query_yn(
+                _( "This vehicle belongs to: %s, there may be consequences if you are observed interacting with it, continue?" ),
+                target.get_owner_name() ) || !current() ) {
+            return;
+        }
+        selection.allow_theft = true;
+    }
+    if( fuel && !fuel->is_owned_by( who, true ) ) {
+        if( !query_consumption_ownership( *fuel, who ) || !current() || !fuel ) {
+            return;
+        }
+        selection.allow_refill_theft = true;
+    }
+
+    if( action == VEHICLE_INSTALL ) {
+        if( info.variants.size() > 1 ) {
+            uilist menu;
+            menu.text = _( "Choose cosmetic variant:" );
+            std::vector<std::string> choices;
+            for( const auto &[id, variant] : info.variants ) {
+                menu.addentry( static_cast<int>( choices.size() ), true, MENU_AUTOASSIGN, variant.get_label() );
+                choices.push_back( id );
+            }
+            menu.query();
+            if( !current() ) {
+                return;
+            }
+            if( menu.ret >= 0 && static_cast<size_t>( menu.ret ) < choices.size() ) {
+                selection.variant = choices[menu.ret];
+            }
+        }
+        if( info.has_flag( VPFLAG_CONE_LIGHT ) || info.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ||
+            info.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) {
+            selection.direction = units::to_degrees( query_vehicle_part_direction(
+                                      here, target, info, target.coord_translate( mount ) ) );
+        }
+    }
+    if( !current() ) {
+        return;
+    }
+    player_activity view{ vehicle_activity_actor() };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "vehicle_work" );
+            out.member( "work", selection );
+        } );
+    }
+}
+
+void client_start_smash( const tripoint_bub_ms &position )
+{
+    avatar &who = get_avatar();
+    map &here = get_map();
+    if( !is_client_mode() || is_client_waiting_for_ack() || who.get_moves() <= 0 ||
+        !here.inbounds( position ) ) {
+        return;
+    }
+    const character_action_guard actor( who );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = who.pos_abs();
+    const tripoint_abs_ms target = here.get_abs( position );
+    const ter_str_id terrain = here.ter( position ).id();
+    const furn_str_id furniture = here.furn( position ).id();
+    const auto at = here.veh_at( position );
+    const int64_t vehicle = at ? at->vehicle().uid().get_value() : 0;
+    const bool pulping = melee::has_revivable_corpse( here, position );
+    const std::string warning = pulping ? std::string() : g->local_faction_action_warning( who );
+    const std::string owner = !pulping && at && at->vehicle().has_owner() &&
+                              !at->vehicle().is_owned_by( who ) ? at->vehicle().get_owner_name() : std::string();
+    if( !warning.empty() && !who.query_yn( warning ) ) {
+        return;
+    }
+    if( !actor || !context || who.pos_abs() != origin ) {
+        return;
+    }
+    if( !owner.empty() && !who.query_yn(
+            _( "This vehicle belongs to: %s, there may be consequences if you are observed interacting with it, continue?" ),
+            owner ) ) {
+        return;
+    }
+    if( !actor || !context || who.pos_abs() != origin ) {
+        return;
+    }
+    player_activity view{ bash_activity_actor( position ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "smash" );
+            out.member( "origin", origin );
+            out.member( "target", target );
+            out.member( "terrain", terrain );
+            out.member( "furniture", furniture );
+            out.member( "vehicle", vehicle );
+            out.member( "allow_vehicle_theft", !owner.empty() );
+            out.member( "allow_faction_consequences", !warning.empty() );
+        } );
+    }
+}
+
+void client_start_owned_wear( const std::vector<equipment_intent> &selection )
+{
+    player_activity view{ wear_activity_actor( {}, {} ) };
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "wear" );
+            out.member( "equipment", selection );
+        } );
+    }
+}
+
 bool client_start_zone_work( const std::string &action )
 {
     if( !is_client_mode() ) {
@@ -2908,6 +4139,18 @@ bool client_drive_radio_car( const point_rel_ms &direction )
     return true;
 }
 
+void client_plug_appliance( const appliance_connection_selection &selection )
+{
+    player_activity view( activity_id( "ACT_VEHICLE" ), 1 );
+    view.set_execution( activity_execution::presentation );
+    if( begin_client_inventory_activity( view ) ) {
+        send_inventory_activity( "start", [&]( JsonOut &out ) {
+            out.member( "kind", "plug_appliance" );
+            out.member( "connection", selection );
+        } );
+    }
+}
+
 bool client_vehicle_control( const vehicle_control_selection &choice )
 {
     if( !is_client_mode() ) {
@@ -2916,6 +4159,12 @@ bool client_vehicle_control( const vehicle_control_selection &choice )
     player_activity view = choice.action == "hotwire" ?
                            player_activity( hotwire_car_activity_actor( 0, choice.position, choice.vehicle_id ) ) :
                            player_activity( start_engines_activity_actor( 0_seconds, tripoint_rel_ms::zero, false ) );
+    if( choice.water && ( choice.water->operation == "drink" ||
+                          choice.water->operation == "siphon_drink" ) ) {
+        view = player_activity( consume_activity_actor::client_view() );
+    } else if( choice.action == "siphon" ) {
+        view = player_activity( ACT_FILL_LIQUID, 1 );
+    }
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
         send_inventory_activity( "start", [&]( JsonOut & out ) {
@@ -3034,6 +4283,32 @@ void client_start_firstaid( const item_location &source, Character &patient,
     } );
 }
 
+static bool submit_dialogue_start( const std::function<void( JsonOut & )> &write_target )
+{
+    if( is_client_waiting_for_ack() || get_avatar().get_moves() <= 0 ||
+        g->multiplayer_session().client_inventory_activity.active ) {
+        return false;
+    }
+    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
+    view.set_execution( activity_execution::presentation );
+    if( !begin_client_inventory_activity( view ) ) {
+        return false;
+    }
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
+        out.member( "kind", "dialogue" );
+        write_target( out );
+    } );
+    return true;
+}
+
+bool client_start_radio_dialogue( const character_id target )
+{
+    return is_client_mode() && target.is_valid() && submit_dialogue_start( [&]( JsonOut & out ) {
+        out.member( "target_npc", target.get_value() );
+        out.member( "radio_contact", true );
+    } );
+}
+
 std::optional<bool> client_start_dialogue( const talker &target, bool radio_contact,
         bool is_computer, bool is_not_conversation, const std::string &remote_name )
 {
@@ -3045,11 +4320,6 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
     if( !guy && !mon ) {
         return std::nullopt;
     }
-    avatar &who = get_avatar();
-    if( is_client_waiting_for_ack() || who.get_moves() <= 0 ||
-        g->multiplayer_session().client_inventory_activity.active ) {
-        return false;
-    }
     if( guy && ( guy->is_dead() || guy->is_hallucination() ||
                  is_player_proxy( *guy ) ) ) {
         return false;
@@ -3058,14 +4328,10 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
                  mon->type->chat_topics.empty() || radio_contact ) ) {
         return false;
     }
-    player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
-    view.set_execution( activity_execution::presentation );
-    if( !begin_client_inventory_activity( view ) ) {
-        return false;
+    if( radio_contact && guy ) {
+        return client_start_radio_dialogue( host_npc_identity( *guy ) );
     }
-    send_inventory_activity( "start", [&]( JsonOut & out ) {
-        out.member( "kind", "dialogue" );
-        out.member( "radio_contact", radio_contact );
+    return submit_dialogue_start( [&]( JsonOut & out ) {
         out.member( "is_computer", is_computer );
         out.member( "is_not_conversation", is_not_conversation );
         out.member( "remote_name", remote_name );
@@ -3076,7 +4342,6 @@ std::optional<bool> client_start_dialogue( const talker &target, bool radio_cont
             out.member( "target", mon->pos_abs() );
         }
     } );
-    return true;
 }
 
 bool client_choose_dialogue_response( uint64_t session_id, uint64_t response_revision,
@@ -3244,6 +4509,15 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
     client_choose_dialogue_response( prompt.session_id, prompt.response_revision, response_ind );
 }
 
+static bool inventory_activity_needs_input( const inventory_activity_client_state &view )
+{
+    return view.cancel_requested || view.needs_placement || view.finished || view.liquid_source_uid > 0 ||
+           view.remote_security_prompt || view.tree_direction_prompt || !view.smash_prompt.empty() ||
+           view.repair_prompt || view.disassembly_prompt || view.spell_prompt || view.dialogue_prompt ||
+           view.remote_vehicle_target > 0 || !view.craft_decision.empty() ||
+           !view.construction_decision.empty();
+}
+
 void client_step_inventory_activity()
 {
     const inventory_activity_client_state &view =
@@ -3252,11 +4526,7 @@ void client_step_inventory_activity()
         get_avatar().activity.set_to_null();
         return;
     }
-    if( view.cancel_requested || view.needs_placement || view.finished || view.liquid_source_uid > 0 ||
-        view.remote_security_prompt || view.tree_direction_prompt || view.repair_prompt ||
-        view.disassembly_prompt || view.spell_prompt || view.dialogue_prompt ||
-        view.remote_vehicle_target > 0 ||
-        !view.craft_decision.empty() || !view.construction_decision.empty() ) {
+    if( inventory_activity_needs_input( view ) ) {
         client_update_inventory_activity_view();
     } else if( !view.activity.empty() ) {
         send_inventory_activity( "step" );
@@ -3425,8 +4695,86 @@ void client_update_inventory_activity_view()
         if( !view.dialogue_ui ) {
             view.dialogue_ui = std::make_shared<dialogue_window>();
         }
-        const dialogue_view_prompt prompt = *view.dialogue_prompt;
-        query_client_dialogue_prompt( *view.dialogue_ui, prompt );
+        const auto prompt = view.dialogue_prompt;
+        const auto send_choice = [&]( const auto & write_choice ) {
+            if( view.active && !view.cancel_requested && view.pending_request == 0 &&
+                view.dialogue_prompt == prompt ) {
+                send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                    out.member( "dialogue_session", static_cast<int64_t>( prompt->session_id ) );
+                    out.member( "response_revision", static_cast<int64_t>( prompt->response_revision ) );
+                    write_choice( out );
+                } );
+            }
+        };
+        if( prompt->trade ) {
+            if( const auto choice = choose_npc_trade( *prompt->trade ) ) {
+                send_choice( [&]( JsonOut & out ) {
+                    out.member( "npc_trade", *choice );
+                } );
+            }
+        } else if( const auto &seminar = prompt->seminar ) {
+            std::vector<std::string> names;
+            names.reserve( seminar->candidates.size() );
+            for( const auto &candidate : seminar->candidates ) {
+                names.push_back( candidate.second );
+            }
+            const auto selected = npcs_select_menu( names,
+                                                    seminar->status.empty() ? _( "Who should participate?" ) : seminar->status );
+            std::vector<character_id> participants;
+            participants.reserve( selected.size() );
+            for( const int index : selected ) {
+                participants.push_back( seminar->candidates[index].first );
+            }
+            send_choice( [&]( JsonOut & out ) {
+                out.member( "npc_seminar" );
+                out.start_object();
+                out.member( "id", seminar->id );
+                out.member( "participants", participants );
+                out.end_object();
+            } );
+        } else if( const auto &offer = prompt->item_offer ) {
+            if( !offer->replacement_question.empty() ) {
+                const bool replace = query_yn( offer->replacement_question );
+                send_choice( [&]( JsonOut & out ) {
+                    out.member( "npc_item_offer" );
+                    out.start_object();
+                    out.member( "id", offer->id );
+                    out.member( "replace_armor", replace );
+                    out.end_object();
+                } );
+            } else {
+                avatar &who = get_avatar();
+                const item_location item = game_menus::inv::titled_menu(
+                                               who, _( "Offer what?" ), _( "You have no items to offer." ) );
+                const item_source source = item ? capture_item_source( who, item ) : item_source{};
+                send_choice( [&]( JsonOut & out ) {
+                    out.member( "npc_item_offer" );
+                    out.start_object();
+                    out.member( "id", offer->id );
+                    if( source.kind == "carried" ) {
+                        out.member( "source", source );
+                    } else {
+                        out.member( "cancel", true );
+                    }
+                    out.end_object();
+                } );
+            }
+        } else {
+            query_client_dialogue_prompt( *view.dialogue_ui, *prompt );
+        }
+    } else if( !view.smash_prompt.empty() && !is_client_waiting_for_ack() &&
+               get_avatar().get_moves() > 0 ) {
+        const std::string activity = view.activity;
+        const std::string prompt = view.smash_prompt;
+        const bool accepted = query_yn( prompt == "long_pulp" ?
+                                        _( "Pulping one or more corpses in this pile would take too much time.  Continue?" ) :
+                                        _( "Keep smashing until destroyed?" ) );
+        if( view.active && !view.cancel_requested && view.activity == activity &&
+            view.smash_prompt == prompt ) {
+            send_inventory_activity( "choose", [&]( JsonOut & out ) {
+                out.member( "confirm", accepted );
+            } );
+        }
     } else if( view.tree_direction_prompt && !is_client_waiting_for_ack() &&
                get_avatar().get_moves() > 0 ) {
         const auto direction = choose_direction( _( "Select a direction for the tree to fall in." ) );
@@ -3675,6 +5023,11 @@ void client_update_inventory_activity_view()
                 out.end_object();
             }
         } );
+    } else if( !view.activity.empty() && !inventory_activity_needs_input( view ) &&
+               inventory_activity_view( get_avatar().activity ) ) {
+        // A response can return unused AP in the current grant. Start
+        // stepping before waiting for the host to advance the calendar.
+        send_inventory_activity( "step" );
     }
 }
 } // namespace cata_mp

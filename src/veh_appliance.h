@@ -15,6 +15,7 @@
 #include "point.h"
 #include "type_id.h"
 #include "uilist.h"
+#include "units.h"
 
 class Character;
 class map;
@@ -23,7 +24,8 @@ class vehicle;
 
 vpart_id vpart_appliance_from_item( const itype_id &item_id );
 bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
-                      const Character &owner, const std::optional<item> &base = std::nullopt );
+                      const Character &owner, const std::optional<item> &base = std::nullopt,
+                      std::optional<units::angle> direction = std::nullopt );
 
 /**
  * Appliance interaction UI. Works similarly to veh_interact, but has

@@ -13,8 +13,10 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "craft_reservation.h"
 #include "debug.h"
 #include "dialogue_chatbin.h"
 #include "faction.h"
@@ -22,6 +24,8 @@
 #include "game_inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_source.h"
+#include "map.h"
 #include "itype.h"
 #include "memory_fast.h"
 #include "messages.h"
@@ -52,8 +56,6 @@ static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_npc_suspend( "npc_suspend" );
 static const efftype_id effect_sleep( "sleep" );
 
-static const flag_id json_flag_INTEGRATED( "INTEGRATED" );
-static const flag_id json_flag_NO_TAKEOFF( "NO_TAKEOFF" );
 static const flag_id json_flag_NO_UNWIELD( "NO_UNWIELD" );
 
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
@@ -368,7 +370,7 @@ void talker_npc::store_chosen_training( const skill_id &c_skill, const matype_id
     } else if( c_proficiency != proficiency_id() ) {
         chosen_proficiency_ = c_proficiency;
     }
-    if( is_valid() ) {
+    if( is_valid() && interlocutor_character() == &get_avatar() ) {
         me_npc->chatbin.store_chosen_training( c_skill, c_style, c_spell, c_proficiency );
     }
 }
@@ -418,7 +420,8 @@ enum consumption_result {
 
 // Returns true if we destroyed the item through consumption
 // does not try to consume contents
-static consumption_result try_consume( npc &p, item &it, std::string &reason )
+static consumption_result try_consume( npc &p, Character &giver, item &it,
+                                       std::string &reason )
 {
     // TODO: Unify this with 'player::consume_item()'
     item &to_eat = it;
@@ -432,12 +435,14 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
         return REFUSED;
     }
 
-    if( !p.will_accept_from_player( it ) ) {
+    if( !p.will_accept_from_player( it, giver ) ) {
         reason = p.chat_snippets().snip_consume_cant_accept.translated();
         return REFUSED;
     }
 
-    // TODO: Make it not a copy+paste from player::consume_item
+    const character_action_guard recipient( p );
+    const character_action_guard donor( giver );
+    const auto food = it.get_safe_reference();
     int amount_used = 1;
     if( to_eat.is_food() ) {
         if( !p.can_consume_as_is( to_eat ) ) {
@@ -450,16 +455,22 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
                 return REFUSED;
             }
 
-            const time_duration &consume_time = p.get_consume_time( to_eat );
-            p.mod_moves( -to_moves<int>( consume_time ) );
-            p.consume( to_eat );
-            reason = p.chat_snippets().snip_consume_eat.translated();
-
-            // Feeding an NPC improves their opinion of the player based on the
-            // food's quality and the NPC's current needs.
+            const time_duration consume_time = p.get_consume_time( to_eat );
+            const std::string accepted = p.chat_snippets().snip_consume_eat.translated();
             const int kcal = p.compute_effective_nutrients( to_eat ).kcal();
             const int quench = comest->quench;
             const std::pair<int, int> fun = p.fun_for( to_eat );
+            const trinary consumed = p.consume( to_eat );
+            if( consumed == trinary::NONE ) {
+                return REFUSED;
+            }
+            reason = accepted;
+            if( !recipient || !donor ) {
+                return consumed == trinary::ALL ? CONSUMED_ALL : CONSUMED_SOME;
+            }
+            p.mod_moves( -to_moves<int>( consume_time ) );
+
+            // The NPC remembers who offered the food.
             const int stored_need = p.get_healthy_kcal() - p.get_stored_kcal() +
                                     p.stomach.get_calories();
             const int kcal_need = std::max( 0, stored_need );
@@ -483,11 +494,13 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
             trust_gain = std::clamp( trust_gain, 0, 4 );
             value_gain = std::clamp( value_gain, 0, 4 );
 
-            if( trust_gain > 0 || value_gain > 0 ) {
-                p.op_of_u.trust += trust_gain;
-                p.op_of_u.value += value_gain;
+            if( ( trust_gain > 0 || value_gain > 0 ) && giver.getID().is_valid() ) {
+                npc_opinion &opinion = p.opinion_of( giver.getID() );
+                opinion.trust += trust_gain;
+                opinion.value += value_gain;
                 add_msg_if_player_sees( p, _( "%s appreciates the food." ), p.disp_name() );
             }
+            return consumed == trinary::ALL ? CONSUMED_ALL : CONSUMED_SOME;
         }
 
     } else if( to_eat.is_medication() ) {
@@ -498,15 +511,28 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
             }
             if( !has ) {
                 std::string talktag = p.chat_snippets().snip_consume_need_item.translated();
-                parse_tags( talktag, get_player_character(), p );
+                parse_tags( talktag, giver, p );
                 reason = string_format( _( talktag ), item::nname( comest->tool ) );
                 return REFUSED;
             }
             p.use_charges( comest->tool, 1 );
+            if( !recipient || !donor || !food ) {
+                return REFUSED;
+            }
             reason = p.chat_snippets().snip_consume_med.translated();
         }
         if( to_eat.type->has_use() ) {
             amount_used = to_eat.type->invoke( &p, to_eat, p.pos_bub() ).value_or( 0 );
+            if( !food ) {
+                return CONSUMED_ALL;
+            }
+            if( !recipient || !donor ) {
+                if( amount_used > 0 ) {
+                    food->charges -= amount_used;
+                    return food->charges <= 0 ? CONSUMED_ALL : CONSUMED_SOME;
+                }
+                return REFUSED;
+            }
             if( amount_used <= 0 ) {
                 reason = p.chat_snippets().snip_consume_nocharge.translated();
                 return REFUSED;
@@ -515,13 +541,18 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
         }
 
         p.consume_effects( to_eat );
-        to_eat.charges -= amount_used;
-        p.mod_moves( -to_moves<int>( 1_seconds ) * 2.5 );
+        if( !food ) {
+            return CONSUMED_ALL;
+        }
+        food->charges -= amount_used;
+        if( recipient ) {
+            p.mod_moves( -to_moves<int>( 1_seconds ) * 2.5 );
+        }
     } else {
         debugmsg( "Unknown comestible type of item: %s\n", to_eat.tname() );
     }
 
-    if( to_eat.charges > 0 ) {
+    if( food && food->charges > 0 ) {
         return CONSUMED_SOME;
     }
 
@@ -532,7 +563,7 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
 std::string talker_npc::give_item_to( const bool to_use )
 {
     if( interlocutor_character() != &get_avatar() ) {
-        return _( "Offering items is not available in remote dialogue yet." );
+        return _( "You cannot offer an item right now." );
     }
     avatar &player_character = get_avatar();
     if( me_npc->is_hallucination() ) {
@@ -546,112 +577,168 @@ std::string talker_npc::give_item_to( const bool to_use )
     return give_item_to( std::move( loc ), to_use );
 }
 
-std::string talker_npc::give_item_to(
-    item_location loc, const bool to_use )
+std::string talker_npc::give_item_to( item_location loc, const bool to_use )
 {
-    if( interlocutor_character() != &get_avatar() ) {
-        return _( "Offering items is not available in remote dialogue yet." );
+    return offer_item( std::move( loc ), to_use ).reason;
+}
+
+bool can_offer_npc_item( const Character &donor, const npc &recipient, const map &here )
+{
+    const tripoint_bub_ms from = donor.pos_bub( here );
+    const tripoint_bub_ms to = recipient.pos_bub( here );
+    return from.z() == to.z() && here.inbounds( from ) && here.inbounds( to ) &&
+           rl_dist( from, to ) <= 1 && ( from == to || here.clear_path( from, to, 1, 1, 100 ) );
+}
+
+npc_item_offer_result talker_npc::offer_item( item_location loc, const bool to_use,
+        const std::optional<bool> replace_armor )
+{
+    Character *donor = interlocutor_character();
+    if( !is_valid() || !donor || donor == me_npc ||
+        ( donor != &get_avatar() && !donor->has_native_player_control() ) ) {
+        return { _( "You cannot offer an item right now." ) };
     }
-    avatar &player_character = get_avatar();
+    const character_action_guard giver( *donor );
+    const character_action_guard recipient( *me_npc );
+    if( !giver || !recipient ) {
+        return { _( "You cannot offer an item right now." ) };
+    }
+    if( donor != &get_avatar() && !can_offer_npc_item( *donor, *me_npc, get_map() ) ) {
+        return { _( "Move closer to hand over the item." ) };
+    }
     if( me_npc->is_hallucination() ) {
-        return me_npc->chat_snippets().snip_give_to_hallucination.translated();
+        return { me_npc->chat_snippets().snip_give_to_hallucination.translated() };
     }
-    if( !loc || !loc.held_by( player_character ) ) {
-        return _( "You are not carrying that item." );
+    if( !loc || !loc.held_by( *donor ) ) {
+        return { _( "You are not carrying that item." ) };
     }
-    item &given = *loc;
+    const item_source source = capture_item_source( *donor, loc );
+    const auto still_offered = [&]() {
+        return giver && loc && resolve_item_source( *donor, get_map(), source ) == loc;
+    };
+    if( !still_offered() ) {
+        return { _( "You are not carrying that item." ) };
+    }
+    if( !can_remove_from_item_pockets( *donor, loc ) ||
+        craft_reservation::contains_reserved_or_live_craft( *loc ) ) {
+        return { _( "You cannot give away that item." ) };
+    }
+    if( ( donor->is_wielding( *loc ) && loc->has_flag( json_flag_NO_UNWIELD ) ) ||
+        ( donor->is_worn( *loc ) && !donor->can_takeoff( *loc ).success() ) ) {
+        return { _( "How?" ) };
+    }
+    if( loc->is_dangerous() && !donor->has_trait( trait_DEBUG_MIND_CONTROL ) ) {
+        return { me_npc->chat_snippets().snip_give_dangerous.translated() };
+    }
 
-    if( ( loc == player_character.get_wielded_item() &&
-          given.has_flag( json_flag_NO_UNWIELD ) ) ||
-        ( player_character.is_worn( given ) &&
-          ( given.has_flag( json_flag_NO_TAKEOFF ) ||
-            given.has_flag( json_flag_INTEGRATED ) ) ) ) {
-        // Integrated item or shackles
-        return _( "How?" );
-    }
-
-    if( given.is_dangerous() && !player_character.has_trait( trait_DEBUG_MIND_CONTROL ) ) {
-        return me_npc->chat_snippets().snip_give_dangerous.translated();
-    }
-
-    bool taken = false;
     std::string reason = me_npc->chat_snippets().snip_give_nope.translated();
-    const item_location weapon = me_npc->get_wielded_item();
-    const double new_weapon_value = me_npc->evaluate_weapon( given );
-    const item &weap = weapon ? *weapon : null_item_reference();
-    const double cur_weapon_value = me_npc->evaluate_weapon( weap );
-    add_msg_debug( debugmode::DF_TALKER, "NPC evaluates own %s: %0.1f",
-                   weap.typeId().str(), cur_weapon_value );
-    add_msg_debug( debugmode::DF_TALKER, "NPC evaluates your %s: %0.1f",
-                   given.typeId().str(), new_weapon_value );
-    if( to_use ) {
-        // Eating first, to avoid evaluating bread as a weapon
-        const consumption_result consume_res = try_consume( *me_npc, given, reason );
-        if( consume_res != REFUSED ) {
-            player_character.mod_moves( -to_moves<int>( 1_seconds ) );
-            if( consume_res == CONSUMED_ALL ) {
-                player_character.i_rem( &given );
-            } else if( given.is_container() ) {
-                given.on_contents_changed();
-            }
-        }// wield it if its a weapon
-        else if( new_weapon_value > cur_weapon_value ) {
-            me_npc->wield( given );
-            reason = me_npc->chat_snippets().snip_give_wield.translated();
-            taken = true;
-        }// HACK: is_gun here is a hack to prevent NPCs wearing guns if they don't want to use them
-        else if( !given.is_gun() && given.is_armor() ) {
-            //if it is impossible to wear return why
-            ret_val<void> can_wear = me_npc->can_wear( given, true );
-            if( !can_wear.success() ) {
-                reason = can_wear.str();
-            } else {
-                //if we can wear it with equip changes prompt first
-                can_wear = me_npc->can_wear( given );
-                if( ( can_wear.success() ||
-                      query_yn( can_wear.str() + _( " Should I take something off?" ) ) )
-                    && me_npc->wear_if_wanted( given, reason ) ) {
-                    taken = true;
-                } else {
-                    reason = can_wear.str();
-                }
-            }
-        } else {
-            reason += " " + string_format( me_npc->chat_snippets().snip_give_weapon_weak.translated() +
-                                           _( "(new weapon value: %.1f vs %.1f)." ), new_weapon_value, cur_weapon_value );
+    const auto take = [&]( const std::string & reply ) -> npc_item_offer_result {
+        if( giver )
+    {
+        donor->mod_moves( -to_moves<int>( 1_seconds ) );
         }
-    } else {//allow_use is false so try to carry instead
-        if( me_npc->can_pickVolume( given ) && me_npc->can_pickWeight( given ) ) {
-            reason = me_npc->chat_snippets().snip_give_carry.translated();
-            // set the item given to be favorited so it's not dropped automatically
-            given.set_favorite( true );
-            taken = true;
-            me_npc->i_add( given );
-        } else {
-            if( !me_npc->can_pickVolume( given ) ) {
-                const units::volume free_space = me_npc->free_space();
-                reason += " " + std::string( me_npc->chat_snippets().snip_give_carry_cant.translated() ) + " ";
-                if( free_space > 0_ml ) {
-                    std::string talktag = me_npc->chat_snippets().snip_give_carry_cant_few_space.translated();
-                    parse_tags( talktag, get_player_character(), *me_npc );
-                    reason += string_format( _( talktag ), format_volume( free_space ), volume_units_long() );
-                } else {
-                    reason += me_npc->chat_snippets().snip_give_carry_cant_no_space.translated();
-                }
-            }
-            if( !me_npc->can_pickWeight( given ) ) {
-                reason += std::string( " " ) + me_npc->chat_snippets().snip_give_carry_too_heavy.translated();
-            }
-        }
-    }
-
-    if( taken ) {
-        player_character.i_rem( &given );
-        player_character.mod_moves( -to_moves<int>( 1_seconds ) );
+        if( recipient )
+    {
         me_npc->has_new_items = true;
     }
+    return { reply };
+};
+if( !to_use ) {
+        const bool volume = me_npc->can_pickVolume( *loc );
+        const bool weight = me_npc->can_pickWeight( *loc );
+        if( volume && weight ) {
+            const std::string accepted = me_npc->chat_snippets().snip_give_carry.translated();
+            item prepared = *loc;
+            prepared.set_favorite( true );
+            prepared.set_owner( *me_npc );
+            me_npc->transfer_item_to_inventory( loc, std::move( prepared ), false, donor );
+            if( !loc ) {
+                return take( accepted );
+            }
+        }
+        if( !recipient || !giver ) {
+            return { reason };
+        }
+        if( !volume || weight ) {
+            reason += " " + me_npc->chat_snippets().snip_give_carry_cant.translated() + " ";
+            const units::volume free_space = me_npc->free_space();
+            if( free_space > 0_ml ) {
+                std::string tag = me_npc->chat_snippets().snip_give_carry_cant_few_space.translated();
+                parse_tags( tag, *donor, *me_npc );
+                reason += string_format( _( tag ), format_volume( free_space ), volume_units_long() );
+            } else {
+                reason += me_npc->chat_snippets().snip_give_carry_cant_no_space.translated();
+            }
+        }
+        if( !weight ) {
+            reason += " " + me_npc->chat_snippets().snip_give_carry_too_heavy.translated();
+        }
+        return { reason };
+    }
 
-    return reason;
+    if( !replace_armor ) {
+        const consumption_result consumed = try_consume( *me_npc, *donor, *loc, reason );
+        if( consumed != REFUSED ) {
+            if( still_offered() ) {
+                if( consumed == CONSUMED_ALL ) {
+                    loc.remove_item();
+                } else {
+                    loc.on_contents_changed();
+                    donor->invalidate_weight_carried_cache();
+                }
+            }
+            if( giver ) {
+                donor->mod_moves( -to_moves<int>( 1_seconds ) );
+            }
+            return { reason };
+        }
+        if( !recipient || !still_offered() ) {
+            return { reason };
+        }
+
+        const item_location current = me_npc->get_wielded_item();
+        const double new_value = me_npc->evaluate_weapon( *loc );
+        const double old_value = me_npc->evaluate_weapon( current ? *current : null_item_reference() );
+        if( new_value > old_value ) {
+            const std::string accepted = me_npc->chat_snippets().snip_give_wield.translated();
+            if( me_npc->wield_offered_item( loc, *donor ) ) {
+                return take( accepted );
+            }
+            return { reason };
+        }
+        if( loc->is_gun() || !loc->is_armor() ) {
+            reason += " " + string_format( me_npc->chat_snippets().snip_give_weapon_weak.translated() +
+                                           _( "(new weapon value: %.1f vs %.1f)." ), new_value, old_value );
+            return { reason };
+        }
+    }
+
+    if( !loc->is_armor() || loc->is_gun() ) {
+        return { reason };
+    }
+    const ret_val<void> possible = me_npc->can_wear( *loc, true );
+    if( !possible.success() ) {
+        return { possible.str() };
+    }
+    const ret_val<void> fits = me_npc->can_wear( *loc );
+    if( !fits.success() ) {
+        if( !replace_armor && donor != &get_avatar() ) {
+            return { fits.str(), true };
+        }
+        const bool replace = replace_armor ? *replace_armor :
+                             query_yn( fits.str() + _( " Should I take something off?" ) );
+        if( !replace ) {
+            return { fits.str() };
+        }
+    }
+    if( !recipient || !still_offered() ) {
+        return { reason };
+    }
+    const item prepared = *loc;
+    if( me_npc->wear_if_wanted( prepared, reason, &loc ) ) {
+        return take( reason );
+    }
+    return { reason };
 }
 
 bool talker_npc::buy_from( const int amount )

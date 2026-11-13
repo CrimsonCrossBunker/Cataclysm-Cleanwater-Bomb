@@ -217,8 +217,8 @@ unload_liquid_choice query_liquid_destination( const item &liquid, const item *t
     choice.container = capture_item_source( get_avatar(), selected.item_loc );
     if( selected.dest_opt == LD_VEH && selected.veh ) {
         const auto tank = veh_interact::select_part( get_map(), *selected.veh,
-        [&preview]( const map &, const vehicle_part & part ) {
-            return part.is_tank() && part.can_reload( preview );
+        [&preview, target]( const map &, const vehicle_part & part ) {
+            return part.is_tank() && &part.get_base() != target && part.can_reload( preview );
         }, _( "Select target tank" ) );
         if( tank ) {
             choice.vehicle = selected.veh->uid().get_value();

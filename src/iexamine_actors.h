@@ -11,6 +11,7 @@
 #include "coords_fwd.h"
 #include "iexamine.h"
 #include "dialogue_helpers.h"
+#include "tool_activity_target.h"
 #include "type_id.h"
 #include "translation.h"
 
@@ -18,6 +19,16 @@ class Character;
 class item_location;
 
 struct const_dialogue;
+
+struct appliance_conversion_selection {
+    tripoint_abs_ms origin;
+    tool_activity_target target;
+    itype_id appliance;
+    std::optional<double> direction;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
 
 class appliance_convert_examine_actor : public iexamine_actor
 {
@@ -33,6 +44,7 @@ class appliance_convert_examine_actor : public iexamine_actor
         void load( const JsonObject &jo, const std::string & ) override;
         void call( Character &you, const tripoint_bub_ms &examp ) const override;
         void finalize() const override;
+        static bool execute( Character &who, map &here, const appliance_conversion_selection &choice );
 
         std::unique_ptr<iexamine_actor> clone() const override;
 };

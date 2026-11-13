@@ -7,7 +7,9 @@
 #include <string>
 #include <vector>
 
+#include "character_id.h"
 #include "coordinates.h"
+#include "type_id.h"
 #include "item_disposition.h"
 #include "vehicle_electronics.h"
 #include "vehicle_appliance.h"
@@ -25,6 +27,7 @@ class Character;
 class map;
 class vehicle;
 class item_location;
+struct vehicle_part;
 
 // Controller state belongs to its character. Queries never reuse another
 // character's connection or a cached vehicle pointer from an earlier map state.
@@ -55,6 +58,20 @@ struct vehicle_engine_selection {
     void deserialize( const JsonObject &data );
 };
 
+struct vehicle_management_selection {
+    std::string operation;
+    tripoint_abs_ms origin;
+    int64_t part_id = 0;
+    faction_id owner;
+    std::string text;
+    character_id crew;
+    itype_id fuel;
+    bool hidden = false;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
 struct vehicle_control_selection {
     int64_t vehicle_id = 0;
     tripoint_abs_ms position;
@@ -72,6 +89,7 @@ struct vehicle_control_selection {
     std::optional<vehicle_tool_use_selection> tool_use;
     std::optional<vehicle_turret_selection> turret;
     std::optional<vehicle_harness_selection> harness;
+    std::optional<vehicle_management_selection> management;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
@@ -98,4 +116,11 @@ std::optional<vehicle_control_selection> query_vehicle_appliance( Character &who
 // never accepted from a serialized vehicle_control_selection.
 bool execute_vehicle_control( Character &who, map &here,
                               const vehicle_control_selection &selection, const item_location *remote_source = nullptr );
+
+namespace cata_mp
+{
+bool client_siphon_vehicle( Character &who, map &here, vehicle &target, const vehicle_part &part );
+bool client_manage_vehicle( Character &who, map &here, vehicle &target,
+                            vehicle_management_selection choice, const vehicle_part *part = nullptr );
+} // namespace cata_mp
 #endif // CATA_SRC_VEHICLE_CONTROL_H

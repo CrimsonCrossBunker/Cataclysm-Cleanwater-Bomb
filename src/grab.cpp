@@ -360,7 +360,7 @@ bool execute_grab( Character &who, map &here, const grab_selection &choice )
             if( !part || who.activity || who.pos_abs() != operator_position ) {
                 return false;
             }
-            part->vehicle().separate_from_grid( &here, part->mount_pos() );
+            part->vehicle().separate_from_grid( here, part->mount_pos(), who );
             part = selected_grab_part( here, choice, true );
             if( !part ) {
                 return false;

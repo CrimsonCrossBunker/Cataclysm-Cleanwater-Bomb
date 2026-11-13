@@ -60,6 +60,17 @@ struct pending_omsync_t {
     bool active = false;
 };
 
+struct replicated_vehicle_part_identity {
+    int64_t part_uid;
+    int64_t tank_contents_uid;
+    bool tank_contents_liquid;
+
+    bool operator==( const replicated_vehicle_part_identity &other ) const {
+        return part_uid == other.part_uid && tank_contents_uid == other.tank_contents_uid &&
+               tank_contents_liquid == other.tank_contents_liquid;
+    }
+};
+
 struct host_replication_baselines {
     std::unordered_map<std::string, std::string> player_appearance;
     std::unordered_map<int, std::string> npc_appearance;
@@ -68,15 +79,10 @@ struct host_replication_baselines {
     // vehicle includes the "snapshot" payload so the client can mirror the SP
     // map::add_vehicle path; subsequent broadcasts stay slim.  Cleared on client
     // connect so a fresh client receives snapshots for every visible vehicle.
-    // Also dropped per-nid when the vehicle's parts vector changes size (install,
-    // remove, fold/unfold, damage-purge) so a structural mutation triggers a full
-    // re-snapshot — the slim parts/cargo deltas cover state-on-existing-parts only.
+    // A change in part identity, tank content identity, or liquid phase requires
+    // a fresh snapshot. Ordinary charge updates preserve the existing item UID.
     std::unordered_set<uint32_t> client_known_veh_nids{};
-    // Server: per-nid baseline of the parts vector size from the last broadcast.
-    // Any change (install/remove/purge) invalidates that nid's snapshot tracking
-    // so the client receives a fresh full snapshot rather than indices that drift
-    // from the host's vector.
-    std::unordered_map<uint32_t, size_t> server_veh_parts_count{};
+    std::unordered_map<uint32_t, std::vector<replicated_vehicle_part_identity>> server_veh_parts{};
     // Server: nids broadcast in the most recent state packet.  Diffed against the
     // current iteration to detect vehicles that have disappeared (folded, fully
     // destroyed, driven out of bubble) so we can emit a "removed_vehicles" entry
@@ -137,47 +143,14 @@ struct host_replication_baselines {
 };
 
 struct client_replication_state {
-    // Client: maps server vehicle network IDs to the last-known absolute tile position.
-    // Used to look up the vehicle object before moving it to the server-authoritative position.
-    std::unordered_map<uint32_t, tripoint_abs_ms> client_veh_pos{};
+    // Resolve removals by persistent identity even when the origin has no physical part.
+    std::unordered_map<uint32_t, int64_t> vehicle_uids{};
     monster_mirrors monsters{};
     // Client: true after the first successful long-range teleport to the host area.
     // The heavy place_player_overmap() is only needed once per session.
     bool initial_teleport_done = false;
-    // Client→server tile baselines: track what was last sent so we only send diffs.
-    // Fields are host-authoritative — the host generates the dust/blood/etc. that
-    // the client sees via tile_changes, and the client must not echo them back or
-    // the host's own state ping-pongs back as ~80 KB per turn.  apply_tile_changes
-    // refreshes these baselines from server-pushed state so the next outgoing
-    // build_client_tile_changes recognizes the tile as unchanged and skips it.
-    std::unordered_map<tripoint_abs_ms, std::string> client_item_baseline{};
-    std::unordered_map<tripoint_abs_ms, std::string> client_terfurn_baseline{};
-    std::unordered_map<tripoint_abs_ms, std::string> client_trap_baseline{};
-    std::unordered_map<tripoint_abs_ms, std::string> client_graffiti_baseline{};
-    std::unordered_map<tripoint_abs_ms, std::string> client_field_baseline{};
-    // Client→server vehicle cargo baseline.  Keyed by the absolute tile position
-    // of the cargo vpart so the host can find the vehicle + part by tile lookup.
-    // Mirrors the item baseline but for items stored inside vehicle cargo parts
-    // (trunks, freezers, lockers, etc.).
-    std::unordered_map<tripoint_abs_ms, std::string> client_veh_cargo_baseline{};
-    // Client→server worn-list baseline.  When the worn signature changes (e.g.
-    // drop_activity_actor peeled a worn garment off as part of a drop), we trigger
-    // a client_resync_worn() so the host's proxy mirrors the new worn list.
-    // Plain signature string keyed on typeId + variant + wielded id.
-    std::string client_worn_baseline{};
-    // Client: last known HP per net ID — used to synthesise combat hit/death messages.
-    std::unordered_map<uint32_t, int> last_monster_hp{};
     // Client: last known HP per bodypart string ID — used to synthesise "you were hit" messages.
     std::unordered_map<std::string, int> last_bodypart_hp{};
-    // Client: net_ids of synced monsters the client just killed locally, awaiting the
-    // host's authoritative confirmation. Value = remaining syncs to suppress a
-    // host-rebroadcast respawn. The host hasn't processed the forwarded kill yet, so
-    // it keeps broadcasting the monster alive; without this, apply_monster_sync
-    // respawns it ("killed the zed, it rose again, dropped 2-3 corpses" — GH#1). The
-    // loop repeats, each iteration leaving a host-side corpse that syncs back.
-    // Bounded: a kill the host REJECTS (HP desync) reappears after the window
-    // instead of vanishing forever.
-    std::unordered_map<uint32_t, int> client_pending_kill{};
     // Client: fingerprint of the last host_worn list applied — avoids re-dressing every tick.
     std::string client_host_worn_sig{};
     // FIFO of per-z regions.  The host may stream more than one floor's overmap in a
@@ -207,11 +180,6 @@ struct host_turn_state {
     // skips its blocking wait so the host advances monmove() solo while the client
     // stays locked, mirroring SP where an expensive move costs several turns.
     bool granted_this_turn = true;
-    // Host-only one-shot: when set, the next serialize_remote_player_state()
-    // broadcast carries "wake_client":true and the flag is cleared.  Drives the
-    // host→client direction of the tap-on-shoulder action.
-    bool pending_wake_client = false;
-    std::string wake_from;
     // Host-only one-shot signals for host→client partner interactions.  The host
     // performs the swap/push locally (SP path); these flags piggy-back on the next
     // state broadcast so the client can render the observer message ("<host> swaps
@@ -257,17 +225,6 @@ struct client_turn_state {
     time_point observed_host_turn = calendar::before_time_starts;
     time_point processed_host_turn = calendar::before_time_starts;
     bool group_fast_forward = false;
-    // Client: "keep smashing" continuation state.
-    // When set, auto-re-fire the smash action after each partial bash until the
-    // target is destroyed or the bash fails to make progress.
-    bool client_autosmash = false;
-    std::string client_autosmash_json{}; // the smash JSON to re-fire
-    bool autosmash_pending = false;    // fire the smash on the next available grant
-    // Set when a partial-bash result arrives and we need to ask "Keep smashing?".
-    // The query MUST run from the main do_turn loop (client_resolve_pending_ui),
-    // never inline in apply_one_state_message — a blocking popup from inside network
-    // processing is the same re-entrant-UI crash class as the aim bug.
-    bool client_smash_query_pending = false;
     // Client: set when the host sends host_died or the socket drops.
     // Suppresses further processing and the lost-connection spam.
     bool server_died = false;
@@ -319,7 +276,6 @@ struct peer_observation {
     std::string partner_activity{};
     // Stable identity of the player this helper committed to.
     std::string partner_help_target{};
-    bool partner_sleeping = false;
     // Progress % (0-100) of the partner's current activity.  Forwarded each
     // action/state packet alongside g_partner_activity.  Read by the Co-op panel.
     int partner_activity_pct = 0;
@@ -358,8 +314,7 @@ struct peer_observation {
     // Client: luminance emitted by the host player (flashlight, mutations, etc.).
     // Received from state packet each turn and injected into the lighting pass.
     float mp_host_luminance = 0.0f;
-    // Host: luminance emitted by the remote player (client). Received from each
-    // action packet and injected into the host's lighting pass at the proxy NPC position.
+    // Client: luminance of another player, projected from the host's actor.
     float mp_remote_player_luminance = 0.0f;
     // Client: last confirmed position of the remote player (our avatar as seen by the server).
     // Used as the center of the monster sync region.

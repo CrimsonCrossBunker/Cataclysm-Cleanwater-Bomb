@@ -3,6 +3,7 @@
 #define CATA_SRC_SLEEP_H
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "calendar.h"
@@ -13,8 +14,44 @@
 
 class Character;
 class JsonObject;
+class JsonOut;
 class item;
+class map;
+enum class activity_execution;
+template <typename T> class ret_val;
 template <typename T> struct enum_traits;
+
+struct sleep_selection {
+    tripoint_abs_ms origin;
+    int alarm_hours = 0;
+    bool save_before_sleep = false;
+    bool allow_faction_offense = false;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
+ret_val<void> can_start_sleep( Character &who, map &here );
+bool sleep_uses_private_property( const Character &who, const map &here );
+bool start_sleep( Character &who, map &here, const sleep_selection &choice,
+                  activity_execution execution );
+
+struct wait_selection {
+    tripoint_abs_ms origin;
+    std::string target;
+    time_duration duration = 0_turns;
+    bool alarm = false;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
+bool is_wait_activity( std::string_view id );
+bool is_rest_activity( std::string_view id );
+bool can_wait_here( const Character &who, map &here );
+time_duration wait_time_until( std::string_view target, time_point now );
+bool start_wait( Character &who, map &here, const wait_selection &choice,
+                 activity_execution execution );
 
 /**
  * Information for evaluating the comfort of a location.

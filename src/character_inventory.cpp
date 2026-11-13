@@ -29,6 +29,7 @@
 #include "character.h"
 #include "character_action_guard.h"
 #include "item_source.h"
+#include "item_move.h"
 #include "craft_reservation.h"
 #include "crafting.h"
 #include "character_attire.h"
@@ -71,6 +72,8 @@
 #include "mutation.h"
 #include "overmapbuffer.h"
 #include "pickup.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
 #include "pimpl.h"
 #include "pocket_type.h"
 #include "profession.h"
@@ -317,15 +320,33 @@ item_location Character::try_add( item it, const item *avoid, const item *origin
 }
 
 item_location Character::transfer_item_to_inventory( item_location &source, item prepared,
-        bool allow_wield )
+        bool allow_wield, Character *donor )
 {
+    Character &owner = donor ? *donor : *this;
     if( !source || source.held_by( *this ) || prepared.count() <= 0 ||
+        ( donor && !source.held_by( *donor ) ) ||
         source->typeId() != prepared.typeId() ||
         source->count() != prepared.count() ||
-        resolve_item_source( *this, get_map(), capture_item_source( *this, source ) ) != source ) {
+        resolve_item_source( owner, get_map(), capture_item_source( owner, source ) ) != source ) {
         return item_location();
     }
     return try_add_impl( std::move( prepared ), nullptr, nullptr, allow_wield, false, &source );
+}
+
+bool Character::transfer_furniture_item_to_inventory( item_location &source )
+{
+    if( !source || source.where() != item_location::type::map || source.has_parent() ) {
+        return false;
+    }
+    map &here = get_map();
+    const tripoint_abs_ms position = source.pos_abs();
+    const tripoint_abs_ms origin = pos_abs();
+    if( origin.z() != position.z() || !here.inbounds( position ) || square_dist( origin, position ) > 1 ||
+        resolve_furniture_item( here, position, source->uid().get_value() ) != source ) {
+        return false;
+    }
+    try_add_impl( item( *source ), nullptr, nullptr, false, false, &source );
+    return !source;
 }
 
 item_location Character::try_add_impl( item it, const item *avoid,
@@ -770,6 +791,10 @@ void Character::drop( const drop_locations &what, const tripoint_bub_ms &target,
         return;
     }
 
+    if( !stash && submit_client_item_move( *this, what, target,
+                                         item_move_destination::prefer_cargo, true ) ) {
+        return;
+    }
     const tripoint_rel_ms placement = target - pos_bub();
     std::vector<drop_or_stash_item_info> items;
     for( drop_location item_pair : what ) {
@@ -791,6 +816,15 @@ void Character::drop( const drop_locations &what, const tripoint_bub_ms &target,
 
 void Character::pick_up( const drop_locations &what )
 {
+    if( is_avatar() && cata_mp::is_client_mode() ) {
+        Pickup::selection selection;
+        for( const auto &[location, quantity] : what ) {
+            selection.targets.push_back( location );
+            selection.quantities.push_back( quantity );
+        }
+        cata_mp::client_request_pickup( selection );
+        return;
+    }
     Pickup::pick_info pick_info = Pickup::pick_info();
     pick_up( what, pick_info );
 }
@@ -1107,6 +1141,9 @@ item_location Character::get_wielded_item()
 void Character::set_wielded_item( const item &to_wield )
 {
     weapon = to_wield;
+    clear_inventory_search_cache();
+    invalidate_crafting_inventory();
+    invalidate_weight_carried_cache();
     martial_arts_data->auto_select_style( *this );
 }
 
@@ -1156,6 +1193,7 @@ void Character::load_carried_items( const JsonObject &data )
 
 void Character::refresh_carried_item_caches()
 {
+    clear_inventory_search_cache();
     invalidate_leak_level_cache();
     invalidate_weight_carried_cache();
     invalidate_inventory_validity_cache();
@@ -2926,8 +2964,19 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
     return wield_impl( it, obtain_cost, combat, nullptr, nullptr );
 }
 
+bool Character::wield_transferred_item( item_location &source, Character &donor )
+{
+    if( !source || &donor == this || !source.held_by( donor ) || has_wield_conflicts( *source ) ||
+        resolve_item_source( donor, get_map(), capture_item_source( donor, source ) ) != source ) {
+        return false;
+    }
+    item prepared = *source;
+    prepared.set_owner( *this );
+    return wield_impl( prepared, std::nullopt, true, &source, nullptr );
+}
+
 bool Character::wield_impl( item &it, std::optional<int> obtain_cost, bool combat,
-                            item_location *source, item_location *result )
+                            item_location *source, item_location *result, int source_charges )
 {
     const character_action_guard lifetime( *this );
     invalidate_inventory_validity_cache();
@@ -3003,7 +3052,13 @@ bool Character::wield_impl( item &it, std::optional<int> obtain_cost, bool comba
     // set_wielded_item invalidates the weapon item_location, so get it again
     wielded = get_wielded_item();
     if( source ) {
-        source->remove_item();
+        if( source_charges > 0 && *source && ( *source )->count_by_charges() &&
+            ( *source )->charges > source_charges ) {
+            ( *source )->charges -= source_charges;
+            source->on_contents_changed();
+        } else {
+            source->remove_item();
+        }
     }
     if( result ) {
         *result = wielded;
@@ -3052,6 +3107,20 @@ bool Character::wield( item_location loc, bool remove_old )
         loc.remove_item();
     }
     return true;
+}
+
+bool Character::wield_charges( item_location source, int quantity )
+{
+    if( !source || !source->count_by_charges() || quantity <= 0 || quantity >= source->charges ||
+        !source->all_items_top().empty() || is_wielding( *source ) || is_worn( *source ) ) {
+        return false;
+    }
+    item selected( *source );
+    selected.charges = quantity;
+    if( has_wield_conflicts( selected ) ) {
+        return false;
+    }
+    return wield_impl( selected, source.obtain_cost( *this, quantity ), true, &source, nullptr, quantity );
 }
 
 bool Character::wield_contents( item &container, item *internal_item, bool penalties,

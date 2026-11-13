@@ -20,7 +20,6 @@
 #include <vehicle_uid.h>
 #include <walking.h>
 
-#define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -61,6 +60,8 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "charcoal_kiln.h"
+#include "smoking_rack.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
 #include "clzones.h"
@@ -106,6 +107,8 @@
 #include "item_group.h"
 #include "item_healing.h"
 #include "item_location.h"
+#include "item_repair.h"
+#include "item_move.h"
 #include "item_pocket.h"
 #include "item_reload.h"
 #include "item_uid.h"
@@ -131,6 +134,7 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mp_client_conn.h"
+#include "mp_actor_binding.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
 #include "mtype.h"
@@ -146,6 +150,7 @@
 #include "pickup.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "safecracking.h"
 #include "pocket_type.h"
 #include "point.h"
 #include "proficiency.h"
@@ -184,6 +189,7 @@
 #include "vehicle_heating.h"
 #include "vehicle_selector.h"
 #include "vehicle_water.h"
+#include "liquid_transfer.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -342,6 +348,9 @@ static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_gliding( "gliding" );
 static const efftype_id effect_incorporeal( "incorporeal" );
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+static const trait_id trait_SHELL2( "SHELL2" );
+static const trait_id trait_SHELL3( "SHELL3" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_magic_channeling( "magic_channeling" );
 static const efftype_id effect_narcosis( "narcosis" );
@@ -365,14 +374,9 @@ static const furn_str_id furn_f_counter( "f_counter" );
 static const furn_str_id furn_f_crate_o( "f_crate_o" );
 static const furn_str_id furn_f_gunsafe_mj( "f_gunsafe_mj" );
 static const furn_str_id furn_f_gunsafe_ml( "f_gunsafe_ml" );
-static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
-static const furn_str_id furn_f_kiln_metal_empty( "f_kiln_metal_empty" );
-static const furn_str_id furn_f_kiln_portable_empty( "f_kiln_portable_empty" );
-static const furn_str_id furn_f_metal_smoking_rack( "f_metal_smoking_rack" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 static const furn_str_id furn_f_safe_c( "f_safe_c" );
 static const furn_str_id furn_f_safe_o( "f_safe_o" );
-static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 static const item_category_id item_category_veh_parts( "veh_parts" );
 static const item_group_id
@@ -413,7 +417,6 @@ static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag json_flag_PARTIAL_DEAF( "PARTIAL_DEAF" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
 static const json_character_flag json_flag_READ_IN_DARKNESS( "READ_IN_DARKNESS" );
-static const json_character_flag json_flag_SAFECRACK_NO_TOOL( "SAFECRACK_NO_TOOL" );
 static const json_character_flag json_flag_SILENT_SPELL( "SILENT_SPELL" );
 static const json_character_flag json_flag_SOCIAL1( "SOCIAL1" );
 static const json_character_flag json_flag_SOCIAL2( "SOCIAL2" );
@@ -931,27 +934,67 @@ std::unique_ptr<activity_actor> autodrive_activity_actor::deserialize( JsonValue
     return autodrive_activity_actor().clone();
 }
 
-void bash_activity_actor::do_turn( player_activity &, Character &who )
+bash_activity_actor::bash_activity_actor( const Character &who, const tripoint_abs_ms &where,
+        const ter_str_id &terrain, const furn_str_id &furniture, int64_t vehicle,
+        bool allow_vehicle_theft ) :
+    owned_target( where ), origin( who.pos_abs() ), operator_id( who.getID() ),
+    terrain( terrain ), furniture( furniture ), vehicle( vehicle ),
+    allow_vehicle_theft( allow_vehicle_theft ), awaiting_confirmation( true )
 {
-    avatar *player = who.as_avatar();
-    if( player == nullptr ) {
-        debugmsg( "An NPC (%s) has been assigned ACT_BASH", who.get_name() );
+}
+
+bool bash_activity_actor::can_smash_at( const Character &who, map &here ) const
+{
+    if( !owned_target || who.getID() != operator_id || who.pos_abs() != origin ||
+        who.is_dead_state() || who.controlling_vehicle || who.has_effect( effect_incorporeal ) ||
+        who.has_flag( json_flag_CANNOT_ATTACK ) ||
+        who.has_active_mutation( trait_SHELL2 ) ||
+        who.has_active_mutation( trait_SHELL3 ) ||
+        !here.inbounds( origin ) || !here.inbounds( *owned_target ) ||
+        owned_target->z() != origin.z() || square_dist( owned_target->xy(), origin.xy() ) > 1 ) {
+        return false;
+    }
+    const tripoint_bub_ms position = here.get_bub( *owned_target );
+    const auto at = here.veh_at( position );
+    return here.ter( position ).id() == terrain && here.furn( position ).id() == furniture &&
+           vehicle == ( at ? at->vehicle().uid().get_value() : 0 );
+}
+
+void bash_activity_actor::do_turn( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    const bool owned = owned_target.has_value();
+    if( ( owned && !can_smash_at( who, here ) ) || ( !owned && !who.is_avatar() ) ) {
         who.cancel_activity();
         return;
     }
+    if( awaiting_confirmation ) {
+        return;
+    }
+
+    const character_action_guard actor( who );
+    const auto context = here.get_context_reference();
+    const auto generation = act.identity_generation();
+    const auto theft = owned ? std::optional<bool>( allow_vehicle_theft ) : std::nullopt;
     while( who.get_moves() > 0 ) {
-        avatar::smash_result res = player->smash( target );
-        if( !res.did_smash ) {
-            add_msg( m_info, _( "Something got in the way of smashing." ) );
-            who.cancel_activity();
+        tripoint_bub_ms position = owned ? here.get_bub( *owned_target ) : target;
+        const int moves = who.get_moves();
+        const Character::smash_result result = who.smash( here, position, theft );
+        if( !actor || !context || who.activity.identity_generation() != generation ) {
             return;
         }
-        if( res.success ) {
-            who.cancel_activity();
-            return;
+        if( !owned ) {
+            target = position;
         }
-        if( !res.can_smash ) {
-            add_msg( m_info, _( "You're no longer able to make progress smashing here." ) );
+        if( !result.did_smash ) {
+            who.add_msg_player_or_npc( m_info, _( "Something got in the way of smashing." ),
+                                       _( "Something got in the way of <npcname>'s smashing." ) );
+        } else if( !result.success && !result.can_smash ) {
+            who.add_msg_player_or_npc( m_info, _( "You're no longer able to make progress smashing here." ),
+                                       _( "<npcname> can no longer make progress smashing here." ) );
+        }
+        if( result.success || !result.did_smash || !result.can_smash ||
+            who.get_moves() >= moves || ( owned && !can_smash_at( who, here ) ) ) {
             who.cancel_activity();
             return;
         }
@@ -962,6 +1005,16 @@ void bash_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
     jsout.member( "target", target );
+    if( owned_target ) {
+        jsout.member( "owned_target", *owned_target );
+        jsout.member( "origin", origin );
+        jsout.member( "operator_id", operator_id );
+        jsout.member( "terrain", terrain );
+        jsout.member( "furniture", furniture );
+        jsout.member( "vehicle", vehicle );
+        jsout.member( "allow_vehicle_theft", allow_vehicle_theft );
+        jsout.member( "awaiting_confirmation", awaiting_confirmation );
+    }
     jsout.end_object();
 }
 
@@ -971,7 +1024,17 @@ std::unique_ptr<activity_actor> bash_activity_actor::deserialize( JsonValue &jsi
 
     JsonObject data = jsin.get_object();
     data.read( "target", actor.target );
-
+    if( data.has_member( "owned_target" ) ) {
+        actor.owned_target.emplace();
+        data.read( "owned_target", *actor.owned_target, true );
+        data.read( "origin", actor.origin, true );
+        data.read( "operator_id", actor.operator_id, true );
+        data.read( "terrain", actor.terrain, true );
+        data.read( "furniture", actor.furniture, true );
+        data.read( "vehicle", actor.vehicle, true );
+        data.read( "allow_vehicle_theft", actor.allow_vehicle_theft, true );
+        data.read( "awaiting_confirmation", actor.awaiting_confirmation, true );
+    }
     return actor.clone();
 }
 
@@ -3694,7 +3757,15 @@ void move_items_activity_actor::do_turn( player_activity &act, Character &who )
     if( !operator_id.is_valid() ) {
         operator_id = who.getID();
     }
-    if( operator_id != who.getID() || target_items.size() != quantities.size() ||
+    if( operator_id != who.getID() ) {
+        act.set_to_null();
+        return;
+    }
+    if( owned_selection ) {
+        do_owned_item_move( who, act, *owned_selection );
+        return;
+    }
+    if( target_items.size() != quantities.size() ||
     std::any_of( quantities.begin(), quantities.end(), []( int count ) {
     return count < 0;
 } ) ) {
@@ -3831,6 +3902,9 @@ void move_items_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "relative_destination", relative_destination );
     jsout.member( "hauling_mode", hauling_mode );
     jsout.member( "operator_id", operator_id );
+    if( owned_selection ) {
+        jsout.member( "owned_selection", *owned_selection );
+    }
 
     jsout.end_object();
 }
@@ -3847,6 +3921,7 @@ std::unique_ptr<activity_actor> move_items_activity_actor::deserialize( JsonValu
     data.read( "relative_destination", actor.relative_destination );
     data.read( "hauling_mode", actor.hauling_mode );
     data.read( "operator_id", actor.operator_id );
+    data.read( "owned_selection", actor.owned_selection );
 
     return actor.clone();
 }
@@ -7034,9 +7109,23 @@ consume_activity_actor consume_activity_actor::client_view( bool reprompt )
     return actor;
 }
 
+bool consume_activity_actor::consumes_vehicle_water() const
+{
+    return is_vehicle_liquid_source( owned_source );
+}
+
+std::optional<tripoint_abs_ms> consume_activity_actor::ground_source() const
+{
+    return server_owned && owned_source.kind == "map" ?
+           std::make_optional( owned_source.position ) : std::nullopt;
+}
+
 bool consume_activity_actor::prepare_owned_turn( Character &who )
 {
-    consume_location = resolve_item_source( who, get_map(), owned_source );
+    map &here = get_map();
+    consume_location = consumes_vehicle_water() ?
+                       resolve_vehicle_water_source( who, here, owned_source, vehicle_owner ) :
+                       resolve_item_source( who, here, owned_source );
     return owned_consumption_allowed( who, consume_location, allow_consequences, allow_theft );
 }
 
@@ -7054,7 +7143,9 @@ void consume_activity_actor::start( player_activity &act, Character &who )
         return;
     }
     if( server_owned ) {
-        owned_source = capture_item_source( who, consume_location );
+        if( owned_source.kind.empty() ) {
+            owned_source = capture_item_source( who, consume_location );
+        }
         if( !prepare_owned_turn( who ) ) {
             act.set_to_null();
             return;
@@ -7062,7 +7153,10 @@ void consume_activity_actor::start( player_activity &act, Character &who )
     }
     const item *target = consume_location ? &*consume_location :
                          !consume_item.is_null() ? &consume_item : nullptr;
-    if( !target || ( !server_owned && !who.will_eat( *target, who.is_avatar() ).success() ) ) {
+    const bool allowed = target && ( server_owned ||
+                                     ( ground_continuation && allow_consequences ? who.can_eat( *target ) :
+                                       who.will_eat( *target, who.is_avatar() && !ground_continuation ) ).success() );
+    if( !allowed ) {
         was_canceled = true;
         if( !target ) {
             reprompt_consume_menu = false;
@@ -7093,11 +7187,17 @@ void consume_activity_actor::finish( player_activity &act, Character &who )
     item temporary = consume_item;
     const bool owned = server_owned;
     const bool reprompt = reprompt_consume_menu;
+    const auto ground = ground_continuation;
+    map &here = get_map();
+    const auto context = ground ? here.get_context_reference() : safe_reference<map>();
+    bool consumed_ground_food = false;
     if( !was_canceled ) {
-        if( location ) {
+        if( location && consumes_vehicle_water() ) {
+            drink_vehicle_liquid( who, here, location );
+        } else if( location ) {
             who.consume( location, /*force=*/true, owned );
         } else if( !temporary.is_null() ) {
-            who.consume( temporary, /*force=*/true );
+            consumed_ground_food = who.consume( temporary, /*force=*/true ) != trinary::NONE;
         }
     }
     if( !lifetime ) {
@@ -7105,6 +7205,12 @@ void consume_activity_actor::finish( player_activity &act, Character &who )
     }
     if( act.id() == ACT_CONSUME && act.identity_generation() == identity ) {
         act.set_to_null();
+        if( ground && consumed_ground_food && context && !who.is_dead_state() ) {
+            start_ground_food( who, here, &*ground );
+        }
+    }
+    if( ground ) {
+        return;
     }
     avatar *local = who.as_avatar();
     if( !local || owned ) {
@@ -7141,9 +7247,15 @@ void consume_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "allow_theft", allow_theft );
     if( server_owned ) {
         jsout.member( "owned_source", owned_source );
+        if( vehicle_owner ) {
+            jsout.member( "vehicle_owner", *vehicle_owner );
+        }
     } else if( !view_only ) {
         jsout.member( "consume_location", consume_location );
         jsout.member( "consume_item", consume_item );
+        if( ground_continuation ) {
+            jsout.member( "ground_continuation", *ground_continuation );
+        }
     }
     jsout.member( "canceled", was_canceled );
     jsout.member( "reprompt_consume_menu", reprompt_consume_menu );
@@ -7163,8 +7275,13 @@ std::unique_ptr<activity_actor> consume_activity_actor::deserialize( JsonValue &
     data.read( "allow_consequences", actor.allow_consequences );
     data.read( "allow_theft", actor.allow_theft );
     data.read( "owned_source", actor.owned_source );
+    data.read( "vehicle_owner", actor.vehicle_owner );
     data.read( "consume_location", actor.consume_location );
     data.read( "consume_item", actor.consume_item );
+    if( data.has_object( "ground_continuation" ) ) {
+        actor.ground_continuation.emplace();
+        data.read( "ground_continuation", *actor.ground_continuation, true );
+    }
     data.read( "canceled", actor.was_canceled );
     if( data.has_member( "reprompt_consume_menu" ) ) {
         data.read( "reprompt_consume_menu", actor.reprompt_consume_menu );
@@ -7186,9 +7303,16 @@ void try_sleep_activity_actor::start( player_activity &act, Character &who )
 {
     act.moves_total = to_moves<int>( duration );
     act.moves_left = act.moves_total;
+    const character_action_guard lifetime( who );
+    const auto identity = act.identity_generation();
     get_event_bus().send<event_type::character_attempt_to_fall_asleep>( who.getID() );
+    if( !lifetime || act.identity_generation() != identity ) {
+        return;
+    }
     who.set_movement_mode( move_mode_prone );
-    who.add_msg_if_player( _( "You lie down preparing to fall asleep." ) );
+    if( lifetime ) {
+        who.add_msg_if_player( _( "You lie down preparing to fall asleep." ) );
+    }
 }
 
 void try_sleep_activity_actor::do_turn( player_activity &act, Character &who )
@@ -7197,8 +7321,9 @@ void try_sleep_activity_actor::do_turn( player_activity &act, Character &who )
         return;
     }
     if( who.can_sleep() ) {
+        const character_action_guard lifetime( who );
         who.fall_asleep(); // calls act.set_to_null()
-        if( !who.has_effect( effect_sleep ) ) {
+        if( lifetime && !who.has_effect( effect_sleep ) ) {
             // Character can potentially have immunity for 'effect_sleep'
             who.add_msg_if_player(
                 _( "You feel you should've fallen asleep by now, but somehow you're still awake." ) );
@@ -7299,10 +7424,9 @@ void safecracking_activity_actor::start( player_activity &act, Character &who )
 {
     time_duration cracking_time = safecracking_time( who );
 
-    if( who.is_avatar() ) {
-        add_msg( m_info, _( "You start cracking the safe." ) );
-    } else { // who.is_npc
-        // npcs can't crack safes yet, this is for when they are able to
+    if( who.is_avatar() || who.has_native_player_control() ) {
+        who.add_msg_if_player( m_info, _( "You start cracking the safe." ) );
+    } else {
         add_msg_if_player_sees( who, _( "%1$s starts cracking the safe." ), who.disp_name() );
     }
 
@@ -7313,14 +7437,57 @@ void safecracking_activity_actor::start( player_activity &act, Character &who )
     act.moves_left = act.moves_total;
 }
 
+std::optional<tripoint_abs_ms> safecracking_activity_actor::work_location() const
+{
+    return target_ ? std::make_optional( target_->position ) : std::nullopt;
+}
+
+bool safecracking_activity_actor::valid_work( const Character &who, map &here )
+{
+    // Old activities saved only bubble coordinates. Resolve them after the
+    // character and map are restored, and require a reachable locked safe.
+    if( !target_ && legacy_safe_ && here.has_loaded_submap( *legacy_safe_ ) ) {
+        const safe_interaction legacy{ safe_action::crack, who.pos_abs(),
+                                       here.get_abs( *legacy_safe_ ), here.furn( *legacy_safe_ ).id() };
+        if( legacy.matches( who, here ) ) {
+            target_ = legacy;
+            operator_id_ = who.getID();
+            legacy_safe_.reset();
+        }
+    }
+    return target_ && target_->action == safe_action::crack && operator_id_ == who.getID() &&
+           target_->matches( who, here ) && has_safecracking_tool( who ) && can_hear_safe_lock( who );
+}
+
+bool safecracking_activity_actor::can_resume_with_internal( const activity_actor &other,
+        const Character &who ) const
+{
+    const auto &proposed = static_cast<const safecracking_activity_actor &>( other );
+    if( !proposed.target_ || proposed.target_->action != safe_action::crack ||
+        proposed.operator_id_ != who.getID() ) {
+        return false;
+    }
+    if( !target_ ) {
+        return legacy_safe_ && get_map().get_abs( *legacy_safe_ ) == proposed.target_->position;
+    }
+    return operator_id_ == proposed.operator_id_ && target_->origin == proposed.target_->origin &&
+           target_->position == proposed.target_->position && target_->furniture == proposed.target_->furniture;
+}
+
+void safecracking_activity_actor::set_resume_values_internal( const activity_actor &other,
+        const Character &who )
+{
+    if( !target_ ) {
+        const auto &proposed = static_cast<const safecracking_activity_actor &>( other );
+        target_ = proposed.target_;
+        operator_id_ = who.getID();
+        legacy_safe_.reset();
+    }
+}
+
 void safecracking_activity_actor::do_turn( player_activity &act, Character &who )
 {
-    bool can_crack = who.has_flag( json_flag_SAFECRACK_NO_TOOL );
-    // short-circuit to avoid the more expensive iteration over items
-    can_crack = can_crack || who.cache_has_item_with( flag_SAFECRACK );
-
-    if( !can_crack ) {
-        // We lost our cracking tool somehow, bail out.
+    if( !valid_work( who, get_map() ) ) {
         act.set_to_null();
         return;
     }
@@ -7335,9 +7502,14 @@ void safecracking_activity_actor::do_turn( player_activity &act, Character &who 
         ( 100 * ( act.moves_total - act.moves_left ) / act.moves_total ) / 5;
     const int difference = current_step - exp_step ;
     if( difference > 0 ) {
+        const character_action_guard lifetime( who );
+        const auto identity = act.identity_generation();
         exp_step += difference;
         if( !who.has_proficiency( proficiency_prof_safecracking ) ) {
             who.practice_proficiency( proficiency_prof_safecracking, 3_minutes * difference );
+            if( !lifetime || act.identity_generation() != identity ) {
+                return;
+            }
             // player gained the proficiency mid-way through cracking
             if( who.has_proficiency( proficiency_prof_safecracking ) ) {
                 int new_time = to_moves<int>( safecracking_time( who ) );
@@ -7348,6 +7520,9 @@ void safecracking_activity_actor::do_turn( player_activity &act, Character &who 
 
         const float skill_level = who.get_skill_level( skill_traps );
         who.practice( skill_traps, std::max( 1.0f,  skill_level / 2 ) );
+        if( !lifetime || act.identity_generation() != identity ) {
+            return;
+        }
         if( who.get_skill_level( skill_traps ) > skill_level ) {
             int new_time = to_moves<int>( safecracking_time( who ) );
             act.moves_total = act.moves_total > new_time ? new_time : act.moves_total;
@@ -7358,25 +7533,37 @@ void safecracking_activity_actor::do_turn( player_activity &act, Character &who 
 
 void safecracking_activity_actor::finish( player_activity &act, Character &who )
 {
-    who.add_msg_if_player( m_good, _( "With a satisfying click, the lock on the safe opens!" ) );
-    get_map().furn_set( safe, furn_f_safe_c );
+    map &here = get_map();
+    if( valid_work( who, here ) &&
+        here.furn_set( here.get_bub( target_->position ), furn_f_safe_c ) ) {
+        who.add_msg_if_player( m_good, _( "With a satisfying click, the lock on the safe opens!" ) );
+    }
     act.set_to_null();
 }
 
 void safecracking_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
-    jsout.member( "safe", safe );
+    if( target_ ) {
+        jsout.member( "work", *target_ );
+        jsout.member( "operator", operator_id_ );
+    } else if( legacy_safe_ ) {
+        jsout.member( "safe", *legacy_safe_ );
+    }
     jsout.member( "exp_step", exp_step );
     jsout.end_object();
 }
 
 std::unique_ptr<activity_actor> safecracking_activity_actor::deserialize( JsonValue &jsin )
 {
-    safecracking_activity_actor actor = safecracking_activity_actor( {} );
+    safecracking_activity_actor actor;
 
     JsonObject data = jsin.get_object();
-    data.read( "safe", actor.safe );
+    if( data.read( "work", actor.target_ ) ) {
+        data.read( "operator", actor.operator_id_, true );
+    } else {
+        data.read( "safe", actor.legacy_safe_, true );
+    }
     data.read( "exp_step", actor.exp_step );
     return actor.clone();
 }
@@ -11473,6 +11660,12 @@ std::unique_ptr<activity_actor> multi_build_construction_activity_actor::deseria
     return actor.clone();
 }
 
+void reel_cable_activity_actor::bind_owner( Character &who )
+{
+    owned_cable = capture_item_source( who, cable );
+    operator_id = who.getID();
+}
+
 void reel_cable_activity_actor::start( player_activity &act, Character & )
 {
     act.moves_total = moves_total;
@@ -11481,12 +11674,22 @@ void reel_cable_activity_actor::start( player_activity &act, Character & )
 
 void reel_cable_activity_actor::finish( player_activity &act, Character &who )
 {
-    cable->reset_link( false, &who, -2 );
-    who.add_msg_if_player( m_info, _( "You reel in the %s and wind it up." ), cable->link_name() );
-    if( cable->has_flag( flag_NO_DROP ) ) {
-        cable.remove_item();
+    item_location target = cable;
+    if( owned_cable ) {
+        target = who.getID() == operator_id ? resolve_item_source( who, get_map(), *owned_cable ) :
+                 item_location();
     }
     act.set_to_null();
+    if( !target || !target->link_has_state( link_state::needs_reeling ) ) {
+        return;
+    }
+    target->reset_link( false, &who, -2 );
+    who.add_msg_if_player( m_info, _( "You reel in the %s and wind it up." ), target->link_name() );
+    if( target->has_flag( flag_NO_DROP ) ) {
+        target.remove_item();
+    } else {
+        target.on_contents_changed();
+    }
 }
 
 void reel_cable_activity_actor::serialize( JsonOut &jsout ) const
@@ -11494,6 +11697,10 @@ void reel_cable_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
     jsout.member( "moves_total", moves_total );
     jsout.member( "cable", cable );
+    if( owned_cable ) {
+        jsout.member( "owned_cable", *owned_cable );
+        jsout.member( "operator", operator_id );
+    }
     jsout.end_object();
 }
 
@@ -11503,6 +11710,8 @@ std::unique_ptr<activity_actor> reel_cable_activity_actor::deserialize( JsonValu
     JsonObject data = jsin.get_object();
     data.read( "moves_total", actor.moves_total );
     data.read( "cable", actor.cable );
+    data.read( "owned_cable", actor.owned_cable );
+    data.read( "operator", actor.operator_id );
 
     return actor.clone();
 }
@@ -12235,8 +12444,16 @@ std::unique_ptr<activity_actor> wield_activity_actor::deserialize( JsonValue &js
     return actor.clone();
 }
 
-void wear_activity_actor::do_turn( player_activity &, Character &who )
+void wear_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    if( owned_selection ) {
+        if( operator_id != who.getID() ) {
+            act.set_to_null();
+            return;
+        }
+        cata_mp::do_owned_wear( act, who, *owned_selection );
+        return;
+    }
     // ACT_WEAR has item_location targets, and int quantities
     while( who.get_moves() > 0 && !target_items.empty() ) {
         item_location target = std::move( target_items.back() );
@@ -12291,6 +12508,10 @@ void wear_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "target_items", target_items );
     jsout.member( "quantities", quantities );
     jsout.member( "handler", handler );
+    if( owned_selection ) {
+        jsout.member( "operator_id", operator_id );
+        jsout.member( "owned_selection", *owned_selection );
+    }
 
     jsout.end_object();
 }
@@ -12304,6 +12525,8 @@ std::unique_ptr<activity_actor> wear_activity_actor::deserialize( JsonValue &jsi
     data.read( "target_items", actor.target_items );
     data.read( "quantities", actor.quantities );
     data.read( "handler", actor.handler );
+    data.read( "operator_id", actor.operator_id );
+    data.read( "owned_selection", actor.owned_selection );
 
     return actor.clone();
 }
@@ -13340,6 +13563,13 @@ std::unique_ptr<activity_actor> forage_activity_actor::deserialize( JsonValue &i
     return actor.clone();
 }
 
+mend_item_activity_actor::mend_item_activity_actor( time_duration duration,
+        item_repair::mending_selection selection, character_id operator_id ) :
+    initial_moves( duration ), mended_fault( selection.fault ), mending_method( selection.fix ),
+    owned_mend( std::move( selection ) ), operator_id( operator_id )
+{
+}
+
 void mend_item_activity_actor::start( player_activity &act, Character & )
 {
     act.moves_total = to_moves<int>( initial_moves );
@@ -13348,12 +13578,23 @@ void mend_item_activity_actor::start( player_activity &act, Character & )
 
 void mend_item_activity_actor::finish( player_activity &act, Character &who )
 {
+    const auto selected = owned_mend;
+    item_location location = mended_item;
+    if( selected ) {
+        location = who.getID() == operator_id ?
+                   item_repair::resolve_target( who, get_map(), selected->target ) : item_location();
+    }
     act.set_to_null();
-    if( !mended_item ) {
+    if( selected && ( !location || !mended_fault.is_valid() || !location->has_fault( mended_fault ) ||
+                      !mending_method.is_valid() || !mended_fault->get_fixes().count( mending_method ) ) ) {
+        who.add_msg_if_player( m_info, _( "The item or fault you were mending is no longer available." ) );
+        return;
+    }
+    if( !location ) {
         debugmsg( "lost item location for ACT_MEND_ITEM" );
         return;
     }
-    item &target = *mended_item;
+    item &target = *location;
     if( target.faults.count( mended_fault ) == 0 ) {
         debugmsg( "item %s does not have fault %s", target.tname(), mended_fault.str() );
         return;
@@ -13368,18 +13609,42 @@ void mend_item_activity_actor::finish( player_activity &act, Character &who )
     }
     const fault_fix &fix = *mending_method;
     const requirement_data &reqs = fix.get_requirements();
-    const temp_crafting_inventory &inv = who.crafting_inventory();
-    if( !reqs.can_make_with_inventory( &who, inv, is_crafting_component ) ) {
-        add_msg( m_info, _( "You are currently unable to mend the %s." ), target.tname() );
+    if( selected ) {
+        who.invalidate_crafting_inventory();
+    }
+    if( selected ? !item_repair::can_mend_fault( who, fix ) :
+        !reqs.can_make_with_inventory( &who, who.crafting_inventory(), is_crafting_component ) ) {
+        who.add_msg_if_player( m_info, _( "You are currently unable to mend the %s." ), target.tname() );
         return;
     }
+
+    const character_action_guard lifetime( who );
+    const auto context = get_map().get_context_reference();
+    const auto retained_target = target.get_safe_reference();
+    const auto generation = act.identity_generation();
+    const auto can_finish = [&]() {
+        return lifetime && context && retained_target && act.identity_generation() == generation;
+    };
     for( const auto &e : reqs.get_components() ) {
         who.consume_items( e );
+        if( !can_finish() ) {
+            return;
+        }
     }
     for( const auto &e : reqs.get_tools() ) {
         who.consume_tools( e );
+        if( !can_finish() ) {
+            return;
+        }
     }
     who.invalidate_crafting_inventory();
+    if( selected ) {
+        location = item_repair::resolve_target( who, *context, selected->target );
+        if( !location || location.get_item() != retained_target.get() ||
+            !location->has_fault( selected->fault ) ) {
+            return;
+        }
+    }
 
     int num_faults_removed = 0;
     bool repaired_mechanical_damage = false;
@@ -13422,16 +13687,25 @@ void mend_item_activity_actor::finish( player_activity &act, Character &who )
         target.mod_damage( -std::max( 0, target.damage() - target.degradation() ) );
     }
 
-    for( const auto& [skill_id, level] : fix.skills ) {
+    if( selected ) {
+        location.on_contents_changed();
+    }
+    for( const auto &[skill_id, level] : fix.skills ) {
         who.practice( skill_id, 10, static_cast<int>( level * 1.25 ) );
+        if( !can_finish() ) {
+            return;
+        }
     }
 
-    for( const auto& [proficiency_id, mult] : fix.time_save_profs ) {
+    for( const auto &[proficiency_id, mult] : fix.time_save_profs ) {
         who.practice_proficiency( proficiency_id, fix.time );
+        if( !can_finish() ) {
+            return;
+        }
     }
 
-    add_msg( m_good, fix.success_msg.translated(), target.tname( 1, false ),
-             start_durability, target.durability_indicator( true ) );
+    who.add_msg_if_player( m_good, fix.success_msg.translated(), target.tname( 1, false ),
+                           start_durability, target.durability_indicator( true ) );
 }
 
 void mend_item_activity_actor::serialize( JsonOut &jsout ) const
@@ -13441,6 +13715,10 @@ void mend_item_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "mended_item", mended_item );
     jsout.member( "mended_fault", mended_fault );
     jsout.member( "mending_method", mending_method );
+    if( owned_mend ) {
+        jsout.member( "owned_mend", *owned_mend );
+        jsout.member( "operator", operator_id );
+    }
 
     jsout.end_object();
 }
@@ -13454,6 +13732,8 @@ std::unique_ptr<activity_actor> mend_item_activity_actor::deserialize( JsonValue
     data.read( "mended_item", actor.mended_item );
     data.read( "mended_fault", actor.mended_fault );
     data.read( "mending_method", actor.mending_method );
+    data.read( "owned_mend", actor.owned_mend );
+    data.read( "operator", actor.operator_id );
 
     return actor.clone();
 }
@@ -13789,6 +14069,8 @@ std::unique_ptr<activity_actor> longsalvage_activity_actor::deserialize( JsonVal
     static_cast<void>( data.get_int( "index", -1 ) );
     // Index-only old activities cannot identify their tool. They cancel on
     // continuation without touching inventory or ground items.
+    int legacy_tool_index = -1;
+    data.read( "index", legacy_tool_index );
     return actor.clone();
 }
 
@@ -14270,6 +14552,103 @@ vehicle *vehicle_activity_actor::resolve_target( map &here )
     return target;
 }
 
+std::optional<time_duration> vehicle_activity_actor::validate_owned_work( Character &who,
+        map &here, vehicle &target )
+{
+    const vehicle_work_selection &selection = *owned_work;
+    const vehicle_part *part = sub_activity == VEHICLE_INSTALL ? nullptr : &target.part( vp_index );
+    if( sub_activity == VEHICLE_REPAIR &&
+        initial_repair_damage >= 0 && part->get_base().damage() != initial_repair_damage ) {
+        return std::nullopt;
+    }
+    const item_location fuel = sub_activity == VEHICLE_REFILL ?
+                               resolve_item_source( who, here, selection.refill ) : item_location();
+    const auto duration = validate_vehicle_work( who, here, target, selection, part, fuel );
+    if( duration && fuel ) {
+        refill_location = part->is_tank() ? fuel.parent_item() : fuel;
+    }
+    return duration;
+}
+
+bool vehicle_activity_actor::can_continue_owned_work( const Character &who, map &here )
+{
+    if( !owned_work || who.getID() != operator_id || who.is_dead_state() ||
+        who.pos_abs() != owned_work->origin || who.controlling_vehicle ) {
+        return false;
+    }
+    vehicle *target = resolve_target( here );
+    return target && !target->magic && std::abs( target->velocity ) <= 100 &&
+           target->get_owner() == owned_work->owner &&
+           ( sub_activity != VEHICLE_INSTALL ||
+             target->mount_to_tripoint_abs( owned_work->mount ) == vp_location );
+}
+
+bool vehicle_activity_actor::start_owned_work( Character &who, map &here,
+        vehicle_work_selection selection )
+{
+    if( who.activity || who.is_dead_state() || who.get_moves() <= 0 || selection.vehicle_uid <= 0 ||
+        ( selection.action != VEHICLE_INSTALL && selection.part_uid <= 0 ) ) {
+        return false;
+    }
+    vehicle_activity_actor actor;
+    actor.sub_activity = selection.action;
+    actor.operator_id = who.getID();
+    actor.vehicle_uid = selection.vehicle_uid;
+    actor.part_uid = selection.part_uid;
+    actor.vp_id = selection.part_type;
+    actor.vp_location = selection.position;
+    actor.owned_work = std::move( selection );
+    vehicle *target = actor.resolve_target( here );
+    if( !target || ( target->has_owner() && !target->is_owned_by( who ) && !actor.owned_work->allow_theft ) ) {
+        return false;
+    }
+    const auto duration = actor.validate_owned_work( who, here, *target );
+    if( !duration ) {
+        return false;
+    }
+    // Validate the wire mount before negating it for the legacy activity fields.
+    const point_rel_ms mount = actor.sub_activity == VEHICLE_INSTALL ?
+                               actor.owned_work->mount : target->part( actor.vp_index ).mount;
+    actor.vp_mount_location_opp = tripoint_rel_ms( mount, 0 );
+    actor.vp_mount_location = -actor.vp_mount_location_opp;
+    actor.vehicle_act_duration = *duration;
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const auto vehicle_ref = target->get_safe_reference();
+    if( !target->handle_potential_theft( who, false, false ) ||
+        !lifetime || !context || !vehicle_ref || who.pos_abs() != actor.owned_work->origin ||
+        who.activity ) {
+        return false;
+    }
+    target = actor.resolve_target( here );
+    if( !target || target != vehicle_ref.get() ) {
+        return false;
+    }
+    actor.owned_work->owner = target->get_owner();
+    const vehicle_part *part = actor.sub_activity == VEHICLE_INSTALL ? nullptr : &target->part( actor.vp_index );
+    if( actor.sub_activity == VEHICLE_REPAIR ) {
+        actor.initial_repair_damage = part->get_base().damage();
+    }
+    if( actor.owned_work->allow_flight_loss ) {
+        const vpart_info &info = actor.vp_id.obj();
+        const bool loses_flight = actor.sub_activity == VEHICLE_INSTALL ?
+                                  target->would_install_prevent_flyable( info, who ) :
+                                  actor.sub_activity == VEHICLE_REPAIR ?
+                                  target->would_repair_prevent_flyable( *part, who ) :
+                                  ( actor.sub_activity == VEHICLE_REMOVE || actor.sub_activity == VEHICLE_REMOVE_APPLIANCE ) &&
+                                  target->would_removal_prevent_flyable( *part, who );
+        if( loses_flight ) {
+            target->set_flyable( false );
+        }
+    }
+    player_activity activity{ actor };
+    activity.set_execution( activity_execution::authoritative );
+    who.set_moves( 0 );
+    who.assign_activity( activity );
+    return lifetime && who.activity.execution() == activity_execution::authoritative &&
+           who.activity.id() == actor.get_type();
+}
+
 void vehicle_activity_actor::start( player_activity &act, Character &who )
 {
     if( operator_id.is_valid() && operator_id != who.getID() ) {
@@ -14278,19 +14657,13 @@ void vehicle_activity_actor::start( player_activity &act, Character &who )
     }
     operator_id = who.getID();
     act.moves_left = to_moves<int>( vehicle_act_duration );
+    if( owned_work ) {
+        act.moves_total = act.moves_left;
+    }
 }
 
 void vehicle_activity_actor::finish( player_activity &act, Character &you )
 {
-#ifdef MP_ENABLED
-    if( cata_mp::is_client_mode() && you.is_avatar() ) {
-        const std::string payload = ::serialize( *this );
-        const std::string action_json =
-            "{\"type\":\"action\",\"action\":\"vehicle_construct\","
-            "\"actor\":" + payload + "}";
-        cata_mp::client_send( cata_mp::client_enrich_action( action_json ) );
-    }
-#endif
     map &here = get_map();
     const character_action_guard lifetime( you );
     const std::uint64_t identity = act.identity_generation();
@@ -14341,6 +14714,14 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
         you.add_msg_if_player( m_info, _( "The vehicle work target is no longer available." ) );
         act.set_to_null();
         return;
+    }
+    if( owned_work ) {
+        you.invalidate_crafting_inventory();
+        if( !validate_owned_work( you, here, *target ) ) {
+            you.add_msg_if_player( m_info, _( "The vehicle work requirements are no longer met." ) );
+            act.set_to_null();
+            return;
+        }
     }
     operator_id = you.getID();
     const tripoint_abs_ms act_pos = vp_location;
@@ -14399,18 +14780,22 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             }
             ::vehicle_part &vp_new = veh.part( partnum );
             here.add_vehicle_to_cache( &veh );
-            if( vp_new.info().variants.size() > 1 ) {
-                veh_shape( here, veh ).change_part_shape( vpart_reference( veh, partnum ) );
-            }
-
-            // Need map-relative coordinates to compare to output of look_around.
-            // Need to call coord_translate() directly since it's a new part.
             const point_rel_ms q = veh.coord_translate( d );
-
-            if( vpinfo.has_flag( VPFLAG_CONE_LIGHT ) ||
-                vpinfo.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ||
-                vpinfo.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) {
-                orient_part( here, &veh, vpinfo, partnum, q );
+            if( owned_work ) {
+                if( !owned_work->variant.empty() ) {
+                    vp_new.variant = owned_work->variant;
+                }
+                if( owned_work->direction ) {
+                    vp_new.direction = units::from_degrees( *owned_work->direction );
+                }
+            } else {
+                if( vp_new.info().variants.size() > 1 ) {
+                    veh_shape( here, veh ).change_part_shape( vpart_reference( veh, partnum ) );
+                }
+                if( vpinfo.has_flag( VPFLAG_CONE_LIGHT ) || vpinfo.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ||
+                    vpinfo.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) {
+                    orient_part( here, &veh, vpinfo, partnum, q );
+                }
             }
 
             const tripoint_bub_ms vehp = veh.pos_bub( here ) + tripoint_rel_ms( q, 0 );
@@ -14596,6 +14981,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 veh.remove_remote_part( here, *vp );
             }
 
+            vehicle *removal_target = &veh;
             if( appliance_removal && veh.part_count() > 1 ) {
                 // Split up power grids
                 veh.find_and_split_vehicles( here, { vp_ind } );
@@ -14606,6 +14992,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 here.rebuild_vehicle_level_caches();
 
                 if( auto newpart = here.veh_at( act_pos ).part_with_feature( VPFLAG_APPLIANCE, false ) ) {
+                    removal_target = &newpart->vehicle();
                     vp = &newpart->part();
                 } else {
                     debugmsg( "No appliance part left to remove after splitting vehicle!" );
@@ -14615,31 +15002,29 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 act.set_to_null();
             }
 
-            // Save these values now so they aren't lost when parts or vehicles are destroyed.
-            const point_rel_ms part_mount = vp->mount;
-            const tripoint_bub_ms part_pos = veh.bub_part_pos( here, *vp );
-
-            veh.unlink_cables( here, part_mount, you,
-                               false, /* unneeded as items will be unlinked if the connected part is removed */
-                               appliance_removal || vpi.location == vpart_location_structure,
-                               appliance_removal || vpi.has_flag( VPFLAG_CABLE_PORTS ) || vpi.has_flag( VPFLAG_BATTERY ) );
-
-            if( veh.part_count_real() <= 1 ) {
-                you.add_msg_if_player( _( "You completely dismantle the %s." ), veh.name );
-                act.set_to_null();
-                // destroy vehicle clears the cache
-                here.destroy_vehicle( &veh );
-            } else if( vp ) {
-                veh.remove_part( *vp );
-                // part_removal_cleanup calls refresh, so parts_at_relative is valid
-                veh.part_removal_cleanup( here );
-                if( veh.parts_at_relative( part_mount, true ).empty() ) {
-                    here.clear_vehicle_point_from_cache( &veh, part_pos );
+            if( vp ) {
+                // Splitting a grid can move the selected part to another vehicle.
+                const point_rel_ms part_mount = vp->mount;
+                const tripoint_bub_ms part_pos = removal_target->bub_part_pos( here, *vp );
+                removal_target->unlink_cables( here, part_mount, you, false,
+                                               appliance_removal || vpi.location == vpart_location_structure,
+                                               appliance_removal || vpi.has_flag( VPFLAG_CABLE_PORTS ) ||
+                                               vpi.has_flag( VPFLAG_BATTERY ) );
+                if( removal_target->part_count_real() <= 1 ) {
+                    you.add_msg_if_player( _( "You completely dismantle the %s." ), removal_target->name );
+                    act.set_to_null();
+                    here.destroy_vehicle( removal_target );
+                } else {
+                    removal_target->remove_part( *vp );
+                    removal_target->part_removal_cleanup( here );
+                    if( removal_target->parts_at_relative( part_mount, true ).empty() ) {
+                        here.clear_vehicle_point_from_cache( removal_target, part_pos );
+                    }
                 }
             }
             // This will be part of an NPC "job" where they need to clean up the activity
             // items afterwards
-            if( you.is_npc() ) {
+            if( you.is_npc() && !you.is_player_controlled() ) {
                 for( item &it : resulting_items ) {
                     activity_handlers::mark_activity_item( it, you );
                 }
@@ -14650,13 +15035,19 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
             std::vector<item_location> locs = put_into_vehicle_or_drop_ret_locs( you,
                                               item_drop_reason::deliberate,
                                               resulting_items );
-            if( you.is_npc() ) {
+            if( you.is_npc() && !you.is_player_controlled() ) {
                 for( const item_location &itl : locs ) {
                     you.may_activity_occupancy_after_end_items_loc.push_back( itl );
                 }
             }
             break;
         }
+        case VEHICLE_SHAPE:
+            if( owned_work ) {
+                veh.part( vp_ind ).variant = owned_work->variant;
+                here.invalidate_map_cache( act_pos.z() );
+            }
+            break;
         case VEHICLE_UNPLUG: {
             // Unplug action just sheds loose connections,
             // assuming vehicle::shed_loose_parts was already called so that
@@ -14687,6 +15078,10 @@ void vehicle_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "vp_index", vp_index );
     jsout.member( "vp_id", vp_id );
     jsout.member( "refill_location", refill_location );
+    if( owned_work ) {
+        jsout.member( "owned_work", *owned_work );
+        jsout.member( "initial_repair_damage", initial_repair_damage );
+    }
     jsout.end_object();
 }
 
@@ -14706,6 +15101,11 @@ std::unique_ptr<activity_actor> vehicle_activity_actor::deserialize( JsonValue &
     data.read( "vp_index", actor.vp_index );
     data.read( "vp_id", actor.vp_id );
     data.read( "refill_location", actor.refill_location );
+    if( data.has_object( "owned_work" ) ) {
+        actor.owned_work.emplace();
+        data.read( "owned_work", *actor.owned_work, true );
+        data.read( "initial_repair_damage", actor.initial_repair_damage );
+    }
 
     return actor.clone();
 }
@@ -15518,20 +15918,21 @@ bool fire_start_activity_actor::validate( Character &who )
     map &here = get_map();
     if( ( operator_id.is_valid() && operator_id != who.getID() ) ||
         !here.inbounds( fire_placement ) || who.pos_abs().z() != fire_placement.z() ||
-        rl_dist( who.pos_abs(), fire_placement ) != 1 ) {
-        return false;
-    }
-    if( owned_target && ( !owned_target->matches( here ) ||
-                          ( owned_target->tool_source &&
-                            !resolve_item_source( who, here, *owned_target->tool_source ) ) ) ) {
+        rl_dist( who.pos_abs(), fire_placement ) != 1 ||
+        !here.has_loaded_submap( here.get_bub( fire_placement ) ) ) {
         return false;
     }
     if( !fire_starter || fire_starter->is_broken() ||
-        resolve_item_source( who, here, capture_item_source( who, fire_starter ) ) != fire_starter ) {
+        ( owned_target && !owned_target->matches( here ) ) ) {
         return false;
     }
-    if( owned_target && owned_target->tool_source &&
-        resolve_item_source( who, here, *owned_target->tool_source ) != fire_starter ) {
+    if( !owned_target ) {
+        owned_target = tool_activity_target::capture( here, fire_placement );
+    }
+    if( !owned_target->tool_source ) {
+        owned_target->tool_source = capture_item_source( who, fire_starter );
+    }
+    if( resolve_item_source( who, here, *owned_target->tool_source, pickup_range ) != fire_starter ) {
         return false;
     }
     const item *tool = fire_starter->get_usable_item( "firestarter" );
@@ -15544,11 +15945,18 @@ bool fire_start_activity_actor::validate( Character &who )
     // Legacy activities bind once to their real carrier and surviving tool.
     // New saves retain the original surface, source UID and operator.
     operator_id = who.getID();
-    if( !owned_target ) {
-        owned_target = tool_activity_target::capture( here, fire_placement );
-        owned_target->tool_source = capture_item_source( who, fire_starter );
-    }
     return true;
+}
+
+void fire_start_activity_actor::append_work_tiles( std::vector<tripoint_abs_ms> &tiles ) const
+{
+    tiles.push_back( fire_placement );
+    if( owned_target && owned_target->tool_source && owned_target->tool_source->kind != "carried" ) {
+        tiles.push_back( owned_target->tool_source->position );
+    }
+    if( tinder_source && tinder_source->kind != "carried" ) {
+        tiles.push_back( tinder_source->position );
+    }
 }
 
 void fire_start_activity_actor::start( player_activity &act, Character &who )
@@ -15579,7 +15987,9 @@ void fire_start_activity_actor::do_turn( player_activity &act, Character &who )
                who.activity.actor.get() == this;
     };
     const tripoint_bub_ms where = here.get_bub( fire_placement );
-    if( !here.is_flammable( where ) ) {
+    const furn_id furniture = here.furn( where );
+    if( !charcoal_kiln::is_idle( furniture ) && !smoking_rack::is_idle( furniture ) &&
+        !here.is_flammable( where ) ) {
         try_fuel_fire( who, where );
         if( !still_working() ) {
             return;
@@ -15659,18 +16069,22 @@ void fire_start_activity_actor::finish( player_activity &act, Character &who )
     }
     map &here = get_map();
     const tripoint_bub_ms position = here.get_bub( fire_placement );
-    if( !here.is_flammable( position ) ) {
-        act.set_to_null();
-        return;
-    }
     const tool_activity_target target = *owned_target;
     const furn_id f_id = here.furn( position );
     firestarter_actor::start_type kind = firestarter_actor::start_type::FIRE;
-    if( f_id == furn_f_metal_smoking_rack || f_id == furn_f_smoking_rack ) {
+    bool ready;
+    if( smoking_rack::is_idle( f_id ) ) {
         kind = firestarter_actor::start_type::SMOKER;
-    } else if( f_id == furn_f_kiln_empty || f_id == furn_f_kiln_metal_empty ||
-               f_id == furn_f_kiln_portable_empty ) {
+        ready = smoking_rack::prepare( who, here, position ) == smoking_rack::preparation::ready;
+    } else if( charcoal_kiln::is_idle( f_id ) ) {
         kind = firestarter_actor::start_type::KILN;
+        ready = charcoal_kiln::prepare( who, here, position );
+    } else {
+        ready = here.is_flammable( position );
+    }
+    if( !ready ) {
+        act.set_to_null();
+        return;
     }
     item_location tool = fire_starter;
     const int skill_gain = potential_skill_gain;
@@ -15682,7 +16096,7 @@ void fire_start_activity_actor::finish( player_activity &act, Character &who )
     const auto context = here.get_context_reference();
     act.set_to_null();
     const uint64_t generation = act.identity_generation();
-    tool->activation_consume( 1, who.pos_bub(), &who );
+    tool->activation_consume( 1, tool.pos_bub( here ), &who );
     if( !lifetime || !context || who.activity.identity_generation() != generation ) {
         return;
     }
@@ -16287,6 +16701,11 @@ void pulp_activity_actor::start( player_activity &act, Character &you )
     you.recoil = MAX_RECOIL;
 
     map &here = get_map();
+    if( act.execution() == activity_execution::authoritative && placement.size() == 1 ) {
+        operator_id = you.getID();
+        origin = you.pos_abs();
+        owned_target = *placement.begin();
+    }
 
     if( !placement.empty() ) {
         for( const tripoint_abs_ms &pos_abs : placement ) {
@@ -16310,12 +16729,25 @@ void pulp_activity_actor::start( player_activity &act, Character &you )
 void pulp_activity_actor::do_turn( player_activity &act, Character &you )
 {
     map &here = get_map();
+    if( owned_target && ( you.getID() != operator_id || you.pos_abs() != origin ||
+                          !here.inbounds( *owned_target ) || you.is_dead_state() ) ) {
+        act.set_to_null();
+        return;
+    }
+    if( awaiting_confirmation ) {
+        return;
+    }
 
     // inverse loop, so we can pop the last element cheaply
     for( int i = corpses.size() - 1; i >= 0; --i ) {
         item *corpse = corpses[i].get_item();
-        if( corpse != nullptr && corpse->damage() < corpse->max_damage() ) {
+        if( corpse && corpse->damage() < corpse->max_damage() &&
+            ( !owned_target || ( corpses[i].where() == item_location::type::map &&
+                                 corpses[i].pos_abs() == *owned_target ) ) ) {
             bool can_pulp = punch_corpse_once( *corpse, you, corpses[i].pos_bub( here ), here );
+            if( awaiting_confirmation ) {
+                return;
+            }
             if( !can_pulp ) {
                 ++unpulped_corpses_qty;
                 corpses.pop_back();
@@ -16367,6 +16799,10 @@ bool pulp_activity_actor::can_pulp( item &corpse, Character &you )
 
     // 10 minutes
     if( pd.time_to_pulp > 600 && !too_long_to_pulp ) {
+        if( owned_target ) {
+            awaiting_confirmation = true;
+            return false;
+        }
         if( you.query_yn(
                 _( "Pulping one or more corpses in this pile would take too much time.  Continue?" ) ) ) {
             too_long_to_pulp = true;
@@ -16376,6 +16812,21 @@ bool pulp_activity_actor::can_pulp( item &corpse, Character &you )
         }
     }
     return true;
+}
+
+void pulp_activity_actor::confirm_long_pulp( bool accepted )
+{
+    if( !awaiting_confirmation ) {
+        return;
+    }
+    awaiting_confirmation = false;
+    if( accepted ) {
+        too_long_to_pulp = true;
+    } else if( !corpses.empty() ) {
+        too_long_to_pulp_interrupted = true;
+        ++unpulped_corpses_qty;
+        corpses.pop_back();
+    }
 }
 
 bool pulp_activity_actor::punch_corpse_once( item &corpse, Character &you,
@@ -16433,7 +16884,7 @@ void pulp_activity_actor::finish( player_activity &act, Character &you )
 
     send_final_message( you );
 
-    if( you.is_npc() ) {
+    if( you.is_npc() && !owned_target ) {
         you.as_npc()->revert_after_activity();
         you.as_npc()->pulp_location.reset();
     } else {
@@ -16576,6 +17027,14 @@ void pulp_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "cut_tool", pd.cut_tool );
     jsout.member( "pry_tool", pd.pry_tool );
 
+    if( owned_target ) {
+        jsout.member( "owned_target", *owned_target );
+        jsout.member( "origin", origin );
+        jsout.member( "operator_id", operator_id );
+        jsout.member( "awaiting_confirmation", awaiting_confirmation );
+        jsout.member( "float_corpse_damage_accum", float_corpse_damage_accum );
+    }
+
     jsout.end_object();
 }
 
@@ -16609,6 +17068,14 @@ std::unique_ptr<activity_actor> pulp_activity_actor::deserialize( JsonValue &jsi
     data.read( "cut_tool", actor.pd.cut_tool );
     data.read( "pry_tool", actor.pd.pry_tool );
 
+    if( data.has_member( "owned_target" ) ) {
+        actor.owned_target.emplace();
+        data.read( "owned_target", *actor.owned_target, true );
+        data.read( "origin", actor.origin, true );
+        data.read( "operator_id", actor.operator_id, true );
+        data.read( "awaiting_confirmation", actor.awaiting_confirmation, true );
+        data.read( "float_corpse_damage_accum", actor.float_corpse_damage_accum, true );
+    }
     return actor.clone();
 }
 
@@ -17112,7 +17579,9 @@ std::vector<npc *> wait_followers_activity_actor::get_absent_followers( Characte
 {
     return g->get_npcs_if( [&you]( const npc & n ) -> bool {
         const npc_attitude att = n.get_attitude();
-        return ( att == NPCATT_FOLLOW || att == NPCATT_ACTIVITY ) && rl_dist( n.pos_bub(), you.pos_bub() ) > n.follow_distance();
+        return &n != &you && !cata_mp::is_player_proxy( n ) &&
+               ( att == NPCATT_FOLLOW || att == NPCATT_ACTIVITY ) &&
+               rl_dist( n.pos_bub(), you.pos_bub() ) > n.follow_distance();
     } );
 }
 
@@ -19531,7 +20000,7 @@ deserialize_functions = {
     { ACT_FERTILIZE_PLANT, &fertilize_plant_activity_actor::deserialize },
     { ACT_FETCH_REQUIRED, &fetch_required_activity_actor::deserialize },
     { ACT_FIELD_DRESS, &butchery_activity_actor::deserialize },
-    { ACT_FILL_LIQUID, &deserialize_vehicle_water_activity },
+    { ACT_FILL_LIQUID, &deserialize_owned_liquid_transfer },
     { ACT_FIND_MOUNT, &find_mount_activity_actor::deserialize },
     { ACT_FIRSTAID, &firstaid_activity_actor::deserialize },
     { ACT_FISH, &fish_activity_actor::deserialize },

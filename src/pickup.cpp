@@ -17,6 +17,7 @@
 #include "activity_actor_definitions.h"
 #include "auto_pickup.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "cata_scope_helpers.h"
 #include "crafting.h"
 #include "contents_change_handler.h"
@@ -199,7 +200,9 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
                          PickupMap &mapPickup, bool autopickup, bool &stash_successful, bool &got_frozen_liquid,
                          Pickup::pick_info &info, Pickup::interaction prompts )
 {
-    const map &here = get_map();
+    map &here = get_map();
+    const character_action_guard lifetime( player_character );
+    const auto context = here.get_context_reference();
     bool picked_up = false;
     bool crushed = false;
     Pickup::pick_info pre_info( info );
@@ -326,6 +329,10 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
             int last_charges = newit.charges;
             ret_val<item_location> ret = player_character.i_add_or_fill( newit, true, nullptr, &it,
                                          /*allow_drop=*/false, /*allow_wield=*/false, false );
+            if( !lifetime || !context || !loc ) {
+                stash_successful = false;
+                return false;
+            }
             item_location added_it = ret.value();
             if( ret.success() ) {
                 craft_relocated( added_it );
@@ -358,6 +365,10 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
         }
     }
 
+    if( !lifetime || !context || !loc ) {
+        stash_successful = false;
+        return false;
+    }
     if( picked_up ) {
         info.set_src( loc );
         info.total_bulk_volume += loc->volume( false, false, quantity );
@@ -376,12 +387,17 @@ static bool pick_one_up( Character &player_character, item_location &loc, int qu
         }
         contents_change_handler handler;
         handler.unseal_pocket_containing( loc );
+        if( !loc ) {
+            stash_successful = false;
+            return false;
+        }
         item &orig_it = *loc.get_item();
         // Subtract moved charges instead of assigning leftover charges,
         // since the total charges of the original item may have changed
         // due to merging.
         if( orig_it.charges > newit.charges ) {
             orig_it.charges -= newit.charges;
+            loc.on_contents_changed();
         } else {
             loc.remove_item();
         }
@@ -426,8 +442,9 @@ bool Pickup::do_pickup( Character &player_character, std::vector<item_location> 
     // merge dropping items with the same name.
     PickupMap mapPickup;
 
+    const character_action_guard lifetime( player_character );
     bool problem = false;
-    while( !problem && player_character.get_moves() >= 0 && !targets.empty() ) {
+    while( !problem && lifetime && player_character.get_moves() >= 0 && !targets.empty() ) {
         item_location target = std::move( targets.back() );
         int quantity = quantities.back();
         // Whether we pick the item up or not, we're done trying to do so,
@@ -442,6 +459,9 @@ bool Pickup::do_pickup( Character &player_character, std::vector<item_location> 
         }
         problem = !pick_one_up( player_character, target, quantity, got_water, got_gas, mapPickup,
                                 autopickup, stash_successful, got_frozen_liquid, info, prompts );
+        if( !lifetime ) {
+            return false;
+        }
         if( info.total_bulk_volume > 200_ml ) {
             // Bulk loading is not allowed beyond a certain volume
             info = Pickup::pick_info();

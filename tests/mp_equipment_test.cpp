@@ -59,6 +59,7 @@ static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bat( "bat" );
 static const itype_id itype_bucket( "bucket" );
 static const itype_id itype_glock_19( "glock_19" );
+static const itype_id itype_nail( "nail" );
 static const itype_id itype_tshirt( "tshirt" );
 static const itype_id itype_water( "water" );
 
@@ -229,6 +230,40 @@ TEST_CASE( "owned_wield_uses_native_retrieval_and_selected_old_weapon_destinatio
     CHECK_FALSE( who.get_wielded_item() );
 }
 
+TEST_CASE( "owned_wield_takes_exact_selected_charges_and_rejects_stale_retries",
+           "[multiplayer][equipment]" )
+{
+    equipment_fixture fixture;
+    npc &who = fixture.remote();
+    who.set_wielded_item( item( itype_bat ) );
+    item_location source = ground_item( who, itype_nail );
+    source->charges = 20;
+    cata_mp::equipment_intent intent = cata_mp::make_equipment_intent( who, source, "wield" );
+    intent.disposition = item_disposition{ "drop", 0, 0 };
+    intent.quantity = 21;
+    CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
+    CHECK( who.get_wielded_item()->typeId() == itype_bat );
+    CHECK( source->charges == 20 );
+
+    intent.quantity = 7;
+    REQUIRE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
+    const item_location wielded = who.get_wielded_item();
+    REQUIRE( wielded );
+    CHECK( wielded->typeId() == itype_nail );
+    CHECK( wielded->charges == 7 );
+    REQUIRE( source );
+    CHECK( source->charges == 13 );
+    bool dropped_bat = false;
+    for( const item &it : get_map().i_at( who.pos_bub() ) ) {
+        dropped_bat = dropped_bat || it.typeId() == itype_bat;
+    }
+    CHECK( dropped_bat );
+    who.set_moves( 1000 );
+    CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
+    CHECK( source->charges == 13 );
+    CHECK( wielded->charges == 7 );
+}
+
 TEST_CASE( "owned_equipment_rejects_inaccessible_stale_and_forbidden_items",
            "[multiplayer][equipment]" )
 {
@@ -276,6 +311,15 @@ TEST_CASE( "owned_equipment_does_not_implicitly_spill_or_remove_integrated_armor
 {
     equipment_fixture fixture;
     npc &who = fixture.remote();
+    SECTION( "rejected_wear_leaves_the_item_at_its_source" ) {
+        const item_location source = ground_item( who, itype_bat );
+        const auto intent = cata_mp::make_equipment_intent( who, source, "wear" );
+        CHECK_FALSE( cata_mp::execute_equipment_intent( who, get_map(), intent ) );
+        REQUIRE( source );
+        CHECK( source.where() == item_location::type::map );
+        CHECK( who.amount_of( itype_bat ) == 0 );
+        CHECK( who.get_moves() == 1000 );
+    }
     SECTION( "open_bucket_disposal" ) {
         who.set_wielded_item( item( itype_bucket ) );
         item_location bucket = who.get_wielded_item();

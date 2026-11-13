@@ -2010,10 +2010,11 @@ class Character : public Creature, public visitable
         * @param item_wear item_location of item to be worn.
         * @param interactive Alert player and drain moves if true.
         * @param theft_consent Explicit ownership decision, or nullopt to ask locally.
+        * @param quantity Explicit selected charges, or zero for normal wear.
         */
         std::optional<std::list<item>::iterator>
         wear( item_location item_wear, bool interactive = true,
-              std::optional<bool> theft_consent = std::nullopt );
+              std::optional<bool> theft_consent = std::nullopt, int quantity = 0 );
 
         /** Used for eating object at a location. Removes item if all of it was consumed.
         *   @returns trinary enum NONE, SOME or ALL amount consumed.
@@ -2319,11 +2320,12 @@ class Character : public Creature, public visitable
         item_location try_add( item it, int &copies_remaining, const item *avoid = nullptr,
                                const item *original_inventory_item = nullptr, bool allow_wield = true,
                                bool ignore_pkt_settings = false );
-        // As try_add, but debit nearby ground/cargo before acquisition
-        // callbacks. A callback may consume the accepted item and return nowhere;
-        // the source handle is cleared once its transfer has committed.
+        // As try_add, but debit the exact source before acquisition callbacks.
+        // A supplied donor must carry the source. The cleared source handle
+        // records a committed transfer even if a callback consumes the new item.
         item_location transfer_item_to_inventory( item_location &source, item prepared,
-                bool allow_wield = true );
+                bool allow_wield = true, Character *donor = nullptr );
+        bool transfer_furniture_item_to_inventory( item_location &source );
         /** Checks to see if it's possible to add an item to the inventory. */
         bool can_add( const item &it, const item *avoid = nullptr,
                       bool allow_wield = true,
@@ -2639,6 +2641,7 @@ class Character : public Creature, public visitable
          * @return whether both removal and replacement were successful (they are performed atomically)
          */
         bool wield( item_location loc, bool remove_old = true );
+        bool wield_charges( item_location source, int quantity );
 
         /**
          * Wield an item, unwielding currently wielded item (if any).
@@ -2869,6 +2872,13 @@ class Character : public Creature, public visitable
 
         std::pair < bodypart_id, int > best_part_to_smash() const;
         virtual std::map < damage_type_id, int > smash_ability() const;
+        struct smash_result {
+            bool can_smash = false;
+            bool did_smash = false;
+            bool success = false;
+        };
+        smash_result smash( map &here, tripoint_bub_ms &target,
+                            std::optional<bool> vehicle_theft = std::nullopt );
 
         // checks if your character is immune to an effect or field based on field_immunity_data
         bool check_immunity_data( const field_immunity_data &ft ) const override;
@@ -3096,6 +3106,9 @@ class Character : public Creature, public visitable
         // Shared mission persistence and replica state; does not execute mission effects.
         void load_mission_state( const JsonObject &data );
         void store_mission_state( JsonOut &out ) const;
+
+        // World contacts belong to this character, including a remote player.
+        std::set<character_id> faction_representatives;
 
         // Full carried-item persistence/replication, not a gameplay action.
         // Loading preserves item identities and does not replay pickup/wear
@@ -4666,6 +4679,9 @@ class Character : public Creature, public visitable
         };
         mutable std::unordered_map < std::string, inv_search_cache > inv_search_caches;
     protected:
+        bool wield_transferred_item( item_location &source, Character &donor );
+        bool wear_transferred_item( item_location &source, Character &donor );
+
         // Bionic IDs are unique only within a character. Used to unambiguously identify bionics in a character
         bionic_uid weapon_bionic_uid = 0;
         mutable bionic_uid next_bionic_uid = 0;  // NOLINT(cata-serialize)
@@ -4691,7 +4707,7 @@ class Character : public Creature, public visitable
         item_location try_add_impl( item it, const item *avoid, const item *original_inventory_item,
                                     bool allow_wield, bool ignore_pkt_settings, item_location *source );
         bool wield_impl( item &it, std::optional < int > obtain_cost, bool combat,
-                         item_location *source, item_location *result );
+                         item_location *source, item_location *result, int source_charges = 0 );
         /* cached recipes, which are invalidated if the turn changes */
         mutable time_point cached_recipe_turn;
         pimpl < recipe_subset > cached_recipe_subset;

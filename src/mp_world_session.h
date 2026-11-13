@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <vector>
 
 #include "mp_actor_binding.h"
 #include "mp_apply_watchdog.h"
@@ -75,6 +76,7 @@ struct world_session {
         player_id client_host_player_id;
         std::map<player_id, std::unique_ptr<player_view>> client_player_views;
         std::map<character_id, std::unique_ptr<npc_view>> client_npc_views;
+        std::vector<radio_contact_view> client_radio_contacts;
         bool client_host_spawned = false;
         bool stale_proxy_cleanup_done = false;
 

@@ -13,10 +13,14 @@
 #include "ammo_effect.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "condition.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "creature_tracker.h"
+#include "craft_reservation.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
@@ -30,13 +34,17 @@
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
+#include "json.h"
+#include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "mapdata.h"
 #include "map_scale_constants.h"
 #include "mapgen_functions.h"
 #include "mapgendata.h"
 #include "messages.h"
+#include "mp_inventory_activity.h"
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
@@ -49,8 +57,12 @@
 #include "timed_event.h"
 #include "translations.h"
 #include "uilist.h"
+#include "units.h"
 #include "value_ptr.h"
 #include "veh_appliance.h"
+#include "veh_interact.h"
+#include "veh_type.h"
+#include "vpart_position.h"
 
 static const activity_id ACT_MORTAR_AIMING( "ACT_MORTAR_AIMING" );
 
@@ -64,20 +76,102 @@ void appliance_convert_examine_actor::load( const JsonObject &jo, const std::str
     mandatory( jo, false, "item", appliance_item );
 }
 
+void appliance_conversion_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "origin", origin );
+    out.member( "target", target );
+    out.member( "appliance", appliance );
+    out.member( "direction", direction );
+    out.end_object();
+}
+
+void appliance_conversion_selection::deserialize( const JsonObject &data )
+{
+    data.read( "origin", origin, true );
+    data.read( "target", target, true );
+    data.read( "appliance", appliance, true );
+    data.read( "direction", direction );
+}
+
 void appliance_convert_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) const
 {
-    if( !query_yn( _( "Connect %s to grid?" ), item::nname( appliance_item ) ) ) {
+    map &here = get_map();
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    appliance_conversion_selection choice{ you.pos_abs(),
+        tool_activity_target::capture( here, here.get_abs( examp ) ), appliance_item, std::nullopt
+    };
+    const auto still_there = [&]() {
+        return lifetime && context && you.pos_abs() == choice.origin && choice.target.matches( here );
+    };
+    if( !query_yn( _( "Connect %s to grid?" ), item::nname( appliance_item ) ) || !still_there() ) {
         return;
     }
-    map &here = get_map();
-    if( furn_set ) {
-        here.furn_set( examp, *furn_set );
+    const vpart_id part = vpart_appliance_from_item( appliance_item );
+    if( part.is_valid() && part->has_flag( "HALF_CIRCLE_LIGHT" ) ) {
+        const restore_on_out_of_scope restore_rng( rng_get_engine() );
+        choice.direction = units::to_degrees( query_vehicle_part_direction( here, examp, part.obj(),
+                                              0_degrees ) );
     }
-    if( ter_set ) {
-        here.ter_set( examp, *ter_set );
+    if( still_there() && ( !you.is_avatar() || !cata_mp::client_appliance_conversion( choice ) ) ) {
+        execute( you, here, choice );
+    }
+}
+
+bool appliance_convert_examine_actor::execute( Character &who, map &here,
+        const appliance_conversion_selection &choice )
+{
+    const tripoint_abs_ms position = choice.target.position;
+    const tripoint_abs_ms origin = who.pos_abs();
+    if( who.activity || who.get_moves() <= 0 || who.is_dead_state() || who.cant_do_mounted( false ) ||
+        who.has_effect( efftype_id( "incorporeal" ) ) || origin != choice.origin ||
+        origin.z() != position.z() || !here.inbounds( position ) || square_dist( origin, position ) > 1 ||
+        get_craft_reservations().provider_tile_reserved( position ) ||
+        get_craft_reservations().craft_site_reserved( position ) ) {
+        return false;
+    }
+    const tripoint_bub_ms tile = here.get_bub( position );
+    if( !here.has_loaded_submap( tile ) || here.veh_at( tile ) ||
+        get_creature_tracker().creature_at( position, true ) || !choice.target.matches( here ) ) {
+        return false;
+    }
+    const iexamine_actor *examined = here.has_furn( tile ) ?
+                                    here.furn( tile )->find_examine_actor( "appliance_convert" ) :
+                                    here.ter( tile )->find_examine_actor( "appliance_convert" );
+    const auto *actor = dynamic_cast<const appliance_convert_examine_actor *>(
+                            examined );
+    if( !actor || actor->appliance_item != choice.appliance || !choice.appliance.is_valid() ||
+        ( actor->furn_set && !actor->furn_set->is_valid() ) ||
+        ( actor->ter_set && !actor->ter_set->is_valid() ) ) {
+        return false;
+    }
+    const vpart_id part = vpart_appliance_from_item( actor->appliance_item );
+    if( !part.is_valid() || part->base_item != actor->appliance_item ||
+        part->has_flag( "HALF_CIRCLE_LIGHT" ) != choice.direction.has_value() ||
+        ( choice.direction &&
+          ( !std::isfinite( *choice.direction ) || *choice.direction < 0 || *choice.direction >= 360 ) ) ) {
+        return false;
+    }
+    const ter_t &terrain = actor->ter_set ? actor->ter_set->obj() : here.ter( tile ).obj();
+    if( terrain.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+        terrain.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
+        return false;
     }
 
-    place_appliance( here, examp, vpart_appliance_from_item( appliance_item ), you );
+    const auto direction = choice.direction ? std::make_optional( units::from_degrees( *choice.direction ) ) :
+                           std::nullopt;
+    if( !place_appliance( here, tile, part, who, std::nullopt, direction ) ) {
+        return false;
+    }
+    // Install first so a failed placement leaves the original tile and contents intact.
+    if( actor->ter_set ) {
+        here.ter_set( tile, *actor->ter_set );
+    }
+    if( actor->furn_set ) {
+        here.furn_set( tile, *actor->furn_set );
+    }
+    return true;
 }
 
 void appliance_convert_examine_actor::finalize() const

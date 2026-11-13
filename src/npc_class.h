@@ -28,6 +28,7 @@ struct const_dialogue;
 struct shopkeeper_blacklist;
 struct shopkeeper_whitelist;
 struct shopkeeper_cons_rates;
+class Character;
 
 namespace trait_group
 {
@@ -73,7 +74,7 @@ struct shopkeeper_item_group {
     shopkeeper_item_group( const std::string &id, int trust, bool strict, bool rigid = false ) :
         id( item_group_id( id ) ), trust( trust ), strict( strict ), rigid( rigid ) {}
 
-    bool can_sell( npc const &guy ) const;
+    bool can_sell( npc const &guy, const Character *buyer = nullptr ) const;
     bool can_restock( npc const &guy ) const;
     std::string get_refusal() const;
 
@@ -162,7 +163,8 @@ class npc_class
         };
         const time_duration &get_shop_restock_interval() const;
         const std::pair<int, int> &get_work_hours() const;
-        faction_price_rule const *get_price_rules( item const &it, npc const &guy ) const;
+        faction_price_rule const *get_price_rules( item const &it, npc const &guy,
+                const Character *customer = nullptr ) const;
 
         bool is_common() const;
 

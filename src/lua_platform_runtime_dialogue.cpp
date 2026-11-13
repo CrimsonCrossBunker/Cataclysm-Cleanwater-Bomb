@@ -52,6 +52,7 @@ extern "C" {
 #include "lua_platform_bindings_values.h" // IWYU pragma: keep
 #include "lua_platform_canvas.h"
 #include "lua_platform_dialogue.h"
+#include "lua_platform_npc_services.h"
 #include "map.h"
 #include "npc_opinion.h"
 #include "output.h"
@@ -566,6 +567,13 @@ std::shared_ptr<platform_dialogue_context> make_platform_dialogue_context(
         return platform_callback_talker_to_lua( owner, actor );
     }, session, runtime_identity, detail::runtime_world_generation_storage(),
     response_action_phase );
+}
+
+scoped_npc_service_dialogue npc_services_for_callback( runtime &owner, ::dialogue &d,
+        const std::string &topic_id )
+{
+    return scoped_npc_service_dialogue( d, cata::lua_platform::dialogue::session_for(
+                                            d, topic_id, owner.handle_runtime(), detail::runtime_world_generation_storage() ) );
 }
 
 void validate_platform_dialogue_descriptor_keys( const sol::table &descriptor,
@@ -1101,6 +1109,7 @@ std::string evaluate_declarative_platform_dialogue_line(
         }
         const sol::protected_function callback = source.as<sol::protected_function>();
         callback_scope scope( *registration.owner );
+        const auto npc_services = npc_services_for_callback( *registration.owner, d, topic.id );
         const sol::protected_function_result result = callback( context );
         context->invalidate();
         if( !result.valid() ) {
@@ -1134,6 +1143,7 @@ sol::object evaluate_declarative_platform_dialogue_responses(
         }
         const sol::protected_function callback = source.as<sol::protected_function>();
         callback_scope scope( *owner );
+        const auto npc_services = npc_services_for_callback( *owner, d, topic_id );
         const sol::protected_function_result result = callback( context );
         context->invalidate();
         if( !result.valid() ) {
@@ -1171,6 +1181,7 @@ bool evaluate_platform_dialogue_boolean(
         }
         const sol::protected_function callback = source.as<sol::protected_function>();
         callback_scope scope( *owner );
+        const auto npc_services = npc_services_for_callback( *owner, d, topic_id );
         const sol::protected_function_result result = callback( context );
         context->invalidate();
         if( !result.valid() ) {
@@ -2065,6 +2076,7 @@ void apply_platform_dialogue_speaker_effects( ::dialogue &d,
                         "dialogue callback recursion limit reached" );
                 }
                 callback_scope scope( *owner );
+                const auto npc_services = npc_services_for_callback( *owner, d, topic.id );
                 const sol::protected_function_result result = callback( context );
                 context->invalidate();
                 if( !result.valid() ) {
@@ -2264,6 +2276,7 @@ void invoke_platform_dialogue_action_callback(
         }
         context = make_platform_dialogue_context( *owner, d, topic_id, true, true );
         callback_scope scope( *owner );
+        scoped_npc_service_dialogue service_scope( d, session );
         const sol::protected_function_result result = callback( context, trial_success );
         context->invalidate();
         if( !result.valid() ) {
@@ -2302,8 +2315,9 @@ talk_topic invoke_platform_dialogue_response_callback(
             throw std::runtime_error( "dialogue callback recursion limit reached" );
         }
         callback_scope scope( *owner );
+        const auto npc_services = npc_services_for_callback( *owner, d, topic_id );
         const sol::protected_function_result result = callback(
-                    context, trial_success, fallback.id );
+                context, trial_success, fallback.id );
         context->invalidate();
         if( !result.valid() ) {
             const sol::error error = result;

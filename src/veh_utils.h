@@ -35,6 +35,7 @@ vehicle_part *most_repairable_part( vehicle &veh, Character &who_arg );
  * Awards xp and consumes components.
  */
 bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who );
+bool unload_solid_fuel( Character &who, map &here, vehicle &target, const itype_id &fuel );
 } // namespace veh_utils
 
 struct veh_menu_item {

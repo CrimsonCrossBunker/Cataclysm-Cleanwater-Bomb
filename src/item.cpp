@@ -53,6 +53,8 @@
 #include "game.h"
 #include "game_constants.h"
 #include "iexamine.h"
+#include "smoking_rack.h"
+#include "mill.h"
 #include "item_category.h"
 #include "item_factory.h"
 #include "item_group.h"
@@ -122,8 +124,6 @@ static const fault_id fault_emp_reboot( "fault_emp_reboot" );
 
 static const furn_str_id furn_f_metal_smoking_rack_active( "f_metal_smoking_rack_active" );
 static const furn_str_id furn_f_smoking_rack_active( "f_smoking_rack_active" );
-static const furn_str_id furn_f_water_mill_active( "f_water_mill_active" );
-static const furn_str_id furn_f_wind_mill_active( "f_wind_mill_active" );
 
 static const item_category_id item_category_container( "container" );
 static const item_category_id item_category_maps( "maps" );
@@ -4680,17 +4680,14 @@ bool item::process_corpse( map &here, Character *carrier, const tripoint_bub_ms 
 
 bool item::process_fake_mill( map &here, Character * /*carrier*/, const tripoint_bub_ms &pos )
 {
-    const furn_id &f = here.furn( pos );
-    if( f != furn_f_wind_mill_active &&
-        f != furn_f_water_mill_active ) {
+    if( !mill::is_active( here, pos ) ) {
         item_counter = 0;
-        return true; //destroy fake mill
+        return true;
     }
-    if( age() >= 6_hours || item_counter == 0 ) {
-        iexamine::mill_finalize( get_avatar(), here, pos ); //activate effects when timers goes to zero
-        return true; //destroy fake mill item
+    if( age() >= mill::duration || item_counter == 0 ) {
+        mill::finish( here, pos );
+        return true;
     }
-
     return false;
 }
 
@@ -4704,7 +4701,7 @@ bool item::process_fake_smoke( map &here, Character * /*carrier*/, const tripoin
     }
 
     if( age() >= 6_hours || item_counter == 0 ) {
-        iexamine::on_smoke_out( here, pos, birthday() ); //activate effects when timers goes to zero
+        smoking_rack::finish( here, pos, birthday() ); //activate effects when timers goes to zero
         return true; //destroy fake smoke when it 'burns out'
     }
 

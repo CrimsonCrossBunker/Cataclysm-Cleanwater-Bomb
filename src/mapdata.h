@@ -594,6 +594,7 @@ struct map_data_common_t {
         bool has_examine( iexamine_examine_function func ) const;
         // checks if it has corresponding examine_actor
         bool has_examine( const std::string &action ) const;
+        const iexamine_actor *find_examine_actor( const std::string &action ) const;
         void set_examine( const iexamine_functions &func );
         void examine( Character &, const tripoint_bub_ms & ) const;
 

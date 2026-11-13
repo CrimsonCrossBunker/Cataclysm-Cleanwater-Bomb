@@ -23,9 +23,9 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
-#include "character_martial_arts.h"
 #include "city.h"
 #include "clone_ptr.h"
 #include "color.h"
@@ -85,6 +85,7 @@
 #include "player_activity.h"
 #include "point.h"
 #include "rng.h"
+#include "sleep.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
@@ -575,7 +576,6 @@ static void mp_partner_activity_transition_check()
 
 static void check_separation_warning( const tripoint_abs_ms &a, const tripoint_abs_ms &b );
 
-static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_sleep( "sleep" );
 
 // ---------------------------------------------------------------------------
@@ -786,13 +786,7 @@ struct mp_hud_t {
 static bool mp_turn_show_green()
 {
     const player_activity &pact = get_avatar().activity;
-    static const activity_id s_act_wait( "ACT_WAIT" );
-    static const activity_id s_act_wait_stamina( "ACT_WAIT_STAMINA" );
-    static const activity_id s_act_wait_weather( "ACT_WAIT_WEATHER" );
-    static const activity_id s_act_wait_npc( "ACT_WAIT_NPC" );
-    const bool in_wait_act = pact && (
-                                 pact.id() == s_act_wait || pact.id() == s_act_wait_stamina ||
-                                 pact.id() == s_act_wait_weather || pact.id() == s_act_wait_npc );
+    const bool in_wait_act = is_wait_activity( pact.id().str() );
     // On the CLIENT, local moves>0 is NOT sufficient to act: the client must
     // also not be waiting on the host's grant/ack for the turn it already sent.
     // Without this, the bar paints green (we have stale local moves) while the
@@ -1183,14 +1177,6 @@ void mp_client_prepare_spawn()
     mp_client_apply_host_seed();
 }
 
-// Server: per-tile baseline (ter + furn + item fingerprint) for dirty-tile tracking.
-static mp_tile_state compute_tile_state( const tripoint_abs_ms &abs );
-// Partial-construction (in-progress build site) sync helpers — defined near
-// compute_tile_state, forward-declared here for the client_tile_changes applier.
-static std::string mp_partial_con_sig( const tripoint_bub_ms &bub );
-static std::string mp_partial_con_obj_json( const tripoint_bub_ms &bub );
-static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, const JsonObject &po );
-
 static std::string json_escape_str( const std::string_view s )
 {
     std::string out;
@@ -1212,8 +1198,6 @@ static std::string json_escape_str( const std::string_view s )
     }
     return out;
 }
-
-static constexpr int CLIENT_PENDING_KILL_SYNCS = 3;
 
 // ---------------------------------------------------------------------------
 // Stale MP NPC cleanup — cross-session
@@ -1716,7 +1700,6 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
             srv->post_send( recipient.admission, resumed + "\n" );
         }
         srv->post_send( recipient.admission, serialize_remote_player_state( recipient ) + "\n" );
-        srv->post_send( recipient.admission, "{\"type\":\"resync_request\"}\n" );
     }
 
     // Templates wire-sync: send host's local template list so the client can
@@ -2061,6 +2044,7 @@ void host_broadcast_vehicle_step()
         if( !v ) {
             continue;
         }
+        v->ensure_uid();
         const uint32_t nid = mp_session().replication.entity_ids.assign( *v );
         const tripoint_abs_ms vabs = v->pos_abs();
         const int face_deg     = static_cast<int>( std::lround( to_degrees( v->face.dir() ) ) );
@@ -2070,6 +2054,7 @@ void host_broadcast_vehicle_step()
         }
         vfirst = false;
         vehicles_json += "{\"nid\":" + std::to_string( nid )
+                             + ",\"uid\":" + std::to_string( v->uid().get_value() )
                          + ",\"x\":" + std::to_string( vabs.x() )
                          + ",\"y\":" + std::to_string( vabs.y() )
                          + ",\"z\":" + std::to_string( vabs.z() )
@@ -2267,6 +2252,10 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     JsonObject jo = jv_top.get_object();
     jo.allow_omitted_members();
     const std::string action = jo.get_string( "action", "" );
+    const std::string type = jo.get_string( "type", "" );
+    if( !action.empty() && !type.empty() && type != "action" ) {
+        return;
+    }
     if( recipient.awaiting_character ) {
         if( action != "player_create" ) {
             return;
@@ -2287,11 +2276,16 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         }
         return;
     }
-    if( action == "player_create" ) {
-        return; // Duplicate/late bootstrap never overwrites a live character.
+    if( action == "player_create" || action == "worn_sync" ) {
+        return; // An admitted character is owned by the host.
     }
     npc *remote = mp_remote_actor( recipient );
     if( !remote ) {
+        return;
+    }
+    const bool inventory_request = action == "inventory_activity" ||
+                                   action == "inventory_activity_cancel";
+    if( remote->has_effect( effect_sleep ) && !inventory_request && !is_state_sync_message( msg ) ) {
         return;
     }
 
@@ -2340,8 +2334,8 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         return; // Presentation release neither consumes a grant nor cancels an activity.
     }
 
-    if( action == "inventory_activity" || action == "inventory_activity_cancel" ) {
-        const bool granted = jo.has_int( "grant_seq" ) &&
+    if( inventory_request ) {
+        const bool granted = !remote->has_effect( effect_sleep ) && jo.has_int( "grant_seq" ) &&
                              jo.get_int64( "grant_seq" ) == recipient.turn.grant_seq &&
                              recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn &&
                              recipient.turn.remote_moves > 0;
@@ -2364,16 +2358,28 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             mp_log( std::string( "[ccb-mp] rejected inventory activity intent: " ) + error.what() );
             return;
         }
+        for( const int64_t uid : recipient.inventory_activity.refresh_vehicle_snapshots ) {
+            if( vehicle *target = vehicle::find_vehicle_by_uid( get_map(), uid ) ) {
+                const uint32_t wire_id = mp_session().replication.entity_ids.assign( *target );
+                for( auto &entry : mp_session().remote_players ) {
+                    if( entry.second ) {
+                        entry.second->replication.client_known_veh_nids.erase( wire_id );
+                    }
+                }
+            }
+        }
         remote = mp_remote_actor( recipient );
         if( !remote ) {
             send_inventory_activity_observers( recipient );
             return;
         }
+        if( remote->has_effect( effect_sleep ) ) {
+            remote->set_moves( std::min( 0, remote->get_moves() ) );
+        }
         recipient.turn.remote_moves = remote->get_moves();
         recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
         recipient.observation.partner_activity = owns_inventory_activity( *remote ) ?
                 remote->activity.id().str() : "";
-        recipient.observation.partner_sleeping = false;
         flush_action_msgs( recipient, messages, remote->name );
         if( const auto server = get_active_server() ) {
             const int current_z = remote->pos_abs().z();
@@ -2421,7 +2427,9 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         g->invalidate_main_ui_adaptor();
         return;
     }
-    if( action == "move" || action == "grab" || action == "toggle_haul" ) {
+    if( action == "move" || action == "grab" || action == "toggle_haul" ||
+        action == "drop" || action == "position_sync" || action == "smash" || action == "eat" ||
+        action == "vehicle_construct" ) {
         // Reject before legacy stats/inventory uploads below can mutate this actor.
         if( const auto server = get_active_server() ) {
             std::string state = serialize_remote_player_state( recipient );
@@ -2718,7 +2726,6 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         recipient.turn.remote_moves = remote->get_moves();
         recipient.turn.client_acted_this_turn = recipient.turn.remote_moves <= 0;
         recipient.observation.partner_activity = outcome == firearm_outcome::aiming ? "ACT_AIM" : "";
-        recipient.observation.partner_sleeping = false;
         flush_action_msgs( recipient, messages, remote->name );
         std::ostringstream encoded;
         JsonOut out( encoded );
@@ -2801,7 +2808,6 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             mp_log( std::string( "[ccb-mp] rejected melee intent: " ) + error.what() );
         }
         recipient.observation.partner_activity.clear();
-        recipient.observation.partner_sleeping = false;
         const bool spent = remote->get_moves() < budget;
         recipient.turn.remote_moves = spent ? remote->get_moves() : budget;
         const bool turn_ended = recipient.turn.remote_moves <= 0;
@@ -2875,16 +2881,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                         }
                     }
                 } else if( action == "tap_partner" ) {
-                    if( other ) {
-                        other->turn.pending_wake_client = true;
-                        other->turn.wake_from = remote->name;
-                    } else if( target->activity.id() == activity_id( "ACT_WAIT" ) ||
-                               target->activity.id() == activity_id( "ACT_WAIT_STAMINA" ) ||
-                               target->activity.id() == activity_id( "ACT_WAIT_WEATHER" ) ||
-                               target->activity.id() == activity_id( "ACT_WAIT_NPC" ) ) {
-                        target->cancel_activity();
-                        add_msg( _( "%s taps you on the shoulder." ), remote->name );
-                    }
+                    tap_waiting_partner( *remote, *target );
                 }
             }
         } catch( const std::exception & ) {
@@ -2893,24 +2890,17 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         srv_emit_ack( recipient, action.c_str() );
         return;
     }
-    if( action == "worn_sync" &&
-        ( !pickup_inventory_revision_matches( jo, recipient.pickup ) ||
-          ( recipient.pickup.revision > 0 && !jo.has_object( "carried" ) ) ) ) {
-        return; // A pre-pickup client snapshot cannot undo an accepted transfer.
-    }
-
-
-    if( msg.find( R"("type":"note_sync")" ) != std::string::npos ) {
+    if( type == "note_sync" ) {
         mp_handle_note_sync( msg );
         return;
     }
 
-    if( msg.find( R"("type":"chat")" ) != std::string::npos ) {
+    if( type == "chat" ) {
         mp_handle_chat_msg( msg );
         return;
     }
 
-    if( jo.get_string( "type", "" ) == "high_five" ) {
+    if( type == "high_five" ) {
         try {
             if( Character *target = resolve_partner_target( recipient, jo ) ) {
                 mp_apply_high_five( *remote );
@@ -2935,16 +2925,10 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         return;
     }
 
-    if( msg.find( R"("type":"shout")" ) != std::string::npos ) {
+    if( type == "shout" ) {
         mp_handle_shout_recv( recipient, msg );
         return;
     }
-
-    map &m = get_map();
-
-    // Snapshot message count before processing so we can forward ALL messages
-    // generated during this action (hits, damage, kills, sounds) to the client.
-    const unsigned long long pre_action_msg = Messages::size();
 
     // Give the NPC its current move budget before executing any action.
     // (monmove skips remote player NPCs, so we manage AP ourselves.)
@@ -2961,9 +2945,6 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         const std::string target = jo.get_string( "client_help_target", "" );
         recipient.observation.partner_help_target = target.empty() ? "" : player_id( target ).str();
         mp_partner_activity_transition_check();
-    }
-    if( jo.has_bool( "client_sleeping" ) ) {
-        recipient.observation.partner_sleeping = jo.get_bool( "client_sleeping" );
     }
     if( jo.has_int( "client_activity_pct" ) ) {
         recipient.observation.partner_activity_pct = jo.get_int( "client_activity_pct" );
@@ -2997,7 +2978,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     // simulation on the host side.  Their sole job is to open and close the
     // lockstep bypass cleanly, so variable-duration activities like ACT_DROP
     // don't race the heartbeat.
-    if( msg.find( R"("action":"activity_start")" ) != std::string::npos ) {
+    if( action == "activity_start" ) {
         const std::string id = jo.get_string( "activity_id", "" );
         const std::string prev = recipient.observation.partner_activity;
         if( !id.empty() ) {
@@ -3008,7 +2989,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
                 + " g_partner_activity prev=" + prev + " now=" + recipient.observation.partner_activity );
         return;
     }
-    if( msg.find( R"("action":"activity_end")" ) != std::string::npos ) {
+    if( action == "activity_end" ) {
         const std::string id = jo.get_string( "activity_id", "" );
         if( ( id.empty() || id == "ACT_AIM" ) && recipient.firearm.weapon != 0 ) {
             finish_firearm_activity( *remote, recipient.firearm, true );
@@ -3031,7 +3012,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     // A remote player can change the authoritative world without the host
     // taking an action. Bypass quicksave's local-avatar dirty counter and
     // report success only after the world and remote characters are written.
-    if( msg.find( R"("action":"session_ending")" ) != std::string::npos ) {
+    if( action == "session_ending" ) {
         mp_log( "[cdda-mp] SESSION-END RECV: client is leaving — auto-saving host" );
         if( g->save() ) {
             add_msg( m_info, _( "Your partner is leaving.  The shared world has been saved." ) );
@@ -3045,7 +3026,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     // Co-op save handshake: the client saved on their side and asked us to save
     // the shared world too, so the host's authoritative save and the client's
     // local save stay at the same game-time. Reply with the actual outcome.
-    if( msg.find( R"("action":"save_request")" ) != std::string::npos ) {
+    if( action == "save_request" ) {
         mp_log( "[cdda-mp] SAVE-REQ RECV: partner asked host to save the shared world" );
         const bool saved = g->save();
         if( saved ) {
@@ -3063,99 +3044,21 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     }
 
     // Templates wire-sync handlers (symmetric — same shape on host and client).
-    if( msg.find( R"("type":"templates_list")" ) != std::string::npos ) {
+    if( type == "templates_list" ) {
         mp_handle_templates_list( msg, recipient.admission );
         return;
     }
-    if( msg.find( R"("type":"template_request")" ) != std::string::npos ) {
+    if( type == "template_request" ) {
         mp_handle_template_request( msg, recipient.admission );
         return;
     }
-    if( msg.find( R"("type":"template_data")" ) != std::string::npos ) {
+    if( type == "template_data" ) {
         mp_handle_template_data( msg );
         return;
     }
 
-    // Apply the client's real character stats to the proxy so all action
-    // handlers (pldrive steering, melee, etc.) use the player's actual values.
-    if( !recipient.player_state_initialized && jo.has_object( "char_stats" ) ) {
-        JsonObject cs = jo.get_object( "char_stats" );
-        cs.allow_omitted_members();
-        // Rename the proxy from the "player2" placeholder to the client's real
-        // character name once it arrives. Drives the on-map @ label and the
-        // sidebar nearby-creature list.
-        if( cs.has_string( "name" ) ) {
-            const std::string cname = cs.get_string( "name" );
-            if( !cname.empty() && remote->name != cname ) {
-                // First rename away from the "player2" placeholder is the real
-                // "joined" moment — announce it here with the actual name
-                // instead of the placeholder the spawn path would have used.
-                const bool was_placeholder = remote->name == "player2";
-                remote->name = cname;
-                // Keep the partner-name cache in lockstep with the proxy name —
-                // mp_addressee_to_you() and the Co-op panel both read it, and a
-                // stale value (the session-id placeholder set at spawn) means a
-                // relayed "Niesha swaps places with Jeff" never converts Jeff→you.
-                recipient.observation.partner_name_cached = cname;
-                if( was_placeholder ) {
-                    add_msg( m_good, _( "%s has connected and joined the game." ), cname );
-                }
-            }
-        }
-        if( cs.has_int( "str" ) ) {
-            remote->set_str_base( cs.get_int( "str" ) );
-        }
-        if( cs.has_int( "dex" ) ) {
-            remote->set_dex_base( cs.get_int( "dex" ) );
-        }
-        if( cs.has_int( "int" ) ) {
-            remote->set_int_base( cs.get_int( "int" ) );
-        }
-        if( cs.has_int( "per" ) ) {
-            remote->set_per_base( cs.get_int( "per" ) );
-        }
-        if( cs.has_array( "skills" ) ) {
-            for( const JsonValue &entry : cs.get_array( "skills" ) ) {
-                JsonArray ja = entry.get_array();
-                const skill_id sid( ja.next_string() );
-                const int lvl = ja.next_int();
-                remote->set_skill_level( sid, lvl );
-            }
-        }
-        if( cs.has_array( "profs" ) ) {
-            for( const JsonValue &pv : cs.get_array( "profs" ) ) {
-                const proficiency_id pid( pv.get_string() );
-                if( !remote->has_proficiency( pid ) ) {
-                    remote->add_proficiency( pid, true );
-                }
-            }
-        }
-    }
-
-    // Extract action label for HUD "Queued" row on the server panel.
-    {
-        const size_t pos = msg.find( R"("action":")" );
-        if( pos != std::string::npos ) {
-            const size_t start = pos + 10;
-            const size_t end = msg.find( '"', start );
-            if( end != std::string::npos ) {
-                std::string act = msg.substr( start, end - start );
-                // Append direction for move actions so it reads e.g. "move:n".
-                if( act == "move" ) {
-                    const size_t dpos = msg.find( R"("dir":")" );
-                    if( dpos != std::string::npos ) {
-                        const size_t dstart = dpos + 7;
-                        const size_t dend = msg.find( '"', dstart );
-                        if( dend != std::string::npos ) {
-                            act += ':' + msg.substr( dstart, dend - dstart );
-                        }
-                    }
-                }
-                if( act != "worn_sync" ) {
-                    mp_session().presentation.last_client_action_label = act;
-                }
-            }
-        }
+    if( !action.empty() ) {
+        mp_session().presentation.last_client_action_label = action;
     }
 
     // Sync client facing direction so the remote NPC proxy flips correctly.
@@ -3180,691 +3083,10 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
         recipient.turn.last_forwarded_msg_count = Messages::size();
     }
 
-    // Worn-item sync — client sends this once after joining (and after any
-    // wear/take-off) so the remote NPC reflects the client's actual equipment.
-    if( msg.find( R"("action":"worn_sync")" ) != std::string::npos ) {
-        mp_log( "[cdda-mp] worn_sync recv: " + msg.substr( 0, 120 ) );
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            // Sync gender so tileset uses the correct overlay prefix.
-            const bool carried_snapshot = jo.has_object( "carried" );
-            if( carried_snapshot ) {
-                remote->load_carried_items( jo.get_object( "carried" ) );
-            }
-            if( !recipient.player_state_initialized && jo.has_bool( "male" ) ) {
-                remote->male = jo.get_bool( "male" );
-            }
-            if( !carried_snapshot && jo.has_array( "worn" ) ) {
-                remote->clear_worn();
-                for( const JsonValue &wv : jo.get_array( "worn" ) ) {
-                    JsonObject wo = wv.get_object();
-                    wo.allow_omitted_members();
-                    // Full item deserialization — preserves pocket contents (items
-                    // inside jacket, fanny pack, etc.) so trade menu and skill
-                    // checks see the client's actual carried items.
-                    item worn_item;
-                    try {
-                        worn_item.deserialize( wo );
-                    } catch( const JsonError &e ) {
-                        // Fallback for legacy {t,v} format or parse errors.
-                        const itype_id tid( wo.get_string( "t", "" ) );
-                        if( tid.is_valid() ) {
-                            worn_item = item( tid );
-                            const std::string var = wo.get_string( "v", "" );
-                            if( !var.empty() ) {
-                                worn_item.set_itype_variant( var );
-                            }
-                        }
-                        mp_log( std::string( "[cdda-mp] worn_sync: worn item parse error (fallback): " )
-                                + e.what() );
-                    }
-                    if( !worn_item.typeId().is_empty() && worn_item.typeId().is_valid() ) {
-                        // wear_item(who, item, interactive, do_calc_encumbrance, do_sort, quiet)
-                        auto result = remote->worn.wear_item( *remote, worn_item,
-                                                              false, false, true, true );
-                        if( !result ) {
-                            mp_log( "[cdda-mp] worn_sync: wear_item FAILED for "
-                                    + worn_item.typeId().str() );
-                        }
-                    }
-                }
-                std::vector<item *> applied_worn;
-                remote->worn.inv_dump( applied_worn );
-                std::string worn_list;
-                for( const item *wi : applied_worn ) {
-                    worn_list += wi->typeId().str() + ' ';
-                }
-                mp_log( "[cdda-mp] worn_sync applied: [" + worn_list + "]" );
-                // Log overlay IDs the NPC would generate (confirm tileset coverage).
-                std::string ov_log;
-                for( const auto &ov : remote->get_overlay_ids() ) {
-                    ov_log += ov.first + ' ';
-                }
-                mp_log( "[cdda-mp] worn_sync overlays: [" + ov_log + "]" );
-            }
-            // Apply the client's wielded weapon to the remote NPC.
-            // Prefer the full item serialization (carries ammo, mods, charges,
-            // contents) when present; fall back to typeId-only for legacy.
-            std::string wielded_str;
-            jo.read( "wielded", wielded_str );
-            bool applied_full = carried_snapshot;
-            if( !carried_snapshot && jo.has_object( "wielded_obj" ) ) {
-                try {
-                    JsonObject wo = jo.get_object( "wielded_obj" );
-                    wo.allow_omitted_members();
-                    item tmp;
-                    tmp.deserialize( wo );
-                    remote->set_wielded_item( tmp );
-                    applied_full = true;
-                    mp_log( "[cdda-mp] worn_sync: set wielded(full)=" + tmp.typeId().str()
-                            + " charges=" + std::to_string( tmp.charges )
-                            + " ammo=" + std::to_string( tmp.ammo_remaining() ) );
-                } catch( const JsonError &e ) {
-                    mp_log( std::string( "[cdda-mp] worn_sync: wielded_obj parse error: " )
-                            + e.what() );
-                }
-            }
-            if( !applied_full ) {
-                if( !wielded_str.empty() ) {
-                    const itype_id wid( wielded_str );
-                    if( wid.is_valid() ) {
-                        remote->set_wielded_item( item( wid ) );
-                        mp_log( "[cdda-mp] worn_sync: set wielded=" + wielded_str );
-                    }
-                } else {
-                    // Client is empty-handed — clear the proxy's weapon slot.
-                    // remove_weapon() zeroes weapon=item() and returns the old
-                    // item without touching the map, so no duplication.
-                    // Do NOT call unwield() here — that moves the item to a pocket
-                    // or drops to the floor, duplicating what the drop/throw/unload
-                    // handler already placed there via tile_changes.
-                    remote->remove_weapon();
-                    mp_log( "[cdda-mp] worn_sync: remove_weapon (client empty-handed)" );
-                }
-            }
-            // Apply all mutations from the client's "appearance" array to the
-            // remote NPC proxy.  Full state sync: clear every mutation on the
-            // proxy first, then apply the client's list.  This covers chargen
-            // cosmetics AND physical mutations (Fangs, Sleek Fur, Spines, etc.)
-            // which the old per-type clearing missed.
-            if( !recipient.player_state_initialized && jo.has_array( "appearance" ) ) {
-                std::vector<trait_id> to_unset;
-                for( const trait_id &existing : remote->get_mutations() ) {
-                    to_unset.push_back( existing );
-                }
-                for( const trait_id &old : to_unset ) {
-                    remote->unset_mutation( old );
-                }
-                int applied = 0;
-                for( const JsonValue &av : jo.get_array( "appearance" ) ) {
-                    JsonObject ao = av.get_object();
-                    ao.allow_omitted_members();
-                    const std::string mid = ao.get_string( "id", "" );
-                    if( mid.empty() ) {
-                        continue;
-                    }
-                    const trait_id tid( mid );
-                    if( !tid.is_valid() ) {
-                        mp_log( "[cdda-mp] worn_sync: appearance id INVALID: " + mid );
-                        continue;
-                    }
-                    const std::string var_str = ao.get_string( "var", "" );
-                    const mutation_variant *var = var_str.empty()
-                                                  ? nullptr
-                                                  : tid.obj().variant( var_str );
-                    remote->set_mutation( tid, var );
-                    ++applied;
-                }
-                mp_log( "[cdda-mp] worn_sync: appearance cleared "
-                        + std::to_string( to_unset.size() )
-                        + " applied " + std::to_string( applied ) );
-            }
-            std::string ma_style_str;
-            jo.read( "keep_hands_free", remote->martial_arts_data->keep_hands_free );
-            jo.read( "ma_style", ma_style_str );
-            if( !ma_style_str.empty() ) {
-                const matype_id mid( ma_style_str );
-                if( mid.is_valid() ) {
-                    remote->martial_arts_data->set_style( mid, true );
-                    mp_log( "[cdda-mp] worn_sync: set ma_style=" + ma_style_str );
-                }
-            }
-            // Rebuild the proxy's main (non-worn, non-wielded) inventory from the
-            // client's serialized blob.  This makes tools, books, guns-in-bag,
-            // currency, and any other carried items visible in the trade menu and
-            // available to host-side skill / activity checks.
-            if( !carried_snapshot && jo.has_array( "client_inv" ) ) {
-                try {
-                    remote->inv->clear();
-                    JsonArray inv_ja = jo.get_array( "client_inv" );
-                    remote->inv->json_load_items( inv_ja );
-                    mp_log( "[cdda-mp] worn_sync: inv rebuilt items=" +
-                            std::to_string( remote->inv->size() ) );
-                } catch( const JsonError &e ) {
-                    mp_log( std::string( "[cdda-mp] worn_sync: inv rebuild error: " ) + e.what() );
-                }
-            }
-        } catch( const JsonError &e ) {
-            mp_log( std::string( "[cdda-mp] worn_sync parse error: " ) + e.what() );
-        }
-        return;
-    }
-
-    // Apply client's move_mode to the remote NPC proxy (run/crouch/prone overlay).
-    if( msg.find( "\"move_mode\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            std::string mm_str;
-            jo.read( "move_mode", mm_str );
-            if( !mm_str.empty() ) {
-                const move_mode_id mode_id( mm_str );
-                if( mode_id.is_valid() ) {
-                    remote->move_mode = mode_id;
-                }
-            }
-        } catch( const JsonError & ) {}
-    }
-
-    // Only uninitialized legacy proxies accept body uploads. An admitted actor
-    // owns its physiology on the server; stale client views cannot overwrite it.
-    if( !recipient.player_state_initialized &&
-        msg.find( "\"client_stamina\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            if( jo.has_int( "client_stamina" ) ) {
-                remote->set_stamina( jo.get_int( "client_stamina" ) );
-            }
-        } catch( const JsonError & ) {}
-    }
-
-    // Sync client light level so the host lighting pass can inject it at the proxy NPC.
-    if( msg.find( "\"client_light\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            if( jo.has_float( "client_light" ) || jo.has_int( "client_light" ) ) {
-                recipient.observation.mp_remote_player_luminance = static_cast<float>
-                        ( jo.get_float( "client_light" ) );
-            }
-        } catch( const JsonError & ) {}
-    }
-
-    // Sync client bleeding effects to the remote NPC proxy so blood appears on
-    // the host's map when the proxy moves.
-    if( !recipient.player_state_initialized &&
-        msg.find( "\"client_bleed\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            if( jo.has_array( "client_bleed" ) ) {
-                remote->remove_effect( effect_bleed );
-                for( const JsonValue &bv : jo.get_array( "client_bleed" ) ) {
-                    JsonObject bo = bv.get_object();
-                    bo.allow_omitted_members();
-                    const std::string bp_str = bo.get_string( "bp", "" );
-                    const int intensity = bo.get_int( "intensity", 0 );
-                    if( !bp_str.empty() && intensity > 0 ) {
-                        const bodypart_id bp = bodypart_str_id( bp_str ).id();
-                        remote->add_effect( effect_bleed, 2_turns, bp, intensity );
-                    }
-                }
-            }
-        } catch( const JsonError & ) {}
-    }
-
-    // Apply field changes (blood, etc.) placed on the client's map tiles.
-    if( msg.find( "\"client_tile_changes\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            if( jo.has_array( "client_tile_changes" ) ) {
-                map &m = get_map();
-                for( const JsonValue &entry : jo.get_array( "client_tile_changes" ) ) {
-                    JsonObject to = entry.get_object();
-                    to.allow_omitted_members();
-                    const tripoint_abs_ms abs{
-                        to.get_int( "x" ), to.get_int( "y" ), to.get_int( "z" )
-                    };
-                    if( !m.inbounds( abs ) ) {
-                        continue;
-                    }
-                    const tripoint_bub_ms bub = m.get_bub( abs );
-                    // Construction is authoritative. Reject legacy snapshots,
-                    // including their attached terrain/items, and never let a
-                    // different player's upload overwrite an active work site.
-                    if( to.has_object( "partial_con" ) || to.get_bool( "partial_con_remove", false ) ||
-                        m.partial_con_at( bub ) ) {
-                        continue;
-                    }
-                    bool touched = false;
-                    if( to.has_string( "ter" ) ) {
-                        const ter_id tid( to.get_string( "ter" ) );
-                        if( tid.id().is_valid() ) {
-                            m.ter_set( bub, tid );
-                            touched = true;
-                        }
-                    }
-                    if( to.has_string( "furn" ) ) {
-                        const furn_id fid( to.get_string( "furn" ) );
-                        if( fid.id().is_valid() ) {
-                            // furn_reset=true suppresses the avatar-grab
-                            // "destroyed!" check inside map::furn_set
-                            // (map.cpp:2085).  Without this, the host's
-                            // legitimate furniture-move (clears old tile,
-                            // sets new tile) arrives as two tile_changes;
-                            // the OLD-tile clear is interpreted by the
-                            // client as a destruction of the avatar's
-                            // grabbed furniture and the grab releases with
-                            // a spurious "The X you were grabbing is
-                            // destroyed!" message.  Real destructions by
-                            // monsters etc. now skip the message too, but
-                            // that's an acceptable trade vs every grab-
-                            // move firing a false alarm.
-                            m.furn_set( bub, fid, /* furn_reset */ true );
-                            touched = true;
-                        }
-                    }
-                    if( to.has_array( "items" ) ) {
-                        mp_log( "[cdda-mp] server apply client items @ " +
-                                std::to_string( abs.x() ) + "," +
-                                std::to_string( abs.y() ) + "," +
-                                std::to_string( abs.z() ) );
-                        m.i_clear( bub );
-                        for( const JsonValue &iv : to.get_array( "items" ) ) {
-                            try {
-                                item new_item;
-                                JsonObject io = iv.get_object();
-                                io.allow_omitted_members();
-                                new_item.deserialize( io );
-                                if( !new_item.typeId().is_empty() && new_item.typeId().is_valid() ) {
-                                    m.add_item( bub, std::move( new_item ) );
-                                }
-                            } catch( const JsonError & ) {}
-                        }
-                        touched = true;
-                    }
-                    if( to.has_array( "fields" ) ) {
-                        for( const JsonValue &fv : to.get_array( "fields" ) ) {
-                            JsonObject fo = fv.get_object();
-                            fo.allow_omitted_members();
-                            const std::string type_str = fo.get_string( "t", "" );
-                            if( type_str.empty() ) {
-                                continue;
-                            }
-                            const field_type_id ftid( type_str );
-                            if( ftid.is_valid() ) {
-                                m.add_field( bub, ftid, fo.get_int( "i", 1 ) );
-                                touched = true;
-                            }
-                        }
-                    }
-                    if( to.has_string( "trap" ) ) {
-                        const std::string trap_str = to.get_string( "trap" );
-                        // Skip if the terrain has a built-in trap (e.g. downspout
-                        // funnel on t_gutter_downspout); trap_set refuses any trap
-                        // on such tiles and debugmsgs.  The peer derives the trap
-                        // from the terrain, so no work needed.
-                        const trap_id &builtin = m.ter( bub )->trap;
-                        if( builtin != tr_null ) {
-                            // no-op
-                        } else if( trap_str.empty() || trap_str == "tr_null" ) {
-                            m.trap_set( bub, tr_null );
-                        } else {
-                            const trap_str_id tsid( trap_str );
-                            if( tsid.is_valid() ) {
-                                m.trap_set( bub, tsid.id() );
-                            }
-                        }
-                        touched = true;
-                    }
-                    if( to.has_string( "graffiti" ) ) {
-                        const std::string gtext = to.get_string( "graffiti" );
-                        if( gtext.empty() ) {
-                            m.delete_graffiti( bub );
-                        } else {
-                            m.set_graffiti( bub, gtext );
-                        }
-                        touched = true;
-                    }
-                    // Refresh baseline to the just-applied state so the next
-                    // build_tile_changes broadcast doesn't echo this same tile
-                    // back to the client.  Erase-and-resend was causing the
-                    // partner's ACT_WAIT heartbeat (which re-includes every
-                    // visible tile) to ping-pong ~80 KB of items+fields per
-                    // turn, blocking the host's input pump.
-                    if( touched ) {
-                        recipient.replication.tile_baseline[abs] = compute_tile_state( abs );
-                    }
-                }
-            }
-        } catch( const JsonError & ) {}
-    }
-
-    // Apply vehicle cargo changes the client made (items placed in trunks,
-    // freezers, lockers via SP drop_activity_actor → put_into_vehicle_or_drop).
-    // Mirrors client_tile_changes for items stored inside vehicle parts.
-    if( msg.find( "\"client_veh_cargo_changes\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            if( jo.has_array( "client_veh_cargo_changes" ) ) {
-                map &m = get_map();
-                for( const JsonValue &entry : jo.get_array( "client_veh_cargo_changes" ) ) {
-                    JsonObject co = entry.get_object();
-                    co.allow_omitted_members();
-                    const tripoint_abs_ms vp_abs{
-                        co.get_int( "x" ), co.get_int( "y" ), co.get_int( "z" )
-                    };
-                    if( !m.inbounds( vp_abs ) ) {
-                        continue;
-                    }
-                    const tripoint_bub_ms vp_bub = m.get_bub( vp_abs );
-                    const std::optional<vpart_reference> cargo_vp = m.veh_at( vp_bub ).cargo();
-                    if( !cargo_vp ) {
-                        mp_log( "[cdda-mp] server veh cargo miss: no cargo part at " +
-                                std::to_string( vp_abs.x() ) + "," +
-                                std::to_string( vp_abs.y() ) + "," +
-                                std::to_string( vp_abs.z() ) );
-                        continue;
-                    }
-                    vehicle &veh = cargo_vp->vehicle();
-                    vehicle_part &part = cargo_vp->part();
-                    mp_log( "[cdda-mp] server apply veh cargo @ " +
-                            std::to_string( vp_abs.x() ) + "," +
-                            std::to_string( vp_abs.y() ) + "," +
-                            std::to_string( vp_abs.z() ) );
-                    {
-                        vehicle_stack stack = veh.get_items( part );
-                        while( !stack.empty() ) {
-                            stack.erase( stack.begin() );
-                        }
-                    }
-                    if( co.has_array( "items" ) ) {
-                        for( const JsonValue &iv : co.get_array( "items" ) ) {
-                            try {
-                                item new_item;
-                                JsonObject io = iv.get_object();
-                                io.allow_omitted_members();
-                                new_item.deserialize( io );
-                                if( !new_item.typeId().is_empty() &&
-                                    new_item.typeId().is_valid() ) {
-                                    veh.add_item( m, part, new_item );
-                                }
-                            } catch( const JsonError & ) {}
-                        }
-                    }
-                }
-            }
-        } catch( const JsonError & ) {}
-    }
-
-    // Apply client-reported combat damage (gun fire, throw, spell) to server monsters.
-    if( msg.find( "\"client_monster_hits\":" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            if( jo.has_array( "client_monster_hits" ) ) {
-                map &m = get_map();
-                bool any_killed = false;
-                for( const JsonValue &hv : jo.get_array( "client_monster_hits" ) ) {
-                    JsonObject ho = hv.get_object();
-                    ho.allow_omitted_members();
-                    const uint32_t nid = static_cast<uint32_t>( ho.get_int( "nid", 0 ) );
-                    const int new_hp   = ho.get_int( "hp", -1 );
-                    if( nid == 0 || new_hp < 0 ) {
-                        continue;
-                    }
-                    monster *mon = mp_session().replication.entity_ids.find_monster(
-                                       nid, get_creature_tracker() );
-                    if( !mon || mon->is_dead() ) {
-                        // Diagnostic for the resurrection report: the client
-                        // reported a hit/kill for a net id the host can't match,
-                        // so the host never applies it and keeps broadcasting the
-                        // monster as alive.
-                        mp_log( "[cdda-mp] HOST-HIT-MISS: nid=" + std::to_string( nid ) +
-                                " hp=" + std::to_string( new_hp ) +
-                                ( mon ? " (host monster already dead)"
-                                  : " (no host monster with this nid)" ) );
-                        continue;
-                    }
-                    if( new_hp <= 0 ) {
-                        mon->die( &m, nullptr );
-                        any_killed = true;
-                    } else {
-                        mon->set_hp( new_hp );
-                    }
-                    mp_log( "[cdda-mp] client hit: nid=" + std::to_string( nid )
-                            + " hp=" + std::to_string( new_hp ) );
-                }
-                if( any_killed ) {
-                    g->cleanup_dead();
-                }
-            }
-        } catch( const JsonError &e ) {
-            mp_log( "[cdda-mp] monster_hits parse error: " + std::string( e.what() ) );
-        }
-    }
-
-    // Wait — drain one turn's worth of AP.
-    const bool is_wait = msg.find( R"("action":"wait")" ) != std::string::npos ||
-                         msg.find( R"("action": "wait")" ) != std::string::npos;
-    if( is_wait ) {
+    if( action == "wait" ) {
         mp_log( "[cdda-mp] wait recv: ctrl_veh=" + std::to_string( remote->controlling_vehicle ) +
                 " g_remote_moves=" + std::to_string( recipient.turn.remote_moves ) );
         srv_emit_ack( recipient, "wait" );
-        return;
-    }
-
-    // Drop — client dropped items locally; add them to the server's authoritative tile.
-    // Always drop at the remote NPC's current server-side position to avoid coordinate
-    // desync between the client's local bubble and the server's bubble.
-    if( msg.find( R"("action":"drop")" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            map &here = get_map();
-            // Use the absolute coordinates sent by the client; fall back to NPC
-            // proxy position only if the client didn't supply them.
-            const tripoint_abs_ms remote_abs = remote->pos_abs();
-            const tripoint_abs_ms abs_pos{
-                jo.get_int( "x", remote_abs.x() ),
-                jo.get_int( "y", remote_abs.y() ),
-                jo.get_int( "z", remote_abs.z() )
-            };
-            const tripoint_bub_ms bub_pos = here.inbounds( abs_pos )
-                                            ? here.get_bub( abs_pos )
-                                            : remote->pos_bub();
-            mp_log( "[cdda-mp] drop recv: abs=(" + std::to_string( abs_pos.x() ) + ","
-                    + std::to_string( abs_pos.y() ) + "," + std::to_string( abs_pos.z() ) + ")"
-                    + " bub=(" + std::to_string( bub_pos.x() ) + "," + std::to_string( bub_pos.y() ) + ")"
-                    + " has_items=" + std::string( jo.has_array( "items" ) ? "yes" : "NO" ) );
-            if( jo.has_array( "items" ) ) {
-                for( const JsonValue &iv : jo.get_array( "items" ) ) {
-                    try {
-                        item dropped;
-                        JsonObject io = iv.get_object();
-                        io.allow_omitted_members();
-                        dropped.deserialize( io );
-                        if( !dropped.typeId().is_empty() && dropped.typeId().is_valid() ) {
-                            mp_log( "[cdda-mp] drop: added " + dropped.typeId().str()
-                                    + " at " + std::to_string( bub_pos.x() ) + ","
-                                    + std::to_string( bub_pos.y() ) );
-                            here.add_item( bub_pos, std::move( dropped ) );
-                            recipient.replication.tile_baseline.erase( abs_pos );
-                        }
-                    } catch( const JsonError &e ) {
-                        mp_log( "[cdda-mp] drop: item deserialize error: " + std::string( e.what() ) );
-                    }
-                }
-            }
-        } catch( const JsonError &e ) {
-            mp_log( "[cdda-mp] drop parse error: " + std::string( e.what() ) );
-        }
-        srv_emit_ack( recipient, "drop" );
-        return;
-    }
-
-    // Smash — parse absolute target and bash it using the client's smash ability.
-    if( msg.find( R"("action":"smash")" ) != std::string::npos ) {
-        std::string smash_result_str = "failed";
-        tripoint_abs_ms smash_target_abs{ 0, 0, 0 };
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            const tripoint_abs_ms abs_target{
-                jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" )
-            };
-            smash_target_abs = abs_target;
-            if( m.inbounds( abs_target ) ) {
-                const tripoint_bub_ms bub = m.get_bub( abs_target );
-                // Capture target name BEFORE bash (it may be destroyed/replaced).
-                std::string target_name;
-                if( m.has_furn( bub ) ) {
-                    target_name = m.furnname( bub );
-                } else {
-                    target_name = m.tername( bub );
-                }
-                auto bash_map = remote->smash_ability();
-                if( jo.has_int( "bash" ) ) {
-                    const int client_bash = jo.get_int( "bash" );
-                    const damage_type_id bash_type( "bash" );
-                    bash_map[bash_type] = client_bash;
-                }
-                // destroy=false so normal bash strength checks apply.
-                const bash_params result = m.bash( bub, bash_map, false, false );
-                if( result.success ) {
-                    smash_result_str = "destroyed";
-                } else if( result.did_bash ) {
-                    smash_result_str = result.can_bash ? "hit" : "impossible";
-                }
-                mp_log( "[cdda-mp] smash @ " +
-                        std::to_string( abs_target.x() ) + "," +
-                        std::to_string( abs_target.y() ) +
-                        " result=" + smash_result_str );
-                // Generate a message so flush_action_msgs forwards it to the client.
-                if( !target_name.empty() ) {
-                    if( smash_result_str == "destroyed" ) {
-                        add_msg( m_good, _( "%s smashes the %s to pieces!" ),
-                                 remote->get_name(), target_name );
-                    } else if( smash_result_str == "hit" ) {
-                        add_msg( _( "%s strikes the %s." ),
-                                 remote->get_name(), target_name );
-                    } else if( smash_result_str == "impossible" ) {
-                        add_msg( m_info, _( "%s can't damage the %s." ),
-                                 remote->get_name(), target_name );
-                    }
-                }
-            }
-        } catch( const JsonError &e ) {
-            std::cout << "[cdda-mp] smash parse error: " << e.what() << std::endl;
-        }
-        // Inlined srv_emit_ack: smash needs custom state injection for the
-        // bash animation, so the broadcast is custom rather than the helper.
-        recipient.turn.client_acted_this_turn = true;
-        recipient.turn.remote_moves = 0;
-        mp_log( "[cdda-mp] SRV-ACK: moves=0 (smash) grant_seq=" +
-                std::to_string( recipient.turn.grant_seq ) );
-        flush_action_msgs( recipient, pre_action_msg, remote->name );
-        auto srv = get_active_server();
-        if( srv ) {
-            std::string state = serialize_remote_player_state( recipient );
-            state = state.substr( 0, state.size() - 1 )
-                    + R"(,"smash_result":")" + smash_result_str + "\""
-                    + ",\"smash_x\":" + std::to_string( smash_target_abs.x() )
-                    + ",\"smash_y\":" + std::to_string( smash_target_abs.y() )
-                    + ",\"smash_z\":" + std::to_string( smash_target_abs.z() ) + "}";
-            srv->post_send( recipient.admission, state + "\n" );
-        }
-        // See NPC-MOVE invalidate for rationale.
-        g->invalidate_main_ui_adaptor();
-        return;
-    }
-
-    // Position sync — client went up/down stairs; teleport proxy NPC to match.
-    if( msg.find( R"("action":"position_sync")" ) != std::string::npos ) {
-        try {
-            JsonValue jv = json_loader::from_string( msg );
-            JsonObject jo = jv.get_object();
-            jo.allow_omitted_members();
-            const tripoint_abs_ms abs_pos{
-                jo.get_int( "x" ), jo.get_int( "y" ), jo.get_int( "z" )
-            };
-            if( m.inbounds( abs_pos ) ) {
-                remote->setpos( m, m.get_bub( abs_pos ) );
-                std::cout << "[cdda-mp] position_sync: proxy NPC moved to ("
-                          << abs_pos.x() << "," << abs_pos.y() << "," << abs_pos.z()
-                          << ")" << std::endl;
-            }
-        } catch( const JsonError &e ) {
-            std::cout << "[cdda-mp] position_sync parse error: " << e.what() << std::endl;
-        }
-        srv_emit_ack( recipient, "position_sync" );
-        return;
-    }
-
-    // Eat / use item — client is authoritative over its own nutrition; server just
-    // drains one turn of AP and re-broadcasts state so the client's HUD stays current.
-    if( msg.find( R"("action":"eat")" ) != std::string::npos ) {
-        srv_emit_ack( recipient, "eat" );
-        return;
-    }
-
-    // Honk horn.
-    // Client → host vehicle construction sync.  Client runs the activity
-    // locally (timer, moves, items, messages, local vehicle mutation) and on
-    // finish dispatches this action with the actor's serialized state.  Host
-    // reconstructs the actor and runs complete_vehicle against the proxy NPC's
-    // crafting inventory and the host's authoritative vehicle.  Piece A's
-    // parts-count-change detection then triggers a snapshot rebroadcast so
-    // the client's local vehicle is replaced with the post-construction
-    // snapshot — covers install, remove (including appliance), repair,
-    // refill, change-shape paths in vehicle_activity_actor.
-    if( msg.find( R"("action":"vehicle_construct")" ) != std::string::npos ) {
-        try {
-            JsonValue actor_jv = jo.get_member( "actor" );
-            std::unique_ptr<activity_actor> actor =
-                vehicle_activity_actor::deserialize( actor_jv );
-            if( !actor ) {
-                mp_log( "[cdda-mp] vehicle_construct: actor deserialize returned null" );
-            } else {
-                player_activity tmp_act( *actor );
-                // complete_vehicle mutates the actor's internal state (vp_index
-                // adjustments etc.) so call it on the deserialized instance
-                // rather than the temp player_activity's clone.
-                static_cast<vehicle_activity_actor *>( actor.get() )
-                ->complete_vehicle( tmp_act, *remote );
-                mp_log( "[cdda-mp] HOST-VEH-CONSTRUCT applied for proxy NPC" );
-            }
-        } catch( const JsonError &e ) {
-            mp_log( "[cdda-mp] vehicle_construct parse error: " + std::string( e.what() ) );
-        }
-        flush_action_msgs( recipient, pre_action_msg, remote->name );
-        srv_emit_ack( recipient, "vehicle_construct" );
-        return;
-    }
-
-    if( msg.find( R"("action":"honk")" ) != std::string::npos ) {
-        map &here = get_map();
-        const tripoint_bub_ms bub = remote->pos_bub();
-        if( const optional_vpart_position vp = here.veh_at( bub ) ) {
-            vehicle &veh = vp->vehicle();
-            veh.honk_horn( here );
-        }
-        flush_action_msgs( recipient, pre_action_msg, remote->name );
-        srv_emit_ack( recipient, "honk" );
         return;
     }
 
@@ -4346,8 +3568,13 @@ static void grant_remote_turn( remote_player_session &recipient )
         return;
     }
     recipient.turn.proxy_was_alive = true;
-    if( recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn ) {
+    const bool sleeping = remote->has_effect( effect_sleep );
+    if( !sleeping && recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn ) {
         return; // An outstanding grant must be consumed before another is issued.
+    }
+    if( sleeping ) {
+        recipient.turn.remote_moves = std::min( 0, recipient.turn.remote_moves );
+        remote->set_moves( recipient.turn.remote_moves );
     }
     recipient.turn.client_acted_this_turn = false;
     // The native character phase already replenished AP and applied effect
@@ -4427,10 +3654,13 @@ void grant_client_turn()
 static bool remote_turns_pending()
 {
     for( const auto &entry : mp_session().remote_players ) {
-        cata_mp::remote_player_session const &recipient = *entry.second;
+        remote_player_session &recipient = *entry.second;
         if( recipient.connected && !recipient.detach_pending &&
             recipient.turn.granted_this_turn && !recipient.turn.client_acted_this_turn ) {
-            return true;
+            const npc *actor = mp_remote_actor( recipient );
+            if( actor && !actor->has_effect( effect_sleep ) ) {
+                return true;
+            }
         }
     }
     return false;
@@ -4483,13 +3713,7 @@ bool host_is_in_wait_activity()
     if( !is_hosting() ) {
         return false;
     }
-    static const activity_id act_wait( "ACT_WAIT" );
-    static const activity_id act_wait_stamina( "ACT_WAIT_STAMINA" );
-    static const activity_id act_wait_weather( "ACT_WAIT_WEATHER" );
-    static const activity_id act_wait_npc( "ACT_WAIT_NPC" );
-    const player_activity &act = get_avatar().activity;
-    return act && ( act.id() == act_wait || act.id() == act_wait_stamina ||
-                    act.id() == act_wait_weather || act.id() == act_wait_npc );
+    return is_wait_activity( get_avatar().activity.id().str() );
 }
 
 bool should_advance_calendar()
@@ -4527,8 +3751,8 @@ bool is_passive_activity( const std::string &activity_id_str )
         "ACT_WORKOUT_HARD", "ACT_WORKOUT",
         "ACT_FORAGE", "ACT_FISH",
         "ACT_FILL_LIQUID", "ACT_PICKUP", "ACT_MOVE_ITEMS",
-        "ACT_WAIT", "ACT_WAIT_STAMINA", "ACT_WAIT_WEATHER", "ACT_WAIT_NPC",
-        "ACT_SLEEP", "ACT_FIRSTAID",
+        "ACT_WAIT", "ACT_WAIT_STAMINA", "ACT_WAIT_WEATHER", "ACT_WAIT_FOLLOWERS", "ACT_WAIT_NPC",
+        "ACT_SLEEP", "ACT_TRY_SLEEP", "ACT_FIRSTAID",
         "ACT_HELP_PARTNER",
     };
     return passive.count( activity_id_str ) > 0;
@@ -4550,13 +3774,21 @@ bool should_fast_forward()
     }
     bool participants = false;
     for( const auto &entry : mp_session().remote_players ) {
-        cata_mp::remote_player_session const &recipient = *entry.second;
+        remote_player_session &recipient = *entry.second;
         if( !recipient.connected || recipient.detach_pending ) {
             continue;
         }
         participants = true;
-        if( !recipient.observation.partner_sleeping &&
-            !is_passive_activity( recipient.observation.partner_activity ) ) {
+        const npc *actor = mp_remote_actor( recipient );
+        if( !actor ) {
+            return false;
+        }
+        if( actor->has_effect( effect_sleep ) ) {
+            continue;
+        }
+        const bool passive = actor->activity ? is_passive_activity( actor->activity.id().str() ) :
+                             recipient.observation.partner_activity == "ACT_HELP_PARTNER";
+        if( !passive ) {
             return false;
         }
     }
@@ -4669,13 +3901,17 @@ bool partner_in_interactive_activity()
 
 bool is_partner_in_wait_activity( character_id target )
 {
-    // g_partner_activity is the activity id string last broadcast from the
-    // other side (host_activity field for the client; client_activity field
-    // for the host).  Only the four wait variants count as interruptible.
-    return mp_partner_observation( target ).partner_activity == "ACT_WAIT" ||
-           mp_partner_observation( target ).partner_activity == "ACT_WAIT_STAMINA" ||
-           mp_partner_observation( target ).partner_activity == "ACT_WAIT_WEATHER" ||
-           mp_partner_observation( target ).partner_activity == "ACT_WAIT_NPC";
+    if( is_client_mode() ) {
+        return is_wait_activity( mp_partner_observation( target ).partner_activity );
+    }
+    if( !target.is_valid() ) {
+        if( const npc *partner = get_partner_npc() ) {
+            target = partner->getID();
+        }
+    }
+    auto *peer = mp_session().find_remote( target );
+    const npc *actor = peer ? mp_remote_actor( *peer ) : nullptr;
+    return actor && is_wait_activity( actor->activity.id().str() );
 }
 
 bool is_partner_helping( character_id helper, character_id worker )
@@ -4837,13 +4073,29 @@ static void mp_cancel_help_if_partner_done()
     av.cancel_activity();
 }
 
-void mark_wake_client_pending( character_id target )
+bool tap_waiting_partner( const Character &who, Character &target )
 {
-    if( auto *recipient = mp_session().find_remote( target ) ) {
-        recipient->turn.pending_wake_client = true;
-        recipient->turn.wake_from = get_avatar().name;
+    const character_action_guard lifetime( target );
+    if( !lifetime || &who == &target || who.posz() != target.posz() ||
+        rl_dist( who.pos_abs(), target.pos_abs() ) > 1 ||
+        !is_wait_activity( target.activity.id().str() ) ) {
+        return false;
     }
+    const std::string name = who.get_name();
+    const character_id id = target.getID();
+    target.cancel_activity();
+    if( lifetime ) {
+        target.add_msg_if_player( _( "%s taps you on the shoulder, snapping you out of your wait." ), name );
+        if( auto *peer = mp_session().find_remote( id ) ) {
+            peer->observation.partner_activity = target.activity ? target.activity.id().str() : "";
+            if( const auto server = get_active_server() ) {
+                server->post_send( peer->admission, serialize_remote_player_state( *peer ) + "\n" );
+            }
+        }
+    }
+    return true;
 }
+
 void mark_partner_swap_pending( character_id target )
 {
     if( auto *recipient = mp_session().find_remote( target ) ) {
@@ -5805,7 +5057,6 @@ void process_session_turn()
 
     if( is_client_mode() ) {
         client_process_incoming();
-        client_resolve_pending_ui();
     }
 
     if( is_hosting() ) {
@@ -6293,12 +5544,6 @@ bool client_apply_message( const std::string &msg )
         return true;
     }
 
-    // Server asks the client to re-send worn/hair after a respawn.
-    if( msg.find( R"("type":"resync_request")" ) != std::string::npos ) {
-        client_resync_worn();
-        return true;
-    }
-
     // Per-tile vehicle motion packet (sent during host's vehmove between
     // game turns).  Slim payload — just position/face/turn_dir/vel.  Apply
     // through the same vehicle sync path the full state packet uses, then
@@ -6627,9 +5872,6 @@ bool client_apply_message( const std::string &msg )
         return true;
     }
 
-    // Trade delta: the host traded with our proxy — apply item changes to our
-    // real avatar so items don't vanish when the next worn_sync overwrites the proxy.
-
     const bool is_state = msg.find( R"("type":"state")" ) != std::string::npos ||
                           msg.find( R"("type": "state")" ) != std::string::npos;
     if( !is_state ) {
@@ -6708,6 +5950,9 @@ bool client_apply_message( const std::string &msg )
         if( jo.has_object( "missions" ) ) {
             apply_mission_view( jo.get_object( "missions" ), get_avatar() );
         }
+        if( jo.has_array( "radio_contacts" ) ) {
+            apply_radio_contacts( jo.get_array( "radio_contacts" ), mp_session().client_radio_contacts );
+        }
         if( jo.has_array( "npcs" ) ) {
             apply_npc_roster( jo );
         }
@@ -6759,36 +6004,6 @@ bool client_apply_message( const std::string &msg )
         // the gap between packets — useful sanity indicator.
         if( jo.has_int( "calendar_turn" ) ) {
             mp_session().host_observation.partner_calendar_turn = jo.get_int( "calendar_turn" );
-        }
-
-        // Host→client tap-on-shoulder: cancel local wait activity if the
-        // host's bump menu invoked Tap. Only ACT_WAIT variants are
-        // interruptible at this stage (sleep / crafting / reading are left
-        // alone). The host already side-emitted the appropriate add_msg on
-        // its side; we add the symmetric message here so the client sees
-        // who tapped them.
-        if( jo.has_bool( "wake_client" ) && jo.get_bool( "wake_client" ) ) {
-            avatar &u = get_avatar();
-            static const activity_id s_act_wait( "ACT_WAIT" );
-            static const activity_id s_act_wait_stamina( "ACT_WAIT_STAMINA" );
-            static const activity_id s_act_wait_weather( "ACT_WAIT_WEATHER" );
-            static const activity_id s_act_wait_npc( "ACT_WAIT_NPC" );
-            const activity_id cur = u.activity.id();
-            const bool was_waiting = cur == s_act_wait || cur == s_act_wait_stamina ||
-                                     cur == s_act_wait_weather || cur == s_act_wait_npc;
-            mp_log( "[cdda-mp] CLI-WAKE: was_waiting=" + std::to_string( was_waiting ) +
-                    " activity=" + cur.str() );
-            if( was_waiting ) {
-                u.cancel_activity();
-                std::string host_name = _( "Your partner" );
-                if( mp_session().client_host_actor.id().is_valid() ) {
-                    if( npc *hnpc = mp_host_view_actor() ) {
-                        host_name = hnpc->get_name();
-                    }
-                }
-                add_msg( _( "%s taps you on the shoulder, snapping you out of your wait." ),
-                         jo.get_string( "wake_from", host_name ) );
-            }
         }
 
         // Host→client swap/push: the host did the action locally and flagged it
@@ -7073,6 +6288,7 @@ bool client_apply_message( const std::string &msg )
                 updated_kills->deserialize( jo.get_object( "kill_tracker" ) );
             }
             get_avatar().load_turn_state( jo.get_object( "character_turn" ) );
+            client_sync_rest_activity( jo );
             if( updated_kills ) {
                 get_avatar().get_kill_statistics().reset( updated_kills->monster_kills(),
                         updated_kills->character_kills() );
@@ -7172,47 +6388,6 @@ bool client_apply_message( const std::string &msg )
             }
         }
 
-        // Handle "keep smashing" continuation based on server bash result.
-        if( jo.has_string( "smash_result" ) ) {
-            const std::string sr = jo.get_string( "smash_result" );
-            // Play the bash animation on the client if the server sent target coords.
-            if( jo.has_int( "smash_x" ) && jo.has_int( "smash_y" ) && jo.has_int( "smash_z" ) ) {
-                const tripoint_abs_ms abs_smash{
-                    jo.get_int( "smash_x" ), jo.get_int( "smash_y" ), jo.get_int( "smash_z" )
-                };
-                map &here = get_map();
-                if( here.inbounds( abs_smash ) ) {
-                    const tripoint_bub_ms bub = here.get_bub( abs_smash );
-                    if( sr == "destroyed" ) {
-                        g->draw_async_anim( bub, "bash_complete", "X", c_light_gray );
-                    } else if( sr == "hit" ) {
-                        g->draw_async_anim( bub, "bash_effective", "/", c_light_gray );
-                    } else if( sr == "impossible" ) {
-                        g->draw_async_anim( bub, "bash_ineffective" );
-                    }
-                }
-            }
-            if( sr == "hit" ) {
-                // Partial bash. If already auto-smashing, re-queue immediately.
-                // Otherwise DEFER the "Keep smashing?" prompt — query_yn opens a
-                // blocking popup, and running it here (inside apply_one_state_message,
-                // i.e. network-message processing) is the same re-entrant-UI crash
-                // class as the aim bug.  client_resolve_pending_ui() (main do_turn
-                // loop) asks it in a valid context.
-                if( mp_session().client_turn.client_autosmash ) {
-                    if( !mp_session().client_turn.client_autosmash_json.empty() ) {
-                        mp_session().client_turn.autosmash_pending = true;
-                    }
-                } else {
-                    mp_session().client_turn.client_smash_query_pending = true;
-                }
-            } else {
-                // Destroyed, impossible, or failed — stop auto-smashing.
-                mp_session().client_turn.client_autosmash = false;
-                mp_session().client_turn.client_autosmash_json.clear();
-            }
-        }
-
         // Sync authoritative client stats from the server's NPC proxy.
         // The server is the source of truth for stamina, move_mode, and vehicle control —
         // it drains proxy stamina during movement and manages controlling_vehicle.
@@ -7278,21 +6453,6 @@ bool client_apply_message( const std::string &msg )
     return true;
 }
 
-void client_resolve_pending_ui()
-{
-    // Drains blocking UI deferred out of the network-recv path (client_apply_
-    // message).  MUST be called from the main do_turn loop, where a top-level UI
-    // context is valid — never from inside packet processing.
-    if( mp_session().client_turn.client_smash_query_pending ) {
-        mp_session().client_turn.client_smash_query_pending = false;
-        mp_session().client_turn.client_autosmash = query_yn( _( "Keep smashing until destroyed?" ) );
-        if( mp_session().client_turn.client_autosmash &&
-            !mp_session().client_turn.client_autosmash_json.empty() ) {
-            mp_session().client_turn.autosmash_pending = true;
-        }
-    }
-}
-
 void client_process_incoming()
 {
     // After the host has died (or the socket dropped), drain the queue silently
@@ -7320,16 +6480,15 @@ void client_process_incoming()
         }
     }
     if( !was_joined && client_join_is_sent() ) {
-        // Just sent the join — clear any stale ack/seq state from a previous session
-        // so the server's first move grant isn't silently ignored after reconnect.
+        // A loaded character can still have local AP. Wait for the first
+        // authoritative grant before allowing an action in the new session.
+        get_avatar().set_moves( 0 );
         mp_session().client_turn.client_waiting_for_ack = false;
         mp_session().client_turn.client_last_grant_seq = 0;
         mp_session().client_turn.last_character_revision = 0;
         mp_session().client_turn.observed_host_turn = calendar::before_time_starts;
         mp_session().client_turn.processed_host_turn = calendar::before_time_starts;
         mp_session().client_pickup = {};
-        // Immediately follow with our worn-item list and skin tone.
-        client_resync_worn();
         // Templates wire-sync: send local template list so the host can request
         // anything it's missing.  Host sends its own list independently.
         mp_templates_sync_on_join();
@@ -7354,8 +6513,7 @@ void client_process_incoming()
         if( post_apply_moves != pre_apply_moves ) {
             mp_log( "[cdda-mp] CLI-RECV#" + std::to_string( recv_count ) +
                     ": moves changed " + std::to_string( pre_apply_moves ) + "->" +
-                    std::to_string( post_apply_moves ) +
-                    " autosmash=" + std::to_string( mp_session().client_turn.autosmash_pending ) );
+                    std::to_string( post_apply_moves ) );
         }
     }
     // (Repaint consolidated into the single throttled redraw at the END of this
@@ -7373,24 +6531,6 @@ void client_process_incoming()
             mp_log( msg );
             mp_session().presentation.client_drain_last = msg;
         }
-    }
-    // Auto-fire pending autosmash when a grant arrives and no ack is outstanding.
-    if( mp_session().client_turn.autosmash_pending &&
-        !mp_session().client_turn.client_autosmash_json.empty() &&
-        get_avatar().get_moves() > 0 && !mp_session().client_turn.client_waiting_for_ack ) {
-        mp_session().client_turn.autosmash_pending = false;
-        client_send( client_enrich_action( mp_session().client_turn.client_autosmash_json ) );
-        // FIX #4 (smash stamina): mirror SP avatar::smash on each continued swing.
-        // Autosmash only re-fires while the target is still bashable, so every re-fire
-        // is a successful swing — burn unconditionally here (manual smash burns in
-        // handle_action.cpp's ACTION_SMASH block, gated on is_bashable).
-        get_avatar().burn_energy_arms( 2 * get_avatar().get_standard_stamina_cost() );
-        mp_log( "[cdda-mp] CLI-AUTOSMASH: sending smash, moves=" +
-                std::to_string( get_avatar().get_moves() ) +
-                " stam=" + std::to_string( get_avatar().get_stamina() ) );
-        get_avatar().set_moves( 0 );
-        mp_session().client_turn.client_waiting_for_ack = true;
-        mp_session().client_turn.ack_set_time = std::chrono::steady_clock::now();
     }
     // Warn if the client is drifting too far from the host's reality bubble center.
     if( mp_session().client_host_actor.id().is_valid() ) {
@@ -7433,271 +6573,6 @@ void client_process_incoming()
                     " present=" + std::to_string( ms( r2, r3 ) ) + ")" );
         }
     }
-}
-
-// Scan tiles around the client avatar for field changes (blood, etc.) since the
-// last action was sent.  Returns a JSON array of changed tile entries suitable
-// for inclusion as "client_tile_changes" in an action packet.
-static std::string build_client_tile_changes( int radius = 10 )
-{
-    const avatar &av = get_avatar();
-    const tripoint_abs_ms center = av.pos_abs();
-    map &m = get_map();
-    std::string out = "[";
-    bool first = true;
-
-    for( int dy = -radius; dy <= radius; ++dy ) {
-        for( int dx = -radius; dx <= radius; ++dx ) {
-            const tripoint_abs_ms abs{ center.x() + dx, center.y() + dy, center.z() };
-            if( !m.inbounds( abs ) ) {
-                continue;
-            }
-            const tripoint_bub_ms bub = m.get_bub( abs );
-
-            // Terrain + furniture — baseline-gated.
-            const std::string ter_str  = m.ter( bub ).id().str();
-            const std::string furn_str = m.furn( bub ).id().str();
-            const std::string terfurn_sig = ter_str + '|' + furn_str;
-            auto &terfurn_baseline = mp_session().replication.client.client_terfurn_baseline[abs];
-            const bool terfurn_changed = terfurn_baseline != terfurn_sig;
-            if( terfurn_changed ) {
-                terfurn_baseline = terfurn_sig;
-            }
-
-            // Items — baseline-gated so we only send when the tile changes.
-            // Full item serialize() is used so nested pocket contents are included.
-            std::string items_sig;
-            std::string items_json = "[]";
-            map_stack items = m.i_at( bub );
-            if( !items.empty() ) {
-                items_json = "[";
-                bool ifirst = true;
-                for( const item &it : items ) {
-                    const std::string item_json = serialize( it );
-                    items_sig += item_json + ',';
-                    if( !ifirst ) {
-                        items_json += ',';
-                    }
-                    ifirst = false;
-                    items_json += item_json;
-                }
-                items_json += "]";
-            }
-            auto &item_baseline = mp_session().replication.client.client_item_baseline[abs];
-            const bool items_changed = item_baseline != items_sig;
-            if( items_changed ) {
-                item_baseline = items_sig;
-                if( !items_sig.empty() ) {
-                    mp_log( "[cdda-mp] client tile items @ " +
-                            std::to_string( abs.x() ) + "," +
-                            std::to_string( abs.y() ) + "," +
-                            std::to_string( abs.z() ) );
-                }
-            }
-
-            // Fields — baseline-gated.  Host owns field simulation (dust,
-            // smoke, blood spread/decay); the only fields the host doesn't
-            // already know about are ones the client *created* this turn via
-            // an action.  Forwarding host-observed fields back to the host
-            // was producing ~100 entries per turn while the partner sat in
-            // ACT_WAIT and blocking the host's input pump.
-            std::string fields_sig;
-            std::string fields_json = "[]";
-            const field &fld = m.field_at( bub );
-            if( fld.field_count() > 0 ) {
-                fields_json = "[";
-                bool ffield = true;
-                for( const auto &[ftype, fentry] : fld ) {
-                    if( !fentry.is_field_alive() ) {
-                        continue;
-                    }
-                    const int fi = fentry.get_field_intensity();
-                    fields_sig += ftype.id().str() + ':' + std::to_string( fi ) + ',';
-                    if( !ffield ) {
-                        fields_json += ',';
-                    }
-                    ffield = false;
-                    fields_json += R"({"t":")" + ftype.id().str()
-                                   + R"(","i":)" + std::to_string( fi ) + "}";
-                }
-                fields_json += "]";
-            }
-            auto &field_baseline = mp_session().replication.client.client_field_baseline[abs];
-            const bool fields_changed = field_baseline != fields_sig;
-            if( fields_changed ) {
-                field_baseline = fields_sig;
-            }
-
-            // Trap — baseline-gated. Skip terrain-builtin traps (e.g. downspout funnel
-            // on t_gutter_downspout); the peer derives those from the terrain itself,
-            // and re-applying via trap_set triggers a debugmsg.
-            const trap &tr_here = m.tr_at( bub );
-            const trap_id &builtin_here = m.ter( bub )->trap;
-            const bool is_builtin_c = !tr_here.is_null() && tr_here.loadid == builtin_here;
-            const std::string trap_sig_c = tr_here.is_null() || is_builtin_c ? "" : tr_here.id.str();
-            auto &trap_baseline = mp_session().replication.client.client_trap_baseline[abs];
-            const bool trap_changed = trap_baseline != trap_sig_c;
-            if( trap_changed ) {
-                trap_baseline = trap_sig_c;
-            }
-
-            // Graffiti — baseline-gated.
-            const std::string graffiti_sig_c = m.has_graffiti_at( bub ) ? m.graffiti_at( bub ) : "";
-            auto &graffiti_baseline = mp_session().replication.client.client_graffiti_baseline[abs];
-            const bool graffiti_changed = graffiti_baseline != graffiti_sig_c;
-            if( graffiti_changed ) {
-                graffiti_baseline = graffiti_sig_c;
-            }
-
-            if( !terfurn_changed && !items_changed && !fields_changed &&
-                !trap_changed && !graffiti_changed ) {
-                continue;
-            }
-
-            if( !first ) {
-                out += ',';
-            }
-            first = false;
-            out += "{\"x\":" + std::to_string( abs.x() )
-                   + ",\"y\":" + std::to_string( abs.y() )
-                   + ",\"z\":" + std::to_string( abs.z() );
-            if( terfurn_changed ) {
-                out += R"(,"ter":")";
-                out += ter_str;
-                out += R"(","furn":")";
-                out += furn_str;
-                out += '"';
-            }
-            if( items_changed ) {
-                out += ",\"items\":" + items_json;
-            }
-            if( fields_changed ) {
-                out += ",\"fields\":" + fields_json;
-            }
-            if( trap_changed ) {
-                out += R"(,"trap":")" + ( trap_sig_c.empty() ? std::string( "tr_null" ) : trap_sig_c ) + "\"";
-            }
-            if( graffiti_changed ) {
-                out += R"(,"graffiti":")" + json_escape_str( graffiti_sig_c ) + "\"";
-            }
-            out += "}";
-        }
-    }
-    out += ']';
-    return out;
-}
-
-// Scan vehicle cargo parts near the client avatar for item changes since the
-// last action was sent.  Each entry identifies the cargo by its tile abs
-// position; the host looks up the vehicle at that tile and updates its cargo.
-// Mirrors build_client_tile_changes() for vehicle cargo storage so drops into
-// trunks/freezers/lockers (and the SP fall-through to ground if the cargo is
-// full) sync over the wire the same way ground drops do.
-static std::string build_client_veh_cargo_changes( int radius = 12 )
-{
-    const avatar &av = get_avatar();
-    const tripoint_abs_ms center = av.pos_abs();
-    map &m = get_map();
-    std::string out = "[";
-    bool first = true;
-
-    for( const wrapped_vehicle &wv : m.get_vehicles() ) {
-        vehicle *v = wv.v;
-        if( !v ) {
-            continue;
-        }
-        // Cheap reject: skip vehicles whose root is far from the avatar.
-        if( std::abs( v->pos_abs().x() - center.x() ) > radius + 20 ||
-            std::abs( v->pos_abs().y() - center.y() ) > radius + 20 ||
-            v->pos_abs().z() != center.z() ) {
-            continue;
-        }
-        for( const vpart_reference &vp : v->get_any_parts( VPFLAG_CARGO ) ) {
-            const tripoint_bub_ms vp_bub = vp.pos_bub( m );
-            const tripoint_abs_ms vp_abs = m.get_abs( vp_bub );
-            if( std::abs( vp_abs.x() - center.x() ) > radius ||
-                std::abs( vp_abs.y() - center.y() ) > radius ) {
-                continue;
-            }
-            std::string items_sig;
-            std::string items_json = "[";
-            bool ifirst = true;
-            for( const item &it : v->get_items( vp.part() ) ) {
-                const std::string item_json = serialize( it );
-                items_sig += item_json + ',';
-                if( !ifirst ) {
-                    items_json += ',';
-                }
-                ifirst = false;
-                items_json += item_json;
-            }
-            items_json += "]";
-            auto &baseline = mp_session().replication.client.client_veh_cargo_baseline[vp_abs];
-            if( baseline == items_sig ) {
-                continue; // no change since last send
-            }
-            baseline = items_sig;
-            mp_log( "[cdda-mp] client veh cargo @ " +
-                    std::to_string( vp_abs.x() ) + "," +
-                    std::to_string( vp_abs.y() ) + "," +
-                    std::to_string( vp_abs.z() ) +
-                    " items_sig_len=" + std::to_string( items_sig.size() ) );
-            if( !first ) {
-                out += ',';
-            }
-            first = false;
-            out += "{\"x\":" + std::to_string( vp_abs.x() )
-                   + ",\"y\":" + std::to_string( vp_abs.y() )
-                   + ",\"z\":" + std::to_string( vp_abs.z() )
-                   + ",\"items\":" + items_json + "}";
-        }
-    }
-    out += ']';
-    return out;
-}
-
-// Build JSON array of monsters the client damaged since the last server sync.
-// Uses g_last_monster_hp (last server-reported HP) as the baseline.
-static std::string build_client_monster_hits()
-{
-    std::string hits;
-    bool first = true;
-    for( const auto &ptr : get_creature_tracker().get_monsters_list() ) {
-        monster *mon = ptr.get();
-        const uint32_t nid = mon ? mp_session().replication.client.monsters.known_id( *mon ) : 0;
-        if( nid == 0 ) {
-            // Diagnostic for the "killed a zed, it rose again" report: a monster
-            // the client killed in its own local world that the host never
-            // assigned a net id to is never reported — the host keeps it alive
-            // and re-broadcasts it, resurrecting the client's corpse.
-            if( mon && mon->is_dead() ) {
-                mp_log( "[cdda-mp] CLIENT-KILL-UNSYNCED: '" + mon->name() +
-                        "' died locally without a host ID — not reported to host" );
-            }
-            continue;
-        }
-        const auto it = mp_session().replication.client.last_monster_hp.find( nid );
-        if( it == mp_session().replication.client.last_monster_hp.end() ) {
-            continue;
-        }
-        const int client_hp = mon->is_dead() ? 0 : mon->get_hp();
-        if( client_hp >= it->second ) {
-            continue;
-        }
-        if( client_hp <= 0 ) {
-            // Client killed this synced monster locally. Mark it so the next few
-            // host broadcasts (still showing it alive, kill not yet processed)
-            // don't respawn it — see apply_monster_sync's spawn guard (GH#1).
-            mp_session().replication.client.client_pending_kill[nid] = CLIENT_PENDING_KILL_SYNCS;
-        }
-        if( !first ) {
-            hits += ',';
-        }
-        first = false;
-        hits += "{\"nid\":" + std::to_string( nid )
-                + ",\"hp\":" + std::to_string( client_hp ) + "}";
-    }
-    return first ? std::string() : ( "[" + hits + "]" );
 }
 
 // Conjugate the first-word verb of `s` to third-person singular in place.
@@ -7781,63 +6656,9 @@ std::string client_enrich_action( const std::string &json )
     const avatar &av = get_avatar();
     client_capture_avatar_msgs();
 
-    const float cl = av.active_light();
-    const std::string tile_changes = build_client_tile_changes();
-    const std::string veh_cargo_changes = build_client_veh_cargo_changes();
-
-    // Worn-list baseline check: if the avatar's worn list (or wielded item)
-    // changed since the last send, fire a worn_sync packet so the host's NPC
-    // proxy reflects the new worn state.  Captures drops that peel garments
-    // off, take_off, wear, and any other worn-mutating activity.  Baseline
-    // includes type + variant + wielded id so a swap (drop X, wear Y) flips
-    // the signature.
-    {
-        std::vector<const item *> worn_items;
-        av.worn.inv_dump( worn_items );
-        std::string worn_sig;
-        for( const item *it : worn_items ) {
-            worn_sig += it->typeId().str();
-            if( it->has_itype_variant() ) {
-                worn_sig += '|';
-                worn_sig += it->itype_variant().id;
-            }
-            worn_sig += ',';
-        }
-        item_location wielded = av.get_wielded_item();
-        worn_sig += ';';
-        if( wielded ) {
-            worn_sig += wielded->typeId().str();
-            // Include ammo count so firing (which doesn't change typeId) still
-            // triggers a worn_sync carrying the updated full-item serialization.
-            worn_sig += ':';
-            worn_sig += std::to_string( wielded->ammo_remaining() );
-        }
-        // Include carried weight and item count so that pocket-content changes
-        // trigger a worn_sync even when worn list and wielded item are unchanged.
-        // Weight alone misses weight-neutral swaps (drop X kg, pick up X kg →
-        // same weight, proxy goes stale until next weight change).
-        worn_sig += '|';
-        worn_sig += std::to_string( av.weight_carried().value() );
-        worn_sig += '/';
-        worn_sig += std::to_string( av.inv->size() );
-        if( worn_sig != mp_session().replication.client.client_worn_baseline ) {
-            mp_session().replication.client.client_worn_baseline = worn_sig;
-            client_resync_worn();
-        }
-    }
-
     std::string enriched = json;
     if( !enriched.empty() && enriched.back() == '}' ) {
         enriched.pop_back();
-        enriched += ",\"client_light\":" + std::to_string( cl );
-        enriched += ",\"client_tile_changes\":" + tile_changes;
-        if( veh_cargo_changes != "[]" ) {
-            enriched += ",\"client_veh_cargo_changes\":" + veh_cargo_changes;
-        }
-        const std::string monster_hits = build_client_monster_hits();
-        if( !monster_hits.empty() ) {
-            enriched += ",\"client_monster_hits\":" + monster_hits;
-        }
         enriched += ",\"client_facing\":" + std::to_string(
                         av.facing == FacingDirection::LEFT ? 0 : 1 );
         // Sync current activity id for HUD/messaging and group pacing.  Primary signals are the explicit
@@ -7848,8 +6669,6 @@ std::string client_enrich_action( const std::string &json )
         // is reflected here too.
         mp_session().client_turn.client_turn_activity = av.activity ? av.activity.id().str() : "";
         enriched += ",\"grant_seq\":" + std::to_string( mp_session().client_turn.client_last_grant_seq );
-        enriched += ",\"client_sleeping\":" + std::string( av.has_effect( effect_sleep ) ? "true" :
-                    "false" );
         const std::string client_act_id = mp_session().client_turn.client_turn_activity;
         enriched += R"(,"client_activity":")" + client_act_id + "\"";
         enriched += ",\"client_help_target\":" + wire_quote( activity_help_target( av.activity ) );
@@ -7929,14 +6748,6 @@ std::vector<player_light> player_lights()
             const float luminance = entry.second->observation.mp_remote_player_luminance;
             if( actor && luminance > 0 ) {
                 result.push_back( { actor->pos_bub(), luminance } );
-            }
-        }
-    } else if( is_hosting() ) {
-        for( const auto &entry : mp_session().remote_players ) {
-            cata_mp::remote_player_session &recipient = *entry.second;
-            const npc *actor = mp_remote_actor( recipient );
-            if( actor && recipient.observation.mp_remote_player_luminance > 0 ) {
-                result.push_back( { actor->pos_bub(), recipient.observation.mp_remote_player_luminance } );
             }
         }
     }
@@ -8256,7 +7067,7 @@ void client_request_pickup( const Pickup::selection &selection )
     const auto request = make_pickup_request( selection, get_map(), mp_session().client_pickup );
     if( !request ) {
         if( !selection.targets.empty() ) {
-            add_msg( m_info, _( "Pick up loose items on the ground separately." ) );
+            add_msg( m_info, _( "The selected items could not be picked up." ) );
         }
         return;
     }
@@ -8264,107 +7075,6 @@ void client_request_pickup( const Pickup::selection &selection )
     client_send( client_enrich_action( *request ) );
     who.set_moves( 0 );
     client_mark_action_sent();
-}
-
-void client_resync_worn()
-{
-    avatar &av = get_avatar();
-    std::vector<item *> worn_items;
-    av.worn.inv_dump( worn_items );
-
-    // Send ALL active mutations — chargen cosmetics (skin/hair/eye) plus
-    // physical mutations (Fangs, Sleek Fur, Spines, Feathered Arms, etc.) —
-    // so the host's NPC proxy renders with the full set of visual overlays.
-    // Receiver does a full state sync: clears its own mutations then applies
-    // this list.
-    std::string appearance_json = "[";
-    bool afirst = true;
-    for( const trait_and_var &tv : av.get_mutations_variants() ) {
-        const mutation_branch &mb = tv.trait.obj();
-        std::string first_type;
-        if( !mb.types.empty() ) {
-            first_type = *mb.types.begin();
-        }
-        if( !afirst ) {
-            appearance_json += ',';
-        }
-        afirst = false;
-        appearance_json += R"({"type":")" + first_type
-                           + R"(","id":")" + tv.trait.str() + "\"";
-        if( !tv.variant.empty() ) {
-            appearance_json += R"(,"var":")" + tv.variant + "\"";
-        }
-        appearance_json += '}';
-    }
-    appearance_json += ']';
-
-    if( mp_session().client_pickup.revision > 0 ) {
-        std::ostringstream carried;
-        JsonOut out( carried );
-        av.store_carried_items( out );
-        client_send( std::string( R"({"action":"worn_sync","male":)" ) +
-                     ( av.male ? "true" : "false" ) + ",\"appearance\":" + appearance_json +
-                     ",\"ma_style\":" + wire_quote( av.martial_arts_data->selected_style().str() ) +
-                     ",\"keep_hands_free\":" + ( av.martial_arts_data->keep_hands_free ? "true" : "false" ) +
-                     ",\"inventory_revision\":" + std::to_string( mp_session().client_pickup.revision ) +
-                     ",\"carried\":" + carried.str() + "}" );
-        return;
-    }
-
-    std::string worn_json = R"({"action":"worn_sync","worn":[)";
-    bool wfirst = true;
-    for( const item *it : worn_items ) {
-        if( !wfirst ) {
-            worn_json += ',';
-        }
-        wfirst = false;
-        // Full item serialization — carries pocket contents (bandages in jacket,
-        // camera in fanny pack, etc.) through to the host's proxy NPC so the
-        // trade menu and skill checks see the real carried items.
-        std::ostringstream woss;
-        {
-            JsonOut wout( woss );
-            it->serialize( wout );
-        }
-        worn_json += woss.str();
-    }
-    std::string wielded_type;
-    std::string wielded_obj_json = "null";
-    item_location wielded = av.get_wielded_item();
-    if( wielded ) {
-        wielded_type = wielded->typeId().str();
-        // Full item serialization carries ammo, mods, charges, contents — so the
-        // host's proxy mirrors the actual wielded weapon, not a pristine spawn.
-        std::ostringstream oss;
-        {
-            JsonOut out( oss );
-            wielded->serialize( out );
-        }
-        wielded_obj_json = oss.str();
-    }
-    // Serialize the client's main (non-worn, non-wielded) inventory so the host's
-    // proxy NPC mirrors tools, books, guns-in-bag, etc. for trade / skill checks.
-    std::string inv_json;
-    {
-        std::ostringstream inv_oss;
-        {
-            JsonOut inv_out( inv_oss );
-            av.inv->json_save_items( inv_out );
-        }
-        inv_json = inv_oss.str();
-    }
-    const std::string male_str = av.male ? "true" : "false";
-    const std::string ma_style_str = av.martial_arts_data->selected_style().str();
-    worn_json += "],\"male\":" + male_str
-                 + ",\"appearance\":" + appearance_json
-                 + R"(,"wielded":")" + wielded_type + "\""
-                 + ",\"wielded_obj\":" + wielded_obj_json
-                 + ",\"client_inv\":" + inv_json
-                 + R"(,"ma_style":")" + ma_style_str + "\""
-                 + ",\"keep_hands_free\":" + ( av.martial_arts_data->keep_hands_free ? "true" : "false" ) + "}";
-    mp_log( "[cdda-mp] worn_sync send: inv_items=" + std::to_string( av.inv->size() )
-            + " inv_bytes=" + std::to_string( inv_json.size() ) );
-    client_send( worn_json );
 }
 
 void client_mark_action_sent()
@@ -8386,14 +7096,12 @@ void mp_client_post_action( int pre_moves )
     if( !is_client_mode() || is_client_waiting_for_ack() ||
         mp_session().client_inventory_activity.active ) {
         // Intent-based actions already sent their request. In particular the
-        // fire UI also handles reach attacks; do not follow them with a legacy
-        // inventory snapshot and wait action that can overwrite the result.
+        // fire UI also handles reach attacks, which send their own request.
         return;
     }
     if( get_avatar().get_moves() >= pre_moves ) {
         return;
     }
-    client_resync_worn();
     client_send( client_enrich_action( R"({"type":"action","action":"wait"})" ) );
     get_avatar().set_moves( 0 );
     client_mark_action_sent();
@@ -8430,13 +7138,6 @@ tripoint_abs_ms client_ctrl_veh_abs()
     return mp_session().client_turn.client_ctrl_veh_abs;
 }
 
-void client_set_autosmash_json( const std::string &json )
-{
-    // Clear any existing auto-smash state so a new manual smash starts fresh.
-    mp_session().client_turn.client_autosmash = false;
-    mp_session().client_turn.client_autosmash_json = json;
-}
-
 void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_idle )
 {
     if( mp_session().client_inventory_activity.active ) {
@@ -8470,7 +7171,8 @@ void client_send_activity_start( const std::string &activity_id_str )
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
           activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
           activity_id_str == "ACT_FIRSTAID" || activity_id_str == "ACT_CRAFT" ||
-          activity_id_str == "ACT_CRAFT_WAIT" || activity_id_str == "ACT_BUILD" ) &&
+          activity_id_str == "ACT_CRAFT_WAIT" || activity_id_str == "ACT_BUILD" ||
+          is_rest_activity( activity_id_str ) ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8493,7 +7195,8 @@ void client_send_activity_end( const std::string &activity_id_str )
     if( ( activity_id_str == "ACT_RELOAD" || activity_id_str == "ACT_UNLOAD" ||
           activity_id_str == "ACT_INSERT_ITEM" || activity_id_str == "ACT_CONSUME" ||
           activity_id_str == "ACT_FIRSTAID" || activity_id_str == "ACT_CRAFT" ||
-          activity_id_str == "ACT_CRAFT_WAIT" || activity_id_str == "ACT_BUILD" ) &&
+          activity_id_str == "ACT_CRAFT_WAIT" || activity_id_str == "ACT_BUILD" ||
+          is_rest_activity( activity_id_str ) ) &&
         mp_session().client_inventory_activity.active ) {
         return;
     }
@@ -8512,13 +7215,6 @@ void client_send_activity_end( const std::string &activity_id_str )
     client_send( json );
 }
 
-// Compute the tile baseline signature from current authoritative map state.
-// Used by build_tile_changes to detect change vs last broadcast, and by the
-// client_tile_changes apply handler to refresh the baseline after applying
-// client-supplied state — without that refresh, the next build_tile_changes
-// would re-broadcast the same state back, causing an item/field round-trip
-// loop with the client (uids drift through deserialize → broadcast → apply,
-// fueling a per-turn 80 KB ping-pong while the partner sits in ACT_WAIT).
 // MP construction sync.  A partial construction (in-progress build site: frame +
 // consumed components + a progress counter) lives in the submap's
 // partial_constructions map, NOT in the per-tile snapshot — so before this it was
@@ -8600,45 +7296,6 @@ static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, const JsonObje
         }
     }
     m.partial_con_set( bub, pc );
-}
-
-static mp_tile_state compute_tile_state( const tripoint_abs_ms &abs )
-{
-    mp_tile_state st;
-    map &m = get_map();
-    if( !m.inbounds( abs ) ) {
-        return st;
-    }
-    const tripoint_bub_ms bub = m.get_bub( abs );
-
-    st.ter  = m.ter( bub ).id().str();
-    st.furn = m.furn( bub ).id().str();
-
-    for( const item &it : m.i_at( bub ) ) {
-        st.items_sig += serialize( it ) + ',';
-    }
-
-    const field &fld = m.field_at( bub );
-    if( fld.field_count() > 0 ) {
-        for( const auto &[ftype, fentry] : fld ) {
-            if( !fentry.is_field_alive() ) {
-                continue;
-            }
-            st.fields_sig += ftype.id().str() + ':' +
-                             std::to_string( fentry.get_field_intensity() ) + ',';
-        }
-    }
-
-    const trap &tr = m.tr_at( bub );
-    const trap_id &builtin = m.ter( bub )->trap;
-    const bool is_builtin = !tr.is_null() && tr.loadid == builtin;
-    st.trap_sig = ( tr.is_null() || is_builtin ) ? "" : tr.id.str();
-
-    st.graffiti_sig = m.has_graffiti_at( bub ) ? m.graffiti_at( bub ) : "";
-
-    st.partial_con_sig = mp_partial_con_sig( bub );
-
-    return st;
 }
 
 // Server: scan the sync area and emit tile entries whose ter/furn/items changed since last broadcast.
@@ -8983,7 +7640,8 @@ static void apply_tile_changes( JsonObject &jo )
                     new_item.deserialize( io );
                     if( !new_item.typeId().is_empty() && new_item.typeId().is_valid() ) {
                         applied += new_item.typeId().str() + ' ';
-                        m.add_item( bub, std::move( new_item ) );
+                        // Restore the server's item state without running placement effects on the replica.
+                        m.add_item_unprocessed( bub, std::move( new_item ), true );
                     }
                 } catch( const JsonError & ) {}
             }
@@ -9057,48 +7715,6 @@ static void apply_tile_changes( JsonObject &jo )
                 m.partial_con_remove( bub );
             }
         }
-
-        // Refresh client→server baselines to match the state we just installed
-        // from the host.  Without this, the next build_client_tile_changes
-        // re-serializes the items/ter/etc., compares to a stale baseline,
-        // marks "changed", and ships them back to the host — fueling an 80 KB
-        // per-turn round-trip while the avatar sits in ACT_WAIT.  Computed
-        // from current map state (not the JSON we received) so the sig
-        // matches what build_client_tile_changes will produce.
-        {
-            const ter_id &cur_ter = m.ter( bub );
-            const furn_id &cur_furn = m.furn( bub );
-            mp_session().replication.client.client_terfurn_baseline[abs] = cur_ter.id().str() + '|' +
-                    cur_furn.id().str();
-
-            std::string cur_items_sig;
-            for( const item &it : m.i_at( bub ) ) {
-                cur_items_sig += serialize( it ) + ',';
-            }
-            mp_session().replication.client.client_item_baseline[abs] = cur_items_sig;
-
-            std::string cur_fields_sig;
-            const field &cur_fld = m.field_at( bub );
-            if( cur_fld.field_count() > 0 ) {
-                for( const auto &[ftype, fentry] : cur_fld ) {
-                    if( !fentry.is_field_alive() ) {
-                        continue;
-                    }
-                    cur_fields_sig += ftype.id().str() + ':' +
-                                      std::to_string( fentry.get_field_intensity() ) + ',';
-                }
-            }
-            mp_session().replication.client.client_field_baseline[abs] = cur_fields_sig;
-
-            const trap &cur_tr = m.tr_at( bub );
-            const trap_id &cur_builtin = m.ter( bub )->trap;
-            const bool cur_is_builtin = !cur_tr.is_null() && cur_tr.loadid == cur_builtin;
-            mp_session().replication.client.client_trap_baseline[abs] =
-                ( cur_tr.is_null() || cur_is_builtin ) ? "" : cur_tr.id.str();
-
-            mp_session().replication.client.client_graffiti_baseline[abs] =
-                m.has_graffiti_at( bub ) ? m.graffiti_at( bub ) : "";
-        }
     }
 
     if( ter_seen > 0 ) {
@@ -9124,189 +7740,87 @@ static void apply_vehicle_sync( JsonObject &jo )
     }
     map &m = get_map();
 
-    // Process host-reported removals first: any nid the host no longer tracks
-    // (folded, fully destroyed, driven out of bubble) should be torn down on
-    // the client to mirror SP's map::destroy_vehicle.  Done before the apply
-    // loop so a vehicle removed-and-replaced in the same broadcast doesn't
-    // collide with its successor at the same tile.
+    auto &known = mp_session().replication.client.vehicle_uids;
+    std::unordered_map<int64_t, vehicle *> vehicles;
+    for( const wrapped_vehicle &local : m.get_vehicles() ) {
+        if( local.v ) {
+            vehicles.emplace( local.v->uid().get_value(), local.v );
+        }
+    }
+    const auto lookup = [&]( int64_t uid ) -> vehicle * {
+        const auto found = vehicles.find( uid );
+        return found == vehicles.end() ? nullptr : found->second;
+    };
     if( jo.has_array( "removed_vehicles" ) ) {
-        for( const JsonValue &rv : jo.get_array( "removed_vehicles" ) ) {
-            const uint32_t rnid = static_cast<uint32_t>( rv.get_int() );
-            auto pos_it = mp_session().replication.client.client_veh_pos.find( rnid );
-            if( pos_it == mp_session().replication.client.client_veh_pos.end() ) {
-                continue;
+        for( const JsonValue &removed : jo.get_array( "removed_vehicles" ) ) {
+            const auto entry = known.find( static_cast<uint32_t>( removed.get_int() ) );
+            if( entry != known.end() ) {
+                if( vehicle *old = lookup( entry->second ) ) {
+                    vehicles.erase( entry->second );
+                    m.destroy_vehicle( old );
+                }
+                known.erase( entry );
             }
-            const tripoint_abs_ms rabs = pos_it->second;
-            mp_session().replication.client.client_veh_pos.erase( pos_it );
-            if( !m.inbounds( rabs ) ) {
-                continue;
-            }
-            const optional_vpart_position vp = m.veh_at( m.get_bub( rabs ) );
-            if( !vp ) {
-                continue;
-            }
-            vehicle &dveh = vp->vehicle();
-            mp_log( "[cdda-mp] CLI-VEH-REMOVE: nid=" + std::to_string( rnid )
-                    + " abs=" + std::to_string( rabs.x() )
-                    + "," + std::to_string( rabs.y() )
-                    + "," + std::to_string( rabs.z() )
-                    + " name=\"" + dveh.name + "\"" );
-            m.destroy_vehicle( &dveh );
+        }
+    }
+    const JsonArray incoming = jo.get_array( "vehicles" );
+    std::unordered_set<int64_t> host_uids;
+    for( const JsonValue &entry : incoming ) {
+        const JsonObject description = entry.get_object();
+        description.allow_omitted_members();
+        const int64_t uid = description.has_member( "uid" ) ? description.get_int64( "uid" ) : 0;
+        if( uid > 0 ) {
+            host_uids.insert( uid );
         }
     }
 
-    const VehicleList vehs = m.get_vehicles();
-
-    // Authoritative positions of every host vehicle in this broadcast.
-    // vehicle_step lists ALL host vehicles, so this is the complete set; used
-    // after the apply loop to cull client-local phantom vehicles.
-    std::vector<tripoint_abs_ms> host_veh_positions;
-
-    for( const JsonValue &entry : jo.get_array( "vehicles" ) ) {
+    for( const JsonValue &entry : incoming ) {
         JsonObject vo = entry.get_object();
         vo.allow_omitted_members();
-
         const uint32_t nid = static_cast<uint32_t>( vo.get_int( "nid", 0 ) );
-        const tripoint_abs_ms new_abs{
-            vo.get_int( "x" ), vo.get_int( "y" ), vo.get_int( "z" )
-        };
-        host_veh_positions.push_back( new_abs );
-        const int  face_deg     = vo.get_int( "face", 0 );
-        const int  turn_dir_deg = vo.get_int( "turn_dir", face_deg );
-        const int  vel          = vo.get_int( "vel",  0 );
-        const int  cruise       = vo.get_int( "cruise", vel );
-        // Read name early — used as fallback identifier when position lookups fail
-        // (e.g. the client's local physics have drifted the vehicle away from both
-        // the tracked position and the server's authoritative position).
-        std::string vname;
-        vo.read( "name", vname );
+        const tripoint_abs_ms new_abs{ vo.get_int( "x" ), vo.get_int( "y" ), vo.get_int( "z" ) };
+        const int face_deg = vo.get_int( "face", 0 );
+        const int turn_dir_deg = vo.get_int( "turn_dir", face_deg );
+        const int vel = vo.get_int( "vel", 0 );
+        const int cruise = vo.get_int( "cruise", vel );
+        const std::string vname = vo.get_string( "name", "" );
+        const auto prior = known.find( nid );
+        const bool first_encounter = prior == known.end();
+        const int64_t uid = vo.has_member( "uid" ) ? vo.get_int64( "uid" ) :
+                            ( first_encounter ? 0 : prior->second );
 
-        vehicle *found = nullptr;
-
-        // Snapshot path: the host emits a full save-format snapshot for this
-        // nid on first encounter AND any time the parts vector mutates
-        // (install, remove, fold, damage-purge).  Treat it as an authoritative
-        // replacement: destroy any prior local instance for this nid, then
-        // deserialize-and-place.  The snapshot is complete state, so we skip
-        // the slim per-part / cargo apply that follows and move on.
         if( vo.has_object( "snapshot" ) && m.inbounds( new_abs ) ) {
-            // Tear down the previous local instance (if any) so a structural
-            // change doesn't end up with two overlapping vehicles at the same
-            // tile.  Look up by tracked position; fall back to scanning by name.
-            auto prev_it = mp_session().replication.client.client_veh_pos.find( nid );
-            tripoint_abs_ms prev_abs = ( prev_it != mp_session().replication.client.client_veh_pos.end() )
-                                       ? prev_it->second
-                                       : new_abs;
-            vehicle *prev = nullptr;
-            if( m.inbounds( prev_abs ) ) {
-                if( const optional_vpart_position vp = m.veh_at( m.get_bub( prev_abs ) ) ) {
-                    prev = &vp->vehicle();
+            JsonObject snapshot = vo.get_object( "snapshot" );
+            snapshot.allow_omitted_members();
+            auto replica = std::make_unique<vehicle>( vehicle_prototype_none );
+            replica->deserialize( snapshot );
+            const int64_t identity = replica->uid().get_value();
+            if( identity <= 0 || ( uid > 0 && uid != identity ) ) {
+                continue;
+            }
+            vehicle *previous = lookup( identity );
+            if( !previous ) {
+                const auto at_origin = m.veh_at( m.get_bub( new_abs ) );
+                if( at_origin && at_origin->vehicle().pos_abs() == new_abs &&
+                    !host_uids.count( at_origin->vehicle().uid().get_value() ) ) {
+                    previous = &at_origin->vehicle();
                 }
             }
-            if( !prev && !vname.empty() ) {
-                for( const wrapped_vehicle &wv : vehs ) {
-                    if( wv.v && wv.v->name == vname ) {
-                        prev = wv.v;
-                        break;
-                    }
-                }
+            const int64_t previous_uid = previous ? previous->uid().get_value() : 0;
+            if( vehicle *restored = m.restore_vehicle_snapshot( std::move( replica ), new_abs, previous ) ) {
+                vehicles.erase( previous_uid );
+                vehicles[identity] = restored;
+                known[nid] = identity;
+                host_uids.insert( identity );
             }
-            if( prev ) {
-                mp_log( "[cdda-mp] CLI-VEH-REPLACE: nid=" + std::to_string( nid )
-                        + " name=\"" + prev->name + "\"" );
-                m.destroy_vehicle( prev );
-            }
-            if( prev_it != mp_session().replication.client.client_veh_pos.end() ) {
-                mp_session().replication.client.client_veh_pos.erase( prev_it );
-            }
-
-            JsonObject snap = vo.get_object( "snapshot" );
-            snap.allow_omitted_members();
-            auto veh_up = std::make_unique<vehicle>( vehicle_prototype_none );
-            veh_up->deserialize( snap );
-            // Re-anchor sm_pos+pos to the broadcast abs position — the
-            // serialized "posx"/"posy" are submap-relative and need to match
-            // the client's bubble origin.  Mirrors map::add_vehicle().
-            const tripoint_bub_ms new_bub = m.get_bub( new_abs );
-            tripoint_bub_sm quotient;
-            point_sm_ms remainder;
-            std::tie( quotient, remainder ) =
-                coords::project_remain<coords::sm>( new_bub );
-            veh_up->sm_pos = m.get_abs_sub().xy() + rebase_rel( quotient );
-            veh_up->pos = remainder;
-            // Preserve the deserialized pivot_anchor / pivot_rotation — those
-            // were set by vehicle::deserialize from the snapshot's "pivot" and
-            // "faceDir" fields, and reflect the host's authoritative state.
-            // Passing point_rel_ms::zero here (as map::add_vehicle does for a
-            // freshly-spawned vehicle from a prototype) would clobber any
-            // non-zero pivot the host has accumulated through rotations or
-            // part changes, shifting every part by a fixed offset relative
-            // to pos_abs.  pos_abs matches the host's, but the rendered
-            // tiles end up several squares off — visible as the bus
-            // appearing at the wrong location on the client after load.
-            veh_up->precalc_mounts( 0, veh_up->pivot_rotation[0],
-                                    veh_up->pivot_anchor[0] );
-            // MP-FIXME: add_vehicle_from_snapshot stubbed for CCB
-            ( void )std::move( veh_up );
-            /* vehicle *placed = m.add_vehicle_from_snapshot(std::move(veh_up)); */
-            mp_log( "[cdda-mp] CLI-VEH-CREATE-SKIPPED: nid=" + std::to_string( nid )
-                    + " abs=" + std::to_string( new_abs.x() )
-                    + "," + std::to_string( new_abs.y() )
-                    + "," + std::to_string( new_abs.z() ) );
             continue;
         }
 
-        // Slim path: no snapshot.  Find the existing local vehicle by tracked
-        // position, server's new_abs, or name.  Same fallback chain as before.
-        auto pos_it = mp_session().replication.client.client_veh_pos.find( nid );
-        const bool first_encounter = ( pos_it == mp_session().replication.client.client_veh_pos.end() );
-        const tripoint_abs_ms search_abs = ( pos_it !=
-                                             mp_session().replication.client.client_veh_pos.end() )
-                                           ? pos_it->second
-                                           : new_abs;
-
-        if( m.inbounds( search_abs ) ) {
-            for( const wrapped_vehicle &wv : vehs ) {
-                if( wv.v && wv.v->pos_abs() == search_abs ) {
-                    found = wv.v;
-                    break;
-                }
-            }
-        }
-        if( !found && m.inbounds( new_abs ) ) {
-            for( const wrapped_vehicle &wv : vehs ) {
-                if( wv.v && wv.v->pos_abs() == new_abs ) {
-                    found = wv.v;
-                    break;
-                }
-            }
-        }
-        if( !found && !vname.empty() ) {
-            for( const wrapped_vehicle &wv : vehs ) {
-                if( wv.v && wv.v->name == vname ) {
-                    found = wv.v;
-                    break;
-                }
-            }
-        }
-
+        vehicle *found = lookup( uid );
         if( !found ) {
-            // No local vehicle and no snapshot in this packet (slim
-            // vehicle_step before first state, or out-of-bounds).  Skip and
-            // wait for the next full state broadcast which will carry one.
-            // Log once per nid — this fires every frame for an unplaceable
-            // vehicle and used to flood ~23% of the client log.
-            if( mp_session().presentation.logged_skip_nids.insert( nid ).second ) {
-                mp_log( "[cdda-mp] CLI-VEH-SKIP-UNKNOWN: nid=" + std::to_string( nid )
-                        + " new_abs=" + std::to_string( new_abs.x() )
-                        + "," + std::to_string( new_abs.y() )
-                        + "," + std::to_string( new_abs.z() )
-                        + " name=\"" + vname + "\""
-                        + " first_encounter=" + std::to_string( first_encounter )
-                        + " (further skips for this nid suppressed)" );
-            }
             continue;
         }
+        known[nid] = uid;
 
         // Compute target facing.
         const units::angle face_angle = units::from_degrees( face_deg );
@@ -9340,9 +7854,6 @@ static void apply_vehicle_sync( JsonObject &jo )
             }
         }
 
-        // Update tracked position only after we've confirmed the vehicle exists
-        // at a location the client can see.  This keeps the lookup anchor valid.
-        mp_session().replication.client.client_veh_pos[nid] = found->pos_abs();
 
         // Finalise facing state.  face.init() and move.init() must still be updated
         // even when displace_vehicle already set pivot_rotation[0].
@@ -9398,10 +7909,9 @@ static void apply_vehicle_sync( JsonObject &jo )
         // Apply per-part state (open/enabled).  Parts are indexed by sequential
         // position over get_all_parts() — same iteration order on both sides.
         if( vo.has_array( "parts" ) ) {
-            // Build index → part pointer map using the same iteration as serialize.
-            std::vector<vehicle_part *> part_ptrs;
+            std::vector<vpart_reference> parts;
             for( const vpart_reference &vpr : found->get_all_parts() ) {
-                part_ptrs.push_back( &vpr.part() );
+                parts.push_back( vpr );
             }
 
             bool parts_changed = false;
@@ -9409,10 +7919,11 @@ static void apply_vehicle_sync( JsonObject &jo )
                 JsonObject po = const_cast<JsonValue &>( pv ).get_object();
                 po.allow_omitted_members();
                 const int idx = po.get_int( "i", -1 );
-                if( idx < 0 || idx >= static_cast<int>( part_ptrs.size() ) ) {
+                if( idx < 0 || idx >= static_cast<int>( parts.size() ) ) {
                     continue;
                 }
-                vehicle_part &vp = *part_ptrs[idx];
+                const vpart_reference &part = parts[idx];
+                vehicle_part &vp = part.part();
                 const bool new_open    = po.get_bool( "open",    vp.open );
                 const bool new_enabled = po.get_bool( "enabled", vp.enabled );
                 if( vp.open != new_open || vp.enabled != new_enabled ) {
@@ -9431,7 +7942,18 @@ static void apply_vehicle_sync( JsonObject &jo )
                 if( po.read( "fuel_type", fuel_type_str ) && !fuel_type_str.empty() ) {
                     const itype_id ftype( fuel_type_str );
                     const int fuel_amt = po.get_int( "fuel_amt", 0 );
-                    if( ftype.is_valid() && vp.ammo_remaining() != fuel_amt ) {
+                    if( vp.is_tank() && po.has_member( "liquid_uid" ) ) {
+                        const int64_t liquid_uid = po.get_int64( "liquid_uid" );
+                        const item &base = vp.get_base();
+                        if( fuel_amt > 0 && !base.empty() && base.legacy_front().typeId() == ftype &&
+                            base.legacy_front().uid().get_value() == liquid_uid &&
+                            vp.ammo_remaining() != fuel_amt ) {
+                            item_location tank = found->part_base( part.part_index() );
+                            tank->legacy_front().charges = fuel_amt;
+                            tank.on_contents_changed();
+                            found->invalidate_mass();
+                        }
+                    } else if( ftype.is_valid() && vp.ammo_remaining() != fuel_amt ) {
                         vp.ammo_set( ftype, fuel_amt );
                     }
                 }
@@ -9449,105 +7971,44 @@ static void apply_vehicle_sync( JsonObject &jo )
             }
         }
 
-        // Apply per-cargo-part item lists the host sent.  Position is already
-        // synced above so m.veh_at(vp_bub).cargo() resolves to the correct part.
-        // Mirrors the server-side client_veh_cargo_changes applier so client and
-        // host converge on the same items_sig the next time either side scans.
         if( vo.has_array( "cargo" ) ) {
-            for( const JsonValue &cv : vo.get_array( "cargo" ) ) {
-                JsonObject co = const_cast<JsonValue &>( cv ).get_object();
-                co.allow_omitted_members();
-                const tripoint_abs_ms vp_abs{
-                    co.get_int( "x" ), co.get_int( "y" ), co.get_int( "z" )
-                };
-                if( !m.inbounds( vp_abs ) ) {
+            for( const JsonValue &entry : vo.get_array( "cargo" ) ) {
+                const JsonObject cargo = entry.get_object();
+                cargo.allow_omitted_members();
+                const tripoint_abs_ms position{ cargo.get_int( "x" ), cargo.get_int( "y" ), cargo.get_int( "z" ) };
+                if( !m.inbounds( position ) ) {
                     continue;
                 }
-                const tripoint_bub_ms vp_bub = m.get_bub( vp_abs );
-                const std::optional<vpart_reference> cargo_vp = m.veh_at( vp_bub ).cargo();
-                if( !cargo_vp ) {
-                    mp_log( "[cdda-mp] client veh cargo miss: no cargo part at " +
-                            std::to_string( vp_abs.x() ) + "," +
-                            std::to_string( vp_abs.y() ) + "," +
-                            std::to_string( vp_abs.z() ) );
+                const auto at = m.veh_at( m.get_bub( position ) ).cargo();
+                const int64_t part_uid = cargo.has_member( "part" ) ? cargo.get_int64( "part" ) : 0;
+                if( !at || &at->vehicle() != found ||
+                    ( part_uid > 0 && at->part().get_base().uid().get_value() != part_uid ) ) {
                     continue;
                 }
-                vehicle &veh = cargo_vp->vehicle();
-                vehicle_part &part = cargo_vp->part();
-                mp_log( "[cdda-mp] client apply veh cargo @ " +
-                        std::to_string( vp_abs.x() ) + "," +
-                        std::to_string( vp_abs.y() ) + "," +
-                        std::to_string( vp_abs.z() ) );
-                {
-                    vehicle_stack stack = veh.get_items( part );
-                    while( !stack.empty() ) {
-                        stack.erase( stack.begin() );
+                std::vector<item> contents;
+                for( const JsonValue &value : cargo.get_array( "items" ) ) {
+                    item restored;
+                    const JsonObject data = value.get_object();
+                    data.allow_omitted_members();
+                    restored.deserialize( data );
+                    if( !restored.is_null() && restored.typeId().is_valid() ) {
+                        contents.emplace_back( std::move( restored ) );
                     }
                 }
-                std::string items_sig;
-                if( co.has_array( "items" ) ) {
-                    for( const JsonValue &iv : co.get_array( "items" ) ) {
-                        try {
-                            item new_item;
-                            JsonObject io = const_cast<JsonValue &>( iv ).get_object();
-                            io.allow_omitted_members();
-                            new_item.deserialize( io );
-                            if( !new_item.typeId().is_empty() &&
-                                new_item.typeId().is_valid() ) {
-                                veh.add_item( m, part, new_item );
-                                items_sig += serialize( new_item ) + ',';
-                            }
-                        } catch( const JsonError & ) {}
-                    }
-                }
-                // Resync the client→host baseline to the post-apply state so the
-                // next build_client_veh_cargo_changes() doesn't immediately
-                // re-send the host's authoritative contents back as a "client
-                // delta" (which would be a no-op but pollutes the wire).
-                mp_session().replication.client.client_veh_cargo_baseline[vp_abs] = items_sig;
+                found->restore_cargo( m, at->part(), std::move( contents ) );
             }
         }
     }
 
-    // Cull purely client-local vehicles: the host's vehicle_step lists ALL its
-    // vehicles every broadcast, so any client vehicle far from every host
-    // vehicle is from the client's own divergent local mapgen (a wreck/parked
-    // car the host's world lacks).  Conservative on purpose — vehicles have no
-    // network id and the client matches them by fragile position/name, so we
-    // only cull vehicles well clear of every host position (never a real host
-    // vehicle whose client pivot has drifted) and never the player-controlled
-    // one.  Empty host list (host has no vehicles) culls all non-controlled
-    // local vehicles, which is correct.
-    {
-        const avatar &av = get_avatar();
-        const optional_vpart_position av_vp = m.veh_at( av.pos_bub() );
-        const vehicle *av_veh = av_vp ? &av_vp->vehicle() : nullptr;
-        constexpr int CULL_MIN_DIST = 8;
-        std::vector<vehicle *> local_cull;
-        for( const wrapped_vehicle &wv : m.get_vehicles() ) {
-            vehicle *v = wv.v;
-            if( !v || v == av_veh ) {
-                continue;
+    // Full lists contain every authoritative vehicle in the same loaded region.
+    // Preserve the avatar's current vehicle until boarding state is reconciled.
+    if( host_uids.size() == incoming.size() ) {
+        const auto avatar_part = m.veh_at( get_avatar().pos_bub() );
+        const vehicle *avatar_vehicle = avatar_part ? &avatar_part->vehicle() : nullptr;
+        for( const wrapped_vehicle &local : m.get_vehicles() ) {
+            if( local.v && local.v != avatar_vehicle && !host_uids.count( local.v->uid().get_value() ) ) {
+                m.destroy_vehicle( local.v );
             }
-            const tripoint_abs_ms vp = v->pos_abs();
-            int best = INT_MAX;
-            for( const tripoint_abs_ms &hp : host_veh_positions ) {
-                if( hp.z() != vp.z() ) {
-                    continue;
-                }
-                best = std::min( best,
-                                 std::max( std::abs( hp.x() - vp.x() ),
-                                           std::abs( hp.y() - vp.y() ) ) );
-            }
-            if( best > CULL_MIN_DIST ) {
-                local_cull.push_back( v );
-            }
-        }
-        for( vehicle *v : local_cull ) {
-            mp_log( "[cdda-mp] CLI-VEH-CULL-LOCAL: name=\"" + v->name + "\" abs=" +
-                    std::to_string( v->pos_abs().x() ) + "," +
-                    std::to_string( v->pos_abs().y() ) );
-            m.destroy_vehicle( v );
         }
     }
 }
@@ -9601,6 +8062,15 @@ static void apply_monster_sync( JsonObject &jo )
     int n_spawned = 0;
     int n_culled = 0;
     std::string culled_log;
+    const auto remove_mirror = [&]( uint32_t id ) {
+        mp_session().replication.client.ever_seen_nids.erase( id );
+        if( monster *removed = mirrors.unbind( id ) ) {
+            culled_log += removed->type->id.str() + "(nid=" + std::to_string( id ) + ") ";
+            ++n_culled;
+            in_region.erase( removed );
+            g->remove_zombie( *removed );
+        }
+    };
 
     for( const JsonValue &entry : jo.get_array( "monsters" ) ) {
         JsonObject mo = entry.get_object();
@@ -9612,17 +8082,14 @@ static void apply_monster_sync( JsonObject &jo )
             continue;
         }
         const uint32_t nid = static_cast<uint32_t>( wire_id );
-        const int  server_hp = mo.get_int( "hp", -1 );
+        const int server_hp = mo.get_int( "hp", -1 );
+        if( server_hp == 0 ) {
+            remove_mirror( nid );
+            continue;
+        }
         const tripoint_abs_ms target{
             mo.get_int( "x" ), mo.get_int( "y" ), mo.get_int( "z" )
         };
-
-        // Host confirmed this monster dead — drop the pending-kill suppress. The
-        // corpse arrives via the host's authoritative kill (item/tile sync), so
-        // the client never spawns a local one (GH#1: no duplicate corpse).
-        if( nid != 0 && server_hp <= 0 ) {
-            mp_session().replication.client.client_pending_kill.erase( nid );
-        }
 
         // --- Primary lookup: stable network ID ---
         monster *best = mirrors.find( nid );
@@ -9656,27 +8123,6 @@ static void apply_monster_sync( JsonObject &jo )
                 if( best != nullptr && !mirrors.bind( nid, *best ) ) {
                     continue;
                 }
-            }
-        }
-
-        // --- Suppress respawn of a monster the client just killed locally ---
-        // The host hasn't processed the forwarded kill yet, so it's still
-        // broadcasting this monster alive. Respawning it now is the GH#1
-        // "killed zed rose again + extra corpses" loop. Skip for a bounded
-        // window; if the host keeps reporting it alive past that, the kill was
-        // rejected (HP desync) — fall through and respawn rather than leave an
-        // invisible-but-alive monster.
-        if( best == nullptr && nid != 0 ) {
-            auto pk = mp_session().replication.client.client_pending_kill.find( nid );
-            if( pk != mp_session().replication.client.client_pending_kill.end() ) {
-                if( pk->second > 0 ) {
-                    --pk->second;
-                    mp_log( "[cdda-mp] MON-KILL-SUPPRESS: nid=" + std::to_string( nid ) +
-                            " server_hp=" + std::to_string( server_hp ) +
-                            " syncs_left=" + std::to_string( pk->second ) );
-                    continue;
-                }
-                mp_session().replication.client.client_pending_kill.erase( pk );
             }
         }
 
@@ -9716,16 +8162,7 @@ static void apply_monster_sync( JsonObject &jo )
         }
 
         matched.insert( best );
-
-        // Silent-drop diagnostic: remember live nids; forget ones the host reports
-        // dead (server_hp<=0) so a later revival re-spawn isn't mis-flagged.
-        if( nid != 0 ) {
-            if( server_hp > 0 ) {
-                mp_session().replication.client.ever_seen_nids.insert( nid );
-            } else {
-                mp_session().replication.client.ever_seen_nids.erase( nid );
-            }
-        }
+        mp_session().replication.client.ever_seen_nids.insert( nid );
 
         // Correct position if the server disagrees.
         if( best->pos_abs() != target && m.inbounds( target ) ) {
@@ -9735,21 +8172,8 @@ static void apply_monster_sync( JsonObject &jo )
             }
         }
 
-        // Synthesise death messages from HP deltas before applying the new value.
-        // "takes N damage" is intentionally omitted — attributed hit messages
-        // from flush_action_msgs / host_capture_avatar_msgs cover those, and
-        // the dumb HP-delta version creates confusing duplicates.
-        if( nid != 0 && server_hp >= 0 ) {
-            mp_session().replication.client.last_monster_hp[nid] = server_hp;
-        }
-
-        // Apply server HP. Kill locally if the server says it's dead.
-        if( server_hp >= 0 ) {
-            if( server_hp <= 0 ) {
-                best->die( &m, nullptr );
-            } else {
-                best->set_hp( server_hp );
-            }
+        if( server_hp > 0 ) {
+            best->set_hp( server_hp );
         }
 
         // Sync facing direction for correct sprite flip.
@@ -9857,27 +8281,12 @@ static void apply_monster_sync( JsonObject &jo )
         }
     }
 
-    // Remove ONLY monsters the host explicitly reports gone (died / left the
-    // bubble) via removed_monsters. NO cull-by-absence: a monster merely missing
-    // from this broadcast (out of radius, or a transient short broadcast) is
-    // left alone — it stays frozen until the host updates or removes it. This
-    // replaces the old "in_region but unmatched → die" loop that killed live
-    // monsters on a single missed broadcast (the woodpecker bug).
+    // A monster omitted from a delta keeps its existing mirror.
     if( jo.has_array( "removed_monsters" ) ) {
         for( const JsonValue &rv : jo.get_array( "removed_monsters" ) ) {
-            const uint32_t rnid = static_cast<uint32_t>( rv.get_int() );
-            if( rnid == 0 ) {
-                continue;
-            }
-            mp_session().replication.client.client_pending_kill.erase( rnid );  // host confirmed gone (GH#1)
-            mp_session().replication.client.ever_seen_nids.erase(
-                rnid );        // host-confirmed removal → not a silent drop
-            monster *removed = mirrors.find( rnid );
-            if( removed && !removed->is_dead() ) {
-                culled_log += removed->type->id.str() + "(nid=" +
-                              std::to_string( rnid ) + ") ";
-                ++n_culled;
-                removed->die( &m, nullptr );
+            const int id = rv.get_int();
+            if( id > 0 ) {
+                remove_mirror( static_cast<uint32_t>( id ) );
             }
         }
     }
@@ -9892,7 +8301,8 @@ static void apply_monster_sync( JsonObject &jo )
                 ( culled_log.empty() ? "" : " [removed: " + culled_log + "]" ) );
     }
 
-    g->cleanup_dead();
+    // Corpses and death effects are simulated by the host.
+    ct.remove_dead();
 }
 
 static std::string build_viewport( remote_player_session &recipient, const tripoint_bub_ms &center )
@@ -10010,17 +8420,10 @@ static bool mp_apply_high_five( Character &who )
 // (it charged nothing before) and caps both sides to ~one high-five per turn.
 static constexpr int high_five_moves_cost = 100;
 
-// Mirror tap-on-shoulder's interruptible set exactly (is_partner_in_wait_activity,
-// which covers all four ACT_WAIT* variants): idle or any wait == available; any
-// real activity (craft / read / sleep / butcher / build / ...) == busy, left alone.
 static bool mp_partner_is_busy( character_id target )
 {
-    const std::string &a = mp_partner_observation( target ).partner_activity;
-    if( a.empty() ) {
-        return false;
-    }
-    return a != "ACT_WAIT" && a != "ACT_WAIT_STAMINA" &&
-           a != "ACT_WAIT_WEATHER" && a != "ACT_WAIT_NPC";
+    const std::string &activity = mp_partner_observation( target ).partner_activity;
+    return !activity.empty() && !is_wait_activity( activity );
 }
 
 void mp_high_five( character_id target )
@@ -10660,31 +9063,10 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                 continue;
             }
             // Assign a stable net ID on first encounter.
+            v->ensure_uid();
             const uint32_t nid = mp_session().replication.entity_ids.assign( *v );
             alive_now.insert( nid );
 
-            // Detect structural change: if the parts vector grew or shrank since
-            // the last broadcast (install, remove, damage-purge, fold-merge), the
-            // sequential part indices the slim sync relies on no longer line up
-            // with the client's local vector.  Drop the nid from the snapshot
-            // tracking so the very next broadcast re-emits the full snapshot
-            // and the client mirrors the new structural state via the existing
-            // CLI-VEH-CREATE path.  Use part_count_real() — part_count()
-            // includes fake parts that are added/removed transiently by
-            // refresh()/remove_fake_parts() between broadcasts (e.g. for
-            // turn-rendering), which would oscillate the baseline and trigger
-            // a snapshot resend on every turn, looping client+host indefinitely.
-            const size_t parts_now = v->part_count_real();
-            auto pc_it = recipient.replication.server_veh_parts_count.find( nid );
-            if( pc_it != recipient.replication.server_veh_parts_count.end() &&
-                pc_it->second != parts_now ) {
-                mp_log( "[cdda-mp] HOST-VEH-PARTS-CHANGED: nid=" + std::to_string( nid )
-                        + " was=" + std::to_string( pc_it->second )
-                        + " now=" + std::to_string( parts_now )
-                        + " name=\"" + v->name + "\"" );
-                recipient.replication.client_known_veh_nids.erase( nid );
-            }
-            recipient.replication.server_veh_parts_count[nid] = parts_now;
             const tripoint_abs_ms vabs = v->pos_abs();
             const int face_deg     = static_cast<int>( std::lround( to_degrees( v->face.dir() ) ) );
             const int turn_dir_deg = static_cast<int>( std::lround( to_degrees( v->turn_dir ) ) );
@@ -10706,8 +9088,14 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
             std::string parts_json = "[";
             bool psfirst = true;
             int pidx = 0;
+            std::vector<replicated_vehicle_part_identity> part_identities;
             for( const vpart_reference &vpr : v->get_all_parts() ) {
                 const vehicle_part &vp = vpr.part();
+                const item &base = vp.get_base();
+                const item *contents = vp.is_tank() && !base.empty() ? &base.legacy_front() : nullptr;
+                const int64_t liquid_uid = contents ? contents->uid().get_value() : 0;
+                part_identities.push_back( { base.uid().get_value(), liquid_uid,
+                                             contents && contents->made_of( phase_id::LIQUID ) } );
                 if( !psfirst ) {
                     parts_json += ',';
                 }
@@ -10720,21 +9108,29 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                 if( vp.is_fuel_store( false ) && !vp.ammo_current().is_null() ) {
                     parts_json += R"(,"fuel_type":")" + vp.ammo_current().str()
                                   + R"(","fuel_amt":)" + std::to_string( vp.ammo_remaining() );
+                    if( contents ) {
+                        parts_json += R"(,"liquid_uid":)" + std::to_string( liquid_uid );
+                    }
                 }
                 parts_json += "}";
                 ++pidx;
             }
             parts_json += ']';
 
+            auto &previous_parts = recipient.replication.server_veh_parts[nid];
+            if( previous_parts != part_identities ) {
+                recipient.replication.client_known_veh_nids.erase( nid );
+                previous_parts = std::move( part_identities );
+            }
             // Per-cargo-part contents.  Baseline-diff gated so a 100-item trunk
             // with stable contents costs nothing on the wire — we only emit
             // parts whose items actually changed since the last broadcast.
-            // Mirrors build_client_veh_cargo_changes() in the opposite direction.
             std::string cargo_json = "[";
             bool cfirst = true;
             for( const vpart_reference &vpr : v->get_any_parts( VPFLAG_CARGO ) ) {
                 const tripoint_abs_ms vp_abs = vmap.get_abs( vpr.pos_bub( vmap ) );
-                std::string items_sig;
+                const int64_t part_uid = vpr.part().get_base().uid().get_value();
+                std::string items_sig = std::to_string( part_uid ) + ':';
                 std::string items_json = "[";
                 bool ifirst = true;
                 for( const item &it : v->get_items( vpr.part() ) ) {
@@ -10764,6 +9160,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                 cargo_json += "{\"x\":" + std::to_string( vp_abs.x() )
                               + ",\"y\":" + std::to_string( vp_abs.y() )
                               + ",\"z\":" + std::to_string( vp_abs.z() )
+                              + ",\"part\":" + std::to_string( part_uid )
                               + ",\"items\":" + items_json + "}";
             }
             cargo_json += ']';
@@ -10772,13 +9169,8 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                 vehicles_json += ',';
             }
             vfirst = false;
-            // First-encounter snapshot: include the full save-format vehicle
-            // JSON so the client can mirror SP's add_vehicle / save-load path
-            // for vehicles it has no local instance of (debug spawn, deployed
-            // foldable, mid-game-constructed frame, mapgen-into-bubble).  The
-            // snapshot is only emitted once per nid per client connection;
-            // subsequent broadcasts stay slim.  Field name "snapshot" is a
-            // nested JSON object so no escaping is needed.
+            // First sight or a changed part/tank identity needs a save-format
+            // snapshot. Other updates use the existing part and cargo deltas.
             std::string snapshot_field;
             if( !recipient.replication.client_known_veh_nids.count( nid ) ) {
                 snapshot_field = ",\"snapshot\":" + ::serialize( *v );
@@ -10788,6 +9180,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                         + std::to_string( snapshot_field.size() ) );
             }
             vehicles_json += "{\"nid\":" + std::to_string( nid )
+                             + ",\"uid\":" + std::to_string( v->uid().get_value() )
                              + ",\"x\":" + std::to_string( vabs.x() )
                              + ",\"y\":" + std::to_string( vabs.y() )
                              + ",\"z\":" + std::to_string( vabs.z() )
@@ -10811,7 +9204,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
     // isn't in alive_now has disappeared (folded, fully destroyed, driven out
     // of bubble, etc.).  Emit a removed_vehicles array so the client can
     // mirror SP's map::destroy_vehicle path.  Also drop those nids from the
-    // snapshot/parts-count tracking so a future re-encounter triggers a fresh
+    // snapshot/part identity tracking so a future re-encounter triggers a fresh
     // snapshot.
     std::string removed_vehicles_json = "[";
     {
@@ -10826,7 +9219,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
             rfirst = false;
             removed_vehicles_json += std::to_string( old_nid );
             recipient.replication.client_known_veh_nids.erase( old_nid );
-            recipient.replication.server_veh_parts_count.erase( old_nid );
+            recipient.replication.server_veh_parts.erase( old_nid );
             mp_log( "[cdda-mp] HOST-VEH-REMOVED: nid=" + std::to_string( old_nid ) );
         }
     }
@@ -10875,6 +9268,9 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
     std::ostringstream missions_state;
     JsonOut missions_out( missions_state );
     write_mission_view( missions_out, *remote );
+    std::ostringstream radio_state;
+    JsonOut radio_out( radio_state );
+    write_radio_contacts( radio_out, *remote );
     std::string kill_statistics_update;
     const kill_statistics &kills = remote->get_kill_statistics();
     if( recipient.turn.last_kill_statistics_revision != kills.revision() ) {
@@ -10890,6 +9286,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
            "\"self_player\":\"" + recipient.credentials.id.str() + "\","
            "\"players\":" + build_player_roster( recipient ) + ","
            "\"missions\":" + missions_state.str() + ","
+           "\"radio_contacts\":" + radio_state.str() + ","
            "\"npcs\":" + build_npc_roster( recipient, *remote ) + ","
            "\"calendar_turn\":" + std::to_string( to_turn<int>( calendar::turn ) ) + ","
            "\"host_name\":\"" + host.name + "\","
@@ -10922,17 +9319,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
            "\"host_hp_max\":" + std::to_string( mp_worst_limb_hp( host ).second ) + ","
            "\"host_ping_echo\":" + std::to_string( recipient.turn.last_client_ping_stamp ) + ","
            "\"host_effects\":" + host_effects_json + ","
-           "\"host_hp\":" + host_hp_json + ","
-    + ( [&recipient]() -> std::string {
-        // One-shot wake_client signal — emit on this broadcast then clear.
-        if( recipient.turn.pending_wake_client )
-        {
-            recipient.turn.pending_wake_client = false;
-            return R"("wake_client":true,"wake_from":")" + json_escape_str( recipient.turn.wake_from ) +
-            "\",";
-        }
-        return "";
-    }() ) +
+           "\"host_hp\":" + host_hp_json + "," +
     ( [&recipient]() -> std::string {
         // One-shot host→client swap/push signals — client renders the
         // observer message locally from the proxy name (no text relay).
@@ -10953,6 +9340,11 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
     }() ) +
     "\"character_revision\":" + std::to_string( ++recipient.turn.character_revision ) +
     ",\"character_turn\":" + character_turn.str() + kill_statistics_update +
+    ( owns_inventory_activity( *remote ) && is_rest_activity( remote->activity.id().str() ) ?
+      R"(,"rest_activity":{"kind":)" + wire_quote( remote->activity.id().str() ) +
+      R"(,"activity":")" + std::to_string( remote->activity.identity_generation() ) +
+      R"(","moves_total":)" + std::to_string( remote->activity.moves_total ) +
+      R"(,"moves_left":)" + std::to_string( remote->activity.moves_left ) + "}" : "" ) +
     ",\"bodyparts\":" + bparts_json +
     ",\"moves\":" + std::to_string( recipient.turn.remote_moves ) +
     ",\"speed\":" + std::to_string( remote->get_speed() ) +
