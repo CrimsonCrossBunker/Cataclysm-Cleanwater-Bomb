@@ -1,14 +1,12 @@
-#include <tuple>
-#include <initializer_list>
-#include <cstddef>
-#include "character_id.h"
-#include <algorithm>
 #include <item_location.h>
+#include <npc_opinion.h>
 #include <ret_val.h>
+#include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -22,8 +20,6 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "damage.h"
-#include "effect.h"
-#include "effect_source.h"
 #include "enums.h"
 #include "faction.h"
 // IWYU pragma: no_include <flexbuffer_json.h>
@@ -31,8 +27,8 @@
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
-#include "magic_enchantment.h"
 #include "lua_platform_loader.h"
+#include "magic_enchantment.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -46,7 +42,6 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
-#include "units.h"
 
 static const bodypart_str_id body_part_debug_tail( "debug_tail" );
 
