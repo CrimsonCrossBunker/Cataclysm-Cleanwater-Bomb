@@ -5004,6 +5004,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
         mounted_charge.reset();
     }
     optional( jo, was_loaded, "thrown_damage", thrown_damage );
+    optional( jo, was_loaded, "thrown_recovery_chance", thrown_recovery_chance,
+              numeric_bound_reader{ 0, 100 }, 100 );
     load_throw_correction( jo, throw_correction );
     optional( jo, was_loaded, "explosion", explosion );
     using_legacy_to_hit = false; //required for inherited but undefined "to_hit" field
