@@ -575,11 +575,11 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
         item sling( itype_sling );
         REQUIRE( you.wield( sling ) );
 
-        check_throw_correction( you, medium_bullet, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
+        check_throw_correction( you, medium_bullet, 1.25f, 2.5f, 2.0f, 0.9f, 3.5f, 1.5f );
         CHECK( throw_cost( you, medium_bullet ) > unassisted_cost );
         check_throw_correction( you, heavy_bullet, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
-        check_throw_correction( you, rock, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
-        check_throw_correction( you, pebble, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
+        check_throw_correction( you, rock, 1.25f, 2.5f, 2.0f, 0.9f, 3.5f, 1.5f );
+        check_throw_correction( you, pebble, 1.25f, 2.5f, 2.0f, 0.9f, 3.5f, 1.5f );
     }
 
     SECTION( "long_sling" ) {
@@ -597,8 +597,8 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
         item sling( itype_staff_sling );
         REQUIRE( you.wield( sling ) );
 
-        check_throw_correction( you, heavy_grenade, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
-        check_throw_correction( you, pebble, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
+        check_throw_correction( you, heavy_grenade, 1.5f, 2.0f, 1.5f, 0.9f, 3.0f, 1.2f );
+        check_throw_correction( you, pebble, 1.5f, 2.0f, 1.5f, 0.9f, 3.0f, 1.2f );
         check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 }
