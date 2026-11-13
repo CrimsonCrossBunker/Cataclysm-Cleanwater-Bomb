@@ -1,7 +1,9 @@
 #include "sling.h"
 
+#include <mp_firearm.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <map>
 #include <memory>
 #include <set>
@@ -11,11 +13,14 @@
 
 #include "avatar.h"
 #include "ballistics.h"
-#include "character.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "dispersion.h"
+#include "enums.h"
 #include "event.h"
 #include "event_bus.h"
 #include "flag.h"
@@ -25,6 +30,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_transformation.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -37,16 +43,12 @@
 #include "mp_throw.h"
 #include "mtype.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "projectile.h"
 #include "ranged.h"
+#include "ret_val.h"
 #include "translations.h"
 #include "type_id.h"
-#include "coordinates.h"
-#include "creature.h"
-#include "enums.h"
-#include "item_transformation.h"
-#include "point.h"
-#include "ret_val.h"
 #include "units.h"
 #include "weakpoint.h"
 

@@ -1,5 +1,7 @@
+#include <item_source.h>
 #include <iuse.h>
 #include <mounted_charge.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
@@ -22,12 +24,11 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "chopping_activity.h"
-#include "item_activation.h"
 #include "cata_assert.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "chopping_activity.h"
 #include "color.h"
 #include "coords_fwd.h"
 #include "damage.h"
@@ -45,9 +46,9 @@
 #include "generic_factory.h"
 #include "input.h"
 #include "item.h"
+#include "item_activation.h"
 #include "item_contents.h"
 #include "item_factory.h"
-#include "remote_vehicle_activity.h"
 #include "item_group.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
@@ -64,6 +65,7 @@
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "relic.h"
+#include "remote_vehicle_activity.h"
 #include "requirements.h"
 #include "ret_val.h"
 #include "stomach.h"
