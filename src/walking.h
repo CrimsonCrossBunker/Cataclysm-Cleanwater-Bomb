@@ -11,12 +11,36 @@
 #include "character_id.h"
 #include "safe_reference.h"
 #include "type_id.h"
+#include "world_position.h"
 
 class JsonOut;
 class JsonObject;
 class vehicle;
 class Character;
 class map;
+
+bool swept_horizontal_rectangle_intersects( const point &start, const point &delta,
+        int left, int bottom, int right, int top );
+
+// Horizontal movement intent in fixed-point units. One input can traverse
+// at most half a tile and can enter only one new gameplay cell.
+struct fractional_walk {
+    static constexpr int max_distance = world_position::tile_center;
+    world_position target;
+    point displacement;
+    int distance;
+
+    static bool is_valid( const point &delta );
+    static point camera_delta( const point &screen, const point &forward );
+    static std::optional<fractional_walk> resolve( const world_position &from, const point &delta );
+    bool supports_grab( const Character &who, const map &here ) const;
+    bool drags_furniture( const Character &who ) const;
+    bool drags_vehicle( const Character &who ) const;
+    point furniture_landing_offset( const Character &who, const map &here ) const;
+    bool clears_obstacles( const map &here, const Character &who,
+                           const tripoint_bub_ms &landing ) const;
+    int scale_cost( int full_tile_cost ) const;
+};
 
 // Local route continuation waiting for one authoritative movement result.
 // The route generation prevents an old response from reviving a canceled or

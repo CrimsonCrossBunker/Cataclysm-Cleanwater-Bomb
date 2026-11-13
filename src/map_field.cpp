@@ -37,11 +37,11 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
-#include "level_cache.h"
 #include "map.h"
 #include "map_field.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
 #include "material.h"
@@ -164,20 +164,26 @@ int map::burn_body_part( Character &you, field_entry &cur, const bodypart_id &bp
 
 void map::process_fields()
 {
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
-        auto &field_cache = get_cache( z ).field_cache;
+    process_fields( get_scent(), nullptr );
+}
+
+void map::process_fields( scent_map &scents, const map_simulation_regions &regions )
+{
+    process_fields( scents, &regions );
+}
+
+void map::process_fields( scent_map &scents, const map_simulation_regions *regions )
+{
+    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    for( int z = minz; z <= maxz; z++ ) {
         for( int x = 0; x < my_MAPSIZE; x++ ) {
             for( int y = 0; y < my_MAPSIZE; y++ ) {
-                if( field_cache[ x + y * MAPSIZE ] ) {
-                    submap *const current_submap = get_submap_at_grid( tripoint_rel_sm{ x, y, z } );
-                    if( current_submap == nullptr ) {
-                        debugmsg( "Tried to process field at (%d,%d,%d) but the submap is not loaded", x, y, z );
-                        continue;
-                    }
-                    process_fields_in_submap( current_submap, { x, y, z } );
-                    if( current_submap->field_count == 0 ) {
-                        field_cache[ x + y * MAPSIZE ] = false;
-                    }
+                const tripoint_rel_sm local( x, y, z );
+                submap *const current_submap = get_submap_at_grid( local );
+                if( current_submap && current_submap->field_count > 0 &&
+                    ( !regions || regions->owns( *this, abs_sub.xy() + local ) ) ) {
+                    process_fields_in_submap( current_submap, { x, y, z }, scents );
                 }
             }
         }
@@ -375,22 +381,30 @@ void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_sp
     }
 }
 
-void map::furniture_terrain_emit_fields()
+void map::furniture_terrain_emit_fields( const map_simulation_regions *regions )
 {
-    if( calendar::once_every( 10_seconds ) ) {
-        for( const tripoint_bub_ms &elem : get_furn_field_locations() ) {
-            const furn_t &furn_to_emit = *furn( elem );
-            for( const emit_id &e : furn_to_emit.emissions ) {
-                emit_field( elem, e );
-            }
-        }
-        for( const tripoint_bub_ms &elem : get_ter_field_locations() ) {
-            const ter_t &ter_to_emit = *ter( elem );
-            for( const emit_id &e : ter_to_emit.emissions ) {
-                emit_field( elem, e );
-            }
-        }
+    if( !calendar::once_every( 10_seconds ) ) {
+        return;
     }
+    const auto emit_at = [&]( const std::vector<tripoint_bub_ms> &indexed, const auto & emissions ) {
+        // An emission's Lua handler may mutate the map and its index.
+        const auto positions = indexed;
+        for( const tripoint_bub_ms &p : positions ) {
+            const tripoint_abs_sm submap_position = project_to<coords::sm>( get_abs( p ) );
+            if( !has_loaded_submap( p ) || ( regions && !regions->owns( *this, submap_position ) ) ) {
+                continue;
+            }
+            for( const emit_id &source : emissions( p ) ) {
+                emit_field( p, source );
+            }
+        }
+    };
+    emit_at( get_furn_field_locations(), [&]( const tripoint_bub_ms & p ) -> const auto & {
+        return furn( p )->emissions;
+    } );
+    emit_at( get_ter_field_locations(), [&]( const tripoint_bub_ms & p ) -> const auto & {
+        return ter( p )->emissions;
+    } );
 }
 
 /*
@@ -429,7 +443,6 @@ void map::create_hot_air( const tripoint_bub_ms &p, int intensity )
  */
 struct field_proc_data {
     scent_block &sblk;
-    Character &player_character;
     const oter_id &om_ter;
     map &here;
     maptile &map_tile;
@@ -444,12 +457,11 @@ This is the general update function for field effects. This should only be calle
 If you need to insert a new field behavior per unit time add a case statement in the switch below.
 */
 void map::process_fields_in_submap( submap *const current_submap,
-                                    const tripoint_bub_sm &submap )
+                                    const tripoint_bub_sm &submap, scent_map &scents )
 {
     const oter_id &om_ter = overmap_buffer.ter( coords::project_to<coords::omt>(
             abs_sub + rebase_rel( submap ) ) );
-    Character &player_character = get_player_character();
-    scent_block sblk( submap, get_scent() );
+    scent_block sblk( submap, scents );
 
     // Initialize the map tile wrapper
     maptile map_tile( current_submap, point_sm_ms::zero );
@@ -459,7 +471,6 @@ void map::process_fields_in_submap( submap *const current_submap,
 
     field_proc_data pd{
         sblk,
-        player_character,
         om_ter,
         *this,
         map_tile,
@@ -833,20 +844,18 @@ static void field_processor_fd_push_items( const tripoint_bub_ms &p, field_entry
                 pushee = items.erase( pushee );
                 tripoint_bub_ms newp = random_entry( valid );
                 pd.here.add_item_or_charges( newp, tmp );
-                if( pd.player_character.pos_bub() == newp ) {
-                    add_msg( m_bad, _( "A %s hits you!" ), tmp.tname() );
-                    const bodypart_id hit = pd.player_character.get_random_body_part();
-                    pd.player_character.deal_damage( nullptr, hit, damage_instance( damage_bash, 6 ) );
-                    pd.player_character.check_dead_state( &pd.here );
-                }
-
-                if( npc *const n = creatures.creature_at<npc>( newp ) ) {
-                    // TODO: combine with player character code above
-                    const bodypart_id hit = pd.player_character.get_random_body_part();
-                    n->deal_damage( nullptr, hit, damage_instance( damage_bash, 6 ) );
-                    add_msg_if_player_sees( newp, _( "A %1$s hits %2$s!" ), tmp.tname(), n->get_name() );
-                    n->check_dead_state( &pd.here );
-                } else if( monster *const mon = creatures.creature_at<monster>( newp ) ) {
+                const tripoint_abs_ms impact = pd.here.get_abs( newp );
+                if( Character *const target = creatures.creature_at<Character>( impact ) ) {
+                    if( target->is_avatar() ) {
+                        add_msg( m_bad, _( "A %s hits you!" ), tmp.tname() );
+                    } else {
+                        add_msg_if_player_sees( newp, _( "A %1$s hits %2$s!" ), tmp.tname(),
+                                                target->get_name() );
+                    }
+                    target->deal_damage( nullptr, target->get_random_body_part(),
+                                         damage_instance( damage_bash, 6 ) );
+                    target->check_dead_state( &pd.here );
+                } else if( monster *const mon = creatures.creature_at<monster>( impact ) ) {
                     mon->apply_damage( nullptr, bodypart_id( "torso" ),
                                        6 - mon->get_armor_type( damage_bash, bodypart_id( "torso" ) ) );
                     add_msg_if_player_sees( newp, _( "A %1$s hits the %2$s!" ), tmp.tname(), mon->name() );
@@ -1813,7 +1822,7 @@ void map::maybe_apply_field_effect( const std::vector<field_effect> &vfe, Creatu
     bool in_vehicle = false;
     bool inside_vehicle = false;
 
-    if( const optional_vpart_position vp = veh_at( critter.pos_bub() ) ; vp.has_value() ) {
+    if( const optional_vpart_position vp = veh_at( critter.pos_abs() ); vp.has_value() ) {
         in_vehicle = true;
         if( vp->is_inside() ) {
             inside_vehicle = true;

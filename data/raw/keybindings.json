@@ -3633,6 +3633,11 @@
   },
   {
     "type": "keybinding",
+    "name": "Toggle 3D terrain view",
+    "id": "toggle_3d_view"
+  },
+  {
+    "type": "keybinding",
     "name": "Sidebar options",
     "category": "DEFAULTMODE",
     "id": "toggle_panel_adm"
@@ -5732,6 +5737,13 @@
     "name": "Co-op chat",
     "category": "DEFAULTMODE",
     "bindings": [ { "input_method": "keyboard_any", "key": "C", "mod": [ "shift" ] } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "coop_session",
+    "name": "Co-op session",
+    "category": "DEFAULTMODE",
+    "bindings": [ { "input_method": "keyboard_any", "key": "F10" } ]
   },
   {
     "type": "keybinding",

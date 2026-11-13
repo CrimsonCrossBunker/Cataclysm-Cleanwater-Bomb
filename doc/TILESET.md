@@ -679,6 +679,12 @@ In order to be included in the distribution of the game, a tileset must meet the
 - Imagery: in general we do not have rules about imagery and content in tilesets, but we may request changes or refuse admission if a set includes overt hate imagery (swastikas for example).
 
 
+## 3D furniture artwork
+
+Add an optional `furniture_3d.json` next to `tileset.txt`. The file contains an array of furniture IDs and their boxes. Each box has an `origin` and `size` in tile-local XYZ coordinates, and a `color` in RGB. Coordinates and color channels range from 0 to 1. On Z, 1 is a full map level. Each box must have positive dimensions and fit within the tile. An entry can have up to 16 boxes.
+
+The 3D view uses those boxes for drawing and picking. Furniture without an entry uses the tileset's sprites. Item sprites on a modeled piece of furniture sit on the highest box under the center of the tile. Look in `gfx/ASCIITileset/furniture_3d.json` for open and closed crates and a table.
+
 ## Legacy tilesets
 
 Prior to October 2019, when `compose.py` was made, sprite indices in `tile_config.json` had to be calculated by hand. Following is a description for them.

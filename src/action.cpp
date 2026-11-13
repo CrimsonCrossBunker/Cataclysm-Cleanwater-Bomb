@@ -39,6 +39,9 @@
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "messages.h"
+#ifdef MP_ENABLED
+    #include "mp_gamestate.h"
+#endif
 #include "options.h"
 #include "output.h"
 #include "path_info.h"
@@ -371,6 +374,8 @@ std::string action_ident( action_id act )
             return "toggle_fullscreen";
         case ACTION_TOGGLE_PIXEL_MINIMAP:
             return "toggle_pixel_minimap";
+        case ACTION_TOGGLE_3D_VIEW:
+            return "toggle_3d_view";
         case ACTION_TOGGLE_PANEL_ADM:
             return "toggle_panel_adm";
         case ACTION_PANEL_MGMT:
@@ -399,6 +404,8 @@ std::string action_ident( action_id act )
             return "high_five";
         case ACTION_COOP_CHAT:
             return "coop_chat";
+        case ACTION_COOP_SESSION:
+            return "coop_session";
         case ACTION_MANAGE_ANDROID_EXTRA_BUTTONS:
             return "manage_android_extra_buttons";
         case ACTION_ITEMACTION:
@@ -475,6 +482,7 @@ bool can_action_change_worldstate( const action_id act )
         case ACTION_HELP:
         case ACTION_MAIN_MENU:
         case ACTION_KEYBINDINGS:
+        case ACTION_COOP_SESSION:
         case ACTION_OPTIONS:
         case ACTION_AUTOPICKUP:
         case ACTION_AUTONOTES:
@@ -493,6 +501,7 @@ bool can_action_change_worldstate( const action_id act )
         case ACTION_ZOOM_OUT:
         case ACTION_ZOOM_IN:
         case ACTION_TOGGLE_PIXEL_MINIMAP:
+        case ACTION_TOGGLE_3D_VIEW:
         case ACTION_TOGGLE_PANEL_ADM:
         case ACTION_PANEL_MGMT:
         case ACTION_RELOAD_TILESET:
@@ -613,7 +622,8 @@ action_id get_movement_action_from_delta( const tripoint_rel_ms &d, const iso_ro
     return ACTION_NULL;
 }
 
-point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rotate rot )
+point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rotate rot,
+        const camera_input *camera )
 {
     // the movement keys' own frame: FORTH is up on screen (= north here),
     // clockwise through FORTH_LEFT
@@ -647,6 +657,9 @@ point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rota
             return point_rel_ms::zero;
     }
     if( rot == iso_rotate::yes ) {
+        if( camera ) {
+            return point_rel_ms( camera->map_direction( delta.raw() ) );
+        }
 #if defined(TILES)
         // 3D: screen direction -> map direction for the orbit camera
         if( render3d::camera_screen_to_map_delta( delta.x(), delta.y() ) ) {
@@ -1148,6 +1161,7 @@ action_id handle_action_menu( map &here )
 #endif
 #if defined(TILES)
             REGISTER_ACTION( ACTION_TOGGLE_PIXEL_MINIMAP );
+            REGISTER_ACTION( ACTION_TOGGLE_3D_VIEW );
             REGISTER_ACTION( ACTION_RELOAD_TILESET );
             REGISTER_ACTION( ACTION_TOGGLE_PREVENT_OCCLUSION );
 #endif // TILES
@@ -1305,6 +1319,11 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_DISTRACTION_MANAGER );
     REGISTER_ACTION( ACTION_COLOR );
     REGISTER_ACTION( ACTION_WORLD_MODS );
+#ifdef MP_ENABLED
+    if( !cata_mp::is_client_mode() && !cata_mp::is_server_mode() ) {
+        REGISTER_ACTION( ACTION_COOP_SESSION );
+    }
+#endif
     REGISTER_ACTION( ACTION_ACTIONMENU );
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,

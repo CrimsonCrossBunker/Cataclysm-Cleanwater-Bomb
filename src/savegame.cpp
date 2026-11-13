@@ -37,6 +37,7 @@
 #include "mission.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_actor_binding.h"
 #include "mtype.h"
 #include "npc.h"
 #include "omdata.h"
@@ -1504,7 +1505,10 @@ void overmap::serialize( std::ostream &fout ) const
     json.member( "npcs" );
     json.start_array();
     for( const auto &i : npcs ) {
-        json.write( *i );
+        // Authenticated guests persist through the world player store.
+        if( !cata_mp::is_player_proxy( *i ) ) {
+            json.write( *i );
+        }
     }
     json.end_array();
     fout << std::endl;
@@ -1892,6 +1896,10 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
                     jp.get_member( "point" ).read( pt, false );
                 }
                 revert.set_furn( pt, furn_id( jp.get_string( "furn" ) ) );
+                point offset;
+                if( jp.read( "furn_offset", offset ) ) {
+                    revert.set_furniture_offset( pt, offset );
+                }
                 revert.set_ter( pt, ter_id( jp.get_string( "ter" ) ) );
                 revert.set_trap( pt, trap_id( jp.get_string( "trap" ) ) );
                 if( jp.has_member( "items" ) ) {
@@ -2054,6 +2062,9 @@ void timed_event_manager::serialize_all( JsonOut &jsout )
                     point_sm_ms pt( x, y );
                     jsout.member( "point", pt );
                     jsout.member( "furn", elem.revert.get_furn( pt ) );
+                    if( const point offset = elem.revert.furniture_offset( pt ); offset != point::zero ) {
+                        jsout.member( "furn_offset", offset );
+                    }
                     jsout.member( "ter", elem.revert.get_ter( pt ) );
                     jsout.member( "trap", elem.revert.get_trap( pt ) );
                     jsout.member( "items", elem.revert.get_items( pt ) );

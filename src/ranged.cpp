@@ -3825,7 +3825,9 @@ bool target_ui::handle_cursor_movement( const std::string &action, bool &skip_re
     } else if( action == "SELECT" &&
                ( mouse_pos = ctxt.get_coordinates( g->w_terrain, g->ter_view_p.raw().xy() ) ) ) {
         // Set pos by clicking with mouse
-        mouse_pos->z() = you->posz() + you->view_offset.z();
+        if( !ctxt.has_map_click() ) {
+            mouse_pos->z() = you->posz() + you->view_offset.z();
+        }
         set_cursor_pos( *mouse_pos );
     } else if( action == "LEVEL_UP" || action == "LEVEL_DOWN" ) {
         // Shift view/cursor up/down one z level
@@ -3866,6 +3868,14 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
     std::vector < tripoint_bub_ms > new_traj;
     tripoint_bub_ms valid_pos = new_pos;
     map &here = get_map();
+    const auto aim_path = [&]( const tripoint_bub_ms & target ) {
+        if( mode != TargetMode::Fire ) {
+            return here.find_clear_path( src, target );
+        }
+        const Creature *victim = get_creature_tracker().creature_at( target );
+        return projectile_path( here, src, target, you,
+                                victim && pl_sees( *victim ) ? victim : nullptr );
+    };
     if( new_pos != src ) {
         // On Z axis, make sure we do not exceed map boundaries
         valid_pos.z() = clamp( valid_pos.z(), -OVERMAP_DEPTH, OVERMAP_HEIGHT );
@@ -3891,7 +3901,7 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
             }
         }
 
-        new_traj = here.find_clear_path( src, valid_pos );
+        new_traj = aim_path( valid_pos );
         if( range == 1 ) {
             // We should always be able to hit adjacent squares
             if( square_dist( src, valid_pos ) > 1 ) {
@@ -3937,7 +3947,7 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
         traj = new_traj;
     } else {
         dst = valid_pos;
-        traj = here.find_clear_path( src, dst );
+        traj = aim_path( dst );
     }
 
     if( snap_to_target ) {
@@ -4072,6 +4082,17 @@ void target_ui::update_target_list()
 tripoint_bub_ms target_ui::choose_initial_target()
 {
     map &here = get_map();
+
+    if( mode == TargetMode::Fire ) {
+        const auto initial_target = activity->take_initial_target();
+        if( initial_target && here.has_loaded_submap( project_to<coords::sm>( *initial_target ) ) ) {
+            const tripoint_bub_ms selected = here.get_bub( *initial_target );
+            const Creature *picked = get_creature_tracker().creature_at( selected );
+            if( picked && picked != you && pl_sees( *picked ) && dist_fn( selected ) <= range ) {
+                return selected;
+            }
+        }
+    }
 
     // Try previously targeted creature
     shared_ptr_fast < Creature > cr = you->last_target.lock();

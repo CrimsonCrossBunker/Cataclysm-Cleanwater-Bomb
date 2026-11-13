@@ -28,6 +28,7 @@ class JsonArray;
 class JsonOut;
 class creature_reachability_filter;
 class game;
+class map;
 class monster;
 class npc;
 
@@ -158,8 +159,17 @@ class creature_tracker
         /** Remove the monsters entry in @ref monsters_by_location */
         void remove_from_location_map( const monster &critter );
 
+        using reachable_factions = std::unordered_map<mfaction_id, std::vector<shared_ptr_fast<Creature>>>;
+        using passability_grid = std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS>;
+        struct reachability_zones;
+        reachable_factions *reachable_creatures( const Creature &origin );
         void flood_fill_zone( const Creature &origin,
                               const creature_reachability_filter *occupancy = nullptr );
+        void flood_fill_zone( const Creature &origin, map &terrain, const passability_grid &bitmap,
+                              reachability_zones *regional,
+                              const creature_reachability_filter *occupancy );
+        reachability_zones &zones_for( map &terrain );
+        void reset_reachability_zones();
         creature_reachability_filter creature_locations_for_flood() const;
 
         void rebuild_cache();
@@ -169,6 +179,7 @@ class creature_tracker
 
         /** Rebuild the passability bitmap from level caches. Called when dirty_ is set. */
         void rebuild_passability_bitmap();
+        static void fill_passability_bitmap( const map &terrain, passability_grid &bitmap );
         void invalidate_reachability_preparation();
         const ai_reachability::output *prepare_reachability_geometry();
 
@@ -197,16 +208,15 @@ class creature_tracker
         bool dirty_ = true;  // NOLINT(cata-serialize)
         int zone_tick_ = 1;  // NOLINT(cata-serialize)
         int zone_number_ = 0;  // NOLINT(cata-serialize)
-        std::unordered_map<int, std::unordered_map<mfaction_id, std::vector<shared_ptr_fast<Creature>>>>
-        creatures_by_zone_and_faction_;  // NOLINT(cata-serialize)
+        std::unordered_map<int, reachable_factions>
+        creatures_by_zone_and_faction_; // NOLINT(cata-serialize)
 
         // Pre-computed passability bitmap for flood_fill_zone.  Each bit is
         // true when the tile is transparent-without-fields OR passable (terrain
         // movecost != 0).  Rebuilt only when dirty_ is set (terrain/furniture
         // changes), so vehicle positions may be stale — acceptable for zone
         // caching which is itself a lazy approximation.
-        std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS>
-        passability_bitmap_{};  // NOLINT(cata-serialize)
+        passability_grid passability_bitmap_{};  // NOLINT(cata-serialize)
 
         // Keep preparation and traversal scratch behind the same owner boundary.
         // This preserves the location/zone cache offsets and tracker footprint.
@@ -234,11 +244,8 @@ template <typename FactionPredicateFn, typename CreaturePredicateFn>
 Creature *creature_tracker::find_reachable( const Creature &origin, FactionPredicateFn &&faction_fn,
         CreaturePredicateFn &&creature_fn )
 {
-    flood_fill_zone( origin );
-
-    const auto map_iter = creatures_by_zone_and_faction_.find( origin.get_reachable_zone() );
-    if( map_iter != creatures_by_zone_and_faction_.end() ) {
-        for( auto& [faction, creatures] : map_iter->second ) {
+    if( reachable_factions *const reachable = reachable_creatures( origin ) ) {
+        for( auto &[faction, creatures] : *reachable ) {
             if( !faction_fn( faction ) ) {
                 continue;
             }

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "action.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
@@ -555,6 +556,74 @@ TEST_CASE( "map_route_player_up_down_stairs", "[map][pathfinding]" )
             }
         }
     }
+    clear_map_without_vision();
+}
+
+TEST_CASE( "automove_uses_the_native_landing_for_offset_stairs", "[map][pathfinding][automove]" )
+{
+    map &here = setup_map_without_obstacles();
+    const tripoint_abs_omt omt = project_to<coords::omt>( here.get_abs(
+            tripoint_bub_ms( 60, 60, 0 ) ) );
+    const tripoint_bub_ms origin = here.get_bub( project_to<coords::ms>( omt ) ) + point( 8, 8 );
+    Character &who = get_player_character();
+    who.setpos( here, origin, false );
+    const tripoint_bub_ms start = who.pos_bub( here );
+    const int horizontal_offset = GENERATE( 1, 2 );
+    const tripoint_bub_ms landing = start + tripoint( horizontal_offset, 0, 1 );
+    here.ter_set( start, ter_id( "t_stairs_up" ) );
+    here.ter_set( landing, ter_id( "t_stairs_down" ) );
+    const auto path = here.route( who, pathfinding_target::point( landing ) );
+    REQUIRE( path == std::vector<tripoint_bub_ms> { landing } );
+    who.set_destination( path );
+    CHECK( who.get_next_auto_move_direction() == ACTION_MOVE_UP );
+
+    if( horizontal_offset == 2 ) {
+        here.ter_set( landing, ter_id( "t_floor" ) );
+        who.set_destination( path );
+        CHECK( who.get_next_auto_move_direction() == ACTION_NULL );
+        CHECK( who.get_auto_move_route() == path );
+    }
+    who.clear_destination();
+    clear_map_without_vision();
+}
+
+TEST_CASE( "ramp_routes_enter_the_same_cell_as_a_horizontal_move", "[map][pathfinding][ramp]" )
+{
+    map &here = setup_map_without_obstacles();
+    Character &who = place_player_at( tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms lower = who.pos_bub( here );
+    const point uphill = GENERATE( point::north, point::east, point::south, point::west );
+    const tripoint_bub_ms upper = lower + uphill + tripoint::above;
+    const tripoint_bub_ms up_proxy = upper + tripoint::below;
+    const tripoint_bub_ms down_proxy = lower + tripoint::above;
+    here.ter_set( lower, ter_id( "t_ramp_up_low" ) );
+    here.ter_set( up_proxy, ter_id( "t_ramp_up_high" ) );
+    here.ter_set( upper, ter_id( "t_ramp_down_high" ) );
+    here.ter_set( down_proxy, ter_id( "t_ramp_down_low" ) );
+    here.build_map_cache( 0 );
+    here.build_map_cache( 1 );
+
+    const auto low_segment = here.ramp_segment_at( lower );
+    const auto high_segment = here.ramp_segment_at( upper );
+    REQUIRE( low_segment );
+    REQUIRE( high_segment );
+    CHECK( low_segment->uphill == uphill );
+    CHECK( high_segment->uphill == uphill );
+    CHECK_FALSE( low_segment->upper );
+    CHECK( high_segment->upper );
+    CHECK_FALSE( here.ramp_segment_at( down_proxy ) );
+    CHECK( here.ramp_z_offset( up_proxy ) == 1 );
+    CHECK( here.ramp_z_offset( down_proxy ) == -1 );
+    const auto path_up = here.route( who, pathfinding_target::point( upper ) );
+    CHECK( path_up == std::vector<tripoint_bub_ms> { upper } );
+    const auto path_down = here.route( upper, pathfinding_target::point( lower ),
+                                       who.get_pathfinding_settings(), who.get_path_avoid() );
+    CHECK( path_down == std::vector<tripoint_bub_ms> { lower } );
+
+    here.ter_set( up_proxy, ter_id( "t_floor" ) );
+    CHECK_FALSE( here.ramp_segment_at( lower ) );
+    CHECK_FALSE( here.ramp_segment_at( upper ) );
+    CHECK( here.route( who, pathfinding_target::point( upper ) ).empty() );
     clear_map_without_vision();
 }
 

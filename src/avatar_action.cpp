@@ -10,6 +10,7 @@
 #include <safe_reference.h>
 #include <translation.h>
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstdint>
 #include <cstdlib>
@@ -256,25 +257,29 @@ bool avatar_action::confirm_non_hostile_melee_attack( avatar &you, const monster
 }
 
 std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
-        const tripoint_rel_ms &d )
+        const tripoint_rel_ms &d, const fractional_walk *step )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const character_action_guard lifetime( you );
     if( !lifetime || !g->check_safe_mode_allowed() || d.z() != 0 ||
-        std::abs( d.x() ) > 1 || std::abs( d.y() ) > 1 || d == tripoint_rel_ms::zero ) {
+        std::abs( d.x() ) > 1 || std::abs( d.y() ) > 1 || ( !step && d == tripoint_rel_ms::zero ) ) {
         return std::nullopt;
     }
-    const tripoint_abs_ms origin = you.pos_abs();
+    const world_position origin = you.pos_world();
+    const bool within_cell = step && step->target.tile() == origin.tile();
+    if( within_cell && !step->drags_vehicle( you ) ) {
+        walk_move_choices choices;
+        choices.destination = origin.tile();
+        return choices;
+    }
     tripoint_bub_ms destination = you.pos_bub( m ) + d;
-    if( !m.inbounds( destination ) ) {
+    if( !m.has_loaded_submap( destination ) ) {
         return std::nullopt;
     }
-    if( m.has_flag( ter_furn_flag::TFLAG_RAMP_UP, destination ) ) {
-        destination.z() += 1;
-    } else if( m.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, destination ) ) {
-        destination.z() -= 1;
+    if( !within_cell ) {
+        destination.z() += m.ramp_z_offset( destination );
     }
-    if( !m.inbounds( destination ) ) {
+    if( !m.has_loaded_submap( destination ) ) {
         return std::nullopt;
     }
     walk_move_choices choices;
@@ -282,14 +287,15 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
     const ter_id terrain = m.ter( destination );
     const furn_id furniture = m.furn( destination );
     const auto unchanged = [&]() {
-        return lifetime && you.pos_abs() == origin && m.inbounds( *choices.destination ) &&
+        return lifetime && you.pos_world() == origin &&
+               m.has_loaded_submap( m.get_bub( *choices.destination ) ) &&
                m.ter( m.get_bub( *choices.destination ) ) == terrain &&
                m.furn( m.get_bub( *choices.destination ) ) == furniture;
     };
     // Modal UI may pump network updates. Carry identities, never borrowed parts.
-    const std::vector<tripoint_abs_ms> targets = { *choices.destination,
-                                                   m.get_abs( you.pos_bub( m ) + you.grab_point )
-                                                 };
+    const std::array<tripoint_abs_ms, 2> targets = { *choices.destination,
+                                                     m.get_abs( you.pos_bub( m ) + you.grab_point )
+                                                   };
     for( const auto &target : targets ) {
         const optional_vpart_position vp = m.veh_at( m.get_bub( target ) );
         if( !vp || !vp->vehicle().has_owner() || vp->vehicle().is_owned_by( you ) ||
@@ -310,6 +316,9 @@ std::optional<walk_move_choices> avatar_action::query_walk( avatar &you, map &m,
         }
         choices.allow_theft = true;
         choices.theft_vehicles.push_back( identity );
+    }
+    if( within_cell ) {
+        return unchanged() ? std::optional<walk_move_choices>( choices ) : std::nullopt;
     }
     const optional_vpart_position from = m.veh_at( you.pos_bub( m ) );
     const bool dive_from_vehicle = from && std::abs( from->vehicle().velocity ) > 100 &&
@@ -359,21 +368,25 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
     return move( static_cast<Character &>( you ), m, d, nullptr );
 }
 
-bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
-                          const walk_move_choices *choices )
+namespace avatar_action
+{
+static bool move_character( Character &you, map &m, const tripoint_rel_ms &d,
+                            const walk_move_choices *choices, const fractional_walk *step )
 {
     const character_action_guard lifetime( you );
     if( !lifetime || ( choices && ( d.z() != 0 || std::abs( d.x() ) > 1 ||
-                                    std::abs( d.y() ) > 1 || d == tripoint_rel_ms::zero ) ) ) {
+                                    std::abs( d.y() ) > 1 ||
+                                    ( !step && d == tripoint_rel_ms::zero ) ) ) ) {
         return false;
     }
     const bool local_input = you.is_avatar() && !choices;
-    const tripoint_abs_ms origin = you.pos_abs();
+    const world_position starting_position = you.pos_world();
+    const tripoint_abs_ms origin = starting_position.tile();
     const uint64_t route_generation = you.destination_generation();
     const auto movement_context = m.get_context_reference();
     const auto mount = you.mounted_creature;
     const auto at_origin = [&]() {
-        return lifetime && movement_context && you.pos_abs() == origin &&
+        return lifetime && movement_context && you.pos_world() == starting_position &&
                you.mounted_creature == mount && you.destination_generation() == route_generation;
     };
     map &here = get_map();
@@ -420,23 +433,21 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
         dest_loc.z() = you_pos.z() + d.z();
     }
 
-    if( dest_loc == you.pos_bub() ) {
+    const bool within_cell = step && dest_loc == you_pos;
+    if( !step && dest_loc == you_pos ) {
         // Well that sure was easy
         return true;
     }
-    if( !m.inbounds( dest_loc ) ) {
+    if( !m.has_loaded_submap( dest_loc ) ) {
         return false;
     }
-    bool via_ramp = false;
-    if( m.has_flag( ter_furn_flag::TFLAG_RAMP_UP, dest_loc ) ) {
-        dest_loc.z() += 1;
-        via_ramp = true;
-    } else if( m.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, dest_loc ) ) {
-        dest_loc.z() -= 1;
-        via_ramp = true;
-    }
+    const int ramp_z = within_cell ? 0 : m.ramp_z_offset( dest_loc );
+    dest_loc.z() += ramp_z;
+    const bool via_ramp = ramp_z != 0;
 
-    if( !m.inbounds( dest_loc ) ) {
+    if( !m.has_loaded_submap( dest_loc ) ||
+        ( step && choices && !choices->confirms( m.get_abs( dest_loc ) ) ) ||
+        ( step && !step->clears_obstacles( m, you, dest_loc ) ) ) {
         return false;
     }
 
@@ -471,7 +482,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
         }
     }
 
-    if( local_input && g->mostseen == 0 && get_option<bool>( "AUTO_FEATURES" ) &&
+    if( !within_cell && local_input && g->mostseen == 0 && get_option<bool>( "AUTO_FEATURES" ) &&
         get_option<bool>( "AUTO_MINING" ) ) {
         const std::string method = automatic_mining_method( you, m, m.get_abs( dest_loc ) );
         if( !method.empty() ) {
@@ -498,7 +509,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
     }
 
     // If the player is *attempting to* move on the X axis, update facing direction of their sprite to match.
-    point_rel_ms new_d = dest_loc.xy() - you_pos.xy();
+    const point_rel_ms new_d = step ? point_rel_ms( step->displacement ) : dest_loc.xy() - you_pos.xy();
 
     if( !g->is_tileset_isometric() ) {
         if( new_d.x() > 0 ) {
@@ -586,7 +597,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
                            you_pos.x() << "," << you_pos.y() << "," << you_pos.z() << ") to (" <<
                            dest_loc.x() << "," << dest_loc.y() << "," << dest_loc.z() << ")";
 
-    if( local_input && g->disable_robot( dest_loc ) ) {
+    if( !within_cell && local_input && g->disable_robot( dest_loc ) ) {
         return false;
     }
 
@@ -599,7 +610,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
 
     creature_tracker &creatures = get_creature_tracker();
     bool attacking = false;
-    if( creatures.creature_at( dest_loc ) ) {
+    if( !within_cell && creatures.creature_at( dest_loc ) ) {
         attacking = true;
     }
 
@@ -613,6 +624,25 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
 
     if( !at_origin() ) {
         return false;
+    }
+    if( within_cell ) {
+        if( !you.has_flag( json_flag_CANNOT_MOVE ) && is_riding &&
+            !you.check_mount_will_move( dest_loc ) ) {
+            if( at_origin() ) {
+                you.mod_moves( -you.get_speed() * 0.2 );
+            }
+            return false;
+        }
+        if( !at_origin() || you.has_flag( json_flag_CANNOT_MOVE ) ) {
+            return false;
+        }
+        if( !m.veh_at( dest_loc ) && m.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, dest_loc ) &&
+            m.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest_loc ) &&
+            !m.has_flag_furn( "BRIDGE", dest_loc ) && !you.has_flag( json_flag_WATERWALKING ) ) {
+            swim( m, you, dest_loc, choices, step );
+            return lifetime && you.pos_world() == step->target;
+        }
+        return g->walk_move( you, dest_loc, false, false, choices, step );
     }
     if( monster *const mon_ptr = creatures.creature_at<monster>( dest_loc, true ) ) {
         monster &critter = *mon_ptr;
@@ -766,7 +796,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
                 you.add_msg_if_player( m_info, _( "%s to dive underwater." ),
                                        press_x( ACTION_MOVE_DOWN ) );
             }
-            avatar_action::swim( here, you, dest_loc, choices );
+            avatar_action::swim( here, you, dest_loc, choices, step );
         }
 
         if( lifetime && you.pos_abs() != origin ) {
@@ -797,7 +827,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
 
     const tripoint_abs_ms old_abs_pos = you.pos_abs();
     const tripoint_abs_ms abs_dest_loc = here.get_abs( dest_loc );
-    if( g->walk_move( you, dest_loc, via_ramp, false, choices ) ) {
+    if( g->walk_move( you, dest_loc, via_ramp, false, choices, step ) ) {
         if( !lifetime ) {
             return false;
         }
@@ -929,24 +959,57 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
     return false;
 }
 
+} // namespace avatar_action
+
+bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
+                          const walk_move_choices *choices )
+{
+    return move_character( you, m, d, choices, nullptr );
+}
+
+bool avatar_action::can_move_fractional( const Character &you, const map &here )
+{
+    const bool powered_mount = you.is_mounted() &&
+                               you.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH );
+    const object_type grab = you.get_grab_type();
+    return here.has_loaded_submap( you.pos_bub( here ) ) && !you.in_vehicle && !powered_mount &&
+           ( grab == object_type::NONE || grab == object_type::FURNITURE || grab == object_type::VEHICLE ) &&
+           !you.has_effect( effect_stunned ) && !you.has_effect( effect_psi_stunned );
+}
+
+bool avatar_action::move_fractional( Character &you, map &m, const point &delta,
+                                     const walk_move_choices *choices )
+{
+    if( !can_move_fractional( you, m ) || you.get_moves() <= 0 ) {
+        return false;
+    }
+    const auto step = fractional_walk::resolve( you.pos_world(), delta );
+    return step && step->supports_grab( you, m ) &&
+           move_character( you, m, step->target.tile() - you.pos_abs(), choices, &*step );
+}
+
 void avatar_action::swim( map &m, avatar &you, const tripoint_bub_ms &p )
 {
     swim( m, static_cast<Character &>( you ), p, nullptr );
 }
 
 void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
-                          const walk_move_choices *choices )
+                          const walk_move_choices *choices, const fractional_walk *step )
 {
     const character_action_guard lifetime( you );
     if( !lifetime || !m.inbounds( p ) ) {
         return;
     }
-    const tripoint_abs_ms origin = you.pos_abs();
+    const world_position origin = you.pos_world();
+    const auto mount = you.is_mounted() ? you.mounted_creature : shared_ptr_fast<monster>();
     const auto at_origin = [&]() {
-        return lifetime && you.pos_abs() == origin;
+        return lifetime && you.pos_world() == origin && ( !mount || you.mounted_creature == mount );
     };
-    if( const Creature *occupant = get_creature_tracker().creature_at( p ) ) {
-        if( occupant != &you ) {
+    const tripoint_abs_ms destination = m.get_abs( p );
+    const bool within_cell = step && origin.tile() == destination;
+    if( !within_cell ) {
+        if( const Creature *occupant = get_creature_tracker().creature_at( p ); occupant &&
+            occupant != &you ) {
             return;
         }
     }
@@ -955,6 +1018,20 @@ void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
         dbg( D_ERROR ) << "game:plswim: Tried to swim in "
                        << m.tername( p ) << "!";
         debugmsg( "Tried to swim in %s!", m.tername( p ) );
+        return;
+    }
+    if( within_cell ) {
+        const int swim_cost = you.swim_speed();
+        you.mod_moves( -step->scale_cost( std::min( swim_cost, 200 ) ) );
+        if( !mount ) {
+            you.burn_move_stamina( step->scale_cost( swim_cost ) );
+        }
+        if( at_origin() ) {
+            you.setpos( m, step->target, false );
+            if( lifetime && mount && you.mounted_creature == mount && you.pos_world() == step->target ) {
+                mount->setpos( m, step->target, false );
+            }
+        }
         return;
     }
     if( you.has_effect( effect_onfire ) ) {
@@ -1030,9 +1107,15 @@ void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
         return;
     }
     tripoint_abs_ms old_abs_pos = you.pos_abs();
-    you.setpos( m, p );
+    const world_position landing = step ?
+                                   *world_position::from_tile( destination, step->target.offset() ) :
+                                   world_position( destination );
+    you.setpos( m, landing );
     if( !lifetime ) {
         return;
+    }
+    if( step && mount && you.is_mounted() && you.mounted_creature == mount ) {
+        mount->setpos( m, you.pos_world(), false );
     }
     if( you.is_avatar() ) {
         g->update_map( *you.as_avatar() );
@@ -1045,11 +1128,13 @@ void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
     if( m.veh_at( you.pos_bub() ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
         m.board_vehicle( you.pos_bub(), &you );
     }
-    you.mod_moves( -( ( movecost > 200 ? 200 : movecost ) * ( trigdist && diagonal ? M_SQRT2 : 1 ) ) );
+    const int move_charge = std::min( movecost, 200 );
+    you.mod_moves( -( step ? step->scale_cost( move_charge ) :
+                      static_cast<int>( move_charge * ( trigdist && diagonal ? M_SQRT2 : 1 ) ) ) );
     you.inv->rust_iron_items();
 
     if( !you.is_mounted() ) {
-        you.burn_move_stamina( movecost );
+        you.burn_move_stamina( step ? step->scale_cost( movecost ) : movecost );
     }
 
     body_part_set flags;
@@ -1324,7 +1409,8 @@ bool avatar_action::can_fire_weapon( avatar &you, const map &m, const item &weap
     return false;
 }
 
-void avatar_action::fire_wielded_weapon( avatar &you )
+void avatar_action::fire_wielded_weapon( avatar &you,
+        const std::optional<tripoint_abs_ms> &initial_target )
 {
     const item_location weapon = you.get_wielded_item();
 
@@ -1353,7 +1439,7 @@ void avatar_action::fire_wielded_weapon( avatar &you )
         return;
     }
 
-    you.assign_activity( aim_activity_actor::use_wielded() );
+    you.assign_activity( aim_activity_actor::use_wielded( initial_target ) );
 }
 
 void avatar_action::fire_ranged_mutation( Character &you, const item &fake_gun )

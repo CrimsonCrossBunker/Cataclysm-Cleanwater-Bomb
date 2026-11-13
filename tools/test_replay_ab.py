@@ -408,6 +408,12 @@ class ReplayProcessTest(unittest.TestCase):
         self.assertEqual(current["seed"], legacy["seed"])
         self.assertEqual(current["recorded_events"], legacy["recorded_events"])
         self.assertNotEqual(current["sha256"], legacy["sha256"])
+        self.replay.write_text(
+            f"CATA_REPLAY 3\nSEED 123\nPROFILE_SEED {seed}\n"
+            "EV 5 0 1 1 0 0 - - 3 2 127 9 -12 35 -1\n")
+        spatial = replay_ab.replay_metadata(self.replay)
+        self.assertEqual(spatial["profile_seed"], seed)
+        self.assertEqual(spatial["recorded_events"], 1)
 
     def test_malformed_profile_seeds_are_rejected_before_launch(self):
         for header in ["", "PROFILE_SEED", "PROFILE_SEED " + "A" * 32,

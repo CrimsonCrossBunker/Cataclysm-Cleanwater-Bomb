@@ -320,6 +320,7 @@ enum class ter_furn_flag : int {
     TFLAG_SEEN_FROM_ABOVE,
     TFLAG_RAMP_DOWN,
     TFLAG_RAMP_UP,
+    TFLAG_RAMP_ENDPOINT,
     TFLAG_RAMP,
     TFLAG_HIDE_PLACE,
     TFLAG_BLOCK_WIND,

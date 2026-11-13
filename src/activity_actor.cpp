@@ -498,9 +498,17 @@ aim_activity_actor::aim_activity_actor()
     initial_view_offset = get_avatar().view_offset;
 }
 
-aim_activity_actor aim_activity_actor::use_wielded()
+aim_activity_actor aim_activity_actor::use_wielded(
+    const std::optional<tripoint_abs_ms> &initial_target )
 {
-    return aim_activity_actor();
+    aim_activity_actor actor;
+    actor.initial_target = initial_target;
+    return actor;
+}
+
+std::optional<tripoint_abs_ms> aim_activity_actor::take_initial_target()
+{
+    return std::exchange( initial_target, std::nullopt );
 }
 
 aim_activity_actor aim_activity_actor::use_bionic( const item &fake_gun, unsigned int uid )
@@ -715,6 +723,9 @@ void aim_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "bionic_uid", bionic_uid );
     jsout.member( "bionic_weapon_source", bionic_weapon_source );
     jsout.member( "fin_trajectory", fin_trajectory );
+    if( initial_target ) {
+        jsout.member( "initial_target", *initial_target );
+    }
     if( burst_rounds != 0 ) {
         jsout.member( "burst_rounds", burst_rounds );
     }
@@ -745,6 +756,7 @@ std::unique_ptr<activity_actor> aim_activity_actor::deserialize( JsonValue &jsin
                                  data.get_int64( "bionic_weapon_source" ) :
                                  actor.fake_weapon ? actor.fake_weapon->uid().get_value() : 0;
     data.read( "fin_trajectory", actor.fin_trajectory );
+    data.read( "initial_target", actor.initial_target );
     actor.burst_rounds = data.get_int( "burst_rounds", 0 );
     data.read( "action", actor.action );
     data.read( "aif_duration", actor.aif_duration );
@@ -9526,13 +9538,15 @@ bool move_furniture_activity_actor::owns_grab( const Character &who ) const
 bool move_furniture_activity_actor::target_valid( const Character &who ) const
 {
     map &here = get_map();
-    if( !owns_grab( who ) || !who.grab_matches( here ) || origin != who.pos_abs() ||
-        !here.inbounds( source.position ) ) {
+    if( !owns_grab( who ) || origin != who.pos_abs() ||
+        ( origin_offset && *origin_offset != who.pos_world().offset() ) ||
+        !here.has_loaded_submap( here.get_bub( source.position ) ) || !who.grab_matches( here ) ) {
         return false;
     }
     const tripoint_bub_ms position = here.get_bub( source.position );
     if( !source.loaded_furniture ) {
-        return !here.veh_at( position ) && here.furn( position ).id() == source.furniture;
+        return !here.veh_at( position ) && here.furn( position ).id() == source.furniture &&
+               ( !fractional_delta || here.furniture_offset( position ) == source_offset );
     }
     const optional_vpart_position vp = here.veh_at( position );
     if( !vp || vp->vehicle().uid().get_value() != source.vehicle_id ) {
@@ -9563,12 +9577,14 @@ bool move_furniture_activity_actor::bind_target( Character &who )
     operator_id = who.getID();
     grab_generation = who.grab_generation();
     origin = who.pos_abs();
-    source.position = who.pos_abs() + who.grab_point;
+    origin_offset = who.pos_world().offset();
+    source.position = origin + who.grab_point;
     if( !here.inbounds( source.position ) ) {
         return false;
     }
     const tripoint_bub_ms position = here.get_bub( source.position );
     source.loaded_furniture = who.get_grab_type() == object_type::FURNITURE_ON_VEHICLE;
+    source_offset = here.furniture_offset( position );
     if( source.loaded_furniture ) {
         const optional_vpart_position vp = here.veh_at( position );
         const auto tiedown = vp.part_with_feature( "FURNITURE_TIEDOWN", true );
@@ -9599,6 +9615,14 @@ void move_furniture_activity_actor::start( player_activity &act, Character &who 
     } else {
         moves = g->grabbed_furn_move_time( who, dp );
     }
+    if( fractional_delta ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), *fractional_delta );
+        if( !step || !step->drags_furniture( who ) ) {
+            act.set_to_null();
+            return;
+        }
+        moves = step->scale_cost( moves );
+    }
     act.moves_left = moves;
     act.moves_total = moves;
 }
@@ -9612,12 +9636,30 @@ void move_furniture_activity_actor::finish( player_activity &act, Character &who
         act.set_to_null();
         return;
     }
-    const character_action_guard lifetime( who );
-    const tripoint_rel_ms step = dp;
-    const bool ramp = via_ramp;
+    map &here = get_map();
+    const tripoint_abs_ms landing = origin + dp;
+    const tripoint_abs_ms held_destination = source.position + dp;
+    if( !here.has_loaded_submap( here.get_bub( landing ) ) ||
+        !here.has_loaded_submap( here.get_bub( held_destination ) ) ) {
+        act.set_to_null();
+        return;
+    }
     const auto decisions = choices;
     const activity_execution execution = act.execution();
-    const auto held_destination = source.position + dp;
+    if( fractional_delta ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), *fractional_delta );
+        act.set_to_null();
+        who.activity.set_execution( execution );
+        if( step && step->drags_furniture( who ) && step->target.tile() == landing ) {
+            g->walk_move( who, here.get_bub( landing ), false, true,
+                          decisions ? &*decisions : nullptr, &*step );
+        }
+        return;
+    }
+    const character_action_guard lifetime( who );
+    const bool ramp = via_ramp;
+    const world_position starting_position = who.pos_world();
+    const auto context = here.get_context_reference();
     const bool stay = source.loaded_furniture ? move_loaded_furniture( who, dp ) :
                       g->grabbed_furn_move( who, dp );
     if( !lifetime || act.actor.get() != this ) {
@@ -9628,8 +9670,8 @@ void move_furniture_activity_actor::finish( player_activity &act, Character &who
     // activity. Never erase that successor or access this actor after clearing.
     act.set_to_null();
     who.activity.set_execution( execution );
-    if( !stay ) {
-        g->walk_move( who, who.pos_bub() + step, ramp, true, decisions ? &*decisions : nullptr );
+    if( !stay && context && &get_map() == &here && who.pos_world() == starting_position ) {
+        g->walk_move( who, here.get_bub( landing ), ramp, true, decisions ? &*decisions : nullptr );
         if( lifetime && who.grab_generation() == held_generation &&
             who.get_grab_type() != object_type::NONE ) {
             const auto offset = held_destination - who.pos_abs();
@@ -9661,7 +9703,14 @@ void move_furniture_activity_actor::serialize( JsonOut &out ) const
     out.member( "operator", operator_id );
     out.member( "grab_generation", grab_generation );
     out.member( "origin", origin );
+    if( origin_offset ) {
+        out.member( "origin_offset", *origin_offset );
+    }
     out.member( "source", source );
+    if( fractional_delta ) {
+        out.member( "fractional_delta", *fractional_delta );
+        out.member( "source_offset", source_offset );
+    }
     if( choices ) {
         out.member( "choices", *choices );
     }
@@ -9677,7 +9726,16 @@ std::unique_ptr<activity_actor> move_furniture_activity_actor::deserialize( Json
     data.read( "operator", actor.operator_id );
     data.read( "grab_generation", actor.grab_generation );
     data.read( "origin", actor.origin );
+    if( data.has_member( "origin_offset" ) ) {
+        actor.origin_offset.emplace();
+        data.read( "origin_offset", *actor.origin_offset );
+    }
     data.read( "source", actor.source );
+    if( data.has_member( "fractional_delta" ) ) {
+        actor.fractional_delta.emplace();
+        data.read( "fractional_delta", *actor.fractional_delta );
+        data.read( "source_offset", actor.source_offset );
+    }
     if( data.has_object( "choices" ) ) {
         actor.choices.emplace();
         data.read( "choices", *actor.choices );

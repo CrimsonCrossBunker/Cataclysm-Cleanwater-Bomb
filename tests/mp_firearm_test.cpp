@@ -714,6 +714,23 @@ TEST_CASE( "bionic_firearm_client_activation_only_opens_an_owned_aim_view",
     CHECK( g->multiplayer_session().client_firearm.next_request > 1 );
 }
 
+TEST_CASE( "firearm_aim_keeps_the_selected_floor_until_aiming_starts",
+           "[firearm][render3d]" )
+{
+    const tripoint_abs_ms picked( 100, 120, -1 );
+    player_activity activity( aim_activity_actor::use_wielded( picked ) );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    activity.serialize( out );
+    player_activity restored;
+    restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
+    auto *aim = dynamic_cast<aim_activity_actor *>( restored.actor.get() );
+    REQUIRE( aim );
+    CHECK( aim->take_initial_target() == picked );
+    CHECK_FALSE( aim->take_initial_target() );
+    CHECK_FALSE( aim_activity_actor::use_wielded().take_initial_target() );
+}
+
 TEST_CASE( "saved_bionic_aim_resolves_its_operator_instead_of_the_avatar",
            "[multiplayer][firearm][bionic]" )
 {

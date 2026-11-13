@@ -210,7 +210,7 @@ Creature::Creature()
     killer = nullptr;
     speed_base = 100;
     underwater = false;
-    location = tripoint_abs_ms( 20, 10, -500 ); // Some arbitrary position that will cause debugmsgs
+    location = world_position( tripoint_abs_ms( 20, 10, -500 ) );
 
     Creature::reset_bonuses();
 
@@ -231,19 +231,24 @@ safe_reference<Creature> Creature::get_safe_reference()
 
 tripoint_bub_ms Creature::pos_bub() const
 {
-    return get_map().get_bub( location );
+    return get_map().get_bub( pos_abs() );
 }
 
 tripoint_bub_ms Creature::pos_bub( const map &here ) const
 {
-    return here.get_bub( location );
+    return here.get_bub( pos_abs() );
 }
 
 void Creature::setpos( map &here, const tripoint_bub_ms &p, bool check_gravity/* = true*/ )
 {
-    const tripoint_abs_ms old_loc = pos_abs();
-    set_pos_abs_only( here.get_abs( p ) );
-    on_move( old_loc );
+    setpos( here, world_position( here.get_abs( p ) ), check_gravity );
+}
+
+void Creature::setpos( map &here, const world_position &p, bool check_gravity )
+{
+    const tripoint_abs_ms old_tile = pos_abs();
+    set_pos_world_only( p );
+    on_move( old_tile );
     if( check_gravity ) {
         gravity_check( &here );
     }
@@ -338,12 +343,17 @@ void Creature::move_to( const tripoint_abs_ms &loc )
 
 void Creature::set_pos_bub_only( const map &here, const tripoint_bub_ms &p )
 {
-    location = here.get_abs( p );
+    set_pos_abs_only( here.get_abs( p ) );
 }
 
 void Creature::set_pos_abs_only( const tripoint_abs_ms &loc )
 {
-    location = loc;
+    set_pos_world_only( world_position( loc ) );
+}
+
+void Creature::set_pos_world_only( const world_position &pos )
+{
+    location = pos;
 }
 
 void Creature::on_move( const tripoint_abs_ms &old_pos )
@@ -3740,17 +3750,17 @@ void Creature::load_hit_range( const JsonObject &jo )
 
 tripoint_abs_ms Creature::pos_abs() const
 {
-    return location;
+    return location.tile();
 }
 
 tripoint_abs_sm Creature::pos_abs_sm() const
 {
-    return project_to<coords::sm>( location );
+    return project_to<coords::sm>( pos_abs() );
 }
 
 tripoint_abs_omt Creature::pos_abs_omt() const
 {
-    return project_to<coords::omt>( location );
+    return project_to<coords::omt>( pos_abs() );
 }
 
 std::unique_ptr<talker> get_talker_for( Creature &me )

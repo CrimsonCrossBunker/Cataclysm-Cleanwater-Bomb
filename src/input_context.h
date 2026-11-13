@@ -404,6 +404,10 @@ class input_context
          */
         std::optional<tripoint_bub_ms> get_coordinates( const catacurses::window &capture_win_,
                 const point &offset = point::zero, bool center_cursor = false ) const;
+        bool has_map_click() const {
+            return next_action.map_click.has_value();
+        }
+        std::optional<tripoint_bub_ms> get_map_click() const;
         std::optional<tripoint_rel_omt> get_coordinates_rel_omt( const catacurses::window &capture_win_,
                 const point &offset = point::zero, bool center_cursor = false ) const;
 
@@ -450,6 +454,9 @@ class input_context
          * keybindings.json yet.
          */
         input_event get_raw_input();
+        const camera_input *get_camera_input() const {
+            return next_action.camera ? &*next_action.camera : nullptr;
+        }
 
         /**
          * Get coordinate of text level from mouse input, difference between this and get_coordinates is that one is getting pixel level coordinate.

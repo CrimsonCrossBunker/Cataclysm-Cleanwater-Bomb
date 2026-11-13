@@ -218,6 +218,14 @@ map_memory::map_memory()
     clear_cache();
 }
 
+void map_memory::set_private_store( std::optional<cata_path> directory )
+{
+    if( !( private_store == directory ) ) {
+        clear();
+        private_store = std::move( directory );
+    }
+}
+
 const memorized_tile &map_memory::get_tile( const tripoint_abs_ms &pos ) const
 {
     const coord_pair p( pos );
@@ -411,7 +419,7 @@ shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_po
 
     CATA_PROFILE_SCOPE_NAMED( "map_memory.load_region" );
     const reg_coord_pair p( sm_pos );
-    const cata_path mm_dir = find_mm_dir();
+    const cata_path mm_dir = private_store ? *private_store : find_mm_dir();
     std::filesystem::path mm_filename = std::filesystem::u8path( find_region_filename( p.reg ) );
 
     mm_region mmr;
@@ -421,7 +429,7 @@ shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_po
 
     try {
 
-        if( world_generator->active_world->has_compression_enabled() ) {
+        if( !private_store && world_generator->active_world->has_compression_enabled() ) {
             if( !reader ) {
                 reader = zzip_stack::load( mm_dir.get_unrelative_path(),
                                            ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path() );
@@ -522,8 +530,11 @@ void map_memory::load( const tripoint_abs_ms &pos )
 bool map_memory::save( const tripoint_abs_ms &pos )
 {
     const tripoint_abs_sm sm_center = coord_pair( pos ).sm;
-    const cata_path dirname = find_mm_dir();
-    assure_dir_exist( dirname );
+    const cata_path dirname = private_store ? *private_store : find_mm_dir();
+    if( !assure_dir_exist( dirname ) ) {
+        return false;
+    }
+    const bool compressed = !private_store && world_generator->active_world->has_compression_enabled();
 
     clear_cache();
 
@@ -547,13 +558,14 @@ bool map_memory::save( const tripoint_abs_ms &pos )
     bool result = true;
 
     std::shared_ptr<zzip_stack> z;
-    if( world_generator->active_world->has_compression_enabled() ) {
+    if( compressed ) {
         z = zzip_stack::load( dirname.get_unrelative_path(),
                               ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path() );
     }
     for( auto &it : regions ) {
         const tripoint &regp = it.first;
         mm_region &reg = it.second;
+        bool written = true;
         if( !reg.is_empty() ) {
             const std::filesystem::path mm_filename = std::filesystem::u8path( find_region_filename( regp ) );
             const std::string descr = string_format(
@@ -564,29 +576,25 @@ bool map_memory::save( const tripoint_abs_ms &pos )
                 reg.serialize( jsout );
             } );
 
-            if( world_generator->active_world->has_compression_enabled() ) {
-                if( z ) {
-                    result = z->add_file( mm_filename, mm_str ) && result;
-                } else {
-                    result = false;
-                }
-
+            if( compressed ) {
+                written = z && z->add_file( mm_filename, mm_str );
             } else {
                 const cata_path path = dirname / mm_filename;
                 const auto writer = [&]( std::ostream & fout ) -> void {
                     fout << mm_str;
                 };
 
-                const bool res = write_to_file( path, writer, descr.c_str() );
-                result = result && res;
+                written = write_to_file( path, writer, descr.c_str() );
             }
+            result = written && result;
         }
         const tripoint_abs_sm regp_sm( mmr_to_sm_copy( regp ) );
         const half_open_rectangle<point_abs_sm> rect_reg(
             regp_sm.xy(),
             regp_sm.xy() + point( MM_REG_SIZE, MM_REG_SIZE ) );
 
-        if( rect_reg.overlaps( rect_keep ) ) {
+        // Preserve distant regions too if the write failed, so save can retry.
+        if( !written || rect_reg.overlaps( rect_keep ) ) {
             dbg( D_INFO ) << "Keeping mm_region " << regp << " [" << regp_sm << "]";
             // Put submaps back
             for( size_t y = 0; y < MM_REG_SIZE; y++ ) {

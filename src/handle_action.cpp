@@ -136,6 +136,7 @@ enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
+    #include "render3d.h"
     #include "screen_shake.h"
     #include "sdltiles.h"
 #endif
@@ -540,6 +541,9 @@ input_context game::get_player_input( std::string &action )
             // monsters move visually without advancing local game time.
             if( cata_mp::is_client_mode() && action == "TIMEOUT" ) {
                 cata_mp::client_process_incoming();
+                if( uquit != QUIT_NO ) {
+                    break;
+                }
                 g->invalidate_main_ui_adaptor();
             }
 #endif
@@ -590,6 +594,9 @@ input_context game::get_player_input( std::string &action )
                 }
                 if( cata_mp::is_client_mode() ) {
                     cata_mp::client_process_incoming();
+                    if( uquit != QUIT_NO ) {
+                        break;
+                    }
                     g->invalidate_main_ui_adaptor();
                     if( get_avatar().activity ) {
                         break;
@@ -852,8 +859,10 @@ void game::execute_contextual_action( const action_id action, const tripoint_bub
     }
 
     const bool vertical_action = action == ACTION_MOVE_UP || action == ACTION_MOVE_DOWN;
-    if( ( vertical_action && target != player_character.pos_bub() ) ||
-        ( !vertical_action && square_dist( target.xy(), player_character.pos_bub().xy() ) > 1 ) ) {
+    const tripoint_bub_ms origin = player_character.pos_bub( here );
+    if( ( vertical_action && target != origin ) ||
+        ( !vertical_action && ( target.z() != origin.z() ||
+                                square_dist( target.xy(), origin.xy() ) > 1 ) ) ) {
         add_msg( m_info, _( "You are no longer close enough to perform that action." ) );
         return;
     }
@@ -1247,7 +1256,7 @@ static void reach_attack( avatar &you )
     g->reenter_fullscreen();
 }
 
-static void fire()
+static void fire( const std::optional<tripoint_bub_ms> &selected )
 {
     avatar &you = get_avatar();
     map &here = get_map();
@@ -1302,7 +1311,9 @@ static void fire()
     }
     // try firing gun
     if( weapon && weapon->is_gun() && !weapon->gun_current_mode().melee() ) {
-        avatar_action::fire_wielded_weapon( you );
+        const auto target = selected ? std::optional<tripoint_abs_ms>( here.get_abs( *selected ) ) :
+                            std::nullopt;
+        avatar_action::fire_wielded_weapon( you, target );
         return;
     }
     // try firing turrets
@@ -1839,6 +1850,7 @@ static const std::set<action_id> host_ui_actions = {
     ACTION_EXPORT_BUG_REPORT_ARCHIVE,
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,
     ACTION_COOP_CHAT,
+    ACTION_COOP_SESSION,
 };
 #endif
 
@@ -1867,9 +1879,28 @@ static void manage_android_buttons()
 }
 #endif
 
+static std::optional<point> fractional_walk_input( const avatar &who, const map &here,
+        action_id action, bool auto_travel, const camera_input *camera )
+{
+    if( !camera || who.is_auto_moving() || auto_travel ||
+        !avatar_action::can_move_fractional( who, here ) ) {
+        return std::nullopt;
+    }
+    const point delta = fractional_walk::camera_delta( get_delta_from_movement_action( action,
+        iso_rotate::no ).raw(), camera->forward );
+    if( who.get_grab_type() != object_type::NONE ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), delta );
+        if( !step || !step->supports_grab( who, here ) ) {
+            return std::nullopt;
+        }
+    }
+    return delta;
+}
+
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
-                              const std::optional<tripoint_bub_ms> &mouse_target )
+                              const std::optional<tripoint_bub_ms> &mouse_target,
+                              const camera_input *camera )
 {
 #if defined(__ANDROID__)
     // Android button management is a Java-side screen.  Handle it before
@@ -1880,6 +1911,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             android_native_ui::show_android_hud_manager();
         } else {
             manage_android_buttons();
+        }
+        return false;
+    }
+#endif
+
+#if defined(TILES)
+    if( act == ACTION_TOGGLE_3D_VIEW ) {
+        if( !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && !render3d::is_available() ) {
+            add_msg( m_info, _( "The current renderer cannot display the 3D terrain view." ) );
+        } else {
+            set_next_option( "RENDER3D_EXPERIMENTAL" );
+            invalidate_main_ui_adaptor();
         }
         return false;
     }
@@ -1913,8 +1956,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             return false;
         }
 
-        // Quickload would trash the MP session by reloading from disk.
-        if( act == ACTION_QUICKLOAD ) {
+        if( act == ACTION_SUICIDE ) {
+            add_msg( m_info, _( "Abandoning a character is unavailable to co-op guests." ) );
             return false;
         }
 
@@ -1991,7 +2034,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             delta != point_rel_ms::zero ) {
             map &here = get_map();
             if( has_radio_car_binding( player_character ) ) {
-                cata_mp::client_drive_radio_car( get_delta_from_movement_action( act, iso_rotate::yes ) );
+                cata_mp::client_drive_radio_car( get_delta_from_movement_action( act, iso_rotate::yes, camera ) );
                 return true;
             }
             // Vehicle control mode: route movement to pldrive instead of walk.
@@ -2012,15 +2055,32 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( mp_locked || cata_mp::is_client_waiting_for_ack() || player_character.activity ) {
                 return false;
             }
-            const tripoint_rel_ms direction( get_delta_from_movement_action( act, iso_rotate::yes ), 0 );
-            const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
-            if( !here.inbounds( target_pos ) ) {
+            const auto fractional = fractional_walk_input( player_character, here, act, auto_travel_mode,
+                camera );
+            const auto step = fractional ? fractional_walk::resolve( player_character.pos_world(),
+                *fractional ) : std::nullopt;
+            if( fractional && !step ) {
                 return false;
             }
-            if( cata_mp::client_auto_mine( here.get_abs( target_pos ) ) ) {
+            const tripoint_rel_ms direction = step ? step->target.tile() - player_character.pos_abs() :
+                                              tripoint_rel_ms( get_delta_from_movement_action( act, iso_rotate::yes, camera ), 0 );
+            tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
+            if( direction != tripoint_rel_ms::zero ) {
+                target_pos.z() += here.ramp_z_offset( target_pos );
+            }
+            if( !here.has_loaded_submap( target_pos ) ||
+                ( step && !step->clears_obstacles( here, player_character, target_pos ) ) ) {
+                if( player_character.is_auto_moving() ) {
+                    player_character.abort_automove();
+                }
+                return false;
+            }
+            if( direction != tripoint_rel_ms::zero &&
+                cata_mp::client_auto_mine( here.get_abs( target_pos ) ) ) {
                 return true;
             }
-            if( Creature *target = get_creature_tracker().creature_at( target_pos, true ) ) {
+            if( Creature *target = direction == tripoint_rel_ms::zero ? nullptr :
+                                   get_creature_tracker().creature_at( target_pos, true ) ) {
                 if( target->as_npc() && player_character.is_auto_moving() ) {
                     player_character.add_msg_if_player( _( "NPC in the way, Auto move canceled." ) );
                     player_character.abort_automove();
@@ -2045,14 +2105,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     return true;
                 }
             }
-            const auto hazards = get_dangerous_tile( player_character, target_pos );
+            const auto hazards = direction == tripoint_rel_ms::zero ? std::vector<std::string>() :
+                                 get_dangerous_tile( player_character, target_pos );
             if( hazards.size() == 1 && hazards.front() == "ledge" ) {
                 cata_mp::client_query_ledge_move( here.get_abs( target_pos ) );
                 return true;
             }
-            const auto choices = avatar_action::query_walk( player_character, here, direction );
+            const auto choices = avatar_action::query_walk( player_character, here, direction,
+                step ? &*step : nullptr );
             if( choices ) {
-                cata_mp::client_walk( direction, *choices );
+                cata_mp::client_walk( direction, *choices, fractional );
             } else if( player_character.is_auto_moving() ) {
                 player_character.abort_automove();
             }
@@ -2294,7 +2356,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( has_radio_car_binding( player_character ) ) {
                 if( const auto binding = read_radio_car_binding( player_character, here ) ) {
                     drive_radio_car( player_character, here,
-                                     get_delta_from_movement_action( act, iso_rotate::yes ), *binding );
+                                     get_delta_from_movement_action( act, iso_rotate::yes, camera ), *binding );
                 } else {
                     disconnect_radio_car( player_character );
                 }
@@ -2304,7 +2366,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 pldrive( get_delta_from_movement_action( act, iso_rotate::no ) );
             } else {
                 const int pre_walk_moves = player_character.get_moves();
-                point_rel_ms dest_delta = get_delta_from_movement_action( act, iso_rotate::yes );
+                point_rel_ms dest_delta = get_delta_from_movement_action( act, iso_rotate::yes, camera );
                 if( auto_travel_mode && !player_character.is_auto_moving() ) {
                     const bool use_grab_routing =
                         has_grabbed_single_tile_vehicle( player_character, here );
@@ -2336,12 +2398,20 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                     dest_delta = dest_next;
                 }
+                tripoint_bub_ms landing = player_character.pos_bub( here ) + dest_delta;
+                if( player_character.is_auto_moving() && dest_delta != point_rel_ms::zero &&
+                    here.has_loaded_submap( landing ) ) {
+                    landing.z() += here.ramp_z_offset( landing );
+                }
                 const auto pending_move = capture_automove_step( player_character, here,
-                                          player_character.pos_abs() + tripoint_rel_ms( dest_delta, 0 ) );
+                    here.get_abs( landing ) );
                 const character_action_guard mover( player_character );
                 const auto move_context = here.get_context_reference();
-                const bool moved = avatar_action::move( player_character, here,
-                                                        tripoint_rel_ms( dest_delta, 0 ) );
+                const auto fractional = fractional_walk_input( player_character, here, act,
+                    auto_travel_mode || pending_move.has_value(), camera );
+                const bool moved = fractional ?
+                                   avatar_action::move_fractional( player_character, here, *fractional ) :
+                                   avatar_action::move( player_character, here, tripoint_rel_ms( dest_delta, 0 ) );
                 if( !mover ) {
                     return true;
                 }
@@ -2640,6 +2710,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_COOP_CHAT:
             cata_mp::mp_open_chat();
             break;
+
+        case ACTION_COOP_SESSION:
+            cata_mp::mp_open_session_menu();
+            return false;
 #endif
 
         case ACTION_PICK_STYLE:
@@ -2732,7 +2806,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 #ifdef MP_ENABLED
                 const int pre_fire_moves = player_character.get_moves();
 #endif
-                fire();
+            fire( mouse_target );
 #ifdef MP_ENABLED
                 cata_mp::mp_client_post_action( pre_fire_moves );
 #endif
@@ -3005,13 +3079,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_SAVE:
 #ifdef MP_ENABLED
             if( cata_mp::is_client_mode() ) {
-                if( query_yn(
-                        _( "Save and disconnect?  Your character will be saved locally so you can load it on rejoin." ) ) ) {
+                if( query_yn( _( "Disconnect from the co-op host?" ) ) ) {
                     if( save() ) {
-                        discard_dimension_rollback_snapshot();
-                        cata_mp::mp_notify_session_ending();
+                        player_character.use_local_map_memory();
                         player_character.set_moves( 0 );
-                        uquit = QUIT_SAVED;
+                        uquit = QUIT_NOSAVED;
+                        cata_mp::mp_notify_session_ending();
+                    } else {
+                        add_msg( m_bad, _( "Could not save your exploration memory.  Retry before disconnecting." ) );
                     }
                 }
             } else if( query_yn( _( "Save and quit?" ) ) ) {
@@ -3309,6 +3384,10 @@ bool game::handle_action()
         ctxt = get_player_input( action );
     }
 
+    if( cata_mp::is_client_mode() && uquit != QUIT_NO ) {
+        return false;
+    }
+
 #ifdef MP_ENABLED
     if( cata_mp::is_client_mode() && action != "TIMEOUT" ) {
         cata_mp::mp_log( "[cdda-mp] HA-ACTION: action=\"" + action +
@@ -3523,7 +3602,9 @@ bool game::handle_action()
 
     // actions allowed only while alive
     if( !player_character.is_dead_state() ) {
-        if( !do_regular_action( act, player_character, mouse_target ) ) {
+        // A confirmed mouse route already supplied a movement action.
+        const camera_input *camera = mouse_target ? nullptr : ctxt.get_camera_input();
+        if( !do_regular_action( act, player_character, mouse_target, camera ) ) {
             return false;
         }
     }

@@ -2,6 +2,8 @@
 
 #include <weakpoint.h>
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <cmath>
 #include <functional>
 #include <memory>
@@ -47,6 +49,7 @@
 #include "vfx_emit.h"
 #include "viewer.h"
 #include "vpart_position.h"
+#include "world_position.h"
 #if defined(TILES)
     #include "cata_tiles.h" // for per-ammo bullet sprite lookup
     #include "sdltiles.h"    // for tilecontext
@@ -312,6 +315,75 @@ static void play_impact_spark_vfx( const tripoint_bub_ms &impact )
     explosion_handler::play_vfx( e );
 }
 
+static point projectile_offset( const map &here, const tripoint_bub_ms &tile,
+                                const Creature *actor )
+{
+    if( actor && actor->pos_abs() == here.get_abs( tile ) ) {
+        return actor->pos_world().offset().xy();
+    }
+    return point( world_position::tile_center, world_position::tile_center );
+}
+
+std::vector<tripoint_bub_ms> projectile_path( const map &here, const tripoint_bub_ms &source,
+        const tripoint_bub_ms &target, const Creature *shooter, const Creature *victim )
+{
+    constexpr int units = world_position::units_per_tile;
+    constexpr int center = world_position::tile_center;
+    const point from = projectile_offset( here, source, shooter );
+    const point to = projectile_offset( here, target, victim );
+    const point centered( center, center );
+    if( source == target || ( from == centered && to == centered ) ) {
+        return here.find_clear_path( source, target );
+    }
+    const tripoint delta = ( target - source ).raw() * units + tripoint( to - from, 0 );
+    struct axis_crossing {
+        int step;
+        int distance;
+        int boundary;
+
+        axis_crossing( int direction, int offset ) :
+            step( direction < 0 ? -1 : 1 ), distance( std::abs( direction ) ),
+            boundary( direction < 0 ? offset : units - offset ) {}
+    };
+    std::array<axis_crossing, 3> axes = {
+        axis_crossing( delta.x, from.x ), axis_crossing( delta.y, from.y ),
+        axis_crossing( delta.z, center )
+    };
+    std::vector<tripoint_bub_ms> path;
+    const tripoint_rel_ms span = ( target - source ).abs();
+    path.reserve( span.x() + span.y() + span.z() );
+    tripoint_bub_ms current = source;
+    const auto compare_crossings = [&]( int a, int b ) {
+        return static_cast<int64_t>( axes[a].boundary ) * axes[b].distance -
+               static_cast<int64_t>( axes[b].boundary ) * axes[a].distance;
+    };
+    const std::array<int *, 3> coords = { &current.x(), &current.y(), &current.z() };
+    const std::array<int, 3> end = { target.x(), target.y(), target.z() };
+    while( current != target ) {
+        int earliest = -1;
+        for( int axis = 0; axis < 3; ++axis ) {
+            if( *coords[axis] != end[axis] &&
+                ( earliest < 0 || compare_crossings( axis, earliest ) < 0 ) ) {
+                earliest = axis;
+            }
+        }
+        // A corner crossing enters the diagonal cell once. Capture every
+        // tied axis before advancing any of the crossing times.
+        std::array<bool, 3> crossed;
+        for( int axis = 0; axis < 3; ++axis ) {
+            crossed[axis] = *coords[axis] != end[axis] && compare_crossings( axis, earliest ) == 0;
+        }
+        for( int axis = 0; axis < 3; ++axis ) {
+            if( crossed[axis] ) {
+                *coords[axis] += axes[axis].step;
+                axes[axis].boundary += units;
+            }
+        }
+        path.push_back( current );
+    }
+    return path;
+}
+
 void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_arg,
                         const tripoint_bub_ms &source, const tripoint_bub_ms &target_arg,
                         const dispersion_sources &dispersion, Creature *origin, const vehicle *in_veh,
@@ -503,8 +575,8 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         // TODO: Z dispersion
     }
 
-    //Use find clear path to draw the trajectory with optimal initial tile offsets.
-    trajectory = here->find_clear_path( source, target );
+    trajectory = projectile_path( *here, source, target, in_veh ? nullptr : origin,
+                                  target == target_arg ? target_critter : nullptr );
 
     add_msg_debug( debugmode::DF_RANGED,
                    "missed_by_tiles: %.2f; missed_by: %.2f; target (orig/hit): %s/%s",
@@ -605,8 +677,10 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         for( size_t i = 1; i < traj_len && ( has_momentum || stream ); ++i ) {
             tp = t_copy[i];
             int distance = rl_dist( source, tp );
-            // no spread at point-blank, skip point-blank calculate
-            if( !first && distance <= 1 ) {
+            // Every pellet shares its first cell. A fractional path can also
+            // cross a different cell at the same distance; that cell still
+            // needs its own obstruction and floor check.
+            if( !first && i == 1 && distance <= 1 ) {
                 prev_point = tp;
                 proj.shot_impact.mult_damage( point_blank_rescale );
                 continue;

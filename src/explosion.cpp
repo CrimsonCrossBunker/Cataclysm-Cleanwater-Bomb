@@ -19,6 +19,7 @@
 
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
@@ -46,12 +47,14 @@
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "map_selector.h"
+#include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "math_defines.h"
 #include "mdarray.h"
 #include "messages.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -1081,27 +1084,42 @@ void process_explosions()
 
     for( const queued_explosion &ex : explosions_copy ) {
         const int safe_range = ex.data.safe_range();
-        map  *bubble_map = &reality_bubble();
-        const tripoint_bub_ms bubble_pos( bubble_map->get_bub( ex.pos ) );
+        map &primary = reality_bubble();
+        const auto &session = g->multiplayer_session();
+        const tripoint_abs_sm center = project_to<coords::sm>( ex.pos );
+        map &terrain = session.has_regions() ? session.map_for( primary, center ) : primary;
+        const tripoint_bub_ms local = terrain.get_bub( ex.pos );
 
-        if( bubble_pos.x() - safe_range < 0 || bubble_pos.x() + safe_range > MAPSIZE_X ||
-            bubble_pos.y() - safe_range < 0 || bubble_pos.y() + safe_range > MAPSIZE_Y ) {
+        if( local.x() - safe_range < 0 || local.x() + safe_range > MAPSIZE_X ||
+            local.y() - safe_range < 0 || local.y() + safe_range > MAPSIZE_Y ) {
             map m;
-            const tripoint_abs_sm origo( project_to<coords::sm>( ex.pos ) - point_rel_sm{ HALF_MAPSIZE, HALF_MAPSIZE} );
+            const tripoint_abs_sm origin = center - point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
             // Create a map centered around the explosion point to allow an explosion with a radius of up to 5 submaps
             // to be created without being cut off by the map's boundary. That also means there is no need for the map
             // to actually overlap the reality bubble, so a large explosion can be detonated without blowing up the PC
             // or have a vehicle run into a crater suddenly appearing just in front of it.
-            process_explosions_in_progress = true;
-            m.load( origo, true, false );
-            swap_map swap( m );
-            m.spawn_monsters( true, true );
-            g->load_npcs( &m );
-            process_explosions_in_progress = false;
+            const bool regional = session.has_regions();
+            std::optional<map_simulation_regions> loaded;
+            if( regional ) {
+                loaded.emplace( session.simulation_regions( primary ) );
+            }
+            {
+                const restore_on_out_of_scope restore_processing( process_explosions_in_progress );
+                process_explosions_in_progress = true;
+                m.load( origin, true, false, loaded ? &*loaded : nullptr );
+                const swap_map context( m );
+                m.spawn_monsters( true, true );
+                g->load_npcs( &m );
+            }
+            const swap_map context( m );
             _make_explosion( &m, ex.source.get(), m.get_bub( ex.pos ), ex.data );
             m.process_falling();
         } else {
-            _make_explosion( bubble_map, ex.source.get(), bubble_map->get_bub( ex.pos ), ex.data );
+            std::optional<swap_map> context;
+            if( &get_map() != &terrain ) {
+                context.emplace( terrain );
+            }
+            _make_explosion( &terrain, ex.source.get(), local, ex.data );
         }
     }
 }

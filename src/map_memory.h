@@ -6,10 +6,12 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "cata_path.h"
 #include "coordinates.h"
 #include "map_scale_constants.h"
 #include "mdarray.h"
@@ -119,6 +121,13 @@ class map_memory
     public:
         map_memory();
 
+        // A guest's memory uses its own uncompressed store. An empty directory
+        // restores the normal character and dimension save path.
+        void set_private_store( std::optional<cata_path> directory );
+        bool has_private_store() const {
+            return private_store.has_value();
+        }
+
         // @returns true if map memory has been loaded
         bool is_valid() const;
 
@@ -181,6 +190,7 @@ class map_memory
         void clear_tile_decoration( const tripoint_abs_ms &pos, std::string_view prefix = "" );
 
     private:
+        std::optional<cata_path> private_store;
         std::map<tripoint_abs_sm, shared_ptr_fast<mm_submap>> submaps;
 
         // Published only after a complete synchronous region preparation. Queries

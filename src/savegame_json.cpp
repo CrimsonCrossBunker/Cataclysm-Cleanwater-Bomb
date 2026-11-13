@@ -101,6 +101,7 @@
 #include "mission.h"
 #include "monster.h"
 #include "morale.h"
+#include "mp_actor_binding.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -4839,6 +4840,10 @@ void vehicle_part::deserialize( const JsonObject &data )
 
 void vehicle_part::serialize( JsonOut &json ) const
 {
+    const npc *passenger = g && passenger_id.is_valid() && has_flag( vp_flag::passenger_flag )
+                           ? g->critter_by_id<npc>( passenger_id ) : nullptr;
+    // Co-op guests are restored by the player store, independently of vehicles.
+    const bool guest_seat = passenger && cata_mp::is_player_proxy( *passenger );
     json.start_object();
     json.member( "id", info_->id.str() );
     if( !variant.empty() ) {
@@ -4852,7 +4857,8 @@ void vehicle_part::serialize( JsonOut &json ) const
     json.member( "blood", blood );
     json.member( "enabled", enabled );
     json.member( "power_disabled", power_disabled );
-    json.member( "flags", flags );
+    json.member( "flags", guest_seat ? flags & ~static_cast<uint32_t>( vp_flag::passenger_flag )
+                 : flags );
     if( !carried_stack.empty() ) {
         std::stack<vehicle_part::carried_part_data> carried_copy = carried_stack;
         json.member( "carried_stack" );
@@ -4863,7 +4869,7 @@ void vehicle_part::serialize( JsonOut &json ) const
         }
         json.end_array();
     }
-    json.member( "passenger_id", passenger_id );
+    json.member( "passenger_id", guest_seat ? character_id() : passenger_id );
     json.member( "crew_id", crew_id );
     if( precalc[0].z() ) {
         json.member( "z_offset", precalc[0].z() );
@@ -4987,6 +4993,10 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "tracking_on", tracking_on );
     data.read( "skidding", skidding );
     data.read( "of_turn_carry", of_turn_carry );
+    point offset;
+    data.read( "motion_offset", offset );
+    set_fractional_offset( offset, data.get_bool( "parked_offset", false ) ?
+                           offset_kind::parked : offset_kind::driving_preview );
     data.read( "is_locked", is_locked );
     data.read( "is_alarm_on", is_alarm_on );
     data.read( "camera_on", camera_on );
@@ -5111,6 +5121,12 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "tracking_on", tracking_on );
     json.member( "skidding", skidding );
     json.member( "of_turn_carry", of_turn_carry );
+    if( fractional_offset() != point::zero ) {
+        json.member( "motion_offset", fractional_offset() );
+        if( has_parked_offset() ) {
+            json.member( "parked_offset", true );
+        }
+    }
     json.member( "name", name );
     json.member( "owner", owner );
     json.member( "old_owner", old_owner );
@@ -5366,7 +5382,10 @@ void faction::serialize( JsonOut &json ) const
 
 void Creature::store( JsonOut &jsout ) const
 {
-    jsout.member( "location", location );
+    jsout.member( "location", pos_abs() );
+    if( location != world_position( pos_abs() ) ) {
+        jsout.member( "location_offset", location.offset() );
+    }
 
     jsout.member( "moves", moves );
     jsout.member( "pain", pain );
@@ -5413,7 +5432,14 @@ void Creature::store( JsonOut &jsout ) const
 void Creature::load( const JsonObject &jsin )
 {
     jsin.allow_omitted_members();
-    jsin.read( "location", location );
+    tripoint_abs_ms tile = pos_abs();
+    jsin.read( "location", tile );
+    location = world_position( tile );
+    if( tripoint offset; jsin.read( "location_offset", offset ) ) {
+        if( const auto precise = world_position::from_tile( tile, offset ) ) {
+            location = *precise;
+        }
+    }
     jsin.read( "moves", moves );
     jsin.read( "pain", pain );
 
@@ -7516,6 +7542,9 @@ void submap::store( JsonOut &jsout ) const
                 jsout.write( p.x() );
                 jsout.write( p.y() );
                 jsout.write( get_furn( p ).obj().id );
+                if( const point offset = furniture_offset( p ); offset != point::zero ) {
+                    jsout.write( offset );
+                }
                 jsout.end_array();
             }
         }
@@ -7814,8 +7843,16 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 debugmsg( "invalid furn_str_id '%s'", furnstr.c_str() );
                 iid_furn = furn_str_id::NULL_ID().id();
             }
-            m->frn[i][j] = iid_furn;
-            if( furniture_entry.size() > 3 ) {
+            const point_sm_ms cell( i, j );
+            set_furn( cell, iid_furn );
+            if( furniture_entry.size() == 4 ) {
+                point offset;
+                furniture_entry.next_value().read( offset, true );
+                if( iid_furn && !set_furniture_offset( cell, offset ) ) {
+                    furniture_entry.throw_error( "Furniture offset is outside its cell range." );
+                }
+            }
+            if( furniture_entry.size() > 4 ) {
                 furniture_entry.throw_error( "Too many values for furniture entry." );
             }
         }

@@ -113,6 +113,9 @@ class avatar : public Character
         bool save_map_memory();
         void load_map_memory();
         void clear_map_memory();
+        void use_guest_map_memory( const cata_path &directory );
+        void use_local_map_memory();
+        bool has_guest_map_memory() const;
 
         // newcharacter.cpp
         bool create( character_type type, const std::string &tempname = "" );

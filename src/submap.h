@@ -132,12 +132,20 @@ class submap
             geometry_version_.changed();
             ensure_nonuniform();
             m->frn[p.x()][p.y()] = furn;
+            furniture_offsets.erase( p );
         }
+
+        bool has_displaced_furniture() const {
+            return !furniture_offsets.empty();
+        }
+        point furniture_offset( const point_sm_ms &p ) const;
+        bool set_furniture_offset( const point_sm_ms &p, const point &offset );
 
         void set_all_furn( const furn_id &furn ) {
             geometry_version_.changed();
             ensure_nonuniform();
             std::uninitialized_fill_n( &m->frn[0][0], elements, furn );
+            furniture_offsets.clear();
         }
         int get_map_damage( const point_sm_ms &p ) const {
             auto it = ephemeral_data.find( p );
@@ -404,6 +412,9 @@ class submap
         };
         std::map<point_sm_ms, tile_data> ephemeral_data;
         std::map<point_sm_ms, terrain_growth_state> terrain_growth;
+        // Only displaced furniture needs storage. IDs and contents remain on
+        // the native cell until the drag transfers them together.
+        std::map<point_sm_ms, point> furniture_offsets;
         // Liquid belonging to finite source terrain is map state, not a
         // ground item.  Keeping it separate prevents item sprites and pickup
         // rules from leaking through the water surface.

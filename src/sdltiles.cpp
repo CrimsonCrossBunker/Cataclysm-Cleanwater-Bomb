@@ -4654,35 +4654,25 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
 
         // game::w_terrain can be drawn by the tilecontext.
         // skip the normal drawing code for it.
-        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
-            const SDL_FRect dest3d{
-                static_cast<float>( win->pos.x * fontwidth ),
-                static_cast<float>( win->pos.y * fontheight ),
-                static_cast<float>( TERRAIN_WINDOW_TERM_WIDTH * font->width ),
-                static_cast<float>( TERRAIN_WINDOW_TERM_HEIGHT * font->height )
-            };
-            render3d::draw_terrain_window( renderer.get(), dest3d, g->ter_view_p, tilecontext.get() );
-            // Any full terrain draw satisfies a pending camera request, even if
-            // another UI path happened to redraw before the camera interval.
-            render3d_camera_redraw_pending = false;
-            if( !render3d::available() ) {
-                // 3D backend unavailable (software renderer, missing shaders,
-                // probe failure): fall back to 2D tiles for this frame
-                tilecontext->draw(
-                    point( win->pos.x * fontwidth, win->pos.y * fontheight ),
-                    g->ter_view_p,
-                    TERRAIN_WINDOW_TERM_WIDTH * font->width,
-                    TERRAIN_WINDOW_TERM_HEIGHT * font->height,
-                    overlay_strings,
-                    color_blocks );
-            }
+        const SDL_FRect terrain_rect{
+            static_cast<float>( win->pos.x * fontwidth ),
+            static_cast<float>( win->pos.y * fontheight ),
+            static_cast<float>( TERRAIN_WINDOW_TERM_WIDTH * fontwidth ),
+            static_cast<float>( TERRAIN_WINDOW_TERM_HEIGHT * fontheight )
+        };
+        const bool drew_3d = get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
+                             render3d::draw_terrain_window( renderer.get(), terrain_rect,
+                                 g->ter_view_p, tilecontext.get() );
+        render3d_camera_redraw_pending = false;
+        if( drew_3d ) {
+            tilecontext->void_line();
         } else {
-            render3d::sync_mouse_capture( renderer.get(), false );
+            render3d::leave_view( renderer.get() );
             tilecontext->draw(
                 point( win->pos.x * fontwidth, win->pos.y * fontheight ),
                 g->ter_view_p,
-                TERRAIN_WINDOW_TERM_WIDTH * font->width,
-                TERRAIN_WINDOW_TERM_HEIGHT * font->height,
+                TERRAIN_WINDOW_TERM_WIDTH * fontwidth,
+                TERRAIN_WINDOW_TERM_HEIGHT * fontheight,
                 overlay_strings,
                 color_blocks );
         }
@@ -6581,6 +6571,20 @@ static bool pop_extra_button_input( input_event &event )
     return true;
 }
 #endif
+static bool can_control_3d_camera( float x, float y )
+{
+    if( !render3d::view_active() || input_replay::is_replaying() ) {
+        return false;
+    }
+    const input_context *ctxt = input_context::input_context_stack.back();
+    if( !ctxt || !ctxt->is_registered_action( "COORDINATE" ) ) {
+        return false;
+    }
+    const SDL_Point logical = window_to_display_buffer_coords(
+                                  SDL_Point{ static_cast<int>( x ), static_cast<int>( y ) } );
+    return render3d::contains_pixel( point( logical.x, logical.y ) );
+}
+
 static void request_render3d_camera_redraw()
 {
     render3d_camera_redraw_pending = true;
@@ -7027,12 +7031,9 @@ static void CheckMessages()
 #else
                 case CATA_WINDOWEVENT_FOCUS_LOST:
                     window_focus = false;
-                    if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
-                        render3d::mouse_captured() ) {
+                    if( render3d::mouse_captured() ) {
                         render3d::sync_mouse_capture( renderer.get(), false );
                         request_render3d_camera_redraw();
-                    } else {
-                        render3d::sync_mouse_capture( renderer.get(), false );
                     }
                     if( IsTextInputActive( ::window.get() ) ) {
                         text_input_active_when_regaining_focus = true;
@@ -7274,8 +7275,7 @@ static void CheckMessages()
                     if( ! mouse.enabled ) {
                         break;
                     }
-                    if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
-                        render3d::mouse_captured() ) {
+                    if( render3d::mouse_captured() ) {
                         // middle-drag orbit: relative motion steers the 3D
                         // camera; do not feed the game's mouseover pipeline
                         render3d::note_mouse_look( ev.motion.xrel, ev.motion.yrel );
@@ -7313,7 +7313,7 @@ static void CheckMessages()
                             last_input = input_event( MouseInput::RightButtonPressed, input_event_t::mouse );
                             break;
                         case SDL_BUTTON_MIDDLE:
-                            if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+                            if( can_control_3d_camera( ev.button.x, ev.button.y ) ) {
                                 // middle-drag orbits the 3D camera; not a game action
                                 render3d::sync_mouse_capture( renderer.get(), true );
                                 request_render3d_camera_redraw();
@@ -7343,7 +7343,7 @@ static void CheckMessages()
                             last_input = input_event( MouseInput::RightButtonReleased, input_event_t::mouse );
                             break;
                         case SDL_BUTTON_MIDDLE:
-                            if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+                            if( render3d::mouse_captured() ) {
                                 render3d::sync_mouse_capture( renderer.get(), false );
                                 request_render3d_camera_redraw();
                             }
@@ -7364,7 +7364,7 @@ static void CheckMessages()
                     if( cataimgui::client::want_capture_mouse() ) {
                         break;
                     }
-                    if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+                    if( can_control_3d_camera( ev.wheel.mouse_x, ev.wheel.mouse_y ) ) {
                         // 3D camera zoom; do not feed the game's scroll pipeline
                         render3d::note_mouse_wheel( static_cast<float>( ev.wheel.y ) );
                         request_render3d_camera_redraw();
@@ -8322,6 +8322,32 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     }
 #endif
 
+    last_input.camera.reset();
+    if( last_input.type != input_event_t::error && last_input.type != input_event_t::timeout &&
+        !last_input.sequence.empty() &&
+        ( last_input.type != input_event_t::mouse || last_input.get_first_input() !=
+          static_cast<int>( MouseInput::Move ) ) ) {
+        last_input.camera = render3d::movement_camera();
+    }
+    last_input.map_click.reset();
+    if( last_input.camera && last_input.type == input_event_t::mouse &&
+        !last_input.sequence.empty() ) {
+        switch( static_cast<MouseInput>( last_input.get_first_input() ) ) {
+            case MouseInput::LeftButtonPressed:
+            case MouseInput::LeftButtonReleased:
+            case MouseInput::RightButtonPressed:
+            case MouseInput::RightButtonReleased:
+                last_input.map_click = tripoint::invalid;
+                if( g ) {
+                    if( const auto picked = render3d::screen_to_tile( last_input.mouse_pos ) ) {
+                        last_input.map_click = get_map().get_abs( *picked ).raw();
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
     input_replay::on_record( last_input );
     return last_input;
 }
@@ -8462,6 +8488,9 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     }
 
     const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
+    if( g && capture_win == g->w_terrain && next_action.map_click ) {
+        return get_map_click();
+    }
     const window_dimensions dim = get_window_dimensions_for_input( capture_win );
 
     const point &win_min = dim.window_pos_pixel;
@@ -8477,8 +8506,7 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
 
     const point screen_pos = coordinate - win_min;
 
-    if( use_tiles && g && capture_win == g->w_terrain &&
-        get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && render3d::available() ) {
+    if( g && capture_win == g->w_terrain && render3d::view_active() ) {
         // 3D mode: unproject through the 3D camera instead of the 2D tile grid
         return render3d::screen_to_tile( coordinate );
     }

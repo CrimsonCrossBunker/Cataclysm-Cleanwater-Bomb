@@ -51,13 +51,14 @@ Reuse this build directory for incremental checks. The workflow
 `.github/workflows/replay-validation.yml` runs the protocol with ASan/UBSan and
 the Python comparison regressions; it does not build or play the full game.
 
-New recordings use `CATA_REPLAY 2`, followed by `SEED <unsigned>` and
+New recordings use `CATA_REPLAY 3`, followed by `SEED <unsigned>` and
 `PROFILE_SEED <32 lowercase hexadecimal characters>` before the input events.
 The profile seed reproduces public local player IDs without consuming gameplay
 randomness. It is not a password or resume credential. Recording and replay
 must start from the same initial save; existing IDs in that save remain intact.
-The reader also accepts format 1. When a legacy save needs an ID during an old
-recording, it uses a deterministic namespace derived from the recording and the
+Format 3 stores the camera direction and resolved map tile for 3D input.
+The reader also accepts formats 1 and 2. When a legacy save needs an ID during
+a format 1 recording, it uses a deterministic namespace derived from the recording and the
 legacy save slot. Keep that slot unchanged when comparing old recordings.
 
 The avatar's optional `local_player_id` save field persists across reloads and

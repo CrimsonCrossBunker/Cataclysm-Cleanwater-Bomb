@@ -43,7 +43,10 @@ class game;
 
 class render_backend;
 struct walk_move_choices;
+struct fractional_walk;
+struct camera_input;
 struct vertical_move_choices;
+class world_position;
 
 namespace cata_mp
 {
@@ -434,13 +437,9 @@ class game
             return dimension_prefix;
         }
 
-        /** Returns the other end of the stairs (if any). May query, affect u etc.
-        * @param pos Disable queries and msgs if not the same position as player.
-        */
+        // Finds an existing stair landing without querying the player or changing the map.
         std::optional<tripoint_bub_ms> find_stairs( const map &mp, int z_after,
                 const tripoint_bub_ms &pos );
-        std::optional<tripoint_bub_ms> find_or_make_stairs( map &mp, int z_after, bool &rope_ladder,
-                bool peeking, const tripoint_bub_ms &pos );
         std::optional<tripoint_bub_ms> find_or_make_stairs( Character &who, map &mp,
                 int z_after, bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos,
                 const vertical_move_choices *choices );
@@ -697,12 +696,14 @@ class game
         /** Makes any nearby NPCs on the overmap active. */
         void load_npcs();
         void load_npcs( map *here );
+        void unload_creatures_outside_resident_maps();
 
         /** NPCs who saw player interacting with their stuff (disassembling, cutting etc)
         * will notify the player that thievery was witnessed and make angry at the player. */
         void on_witness_theft( const item &target );
         void on_witness_theft( const item &target, Character &p );
     private:
+        void activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby );
         /** Unloads all NPCs.
          *
          * If you call this you must later call load_npcs, lest caches get
@@ -1040,7 +1041,8 @@ class game
         // Regular movement. Returns false if it failed for any reason
         bool walk_move( const tripoint_bub_ms &dest, bool via_ramp = false, bool furniture_move = false );
         bool walk_move( Character &who, const tripoint_bub_ms &dest, bool via_ramp = false,
-                        bool furniture_move = false, const walk_move_choices *choices = nullptr );
+                        bool furniture_move = false, const walk_move_choices *choices = nullptr,
+                        const fractional_walk *step = nullptr );
         void on_move_effects();
         void on_move_effects( Character &who );
     private:
@@ -1081,13 +1083,13 @@ class game
         // Handle pushing during move, returns true if it handled the move
         bool grabbed_move( const tripoint_rel_ms &dp, bool via_ramp, bool stairs_move = false );
         bool grabbed_move( Character &who, const tripoint_rel_ms &dp, bool via_ramp,
-                           bool stairs_move = false, const walk_move_choices *choices = nullptr );
-        bool grabbed_veh_move_helper( const tripoint_rel_ms &dp, bool stairs_move );
-        bool grabbed_veh_move_helper( Character &who, const tripoint_rel_ms &dp, bool stairs_move );
-        bool grabbed_veh_move_stairs( const tripoint_rel_ms &dp );
+                           bool stairs_move = false, const walk_move_choices *choices = nullptr,
+                           const fractional_walk *step = nullptr );
         bool grabbed_veh_move_stairs( Character &who, const tripoint_rel_ms &dp );
-        bool grabbed_veh_move( const tripoint_rel_ms &dp );
-        bool grabbed_veh_move( Character &who, const tripoint_rel_ms &dp );
+        bool grabbed_veh_move( Character &who, const tripoint_rel_ms &dp,
+                               const walk_move_choices *choices = nullptr,
+                               const fractional_walk *step = nullptr );
+        bool dragged_vehicle_wheel_traps( Character &who, map &here, int64_t vehicle_id );
 
         void control_vehicle( const std::optional<tripoint_bub_ms> &p =
                                   std::nullopt ); // Use vehicle controls  '^'
@@ -1123,7 +1125,8 @@ class game
         int grabbed_furn_move_time( const tripoint_rel_ms &dp );
         int grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp );
         bool grabbed_furn_move( const tripoint_rel_ms &dp );
-        bool grabbed_furn_move( Character &who, const tripoint_rel_ms &dp );
+        bool grabbed_furn_move( Character &who, const tripoint_rel_ms &dp,
+                                const std::optional<point> &offset = std::nullopt );
 
         void reload_item(); // Reload an item
         void reload_wielded( bool prompt = false );
@@ -1132,7 +1135,9 @@ class game
         void insert_item( drop_locations &targets );
         // Places the player at the specified point; hurts feet, lists items etc.
         point_rel_sm place_player( const tripoint_bub_ms &dest, bool quick = false );
-        point_rel_sm place_character( Character &who, const tripoint_bub_ms &dest, bool quick = false );
+        point_rel_sm place_character( Character &who, const tripoint_bub_ms &dest, bool quick = false,
+                                      const world_position *precise = nullptr,
+                                      const std::function<bool()> &before_placement = {} );
         void place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player = true );
         void perhaps_add_random_npc( bool ignore_spawn_timers_and_rates );
         static void display_om_pathfinding_progress( size_t open_set, size_t known_size );
@@ -1216,7 +1221,8 @@ class game
         // Routine loop functions, approximately in order of execution
         void open_consume_item_menu(); // Custom menu for consuming specific group of items
         bool do_regular_action( action_id &act, avatar &player_character,
-                                const std::optional<tripoint_bub_ms> &mouse_target );
+                                const std::optional<tripoint_bub_ms> &mouse_target,
+                                const camera_input *camera );
         bool handle_action();
         bool try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_target );
         bool try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target );

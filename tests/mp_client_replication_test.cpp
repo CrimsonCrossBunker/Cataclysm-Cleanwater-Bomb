@@ -1,10 +1,13 @@
 #include "cata_catch.h"
 
 #include <initializer_list>
+#include <memory>
 #include <sstream>
+#include <vector>
 
 #include "avatar.h"
 #include "avatar_action.h"
+#include "calendar.h"
 #include "rng.h"
 #include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
@@ -14,6 +17,7 @@
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapbuffer.h"
 #include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
@@ -21,6 +25,10 @@
 #include "player_activity.h"
 #include "mtype.h"
 #include "player_helpers.h"
+#include "submap.h"
+#include "vehicle.h"
+#include "vehicle_uid.h"
+#include "vpart_range.h"
 #include "worldfactory.h"
 
 namespace
@@ -88,6 +96,89 @@ TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
     CHECK( world_generator->active_world->identity() == local );
     session.reset();
     CHECK_FALSE( session.admission.host_world.valid() );
+}
+
+TEST_CASE( "mp_client_exits_replica_without_switching_to_solo",
+           "[multiplayer][client_replication][regression]" )
+{
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    avatar &guest = get_avatar();
+    const int previous_moves = guest.get_moves();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        guest.set_moves( previous_moves );
+    } );
+    g->uquit = QUIT_NO;
+    guest.set_moves( 100 );
+    cata_mp::set_client_mode( true );
+    const std::string packet = GENERATE(
+                                   R"({"type":"session_ending","from":"host"})",
+                                   R"({"type":"state","connected":false})",
+                                   R"({"type":"inventory_update"})" );
+    REQUIRE( cata_mp::client_apply_message( packet ) );
+    CHECK( cata_mp::is_client_mode() );
+    CHECK( guest.get_moves() == 0 );
+    CHECK( g->uquit == QUIT_NOSAVED );
+    CHECK_FALSE( session.client_turn.exit_reason.empty() );
+    CHECK_FALSE( cata_mp::client_apply_message( packet ) );
+}
+
+TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_position",
+           "[multiplayer][client_replication][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_overmaps();
+    } );
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    g->uquit = QUIT_NO;
+    cata_mp::set_client_mode( true );
+    map &here = get_map();
+    const tripoint_bub_ms local( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+    get_avatar().setpos( here, local, false );
+    const tripoint_abs_sm start = get_avatar().pos_abs_sm();
+    const auto state = []( const tripoint_abs_ms & position, const std::string &offset = "" ) {
+        return R"({"type":"state","connected":true,"pos":{"x":)" + std::to_string( position.x() ) +
+               ",\"y\":" + std::to_string( position.y() ) + ",\"z\":" +
+               std::to_string( position.z() ) + offset + "}}";
+    };
+    REQUIRE( cata_mp::client_apply_message( state( get_avatar().pos_abs() ) ) );
+    const tripoint_abs_sm destination = start + point_rel_sm( MAPSIZE + 2, 0 );
+    const tripoint_abs_ms absolute = project_to<coords::ms>( destination );
+    REQUIRE_FALSE( here.inbounds( absolute ) );
+    auto existing = std::make_unique<submap>();
+    existing->set_all_ter( ter_str_id( "t_floor" ).id(), true );
+    existing->last_touched = calendar::turn - 1_days;
+    const time_point last_touched = existing->last_touched;
+    REQUIRE( MAPBUFFER.add_submap( destination, existing ) );
+    const std::string prefix =
+        R"({"type":"map_sync","z":0,"pal":["t_wall","f_null","f_chair"],"subs":[{"sx":)" +
+        std::to_string( destination.x() ) + ",\"sy\":" +
+        std::to_string( destination.y() );
+    CHECK( cata_mp::client_apply_message( prefix + R"(,"t":[[99999999,0]],"f":[[144,1]]}]})" ) );
+    CHECK( session.replication.client.pending_terrain.empty() );
+    REQUIRE( cata_mp::client_apply_message( prefix +
+                                            R"(,"t":[[144,0]],"f":[[1,2],[143,1]],"fo":[[0,-64,25]]}]})" ) );
+    REQUIRE( session.replication.client.pending_terrain.count( destination ) == 1 );
+    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east,
+            R"(,"offset":[23,164,0])" ) ) );
+    CHECK( get_avatar().pos_abs() == absolute + point::east );
+    CHECK( get_avatar().pos_world().offset() == tripoint( 23, 164, 0 ) );
+    CHECK( here.ter( here.get_bub( absolute ) ) == ter_str_id( "t_wall" ).id() );
+    CHECK( MAPBUFFER.lookup_submap( destination )->last_touched == last_touched );
+    CHECK( session.replication.client.pending_terrain.empty() );
+    CHECK( here.furniture_offset( here.get_bub( absolute ) ) == point( -64, 25 ) );
+    REQUIRE( cata_mp::client_apply_message( prefix + R"(,"t":[[144,0]],"f":[[1,2],[143,1]]}]})" ) );
+    CHECK( here.furniture_offset( here.get_bub( absolute ) ) == point::zero );
+    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east,
+            R"(,"offset":[79,163,0])" ) ) );
+    CHECK( get_avatar().pos_world().offset() == tripoint( 79, 163, 0 ) );
 }
 
 TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
@@ -299,4 +390,92 @@ TEST_CASE( "client_autoattack_submits_intent_without_local_damage_or_rng", "[mul
     CHECK( rng_get_engine() == rng );
     CHECK( actor.get_moves() == 0 );
     CHECK( cata_mp::is_client_waiting_for_ack() );
+}
+
+TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_ramps",
+           "[multiplayer][client_replication][vehicle][render3d]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_map_without_vision();
+        clear_avatar();
+    } );
+    const tripoint_bub_ms start( 60, 60, 0 );
+    const tripoint_bub_ms destination = start + tripoint( 12, 0, 1 );
+    vehicle *const car = here.add_vehicle( vproto_id( "bicycle" ), start, 0_degrees, 0,
+                                           veh_spawn_status::UNDAMAGED );
+    REQUIRE( car );
+    car->ensure_uid();
+    const auto parts = car->get_all_parts();
+    REQUIRE( parts.begin() != parts.end() );
+    const int low_part = static_cast<int>( parts.begin()->part_index() );
+    const point_rel_ms low_mount = parts.begin()->mount_pos();
+    const tripoint_abs_ms old_tile = car->abs_part_pos( low_part );
+    const int heading = 90;
+    const point_rel_ms pivot = low_mount;
+    std::vector<int> levels;
+    for( const vpart_reference &part : parts ) {
+        if( !part.part().removed ) {
+            levels.push_back( destination.z() - ( part.mount_pos() == low_mount ? 1 : 0 ) );
+        }
+    }
+    const tripoint_abs_ms absolute = here.get_abs( destination );
+    const point settled_offset( 48, -8 );
+    const auto packet = [&]( const std::vector<int> &part_levels, bool include_offset = true ) {
+        std::ostringstream stream;
+        JsonOut out( stream );
+        out.start_object();
+        out.member( "type", "vehicle_step" );
+        out.member( "vehicles" );
+        out.start_array();
+        out.start_object();
+        out.member( "nid", 21 );
+        out.member( "uid", car->uid().get_value() );
+        out.member( "x", absolute.x() );
+        out.member( "y", absolute.y() );
+        out.member( "z", absolute.z() );
+        out.member( "face", heading );
+        out.member( "pose" );
+        out.start_array();
+        out.write( pivot );
+        out.write( heading );
+        out.write( part_levels );
+        out.end_array();
+        if( include_offset ) {
+            out.member( "motion_offset", settled_offset );
+            out.member( "parked_offset", true );
+        }
+        out.end_object();
+        out.end_array();
+        out.end_object();
+        return stream.str();
+    };
+
+    cata_mp::set_client_mode( true );
+    const auto rng = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( packet( { OVERMAP_HEIGHT + 1 } ) ) );
+    CHECK( car->pos_abs() == here.get_abs( start ) );
+    REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
+    CHECK( car->pos_abs() == absolute );
+    CHECK( car->fractional_offset() == settled_offset );
+    CHECK( car->has_parked_offset() );
+    CHECK( car->face.dir() == units::from_degrees( heading ) );
+    CHECK( car->pivot_anchor[0] == pivot );
+    CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
+    CHECK_FALSE( here.veh_at( old_tile ) );
+    const auto low = here.veh_at( destination + tripoint::below );
+    REQUIRE( low );
+    CHECK( &low->vehicle() == car );
+    REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
+    CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
+    CHECK( car->fractional_offset() == settled_offset );
+    REQUIRE( cata_mp::client_apply_message( packet( levels, false ) ) );
+    CHECK( car->fractional_offset() == point::zero );
+    CHECK_FALSE( car->has_parked_offset() );
+    CHECK( rng_get_engine() == rng );
 }

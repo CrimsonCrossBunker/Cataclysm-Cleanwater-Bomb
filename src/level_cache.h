@@ -78,7 +78,6 @@ struct level_cache_default_zero_members {
     cata::mdarray<lit_level, point_bub_ms> visibility_cache;
     std::bitset<MAPSIZE_X *MAPSIZE_Y> map_memory_cache_dec;
     std::bitset<MAPSIZE_X *MAPSIZE_Y> map_memory_cache_ter;
-    std::bitset<MAPSIZE *MAPSIZE> field_cache;
 };
 // The only way to memset the above without UB is if it is trivially copyable
 // and that all zeros is a valid representation. We can't assert the latter.
@@ -130,6 +129,7 @@ struct level_cache : level_cache_default_zero_members {
 
         void clear_vehicle_cache();
         void clear_veh_from_veh_cached_parts( const tripoint_bub_ms &pt, vehicle *veh );
+        bool forget_vehicle( vehicle &veh );
 
     private:
         // Whether the cache is empty or not; if true, nothing has been added to the cache

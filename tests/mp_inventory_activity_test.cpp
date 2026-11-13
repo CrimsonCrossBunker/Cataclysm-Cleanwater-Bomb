@@ -160,6 +160,7 @@
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "vpart_position.h"
+#include "world_position.h"
 #include "submap.h"
 #include "weather.h"
 #include "weather_gen.h"
@@ -12702,6 +12703,182 @@ TEST_CASE( "native_vehicle_drag_bills_and_moves_the_actual_operator_object",
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
 }
 
+TEST_CASE( "vehicle_drag_preserves_the_operator_offset_and_rejects_blocked_turns",
+           "[grab_owned][walking_owned][multiplayer][vehicle]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const auto start = who.pos_bub( here );
+    const auto held = start + point::east;
+    const auto destination = start + point::west;
+    const auto initial = world_position::from_tile( here.get_abs( start ), tripoint( 147, 101, 0 ) );
+    REQUIRE( initial );
+    who.setpos( here, *initial, false );
+    who.set_str_base( 50 );
+    who.set_moves( 1000 );
+    for( const auto &tile : {
+             start, held, destination, held + point::east
+         } ) {
+        here.ter_set( tile, ter_id( "t_floor" ) );
+    }
+    vehicle *cart = here.add_vehicle( vproto_id( "none" ), held, 0_degrees, 0,
+                                      veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart );
+    cart->set_owner( who.get_faction_id() );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    cart->refresh();
+    here.add_vehicle_to_cache( cart );
+    who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
+    REQUIRE( who.validate_grab( here ) );
+
+    SECTION( "a pull can occupy the operator's previous cell" ) {
+        walk_move_choices choices;
+        choices.destination = here.get_abs( destination );
+        REQUIRE( avatar_action::move( who, here, tripoint_rel_ms::west, &choices ) );
+        CHECK( who.pos_abs() == here.get_abs( destination ) );
+        CHECK( who.pos_world().offset() == initial->offset() );
+        CHECK( cart->pos_bub( here ) == start );
+        CHECK( who.grab_matches( here ) );
+        CHECK_FALSE( here.veh_at( held ) );
+        CHECK( veh_pointer_or_null( here.veh_at( start ) ) == cart );
+    }
+
+    SECTION( "a blocked turn preserves the current pose and handhold" ) {
+        here.ter_set( held + point::east, ter_id( "t_wall" ) );
+        cart->turn_dir = 45_degrees;
+        cart->last_turn = 15_degrees;
+        cart->precalc_mounts( 1, 45_degrees, point_rel_ms::east );
+        const auto mount_preview = cart->part( 0 ).precalc[1];
+        const auto projected_position = cart->part( 0 ).next_pos;
+        const auto grab_generation = who.grab_generation();
+        REQUIRE( grabbed_vehicle_test_access::move( *g, who, tripoint_rel_ms::east ) );
+        CHECK( who.pos_world() == *initial );
+        CHECK( who.grab_generation() == grab_generation );
+        CHECK( who.grab_matches( here ) );
+        CHECK( cart->pos_bub( here ) == held );
+        CHECK( cart->face.dir() == 0_degrees );
+        CHECK( cart->turn_dir == 45_degrees );
+        CHECK( cart->last_turn == 15_degrees );
+        CHECK( cart->part( 0 ).precalc[1] == mount_preview );
+        CHECK( cart->part( 0 ).next_pos == projected_position );
+        CHECK( veh_pointer_or_null( here.veh_at( held ) ) == cart );
+    }
+}
+
+TEST_CASE( "fractional_vehicle_drag_settles_one_authoritative_hull",
+           "[grab_owned][fractional_walk][multiplayer][vehicle]" )
+{
+    vehicle_control_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const auto held = origin + point::east;
+    const auto landing = held + point::east;
+    for( const auto &cell : {
+             origin + point::west, origin, held, landing
+         } ) {
+        here.ter_set( cell, ter_id( "t_floor" ) );
+    }
+    vehicle *const cart = here.add_vehicle( vproto_id( "none" ), held, 0_degrees, 0,
+                                            veh_spawn_status::UNDAMAGED );
+    REQUIRE( cart );
+    cart->set_owner( who.get_faction_id() );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    REQUIRE( cart->install_part( here, point_rel_ms::zero, vpart_id( "board" ) ) >= 0 );
+    cart->refresh();
+    here.add_vehicle_to_cache( cart );
+    who.set_str_base( 50 );
+    who.grab( object_type::VEHICLE, tripoint_rel_ms::east );
+    REQUIRE( who.validate_grab( here ) );
+    const auto handhold = who.grab_generation();
+
+    const auto request_step = [&]( const point & delta ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), delta );
+        REQUIRE( step );
+        walk_move_choices choices;
+        choices.destination = step->target.tile();
+        who.set_moves( 1000 );
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", who.pos_abs() );
+            out.member( "origin_offset", who.pos_world().offset() );
+            out.member( "direction", step->target.tile() - who.pos_abs() );
+            out.member( "fractional_delta", step->displacement );
+            out.member( "mode", "walk" );
+            out.member( "choices", choices );
+        } ) );
+    };
+
+    SECTION( "push survives an idle turn and a save, then crosses one cell" ) {
+        request_step( point( 64, 0 ) );
+        CHECK( who.pos_bub( here ) == origin );
+        CHECK( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+        CHECK( cart->pos_bub( here ) == held );
+        CHECK( cart->fractional_offset() == point( 64, 0 ) );
+        REQUIRE( cart->has_parked_offset() );
+        cart->of_turn = 1.0f;
+        REQUIRE( cart->act_on_map( here ) == cart );
+        CHECK( cart->fractional_offset() == point( 64, 0 ) );
+
+        std::ostringstream stream;
+        JsonOut out( stream );
+        cart->serialize( out );
+        const JsonValue saved = json_loader::from_string( stream.str() );
+        vehicle restored( vproto_id( "none" ) );
+        restored.deserialize( saved.get_object() );
+        CHECK( restored.fractional_offset() == point( 64, 0 ) );
+        CHECK( restored.has_parked_offset() );
+
+        request_step( point( 64, 0 ) );
+        CHECK( who.pos_bub( here ) == held );
+        CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
+        CHECK_FALSE( who.in_vehicle );
+        CHECK( cart->pos_bub( here ) == landing );
+        CHECK( cart->fractional_offset() == point( -128, 0 ) );
+        CHECK( cart->face.dir() == 0_degrees );
+        CHECK_FALSE( here.veh_at( held ) );
+        CHECK( veh_pointer_or_null( here.veh_at( landing ) ) == cart );
+        CHECK( who.grab_matches( here ) );
+        CHECK( who.grab_generation() == handhold );
+    }
+    SECTION( "blocked hull cannot advance even within its current cell" ) {
+        here.ter_set( landing, ter_id( "t_wall" ) );
+        const world_position before = who.pos_world();
+        request_step( point( 64, 0 ) );
+        CHECK( who.pos_world() == before );
+        CHECK( cart->pos_bub( here ) == held );
+        CHECK( cart->fractional_offset() == point::zero );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "a pull moves through the operator's vacated coordinates" ) {
+        request_step( point( -64, 0 ) );
+        request_step( point( -128, 0 ) );
+        CHECK( who.pos_bub( here ) == origin + point::west );
+        CHECK( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+        CHECK( cart->pos_bub( here ) == origin );
+        CHECK( cart->fractional_offset() == point( 64, 0 ) );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "another player collides with the part extending past the cached tile" ) {
+        request_step( point( 64, 0 ) );
+        REQUIRE( cart->fractional_offset() == point( 64, 0 ) );
+        npc &other = spawn_npc( landing.xy(), "test_talker" );
+        clear_character( other, true );
+        bind_feedback_player( other, 'b', 702 );
+        other.setpos( here, landing, false );
+        other.set_moves( 1000 );
+        const auto before = other.pos_world();
+        CHECK_FALSE( avatar_action::move_fractional( other, here, point( -32, 0 ) ) );
+        CHECK( other.pos_world() == before );
+        CHECK( avatar_action::move_fractional( other, here, point( 32, 0 ) ) );
+    }
+}
+
 TEST_CASE( "continued_vehicle_drag_keeps_the_saved_vehicle_and_part_identity",
            "[grab_owned][multiplayer][vehicle]" )
 {
@@ -13216,6 +13393,7 @@ TEST_CASE( "walking_authority_derives_ramp_height_from_terrain",
     walk_move_choices choices;
     choices.destination = here.get_abs( upper );
     who.set_moves( 1000 );
+    const bool fractional = GENERATE( false, true );
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "walk" );
         out.member( "origin", who.pos_abs() );
@@ -13223,9 +13401,107 @@ TEST_CASE( "walking_authority_derives_ramp_height_from_terrain",
         out.member( "mode", "walk" );
         out.member( "choices", choices );
         out.member( "dz", -7 );
+        if( fractional ) {
+            out.member( "origin_offset", who.pos_world().offset() );
+            out.member( "fractional_delta", point( 128, 0 ) );
+        }
     } ) );
     CHECK( who.pos_bub() == upper );
+    CHECK( who.pos_world().offset() == tripoint( fractional ? 0 : 128, 128, 0 ) );
     CHECK( get_avatar().posz() == 0 );
+}
+
+TEST_CASE( "fractional_furniture_drag_moves_the_crate_and_its_contents_once",
+           "[grab_owned][fractional_walk][multiplayer]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const auto crate = origin + point::east;
+    const auto landing = crate + point::east;
+    for( const auto &cell : {
+             origin, crate, landing
+         } ) {
+        here.ter_set( cell, ter_id( "t_floor" ) );
+    }
+    const furn_id crate_type( "f_crate_o" );
+    here.furn_set( crate, crate_type );
+    here.add_item_or_charges( crate, item( itype_id( "test_rock" ) ) );
+    who.set_str_base( 50 );
+    who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
+
+    const auto request_step = [&]() {
+        const auto step = fractional_walk::resolve( who.pos_world(), point( 64, 0 ) );
+        REQUIRE( step );
+        walk_move_choices choices;
+        choices.destination = step->target.tile();
+        who.set_moves( 1000 );
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", who.pos_abs() );
+            out.member( "origin_offset", who.pos_world().offset() );
+            out.member( "direction", step->target.tile() - who.pos_abs() );
+            out.member( "fractional_delta", step->displacement );
+            out.member( "mode", "walk" );
+            out.member( "choices", choices );
+        } ) );
+        REQUIRE( who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) );
+    };
+    const auto finish = [&]() {
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+    };
+
+    request_step();
+    save_reload_activity( who );
+    SECTION( "subcell move followed by one grid transfer" ) {
+        finish();
+        CHECK( who.pos_bub( here ) == origin );
+        CHECK( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+        CHECK( here.furniture_offset( crate ) == point( 64, 0 ) );
+        REQUIRE( here.i_at( crate ).size() == 1 );
+        CHECK_FALSE( here.has_furn( landing ) );
+
+        request_step();
+        finish();
+        CHECK( who.pos_bub( here ) == crate );
+        CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
+        CHECK_FALSE( here.has_furn( crate ) );
+        CHECK( here.furniture_offset( crate ) == point::zero );
+        CHECK( here.i_at( crate ).empty() );
+        CHECK( here.furn( landing ) == crate_type );
+        CHECK( here.furniture_offset( landing ) == point( -128, 0 ) );
+        REQUIRE( here.i_at( landing ).size() == 1 );
+        CHECK( here.i_at( landing ).begin()->typeId() == itype_id( "test_rock" ) );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "another player encounters the part sticking out of its cell" ) {
+        finish();
+        REQUIRE( here.furniture_offset( crate ) == point( 64, 0 ) );
+        const auto far_side = landing + point::east;
+        here.ter_set( far_side, ter_id( "t_floor" ) );
+        npc &other = spawn_npc( landing.xy(), "test_talker" );
+        clear_character( other, true );
+        bind_feedback_player( other, 'b', 702 );
+        other.setpos( here, landing, false );
+        other.set_moves( 1000 );
+        const auto position = other.pos_world();
+        CHECK_FALSE( avatar_action::move_fractional( other, here, point( -32, 0 ) ) );
+        CHECK( other.pos_world() == position );
+        CHECK( avatar_action::move_fractional( other, here, point( 32, 0 ) ) );
+    }
+    SECTION( "a wall placed before settlement blocks both bodies" ) {
+        here.ter_set( landing, ter_id( "t_wall" ) );
+        finish();
+        CHECK( who.pos_world() == world_position( here.get_abs( origin ) ) );
+        CHECK( here.furn( crate ) == crate_type );
+        CHECK( here.furniture_offset( crate ) == point::zero );
+        CHECK( here.i_at( crate ).size() == 1 );
+        CHECK_FALSE( here.has_furn( landing ) );
+    }
 }
 
 TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_player",
@@ -13237,6 +13513,9 @@ TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_pla
     map &here = get_map();
     get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
     const auto origin = who.pos_bub();
+    const auto initial = world_position::from_tile( here.get_abs( origin ), tripoint( 147, 101, 0 ) );
+    REQUIRE( initial );
+    who.setpos( here, *initial, false );
     const auto chair = origin + tripoint::east;
     const auto destination = chair + tripoint::east;
     for( const auto &p : { origin, chair, destination } ) {
@@ -13258,10 +13537,25 @@ TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_pla
     REQUIRE( who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) );
     CHECK( who.activity.execution() == activity_execution::authoritative );
     save_reload_activity( who );
-    who.set_moves( 100000 );
-    fixture.run( who, fixture.request( who, "step" ) );
-    CHECK( who.pos_bub() == chair );
-    CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
+    SECTION( "move and keep the saved offset" ) {
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK( who.pos_bub() == chair );
+        CHECK( who.pos_world().offset() == initial->offset() );
+        CHECK( here.furn( destination ) == furn_str_id( "f_chair" ) );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "cancel if the operator changed position inside the same cell" ) {
+        const auto shifted = initial->translated( tripoint( 1, 0, 0 ) );
+        REQUIRE( shifted );
+        who.setpos( here, *shifted, false );
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+        CHECK( who.pos_world() == *shifted );
+        CHECK( here.furn( chair ) == furn_str_id( "f_chair" ) );
+        CHECK_FALSE( here.has_furn( destination ) );
+        CHECK_FALSE( who.activity );
+    }
     CHECK_FALSE( get_avatar().activity );
     CHECK( get_avatar().pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
 }
@@ -13285,15 +13579,32 @@ TEST_CASE( "remote_swimming_requires_consent_and_changes_only_the_swimmer",
     const int host_stamina = host.get_stamina();
     walk_move_choices choices;
     choices.destination = here.get_abs( destination );
-    avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
+    const bool fractional = GENERATE( false, true );
+    const auto enter_water = [&] {
+        if( fractional )
+    {
+        return avatar_action::move_fractional( who, here, point( 128, 0 ), &choices );
+        }
+        return avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
+    };
+    enter_water();
     CHECK( who.pos_bub() == origin );
     CHECK( who.has_effect( efftype_id( "onfire" ) ) );
     CHECK( who.get_moves() == 1000 );
     choices.allow_swimming = true;
-    avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
-    CHECK( who.pos_bub() == destination );
+    enter_water();
+    REQUIRE( who.pos_bub() == destination );
     CHECK_FALSE( who.has_effect( efftype_id( "onfire" ) ) );
     CHECK( who.get_moves() < 1000 );
+    if( fractional ) {
+        CHECK( who.pos_world().offset().x == 0 );
+        const int moves_after_entry = who.get_moves();
+        choices.destination = who.pos_abs();
+        REQUIRE( avatar_action::move_fractional( who, here, point( 64, 0 ), &choices ) );
+        CHECK( who.pos_bub() == destination );
+        CHECK( who.pos_world().offset().x == 64 );
+        CHECK( who.get_moves() < moves_after_entry );
+    }
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
     CHECK( host.get_moves() == host_moves );
     CHECK( host.get_stamina() == host_stamina );
@@ -13551,7 +13862,9 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     const auto destination = origin + tripoint::below;
     here.ter_set( origin, ter_id( "t_stairs_down" ) );
     here.ter_set( destination, ter_id( "t_stairs_up" ) );
-    who.setpos( here, origin, false );
+    const auto initial = world_position::from_tile( here.get_abs( origin ), tripoint( 92, 164, 0 ) );
+    REQUIRE( initial );
+    who.setpos( here, *initial, false );
     who.set_moves( 1000 );
     vertical_move_selection choice;
     choice.origin = who.pos_abs();
@@ -13583,6 +13896,7 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     } );
     fixture.run( who, wire, authorized );
     CHECK( who.pos_bub() == ( accepted ? destination : origin ) );
+    CHECK( who.pos_world().offset() == initial->offset() );
     CHECK( who.get_moves() == ( accepted ? 900 : 1000 ) );
     const auto settled_position = who.pos_abs();
     const int settled_moves = who.get_moves();
@@ -13852,6 +14166,180 @@ TEST_CASE( "ledge_jump_intents_recheck_the_gap_and_use_only_the_requesting_playe
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
     CHECK( host.get_moves() == host_moves );
     CHECK( here.get_abs_sub() == map_origin );
+}
+
+TEST_CASE( "fractional_walk_settles_native_collision_and_rejects_stale_same_tile_intents",
+           "[mp_inventory_activity][walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    const tripoint_bub_ms tile( 60, 60, 0 );
+    const tripoint_abs_ms origin = here.get_abs( tile );
+    get_avatar().setpos( here, tile + tripoint( -4, -4, 0 ) );
+    const ter_id floor = ter_str_id( "t_floor" ).id();
+    here.ter_set( tile, floor );
+    here.ter_set( tile + point::east, floor );
+    here.ter_set( tile + point::south, floor );
+    here.ter_set( tile + point::south_east, floor );
+    who.setpos( here, tile, false );
+    who.set_moves( 1000 );
+
+    const auto start = [&]( const world_position & from, const point & delta,
+    const tripoint_rel_ms & direction ) {
+        walk_move_choices choices;
+        choices.destination = from.tile() + direction;
+        const auto wire = fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", from.tile() );
+            out.member( "origin_offset", from.offset() );
+            out.member( "fractional_delta", delta );
+            out.member( "direction", direction );
+            out.member( "mode", who.current_movement_mode().str() );
+            out.member( "choices", choices );
+        } );
+        fixture.run( who, wire );
+    };
+
+    const world_position center( origin );
+    start( center, point( 64, 0 ), tripoint_rel_ms::zero );
+    REQUIRE( who.pos_abs() == origin );
+    REQUIRE( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+    const world_position settled = who.pos_world();
+    const int settled_moves = who.get_moves();
+    CHECK( settled_moves < 1000 );
+    start( center, point( 64, 0 ), tripoint_rel_ms::zero );
+    start( settled, point( 129, 0 ), tripoint_rel_ms::east );
+    CHECK( who.pos_world() == settled );
+    CHECK( who.get_moves() == settled_moves );
+
+    const auto corner = world_position::from_tile( origin, tripoint( 240, 240, 0 ) );
+    REQUIRE( corner );
+    who.setpos( here, *corner, false );
+    here.ter_set( tile + point::south, ter_str_id( "t_wall" ).id() );
+    start( *corner, point( 80, 80 ), tripoint_rel_ms( 1, 1, 0 ) );
+    CHECK( who.pos_world() == *corner );
+    CHECK( who.get_moves() == settled_moves );
+    here.ter_set( tile + point::south, floor );
+    start( *corner, point( 80, 80 ), tripoint_rel_ms( 1, 1, 0 ) );
+    REQUIRE( who.pos_bub( here ) == tile + point::south_east );
+    CHECK( who.pos_world().offset() == tripoint( 64, 64, 0 ) );
+    CHECK( who.get_moves() < settled_moves );
+}
+
+TEST_CASE( "fractional_body_cannot_slide_into_a_wall_before_the_center_crosses",
+           "[mp_inventory_activity][walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    npc &guest = fixture.remote();
+    bind_feedback_player( guest, 'a', 701 );
+    avatar &host = get_avatar();
+    map &here = get_map();
+    const restore_on_out_of_scope restore_safemode( g->safe_mode );
+    g->set_safe_mode( SAFE_MODE_OFF );
+    const tripoint_bub_ms tile( 60, 60, 0 );
+    const tripoint_bub_ms wall = tile + point::north;
+    const ter_id floor( "t_floor" );
+    here.ter_set( tile, floor );
+    here.ter_set( wall, ter_id( "t_wall" ) );
+    const auto initial = world_position::from_tile( here.get_abs( tile ), tripoint( 128, 96, 0 ) );
+    REQUIRE( initial );
+    const point into_wall( 0, -72 );
+    const auto unblocked = initial->translated( tripoint( into_wall, 0 ) );
+    REQUIRE( unblocked );
+    REQUIRE( unblocked->tile() == initial->tile() );
+
+    host.setpos( here, tile + tripoint( -4, -4, 0 ) );
+    guest.setpos( here, *initial, false );
+    guest.set_moves( 1000 );
+    const auto request = [&]() {
+        walk_move_choices choices;
+        choices.destination = initial->tile();
+        return fixture.request( guest, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", initial->tile() );
+            out.member( "origin_offset", initial->offset() );
+            out.member( "fractional_delta", into_wall );
+            out.member( "direction", tripoint_rel_ms::zero );
+            out.member( "mode", guest.current_movement_mode().str() );
+            out.member( "choices", choices );
+        } );
+    };
+    fixture.run( guest, request() );
+    CHECK( guest.pos_world() == *initial );
+    CHECK( guest.get_moves() == 1000 );
+    here.ter_set( wall, floor );
+    fixture.run( guest, request() );
+    CHECK( guest.pos_world() == *unblocked );
+
+    guest.setpos( here, tile + tripoint( 4, 4, 0 ), false );
+    host.setpos( here, *initial, false );
+    host.set_moves( 1000 );
+    here.ter_set( wall, ter_id( "t_wall" ) );
+    CHECK_FALSE( avatar_action::move_fractional( host, here, into_wall ) );
+    CHECK( host.pos_world() == *initial );
+    CHECK( host.get_moves() == 1000 );
+    here.ter_set( wall, floor );
+    CHECK( avatar_action::move_fractional( host, here, into_wall ) );
+    CHECK( host.pos_world() == *unblocked );
+}
+
+TEST_CASE( "solo_fractional_walk_keeps_exact_position_when_the_map_scrolls",
+           "[walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    const restore_on_out_of_scope restore_safemode( g->safe_mode );
+    g->set_safe_mode( SAFE_MODE_OFF );
+    const tripoint_bub_ms start( HALF_MAPSIZE_X + SEEX - 1, HALF_MAPSIZE_Y, 0 );
+    const tripoint_abs_ms destination = here.get_abs( start + point::east );
+    const tripoint_abs_sm old_window = here.get_abs_sub();
+    here.ter_set( start, ter_str_id( "t_floor" ).id() );
+    here.ter_set( start + point::east, ter_str_id( "t_floor" ).id() );
+    who.setpos( here, start, false );
+    who.set_moves( 1000 );
+    REQUIRE( avatar_action::move_fractional( who, here, point( 128, 0 ) ) );
+    CHECK( who.pos_abs() == destination );
+    CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
+    CHECK( here.get_abs_sub() == old_window + point_rel_sm::east );
+}
+
+TEST_CASE( "fractional_movement_keeps_the_rider_and_mount_together",
+           "[walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    const restore_on_out_of_scope restore_safemode( g->safe_mode );
+    g->set_safe_mode( SAFE_MODE_OFF );
+    const tripoint_bub_ms start( 60, 60, 0 );
+    here.ter_set( start, ter_id( "t_floor" ) );
+    here.ter_set( start + point::east, ter_id( "t_floor" ) );
+    who.setpos( here, start + point::west, false );
+    monster &mount = spawn_test_monster( "mon_horse_police", start );
+    mount.friendly = -1;
+    who.mount_creature( mount );
+    const on_out_of_scope dismount( [&who] {
+        if( who.is_mounted() )
+    {
+        who.forced_dismount();
+        }
+    } );
+    REQUIRE( who.is_mounted() );
+    const world_position origin = who.pos_world();
+    who.set_moves( 1000 );
+    REQUIRE( avatar_action::move_fractional( who, here, point( 64, 0 ) ) );
+    CHECK( who.pos_abs() == origin.tile() );
+    CHECK( who.pos_world().offset().x == 192 );
+    CHECK( mount.pos_world() == who.pos_world() );
+    REQUIRE( avatar_action::move_fractional( who, here, point( 64, 0 ) ) );
+    CHECK( who.pos_abs() == origin.tile() + point::east );
+    CHECK( who.pos_world().offset().x == 0 );
+    CHECK( mount.pos_world() == who.pos_world() );
+    CHECK( who.is_mounted() );
+    CHECK( who.get_moves() < 1000 );
 }
 
 TEST_CASE( "ordinary_walking_cannot_replace_a_ledge_choice_with_danger_consent",

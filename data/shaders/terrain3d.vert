@@ -18,7 +18,7 @@ layout(set = 1, binding = 0) uniform UBO {
     mat4 mvp;
     vec4 cam_right;  // xyz: camera right on the ground plane (billboard facing)
     vec4 cam_up;     // xyz: world up (billboard facing)
-    vec4 params;     // x = mode: 0 box, 1 static xquad, 2 yaw billboard, 3 cardinal-snapped billboard, 4 axis quad (fence), 5 flat horizontal quad
+    vec4 params;     // x = mode: 0 box, 1 static xquad, 2 yaw billboard, 3 cardinal-snapped billboard, 4 axis quad, 5 horizontal quad, 8 ramp
     vec4 sun_dir;    // xyz = direction toward the sun (world), w = 1 when the sun is up
 };
 
@@ -65,10 +65,13 @@ void main()
             uv_local = a_aux.xy;
         }
         shade = 0.95;
-    } else if( mode == 5 ) {
+    } else if( mode == 5 || mode == 8 ) {
         // flat horizontal quad (floor overlays, cutout floor tiles): no
         // thickness, so no side faces that would sample transparent sprite rows
-        world = a_inst_pos + vec3( a_pos.x * a_inst_scale.x, a_pos.y * a_inst_scale.y, 0.0 );
+        vec2 rise = mode == 8
+                    ? ( a_inst_pad > 0.5 ? vec2( 0.0, a_inst_scale.z ) : vec2( a_inst_scale.z, 0.0 ) )
+                    : vec2( 0.0 );
+        world = a_inst_pos + vec3( a_pos.xy * a_inst_scale.xy, dot( a_pos.xy, rise ) );
         // same quarter-turn UV rotation as a box top face: 2D rotates a
         // single-sprite connection tile by rota % 4
         int iflags = int( a_inst_flags + 0.5 );
@@ -85,7 +88,7 @@ void main()
         // same sun shading as a box top face (normal = +z)
         vec3 light_dir = sun_dir.w > 0.5 ? normalize( sun_dir.xyz )
                          : normalize( vec3( 0.4, 0.3, 0.85 ) );
-        shade = 0.55 + 0.45 * max( light_dir.z, 0.0 );
+        shade = 0.55 + 0.45 * max( dot( light_dir, normalize( vec3( -rise, 1.0 ) ) ), 0.0 );
     } else if( mode == 1 ) {
         // static crossed quad pair; uv comes from the vertex
         world = a_inst_pos + a_pos * a_inst_scale;

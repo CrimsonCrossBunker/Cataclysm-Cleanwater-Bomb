@@ -1,5 +1,6 @@
 #include "mapbuffer.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <exception>
@@ -288,7 +289,8 @@ submap_prefetcher::status mapbuffer::prefetch_status() const
     return prefetcher_.inspect();
 }
 
-void mapbuffer::save( bool delete_after_save, const map *resident_map )
+void mapbuffer::save( bool delete_after_save,
+                      const std::vector<std::reference_wrapper<const map>> &resident_maps )
 {
     storage();
     // The prefetch worker reads the same zzip archives this loop rewrites. Park it
@@ -342,11 +344,13 @@ void mapbuffer::save( bool delete_after_save, const map *resident_map )
         const cata_path dirname = find_dirname( om_addr );
         const cata_path quad_path = dirname / quad_file_name( om_addr );
 
-        const bool outside_resident_map = resident_map && !resident_map->inbounds( om_addr );
-        // delete_on_save deletes everything, otherwise delete submaps
-        // outside the current map.
+        const bool outside_resident_maps = !resident_maps.empty() &&
+                                           std::none_of( resident_maps.begin(), resident_maps.end(),
+        [&]( const map & resident ) {
+            return resident.inbounds( om_addr );
+        } );
         save_quad( dirname, quad_path, om_addr, submaps_to_delete,
-                   delete_after_save || outside_resident_map );
+                   delete_after_save || outside_resident_maps );
         num_saved_submaps += 4;
     }
     for( auto &elem : submaps_to_delete ) {

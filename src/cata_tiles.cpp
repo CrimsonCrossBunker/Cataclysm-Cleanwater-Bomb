@@ -315,12 +315,20 @@ void tileset::clear()
     renderer_instance_generation_at_upload = 0;
     gpu_textures_generation_at_upload = 0;
     duplicate_ids.clear();
+    furniture_geometry.clear();
     tile_ids.clear();
     for( std::unordered_map<std::string, season_tile_value> &m : tile_ids_by_season ) {
         m.clear();
     }
     item_layer_data.clear();
     field_layer_data.clear();
+}
+
+const std::vector<tileset_furniture_box> *tileset::find_furniture_geometry(
+    const std::string &id ) const
+{
+    const auto it = furniture_geometry.find( id );
+    return it == furniture_geometry.end() ? nullptr : &it->second;
 }
 
 uint64_t compute_tileset_filter_fingerprint( const std::string &memory_map_mode )
@@ -6295,21 +6303,27 @@ void cata_tiles::draw_hit_frame()
         draw_from_id_string( hit_overlay, draw_pos, 0, 0, lit_level::LIT, false );
     }
 }
-void cata_tiles::draw_line()
+void cata_tiles::for_each_line_marker(
+    const std::function<void( const tripoint_bub_ms &, const std::string & )> &draw_marker ) const
 {
-    map &here = get_map();
-
-    if( line_trajectory.empty() ) {
+    if( !do_draw_line || line_trajectory.empty() ) {
         return;
     }
-    static std::string line_overlay = "animation_line";
-    if( !is_target_line || get_player_view().sees( here, line_pos ) ) {
+    static const std::string line_overlay = "animation_line";
+    if( !is_target_line || get_player_view().sees( get_map(), line_pos ) ) {
         for( auto it = line_trajectory.begin(); it != line_trajectory.end() - 1; ++it ) {
-            draw_from_id_string( line_overlay, *it, 0, 0, lit_level::LIT, false );
+            draw_marker( *it, line_overlay );
         }
     }
 
-    draw_from_id_string( line_endpoint_id, line_trajectory.back(), 0, 0, lit_level::LIT, false );
+    draw_marker( line_trajectory.back(), line_endpoint_id );
+}
+
+void cata_tiles::draw_line()
+{
+    for_each_line_marker( [this]( const tripoint_bub_ms & p, const std::string & id ) {
+        draw_from_id_string( id, p, 0, 0, lit_level::LIT, false );
+    } );
 }
 void cata_tiles::draw_cursor()
 {

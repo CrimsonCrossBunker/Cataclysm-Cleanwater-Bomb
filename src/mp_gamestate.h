@@ -130,7 +130,6 @@ void mark_partner_push_pending( character_id target );
 // Current partner-separation tier (0 = close, 1 = mild warn, 2 = urgent
 // warn / leeway, 3 = pause).  Read by do_turn to auto-pause the calendar
 // at tier 3.
-int get_separation_tier();
 
 // Returns the partner NPC (proxy of the OTHER player) from this side's POV,
 // or nullptr if not connected. On the host that's the client's proxy; on
@@ -237,6 +236,7 @@ void set_host_mode( bool enabled );
 // True when this instance is hosting (listen server running), regardless of
 // whether it is also a headless dedicated server.
 bool is_hosting();
+void refresh_resident_regions( bool before_primary_relocation = false );
 
 // Called before unloading or replacing a world. Joins the host worker, closes
 // the client, and clears modes, proxy bindings, pending events and handshake
@@ -354,6 +354,8 @@ bool mp_menu_start_host_session();
 // CLI and menu share the same deferred start, after the world is loaded.
 bool mp_request_host_session( uint16_t port, const std::string &password,
                               const std::string &version );
+bool mp_request_host_session( uint16_t port, const std::string &password,
+                              const std::string &version, int room_players );
 
 // Main-menu integration: prompts for a host address (with optional :port),
 // probes, connects, sets client mode.  Silent on success; pops an error
@@ -363,6 +365,10 @@ bool mp_menu_join_session();
 // Main-menu integration: disarm a previously armed (but not-yet-started)
 // host session.  No-op if host mode isn't armed.
 void mp_menu_cancel_host();
+
+// Switch a loaded local world back to solo play after saving its guests.
+bool mp_close_host_session();
+void mp_open_session_menu();
 
 // Co-op block appended to the debug "Generate game report" output (debug.cpp).
 std::string mp_game_report_section();

@@ -58,7 +58,7 @@ void profile_identity_round_trip( const std::filesystem::path &path )
     check( first && second && *first != *second && first->size() == 32, "distinct profile IDs" );
     input_replay::on_record( input_event( 46, input_event_t::keyboard_code ) );
     input_replay::finish();
-    check( read( path ).find( "CATA_REPLAY 2\n" ) == 0, "new recordings use v2" );
+    check( read( path ).find( "CATA_REPLAY 3\n" ) == 0, "new recordings use v3" );
     check( input_replay::begin_replay( path.string() ), "load recorded identity seed" );
     check( input_replay::next_profile_identity( "renamed slot" ) == first,
            "v2 identity is independent of a legacy filename" );
@@ -111,11 +111,13 @@ void round_trip( const std::filesystem::path &path )
     input_replay::set_record_seed( std::numeric_limits<unsigned int>::max() );
     std::string error;
     check( input_replay::begin_record( path.string(), &error ), "start recording" );
-    input_event event( 119, input_event_t::keyboard_code );
+    input_event event( MouseInput::LeftButtonPressed, input_event_t::mouse );
     event.modifiers = { keymod_t::ctrl, keymod_t::alt, keymod_t::shift };
     event.mouse_pos = point( -2, 37 );
     event.text = "汉字 % -\n\t";
     event.edit = "-";
+    event.camera = camera_input{ 2, point( 127, 9 ) };
+    event.map_click = tripoint( -12, 35, -1 );
     input_replay::on_record( input_event() );
     input_replay::on_record( input_event( 0, input_event_t::timeout ) );
     input_replay::on_record( input_event( MouseInput::Move, input_event_t::mouse ) );
@@ -134,6 +136,10 @@ void round_trip( const std::filesystem::path &path )
     check( decoded.modifiers == event.modifiers &&
            decoded.mouse_pos == event.mouse_pos, "modifiers/mouse" );
     check( decoded.text == event.text && decoded.edit == event.edit, "escaped Unicode text" );
+    check( decoded.camera && decoded.camera->octant == 2 &&
+           decoded.camera->forward == point( 127, 9 ) &&
+           decoded.camera->map_direction( point::north ) == point::east, "spatial camera" );
+    check( decoded.map_click == event.map_click, "absolute map click" );
     check( input_replay::replay_remaining() == 0, "queue drained" );
     check( input_replay::replay_just_finished(), "completion only after final event" );
     check( !input_replay::replay_just_finished(), "completion is one-shot" );
@@ -144,6 +150,8 @@ void round_trip( const std::filesystem::path &path )
 void malformed_logs( const std::filesystem::path &path )
 {
     const std::string valid = "CATA_REPLAY 1\nSEED 19\nEV 2 0 1 46 0 0 - -\n";
+    const std::string spatial_header =
+        "CATA_REPLAY 3\nSEED 19\nPROFILE_SEED 0123456789abcdef0123456789abcdef\n";
     const std::vector<std::string> invalid = {
         "", "CATA_REPLAY 2\nSEED 19\nEV 2 0 1 46 0 0 - -\n",
         "CATA_REPLAY 3\nSEED 19\nEV 2 0 1 46 0 0 - -\n",
@@ -169,6 +177,10 @@ void malformed_logs( const std::filesystem::path &path )
         "CATA_REPLAY 1\nSEED 19\nEV 2 0 1 46 0 0 %G0 -\n",
         "CATA_REPLAY 1\nSEED 19\nEV 2 0 1 46 0 0 - %0\n",
         "CATA_REPLAY 1\nSEED 19\nEV 2 0 1 46 0 0 - - extra\n",
+        spatial_header + "EV 2 0 1 46 0 0 - - 1 8 127 9\n",
+        spatial_header + "EV 2 0 1 46 0 0 - - 1 2 128 128\n",
+        spatial_header + "EV 2 0 1 46 0 0 - - 2 -12 35 -1\n",
+        spatial_header + "EV 5 0 1 1 0 0 - - 3 2 127 9 -12 35\n",
         valid + "EV 2 0 1 46 0 0 -\n"
     };
     for( const std::string &text : invalid ) {

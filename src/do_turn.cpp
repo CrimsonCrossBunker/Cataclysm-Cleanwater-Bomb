@@ -2,6 +2,7 @@
 
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_world_session.h"
 #include "mp_inventory_activity.h"
 #include "translation.h"
 
@@ -30,6 +31,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "character_turn.h"
+#include "current_map.h"
 #include "player_control.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_loader.h"
@@ -135,6 +137,10 @@ bool cleanup_at_end()
     g->first_redraw_since_waiting_started = true;
 
     avatar &u = get_avatar();
+    const std::string &client_exit_reason = g->multiplayer_session().client_turn.exit_reason;
+    if( cata_mp::is_client_mode() && !client_exit_reason.empty() ) {
+        popup( client_exit_reason );
+    }
     if( g->uquit == QUIT_DIED || g->uquit == QUIT_SUICIDE ) {
         // Put (non-hallucinations) into the overmap so they are not lost.
         for( monster &critter : g->all_monsters() ) {
@@ -317,6 +323,8 @@ void handle_key_blocking_activity( int timeout )
             get_help().display_help();
         } else if( action == "coop_chat" ) {
             cata_mp::mp_open_chat();
+        } else if( action == "coop_session" ) {
+            cata_mp::mp_open_session_menu();
         } else if( action != "HELP_KEYBINDINGS" ) {
             refresh = false;
         }
@@ -340,6 +348,28 @@ void update_avatar_memory( avatar &u )
                                 static_cast<bool>( u.activity.get_progress_message( u ) ) );
     if( !view_blocked ) {
         get_map().update_map_memory( u );
+    }
+}
+
+void process_npc_sounds( game &owner, avatar &host )
+{
+    map &primary = reality_bubble();
+    const auto &session = owner.multiplayer_session();
+    const bool regional = session.has_regions();
+    for( npc &actor : owner.all_npcs() ) {
+        if( !regional && rl_dist( actor.pos_abs(), host.pos_abs() ) >= MAX_VIEW_DISTANCE ) {
+            continue;
+        }
+        map *const terrain = regional ? session.loaded_map_at( primary, actor.pos_abs_sm() ) :
+                             &primary;
+        if( !terrain ) {
+            continue;
+        }
+        std::optional<swap_map> context;
+        if( terrain != &primary ) {
+            context.emplace( *terrain );
+        }
+        sounds::process_sound_markers( &actor );
     }
 }
 
@@ -396,11 +426,13 @@ void process_avatar_activity( avatar &u )
     }
 }
 
-void monmove()
+static void monmove()
 {
     CATA_PROFILE_SCOPE();
     g->cleanup_dead();
-    map &m = get_map();
+    map &primary = get_map();
+    const cata_mp::world_session &session = g->multiplayer_session();
+    const bool regional = session.has_regions();
     avatar &u = get_avatar();
 
     int mon_count = 0;
@@ -412,8 +444,15 @@ void monmove()
     const bool has_npc_do_turn =
         cata::lua_platform::has_native_hook( "on_npc_do_turn" );
     for( monster &critter : g->all_monsters() ) {
-        if( !m.inbounds( critter.pos_abs() ) ) {
+        map *const owner = regional ? session.loaded_map_at( primary, critter.pos_abs_sm() ) :
+                           &primary;
+        if( !owner || !owner->inbounds( critter.pos_abs() ) ) {
             continue;
+        }
+        map &m = *owner;
+        std::optional<swap_map> context;
+        if( &m != &primary ) {
+            context.emplace( m );
         }
         ++mon_count;
         const std::chrono::steady_clock::time_point mon_t0 = std::chrono::steady_clock::now();
@@ -539,6 +578,19 @@ void monmove()
 
     // Now, do active NPCs.
     for( npc &guy : g->all_npcs() ) {
+        map *const owner = regional ? session.loaded_map_at( primary, guy.pos_abs_sm() ) :
+                           &primary;
+        if( !owner ) {
+            continue;
+        }
+        map &m = *owner;
+        std::optional<swap_map> context;
+        if( &m != &primary ) {
+            context.emplace( m );
+        }
+        if( regional ) {
+            guy.update_ai_map_origin( m );
+        }
         // Network input replaces AI, not physical character turns. The same
         // owned-character path below advances effects/body without NPC actions.
         const bool remote_controlled = cata_mp::prepare_remote_character_turn( guy );
@@ -815,6 +867,9 @@ bool game::do_turn()
         // The host advances the world. View updates and input polling cannot
         // tick terrain, monsters, missions or world Lua hooks a second time.
         cata_mp::process_session_turn();
+        if( is_game_over() ) {
+            return turn_handler::cleanup_at_end();
+        }
         avatar &u = get_avatar();
         cata_mp::client_finish_ready_firearm_activity();
         cata_mp::client_update_inventory_activity_view();
@@ -995,11 +1050,7 @@ void game::simulate_turn_prefix()
     process_avatar_activity( u );
 
     // Process NPC sound events before they move or they hear themselves talking
-    for( npc &guy : all_npcs() ) {
-        if( rl_dist( guy.pos_bub(), u.pos_bub() ) < MAX_VIEW_DISTANCE ) {
-            sounds::process_sound_markers( &guy );
-        }
-    }
+    process_npc_sounds( *this, u );
 
     music::deactivate_music_id( music::music_id::sound );
 
@@ -1037,11 +1088,7 @@ bool game::do_avatar_action_loop()
 
                 mon_info_update();
                 // Process any new sounds the player caused during their turn.
-                for( npc &guy : all_npcs() ) {
-                    if( rl_dist( guy.pos_bub(), u.pos_bub() ) < MAX_VIEW_DISTANCE ) {
-                        sounds::process_sound_markers( &guy );
-                    }
-                }
+                process_npc_sounds( *this, u );
                 explosion_handler::process_explosions();
                 sounds::process_sound_markers( &u );
                 if( !u.activity && uquit != QUIT_WATCH
@@ -1168,6 +1215,9 @@ bool game::do_avatar_action_loop()
 void game::simulate_turn_suffix()
 {
     CATA_PROFILE_SCOPE();
+    if( cata_mp::is_hosting() ) {
+        cata_mp::refresh_resident_regions();
+    }
     avatar &u = get_avatar();
     map &m = get_map();
 
@@ -1192,9 +1242,41 @@ void game::simulate_turn_suffix()
     m.build_floor_caches();
 
     m.process_falling();
-    m.vehmove();
-    m.process_fields();
-    m.process_items();
+    auto &session = multiplayer_session();
+    if( session.has_regions() ) {
+        const map_simulation_regions regions = session.simulation_regions( m );
+        const auto views = session.active_maps( m );
+        for( map &terrain : views ) {
+            if( &terrain != &m ) {
+                const swap_map context( terrain );
+                terrain.build_floor_caches();
+            }
+        }
+        m.vehmove( views, regions );
+        m.process_fields( scent, regions );
+        m.process_items( &regions );
+        for( const auto &entry : session.active_regions() ) {
+            cata_mp::resident_region &region = entry.get();
+            map &terrain = *region.terrain;
+            const swap_map context( terrain );
+            if( const Character *actor = player_controls().find( region.player ).resolve(
+                                             player_controls() ) ) {
+                const tripoint_bub_ms position = actor->pos_bub( terrain );
+                if( !actor->has_flag( json_flag_NO_SCENT ) ) {
+                    region.scent->set( position, actor->scent, actor->get_type_of_scent() );
+                    overmap_buffer.set_scent( actor->pos_abs_omt(), actor->scent );
+                }
+                region.scent->update( position, terrain );
+            }
+            terrain.process_fields( *region.scent, regions );
+            terrain.process_items( &regions );
+            terrain.build_map_cache( terrain.get_abs_sub().z(), true );
+        }
+    } else {
+        m.vehmove();
+        m.process_fields();
+        m.process_items();
+    }
     explosion_handler::process_explosions();
     m.creature_in_field( u );
 
@@ -1219,7 +1301,15 @@ void game::simulate_turn_suffix()
     if( calendar::once_every( time_between_npc_OM_moves ) ) {
         overmap_npc_move();
     }
-    m.furniture_terrain_emit_fields();
+    if( session.has_regions() ) {
+        const map_simulation_regions regions = session.simulation_regions( m );
+        session.visit_resident_maps( m, [&]( map & terrain ) {
+            const swap_map context( terrain );
+            terrain.furniture_terrain_emit_fields( &regions );
+        } );
+    } else {
+        m.furniture_terrain_emit_fields();
+    }
     // required after monsters move and fields emit
     mon_info_update();
 
@@ -1231,7 +1321,7 @@ void game::simulate_turn_suffix()
     // Per-turn world-state updates previously ran inside present_turn().
     // Moving them here keeps simulation advancing every tick regardless of
     // whether the renderer is gated.
-    if( levz >= 0 && !u.is_underwater() ) {
+    if( session.has_regions() || ( levz >= 0 && !u.is_underwater() ) ) {
         handle_weather_effects( get_weather().weather_id );
     }
 

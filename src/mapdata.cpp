@@ -261,6 +261,7 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
         case ter_furn_flag::TFLAG_SEEN_FROM_ABOVE: return "SEEN_FROM_ABOVE";
         case ter_furn_flag::TFLAG_RAMP_DOWN: return "RAMP_DOWN";
         case ter_furn_flag::TFLAG_RAMP_UP: return "RAMP_UP";
+        case ter_furn_flag::TFLAG_RAMP_ENDPOINT: return "RAMP_ENDPOINT";
         case ter_furn_flag::TFLAG_RAMP: return "RAMP";
         case ter_furn_flag::TFLAG_HIDE_PLACE: return "HIDE_PLACE";
         case ter_furn_flag::TFLAG_BLOCK_WIND: return "BLOCK_WIND";

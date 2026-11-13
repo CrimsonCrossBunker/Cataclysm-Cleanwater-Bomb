@@ -1577,6 +1577,14 @@ class vehicle
         tripoint_abs_ms pos_abs() const;
         // Returns the location of the vehicle in global overmap terrain coordinates.
         tripoint_abs_omt pos_abs_omt() const;
+        // Settled displacement from the center of the native map cell, in
+        // world_position units. Cell ownership changes at the native move.
+        point fractional_offset() const;
+        enum class offset_kind : uint8_t { driving_preview, parked };
+        void set_fractional_offset( const point &offset, offset_kind kind = offset_kind::driving_preview );
+        bool has_parked_offset() const;
+        bool supports_fractional_drag( const map &here, const point &direction ) const;
+        bool can_drag_fractionally( const map &here, const point &delta, const Character &who ) const;
         // Returns the coordinates (in map squares) of the vehicle relative to the local map.
         // Warning: Don't assume this position contains a vehicle part
         tripoint_bub_ms pos_bub( const map &here ) const;
@@ -1980,12 +1988,19 @@ class vehicle
         // Returns if any collision occurred
         bool collision( map &here, std::vector < veh_collision > &colls,
                         const tripoint_rel_ms &dp,
-                        bool just_detect, bool bash_floor = false );
+                        bool just_detect, bool bash_floor = false,
+                        const Creature *ignored_creature = nullptr );
+
+        // Checks the ground hull between its cached and proposed native poses.
+        // The caller still resolves impacts in the native destination cells.
+        bool clears_horizontal_sweep( map &here, const tripoint_rel_ms &dp,
+                                      const Creature *ignored = nullptr );
 
         // Handle given part collision with vehicle, monster/NPC/player or terrain obstacle
         // Returns collision, which has type, impulse, part, & target.
         veh_collision part_collision( map &here, int part, const tripoint_abs_ms &p,
-                                      bool just_detect, bool bash_floor );
+                                      bool just_detect, bool bash_floor,
+                                      const Creature *ignored_creature = nullptr );
 
         // Probability that the wheel will hit the item.
         static double hit_probability( const item &it, const vehicle_part *vp_wheel );
@@ -2210,7 +2225,7 @@ class vehicle
                 bool no_fake = false ) const;
 
         // calculate the new projected points for all vehicle parts to move to
-        void part_project_points( const tripoint_rel_ms &dp );
+        void part_project_points( const map &here, const tripoint_rel_ms &dp, bool bash_floor );
 
         // get all vehicle parts' projected points
         std::set < tripoint_abs_ms > get_projected_part_points() const;
@@ -2386,11 +2401,20 @@ class vehicle
         faction_id old_owner = faction_id::NULL_ID();
 
     private:
+        tripoint_abs_ms collision_part_position( const map &here, int index,
+                const tripoint_rel_ms &dp, bool bash_floor ) const;
+        veh_collision resolve_part_collision( map &here, int part, const tripoint_abs_ms &pos,
+                                              bool just_detect, bool bash_floor, bool vertical, const Creature *ignored_creature );
+
         mutable double coefficient_air_resistance = 1; // NOLINT(cata-serialize)
         mutable double coefficient_rolling_resistance = 1; // NOLINT(cata-serialize)
         mutable double coefficient_water_resistance = 1; // NOLINT(cata-serialize)
         mutable double draft_m = 1; // NOLINT(cata-serialize)
         mutable double hull_height = 0.3; // NOLINT(cata-serialize)
+
+        point motion_offset = point::zero; // NOLINT(cata-serialize)
+        // A push changes the resting pose. Stopping cancels only a driving preview.
+        offset_kind motion_offset_kind = offset_kind::driving_preview; // NOLINT(cata-serialize)
 
         // Absolute location when cache was last refreshed.
         mutable tripoint_abs_ms occupied_cache_pos = tripoint_abs_ms::invalid; // NOLINT(cata-serialize)
@@ -2441,12 +2465,14 @@ class vehicle
          */
         item removed_part( map &here, const vehicle_part &vp ) const;
 
-        // Updates the internal precalculated mount offsets after the vehicle has been displaced
-        // used in map::displace_vehicle()
-        std::set < int > advance_precalc_mounts( const point_sm_ms &new_pos, map *here,
-                const tripoint_bub_ms &src,
-                const tripoint_rel_ms &dp, int ramp_offset,
-                bool adjust_pos, std::set < int > parts_to_move );
+        // World cell occupied by this part after a native displacement, including ramps.
+        tripoint_bub_ms displaced_part_position( const map &here, int part,
+                const tripoint_bub_ms &origin, const tripoint_rel_ms &dp,
+                const std::set<int> &parts_to_move ) const;
+        // Publish the displaced mount positions and remove the old cache entries.
+        std::set < int > advance_precalc_mounts( const point_sm_ms &new_pos, map &here,
+                const tripoint_bub_ms &src, const tripoint_bub_ms &dst, const tripoint_rel_ms &dp,
+                bool adjust_pos, const std::set<int> &parts_to_move );
         // make sure the vehicle is supported across z-levels or on the same z-level
         bool level_vehicle( map &here );
 

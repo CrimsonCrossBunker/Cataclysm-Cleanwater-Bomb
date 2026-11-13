@@ -24,9 +24,9 @@
 
 // Replay log format (line-based, intentionally human-diffable):
 //
-//   CATA_REPLAY 2            <- magic + format version (v1 still readable)
+//   CATA_REPLAY 3            <- magic + format version (v1/v2 still readable)
 //   SEED <unsigned>          <- RNG seed applied on replay
-//   PROFILE_SEED <32 hex>    <- independent public identity seed; v2 only
+//   PROFILE_SEED <32 hex>    <- independent public identity seed since v2
 //   EV <type> <mods> <n> <k0> <k1> ... <mx> <my> <text> <edit>
 //   ...
 //
@@ -37,6 +37,8 @@
 //   <mx>/<my> mouse_pos
 //   <text>/<edit> percent-escaped UTF-8 (space and % and control chars escaped),
 //                 or "-" when empty
+//   v3 ends each event with a spatial flags field (1=camera, 2=map click).
+//   If set, the fields follow in order: octant and forward x/y, then tile x/y/z.
 //
 // Fields are space-separated; only <text>/<edit> may contain escaped spaces.
 
@@ -52,7 +54,7 @@ bool replay_finish_signaled = false; // one-shot guard for replay_just_finished(
 bool replay_input_failed = false;
 std::size_t loaded_event_count = 0;
 
-constexpr int replay_format_version = 2;
+constexpr int replay_format_version = 3;
 
 struct profile_identity_state {
     std::string seed;
@@ -173,6 +175,34 @@ bool fail( std::string *error, const std::string &message )
     return false;
 }
 
+bool read_spatial_input( std::istream &in, input_event &ev )
+{
+    int flags = 0;
+    if( !( in >> flags ) || flags < 0 || flags > 3 ) {
+        return false;
+    }
+    if( flags & 1 ) {
+        constexpr int limit = camera_input::forward_limit;
+        int octant = 0;
+        point forward;
+        if( !( in >> octant >> forward.x >> forward.y ) || octant < 0 || octant >= 8 ||
+            forward == point::zero || forward.x < -limit || forward.x > limit ||
+            forward.y < -limit || forward.y > limit ||
+            forward.x * forward.x + forward.y * forward.y > limit * limit ) {
+            return false;
+        }
+        ev.camera = camera_input{ octant, forward };
+    }
+    if( flags & 2 ) {
+        tripoint tile;
+        if( ev.type != input_event_t::mouse || !( in >> tile.x >> tile.y >> tile.z ) ) {
+            return false;
+        }
+        ev.map_click = tile;
+    }
+    return true;
+}
+
 } // namespace
 
 namespace input_replay
@@ -255,7 +285,7 @@ bool begin_replay( const std::string &path, std::string *error )
     std::istringstream header( line );
     header.imbue( std::locale::classic() );
     if( !( header >> token >> version ) || token != "CATA_REPLAY" ||
-        ( version != 1 && version != replay_format_version ) || !( header >> std::ws ).eof() ) {
+        version < 1 || version > replay_format_version || !( header >> std::ws ).eof() ) {
         return fail( error, "Invalid replay format header" );
     }
     std::getline( in, line );
@@ -271,7 +301,7 @@ bool begin_replay( const std::string &path, std::string *error )
 
     std::size_t line_number = 2;
     std::string identity_seed;
-    if( version == 2 ) {
+    if( version >= 2 ) {
         std::getline( in, line );
         ++line_number;
         std::istringstream identity_header( line );
@@ -323,6 +353,7 @@ bool begin_replay( const std::string &path, std::string *error )
         std::string text_tok;
         std::string edit_tok;
         if( !( ls >> ev.mouse_pos.x >> ev.mouse_pos.y >> text_tok >> edit_tok ) ||
+            ( version >= 3 && !read_spatial_input( ls, ev ) ) ||
             !( ls >> std::ws ).eof() || !unescape_field( text_tok, ev.text ) ||
             !unescape_field( edit_tok, ev.edit ) ) {
             return fail( error, "Invalid event data on line " + std::to_string( line_number ) );
@@ -431,6 +462,13 @@ void on_record( const input_event &ev )
     os << ' ' << ev.mouse_pos.x << ' ' << ev.mouse_pos.y
        << ' ' << escape_field( ev.text )
        << ' ' << escape_field( ev.edit );
+    os << ' ' << ( ( ev.camera ? 1 : 0 ) | ( ev.map_click ? 2 : 0 ) );
+    if( ev.camera ) {
+        os << ' ' << ev.camera->octant << ' ' << ev.camera->forward.x << ' ' << ev.camera->forward.y;
+    }
+    if( ev.map_click ) {
+        os << ' ' << ev.map_click->x << ' ' << ev.map_click->y << ' ' << ev.map_click->z;
+    }
     *record_stream << os.str() << '\n';
     record_stream->flush();
 }

@@ -233,7 +233,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         const JsonObject &request,
         inventory_activity_host_state &state, pickup_host_state &inventory, bool authorized = true );
 bool apply_inventory_activity_result( const JsonObject &response );
-bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &choices );
+bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &choices,
+                  const std::optional<point> &fractional_delta = std::nullopt );
 void client_start_sleep( const sleep_selection &choice );
 void client_start_wait( const wait_selection &choice );
 void client_sync_rest_activity( const JsonObject &state );

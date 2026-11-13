@@ -20,7 +20,12 @@ class vehicle;
 struct dealt_projectile_attack;
 struct projectile;
 
-/** Aim result for a single projectile attack */
+// A creature contributes its exact XY position only when it occupies the
+// specified endpoint. The same path feeds aiming and authoritative ballistics.
+std::vector<tripoint_bub_ms> projectile_path( const map &here, const tripoint_bub_ms &source,
+        const tripoint_bub_ms &target, const Creature *shooter, const Creature *victim );
+
+// Aim result for a single projectile attack.
 struct projectile_attack_aim {
     ///< Hit quality, where 0.0 is a perfect hit and 1.0 is a miss
     double missed_by = 0;

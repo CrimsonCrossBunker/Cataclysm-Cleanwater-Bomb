@@ -43,6 +43,7 @@
 #include "transient_effect.h"
 #include "transient_visual_layer.h"
 #include "smooth_lighting.h"
+#include "sprite_alpha_profile.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -147,13 +148,6 @@ class tile_lookup_res
 
 // 3D-only silhouette metadata captured during the tileset's existing alpha
 // scan. Indices are sprite-local pixels; -1 means that row/column is empty.
-struct sprite_alpha_profile {
-    std::vector<int> top;
-    std::vector<int> bottom;
-    std::vector<int> left;
-    std::vector<int> right;
-};
-
 struct sprite_alpha_scan {
     SDL_Rect bounds = { 0, 0, 0, 0 };
     std::shared_ptr<const sprite_alpha_profile> profile;
@@ -371,6 +365,13 @@ struct atlas_replay_descriptor {
     int expected_tilecount = 0;
 };
 
+// Furniture artwork in tile-local coordinates. One unit on Z is one map level.
+struct tileset_furniture_box {
+    std::array<float, 3> origin;
+    std::array<float, 3> size;
+    std::array<float, 3> color;
+};
+
 class tileset
 {
     private:
@@ -431,6 +432,7 @@ class tileset
 
         std::unordered_set<std::string> duplicate_ids;
 
+        std::unordered_map<std::string, std::vector<tileset_furniture_box>> furniture_geometry;
         std::unordered_map<std::string, tile_type> tile_ids;
         // caches both "default" and "_season_XXX" tile variants (to reduce the number of lookups)
         // either variant can be either a `nullptr` or a pointer/reference to the real value (stored inside `tile_ids`)
@@ -451,6 +453,8 @@ class tileset
         std::unordered_map<std::string, std::vector<layer_context_sprites>> field_layer_data;
 
         void clear();
+
+        const std::vector<tileset_furniture_box> *find_furniture_geometry( const std::string &id ) const;
 
         bool is_isometric() const {
             return tile_isometric;
@@ -1222,6 +1226,8 @@ class cata_tiles
         // pseudo-animated layer, not really though.
         void init_draw_line( const tripoint_bub_ms &p, std::vector<tripoint_bub_ms> trajectory,
                              std::string line_end_name, bool target_line );
+        void for_each_line_marker( const std::function<void( const tripoint_bub_ms &,
+                const std::string & )> &draw_marker ) const;
         void draw_line();
         void void_line();
 

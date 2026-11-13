@@ -36,6 +36,7 @@
 #include "units_fwd.h"
 #include "viewer.h"
 #include "weakpoint.h"
+#include "world_position.h"
 
 class Character;
 class JsonObject;
@@ -327,6 +328,7 @@ class Creature : public viewer
         virtual void gravity_check( map *here );
         void setpos( map &here, const tripoint_bub_ms &p, bool check_gravity = true );
         void setpos( const tripoint_abs_ms &p, bool check_gravity = true );
+        void setpos( map &here, const world_position &p, bool check_gravity = true );
 
         /** Checks if the creature fits confortably into a given tile. */
         bool will_be_cramped_in_vehicle_tile( map &here, const tripoint_abs_ms &loc ) const;
@@ -813,8 +815,7 @@ class Creature : public viewer
          * regular movement and vision. **/
         int reachable_zone = 0;
 
-        /** The creature's position in absolute coordinates */
-        tripoint_abs_ms location;
+        world_position location;
         lazy<safe_reference_anchor> anchor;
     protected:
         // Sets the creature's position without any side-effects.
@@ -823,6 +824,10 @@ class Creature : public viewer
     public:
         // Sets the creature's position without any side-effects.
         void set_pos_abs_only( const tripoint_abs_ms &loc );
+        void set_pos_world_only( const world_position &pos );
+        const world_position &pos_world() const {
+            return location;
+        }
         safe_reference<Creature> get_safe_reference();
     protected:
         // Invoked when the creature's position changes.
@@ -1339,10 +1344,7 @@ class Creature : public viewer
          *
          */
         std::string replace_with_npc_name( std::string input ) const;
-        /**
-         * Returns the location of the creature in map square coordinates (the most detailed
-         * coordinate system), relative to a fixed global point of origin.
-         */
+        /** Returns the containing map square, relative to the world origin. */
         tripoint_abs_ms pos_abs() const;
         /**
          * Returns the location of the creature in global submap coordinates.

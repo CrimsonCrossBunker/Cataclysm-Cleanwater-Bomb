@@ -29,6 +29,7 @@
 #include "trap.h"
 #include "units.h"
 #include "vehicle.h"
+#include "world_position.h"
 
 static const furn_str_id furn_f_console( "f_console" );
 
@@ -114,6 +115,29 @@ const std::string &submap::get_graffiti( const point_sm_ms &p ) const
         return cosmetics[ fresult.ndx ].str;
     }
     return STRING_EMPTY;
+}
+
+point submap::furniture_offset( const point_sm_ms &p ) const
+{
+    const auto it = furniture_offsets.find( p );
+    return it == furniture_offsets.end() ? point::zero : it->second;
+}
+
+bool submap::set_furniture_offset( const point_sm_ms &p, const point &offset )
+{
+    constexpr int limit = world_position::units_per_tile - 1;
+    if( offset.x < -limit || offset.x > limit || offset.y < -limit || offset.y > limit ) {
+        return false;
+    }
+    if( offset == point::zero ) {
+        furniture_offsets.erase( p );
+        return true;
+    }
+    if( !get_furn( p ) ) {
+        return false;
+    }
+    furniture_offsets.insert_or_assign( p, offset );
+    return true;
 }
 
 void submap::set_graffiti( const point_sm_ms &p, const std::string &new_graffiti )
@@ -282,6 +306,15 @@ void submap::rotate( int turns )
         }
     }
 
+    std::map<point_sm_ms, point> rotated_offsets;
+    for( const auto &[cell, offset] : furniture_offsets ) {
+        point rotated = offset;
+        for( int i = 0; i < turns; ++i ) {
+            rotated = point( -rotated.y, rotated.x );
+        }
+        rotated_offsets.emplace( rotate_point( cell ), rotated );
+    }
+    furniture_offsets.swap( rotated_offsets );
     active_items.rotate_locations( turns, { SEEX, SEEY } );
 
     for( submap::cosmetic_t &elem : cosmetics ) {
@@ -330,6 +363,17 @@ void submap::mirror( bool horizontally )
     }
     geometry_version_.changed();
     std::map<point_sm_ms, computer> mirror_comp;
+    std::map<point_sm_ms, point> mirrored_offsets;
+    for( const auto &[cell, offset] : furniture_offsets ) {
+        if( horizontally ) {
+            mirrored_offsets.emplace( point_sm_ms( SEEX - 1 - cell.x(), cell.y() ),
+                                      point( -offset.x, offset.y ) );
+        } else {
+            mirrored_offsets.emplace( point_sm_ms( cell.x(), SEEY - 1 - cell.y() ),
+                                      point( offset.x, -offset.y ) );
+        }
+    }
+    furniture_offsets.swap( mirrored_offsets );
 
     if( horizontally ) {
         for( int i = 0, ie = SEEX / 2; i < ie; i++ ) {
@@ -404,6 +448,7 @@ void submap::revert_submap( submap &sr )
         m.reset();
         terrain_growth.clear();
         finite_liquids.clear();
+        furniture_offsets.clear();
         cosmetics.clear();
         set_all_ter( sr.get_ter( point_sm_ms::zero ), true );
         return;
@@ -427,6 +472,7 @@ void submap::revert_submap( submap &sr )
     }
     terrain_growth = sr.terrain_growth;
     finite_liquids = sr.finite_liquids;
+    furniture_offsets = sr.furniture_offsets;
     // copy cosmetics to new submap
     // since their positions are stored in point_sm_ms, cosmetics do not require location updates.
     cosmetics = sr.cosmetics;
@@ -438,6 +484,7 @@ submap submap::get_revert_submap() const
     ret.uniform_ter = uniform_ter;
     ret.terrain_growth = terrain_growth;
     ret.finite_liquids = finite_liquids;
+    ret.furniture_offsets = furniture_offsets;
     if( !is_uniform() ) {
         ret.m = std::make_unique<maptile_soa>( *m );
         ret.cosmetics = cosmetics;
@@ -485,7 +532,9 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
 
             if( copy_from->m->frn[x][y] != f_null && ( copy_from_is_overlay ||
                     this->m->frn[x][y] == f_null ) ) {
-                this->m->frn[x][y] = copy_from->m->frn[x][y];
+                const point_sm_ms cell( x, y );
+                this->m->frn[x][y] = copy_from->get_furn( cell );
+                set_furniture_offset( cell, copy_from->furniture_offset( cell ) );
             }
 
             this->m->lum[x][y] += copy_from->m->lum[x][y];

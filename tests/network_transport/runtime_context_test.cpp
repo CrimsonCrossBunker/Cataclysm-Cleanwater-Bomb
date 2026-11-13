@@ -17,7 +17,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-void require( bool condition, const char *message )
+void require( bool condition, const std::string &message )
 {
     if( !condition ) {
         throw std::runtime_error( message );
@@ -66,7 +66,7 @@ void receive_exact( client_connection &client, const std::string &expected )
         std::map<std::string, std::string> fields;
         require( read_handshake( message, fields ), "valid queued message" );
         require( fields["type"] == "welcome" || fields["type"] == "player_joined",
-                 "another session's gameplay message reached this client" );
+                 "unexpected payload before owner-specific message: " + message );
         return false;
     }, "expected owner-specific payload" );
 }
@@ -144,7 +144,7 @@ void exercise_inbound_overload( uint16_t port )
         client.send( "{\"type\":\"action\",\"action\":\"wait\",\"sequence\":" + std::to_string( i ) + "}" );
     }
     receive_exact( client,
-                   R"({"type":"error","message":"Host incoming action queue is full; this message was not accepted. Reconnect to resynchronize."})" );
+                   R"({"type":"error","message":"Host incoming action queue is full; this message was not accepted.  Reconnect to resynchronize."})" );
     await( [&]() {
         const auto usage = host.events().current_usage();
         return usage.queued == 4 && usage.reserved_disconnects == 0;

@@ -15,6 +15,7 @@
 class input_context;
 class map;
 struct input_event;
+struct camera_input;
 
 /**
  * Enumerates all discrete actions that can be performed by player
@@ -367,11 +368,14 @@ enum action_id : int {
     /** Interact with the current or nearby tile */
     ACTION_INTERACT,
     ACTION_COOP_CHAT,
+    ACTION_COOP_SESSION,
     ACTION_PASS_ITEM,
     ACTION_HIGH_FIVE,
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,
     /** Select and use an explicitly activatable melee technique */
     ACTION_ACTIVE_TECHNIQUE,
+    /** Switch the local terrain view between 2D and 3D. */
+    ACTION_TOGGLE_3D_VIEW,
     /** Not an action, serves as count of enumerated actions */
     NUM_ACTIONS
     /**@}*/
@@ -610,7 +614,8 @@ enum class iso_rotate : int {
 action_id get_movement_action_from_delta( const tripoint_rel_ms &d, iso_rotate rot );
 
 // Helper function to convert movement action to coordinate delta point
-point_rel_ms get_delta_from_movement_action( action_id act, iso_rotate rot );
+point_rel_ms get_delta_from_movement_action( action_id act, iso_rotate rot,
+        const camera_input *camera = nullptr );
 
 /**
  * Show the action menu

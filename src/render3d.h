@@ -7,16 +7,15 @@
 #include <optional>
 
 #include "coords_fwd.h"
+#include "input_enums.h"
 #include "point.h"
 
 struct SDL_Renderer;
 struct SDL_FRect;
 class cata_tiles;
 
-// Experimental 3D terrain renderer (P0). Renders the terrain around the view
-// center as instanced cubes into an offscreen GPU texture, then composites it
-// into the terrain window via SDL_Renderer. Everything it reads from the game
-// is read-only; simulation code is untouched.
+// SDL3 terrain renderer. Composites the map and tileset assets into the
+// terrain window and keeps the presented frame for picking and camera input.
 namespace render3d
 {
 
@@ -24,17 +23,20 @@ namespace render3d
 void on_renderer_created( SDL_Renderer *renderer );
 void on_renderer_destroyed();
 
-// True once probing succeeded: GPU-device renderer plus loadable shaders.
-bool available();
+// Whether the current renderer can draw the 3D tiles view.
+bool is_available();
+// Whether the terrain window currently displays a 3D frame.
+bool view_active();
+bool contains_pixel( const point &logical_pixel );
 
-// available(), re-probing first if the renderer object changed (runtime
-// renderer rebuild, or the option was toggled on after startup).
-bool ensure_available( SDL_Renderer *renderer );
+// Retire the presented view before the frontend draws a fallback frame.
+void leave_view( SDL_Renderer *renderer );
 
 // Draws the 3D scene into the given pixel rect of the current render target.
+// Returns true when a complete 3D frame was composited.
 // tiles provides tileset sprite lookups (atlas texture + uv); may be null,
 // in which case everything falls back to flat hash colors.
-void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
+bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                           const tripoint_bub_ms &center, cata_tiles *tiles );
 
 // Top-down orbit camera: feed relative mouse motion (pixels) here.
@@ -47,9 +49,8 @@ void note_mouse_wheel( float ticks );
 bool mouse_captured();
 
 // Converts a logical pixel (same space as the dest rect of draw_terrain_window)
-// to the map tile under the cursor by unprojecting a camera ray onto the view
-// level's ground plane. Also remembers the pixel as the hover position for the
-// next frame's preselection box. Nullopt before the first frame / ray misses.
+// to the nearest selectable terrain surface in the presented frame.
+// Also remembers the pixel as the hover position for the next preselection box.
 std::optional<tripoint_bub_ms> screen_to_tile( const point &logical_pixel );
 
 // Game-driven cursors (targeting, construction, zones): cata_tiles forwards
@@ -64,6 +65,8 @@ void push_cursor( const tripoint_bub_ms &p, bool highlight );
 bool camera_screen_to_map_delta( int &dx, int &dy );
 // The inverse: a map-frame step to the movement keys' screen frame.
 bool camera_map_to_screen_delta( int &dx, int &dy );
+// Quantized direction of the currently presented camera.
+std::optional<camera_input> movement_camera();
 
 // Enable/disable relative mouse mode for FP look. Idempotent.
 void sync_mouse_capture( SDL_Renderer *renderer, bool want );

@@ -20,6 +20,7 @@
 #include "color.h"
 #include "coordinates.h"
 #include "crafting.h"
+#include "current_map.h"
 #include "debug.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
@@ -38,6 +39,8 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "map_selector.h"
+#include "map_simulation_regions.h"
+#include "mp_world_session.h"
 #include "npc.h"
 #include "pimpl.h"
 #include "point.h"
@@ -1549,6 +1552,12 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
     }
 
     map &here = get_map();
+    const auto &session = g->multiplayer_session();
+    map &primary = reality_bubble();
+    const bool regional = session.has_regions();
+    const auto map_at = [&]( const tripoint_abs_ms & position ) -> map & {
+        return regional ? session.map_for( primary, project_to<coords::sm>( position ) ) : here;
+    };
 
     auto try_character = [uid]( Character * c ) -> item_location {
         if( c == nullptr )
@@ -1565,10 +1574,16 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
 
     // Off-bubble would wrap a pointer into a temporary tinymap; gate to
     // in-bounds.  Owners must call rebuild_for_item once back in range.
-    auto try_map_at = [uid, &here]( const tripoint_abs_ms & abs ) -> item_location {
-        if( !here.inbounds( here.get_bub( abs ) ) )
+    auto try_map_at = [uid, &map_at, &here]( const tripoint_abs_ms & abs ) -> item_location {
+        map &terrain = map_at( abs );
+        if( !terrain.has_loaded_submap( terrain.get_bub( abs ) ) )
         {
             return item_location::nowhere;
+        }
+        std::optional<swap_map> context;
+        if( &terrain != &here )
+        {
+            context.emplace( terrain );
         }
         map_cursor mc( abs );
         item *found = retrieve_by_uid( mc, uid );
@@ -1612,8 +1627,9 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
         }
         case item_locator_hint::place::vehicle: {
             const vehicle_hint *vh = std::get_if<vehicle_hint>( &hint.location );
-            if( vh != nullptr && here.inbounds( here.get_bub( vh->cargo_square ) ) ) {
-                const optional_vpart_position vp = here.veh_at( vh->cargo_square );
+            if( vh != nullptr ) {
+                map &terrain = map_at( vh->cargo_square );
+                const optional_vpart_position vp = terrain.veh_at( vh->cargo_square );
                 if( vp ) {
                     vehicle &veh = vp->vehicle();
                     // Try in order: stored part_index (if in range), then
@@ -1664,26 +1680,49 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
             return l2;
         }
     }
-    for( const wrapped_vehicle &wv : here.get_vehicles() ) {
-        if( wv.v == nullptr ) {
-            continue;
+    const auto scan_view = [&]( map & terrain,
+    const map_simulation_regions * regions ) -> item_location {
+        std::optional<swap_map> context;
+        if( &terrain != &here )
+        {
+            context.emplace( terrain );
         }
-        for( const vpart_reference &vpr : wv.v->get_all_parts() ) {
-            vehicle_cursor vc( *wv.v, vpr.part_index() );
-            item *found = retrieve_by_uid( vc, uid );
-            if( found != nullptr ) {
-                return item_location( vc, found );
+        for( const wrapped_vehicle &wv : terrain.get_vehicles() )
+        {
+            if( wv.v == nullptr ||
+                ( regions && !regions->owns( terrain, wv.v->sm_pos ) ) ) {
+                continue;
+            }
+            for( const vpart_reference &vpr : wv.v->get_all_parts() ) {
+                vehicle_cursor vc( *wv.v, vpr.part_index() );
+                item *found = retrieve_by_uid( vc, uid );
+                if( found != nullptr ) {
+                    return item_location( vc, found );
+                }
             }
         }
-    }
-    for( const tripoint_bub_ms &p : here.points_on_zlevel() ) {
-        if( !here.has_items( p ) ) {
-            continue;
+        for( const tripoint_bub_ms &p : terrain.points_on_zlevel() )
+        {
+            if( ( regions && !regions->owns( terrain, project_to<coords::sm>( terrain.get_abs( p ) ) ) ) ||
+                !terrain.has_items( p ) ) {
+                continue;
+            }
+            map_cursor mc( terrain.get_abs( p ) );
+            item *found = retrieve_by_uid( mc, uid );
+            if( found != nullptr ) {
+                return item_location( mc, found );
+            }
         }
-        map_cursor mc( here.get_abs( p ) );
-        item *found = retrieve_by_uid( mc, uid );
-        if( found != nullptr ) {
-            return item_location( mc, found );
+
+        return item_location::nowhere;
+    };
+    if( !regional ) {
+        return scan_view( here, nullptr );
+    }
+    const map_simulation_regions regions = session.simulation_regions( primary );
+    for( map &terrain : session.active_maps( primary ) ) {
+        if( item_location result = scan_view( terrain, &regions ) ) {
+            return result;
         }
     }
 

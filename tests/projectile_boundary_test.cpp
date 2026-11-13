@@ -2,6 +2,7 @@
 #include <memory>
 #include <functional>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "ballistics.h"
@@ -18,6 +19,7 @@
 #include "point.h"
 #include "projectile.h"
 #include "type_id.h"
+#include "world_position.h"
 
 static const ammo_effect_str_id ammo_effect_STREAM( "STREAM" );
 static const damage_type_id damage_bash( "bash" );
@@ -81,3 +83,29 @@ TEST_CASE( "vertical_projectiles_stop_at_the_loaded_map_boundary", "[projectile]
 }
 
 
+
+TEST_CASE( "fractional_projectile_path_starts_at_the_actual_shooting_position",
+           "[projectile][render3d]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms source( 60, 60, 0 );
+    const tripoint_bub_ms target( 62, 61, 0 );
+    you.setpos( here, source, false );
+    CHECK( projectile_path( here, source, target, &you, nullptr ) ==
+           here.find_clear_path( source, target ) );
+
+    const auto offset = world_position::from_tile( here.get_abs( source ), tripoint( 128, 240, 0 ) );
+    REQUIRE( offset );
+    you.setpos( here, *offset, false );
+    const std::vector<tripoint_bub_ms> expected = {
+        source + point::south, source + point::south_east, target
+    };
+    CHECK( projectile_path( here, source, target, &you, nullptr ) == expected );
+    const std::vector<tripoint_bub_ms> reversed = {
+        source + point::south_east, source + point::south, source
+    };
+    CHECK( projectile_path( here, target, source, nullptr, &you ) == reversed );
+}

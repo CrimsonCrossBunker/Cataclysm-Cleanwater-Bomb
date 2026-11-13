@@ -783,6 +783,8 @@ bool game::setup()
 void game::reset_game_state()
 {
     multiplayer_session_ptr->prepare_for_world_load();
+    u.use_local_map_memory();
+    u.clear_map_memory();
     player_controls_ptr->reset();
     local_player_control_ptr->reset();
     npc_lifetimes_ptr->reset();
@@ -1318,40 +1320,66 @@ vehicle *game::place_vehicle_nearby(
 void game::load_npcs()
 {
     map &here = get_map();
-    const int radius = HALF_MAPSIZE - 1;
-    const tripoint_abs_sm abs_sub( here.get_abs_sub() );
-    const half_open_rectangle<point_abs_sm> map_bounds( abs_sub.xy(), abs_sub.xy() + point( MAPSIZE,
-            MAPSIZE ) );
-    // uses submap coordinates
+    activate_npcs( here, overmap_buffer.get_npcs_near_player( HALF_MAPSIZE - 1 ) );
+    npcs_dirty = false;
+}
+
+void game::load_npcs( map *here )
+{
+    const int radius = here->getmapsize() / 2;
+    const tripoint_abs_sm center = here->get_abs_sub() + point_rel_sm( radius, radius );
+    const swap_map context( *here );
+    activate_npcs( *here, overmap_buffer.get_npcs_near( center, radius ) );
+    if( here == &reality_bubble() ) {
+        npcs_dirty = false;
+    }
+}
+
+void game::unload_creatures_outside_resident_maps()
+{
+    map &primary = reality_bubble();
+    const auto &session = multiplayer_session();
+    for( auto it = critter_tracker->active_npc.begin(); it != critter_tracker->active_npc.end(); ) {
+        npc &actor = **it;
+        if( actor.has_native_player_control() || session.loaded_map_at( primary, actor.pos_abs_sm() ) ) {
+            ++it;
+        } else {
+            actor.on_unload();
+            it = critter_tracker->active_npc.erase( it );
+        }
+    }
+    for( monster &actor : all_monsters() ) {
+        if( !session.loaded_map_at( primary, actor.pos_abs_sm() ) ) {
+            despawn_monster( actor );
+        }
+    }
+    critter_tracker->invalidate_reachability_cache();
+}
+
+void game::activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby )
+{
     std::vector<shared_ptr_fast<npc>> just_added;
-    for( const auto &temp : overmap_buffer.get_npcs_near_player( radius ) ) {
+    for( const auto &temp : nearby ) {
+        const tripoint_abs_sm sm_loc = temp->pos_abs_sm();
+        // Placement may find a nearby alternative. Only start it in a
+        // loaded submap of the view that activated this NPC.
+        if( !here.has_loaded_submap( sm_loc ) || temp->has_companion_mission() ) {
+            continue;
+        }
         const character_id &id = temp->getID();
         const auto found = std::find_if( critter_tracker->active_npc.begin(),
                                          critter_tracker->active_npc.end(),
         [id]( const shared_ptr_fast<npc> &n ) {
             return n->getID() == id;
         } );
-        if( found != critter_tracker->active_npc.end() ) {
-            continue;
-        }
-        if( temp->is_active() ) {
-            continue;
-        }
-        if( temp->has_companion_mission() ) {
-            continue;
-        }
-
-        const tripoint_abs_sm sm_loc = temp->pos_abs_sm();
-        // NPCs who are out of bounds before placement would be pushed into bounds
-        // This can cause NPCs to teleport around, so we don't want that
-        if( !map_bounds.contains( sm_loc.xy() ) ) {
+        if( found != critter_tracker->active_npc.end() || temp->is_active() ) {
             continue;
         }
 
         add_msg_debug( debugmode::DF_NPC, "game::load_npcs: Spawning static NPC, %s %s",
-                       abs_sub.to_string_writable(), sm_loc.to_string_writable() );
+                       here.get_abs_sub().to_string_writable(), sm_loc.to_string_writable() );
         temp->place_on_map( &here );
-        if( !reality_bubble().inbounds( temp->pos_bub() ) ) {
+        if( !here.has_loaded_submap( temp->pos_abs_sm() ) ) {
             continue;
         }
         // In the rare case the npc was marked for death while
@@ -1367,65 +1395,6 @@ void game::load_npcs()
     for( const auto &npc : just_added ) {
         npc->on_load( &here );
     }
-
-    npcs_dirty = false;
-}
-
-void game::load_npcs( map *here )
-{
-    const int mapsize = here->getmapsize();
-    const int radius = mapsize / 2 - 1;
-    const tripoint_abs_sm abs_sub( here->get_abs_sub() );
-    const tripoint_abs_sm center = abs_sub + point_rel_sm{radius, radius};
-    const half_open_rectangle<point_abs_sm> map_bounds( abs_sub.xy(), abs_sub.xy() + point( mapsize,
-            mapsize ) );
-    // uses submap coordinates
-    std::vector<shared_ptr_fast<npc>> just_added;
-    for( const auto &temp : overmap_buffer.get_npcs_near( center, radius ) ) {
-        const character_id &id = temp->getID();
-        const auto found = std::find_if( critter_tracker->active_npc.begin(),
-                                         critter_tracker->active_npc.end(),
-        [id]( const shared_ptr_fast<npc> &n ) {
-            return n->getID() == id;
-        } );
-        if( found != critter_tracker->active_npc.end() ) {
-            continue;
-        }
-        if( temp->is_active() ) {
-            continue;
-        }
-        if( temp->has_companion_mission() ) {
-            continue;
-        }
-
-        const tripoint_abs_sm sm_loc = temp->pos_abs_sm();
-        // NPCs who are out of bounds before placement would be pushed into bounds
-        // This can cause NPCs to teleport around, so we don't want that
-        if( !map_bounds.contains( sm_loc.xy() ) ) {
-            continue;
-        }
-
-        add_msg_debug( debugmode::DF_NPC, "game::load_npcs: Spawning static NPC, %s %s",
-                       abs_sub.to_string_writable(), sm_loc.to_string_writable() );
-        temp->place_on_map( here );
-        if( !here->inbounds( temp->pos_abs() ) ) {
-            continue;
-        }
-        // In the rare case the npc was marked for death while
-        // it was on the overmap. Kill it.
-        if( temp->marked_for_death ) {
-            temp->die( here, nullptr );
-        } else {
-            critter_tracker->active_npc.push_back( temp );
-            just_added.push_back( temp );
-        }
-    }
-
-    for( const auto &npc : just_added ) {
-        npc->on_load( here );
-    }
-
-    npcs_dirty = false;
 }
 
 void game::on_witness_theft( const item &target )
@@ -2929,6 +2898,9 @@ input_context get_default_mode_input_context()
         ctxt.register_action( "toggle_fullscreen" );
 #endif
         ctxt.register_action( "toggle_pixel_minimap" );
+#if defined(TILES)
+        ctxt.register_action( "toggle_3d_view" );
+#endif
         ctxt.register_action( "toggle_panel_adm" );
         ctxt.register_action( "reload_tileset" );
         ctxt.register_action( "toggle_auto_features" );
@@ -2941,6 +2913,9 @@ input_context get_default_mode_input_context()
         ctxt.register_action( "diary" );
         ctxt.register_action( "action_menu" );
         ctxt.register_action( "main_menu" );
+#ifdef MP_ENABLED
+        ctxt.register_action( "coop_session" );
+#endif
         ctxt.register_action( "item_action_menu" );
         ctxt.register_action( "ANY_INPUT" );
         ctxt.register_action( "COORDINATE" );
@@ -2968,7 +2943,7 @@ bool game::try_get_left_click_action( action_id &act, const tripoint_bub_ms &mou
     bool new_destination = true;
     if( !destination_preview.empty() ) {
         auto &final_destination = destination_preview.back();
-        if( final_destination.xy() == mouse_target.xy() ) {
+        if( final_destination == mouse_target ) {
             // Second click
             new_destination = false;
             u.set_destination( destination_preview );
@@ -3023,7 +2998,7 @@ bool game::queue_contextual_actions( const tripoint_bub_ms &target,
 
     const player_activity queued_action( contextual_action_activity_actor( here.get_abs( target ),
                                          actions ) );
-    if( square_dist( target.xy(), u.pos_bub().xy() ) <= 1 ) {
+    if( target.z() == u.posz() && square_dist( target.xy(), u.pos_bub().xy() ) <= 1 ) {
         u.assign_activity( queued_action );
         return true;
     }
@@ -3145,8 +3120,10 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
     }
 #endif
 
-    const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;
-    const bool is_self = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 0;
+    const tripoint_bub_ms player_pos = u.pos_bub( here );
+    const bool is_adjacent = mouse_target.z() == player_pos.z() &&
+                             square_dist( mouse_target.xy(), player_pos.xy() ) <= 1;
+    const bool is_self = mouse_target == player_pos;
     if( const monster *const mon = get_creature_tracker().creature_at<monster>( mouse_target ) ) {
         if( !u.sees( here, *mon ) ) {
             add_msg( _( "Nothing relevant here." ) );
@@ -3162,8 +3139,7 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
 
         act = ACTION_FIRE;
     } else if( is_adjacent &&
-               here.close_door( tripoint_bub_ms( mouse_target.xy(), u.posz() ),
-                                !here.is_outside( u.pos_bub() ), true ) ) {
+               here.close_door( mouse_target, !here.is_outside( player_pos ), true ) ) {
         act = ACTION_CLOSE;
     } else if( is_self ) {
         act = ACTION_PICKUP;
@@ -3179,6 +3155,13 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
 
 bool game::is_game_over()
 {
+    if( cata_mp::is_client_mode() ) {
+        if( uquit == QUIT_NO && !u.is_dead_state() ) {
+            return false;
+        }
+        uquit = QUIT_NOSAVED;
+        return true;
+    }
     map &here = get_map();
 
     if( uquit == QUIT_DIED || uquit == QUIT_WATCH ) {
@@ -4668,7 +4651,14 @@ void game::cleanup_dead()
     // can't use all_npcs as that does not include dead ones
     for( const auto &n : critter_tracker->active_npc ) {
         if( n->is_dead() ) {
-            n->die( &here, nullptr ); // make sure this has been called to create corpses etc.
+            const auto &session = multiplayer_session();
+            if( session.has_regions() ) {
+                map &owner = session.map_for( reality_bubble(), n->pos_abs_sm() );
+                const swap_map context( owner );
+                n->die( &owner, nullptr );
+            } else {
+                n->die( &here, nullptr );
+            }
             npc_is_dead = true;
         }
     }
@@ -6685,7 +6675,7 @@ std::optional<std::vector<tripoint_bub_ms>> game::safe_route_to( Character &who,
         report( _( "You can't see the destination." ) );
         return std::nullopt;
     }
-    if( rl_dist( who.pos_bub(), target ) <= threshold ) {
+    if( who.posz() == target.z() && rl_dist( who.pos_bub(), target ) <= threshold ) {
         return {}; // no need to move anywhere, already near destination
     }
     using route_t = std::vector<tripoint_bub_ms>;
@@ -6994,6 +6984,14 @@ look_around_result game::look_around(
 
             if( show_window && ui ) {
                 ui->mark_resize();
+            }
+        } else if( action == "SELECT" && ctxt.has_map_click() ) {
+            const auto picked = ctxt.get_map_click();
+            if( !picked || picked->z() < min_levz || picked->z() > max_levz ||
+                ( !change_lv && picked->z() != lp.z() ) ) {
+                action.clear();
+            } else {
+                lp = *picked;
             }
         } else if( action == "LEVEL_UP" || action == "LEVEL_DOWN" ) {
             const int dz = action == "LEVEL_UP" ? 1 : -1;
@@ -8484,7 +8482,8 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
 }
 
 bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const bool via_ramp,
-                      const bool furniture_move, const walk_move_choices *choices )
+                      const bool furniture_move, const walk_move_choices *choices,
+                      const fractional_walk *step )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
@@ -8494,15 +8493,21 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     if( !furniture_move && who.get_grab_type() != object_type::NONE &&
         !who.validate_grab( here ) ) {
         who.grab( object_type::NONE );
+        if( step ) {
+            return false;
+        }
     }
     if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
         if( occupant != &who ) {
             return false;
         }
     }
-    const tripoint_abs_ms original_position = who.pos_abs();
+    const world_position original_position = who.pos_world();
+    const auto movement_context = here.get_context_reference();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const auto still_at_origin = [&]() {
-        return lifetime && who.pos_abs() == original_position;
+        return lifetime && movement_context && &get_map() == &here &&
+               here.get_abs_sub() == map_origin && who.pos_world() == original_position;
     };
     const auto permitted_vehicle = [&]( vehicle & target ) {
         if( choices || !who.is_avatar() ) {
@@ -8519,6 +8524,11 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         return true; // debug trait immunity to gravity, walls etc
     }
     const tripoint_bub_ms pos = who.pos_bub( here );
+    const bool within_cell = step && pos == dest_loc;
+    const bool settle_furniture = furniture_move && step;
+    if( settle_furniture && ( who.is_mounted() || !step->drags_furniture( who ) ) ) {
+        return false;
+    }
 
     const tripoint_abs_ms dest_loc_abs = here.get_abs( dest_loc );
 
@@ -8576,6 +8586,8 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const uint64_t expected_grab_generation = who.grab_generation();
     const tripoint_rel_ms expected_grab_point = who.grab_point;
     const furn_id expected_grab_furniture = here.furn( pos + who.grab_point );
+    const point expected_furniture_offset = settle_furniture ?
+                                            here.furniture_offset( pos + who.grab_point ) : point::zero;
 
     bool pushing = false; // moving -into- grabbed tile; skip check for move_cost > 0
     bool pulling = false; // moving -away- from grabbed tile; check for move_cost > 0
@@ -8585,17 +8597,19 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const tripoint_bub_ms furn_dest = dest_loc + who.grab_point.xy();
 
     bool grabbed = who.get_grab_type() != object_type::NONE;
-    if( grabbed ) {
-        const tripoint_rel_ms dp = dest_loc - pos;
-        pushing = dp.xy() == who.grab_point.xy();
-        pulling = dp.xy() == -who.grab_point.xy();
+    if( grabbed && !within_cell ) {
+        const point direction = step && step->drags_vehicle( who ) ?
+                                point( sgn( step->displacement.x ), sgn( step->displacement.y ) ) :
+                                ( dest_loc - pos ).xy().raw();
+        pushing = direction == who.grab_point.xy().raw();
+        pulling = direction == -who.grab_point.xy().raw();
     }
 
     // Now make sure we're actually holding something
     if( grabbed && who.get_grab_type() == object_type::FURNITURE ) {
         // We only care about shifting, because it's the only one that can change our destination
         if( here.has_furn( pos + who.grab_point ) ) {
-            shifting_furniture = !pushing && !pulling;
+            shifting_furniture = !step && !pushing && !pulling;
         } else {
             // We were grabbing a furniture that isn't there
             grabbed = false;
@@ -8679,7 +8693,8 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         cata::lua_platform::has_native_hook( "on_player_try_move" );
     const bool has_character_try_move =
         cata::lua_platform::has_native_hook( "on_character_try_move" );
-    if( has_player_try_move || has_character_try_move ) {
+    if( ( has_player_try_move || has_character_try_move ) &&
+        ( !step || !step->drags_furniture( who ) || settle_furniture ) ) {
         const auto mount = who.is_mounted() ? who.mounted_creature : shared_ptr_fast<monster>();
         cata::lua_platform::native_callback_arguments payload = {
             { "player", static_cast<const Character *>( &who ) },
@@ -8735,18 +8750,21 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             ( !impassable_field_ids.empty() && !who.is_immune_fields( impassable_field_ids ) ) ) ) ) {
         return false;
     }
-    if( grabbed && ( ( !furniture_move && !who.grab_matches( here ) ) ||
+    if( grabbed && ( ( ( !furniture_move || settle_furniture ) && !who.grab_matches( here ) ) ||
                      who.grab_generation() != expected_grab_generation ||
                      who.get_grab_type() != expected_grab_type ||
                      who.grab_point != expected_grab_point ||
                      ( expected_grab_type == object_type::VEHICLE &&
                        ( !grabbed_vehicle || grabbed_vehicle->uid().get_value() != expected_grab_vehicle ) ) ||
                      ( expected_grab_type == object_type::FURNITURE &&
-                       here.furn( pos + who.grab_point ) != expected_grab_furniture ) ) ) {
+                       ( here.furn( pos + who.grab_point ) != expected_grab_furniture ||
+                         ( settle_furniture && here.furniture_offset( pos + who.grab_point ) !=
+                           expected_furniture_offset ) ) ) ) ) {
         return false;
     }
 
-    std::vector<std::string> harmful_stuff = get_dangerous_tile( who, dest_loc );
+    std::vector<std::string> harmful_stuff = within_cell ? std::vector<std::string>() :
+        get_dangerous_tile( who, dest_loc );
     if( !shifting_furniture && !pushing && !harmful_stuff.empty() ) {
         // A stale walking confirmation cannot silently become a fall. The owner
         // must choose climb/jump/fall/glide through the ledge command instead.
@@ -8784,7 +8802,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return true;
         }
     }
-    if( !still_at_origin() ) {
+    if( !still_at_origin() ||
+        ( step && ( !avatar_action::can_move_fractional( who, here ) ||
+                    !step->supports_grab( who, here ) ||
+                    !step->clears_obstacles( here, who, dest_loc ) ) ) ) {
         return false;
     }
     if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
@@ -8807,16 +8828,33 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const bool grabbed_has_wheels = grabbed && who.get_grab_type() == object_type::VEHICLE &&
                                     grabbed_vehicle && !grabbed_vehicle->wheelcache.empty();
     const int64_t grabbed_vehicle_id = grabbed_vehicle ? grabbed_vehicle->uid().get_value() : 0;
-    const int64_t grabbed_part_id = vp_grab ?
-                                    vp_grab->vehicle().part( vp_grab->part_index() ).get_base().uid().get_value() : 0;
-    const int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
-                      modifier,
-                      via_ramp, false, !impassable_field_ids.empty() && who.is_immune_fields( impassable_field_ids ) );
+    const int held_part = grabbed && grabbed_vehicle && who.get_grab_type() == object_type::VEHICLE ?
+                          who.grabbed_vehicle_part( here ) : -1;
+    const int64_t grabbed_part_id = held_part >= 0 ?
+                                    grabbed_vehicle->part( held_part ).get_base().uid().get_value() : 0;
+    const bool ignore_fields = !impassable_field_ids.empty() &&
+                               who.is_immune_fields( impassable_field_ids );
+    int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
+        modifier, via_ramp, false, ignore_fields, !step );
 
-    if( !furniture_move && grabbed_move( who, dest_loc - pos, via_ramp, false, choices ) ) {
-        return true;
-    } else if( mcost == 0 ) {
+    const bool fractional_vehicle_drag = step && step->drags_vehicle( who );
+    if( fractional_vehicle_drag &&
+        ( !grabbed_vehicle || !here.passable_ter_furn( dest_loc ) ||
+          !grabbed_vehicle->can_drag_fractionally( here, step->displacement, who ) ) ) {
         return false;
+    }
+    if( !fractional_vehicle_drag && !furniture_move &&
+        grabbed_move( who, dest_loc - pos, via_ramp, false, choices, step ) ) {
+        return true;
+    } else if( mcost == 0 && !settle_furniture ) {
+        return false;
+    }
+    if( settle_furniture ) {
+        if( grabbed_furn_move( who, dest_loc - pos, step->furniture_landing_offset( who, here ) ) ) {
+            return false;
+        }
+        mcost = here.combined_movecost( pos, dest_loc, nullptr, 0, via_ramp, false,
+                                        ignore_fields, false );
     }
     if( !still_at_origin() ) {
         return true;
@@ -8837,12 +8875,17 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return false;
         }
         const double crit_speed = who.mount_speed();
-        const double base_moves = who.run_cost( mcost, diag ) * 100.0 / crit_speed;
+        const double base_moves = who.run_cost( mcost, diag && !step ) * 100.0 / crit_speed;
         const double encumb_moves = who.get_weight() / 4800.0_gram;
-        who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
+        const int move_cost = static_cast<int>( std::ceil( base_moves + encumb_moves ) );
+        who.mod_moves( -( step ? step->scale_cost( move_cost ) : move_cost ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        who.mod_moves( -who.run_cost( mcost, diag ) );
+        int move_cost = who.run_cost( mcost, diag && !step );
+        if( step ) {
+            move_cost = step->scale_cost( move_cost );
+        }
+        who.mod_moves( -move_cost );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.
@@ -8863,6 +8906,23 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     // Max out recoil & reset aim point
     who.recoil = MAX_RECOIL;
     who.last_target_pos = std::nullopt;
+    if( within_cell ) {
+        const auto mount = who.is_mounted() ? who.mounted_creature : shared_ptr_fast<monster>();
+        if( fractional_vehicle_drag &&
+            ( who.grab_generation() != expected_grab_generation ||
+              grabbed_veh_move( who, tripoint_rel_ms::zero, choices, step ) ) ) {
+            return true;
+        }
+        if( !still_at_origin() ) {
+            return true;
+        }
+        who.setpos( here, step->target, false );
+        if( lifetime && mount && who.is_mounted() && who.mounted_creature == mount &&
+            who.pos_world() == step->target ) {
+            mount->setpos( here, step->target, false );
+        }
+        return true;
+    }
 
     // Print a message if movement is slow
     const int mcost_to = here.move_cost( dest_loc ); //calculate this _after_ calling grabbed_move
@@ -8949,7 +9009,35 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
 
     bool moving = dest_loc != oldpos;
 
-    point_rel_sm submap_shift = place_character( who, dest_loc );
+    std::optional<world_position> precise;
+    if( step || grabbed || furniture_move ) {
+        // Grid dragging keeps the operator's exact position inside the cell.
+        tripoint offset = step ? step->target.offset() : original_position.offset();
+        if( via_ramp ) {
+            offset.z = 0;
+        }
+        precise = world_position::from_tile( dest_loc_abs, offset );
+    }
+    std::function<bool()> settle_vehicle;
+    if( fractional_vehicle_drag ) {
+        settle_vehicle = [&]() {
+            if( !still_at_origin() || who.grab_generation() != expected_grab_generation ||
+                !step->supports_grab( who, here ) || !step->clears_obstacles( here, who, dest_loc ) ) {
+                return false;
+            }
+            return !grabbed_veh_move( who, dest_loc - pos, choices, step ) && still_at_origin();
+        };
+    }
+    point_rel_sm submap_shift = place_character( who, dest_loc, false, precise ? &*precise : nullptr,
+        settle_vehicle );
+    if( fractional_vehicle_drag && still_at_origin() ) {
+        return false;
+    }
+    if( fractional_vehicle_drag &&
+        ( !lifetime || !movement_context || &get_map() != &here ||
+          dragged_vehicle_wheel_traps( who, here, grabbed_vehicle_id ) ) ) {
+        return true;
+    }
     point_rel_ms ms_shift = coords::project_to<coords::ms>( submap_shift );
     oldpos = oldpos - ms_shift.raw();
 
@@ -9198,7 +9286,9 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
     return place_character( get_avatar(), dest_loc, quick );
 }
 
-point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_loc, bool quick )
+point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_loc, bool quick,
+                                    const world_position *precise,
+                                    const std::function<bool()> &before_placement )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
@@ -9210,9 +9300,9 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             return point_rel_sm::zero;
         }
     }
-    const tripoint_abs_ms original_position = who.pos_abs();
+    const world_position original_position = who.pos_world();
     const auto still_at_origin = [&]() {
-        return lifetime && who.pos_abs() == original_position;
+        return lifetime && who.pos_world() == original_position;
     };
     const optional_vpart_position vp1 = here.veh_at( dest_loc );
     if( const std::optional<std::string> label = vp1.get_label() ) {
@@ -9414,13 +9504,21 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             who.stop_hauling();
         }
     }
-    who.setpos( here, dest_loc );
+    // Settle coupled movement only after placement effects can no longer veto the step.
+    if( before_placement && !before_placement() ) {
+        return point_rel_sm::zero;
+    }
+    if( precise ) {
+        who.setpos( here, *precise );
+    } else {
+        who.setpos( here, dest_loc );
+    }
     if( !lifetime ) {
         return point_rel_sm::zero;
     }
     if( who.is_mounted() ) {
         monster *mon = who.mounted_creature.get();
-        mon->setpos( here, who.pos_bub() );
+        mon->setpos( here, who.pos_world() );
         mon->process_triggers();
         here.creature_in_field( *mon );
     }
@@ -9632,10 +9730,15 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
         u.mounted_creature->remove_effect( effect_ridden );
         u.mounted_creature = nullptr;
     }
-    // offload the active npcs.
-    unload_npcs();
-    for( monster &critter : all_monsters() ) {
-        despawn_monster( critter );
+    const bool hosting = cata_mp::is_hosting() && &here == &reality_bubble();
+    if( hosting ) {
+        cata_mp::refresh_resident_regions( true );
+    }
+    if( !hosting || !multiplayer_session().has_regions() ) {
+        unload_npcs();
+        for( monster &critter : all_monsters() ) {
+            despawn_monster( critter );
+        }
     }
     if( u.in_vehicle ) {
         here.unboard_vehicle( u.pos_bub() );
@@ -9652,8 +9755,16 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
         project_to<coords::sm>( om_dest ) - point( HALF_MAPSIZE, HALF_MAPSIZE );
     const tripoint_bub_ms player_pos( u.pos_bub().xy(), map_sm_pos.z() );
     load_map( map_sm_pos );
+    if( hosting ) {
+        unload_creatures_outside_resident_maps();
+    }
     load_npcs();
-    here.spawn_monsters( true ); // Static monsters
+    if( hosting && multiplayer_session().has_regions() ) {
+        const map_simulation_regions regions = multiplayer_session().simulation_regions( here );
+        here.spawn_monsters( true, false, &regions );
+    } else {
+        here.spawn_monsters( true ); // Static monsters
+    }
     update_overmap_seen();
     // update weather now as it could be different on the new location
     weather.set_nextweather( calendar::turn );
@@ -9920,10 +10031,10 @@ int game::grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp )
 
     tripoint_bub_ms fdest = fpos + tripoint_rel_ms( dp.xy(), 0 ); // intended destination of furniture.
 
-    const bool canmove = can_move_furniture( who, fdest, dp );
+    const bool canmove = dp == tripoint_rel_ms::zero || can_move_furniture( who, fdest, dp );
     const furn_t &furntype = here.furn( fpos ).obj();
     const map_stack &ms = here.i_at( fdest );
-    const int dst_items = ms.size();
+    const int dst_items = fdest == fpos ? 0 : ms.size();
 
     const bool only_liquid_items = std::all_of( ms.begin(), ms.end(),
     [&]( const item & liquid_item ) {
@@ -9976,7 +10087,8 @@ int game::grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp )
     return moves_total;
 }
 
-bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
+bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp,
+                              const std::optional<point> &offset )
 {
     map &here = get_map();
     if( !who.validate_grab( here ) ) {
@@ -9994,16 +10106,18 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
         return false;
     }
 
-    const bool pushing_furniture = dp.xy() ==  who.grab_point.xy();
-    const bool pulling_furniture = dp.xy() == -who.grab_point.xy();
-    const bool shifting_furniture = !pushing_furniture && !pulling_furniture;
+    const int along_grab = dp.x() * who.grab_point.x() + dp.y() * who.grab_point.y();
+    const bool pushing_furniture = offset ? along_grab > 0 : dp.xy() == who.grab_point.xy();
+    const bool pulling_furniture = offset ? along_grab < 0 : dp.xy() == -who.grab_point.xy();
+    const bool within_cell = offset && dp == tripoint_rel_ms::zero;
+    const bool shifting_furniture = !offset && !pushing_furniture && !pulling_furniture;
 
     // Intended destination of furniture.
     const tripoint_bub_ms fdest = fpos + dp;
 
     // Unfortunately, game::is_empty fails for tiles we're standing on,
     // which will forbid pulling, so:
-    const bool canmove = can_move_furniture( who, fdest, dp );
+    const bool canmove = within_cell || can_move_furniture( who, fdest, dp );
     // @TODO: it should be possible to move over invisible traps. This should probably
     // trigger the trap.
     // The current check (no move if trap) allows a player to detect invisible traps by
@@ -10012,7 +10126,7 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
     const furn_t furntype = here.furn( fpos ).obj();
     const int src_items = here.i_at( fpos ).size();
     const map_stack &dst_ms = here.i_at( fdest );
-    const int dst_items = dst_ms.size();
+    const int dst_items = within_cell ? 0 : dst_ms.size();
 
     const bool only_liquid_items = std::all_of( dst_ms.begin(), dst_ms.end(),
     [&]( const item & liquid_item ) {
@@ -10097,6 +10211,9 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
     }
     sounds::sound( fdest, furntype.move_str_req * 2, sounds::sound_t::movement,
                    _( "a scraping noise." ), true, "misc", "scraping" );
+    if( within_cell ) {
+        return !here.set_furniture_offset( fpos, *offset );
+    }
 
     if( here.veh_at( fdest ) ) {
         who.grab( object_type::NONE );
@@ -10114,7 +10231,9 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
         return shifting_furniture;
     } else {
         // Actually move the furniture.
+        const point displacement = offset.value_or( here.furniture_offset( fpos ) );
         here.furn_set( fdest, here.furn( fpos ), false, false, true );
+        here.set_furniture_offset( fdest, displacement );
         here.furn_set( fpos, furn_str_id::NULL_ID(), true );
     }
 
@@ -10185,7 +10304,8 @@ bool game::grabbed_move( const tripoint_rel_ms &dp, const bool via_ramp, bool st
 }
 
 bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool via_ramp,
-                         bool stairs_move, const walk_move_choices *choices )
+                         bool stairs_move, const walk_move_choices *choices,
+                         const fractional_walk *step )
 {
     if( who.get_grab_type() == object_type::NONE ) {
         return false;
@@ -10193,7 +10313,8 @@ bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool v
 
     // vehicle: pulling, pushing, or moving around the grabbed object.
     if( who.get_grab_type() == object_type::VEHICLE ) {
-        return grabbed_veh_move_helper( who, dp, stairs_move );
+        return stairs_move ? grabbed_veh_move_stairs( who, dp ) :
+               grabbed_veh_move( who, dp, choices, step );
     }
 
     if( who.get_grab_type() == object_type::FURNITURE ||
@@ -10201,7 +10322,8 @@ bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool v
         const activity_execution execution = who.activity.execution();
         const character_action_guard lifetime( who );
         who.assign_activity( move_furniture_activity_actor( dp, via_ramp,
-                             choices ? std::make_optional( *choices ) : std::nullopt ) );
+                choices ? std::make_optional( *choices ) : std::nullopt,
+                step ? std::make_optional( step->displacement ) : std::nullopt ) );
         if( lifetime ) {
             who.activity.set_execution( execution );
         }
@@ -10586,10 +10708,11 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return;
     }
     const bool local_input = who.is_avatar() && !choices;
-    const tripoint_abs_ms origin = who.pos_abs();
+    const world_position starting_position = who.pos_world();
+    const tripoint_abs_ms origin = starting_position.tile();
     const auto mount = who.mounted_creature;
     const auto at_origin = [&]() {
-        return lifetime && who.pos_abs() == origin && who.mounted_creature == mount;
+        return lifetime && who.pos_world() == starting_position && who.mounted_creature == mount;
     };
     const int64_t requested_z = static_cast<int64_t>( who.posz() ) + movez;
     if( requested_z < -OVERMAP_DEPTH || requested_z > OVERMAP_HEIGHT ) {
@@ -10997,9 +11120,16 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return;
     }
     const tripoint_abs_ms destination = here.get_abs( stairs );
+    world_position landing( destination );
+    // Aligned stairs preserve lateral position. An offset staircase, climb
+    // or forced landing still uses the center of its validated destination.
+    if( !force && !climbing && !swimming && destination.xy() == origin.xy() &&
+        !who.is_mounted() && !who.in_vehicle ) {
+        landing = *world_position::from_tile( destination, tripoint( starting_position.offset().xy(), 0 ) );
+    }
     const bool z_level_changed = who.is_avatar() ? vertical_shift( destination.z() ) :
                                  destination.z() != origin.z();
-    who.setpos( destination, false );
+    who.setpos( here, landing, false );
     if( !lifetime ) {
         return;
     }
@@ -11094,10 +11224,17 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
                                 const std::optional<tripoint_bub_ms> item_travellers_location,
                                 vehicle *veh )
 {
+    if( cata_mp::is_client_mode() ) {
+        return false;
+    }
+    if( cata_mp::is_hosting() && !multiplayer_session().remote_players.empty() ) {
+        add_msg( m_info, _( "Close the co-op room before travelling to another dimension." ) );
+        return false;
+    }
     // Keep the last complete save before this trip writes source maps.  The
     // later safety checkpoint must not replace the player's quickload target.
     ensure_dimension_rollback_snapshot();
-    if( !cata_mp::is_client_mode() && world_generator && world_generator->active_world &&
+    if( world_generator && world_generator->active_world &&
         !world_generator->active_world->world_saves.empty() &&
         !save_snapshot::begin_dimension_transition( world_generator->active_world->folder_path() ) ) {
         return false;
@@ -11295,7 +11432,7 @@ void game::start_hauling( Character &who, const tripoint_bub_ms &pos )
 std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
         const tripoint_bub_ms &pos )
 {
-    if( !mp.inbounds( pos ) || !mp.inbounds_z( z_after ) ) {
+    if( !mp.has_loaded_submap( pos ) || !mp.inbounds_z( z_after ) ) {
         return std::nullopt;
     }
     const int movez = z_after - pos.z();
@@ -11303,11 +11440,12 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
     const bool going_up_1 = movez == 1;
 
     // If there are stairs on the same x and y as we currently are, use those
-    if( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos + tripoint::below ) ) {
-        return pos + tripoint::below;
-    }
-    if( going_up_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos + tripoint::above ) ) {
-        return pos + tripoint::above;
+    const tripoint_bub_ms aligned( pos.xy(), z_after );
+    if( mp.has_loaded_submap( aligned ) ) {
+        if( ( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, aligned ) ) ||
+            ( going_up_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, aligned ) ) ) {
+            return aligned;
+        }
     }
     // We did not find stairs directly above or below, so search the map for them
     // If there's empty space right below us, we can just go down that way.
@@ -11324,7 +11462,7 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
     if( !mp.is_open_air( pos ) ) {
         for( const tripoint_bub_ms &dest : mp.points_in_rectangle( omtile_align_start,
                 omtile_align_end ) ) {
-            if( rl_dist( pos, dest ) <= best &&
+            if( rl_dist( pos, dest ) <= best && mp.has_loaded_submap( dest ) &&
                 ( ( going_down_1 && mp.has_flag( ter_furn_flag::TFLAG_GOES_UP, dest ) ) ||
                   ( going_up_1 && ( mp.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, dest ) ||
                                     mp.ter( dest ) == ter_t_manhole_cover ) ) ||
@@ -11336,12 +11474,6 @@ std::optional<tripoint_bub_ms> game::find_stairs( const map &mp, int z_after,
     }
 
     return stairs;
-}
-
-std::optional<tripoint_bub_ms> game::find_or_make_stairs( map &mp, const int z_after,
-        bool &rope_ladder, bool peeking, const tripoint_bub_ms &pos )
-{
-    return find_or_make_stairs( get_avatar(), mp, z_after, rope_ladder, peeking, pos, nullptr );
 }
 
 std::optional<tripoint_bub_ms> game::find_or_make_stairs( Character &who, map &mp,
@@ -11574,7 +11706,13 @@ bool game::vertical_shift( const int z_after )
     scent.reset();
 
     const int z_before = u.posz();
-    u.move_to( tripoint_abs_ms( u.pos_abs().xy(), z_after ) );
+    tripoint offset = u.pos_world().offset();
+    if( z_before != z_after ) {
+        offset.z = 0;
+    }
+    const tripoint_abs_ms destination( u.pos_abs().xy(), z_after );
+    u.setpos( here, world_position::from_tile( destination, offset ).value_or(
+                  world_position( destination ) ), false );
 
     // Shift the map itself
     here.vertical_shift( z_after );
@@ -11750,9 +11888,17 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
         shift.y()++;
     }
 
+    const auto place_at_window_position = [&]() {
+        const tripoint_bub_ms local( x, y, here.get_abs_sub().z() );
+        if( u.pos_abs() == here.get_abs( local ) ) {
+            u.setpos( here, u.pos_world() );
+        } else {
+            u.setpos( here, local );
+        }
+    };
     if( shift == point_rel_sm::zero ) {
         // adjust player position
-        u.setpos( here, tripoint_bub_ms( x, y, here.get_abs_sub().z() ) );
+        place_at_window_position();
         if( z_level_changed ) {
             // Update what parts of the world map we can see
             // We may be able to see farther now that the z-level has changed.
@@ -11765,10 +11911,15 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     // this handles loading/unloading submaps that have scrolled on or off the viewport
     // NOLINTNEXTLINE(cata-use-named-point-constants)
     inclusive_rectangle<point_rel_sm> size_1( {-1, -1}, { 1, 1 } );
+    const auto &session = multiplayer_session();
+    std::optional<map_simulation_regions> regions;
+    if( session.has_regions() && &here == &reality_bubble() ) {
+        regions.emplace( session.simulation_regions( here ) );
+    }
     point_rel_sm remaining_shift = shift;
     while( remaining_shift != point_rel_sm::zero ) {
         point_rel_sm this_shift = clamp( remaining_shift, size_1 );
-        here.shift( point_rel_sm( this_shift ) );
+        here.shift( this_shift, regions ? &*regions : nullptr );
         remaining_shift -= this_shift;
     }
 
@@ -11785,14 +11936,23 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
 
     // Shift NPCs
     for( auto it = critter_tracker->active_npc.begin(); it != critter_tracker->active_npc.end(); ) {
-        ( *it )->shift( shift );
-        const tripoint_bub_ms pos = ( *it )->pos_bub( here );
+        npc &actor = **it;
+        if( regions ) {
+            if( map *const owner = session.loaded_map_at( here, actor.pos_abs_sm() ) ) {
+                actor.update_ai_map_origin( *owner );
+                ++it;
+                continue;
+            }
+        } else {
+            actor.shift( shift );
+        }
+        const tripoint_bub_ms pos = actor.pos_bub( here );
 
         // TODO: This could probably be replaced by an inbounds check.
         if( pos.x() < 0 || pos.x() >= MAPSIZE_X ||
             pos.y() < 0 || pos.y() >= MAPSIZE_Y ) {
             //Remove the npc from the active list. It remains in the overmap list.
-            ( *it )->on_unload();
+            actor.on_unload();
             it = critter_tracker->active_npc.erase( it );
         } else {
             ++it;
@@ -11804,7 +11964,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     // Also ensure the player is on current z-level
     // m.get_abs_sub().z should later be removed, when there is no longer such a thing
     // as "current z-level"
-    u.setpos( here, tripoint_bub_ms( x, y, here.get_abs_sub().z() ) );
+    place_at_window_position();
 
     // Only do the loading after all coordinates have been shifted.
 
@@ -11820,7 +11980,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
 
     // Spawn monsters if appropriate
     // This call will generate new monsters in addition to loading, so it's placed after NPC loading
-    here.spawn_monsters( false ); // Static monsters
+    here.spawn_monsters( false, false, regions ? &*regions : nullptr ); // Static monsters
 
     // Update what parts of the world map we can see
     update_overmap_seen();
@@ -11897,8 +12057,12 @@ void game::despawn_monster( monster &critter )
 void game::despawn_nonlocal_monsters()
 {
     map &here = get_map();
+    const auto &session = multiplayer_session();
 
     for( monster &critter : g->all_monsters() ) {
+        if( session.has_regions() && session.loaded_map_at( here, critter.pos_abs_sm() ) ) {
+            continue;
+        }
         const tripoint_bub_ms pos = critter.pos_bub( here );
 
         if( pos.x() < 0 - MAPSIZE_X / 6 ||
@@ -11920,7 +12084,9 @@ void game::shift_monsters( const tripoint_rel_sm &shift )
             critter.shift( shift.xy() );
         }
 
-        if( reality_bubble().inbounds( critter.pos_bub() ) ) {
+        if( reality_bubble().inbounds( critter.pos_abs() ) ||
+            ( multiplayer_session().has_regions() &&
+              multiplayer_session().loaded_map_at( reality_bubble(), critter.pos_abs_sm() ) ) ) {
             // We're inbounds, so don't despawn after all.
             continue;
         }
@@ -13316,6 +13482,12 @@ void set_scenario( const scenario *new_scenario )
 
 scent_map &get_scent()
 {
+    const auto &session = g->multiplayer_session();
+    if( session.has_regions() ) {
+        if( scent_map *regional = session.scent_for( get_map() ) ) {
+            return *regional;
+        }
+    }
     return g->scent;
 }
 

@@ -1,21 +1,330 @@
 #include "walking.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "creature.h"
+#include "creature_tracker.h"
+#include "enums.h"
+#include "field.h"
+#include "mapdata.h"
 #include "flexbuffer_json.h"
 #include "int_id.h"
 #include "item.h"
 #include "item_uid.h"
 #include "json.h"
+#include "level_cache.h"
 #include "map.h"
+#include "monster.h"
 #include "player_activity.h"
 #include "safe_reference.h"
+#include "trap.h"
 #include "vpart_position.h"
 #include "vehicle.h"
 #include "vehicle_uid.h"
+
+bool fractional_walk::is_valid( const point &delta )
+{
+    if( delta == point::zero ||
+        delta.x < -max_distance || delta.x > max_distance ||
+        delta.y < -max_distance || delta.y > max_distance ) {
+        return false;
+    }
+    return delta.x * delta.x + delta.y * delta.y <= max_distance * max_distance;
+}
+
+point fractional_walk::camera_delta( const point &screen, const point &forward )
+{
+    const point right( -forward.y, forward.x );
+    const point delta = right * screen.x - forward * screen.y;
+    if( screen.x && screen.y ) {
+        // Truncate after scaling by less than 1/sqrt(2). The intent stays
+        // inside the same bounded radius for all eight input directions.
+        return point( delta.x * 181 / 256, delta.y * 181 / 256 );
+    }
+    return delta;
+}
+
+std::optional<fractional_walk> fractional_walk::resolve( const world_position &from,
+        const point &delta )
+{
+    if( !is_valid( delta ) ) {
+        return std::nullopt;
+    }
+    point displacement = delta;
+    const point offset = from.offset().xy();
+    const auto travel_to_edge = []( int offset, int amount ) {
+        return amount < 0 ? offset + 1 : world_position::units_per_tile - offset;
+    };
+    const int x_edge = travel_to_edge( offset.x, delta.x );
+    const int y_edge = travel_to_edge( offset.y, delta.y );
+    const int x_distance = std::abs( delta.x );
+    const int y_distance = std::abs( delta.y );
+    if( x_edge <= x_distance && y_edge <= y_distance ) {
+        const int x_first = x_edge * y_distance;
+        const int y_first = y_edge * x_distance;
+        // Leave the second cell entry for the next action. A simultaneous
+        // crossing is a single diagonal entry with two side cells to check.
+        if( x_first < y_first ) {
+            displacement.x = delta.x * y_edge / y_distance;
+            displacement.y = delta.y < 0 ? 1 - y_edge : y_edge - 1;
+        } else if( y_first < x_first ) {
+            displacement.y = delta.y * x_edge / x_distance;
+            displacement.x = delta.x < 0 ? 1 - x_edge : x_edge - 1;
+        }
+    }
+    const auto target = from.translated( tripoint( displacement, 0 ) );
+    if( !target ) {
+        return std::nullopt;
+    }
+    // Integer square root rounded up, for deterministic move-point charges.
+    const int squared_distance = displacement.x * displacement.x + displacement.y * displacement.y;
+    int low = 1;
+    int high = max_distance;
+    while( low < high ) {
+        const int mid = ( low + high ) / 2;
+        if( mid * mid < squared_distance ) {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+    return fractional_walk{ *target, displacement, low };
+}
+
+// A fixed-point translation against the open interior of a rectangle.
+// Touching an edge without entering it does not constitute a collision.
+bool swept_horizontal_rectangle_intersects( const point &start, const point &delta,
+        int left, int bottom, int right, int top )
+{
+    const point end = start + delta;
+    if( std::max( start.x, end.x ) <= left || std::min( start.x, end.x ) >= right ||
+        std::max( start.y, end.y ) <= bottom || std::min( start.y, end.y ) >= top ) {
+        return false;
+    }
+    const point center( ( left + right ) / 2, ( bottom + top ) / 2 );
+    const int normal_distance = std::abs( ( center.x - start.x ) * delta.y -
+                                          ( center.y - start.y ) * delta.x );
+    const int extent = ( right - left ) / 2 * std::abs( delta.y ) +
+                       ( top - bottom ) / 2 * std::abs( delta.x );
+    return delta == point::zero || normal_distance < extent;
+}
+
+namespace
+{
+
+int half_body_width( const Creature &who )
+{
+    // Keep every body narrower than a gameplay cell. Small passages
+    // and fitting checks for its destination remain with native walking.
+    return 32 + 16 * ( static_cast<int>( who.get_size() ) -
+                       static_cast<int>( creature_size::tiny ) );
+}
+
+bool swept_body_clear( const map &here, const tripoint_bub_ms &origin,
+                       const tripoint_bub_ms &destination, const point &start,
+                       const point &delta, int half_width,
+                       const std::optional<tripoint_bub_ms> &held, const vehicle *held_vehicle )
+{
+    constexpr int tile = world_position::units_per_tile;
+    for( int y = -1; y <= 1; ++y ) {
+        for( int x = -1; x <= 1; ++x ) {
+            const tripoint_bub_ms cell = origin + point( x, y );
+            if( cell == held ) {
+                continue;
+            }
+            if( cell != origin && cell != destination ) {
+                const int left = x * tile - half_width;
+                const int bottom = y * tile - half_width;
+                const int right = left + tile + 2 * half_width;
+                const int top = bottom + tile + 2 * half_width;
+                // A wall can appear around the body. Allow retreat toward its own cell.
+                const int toward_x = x * delta.x;
+                const int toward_y = y * delta.y;
+                const bool retreating = start.x > left && start.x < right &&
+                                        start.y > bottom && start.y < top &&
+                                        toward_x <= 0 && toward_y <= 0 && ( toward_x < 0 || toward_y < 0 );
+                if( !retreating &&
+                    swept_horizontal_rectangle_intersects( start, delta, left, bottom, right, top ) &&
+                    here.move_cost( cell, held_vehicle ) == 0 ) {
+                    return false;
+                }
+            }
+        }
+    }
+    // Obstacles can also extend outside their native cell.
+    const bool displaced_furniture = here.has_displaced_furniture_near( origin );
+    const bool has_vehicles = here.get_cache_ref( origin.z() ).get_veh_in_active_range();
+    if( !displaced_furniture && !has_vehicles ) {
+        return true;
+    }
+    const auto hits_obstacle = [&]( const point & corner ) {
+        const int left = corner.x - half_width;
+        const int bottom = corner.y - half_width;
+        const int right = left + tile + 2 * half_width;
+        const int top = bottom + tile + 2 * half_width;
+        if( !swept_horizontal_rectangle_intersects( start, delta, left, bottom, right, top ) ) {
+            return false;
+        }
+        if( start.x > left && start.x < right && start.y > bottom && start.y < top ) {
+            const point center( ( left + right ) / 2, ( bottom + top ) / 2 );
+            // Permit walking out of a footprint that already overlaps the character.
+            return ( start.x - center.x ) * delta.x + ( start.y - center.y ) * delta.y <= 0;
+        }
+        return true;
+    };
+    for( int y = -2; y <= 2; ++y ) {
+        for( int x = -2; x <= 2; ++x ) {
+            const tripoint_bub_ms cell = origin + point( x, y );
+            const point corner( x * tile, y * tile );
+            const int reach = tile - 1 + half_width;
+            if( !swept_horizontal_rectangle_intersects( start, delta, corner.x - reach,
+                    corner.y - reach, corner.x + tile + reach, corner.y + tile + reach ) ) {
+                continue;
+            }
+            if( displaced_furniture && cell != held ) {
+                const point offset = here.furniture_offset( cell );
+                if( offset != point::zero && here.furn( cell )->movecost < 0 &&
+                    hits_obstacle( corner + offset ) ) {
+                    return false;
+                }
+            }
+            if( has_vehicles ) {
+                const auto part = here.veh_at( cell );
+                if( part && &part->vehicle() != held_vehicle &&
+                    part->vehicle().fractional_offset() != point::zero && part.obstacle_at_part() &&
+                    hits_obstacle( corner + part->vehicle().fractional_offset() ) ) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+} // namespace
+
+static bool straight_drag_direction( const Character &who, const point &delta )
+{
+    const point direction( sgn( delta.x ), sgn( delta.y ) );
+    const point hold = who.grab_point.raw().xy();
+    return hold != point::zero && ( hold == direction || hold == -direction );
+}
+
+bool fractional_walk::drags_furniture( const Character &who ) const
+{
+    return who.get_grab_type() == object_type::FURNITURE && who.grab_point.z() == 0 &&
+           straight_drag_direction( who, displacement );
+}
+
+bool fractional_walk::drags_vehicle( const Character &who ) const
+{
+    return who.get_grab_type() == object_type::VEHICLE && who.grab_point.z() == 0 &&
+           straight_drag_direction( who, displacement );
+}
+
+bool fractional_walk::supports_grab( const Character &who, const map &here ) const
+{
+    if( who.get_grab_type() == object_type::NONE || drags_furniture( who ) ) {
+        return true;
+    }
+    if( !drags_vehicle( who ) || who.is_mounted() ) {
+        return false;
+    }
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const auto part = here.veh_at( origin + who.grab_point );
+    const tripoint_bub_ms landing = here.get_bub( target.tile() );
+    const point direction( sgn( displacement.x ), sgn( displacement.y ) );
+    return part && veh_pointer_or_null( here.veh_at( origin ) ) != &part->vehicle() &&
+           here.has_loaded_submap( landing ) && here.has_floor( origin ) && here.has_floor( landing ) &&
+           !here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, origin ) &&
+           !here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, landing ) &&
+           here.ramp_z_offset( landing ) == 0 && !here.ramp_segment_at( landing ) &&
+           part->vehicle().supports_fractional_drag( here, direction );
+}
+
+point fractional_walk::furniture_landing_offset( const Character &who, const map &here ) const
+{
+    const tripoint_bub_ms held = who.pos_bub( here ) + who.grab_point;
+    const point cells = ( target.tile() - who.pos_abs() ).raw().xy();
+    return here.furniture_offset( held ) + displacement - cells * world_position::units_per_tile;
+}
+
+bool fractional_walk::clears_obstacles( const map &here, const Character &who,
+                                        const tripoint_bub_ms &landing ) const
+{
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const tripoint_bub_ms destination = here.get_bub( target.tile() );
+    const int half_width = who.is_mounted() ?
+                           std::max( half_body_width( who ), half_body_width( *who.mounted_creature ) ) :
+                           half_body_width( who );
+    std::optional<tripoint_bub_ms> held;
+    const vehicle *held_vehicle = nullptr;
+    if( drags_vehicle( who ) ) {
+        held_vehicle = veh_pointer_or_null( here.veh_at( origin + who.grab_point ) );
+        if( !held_vehicle || landing.z() != origin.z() || !who.grab_matches( here ) ) {
+            return false;
+        }
+    } else if( drags_furniture( who ) ) {
+        constexpr int tile = world_position::units_per_tile;
+        held = origin + who.grab_point;
+        if( landing.z() != origin.z() || !here.has_loaded_submap( *held ) ||
+            !who.grab_matches( here ) ) {
+            return false;
+        }
+        if( here.ter( *held )->movecost == 0 ||
+            here.field_at( *held ).any_negative_move_cost() ) {
+            return false;
+        }
+        const point offset = here.furniture_offset( *held );
+        const point settled = furniture_landing_offset( who, here );
+        if( std::abs( settled.x ) >= tile ||
+            std::abs( settled.y ) >= tile ) {
+            return false;
+        }
+
+        const Creature *held_occupant = get_creature_tracker().creature_at( here.get_abs( *held ), true );
+        if( held_occupant && held_occupant != &who ) {
+            return false;
+        }
+        for( int y = -2; y <= 2; ++y ) {
+            for( int x = -2; x <= 2; ++x ) {
+                const point delta( x, y );
+                const point edge = delta * tile;
+                if( !swept_horizontal_rectangle_intersects( offset, displacement, edge.x - tile,
+                        edge.y - tile, edge.x + tile, edge.y + tile ) ) {
+                    continue;
+                }
+                const tripoint_bub_ms cell = *held + delta;
+                if( cell == *held ) {
+                    continue;
+                }
+                const Creature *occupant = get_creature_tracker().creature_at( here.get_abs( cell ), true );
+                if( !here.has_loaded_submap( cell ) || !here.has_floor( cell ) ||
+                    !here.passable( cell ) || here.has_furn( cell ) || here.veh_at( cell ) ||
+                    ( occupant && occupant != &who ) || here.ramp_z_offset( cell ) != 0 ||
+                    !here.tr_at( cell ).is_null() ) {
+                    return false;
+                }
+            }
+        }
+    }
+    return swept_body_clear( here, origin, destination, who.pos_world().offset().xy(),
+                             displacement, half_width, held, held_vehicle ) &&
+           ( landing.z() == origin.z() ||
+             swept_body_clear( here, landing, landing, target.offset().xy(), point::zero, half_width,
+                               std::nullopt, nullptr ) );
+}
+
+int fractional_walk::scale_cost( int full_tile_cost ) const
+{
+    const int64_t scaled = static_cast<int64_t>( full_tile_cost ) * distance;
+    return std::max( 1, static_cast<int>( ( scaled + world_position::units_per_tile - 1 ) /
+                                          world_position::units_per_tile ) );
+}
 
 static std::pair<int64_t, int64_t> openable_vehicle_door( map &here,
         const tripoint_bub_ms &target )
