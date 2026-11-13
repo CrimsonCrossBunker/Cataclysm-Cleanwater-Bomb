@@ -1116,7 +1116,7 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
            "[.multiplayer_runtime][world_session][lifecycle][regression]" )
 {
     cata_mp::mp_on_world_exit();
-    WORLD isolated_world( "room_switch" );
+    const std::string world_name = "room_switch";
     const restore_on_out_of_scope restore_world( world_generator->active_world );
     const restore_on_out_of_scope restore_last_world( world_generator->last_world_name );
     const restore_on_out_of_scope restore_last_character( world_generator->last_character_name );
@@ -1128,15 +1128,19 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     WORLD *const previous_world = world_generator->active_world;
     const on_out_of_scope cleanup( [&]() {
         cata_mp::mp_on_world_exit();
-        PATH_INFO::set_savedir( savedir );
         world_generator->set_active_world( previous_world );
+        world_generator->remove_world( world_name );
+        PATH_INFO::set_savedir( savedir );
         clear_overmaps();
         std::error_code error;
         std::filesystem::remove_all( save_root.get_unrelative_path(), error );
     } );
     PATH_INFO::set_savedir( save_root.get_unrelative_path().generic_u8string() + "/" );
-    REQUIRE( assure_dir_exist( isolated_world.folder_path() ) );
-    world_generator->set_active_world( &isolated_world );
+    REQUIRE_FALSE( world_generator->has_world( world_name ) );
+    WORLD *const isolated_world = world_generator->make_new_world(
+                                      world_name, previous_world->active_mod_order );
+    REQUIRE( isolated_world );
+    world_generator->set_active_world( isolated_world );
     clear_overmaps();
     clear_avatar();
     clear_map_without_vision();
@@ -1155,8 +1159,8 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
         REQUIRE( cata_mp::is_hosting() );
     };
     open_room();
-    CHECK( session.host_info.world == isolated_world.identity() );
-    CHECK( session.host_info.world_name == isolated_world.world_name );
+    CHECK( session.host_info.world == isolated_world->identity() );
+    CHECK( session.host_info.world_name == isolated_world->world_name );
     CHECK( session.host_info.player_name == host.name );
 
     const cata_mp::player_credentials profile{ player_id( std::string( 32, '8' ) ),
@@ -1234,6 +1238,11 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     // Query the same two actors from both view contexts. The wall changes in
     // the guest window must invalidate the host's cached reachable members.
     const tripoint_bub_ms isolated_tile( 78, 78, 0 );
+    const ter_id wall = ter_str_id( "t_wall" ).id();
+    // Close the vertical route as well: open air above counts as reachable
+    // for this cache, even when a ground monster cannot climb there.
+    region.terrain->ter_set( region.terrain->get_bub( here.get_abs( isolated_tile +
+                             tripoint_rel_ms::above ) ), wall );
     auto &tracker = get_creature_tracker();
     auto isolated_monster = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ), isolated_tile );
     REQUIRE( tracker.add( isolated_monster ) );
@@ -1242,8 +1251,7 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     };
     for( const tripoint_bub_ms &p : here.points_in_radius( isolated_tile, 1 ) ) {
         if( p != isolated_tile ) {
-            region.terrain->ter_set( region.terrain->get_bub( here.get_abs( p ) ),
-                                     ter_str_id( "t_wall" ).id() );
+            region.terrain->ter_set( region.terrain->get_bub( here.get_abs( p ) ), wall );
         }
     }
     CHECK( tracker.find_reachable( *isolated_monster, is_host ) == nullptr );
@@ -1308,7 +1316,8 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     REQUIRE( restored );
     CHECK( restored->getID() == guest_id );
     CHECK( restored->pos_abs() == saved_guest_position );
-    CHECK_FALSE( restored->in_vehicle );
+    CHECK( restored->in_vehicle );
+    CHECK( seat->part().passenger_id == guest_id );
     CHECK_FALSE( restored->controlling_vehicle );
 
     // Walk one window away without changing the local player's map, then close
