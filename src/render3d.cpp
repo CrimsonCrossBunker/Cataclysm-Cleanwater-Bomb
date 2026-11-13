@@ -4863,7 +4863,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
     // hover preselection box + game-driven cursors (targeting, construction...):
     // a thin slab carrying the tileset's highlight/cursor sprite
-    auto push_cursor_slab = [&]( const tripoint_bub_ms & tp, const char *sprite ) {
+    auto push_cursor_slab = [&]( const tripoint_bub_ms & tp, const std::string & sprite ) {
         if( count >= MAX_DRAW_INSTANCES || !here.inbounds( tp ) ) {
             return;
         }
@@ -4875,6 +4875,16 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                        rel.z() * LEVEL_HEIGHT + 0.002f, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
         ++count;
     };
+    if( tiles ) {
+        tiles->for_each_line_marker( [&]( const tripoint_bub_ms & p, const std::string & sprite ) {
+            const tripoint_rel_ms rel = p - center;
+            const int radius = rel.z() == 0 ? VIEW_RADIUS : REGION_RADIUS;
+            if( std::abs( rel.x() ) <= radius && std::abs( rel.y() ) <= radius &&
+                here.has_loaded_submap( p ) && you.sees( here, p ) ) {
+                push_cursor_slab( p, sprite );
+            }
+        } );
+    }
     // Mark the gameplay cell that the next forward input would enter.
     const auto has_game_cursor = [&]( const tripoint_bub_ms & tp ) {
         for( const auto &c : g_game_cursors ) {

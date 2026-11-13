@@ -4664,7 +4664,9 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
                              render3d::draw_terrain_window( renderer.get(), terrain_rect,
                                  g->ter_view_p, tilecontext.get() );
         render3d_camera_redraw_pending = false;
-        if( !drew_3d ) {
+        if( drew_3d ) {
+            tilecontext->void_line();
+        } else {
             render3d::leave_view( renderer.get() );
             tilecontext->draw(
                 point( win->pos.x * fontwidth, win->pos.y * fontheight ),

@@ -1216,6 +1216,8 @@ class cata_tiles
         // pseudo-animated layer, not really though.
         void init_draw_line( const tripoint_bub_ms &p, std::vector<tripoint_bub_ms> trajectory,
                              std::string line_end_name, bool target_line );
+        void for_each_line_marker( const std::function<void( const tripoint_bub_ms &,
+                const std::string & )> &draw_marker ) const;
         void draw_line();
         void void_line();
 
