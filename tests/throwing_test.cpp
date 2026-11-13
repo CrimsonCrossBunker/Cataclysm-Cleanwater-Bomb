@@ -10,9 +10,12 @@
 #include "character.h"
 #include "coordinates.h"
 #include "damage.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
+#include "itype.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -25,8 +28,12 @@
 #include "test_statistics.h"
 #include "type_id.h"
 
+static const flag_id json_flag_SLING_PROJECTILE( "SLING_PROJECTILE" );
+
+static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_grenade( "grenade" );
 static const itype_id itype_javelin_iron( "javelin_iron" );
+static const itype_id itype_pebble( "pebble" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_sling( "sling" );
 static const itype_id itype_sling_bullet_stone_500( "sling_bullet_stone_500" );
@@ -353,6 +360,61 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
     }
 }
 
+TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
+{
+    const item ammo( itype_9mm, calendar::turn, 1 );
+    const item rock( itype_rock );
+    const item knife( itype_throwing_knife );
+    REQUIRE( ammo.is_ammo() );
+    REQUIRE_FALSE( ammo.has_flag( json_flag_SLING_PROJECTILE ) );
+
+    throw_correction_data correction;
+    correction.deserialize( json_loader::from_string( R"({
+        "required_flag": "SLING_PROJECTILE", "allow_ammotype": ["9mm"]
+    })" ).get_object() );
+    CHECK( correction.applies_to( ammo ) );
+    CHECK( correction.applies_to( rock ) );
+    CHECK_FALSE( correction.applies_to( knife ) );
+
+    SECTION( "omitted_fields_preserve_inherited_selectors" ) {
+        correction.deserialize( json_loader::from_string( "{}" ).get_object() );
+        CHECK( correction.applies_to( ammo ) );
+        CHECK( correction.applies_to( rock ) );
+        CHECK_FALSE( correction.applies_to( knife ) );
+    }
+    SECTION( "ammo_list_without_flags_requires_matching_ammo" ) {
+        throw_correction_data ammo_only;
+        ammo_only.deserialize( json_loader::from_string( R"({"allow_ammotype":["9mm"]})"
+                             ).get_object() );
+        CHECK( ammo_only.applies_to( ammo ) );
+        CHECK_FALSE( ammo_only.applies_to( rock ) );
+        CHECK_FALSE( ammo_only.applies_to( knife ) );
+    }
+    SECTION( "null_clears_inherited_flags_but_preserves_ammo_list" ) {
+        correction.deserialize( json_loader::from_string( R"({"required_flag":null})"
+                              ).get_object() );
+        CHECK( correction.applies_to( ammo ) );
+        CHECK_FALSE( correction.applies_to( rock ) );
+        CHECK_FALSE( correction.applies_to( knife ) );
+    }
+    SECTION( "clearing_both_selectors_removes_item_type_restrictions" ) {
+        correction.deserialize( json_loader::from_string( R"({
+            "required_flag": null, "allow_ammotype": []
+        })" ).get_object() );
+        CHECK( correction.applies_to( knife ) );
+    }
+    SECTION( "both_matching_paths_still_check_physical_limits" ) {
+        const std::string limit = GENERATE( R"({"min_weight":"1 kg"})",
+                                           R"({"max_weight":"0 g"})",
+                                           R"({"max_volume":"0 ml"})",
+                                           R"({"max_length":"0 mm"})" );
+        CAPTURE( limit );
+        correction.deserialize( json_loader::from_string( limit ).get_object() );
+        CHECK_FALSE( correction.applies_to( ammo ) );
+        CHECK_FALSE( correction.applies_to( rock ) );
+    }
+}
+
 static void check_throw_correction( const Character &you, const item &projectile,
                                     const float damage, const float range,
                                     const float stamina, const float dispersion,
@@ -394,6 +456,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
     item medium_bullet( itype_sling_bullet_stone_500 );
     item heavy_bullet( itype_sling_bullet_stone_750 );
     item rock( itype_rock );
+    item pebble( itype_pebble, calendar::turn, 1 );
     item throwing_knife( itype_throwing_knife );
 
     SECTION( "sling" ) {
@@ -404,7 +467,8 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
         check_throw_correction( you, medium_bullet, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
         CHECK( throw_cost( you, medium_bullet ) > unassisted_cost );
         check_throw_correction( you, heavy_bullet, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
-        check_throw_correction( you, rock, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+        check_throw_correction( you, rock, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
+        check_throw_correction( you, pebble, 1.25f, 2.5f, 2.0f, 0.9f, 3.0f, 1.5f );
     }
 
     SECTION( "long_sling" ) {
@@ -413,6 +477,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
 
         check_throw_correction( you, heavy_bullet, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
         check_throw_correction( you, rock, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
+        check_throw_correction( you, pebble, 1.5f, 3.0f, 4.5f, 0.9f, 4.0f, 1.8f );
         check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 
@@ -422,6 +487,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
         REQUIRE( you.wield( sling ) );
 
         check_throw_correction( you, heavy_grenade, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
+        check_throw_correction( you, pebble, 1.5f, 2.0f, 1.5f, 0.9f, 3.5f, 1.2f );
         check_throw_correction( you, throwing_knife, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 }
