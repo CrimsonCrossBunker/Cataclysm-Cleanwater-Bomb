@@ -143,6 +143,8 @@
     "throw_correction_data": {
       "required_flag": "SLING_PROJECTILE",
       "allow_ammotype": [ "pebble" ],
+      "//": "Full bonuses at throwing 4 are a balance choice for this item's larger range bonus, not a measured length-specific learning threshold. General sling release timing: Denny (2025), https://doi.org/10.1119/5.0226263.",
+      "full_bonus_skill": 4,
       "min_weight": "1 g",
       "max_weight": "900 g",
       "max_volume": "500 ml",
