@@ -3427,7 +3427,7 @@
     "material": [ "plastic" ],
     "symbol": ".",
     "color": "white",
-    "flags": [ "NO_REPAIR" ]
+    "flags": [ "NO_REPAIR", "SLING_PROJECTILE" ]
   },
   {
     "id": "salt_lick",
