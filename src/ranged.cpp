@@ -1301,6 +1301,33 @@ int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second )
                              std::numeric_limits<int>::max() ) );
 }
 
+firearm_burst_recoil::firearm_burst_recoil( int arm_strength, float skill, int rpm )
+{
+    const double level = std::clamp<double>( skill, 0.0, MAX_SKILL );
+    // An 8-strength shooter at weapon skill 7 is the reference for an intermediate rifle.
+    const double control = ( 8.0 + std::max( 1, arm_strength ) ) / 16.0 * ( 0.5 + level / 14.0 );
+    const double old_kick_scale = 5.0 * ( 1.0 - level / ( 2 * MAX_SKILL ) );
+    // Faster follow-up rounds leave less time for the opening kick to displace the aim.
+    const double interval_scale = std::clamp( 750.0 / std::max( 1, rpm ), 0.65, 1.20 );
+    opening_scale = old_kick_scale * std::min( 0.8, 0.7 / control ) * interval_scale;
+    steady_scale = 0.65 / ( control * std::sqrt( control ) );
+    settling_rounds = std::clamp( 5.0 / control, 2.5, 10.0 );
+}
+
+double firearm_burst_recoil::after_shot( int gun_recoil )
+{
+    const double kick = std::max( 0, gun_recoil );
+    const double progress = std::min( ++shots_fired / settling_rounds, 1.0 );
+    const double steady_recoil = kick * steady_scale;
+    if( progress >= 1.0 ) {
+        return steady_recoil;
+    }
+    opening_recoil += kick * opening_scale;
+    // Blend out the accumulated climb as the shooter settles into the burst.
+    const double settled = progress * progress * ( 3.0 - 2.0 * progress );
+    return opening_recoil * ( 1.0 - settled ) + steady_recoil * settled;
+}
+
 int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 {
     map &here = get_map();
@@ -1325,7 +1352,8 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
     if( mode.fixed_burst() || burst_rounds != 0 ) {
         const int planned = mode.fixed_burst() ? mode.qty : roll_firearm_burst_rounds( *this, *mode,
                             burst_rounds );
-        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm );
+        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm,
+                                         true );
         if( fired > 0 ) {
             add_msg_if_player( n_gettext( "You fire %d round.", "You fire %d rounds.", fired ), fired );
         }
@@ -1343,7 +1371,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
         }
         return 0;
     }
-    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second );
+    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second, mode.rpm );
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, item &gun,
@@ -1353,7 +1381,8 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
 }
 
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
-                              item_location ammo, bool spend_attack_moves, int burst_rpm )
+                              item_location ammo, bool spend_attack_moves, int firing_rpm,
+                              bool spend_burst_moves )
 {
     if( !gun.is_gun() ) {
         debugmsg( "%s tried to fire non-gun (%s).", get_name(), gun.tname() );
@@ -1415,21 +1444,27 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         }
     }
 
-    // Up to 50% of recoil can be delayed until end of burst dependent upon relevant skill
-    /** @EFFECT_PISTOL delays effects of recoil during automatic fire */
-    /** @EFFECT_SMG delays effects of recoil during automatic fire */
-    /** @EFFECT_RIFLE delays effects of recoil during automatic fire */
-    /** @EFFECT_SHOTGUN delays effects of recoil during automatic fire */
-    double absorb = std::min( get_skill_level( gun.gun_skill() ),
-                              static_cast<float>( MAX_SKILL ) ) / static_cast<double>( MAX_SKILL * 2 );
+    /** @EFFECT_PISTOL improves recoil control during automatic fire */
+    /** @EFFECT_SMG improves recoil control during automatic fire */
+    /** @EFFECT_RIFLE improves recoil control during automatic fire */
+    /** @EFFECT_SHOTGUN improves recoil control during automatic fire */
+    const skill_id gun_skill = gun.gun_skill();
+    const float gun_skill_level = get_skill_level( gun_skill );
+    const double absorb = std::min( gun_skill_level, static_cast<float>( MAX_SKILL ) ) /
+                          static_cast<double>( MAX_SKILL * 2 );
+    std::optional<firearm_burst_recoil> recoil_control;
+    if( firing_rpm > 0 && shots > 1 && !gun.has_flag( flag_VEHICLE ) &&
+        !is_fake() && !is_mech_weapon ) {
+        recoil_control.emplace( get_arm_str(), gun_skill_level, firing_rpm );
+    }
+    double burst_recoil = 0.0;
 
     itype_id gun_id = gun.typeId();
     const int attack_moves = spend_attack_moves
                              ? time_to_attack( *this, *gun_id ) + action_time( *this, *gun_id )
                              : 0;
     const int reload_moves = reload_and_shoot_time( *this, ammo );
-    const int burst_speed = burst_rpm > 0 ? get_speed() : 0;
-    skill_id gun_skill = gun.gun_skill();
+    const int burst_speed = spend_burst_moves ? get_speed() : 0;
     add_msg_debug( debugmode::DF_RANGED, "Gun skill (%s) %g", gun_skill.c_str(),
                    get_skill_level( gun_skill ) ) ;
     tripoint_bub_ms aim = target;
@@ -1482,7 +1517,8 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
                            elem.res_pen );
         }
 
-        dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total(), proj.shot_spread );
+        dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total() + burst_recoil,
+                                        proj.shot_spread );
         dispersion.add_range( dispersion_variance() );
 
         dealt_projectile_attack shot;
@@ -1524,23 +1560,24 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             break;
         }
 
-        int qty = gun.gun_recoil( *this, bipod );
-
-        add_msg_debug( debugmode::DF_RANGED, "total recoil: %d; absorbed: %.0f%%",
-                       qty, absorb * 100 );
-
-        delay += qty * absorb;
-        // Temporarily scale by 5x as we adjust MAX_RECOIL, factoring in the recoil enchantment also.
-        const int added_recoil = enchantment_cache->modify_value(
-                                     enchant_vals::mod::RECOIL_MODIFIER, 5.0 ) * ( qty * ( 1.0 - absorb ) );
-
-        add_msg_debug( debugmode::DF_RANGED, "final recoil of this shot: %d", added_recoil );
-
-        // if shoots multiple barrels simultaneously, do not apply the recoil while shooting, only in the end
-        if( gun.gun_current_mode().flags.count( "VOLLEY" ) ) {
-            delay += added_recoil;
+        const int qty = gun.gun_recoil( *this, bipod );
+        const double recoil_scale = enchantment_cache->modify_value(
+                                        enchant_vals::mod::RECOIL_MODIFIER, 5.0 );
+        if( recoil_control ) {
+            burst_recoil = recoil_control->after_shot( qty ) * std::max( 0.0, recoil_scale / 5.0 );
+            add_msg_debug( debugmode::DF_RANGED, "recoil after shot %d: %.1f", curshot, burst_recoil );
         } else {
-            recoil += added_recoil;
+            add_msg_debug( debugmode::DF_RANGED, "total recoil: %d; absorbed: %.0f%%",
+                           qty, absorb * 100 );
+            delay += qty * absorb;
+            const int added_recoil = recoil_scale * ( qty * ( 1.0 - absorb ) );
+            add_msg_debug( debugmode::DF_RANGED, "final recoil of this shot: %d", added_recoil );
+            // Simultaneous barrels impart their recoil only after all projectiles leave.
+            if( gun.gun_current_mode().flags.count( "VOLLEY" ) ) {
+                delay += added_recoil;
+            } else {
+                recoil += added_recoil;
+            }
         }
 
         const itype_id current_ammo = gun.ammo_current();
@@ -1593,8 +1630,13 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             continue; // skip retargeting for launchers
         }
     }
+    // Carry the last shot's aim displacement into the next trigger pull.
+    recoil += burst_recoil;
+
     // Interrupted bursts only occupy the time spent firing, with one interval for a failed trigger.
-    const int burst_moves = firearm_burst_move_cost( std::max( 1, curshot ), burst_rpm, burst_speed );
+    const int burst_moves = spend_burst_moves
+                            ? firearm_burst_move_cost( std::max( 1, curshot ), firing_rpm, burst_speed )
+                            : 0;
     const int64_t total_moves = static_cast<int64_t>( attack_moves ) + reload_moves + burst_moves;
     mod_moves( -static_cast<int>( std::min<int64_t>( total_moves, std::numeric_limits<int>::max() ) ) );
 
@@ -1651,8 +1693,9 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         // Reset aim for bows and other reload-and-shoot weapons.
         recoil = MAX_RECOIL;
     } else {
-        // apply delayed recoil, factor in recoil enchantments
-        recoil += enchantment_cache->modify_value( enchant_vals::mod::RECOIL_MODIFIER, delay );
+        if( !recoil_control ) {
+            recoil += enchantment_cache->modify_value( enchant_vals::mod::RECOIL_MODIFIER, delay );
+        }
         if( is_mech_weapon ) {
             // mechs can handle recoil far better. they are built around their main gun.
             // TODO: shouldn't this affect only recoil accumulated during this function?
