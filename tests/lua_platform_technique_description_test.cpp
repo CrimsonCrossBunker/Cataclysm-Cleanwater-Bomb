@@ -25,10 +25,12 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "debug.h"
+#include "damage.h"
 #include "effect.h"
 #include "effect_source.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
+#include "item_location.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_martial_arts.h"
@@ -65,6 +67,7 @@ static const matec_id tec_lua_boxing_opening_cross( "tec_lua_boxing_opening_cros
 static const matec_id tec_lua_muay_clinch_knee( "tec_lua_muay_clinch_knee" );
 static const matec_id tec_lua_muay_push_kick( "tec_lua_muay_push_kick" );
 static const matec_id tec_lua_staff_long_thrust( "tec_lua_staff_long_thrust" );
+static const matec_id tec_lua_wingchun_chain( "tec_lua_wingchun_chain" );
 static const matec_id tec_rapid_window_break( "tec_rapid_window_break" );
 static const matec_id tec_shadow_combination( "tec_shadow_combination" );
 static const matec_id tec_weapon_breach( "tec_weapon_breach" );
@@ -804,8 +807,8 @@ TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
         CHECK( technique.manual_activation != technique.crit_tec );
     }
     CHECK( library_count == 26 );
-    CHECK( tec_lua_boxing_double_jab->repeat_min == 2 );
-    CHECK( tec_lua_boxing_double_jab->repeat_max == 2 );
+    CHECK( tec_lua_boxing_double_jab->repeat_min == 1 );
+    CHECK( tec_lua_boxing_double_jab->repeat_max == 1 );
     CHECK( tec_lua_boxing_double_jab->damage_multiplier( attacker, damage_bash ) == Approx( 0.65 ) );
     CHECK( tec_lua_boxing_cross->damage_multiplier( attacker, damage_bash ) == Approx( 1.3 ) );
     CHECK( tec_lua_boxing_double_jab->move_cost_multiplier( attacker ) < tec_lua_boxing_cross->move_cost_multiplier( attacker ) );
@@ -849,6 +852,30 @@ TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
     CHECK_FALSE( tec_lua_boxing_double_jab->activation_allowed( attacker, "target", &target ) );
     CHECK_FALSE( attacker.evaluate_technique( tec_lua_boxing_opening_cross, target, attacker.used_weapon(),
                  true, false, false, false ) );
+}
+
+TEST_CASE( "lua_core_punch_combinations_resolve_as_single_attacks",
+           "[lua][platform][martial_arts][technique_library]" )
+{
+    const bool double_jab = GENERATE( true, false );
+    const matec_id technique = double_jab ? tec_lua_boxing_double_jab : tec_lua_wingchun_chain;
+    CAPTURE( technique );
+    clear_avatar();
+    clear_map();
+    cata::lua_platform::runtime_world_ready( true );
+    avatar &attacker = get_avatar();
+    attacker.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    REQUIRE( technique.is_valid() );
+    CHECK( technique->repeat_min == 1 );
+    CHECK( technique->repeat_max == 1 );
+    monster &target = spawn_test_monster( "mon_zombie", attacker.pos_bub() + tripoint::east );
+    damage_instance damage( damage_bash, 100.0f );
+    int move_cost = 100;
+    item_location weapon;
+    attacker.perform_technique( *technique, target, damage, move_cost, weapon );
+    CHECK( damage.type_damage( damage_bash ) == Approx( double_jab ? 65.0f : 50.0f ) );
+    CHECK( damage.total_damage() == Approx( double_jab ? 65.0f : 50.0f ) );
+    CHECK( move_cost == ( double_jab ? 85 : 80 ) );
 }
 
 TEST_CASE( "lua_position_plan_rejects_invalid_results_without_native_costs",

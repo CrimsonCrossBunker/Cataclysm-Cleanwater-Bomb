@@ -3,9 +3,9 @@ local ccb = require("ccb")
 local profiles = {
     {
         id = "boxing_double_jab", name = ccb.content.text("Double Jab"),
-        description = ccb.content.text("Two light lead-hand punches trade impact for speed and accuracy."),
+        description = ccb.content.text("A light lead-hand combination trades overall impact for speed and accuracy. The combination resolves as a single attack."),
         styles = { "style_boxing", "style_kickboxing" }, vector = "vector_punch",
-        damage = "bash", scale = 0.65, speed = 0.85, accuracy = 1, repeats = 2, level = 2,
+        damage = "bash", scale = 0.65, speed = 0.85, accuracy = 1, level = 2,
     },
     {
         id = "boxing_cross", name = ccb.content.text("Rear-Hand Cross"),
@@ -63,9 +63,9 @@ local profiles = {
     },
     {
         id = "wingchun_chain", name = ccb.content.text("Straight-Punch Chain"),
-        description = ccb.content.text("Three short straight punches prioritize repeated contact over individual power."),
+        description = ccb.content.text("A compact straight-punch combination trades overall power for speed and accuracy. The combination resolves as a single attack."),
         styles = { "style_wingchun" }, vector = "vector_punch",
-        damage = "bash", scale = 0.5, speed = 0.8, accuracy = 1, repeats = 3, level = 3,
+        damage = "bash", scale = 0.5, speed = 0.8, accuracy = 1, level = 3,
     },
     {
         id = "brawling_hammerfist", name = ccb.content.text("Descending Hammerfist"),
@@ -195,7 +195,6 @@ for _, profile in ipairs(profiles) do
         manual_activation = not profile.critical, crit_tec = profile.critical or false,
         cooldown_turns = profile.critical and 0 or 3,
         unarmed_allowed = not armed, strictly_unarmed = not armed, melee_allowed = armed,
-        repeat_min = profile.repeats or 1, repeat_max = profile.repeats or 1,
         disarms = profile.disarms or false, knockback_dist = profile.knockback or 0,
         down_dur = profile.down or 0, reach_ok = profile.reach or false,
         active_when = handler,
