@@ -301,6 +301,53 @@ def main():
         assert host2.read() == 'READY'
         host2.close()
         results.append('disconnect_reconnect_same_port_rehost')
+
+        # Incrementally fill one room, observing each planned capacity in
+        # the same run. The 32nd remote can connect at the transport layer
+        # but may never acquire an admission or enter the simulation queue.
+        expanded = start('expanded-host', 'host', port, 32)
+        assert expanded.read() == 'READY'
+        guests = []
+        admissions = set()
+        checkpoints = (8, 16, 32)
+        for number in range(1, 32):
+            guest = start(f'expanded-guest{number}', 'raw', port)
+            assert guest.read() == 'READY'
+            packet = {
+                'type': 'join',
+                'transport': 'ccb-renet-2',
+                'password': '口令"\\',
+                'version': 'abc',
+                'name': f'expanded-player{number}',
+                'world_id': 'a' * 32,
+                'player_id': f'{number:032x}',
+                'resume_secret': 'b' * 64,
+            }
+            assert guest.command('send ' + json.dumps(packet)) == 'OK'
+            event = expanded.command('next').split()
+            assert event[:2] == ['EVENT', '0'], event
+            assert event[2] not in admissions, event
+            admissions.add(event[2])
+            assert guest.message()['type'] == 'welcome'
+            guests.append(guest)
+            # Drain the admission notice on each client before a later join.
+            for recipient in guests:
+                assert recipient.message()['type'] == 'player_joined'
+            if number + 1 in checkpoints:
+                for recipient in guests:
+                    assert recipient.command('send ' + json.dumps(action)) == 'OK'
+                    assert expanded.command('next').startswith('EVENT 2 ')
+                results.append(f'{number + 1}_player_room_admission_and_actions')
+        excess = start('expanded-full', 'client', port,
+                       'extra-player', '口令"\\', 'abc')
+        response = excess.read()
+        assert 'Server is full (32 players including the host)' in response, response
+        assert expanded.command('next') == 'EMPTY'
+        excess.close()
+        for guest in reversed(guests):
+            guest.close()
+            assert expanded.command('next').startswith('EVENT 1 ')
+        expanded.close()
         unused = start('timeout', 'client', port, 'player', '', 'abc')
         begun = time.monotonic()
         assert 'Timed out' in unused.read()

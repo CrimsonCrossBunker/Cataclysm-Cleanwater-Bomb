@@ -26,8 +26,6 @@ namespace cata_mp
 namespace
 {
 using clock = std::chrono::steady_clock;
-// Lift only after the engine's per-player simulation state is migrated.
-constexpr size_t max_game_peers = 3;
 
 } // namespace
 
@@ -70,10 +68,14 @@ struct server::impl {
 };
 
 server::server( uint16_t port, std::string password, std::string version,
-                std::shared_ptr<event_queue> events, server_welcome welcome )
-    : port_( port ), password_( std::move( password ) ), version_( std::move( version ) ),
+                std::shared_ptr<event_queue> events, server_welcome welcome, int room_players )
+    : port_( port ), room_players_( room_players ), password_( std::move( password ) ),
+      version_( std::move( version ) ),
       impl_( std::make_unique<impl>( std::move( events ), std::move( welcome ) ) )
 {
+    if( !valid_room_size( room_players_ ) ) {
+        throw std::invalid_argument( "Invalid multiplayer room size" );
+    }
     if( !impl_->transport.start_host( "0.0.0.0:" + std::to_string( port ) ) ) {
         throw std::runtime_error( impl_->transport.last_error() );
     }
@@ -220,8 +222,8 @@ void server::on_message( uint64_t id, const std::string &msg )
         []( const auto & entry ) {
             return entry.second.admission.active();
         } );
-        if( joined >= max_game_peers ) {
-            reject( "Server is full (four players including the host)" );
+        if( joined >= static_cast<size_t>( room_players_ - 1 ) ) {
+            reject( "Server is full (" + std::to_string( room_players_ ) + " players including the host)" );
             return;
         }
         peer.probed = true;
@@ -443,13 +445,14 @@ void host_session::stop()
 }
 
 bool host_session::start( uint16_t port, const std::string &password,
-                          const std::string &version, server_welcome welcome )
+                          const std::string &version, server_welcome welcome, int room_players )
 {
     stop();
     error_.clear();
     try {
         events();
-        instance_ = std::make_shared<server>( port, password, version, events_, std::move( welcome ) );
+        instance_ = std::make_shared<server>( port, password, version, events_, std::move( welcome ),
+                                              room_players );
         worker_ = std::thread( [instance = instance_]() {
             try {
                 instance->run();
