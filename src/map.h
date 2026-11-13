@@ -560,16 +560,17 @@ class map
          * you set this to true, do ensure that the map is not accessed before
          * this function returns (for example, UIs that draw the map should be
          * disabled).
+         * @param regions Active simulation views, if loading for co-op.
          */
         void load( const tripoint_abs_sm &w, bool update_vehicles,
-                   bool pump_events = false );
+                   bool pump_events = false, const map_simulation_regions *regions = nullptr );
         /**
          * Shift the map along the vector s.
          * This is like loading the map with coordinates derived from the current
          * position of the map (@ref abs_sub) plus the shift vector.
          * Note: the map must have been loaded before this can be called.
          */
-        void shift( const point_rel_sm &s );
+        void shift( const point_rel_sm &s, const map_simulation_regions *regions = nullptr );
         /**
          * Moves the map vertically to (not by!) newz.
          * Does not actually shift anything, only forces cache updates.
@@ -2040,7 +2041,8 @@ class map
 
     protected:
         void saven( const tripoint_bub_sm &grid );
-        void loadn( const point_bub_sm &grid, bool update_vehicles );
+        void loadn( const point_bub_sm &grid, bool update_vehicles,
+                    const map_simulation_regions *regions );
         /**
          * Whether the reservation index may be cleared before the walk.  A pass that
          * does not walk every craft holding a record has to be additive, or it erases
@@ -2062,7 +2064,9 @@ class map
          * Fast forward a submap that has just been loading into this map.
          * This is used to rot and remove rotten items, grow plants, fill funnels etc.
          */
-        void actualize( const tripoint_rel_sm &grid );
+        void actualize( const tripoint_rel_sm &grid, const map_simulation_regions *regions = nullptr );
+        void index_submap_location( const submap &sm, const point_sm_ms &local,
+                                    const tripoint_bub_ms &p );
         /**
          * Hacks in missing tree tops. It CAN be done in other ways, but it would be a lot of work
          * to get regional translation code to deal with chunks instead of terrain, and then use these

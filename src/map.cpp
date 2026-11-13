@@ -10282,7 +10282,7 @@ void map::save()
 }
 
 void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
-                const bool pump_events )
+                const bool pump_events, const map_simulation_regions *regions )
 {
     context_lifetime_.reset();
     viewpoint_.reset();
@@ -10304,10 +10304,14 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     submaps_with_active_items.clear();
     submaps_with_active_items_dirty.clear();
     set_abs_sub( w );
+    std::fill( grid.begin(), grid.end(), nullptr );
     clear_vehicle_level_caches();
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        clear_vehicle_list( z );
+    }
     for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
         for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
-            loadn( { gridx, gridy }, update_vehicle );
+            loadn( { gridx, gridy }, update_vehicle, regions );
             if( pump_events ) {
                 inp_mngr.pump_events();
             }
@@ -10323,7 +10327,7 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
                 const int zmin = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
                 const int zmax = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
                 for( int gridz = zmin; gridz <= zmax; gridz++ ) {
-                    actualize( { gridx, gridy, gridz } );
+                    actualize( { gridx, gridy, gridz }, regions );
                     if( pump_events ) {
                         inp_mngr.pump_events();
                     }
@@ -10332,8 +10336,8 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
         }
     }
 
-    // tinymap derives from map, and a remote load would otherwise wipe the bubble's locks.
-    reconcile_loaded_items( this == &get_map()
+    // A view load cannot clear claims made in other active maps.
+    reconcile_loaded_items( !regions && this == &get_map()
                             ? reconcile_scope::full_rebuild
                             : reconcile_scope::additive );
 }
@@ -10516,7 +10520,7 @@ template void
 shift_bitset_cache<MAPSIZE_X, SEEX>( std::bitset<MAPSIZE_X *MAPSIZE_X> &cache,
                                      const point_rel_sm &s );
 
-void map::shift( const point_rel_sm &sp )
+void map::shift( const point_rel_sm &sp, const map_simulation_regions *regions )
 {
     if( !zlevels ) {
         debugmsg( "map::shift called from map that doesn't support Z levels" );
@@ -10556,14 +10560,18 @@ void map::shift( const point_rel_sm &sp )
             if( ( sp.x() && gridx == x_start ) || ( sp.y() && gridy == y_start ) ) {
                 for( int gridz = zmin; gridz <= zmax; gridz++ ) {
                     const tripoint_rel_sm grid( gridx, gridy, gridz );
-                    on_unload( grid );
+                    if( !regions || !regions->loaded_elsewhere( *this, abs.xy() + grid ) ) {
+                        on_unload( grid );
+                    }
                 }
             }
         }
     }
     set_abs_sub( abs + sp );
 
-    g->shift_destination_preview( { -sp.x() * SEEX, -sp.y() * SEEY } );
+    if( !regions || this == &reality_bubble() ) {
+        g->shift_destination_preview( { -sp.x() * SEEX, -sp.y() * SEEY } );
+    }
 
     shift_traps( sp );
 
@@ -10609,7 +10617,7 @@ void map::shift( const point_rel_sm &sp )
                     update_vehicle_list( cur_submap, gridz );
                 }
             } else {
-                loadn( { gridx, gridy }, true );
+                loadn( { gridx, gridy }, true, regions );
 
                 for( int gridz = zmin; gridz <= zmax; gridz++ ) {
                     loaded_grids.emplace_back( gridx, gridy, gridz );
@@ -10630,7 +10638,7 @@ void map::shift( const point_rel_sm &sp )
     // actualize after loading all submaps to prevent errors
     // with entities at the edges
     for( tripoint_rel_sm loaded_grid : loaded_grids ) {
-        actualize( loaded_grid );
+        actualize( loaded_grid, regions );
     }
     if( !loaded_grids.empty() ) {
         // A shift walks the bubble it now has, so the crafts it scrolled away from are
@@ -10704,7 +10712,8 @@ bool generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &terrain_type
     return MAPBUFFER.generate_uniform_omt( p, terrain_type );
 }
 
-void map::loadn( const point_bub_sm &grid, bool update_vehicles )
+void map::loadn( const point_bub_sm &grid, bool update_vehicles,
+                 const map_simulation_regions *regions )
 {
     dbg( D_INFO ) << "map::loadn(game[" << g.get() << "], worldx[" << abs_sub.x()
                   << "], worldy[" << abs_sub.y() << "], grid " << grid << ")";
@@ -10714,6 +10723,14 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles )
     // Get the base submap "grid" is an offset from.
     const tripoint_abs_sm grid_sm_base = project_to<coords::sm>( grid_abs_omt );
     bool map_incomplete = false;
+    const int start_z = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int stop_z = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+
+    // A leading-edge slot can still point into the old window. Clear it
+    // before storage access, including when map generation fails.
+    for( int z = start_z; z <= stop_z; ++z ) {
+        this->grid[get_nonant( tripoint_rel_sm( grid.x(), grid.y(), z ) )] = nullptr;
+    }
 
     map &bubble_map = reality_bubble();
 
@@ -10751,11 +10768,6 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles )
         }
     }
 
-    const int start_z = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int stop_z = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
-
-    submap *tmpsub;
-
     for( int z = start_z; z <= stop_z; z++ ) {
         const tripoint_abs_sm pos = { grid_abs_sub.xy(), z };
         // New submap changes the content of the map and all caches must be recalculated
@@ -10764,15 +10776,21 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles )
         set_outside_cache_dirty( z );
         set_floor_cache_dirty( z );
         set_pathfinding_cache_dirty( z );
-        tmpsub = MAPBUFFER.lookup_submap( pos );
-        setsubmap( get_nonant( tripoint_rel_sm{ grid.x(), grid.y(), z} ), tmpsub );
+        submap *const tmpsub = MAPBUFFER.lookup_submap( pos );
+        const size_t index = get_nonant( tripoint_rel_sm( grid.x(), grid.y(), z ) );
+        if( !tmpsub ) {
+            debugmsg( "Failed to load submap at %s", pos.to_string() );
+            continue;
+        }
+        setsubmap( index, tmpsub );
         if( !tmpsub->active_items.empty() ) {
             submaps_with_active_items_dirty.emplace( pos );
         }
+        const bool already_active = regions && regions->loaded_elsewhere( *this, pos );
 
         // Destroy bugged no-part vehicles
         auto &veh_vec = tmpsub->vehicles;
-        for( auto iter = veh_vec.begin(); iter != veh_vec.end(); ) {
+        for( auto iter = veh_vec.begin(); !already_active && iter != veh_vec.end(); ) {
             vehicle *veh = iter->get();
             if( veh->part_count() > 0 ) {
                 // Always fix submap coordinates for easier Z-level-related operations
@@ -10794,16 +10812,15 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles )
         if( update_vehicles ) {
             level_cache &map_cache = get_cache( z );
             for( const auto &veh : tmpsub->vehicles ) {
-                // Only add if not tracking already.
-                if( map_cache.vehicle_list.find( veh.get() ) == map_cache.vehicle_list.end() ) {
-                    map_cache.vehicle_list.insert( veh.get() );
-                    if( !veh->loot_zones.empty() ) {
-                        map_cache.zone_vehicles.insert( veh.get() );
-                    }
+                if( veh->part_count() > 0 ) {
+                    _add_vehicle_to_list( map_cache, veh.get() );
                 }
             }
         }
 
+        if( already_active ) {
+            continue;
+        }
         if( zlevels ) {
             add_tree_tops( { grid.x(), grid.y(), z } );
         }
@@ -11518,11 +11535,43 @@ void map::decay_cosmetic_fields( const tripoint_bub_ms &p,
     }
 }
 
-void map::actualize( const tripoint_rel_sm &grid )
+void map::index_submap_location( const submap &sm, const point_sm_ms &local,
+                                const tripoint_bub_ms &p )
+{
+    const ter_t &ter = sm.get_ter( local ).obj();
+    if( !sm.get_furn( local )->emissions.empty() ) {
+        field_furn_locs.push_back( p );
+    }
+    if( !ter.emissions.empty() ) {
+        field_ter_locs.push_back( p );
+    }
+    const trap_id tr = sm.get_trap( local );
+    if( tr != tr_null ) {
+        traplocs[tr.to_i()].push_back( p );
+    }
+    if( ter.trap != tr_null ) {
+        traplocs[ter.trap.to_i()].push_back( p );
+    }
+}
+
+void map::actualize( const tripoint_rel_sm &grid, const map_simulation_regions *regions )
 {
     submap *const tmpsub = get_submap_at_grid( grid );
     if( tmpsub == nullptr ) {
         debugmsg( "Actualize called on null submap (%d,%d,%d)", grid.x(), grid.y(), grid.z() );
+        return;
+    }
+    const bool already_active = regions && regions->loaded_elsewhere( *this, abs_sub.xy() + grid );
+    const tripoint_bub_ms origin = rebase_bub( project_to<coords::ms>( grid ) );
+    if( already_active ) {
+        // The existing view already advances this storage. Only populate
+        // this view's local indices as the submap comes into range.
+        for( int x = 0; x < SEEX; ++x ) {
+            for( int y = 0; y < SEEY; ++y ) {
+                const point_sm_ms local( x, y );
+                index_submap_location( *tmpsub, local, origin + local.raw() );
+            }
+        }
         return;
     }
 
@@ -11544,26 +11593,11 @@ void map::actualize( const tripoint_rel_sm &grid )
     explosion_handler::process_explosions();
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
-            const tripoint_bub_ms pnt =  rebase_bub( coords::project_to<coords::ms>( grid ) + point( x, y ) );
-            const point_sm_ms p( x, y );
+            const point_sm_ms local( x, y );
+            const tripoint_bub_ms pnt = origin + local.raw();
             smoking_rack::reconcile( *this, pnt );
+            index_submap_location( *tmpsub, local, pnt );
             const furn_t &furn = *this->furn( pnt );
-            const ter_t &terr = *this->ter( pnt );
-            if( !furn.emissions.empty() ) {
-                field_furn_locs.push_back( pnt );
-            }
-            if( !terr.emissions.empty() ) {
-                field_ter_locs.push_back( pnt );
-            }
-
-            const trap_id trap_here = tmpsub->get_trap( p );
-            if( trap_here != tr_null ) {
-                traplocs[trap_here.to_i()].push_back( pnt );
-            }
-            const ter_t &ter = tmpsub->get_ter( p ).obj();
-            if( ter.trap != tr_null ) {
-                traplocs[ter.trap.to_i()].push_back( pnt );
-            }
 
             if( do_funnels ) {
                 fill_funnels( pnt, tmpsub->last_touched );

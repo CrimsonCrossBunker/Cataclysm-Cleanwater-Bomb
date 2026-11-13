@@ -34,6 +34,7 @@ static const ter_str_id ter_t_soil( "t_soil" );
 static const ter_str_id ter_t_wall( "t_wall" );
 static const field_type_str_id field_fd_marker1( "fd_marker1" );
 static const itype_id itype_test_2x4( "test_2x4" );
+static const trap_str_id tr_beartrap( "tr_beartrap" );
 
 namespace
 {
@@ -91,6 +92,8 @@ class simulation_test_map : public map
         void attach( const tripoint_rel_sm &local, submap &sm ) {
             setsubmap( get_nonant( local ), &sm );
         }
+
+        using map::actualize;
 };
 
 void insert_quad( mapbuffer &buffer, const tripoint_abs_sm &base, const ter_str_id &terrain )
@@ -248,6 +251,33 @@ TEST_CASE( "overlapping_map_views_tick_shared_fields_and_items_once",
     other.process_items( &after_shift );
     CHECK( other.get_field_age( other_tile, field_fd_marker1 ) == 2_turns );
     CHECK( shared_item.wetness == 8 );
+}
+
+TEST_CASE( "loading_an_already_active_submap_indexes_without_advancing_it",
+           "[map_storage][region_simulation][regression]" )
+{
+    const tripoint_abs_sm origin( 0, 0, 0 );
+    const tripoint_bub_ms tile( 1, 1, 0 );
+    submap shared;
+    shared.set_all_ter( ter_t_floor, true );
+    shared.set_trap( point_sm_ms( 1, 1 ), tr_beartrap );
+    simulation_test_map primary( origin );
+    simulation_test_map joined( origin );
+    primary.attach( tripoint_rel_sm::zero, shared );
+    joined.attach( tripoint_rel_sm::zero, shared );
+
+    item wet( itype_test_2x4 );
+    wet.wetness = 10;
+    item &shared_item = primary.add_item( tile, wet );
+    const time_point last_touched = shared.last_touched;
+    const map_simulation_regions regions( { std::cref( primary ), std::cref( joined ) } );
+    CHECK( regions.loaded_elsewhere( joined, origin ) );
+    CHECK( joined.trap_locations( tr_beartrap ).empty() );
+    joined.actualize( tripoint_rel_sm::zero, &regions );
+    CHECK( shared_item.wetness == 10 );
+    CHECK( shared.last_touched == last_touched );
+    REQUIRE( joined.trap_locations( tr_beartrap ).size() == 1 );
+    CHECK( joined.trap_locations( tr_beartrap ).front() == tile );
 }
 
 TEST_CASE( "legacy_map_buffer_binds_on_insertion_and_rebinds_only_after_clear", "[map_storage]" )

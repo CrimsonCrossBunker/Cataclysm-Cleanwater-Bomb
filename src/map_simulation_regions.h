@@ -19,6 +19,7 @@ class map_simulation_regions
 
         const map *owner_at( const tripoint_abs_sm &pos ) const;
         bool owns( const map &view, const tripoint_abs_sm &pos ) const;
+        bool loaded_elsewhere( const map &view, const tripoint_abs_sm &pos ) const;
 
     private:
         std::vector<std::reference_wrapper<const map>> maps_;
