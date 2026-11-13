@@ -1966,7 +1966,7 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
         du.res_pen += skill_level / 2.0f;
     }
 
-    int total_damage = 0;
+    float total_damage = 0.0f;
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }
