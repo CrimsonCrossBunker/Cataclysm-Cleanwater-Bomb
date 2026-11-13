@@ -11,9 +11,9 @@ map_simulation_regions::map_simulation_regions(
 
 const map *map_simulation_regions::owner_at( const tripoint_abs_sm &pos ) const
 {
-    for( const map &view : maps_ ) {
-        if( view.has_loaded_submap( pos ) ) {
-            return &view;
+    for( const auto &view : maps_ ) {
+        if( view.get().has_loaded_submap( pos ) ) {
+            return &view.get();
         }
     }
     return nullptr;
@@ -26,8 +26,8 @@ bool map_simulation_regions::owns( const map &view, const tripoint_abs_sm &pos )
 
 bool map_simulation_regions::loaded_elsewhere( const map &view, const tripoint_abs_sm &pos ) const
 {
-    for( const map &other : maps_ ) {
-        if( &other != &view && other.has_loaded_submap( pos ) ) {
+    for( const auto &other : maps_ ) {
+        if( &other.get() != &view && other.get().has_loaded_submap( pos ) ) {
             return true;
         }
     }

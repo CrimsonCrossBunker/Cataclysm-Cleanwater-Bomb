@@ -1636,8 +1636,9 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     // if the NPC pointer briefly becomes unresolvable (load/unload races).
     recipient.observation.partner_name_cached = remote->name;
 
-    const auto spawn_pos = find_guest_spawn( m, u.pos_abs(),
-                                           saved ? std::optional( remote->pos_abs() ) : std::nullopt );
+    const std::optional<tripoint_abs_ms> saved_pos = saved ? std::optional( remote->pos_abs() ) :
+            std::nullopt;
+    const auto spawn_pos = find_guest_spawn( m, u.pos_abs(), saved_pos );
     if( !spawn_pos ) {
         throw std::runtime_error( "No free spawn tile near the host" );
     }

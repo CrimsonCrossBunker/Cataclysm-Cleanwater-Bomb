@@ -8793,11 +8793,11 @@ cata::copy_const<Map, field_entry> *map::get_field_helper(
 
     point_sm_ms l;
     auto *const current_submap = m.unsafe_get_submap_at( tripoint_bub_ms( p ), l );
-    if( current_submap == nullptr ) {
+    if( !current_submap || current_submap->field_count <= 0 ) {
         return nullptr;
     }
 
-    return current_submap->field_count > 0 ? current_submap->get_field( l ).find_field( type ) : nullptr;
+    return current_submap->get_field( l ).find_field( type );
 }
 
 field_entry *map::get_field( const tripoint_bub_ms &p, const field_type_id &type )
@@ -11536,7 +11536,7 @@ void map::decay_cosmetic_fields( const tripoint_bub_ms &p,
 }
 
 void map::index_submap_location( const submap &sm, const point_sm_ms &local,
-                                const tripoint_bub_ms &p )
+                                 const tripoint_bub_ms &p )
 {
     const ter_t &ter = sm.get_ter( local ).obj();
     if( !sm.get_furn( local )->emissions.empty() ) {
