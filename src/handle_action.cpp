@@ -136,6 +136,7 @@ enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
+    #include "render3d.h"
     #include "screen_shake.h"
     #include "sdltiles.h"
 #endif
@@ -1910,6 +1911,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             android_native_ui::show_android_hud_manager();
         } else {
             manage_android_buttons();
+        }
+        return false;
+    }
+#endif
+
+#if defined(TILES)
+    if( act == ACTION_TOGGLE_3D_VIEW ) {
+        if( !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && !render3d::is_available() ) {
+            add_msg( m_info, _( "The current renderer cannot display the 3D terrain view." ) );
+        } else {
+            set_next_option( "RENDER3D_EXPERIMENTAL" );
+            invalidate_main_ui_adaptor();
         }
         return false;
     }

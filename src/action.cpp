@@ -374,6 +374,8 @@ std::string action_ident( action_id act )
             return "toggle_fullscreen";
         case ACTION_TOGGLE_PIXEL_MINIMAP:
             return "toggle_pixel_minimap";
+        case ACTION_TOGGLE_3D_VIEW:
+            return "toggle_3d_view";
         case ACTION_TOGGLE_PANEL_ADM:
             return "toggle_panel_adm";
         case ACTION_PANEL_MGMT:
@@ -499,6 +501,7 @@ bool can_action_change_worldstate( const action_id act )
         case ACTION_ZOOM_OUT:
         case ACTION_ZOOM_IN:
         case ACTION_TOGGLE_PIXEL_MINIMAP:
+        case ACTION_TOGGLE_3D_VIEW:
         case ACTION_TOGGLE_PANEL_ADM:
         case ACTION_PANEL_MGMT:
         case ACTION_RELOAD_TILESET:
@@ -1158,6 +1161,7 @@ action_id handle_action_menu( map &here )
 #endif
 #if defined(TILES)
             REGISTER_ACTION( ACTION_TOGGLE_PIXEL_MINIMAP );
+            REGISTER_ACTION( ACTION_TOGGLE_3D_VIEW );
             REGISTER_ACTION( ACTION_RELOAD_TILESET );
             REGISTER_ACTION( ACTION_TOGGLE_PREVENT_OCCLUSION );
 #endif // TILES

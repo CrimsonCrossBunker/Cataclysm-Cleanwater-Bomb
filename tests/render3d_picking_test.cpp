@@ -107,6 +107,7 @@ TEST_CASE( "software_sdl3_does_not_publish_a_3d_terrain_view", "[render3d][sdl3]
     CHECK_FALSE( render3d::draw_terrain_window( renderer,
             SDL_FRect{ 0.0f, 0.0f, 320.0f, 240.0f }, tripoint_bub_ms::zero, nullptr ) );
     render3d::leave_view( renderer );
+    CHECK_FALSE( render3d::is_available() );
     CHECK_FALSE( render3d::view_active() );
     CHECK_FALSE( render3d::movement_camera() );
     CHECK_FALSE( render3d::mouse_captured() );

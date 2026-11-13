@@ -3633,6 +3633,11 @@
   },
   {
     "type": "keybinding",
+    "name": "Toggle 3D terrain view",
+    "id": "toggle_3d_view"
+  },
+  {
+    "type": "keybinding",
     "name": "Sidebar options",
     "category": "DEFAULTMODE",
     "id": "toggle_panel_adm"

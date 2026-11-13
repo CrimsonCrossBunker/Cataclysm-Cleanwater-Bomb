@@ -374,6 +374,8 @@ enum action_id : int {
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,
     /** Select and use an explicitly activatable melee technique */
     ACTION_ACTIVE_TECHNIQUE,
+    /** Switch the local terrain view between 2D and 3D. */
+    ACTION_TOGGLE_3D_VIEW,
     /** Not an action, serves as count of enumerated actions */
     NUM_ACTIONS
     /**@}*/

@@ -3135,7 +3135,7 @@ void options_manager::add_options_graphics()
              true, COPT_CURSES_HIDE
            );
 
-        add( "RENDER3D_EXPERIMENTAL", page_id, to_translation( "Experimental 3D renderer" ),
+        add( "RENDER3D_EXPERIMENTAL", page_id, to_translation( "3D terrain view" ),
              to_translation( "Use the 3D terrain view when the SDL3 GPU renderer and its shaders are available.  Hold the middle mouse button over the map to orbit, and scroll to zoom.  The game uses 2D tiles when the 3D view is unavailable." ),
              false, COPT_CURSES_HIDE
            );

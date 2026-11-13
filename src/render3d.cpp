@@ -5121,9 +5121,14 @@ void on_renderer_destroyed()
     g_mouse_captured = false;
 }
 
+bool is_available()
+{
+    return use_tiles && g_available;
+}
+
 bool view_active()
 {
-    return use_tiles && g_available && get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
+    return is_available() && get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
            presented_camera.terrain && presented_camera.terrain.get() == &get_map();
 }
 

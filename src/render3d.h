@@ -14,10 +14,8 @@ struct SDL_Renderer;
 struct SDL_FRect;
 class cata_tiles;
 
-// Experimental 3D terrain renderer (P0). Renders the terrain around the view
-// center as instanced cubes into an offscreen GPU texture, then composites it
-// into the terrain window via SDL_Renderer. Everything it reads from the game
-// is read-only; simulation code is untouched.
+// SDL3 terrain renderer. Composites the map and tileset assets into the
+// terrain window and keeps the presented frame for picking and camera input.
 namespace render3d
 {
 
@@ -25,6 +23,8 @@ namespace render3d
 void on_renderer_created( SDL_Renderer *renderer );
 void on_renderer_destroyed();
 
+// Whether the current renderer can draw the 3D tiles view.
+bool is_available();
 // Whether the terrain window currently displays a 3D frame.
 bool view_active();
 bool contains_pixel( const point &logical_pixel );

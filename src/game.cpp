@@ -2898,6 +2898,9 @@ input_context get_default_mode_input_context()
         ctxt.register_action( "toggle_fullscreen" );
 #endif
         ctxt.register_action( "toggle_pixel_minimap" );
+#if defined(TILES)
+        ctxt.register_action( "toggle_3d_view" );
+#endif
         ctxt.register_action( "toggle_panel_adm" );
         ctxt.register_action( "reload_tileset" );
         ctxt.register_action( "toggle_auto_features" );
