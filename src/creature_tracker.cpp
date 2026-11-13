@@ -15,6 +15,7 @@
 #include <ostream>
 #include <ratio>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 
@@ -32,6 +33,7 @@
 #include "maptile_fwd.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "monster_target_candidates.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
@@ -55,6 +57,50 @@ struct creature_tracker::reachability_state {
     ff::flood_fill_10_workspace flood;
     std::optional<ai_reachability::frame> preparation;
 };
+
+struct creature_tracker::target_candidate_state {
+    monster_target_candidates table{ MAX_VIEW_DISTANCE };
+    std::unordered_map<const monster *, std::size_t> slots;
+};
+
+bool creature_tracker::nearby_monster_targets( const tripoint_abs_ms &origin,
+        std::vector<shared_ptr_fast<monster>> &out )
+{
+    out.clear();
+    if( monsters_list.size() < 256 || monsters_list.size() > 4096 ) {
+        return false;
+    }
+    try {
+        if( !target_candidates_ ) {
+            auto state = std::make_unique<target_candidate_state>();
+            for( const auto &mon : monsters_list ) {
+                state->slots.emplace( mon.get(), state->slots.size() );
+                state->table.add( mon->pos_abs().x(), mon->pos_abs().y() );
+            }
+            // Share each coarse window across its observers, regardless of
+            // later friendliness changes. Workers see only copied cell values.
+            for( const auto &mon : monsters_list ) {
+                if( mon->friendly != 0 ) {
+                    state->table.warm( mon->pos_abs().x(), mon->pos_abs().y() );
+                }
+            }
+            target_candidates_ = std::move( state );
+        }
+        const auto &indices = target_candidates_->table.query( origin.x(), origin.y(),
+                              get_thread_pool() );
+        out.reserve( indices.size() );
+        for( const std::size_t i : indices ) {
+            out.push_back( monsters_list[i] );
+        }
+        return true;
+    } catch( const std::bad_alloc & ) {
+        target_candidates_.reset();
+    } catch( const std::system_error & ) {
+        target_candidates_.reset();
+    }
+    out.clear();
+    return false;
+}
 
 creature_tracker::creature_tracker() = default;
 
@@ -152,6 +198,7 @@ bool creature_tracker::add( const shared_ptr_fast<monster> &critter_ptr )
         return false;
     }
 
+    target_candidates_.reset();
     monsters_list.emplace_back( critter_ptr );
     cache_location( critter.pos_abs(), critter_ptr );
     return true;
@@ -181,6 +228,14 @@ void creature_tracker::cache_location( const tripoint_abs_ms &pos,
     // can leave a false positive, never a false negative for an existing entry.
     location_filter_.set( location_bucket( pos ) );
     monsters_by_location[pos] = critter;
+    if( target_candidates_ ) {
+        const auto slot = target_candidates_->slots.find( critter.get() );
+        if( slot == target_candidates_->slots.end() ) {
+            target_candidates_.reset();
+        } else {
+            target_candidates_->table.move( slot->second, pos.x(), pos.y() );
+        }
+    }
     if( ++location_filter_updates_ >= std::max<size_t>( 1024, monsters_by_location.size() * 4 ) ) {
         rebuild_location_filter();
     }
@@ -212,6 +267,16 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
                       critter.disp_name(), new_pos.to_string_writable(), othermon.disp_name() );
             return false;
         }
+    }
+
+    // The location index already owns the tracked pointer. Keep the list scan
+    // below for missing/mismatched old entries, not for every normal step.
+    const auto old = monsters_by_location.find( old_pos );
+    if( old != monsters_by_location.end() && old->second.get() == &critter ) {
+        const shared_ptr_fast<monster> tracked = old->second;
+        monsters_by_location.erase( old );
+        cache_location( new_pos, tracked );
+        return true;
     }
 
     const auto iter = std::find_if( monsters_list.begin(), monsters_list.end(),
@@ -265,11 +330,13 @@ void creature_tracker::remove( const monster &critter )
 
     remove_from_location_map( critter );
     removed_this_turn_.emplace( *iter );
+    target_candidates_.reset();
     monsters_list.erase( iter );
 }
 
 void creature_tracker::clear()
 {
+    target_candidates_.reset();
     monsters_list.clear();
     monsters_by_location.clear();
     location_filter_.reset();
@@ -284,6 +351,7 @@ void creature_tracker::clear()
 
 void creature_tracker::rebuild_cache()
 {
+    target_candidates_.reset();
     monsters_by_location.clear();
     for( const shared_ptr_fast<monster> &mon_ptr : monsters_list ) {
         cache_location( mon_ptr->pos_abs(), mon_ptr );
@@ -388,6 +456,7 @@ void creature_tracker::remove_dead()
         monster *const critter = iter->get();
         if( critter->is_dead() ) {
             remove_from_location_map( *critter );
+            target_candidates_.reset();
             iter = monsters_list.erase( iter );
         } else {
             ++iter;

@@ -605,6 +605,7 @@ class monster : public Creature
         int anger = 0;
         int morale = 2;
     private:
+        float rate_target_impl( Creature &c, float best, bool smart, bool already_visible ) const;
         monster_uid uid_;
         int amount_eaten = 0;
         void recheck_fed_status();

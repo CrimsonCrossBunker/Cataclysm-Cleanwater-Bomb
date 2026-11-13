@@ -15,6 +15,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "behavior.h"
@@ -44,6 +45,7 @@
 #include "monfaction.h"
 #include "mongroup.h"
 #include "monster_destination_plan.h"
+#include "monster_local_cache.h"
 #include "monster_movement_plan.h"
 #include "monster_oracle.h"
 #include "monster_planning_reaction.h"
@@ -381,6 +383,11 @@ bool monster::can_move_to( const tripoint_bub_ms &p ) const
 
 float monster::rate_target( Creature &c, float best, bool smart ) const
 {
+    return rate_target_impl( c, best, smart, false );
+}
+
+float monster::rate_target_impl( Creature &c, float best, bool smart, bool already_visible ) const
+{
     const map &here = get_map();
 
     const FastDistanceApproximation d = rl_dist_fast( pos_bub( here ), c.pos_bub( here ) );
@@ -393,7 +400,7 @@ float monster::rate_target( Creature &c, float best, bool smart ) const
         return FLT_MAX;
     }
 
-    if( !sees( here, c ) ) {
+    if( !already_visible && !sees( here, c ) ) {
         return FLT_MAX;
     }
 
@@ -586,7 +593,7 @@ void monster::plan()
     // If we can see the player, move toward them or flee.
     if( friendly == 0 && seen_levels.test( player_character.posz() + OVERMAP_DEPTH ) &&
         sees( here, player_character ) ) {
-        mon_plan.dist = rate_target( player_character, mon_plan.dist, mon_plan.smart_planning );
+        mon_plan.dist = rate_target_impl( player_character, mon_plan.dist, mon_plan.smart_planning, true );
         mon_plan.fleeing = mon_plan.fleeing || is_fleeing( player_character );
         mon_plan.target = &player_character;
         const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
@@ -608,7 +615,7 @@ void monster::plan()
         }
         anger_cub_threatened( mon_plan );
     } else if( friendly != 0 && !mon_plan.docile ) {
-        for( monster &tmp : g->all_monsters() ) {
+        const auto consider = [&]( monster &tmp ) {
             if( tmp.friendly == 0 && tmp.attitude_to( *this ) == Attitude::HOSTILE &&
                 seen_levels.test( tmp.posz() + OVERMAP_DEPTH ) ) {
                 float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning );
@@ -619,6 +626,19 @@ void monster::plan()
                     mon_plan.target = &tmp;
                 }
                 mon_plan.dist = choice.state.best;
+            }
+        };
+        std::vector<shared_ptr_fast<monster>> candidates;
+        if( get_creature_tracker().nearby_monster_targets(
+                here.get_abs( here.observer_position( *this ) ), candidates ) ) {
+            for( const auto &candidate : candidates ) {
+                if( !candidate->is_dead() ) {
+                    consider( *candidate );
+                }
+            }
+        } else {
+            for( monster &tmp : g->all_monsters() ) {
+                consider( tmp );
             }
         }
     }
@@ -1252,7 +1272,7 @@ void monster::move()
             selection = resolve_monster_step( proposal, selected );
             return selected && proposal.stop_if_selected;
         };
-        const bool can_bash = !bash_skill().empty();
+        const bool can_bash = !type->bash_skill.empty();
         // This is a float and using trig_dist() because that Does the Right Thing(tm)
         // in both circular and roguelike distance modes.
         const float distance_to_target = trig_dist( pos_bub(), destination );
@@ -1639,7 +1659,7 @@ tripoint_bub_ms monster::scent_move()
         return { -1, -1, INT_MIN };
     }
 
-    const bool can_bash = !bash_skill().empty();
+    const bool can_bash = !type->bash_skill.empty();
     if( !fleeing && scent_here > smell_threshold ) {
         // Smell too strong to track, wander around
         sdirection.push_back( pos_bub() );
@@ -1661,12 +1681,28 @@ tripoint_bub_ms monster::scent_move()
         }
     }
 
+    monster_local_cache<bool, 2, SCENT_MAP_Z_REACH> movement_cache;
+    std::optional<std::map<damage_type_id, int>> estimate;
+    const tripoint_bub_ms origin = pos_bub();
     for( const tripoint_bub_ms &direction : sdirection ) {
-        // Add some randomness to make creatures zigzag towards the source
+        // Retain duplicate destinations: they weight the random choice.
         for( const tripoint_bub_ms &dest : here.points_in_radius( direction, 1 ) ) {
-            if( here.valid_move( pos_bub(), dest, can_bash, true ) &&
-                ( can_move_to( dest ) || ( dest == player_character.pos_bub() ) ||
-                  ( can_bash && here.bash_rating( bash_estimate(), dest ) > 0 ) ) ) {
+            const tripoint_rel_ms offset = dest - origin;
+            if( movement_cache.get( offset.x(), offset.y(), offset.z(), [&]() {
+                if( !here.valid_move( origin, dest, can_bash, true ) ) {
+                    return false;
+                }
+                if( can_move_to( dest ) || dest == player_character.pos_bub() ) {
+                    return true;
+                }
+                if( !can_bash ) {
+                    return false;
+                }
+                if( !estimate ) {
+                    estimate = bash_estimate();
+                }
+                return here.bash_rating( *estimate, dest ) > 0;
+            } ) ) {
                 smoves.push_back( dest );
             }
         }
@@ -1912,7 +1948,7 @@ bool monster::bash_at( const tripoint_bub_ms &p )
         return false;
     }
 
-    if( bash_skill().empty() ) {
+    if( type->bash_skill.empty() ) {
         return false;
     }
 
@@ -1973,32 +2009,29 @@ std::map<damage_type_id, int> monster::group_bash_skill( const tripoint_bub_ms &
     const std::vector<tripoint_bub_ms> bzone = get_bashing_zone( target, pos_bub(), max_helper_depth );
 
     creature_tracker &creatures = get_creature_tracker();
+    monster_local_cache<monster *, max_helper_depth + 1, 0> helper_cache;
+    const tripoint_bub_ms origin = pos_bub();
     for( const tripoint_bub_ms &candidate : bzone ) {
-        // Drawing this line backwards excludes the target and includes the candidate.
-        std::vector<tripoint_bub_ms> path_to_target = line_to( target, candidate, 0, 0 );
-        bool connected = true;
         monster *mon = nullptr;
-        for( const tripoint_bub_ms &in_path : path_to_target ) {
-            // If any point in the line from zombie to target is not a cooperating zombie,
-            // it can't contribute.
-            mon = creatures.creature_at<monster>( in_path );
-            if( !mon ) {
-                connected = false;
-                break;
-            }
-            monster &helpermon = *mon;
-            if( !helpermon.has_flag( mon_flag_GROUP_BASH ) || helpermon.is_hallucination() ) {
-                connected = false;
-                break;
-            }
+        const auto visit = [&]( const tripoint_bub_ms &in_path ) {
+            const tripoint_rel_ms offset = in_path - origin;
+            mon = helper_cache.get( offset.x(), offset.y(), offset.z(), [&]() -> monster * {
+                monster *helper = creatures.creature_at<monster>( in_path );
+                return helper && helper->has_flag( mon_flag_GROUP_BASH ) &&
+                       !helper->is_hallucination() ? helper : nullptr;
+            } );
+            return mon != nullptr;
+        };
+        // Match line_to's equal-endpoint case and traversal order without a vector.
+        if( target == candidate ) {
+            visit( target );
+        } else {
+            bresenham( target, candidate, 0, 0, visit );
         }
-        if( !connected || !mon ) {
+        if( !mon ) {
             continue;
         }
-        // If we made it here, the last monster checked was the candidate.
-        monster &helpermon = *mon;
-        // Contribution falls off rapidly with distance from target.
-        add_map( ret, helpermon.bash_skill(), rl_dist( candidate, target ) );
+        add_map( ret, mon->type->bash_skill, rl_dist( candidate, target ) );
     }
 
     return ret;
