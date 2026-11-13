@@ -39,6 +39,23 @@ std::pair<int, int> firearm_burst_round_range( int rounds, float skill );
 /** AP corresponding to rounds / RPM at the character's current moves per game second. */
 int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second );
 
+/** A sweep follows the shorter horizontal arc between its two endpoints. */
+struct firearm_sweep {
+    tripoint_bub_ms start;
+    tripoint_bub_ms end;
+    int speed; // 1 = fast, 2 = medium, 3 = slow
+
+    double duration( const tripoint_bub_ms &origin ) const;
+    bool contains( const tripoint_bub_ms &origin, const tripoint_bub_ms &pos,
+                   double padding = 0.0 ) const;
+    int rounds( const tripoint_bub_ms &origin, int rpm ) const;
+    std::vector<tripoint_bub_ms> shot_targets( const tripoint_bub_ms &origin, int rpm ) const;
+};
+
+std::optional<firearm_sweep> find_firearm_sweep( const Character &shooter, map &here,
+        const tripoint_bub_ms &primary, int range, int rpm, int max_rounds );
+bool select_full_auto_mode( item &gun );
+
 /** Additional aim dispersion accumulated during one continuous trigger pull. */
 class firearm_burst_recoil
 {
@@ -80,7 +97,8 @@ trajectory mode_reach( avatar &you, item_location weapon );
 trajectory mode_unarmed_reach( avatar &you );
 
 /** Select a manual turret shot using an owned preview gun and resource view. */
-trajectory mode_turret_manual( avatar &you, turret_data &turret, item &preview );
+trajectory mode_turret_manual( avatar &you, turret_data &turret, item &preview,
+                               std::optional<firearm_sweep> *sweep = nullptr );
 
 /** Selecting target for turrets (when using vehicle controls) */
 trajectory mode_turrets( avatar &you, vehicle &veh, const std::vector<vehicle_part *> &turrets );

@@ -2525,6 +2525,7 @@ void npc_follower_rules::serialize( JsonOut &json ) const
     json.member( "engagement", static_cast<int>( engagement ) );
     json.member( "aim", static_cast<int>( aim ) );
     json.member( "burst", static_cast<int>( burst ) );
+    json.member( "allow_sweep", allow_sweep );
     json.member( "cbm_reserve", static_cast<int>( cbm_reserve ) );
     json.member( "cbm_recharge", static_cast<int>( cbm_recharge ) );
 
@@ -2555,6 +2556,7 @@ void npc_follower_rules::deserialize( const JsonObject &data )
     aim = static_cast<aim_rule>( tmpaim );
     int saved_burst = static_cast<int>( burst_rule::ADAPTIVE );
     data.read( "burst", saved_burst );
+    allow_sweep = data.get_bool( "allow_sweep", false );
     burst = saved_burst >= static_cast<int>( burst_rule::ADAPTIVE ) &&
             saved_burst <= static_cast<int>( burst_rule::FULL_AUTO )
             ? static_cast<burst_rule>( saved_burst ) : burst_rule::ADAPTIVE;

@@ -82,6 +82,7 @@ class effect;
 class enchant_cache;
 class faction;
 class gun_mode;
+struct firearm_sweep;
 class inventory;
 class known_magic;
 class ma_technique;
@@ -3557,6 +3558,8 @@ class Character : public Creature, public visitable
         /** Fire a selected mode. A nonzero burst request uses a skill-adjusted count and RPM timing. */
         int fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
                       const item_location &ammo = item_location(), int burst_rounds = 0 );
+        int fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_mode &mode,
+                            int round_limit, bool protect_friendlies );
         /**
          *  Fires a gun or auxiliary gunmod (ignoring any current mode)
          *  @param target where the first shot is aimed at (may vary for later shots)
@@ -3574,7 +3577,9 @@ class Character : public Creature, public visitable
     private:
         int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                            item_location ammo, bool spend_attack_moves, int firing_rpm = 0,
-                           bool spend_burst_moves = false );
+                           bool spend_burst_moves = false,
+                           const std::vector<tripoint_bub_ms> *sweep_targets = nullptr,
+                           bool protect_friendlies = false );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,

@@ -57,7 +57,7 @@ void mend( avatar &you, item_location loc );
 bool can_fire_weapon( avatar &you, const map &m, const item &weapon );
 
 /** Checks if the wielded weapon is a gun and can be fired then starts interactive aiming */
-void fire_wielded_weapon( avatar &you );
+void fire_wielded_weapon( avatar &you, bool sweeping = false );
 
 /** Stores fake gun specified by the mutation and starts interactive aiming */
 void fire_ranged_mutation( Character &you, const item &fake_gun );
@@ -71,7 +71,7 @@ void fire_ranged_bionic( avatar &you, const item &fake_gun, unsigned int uid );
  * Assumes that the turret is on player position.
  * @return true if attempt to fire was successful (aim then cancel is also considered success)
  */
-bool fire_turret_manual( avatar &you, map &m, turret_data &turret );
+bool fire_turret_manual( avatar &you, map &m, turret_data &turret, bool sweeping = false );
 
 // Throw an item  't'
 void plthrow( avatar &you, item_location loc,

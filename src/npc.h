@@ -496,6 +496,7 @@ struct npc_follower_rules {
     combat_engagement engagement;
     aim_rule aim = aim_rule::WHEN_CONVENIENT;
     burst_rule burst = burst_rule::ADAPTIVE;
+    bool allow_sweep = false;
     cbm_recharge_rule cbm_recharge = cbm_recharge_rule::CBM_RECHARGE_SOME;
     cbm_reserve_rule cbm_reserve = cbm_reserve_rule::CBM_RESERVE_SOME;
     ally_rule flags = ally_rule::DEFAULT; // NOLINT(cata-serialize)
