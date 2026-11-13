@@ -130,7 +130,7 @@
     "color": "white",
     "countdown_interval": "5 seconds",
     "countdown_action": { "type": "explosion", "explosion": { "power": 5 } },
-    "flags": [ "DANGEROUS", "SPAWN_ACTIVE" ]
+    "flags": [ "DANGEROUS", "SPAWN_ACTIVE", "NPC_THROW_NOW" ]
   },
   {
     "type": "ITEM",
