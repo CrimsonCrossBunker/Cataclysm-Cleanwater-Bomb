@@ -10,7 +10,9 @@
 #include "rng.h"
 #include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
+#include "character_id.h"
 #include "creature_tracker.h"
+#include "display.h"
 #include "game.h"
 #include "json.h"
 #include "json_loader.h"
@@ -21,10 +23,13 @@
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_world_session.h"
+#include "npc.h"
+#include "overmapbuffer.h"
 #include "player_activity.h"
 #include "mtype.h"
 #include "player_helpers.h"
 #include "submap.h"
+#include "widget.h"
 #include "worldfactory.h"
 
 namespace
@@ -65,6 +70,43 @@ std::string state_message( std::initializer_list<wire_monster> monsters,
     return out.str();
 }
 } // namespace
+
+TEST_CASE( "compass_drops_retired_npcs_before_the_next_visibility_update",
+           "[multiplayer][replication][compass]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &visible = get_avatar().get_mon_visible();
+    const restore_on_out_of_scope restore_visible( visible );
+    auto &east = visible.unique_types[static_cast<int>( cardinal_direction::EAST )];
+    east.clear();
+    int legend_height = 0;
+    const std::string original_legend = display::colorized_compass_legend_text( 80, 30, legend_height );
+
+    SECTION( "retiring a loaded actor removes it from the compass immediately" ) {
+        npc &actor = spawn_npc( { 60, 60 }, "test_talker" );
+        const character_id id = actor.getID();
+        const on_out_of_scope cleanup( [id] {
+            g->remove_npc( id );
+            overmap_buffer.remove_npc( id );
+        } );
+        REQUIRE( g->shared_from( actor ) );
+        east.push_back( actor.get_safe_reference() );
+        REQUIRE_FALSE( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
+        g->remove_npc( id );
+        CHECK( east.empty() );
+    }
+    SECTION( "redraw skips an expired observation from a previous packet" ) {
+        {
+            npc actor;
+            east.push_back( actor.get_safe_reference() );
+            REQUIRE_FALSE( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
+        }
+        REQUIRE( east.size() == 1 );
+    }
+    CHECK( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
+    CHECK( display::colorized_compass_legend_text( 80, 30, legend_height ) == original_legend );
+}
 
 TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
            "[multiplayer][world_identity][regression]" )

@@ -75,6 +75,7 @@
 #include "point.h"
 #include "ranged.h"
 #include "ret_val.h"
+#include "safe_reference.h"
 #include "skill.h"
 #include "stomach.h"
 #include "string_formatter.h"
@@ -1784,9 +1785,8 @@ void avatar::export_as_npc( const cata_path &path )
 void monster_visible_info::remove_npc( npc *n )
 {
     for( auto &t : unique_types ) {
-        auto it = std::find( t.begin(), t.end(), n );
-        if( it != t.end() ) {
-            t.erase( it );
-        }
+        t.erase( std::remove_if( t.begin(), t.end(), [n]( const safe_reference<Creature> &entry ) {
+            return !entry || entry.get() == n;
+        } ), t.end() );
     }
 }

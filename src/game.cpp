@@ -1443,6 +1443,7 @@ void game::remove_npc( character_id const &id )
         return n->getID() == id;
     } );
     if( it != active_npc.end() ) {
+        get_avatar().get_mon_visible().remove_npc( it->get() );
         retire_npc_lifetime( **it );
         active_npc.erase( it );
     }
@@ -4579,7 +4580,7 @@ void game::mon_info_update( )
                 mon_visible.has_dangerous_creature_in_proximity = true;
                 newseen++;
             }
-            unique_types[index].push_back( p );
+            unique_types[index].push_back( p->get_safe_reference() );
         }
     }
 
