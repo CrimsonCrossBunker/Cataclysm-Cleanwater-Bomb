@@ -425,6 +425,7 @@ void player_activity::do_turn( Character &you )
                     act_id == ACT_WORKOUT_LIGHT;
     if( !excluded && adjusted_stamina < previous_stamina &&
         you.get_stamina() < you.get_stamina_max() / 3 ) {
+        const std::uint64_t stamina_identity = identity_generation();
         if( one_in( 50 ) ) {
             you.add_msg_if_player( _( "You pause for a moment to catch your breath." ) );
         }
@@ -441,6 +442,9 @@ void player_activity::do_turn( Character &you )
                 case UILIST_CANCEL:
                 case 2:
                     auto_resume = false;
+                    if( travel_activity ) {
+                        you.abort_automove();
+                    }
                     you.cancel_activity();
                     break;
                 case 3:
@@ -451,7 +455,7 @@ void player_activity::do_turn( Character &you )
                     break;
             }
         }
-        if( !character_reference || identity_generation() != dispatched_identity ) {
+        if( !character_reference || identity_generation() != stamina_identity ) {
             return;
         }
         if( !ignoreQuery && auto_resume ) {
