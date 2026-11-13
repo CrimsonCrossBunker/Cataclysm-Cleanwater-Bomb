@@ -12470,24 +12470,20 @@ void map::build_floor_caches()
     }
 }
 
-static void vehicle_caching_internal( level_cache &zch, const vpart_reference &vp, vehicle *v )
+static void vehicle_caching_internal( level_cache &zch, const vpart_reference &vp, vehicle &v,
+                                      const tripoint_bub_ms &part_pos )
 {
-    // TODO: Check if this is actually reasonable. Probably need to feed the map in.
-    // The guess is that the reality bubble should be affected, but that needs to be checked as well.
-    map &here =
-        reality_bubble();
     auto &outside_cache = zch.outside_cache;
     auto &transparency_cache = zch.transparency_cache;
     auto &floor_cache = zch.floor_cache;
 
     const size_t part = vp.part_index();
-    const tripoint_bub_ms part_pos =  v->bub_part_pos( here, vp.part() );
 
     bool vehicle_is_opaque = vp.has_feature( VPFLAG_OPAQUE ) && !vp.part().is_broken();
 
     if( vehicle_is_opaque ) {
-        int dpart = v->part_with_feature( part, VPFLAG_OPENABLE, true );
-        if( dpart < 0 || !v->part( dpart ).open ) {
+        int dpart = v.part_with_feature( part, VPFLAG_OPENABLE, true );
+        if( dpart < 0 || !v.part( dpart ).open ) {
             transparency_cache[part_pos.x()][part_pos.y()] = LIGHT_TRANSPARENCY_SOLID;
         } else {
             vehicle_is_opaque = false;
@@ -12503,19 +12499,6 @@ static void vehicle_caching_internal( level_cache &zch, const vpart_reference &v
     }
 }
 
-static void vehicle_caching_internal_above( level_cache &zch_above, const vpart_reference &vp,
-        vehicle *v )
-{
-    // TODO: Check if this is actually reasonable. Probably need to feed the map in.
-    // The guess is that the reality bubble should be affected, but that needs to be checked as well.
-    map &here =
-        reality_bubble();
-    if( vp.has_feature( VPFLAG_ROOF ) || vp.has_feature( VPFLAG_OPAQUE ) ) {
-        const tripoint_bub_ms part_pos = v->bub_part_pos( here, vp.part() );
-        zch_above.floor_cache[part_pos.x()][part_pos.y()] = true;
-    }
-}
-
 void map::do_vehicle_caching( int z )
 {
     level_cache *ch = get_cache_lazy( z );
@@ -12528,9 +12511,10 @@ void map::do_vehicle_caching( int z )
             if( !inbounds( part_pos.xy() ) ) {
                 continue;
             }
-            vehicle_caching_internal( get_cache( part_pos.z() ), vp, v );
-            if( part_pos.z() < OVERMAP_HEIGHT ) {
-                vehicle_caching_internal_above( get_cache( part_pos.z() + 1 ), vp, v );
+            vehicle_caching_internal( get_cache( part_pos.z() ), vp, *v, part_pos );
+            if( part_pos.z() < OVERMAP_HEIGHT &&
+                ( vp.has_feature( VPFLAG_ROOF ) || vp.has_feature( VPFLAG_OPAQUE ) ) ) {
+                get_cache( part_pos.z() + 1 ).floor_cache[part_pos.x()][part_pos.y()] = true;
             }
         }
     }
