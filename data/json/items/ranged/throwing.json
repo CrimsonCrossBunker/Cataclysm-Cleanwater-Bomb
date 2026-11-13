@@ -231,7 +231,8 @@
     "volume": "140 ml",
     "weight": "250 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 12 } ],
+    "damage": [ { "damage_type": "bash", "amount": 12 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 6 } ],
     "recovery_chance": 10,
     "thrown_recovery_chance": 10,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -248,7 +249,8 @@
     "volume": "275 ml",
     "weight": "500 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ],
+    "damage": [ { "damage_type": "bash", "amount": 15 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 7.5 } ],
     "recovery_chance": 5,
     "thrown_recovery_chance": 5,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -265,7 +267,8 @@
     "volume": "400 ml",
     "weight": "750 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 18 } ],
+    "damage": [ { "damage_type": "bash", "amount": 18 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 9 } ],
     "recovery_chance": 0,
     "thrown_recovery_chance": 0,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -283,7 +286,8 @@
     "volume": "100 ml",
     "weight": "250 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 10 } ],
+    "damage": [ { "damage_type": "bash", "amount": 10 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 5 } ],
     "recovery_chance": 80,
     "thrown_recovery_chance": 80,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -301,7 +305,8 @@
     "volume": "200 ml",
     "weight": "500 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 12 } ],
+    "damage": [ { "damage_type": "bash", "amount": 12 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 6 } ],
     "recovery_chance": 70,
     "thrown_recovery_chance": 70,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -319,7 +324,8 @@
     "volume": "300 ml",
     "weight": "750 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 14 } ],
+    "damage": [ { "damage_type": "bash", "amount": 14 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 7 } ],
     "recovery_chance": 60,
     "thrown_recovery_chance": 60,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -337,7 +343,8 @@
     "volume": "35 ml",
     "weight": "250 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 12, "armor_penetration": 5 } ],
+    "damage": [ { "damage_type": "bash", "amount": 12, "armor_penetration": 5 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 6, "armor_penetration": 5 } ],
     "recovery_chance": 95,
     "thrown_recovery_chance": 95,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -355,7 +362,8 @@
     "volume": "70 ml",
     "weight": "500 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 16, "armor_penetration": 9 } ],
+    "damage": [ { "damage_type": "bash", "amount": 16, "armor_penetration": 9 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 8, "armor_penetration": 9 } ],
     "recovery_chance": 90,
     "thrown_recovery_chance": 90,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -373,7 +381,8 @@
     "volume": "100 ml",
     "weight": "750 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 20, "armor_penetration": 12 } ],
+    "damage": [ { "damage_type": "bash", "amount": 20, "armor_penetration": 12 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 10, "armor_penetration": 12 } ],
     "recovery_chance": 85,
     "thrown_recovery_chance": 85,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -390,7 +399,8 @@
     "volume": "25 ml",
     "weight": "250 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ],
+    "damage": [ { "damage_type": "bash", "amount": 15 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 7.5 } ],
     "recovery_chance": 50,
     "thrown_recovery_chance": 50,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -407,7 +417,8 @@
     "volume": "50 ml",
     "weight": "500 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 19 } ],
+    "damage": [ { "damage_type": "bash", "amount": 19 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 9.5 } ],
     "recovery_chance": 40,
     "thrown_recovery_chance": 40,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
@@ -424,7 +435,8 @@
     "volume": "75 ml",
     "weight": "750 g",
     "ammo_type": "pebble",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 23 } ],
+    "damage": [ { "damage_type": "bash", "amount": 23 } ],
+    "thrown_damage": [ { "damage_type": "bash", "amount": 11.5 } ],
     "recovery_chance": 30,
     "thrown_recovery_chance": 30,
     "flags": [ "NPC_THROWN", "SLING_PROJECTILE" ]
