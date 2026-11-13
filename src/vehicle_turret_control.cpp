@@ -18,7 +18,7 @@
 #include "line.h"
 #include "map.h"
 #include "messages.h"
-#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 #include "mp_inventory_activity.h"
 #include "npc.h"
 #include "output.h"

@@ -1537,7 +1537,7 @@ static void fire( bool sweeping = false )
         return;
     }
 
-    const item_location weapon = you.get_wielded_item();
+    item_location weapon = you.get_wielded_item();
     if( sweeping && cata_mp::is_client_mode() ) {
         add_msg( m_info, _( "Sweeping fire is unavailable for multiplayer clients." ) );
         return;

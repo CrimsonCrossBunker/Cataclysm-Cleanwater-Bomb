@@ -1348,7 +1348,7 @@ double firearm_sweep::duration( const tripoint_bub_ms &origin ) const
         start.z() != origin.z() || end.z() != origin.z() ) {
         return 0.0;
     }
-    static constexpr std::array<double, 3> degrees_per_second = { 180.0, 120.0, 60.0 };
+    static constexpr std::array<double, 3> degrees_per_second = { 150.0, 90.0, 45.0 };
     const double angle = std::abs( sweep_angle( origin, start, end ) );
     if( angle < 1e-9 ) {
         return 0.0;
