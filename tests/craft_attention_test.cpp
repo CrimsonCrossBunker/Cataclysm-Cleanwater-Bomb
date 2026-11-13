@@ -3499,8 +3499,9 @@ TEST_CASE( "craft_relocation_rekeys_its_schedule_and_site_lock",
     const tripoint_bub_ms landing( 62, 60, 0 );
     u.setpos( here, origin );
 
-    item ingredient( itype_2x4, calendar::turn );
-    item placed( &recipe_cudgel_test_only_unattended.obj(), 1, ingredient );
+    const recipe_id passive_recipe( "test_throwing_plain_test_unattended" );
+    item ingredient( itype_id( "test_2x4" ), calendar::turn );
+    item placed( &passive_recipe.obj(), 1, ingredient );
     item &on_map = here.add_item( origin, placed );
     REQUIRE( on_map.is_craft() );
     on_map.set_current_step( 0 );
@@ -3509,7 +3510,7 @@ TEST_CASE( "craft_relocation_rekeys_its_schedule_and_site_lock",
     item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
     // Without storage, obtain falls through i_add to wield, which carries a re-key hook
     // of its own; every obtain below would then pass whatever the wrapper does.
-    u.wear_item( item( itype_debug_backpack ) );
+    u.wear_item( item( itype_id( "test_backpack" ) ) );
 
     craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
     REQUIRE( on_map.get_reservations().empty() );
@@ -3561,7 +3562,7 @@ TEST_CASE( "craft_relocation_rekeys_its_schedule_and_site_lock",
 
     GIVEN( "the craft is inserted into a container on the ground" ) {
         const tripoint_bub_ms crate_pos( 61, 61, 0 );
-        item &crate = here.add_item( crate_pos, item( itype_backpack ) );
+        item &crate = here.add_item( crate_pos, item( itype_id( "test_backpack" ) ) );
         item_location holster( map_cursor( here.get_abs( crate_pos ) ), &crate );
         item_location carried = loc.obtain( u );
         REQUIRE( carried );
