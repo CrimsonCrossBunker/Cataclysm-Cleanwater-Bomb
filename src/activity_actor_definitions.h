@@ -582,6 +582,7 @@ class aim_activity_actor : public activity_actor
 
     public:
         std::string action;
+        int burst_rounds = 0; // Confirmed rounds while an aim-and-fire action is pending.
         int aif_duration = 0; // Counts aim-and-fire duration
         bool aiming_at_critter = false; // Whether aiming at critter or a tile
         bool should_unload_RAS = false;

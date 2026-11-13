@@ -63,13 +63,14 @@ class gun_modifier_data
 {
     private:
         translation name_;
-        int qty_;
+        int qty_ = 0;
+        int rpm_ = 0;
         std::set<std::string> flags_;
 
     public:
         gun_modifier_data() = default;
-        gun_modifier_data( const translation &n, const int q, const std::set<std::string> &f ) : name_( n ),
-            qty_( q ), flags_( f ) { }
+        gun_modifier_data( const translation &n, int q, const std::set<std::string> &f,
+                           int rpm = 0 ) : name_( n ), qty_( q ), rpm_( rpm ), flags_( f ) { }
         const translation &name() const {
             return name_;
         }
@@ -79,6 +80,9 @@ class gun_modifier_data
         }
         int qty() const {
             return qty_;
+        }
+        int rpm() const {
+            return rpm_;
         }
         const std::set<std::string> &flags() const {
             return flags_;

@@ -4,6 +4,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "coordinates.h"
@@ -24,6 +25,19 @@ struct vehicle_part;
 
 // Recoil change less or equal to this value (in MoA) stops further aiming
 constexpr double MIN_RECOIL_IMPROVEMENT = 0.01;
+
+constexpr int min_firearm_burst_rounds = 2;
+constexpr int max_firearm_burst_rounds = 30;
+
+constexpr bool valid_firearm_burst_rounds( int rounds )
+{
+    return rounds >= min_firearm_burst_rounds && rounds <= max_firearm_burst_rounds;
+}
+
+/** Inclusive round count range before ammunition or weapon faults interrupt the burst. */
+std::pair<int, int> firearm_burst_round_range( int rounds, float skill );
+/** AP corresponding to rounds / RPM at the character's current moves per game second. */
+int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second );
 
 namespace target_handler
 {

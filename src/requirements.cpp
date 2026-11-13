@@ -1449,7 +1449,7 @@ requirement_data requirement_data::disassembly_requirements() const
         return tcv.empty();
     } ), ret.tools.end() );
     ret.qualities.erase( std::remove_if( ret.qualities.begin(), ret.qualities.end(),
-    []( const std::vector<quality_requirement> & alternatives ) {
+    []( const std::vector<quality_requirement> &alternatives ) {
         return alternatives.empty();
     } ), ret.qualities.end() );
     // Remove unrecoverable components

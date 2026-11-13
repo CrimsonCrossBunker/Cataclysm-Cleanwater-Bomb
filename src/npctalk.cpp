@@ -6691,11 +6691,11 @@ talk_effect_fun_t::func f_ranged_attack( bool is_npc )
         if( c ) {
             tripoint_bub_ms target_pos = c->pos_bub();
             item_location wielded = attacker->get_wielded_item();
-            if( wielded->is_gun() ) {
-                gun_mode mode = wielded->gun_current_mode();
-                if( wielded->ammo_sufficient( attacker, mode.qty * 2 ) ) {
-                    attacker->fire_gun( target_pos, mode.qty );
-
+            if( wielded && wielded->is_gun() ) {
+                const gun_mode mode = wielded->gun_current_mode();
+                const int available = mode.shots_available( calendar::turn );
+                if( available > 0 && wielded->ammo_sufficient( attacker, available * 2 ) ) {
+                    attacker->fire_gun( get_map(), target_pos, mode );
                 }
             }
         }

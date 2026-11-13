@@ -59,6 +59,13 @@ static std::map<aim_rule, std::string> aim_rule_map = {
     {aim_rule::STRICTLY_PRECISE, "<ally_rule_aim_strictly_precise>" },
 };
 
+static std::map<burst_rule, std::string> burst_rule_map = {
+    {burst_rule::ADAPTIVE, "<ally_rule_burst_adaptive>"},
+    {burst_rule::SHORT, "<ally_rule_burst_short>"},
+    {burst_rule::LONG, "<ally_rule_burst_long>"},
+    {burst_rule::FULL_AUTO, "<ally_rule_burst_full_auto>"},
+};
+
 void follower_rules_ui::draw_follower_rules_ui( npc *guy )
 {
     input_context ctxt;
@@ -187,24 +194,18 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
     cataimgui::draw_colored_text( string_format(
                                       _( "Individual settings are colored if they already match to %s." ),
                                       guy->disp_name() ) );
-    if( ImGui::BeginTable( "##SETTINGS_SWAP_TABLE", 8, ImGuiTableFlags_None,
+    if( ImGui::BeginTable( "##SETTINGS_SWAP_TABLE", 9, ImGuiTableFlags_None,
                            ImVec2( window_width, window_height ) ) ) {
-        ImGui::TableSetupColumn( _( "Name" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Behaviors" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Aiming" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Engagement" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "CBM recharge" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "CBM reserve" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "Pickup list" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
-        ImGui::TableSetupColumn( _( "ALL" ), ImGuiTableColumnFlags_WidthStretch,
-                                 static_cast<float>( window_width / 8.0f ) );
+        const float column_width = static_cast<float>( window_width / 9.0f );
+        ImGui::TableSetupColumn( _( "Name" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "Behaviors" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "Aiming" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "Burst length" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "Engagement" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "CBM recharge" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "CBM reserve" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "Pickup list" ), ImGuiTableColumnFlags_WidthStretch, column_width );
+        ImGui::TableSetupColumn( _( "ALL" ), ImGuiTableColumnFlags_WidthStretch, column_width );
         ImGui::TableHeadersRow();
         int button_number = 0;
         for( npc &role_model : g->all_npcs() ) {
@@ -214,6 +215,7 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
             if( role_model.is_player_ally() ) {
                 bool do_flags_overrides = false;
                 bool do_aim = false;
+                bool do_burst = false;
                 bool do_engagement = false;
                 bool do_cbm_recharge = false;
                 bool do_cbm_reserve = false;
@@ -228,6 +230,8 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
                 /*Aim rule*/
                 do_aim = setup_table_button( button_number, toggle_label,
                                              role_model.rules.aim == guy->rules.aim );
+                do_burst = setup_table_button( button_number, toggle_label,
+                                               role_model.rules.burst == guy->rules.burst );
                 /*Engagement rule*/
                 do_engagement = setup_table_button( button_number, toggle_label,
                                                     role_model.rules.engagement == guy->rules.engagement );
@@ -247,6 +251,7 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
                 do_all = setup_table_button( button_number, toggle_label,
                                              role_model.rules.flags == guy->rules.flags &&
                                              role_model.rules.aim == guy->rules.aim &&
+                                             role_model.rules.burst == guy->rules.burst &&
                                              role_model.rules.engagement == guy->rules.engagement &&
                                              role_model.rules.cbm_recharge == guy->rules.cbm_recharge &&
                                              role_model.rules.cbm_reserve == guy->rules.cbm_reserve &&
@@ -262,6 +267,9 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
                 }
                 if( do_aim || do_all ) {
                     guy_with_new->rules.aim = guy_with_same->rules.aim;
+                }
+                if( do_burst || do_all ) {
+                    guy_with_new->rules.burst = guy_with_same->rules.burst;
                 }
                 if( do_engagement || do_all ) {
                     guy_with_new->rules.engagement = guy_with_same->rules.engagement;
@@ -424,6 +432,10 @@ void follower_rules_ui_impl::draw_controls()
     assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
     radio_group( "AIMING_RULES", _( "Aiming rules:" ), &guy->rules.aim, aim_rule_map, assigned_hotkey,
                  pressed_key );
+
+    assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
+    radio_group( "BURST_RULES", _( "Automatic fire burst length:" ), &guy->rules.burst, burst_rule_map,
+                 assigned_hotkey, pressed_key );
 
     /* Shows CBM rules, but only if the character has bionics. Must be last because it will
     only appear sometimes and we don't want hotkeys to be different depending on whether

@@ -2351,9 +2351,9 @@ void npc::execute_action( npc_action action )
             }
             aim( Target_attributes( pos_bub(), tar ) );
             if( is_hallucination() ) {
-                pretend_fire( this, mode.qty, *mode );
+                pretend_fire( mode );
             } else {
-                fire_gun( here, tar, mode.qty, *mode );
+                fire_gun( here, tar, mode );
                 // "discard" the fake bio weapon after shooting it
                 if( is_using_bionic_weapon() ) {
                     discharge_cbm_weapon();
@@ -2674,7 +2674,8 @@ void npc::evaluate_best_attack( const Creature *target )
                            ( rules.has_flag( ally_rule::use_silent ) && is_player_ally() &&
                              !mode.second->is_silent() ) ) ) {
                         if( it->shots_remaining( here, this ) > 0 || can_reload_current() ) {
-                            compare( std::make_shared<npc_attack_gun>( *it, mode.second ), "(as FIRED) ", it );
+                            compare( std::make_shared<npc_attack_gun>( *it, mode.first, mode.second ),
+                                     "(as FIRED) ", it );
                         } else {
                             compare( std::make_shared<npc_attack_melee>( *it ), "(as MELEE) ", it );
                         }

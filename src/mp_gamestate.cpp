@@ -2709,6 +2709,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             jo.read( "bionic", intent.bionic );
             intent.request = jo.get_int64( "request" );
             intent.mode = gun_mode_id( jo.get_string( "mode" ) );
+            intent.burst_rounds = jo.get_int( "burst_rounds", 0 );
             jo.read( "ammo", intent.ammo, false );
             jo.read( "origin", intent.origin, true );
             jo.read( "target", intent.target, true );
@@ -6870,7 +6871,7 @@ void client_cancel_firearm_activity( bool unload_ras )
 }
 
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action,
-                             const item_location &ammo )
+                             const item_location &ammo, int burst_rounds )
 {
     avatar &who = get_avatar();
     const item_location weapon = client_firearm_weapon();
@@ -6896,6 +6897,9 @@ void client_request_firearm( const tripoint_bub_ms &target, const std::string &a
     view.pending_request = view.next_request++;
     out.member( "request", view.pending_request );
     out.member( "mode", weapon->gun_get_mode_id() );
+    if( burst_rounds != 0 ) {
+        out.member( "burst_rounds", burst_rounds );
+    }
     if( ammo ) {
         out.member( "ammo", capture_item_source( who, ammo ) );
     }
