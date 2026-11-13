@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include "avatar.h"
 #include "avatar_action.h"
@@ -25,6 +26,9 @@
 #include "mtype.h"
 #include "player_helpers.h"
 #include "submap.h"
+#include "vehicle.h"
+#include "vehicle_uid.h"
+#include "vpart_range.h"
 #include "worldfactory.h"
 
 namespace
@@ -381,4 +385,81 @@ TEST_CASE( "client_autoattack_submits_intent_without_local_damage_or_rng", "[mul
     CHECK( rng_get_engine() == rng );
     CHECK( actor.get_moves() == 0 );
     CHECK( cata_mp::is_client_waiting_for_ack() );
+}
+
+TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_ramps",
+           "[multiplayer][client_replication][vehicle][render3d]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_map_without_vision();
+        clear_avatar();
+    } );
+    const tripoint_bub_ms start( 60, 60, 0 );
+    const tripoint_bub_ms destination = start + tripoint( 12, 0, 1 );
+    vehicle *const car = here.add_vehicle( vproto_id( "bicycle" ), start, 0_degrees, 0,
+                                           veh_spawn_status::UNDAMAGED );
+    REQUIRE( car );
+    car->ensure_uid();
+    const auto parts = car->get_all_parts();
+    REQUIRE( parts.begin() != parts.end() );
+    const int low_part = static_cast<int>( parts.begin()->part_index() );
+    const point_rel_ms low_mount = parts.begin()->mount_pos();
+    const tripoint_abs_ms old_tile = car->abs_part_pos( low_part );
+    const int heading = 90;
+    const point_rel_ms pivot = low_mount;
+    std::vector<int> levels;
+    for( const vpart_reference &part : parts ) {
+        if( !part.part().removed ) {
+            levels.push_back( destination.z() - ( part.mount_pos() == low_mount ? 1 : 0 ) );
+        }
+    }
+    const tripoint_abs_ms absolute = here.get_abs( destination );
+    const auto packet = [&]( const std::vector<int> &part_levels ) {
+        std::ostringstream stream;
+        JsonOut out( stream );
+        out.start_object();
+        out.member( "type", "vehicle_step" );
+        out.member( "vehicles" );
+        out.start_array();
+        out.start_object();
+        out.member( "nid", 21 );
+        out.member( "uid", car->uid().get_value() );
+        out.member( "x", absolute.x() );
+        out.member( "y", absolute.y() );
+        out.member( "z", absolute.z() );
+        out.member( "face", heading );
+        out.member( "pose" );
+        out.start_array();
+        out.write( pivot );
+        out.write( heading );
+        out.write( part_levels );
+        out.end_array();
+        out.end_object();
+        out.end_array();
+        out.end_object();
+        return stream.str();
+    };
+
+    cata_mp::set_client_mode( true );
+    const auto rng = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( packet( { OVERMAP_HEIGHT + 1 } ) ) );
+    CHECK( car->pos_abs() == here.get_abs( start ) );
+    REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
+    CHECK( car->pos_abs() == absolute );
+    CHECK( car->face.dir() == units::from_degrees( heading ) );
+    CHECK( car->pivot_anchor[0] == pivot );
+    CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
+    CHECK_FALSE( here.veh_at( old_tile ) );
+    const auto low = here.veh_at( destination + tripoint::below );
+    REQUIRE( low );
+    CHECK( &low->vehicle() == car );
+    REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
+    CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
+    CHECK( rng_get_engine() == rng );
 }

@@ -881,6 +881,119 @@ vehicle *map::restore_vehicle_snapshot( std::unique_ptr<vehicle> replica,
     return restored;
 }
 
+bool map::apply_vehicle_replica_pose( vehicle &veh, const tripoint_abs_ms &position,
+                                      units::angle facing, units::angle mount_heading,
+                                      const point_rel_ms &pivot,
+                                      const std::vector<int> &part_levels )
+{
+    if( !has_loaded_submap( project_to<coords::sm>( position ) ) ||
+        !has_loaded_submap( veh.sm_pos ) ||
+        pivot.x() < -MAPSIZE_X || pivot.x() > MAPSIZE_X ||
+        pivot.y() < -MAPSIZE_Y || pivot.y() > MAPSIZE_Y ) {
+        return false;
+    }
+    bool changed = veh.pos_abs() != position || veh.face.dir() != facing ||
+                   veh.pivot_anchor[0] != pivot || veh.pivot_rotation[0] != mount_heading;
+    std::vector<int> by_part( veh.part_count(), 0 );
+    std::size_t i = 0;
+    for( const vpart_reference &part : veh.get_all_parts() ) {
+        if( part.part().removed ) {
+            continue;
+        }
+        if( i == part_levels.size() || !inbounds_z( part_levels[i] ) ) {
+            return false;
+        }
+        const int relative_z = part_levels[i++] - position.z();
+        by_part[part.part_index()] = relative_z;
+        changed |= part.part().precalc[0].z() != relative_z;
+    }
+    if( i != part_levels.size() ) {
+        return false;
+    }
+    if( !changed ) {
+        return true;
+    }
+
+    const tripoint_abs_sm old_submap = veh.sm_pos;
+    const tripoint_abs_sm new_submap = project_to<coords::sm>( position );
+    submap *const from = get_submap_at_grid( old_submap - abs_sub.xy() );
+    point_sm_ms offset;
+    submap *const to = unsafe_get_submap_at( get_bub( position ), offset );
+    auto current = std::find_if( from->vehicles.begin(), from->vehicles.end(),
+    [&]( const std::unique_ptr<vehicle> &entry ) {
+        return entry.get() == &veh;
+    } );
+    if( current == from->vehicles.end() ) {
+        return false;
+    }
+
+    const std::vector<rider_data> riders = veh.get_riders();
+    memory_clear_vehicle_points( veh );
+    for( const vpart_reference &part : veh.get_all_parts_with_fakes() ) {
+        const tripoint_bub_ms old_tile = veh.bub_part_pos( *this, part.part() );
+        clear_vehicle_point_from_cache( &veh, old_tile );
+        on_vehicle_moved( old_tile.z() );
+    }
+    remove_vehicle_from_cache( &veh, old_submap.z(), old_submap.z() );
+    if( from != to ) {
+        to->ensure_nonuniform();
+        to->vehicles.push_back( std::move( *current ) );
+        from->vehicles.erase( current );
+    }
+
+    veh.sm_pos = new_submap;
+    veh.pos = offset;
+    veh.face.init( facing );
+    veh.move.init( facing );
+    veh.precalc_mounts( 0, mount_heading, pivot );
+    for( const vpart_reference &part : veh.get_all_parts_with_fakes( true ) ) {
+        if( part.part().removed ) {
+            continue;
+        }
+        const int parent = part.part().fake_part_to;
+        const int relative_z = part.part().is_fake && parent >= 0 && parent < veh.part_count() ?
+                               by_part[parent] : by_part[part.part_index()];
+        part.part().precalc[0].z() = relative_z;
+        part.part().precalc[1].z() = relative_z;
+    }
+    veh.update_active_fakes();
+    veh.get_points( true );
+    veh.zones_dirty = true;
+    update_vehicle_list( to, position.z() );
+    cache_vehicle_parts( veh );
+    on_vehicle_moved( old_submap.z() );
+    on_vehicle_moved( position.z() );
+    std::set<int> occupied_levels;
+    for( const vpart_reference &part : veh.get_all_parts_with_fakes() ) {
+        if( !part.part().removed ) {
+            occupied_levels.insert( veh.abs_part_pos( part.part() ).z() );
+        }
+    }
+    for( const int z : occupied_levels ) {
+        on_vehicle_moved( z );
+        invalidate_max_populated_zlev( z );
+    }
+
+    // Mirror seat attachment without running host physics or vertical movement.
+    // Full position updates can also have moved a rider before this packet.
+    for( const rider_data &rider : riders ) {
+        Character *const passenger = rider.psg->as_character();
+        if( !passenger || veh.get_passenger( rider.prt ) != passenger ) {
+            continue;
+        }
+        const tripoint_abs_ms seat = veh.abs_part_pos( rider.prt );
+        const Creature *occupant = get_creature_tracker().creature_at( seat );
+        if( !occupant && has_loaded_submap( project_to<coords::sm>( seat ) ) ) {
+            passenger->setpos( *this, get_bub( seat ), false );
+            if( passenger->is_avatar() && abs_sub.z() != seat.z() ) {
+                vertical_shift( seat.z() );
+            }
+        }
+    }
+    refresh_vehicle_in_shared_views( veh, old_submap, from );
+    return true;
+}
+
 void map::rebuild_vehicle_level_caches()
 {
     clear_vehicle_level_caches();

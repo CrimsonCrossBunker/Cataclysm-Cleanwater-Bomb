@@ -849,6 +849,10 @@ class map
         bool place_vehicle( std::unique_ptr<vehicle> &&new_vehicle );
         vehicle *restore_vehicle_snapshot( std::unique_ptr<vehicle> replica,
                                           const tripoint_abs_ms &position, vehicle *previous );
+        bool apply_vehicle_replica_pose( vehicle &veh, const tripoint_abs_ms &position,
+                                         units::angle facing, units::angle mount_heading,
+                                         const point_rel_ms &pivot,
+                                         const std::vector<int> &part_levels );
         void add_vehicle_to_cache( vehicle * );
         void clear_vehicle_point_from_cache( vehicle *veh, const tripoint_bub_ms &pt );
         // clears all vehicle level caches

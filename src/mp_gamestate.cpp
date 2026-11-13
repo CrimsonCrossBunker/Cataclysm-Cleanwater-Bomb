@@ -2184,6 +2184,25 @@ void host_capture_vehmove_msgs( unsigned long long pre_msg )
     }
 }
 
+// The pivot and part levels describe the settled native vehicle geometry.
+static std::string vehicle_pose_fields( const vehicle &veh )
+{
+    std::ostringstream stream;
+    JsonOut out( stream );
+    out.start_array();
+    out.write( veh.pivot_anchor[0] );
+    out.write( to_degrees( veh.pivot_rotation[0] ) );
+    out.start_array();
+    for( const vpart_reference &part : veh.get_all_parts() ) {
+        if( !part.part().removed ) {
+            out.write( veh.abs_part_pos( part.part() ).z() );
+        }
+    }
+    out.end_array();
+    out.end_array();
+    return ",\"pose\":" + stream.str();
+}
+
 void host_broadcast_vehicle_step()
 {
     if( !is_hosting() || mp_session().remote_players.empty() ) {
@@ -2218,7 +2237,8 @@ void host_broadcast_vehicle_step()
                          + ",\"face\":" + std::to_string( face_deg )
                          + ",\"turn_dir\":" + std::to_string( turn_dir_deg )
                          + ",\"vel\":" + std::to_string( v->velocity )
-                         + ",\"cruise\":" + std::to_string( v->cruise_velocity ) + "}";
+                         + ",\"cruise\":" + std::to_string( v->cruise_velocity )
+                         + vehicle_pose_fields( *v ) + "}";
     }
     vehicles_json += "]";
     // Suppress identical back-to-back broadcasts.  vehproceed() fires this hook
@@ -7871,7 +7891,19 @@ static void apply_vehicle_sync( JsonObject &jo )
         const int64_t uid = vo.has_member( "uid" ) ? vo.get_int64( "uid" ) :
                             ( first_encounter ? 0 : prior->second );
 
-        if( vo.has_object( "snapshot" ) && m.inbounds( new_abs ) ) {
+        point_rel_ms pivot;
+        double mount_heading = face_deg;
+        std::vector<int> part_levels;
+        const bool has_pose = vo.has_array( "pose" );
+        if( has_pose ) {
+            const JsonArray pose = vo.get_array( "pose" );
+            if( pose.size() != 3 || !pose[0].read( pivot ) || !pose[1].read( mount_heading ) ||
+                !std::isfinite( mount_heading ) || std::abs( mount_heading ) > 360.0 ||
+                !pose[2].read( part_levels ) ) {
+                continue;
+            }
+        }
+        if( vo.has_object( "snapshot" ) && m.has_loaded_submap( project_to<coords::sm>( new_abs ) ) ) {
             JsonObject snapshot = vo.get_object( "snapshot" );
             snapshot.allow_omitted_members();
             auto replica = std::make_unique<vehicle>( vehicle_prototype_none );
@@ -7894,6 +7926,10 @@ static void apply_vehicle_sync( JsonObject &jo )
                 vehicles[identity] = restored;
                 known[nid] = identity;
                 host_uids.insert( identity );
+                if( has_pose ) {
+                    m.apply_vehicle_replica_pose( *restored, new_abs, units::from_degrees( face_deg ),
+                                                  units::from_degrees( mount_heading ), pivot, part_levels );
+                }
             }
             continue;
         }
@@ -7904,79 +7940,87 @@ static void apply_vehicle_sync( JsonObject &jo )
         }
         known[nid] = uid;
 
-        // Compute target facing.
         const units::angle face_angle = units::from_degrees( face_deg );
-        const bool face_changed = ( found->face.dir() != face_angle );
-
-        // Always prime precalc[1] before any displacement.
-        // displace_vehicle → advance_precalc_mounts copies precalc[1] → precalc[0]
-        // then calls add_vehicle_to_cache.  Without this, a pure translation (no face
-        // change) would copy stale precalc[1] into the cache — wrong part positions.
-        found->pivot_rotation[1] = face_angle;
-        found->precalc_mounts( 1, face_angle, found->pivot_point( m ) );
-
-        // Move vehicle to server-authoritative position if it has changed AND the
-        // target is inside the client's loaded map.  Driving out of the bubble is
-        // handled naturally when the submaps unload; we don't force the vehicle to
-        // follow into territory the client hasn't loaded.
-        bool did_displace = false;
-        if( found->pos_abs() != new_abs && m.inbounds( new_abs ) ) {
-            const tripoint_bub_ms cur_bub = found->pos_bub( m );
-            const tripoint_bub_ms new_bub = m.get_bub( new_abs );
-            const tripoint_rel_ms dp      = new_bub - cur_bub;
-            if( dp != tripoint_rel_ms::zero ) {
-                m.displace_vehicle( *found, dp );
-                did_displace = true;
-                // advance_precalc_mounts inside displace_vehicle already:
-                //   - cleared the rendering cache at old positions
-                //   - copied precalc[1] (new facing) → precalc[0]
-                //   - set pivot_rotation[0] = pivot_rotation[1] = face_angle
-                // add_vehicle_to_cache was called inside displace_vehicle with the
-                // correct new-facing part positions.
+        if( has_pose ) {
+            if( !m.apply_vehicle_replica_pose( *found, new_abs, face_angle,
+                                               units::from_degrees( mount_heading ), pivot, part_levels ) ) {
+                continue;
             }
-        }
+            found->turn_dir = units::from_degrees( turn_dir_deg );
+        } else {
+            const bool face_changed = ( found->face.dir() != face_angle );
+
+            // Always prime precalc[1] before any displacement.
+            // displace_vehicle → advance_precalc_mounts copies precalc[1] → precalc[0]
+            // then calls add_vehicle_to_cache.  Without this, a pure translation (no face
+            // change) would copy stale precalc[1] into the cache — wrong part positions.
+            found->pivot_rotation[1] = face_angle;
+            found->precalc_mounts( 1, face_angle, found->pivot_point( m ) );
+
+            // Move vehicle to server-authoritative position if it has changed AND the
+            // target is inside the client's loaded map.  Driving out of the bubble is
+            // handled naturally when the submaps unload; we don't force the vehicle to
+            // follow into territory the client hasn't loaded.
+            bool did_displace = false;
+            if( found->pos_abs() != new_abs && m.inbounds( new_abs ) ) {
+                const tripoint_bub_ms cur_bub = found->pos_bub( m );
+                const tripoint_bub_ms new_bub = m.get_bub( new_abs );
+                const tripoint_rel_ms dp      = new_bub - cur_bub;
+                if( dp != tripoint_rel_ms::zero ) {
+                    m.displace_vehicle( *found, dp );
+                    did_displace = true;
+                    // advance_precalc_mounts inside displace_vehicle already:
+                    //   - cleared the rendering cache at old positions
+                    //   - copied precalc[1] (new facing) → precalc[0]
+                    //   - set pivot_rotation[0] = pivot_rotation[1] = face_angle
+                    // add_vehicle_to_cache was called inside displace_vehicle with the
+                    // correct new-facing part positions.
+                }
+            }
 
 
-        // Finalise facing state.  face.init() and move.init() must still be updated
-        // even when displace_vehicle already set pivot_rotation[0].
-        // turn_dir synced unconditionally: it updates immediately after pldrive on the
-        // server (before vehmove), so the client sees the new intended heading right away.
-        found->turn_dir = units::from_degrees( turn_dir_deg );
+            // Finalise facing state.  face.init() and move.init() must still be updated
+            // even when displace_vehicle already set pivot_rotation[0].
+            // turn_dir synced unconditionally: it updates immediately after pldrive on the
+            // server (before vehmove), so the client sees the new intended heading right away.
+            found->turn_dir = units::from_degrees( turn_dir_deg );
 
-        if( face_changed ) {
-            found->face.init( face_angle );
-            found->move.init( face_angle );
-            found->pivot_rotation[0] = face_angle;
+            if( face_changed ) {
+                found->face.init( face_angle );
+                found->move.init( face_angle );
+                found->pivot_rotation[0] = face_angle;
 
-            if( !did_displace ) {
-                // No displacement occurred: advance_precalc_mounts was NOT called,
-                // so precalc[0] and the rendering cache still reflect the old facing.
-                // Clear the stale cache entries, recompute precalc[0], then re-add.
+                if( !did_displace ) {
+                    // No displacement occurred: advance_precalc_mounts was NOT called,
+                    // so precalc[0] and the rendering cache still reflect the old facing.
+                    // Clear the stale cache entries, recompute precalc[0], then re-add.
+                    for( const vpart_reference &vpr : found->get_all_parts_with_fakes() ) {
+                        if( !vpr.part().removed ) {
+                            m.clear_vehicle_point_from_cache( found,
+                                                              found->bub_part_pos( m, vpr.part() ) );
+                        }
+                    }
+                    found->precalc_mounts( 0, face_angle, found->pivot_point( m ) );
+                    m.add_vehicle_to_cache( found );
+                }
+                // did_displace case: cache and precalc[0] are already correct (set by
+                // advance_precalc_mounts from the pre-set precalc[1]).
+            }
+
+            // First encounter: vehicle may have uninitialized precalc (debug spawn, save
+            // load without a physics tick, etc.).  Force a full rebuild so the render
+            // cache reflects correct part positions from the start.
+            if( first_encounter && !did_displace && !face_changed ) {
                 for( const vpart_reference &vpr : found->get_all_parts_with_fakes() ) {
                     if( !vpr.part().removed ) {
                         m.clear_vehicle_point_from_cache( found,
                                                           found->bub_part_pos( m, vpr.part() ) );
                     }
                 }
-                found->precalc_mounts( 0, face_angle, found->pivot_point( m ) );
+                found->precalc_mounts( 0, found->face.dir(), found->pivot_anchor[0] );
                 m.add_vehicle_to_cache( found );
             }
-            // did_displace case: cache and precalc[0] are already correct (set by
-            // advance_precalc_mounts from the pre-set precalc[1]).
-        }
 
-        // First encounter: vehicle may have uninitialized precalc (debug spawn, save
-        // load without a physics tick, etc.).  Force a full rebuild so the render
-        // cache reflects correct part positions from the start.
-        if( first_encounter && !did_displace && !face_changed ) {
-            for( const vpart_reference &vpr : found->get_all_parts_with_fakes() ) {
-                if( !vpr.part().removed ) {
-                    m.clear_vehicle_point_from_cache( found,
-                                                      found->bub_part_pos( m, vpr.part() ) );
-                }
-            }
-            found->precalc_mounts( 0, found->face.dir(), found->pivot_anchor[0] );
-            m.add_vehicle_to_cache( found );
         }
 
         // Update velocity and cruise target (server is authoritative for physics).
@@ -8048,7 +8092,6 @@ static void apply_vehicle_sync( JsonObject &jo )
                                                           found->bub_part_pos( m, vpr.part() ) );
                     }
                 }
-                found->precalc_mounts( 0, found->face.dir(), found->pivot_anchor[0] );
                 m.add_vehicle_to_cache( found );
             }
         }
@@ -9271,7 +9314,8 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                              + ",\"face\":" + std::to_string( face_deg )
                              + ",\"turn_dir\":" + std::to_string( turn_dir_deg )
                              + ",\"vel\":" + std::to_string( v->velocity )
-                             + ",\"cruise\":" + std::to_string( v->cruise_velocity );
+                             + ",\"cruise\":" + std::to_string( v->cruise_velocity )
+                             + vehicle_pose_fields( *v );
             vehicles_json += R"(,"name":")";
             vehicles_json += vname_escaped;
             vehicles_json += R"(","parts":)";
