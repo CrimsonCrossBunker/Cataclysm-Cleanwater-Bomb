@@ -3319,9 +3319,10 @@ bool game::handle_action()
             player_character.abort_automove();
         }
         ctxt = get_player_input( action );
-        if( cata_mp::is_client_mode() && uquit != QUIT_NO ) {
-            return false;
-        }
+    }
+
+    if( cata_mp::is_client_mode() && uquit != QUIT_NO ) {
+        return false;
     }
 
 #ifdef MP_ENABLED

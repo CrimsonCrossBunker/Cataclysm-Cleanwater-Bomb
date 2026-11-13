@@ -5419,7 +5419,8 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            leave_client_replica( _( "Could not restore your saved character from the host.  Reconnect to retry." ) );
+            leave_client_replica(
+                _( "Could not restore your saved character from the host.  Reconnect to retry." ) );
             return true;
         }
     }
@@ -5432,7 +5433,8 @@ bool client_apply_message( const std::string &msg )
                 return true;
             }
         } catch( const JsonError & ) {
-            leave_client_replica( _( "Invalid inventory activity response.  Reconnect to synchronize your character." ) );
+            leave_client_replica(
+                _( "Invalid inventory activity response.  Reconnect to synchronize your character." ) );
             return true;
         }
     }
@@ -6497,11 +6499,12 @@ void client_process_incoming()
             if( host.valid() ) {
                 get_avatar().use_guest_map_memory( PATH_INFO::config_dir_path() /
                                                   "mp_map_memory" / host.str() /
-                                                  mp_session().local_player->id.str() );
+                                                   mp_session().local_player->id.str() );
             }
             client_send_join( *mp_session().local_player );
         } catch( const std::exception & ) {
-            leave_client_replica( _( "Could not load or save your multiplayer identity.  Restore its configuration backup before reconnecting." ) );
+            leave_client_replica(
+                _( "Could not load or save your multiplayer identity.  Restore its configuration backup before reconnecting." ) );
             return;
         }
     }
