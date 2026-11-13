@@ -14,19 +14,20 @@
 <!-- CCB-DOC-MOVED-END -->
 # JSON Loading Order #
 
-All files here in data/json are read eventually, but the order in which they're
-read can be important for objects with dependencies on other kinds of objects
-(e.g. recipes depend on skills). Ensuring the proper loading order will prevent
-surprises that, most often, manifest as crash-to-desktop with segfault (a very
-bad thing).
+Within each loaded data root, CCB reads JSON files in breadth-first order. Files
+in the root directory are read before files in its subdirectories. For example,
+`data/json/whatever.json` is read before `data/json/subdir/whatever.json` when
+`data/json/` is loaded as one root.
 
-The way Cataclysm finds and loads json files is by running a breadth-first
-search in the tree data/json/. This means `data/json/whatever.json` will
-**always** be read before `data/json/subdir/whatever.json`. This tells us how to
-ensure dependency loading order.
+File order can matter when a loader needs an object that has already been
+loaded. However, some dependencies are resolved later: types using
+`generic_factory` defer `copy-from` objects whose parents are not yet available
+and retry them during dependency resolution. See [JSON Inheritance](../../doc/JSON/JSON_INHERITANCE.md)
+for type-specific behavior. Directory depth alone does not establish that a
+dependency is valid.
 
-For instance, if you have scenarios that depend on professions that depend on
-skills, you'll want a directory structure such as the following:
+For example, this directory structure loads skills before professions, then
+scenarios; it illustrates file order rather than a required content layout:
 
 ```
 data/json/
@@ -40,10 +41,17 @@ data/json/
 Which results in a loading order of: `skills.json` then `professions.json` and
 then `scenarios.json`.
 
+These rules apply separately to each data root, not to the order in which mods
+are loaded. Mod interaction data is excluded from the ordinary mod scan and
+loaded separately. Within a JSON array, objects are loaded in array order.
+The file traversal is implemented in [filesystem.cpp](../../src/filesystem.cpp);
+file loading and mod interactions are handled in [init.cpp](../../src/init.cpp).
+
 ## Same-depth loading order ##
 
 Note that, when files (or directories) are at the same depth
 (i.e. all in `data/json/`), they will be read in lexical order, which is
 more or less equivalent to alphabetical order for file names that use only
-ascii characters. For UTF-8 or otherwise non-ascii file names, the names will be
-ordered by codepoint.
+ASCII characters. The comparison uses filesystem path ordering, not
+locale-aware alphabetical sorting; do not rely on a universal Unicode
+codepoint order for non-ASCII names across platforms.
