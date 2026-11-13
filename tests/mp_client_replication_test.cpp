@@ -1,10 +1,12 @@
 #include "cata_catch.h"
 
 #include <initializer_list>
+#include <memory>
 #include <sstream>
 
 #include "avatar.h"
 #include "avatar_action.h"
+#include "calendar.h"
 #include "rng.h"
 #include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
@@ -14,6 +16,7 @@
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapbuffer.h"
 #include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
@@ -21,6 +24,7 @@
 #include "player_activity.h"
 #include "mtype.h"
 #include "player_helpers.h"
+#include "submap.h"
 #include "worldfactory.h"
 
 namespace
@@ -144,6 +148,11 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     const tripoint_abs_sm destination = start + point_rel_sm( MAPSIZE + 2, 0 );
     const tripoint_abs_ms absolute = project_to<coords::ms>( destination );
     REQUIRE_FALSE( here.inbounds( absolute ) );
+    auto existing = std::make_unique<submap>();
+    existing->set_all_ter( ter_str_id( "t_floor" ).id(), true );
+    existing->last_touched = calendar::turn - 1_days;
+    const time_point last_touched = existing->last_touched;
+    REQUIRE( MAPBUFFER.add_submap( destination, existing ) );
     const std::string prefix = R"({"type":"map_sync","z":0,"pal":["t_wall","f_null"],"subs":[{"sx":)" +
                                std::to_string( destination.x() ) + ",\"sy\":" +
                                std::to_string( destination.y() );
@@ -154,6 +163,7 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     REQUIRE( cata_mp::client_apply_message( state( absolute + point::east ) ) );
     CHECK( get_avatar().pos_abs() == absolute + point::east );
     CHECK( here.ter( here.get_bub( absolute ) ) == ter_str_id( "t_wall" ).id() );
+    CHECK( MAPBUFFER.lookup_submap( destination )->last_touched == last_touched );
     CHECK( session.replication.client.pending_terrain.empty() );
 }
 

@@ -93,6 +93,7 @@
 #include "mondeath.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_client_conn.h"
 #include "mp_world_session.h"
 #include "mtype.h"
 #include "options.h"
@@ -10576,6 +10577,11 @@ void map::save( const map_simulation_regions *regions )
     }
 }
 
+static bool is_replica_window( const map &terrain )
+{
+    return cata_mp::is_client_mode() && &terrain == &reality_bubble();
+}
+
 void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
                 const bool pump_events, const map_simulation_regions *regions )
 {
@@ -10633,9 +10639,11 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     }
 
     // A view load cannot clear claims made in other active maps.
-    reconcile_loaded_items( !regions && this == &get_map()
-                            ? reconcile_scope::full_rebuild
-                            : reconcile_scope::additive );
+    if( !is_replica_window( *this ) ) {
+        reconcile_loaded_items( !regions && this == &get_map()
+                                ? reconcile_scope::full_rebuild
+                                : reconcile_scope::additive );
+    }
 }
 
 void map::reconcile_loaded_items( const reconcile_scope scope )
@@ -10847,13 +10855,15 @@ void map::shift( const point_rel_sm &sp, const map_simulation_regions *regions )
     const int y_step = sp.y() >= 0 ? 1 : -1;
 
     // Have to run on_unload before changing the abs_sub for the map.
+    // Replica scrolling only changes the visible window.
+    const bool replica = is_replica_window( *this );
     // TODO: can probably skip a bunch of iteration here.
     for( int gridx = x_start; gridx != x_stop; gridx += x_step ) {
         for( int gridy = y_start; gridy != y_stop; gridy += y_step ) {
             // The sp.x() and sp.y() check here establishes that we are moving
             // in the x or y direction respectively. If we are not moving in the x direction,
             // we don't want to call on_unload on grid points where gridx == x_start.
-            if( ( sp.x() && gridx == x_start ) || ( sp.y() && gridy == y_start ) ) {
+            if( !replica && ( ( sp.x() && gridx == x_start ) || ( sp.y() && gridy == y_start ) ) ) {
                 for( int gridz = zmin; gridz <= zmax; gridz++ ) {
                     const tripoint_rel_sm grid( gridx, gridy, gridz );
                     if( !regions || !regions->loaded_elsewhere( *this, abs.xy() + grid ) ) {
@@ -10940,7 +10950,7 @@ void map::shift( const point_rel_sm &sp, const map_simulation_regions *regions )
     for( tripoint_rel_sm loaded_grid : loaded_grids ) {
         actualize( loaded_grid, regions );
     }
-    if( !loaded_grids.empty() ) {
+    if( !replica && !loaded_grids.empty() ) {
         // A shift walks the bubble it now has, so the crafts it scrolled away from are
         // not seen and must keep the claims their leases still cover.
         reconcile_loaded_items( reconcile_scope::additive );
@@ -11051,6 +11061,7 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
         }
     }
 
+    const bool replica = is_replica_window( *this );
     if( map_incomplete ) {
         smallmap tmp_map;
         swap_map swap( *tmp_map.cast_to_map() );
@@ -11118,7 +11129,7 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
             }
         }
 
-        if( already_active ) {
+        if( already_active || replica ) {
             continue;
         }
         if( zlevels ) {
@@ -11860,9 +11871,8 @@ void map::actualize( const tripoint_rel_sm &grid, const map_simulation_regions *
     }
     const bool already_active = regions && regions->loaded_elsewhere( *this, abs_sub.xy() + grid );
     const tripoint_bub_ms origin = rebase_bub( project_to<coords::ms>( grid ) );
-    if( already_active ) {
-        // The existing view already advances this storage. Only populate
-        // this view's local indices as the submap comes into range.
+    if( already_active || is_replica_window( *this ) ) {
+        // Only the authoritative simulation owner catches up a submap.
         for( int x = 0; x < SEEX; ++x ) {
             for( int y = 0; y < SEEY; ++y ) {
                 const point_sm_ms local( x, y );
@@ -11990,8 +12000,8 @@ void map::on_unload( const tripoint_rel_sm &loc )
 
 
     if( !adjusted ) {
-        tripoint_rel_omt omt_origin = project_to<coords::omt>( loc );
-        tripoint_rel_sm sm_origin = project_to<coords::sm>( omt_origin );
+        const tripoint_rel_sm sm_origin = project_to<coords::sm>( omt_abs_origin ) -
+                                          get_abs_sub().xy();
         std::vector<point_rel_sm> offsets;
         offsets.reserve( 4 );
         offsets.push_back( point_rel_sm::zero );

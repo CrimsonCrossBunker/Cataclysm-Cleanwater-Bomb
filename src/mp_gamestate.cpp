@@ -5272,7 +5272,7 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
     const tripoint_abs_sm origin = center - point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
     if( !terrain.has_loaded_submap( center ) ) {
         mp_client_apply_host_seed();
-        g->place_player_overmap( project_to<coords::omt>( abs_pos ), false );
+        terrain.load( origin, true );
     }
     if( !terrain.has_loaded_submap( center ) ) {
         return;
