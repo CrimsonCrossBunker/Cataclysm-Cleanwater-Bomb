@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -10,11 +11,13 @@
 #include "character.h"
 #include "coordinates.h"
 #include "damage.h"
+#include "debug.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
 #include "itype.h"
+#include "json_error.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -358,6 +361,37 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
         }
         thrown.charges--;
     }
+}
+
+TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[throwing]" )
+{
+    throw_correction_data correction;
+    const bool inherited_maximum = GENERATE( false, true );
+    CAPTURE( inherited_maximum );
+    if( inherited_maximum ) {
+        correction.deserialize( json_loader::from_string( R"({"max_weight":"1 g"})"
+                              ).get_object() );
+    }
+    const std::string definition = inherited_maximum ?
+                                   R"({"min_weight":"2 g","throw_damage_multiplier":1.5})" :
+                                   R"({"min_weight":"2 g","max_weight":"1 g","throw_damage_multiplier":1.5})";
+    const std::string warning = capture_debugmsg_during( [&]() {
+        CHECK_NOTHROW( correction.deserialize( json_loader::from_string( definition ).get_object() ) );
+    } );
+    CHECK( warning.find( "min_weight exceeds max_weight" ) != std::string::npos );
+    CHECK( correction.was_loaded );
+    CHECK( correction.damage_multiplier == Approx( 1.5f ) );
+    CHECK_FALSE( correction.applies_to( item( itype_9mm, calendar::turn, 1 ) ) );
+}
+
+TEST_CASE( "throw_correction_rejects_empty_flag_arrays", "[throwing]" )
+{
+    const std::string definition = GENERATE( R"({"required_flag":[]})",
+                                            R"({"required_flag":[[]]})" );
+    CAPTURE( definition );
+    throw_correction_data correction;
+    CHECK_THROWS_AS( correction.deserialize( json_loader::from_string( definition ).get_object() ),
+                     JsonError );
 }
 
 TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
