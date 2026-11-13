@@ -362,8 +362,9 @@ TEST_CASE( "creature_world_position_round_trips_with_legacy_tile_saves",
     source.set_pos_abs_only( tile );
     const std::string legacy_save = serialize( source );
     const JsonValue legacy = json_loader::from_string( legacy_save );
-    CHECK_FALSE( legacy.get_object().has_member( "location_offset" ) );
-    restored.deserialize( legacy.get_object() );
+    const JsonObject legacy_object = legacy.get_object();
+    CHECK_FALSE( legacy_object.has_member( "location_offset" ) );
+    restored.deserialize( legacy_object );
     CHECK( restored.pos_world() == centered );
 }
 

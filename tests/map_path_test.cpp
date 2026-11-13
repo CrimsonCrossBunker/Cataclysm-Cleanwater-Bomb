@@ -565,7 +565,8 @@ TEST_CASE( "automove_uses_the_native_landing_for_offset_stairs", "[map][pathfind
     const tripoint_abs_omt omt = project_to<coords::omt>( here.get_abs(
             tripoint_bub_ms( 60, 60, 0 ) ) );
     const tripoint_bub_ms origin = here.get_bub( project_to<coords::ms>( omt ) ) + point( 8, 8 );
-    Character &who = place_player_at( origin );
+    Character &who = get_player_character();
+    who.setpos( here, origin, false );
     const tripoint_bub_ms start = who.pos_bub( here );
     const int horizontal_offset = GENERATE( 1, 2 );
     const tripoint_bub_ms landing = start + tripoint( horizontal_offset, 0, 1 );
