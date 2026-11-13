@@ -1,6 +1,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
@@ -13,6 +14,7 @@
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "game.h"
+#include "map.h"
 #include "map_storage_context.h"
 #include "mapbuffer.h"
 #include "path_info.h"
@@ -63,6 +65,14 @@ class storage_fixture
                                         cata_path( cata_path::root_path::unknown, directory ), compressed );
         }
         std::filesystem::path root;
+};
+
+class residency_map : public map
+{
+    public:
+        explicit residency_map( const tripoint_abs_sm &origin ) {
+            set_abs_sub( origin );
+        }
 };
 
 void insert_quad( mapbuffer &buffer, const tripoint_abs_sm &base, const ter_str_id &terrain )
@@ -148,6 +158,29 @@ TEST_CASE( "map_buffers_keep_same_coordinates_in_separate_storage_namespaces", "
     check_quad( second, base, ter_t_floor );
     check_quad( first, base, ter_t_dirt );
     CHECK( rng_get_engine() == rng_before );
+}
+
+TEST_CASE( "map_save_keeps_quads_resident_in_either_active_map", "[map_storage][regression]" )
+{
+    storage_fixture fixture;
+    mapbuffer buffer( fixture.context( "a", "default", false ) );
+    const tripoint_abs_sm primary_base( 0, 0, 0 );
+    const tripoint_abs_sm remote_base( 40, -40, 0 );
+    const tripoint_abs_sm outside_base( -60, 60, 0 );
+    const residency_map primary( primary_base );
+    const residency_map remote( remote_base );
+    insert_quad( buffer, primary_base, ter_t_dirt );
+    insert_quad( buffer, remote_base, ter_t_floor );
+    insert_quad( buffer, outside_base, ter_t_soil );
+    submap *const primary_before = buffer.lookup_submap( primary_base );
+    submap *const remote_before = buffer.lookup_submap( remote_base );
+
+    buffer.save( false, { std::cref( primary ), std::cref( remote ) } );
+
+    CHECK( std::distance( buffer.begin(), buffer.end() ) == 8 );
+    CHECK( buffer.lookup_submap( primary_base ) == primary_before );
+    CHECK( buffer.lookup_submap( remote_base ) == remote_before );
+    check_quad( buffer, outside_base, ter_t_soil );
 }
 
 TEST_CASE( "legacy_map_buffer_binds_on_insertion_and_rebinds_only_after_clear", "[map_storage]" )
