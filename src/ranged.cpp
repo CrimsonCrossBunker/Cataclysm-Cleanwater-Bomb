@@ -1313,7 +1313,7 @@ int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
-                         item_location ammo, int burst_rounds )
+                         const item_location &ammo, int burst_rounds )
 {
     if( !mode || mode.melee() ) {
         return 0;
@@ -1347,7 +1347,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                          item_location ammo )
 {
-    return fire_gun_impl( here, target, shots, gun, ammo, true );
+    return fire_gun_impl( here, target, shots, gun, std::move( ammo ), true );
 }
 
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
@@ -2927,7 +2927,7 @@ int reload_and_shoot_time( const Character &p, const item_location &loc )
     return time;
 }
 
-bool ready_ranged_ammo( Character &who, item &gun, item_location ammo )
+bool ready_ranged_ammo( Character &who, item &gun, const item_location &ammo )
 {
     const int moves = reload_and_shoot_time( who, ammo );
     if( !ammo || !gun.reload( who, ammo, 1 ) ) {
