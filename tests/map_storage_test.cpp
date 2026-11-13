@@ -306,11 +306,16 @@ TEST_CASE( "npc_activation_uses_the_requested_map_and_shared_tracker",
         overmap_buffer.remove_npc( id );
     } );
 
+    REQUIRE_FALSE( g->shared_from( *inhabitant ) );
     g->load_npcs( &remote );
-    REQUIRE( g->critter_by_id<npc>( id ) == inhabitant.get() );
+    REQUIRE( g->shared_from( *inhabitant ).get() == inhabitant.get() );
     CHECK( inhabitant->pos_abs() == remote.get_abs( tile ) );
     g->load_npcs( &remote );
-    CHECK( g->critter_by_id<npc>( id ) == inhabitant.get() );
+    int copies = 0;
+    for( const npc &active : g->all_npcs() ) {
+        copies += active.getID() == id;
+    }
+    CHECK( copies == 1 );
 }
 
 TEST_CASE( "legacy_map_buffer_binds_on_insertion_and_rebinds_only_after_clear", "[map_storage]" )
