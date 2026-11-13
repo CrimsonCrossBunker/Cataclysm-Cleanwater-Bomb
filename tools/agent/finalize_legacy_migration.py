@@ -95,12 +95,17 @@ def banner(entry: dict | list[dict], *, phase: str = "finalized") -> str:
         date_label = "Moved date / 迁移日期"
     commit_label = (
         "Source commit referenced by the last migration record / 上次迁移记录参考 commit"
+        if in_progress else "Last in-repository commit / 仓库内最后适用 commit"
     )
     commits_label = (
         "Stable document IDs and source commits referenced by the last migration record / "
-        "稳定文档 ID 与上次迁移记录参考 commit"
+        "稳定文档 ID 与上次迁移记录参考 commit" if in_progress else
+        "Stable document IDs and last commits / 稳定文档 ID 与最后 commit"
     )
-    default_reason = "Historical material; not a current CCB contract or policy."
+    default_reason = (
+        "Historical material; not a current CCB contract or policy." if in_progress else
+        "The maintained documentation now lives in CCB-Docs."
+    )
     reasons = sorted({item.get("archive_reason") or default_reason for item in entries})
     lines = [
         START,
@@ -128,33 +133,36 @@ def banner(entry: dict | list[dict], *, phase: str = "finalized") -> str:
         for english in sorted({item["en_url"] for item in entries}):
             lines.append(f"> English: {english}")
         lines.append(f"> {date_label}: `{primary['moved_at']}`")
-    if archived:
-        archive_opening_en = (
-            "This in-repository body is retained as historical reference while archive "
-            "organization is still in progress. " if in_progress else
-            "This in-repository body is retained as historical reference. "
-        )
-        archive_opening_zh = (
-            "本仓库正文暂作为历史参考保留，归档整理尚未完成，" if in_progress else
-            "本仓库正文作为历史参考保留，"
-        )
+    if not in_progress:
         lines.extend(
             [
                 *(f"> {reason}" for reason in reasons),
-                "> " + archive_opening_en + "No deletion deadline is set. The content may "
+                "> This in-repository body is no longer maintained. The historical body "
+                f"is retained through `{primary['retained_body_until']}` and may then be "
+                "removed; this bilingual entry banner remains permanently.",
+                "> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。",
+            ]
+        )
+    elif archived:
+        lines.extend(
+            [
+                *(f"> {reason}" for reason in reasons),
+                "> This in-repository body is retained as historical reference while archive "
+                "organization is still in progress. No deletion deadline is set. The content may "
                 "reflect older upstream lore, proposals, or processes and does not "
                 "represent current CCB lore, implementation, or policy. Additions or "
                 "corrections should identify differences from the historical content. "
                 "The body will serve as a reference for later archive organization. "
                 "Any removal requires a separate review and an explicit maintainer "
                 "decision; neither dates nor status changes authorize deletion.",
-                "> " + archive_opening_zh + "暂不设置删除期限。内容可能反映旧上游设定、方案或流程，"
+                "> 本仓库正文暂作为历史参考保留，归档整理尚未完成，暂不设置删除期限。"
+                "内容可能反映旧上游设定、方案或流程，"
                 "不代表当前 CCB 的设定、实现或规则。如需补充或纠错，应注明与历史内容的区别。"
                 "正文将作为后续归档与整理的参考来源；是否移除正文应另行复核，由维护者明确决定，"
                 "不因日期或状态变化自动删除。",
             ]
         )
-    elif in_progress:
+    else:
         lines.extend(
             [
                 "> CCB-Docs is still a work in progress; the links above are migration targets.",
@@ -171,19 +179,6 @@ def banner(entry: dict | list[dict], *, phase: str = "finalized") -> str:
                 "部分内容尚未按当前 CCB 实现核实，使用和更新时应检查相关源码。"
                 "新增或改动功能时，可同步更新相关文档。保留正文将作为后续文档迁移与整理的参考来源，"
                 "后续整理不保证原文保留。",
-            ]
-        )
-    else:
-        lines.extend(
-            [
-                "> Migration to CCB-Docs has been completed for this document.",
-                "> 本文已完成向 CCB-Docs 的迁移。",
-                "> The in-repository body is retained as a reference. No deletion "
-                "deadline is set. Any removal requires a separate review and an "
-                "explicit maintainer decision; neither dates nor migration status "
-                "authorize deletion.",
-                "> 本仓库正文保留作为参考，暂不设置删除期限。是否移除正文应另行复核，"
-                "由维护者明确决定，不因日期或迁移状态变化自动删除。",
             ]
         )
     lines.extend([END, ""])

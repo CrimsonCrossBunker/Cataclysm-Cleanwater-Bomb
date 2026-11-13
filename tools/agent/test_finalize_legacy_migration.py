@@ -62,9 +62,10 @@ class FinalizeLegacyMigrationTests(unittest.TestCase):
         self.assertIn("Archived / 已归档", content)
         self.assertIn("Moved date / 迁移日期: `2026-08-02`", content)
         self.assertIn("Superseded upstream policy.", content)
-        self.assertIn("No deletion deadline is set", content)
-        self.assertNotIn("2027-02-02", content)
-        self.assertNotIn("may then be removed", content)
+        self.assertIn("no longer maintained", content)
+        self.assertIn("retained through `2027-02-02`", content)
+        self.assertIn("may then be removed", content)
+        self.assertIn("Last in-repository commit / 仓库内最后适用 commit", content)
         self.assertNotIn("Migration in progress", content)
         self.assertNotIn("Updates to this in-repository body are optional", content)
 
@@ -120,14 +121,20 @@ class FinalizeLegacyMigrationTests(unittest.TestCase):
         self.assertEqual(content.count(first["en_url"]), 1)
         self.assertIn("Migration start date / 开始迁移日期: `2026-08-02`", content)
         self.assertNotIn("no longer maintained", content)
+        completed = banner([first, second])
+        self.assertIn("Stable document IDs and last commits / 稳定文档 ID 与最后 commit:", completed)
+        self.assertIn("Moved / 已迁移", completed)
+        self.assertIn("retained through `2027-02-02`", completed)
 
     def test_completed_migration_banner_is_still_available(self) -> None:
         result = final_entry(self.entry(), date(2026, 8, 2))
         content = banner(result)
         self.assertIn("Moved / 已迁移", content)
-        self.assertIn("本文已完成向 CCB-Docs 的迁移", content)
-        self.assertIn("No deletion deadline is set", content)
-        self.assertNotIn("2027-02-02", content)
+        self.assertIn("The maintained documentation now lives in CCB-Docs.", content)
+        self.assertIn("retained through `2027-02-02`", content)
+        self.assertIn("may then be removed", content)
+        self.assertIn("remains permanently", content)
+        self.assertNotIn("No deletion deadline is set", content)
         self.assertNotIn("Migration in progress", content)
 
     def test_archive_in_progress_preserves_reason_without_deletion_permission(self) -> None:
