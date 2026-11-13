@@ -1882,7 +1882,7 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
     const float weight_mult = do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
                               &throw_correction_data::weight_multiplier ) :
-                              thrower.throw_weight_multiplier( thrown );
+                              thrower.throw_weight_multiplier( thrown, true );
     const float weight_dmg = thrown.weight() * weight_mult / 100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
