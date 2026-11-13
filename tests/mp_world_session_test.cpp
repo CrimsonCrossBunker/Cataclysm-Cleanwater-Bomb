@@ -1,6 +1,8 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "creature_tracker.h"
+#include "current_map.h"
+#include "debug.h"
 #include "character_martial_arts.h"
 #include "flag.h"
 #include "effect.h"
@@ -33,6 +35,10 @@
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "player_helpers.h"
+#include "vehicle.h"
+#include "vpart_position.h"
+#include "worldfactory.h"
+#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -1106,6 +1112,256 @@ TEST_CASE( "mp_deferred_host_intent_survives_setup_but_not_world_exit",
     CHECK( cata_mp::mp_menu_coop_status_text().empty() );
 }
 
+TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
+           "[.multiplayer_runtime][world_session][lifecycle][regression]" )
+{
+    cata_mp::mp_on_world_exit();
+    const std::string world_name = "room_switch";
+    const restore_on_out_of_scope restore_world( world_generator->active_world );
+    const restore_on_out_of_scope restore_last_world( world_generator->last_world_name );
+    const restore_on_out_of_scope restore_last_character( world_generator->last_character_name );
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const auto save_root = PATH_INFO::world_base_save_path() / "room_switch";
+    REQUIRE( std::filesystem::create_directory( save_root.get_unrelative_path() ) );
+    const std::string savedir = PATH_INFO::savedir();
+    WORLD *const previous_world = world_generator->active_world;
+    const on_out_of_scope cleanup( [&]() {
+        cata_mp::mp_on_world_exit();
+        world_generator->set_active_world( previous_world );
+        world_generator->remove_world( world_name );
+        PATH_INFO::set_savedir( savedir );
+        clear_overmaps();
+        std::error_code error;
+        std::filesystem::remove_all( save_root.get_unrelative_path(), error );
+    } );
+    PATH_INFO::set_savedir( save_root.get_unrelative_path().generic_u8string() + "/" );
+    REQUIRE_FALSE( world_generator->has_world( world_name ) );
+    WORLD *const isolated_world = world_generator->make_new_world(
+                                      world_name, previous_world->active_mod_order );
+    REQUIRE( isolated_world );
+    world_generator->set_active_world( isolated_world );
+    clear_overmaps();
+    clear_avatar();
+    clear_map_without_vision();
+    g->uquit = QUIT_NO;
+    avatar &host = get_avatar();
+    map &here = get_map();
+    host.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const auto local_id = host.getID();
+    const auto position = host.pos_abs();
+    const auto turn = calendar::turn;
+    auto &session = g->multiplayer_session();
+    const auto open_room = [&]() {
+        REQUIRE( cata_mp::mp_request_host_session( 0, "", "room-switch" ) );
+        cata_mp::process_mp_events();
+        INFO( session.hosting.error() );
+        REQUIRE( cata_mp::is_hosting() );
+    };
+    open_room();
+    CHECK( session.host_info.world == isolated_world->identity() );
+    CHECK( session.host_info.world_name == isolated_world->world_name );
+    CHECK( session.host_info.player_name == host.name );
+
+    const cata_mp::player_credentials profile{ player_id( std::string( 32, '8' ) ),
+            std::string( 64, 'd' ) };
+    const auto join = [&]( uint64_t id ) {
+        auto admission = cata_mp::peer_admission::create( id );
+        REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::connect,
+                                               "guest", "", admission, profile } ) );
+        cata_mp::process_mp_events();
+        REQUIRE( session.find_remote( admission ) );
+        return admission;
+    };
+    const auto first = join( 901 );
+    finish_player_creation( first, "room guest" );
+    npc *guest = session.find_remote( first )->actor.retained( g->npc_lifetimes() );
+    REQUIRE( guest );
+    const auto guest_id = guest->getID();
+    guest->setpos( here, tripoint_bub_ms( 68, 68, 0 ) );
+    const tripoint_abs_ms saved_guest_position = guest->pos_abs();
+    const auto seat_tile = guest->pos_bub( here );
+    REQUIRE( here.add_vehicle( vproto_id( "bicycle" ), seat_tile, 0_degrees, 0,
+                               veh_spawn_status::UNDAMAGED ) );
+    const auto seat = here.veh_at( seat_tile ).part_with_feature( VPFLAG_BOARDABLE, false );
+    REQUIRE( seat );
+    here.board_vehicle( seat_tile, guest );
+    REQUIRE( seat->part().passenger_id == guest_id );
+    const JsonObject seat_record = json_loader::from_string( serialize( seat->part() ) ).get_object();
+    seat_record.allow_omitted_members();
+    character_id saved_passenger;
+    REQUIRE( seat_record.read( "passenger_id", saved_passenger ) );
+    CHECK_FALSE( saved_passenger.is_valid() );
+    CHECK( ( seat_record.get_int( "flags" ) & static_cast<int>( vp_flag::passenger_flag ) ) == 0 );
+    CHECK( seat->part().passenger_id == guest_id );
+
+    const auto center = here.get_abs_sub() + point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+    auto &region = session.load_region( *g, here, profile.id, center );
+    REQUIRE( region.terrain->has_loaded_submap( guest->pos_abs_sm() ) );
+    CHECK( region.terrain->get_abs_sub() == here.get_abs_sub() );
+    CHECK( session.loaded_map_at( here, guest->pos_abs_sm() ) == &here );
+    CHECK( session.scent_for( *region.terrain ) == region.scent.get() );
+    CHECK( session.scent_for( here ) == nullptr );
+    CHECK( &session.load_region( *g, here, profile.id, center ) == &region );
+    const tripoint_bub_ms changed_tile( 72, 72, 0 );
+    const tripoint_bub_ms mirrored_tile = region.terrain->get_bub( here.get_abs( changed_tile ) );
+    const trap_str_id beartrap( "tr_beartrap" );
+    const trap_str_id pit( "tr_pit" );
+    region.terrain->trap_set( mirrored_tile, beartrap.id() );
+    const auto &beartraps = here.trap_locations( beartrap.id() );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 1 );
+    here.ter_set( changed_tile, ter_str_id( "t_pit" ).id() );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 0 );
+    const auto &remote_pits = region.terrain->trap_locations( pit.id() );
+    CHECK( std::count( remote_pits.begin(), remote_pits.end(), mirrored_tile ) == 1 );
+    region.terrain->ter_set( mirrored_tile, ter_str_id( "t_floor" ).id() );
+    CHECK( std::count( remote_pits.begin(), remote_pits.end(), mirrored_tile ) == 0 );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 1 );
+    region.terrain->remove_trap( mirrored_tile );
+    CHECK( std::count( beartraps.begin(), beartraps.end(), changed_tile ) == 0 );
+
+    const auto &emitters = here.get_furn_field_locations();
+    region.terrain->furn_set( mirrored_tile, furn_str_id( "f_fog" ).id() );
+    CHECK( std::count( emitters.begin(), emitters.end(), changed_tile ) == 1 );
+    region.terrain->furn_set( mirrored_tile, furn_str_id( "f_swamp_gas" ).id() );
+    CHECK( std::count( emitters.begin(), emitters.end(), changed_tile ) == 1 );
+    region.terrain->furn_set( mirrored_tile, furn_str_id::NULL_ID() );
+    CHECK( std::count( emitters.begin(), emitters.end(), changed_tile ) == 0 );
+
+    here.build_map_cache( changed_tile.z() );
+    REQUIRE( here.is_transparent_wo_fields( changed_tile ) );
+    region.terrain->ter_set( mirrored_tile, ter_str_id( "t_wall" ).id() );
+    here.build_map_cache( changed_tile.z() );
+    CHECK_FALSE( here.is_transparent_wo_fields( changed_tile ) );
+    region.terrain->ter_set( mirrored_tile, ter_str_id( "t_floor" ).id() );
+
+    // Query the same two actors from both view contexts. The wall changes in
+    // the guest window must invalidate the host's cached reachable members.
+    const tripoint_bub_ms isolated_tile( 78, 78, 0 );
+    const ter_id wall = ter_str_id( "t_wall" ).id();
+    // Close the vertical route as well: open air above counts as reachable
+    // for this cache, even when a ground monster cannot climb there.
+    region.terrain->ter_set( region.terrain->get_bub( here.get_abs( isolated_tile +
+                             tripoint_rel_ms::above ) ), wall );
+    auto &tracker = get_creature_tracker();
+    auto isolated_monster = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ), isolated_tile );
+    REQUIRE( tracker.add( isolated_monster ) );
+    const auto is_host = [&]( Creature * candidate ) {
+        return candidate == &host;
+    };
+    for( const tripoint_bub_ms &p : here.points_in_radius( isolated_tile, 1 ) ) {
+        if( p != isolated_tile ) {
+            region.terrain->ter_set( region.terrain->get_bub( here.get_abs( p ) ), wall );
+        }
+    }
+    CHECK( tracker.find_reachable( *isolated_monster, is_host ) == nullptr );
+    region.terrain->ter_set( region.terrain->get_bub( here.get_abs( isolated_tile + point::west ) ),
+                             ter_str_id( "t_floor" ).id() );
+    {
+        const swap_map context( *region.terrain );
+        CHECK( tracker.find_reachable( *isolated_monster, is_host ) == &host );
+    }
+    CHECK( tracker.find_reachable( *isolated_monster, is_host ) == &host );
+    tracker.remove( *isolated_monster );
+
+    const tripoint_abs_ms second_vehicle_pos = here.get_abs( tripoint_bub_ms( 74, 74, 0 ) );
+    vehicle *second_vehicle = here.add_vehicle( vproto_id( "bicycle" ),
+        here.get_bub( second_vehicle_pos ), 0_degrees, 0,
+        veh_spawn_status::UNDAMAGED );
+    REQUIRE( second_vehicle );
+    REQUIRE( veh_pointer_or_null( region.terrain->veh_at( second_vehicle_pos ) ) == second_vehicle );
+    const auto second_vehicle_lifetime = second_vehicle->get_safe_reference();
+    second_vehicle->summon_time_limit = 2_turns;
+    here.vehmove( session.active_maps( here ), session.simulation_regions( here ) );
+    REQUIRE( second_vehicle_lifetime );
+    REQUIRE( second_vehicle->summon_time_limit );
+    CHECK( *second_vehicle->summon_time_limit == 1_turns );
+    region.terrain->destroy_vehicle( second_vehicle );
+    CHECK_FALSE( here.veh_at( second_vehicle_pos ) );
+    CHECK_FALSE( region.terrain->veh_at( second_vehicle_pos ) );
+
+    // Make the normal shared save fail after the guest record was written.
+    const auto master = PATH_INFO::world_base_save_path() / SAVE_MASTER;
+    REQUIRE( std::filesystem::create_directory( master.get_unrelative_path() ) );
+    const bool had_logged_error = debug_has_error_been_observed();
+    bool closed = true;
+    const std::string error = capture_debugmsg_during( [&]() {
+        closed = cata_mp::mp_close_host_session();
+    } );
+    if( !had_logged_error && !closed && error.find( "game not saved" ) != std::string::npos ) {
+        // The injected I/O failure is expected and separately asserted below.
+        debug_reset_error_observed();
+    }
+    CHECK_FALSE( closed );
+    CHECK( error.find( "game not saved" ) != std::string::npos );
+    CHECK( cata_mp::is_hosting() );
+    REQUIRE( session.find_remote( first ) );
+    CHECK( seat->part().passenger_id == guest_id );
+    REQUIRE( std::filesystem::remove( master.get_unrelative_path() ) );
+
+    REQUIRE( cata_mp::mp_close_host_session() );
+    CHECK_FALSE( cata_mp::is_session_active() );
+    CHECK_FALSE( cata_mp::is_hosting() );
+    CHECK( g->uquit == QUIT_NO );
+    CHECK( host.getID() == local_id );
+    CHECK( host.pos_abs() == position );
+    CHECK( calendar::turn == turn );
+    CHECK( session.remote_players.empty() );
+    CHECK_FALSE( session.has_regions() );
+    CHECK_FALSE( g->player_controls().is_reserved( profile.id ) );
+    CHECK( g->critter_by_id<npc>( guest_id ) == nullptr );
+    CHECK_FALSE( overmap_buffer.find_npc( guest_id ) );
+    CHECK( g->get_follower_list().count( guest_id ) == 0 );
+    CHECK_FALSE( seat->part().passenger_id.is_valid() );
+
+    open_room();
+    const auto second = join( 901 );
+    CHECK_FALSE( session.find_remote( first ) );
+    auto *restored = session.find_remote( second )->actor.retained( g->npc_lifetimes() );
+    REQUIRE( restored );
+    CHECK( restored->getID() == guest_id );
+    CHECK( restored->pos_abs() == saved_guest_position );
+    CHECK( restored->in_vehicle );
+    CHECK( seat->part().passenger_id == guest_id );
+    CHECK_FALSE( restored->controlling_vehicle );
+
+    // Walk one window away without changing the local player's map, then close
+    // and reopen the room. The guest's exact position and remote edits survive.
+    const tripoint_bub_ms edge( ( MAPSIZE - 2 ) * SEEX, HALF_MAPSIZE_Y, 0 );
+    here.ter_set( edge, ter_str_id( "t_floor" ).id() );
+    restored->setpos( here, edge, false );
+    cata_mp::refresh_resident_regions();
+    REQUIRE( session.find_region( profile.id ) != nullptr );
+    auto &distant_region = *session.find_region( profile.id );
+    const tripoint_abs_sm distant_center = center + point_rel_sm( MAPSIZE + 2, 0 );
+    restored->setpos( project_to<coords::ms>( distant_center ), false );
+    cata_mp::refresh_resident_regions();
+    map &distant = *distant_region.terrain;
+    const tripoint_bub_ms distant_tile( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+    const tripoint_abs_ms distant_position = distant.get_abs( distant_tile );
+    const tripoint_abs_ms marker = distant.get_abs( distant_tile + point::east );
+    REQUIRE_FALSE( here.inbounds( distant_position ) );
+    distant.furn_set( distant_tile, furn_str_id::NULL_ID() );
+    distant.ter_set( distant_tile, ter_str_id( "t_floor" ).id() );
+    distant.ter_set( distant.get_bub( marker ), ter_str_id( "t_wall" ).id() );
+    restored->setpos( distant, distant_tile, false );
+    REQUIRE( cata_mp::mp_close_host_session() );
+    CHECK_FALSE( session.has_regions() );
+    CHECK( host.pos_abs() == position );
+
+    open_room();
+    const auto third = join( 903 );
+    auto *distant_guest = session.find_remote( third )->actor.retained( g->npc_lifetimes() );
+    REQUIRE( distant_guest );
+    CHECK( distant_guest->getID() == guest_id );
+    CHECK( distant_guest->pos_abs() == distant_position );
+    map *const restored_map = session.loaded_map_at( here, distant_guest->pos_abs_sm() );
+    REQUIRE( restored_map != nullptr );
+    REQUIRE( restored_map != &here );
+    CHECK( restored_map->ter( restored_map->get_bub( marker ) ) == ter_str_id( "t_wall" ).id() );
+    CHECK( cata_mp::mp_close_host_session() );
+}
+
 TEST_CASE( "mp_client_mode_and_teardown_belong_to_the_owning_world",
            "[multiplayer][world_session][lifecycle][regression]" )
 {
@@ -1282,6 +1538,85 @@ TEST_CASE( "activated_mutation_flags_belong_to_the_queried_player",
 }
 
 // Requires the co-op runtime adjacent to the test executable, as for the game.
+TEST_CASE( "mp_wait_ack_serializes_only_the_grant_owner",
+           "[.multiplayer_runtime][turn_coordination][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        clear_avatar();
+    } );
+    const bool started = session.hosting.start( 0, "", "wait-ack-regression" );
+    INFO( session.hosting.error() );
+    REQUIRE( started );
+    auto &waiting = make_test_remote( session, 801 );
+    auto &observer = make_test_remote( session, 802 );
+    for( cata_mp::remote_player_session *peer : {
+             &waiting, &observer
+         } ) {
+        const bool first = peer == &waiting;
+        const cata_mp::player_id owner( std::string( 32, first ? '1' : '2' ) );
+        npc &actor = spawn_npc( { first ? 61 : 62, 60 }, "test_talker" );
+        actor.set_value( "mp_proxy", std::string( "1" ) );
+        actor.set_value( "mp_player_id", owner.str() );
+        peer->credentials.id = owner;
+        peer->actor.bind_player( actor, owner, g->npc_lifetimes(),
+                                 g->player_controls().claim( owner, actor ) );
+        peer->connected = true;
+    }
+    auto &queue = cata_mp::get_mp_queue();
+    const auto act = [&queue, &waiting]( const std::string & message ) {
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "player",
+                               test_granted_action( message, waiting.turn.grant_seq ), waiting.admission } ) );
+        cata_mp::process_mp_events();
+    };
+    act( R"({"action":"wait","client_activity":"ACT_WAIT","client_activity_pct":30})" );
+
+    CHECK( waiting.turn.client_acted_this_turn );
+    CHECK( waiting.turn.remote_moves == 0 );
+    CHECK( waiting.turn.character_revision == 1 );
+    CHECK_FALSE( observer.turn.client_acted_this_turn );
+    CHECK( observer.turn.remote_moves == 100 );
+    CHECK( observer.turn.character_revision == 0 );
+    CHECK_FALSE( cata_mp::client_acted_this_turn() );
+
+    const std::string next_snapshot = cata_mp::serialize_remote_player_state( observer );
+    const JsonValue snapshot = json_loader::from_string( next_snapshot );
+    const JsonObject state = snapshot.get_object();
+    state.allow_omitted_members();
+    const JsonArray players = state.get_array( "players" );
+    REQUIRE( players.size() == 1 );
+    const JsonObject peer = players.get_object( 0 );
+    peer.allow_omitted_members();
+    CHECK( peer.get_string( "player" ) == waiting.credentials.id.str() );
+    CHECK( peer.get_string( "activity" ) == "ACT_WAIT" );
+    CHECK( peer.get_int( "activity_pct" ) == 30 );
+
+    // A shared mutation still updates the observer before it takes its turn.
+    map &here = get_map();
+    const tripoint_bub_ms door( 61, 61, 0 );
+    here.ter_set( door, ter_str_id( "t_door_c" ) );
+    const tripoint_abs_ms target = here.get_abs( door );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "action", "open" );
+    out.member( "x", target.x() );
+    out.member( "y", target.y() );
+    out.member( "z", target.z() );
+    out.end_object();
+    next_test_remote_turn( waiting );
+    act( encoded.str() );
+
+    CHECK( here.ter( door ) == ter_str_id( "t_door_o" ).id() );
+    CHECK( observer.turn.character_revision == 2 );
+    CHECK( observer.replication.tile_baseline.at( target ).ter == "t_door_o" );
+}
+
 TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
            "[.multiplayer_runtime][turn_coordination][regression]" )
 {

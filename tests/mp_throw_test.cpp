@@ -1,51 +1,85 @@
-#include "cata_catch.h"
-
+#include <cstdint>
+#include <functional>
+#include <list>
+#include <memory>
+#include <optional>
+#include <random>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
 #include "item_disposition.h"
 #include "item_location.h"
-#include "item_stack.h"
+#include "item_source.h"
 #include "item_uid.h"
 #include "json.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_selector.h"
+#include "map_iterator.h"
+#include "memory_fast.h"
 #include "monster.h"
+#include "mp_actor_binding.h"
+#include "mp_admission.h"
 #include "mp_client_conn.h"
-#include "mp_gamestate.h"
 #include "mp_firearm.h"
+#include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
+#include "mp_peek.h"
+#include "mp_pickup.h"
+#include "mp_player_identity.h"
 #include "mp_queue.h"
 #include "mp_test_helpers.h"
 #include "mp_throw.h"
-#include "mp_peek.h"
+#include "mp_world_session.h"
+#include "mp_world_state.h"
 #include "npc.h"
+#include "player_control.h"
 #include "player_helpers.h"
+#include "player_identity.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "projectile.h"
-#include "ranged_actions.h"
 #include "ranged.h"
+#include "ranged_actions.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "skill.h"
 #include "sling.h"
+#include "type_id.h"
+
+static const itype_id itype_test_backpack( "test_backpack" );
+static const itype_id itype_test_sling_payload( "test_sling_payload" );
+static const itype_id itype_test_sling_payload_fire( "test_sling_payload_fire" );
+static const itype_id itype_test_throwing_aid( "test_throwing_aid" );
+static const itype_id itype_test_throwing_firestarter( "test_throwing_firestarter" );
+static const itype_id itype_test_throwing_holster( "test_throwing_holster" );
+static const itype_id itype_test_throwing_plain( "test_throwing_plain" );
+static const itype_id itype_test_throwing_stack( "test_throwing_stack" );
+
+static const mtype_id mon_test_zombie( "mon_test_zombie" );
+
+static const skill_id skill_throw( "throw" );
 
 namespace
 {
-const itype_id projectile_id( "throwing_stick_with_charges" );
-
 void prepare_thrower( Character &who, const tripoint_bub_ms &where )
 {
     clear_character( who, true );
     who.setpos( get_map(), where );
-    who.set_wielded_item( item( projectile_id, calendar::turn, 10 ) );
-    who.set_skill_level( skill_id( "throw" ), 5 );
+    who.set_wielded_item( item( itype_test_throwing_stack, calendar::turn, 10 ) );
+    who.set_skill_level( skill_throw, 5 );
     who.set_moves( 1000 );
     who.set_stamina( who.get_stamina_max() );
 }
@@ -71,12 +105,12 @@ class throw_fixture
             clear_avatar();
         }
         npc &remote() {
-            npc &who = spawn_npc( { 60, 60 }, "test_talker" );
+            npc &who = spawn_npc( { 60, 60 }, "test_throwing_npc" );
             prepare_thrower( who, tripoint_bub_ms( 60, 60, 0 ) );
             const cata_mp::player_id owner( std::string( 32, '7' ) );
             who.set_value( "mp_proxy", std::string( "1" ) );
             who.set_value( "mp_player_id", owner.str() );
-            auto &peer = make_test_remote( g->multiplayer_session() );
+            cata_mp::remote_player_session &peer = make_test_remote( g->multiplayer_session() );
             peer.actor.bind_player( who, owner, g->npc_lifetimes(),
                                     g->player_controls().claim( owner, who ) );
             peer.connected = true;
@@ -87,9 +121,10 @@ class throw_fixture
         }
 };
 
-item_location add_projectile_to_backpack( Character &who, const itype_id &ammo = projectile_id )
+item_location add_projectile_to_backpack( Character &who,
+        const itype_id &ammo = itype_test_throwing_stack )
 {
-    const auto worn = who.wear_item( item( itype_id( "backpack" ) ), false );
+    const auto worn = who.wear_item( item( itype_test_backpack ), false );
     REQUIRE( worn );
     item_location backpack( who, & **worn );
     const auto inserted = backpack->put_in( item( ammo, calendar::turn, 5 ),
@@ -108,7 +143,7 @@ TEST_CASE( "authoritative_throw_matches_native_damage_cost_and_rng", "[multiplay
     prepare_thrower( reference, tripoint_bub_ms( 60, 80, 0 ) );
     REQUIRE( who.get_cardiofit() == reference.get_cardiofit() );
     REQUIRE( who.get_stamina_max() == reference.get_stamina_max() );
-    auto victim = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+    auto victim = make_shared_fast<monster>( mon_test_zombie,
                   tripoint_bub_ms( 65, 60, 0 ) );
     victim->set_hp( 1000 );
     auto expected_victim = make_shared_fast<monster>( *victim );
@@ -116,7 +151,7 @@ TEST_CASE( "authoritative_throw_matches_native_damage_cost_and_rng", "[multiplay
     REQUIRE( get_creature_tracker().add( victim ) );
     REQUIRE( get_creature_tracker().add( expected_victim ) );
     get_map().build_map_cache( 0 );
-    auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
     intent.target = victim->pos_abs();
     std::optional<tripoint_bub_ms> blind;
     SECTION( "normal" ) {}
@@ -124,7 +159,8 @@ TEST_CASE( "authoritative_throw_matches_native_damage_cost_and_rng", "[multiplay
         intent.blind_from = get_map().get_abs( tripoint_bub_ms( 61, 60, 0 ) );
         blind = tripoint_bub_ms( 61, 80, 0 );
     }
-    const auto before = rng_get_engine();
+    const cata_default_random_engine before =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     if( blind ) {
         reference.mod_moves( -reference.get_speed() * 2 );
     }
@@ -135,14 +171,15 @@ TEST_CASE( "authoritative_throw_matches_native_damage_cost_and_rng", "[multiplay
     reference.get_wielded_item()->mod_charges( -1 );
     thrown.charges = 1;
     reference.throw_item( expected_victim->pos_bub(), thrown, blind );
-    const auto expected_rng = rng_get_engine();
+    const cata_default_random_engine expected_rng =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     rng_get_engine() = before;
     REQUIRE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
     CHECK( who.get_wielded_item()->charges == 9 );
     CHECK( who.get_moves() == reference.get_moves() );
     CHECK( who.get_stamina() == reference.get_stamina() );
-    CHECK( who.get_skill_level_object( skill_id( "throw" ) ).exercise( true ) ==
-           reference.get_skill_level_object( skill_id( "throw" ) ).exercise( true ) );
+    CHECK( who.get_skill_level_object( skill_throw ).exercise( true ) ==
+           reference.get_skill_level_object( skill_throw ).exercise( true ) );
     CHECK( victim->get_hp() == expected_victim->get_hp() );
     CHECK( rng_get_engine() == expected_rng );
 }
@@ -152,23 +189,23 @@ TEST_CASE( "throw_preparation_uses_selected_disposal_and_keeps_cancel_cost",
 {
     throw_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "bat" ) ) );
+    who.set_wielded_item( item( itype_test_throwing_plain ) );
     item_location source = add_projectile_to_backpack( who );
-    auto intent = cata_mp::make_throw_intent( who, source );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, source );
     intent.disposition = item_disposition{ "drop", 0, 0 };
     const int before_moves = who.get_moves();
     const int retrieve_cost = who.item_handling_cost( *source, true, INVENTORY_HANDLING_PENALTY );
     // No target represents canceling the targeting UI after choosing preparation.
     CHECK_FALSE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
     REQUIRE( who.get_wielded_item() );
-    CHECK( who.get_wielded_item()->typeId() == projectile_id );
+    CHECK( who.get_wielded_item()->typeId() == itype_test_throwing_stack );
     CHECK( who.get_wielded_item()->charges == 5 );
     CHECK( who.get_moves() == before_moves - retrieve_cost );
     CHECK( who.items_with( []( const item & it ) {
-        return it.typeId() == projectile_id;
+        return it.typeId() == itype_test_throwing_stack;
     } ).size() == 1 );
     REQUIRE( get_map().i_at( who.pos_bub() ).size() == 1 );
-    CHECK( get_map().i_at( who.pos_bub() ).begin()->typeId() == itype_id( "bat" ) );
+    CHECK( get_map().i_at( who.pos_bub() ).begin()->typeId() == itype_test_throwing_plain );
 }
 
 TEST_CASE( "throwing_a_map_item_removes_the_source_without_creating_a_copy",
@@ -179,8 +216,8 @@ TEST_CASE( "throwing_a_map_item_removes_the_source_without_creating_a_copy",
     who.remove_weapon();
     map &here = get_map();
     item_location source = here.add_item_or_charges_ret_loc( who.pos_bub(),
-                           item( projectile_id, calendar::turn, 5 ) );
-    auto intent = cata_mp::make_throw_intent( who, source );
+                           item( itype_test_throwing_stack, calendar::turn, 5 ) );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, source );
     intent.target = here.get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     REQUIRE( cata_mp::execute_throw_intent( who, here, intent ) );
     REQUIRE( who.get_wielded_item() );
@@ -188,7 +225,7 @@ TEST_CASE( "throwing_a_map_item_removes_the_source_without_creating_a_copy",
     CHECK( charges == 4 );
     for( const tripoint_bub_ms &point : here.points_in_radius( who.pos_bub(), 8 ) ) {
         for( const item &it : here.i_at( point ) ) {
-            if( it.typeId() == projectile_id ) {
+            if( it.typeId() == itype_test_throwing_stack ) {
                 charges += it.charges;
             }
         }
@@ -201,10 +238,10 @@ TEST_CASE( "sling_throw_resolves_nested_projectile_without_stowing_the_aid",
 {
     throw_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "sling" ) ) );
-    const auto aid = who.get_wielded_item()->uid().get_value();
+    who.set_wielded_item( item( itype_test_throwing_aid ) );
+    const int64_t aid = who.get_wielded_item()->uid().get_value();
     item_location source = add_projectile_to_backpack( who );
-    auto intent = cata_mp::make_throw_intent( who, source );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, source );
     REQUIRE( intent.item.path.size() == 2 );
     intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     REQUIRE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
@@ -219,8 +256,8 @@ TEST_CASE( "item_disposition_resolves_identity_and_rejects_missing_destinations"
     throw_fixture fixture;
     avatar &who = get_avatar();
     prepare_thrower( who, tripoint_bub_ms( 60, 60, 0 ) );
-    who.set_wielded_item( item( itype_id( "glock_19" ) ) );
-    const auto worn = who.wear_item( item( itype_id( "holster" ) ), false );
+    who.set_wielded_item( item( itype_test_throwing_plain ) );
+    const auto worn = who.wear_item( item( itype_test_throwing_holster ), false );
     REQUIRE( worn );
     item &holster = **worn;
     const item_disposition choice{ "holster", holster.uid().get_value(), 0 };
@@ -233,7 +270,7 @@ TEST_CASE( "item_disposition_resolves_identity_and_rejects_missing_destinations"
     REQUIRE( execute_item_disposition( who, who.get_wielded_item(), choice ) );
     CHECK_FALSE( who.get_wielded_item() );
     CHECK( holster.has_item_with( []( const item & it ) {
-        return it.typeId() == itype_id( "glock_19" );
+        return it.typeId() == itype_test_throwing_plain;
     } ) );
 }
 
@@ -245,12 +282,12 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
     const bool sling = GENERATE( false, true );
     item_location ammo = who.get_wielded_item();
     if( sling ) {
-        who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
-        ammo = add_projectile_to_backpack( who, itype_id( "sling-ready_grenade" ) );
+        who.set_wielded_item( item( itype_test_throwing_aid ) );
+        ammo = add_projectile_to_backpack( who, itype_test_sling_payload );
     }
     const int count = ammo->charges;
-    auto &peer = only_test_remote( g->multiplayer_session() );
-    auto intent = cata_mp::make_throw_intent( who, ammo );
+    cata_mp::remote_player_session &peer = only_test_remote( g->multiplayer_session() );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, ammo );
     const tripoint_abs_ms target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     const auto packet = [&]( int64_t uid ) {
         std::ostringstream text;
@@ -289,7 +326,8 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
         REQUIRE( cata_mp::execute_firearm_intent( who, get_map(), peer.firearm, prepare ) ==
                  cata_mp::firearm_outcome::aiming );
     }
-    const auto before = rng_get_engine();
+    const cata_default_random_engine before =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     send( packet( intent.item.path.back() + 100 ) );
     CHECK( ammo->charges == count );
     CHECK( rng_get_engine() == before );
@@ -298,7 +336,8 @@ TEST_CASE( "throw_request_rejects_stale_sources_and_duplicates_before_client_mut
     REQUIRE( ammo->charges == count - 1 );
     CHECK( who.get_str_base() == 8 );
     const int moves = peer.turn.remote_moves;
-    const auto after = rng_get_engine();
+    const cata_default_random_engine after =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     send( wire );
     CHECK( ammo->charges == count - 1 );
     CHECK( peer.turn.remote_moves == moves );
@@ -314,15 +353,16 @@ TEST_CASE( "client_throw_request_keeps_inventory_and_gameplay_rng_untouched",
     const bool sling = GENERATE( false, true );
     item_location ammo = who.get_wielded_item();
     if( sling ) {
-        who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
-        ammo = add_projectile_to_backpack( who, itype_id( "sling-ready_grenade" ) );
+        who.set_wielded_item( item( itype_test_throwing_aid ) );
+        ammo = add_projectile_to_backpack( who, itype_test_sling_payload );
     }
     const int count = ammo->charges;
-    auto intent = cata_mp::make_throw_intent( who, ammo );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, ammo );
     intent.method = sling ? cata_mp::throw_method::sling : cata_mp::throw_method::hand;
     intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
-    const auto uid = who.get_wielded_item()->uid().get_value();
-    const auto before = rng_get_engine();
+    const int64_t uid = who.get_wielded_item()->uid().get_value();
+    const cata_default_random_engine before =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     cata_mp::set_client_mode( true );
     if( sling ) {
         REQUIRE( can_launch_sling( who, ammo ).success() );
@@ -344,18 +384,20 @@ TEST_CASE( "authoritative_sling_matches_native_ignition_damage_cost_and_rng",
     npc &who = fixture.remote();
     avatar &reference = get_avatar();
     prepare_thrower( reference, tripoint_bub_ms( 60, 80, 0 ) );
-    const itype_id ammo_id( GENERATE( "sling-ready_grenade", "sling-ready_homemade_grenade" ) );
-    who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
-    reference.set_wielded_item( item( itype_id( "staff_sling" ) ) );
+    const itype_id ammo_id( GENERATE( "test_sling_payload", "test_sling_payload_fire" ) );
+    who.set_wielded_item( item( itype_test_throwing_aid ) );
+    reference.set_wielded_item( item( itype_test_throwing_aid ) );
     item_location ammo = add_projectile_to_backpack( who, ammo_id );
     item_location reference_ammo = add_projectile_to_backpack( reference, ammo_id );
-    item_location lighter = who.i_add( tool_with_ammo( itype_id( "lighter" ), 100 ) );
-    item_location reference_lighter = reference.i_add( tool_with_ammo( itype_id( "lighter" ), 100 ) );
+    item_location lighter = who.i_add( tool_with_ammo( itype_test_throwing_firestarter,
+                                       100 ) );
+    item_location reference_lighter = reference.i_add( tool_with_ammo(
+                                          itype_test_throwing_firestarter, 100 ) );
     REQUIRE( can_launch_sling( who, ammo ).success() );
     REQUIRE( can_launch_sling( reference, reference_ammo ).success() );
     who.set_moves( 1000 );
     reference.set_moves( 1000 );
-    auto victim = make_shared_fast<monster>( mtype_id( "mon_test_zombie" ),
+    auto victim = make_shared_fast<monster>( mon_test_zombie,
                   tripoint_bub_ms( 65, 60, 0 ) );
     victim->set_hp( 1000 );
     auto expected_victim = make_shared_fast<monster>( *victim );
@@ -363,17 +405,19 @@ TEST_CASE( "authoritative_sling_matches_native_ignition_damage_cost_and_rng",
     REQUIRE( get_creature_tracker().add( victim ) );
     REQUIRE( get_creature_tracker().add( expected_victim ) );
     get_map().build_map_cache( 0 );
-    auto intent = cata_mp::make_throw_intent( who, ammo );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, ammo );
     intent.method = cata_mp::throw_method::sling;
     intent.target = victim->pos_abs();
-    const auto weapon_uid = who.get_wielded_item()->uid().get_value();
-    const auto before = rng_get_engine();
+    const int64_t weapon_uid = who.get_wielded_item()->uid().get_value();
+    const cata_default_random_engine before =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     reference.last_target = expected_victim;
     reference.last_target_pos = expected_victim->pos_abs();
     mark_ranged_target( reference, true );
     const auto expected = launch_sling( reference, reference_ammo, expected_victim->pos_bub() );
     REQUIRE( expected );
-    const auto expected_rng = rng_get_engine();
+    const cata_default_random_engine expected_rng =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     rng_get_engine() = before;
     REQUIRE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
     REQUIRE( ammo );
@@ -384,8 +428,8 @@ TEST_CASE( "authoritative_sling_matches_native_ignition_damage_cost_and_rng",
     CHECK( who.get_moves() == reference.get_moves() );
     CHECK( who.get_stamina() == reference.get_stamina() );
     CHECK( who.recoil == reference.recoil );
-    CHECK( who.get_skill_level_object( skill_id( "throw" ) ).exercise( true ) ==
-           reference.get_skill_level_object( skill_id( "throw" ) ).exercise( true ) );
+    CHECK( who.get_skill_level_object( skill_throw ).exercise( true ) ==
+           reference.get_skill_level_object( skill_throw ).exercise( true ) );
     CHECK( victim->get_hp() == expected_victim->get_hp() );
     CHECK( rng_get_engine() == expected_rng );
     const item &expected_drop = expected->proj.get_drop();
@@ -402,11 +446,12 @@ TEST_CASE( "authoritative_sling_rejections_do_not_light_or_consume_ammo",
 {
     throw_fixture fixture;
     npc &who = fixture.remote();
-    who.set_wielded_item( item( itype_id( "staff_sling" ) ) );
-    item_location ammo = add_projectile_to_backpack( who, itype_id( "sling-ready_homemade_grenade" ) );
-    item_location lighter = who.i_add( tool_with_ammo( itype_id( "lighter" ), 100 ) );
+    who.set_wielded_item( item( itype_test_throwing_aid ) );
+    item_location ammo = add_projectile_to_backpack( who, itype_test_sling_payload_fire );
+    item_location lighter = who.i_add( tool_with_ammo( itype_test_throwing_firestarter,
+                                       100 ) );
     REQUIRE( can_launch_sling( who, ammo ).success() );
-    auto intent = cata_mp::make_throw_intent( who, ammo );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, ammo );
     intent.method = cata_mp::throw_method::sling;
     intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
     SECTION( "cancel" ) {
@@ -440,7 +485,8 @@ TEST_CASE( "authoritative_sling_rejections_do_not_light_or_consume_ammo",
     const int moves = who.get_moves();
     const int stamina = who.get_stamina();
     const int fuel = lighter ? lighter->ammo_remaining() : 0;
-    const auto before = rng_get_engine();
+    const cata_default_random_engine before =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     CHECK_FALSE( cata_mp::execute_throw_intent( who, get_map(), intent ) );
     CHECK( ammo->charges == 5 );
     CHECK_FALSE( ammo->active );
@@ -460,21 +506,22 @@ TEST_CASE( "paid_ledge_throw_uses_the_owners_view_and_only_charges_peeking_once"
     map &here = get_map();
     const tripoint_bub_ms ledge( 61, 60, 0 );
     const tripoint_bub_ms bottom( 61, 60, -2 );
-    here.ter_set( ledge, ter_id( "t_open_air" ) );
-    here.ter_set( ledge + tripoint::below, ter_id( "t_open_air" ) );
-    here.ter_set( bottom, ter_id( "t_floor" ) );
-    here.ter_set( bottom + tripoint::east, ter_id( "t_floor" ) );
-    const auto origin = who.pos_abs();
+    here.ter_set( ledge, ter_id( "test_t_throwing_open_air" ) );
+    here.ter_set( ledge + tripoint::below, ter_id( "test_t_throwing_open_air" ) );
+    here.ter_set( bottom, ter_id( "test_t_throwing_floor" ) );
+    here.ter_set( bottom + tripoint::east, ter_id( "test_t_throwing_floor" ) );
+    const tripoint_abs_ms origin = who.pos_abs();
     const int moves = who.get_moves();
     const int host_moves = get_avatar().get_moves();
-    const auto rng = rng_get_engine();
+    const cata_default_random_engine rng =
+        rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     const auto peek = cata_mp::authorize_ledge_peek( who, here, origin, here.get_abs( ledge ), 17 );
     REQUIRE( peek );
     CHECK( peek->viewpoint == here.get_abs( bottom ) );
     CHECK( who.pos_abs() == origin );
     CHECK( who.get_moves() == moves - who.get_speed() * 2 );
     CHECK( rng_get_engine() == rng );
-    auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
     intent.blind_from = peek->viewpoint;
     intent.peek_request = peek->request;
     intent.target = here.get_abs( bottom + tripoint::east );
@@ -488,7 +535,7 @@ TEST_CASE( "paid_ledge_throw_uses_the_owners_view_and_only_charges_peeking_once"
     }
     SECTION( "permission_cannot_be_borrowed_or_redirected" ) {
         const int invalid = GENERATE( 0, 1, 2, 3, 4 );
-        auto changed = *peek;
+        cata_mp::peek_authorization changed = *peek;
         if( invalid == 0 ) {
             ++intent.peek_request;
         } else if( invalid == 1 ) {
@@ -496,14 +543,17 @@ TEST_CASE( "paid_ledge_throw_uses_the_owners_view_and_only_charges_peeking_once"
         } else if( invalid == 2 ) {
             intent.blind_from = here.get_abs( bottom + tripoint::east );
         } else if( invalid == 3 ) {
-            here.ter_set( ledge, ter_id( "t_floor" ) );
+            here.ter_set( ledge, ter_id( "test_t_throwing_floor" ) );
         } else {
             intent.peek_request = 0; // A distant throw origin needs the paid permission.
         }
+        // The Catch2 section listener reseeds the game RNG on entry.
+        const cata_default_random_engine before_rejected_throw =
+            rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
         CHECK_FALSE( cata_mp::execute_throw_intent( who, here, intent, &changed ) );
         CHECK( who.get_moves() == moves - who.get_speed() * 2 );
         CHECK( who.get_wielded_item()->charges == 10 );
-        CHECK( rng_get_engine() == rng );
+        CHECK( rng_get_engine() == before_rejected_throw );
     }
     CHECK( who.pos_abs() == origin );
     CHECK( get_avatar().get_moves() == host_moves );
@@ -515,17 +565,17 @@ TEST_CASE( "peek_permission_is_consumed_by_throw_and_released_without_spending_a
     throw_fixture fixture;
     npc &who = fixture.remote();
     map &here = get_map();
-    auto &peer = only_test_remote( g->multiplayer_session() );
+    cata_mp::remote_player_session &peer = only_test_remote( g->multiplayer_session() );
     const tripoint_bub_ms ledge( 61, 60, 0 );
-    const auto bottom = ledge + tripoint::below;
-    here.ter_set( ledge, ter_id( "t_open_air" ) );
-    here.ter_set( bottom, ter_id( "t_floor" ) );
-    here.ter_set( bottom + tripoint::east, ter_id( "t_floor" ) );
+    const tripoint_bub_ms bottom = ledge + tripoint::below;
+    here.ter_set( ledge, ter_id( "test_t_throwing_open_air" ) );
+    here.ter_set( bottom, ter_id( "test_t_throwing_floor" ) );
+    here.ter_set( bottom + tripoint::east, ter_id( "test_t_throwing_floor" ) );
     peer.inventory_activity.peek = cata_mp::authorize_ledge_peek( who, here, who.pos_abs(),
                                    here.get_abs( ledge ), 29 );
     REQUIRE( peer.inventory_activity.peek );
     peer.turn.remote_moves = who.get_moves();
-    const auto intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
+    const cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, who.get_wielded_item() );
     const auto send = [&]( const std::string & wire ) {
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player", wire, peer.admission } ) );
         cata_mp::process_mp_events();
@@ -556,7 +606,8 @@ TEST_CASE( "peek_permission_is_consumed_by_throw_and_released_without_spending_a
         CHECK( who.get_wielded_item()->charges == 9 );
         next_test_remote_turn( peer );
         who.set_moves( peer.turn.remote_moves );
-        const auto rng = rng_get_engine();
+        const cata_default_random_engine rng =
+            rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
         send( packet() );
         CHECK( who.get_wielded_item()->charges == 9 );
         CHECK( who.get_moves() == 100 );

@@ -1,26 +1,35 @@
 #include "cata_catch.h"
 
 #include <initializer_list>
+#include <memory>
 #include <sstream>
 
 #include "avatar.h"
 #include "avatar_action.h"
+#include "calendar.h"
 #include "rng.h"
 #include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
+#include "character_id.h"
 #include "creature_tracker.h"
+#include "display.h"
 #include "game.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapbuffer.h"
 #include "monster.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_world_session.h"
+#include "npc.h"
+#include "overmapbuffer.h"
 #include "player_activity.h"
 #include "mtype.h"
 #include "player_helpers.h"
+#include "submap.h"
+#include "widget.h"
 #include "worldfactory.h"
 
 namespace
@@ -62,6 +71,43 @@ std::string state_message( std::initializer_list<wire_monster> monsters,
 }
 } // namespace
 
+TEST_CASE( "compass_drops_retired_npcs_before_the_next_visibility_update",
+           "[multiplayer][replication][compass]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &visible = get_avatar().get_mon_visible();
+    const restore_on_out_of_scope restore_visible( visible );
+    auto &east = visible.unique_types[static_cast<int>( cardinal_direction::EAST )];
+    east.clear();
+    int legend_height = 0;
+    const std::string original_legend = display::colorized_compass_legend_text( 80, 30, legend_height );
+
+    SECTION( "retiring a loaded actor removes it from the compass immediately" ) {
+        npc &actor = spawn_npc( { 60, 60 }, "test_talker" );
+        const character_id id = actor.getID();
+        const on_out_of_scope cleanup( [id] {
+            g->remove_npc( id );
+            overmap_buffer.remove_npc( id );
+        } );
+        REQUIRE( g->shared_from( actor ) );
+        east.push_back( actor.get_safe_reference() );
+        REQUIRE_FALSE( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
+        g->remove_npc( id );
+        CHECK( east.empty() );
+    }
+    SECTION( "redraw skips an expired observation from a previous packet" ) {
+        {
+            npc actor;
+            east.push_back( actor.get_safe_reference() );
+            REQUIRE_FALSE( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
+        }
+        REQUIRE( east.size() == 1 );
+    }
+    CHECK( display::colorized_compass_text( cardinal_direction::EAST, 10 ).empty() );
+    CHECK( display::colorized_compass_legend_text( 80, 30, legend_height ) == original_legend );
+}
+
 TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
            "[multiplayer][world_identity][regression]" )
 {
@@ -88,6 +134,79 @@ TEST_CASE( "mp_client_pins_authority_world_independently_of_local_world",
     CHECK( world_generator->active_world->identity() == local );
     session.reset();
     CHECK_FALSE( session.admission.host_world.valid() );
+}
+
+TEST_CASE( "mp_client_exits_replica_without_switching_to_solo",
+           "[multiplayer][client_replication][regression]" )
+{
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    avatar &guest = get_avatar();
+    const int previous_moves = guest.get_moves();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        guest.set_moves( previous_moves );
+    } );
+    g->uquit = QUIT_NO;
+    guest.set_moves( 100 );
+    cata_mp::set_client_mode( true );
+    const std::string packet = GENERATE(
+                                   R"({"type":"session_ending","from":"host"})",
+                                   R"({"type":"state","connected":false})",
+                                   R"({"type":"inventory_update"})" );
+    REQUIRE( cata_mp::client_apply_message( packet ) );
+    CHECK( cata_mp::is_client_mode() );
+    CHECK( guest.get_moves() == 0 );
+    CHECK( g->uquit == QUIT_NOSAVED );
+    CHECK_FALSE( session.client_turn.exit_reason.empty() );
+    CHECK_FALSE( cata_mp::client_apply_message( packet ) );
+}
+
+TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_position",
+           "[multiplayer][client_replication][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_overmaps();
+    } );
+    const restore_on_out_of_scope restore_quit( g->uquit );
+    g->uquit = QUIT_NO;
+    cata_mp::set_client_mode( true );
+    map &here = get_map();
+    const tripoint_bub_ms local( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+    get_avatar().setpos( here, local, false );
+    const tripoint_abs_sm start = get_avatar().pos_abs_sm();
+    const auto state = []( const tripoint_abs_ms &position ) {
+        return R"({"type":"state","connected":true,"pos":{"x":)" + std::to_string( position.x() ) +
+               ",\"y\":" + std::to_string( position.y() ) + ",\"z\":" +
+               std::to_string( position.z() ) + "}}";
+    };
+    REQUIRE( cata_mp::client_apply_message( state( get_avatar().pos_abs() ) ) );
+    const tripoint_abs_sm destination = start + point_rel_sm( MAPSIZE + 2, 0 );
+    const tripoint_abs_ms absolute = project_to<coords::ms>( destination );
+    REQUIRE_FALSE( here.inbounds( absolute ) );
+    auto existing = std::make_unique<submap>();
+    existing->set_all_ter( ter_str_id( "t_floor" ).id(), true );
+    existing->last_touched = calendar::turn - 1_days;
+    const time_point last_touched = existing->last_touched;
+    REQUIRE( MAPBUFFER.add_submap( destination, existing ) );
+    const std::string prefix = R"({"type":"map_sync","z":0,"pal":["t_wall","f_null"],"subs":[{"sx":)" +
+                               std::to_string( destination.x() ) + ",\"sy\":" +
+                               std::to_string( destination.y() );
+    CHECK( cata_mp::client_apply_message( prefix + R"(,"t":[[99999999,0]],"f":[[144,1]]}]})" ) );
+    CHECK( session.replication.client.pending_terrain.empty() );
+    REQUIRE( cata_mp::client_apply_message( prefix + R"(,"t":[[144,0]],"f":[[144,1]]}]})" ) );
+    REQUIRE( session.replication.client.pending_terrain.count( destination ) == 1 );
+    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east ) ) );
+    CHECK( get_avatar().pos_abs() == absolute + point::east );
+    CHECK( here.ter( here.get_bub( absolute ) ) == ter_str_id( "t_wall" ).id() );
+    CHECK( MAPBUFFER.lookup_submap( destination )->last_touched == last_touched );
+    CHECK( session.replication.client.pending_terrain.empty() );
 }
 
 TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",

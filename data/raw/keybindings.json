@@ -5735,6 +5735,13 @@
   },
   {
     "type": "keybinding",
+    "id": "coop_session",
+    "name": "Co-op session",
+    "category": "DEFAULTMODE",
+    "bindings": [ { "input_method": "keyboard_any", "key": "F10" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "pass_item",
     "name": "Pass item to partner",
     "category": "DEFAULTMODE",

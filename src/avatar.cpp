@@ -25,6 +25,7 @@
 #include "avatar_action.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -74,6 +75,7 @@
 #include "point.h"
 #include "ranged.h"
 #include "ret_val.h"
+#include "safe_reference.h"
 #include "skill.h"
 #include "stomach.h"
 #include "string_formatter.h"
@@ -290,6 +292,21 @@ void avatar::load_map_memory()
 void avatar::clear_map_memory()
 {
     player_map_memory->clear();
+}
+
+void avatar::use_guest_map_memory( const cata_path &directory )
+{
+    player_map_memory->set_private_store( directory );
+}
+
+void avatar::use_local_map_memory()
+{
+    player_map_memory->set_private_store( std::nullopt );
+}
+
+bool avatar::has_guest_map_memory() const
+{
+    return player_map_memory->has_private_store();
 }
 
 void avatar::prepare_map_memory_region( const tripoint_abs_ms &p1, const tripoint_abs_ms &p2 )
@@ -1768,9 +1785,8 @@ void avatar::export_as_npc( const cata_path &path )
 void monster_visible_info::remove_npc( npc *n )
 {
     for( auto &t : unique_types ) {
-        auto it = std::find( t.begin(), t.end(), n );
-        if( it != t.end() ) {
-            t.erase( it );
-        }
+        t.erase( std::remove_if( t.begin(), t.end(), [n]( const safe_reference<Creature> &entry ) {
+            return !entry || entry.get() == n;
+        } ), t.end() );
     }
 }

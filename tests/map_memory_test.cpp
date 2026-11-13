@@ -154,6 +154,36 @@ TEST_CASE( "map_memory_disk_reads_preserve_regions_and_observe_later_saves",
     } );
 }
 
+TEST_CASE( "guest_map_memory_is_private_to_the_selected_store",
+           "[map_memory][save][multiplayer][regression]" )
+{
+    with_map_memory_world( true, []() {
+        const auto root = world_generator->active_world->folder_path() / "guest-memory";
+        const auto first = root / "first";
+        const auto second = root / "second";
+        const tripoint_abs_ms tile( 120, 120, 0 );
+        map_memory memory;
+
+        memory.set_private_store( first );
+        memory.prepare_region( tile, tile );
+        memory.set_tile_terrain( tile, "t_floor", 0, 0 );
+        REQUIRE( memory.save( tile ) );
+
+        memory.set_private_store( second );
+        memory.prepare_region( tile, tile );
+        CHECK( memory.get_tile( tile ).get_ter_id().empty() );
+        memory.set_tile_terrain( tile, "t_wall", 0, 0 );
+        REQUIRE( memory.save( tile ) );
+
+        memory.set_private_store( first );
+        memory.prepare_region( tile, tile );
+        CHECK( memory.get_tile( tile ).get_ter_id() == "t_floor" );
+        memory.set_private_store( std::nullopt );
+        memory.prepare_region( tile, tile );
+        CHECK( memory.get_tile( tile ).get_ter_id().empty() );
+    } );
+}
+
 BENCHMARK_TEST_CASE( "map_memory_first_exploration_compressed_archive",
                      "[map_memory][save][exploration]" )
 {

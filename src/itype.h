@@ -1023,6 +1023,31 @@ struct hash<gun_type_type> {
 
 } // namespace std
 
+struct throw_correction_data {
+    bool was_loaded = false;
+
+    /** Required item flags in disjunctive normal form (OR of AND clauses). */
+    std::vector<std::vector<flag_id>> required_flags;
+    std::set<ammotype> allowed_ammo;
+    std::optional<units::mass> min_weight;
+    std::optional<units::mass> max_weight;
+    std::optional<units::volume> max_volume;
+    std::optional<units::length> max_length;
+    std::optional<int> full_bonus_skill;
+
+    float damage_multiplier = 1.0f;
+    float range_multiplier = 1.0f;
+    float stamina_multiplier = 1.0f;
+    float dispersion_multiplier = 1.0f;
+    float speed_multiplier = 1.0f;
+    float weight_multiplier = 1.0f;
+
+    void deserialize( const JsonObject &jo );
+    bool applies_to( const item &thrown ) const;
+    float skill_adjusted_bonus( float value, float throwing_skill, bool lower_is_better,
+                                float neutral = 1.0f ) const;
+};
+
 struct islot_gunmod : common_ranged_data {
     bool was_loaded = false;
     void deserialize( const JsonObject &jo );
@@ -1148,13 +1173,8 @@ struct islot_gunmod : common_ranged_data {
     double heat_per_shot_modifier = 0;
     float heat_per_shot_multiplier = 1.0f;
 
-    //Throw-related multipliers when this mod is installed on a wielded ranged weapon
-    float throw_damage_multiplier = 1.0f;
-    float throw_range_multiplier = 1.0f;
-    float throw_stamina_multiplier = 1.0f;
-    float throw_dispersion_multiplier = 1.0f;
-    float throw_speed_multiplier = 1.0f;
-    float throw_weight_multiplier = 1.0f;
+    /** Throw corrections applied while this mod is installed on a wielded ranged weapon. */
+    std::optional<throw_correction_data> throw_correction;
 
     //Throw-related additive bonuses, applied after all multipliers
     float throw_damage_add = 0.0f;
@@ -1523,13 +1543,10 @@ struct itype {
 
         /** Base damage output when thrown */
         damage_instance thrown_damage;
+        int thrown_recovery_chance = 100;
 
-        /** Multipliers applied to throwing when this item is wielded */
-        float throw_damage_multiplier = 1.0f;
-        float throw_range_multiplier = 1.0f;
-        float throw_stamina_multiplier = 1.0f;
-        float throw_dispersion_multiplier = 1.0f;
-        float throw_speed_multiplier = 1.0f;
+        /** Corrections applied to compatible items while this item is wielded. */
+        std::optional<throw_correction_data> throw_correction;
 
         /** What recipes can make this item */
         std::vector<recipe_id> recipes;
@@ -1903,9 +1920,6 @@ struct itype {
 
         // returns true if it is one of the outcomes of cutting
         bool is_basic_component() const;
-
-        /** Multiplier applied to thrown weight (lever arm) for this item type */
-        float throw_weight_multiplier = 1.0f;
 
         // used for generic_factory for copy-from
         bool was_loaded = false;

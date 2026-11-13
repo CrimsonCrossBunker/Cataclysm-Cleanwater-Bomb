@@ -2,9 +2,9 @@
   {
     "id": "atlatl",
     "type": "ITEM",
-    "subtypes": [ "GUN" ],
+    "category": "weapons",
     "name": { "str": "atlatl" },
-    "description": "Although spear throwing contraptions were used throughout the entire world, this design in particular hails from Mesoamericas.  It was especially popular among Peruvian natives, despite the Nahuatl origin of the name.  It is essentially a carved piece of wooden shaft with a hollowed space to place the projectile of the same name.  It'll also do well as a melee weapon in a pinch.",
+    "description": "Although spear throwing contraptions were used throughout the entire world, this design in particular hails from Mesoamericas.  It was especially popular among Peruvian natives, despite the Nahuatl origin of the name.  It is a carved wooden spear thrower with a hook that holds the tail of a dart.  Its leverage helps launch atlatl darts and suitably sized javelins.  It'll also do well as a melee weapon in a pinch.",
     "weight": "1200 g",
     "volume": "2100 ml",
     "symbol": "(",
@@ -13,28 +13,25 @@
     "price_postapoc": "7 USD 50 cent",
     "longest_side": "60 cm",
     "material": [ "wood" ],
-    "flags": [
-      "PRIMITIVE_RANGED_WEAPON",
-      "RELOAD_AND_SHOOT",
-      "WATERPROOF_GUN",
-      "WATER_FRIENDLY",
-      "NEVER_JAMS",
-      "BELTED",
-      "FRAGILE_MELEE"
-    ],
-    "skill": "throw",
-    "min_strength": 6,
-    "ammo": [ "atlatl" ],
-    "loudness": 10,
-    "reload_noise_volume": 2,
-    "//": "With the range compression, this is an incredibly generous ~100m effective range.",
-    "range": 8,
-    "ranged_damage": { "damage_type": "stab", "amount": 10 },
-    "//2": "Significantly worse accuracy than a bow. See 'Comparing Atlatls and Bows: Accuracy and Learning Curve' by John C Whittaker",
-    "dispersion": 1800,
-    "sight_dispersion": 3000,
-    "clip_size": 1,
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "atlatl": 1 }, "open_container": true } ],
+    "flags": [ "BELTED", "FRAGILE_MELEE", "THROW_KEEP_WIELDED" ],
+    "//": "Leverage, not spring energy: Whittaker and Maginniss (2006), https://worldatlatl.org/wp-content/uploads/2017/12/2006-2-THE-ATLATL.pdf",
+    "//2": "Bebber et al. (2023), https://doi.org/10.1038/s41598-023-40451-8, measured faster darts than hand-thrown javelins using different projectile masses. These multipliers are conservative game-balance values, not measured damage or range ratios. Bounds also admit existing JAVELIN items; heavy rigid javelins are not equivalent to the experimental darts.",
+    "throw_correction_data": {
+      "//": "Full bonuses at throwing 2 are a balance choice informed by velocity gains after brief novice practice in Bebber et al. (2023), https://doi.org/10.1038/s41598-023-40451-8; the study does not measure a game skill threshold.",
+      "full_bonus_skill": 2,
+      "required_flag": "JAVELIN",
+      "allow_ammotype": [ "atlatl" ],
+      "min_weight": "1 g",
+      "max_weight": "1200 g",
+      "max_volume": "1500 ml",
+      "max_length": "200 cm",
+      "throw_damage_multiplier": 1.5,
+      "throw_range_multiplier": 2.0,
+      "throw_stamina_multiplier": 1.25,
+      "throw_dispersion_multiplier": 1.0,
+      "throw_speed_multiplier": 1.25,
+      "throw_weight_multiplier": 1.25
+    },
     "to_hit": { "grip": "solid", "length": "short", "surface": "any", "balance": "neutral" },
     "melee_damage": { "bash": 12 }
   },
@@ -57,7 +54,9 @@
     "dispersion": 180,
     "loudness": 0,
     "critical_multiplier": 10,
+    "thrown_damage": [ { "damage_type": "stab", "amount": 10, "armor_penetration": 2 } ],
     "recovery_chance": 97,
+    "thrown_recovery_chance": 97,
     "melee_damage": { "stab": 10 }
   },
   {
@@ -79,7 +78,9 @@
     "dispersion": 180,
     "loudness": 0,
     "critical_multiplier": 10,
+    "thrown_damage": [ { "damage_type": "stab", "amount": 8, "armor_penetration": 1.25 } ],
     "recovery_chance": 96,
+    "thrown_recovery_chance": 96,
     "melee_damage": { "stab": 8 }
   },
   {
@@ -101,7 +102,9 @@
     "dispersion": 200,
     "loudness": 0,
     "critical_multiplier": 8,
+    "thrown_damage": [ { "damage_type": "stab", "amount": 5 } ],
     "recovery_chance": 83,
+    "thrown_recovery_chance": 83,
     "melee_damage": { "stab": 5 }
   }
 ]

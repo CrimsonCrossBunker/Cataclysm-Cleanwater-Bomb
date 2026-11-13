@@ -697,12 +697,14 @@ class game
         /** Makes any nearby NPCs on the overmap active. */
         void load_npcs();
         void load_npcs( map *here );
+        void unload_creatures_outside_resident_maps();
 
         /** NPCs who saw player interacting with their stuff (disassembling, cutting etc)
         * will notify the player that thievery was witnessed and make angry at the player. */
         void on_witness_theft( const item &target );
         void on_witness_theft( const item &target, Character &p );
     private:
+        void activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby );
         /** Unloads all NPCs.
          *
          * If you call this you must later call load_npcs, lest caches get

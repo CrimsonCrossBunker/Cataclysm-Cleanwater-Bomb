@@ -1318,7 +1318,7 @@ void npc::place_on_map( map *here )
     const tripoint_bub_ms pos = pos_bub( *here );
 
     for( const tripoint_bub_ms &p : closest_points_first( pos, 1, SEEX + 1 ) ) {
-        if( g->is_empty( p ) ) {
+        if( here->has_loaded_submap( p ) && g->is_empty( here, here->get_abs( p ) ) ) {
             setpos( *here, p );
             return;
         }
@@ -3415,6 +3415,18 @@ void npc::shift( const point_rel_sm &s )
     // TODO: convert these to absolute coords and get rid of shift()
     maybe_shift( wanted_item_pos, -shift );
     path.clear();
+    if( ai_map_origin ) {
+        *ai_map_origin += s;
+    }
+}
+
+void npc::update_ai_map_origin( const map &terrain )
+{
+    const point_abs_sm origin = terrain.get_abs_sub().xy();
+    if( ai_map_origin && origin != *ai_map_origin ) {
+        shift( origin - *ai_map_origin );
+    }
+    ai_map_origin = origin;
 }
 
 bool npc::is_dead() const
@@ -3750,6 +3762,7 @@ void npc::npc_update_body()
 
 void npc::on_load( map *here )
 {
+    update_ai_map_origin( *here );
     // Reconcile only changed traits; an unchanged personality must not
     // repeatedly activate passive enchantments when re-entering the bubble.
     generate_personality_traits();

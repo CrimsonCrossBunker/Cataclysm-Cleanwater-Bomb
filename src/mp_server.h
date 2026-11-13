@@ -17,6 +17,14 @@ namespace cata_mp
 {
 class event_queue;
 
+inline constexpr int default_room_players = 4;
+inline constexpr int maximum_room_players = 32; // Includes the simulation host.
+
+constexpr bool valid_room_size( int players )
+{
+    return players >= 2 && players <= maximum_room_players;
+}
+
 // Published as one value by the simulation owner. The network worker never
 // reads the game, the current world, or another session's metadata.
 struct server_welcome {
@@ -31,7 +39,8 @@ class server
 {
     public:
         server( uint16_t port, std::string password, std::string version,
-                std::shared_ptr<event_queue> events, server_welcome welcome );
+                std::shared_ptr<event_queue> events, server_welcome welcome,
+                int room_players );
         ~server();
 
         // Start listening. Blocks until stop() is called.
@@ -59,6 +68,7 @@ class server
         void on_message( uint64_t peer_id, const std::string &msg );
 
         uint16_t port_;
+        int room_players_;
         std::string password_;
         std::string version_;
 
@@ -81,7 +91,7 @@ class host_session
         host_session &operator=( const host_session & ) = delete;
 
         bool start( uint16_t port, const std::string &password, const std::string &version,
-                    server_welcome welcome = {} );
+                    server_welcome welcome = {}, int room_players = default_room_players );
         void stop();
         bool running() const;
         std::shared_ptr<server> active_server() const;

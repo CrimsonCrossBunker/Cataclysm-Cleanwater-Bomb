@@ -568,12 +568,18 @@ jobs:
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
         run: |
           msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
+      - name: Build Windows co-op runtime
+        if: runner.os == 'Windows' && matrix.sdl3 == 1
+        run: python build-scripts/build-coop-runtime.py --target x86_64-pc-windows-msvc --target-dir coop-rust --library-dir .
       - name: Package CDDA (windows msvc, SDL3)
         if: runner.os == 'Windows' && matrix.sdl3 == 1
         shell: pwsh
         run: |
           .\build-scripts\windist.ps1
           mv cataclysmdda-0.J.zip ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.zip
+      - name: Install Rust targets for the universal macOS co-op runtime
+        if: runner.os == 'macOS'
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
       - name: Build CDDA (osx, curses)
         if: runner.os == 'macOS' && matrix.tiles != 1
         run: |

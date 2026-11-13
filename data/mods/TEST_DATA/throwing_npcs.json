@@ -1,0 +1,27 @@
+[
+  {
+    "type": "item_group",
+    "id": "test_throwing_empty_gear",
+    "subtype": "collection",
+    "items": [  ]
+  },
+  {
+    "type": "npc_class",
+    "id": "test_throwing_npc_class",
+    "name": "test thrower",
+    "job_description": "A gearless NPC for throwing mechanics tests.",
+    "common": false,
+    "worn_override": "test_throwing_empty_gear",
+    "carry_override": "test_throwing_empty_gear",
+    "weapon_override": "test_throwing_empty_gear"
+  },
+  {
+    "type": "npc",
+    "id": "test_throwing_npc",
+    "name_suffix": "Test thrower",
+    "class": "test_throwing_npc_class",
+    "attitude": 1,
+    "mission": "NULL",
+    "chat": "TALK_DONE"
+  }
+]

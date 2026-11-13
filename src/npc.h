@@ -1216,11 +1216,9 @@ class npc : public Character
 
         void witness_thievery( item *it ) override;
 
-        /* shift() works much like monster::shift(), and is called when the player moves
-         * from one submap to an adjacent submap.  It updates our position (shifting by
-         * 12 tiles), as well as our plans.
-         */
+        // Rebase bubble-local AI state when the active map window moves.
         void shift( const point_rel_sm &s );
+        void update_ai_map_origin( const map &terrain );
 
         // Movement; the following are defined in npcmove.cpp
         void move(); // Picks an action & a target and calls execute_action
@@ -1643,6 +1641,7 @@ class npc : public Character
         int  worst_item_value = 0; // The value of our least-wanted item
 
         std::vector < tripoint_bub_ms > path; // Our movement plans
+        std::optional<point_abs_sm> ai_map_origin; // NOLINT(cata-serialize)
 
         //Set mission source or squad leader for a patrol
         std::string companion_mission_role_id;

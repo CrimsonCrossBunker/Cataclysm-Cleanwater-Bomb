@@ -26,6 +26,7 @@
 #include "effect_on_condition.h"
 #include "enums.h"
 #include "game.h"
+#include "current_map.h"
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
@@ -33,6 +34,8 @@
 #include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
+#include "map_simulation_regions.h"
+#include "mp_world_session.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "math_defines.h"
@@ -110,9 +113,8 @@ weather_type_id get_bad_weather()
  * Causes glare effect to player's eyes if they are not wearing applicable eye protection.
  * @param intensity Level of sun brightness
  */
-void glare( const weather_type_id &w )
+static void apply_glare( const weather_type_id &w, Character &player_character )
 {
-    Character &player_character = get_player_character();//todo npcs, also
     //General prerequisites for glare
     if( g->is_sheltered( player_character.pos_bub() ) ||
         player_character.in_sleep_state() ||
@@ -147,6 +149,11 @@ void glare( const weather_type_id &w )
             player_character.add_effect( *effect, dur, bp );
         }
     }
+}
+
+void glare( const weather_type_id &w )
+{
+    apply_glare( w, get_player_character() );
 }
 
 ////// food vs weather
@@ -337,13 +344,17 @@ double trap::funnel_turns_per_charge( double rain_depth_mm_per_hour ) const
 /**
  * Main routine for filling funnels from weather effects.
  */
-static void fill_funnels( int rain_depth_mm_per_hour, const trap &tr )
+static void fill_funnels( int rain_depth_mm_per_hour, const trap &tr,
+                          const map_simulation_regions *regions )
 {
     const double turns_per_charge = tr.funnel_turns_per_charge( rain_depth_mm_per_hour );
     map &here = get_map();
     // Give each funnel on the map a chance to collect the rain.
     const std::vector<tripoint_bub_ms> &funnel_locs = here.trap_locations( tr.loadid );
     for( const tripoint_bub_ms &loc : funnel_locs ) {
+        if( regions && !regions->owns( here, project_to<coords::sm>( here.get_abs( loc ) ) ) ) {
+            continue;
+        }
         units::volume maxcontains = 0_ml;
         if( one_in( turns_per_charge ) ) {
             // FIXME:
@@ -371,10 +382,10 @@ static void fill_funnels( int rain_depth_mm_per_hour, const trap &tr )
  * Fill funnels and makeshift funnels from weather effects.
  * @see fill_funnels
  */
-static void fill_water_collectors( int mmPerHour )
+static void fill_water_collectors( int mmPerHour, const map_simulation_regions *regions )
 {
     for( const trap * const &e : trap::get_funnels() ) {
-        fill_funnels( mmPerHour, *e );
+        fill_funnels( mmPerHour, *e, regions );
     }
 }
 
@@ -458,35 +469,61 @@ double precip_mm_per_hour( precip_class const p )
         0;
 }
 
+static void apply_rain_to_map( map &terrain, const weather_type_id &w,
+                               const map_simulation_regions *regions )
+{
+    if( !w->rains || w->precip == precip_class::none ) {
+        return;
+    }
+    fill_water_collectors( precip_mm_per_hour( w->precip ), regions );
+    const time_duration decay_time = w->precip == precip_class::very_light ? 5_turns :
+                                     w->precip == precip_class::light ? 15_turns :
+                                     w->precip == precip_class::heavy ? 45_turns : 60_turns;
+    terrain.decay_fields_and_scent( decay_time, regions );
+}
+
+static void apply_weather_to_player( map &terrain, const weather_type_id &w, Character &target )
+{
+    // Vertical precipitation is blocked by roofs, not walls.
+    if( w->rains && calendar::once_every( 6_seconds ) &&
+        !terrain.is_roofed( target.pos_bub( terrain ) ) ) {
+        const int wetness = w->precip == precip_class::very_light ? 5 :
+                            w->precip == precip_class::light ? 30 :
+                            w->precip == precip_class::heavy ? 60 : 0;
+        wet_character( target, wetness );
+    }
+    apply_glare( w, target );
+}
+
 void handle_weather_effects( const weather_type_id &w )
 {
-    //Possible TODO, make npc/monsters affected
     map &here = get_map();
-    Character &target = get_player_character();
-    if( w->rains && w->precip != precip_class::none ) {
-        fill_water_collectors( precip_mm_per_hour( w->precip ) );
-        int wetness = 0;
-        time_duration decay_time = 60_turns;
-        if( w->precip == precip_class::very_light ) {
-            wetness = 5;
-            decay_time = 5_turns;
-        } else if( w->precip == precip_class::light ) {
-            wetness = 30;
-            decay_time = 15_turns;
-        } else if( w->precip == precip_class::heavy ) {
-            decay_time = 45_turns;
-            wetness = 60;
+    const auto &session = g->multiplayer_session();
+    if( session.has_regions() ) {
+        const map_simulation_regions regions = session.simulation_regions( here );
+        session.visit_resident_maps( here, [&]( map & terrain ) {
+            if( terrain.get_abs_sub().z() >= 0 ) {
+                const swap_map context( terrain );
+                apply_rain_to_map( terrain, w, &regions );
+            }
+        } );
+        for( Creature &actor : g->all_creatures() ) {
+            map *const terrain = session.loaded_map_at( here, actor.pos_abs_sm() );
+            if( !terrain || actor.posz() < 0 || actor.is_underwater() ) {
+                continue;
+            }
+            const swap_map context( *terrain );
+            if( Character *player = actor.as_character();
+                player && ( player->is_avatar() || g->player_controls().is_claimed( *player ) ) ) {
+                apply_weather_to_player( *terrain, w, *player );
+            }
+            terrain->maybe_apply_field_effect( w->passive_effect, actor );
         }
-        here.decay_fields_and_scent( decay_time );
-        // Coarse correction to get us back to previously intended soaking rate.
-        // Precipitation is vertical - only roofs/floors block it, not walls.
-        // is_roofed() walks upward through all z-levels for a complete check.
-        if( calendar::once_every( 6_seconds ) && !here.is_roofed( target.pos_bub() ) ) {
-            wet_character( target, wetness );
-        }
+        get_weather().lightning_active = false;
+        return;
     }
-    glare( w );
-
+    apply_rain_to_map( here, w, nullptr );
+    apply_weather_to_player( here, w, get_player_character() );
     for( Creature &c : g->all_creatures() ) {
         here.maybe_apply_field_effect( w->passive_effect, c );
     }
@@ -1073,10 +1110,12 @@ void weather_manager::update_weather()
         }
 
         if( weather_id->sight_penalty != old_weather->sight_penalty ) {
-            for( int i = -OVERMAP_DEPTH; i <= OVERMAP_HEIGHT; i++ ) {
-                here.set_transparency_cache_dirty( i );
-            }
-            here.set_seen_cache_dirty( tripoint_bub_ms::zero );
+            g->multiplayer_session().visit_resident_maps( here, []( map & terrain ) {
+                for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+                    terrain.set_transparency_cache_dirty( z );
+                    terrain.set_seen_cache_dirty( z );
+                }
+            } );
         }
         if( weather_changed ) {
             effect_on_conditions::process_reactivate();

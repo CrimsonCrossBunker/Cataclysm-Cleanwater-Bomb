@@ -37,6 +37,7 @@
 #include "mission.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_actor_binding.h"
 #include "mtype.h"
 #include "npc.h"
 #include "omdata.h"
@@ -1504,7 +1505,10 @@ void overmap::serialize( std::ostream &fout ) const
     json.member( "npcs" );
     json.start_array();
     for( const auto &i : npcs ) {
-        json.write( *i );
+        // Authenticated guests persist through the world player store.
+        if( !cata_mp::is_player_proxy( *i ) ) {
+            json.write( *i );
+        }
     }
     json.end_array();
     fout << std::endl;
