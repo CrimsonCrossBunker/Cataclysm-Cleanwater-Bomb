@@ -6,6 +6,7 @@
 #include <tuple>
 #include <utility>
 
+#include "bresenham.h"
 #include "cata_assert.h"
 #include "coordinates.h"
 #include "debug.h"
@@ -26,48 +27,7 @@ double iso_tangent( double distance, const units::angle &vertex )
 void bresenham( const point_bub_ms &p1, const point_bub_ms &p2, int t,
                 const std::function<bool( const point_bub_ms & )> &interact )
 {
-    // The slope components.
-    const point_rel_ms d = p2 - p1;
-    // Signs of slope values.
-    const point s( ( d.x() == 0 ) ? 0 : sgn( d.x() ), ( d.y() == 0 ) ? 0 : sgn( d.y() ) );
-    // Absolute values of slopes x2 to avoid rounding errors.
-    const point_rel_ms a = d.abs() * 2;
-
-    point_bub_ms cur = p1;
-
-    if( a.x() == a.y() ) {
-        while( cur.x() != p2.x() ) {
-            cur.y() += s.y;
-            cur.x() += s.x;
-            if( !interact( cur ) ) {
-                break;
-            }
-        }
-    } else if( a.x() > a.y() ) {
-        while( cur.x() != p2.x() ) {
-            if( t > 0 ) {
-                cur.y() += s.y;
-                t -= a.x();
-            }
-            cur.x() += s.x;
-            t += a.y();
-            if( !interact( cur ) ) {
-                break;
-            }
-        }
-    } else {
-        while( cur.y() != p2.y() ) {
-            if( t > 0 ) {
-                cur.x() += s.x;
-                t -= a.y();
-            }
-            cur.y() += s.y;
-            t += a.x();
-            if( !interact( cur ) ) {
-                break;
-            }
-        }
-    }
+    bresenham_2d( p1, p2, t, interact );
 }
 
 void bresenham( const tripoint_bub_ms &loc1, const tripoint_bub_ms &loc2, int t, int t2,
@@ -230,7 +190,7 @@ std::vector<point> line_to( const point &p1, const point &p2, int t )
     if( numCells == 1 ) {
         line.push_back( p1 );
     } else {
-        bresenham( point_bub_ms( p1 ), point_bub_ms( p2 ), t, [&line]( const point_bub_ms & new_point ) {
+        bresenham_2d( point_bub_ms( p1 ), point_bub_ms( p2 ), t, [&line]( const point_bub_ms & new_point ) {
             line.push_back( new_point.raw() );
             return true;
         } );
