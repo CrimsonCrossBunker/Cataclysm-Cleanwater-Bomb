@@ -3591,13 +3591,25 @@ static std::string build_map_sync_z( remote_player_session &recipient, int az, b
             }
             std::vector<int> ter_cells;
             std::vector<int> furn_cells;
+            std::string furniture_offsets;
             ter_cells.reserve( SEEX * SEEY );
             furn_cells.reserve( SEEX * SEEY );
             for( int ly = 0; ly < SEEY; ++ly ) {
                 for( int lx = 0; lx < SEEX; ++lx ) {
                     const tripoint_bub_ms bub{ bub0.x() + lx, bub0.y() + ly, bub0.z() };
                     ter_cells.push_back( idx_of( m.ter( bub ).id().str() ) );
-                    furn_cells.push_back( idx_of( m.furn( bub ).id().str() ) );
+                    const furn_id furnishing = m.furn( bub );
+                    furn_cells.push_back( idx_of( furnishing.id().str() ) );
+                    if( furnishing ) {
+                        const point offset = m.furniture_offset( bub );
+                        if( offset != point::zero ) {
+                            if( !furniture_offsets.empty() ) {
+                                furniture_offsets += ',';
+                            }
+                            furniture_offsets += '[' + std::to_string( ly * SEEX + lx ) + ',' +
+                                                 std::to_string( offset.x ) + ',' + std::to_string( offset.y ) + ']';
+                        }
+                    }
                 }
             }
             if( !first_sub ) {
@@ -3607,7 +3619,11 @@ static std::string build_map_sync_z( remote_player_session &recipient, int az, b
             subs += "{\"sx\":" + std::to_string( sm_abs.x() ) +
                     ",\"sy\":" + std::to_string( sm_abs.y() ) +
                     ",\"t\":" + rle( ter_cells ) +
-                    ",\"f\":" + rle( furn_cells ) + "}";
+                    ",\"f\":" + rle( furn_cells );
+            if( !furniture_offsets.empty() ) {
+                subs += ",\"fo\":[" + furniture_offsets + ']';
+            }
+            subs += '}';
             recipient.replication.map_sync_sent.insert( sm_abs );
             ++sent;
         }
@@ -5280,6 +5296,11 @@ static void apply_pending_terrain()
                 const int index = y * SEEX + x;
                 terrain.ter_set( local, chunk.terrain[index] );
                 terrain.furn_set( local, chunk.furniture[index], false, false, true );
+                if( chunk.furniture[index] ) {
+                    const auto offset = chunk.furniture_offsets.find( index );
+                    terrain.set_furniture_offset( local, offset == chunk.furniture_offsets.end() ?
+                                                  point::zero : offset->second );
+                }
             }
         }
         it = pending.erase( it );
@@ -5909,6 +5930,18 @@ bool client_apply_message( const std::string &msg )
                 client_replication_state::terrain_chunk chunk;
                 if( decode( cell.get_array( "t" ), terrain_palette, chunk.terrain ) &&
                     decode( cell.get_array( "f" ), furniture_palette, chunk.furniture ) ) {
+                    if( cell.has_array( "fo" ) ) {
+                        for( JsonArray offset : cell.get_array( "fo" ) ) {
+                            if( offset.size() != 3 ) {
+                                continue;
+                            }
+                            const int index = offset.get_int( 0 );
+                            if( index >= 0 && index < SEEX * SEEY && chunk.furniture[index] ) {
+                                chunk.furniture_offsets.emplace( index,
+                                                                 point( offset.get_int( 1 ), offset.get_int( 2 ) ) );
+                            }
+                        }
+                    }
                     pending.insert_or_assign( position, std::move( chunk ) );
                 }
             }
@@ -7422,7 +7455,9 @@ static std::string build_tile_changes( remote_player_session &recipient,
             }
             const tripoint_bub_ms bub = m.get_bub( abs );
             const std::string ter_str  = m.ter( bub ).id().str();
-            const std::string furn_str = m.furn( bub ).id().str();
+            const furn_id furnishing = m.furn( bub );
+            const std::string furn_str = furnishing.id().str();
+            const point furniture_offset = furnishing ? m.furniture_offset( bub ) : point::zero;
 
             // Build item fingerprint and JSON simultaneously.
             // Full item serialize() is used so nested pocket contents are included.
@@ -7486,6 +7521,7 @@ static std::string build_tile_changes( remote_player_session &recipient,
 
             auto &baseline = recipient.replication.tile_baseline[abs];
             if( baseline.ter == ter_str && baseline.furn == furn_str &&
+                baseline.furniture_offset == furniture_offset &&
                 baseline.items_sig == items_sig && baseline.fields_sig == fields_sig &&
                 baseline.trap_sig == trap_sig && baseline.graffiti_sig == graffiti_sig &&
                 baseline.partial_con_sig == partial_con_sig ) {
@@ -7494,6 +7530,7 @@ static std::string build_tile_changes( remote_player_session &recipient,
             const bool had_pc = !baseline.partial_con_sig.empty();
             baseline.ter          = ter_str;
             baseline.furn         = furn_str;
+            baseline.furniture_offset = furniture_offset;
             baseline.items_sig    = items_sig;
             baseline.fields_sig   = fields_sig;
             baseline.trap_sig     = trap_sig;
@@ -7524,7 +7561,12 @@ static std::string build_tile_changes( remote_player_session &recipient,
             out += ter_str;
             out += R"(","furn":")";
             out += furn_str;
-            out += R"(","items":)";
+            out += '"';
+            if( furniture_offset != point::zero ) {
+                out += ",\"furn_offset\":[" + std::to_string( furniture_offset.x ) + ',' +
+                       std::to_string( furniture_offset.y ) + ']';
+            }
+            out += ",\"items\":";
             out += items_json;
             out += ",\"fields\":";
             out += fields_json;
@@ -7721,6 +7763,9 @@ static void apply_tile_changes( JsonObject &jo )
         if( !furn_str.empty() ) {
             // furn_reset=true — see comment on the other MP furn_set call.
             m.furn_set( bub, furn_id( furn_str ), /* furn_reset */ true );
+            point offset;
+            to.read( "furn_offset", offset );
+            m.set_furniture_offset( bub, offset );
         }
 
         if( to.has_array( "items" ) ) {

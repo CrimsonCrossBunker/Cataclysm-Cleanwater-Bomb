@@ -8519,6 +8519,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     }
     const tripoint_bub_ms pos = who.pos_bub( here );
     const bool within_cell = step && pos == dest_loc;
+    const bool settle_furniture = furniture_move && step;
+    if( settle_furniture && ( who.is_mounted() || !step->drags_furniture( who ) ) ) {
+        return false;
+    }
 
     const tripoint_abs_ms dest_loc_abs = here.get_abs( dest_loc );
 
@@ -8576,6 +8580,8 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const uint64_t expected_grab_generation = who.grab_generation();
     const tripoint_rel_ms expected_grab_point = who.grab_point;
     const furn_id expected_grab_furniture = here.furn( pos + who.grab_point );
+    const point expected_furniture_offset = settle_furniture ?
+                                            here.furniture_offset( pos + who.grab_point ) : point::zero;
 
     bool pushing = false; // moving -into- grabbed tile; skip check for move_cost > 0
     bool pulling = false; // moving -away- from grabbed tile; check for move_cost > 0
@@ -8585,7 +8591,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const tripoint_bub_ms furn_dest = dest_loc + who.grab_point.xy();
 
     bool grabbed = who.get_grab_type() != object_type::NONE;
-    if( grabbed ) {
+    if( grabbed && !within_cell ) {
         const tripoint_rel_ms dp = dest_loc - pos;
         pushing = dp.xy() == who.grab_point.xy();
         pulling = dp.xy() == -who.grab_point.xy();
@@ -8595,7 +8601,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     if( grabbed && who.get_grab_type() == object_type::FURNITURE ) {
         // We only care about shifting, because it's the only one that can change our destination
         if( here.has_furn( pos + who.grab_point ) ) {
-            shifting_furniture = !pushing && !pulling;
+            shifting_furniture = !step && !pushing && !pulling;
         } else {
             // We were grabbing a furniture that isn't there
             grabbed = false;
@@ -8679,7 +8685,8 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         cata::lua_platform::has_native_hook( "on_player_try_move" );
     const bool has_character_try_move =
         cata::lua_platform::has_native_hook( "on_character_try_move" );
-    if( has_player_try_move || has_character_try_move ) {
+    if( ( has_player_try_move || has_character_try_move ) &&
+        ( !step || !step->drags_furniture( who ) || settle_furniture ) ) {
         const auto mount = who.is_mounted() ? who.mounted_creature : shared_ptr_fast<monster>();
         cata::lua_platform::native_callback_arguments payload = {
             { "player", static_cast<const Character *>( &who ) },
@@ -8735,14 +8742,16 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             ( !impassable_field_ids.empty() && !who.is_immune_fields( impassable_field_ids ) ) ) ) ) {
         return false;
     }
-    if( grabbed && ( ( !furniture_move && !who.grab_matches( here ) ) ||
+    if( grabbed && ( ( ( !furniture_move || settle_furniture ) && !who.grab_matches( here ) ) ||
                      who.grab_generation() != expected_grab_generation ||
                      who.get_grab_type() != expected_grab_type ||
                      who.grab_point != expected_grab_point ||
                      ( expected_grab_type == object_type::VEHICLE &&
                        ( !grabbed_vehicle || grabbed_vehicle->uid().get_value() != expected_grab_vehicle ) ) ||
                      ( expected_grab_type == object_type::FURNITURE &&
-                       here.furn( pos + who.grab_point ) != expected_grab_furniture ) ) ) {
+                       ( here.furn( pos + who.grab_point ) != expected_grab_furniture ||
+                         ( settle_furniture && here.furniture_offset( pos + who.grab_point ) !=
+                           expected_furniture_offset ) ) ) ) ) {
         return false;
     }
 
@@ -8814,13 +8823,20 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
                                     vp_grab->vehicle().part( vp_grab->part_index() ).get_base().uid().get_value() : 0;
     const bool ignore_fields = !impassable_field_ids.empty() &&
                                who.is_immune_fields( impassable_field_ids );
-    const int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
+    int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
         modifier, via_ramp, false, ignore_fields, !step );
 
-    if( !furniture_move && grabbed_move( who, dest_loc - pos, via_ramp, false, choices ) ) {
+    if( !furniture_move && grabbed_move( who, dest_loc - pos, via_ramp, false, choices, step ) ) {
         return true;
-    } else if( mcost == 0 ) {
+    } else if( mcost == 0 && !settle_furniture ) {
         return false;
+    }
+    if( settle_furniture ) {
+        if( grabbed_furn_move( who, dest_loc - pos, step->furniture_landing_offset( who, here ) ) ) {
+            return false;
+        }
+        mcost = here.combined_movecost( pos, dest_loc, nullptr, 0, via_ramp, false,
+                                        ignore_fields, false );
     }
     if( !still_at_origin() ) {
         return true;
@@ -8969,8 +8985,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
 
     std::optional<world_position> precise;
     if( step || grabbed || furniture_move ) {
-        // Dragging is still a whole-cell operation. Translate the operator
-        // with the object without recentering their position inside the cell.
+        // Grid dragging keeps the operator's exact position inside the cell.
         tripoint offset = step ? step->target.offset() : original_position.offset();
         if( via_ramp ) {
             offset.z = 0;
@@ -9966,10 +9981,10 @@ int game::grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp )
 
     tripoint_bub_ms fdest = fpos + tripoint_rel_ms( dp.xy(), 0 ); // intended destination of furniture.
 
-    const bool canmove = can_move_furniture( who, fdest, dp );
+    const bool canmove = dp == tripoint_rel_ms::zero || can_move_furniture( who, fdest, dp );
     const furn_t &furntype = here.furn( fpos ).obj();
     const map_stack &ms = here.i_at( fdest );
-    const int dst_items = ms.size();
+    const int dst_items = fdest == fpos ? 0 : ms.size();
 
     const bool only_liquid_items = std::all_of( ms.begin(), ms.end(),
     [&]( const item & liquid_item ) {
@@ -10022,7 +10037,8 @@ int game::grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp )
     return moves_total;
 }
 
-bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
+bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp,
+                              const std::optional<point> &offset )
 {
     map &here = get_map();
     if( !who.validate_grab( here ) ) {
@@ -10040,16 +10056,18 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
         return false;
     }
 
-    const bool pushing_furniture = dp.xy() ==  who.grab_point.xy();
-    const bool pulling_furniture = dp.xy() == -who.grab_point.xy();
-    const bool shifting_furniture = !pushing_furniture && !pulling_furniture;
+    const int along_grab = dp.x() * who.grab_point.x() + dp.y() * who.grab_point.y();
+    const bool pushing_furniture = offset ? along_grab > 0 : dp.xy() == who.grab_point.xy();
+    const bool pulling_furniture = offset ? along_grab < 0 : dp.xy() == -who.grab_point.xy();
+    const bool within_cell = offset && dp == tripoint_rel_ms::zero;
+    const bool shifting_furniture = !offset && !pushing_furniture && !pulling_furniture;
 
     // Intended destination of furniture.
     const tripoint_bub_ms fdest = fpos + dp;
 
     // Unfortunately, game::is_empty fails for tiles we're standing on,
     // which will forbid pulling, so:
-    const bool canmove = can_move_furniture( who, fdest, dp );
+    const bool canmove = within_cell || can_move_furniture( who, fdest, dp );
     // @TODO: it should be possible to move over invisible traps. This should probably
     // trigger the trap.
     // The current check (no move if trap) allows a player to detect invisible traps by
@@ -10058,7 +10076,7 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
     const furn_t furntype = here.furn( fpos ).obj();
     const int src_items = here.i_at( fpos ).size();
     const map_stack &dst_ms = here.i_at( fdest );
-    const int dst_items = dst_ms.size();
+    const int dst_items = within_cell ? 0 : dst_ms.size();
 
     const bool only_liquid_items = std::all_of( dst_ms.begin(), dst_ms.end(),
     [&]( const item & liquid_item ) {
@@ -10143,6 +10161,9 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
     }
     sounds::sound( fdest, furntype.move_str_req * 2, sounds::sound_t::movement,
                    _( "a scraping noise." ), true, "misc", "scraping" );
+    if( within_cell ) {
+        return !here.set_furniture_offset( fpos, *offset );
+    }
 
     if( here.veh_at( fdest ) ) {
         who.grab( object_type::NONE );
@@ -10160,7 +10181,9 @@ bool game::grabbed_furn_move( Character &who, const tripoint_rel_ms &dp )
         return shifting_furniture;
     } else {
         // Actually move the furniture.
+        const point displacement = offset.value_or( here.furniture_offset( fpos ) );
         here.furn_set( fdest, here.furn( fpos ), false, false, true );
+        here.set_furniture_offset( fdest, displacement );
         here.furn_set( fpos, furn_str_id::NULL_ID(), true );
     }
 
@@ -10231,7 +10254,8 @@ bool game::grabbed_move( const tripoint_rel_ms &dp, const bool via_ramp, bool st
 }
 
 bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool via_ramp,
-                         bool stairs_move, const walk_move_choices *choices )
+                         bool stairs_move, const walk_move_choices *choices,
+                         const fractional_walk *step )
 {
     if( who.get_grab_type() == object_type::NONE ) {
         return false;
@@ -10247,7 +10271,8 @@ bool game::grabbed_move( Character &who, const tripoint_rel_ms &dp, const bool v
         const activity_execution execution = who.activity.execution();
         const character_action_guard lifetime( who );
         who.assign_activity( move_furniture_activity_actor( dp, via_ramp,
-                             choices ? std::make_optional( *choices ) : std::nullopt ) );
+                choices ? std::make_optional( *choices ) : std::nullopt,
+                step ? std::make_optional( step->displacement ) : std::nullopt ) );
         if( lifetime ) {
             who.activity.set_execution( execution );
         }

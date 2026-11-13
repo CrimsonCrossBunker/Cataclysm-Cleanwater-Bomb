@@ -98,10 +98,10 @@ void pick_surfaces::set_vehicle_body( const tripoint &cell, float bottom, float 
     }
 }
 
-void pick_surfaces::add_vehicle_box( const tripoint &cell, const scene_point &minimum,
+void pick_surfaces::add_displaced_box( const tripoint &cell, const scene_point &minimum,
                                      const scene_point &maximum )
 {
-    translated_bodies_.push_back( vehicle_box{ cell, minimum, maximum } );
+    translated_bodies_.push_back( displaced_box{ cell, minimum, maximum } );
 }
 
 void pick_surfaces::add_actor( const tripoint &cell, const scene_point &bottom,
@@ -216,7 +216,7 @@ std::optional<tripoint> pick_surfaces::trace( const scene_point &origin,
             selected = cell;
         }
     }
-    for( const vehicle_box &body : translated_bodies_ ) {
+    for( const displaced_box &body : translated_bodies_ ) {
         float hit = entry;
         float leave = nearest;
         if( clip_axis( origin.x, ray.x, body.minimum.x, body.maximum.x, hit, leave ) &&

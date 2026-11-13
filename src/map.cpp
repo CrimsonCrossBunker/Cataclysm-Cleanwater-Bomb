@@ -2708,6 +2708,47 @@ static void update_tile_index( std::vector<tripoint_bub_ms> &locations,
     }
 }
 
+point map::furniture_offset( const tripoint_bub_ms &p ) const
+{
+    point_sm_ms local;
+    const submap *const sm = inbounds( p ) ? unsafe_get_submap_at( p, local ) : nullptr;
+    return sm ? sm->furniture_offset( local ) : point::zero;
+}
+
+bool map::has_displaced_furniture_near( const tripoint_bub_ms &p ) const
+{
+    constexpr int radius = 2;
+    const auto first = project_to<coords::sm>( p + point( -radius, -radius ) );
+    const auto last = project_to<coords::sm>( p + point( radius, radius ) );
+    for( int y = first.y(); y <= last.y(); ++y ) {
+        for( int x = first.x(); x <= last.x(); ++x ) {
+            const tripoint_bub_ms tile( x * SEEX, y * SEEY, p.z() );
+            const submap *const sm = inbounds( tile ) ? unsafe_get_submap_at( tile ) : nullptr;
+            if( sm && sm->has_displaced_furniture() ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool map::set_furniture_offset( const tripoint_bub_ms &p, const point &offset )
+{
+    point_sm_ms local;
+    submap *const sm = inbounds( p ) ? unsafe_get_submap_at( p, local ) : nullptr;
+    if( !sm ) {
+        return false;
+    }
+    if( sm->furniture_offset( local ) == offset ) {
+        return true;
+    }
+    if( !sm->set_furniture_offset( local, offset ) ) {
+        return false;
+    }
+    sm->player_adjusted_map = true;
+    return true;
+}
+
 bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, const bool furn_reset,
                     bool avoid_creatures, bool allow_on_open_air )
 {

@@ -7538,6 +7538,9 @@ void submap::store( JsonOut &jsout ) const
                 jsout.write( p.x() );
                 jsout.write( p.y() );
                 jsout.write( get_furn( p ).obj().id );
+                if( const point offset = furniture_offset( p ); offset != point::zero ) {
+                    jsout.write( offset );
+                }
                 jsout.end_array();
             }
         }
@@ -7836,8 +7839,16 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 debugmsg( "invalid furn_str_id '%s'", furnstr.c_str() );
                 iid_furn = furn_str_id::NULL_ID().id();
             }
-            m->frn[i][j] = iid_furn;
-            if( furniture_entry.size() > 3 ) {
+            const point_sm_ms cell( i, j );
+            set_furn( cell, iid_furn );
+            if( furniture_entry.size() == 4 ) {
+                point offset;
+                furniture_entry.next_value().read( offset, true );
+                if( iid_furn && !set_furniture_offset( cell, offset ) ) {
+                    furniture_entry.throw_error( "Furniture offset is outside its cell range." );
+                }
+            }
+            if( furniture_entry.size() > 4 ) {
                 furniture_entry.throw_error( "Too many values for furniture entry." );
             }
         }

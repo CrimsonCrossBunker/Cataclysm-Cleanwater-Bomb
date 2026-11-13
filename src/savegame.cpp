@@ -1896,6 +1896,10 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
                     jp.get_member( "point" ).read( pt, false );
                 }
                 revert.set_furn( pt, furn_id( jp.get_string( "furn" ) ) );
+                point offset;
+                if( jp.read( "furn_offset", offset ) ) {
+                    revert.set_furniture_offset( pt, offset );
+                }
                 revert.set_ter( pt, ter_id( jp.get_string( "ter" ) ) );
                 revert.set_trap( pt, trap_id( jp.get_string( "trap" ) ) );
                 if( jp.has_member( "items" ) ) {
@@ -2058,6 +2062,9 @@ void timed_event_manager::serialize_all( JsonOut &jsout )
                     point_sm_ms pt( x, y );
                     jsout.member( "point", pt );
                     jsout.member( "furn", elem.revert.get_furn( pt ) );
+                    if( const point offset = elem.revert.furniture_offset( pt ); offset != point::zero ) {
+                        jsout.member( "furn_offset", offset );
+                    }
                     jsout.member( "ter", elem.revert.get_ter( pt ) );
                     jsout.member( "trap", elem.revert.get_trap( pt ) );
                     jsout.member( "items", elem.revert.get_items( pt ) );

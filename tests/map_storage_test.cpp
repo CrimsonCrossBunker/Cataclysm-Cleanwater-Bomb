@@ -461,6 +461,33 @@ TEST_CASE( "failed_map_save_retains_owned_submaps_for_retry", "[map_storage][sav
     check_quad( buffer, base, ter_t_floor );
 }
 
+TEST_CASE( "displaced_furniture_round_trips_with_the_owning_submap", "[map_storage][save]" )
+{
+    storage_fixture fixture;
+    mapbuffer buffer( fixture.context( "a", "default", false ) );
+    const tripoint_abs_sm base( 0, 0, 0 );
+    const point_sm_ms moved( 1, 1 );
+    const point_sm_ms centered( 2, 1 );
+    const furn_id furniture( "f_chair" );
+    insert_quad( buffer, base, ter_t_floor );
+    submap *original = buffer.lookup_submap( base );
+    REQUIRE( original );
+    original->set_furn( moved, furniture );
+    original->set_furn( centered, furniture );
+    REQUIRE( original->set_furniture_offset( moved, point( -128, 36 ) ) );
+    buffer.save( true );
+    REQUIRE( buffer.begin() == buffer.end() );
+
+    submap *restored = buffer.lookup_submap( base );
+    REQUIRE( restored );
+    CHECK( restored->get_furn( moved ) == furniture );
+    CHECK( restored->furniture_offset( moved ) == point( -128, 36 ) );
+    CHECK( restored->get_furn( centered ) == furniture );
+    CHECK( restored->furniture_offset( centered ) == point::zero );
+    restored->set_furn( moved, furn_str_id::NULL_ID() );
+    CHECK( restored->furniture_offset( moved ) == point::zero );
+}
+
 TEST_CASE( "owned_uniform_maps_persist_without_a_terrain_resolver", "[map_storage][save]" )
 {
     const bool compressed = GENERATE( false, true );

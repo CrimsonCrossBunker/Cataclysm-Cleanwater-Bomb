@@ -975,6 +975,9 @@ class map
             return has_furn( tripoint_bub_ms( p, abs_sub.z() ) );
         }
         furn_id furn( tripoint_bub_ms p ) const;
+        point furniture_offset( const tripoint_bub_ms &p ) const;
+        bool has_displaced_furniture_near( const tripoint_bub_ms &p ) const;
+        bool set_furniture_offset( const tripoint_bub_ms &p, const point &offset );
         furn_id furn( const point_bub_ms &p ) const {
             return furn( tripoint_bub_ms( p, abs_sub.z() ) );
         }

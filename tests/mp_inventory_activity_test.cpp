@@ -13300,6 +13300,99 @@ TEST_CASE( "walking_authority_derives_ramp_height_from_terrain",
     CHECK( get_avatar().posz() == 0 );
 }
 
+TEST_CASE( "fractional_furniture_drag_moves_the_crate_and_its_contents_once",
+           "[grab_owned][fractional_walk][multiplayer]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    get_avatar().setpos( here, tripoint_bub_ms( 30, 30, 0 ), false );
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const auto crate = origin + point::east;
+    const auto landing = crate + point::east;
+    for( const auto &cell : {
+             origin, crate, landing
+         } ) {
+        here.ter_set( cell, ter_id( "t_floor" ) );
+    }
+    const furn_id crate_type( "f_crate_o" );
+    here.furn_set( crate, crate_type );
+    here.add_item_or_charges( crate, item( itype_id( "test_rock" ) ) );
+    who.set_str_base( 50 );
+    who.grab( object_type::FURNITURE, tripoint_rel_ms::east );
+
+    const auto request_step = [&]() {
+        const auto step = fractional_walk::resolve( who.pos_world(), point( 64, 0 ) );
+        REQUIRE( step );
+        walk_move_choices choices;
+        choices.destination = step->target.tile();
+        who.set_moves( 1000 );
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", who.pos_abs() );
+            out.member( "origin_offset", who.pos_world().offset() );
+            out.member( "direction", step->target.tile() - who.pos_abs() );
+            out.member( "fractional_delta", step->displacement );
+            out.member( "mode", "walk" );
+            out.member( "choices", choices );
+        } ) );
+        REQUIRE( who.activity.id() == activity_id( "ACT_FURNITURE_MOVE" ) );
+    };
+    const auto finish = [&]() {
+        who.set_moves( 100000 );
+        fixture.run( who, fixture.request( who, "step" ) );
+    };
+
+    request_step();
+    save_reload_activity( who );
+    SECTION( "subcell move followed by one grid transfer" ) {
+        finish();
+        CHECK( who.pos_bub( here ) == origin );
+        CHECK( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+        CHECK( here.furniture_offset( crate ) == point( 64, 0 ) );
+        REQUIRE( here.i_at( crate ).size() == 1 );
+        CHECK_FALSE( here.has_furn( landing ) );
+
+        request_step();
+        finish();
+        CHECK( who.pos_bub( here ) == crate );
+        CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
+        CHECK_FALSE( here.has_furn( crate ) );
+        CHECK( here.furniture_offset( crate ) == point::zero );
+        CHECK( here.i_at( crate ).empty() );
+        CHECK( here.furn( landing ) == crate_type );
+        CHECK( here.furniture_offset( landing ) == point( -128, 0 ) );
+        REQUIRE( here.i_at( landing ).size() == 1 );
+        CHECK( here.i_at( landing ).begin()->typeId() == itype_id( "test_rock" ) );
+        CHECK( who.grab_matches( here ) );
+    }
+    SECTION( "another player encounters the part sticking out of its cell" ) {
+        finish();
+        REQUIRE( here.furniture_offset( crate ) == point( 64, 0 ) );
+        const auto far_side = landing + point::east;
+        here.ter_set( far_side, ter_id( "t_floor" ) );
+        npc &other = spawn_npc( landing.xy(), "test_talker" );
+        clear_character( other, true );
+        bind_feedback_player( other, 'b', 702 );
+        other.setpos( here, landing, false );
+        other.set_moves( 1000 );
+        const auto position = other.pos_world();
+        CHECK_FALSE( avatar_action::move_fractional( other, here, point( -32, 0 ) ) );
+        CHECK( other.pos_world() == position );
+        CHECK( avatar_action::move_fractional( other, here, point( 32, 0 ) ) );
+    }
+    SECTION( "a wall placed before settlement blocks both bodies" ) {
+        here.ter_set( landing, ter_id( "t_wall" ) );
+        finish();
+        CHECK( who.pos_world() == world_position( here.get_abs( origin ) ) );
+        CHECK( here.furn( crate ) == crate_type );
+        CHECK( here.furniture_offset( crate ) == point::zero );
+        CHECK( here.i_at( crate ).size() == 1 );
+        CHECK_FALSE( here.has_furn( landing ) );
+    }
+}
+
 TEST_CASE( "walking_request_runs_native_furniture_activity_on_the_requesting_player",
            "[mp_inventory_activity][walking_owned][grab_owned]" )
 {

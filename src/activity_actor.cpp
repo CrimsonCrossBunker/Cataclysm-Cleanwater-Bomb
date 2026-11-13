@@ -9545,7 +9545,8 @@ bool move_furniture_activity_actor::target_valid( const Character &who ) const
     }
     const tripoint_bub_ms position = here.get_bub( source.position );
     if( !source.loaded_furniture ) {
-        return !here.veh_at( position ) && here.furn( position ).id() == source.furniture;
+        return !here.veh_at( position ) && here.furn( position ).id() == source.furniture &&
+               ( !fractional_delta || here.furniture_offset( position ) == source_offset );
     }
     const optional_vpart_position vp = here.veh_at( position );
     if( !vp || vp->vehicle().uid().get_value() != source.vehicle_id ) {
@@ -9583,6 +9584,7 @@ bool move_furniture_activity_actor::bind_target( Character &who )
     }
     const tripoint_bub_ms position = here.get_bub( source.position );
     source.loaded_furniture = who.get_grab_type() == object_type::FURNITURE_ON_VEHICLE;
+    source_offset = here.furniture_offset( position );
     if( source.loaded_furniture ) {
         const optional_vpart_position vp = here.veh_at( position );
         const auto tiedown = vp.part_with_feature( "FURNITURE_TIEDOWN", true );
@@ -9613,6 +9615,14 @@ void move_furniture_activity_actor::start( player_activity &act, Character &who 
     } else {
         moves = g->grabbed_furn_move_time( who, dp );
     }
+    if( fractional_delta ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), *fractional_delta );
+        if( !step || !step->drags_furniture( who ) ) {
+            act.set_to_null();
+            return;
+        }
+        moves = step->scale_cost( moves );
+    }
     act.moves_left = moves;
     act.moves_total = moves;
 }
@@ -9634,10 +9644,20 @@ void move_furniture_activity_actor::finish( player_activity &act, Character &who
         act.set_to_null();
         return;
     }
-    const character_action_guard lifetime( who );
-    const bool ramp = via_ramp;
     const auto decisions = choices;
     const activity_execution execution = act.execution();
+    if( fractional_delta ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), *fractional_delta );
+        act.set_to_null();
+        who.activity.set_execution( execution );
+        if( step && step->drags_furniture( who ) && step->target.tile() == landing ) {
+            g->walk_move( who, here.get_bub( landing ), false, true,
+                          decisions ? &*decisions : nullptr, &*step );
+        }
+        return;
+    }
+    const character_action_guard lifetime( who );
+    const bool ramp = via_ramp;
     const world_position starting_position = who.pos_world();
     const auto context = here.get_context_reference();
     const bool stay = source.loaded_furniture ? move_loaded_furniture( who, dp ) :
@@ -9687,6 +9707,10 @@ void move_furniture_activity_actor::serialize( JsonOut &out ) const
         out.member( "origin_offset", *origin_offset );
     }
     out.member( "source", source );
+    if( fractional_delta ) {
+        out.member( "fractional_delta", *fractional_delta );
+        out.member( "source_offset", source_offset );
+    }
     if( choices ) {
         out.member( "choices", *choices );
     }
@@ -9707,6 +9731,11 @@ std::unique_ptr<activity_actor> move_furniture_activity_actor::deserialize( Json
         data.read( "origin_offset", *actor.origin_offset );
     }
     data.read( "source", actor.source );
+    if( data.has_member( "fractional_delta" ) ) {
+        actor.fractional_delta.emplace();
+        data.read( "fractional_delta", *actor.fractional_delta );
+        data.read( "source_offset", actor.source_offset );
+    }
     if( data.has_object( "choices" ) ) {
         actor.choices.emplace();
         data.read( "choices", *actor.choices );

@@ -965,7 +965,7 @@ bool avatar_action::can_move_fractional( const Character &you, const map &here )
     const bool powered_mount = you.is_mounted() &&
                                you.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH );
     return here.has_loaded_submap( you.pos_bub( here ) ) && !you.in_vehicle && !powered_mount &&
-           you.get_grab_type() == object_type::NONE &&
+           ( you.get_grab_type() == object_type::NONE || you.get_grab_type() == object_type::FURNITURE ) &&
            !you.has_effect( effect_stunned ) && !you.has_effect( effect_psi_stunned );
 }
 
@@ -976,7 +976,8 @@ bool avatar_action::move_fractional( Character &you, map &m, const point &delta,
         return false;
     }
     const auto step = fractional_walk::resolve( you.pos_world(), delta );
-    return step && move_character( you, m, step->target.tile() - you.pos_abs(), choices, &*step );
+    return step && ( you.get_grab_type() == object_type::NONE || step->drags_furniture( you ) ) &&
+           move_character( you, m, step->target.tile() - you.pos_abs(), choices, &*step );
 }
 
 void avatar_action::swim( map &m, avatar &you, const tripoint_bub_ms &p )

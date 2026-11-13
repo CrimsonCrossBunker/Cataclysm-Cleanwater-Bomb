@@ -1885,8 +1885,15 @@ static std::optional<point> fractional_walk_input( const avatar &who, const map 
         !avatar_action::can_move_fractional( who, here ) ) {
         return std::nullopt;
     }
-    return fractional_walk::camera_delta( get_delta_from_movement_action( action,
-            iso_rotate::no ).raw(), camera->forward );
+    const point delta = fractional_walk::camera_delta( get_delta_from_movement_action( action,
+        iso_rotate::no ).raw(), camera->forward );
+    if( who.get_grab_type() != object_type::NONE ) {
+        const auto step = fractional_walk::resolve( who.pos_world(), delta );
+        if( !step || !step->drags_furniture( who ) ) {
+            return std::nullopt;
+        }
+    }
+    return delta;
 }
 
 // NOLINTNEXTLINE(readability-function-size)

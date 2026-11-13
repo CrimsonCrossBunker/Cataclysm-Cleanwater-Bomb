@@ -1083,7 +1083,8 @@ class game
         // Handle pushing during move, returns true if it handled the move
         bool grabbed_move( const tripoint_rel_ms &dp, bool via_ramp, bool stairs_move = false );
         bool grabbed_move( Character &who, const tripoint_rel_ms &dp, bool via_ramp,
-                           bool stairs_move = false, const walk_move_choices *choices = nullptr );
+                           bool stairs_move = false, const walk_move_choices *choices = nullptr,
+                           const fractional_walk *step = nullptr );
         bool grabbed_veh_move_helper( const tripoint_rel_ms &dp, bool stairs_move );
         bool grabbed_veh_move_helper( Character &who, const tripoint_rel_ms &dp, bool stairs_move );
         bool grabbed_veh_move_stairs( const tripoint_rel_ms &dp );
@@ -1125,7 +1126,8 @@ class game
         int grabbed_furn_move_time( const tripoint_rel_ms &dp );
         int grabbed_furn_move_time( Character &who, const tripoint_rel_ms &dp );
         bool grabbed_furn_move( const tripoint_rel_ms &dp );
-        bool grabbed_furn_move( Character &who, const tripoint_rel_ms &dp );
+        bool grabbed_furn_move( Character &who, const tripoint_rel_ms &dp,
+                                const std::optional<point> &offset = std::nullopt );
 
         void reload_item(); // Reload an item
         void reload_wielded( bool prompt = false );

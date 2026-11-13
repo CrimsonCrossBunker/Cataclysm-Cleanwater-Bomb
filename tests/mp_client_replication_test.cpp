@@ -157,12 +157,14 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     existing->last_touched = calendar::turn - 1_days;
     const time_point last_touched = existing->last_touched;
     REQUIRE( MAPBUFFER.add_submap( destination, existing ) );
-    const std::string prefix = R"({"type":"map_sync","z":0,"pal":["t_wall","f_null"],"subs":[{"sx":)" +
-                               std::to_string( destination.x() ) + ",\"sy\":" +
-                               std::to_string( destination.y() );
+    const std::string prefix =
+        R"({"type":"map_sync","z":0,"pal":["t_wall","f_null","f_chair"],"subs":[{"sx":)" +
+        std::to_string( destination.x() ) + ",\"sy\":" +
+        std::to_string( destination.y() );
     CHECK( cata_mp::client_apply_message( prefix + R"(,"t":[[99999999,0]],"f":[[144,1]]}]})" ) );
     CHECK( session.replication.client.pending_terrain.empty() );
-    REQUIRE( cata_mp::client_apply_message( prefix + R"(,"t":[[144,0]],"f":[[144,1]]}]})" ) );
+    REQUIRE( cata_mp::client_apply_message( prefix +
+                                            R"(,"t":[[144,0]],"f":[[1,2],[143,1]],"fo":[[0,-64,25]]}]})" ) );
     REQUIRE( session.replication.client.pending_terrain.count( destination ) == 1 );
     REQUIRE( cata_mp::client_apply_message( state( absolute + point::east,
             R"(,"offset":[23,164,0])" ) ) );
@@ -171,6 +173,9 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     CHECK( here.ter( here.get_bub( absolute ) ) == ter_str_id( "t_wall" ).id() );
     CHECK( MAPBUFFER.lookup_submap( destination )->last_touched == last_touched );
     CHECK( session.replication.client.pending_terrain.empty() );
+    CHECK( here.furniture_offset( here.get_bub( absolute ) ) == point( -64, 25 ) );
+    REQUIRE( cata_mp::client_apply_message( prefix + R"(,"t":[[144,0]],"f":[[1,2],[143,1]]}]})" ) );
+    CHECK( here.furniture_offset( here.get_bub( absolute ) ) == point::zero );
     REQUIRE( cata_mp::client_apply_message( state( absolute + point::east,
             R"(,"offset":[79,163,0])" ) ) );
     CHECK( get_avatar().pos_world().offset() == tripoint( 79, 163, 0 ) );

@@ -2792,6 +2792,8 @@ class move_furniture_activity_actor : public activity_actor
         uint64_t grab_generation = 0;
         tripoint_abs_ms origin;
         std::optional<tripoint> origin_offset;
+        std::optional<point> fractional_delta;
+        point source_offset = point::zero;
         grab_selection source;
         std::optional<walk_move_choices> choices;
         bool bind_target( Character &who );
@@ -2800,8 +2802,10 @@ class move_furniture_activity_actor : public activity_actor
 
     public:
         move_furniture_activity_actor( const tripoint_rel_ms &dp, bool via_ramp,
-                                       std::optional<walk_move_choices> choices = std::nullopt ) :
-            dp( dp ), via_ramp( via_ramp ), choices( std::move( choices ) ) {}
+                                       std::optional<walk_move_choices> choices = std::nullopt,
+                                       std::optional<point> fractional_delta = std::nullopt ) :
+            dp( dp ), via_ramp( via_ramp ), fractional_delta( fractional_delta ),
+            choices( std::move( choices ) ) {}
         const activity_id &get_type() const override {
             static const activity_id ACT_FURNITURE_MOVE( "ACT_FURNITURE_MOVE" );
             return ACT_FURNITURE_MOVE;

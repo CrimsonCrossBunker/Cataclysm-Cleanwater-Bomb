@@ -48,6 +48,7 @@ struct mp_chat_line {
 struct mp_tile_state {
     std::string ter;
     std::string furn;
+    point furniture_offset = point::zero;
     std::string items_sig;    // "type:charges,..." — empty when no items
     std::string fields_sig;   // "type:intensity,..." — empty when no fields
     std::string trap_sig;     // trap id string, empty = tr_null (no placed trap)
@@ -152,6 +153,7 @@ struct client_replication_state {
     struct terrain_chunk {
         std::array<ter_id, SEEX * SEEY> terrain;
         std::array<furn_id, SEEX * SEEY> furniture;
+        std::map<int, point> furniture_offsets;
     };
     // Receive terrain before a state moves the local window over it.
     std::map<tripoint_abs_sm, terrain_chunk> pending_terrain;

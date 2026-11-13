@@ -3790,6 +3790,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 }
 
                 if( !roof_unseen && f != furn_str_id::NULL_ID() && count < MAX_DRAW_INSTANCES ) {
+                    const point offset = here.furniture_offset( p );
+                    const float fx = static_cast<float>( dx ) + position_fraction( offset.x );
+                    const float fy = static_cast<float>( dy ) + position_fraction( offset.y );
                     sprite_lookup_3d fl;
                     lookup_sprite_layers_3d( tiles, f->id.str(), TILE_CATEGORY::FURNITURE, p,
                                              -1, 0, true, fl );
@@ -3815,25 +3818,31 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     if( flat ) {
                         std::vector<float> &v = bucket_for( MODE_FLATQUAD_DECAL,
                                                             ftex ? fspr.atlas : nullptr );
-                        push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                        push_instance( v, fx, fy,
                                        wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, fr, fg, fb,
                                        false, fl.fg_rot4, false, -1.0f, ghost, tone.sat );
                     } else {
                         std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
                                                             ftex ? fspr.atlas : nullptr );
-                        push_instance( v, dx + 0.5f, dy + 0.5f,
+                        push_instance( v, fx + 0.5f, fy + 0.5f,
                                        wz - FURN_QUAD_HEIGHT * fspr.base_drop,
                                        fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
                                        false, 0, false, -1.0f, ghost, tone.sat );
                     }
                     ++count;
+                    if( offset != point::zero ) {
+                        surfaces.add_displaced_box( tripoint( dx, dy, zlev ), { fx, fy, wz }, {
+                            fx + 1.0f, fy + 1.0f,
+                            wz + ( flat ? 0.01f : FURN_QUAD_HEIGHT )
+                        } );
+                    }
                     if( !flat && layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
                         // the indicator rides the body's exact quad, a hair
                         // toward the camera so the strict depth test never
                         // drops it
                         std::vector<float> &vo = bucket_for( MODE_BILLBOARD_SNAP, fl.fg.atlas );
-                        push_instance( vo, dx + 0.5f - fwd_x * 0.02f,
-                                       dy + 0.5f - fwd_y * 0.02f,
+                        push_instance( vo, fx + 0.5f - fwd_x * 0.02f,
+                                       fy + 0.5f - fwd_y * 0.02f,
                                        wz - FURN_QUAD_HEIGHT * fspr.base_drop,
                                        fw, FURN_QUAD_HEIGHT, 1.0f, fl.fg,
                                        tone.shade, tone.shade, tone.shade,
@@ -4237,7 +4246,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                             }
                             if( near_hide && vdrew && ( slope || offset != point::zero ) ) {
-                                surfaces.add_vehicle_box( tripoint( dx, dy, zlev ),
+                                surfaces.add_displaced_box( tripoint( dx, dy, zlev ),
                                 { dx + shift_x, dy + shift_y, vehicle_z + VEH_DECAL_Z - 0.002f },
                                 { dx + shift_x + 1.0f, dy + shift_y + 1.0f, vehicle_z + VEH_DECAL_Z + 0.002f } );
                             }
@@ -4615,7 +4624,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 if( !slope && offset == point::zero ) {
                                     surfaces.set_vehicle_body( cell, body_bottom, box_top );
                                 } else {
-                                    surfaces.add_vehicle_box( cell, { left, top, vehicle_z + body_bottom },
+                                    surfaces.add_displaced_box( cell, { left, top, vehicle_z + body_bottom },
                                     { left + 1.0f, top + 1.0f, vehicle_z + box_top } );
                                 }
                                 sprite_info rspr; // untextured -> white fallback x color
