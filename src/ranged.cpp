@@ -1705,7 +1705,7 @@ int throw_cost( const Character &c, const item &to_throw )
     // Differences:
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
-    const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
+    const int base_move_cost = to_throw.attack_time( c ) / 2;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
     const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier( to_throw );
@@ -1725,9 +1725,7 @@ int throw_cost( const Character &c, const item &to_throw )
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
-    if( do_railgun ) {
-        move_cost -= c.get_dex();
-    }
+    move_cost -= c.get_dex();
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
                                   ( do_railgun ? 1.0f : c.throw_speed_multiplier( to_throw ) ) ) );
