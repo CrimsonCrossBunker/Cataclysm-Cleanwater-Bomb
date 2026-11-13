@@ -144,7 +144,7 @@ TEST_CASE( "authoritative_throw_matches_native_damage_cost_and_rng", "[multiplay
     REQUIRE( who.get_cardiofit() == reference.get_cardiofit() );
     REQUIRE( who.get_stamina_max() == reference.get_stamina_max() );
     auto victim = make_shared_fast<monster>( mon_test_zombie,
-                                            tripoint_bub_ms( 65, 60, 0 ) );
+                  tripoint_bub_ms( 65, 60, 0 ) );
     victim->set_hp( 1000 );
     auto expected_victim = make_shared_fast<monster>( *victim );
     expected_victim->spawn( tripoint_bub_ms( 65, 80, 0 ) );
@@ -398,7 +398,7 @@ TEST_CASE( "authoritative_sling_matches_native_ignition_damage_cost_and_rng",
     who.set_moves( 1000 );
     reference.set_moves( 1000 );
     auto victim = make_shared_fast<monster>( mon_test_zombie,
-                                            tripoint_bub_ms( 65, 60, 0 ) );
+                  tripoint_bub_ms( 65, 60, 0 ) );
     victim->set_hp( 1000 );
     auto expected_victim = make_shared_fast<monster>( *victim );
     expected_victim->spawn( tripoint_bub_ms( 65, 80, 0 ) );
