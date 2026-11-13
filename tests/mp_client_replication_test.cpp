@@ -117,7 +117,7 @@ TEST_CASE( "mp_client_exits_replica_without_switching_to_solo",
     CHECK( cata_mp::is_client_mode() );
     CHECK( guest.get_moves() == 0 );
     CHECK( g->uquit == QUIT_NOSAVED );
-    CHECK( g->is_game_over() );
+    CHECK_FALSE( session.client_turn.exit_reason.empty() );
     CHECK_FALSE( cata_mp::client_apply_message( packet ) );
 }
 
