@@ -813,16 +813,17 @@ bool composite_latest_frame( SDL_Renderer *renderer, const SDL_FRect &dest )
     if( slot.state != frame_slot_state::ready || !slot.color_tex_sdl ) {
         return false;
     }
-    if( !SDL_RenderTexture( renderer, slot.color_tex_sdl, nullptr, &dest ) ) {
+    if( !slot.camera.terrain || slot.camera.terrain.get() != &get_map() ||
+        !SDL_RenderTexture( renderer, slot.color_tex_sdl, nullptr, &dest ) ) {
         return false;
     }
     if( presented_serial != slot.serial ) {
         // The slot can be reused while its image is still on screen. Keep
         // the published surface buffer independently and recycle the old one.
         std::swap( presented_surfaces, slot.surfaces );
-        presented_camera = slot.camera;
         presented_serial = slot.serial;
     }
+    presented_camera = slot.camera;
     presented_camera.viewport = dest;
     return true;
 }
@@ -4931,8 +4932,7 @@ namespace
 // rotate a single compass step by `steps` octants (clockwise on the compass)
 bool camera_rotate_step( int &dx, int &dy, const int steps )
 {
-    if( replay_mode == replay_mode_t::replay || !use_tiles || !g_available ||
-        !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+    if( replay_mode == replay_mode_t::replay || !view_active() ) {
         return false;
     }
     const int idx = compass_index( point_rel_ms( dx, dy ) );
@@ -4961,25 +4961,29 @@ bool camera_map_to_screen_delta( int &dx, int &dy )
     return camera_rotate_step( dx, dy, -camera_forward_octant() );
 }
 
-std::optional<point> camera_walk_delta( const point &screen )
+static camera_input camera_from_yaw()
 {
-    const auto camera = movement_camera();
-    if( !camera || compass_index( point_rel_ms( screen ) ) < 0 ) {
-        return std::nullopt;
-    }
-    return fractional_walk::camera_delta( screen, camera->forward );
-}
-
-std::optional<camera_input> movement_camera()
-{
-    if( !use_tiles || !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
-        return std::nullopt;
-    }
     constexpr int scale = camera_input::forward_limit;
     static_assert( scale == fractional_walk::max_distance );
     return camera_input{ camera_forward_octant(),
                          point( static_cast<int>( scale * std::cos( g_yaw ) ),
                                 static_cast<int>( scale * std::sin( g_yaw ) ) ) };
+}
+
+std::optional<point> camera_walk_delta( const point &screen )
+{
+    if( compass_index( point_rel_ms( screen ) ) < 0 ) {
+        return std::nullopt;
+    }
+    return fractional_walk::camera_delta( screen, camera_from_yaw().forward );
+}
+
+std::optional<camera_input> movement_camera()
+{
+    if( !view_active() ) {
+        return std::nullopt;
+    }
+    return camera_from_yaw();
 }
 
 void sync_mouse_capture( SDL_Renderer *renderer, const bool want )
@@ -5022,20 +5026,28 @@ void on_renderer_destroyed()
     g_mouse_captured = false;
 }
 
-bool available()
+bool view_active()
 {
-    return g_available;
+    return use_tiles && g_available && get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
+           presented_camera.terrain && presented_camera.terrain.get() == &get_map();
 }
 
-bool ensure_available( SDL_Renderer *renderer )
+bool contains_pixel( const point &logical_pixel )
 {
-    if( renderer && renderer != g_probed_renderer ) {
-        on_renderer_created( renderer );
-    }
-    return g_available;
+    const SDL_FRect &rect = presented_camera.viewport;
+    return logical_pixel.x >= rect.x && logical_pixel.y >= rect.y &&
+           logical_pixel.x < rect.x + rect.w && logical_pixel.y < rect.y + rect.h;
 }
 
-void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
+void leave_view( SDL_Renderer *renderer )
+{
+    sync_mouse_capture( renderer, false );
+    presented_camera = {};
+    g_game_cursors.clear();
+    g_last_mouse = point::north_west;
+}
+
+bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                           const tripoint_bub_ms &center, cata_tiles *tiles )
 {
     static int call_count = 0;
@@ -5046,20 +5058,20 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                       " renderer_match=" + ( renderer == g_probed_renderer ? std::string( "yes" ) :
                                              std::string( "no" ) ) );
     }
-    if( !renderer ) {
-        return;
+    if( !renderer || dest.w <= 0.0f || dest.h <= 0.0f ) {
+        return false;
     }
     if( renderer != g_probed_renderer ) {
         on_renderer_created( renderer );
     }
     if( !g_available ) {
-        return;
+        return false;
     }
     const int w = std::max( 64, static_cast<int>( dest.w ) );
     const int h = std::max( 64, static_cast<int>( dest.h ) );
     if( !ensure_targets( renderer, w, h ) ) {
         g_available = false;
-        return;
+        return false;
     }
     const bool profile = profiling_enabled();
     g_profile = frame_profile{};
@@ -5166,14 +5178,14 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
             }
         }
         const Uint64 composite_begin = profile_ticks( profile );
-        composite_latest_frame( renderer, dest );
+        const bool composited = composite_latest_frame( renderer, dest );
         if( profile ) {
             const Uint64 frame_end = profile_ticks( true );
             g_profile.composite_ms = profile_ms( composite_begin, frame_end );
             g_profile.total_ms = profile_ms( total_begin, frame_end );
         }
         publish_profile( g_profile );
-        return;
+        return composited;
     }
     frame_slot &slot = g_ctx.slots[slot_index];
     slot.texture_owners.clear();
@@ -5405,12 +5417,12 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         slot.state = frame_slot_state::empty;
         slot.texture_owners.clear();
         g_recording_slot = nullptr;
-        composite_latest_frame( renderer, dest );
+        const bool composited = composite_latest_frame( renderer, dest );
         if( profile ) {
             g_profile.total_ms = profile_ms( total_begin, profile_ticks( true ) );
         }
         publish_profile( g_profile );
-        return;
+        return composited;
     }
 
     // upload instance data. A fully culled scene still renders the sky/clear,
@@ -5466,14 +5478,24 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     if( profile ) {
         g_profile.upload_ms = profile_ms( upload_begin, profile_ticks( true ) );
     }
+    const auto discard_submission = [&]() {
+        SDL_CancelGPUCommandBuffer( cmd );
+        slot.state = frame_slot_state::empty;
+        slot.texture_owners.clear();
+        g_recording_slot = nullptr;
+        if( profile ) {
+            g_profile.total_ms = profile_ms( total_begin, profile_ticks( true ) );
+        }
+        publish_profile( g_profile );
+        return composite_latest_frame( renderer, dest );
+    };
     if( !upload_ok ) {
-        // Never draw stale instance data from this slot's previous submission.
-        segments.clear();
         static bool upload_failure_logged = false;
         if( !upload_failure_logged ) {
             upload_failure_logged = true;
-            write_status( "instance upload failed; world geometry skipped for this frame" );
+            write_status( "instance upload failed; discarding incomplete 3D frame" );
         }
+        return discard_submission();
     }
 
     // pass 1: the world clears color/depth and writes all scene geometry.
@@ -5489,6 +5511,9 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     depth_target.clear_depth = 1.0f;
 
     SDL_GPURenderPass *pass = SDL_BeginGPURenderPass( cmd, &color_target, 1, &depth_target );
+    if( !pass ) {
+        return discard_submission();
+    }
     SDL_BindGPUGraphicsPipeline( pass, g_ctx.pipeline );
     SDL_GPUBufferBinding inst_bind{};
     inst_bind.buffer = slot.instance_vb;
@@ -5558,6 +5583,9 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         sky_depth.load_op = SDL_GPU_LOADOP_LOAD;
         sky_depth.store_op = SDL_GPU_STOREOP_DONT_CARE;
         SDL_GPURenderPass *sky_pass = SDL_BeginGPURenderPass( cmd, &sky_target, 1, &sky_depth );
+        if( !sky_pass ) {
+            return discard_submission();
+        }
         SDL_BindGPUGraphicsPipeline( sky_pass, g_ctx.sky_pipeline );
         SDL_PushGPUFragmentUniformData( cmd, 0, &sky_ub, sizeof( sky_ub ) );
         SDL_DrawGPUPrimitives( sky_pass, 3, 1, 0, 0 );
@@ -5578,12 +5606,12 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         slot.state = frame_slot_state::empty;
         slot.texture_owners.clear();
         g_recording_slot = nullptr;
-        composite_latest_frame( renderer, dest );
+        const bool composited = composite_latest_frame( renderer, dest );
         if( profile ) {
             g_profile.total_ms = profile_ms( total_begin, profile_ticks( true ) );
         }
         publish_profile( g_profile );
-        return;
+        return composited;
     }
     slot.camera = camera;
     slot.fence = fence;
@@ -5616,6 +5644,7 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         first_draw_logged = true;
         write_status( "drawing: first frame composited, instances=" + std::to_string( count ) );
     }
+    return composited;
 }
 
 } // namespace render3d

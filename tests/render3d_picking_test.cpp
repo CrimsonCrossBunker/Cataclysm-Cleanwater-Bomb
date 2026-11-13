@@ -4,6 +4,13 @@
 #include "render3d_picking.h"
 #include "sprite_alpha_profile.h"
 
+#if defined(TILES)
+#include "options_helpers.h"
+#include "render3d.h"
+#include "sdl_renderer_recovery.h"
+#include "sdltiles.h"
+#endif
+
 TEST_CASE( "render3d_picks_the_first_visible_terrain_surface", "[render3d][picking]" )
 {
     using namespace render3d;
@@ -72,3 +79,20 @@ TEST_CASE( "render3d_picks_the_first_visible_terrain_surface", "[render3d][picki
         CHECK_FALSE( surfaces.trace( outside, down ) );
     }
 }
+
+#if defined(TILES)
+
+TEST_CASE( "software_sdl3_does_not_publish_a_3d_terrain_view", "[render3d][sdl3]" )
+{
+    software_render_fixture fixture;
+    REQUIRE( fixture.available() );
+    const override_option enable_3d( "RENDER3D_EXPERIMENTAL", "true" );
+    SDL_Renderer *const renderer = get_sdl_renderer().get();
+    CHECK_FALSE( render3d::draw_terrain_window( renderer,
+            SDL_FRect{ 0.0f, 0.0f, 320.0f, 240.0f }, tripoint_bub_ms::zero, nullptr ) );
+    render3d::leave_view( renderer );
+    CHECK_FALSE( render3d::view_active() );
+    CHECK_FALSE( render3d::movement_camera() );
+    CHECK_FALSE( render3d::mouse_captured() );
+}
+#endif

@@ -3136,7 +3136,7 @@ void options_manager::add_options_graphics()
            );
 
         add( "RENDER3D_EXPERIMENTAL", page_id, to_translation( "Experimental 3D renderer" ),
-             to_translation( "If true, renders the map with an experimental 3D backend instead of the 2D tileset.  Requires the GPU renderer and a restart; falls back to 2D tiles when unavailable." ),
+             to_translation( "Use the 3D terrain view when the SDL3 GPU renderer and its shaders are available.  Hold the middle mouse button over the map to orbit, and scroll to zoom.  The game uses 2D tiles when the 3D view is unavailable." ),
              false, COPT_CURSES_HIDE
            );
 

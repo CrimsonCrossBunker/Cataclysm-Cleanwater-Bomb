@@ -25,17 +25,18 @@ namespace render3d
 void on_renderer_created( SDL_Renderer *renderer );
 void on_renderer_destroyed();
 
-// True once probing succeeded: GPU-device renderer plus loadable shaders.
-bool available();
+// Whether the terrain window currently displays a 3D frame.
+bool view_active();
+bool contains_pixel( const point &logical_pixel );
 
-// available(), re-probing first if the renderer object changed (runtime
-// renderer rebuild, or the option was toggled on after startup).
-bool ensure_available( SDL_Renderer *renderer );
+// Retire the presented view before the frontend draws a fallback frame.
+void leave_view( SDL_Renderer *renderer );
 
 // Draws the 3D scene into the given pixel rect of the current render target.
+// Returns true when a complete 3D frame was composited.
 // tiles provides tileset sprite lookups (atlas texture + uv); may be null,
 // in which case everything falls back to flat hash colors.
-void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
+bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                           const tripoint_bub_ms &center, cata_tiles *tiles );
 
 // Top-down orbit camera: feed relative mouse motion (pixels) here.
