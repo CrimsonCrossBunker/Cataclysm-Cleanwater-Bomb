@@ -1113,8 +1113,6 @@ TEST_CASE( "mp_deferred_host_intent_survives_setup_but_not_world_exit",
 TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
            "[.multiplayer_runtime][world_session][lifecycle][regression]" )
 {
-    clear_avatar();
-    clear_map_without_vision();
     cata_mp::mp_on_world_exit();
     WORLD isolated_world( "room_switch" );
     const restore_on_out_of_scope restore_world( world_generator->active_world );
@@ -1125,17 +1123,21 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     const auto save_root = PATH_INFO::world_base_save_path() / "room_switch";
     REQUIRE( std::filesystem::create_directory( save_root.get_unrelative_path() ) );
     const std::string savedir = PATH_INFO::savedir();
+    WORLD *const previous_world = world_generator->active_world;
     const on_out_of_scope cleanup( [&]() {
         cata_mp::mp_on_world_exit();
         PATH_INFO::set_savedir( savedir );
-        clear_npcs();
-        clear_vehicles();
+        world_generator->set_active_world( previous_world );
+        clear_overmaps();
         std::error_code error;
         std::filesystem::remove_all( save_root.get_unrelative_path(), error );
     } );
     PATH_INFO::set_savedir( save_root.get_unrelative_path().generic_u8string() + "/" );
-    world_generator->active_world = &isolated_world;
     REQUIRE( assure_dir_exist( isolated_world.folder_path() ) );
+    world_generator->set_active_world( &isolated_world );
+    clear_overmaps();
+    clear_avatar();
+    clear_map_without_vision();
     g->uquit = QUIT_NO;
     avatar &host = get_avatar();
     map &here = get_map();
