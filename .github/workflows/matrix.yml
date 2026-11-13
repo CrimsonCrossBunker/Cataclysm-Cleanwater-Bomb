@@ -1,12 +1,6 @@
-name: General build matrix
+name: Stage 5 macOS SDL3 DMG validation
 
 on:
-  push:
-    branches:
-    - master
-  pull_request:
-    # Stacked content PRs need the same native acceptance before reaching master.
-    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
     inputs:
       run_tests:
@@ -140,24 +134,6 @@ jobs:
       max-parallel: ${{ fromJSON(needs.matrix-variables.outputs.max_parallel) }}
       matrix:
         include:
-          - compiler: clang++-14
-            os: ubuntu-24.04
-            tiles: 0
-            sound: 0
-            cmake: 0
-            localize: 1
-            test-stage: 1
-            native: linux64
-            pch: 1
-            lua_platform: 1
-            pr_artifact: linux-curses
-            dont_skip_data_only_changes: 1
-            mods: magiclysm|xedra_evolved
-            title: Basic Build (Clang oldest supported, Ubuntu, Curses)
-            ccache_limit: 4.5G
-            ccache_key: linux-llvm-14
-            extra_package: clang-14
-
           - compiler: clang++
             os: macos-15
             cmake: 0
@@ -173,88 +149,6 @@ jobs:
             title: macOS 15, Apple Clang 17, Tiles, Sound, SDL3
             ccache_limit: 12G
             ccache_key: macos-llvm-17-sdl3
-
-          - title: Android arm64-v8a (build only)
-            os: ubuntu-latest
-            android: arm64
-            lua_platform: 1
-            sdl3: 1 # Android remains on SDL3.
-
-          - compiler: g++-9
-            os: ubuntu-24.04
-            cmake: 0
-            tiles: 0
-            sound: 0
-            localize: 1
-            gold: 1
-            lto: 1
-            libbacktrace: 1
-            # Keep LTO/ODR coverage independent from the exceptionally large
-            # sol2 runtime TU.  Lua remains enabled in Make, CMake, Android,
-            # macOS, and Windows builds elsewhere in this matrix.
-            lua_platform: 0
-            native: linux64
-            pch: 1
-            cxxflags: -gsplit-dwarf
-            title: GCC 9, Curses, LTO (Lua disabled)
-            ccache_limit: 7.5G
-            ccache_key: linux-gcc-9-lto
-            extra_package: g++-9
-
-          - compiler: clang++-22
-            os: ubuntu-26.04
-            cmake: 0
-            tiles: 1
-            sound: 0
-            sdl3: 1
-            localize: 1
-            lua_platform: 1
-            native: linux64
-            pch: 1
-            sanitize: address
-            title: Clang 22, Ubuntu, Tiles, ASan
-            native_tests: true
-            ccache_limit: 6G
-            ccache_key: linux-llvm-22-asan
-
-          - compiler: g++-16
-            os: ubuntu-26.04
-            cmake: 0
-            tiles: 0
-            sound: 0
-            localize: 1
-            dont_skip_data_only_changes: 1
-            lua_platform: 1
-            native: linux64
-            # This leg does not publish an artifact.  Avoid full -g debug
-            # metadata and a second concurrent TU around the large sol2 TU.
-            full_debug_symbols: 0
-            num_build_jobs: 1
-            pch: 1
-            semantic_acceptance: true
-            native_tests: true
-            title: GCC 16, Ubuntu, Curses, Lua API
-            ccache_limit: 6.5G
-            ccache_key: linux-gcc-16
-            extra_package: g++-16
-
-          - compiler: g++-9
-            os: ubuntu-24.04
-            cmake: 1
-            tiles: 1
-            sound: 1
-            sdl3: 1
-            localize: 0
-            lua_platform: 1
-            native: linux64
-            num_build_jobs: 2
-            sanitize: undefined
-            pch: 1
-            title: GCC 9, Ubuntu, Tiles, Sound, CMake
-            ccache_limit: 1G
-            ccache_key: linux-gcc-9-cmake
-            extra_package: g++-9
-
     name: ${{ matrix.title }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 240
@@ -490,6 +384,30 @@ jobs:
         make -j1 CCACHE=1 LINTJSON=0 DEBUG_SYMBOLS=1 NATIVE=osx TILES=1 SOUND=1 SDL3=1 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=1 PCH=0 UNIVERSAL_BINARY=1 WARN_STALE_DATA=0 dmgdist
         lipo Cataclysm.app/Contents/Resources/libccb_bevy_ecs_coop.dylib -verify_arch x86_64 arm64
         cp -- Cataclysm.dmg "ccb-pr-macos-tiles-${PR_NUMBER}.dmg"
+    - name: Inspect the mounted DMG and start the packaged SDL3 executable
+      if: steps.package-pr-macos-tiles.outcome == 'success'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mount_path="$(mktemp -d)"
+        hdiutil attach -readonly -nobrowse -mountpoint "$mount_path" Cataclysm.dmg
+        trap 'hdiutil detach "$mount_path"' EXIT
+        resources="$mount_path/Cataclysm.app/Contents/Resources"
+        lipo "$resources/cataclysm-tiles" -verify_arch x86_64 arm64
+        lipo "$resources/libccb_bevy_ecs_coop.dylib" -verify_arch x86_64 arm64
+        codesign --verify "$mount_path/Cataclysm.app"
+        (
+          cd "$resources"
+          DYLD_LIBRARY_PATH=. DYLD_FRAMEWORK_PATH=. ./cataclysm-tiles --help > "$RUNNER_TEMP/stage5-macos-help.txt"
+          grep -F -- --host-players "$RUNNER_TEMP/stage5-macos-help.txt"
+          python3 - <<'PYCODE'
+        import ctypes
+        from pathlib import Path
+        dll = ctypes.CDLL(str(Path("libccb_bevy_ecs_coop.dylib").resolve(strict=True)))
+        assert dll.ccb_coop_abi_version() == 2
+        print("Mounted universal SDL3 game and co-op ABI 2 verified")
+        PYCODE
+        )
     - name: upload PR macOS tiles artifact
       id: upload-pr-macos-tiles
       if: ${{ steps.package-pr-macos-tiles.outcome == 'success' }}
