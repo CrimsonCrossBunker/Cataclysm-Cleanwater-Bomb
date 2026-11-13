@@ -505,6 +505,61 @@ TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
     }
 }
 
+TEST_CASE( "throw_correction_full_bonus_skill_loading", "[throwing]" )
+{
+    throw_correction_data correction;
+    CHECK_FALSE( correction.full_bonus_skill );
+    CHECK( correction.skill_adjusted_bonus( 1.6f, 0.0f, false ) == Approx( 1.6f ) );
+    correction.deserialize( json_loader::from_string( R"({"full_bonus_skill":3})"
+                                                    ).get_object() );
+    REQUIRE( correction.full_bonus_skill == 3 );
+    correction.deserialize( json_loader::from_string( "{}" ).get_object() );
+    CHECK( correction.full_bonus_skill == 3 );
+
+    SECTION( "zero_disables_the_requirement" ) {
+        correction.deserialize( json_loader::from_string( R"({"full_bonus_skill":0})"
+                                                        ).get_object() );
+        CHECK( correction.full_bonus_skill == 0 );
+        CHECK( correction.skill_adjusted_bonus( 1.6f, 0.0f, false ) == Approx( 1.6f ) );
+    }
+    SECTION( "null_clears_the_inherited_requirement" ) {
+        correction.deserialize( json_loader::from_string( R"({"full_bonus_skill":null})"
+                                                        ).get_object() );
+        CHECK_FALSE( correction.full_bonus_skill );
+        CHECK( correction.skill_adjusted_bonus( 1.6f, 0.0f, false ) == Approx( 1.6f ) );
+    }
+    SECTION( "invalid_requirements_are_rejected" ) {
+        const std::string definition = GENERATE( R"({"full_bonus_skill":-1})",
+                                                R"({"full_bonus_skill":"3"})" );
+        CHECK_THROWS_AS( correction.deserialize( json_loader::from_string( definition ).get_object() ),
+                         JsonError );
+    }
+}
+
+TEST_CASE( "throw_correction_scales_only_favorable_changes", "[throwing]" )
+{
+    throw_correction_data correction;
+    correction.full_bonus_skill = 3;
+    const float skill = GENERATE( 0.0f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f );
+    CAPTURE( skill );
+    const float proficiency = std::min( 1.0f, skill / 3.0f );
+    CHECK( correction.skill_adjusted_bonus( 1.6f, skill, false ) ==
+           Approx( 1.0f + 0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( 0.4f, skill, false ) == Approx( 0.4f ) );
+    CHECK( correction.skill_adjusted_bonus( 0.4f, skill, true ) ==
+           Approx( 1.0f - 0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( 1.6f, skill, true ) == Approx( 1.6f ) );
+    CHECK( correction.skill_adjusted_bonus( 1.0f, skill, false ) == Approx( 1.0f ) );
+    CHECK( correction.skill_adjusted_bonus( 1.0f, skill, true ) == Approx( 1.0f ) );
+
+    CHECK( correction.skill_adjusted_bonus( 0.6f, skill, false, 0.0f ) ==
+           Approx( 0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( -0.6f, skill, false, 0.0f ) == Approx( -0.6f ) );
+    CHECK( correction.skill_adjusted_bonus( -0.6f, skill, true, 0.0f ) ==
+           Approx( -0.6f * proficiency ) );
+    CHECK( correction.skill_adjusted_bonus( 0.6f, skill, true, 0.0f ) == Approx( 0.6f ) );
+}
+
 static void check_throw_correction( const Character &you, const item &projectile,
                                     const float damage, const float range,
                                     const float stamina, const float dispersion,
@@ -516,6 +571,38 @@ static void check_throw_correction( const Character &you, const item &projectile
     CHECK( you.throw_dispersion_multiplier( projectile ) == Approx( dispersion ) );
     CHECK( you.throw_speed_multiplier( projectile ) == Approx( speed ) );
     CHECK( you.throw_weight_multiplier( projectile ) == Approx( weight ) );
+}
+
+TEST_CASE( "throwing_aid_proficiency_preserves_penalties", "[throwing]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    const int skill = GENERATE( 0, 1, 2, 3, 4 );
+    const bool lighter = GENERATE( false, true );
+    CAPTURE( skill, lighter );
+    you.set_skill_level( skill_throw, skill );
+    const float proficiency = std::min( 1.0f, skill / 3.0f );
+    item aid( itype_id( lighter ? "test_throw_correction_skill_light" :
+                       "test_throw_correction_skill" ) );
+    REQUIRE( aid.type->throw_correction );
+    REQUIRE( aid.type->throw_correction->full_bonus_skill == 3 );
+    REQUIRE( you.wield( aid ) );
+    const item projectile( itype_rock );
+
+    if( lighter ) {
+        check_throw_correction( you, projectile, 0.7f, 0.8f, 1.3f, 1.6f,
+                                1.0f - 0.3f * proficiency, 1.0f - 0.3f * proficiency );
+        CHECK( you.throw_weight_multiplier( projectile, true ) == Approx( 0.7f ) );
+    } else {
+        check_throw_correction( you, projectile, 1.0f + 0.6f * proficiency,
+                                1.0f + 0.9f * proficiency, 1.0f - 0.3f * proficiency,
+                                1.0f - 0.6f * proficiency, 1.3f, 1.6f );
+        CHECK( you.throw_weight_multiplier( projectile, true ) ==
+               Approx( 1.0f + 0.6f * proficiency ) );
+    }
+    const item incompatible( itype_throwing_knife );
+    check_throw_correction( you, incompatible, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
+    CHECK( you.throw_weight_multiplier( incompatible, true ) == Approx( 1.0f ) );
 }
 
 TEST_CASE( "throw_correction_flag_requirements", "[throwing]" )
