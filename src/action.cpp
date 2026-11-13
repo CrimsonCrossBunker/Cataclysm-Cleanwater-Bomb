@@ -619,7 +619,8 @@ action_id get_movement_action_from_delta( const tripoint_rel_ms &d, const iso_ro
     return ACTION_NULL;
 }
 
-point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rotate rot )
+point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rotate rot,
+        const camera_input *camera )
 {
     // the movement keys' own frame: FORTH is up on screen (= north here),
     // clockwise through FORTH_LEFT
@@ -653,6 +654,9 @@ point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rota
             return point_rel_ms::zero;
     }
     if( rot == iso_rotate::yes ) {
+        if( camera ) {
+            return point_rel_ms( camera->map_direction( delta.raw() ) );
+        }
 #if defined(TILES)
         // 3D: screen direction -> map direction for the orbit camera
         if( render3d::camera_screen_to_map_delta( delta.x(), delta.y() ) ) {

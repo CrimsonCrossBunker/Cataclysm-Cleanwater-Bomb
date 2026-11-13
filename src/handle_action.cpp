@@ -104,7 +104,6 @@
 #include "vertical_movement.h"
 #include "walking.h"
 #if defined(TILES)
-    #include "render3d.h"
     #include "sdl_gamepad.h"
 #endif
 #include "sleep.h"
@@ -1876,26 +1875,20 @@ static void manage_android_buttons()
 #endif
 
 static std::optional<point> fractional_walk_input( const avatar &who, const map &here,
-        action_id action, bool auto_travel )
+        action_id action, bool auto_travel, const camera_input *camera )
 {
-#if defined(TILES)
-    if( use_tiles && !who.is_auto_moving() && !auto_travel &&
-        avatar_action::can_move_fractional( who, here ) ) {
-        return render3d::camera_walk_delta( get_delta_from_movement_action( action,
-                iso_rotate::no ).raw() );
+    if( !camera || who.is_auto_moving() || auto_travel ||
+        !avatar_action::can_move_fractional( who, here ) ) {
+        return std::nullopt;
     }
-#else
-    static_cast<void>( who );
-    static_cast<void>( here );
-    static_cast<void>( action );
-    static_cast<void>( auto_travel );
-#endif
-    return std::nullopt;
+    return fractional_walk::camera_delta( get_delta_from_movement_action( action,
+            iso_rotate::no ).raw(), camera->forward );
 }
 
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
-                              const std::optional<tripoint_bub_ms> &mouse_target )
+                              const std::optional<tripoint_bub_ms> &mouse_target,
+                              const camera_input *camera )
 {
 #if defined(__ANDROID__)
     // Android button management is a Java-side screen.  Handle it before
@@ -2017,7 +2010,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             delta != point_rel_ms::zero ) {
             map &here = get_map();
             if( has_radio_car_binding( player_character ) ) {
-                cata_mp::client_drive_radio_car( get_delta_from_movement_action( act, iso_rotate::yes ) );
+                cata_mp::client_drive_radio_car( get_delta_from_movement_action( act, iso_rotate::yes, camera ) );
                 return true;
             }
             // Vehicle control mode: route movement to pldrive instead of walk.
@@ -2038,14 +2031,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( mp_locked || cata_mp::is_client_waiting_for_ack() || player_character.activity ) {
                 return false;
             }
-            const auto fractional = fractional_walk_input( player_character, here, act, auto_travel_mode );
+            const auto fractional = fractional_walk_input( player_character, here, act, auto_travel_mode,
+                camera );
             const auto step = fractional ? fractional_walk::resolve( player_character.pos_world(),
                 *fractional ) : std::nullopt;
             if( fractional && !step ) {
                 return false;
             }
             const tripoint_rel_ms direction = step ? step->target.tile() - player_character.pos_abs() :
-                                              tripoint_rel_ms( get_delta_from_movement_action( act, iso_rotate::yes ), 0 );
+                                              tripoint_rel_ms( get_delta_from_movement_action( act, iso_rotate::yes, camera ), 0 );
             const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
             if( !here.inbounds( target_pos ) ||
                 ( step && !step->clears_corner( here, player_character.pos_bub( here ) ) ) ) {
@@ -2332,7 +2326,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( has_radio_car_binding( player_character ) ) {
                 if( const auto binding = read_radio_car_binding( player_character, here ) ) {
                     drive_radio_car( player_character, here,
-                                     get_delta_from_movement_action( act, iso_rotate::yes ), *binding );
+                                     get_delta_from_movement_action( act, iso_rotate::yes, camera ), *binding );
                 } else {
                     disconnect_radio_car( player_character );
                 }
@@ -2342,7 +2336,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 pldrive( get_delta_from_movement_action( act, iso_rotate::no ) );
             } else {
                 const int pre_walk_moves = player_character.get_moves();
-                point_rel_ms dest_delta = get_delta_from_movement_action( act, iso_rotate::yes );
+                point_rel_ms dest_delta = get_delta_from_movement_action( act, iso_rotate::yes, camera );
                 if( auto_travel_mode && !player_character.is_auto_moving() ) {
                     const bool use_grab_routing =
                         has_grabbed_single_tile_vehicle( player_character, here );
@@ -2379,7 +2373,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 const character_action_guard mover( player_character );
                 const auto move_context = here.get_context_reference();
                 const auto fractional = fractional_walk_input( player_character, here, act,
-                    auto_travel_mode || pending_move.has_value() );
+                    auto_travel_mode || pending_move.has_value(), camera );
                 const bool moved = fractional ?
                                    avatar_action::move_fractional( player_character, here, *fractional ) :
                                    avatar_action::move( player_character, here, tripoint_rel_ms( dest_delta, 0 ) );
@@ -3573,7 +3567,9 @@ bool game::handle_action()
 
     // actions allowed only while alive
     if( !player_character.is_dead_state() ) {
-        if( !do_regular_action( act, player_character, mouse_target ) ) {
+        // A confirmed mouse route already supplied a movement action.
+        const camera_input *camera = mouse_target ? nullptr : ctxt.get_camera_input();
+        if( !do_regular_action( act, player_character, mouse_target, camera ) ) {
             return false;
         }
     }

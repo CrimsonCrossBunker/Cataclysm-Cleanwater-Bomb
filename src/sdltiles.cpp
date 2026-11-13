@@ -8322,6 +8322,32 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     }
 #endif
 
+    last_input.camera.reset();
+    if( last_input.type != input_event_t::error && last_input.type != input_event_t::timeout &&
+        !last_input.sequence.empty() &&
+        ( last_input.type != input_event_t::mouse || last_input.get_first_input() !=
+          static_cast<int>( MouseInput::Move ) ) ) {
+        last_input.camera = render3d::movement_camera();
+    }
+    last_input.map_click.reset();
+    if( last_input.camera && last_input.type == input_event_t::mouse &&
+        !last_input.sequence.empty() ) {
+        switch( static_cast<MouseInput>( last_input.get_first_input() ) ) {
+            case MouseInput::LeftButtonPressed:
+            case MouseInput::LeftButtonReleased:
+            case MouseInput::RightButtonPressed:
+            case MouseInput::RightButtonReleased:
+                last_input.map_click = tripoint::invalid;
+                if( g ) {
+                    if( const auto picked = render3d::screen_to_tile( last_input.mouse_pos ) ) {
+                        last_input.map_click = get_map().get_abs( *picked ).raw();
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
     input_replay::on_record( last_input );
     return last_input;
 }
@@ -8462,6 +8488,9 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     }
 
     const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
+    if( g && capture_win == g->w_terrain && next_action.map_click ) {
+        return get_map_click();
+    }
     const window_dimensions dim = get_window_dimensions_for_input( capture_win );
 
     const point &win_min = dim.window_pos_pixel;

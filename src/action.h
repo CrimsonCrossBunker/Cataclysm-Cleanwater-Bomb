@@ -15,6 +15,7 @@
 class input_context;
 class map;
 struct input_event;
+struct camera_input;
 
 /**
  * Enumerates all discrete actions that can be performed by player
@@ -611,7 +612,8 @@ enum class iso_rotate : int {
 action_id get_movement_action_from_delta( const tripoint_rel_ms &d, iso_rotate rot );
 
 // Helper function to convert movement action to coordinate delta point
-point_rel_ms get_delta_from_movement_action( action_id act, iso_rotate rot );
+point_rel_ms get_delta_from_movement_action( action_id act, iso_rotate rot,
+        const camera_input *camera = nullptr );
 
 /**
  * Show the action menu

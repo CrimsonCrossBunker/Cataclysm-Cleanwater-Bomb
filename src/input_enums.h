@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -52,13 +53,32 @@ enum class keymod_t {
     shift,
 };
 
+struct camera_input {
+    static constexpr int forward_limit = 128;
+
+    // Screen-up in map space, clockwise from north.
+    int octant;
+    point forward;
+
+    point map_direction( const point &screen ) const {
+        constexpr point compass[] = {
+            point::north, point::north_east, point::east, point::south_east,
+            point::south, point::south_west, point::west, point::north_west
+        };
+        for( int i = 0; i < 8; ++i ) {
+            if( screen == compass[i] ) {
+                return compass[( i + octant ) % 8];
+            }
+        }
+        return screen;
+    }
+};
+
 /**
  * An instance of an input, like a keypress etc.
  *
- * Gamepad, mouse and keyboard keypresses will be represented as `int`.
- * Whether a gamepad, mouse or keyboard was used can be checked using the
- * `type` member.
- *
+ * Gamepad, mouse and keyboard keypresses are represented as int.
+ * The type member identifies the device and keyboard mode.
  */
 struct input_event {
     input_event_t type;
@@ -71,6 +91,9 @@ struct input_event {
     // events, simply make this of size 1.
 
     point mouse_pos;       // Mouse click co-ordinates, if applicable
+    std::optional<camera_input> camera;
+    // An invalid tripoint records a click that missed the rendered map.
+    std::optional<tripoint> map_click;
 
     // Actually entered text (if any), UTF-8 encoded, might be empty if
     // the input is not UTF-8 or not even text.

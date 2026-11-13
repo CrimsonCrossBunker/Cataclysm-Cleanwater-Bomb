@@ -4921,7 +4921,8 @@ namespace
 // rotate a single compass step by `steps` octants (clockwise on the compass)
 bool camera_rotate_step( int &dx, int &dy, const int steps )
 {
-    if( !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+    if( replay_mode == replay_mode_t::replay || !use_tiles || !g_available ||
+        !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
         return false;
     }
     const int idx = compass_index( point_rel_ms( dx, dy ) );
@@ -4952,17 +4953,23 @@ bool camera_map_to_screen_delta( int &dx, int &dy )
 
 std::optional<point> camera_walk_delta( const point &screen )
 {
-    if( !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ||
-        compass_index( point_rel_ms( screen ) ) < 0 ) {
+    const auto camera = movement_camera();
+    if( !camera || compass_index( point_rel_ms( screen ) ) < 0 ) {
         return std::nullopt;
     }
-    const float forward_x = std::cos( g_yaw );
-    const float forward_y = std::sin( g_yaw );
-    const float scale = static_cast<float>( fractional_walk::max_distance ) /
-                        ( screen.x && screen.y ? std::sqrt( 2.0f ) : 1.0f );
-    // Truncate toward zero so quantization stays within the allowed radius.
-    return point( static_cast<int>( scale * ( -screen.y * forward_x - screen.x * forward_y ) ),
-                  static_cast<int>( scale * ( -screen.y * forward_y + screen.x * forward_x ) ) );
+    return fractional_walk::camera_delta( screen, camera->forward );
+}
+
+std::optional<camera_input> movement_camera()
+{
+    if( !use_tiles || !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+        return std::nullopt;
+    }
+    constexpr int scale = camera_input::forward_limit;
+    static_assert( scale == fractional_walk::max_distance );
+    return camera_input{ camera_forward_octant(),
+                         point( static_cast<int>( scale * std::cos( g_yaw ) ),
+                                static_cast<int>( scale * std::sin( g_yaw ) ) ) };
 }
 
 void sync_mouse_capture( SDL_Renderer *renderer, const bool want )

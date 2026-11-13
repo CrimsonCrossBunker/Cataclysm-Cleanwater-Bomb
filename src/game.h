@@ -44,6 +44,7 @@ class game;
 class render_backend;
 struct walk_move_choices;
 struct fractional_walk;
+struct camera_input;
 struct vertical_move_choices;
 class world_position;
 
@@ -1222,7 +1223,8 @@ class game
         // Routine loop functions, approximately in order of execution
         void open_consume_item_menu(); // Custom menu for consuming specific group of items
         bool do_regular_action( action_id &act, avatar &player_character,
-                                const std::optional<tripoint_bub_ms> &mouse_target );
+                                const std::optional<tripoint_bub_ms> &mouse_target,
+                                const camera_input *camera );
         bool handle_action();
         bool try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_target );
         bool try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target );

@@ -32,6 +32,7 @@
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
 #include "game.h"
+#include "game_constants.h"
 #include "help.h"
 #include "imgui/imgui.h"
 #include "input.h"
@@ -531,7 +532,7 @@ const std::string &input_context::handle_input( const int timeout )
     if( timeout >= 0 ) {
         inp_mngr.set_timeout( timeout );
     }
-    next_action.type = input_event_t::error;
+    next_action = input_event();
     const std::string *result = &CATA_ERROR;
     const bool publish_named_actions =
         android_ui_mode::is_new_ui_build() || cata::lua_platform::is_enabled();
@@ -578,6 +579,7 @@ const std::string &input_context::handle_input( const int timeout )
         // keyboard event.
         if( publish_named_actions &&
             cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
+            next_action = input_event();
             result = &context_direct_action;
             break;
         }
@@ -693,7 +695,8 @@ static void rotate_direction_cw( int &dx, int &dy )
 // See src/coords_fwd.h and src/coordinates.h
 template<typename Point, coords::scale Scale>
 static std::optional<coords::coord_point<Point, coords::origin::relative, Scale>>
-        get_direction( const std::string &action, bool iso_mode )
+get_direction( const std::string &action, bool iso_mode,
+               const std::optional<camera_input> &camera )
 {
     using CoordPoint = coords::coord_point<Point, coords::origin::relative, Scale>;
     CoordPoint p;
@@ -716,6 +719,12 @@ static std::optional<coords::coord_point<Point, coords::origin::relative, Scale>
     } else {
         return std::nullopt;
     }
+    if( iso_mode && camera ) {
+        const point direction = camera->map_direction( p.raw().xy() );
+        p.x() = direction.x;
+        p.y() = direction.y;
+        return p;
+    }
 #if defined(TILES)
     // 3D: direction prompts follow the camera's screen frame, matching the
     // movement keys; the camera transform replaces the isometric 45-degree
@@ -733,13 +742,13 @@ static std::optional<coords::coord_point<Point, coords::origin::relative, Scale>
 std::optional<tripoint_rel_ms> input_context::get_direction_rel_ms( const std::string &action )
 const
 {
-    return get_direction<tripoint, coords::ms>( action, iso_mode );
+    return get_direction<tripoint, coords::ms>( action, iso_mode, next_action.camera );
 }
 
 std::optional<tripoint_rel_omt> input_context::get_direction_rel_omt( const std::string &action )
 const
 {
-    return get_direction<tripoint, coords::omt>( action, iso_mode );
+    return get_direction<tripoint, coords::omt>( action, iso_mode, next_action.camera );
 }
 
 // Custom set of hotkeys that explicitly don't include the hardcoded
@@ -1607,6 +1616,24 @@ input_event input_context::get_raw_input()
     return next_action;
 }
 
+std::optional<tripoint_bub_ms> input_context::get_map_click() const
+{
+    if( !next_action.map_click || next_action.map_click->is_invalid() ) {
+        return std::nullopt;
+    }
+    const map &terrain = get_map();
+    const tripoint_abs_ms origin = terrain.get_abs( tripoint_bub_ms::zero );
+    const tripoint &tile = *next_action.map_click;
+    const std::int64_t x = std::int64_t( tile.x ) - origin.x();
+    const std::int64_t y = std::int64_t( tile.y ) - origin.y();
+    if( x < 0 || x >= terrain.getmapsize() * SEEX || y < 0 ||
+        y >= terrain.getmapsize() * SEEY || !terrain.inbounds_z( tile.z ) ) {
+        return std::nullopt;
+    }
+    const tripoint_bub_ms local( static_cast<int>( x ), static_cast<int>( y ), tile.z );
+    return terrain.has_loaded_submap( local ) ? std::optional<tripoint_bub_ms>( local ) : std::nullopt;
+}
+
 #if defined(TUI)
 // Also specify that we don't have a gamepad plugged in.
 std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses::window
@@ -1614,6 +1641,9 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
 {
     if( !coordinate_input_received ) {
         return std::nullopt;
+    }
+    if( g && capture_win == g->w_terrain && next_action.map_click ) {
+        return get_map_click();
     }
     const point view_size( getmaxx( capture_win ), getmaxy( capture_win ) );
     const point win_min( getbegx( capture_win ),

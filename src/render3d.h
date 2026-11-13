@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "coords_fwd.h"
+#include "input_enums.h"
 #include "point.h"
 
 struct SDL_Renderer;
@@ -67,6 +68,7 @@ bool camera_map_to_screen_delta( int &dx, int &dy );
 // Rotate a keyboard direction through the camera's full yaw and quantize it
 // to the shared horizontal movement intent.
 std::optional<point> camera_walk_delta( const point &screen );
+std::optional<camera_input> movement_camera();
 
 // Enable/disable relative mouse mode for FP look. Idempotent.
 void sync_mouse_capture( SDL_Renderer *renderer, bool want );

@@ -28,6 +28,7 @@ struct fractional_walk {
     int distance;
 
     static bool is_valid( const point &delta );
+    static point camera_delta( const point &screen, const point &forward );
     static std::optional<fractional_walk> resolve( const world_position &from, const point &delta );
     bool clears_corner( const map &here, const tripoint_bub_ms &origin ) const;
     int scale_cost( int full_tile_cost ) const;

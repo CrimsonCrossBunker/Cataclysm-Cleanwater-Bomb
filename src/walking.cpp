@@ -28,6 +28,18 @@ bool fractional_walk::is_valid( const point &delta )
     return delta.x * delta.x + delta.y * delta.y <= max_distance * max_distance;
 }
 
+point fractional_walk::camera_delta( const point &screen, const point &forward )
+{
+    const point right( -forward.y, forward.x );
+    const point delta = right * screen.x - forward * screen.y;
+    if( screen.x && screen.y ) {
+        // Truncate after scaling by less than 1/sqrt(2). The intent stays
+        // inside the same bounded radius for all eight input directions.
+        return point( delta.x * 181 / 256, delta.y * 181 / 256 );
+    }
+    return delta;
+}
+
 std::optional<fractional_walk> fractional_walk::resolve( const world_position &from,
         const point &delta )
 {

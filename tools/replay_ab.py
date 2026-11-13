@@ -109,15 +109,15 @@ def replay_metadata(path: Path) -> dict:
     profile_seed = None
     with path.open(encoding="utf-8") as stream:
         header = stream.readline().strip()
-        if header not in ("CATA_REPLAY 1", "CATA_REPLAY 2"):
-            raise ValueError("replay must have a CATA_REPLAY 1 or 2 header")
+        if header not in ("CATA_REPLAY 1", "CATA_REPLAY 2", "CATA_REPLAY 3"):
+            raise ValueError("replay must have a CATA_REPLAY 1, 2, or 3 header")
         seed_line = stream.readline().split()
         if len(seed_line) != 2 or seed_line[0] != "SEED":
             raise ValueError("replay must have a SEED header")
         seed = int(seed_line[1])
         if not 0 <= seed <= 0xFFFFFFFF:
             raise ValueError("replay seed must fit an unsigned 32-bit integer")
-        if header == "CATA_REPLAY 2":
+        if header != "CATA_REPLAY 1":
             fields = stream.readline().split()
             if (len(fields) != 2 or fields[0] != "PROFILE_SEED" or
                     len(fields[1]) != 32 or
