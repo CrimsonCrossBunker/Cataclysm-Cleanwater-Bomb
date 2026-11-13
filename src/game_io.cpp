@@ -381,6 +381,10 @@ bool game::load( const save_t &name )
     const cata_path worldpath = PATH_INFO::world_base_save_path();
     const bool recovering_transition = save_snapshot::dimension_transition_pending( worldpath );
     if( recovering_transition ) {
+        if( cata_mp::is_client_mode() ) {
+            popup( _( "Load this character in single-player first to recover an interrupted dimension transition." ) );
+            return false;
+        }
         if( !save_snapshot::recover_dimension_transition( worldpath ) ) {
             debugmsg( "Could not recover interrupted dimension travel; refusing to load a partial save." );
             return false;
