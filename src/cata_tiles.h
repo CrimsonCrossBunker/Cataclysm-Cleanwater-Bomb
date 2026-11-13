@@ -365,6 +365,13 @@ struct atlas_replay_descriptor {
     int expected_tilecount = 0;
 };
 
+// Furniture artwork in tile-local coordinates. One unit on Z is one map level.
+struct tileset_furniture_box {
+    std::array<float, 3> origin;
+    std::array<float, 3> size;
+    std::array<float, 3> color;
+};
+
 class tileset
 {
     private:
@@ -425,6 +432,7 @@ class tileset
 
         std::unordered_set<std::string> duplicate_ids;
 
+        std::unordered_map<std::string, std::vector<tileset_furniture_box>> furniture_geometry;
         std::unordered_map<std::string, tile_type> tile_ids;
         // caches both "default" and "_season_XXX" tile variants (to reduce the number of lookups)
         // either variant can be either a `nullptr` or a pointer/reference to the real value (stored inside `tile_ids`)
@@ -445,6 +453,8 @@ class tileset
         std::unordered_map<std::string, std::vector<layer_context_sprites>> field_layer_data;
 
         void clear();
+
+        const std::vector<tileset_furniture_box> *find_furniture_geometry( const std::string &id ) const;
 
         bool is_isometric() const {
             return tile_isometric;

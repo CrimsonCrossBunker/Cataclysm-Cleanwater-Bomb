@@ -61,8 +61,8 @@ class pick_surfaces
         void set( const tripoint &cell, pick_surface surface );
         void set_ramp( const tripoint &cell, ramp_surface surface );
         void set_vehicle_body( const tripoint &cell, float bottom, float top );
-        void add_displaced_box( const tripoint &cell, const scene_point &minimum,
-                              const scene_point &maximum );
+        void add_box( const tripoint &cell, const scene_point &minimum,
+                      const scene_point &maximum, bool selectable = true );
         void add_actor( const tripoint &cell, const scene_point &bottom, const point &pixel_size,
                         float width, float height, std::shared_ptr<const sprite_alpha_profile> alpha );
         std::optional<tripoint> trace( const scene_point &origin, const scene_point &ray,
@@ -74,10 +74,11 @@ class pick_surfaces
             float top;
         };
 
-        struct displaced_box {
+        struct box_surface {
             tripoint cell;
             scene_point minimum;
             scene_point maximum;
+            bool selectable;
         };
 
         struct actor_surface {
@@ -98,7 +99,7 @@ class pick_surfaces
         std::unordered_map<std::size_t, height_range> vehicle_bodies_;
         std::vector<std::pair<tripoint, ramp_surface>> ramps_;
         std::array<float, OVERMAP_LAYERS> vehicle_top_{};
-        std::vector<displaced_box> translated_bodies_;
+        std::vector<box_surface> boxes_;
         std::vector<actor_surface> actors_;
 };
 

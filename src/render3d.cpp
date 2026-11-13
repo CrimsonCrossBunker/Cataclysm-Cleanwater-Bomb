@@ -2487,6 +2487,35 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // instead carries the tile light (0..1) the NV look dims by
         float sat = 1.0f;
     };
+    const tileset *artwork = tiles ? tiles->get_tileset_3d().get() : nullptr;
+    const auto draw_furniture_geometry = [&]( const std::string & id, const tripoint & cell,
+    const scene_point & base, const tile_tone tone, bool ghost, bool memory ) {
+        const std::vector<tileset_furniture_box> *geometry = artwork ?
+                artwork->find_furniture_geometry( id ) : nullptr;
+        if( !geometry || geometry->size() > static_cast<size_t>( MAX_DRAW_INSTANCES - count ) ) {
+            return std::optional<float>();
+        }
+        std::vector<float> &instances = bucket_for( MODE_BOX, nullptr );
+        float item_height = base.z;
+        for( const tileset_furniture_box &box : *geometry ) {
+            const scene_point minimum{ base.x + box.origin[0], base.y + box.origin[1],
+                                       base.z + box.origin[2] * LEVEL_HEIGHT };
+            const float height = box.size[2] * LEVEL_HEIGHT;
+            const scene_point maximum{ minimum.x + box.size[0], minimum.y + box.size[1],
+                                       minimum.z + height };
+            push_instance( instances, minimum.x, minimum.y, minimum.z,
+                           box.size[0], box.size[1], height, sprite_info{},
+                           box.color[0] * tone.shade, box.color[1] * tone.shade, box.color[2] * tone.shade,
+                           true, 0, false, -1.0f, ghost, tone.sat, memory );
+            surfaces.add_box( cell, minimum, maximum, !memory );
+            if( minimum.x <= base.x + 0.5f && maximum.x > base.x + 0.5f &&
+                minimum.y <= base.y + 0.5f && maximum.y > base.y + 0.5f ) {
+                item_height = std::max( item_height, maximum.z );
+            }
+            ++count;
+        }
+        return std::optional<float>( item_height );
+    };
     const bool nv_tint = nv_tint_active();
     const auto tone_from_light = [nv_tint]( const float light ) {
         const float t = std::clamp( light / smooth_lighting::full_color_light, 0.0f, 1.0f );
@@ -2620,6 +2649,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const auto push_memory_furniture = [&]()
         {
             if( !furn_ok || !with_furniture || count >= MAX_DRAW_INSTANCES ) {
+                return;
+            }
+            if( draw_furniture_geometry( dec_id, tripoint( d, p.z() ),
+                                         { static_cast<float>( dx ), static_cast<float>( dy ), wz }, {}, false, true ) ) {
                 return;
             }
             // 2D's memory draw feeds the stored subtile/rotation back in
@@ -3789,65 +3822,75 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     }
                 }
 
+                float item_base_z = wz;
+                point item_offset;
                 if( !roof_unseen && f != furn_str_id::NULL_ID() && count < MAX_DRAW_INSTANCES ) {
                     const point offset = here.furniture_offset( p );
                     const float fx = static_cast<float>( dx ) + position_fraction( offset.x );
                     const float fy = static_cast<float>( dy ) + position_fraction( offset.y );
-                    sprite_lookup_3d fl;
-                    lookup_sprite_layers_3d( tiles, f->id.str(), TILE_CATEGORY::FURNITURE, p,
-                                             -1, 0, true, fl );
-                    // locked/alarmed furniture whose tileset splits bg=body /
-                    // fg=indicator (key or alarm icon) draws both layers, as
-                    // 2D does; ordinary furniture keeps its fg-only billboard
-                    const bool layered = fl.bg_tex && wants_layered_face( f.obj() );
-                    const sprite_info &fspr = layered ? fl.bg : fl.fg;
-                    const bool ftex = layered ? fl.bg_tex : fl.fg_tex;
-                    float fr = tone.shade;
-                    float fg = tone.shade;
-                    float fb = tone.shade;
-                    if( !ftex ) {
-                        terrain_color( f.to_i() * 31 + 7, fr, fg, fb );
-                        fr *= tone.shade;
-                        fg *= tone.shade;
-                        fb *= tone.shade;
-                    }
-                    // furniture is a billboard snapped to 90-degree steps: always
-                    // roughly facing the camera without continuously rotating
-                    const float fw = FURN_QUAD_HEIGHT * std::clamp( fspr.aspect, 0.5f, 2.0f );
-                    const bool flat = flat_furniture( f.obj() );
-                    if( flat ) {
-                        std::vector<float> &v = bucket_for( MODE_FLATQUAD_DECAL,
-                                                            ftex ? fspr.atlas : nullptr );
-                        push_instance( v, fx, fy,
-                                       wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, fr, fg, fb,
-                                       false, fl.fg_rot4, false, -1.0f, ghost, tone.sat );
+                    const tripoint cell( dx, dy, zlev );
+                    const std::optional<float> item_support = draw_furniture_geometry(
+                            f->id.str(), cell, { fx, fy, wz }, tone, ghost, false );
+                    if( item_support ) {
+                        item_base_z = *item_support;
+                        item_offset = offset;
                     } else {
-                        std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
-                                                            ftex ? fspr.atlas : nullptr );
-                        push_instance( v, fx + 0.5f, fy + 0.5f,
-                                       wz - FURN_QUAD_HEIGHT * fspr.base_drop,
-                                       fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
-                                       false, 0, false, -1.0f, ghost, tone.sat );
-                    }
-                    ++count;
-                    if( offset != point::zero ) {
-                        surfaces.add_displaced_box( tripoint( dx, dy, zlev ), { fx, fy, wz }, {
-                            fx + 1.0f, fy + 1.0f,
-                            wz + ( flat ? 0.01f : FURN_QUAD_HEIGHT )
-                        } );
-                    }
-                    if( !flat && layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
-                        // the indicator rides the body's exact quad, a hair
-                        // toward the camera so the strict depth test never
-                        // drops it
-                        std::vector<float> &vo = bucket_for( MODE_BILLBOARD_SNAP, fl.fg.atlas );
-                        push_instance( vo, fx + 0.5f - fwd_x * 0.02f,
-                                       fy + 0.5f - fwd_y * 0.02f,
-                                       wz - FURN_QUAD_HEIGHT * fspr.base_drop,
-                                       fw, FURN_QUAD_HEIGHT, 1.0f, fl.fg,
-                                       tone.shade, tone.shade, tone.shade,
-                                       false, 0, false, -1.0f, ghost, tone.sat );
+                        sprite_lookup_3d fl;
+                        lookup_sprite_layers_3d( tiles, f->id.str(), TILE_CATEGORY::FURNITURE, p,
+                                                 -1, 0, true, fl );
+                        // locked/alarmed furniture whose tileset splits bg=body /
+                        // fg=indicator (key or alarm icon) draws both layers, as
+                        // 2D does; ordinary furniture keeps its fg-only billboard
+                        const bool layered = fl.bg_tex && wants_layered_face( f.obj() );
+                        const sprite_info &fspr = layered ? fl.bg : fl.fg;
+                        const bool ftex = layered ? fl.bg_tex : fl.fg_tex;
+                        float fr = tone.shade;
+                        float fg = tone.shade;
+                        float fb = tone.shade;
+                        if( !ftex ) {
+                            terrain_color( f.to_i() * 31 + 7, fr, fg, fb );
+                            fr *= tone.shade;
+                            fg *= tone.shade;
+                            fb *= tone.shade;
+                        }
+                        // furniture is a billboard snapped to 90-degree steps: always
+                        // roughly facing the camera without continuously rotating
+                        const float fw = FURN_QUAD_HEIGHT * std::clamp( fspr.aspect, 0.5f, 2.0f );
+                        const bool flat = flat_furniture( f.obj() );
+                        if( flat ) {
+                            std::vector<float> &v = bucket_for( MODE_FLATQUAD_DECAL,
+                                                                ftex ? fspr.atlas : nullptr );
+                            push_instance( v, fx, fy,
+                                           wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, fr, fg, fb,
+                                           false, fl.fg_rot4, false, -1.0f, ghost, tone.sat );
+                        } else {
+                            std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
+                                                                ftex ? fspr.atlas : nullptr );
+                            push_instance( v, fx + 0.5f, fy + 0.5f,
+                                           wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                                           fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
+                        }
                         ++count;
+                        if( offset != point::zero ) {
+                            surfaces.add_box( cell, { fx, fy, wz }, {
+                                fx + 1.0f, fy + 1.0f,
+                                wz + ( flat ? 0.01f : FURN_QUAD_HEIGHT )
+                            } );
+                        }
+                        if( !flat && layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                            // the indicator rides the body's exact quad, a hair
+                            // toward the camera so the strict depth test never
+                            // drops it
+                            std::vector<float> &vo = bucket_for( MODE_BILLBOARD_SNAP, fl.fg.atlas );
+                            push_instance( vo, fx + 0.5f - fwd_x * 0.02f,
+                                           fy + 0.5f - fwd_y * 0.02f,
+                                           wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                                           fw, FURN_QUAD_HEIGHT, 1.0f, fl.fg,
+                                           tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
+                            ++count;
+                        }
                     }
                 }
 
@@ -3893,9 +3936,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         // separate co-tile quads along the camera axis so items,
                         // their highlight and furniture billboards never z-fight:
                         // item 0.06 toward the camera, highlight 0.03, furniture 0
-                        const float cx = dx + 0.5f - fwd_x * 0.06f;
-                        const float cy = dy + 0.5f - fwd_y * 0.06f;
-                        const float iz = wz + 0.02f - ITEM_HEIGHT * ispr.base_drop;
+                        const float cx = dx + 0.5f + position_fraction( item_offset.x ) - fwd_x * 0.06f;
+                        const float cy = dy + 0.5f + position_fraction( item_offset.y ) - fwd_y * 0.06f;
+                        const float iz = item_base_z + 0.02f - ITEM_HEIGHT * ispr.base_drop;
                         // tileset highlight sprite behind the item, slightly enlarged
                         sprite_info hspr;
                         if( itex &&
@@ -4246,7 +4289,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                             }
                             if( near_hide && vdrew && ( slope || offset != point::zero ) ) {
-                                surfaces.add_displaced_box( tripoint( dx, dy, zlev ),
+                                surfaces.add_box( tripoint( dx, dy, zlev ),
                                 { dx + shift_x, dy + shift_y, vehicle_z + VEH_DECAL_Z - 0.002f },
                                 { dx + shift_x + 1.0f, dy + shift_y + 1.0f, vehicle_z + VEH_DECAL_Z + 0.002f } );
                             }
@@ -4624,7 +4667,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 if( !slope && offset == point::zero ) {
                                     surfaces.set_vehicle_body( cell, body_bottom, box_top );
                                 } else {
-                                    surfaces.add_displaced_box( cell, { left, top, vehicle_z + body_bottom },
+                                    surfaces.add_box( cell, { left, top, vehicle_z + body_bottom },
                                     { left + 1.0f, top + 1.0f, vehicle_z + box_top } );
                                 }
                                 sprite_info rspr; // untextured -> white fallback x color

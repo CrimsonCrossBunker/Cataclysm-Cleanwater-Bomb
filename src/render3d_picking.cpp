@@ -63,7 +63,7 @@ void pick_surfaces::reset( int view_level )
     vehicle_bodies_.clear();
     ramps_.clear();
     vehicle_top_.fill( 0.0f );
-    translated_bodies_.clear();
+    boxes_.clear();
     actors_.clear();
     cells_.assign( VIEW_SIZE * VIEW_SIZE + ( OVERMAP_LAYERS - 1 ) * REGION_SIZE * REGION_SIZE,
                    pick_surface::open );
@@ -98,10 +98,10 @@ void pick_surfaces::set_vehicle_body( const tripoint &cell, float bottom, float 
     }
 }
 
-void pick_surfaces::add_displaced_box( const tripoint &cell, const scene_point &minimum,
-                                     const scene_point &maximum )
+void pick_surfaces::add_box( const tripoint &cell, const scene_point &minimum,
+                             const scene_point &maximum, const bool selectable )
 {
-    translated_bodies_.push_back( displaced_box{ cell, minimum, maximum } );
+    boxes_.push_back( box_surface{ cell, minimum, maximum, selectable } );
 }
 
 void pick_surfaces::add_actor( const tripoint &cell, const scene_point &bottom,
@@ -216,14 +216,14 @@ std::optional<tripoint> pick_surfaces::trace( const scene_point &origin,
             selected = cell;
         }
     }
-    for( const displaced_box &body : translated_bodies_ ) {
+    for( const box_surface &body : boxes_ ) {
         float hit = entry;
         float leave = nearest;
         if( clip_axis( origin.x, ray.x, body.minimum.x, body.maximum.x, hit, leave ) &&
             clip_axis( origin.y, ray.y, body.minimum.y, body.maximum.y, hit, leave ) &&
             clip_axis( origin.z, ray.z, body.minimum.z, body.maximum.z, hit, leave ) && hit < leave ) {
             nearest = hit;
-            selected = body.cell;
+            selected = body.selectable ? std::optional<tripoint>( body.cell ) : std::nullopt;
         }
     }
 

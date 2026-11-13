@@ -315,12 +315,20 @@ void tileset::clear()
     renderer_instance_generation_at_upload = 0;
     gpu_textures_generation_at_upload = 0;
     duplicate_ids.clear();
+    furniture_geometry.clear();
     tile_ids.clear();
     for( std::unordered_map<std::string, season_tile_value> &m : tile_ids_by_season ) {
         m.clear();
     }
     item_layer_data.clear();
     field_layer_data.clear();
+}
+
+const std::vector<tileset_furniture_box> *tileset::find_furniture_geometry(
+    const std::string &id ) const
+{
+    const auto it = furniture_geometry.find( id );
+    return it == furniture_geometry.end() ? nullptr : &it->second;
 }
 
 uint64_t compute_tileset_filter_fingerprint( const std::string &memory_map_mode )

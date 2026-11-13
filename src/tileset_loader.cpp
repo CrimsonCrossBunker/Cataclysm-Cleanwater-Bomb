@@ -59,6 +59,59 @@ std::string get_ascii_tile_id( const uint32_t sym, const int FG, const int BG )
                           static_cast<char>( FG ), static_cast<char>( BG )
                         } );
 }
+
+std::array<float, 3> read_normalized_triple( const JsonObject &box, const char *member )
+{
+    const JsonArray array = box.get_array( member );
+    if( array.size() != 3 ) {
+        box.throw_error_at( member, "Expected three numbers in the interval [0, 1]" );
+    }
+    std::array<float, 3> result;
+    for( size_t i = 0; i < result.size(); ++i ) {
+        const double value = array.get_float( i );
+        if( !( value >= 0 && value <= 1 ) ) {
+            box.throw_error_at( member, "Expected three numbers in the interval [0, 1]" );
+        }
+        result[i] = static_cast<float>( value );
+    }
+    return result;
+}
+
+std::unordered_map<std::string, std::vector<tileset_furniture_box>> load_furniture_geometry(
+    const cata_path &path )
+{
+    std::unordered_map<std::string, std::vector<tileset_furniture_box>> result;
+    try {
+        const std::optional<JsonValue> config = json_loader::from_path_opt( path );
+        if( !config ) {
+            return result;
+        }
+        for( const JsonObject model : config->get_array() ) {
+            const std::string id = model.get_string( "id" );
+            const JsonArray boxes = model.get_array( "boxes" );
+            if( id.empty() || boxes.empty() || boxes.size() > 16 || result.count( id ) ) {
+                model.throw_error( "Expected a unique furniture id and 1 to 16 boxes" );
+            }
+            std::vector<tileset_furniture_box> &geometry = result[id];
+            geometry.reserve( boxes.size() );
+            for( const JsonObject box : boxes ) {
+                const tileset_furniture_box part{ read_normalized_triple( box, "origin" ),
+                                                  read_normalized_triple( box, "size" ),
+                                                  read_normalized_triple( box, "color" ) };
+                for( size_t axis = 0; axis < part.origin.size(); ++axis ) {
+                    if( part.size[axis] <= 0 || part.origin[axis] + part.size[axis] > 1 ) {
+                        box.throw_error_at( "size", "Furniture box must have positive size and fit its tile" );
+                    }
+                }
+                geometry.push_back( part );
+            }
+        }
+    } catch( const JsonError &error ) {
+        DebugLog( D_WARNING, D_SDL ) << "Ignoring 3D furniture artwork: " << error.what();
+        result.clear();
+    }
+    return result;
+}
 } // namespace
 
 static void get_tile_information( const cata_path &config_path, std::string &json_path,
@@ -417,6 +470,7 @@ atlas_upload_interrupt tileset_cache::loader::load( const std::string &tileset_i
     }
 
     ts.clear();
+    ts.furniture_geometry = load_furniture_geometry( tileset_root / "furniture_3d.json" );
 
     // Parse pass: record atlas descriptors and tile mappings, no GPU work.
     // Texture upload happens later in upload_atlases.
