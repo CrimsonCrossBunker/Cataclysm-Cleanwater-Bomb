@@ -1182,6 +1182,15 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     here.board_vehicle( seat_tile, guest );
     REQUIRE( seat->part().passenger_id == guest_id );
 
+    const auto center = here.get_abs_sub() + point_rel_sm( HALF_MAPSIZE, HALF_MAPSIZE );
+    auto &region = session.load_region( *g, here, profile.id, center );
+    REQUIRE( region.terrain->has_loaded_submap( guest->pos_abs_sm() ) );
+    CHECK( region.terrain->get_abs_sub() == here.get_abs_sub() );
+    CHECK( session.loaded_map_at( here, guest->pos_abs_sm() ) == &here );
+    CHECK( session.scent_for( *region.terrain ) == region.scent.get() );
+    CHECK( session.scent_for( here ) == nullptr );
+    CHECK( &session.load_region( *g, here, profile.id, center ) == &region );
+
     // Make the normal shared save fail after the guest record was written.
     const auto master = PATH_INFO::world_base_save_path() / SAVE_MASTER;
     REQUIRE( std::filesystem::create_directory( master.get_unrelative_path() ) );
@@ -1204,6 +1213,7 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     CHECK( host.pos_abs() == position );
     CHECK( calendar::turn == turn );
     CHECK( session.remote_players.empty() );
+    CHECK_FALSE( session.has_regions() );
     CHECK_FALSE( g->player_controls().is_reserved( profile.id ) );
     CHECK( g->critter_by_id<npc>( guest_id ) == nullptr );
     CHECK_FALSE( overmap_buffer.find_npc( guest_id ) );

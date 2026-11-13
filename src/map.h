@@ -547,7 +547,7 @@ class map
          * if they have been loaded from disc and the are added by map::generate, too.
          * So when do they not appear in the mapbuffer?
          */
-        void save();
+        void save( const map_simulation_regions *regions = nullptr );
         /**
          * Load submaps into @ref grid. This might create new submaps if
          * the @ref mapbuffer can not deliver the requested submap (as it does
@@ -2008,7 +2008,8 @@ class map
          * when starting a new game, or after teleportation or after moving vertically).
          * If false, monsters are not spawned in view of player character.
          */
-        void spawn_monsters( bool ignore_sight, bool spawn_nonlocal = false );
+        void spawn_monsters( bool ignore_sight, bool spawn_nonlocal = false,
+                             const map_simulation_regions *regions = nullptr );
 
         /**
         * Checks to see if the corpse that is rotting away generates items when it does.

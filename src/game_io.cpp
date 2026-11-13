@@ -43,6 +43,7 @@
 #include "character_id.h"
 #include "clzones.h"
 #include "coordinates.h"
+#include "current_map.h"
 #include "debug.h"
 #include "dependency_tree.h"
 #include "diary.h"
@@ -63,7 +64,9 @@
 #include "loading_ui.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "map_simulation_regions.h"
 #include "mapbuffer.h"
+#include "mp_world_session.h"
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_id_compat.h"
@@ -678,12 +681,23 @@ bool game::save_dimension_data()
 }
 bool game::save_maps()
 {
-    map &here = get_map();
-
     try {
-        here.save();
+        map &primary = reality_bubble();
+        auto &session = multiplayer_session();
+        std::vector<std::reference_wrapper<const map>> resident{ std::cref( primary ) };
+        if( session.has_regions() ) {
+            const map_simulation_regions regions = session.simulation_regions( primary );
+            for( const auto &entry : session.active_maps( primary ) ) {
+                entry.get().save( &regions );
+                if( &entry.get() != &primary ) {
+                    resident.emplace_back( entry.get() );
+                }
+            }
+        } else {
+            primary.save();
+        }
         overmap_buffer.save(); // can throw
-        MAPBUFFER.save( false, { std::cref( here ) } ); // can throw
+        MAPBUFFER.save( false, resident ); // can throw
         return true;
     } catch( const std::exception &err ) {
         popup( _( "Failed to save the maps: %s" ), err.what() );
@@ -840,6 +854,10 @@ bool game::save()
     save_in_progress = true;
     if( cata_mp::is_client_mode() ) {
         return !u.has_guest_map_memory() || u.save_map_memory();
+    }
+    std::optional<swap_map> primary_context;
+    if( &get_map() != &reality_bubble() ) {
+        primary_context.emplace( reality_bubble() );
     }
     // total_time_played accumulates real wall-clock seconds, which is inherently
     // non-deterministic. Under input replay we freeze the delta at 0 so the

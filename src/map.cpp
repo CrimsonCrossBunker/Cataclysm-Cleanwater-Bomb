@@ -10266,16 +10266,17 @@ std::vector<tripoint_bub_ms> map::get_dir_circle( const tripoint_bub_ms &f,
     return circle;
 }
 
-void map::save()
+void map::save( const map_simulation_regions *regions )
 {
-    for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
-        for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
-            if( zlevels ) {
-                for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; gridz++ ) {
+    const int min_z = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int max_z = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    for( int gridx = 0; gridx < my_MAPSIZE; ++gridx ) {
+        for( int gridy = 0; gridy < my_MAPSIZE; ++gridy ) {
+            for( int gridz = min_z; gridz <= max_z; ++gridz ) {
+                const tripoint_abs_sm absolute = abs_sub.xy() + tripoint_rel_sm( gridx, gridy, gridz );
+                if( !regions || regions->owns( *this, absolute ) ) {
                     saven( { gridx, gridy, gridz } );
                 }
-            } else {
-                saven( { gridx, gridy, abs_sub.z() } );
             }
         }
     }
@@ -11686,6 +11687,9 @@ void map::on_unload( const tripoint_rel_sm &loc )
     std::tie( omt_abs_origin, offset_within_omt ) = project_remain<coords::omt>( submap_abs_origin );
     // uuuugh this should be const?
     std::shared_ptr<map_data_summary> const_summary = overmap_buffer.get_omt_summary( omt_abs_origin );
+    if( !const_summary ) {
+        return;
+    }
     bool adjusted = !const_summary->placeholder;
 
 
@@ -11987,7 +11991,8 @@ void map::spawn_monsters_submap( const tripoint_rel_sm &gp, bool ignore_sight, b
     current_submap->spawns.clear();
 }
 
-void map::spawn_monsters( bool ignore_sight, bool spawn_nonlocal )
+void map::spawn_monsters( bool ignore_sight, bool spawn_nonlocal,
+                          const map_simulation_regions *regions )
 {
     const int zmin = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int zmax = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
@@ -11998,7 +12003,9 @@ void map::spawn_monsters( bool ignore_sight, bool spawn_nonlocal )
     for( gz = zmin; gz <= zmax; gz++ ) {
         for( gx = 0; gx < my_MAPSIZE; gx++ ) {
             for( gy = 0; gy < my_MAPSIZE; gy++ ) {
-                spawn_monsters_submap( gp, ignore_sight, spawn_nonlocal );
+                if( !regions || regions->owns( *this, abs_sub.xy() + gp ) ) {
+                    spawn_monsters_submap( gp, ignore_sight, spawn_nonlocal );
+                }
             }
         }
     }

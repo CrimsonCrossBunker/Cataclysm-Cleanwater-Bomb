@@ -4626,7 +4626,14 @@ void game::cleanup_dead()
     // can't use all_npcs as that does not include dead ones
     for( const auto &n : critter_tracker->active_npc ) {
         if( n->is_dead() ) {
-            n->die( &here, nullptr ); // make sure this has been called to create corpses etc.
+            const auto &session = multiplayer_session();
+            if( session.has_regions() ) {
+                map &owner = session.map_for( reality_bubble(), n->pos_abs_sm() );
+                const swap_map context( owner );
+                n->die( &owner, nullptr );
+            } else {
+                n->die( &here, nullptr );
+            }
             npc_is_dead = true;
         }
     }
@@ -11726,10 +11733,15 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     // this handles loading/unloading submaps that have scrolled on or off the viewport
     // NOLINTNEXTLINE(cata-use-named-point-constants)
     inclusive_rectangle<point_rel_sm> size_1( {-1, -1}, { 1, 1 } );
+    const auto &session = multiplayer_session();
+    std::optional<map_simulation_regions> regions;
+    if( session.has_regions() && &here == &reality_bubble() ) {
+        regions.emplace( session.simulation_regions( here ) );
+    }
     point_rel_sm remaining_shift = shift;
     while( remaining_shift != point_rel_sm::zero ) {
         point_rel_sm this_shift = clamp( remaining_shift, size_1 );
-        here.shift( point_rel_sm( this_shift ) );
+        here.shift( this_shift, regions ? &*regions : nullptr );
         remaining_shift -= this_shift;
     }
 
@@ -11746,14 +11758,23 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
 
     // Shift NPCs
     for( auto it = critter_tracker->active_npc.begin(); it != critter_tracker->active_npc.end(); ) {
-        ( *it )->shift( shift );
-        const tripoint_bub_ms pos = ( *it )->pos_bub( here );
+        npc &actor = **it;
+        if( regions ) {
+            if( map *const owner = session.loaded_map_at( here, actor.pos_abs_sm() ) ) {
+                actor.update_ai_map_origin( *owner );
+                ++it;
+                continue;
+            }
+        } else {
+            actor.shift( shift );
+        }
+        const tripoint_bub_ms pos = actor.pos_bub( here );
 
         // TODO: This could probably be replaced by an inbounds check.
         if( pos.x() < 0 || pos.x() >= MAPSIZE_X ||
             pos.y() < 0 || pos.y() >= MAPSIZE_Y ) {
             //Remove the npc from the active list. It remains in the overmap list.
-            ( *it )->on_unload();
+            actor.on_unload();
             it = critter_tracker->active_npc.erase( it );
         } else {
             ++it;
@@ -11781,7 +11802,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
 
     // Spawn monsters if appropriate
     // This call will generate new monsters in addition to loading, so it's placed after NPC loading
-    here.spawn_monsters( false ); // Static monsters
+    here.spawn_monsters( false, false, regions ? &*regions : nullptr ); // Static monsters
 
     // Update what parts of the world map we can see
     update_overmap_seen();
@@ -11858,8 +11879,12 @@ void game::despawn_monster( monster &critter )
 void game::despawn_nonlocal_monsters()
 {
     map &here = get_map();
+    const auto &session = multiplayer_session();
 
     for( monster &critter : g->all_monsters() ) {
+        if( session.has_regions() && session.loaded_map_at( here, critter.pos_abs_sm() ) ) {
+            continue;
+        }
         const tripoint_bub_ms pos = critter.pos_bub( here );
 
         if( pos.x() < 0 - MAPSIZE_X / 6 ||
@@ -11881,7 +11906,9 @@ void game::shift_monsters( const tripoint_rel_sm &shift )
             critter.shift( shift.xy() );
         }
 
-        if( reality_bubble().inbounds( critter.pos_bub() ) ) {
+        if( reality_bubble().inbounds( critter.pos_abs() ) ||
+            ( multiplayer_session().has_regions() &&
+              multiplayer_session().loaded_map_at( reality_bubble(), critter.pos_abs_sm() ) ) ) {
             // We're inbounds, so don't despawn after all.
             continue;
         }
@@ -13277,6 +13304,12 @@ void set_scenario( const scenario *new_scenario )
 
 scent_map &get_scent()
 {
+    const auto &session = g->multiplayer_session();
+    if( session.has_regions() ) {
+        if( scent_map *regional = session.scent_for( get_map() ) ) {
+            return *regional;
+        }
+    }
     return g->scent;
 }
 

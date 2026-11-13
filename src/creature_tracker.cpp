@@ -23,6 +23,7 @@
 #include "cata_assert.h"
 #include "cata_compiler_support.h"
 #include "creature_reachability_filter.h"
+#include "current_map.h"
 #include "debug.h"
 #include "flood_fill.h"
 #include "game.h"
@@ -33,6 +34,7 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mp_gamestate.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -359,6 +361,8 @@ void creature_tracker::swap_positions( monster &first, monster &second )
 bool creature_tracker::kill_marked_for_death()
 {
     map &here = get_map();
+    const auto &session = g->multiplayer_session();
+    const bool regional = session.has_regions();
     // Important: `Creature::die` must not be called after creature objects (NPCs, monsters) have
     // been removed, the dying creature could still have a pointer (the killer) to another creature.
     bool monster_is_dead = false;
@@ -374,7 +378,13 @@ bool creature_tracker::kill_marked_for_death()
         dbg( D_INFO ) << string_format( "cleanup_dead: critter at %s hp:%d %s",
                                         critter.pos_abs().to_string_writable(),
                                         critter.get_hp(), critter.name() );
-        critter.die( &here, nullptr );
+        if( regional ) {
+            map &owner = session.map_for( reality_bubble(), critter.pos_abs_sm() );
+            const swap_map context( owner );
+            critter.die( &owner, nullptr );
+        } else {
+            critter.die( &here, nullptr );
+        }
         monster_is_dead = true;
     }
 

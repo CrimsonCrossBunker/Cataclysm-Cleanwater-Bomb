@@ -33,6 +33,7 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
+#include "current_map.h"
 #include "cursesdef.h"
 #include "dialogue_chatbin.h"
 #include "display.h"
@@ -56,6 +57,7 @@
 #include "line.h"
 #include "map.h"
 #include "map_scale_constants.h"
+#include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "messages.h"
@@ -87,6 +89,7 @@
 #include "rng.h"
 #include "sleep.h"
 #include "sounds.h"
+#include "scent_map.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "tileray.h"
@@ -388,6 +391,23 @@ static npc *mp_loaded_actor( actor_binding &binding )
 static npc *mp_remote_actor( remote_player_session &recipient )
 {
     return mp_loaded_actor( recipient.actor );
+}
+
+static map &remote_actor_map( const remote_player_session &recipient, const npc &actor )
+{
+    map &primary = reality_bubble();
+    if( const resident_region *region = mp_session().find_region( recipient.credentials.id ) ) {
+        if( region->terrain->has_loaded_submap( actor.pos_abs_sm() ) ) {
+            return *region->terrain;
+        }
+    }
+    return mp_session().map_for( primary, actor.pos_abs_sm() );
+}
+
+static map &recipient_map( remote_player_session &recipient )
+{
+    const npc *const actor = mp_remote_actor( recipient );
+    return actor ? remote_actor_map( recipient, *actor ) : reality_bubble();
 }
 
 static const peer_observation &mp_partner_observation( character_id target = character_id() )
@@ -1744,6 +1764,7 @@ static void release_remote_player( remote_player_session &recipient )
     }
     npc *remote = mp_remote_actor( recipient );
     if( remote ) {
+        const swap_map context( remote_actor_map( recipient, *remote ) );
         release_guest_seat( *remote );
         g->remove_npc_follower( remote->getID() );
         // Clean despawn — the partner quit/disconnected, they are NOT dead.
@@ -2314,6 +2335,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
     if( !remote ) {
         return;
     }
+    const swap_map context( remote_actor_map( recipient, *remote ) );
     const bool inventory_request = action == "inventory_activity" ||
                                    action == "inventory_activity_cancel";
     if( remote->has_effect( effect_sleep ) && !inventory_request && !is_state_sync_message( msg ) ) {
@@ -3324,10 +3346,11 @@ static std::string build_overmap_sync( remote_player_session &recipient )
     if( !is_hosting() || !recipient.connected ) {
         return std::string();
     }
-    const tripoint_abs_omt center = get_avatar().pos_abs_omt();
+    const npc *const remote = mp_remote_actor( recipient );
+    const bool regional = remote && &remote_actor_map( recipient, *remote ) != &reality_bubble();
+    const tripoint_abs_omt center = regional ? remote->pos_abs_omt() : get_avatar().pos_abs_omt();
     const int host_z = center.z();
     int client_z = host_z;
-    const npc *remote = mp_remote_actor( recipient );
     if( remote ) {
         client_z = remote->pos_abs_omt().z();
     }
@@ -3375,7 +3398,7 @@ static std::string build_overmap_sync( remote_player_session &recipient )
 static std::string build_map_sync_z( remote_player_session &recipient, int az, bool complete )
 {
     const std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-    map &m = get_map();
+    map &m = recipient_map( recipient );
     const tripoint_abs_sm origin = m.get_abs_sub();
 
     std::vector<std::string> palette;
@@ -3420,7 +3443,7 @@ static std::string build_map_sync_z( remote_player_session &recipient, int az, b
     for( int gy = 0; gy < MAPSIZE && sent < cap; ++gy ) {
         for( int gx = 0; gx < MAPSIZE && sent < cap; ++gx ) {
             const tripoint_abs_sm sm_abs{ origin.x() + gx, origin.y() + gy, az };
-            if( recipient.replication.map_sync_sent.count( sm_abs ) ) {
+            if( recipient.replication.map_sync_sent.count( sm_abs ) || !m.has_loaded_submap( sm_abs ) ) {
                 continue;
             }
             const tripoint_abs_ms sm_ms0{ sm_abs.x() *SEEX, sm_abs.y() *SEEY, az };
@@ -3487,11 +3510,12 @@ static std::string build_map_sync( remote_player_session &recipient )
     if( !is_hosting() || !recipient.connected ) {
         return std::string();
     }
-    const tripoint_abs_sm origin = get_map().get_abs_sub();
+    map &terrain = recipient_map( recipient );
+    const tripoint_abs_sm origin = terrain.get_abs_sub();
 
     // Which floors to sync this turn: the host's, plus the client's if its proxy
     // is on a different one.
-    const int host_z = get_avatar().posz();
+    const int host_z = &terrain == &reality_bubble() ? get_avatar().posz() : origin.z();
     int client_z = host_z;
     const npc *remote = mp_remote_actor( recipient );
     if( remote ) {
@@ -3513,9 +3537,10 @@ static std::string build_map_sync( remote_player_session &recipient )
         it = in_bubble ? std::next( it ) : recipient.replication.map_sync_sent.erase( it );
     }
 
-    std::string out = build_map_sync_z( recipient, host_z );
+    const bool regional = &terrain != &reality_bubble();
+    std::string out = build_map_sync_z( recipient, host_z, regional );
     if( two_floors ) {
-        const std::string client_msg = build_map_sync_z( recipient, client_z );
+        const std::string client_msg = build_map_sync_z( recipient, client_z, regional );
         if( !client_msg.empty() ) {
             if( !out.empty() ) {
                 out += '\n';
@@ -8754,6 +8779,7 @@ static std::string build_npc_roster( remote_player_session &recipient, const Cha
     std::set<int> present;
     for( const npc &actor : g->all_npcs() ) {
         if( actor.is_dead() || actor.is_hallucination() || is_player_proxy( actor ) ||
+            ( mp_session().has_regions() && !get_map().has_loaded_submap( actor.pos_abs_sm() ) ) ||
             !actor.getID().is_valid() ) {
             continue;
         }
@@ -8782,6 +8808,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
         return R"({"type":"state","connected":false})";
     }
 
+    const swap_map context( remote_actor_map( recipient, *remote ) );
     tripoint_bub_ms pos_bub = remote->pos_bub();
     tripoint_abs_ms pos = remote->pos_abs();
     mp_log( "[cdda-mp] SRP: npc_abs=" + std::to_string( pos.x() ) + "," + std::to_string( pos.y() ) +
