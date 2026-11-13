@@ -18,9 +18,9 @@
     "throw_correction_data": {
       "required_flag": "SLING_PROJECTILE",
       "min_weight": "1 g",
-      "max_weight": "500 g",
+      "max_weight": "700 g",
       "max_volume": "500 ml",
-      "max_length": "15 cm",
+      "max_length": "20 cm",
       "throw_damage_multiplier": 1.25,
       "throw_range_multiplier": 2.5,
       "throw_stamina_multiplier": 2,
@@ -137,9 +137,9 @@
     "throw_correction_data": {
       "required_flag": "SLING_PROJECTILE",
       "min_weight": "1 g",
-      "max_weight": "750 g",
+      "max_weight": "900 g",
       "max_volume": "500 ml",
-      "max_length": "15 cm",
+      "max_length": "25 cm",
       "throw_damage_multiplier": 1.5,
       "throw_range_multiplier": 3,
       "throw_stamina_multiplier": 4.5,
