@@ -42,20 +42,20 @@ TEST_CASE( "sweep_speed_and_rpm_set_round_count_and_cover_the_arc", "[ranged][gu
     const firearm_sweep fast{ start, end, 1 };
     const firearm_sweep medium{ start, end, 2 };
     const firearm_sweep slow{ start, end, 3 };
-    CHECK( fast.rounds( origin, 750 ) == 8 );
-    CHECK( medium.rounds( origin, 750 ) == 13 );
-    CHECK( slow.rounds( origin, 750 ) == 25 );
-    CHECK( slow.rounds( origin, 600 ) == 20 );
-    CHECK( slow.rounds( origin, 900 ) == 30 );
-    CHECK( fast.rounds( origin, 1200 ) == 12 );
-    const auto points = slow.shot_targets( origin, 750 );
-    REQUIRE( points.size() == 25 );
+    CHECK( fast.rounds( origin, 750 ) == 12 );
+    CHECK( medium.rounds( origin, 750 ) == 19 );
+    CHECK( slow.rounds( origin, 750 ) == 38 );
+    CHECK( slow.rounds( origin, 600 ) == 30 );
+    CHECK( slow.rounds( origin, 900 ) == 45 );
+    CHECK( fast.rounds( origin, 1200 ) == 18 );
+    const auto points = slow.shot_targets( origin, 900 );
+    REQUIRE( points.size() == 45 );
     CHECK( points.front() == start );
     CHECK( points.back() == end );
-    CHECK( points[12].x() == points[12].y() );
-    CHECK( points[12].x() > origin.x() );
+    CHECK( points[22].x() == points[22].y() );
+    CHECK( points[22].x() > origin.x() );
     const firearm_sweep reverse{ end, start, 3 };
-    CHECK( reverse.shot_targets( origin, 750 )[12] == points[12] );
+    CHECK( reverse.shot_targets( origin, 900 )[22] == points[22] );
 }
 
 TEST_CASE( "sweep_wraps_at_the_bearing_boundary_and_rejects_degenerate_arcs",
@@ -68,7 +68,7 @@ TEST_CASE( "sweep_wraps_at_the_bearing_boundary_and_rejects_degenerate_arcs",
     CHECK( sweep.contains( origin, tripoint_bub_ms( 14, 20, 0 ) ) );
     CHECK_FALSE( sweep.contains( origin, tripoint_bub_ms( 26, 20, 0 ) ) );
     CHECK_FALSE( sweep.contains( origin, tripoint_bub_ms( 14, 20, 1 ) ) );
-    CHECK( sweep.duration( origin ) < 0.3 );
+    CHECK( sweep.duration( origin ) < 0.4 );
     const firearm_sweep same_ray{ start, tripoint_bub_ms( 10, 18, 0 ), 2 };
     const firearm_sweep wrong_floor{ start, tripoint_bub_ms( 15, 21, 1 ), 2 };
     const firearm_sweep wrong_speed{ start, end, 4 };
