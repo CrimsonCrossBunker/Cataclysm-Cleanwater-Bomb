@@ -1,283 +1,52 @@
-name: SDL3 build matrix
+name: Stage 5 macOS co-op runtime validation
 
 on:
   workflow_dispatch:
 
-concurrency:
-  group: sdl3-matrix-${{ github.event.pull_request.number || github.ref_name }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
 
 jobs:
-  # Desktop SDL3 is temporarily paused. To restore automatic runs, re-enable
-  # the push and pull_request triggers in `on` and set the repository variable
-  # CCB_DESKTOP_SDL3_ENABLED=true.
-  skip-duplicates-code:
-    if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' }}
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip_code: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578 # master
-        with:
-          skip_after_successful_duplicate: 'false'
-          paths_ignore: '["android/**", "build-data/osx/**", "doc/**", "doxygen_doc/**", "lgtm/**", "utilities/**", "lang/**"]'
-
-  # Compile GLSL -> spv/dxil/msl once on Linux (cheap shadercross + DXC there)
-  # and share the artifacts with every platform build job. Runtime variant_pass
-  # picks the format matching its GPU backend (Vulkan/D3D12/Metal).
-  compile-shaders:
-    needs: [ skip-duplicates-code ]
-    if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' && needs.skip-duplicates-code.outputs.should_skip_code != 'true' && github.event.pull_request.draft == false }}
-    name: Compile shaders
-    runs-on: ubuntu-24.04
-    steps:
-    - name: checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-
-    - name: install glslang
-      run: |
-          sudo apt-get update
-          sudo apt-get install -y glslang-tools
-
-    - name: setup SDL3 (for shadercross link)
-      id: sdl
-      uses: libsdl-org/setup-sdl@afd98199e97f9c2aa739474be7e0886d149a5e47 # main
-      with:
-        version: 3.4.10
-        cmake-generator: Ninja
-        install-linux-dependencies: true
-
-    - name: build SDL_shadercross
-      run: |
-          git clone --recursive https://github.com/libsdl-org/SDL_shadercross.git /tmp/SDL_shadercross
-          cd /tmp/SDL_shadercross
-          git checkout 6b06e55c7c5d7e7a09a8a14f76e866dcfad5ab99
-          git submodule update --init --recursive
-          cmake -P build-scripts/download-prebuilt-DirectXShaderCompiler.cmake
-          cmake -S external/SPIRV-Cross -B spirv_cross_build -GNinja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DSPIRV_CROSS_SHARED=OFF \
-              -DSPIRV_CROSS_STATIC=ON \
-              -DSPIRV_CROSS_CLI=OFF \
-              -DSPIRV_CROSS_ENABLE_TESTS=OFF \
-              -DCMAKE_INSTALL_PREFIX=/tmp/spirv_cross_prefix
-          cmake --build spirv_cross_build
-          cmake --install spirv_cross_build
-          cmake -B build -GNinja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_PREFIX_PATH=/tmp/spirv_cross_prefix \
-              -DDirectXShaderCompiler_ROOT=/tmp/SDL_shadercross/external/DirectXShaderCompiler-binaries \
-              -DSDLSHADERCROSS_VENDORED=OFF \
-              -DSDLSHADERCROSS_INSTALL=ON \
-              -DSDLSHADERCROSS_CLI=ON \
-              -DSDLSHADERCROSS_SHARED=OFF \
-              -DSDLSHADERCROSS_STATIC=ON \
-              -DSDLSHADERCROSS_SPIRVCROSS_SHARED=OFF
-          cmake --build build
-          sudo cmake --install build
-
-    - name: compile shaders for all backends
-      env:
-        # shadercross dynamically links against SDL3 (built by setup-sdl) and
-        # against the prebuilt DXC libdxcompiler.so under the SDL_shadercross
-        # external/ tree, neither of which is in the system loader path.
-        LD_LIBRARY_PATH: ${{ steps.sdl.outputs.prefix }}/lib:/tmp/SDL_shadercross/external/DirectXShaderCompiler-binaries/linux/lib
-      run: |
-          python3 tools/build_shaders.py \
-              --shader-dir data/shaders \
-              --formats spv,dxil,msl \
-              --stamp data/shaders/build-spv-dxil-msl.stamp
-          # Touch per-platform stamps so the Make/CMake rule on each platform
-          # job sees its expected stamp name and skips invoking build_shaders.
-          touch data/shaders/build-spv.stamp \
-                data/shaders/build-dxil.stamp \
-                data/shaders/build-msl.stamp
-
-    - name: upload shader artifacts
-      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-      with:
-        name: cdda-shaders
-        path: |
-          data/shaders/*.spv
-          data/shaders/*.dxil
-          data/shaders/*.msl
-          data/shaders/build-*.stamp
-        if-no-files-found: error
-        retention-days: 1
-
   build:
-    needs: [ skip-duplicates-code, compile-shaders ]
-    if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' && needs.skip-duplicates-code.outputs.should_skip_code != 'true' && github.event.pull_request.draft == false }}
+    name: Build the universal co-op dylib
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build both Rust targets through the release Make recipe
+        run: |
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
+          make NATIVE=osx UNIVERSAL_BINARY=1 RUST_COOP=1 TILES=0 RUST_COOP_JOBS=3 coop-runtime
+          lipo -info libccb_bevy_ecs_coop.dylib
+          lipo libccb_bevy_ecs_coop.dylib -verify_arch x86_64 arm64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage5-macos-universal-coop
+          path: libccb_bevy_ecs_coop.dylib
+          if-no-files-found: error
+          retention-days: 3
+
+  loopback:
+    name: Native ABI and Renet loopback (${{ matrix.arch }})
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 6
     strategy:
-      fail-fast: true
-      max-parallel: 1
+      fail-fast: false
       matrix:
         include:
-          - title: macOS
-            os: macos-15
-            platform: macos
-          - title: Ubuntu
-            os: ubuntu-24.04
-            platform: linux
-          - title: Windows
-            os: windows-2022
-            platform: windows
-    name: ${{ matrix.title }}
-    runs-on: ${{ matrix.os }}
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
     steps:
-    - name: checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
-
-    - name: download prebuilt shader artifacts
-      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-      with:
-        name: cdda-shaders
-        path: data/shaders
-
-    - name: mark shader artifacts fresh
-      shell: bash
-      run: |
-          # checkout sets .frag mtimes to "now"; bump artifact mtimes so the
-          # Make/CMake shader rule sees them as up-to-date and skips invoking
-          # build_shaders.py.
-          touch data/shaders/build-*.stamp data/shaders/*.spv data/shaders/*.dxil data/shaders/*.msl
-
-    - name: install build deps (Ubuntu)
-      if: matrix.platform == 'linux'
-      run: |
-          sudo apt-get update
-          sudo apt-get install libflac-dev libogg-dev libvorbis-dev libmpg123-dev libwavpack-dev \
-              libfreetype-dev libharfbuzz-dev libjpeg-dev libpng-dev libwebp-dev libtiff-dev \
-              libpulse-dev libncursesw5-dev ccache gettext parallel pkg-config cmake \
-              libx11-dev libxext-dev libxcursor-dev libxi-dev libxfixes-dev libxrandr-dev \
-              libxrender-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev \
-              libdecor-0-dev libdrm-dev libgbm-dev libudev-dev libpipewire-0.3-dev \
-              libdbus-1-dev libibus-1.0-dev
-
-    - name: cache SDL3 stack source build (Ubuntu)
-      if: matrix.platform == 'linux'
-      id: cache-sdl3
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ${{ runner.workspace }}/sdl3_prefix
-        key: sdl3-stack-sdl-3.4.10-image-3.4.4-ttf-3.2.2-mixer-3.2.4-${{ runner.os }}-v2
-
-    - name: build SDL3 stack from source (Ubuntu)
-      if: matrix.platform == 'linux' && steps.cache-sdl3.outputs.cache-hit != 'true'
-      run: |
-          PREFIX=${{ runner.workspace }}/sdl3_prefix
-          export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig:$PREFIX/lib/x86_64-linux-gnu/pkgconfig
-          export CMAKE_PREFIX_PATH=$PREFIX
-          git clone --depth 1 --branch release-3.4.10 https://github.com/libsdl-org/SDL.git sdl3_src
-          cmake -S sdl3_src -B sdl3_build \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=$PREFIX \
-              -DBUILD_SHARED_LIBS=ON
-          cmake --build sdl3_build -j$(nproc)
-          cmake --install sdl3_build
-          git clone --depth 1 --branch release-3.4.4 https://github.com/libsdl-org/SDL_image.git sdl3_image_src
-          cmake -S sdl3_image_src -B sdl3_image_build \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=$PREFIX \
-              -DSDLIMAGE_VENDORED=OFF \
-              -DBUILD_SHARED_LIBS=ON
-          cmake --build sdl3_image_build -j$(nproc)
-          cmake --install sdl3_image_build
-          git clone --depth 1 --branch release-3.2.2 https://github.com/libsdl-org/SDL_ttf.git sdl3_ttf_src
-          cmake -S sdl3_ttf_src -B sdl3_ttf_build \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=$PREFIX \
-              -DSDLTTF_VENDORED=OFF \
-              -DBUILD_SHARED_LIBS=ON
-          cmake --build sdl3_ttf_build -j$(nproc)
-          cmake --install sdl3_ttf_build
-          git clone --depth 1 --branch release-3.2.4 https://github.com/libsdl-org/SDL_mixer.git sdl3_mixer_src
-          cmake -S sdl3_mixer_src -B sdl3_mixer_build \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=$PREFIX \
-              -DSDLMIXER_VENDORED=OFF \
-              -DSDLMIXER_FLAC=ON -DSDLMIXER_FLAC_LIBFLAC=ON \
-              -DSDLMIXER_MP3=ON -DSDLMIXER_MP3_MPG123=ON \
-              -DSDLMIXER_VORBIS_VORBISFILE=ON -DSDLMIXER_VORBIS_STB=OFF -DSDLMIXER_VORBIS_TREMOR=OFF \
-              -DSDLMIXER_WAVPACK=ON \
-              -DSDLMIXER_OPUS=OFF -DSDLMIXER_MOD=OFF -DSDLMIXER_MIDI=OFF \
-              -DBUILD_SHARED_LIBS=ON
-          cmake --build sdl3_mixer_build -j$(nproc)
-          cmake --install sdl3_mixer_build
-
-    - name: install SDL3 (macOS)
-      if: matrix.platform == 'macos'
-      run: |
-          HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes \
-              brew install pkgconf sdl3 sdl3_image sdl3_ttf sdl3_mixer \
-              gettext ccache parallel
-
-    - name: setup MSVC (Windows)
-      if: matrix.platform == 'windows'
-      uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
-
-    - name: install vcpkg (Windows)
-      if: matrix.platform == 'windows'
-      uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
-      with:
-        vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
-        vcpkgGitCommitId: 'f6672d8e480ccdecddfad3fd1b838ba369ffe6cd'
-
-    - name: integrate vcpkg (Windows)
-      if: matrix.platform == 'windows'
-      run: |
-        vcpkg integrate install --vcpkg-root "$env:RUNNER_WORKSPACE\b\vcpkg"
-      env:
-        RUNNER_WORKSPACE: ${{ runner.workspace }}
-
-    - name: cache vcpkg packages (Windows)
-      if: matrix.platform == 'windows'
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: msvc-full-features/vcpkg_installed
-        key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
-
-    - name: install vcpkg packages (Windows)
-      if: matrix.platform == 'windows'
-      shell: pwsh
-      working-directory: msvc-full-features
-      env:
-        VCPKG_BINARY_SOURCES: clear;default,readwrite
-        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
-      run: |
-        vcpkg install --triplet x64-windows-static --host-triplet x64-windows-static `
-          --x-install-root="$env:GITHUB_WORKSPACE\msvc-full-features\vcpkg_installed\x64-windows-static" `
-          --x-feature=sdl3 --clean-after-build
-
-    - name: build (Ubuntu)
-      if: matrix.platform == 'linux'
-      env:
-        PKG_CONFIG_PATH: ${{ runner.workspace }}/sdl3_prefix/lib/pkgconfig:${{ runner.workspace }}/sdl3_prefix/lib/x86_64-linux-gnu/pkgconfig
-        LD_LIBRARY_PATH: ${{ runner.workspace }}/sdl3_prefix/lib:${{ runner.workspace }}/sdl3_prefix/lib/x86_64-linux-gnu
-      run: |
-          make -j$(nproc) TILES=1 SDL3=1 SOUND=1 NATIVE=linux64 RELEASE=1 BACKTRACE=0 LOCALIZE=0
-
-    - name: build (macOS)
-      if: matrix.platform == 'macos'
-      env:
-        PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig
-      run: |
-          make -j$(sysctl -n hw.ncpu) TILES=1 SDL3=1 SOUND=1 NATIVE=osx RELEASE=1 LOCALIZE=0
-
-    - name: build (Windows)
-      if: matrix.platform == 'windows'
-      env:
-        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
-      run: |
-          msbuild -m -p:Configuration=Release -p:Platform=x64 -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static" msvc-full-features\Cataclysm-vcpkg-static.sln
-
-    - name: run sound_backend tests (Windows)
-      if: matrix.platform == 'windows'
-      run: |
-          .\Cataclysm-test-vcpkg-static-Release-x64.exe --min-duration 20 --order lex --wait-for-keypress exit "[sound_backend]"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: stage5-macos-universal-coop
+      - name: Load packaged library and complete a native loopback connection
+        run: python3 .github/stage5-coop-runtime-probe.py libccb_bevy_ecs_coop.dylib ${{ matrix.arch }}
