@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <memory>
 #include <ostream>
@@ -380,6 +381,26 @@ TEST_CASE( "thrown_items_follow_recovery_chance", "[throwing]" )
         found = found || dropped.typeId() == thrown_id;
     }
     CHECK( found == recover );
+}
+
+TEST_CASE( "throwing_leverage_raises_weight_damage_cap", "[throwing][sling]" )
+{
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    reset_player( you, { 10, 8, 8, 8 }, { 30, 30, 0 } );
+    const item bullet( itype_sling_bullet_stone_750, calendar::turn, 1 );
+    const double base_cap = you.thrown_item_adjusted_damage( bullet );
+    REQUIRE( base_cap == 4 );
+    const double base_damage = bullet.base_damage_thrown().type_damage( damage_bash );
+    CHECK( you.thrown_item_total_damage_raw( bullet ) == std::round( base_damage + base_cap ) );
+
+    item sling( itype_sling_long );
+    REQUIRE( you.wield( sling ) );
+    const double cap = base_cap * ( 1.0 + 0.5 * ( 1.8 - 1.0 ) );
+    const double expected_damage = ( base_damage + cap ) * 1.5;
+    CHECK( you.thrown_item_total_damage_raw( bullet ) == std::round( expected_damage ) );
+    const dealt_projectile_attack attack = you.throw_item( { 31, 30, 0 }, bullet );
+    CHECK( attack.proj.impact.type_damage( damage_bash ) == Approx( expected_damage ) );
 }
 
 TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[throwing]" )
