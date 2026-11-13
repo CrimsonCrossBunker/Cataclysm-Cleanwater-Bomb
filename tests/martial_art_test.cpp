@@ -181,7 +181,7 @@ TEST_CASE( "active_grappling_controls_and_releases_npc_targets",
     REQUIRE_FALSE( target.is_enemy() );
     REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
     CHECK( target.hit_by_player );
-    CHECK(( target.get_attitude() == NPCATT_KILL || target.get_attitude() == NPCATT_FLEE_TEMP ) );
+    CHECK( ( target.get_attitude() == NPCATT_KILL || target.get_attitude() == NPCATT_FLEE_TEMP ) );
     CHECK_FALSE( target.move_effects( false ) );
     CHECK( target.move_effects( true ) );
     SECTION( "drag and throw" ) {
@@ -189,7 +189,7 @@ TEST_CASE( "active_grappling_controls_and_releases_npc_targets",
         CHECK( target.pos_abs() == origin );
         CHECK( dude.pos_abs() == origin + tripoint::west );
         REQUIRE( dude.use_active_technique( target, tec_judo_hip_throw ) );
-        CHECK( target.pos_abs() == origin + tripoint_rel_ms(-2, 0, 0 ) );
+        CHECK( target.pos_abs() == origin + tripoint_rel_ms( -2, 0, 0 ) );
         CHECK( target.has_effect( effect_downed ) );
         CHECK_FALSE( target.has_effect( effect_martial_grapple ) );
     }
