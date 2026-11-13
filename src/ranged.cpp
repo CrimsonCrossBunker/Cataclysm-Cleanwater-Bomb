@@ -1314,7 +1314,7 @@ int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
-                         item_location ammo, int burst_rounds )
+                         const item_location &ammo, int burst_rounds )
 {
     if( !mode || mode.melee() ) {
         return 0;
@@ -1349,7 +1349,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                          item_location ammo )
 {
-    return fire_gun_impl( here, target, shots, gun, ammo, true );
+    return fire_gun_impl( here, target, shots, gun, std::move( ammo ), true );
 }
 
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
@@ -1673,28 +1673,29 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 }
 
 static float railgun_throw_multiplier( const Character &character, float base,
-                                       float itype::*item_mult,
-                                       float islot_gunmod::*gunmod_mult )
+                                       float throw_correction_data::*multiplier )
 {
-    float multiplier = base;
+    float result = base;
     const item_location wielded = character.get_wielded_item();
     if( !wielded ) {
-        return multiplier;
+        return result;
     }
     const bool has_railgun_throw_multiplier = flag_RAILGUN_THROW_MULTIPLIER.is_valid();
     if( has_railgun_throw_multiplier &&
-        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-        multiplier *= wielded->type->*item_mult;
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+        wielded->type->throw_correction ) {
+        result *= wielded->type->throw_correction.value().*multiplier;
     }
     if( wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
             if( has_railgun_throw_multiplier &&
-                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-                multiplier *= ( *mod->type->gunmod ).*gunmod_mult;
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+                mod->type->gunmod->throw_correction ) {
+                result *= mod->type->gunmod->throw_correction.value().*multiplier;
             }
         }
     }
-    return multiplier;
+    return result;
 }
 
 int throw_cost( const Character &c, const item &to_throw )
@@ -1707,7 +1708,7 @@ int throw_cost( const Character &c, const item &to_throw )
     const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
-    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier( to_throw );
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
                               60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
@@ -1729,7 +1730,7 @@ int throw_cost( const Character &c, const item &to_throw )
     }
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
-                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
+                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier( to_throw ) ) ) );
 
     return std::max( 25, move_cost );
 }
@@ -1804,7 +1805,7 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
 {
     const bool do_railgun = is_fcl_railgun_throw( to_throw );
     units::mass weight = to_throw.weight() *
-                         ( do_railgun ? 1.0f : throw_weight_multiplier() );
+                         ( do_railgun ? 1.0f : throw_weight_multiplier( to_throw ) );
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1844,10 +1845,10 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
         dispersion *= 4;
     }
 
-    const float dispersion_multiplier = do_railgun ? railgun_throw_multiplier( *this, 0.5f,
-                                        &itype::throw_dispersion_multiplier,
-                                        &islot_gunmod::throw_dispersion_multiplier ) :
-                                        throw_dispersion_multiplier();
+    const float dispersion_multiplier = do_railgun ?
+                                        railgun_throw_multiplier( *this, 0.5f,
+                                                &throw_correction_data::dispersion_multiplier ) :
+                                        throw_dispersion_multiplier( to_throw );
     dispersion = static_cast<int>( std::round( dispersion * dispersion_multiplier ) );
 
     return std::max( 0, dispersion );
@@ -1883,9 +1884,8 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
     const float weight_dmg = thrown.weight() *
                              ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
-                                     &itype::throw_weight_multiplier,
-                                     &islot_gunmod::throw_weight_multiplier ) :
-                               thrower.throw_weight_multiplier() ) /
+                                     &throw_correction_data::weight_multiplier ) :
+                               thrower.throw_weight_multiplier( thrown ) ) /
                              100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
@@ -1973,9 +1973,8 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
     }
     const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ?
                                     railgun_throw_multiplier( *this, 3.5f,
-                                            &itype::throw_damage_multiplier,
-                                            &islot_gunmod::throw_damage_multiplier ) :
-                                    throw_damage_multiplier();
+                                            &throw_correction_data::damage_multiplier ) :
+                                    throw_damage_multiplier( thrown );
     return std::round( total_damage * throw_damage_mult );
 }
 
@@ -1999,7 +1998,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         const int stamina_cost = get_standard_stamina_cost( &thrown );
         mod_stamina( static_cast<int>( std::round(
                                            ( stamina_cost + throwing_skill ) *
-                                           ( fcl_railgun_throw ? 1.0f : throw_stamina_multiplier() ) ) ) );
+                                           ( fcl_railgun_throw ? 1.0f :
+                                             throw_stamina_multiplier( thrown ) ) ) ) );
     }
 
     const float skill_level = throwing_skill_adjusted( *this );
@@ -2093,8 +2093,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
 
     // Apply wielded-item throwing damage multiplier.
     impact.mult_damage( do_railgun ? railgun_throw_multiplier( *this, 3.5f,
-                        &itype::throw_damage_multiplier,
-                        &islot_gunmod::throw_damage_multiplier ) : throw_damage_multiplier() );
+                        &throw_correction_data::damage_multiplier ) :
+                        throw_damage_multiplier( thrown ) );
 
     Creature *critter = get_creature_tracker().creature_at( target, true );
     const dispersion_sources dispersion( throwing_dispersion( thrown, critter,
@@ -2929,7 +2929,7 @@ int reload_and_shoot_time( const Character &p, const item_location &loc )
     return time;
 }
 
-bool ready_ranged_ammo( Character &who, item &gun, item_location ammo )
+bool ready_ranged_ammo( Character &who, item &gun, const item_location &ammo )
 {
     const int moves = reload_and_shoot_time( who, ammo );
     if( !ammo || !gun.reload( who, ammo, 1 ) ) {

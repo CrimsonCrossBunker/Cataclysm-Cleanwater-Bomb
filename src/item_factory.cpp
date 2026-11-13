@@ -1,5 +1,7 @@
+#include <item_source.h>
 #include <iuse.h>
 #include <mounted_charge.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
@@ -22,12 +24,11 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "chopping_activity.h"
-#include "item_activation.h"
 #include "cata_assert.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "chopping_activity.h"
 #include "color.h"
 #include "coords_fwd.h"
 #include "damage.h"
@@ -45,9 +46,9 @@
 #include "generic_factory.h"
 #include "input.h"
 #include "item.h"
+#include "item_activation.h"
 #include "item_contents.h"
 #include "item_factory.h"
-#include "remote_vehicle_activity.h"
 #include "item_group.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
@@ -64,6 +65,7 @@
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "relic.h"
+#include "remote_vehicle_activity.h"
 #include "requirements.h"
 #include "ret_val.h"
 #include "stomach.h"
@@ -4189,6 +4191,122 @@ void islot_seed::deserialize( const JsonObject &jo, std::string_view src )
     load_eocs( "eoc_on_water", eoc_on_water );
 }
 
+void throw_correction_data::deserialize( const JsonObject &jo )
+{
+    if( jo.has_member( "required_flag" ) ) {
+        const JsonValue required = jo.get_member( "required_flag" );
+        required_flags.clear();
+        if( required.test_string() ) {
+            required_flags.push_back( { flag_id( required.get_string() ) } );
+        } else if( required.test_array() ) {
+            const JsonArray alternatives = required.get_array();
+            if( alternatives.empty() ) {
+                required.throw_error( "required_flag must contain at least one flag clause" );
+            }
+            for( const JsonValue alternative : alternatives ) {
+                if( alternative.test_string() ) {
+                    required_flags.push_back( { flag_id( alternative.get_string() ) } );
+                } else if( alternative.test_array() ) {
+                    const JsonArray conjunction = alternative.get_array();
+                    if( conjunction.empty() ) {
+                        alternative.throw_error( "required_flag AND clauses must not be empty" );
+                    }
+                    std::vector<flag_id> clause;
+                    for( const JsonValue flag : conjunction ) {
+                        if( !flag.test_string() ) {
+                            flag.throw_error( "required_flag AND clauses must contain only "
+                                              "strings" );
+                        }
+                        clause.emplace_back( flag.get_string() );
+                    }
+                    required_flags.push_back( std::move( clause ) );
+                } else {
+                    alternative.throw_error( "required_flag alternatives must be strings or arrays "
+                                             "of strings" );
+                }
+            }
+        } else if( !required.test_null() ) {
+            required.throw_error( "required_flag must be a string, an array, or null" );
+        }
+    }
+    optional( jo, was_loaded, "allow_ammotype", allowed_ammo, auto_flags_reader<ammotype> {} );
+
+    const auto load_optional_bound = [&jo]( const char *member, auto & target, const auto & reader ) {
+        if( !jo.has_member( member ) ) {
+            return;
+        }
+        const JsonValue value = jo.get_member( member );
+        if( value.test_null() ) {
+            target.reset();
+        } else {
+            target = reader.get_next( value );
+        }
+    };
+    load_optional_bound( "min_weight", min_weight, units_bound_reader<units::mass> { 0_gram } );
+    load_optional_bound( "max_weight", max_weight, units_bound_reader<units::mass> { 0_gram } );
+    load_optional_bound( "max_volume", max_volume, units_bound_reader<units::volume> { 0_ml } );
+    load_optional_bound( "max_length", max_length, units_bound_reader<units::length> { 0_mm } );
+    if( min_weight && max_weight && *min_weight > *max_weight ) {
+        try {
+            jo.throw_error_at( "min_weight",
+                               "throw_correction_data: min_weight exceeds max_weight" );
+        } catch( const JsonError &err ) {
+            debugmsg( "Warning: %s", err.what() );
+        }
+    }
+
+    optional( jo, was_loaded, "throw_damage_multiplier", damage_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_range_multiplier", range_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_stamina_multiplier", stamina_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_dispersion_multiplier", dispersion_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_speed_multiplier", speed_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_weight_multiplier", weight_multiplier, 1.0f );
+    was_loaded = true;
+}
+
+bool throw_correction_data::applies_to( const item &thrown ) const
+{
+    const bool unrestricted = required_flags.empty() && allowed_ammo.empty();
+    const bool ammo_match = thrown.is_ammo() && allowed_ammo.count( thrown.ammo_type() ) > 0;
+    const bool flags_match = std::any_of( required_flags.begin(), required_flags.end(),
+    [&thrown]( const std::vector<flag_id> &clause ) {
+        return std::all_of( clause.begin(), clause.end(), [&thrown]( const flag_id & flag ) {
+            return thrown.has_flag( flag );
+        } );
+    } );
+    if( !unrestricted && !flags_match && !ammo_match ) {
+        return false;
+    }
+
+    units::mass weight = thrown.weight();
+    units::volume volume = thrown.volume();
+    if( thrown.count_by_charges() && thrown.charges > 1 ) {
+        weight /= thrown.charges;
+        volume /= thrown.charges;
+    }
+    return ( !min_weight || weight >= *min_weight ) &&
+           ( !max_weight || weight <= *max_weight ) &&
+           ( !max_volume || volume <= *max_volume ) &&
+           ( !max_length || thrown.length() <= *max_length );
+}
+
+static void load_throw_correction( const JsonObject &jo,
+                                   std::optional<throw_correction_data> &correction )
+{
+    if( !jo.has_member( "throw_correction_data" ) ) {
+        return;
+    }
+    const JsonValue value = jo.get_member( "throw_correction_data" );
+    if( value.test_null() ) {
+        correction.reset();
+        return;
+    }
+    if( !correction ) {
+        correction.emplace();
+    }
+    correction->deserialize( value.get_object() );
+}
+
 void islot_gunmod::deserialize( const JsonObject &jo )
 {
     mandatory( jo, was_loaded, "install_time", install_time );
@@ -4237,13 +4355,7 @@ void islot_gunmod::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "blacklist_slot", blacklist_slot, auto_flags_reader < gunmod_location > {} );
     optional( jo, was_loaded, "barrel_length", barrel_length );
     optional( jo, was_loaded, "add_mod", add_mod, weighted_string_id_reader < gunmod_location, int > {1} );
-    //Throw-related multipliers
-    optional( jo, was_loaded, "throw_damage_multiplier", throw_damage_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_range_multiplier", throw_range_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_stamina_multiplier", throw_stamina_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_dispersion_multiplier", throw_dispersion_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_speed_multiplier", throw_speed_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_weight_multiplier", throw_weight_multiplier, 1.0f );
+    load_throw_correction( jo, throw_correction );
     //Throw-related additive bonuses
     optional( jo, was_loaded, "throw_damage_add", throw_damage_add, 0.0f );
     optional( jo, was_loaded, "throw_range_add", throw_range_add, 0.0f );
@@ -4892,11 +5004,7 @@ void itype::load( const JsonObject &jo, std::string_view src )
         mounted_charge.reset();
     }
     optional( jo, was_loaded, "thrown_damage", thrown_damage );
-    optional( jo, was_loaded, "throw_damage_multiplier", throw_damage_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_range_multiplier", throw_range_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_stamina_multiplier", throw_stamina_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_dispersion_multiplier", throw_dispersion_multiplier, 1.0f );
-    optional( jo, was_loaded, "throw_speed_multiplier", throw_speed_multiplier, 1.0f );
+    load_throw_correction( jo, throw_correction );
     optional( jo, was_loaded, "explosion", explosion );
     using_legacy_to_hit = false; //required for inherited but undefined "to_hit" field
     optional( jo, was_loaded, "to_hit", m_to_hit, melee_accuracy_reader{ *this }, -2 );
@@ -5041,8 +5149,6 @@ void itype::load( const JsonObject &jo, std::string_view src )
     JsonObject replace_val = jo.get_object( "replace_materials" );
     replace_val.allow_omitted_members();
     replace_materials( replace_val, *this );
-
-    optional( jo, was_loaded, "throw_weight_multiplier", throw_weight_multiplier, 1.0f );
 }
 
 void Item_factory::add_migration( const migration &m )

@@ -148,13 +148,21 @@ These fields can be read by any ITEM regardless of subtypes:
 "degradation_multiplier": 0.8,               // Controls how quickly an item degrades when taking damage. 0 = no degradation. Defaults to 1.0.
 "solar_efficiency": 0.3,                     // Efficiency of solar energy conversion for solarpacks; require SOLARPACK_ON to generate electricity; default 0
 "source_monster": "mon_zombie",               // This item is corpse of this monster (so it has weight and volume of this monster), and revive into this monster; require COPRSE flag
-"thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage, that would be dealt when you throw this item; lack of this field fall back to use melee damage, including player's str bonus applied to melee attack
-"throw_damage_multiplier": 1.1,              // (Optional, default = 1.0) Multiplier to thrown damage when this item is wielded.
-"throw_range_multiplier": 1.1,               // (Optional, default = 1.0) Multiplier to thrown range when this item is wielded.
-"throw_stamina_multiplier": 0.9,             // (Optional, default = 1.0) Multiplier to throwing stamina cost when this item is wielded.
-"throw_dispersion_multiplier": 0.9,          // (Optional, default = 1.0) Multiplier to throwing dispersion when this item is wielded.  Lower is more accurate.
-"throw_speed_multiplier": 0.9,               // (Optional, default = 1.0) Multiplier to throwing move cost when this item is wielded.  Lower is faster.
-"throw_weight_multiplier": 1.1,              // (Optional, default = 1.0) Multiplier to the thrown item's effective weight when this item is wielded.
+"thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage dealt when throwing this item; if omitted, melee damage is used, including the character's strength bonus.
+"throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. Match either required_flag or allow_ammotype, then pass all physical limits; see Throw corrections below.
+  "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "SLING_AMMO" ] ], // String, array, or null. Outer entries are alternatives; flags grouped in an inner array are all required. null clears the flag requirement; empty arrays are errors.
+  "allow_ammotype": [ "pebble" ],            // (Optional) Ammunition types accepted as an alternative to required_flag. Also accepts a single string.
+  "min_weight": "1 g",                     // (Optional) Inclusive minimum projectile weight.
+  "max_weight": "750 g",                   // (Optional) Inclusive maximum projectile weight.
+  "max_volume": "500 ml",                  // (Optional) Inclusive maximum projectile volume.
+  "max_length": "15 cm",                   // (Optional) Inclusive maximum projectile length.
+  "throw_damage_multiplier": 1.1,           // (Optional, default = 1.0) Multiplier to thrown damage.
+  "throw_range_multiplier": 1.1,            // (Optional, default = 1.0) Multiplier to thrown range.
+  "throw_stamina_multiplier": 0.9,          // (Optional, default = 1.0) Multiplier to throwing stamina cost.
+  "throw_dispersion_multiplier": 0.9,       // (Optional, default = 1.0) Multiplier to throwing dispersion. Lower is more accurate.
+  "throw_speed_multiplier": 0.9,            // (Optional, default = 1.0) Multiplier to throwing move cost. Lower is faster.
+  "throw_weight_multiplier": 1.1            // (Optional, default = 1.0) Multiplier to the projectile's effective weight.
+},
 "material": [                                // Material types, can be as many as you want.  See materials.json for possible options
   { "type": "cotton", "portion": 9 },        // type indicates the material's ID, portion indicates proportionally how much of the item is composed of that material
   { "type": "plastic" }                      // portion can be omitted and will default to 1. In this case, the item is 90% cotton and 10% plastic.
@@ -215,6 +223,27 @@ These fields can be read by any ITEM regardless of subtypes:
     }
 },
 ```
+
+#### Throw corrections
+
+`throw_correction_data` accepts projectiles matching either `required_flag` or
+`allow_ammotype`.  The latter matches ammunition items by ammunition type, not by
+item ID.  With an ammo list but no flag requirement, only matching ammunition is
+accepted.  Without either selector, there is no item-type restriction.
+All accepted projectiles must still pass the configured weight, volume, and length
+limits.  Weight and volume use a single charge for charge-counted items.
+
+Omitted fields retain inherited values.  On a new definition, omitted selectors
+and bounds impose no restriction, and omitted multipliers default to 1.0.
+`required_flag: null` clears an inherited flag requirement; empty outer or inner
+flag arrays are errors.  `allow_ammotype: []` clears the ammo list.  A bound set to
+`null` clears that bound; setting the entire `throw_correction_data` to `null`
+removes the correction.
+
+Weight bounds are inclusive and independent: omitting one does not limit that
+side of the interval.  When `min_weight` exceeds `max_weight`, loading emits a
+JSON warning but continues.  The bounds are not changed, so no projectile can
+satisfy that interval.
 
 #### To hit object
 For additional clarity, an item's `to_hit` bonus can be encoded as string of 4 fields.  All the fields are mandatory:
@@ -972,13 +1001,21 @@ Gun mods can be defined like this:
 "cooling_value_multiplier": 0.5,      // Multiply gun's "cooling_value" by this number; works the same as overheat_threshold_multiplier
 "heat_per_shot_modifier":  -2,        //  Add a flat amount to gun's "heat_per_shot"; works the same as overheat_threshold_modifier
 "heat_per_shot_multiplier": 2.0,      // Multiply the gun's "heat_per_shot" by this number; works the same as overheat_threshold_multiplier
-"throw_damage_multiplier": 1.1,       // Optional (default = 1.0) Multiplier to thrown damage while the gun with this mod installed is wielded
-"throw_range_multiplier": 1.1,        // Optional (default = 1.0) Multiplier to thrown range while the gun with this mod installed is wielded
-"throw_stamina_multiplier": 0.9,      // Optional (default = 1.0) Multiplier to throwing stamina cost while the gun with this mod installed is wielded
-"throw_dispersion_multiplier": 0.9,   // Optional (default = 1.0) Multiplier to throwing dispersion while the gun with this mod installed is wielded. Lower is more accurate
-"throw_speed_multiplier": 0.9,        // Optional (default = 1.0) Multiplier to throwing move cost while the gun with this mod installed is wielded. Lower is faster
-"throw_weight_multiplier": 0.9,       // Optional (default = 1.0) Multiplier to the thrown item's effective weight while the gun with this mod installed is wielded
-"throw_damage_add": 0.2,              // Optional (default = 0.0) Added to the final throwing damage coefficient after all multipliers
+"throw_correction_data": {            // Optional throw corrections from this mod. Projectile restrictions use the same format as ITEM throw_correction_data.
+  "required_flag": "SLING_PROJECTILE",
+  "allow_ammotype": [ "pebble" ],
+  "min_weight": "1 g",
+  "max_weight": "750 g",
+  "max_volume": "500 ml",
+  "max_length": "15 cm",
+  "throw_damage_multiplier": 1.1,
+  "throw_range_multiplier": 1.1,
+  "throw_stamina_multiplier": 0.9,
+  "throw_dispersion_multiplier": 0.9,
+  "throw_speed_multiplier": 0.9,
+  "throw_weight_multiplier": 0.9
+},
+"throw_damage_add": 0.2,              // Optional (default = 0.0) Added to the final throwing damage coefficient after all applicable multipliers
 "throw_range_add": 0.2,               // Optional (default = 0.0) Added to the final throwing range coefficient after all multipliers
 "throw_stamina_add": -0.1,            // Optional (default = 0.0) Added to the final throwing stamina cost coefficient after all multipliers
 "throw_dispersion_add": -0.1,         // Optional (default = 0.0) Added to the final throwing dispersion coefficient after all multipliers
