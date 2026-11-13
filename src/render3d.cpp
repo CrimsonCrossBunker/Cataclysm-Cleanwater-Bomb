@@ -2158,7 +2158,7 @@ std::optional<tripoint_bub_ms> tile_at_pixel( const point &logical_pixel,
         camera.right.y *nx *tan_half *camera.aspect + camera.up.y *ny *tan_half + camera.forward.y,
         camera.right.z *nx *tan_half *camera.aspect + camera.up.z *ny *tan_half + camera.forward.z
     };
-    const std::optional<tripoint> hit = surfaces.trace( camera.eye, ray );
+    const std::optional<tripoint> hit = surfaces.trace( camera.eye, ray, camera.right );
     if( !hit ) {
         return std::nullopt;
     }
@@ -4535,11 +4535,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // a stalk, its flat art is drawn above instead).
                             if( !near_hide && !flank_tightened && !is_mirror &&
                                 count < MAX_DRAW_INSTANCES ) {
+                                constexpr float body_bottom = VEH_PANEL_BASE_Z + 0.30f;
+                                surfaces.set_vehicle_body( tripoint( dx, dy, zlev ), body_bottom, box_top );
                                 sprite_info rspr; // untextured -> white fallback x color
                                 std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
                                 push_instance( v, static_cast<float>( dx ),
-                                               static_cast<float>( dy ), wz + VEH_PANEL_BASE_Z + 0.30f,
-                                               1.0f, 1.0f, box_top - VEH_PANEL_BASE_Z - 0.30f, rspr,
+                                               static_cast<float>( dy ), wz + body_bottom,
+                                               1.0f, 1.0f, box_top - body_bottom, rspr,
                                                0.6f * tone.shade, 0.6f * tone.shade,
                                                0.6f * tone.shade,
                                                false, 0, false, -1.0f, ghost, tone.sat );
@@ -4678,6 +4680,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const float cw = ch * std::clamp( cspr.aspect, 0.4f, 2.5f );
         // canvas bottom of the body sprite, as the single-billboard path placed it
         const float zbase = wz - ch * cspr.base_drop;
+        if( &critter != &you ) {
+            const tripoint d( p.x() - center.x(), p.y() - center.y(), p.z() );
+            surfaces.add_actor( d, scene_point{ dx + 0.5f, dy + 0.5f, zbase },
+                                point( cspr.px_w, cspr.px_h ), cw, ch, cspr.alpha_profile );
+        }
         {
             std::vector<float> &v = bucket_for( MODE_BILLBOARD, ctex ? cspr.atlas : nullptr );
             push_instance( v, dx + 0.5f, dy + 0.5f, zbase, cw, ch, 1.0f, cspr,

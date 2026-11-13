@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <utility>
+
+#include "sprite_alpha_profile.h"
 
 namespace render3d
 {
@@ -57,6 +60,9 @@ bool is_wall( pick_surface surface )
 void pick_surfaces::reset( int view_level )
 {
     view_level_ = view_level;
+    vehicle_bodies_.clear();
+    vehicle_top_.fill( 0.0f );
+    actors_.clear();
     cells_.assign( VIEW_SIZE * VIEW_SIZE + ( OVERMAP_LAYERS - 1 ) * REGION_SIZE * REGION_SIZE,
                    pick_surface::open );
 }
@@ -76,17 +82,35 @@ void pick_surfaces::set( const tripoint &cell, pick_surface surface )
     cells_[index( cell )] = surface;
 }
 
-pick_surface pick_surfaces::at( const tripoint &cell ) const
+void pick_surfaces::set_vehicle_body( const tripoint &cell, float bottom, float top )
+{
+    if( top > bottom ) {
+        vehicle_bodies_.insert_or_assign( index( cell ), height_range{ bottom, top } );
+        float &level_top = vehicle_top_[cell.z + OVERMAP_DEPTH];
+        level_top = std::max( level_top, top );
+    }
+}
+
+void pick_surfaces::add_actor( const tripoint &cell, const scene_point &bottom,
+                               const point &pixel_size, float width, float height,
+                               std::shared_ptr<const sprite_alpha_profile> alpha )
+{
+    actors_.push_back( actor_surface{ cell, bottom, pixel_size, width, height, std::move( alpha ) } );
+}
+
+bool pick_surfaces::contains( const tripoint &cell ) const
 {
     const int radius = cell.z == view_level_ ? VIEW_RADIUS : REGION_RADIUS;
-    if( std::abs( cell.x ) > radius || std::abs( cell.y ) > radius ) {
-        return pick_surface::open;
-    }
-    return cells_[index( cell )];
+    return std::abs( cell.x ) <= radius && std::abs( cell.y ) <= radius;
+}
+
+pick_surface pick_surfaces::at( const tripoint &cell ) const
+{
+    return contains( cell ) ? cells_[index( cell )] : pick_surface::open;
 }
 
 std::optional<tripoint> pick_surfaces::trace( const scene_point &origin,
-        const scene_point &ray ) const
+        const scene_point &ray, const scene_point &view_right ) const
 {
     if( cells_.empty() ) {
         return std::nullopt;
@@ -117,30 +141,82 @@ std::optional<tripoint> pick_surfaces::trace( const scene_point &origin,
                 }
             }
         }
-        float wall_entry = entry;
-        float wall_exit = std::min( exit, nearest );
-        if( !clip_axis( origin.z, ray.z, base, base + WALL_HEIGHT, wall_entry, wall_exit ) ) {
+        const float vehicle_top = vehicle_top_[z + OVERMAP_DEPTH];
+        float cell_entry = entry;
+        float level_exit = std::min( exit, nearest );
+        if( !clip_axis( origin.z, ray.z, base, base + std::max( WALL_HEIGHT, vehicle_top ),
+                        cell_entry, level_exit ) ) {
             continue;
         }
-        ray_axis x( origin.x, ray.x, wall_entry );
-        ray_axis y( origin.y, ray.y, wall_entry );
-        while( wall_entry < wall_exit ) {
+        ray_axis x( origin.x, ray.x, cell_entry );
+        ray_axis y( origin.y, ray.y, cell_entry );
+        while( cell_entry < level_exit ) {
             const tripoint cell( x.cell, y.cell, z );
+            const float crossing = std::min( x.next_crossing, y.next_crossing );
+            const float cell_exit = std::min( crossing, level_exit );
             const pick_surface surface = at( cell );
-            if( is_wall( surface ) ) {
-                nearest = wall_entry;
+            float hit = cell_entry;
+            float leave = cell_exit;
+            if( is_wall( surface ) &&
+                clip_axis( origin.z, ray.z, base, base + WALL_HEIGHT, hit, leave ) ) {
+                nearest = hit;
                 selected = surface == pick_surface::wall ? std::optional<tripoint>( cell ) : std::nullopt;
+            }
+            if( vehicle_top > 0.0f && contains( cell ) ) {
+                const auto body = vehicle_bodies_.find( index( cell ) );
+                hit = cell_entry;
+                leave = std::min( cell_exit, nearest );
+                if( body != vehicle_bodies_.end() &&
+                    clip_axis( origin.z, ray.z, base + body->second.bottom, base + body->second.top,
+                               hit, leave ) && hit < leave ) {
+                    nearest = hit;
+                    selected = cell;
+                }
+            }
+            if( nearest < cell_exit ) {
                 break;
             }
-            const float crossing = std::min( x.next_crossing, y.next_crossing );
             if( x.next_crossing == crossing ) {
                 x.advance();
             }
             if( y.next_crossing == crossing ) {
                 y.advance();
             }
-            wall_entry = crossing;
+            cell_entry = crossing;
         }
+    }
+    // The base billboard is the selectable creature body. Its cached alpha
+    // outline excludes transparent margins without reading back GPU textures.
+    const float perpendicular = ray.x * view_right.y - ray.y * view_right.x;
+    if( std::abs( perpendicular ) < 1e-5f ) {
+        return selected;
+    }
+    for( const actor_surface &actor : actors_ ) {
+        const float dx = actor.bottom.x - origin.x;
+        const float dy = actor.bottom.y - origin.y;
+        const float t = ( dx * view_right.y - dy * view_right.x ) / perpendicular;
+        if( t < entry || t >= nearest ) {
+            continue;
+        }
+        const float horizontal = ( ( ray.x * t - dx ) * view_right.x +
+                                   ( ray.y * t - dy ) * view_right.y ) / actor.width + 0.5f;
+        const float vertical = ( origin.z + ray.z * t - actor.bottom.z ) / actor.height;
+        if( horizontal < 0.0f || horizontal >= 1.0f || vertical <= 0.0f || vertical > 1.0f ) {
+            continue;
+        }
+        if( actor.alpha && actor.pixel_size.x > 0 && actor.pixel_size.y > 0 ) {
+            const int x = std::min( actor.pixel_size.x - 1,
+                                    static_cast<int>( horizontal * actor.pixel_size.x ) );
+            const int y = std::min( actor.pixel_size.y - 1,
+                                    static_cast<int>( ( 1.0f - vertical ) * actor.pixel_size.y ) );
+            if( static_cast<std::size_t>( x ) < actor.alpha->top.size() &&
+                static_cast<std::size_t>( x ) < actor.alpha->bottom.size() &&
+                ( actor.alpha->top[x] < 0 || y < actor.alpha->top[x] || y > actor.alpha->bottom[x] ) ) {
+                continue;
+            }
+        }
+        nearest = t;
+        selected = actor.cell;
     }
     return selected;
 }

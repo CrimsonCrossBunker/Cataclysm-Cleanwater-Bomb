@@ -43,6 +43,7 @@
 #include "transient_effect.h"
 #include "transient_visual_layer.h"
 #include "smooth_lighting.h"
+#include "sprite_alpha_profile.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -147,13 +148,6 @@ class tile_lookup_res
 
 // 3D-only silhouette metadata captured during the tileset's existing alpha
 // scan. Indices are sprite-local pixels; -1 means that row/column is empty.
-struct sprite_alpha_profile {
-    std::vector<int> top;
-    std::vector<int> bottom;
-    std::vector<int> left;
-    std::vector<int> right;
-};
-
 struct sprite_alpha_scan {
     SDL_Rect bounds = { 0, 0, 0, 0 };
     std::shared_ptr<const sprite_alpha_profile> profile;
