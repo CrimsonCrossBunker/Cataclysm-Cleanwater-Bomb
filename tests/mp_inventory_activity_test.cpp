@@ -13557,7 +13557,9 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     const auto destination = origin + tripoint::below;
     here.ter_set( origin, ter_id( "t_stairs_down" ) );
     here.ter_set( destination, ter_id( "t_stairs_up" ) );
-    who.setpos( here, origin, false );
+    const auto initial = world_position::from_tile( here.get_abs( origin ), tripoint( 92, 164, 0 ) );
+    REQUIRE( initial );
+    who.setpos( here, *initial, false );
     who.set_moves( 1000 );
     vertical_move_selection choice;
     choice.origin = who.pos_abs();
@@ -13589,6 +13591,7 @@ TEST_CASE( "vertical_intents_revalidate_stairs_and_cannot_force_client_teleports
     } );
     fixture.run( who, wire, authorized );
     CHECK( who.pos_bub() == ( accepted ? destination : origin ) );
+    CHECK( who.pos_world().offset() == initial->offset() );
     CHECK( who.get_moves() == ( accepted ? 900 : 1000 ) );
     const auto settled_position = who.pos_abs();
     const int settled_moves = who.get_moves();

@@ -10624,10 +10624,11 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return;
     }
     const bool local_input = who.is_avatar() && !choices;
-    const tripoint_abs_ms origin = who.pos_abs();
+    const world_position starting_position = who.pos_world();
+    const tripoint_abs_ms origin = starting_position.tile();
     const auto mount = who.mounted_creature;
     const auto at_origin = [&]() {
-        return lifetime && who.pos_abs() == origin && who.mounted_creature == mount;
+        return lifetime && who.pos_world() == starting_position && who.mounted_creature == mount;
     };
     const int64_t requested_z = static_cast<int64_t>( who.posz() ) + movez;
     if( requested_z < -OVERMAP_DEPTH || requested_z > OVERMAP_HEIGHT ) {
@@ -11035,9 +11036,16 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return;
     }
     const tripoint_abs_ms destination = here.get_abs( stairs );
+    world_position landing( destination );
+    // Aligned stairs preserve lateral position. An offset staircase, climb
+    // or forced landing still uses the center of its validated destination.
+    if( !force && !climbing && !swimming && destination.xy() == origin.xy() &&
+        !who.is_mounted() && !who.in_vehicle ) {
+        landing = *world_position::from_tile( destination, tripoint( starting_position.offset().xy(), 0 ) );
+    }
     const bool z_level_changed = who.is_avatar() ? vertical_shift( destination.z() ) :
                                  destination.z() != origin.z();
-    who.setpos( destination, false );
+    who.setpos( here, landing, false );
     if( !lifetime ) {
         return;
     }
