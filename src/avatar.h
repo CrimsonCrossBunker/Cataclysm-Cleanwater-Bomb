@@ -234,8 +234,6 @@ class avatar : public Character
          */
         bool wield_contents( item &container, item *internal_item = nullptr, bool penalties = true,
                              int base_cost = INVENTORY_HANDLING_PENALTY );
-        /** Handles sleep attempts by the player, starts ACT_TRY_SLEEP activity */
-        void try_to_sleep( const time_duration &dur );
         void set_pos_abs_only( const tripoint_abs_ms &loc );
         /** Handles reading effects and returns true if activity started */
         bool read( item_location &book, item_location ereader = {} );
@@ -245,14 +243,6 @@ class avatar : public Character
         void add_snippet( snippet_id snippet );
         bool has_seen_snippet( const snippet_id &snippet ) const;
         const std::set<snippet_id> &get_snippets();
-
-        /** smash a map feature */
-        struct smash_result {
-            bool can_smash;
-            bool did_smash;
-            bool success;
-        };
-        smash_result smash( tripoint_bub_ms &smashp );
 
         /**
          * Opens the targeting menu to pull a nearby creature towards the character.
@@ -400,7 +390,6 @@ class avatar : public Character
         vproto_id starting_vehicle = vproto_id::NULL_ID();
         std::vector<mtype_id> starting_pets;
         std::set<character_id> follower_ids;
-        std::set<character_id> faction_representatives;
 
         mutable bool aim_cache_dirty = true;
         // dirty the aim cache and record that the aim cone may have changed

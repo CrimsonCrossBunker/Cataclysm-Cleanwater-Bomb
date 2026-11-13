@@ -105,7 +105,6 @@ static const efftype_id effect_berserk( "berserk" );
 static const efftype_id effect_bile_irritant( "bile_irritant" );
 static const efftype_id effect_glowing( "glowing" );
 static const efftype_id effect_harnessed( "harnessed" );
-static const efftype_id effect_hunger_engorged( "hunger_engorged" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pet( "pet" );
@@ -117,10 +116,7 @@ static const efftype_id effect_winded( "winded" );
 
 static const furn_str_id furn_f_safe_c( "f_safe_c" );
 
-static const itype_id itype_grass( "grass" );
-static const itype_id itype_small_plant( "small_plant" );
 static const itype_id itype_swim_fins( "swim_fins" );
-static const itype_id itype_underbrush( "underbrush" );
 
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
@@ -138,14 +134,7 @@ static const ter_str_id ter_t_door_locked_alarm( "t_door_locked_alarm" );
 static const ter_str_id ter_t_door_locked_interior( "t_door_locked_interior" );
 static const ter_str_id ter_t_door_locked_peep( "t_door_locked_peep" );
 static const ter_str_id ter_t_fault( "t_fault" );
-static const ter_str_id ter_t_grass( "t_grass" );
-static const ter_str_id ter_t_grass_alien( "t_grass_alien" );
-static const ter_str_id ter_t_grass_dead( "t_grass_dead" );
-static const ter_str_id ter_t_grass_golf( "t_grass_golf" );
-static const ter_str_id ter_t_grass_white( "t_grass_white" );
 
-static const trait_id trait_GRAZER( "GRAZER" );
-static const trait_id trait_RUMINANT( "RUMINANT" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHELL3( "SHELL3" );
 
@@ -1408,62 +1397,8 @@ void avatar_action::mend( avatar &you, item_location loc )
 bool avatar_action::eat_here( avatar &you )
 {
     map &here = get_map();
-    if( ( you.has_active_mutation( trait_RUMINANT ) || you.has_active_mutation( trait_GRAZER ) ) &&
-        ( here.has_flag( ter_furn_flag::TFLAG_SHRUB, you.pos_bub() ) &&
-          !here.has_flag( ter_furn_flag::TFLAG_GRAZER_INEDIBLE, you.pos_bub() ) ) ) {
-        if( you.has_effect( effect_hunger_engorged ) ) {
-            add_msg( _( "You're too full to eat the leaves from the %s." ), here.ter( you.pos_bub() )->name() );
-            return true;
-        } else {
-            here.ter_set( you.pos_bub(), ter_t_grass );
-            item food( itype_underbrush, calendar::turn, 1 );
-            you.assign_activity( consume_activity_actor( food ) );
-            return true;
-        }
-    }
-    if( ( you.has_active_mutation( trait_RUMINANT ) || you.has_active_mutation( trait_GRAZER ) ) &&
-        ( here.has_flag( ter_furn_flag::TFLAG_FLOWER, you.pos_bub() ) &&
-          !here.has_flag( ter_furn_flag::TFLAG_GRAZER_INEDIBLE, you.pos_bub() ) ) ) {
-        if( you.has_effect( effect_hunger_engorged ) ) {
-            add_msg( _( "You're too full to eat the %s." ), here.ter( you.pos_bub() )->name() );
-            return true;
-        } else {
-            here.furn_set( you.pos_bub(), furn_str_id::NULL_ID() );
-            item food( itype_small_plant, calendar::turn, 1 );
-            you.assign_activity( consume_activity_actor( food ) );
-            return true;
-        }
-    }
-    if( you.has_active_mutation( trait_GRAZER ) &&
-        ( here.has_flag( ter_furn_flag::TFLAG_GRAZABLE, you.pos_bub() ) &&
-          !here.has_flag( ter_furn_flag::TFLAG_FUNGUS, you.pos_bub() ) ) ) {
-        if( you.has_effect( effect_hunger_engorged ) ) {
-            add_msg( _( "You're too full to graze." ) );
-            return true;
-        } else {
-            item food( item( itype_grass, calendar::turn, 1 ) );
-            you.assign_activity( consume_activity_actor( food ) );
-            here.ter_set( you.pos_bub(), here.get_ter_transforms_into( you.pos_bub() ) );
-            return true;
-        }
-    }
-    if( you.has_active_mutation( trait_GRAZER ) ) {
-        const ter_id &ter_underfoot = here.ter( you.pos_bub() );
-        if( ter_underfoot == ter_t_grass_golf || ter_underfoot == ter_t_grass ) {
-            add_msg( _( "This grass is too short to graze." ) );
-            return true;
-        } else if( ter_underfoot == ter_t_grass_dead ) {
-            add_msg( _( "This grass is dead and too mangled for you to graze." ) );
-            return true;
-        } else if( ter_underfoot == ter_t_grass_white ) {
-            add_msg( _( "This grass is tainted with paint and thus inedible." ) );
-            return true;
-        } else if( ter_underfoot == ter_t_grass_alien ) {
-            add_msg( _( "This grass is razor sharp and would probably shred your mouth." ) );
-            return true;
-        }
-    }
-    return false;
+    return cata_mp::is_client_mode() ? select_client_ground_food( you, here ) :
+           start_ground_food( you, here );
 }
 
 void avatar_action::eat( avatar &you, item_location &loc )

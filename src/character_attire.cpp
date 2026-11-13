@@ -24,8 +24,10 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "coordinates.h"
 #include "craft_reservation.h"
+#include "item_source.h"
 #include "creature.h"
 #include "damage.h"
 #include "debug.h"
@@ -308,7 +310,8 @@ Character::wear( int pos, bool interactive )
 }
 
 std::optional<std::list<item>::iterator>
-Character::wear( item_location item_wear, bool interactive, std::optional<bool> theft_consent )
+Character::wear( item_location item_wear, bool interactive, std::optional<bool> theft_consent,
+                 int quantity )
 {
     // Need to account for case where we're trying to wear something that belongs to someone else
     if( !item_wear || ( theft_consent ?
@@ -334,33 +337,68 @@ Character::wear( item_location item_wear, bool interactive, std::optional<bool> 
         }
         return std::nullopt;
     }
-    if( is_wearable_empty_stackable_container_stack( item_wear ) ) {
-        item_location split = item_wear.split_stack( 1 );
-        if( !split ) {
-            return std::nullopt;
+    if( quantity < 0 || quantity > item_wear->count() ) {
+        return std::nullopt;
+    }
+    if( quantity == 0 && is_wearable_empty_stackable_container_stack( item_wear ) ) {
+        if( theft_consent ) {
+            quantity = 1;
+        } else {
+            item_location split = item_wear.split_stack( 1 );
+            if( !split ) {
+                return std::nullopt;
+            }
+            item_wear = split;
         }
-        item_wear = split;
     }
 
-    bool was_weapon;
     item &to_wear = *item_wear;
     item to_wear_copy( to_wear );
-    if( &to_wear == &weapon ) {
-        weapon = item();
-        was_weapon = true;
-    } else if( has_item( to_wear ) ) {
-        remove_item( to_wear );
-        was_weapon = false;
-    } else {
-        // item is on the map if this point is reached.
-        item_wear.remove_item();
-        was_weapon = false;
+    const bool partial = quantity > 0 && quantity < to_wear.count();
+    const bool was_weapon = !partial && &to_wear == &weapon;
+    if( partial ) {
+        if( !to_wear.count_by_charges() || !to_wear.all_items_top().empty() ) {
+            return std::nullopt;
+        }
+        to_wear_copy.charges = quantity;
     }
-
     worn.check_rigid_sidedness( to_wear_copy );
     worn.one_per_layer_sidedness( to_wear_copy );
 
+    // A rejected server request must leave the original item in its pocket or on its tile.
+    if( theft_consent && !was_weapon ) {
+        const auto can_wear_item = can_wear( to_wear_copy );
+        if( !can_wear_item.success() ) {
+            if( interactive ) {
+                add_msg_if_player( m_info, "%s", can_wear_item.c_str() );
+            }
+            return std::nullopt;
+        }
+    }
+    if( partial ) {
+        to_wear.charges -= quantity;
+    } else if( was_weapon ) {
+        weapon = item();
+    } else if( has_item( to_wear ) ) {
+        remove_item( to_wear );
+    } else {
+        item_wear.remove_item();
+    }
+
+    const character_action_guard lifetime( *this );
     auto result = wear_item( to_wear_copy, interactive );
+    if( !lifetime ) {
+        return std::nullopt;
+    }
+    if( partial ) {
+        if( item_wear ) {
+            if( !result ) {
+                item_wear->charges += quantity;
+            }
+            item_wear.on_contents_changed();
+        }
+        return result;
+    }
     if( !result ) {
         // set it to no longer be sided
         to_wear_copy.set_side( side::BOTH );
@@ -381,7 +419,8 @@ Character::wear( item_location item_wear, bool interactive, std::optional<bool> 
 }
 
 std::optional<std::list<item>::iterator> outfit::wear_item( Character &guy, const item &to_wear,
-        bool interactive, bool do_calc_encumbrance, bool do_sort_items, bool quiet )
+        bool interactive, bool do_calc_encumbrance, bool do_sort_items, bool quiet,
+        item_location *transferred_source )
 {
     const map &here = get_map();
 
@@ -401,8 +440,19 @@ std::optional<std::list<item>::iterator> outfit::wear_item( Character &guy, cons
 
     item_location loc = new_item_it != worn.end() ?
                         item_location( guy, &*new_item_it ) : item_location();
+    std::optional<character_action_guard> transferred_lifetime;
+    if( transferred_source ) {
+        transferred_lifetime.emplace( guy );
+        transferred_source->remove_item();
+        if( !*transferred_lifetime || !loc ) {
+            return std::nullopt;
+        }
+    }
     cata::event e = cata::event::make<event_type::character_wears_item>( guy.getID(), guy.last_item );
     get_event_bus().send_with_talker( &guy, &loc, e );
+    if( transferred_lifetime && ( !*transferred_lifetime || !loc ) ) {
+        return std::nullopt;
+    }
 
     if( interactive ) {
         if( !quiet ) {
@@ -515,6 +565,27 @@ std::optional<std::list<item>::iterator> Character::wear_item( const item &to_we
 int Character::amount_worn( const itype_id &id ) const
 {
     return worn.amount_worn( id );
+}
+
+bool Character::wear_transferred_item( item_location &source, Character &donor )
+{
+    if( !source || !source.held_by( donor ) ||
+        ( &donor == this && !is_wielding( *source ) ) ||
+        resolve_item_source( donor, get_map(), capture_item_source( donor, source ) ) != source ) {
+        return false;
+    }
+    item prepared = *source;
+    prepared.set_owner( *this );
+    worn.check_rigid_sidedness( prepared );
+    worn.one_per_layer_sidedness( prepared );
+    if( !can_wear( prepared ).success() ) {
+        return false;
+    }
+    invalidate_inventory_validity_cache();
+    invalidate_leak_level_cache();
+    worn.wear_item( *this, prepared, false, true, true, false, &source );
+    // The source is debited before a wear callback can consume the new item.
+    return !source;
 }
 
 int Character::item_wear_cost( const item &it ) const

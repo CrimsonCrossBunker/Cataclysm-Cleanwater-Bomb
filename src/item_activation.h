@@ -9,6 +9,7 @@
 
 #include "coords_fwd.h"
 #include "tool_activity_target.h"
+#include "vehicle_power_connection.h"
 
 class Character;
 class item;
@@ -41,13 +42,14 @@ struct item_activation_choices {
     std::optional<lumber_selection> lumber;
     std::optional<salvage_selection> salvage;
     std::vector<salvage_selection> salvage_batch;
+    std::optional<cable_link_selection> cable_link;
     bool empty() const {
         return !timer_seconds && !radio && remote_vehicle_action.empty() && !remote_vehicle_uid &&
-               !fire_target && !fire_tinder && !lumber && !salvage && salvage_batch.empty();
+               !fire_target && !fire_tinder && !lumber && !salvage && salvage_batch.empty() && !cable_link;
     }
 };
 
-bool query_item_activation_choices( const item &source, const std::string &method,
+bool query_item_activation_choices( const item_location &location, const std::string &method,
                                     item_activation_choices &choices );
 bool valid_item_activation_choices( const item &source, const std::string &method,
                                     const item_activation_choices &choices );

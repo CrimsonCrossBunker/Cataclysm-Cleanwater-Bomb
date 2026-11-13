@@ -1208,7 +1208,9 @@ class vehicle
         // merges vehicles together by copying parts, does not account for any vehicle complexities
         bool merge_vehicle_parts( map *here, vehicle *veh );
         bool merge_appliance_into_grid( map *here, vehicle &veh_target );
-        void separate_from_grid( map *here, point_rel_ms mount );
+        bool can_separate_from_grid( const point_rel_ms &mount ) const;
+        void separate_from_grid( map &here, const point_rel_ms &mount, Character &who );
+        void rename( const std::string &new_name );
 
         bool is_powergrid() const;
 
@@ -2088,6 +2090,9 @@ class vehicle
          */
         int add_charges( map &here, vehicle_part &vp, const item &itm );
 
+        // Restore authoritative cargo with its persistent identities, without placement effects.
+        void restore_cargo( map &here, vehicle_part &part, std::vector<item> contents );
+
         // remove item from part's cargo
         bool remove_item( vehicle_part &vp, item *it );
         vehicle_stack::iterator remove_item( vehicle_part &vp, const vehicle_stack::const_iterator &it );
@@ -2253,7 +2258,7 @@ class vehicle
         void open_all_at( map &here, int p );
 
         // Honk the vehicle's horn, if there are any
-        void honk_horn( map &here ) const;
+        void honk_horn( map &here, const Character &who ) const;
         void reload_seeds( map *here, const tripoint_bub_ms &pos );
         void beeper_sound( map &here ) const;
         void play_music( map &here ) const;

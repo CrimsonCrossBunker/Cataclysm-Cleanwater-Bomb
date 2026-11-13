@@ -12,6 +12,7 @@
 #include "game.h"
 #include "json.h"
 #include "json_loader.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "monster.h"
 #include "mp_client_conn.h"
@@ -123,7 +124,6 @@ TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
     cata_mp::mp_store_pending_welcome(
         R"({"type":"welcome","world_id":"22222222222222222222222222222222","world":"next"})" );
     REQUIRE( session.replication.client.monsters.known_id( *first ) == 0 );
-    REQUIRE( session.replication.client.last_monster_hp.empty() );
     REQUIRE( cata_mp::client_apply_message( state_message( {{ 5, second.get(), 40 }} ) ) );
     CHECK( session.replication.client.monsters.find( 5 ) == second.get() );
     CHECK( second->get_hp() == 40 );
@@ -139,7 +139,7 @@ TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",
     CHECK( second->get_hp() == 40 );
 }
 
-TEST_CASE( "mp_client_damage_reports_use_only_current_native_bindings",
+TEST_CASE( "mp_monster_replica_uses_host_hp_and_despawns_without_death_effects",
            "[multiplayer][client_replication][entity_identity][regression]" )
 {
     clear_avatar();
@@ -158,27 +158,33 @@ TEST_CASE( "mp_client_damage_reports_use_only_current_native_bindings",
                     tripoint_bub_ms( 62, 60, 0 ) );
     REQUIRE( get_creature_tracker().add( original ) );
     REQUIRE( cata_mp::client_apply_message( state_message( {{ 17, original.get(), 70 }} ) ) );
-    auto copied = make_shared_fast<monster>( *original );
-    copied->spawn( original->pos_abs() + tripoint::east );
-    REQUIRE( get_creature_tracker().add( copied ) );
     original->set_hp( 50 );
-    copied->set_hp( 20 );
-    const auto check_report = [&]( int hp ) {
-        JsonValue value = json_loader::from_string( cata_mp::client_enrich_action(
-                              R"({"type":"action","action":"wait"})" ) );
-        JsonObject action = value.get_object();
-        action.allow_omitted_members();
-        JsonArray hits = action.get_array( "client_monster_hits" );
-        REQUIRE( hits.size() == 1 );
-        JsonObject hit = hits.get_object( 0 );
-        CHECK( hit.get_int( "nid" ) == 17 );
-        CHECK( hit.get_int( "hp" ) == hp );
-    };
-    check_report( 50 );
-    CHECK( session.replication.client.monsters.known_id( *copied ) == 0 );
-    original->set_hp( 0 );
-    check_report( 0 );
-    CHECK( session.replication.client.client_pending_kill.count( 17 ) == 1 );
+    JsonValue value = json_loader::from_string( cata_mp::client_enrich_action(
+                          R"({"type":"action","action":"wait"})" ) );
+    JsonObject action = value.get_object();
+    action.allow_omitted_members();
+    CHECK_FALSE( action.has_member( "client_monster_hits" ) );
+
+    REQUIRE( cata_mp::client_apply_message( state_message( {{ 17, original.get(), 65 }} ) ) );
+    CHECK( original->get_hp() == 65 );
+    REQUIRE( cata_mp::client_apply_message( state_message( {} ) ) );
+    CHECK( session.replication.client.monsters.find( 17 ) == original.get() );
+
+    map &here = get_map();
+    const tripoint_bub_ms tile = original->pos_bub();
+    const size_t item_count = here.i_at( tile ).size();
+    const auto rng = rng_get_engine();
+    const bool hp_removal = GENERATE( false, true );
+    const std::string gone = hp_removal ? state_message( {{ 17, original.get(), 0 }} ) :
+                             state_message( {}, { 17 } );
+    REQUIRE( cata_mp::client_apply_message( gone ) );
+    CHECK( session.replication.client.monsters.find( 17 ) == nullptr );
+    CHECK_FALSE( get_creature_tracker().is_present( original.get() ) );
+    CHECK( original->get_hp() == 65 );
+    CHECK( here.i_at( tile ).size() == item_count );
+    CHECK( rng_get_engine() == rng );
+    REQUIRE( cata_mp::client_apply_message( gone ) );
+    CHECK( here.i_at( tile ).size() == item_count );
 }
 
 TEST_CASE( "mp_client_duplicate_wire_ids_do_not_rebind_another_monster",

@@ -17,6 +17,8 @@
 #include "map.h"
 #include "map_scale_constants.h"
 #include "memory_fast.h"
+#include "mp_client_conn.h"
+#include "item_uid.h"
 #include "options.h"
 #include "player_activity.h"
 #include "point.h"
@@ -25,6 +27,7 @@
 #include "ui_manager.h"
 #include "uilist.h"
 #include "units.h"
+#include "veh_interact.h"
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle.h"
@@ -93,6 +96,9 @@ player_activity veh_shape::start( const tripoint_bub_ms &pos )
                 }, part );
                 if( part.has_value() ) {
                     change_part_shape( part.value() );
+                    if( cata_mp::is_client_mode() && you.activity.execution() == activity_execution::presentation ) {
+                        return player_activity();
+                    }
                 }
             } while( part.has_value() );
             action.clear();
@@ -155,6 +161,10 @@ void veh_shape::change_part_shape( vpart_reference vpr ) const
     const vpart_info &vpi = part.info();
     veh_menu menu( this->veh, _( "Choose cosmetic variant:" ) );
     std::string chosen_variant = part.variant; // support for cancel
+    const bool client = cata_mp::is_client_mode();
+    const int index = vpr.part_index();
+    const int64_t uid = part.get_base().uid().get_value();
+    const auto vehicle_ref = veh.get_safe_reference();
 
     for( const auto &[vvid, vv] : vpi.variants ) {
         menu.add( vv.get_label() )
@@ -165,8 +175,10 @@ void veh_shape::change_part_shape( vpart_reference vpr ) const
         .desc( _( "Confirm to save or exit to revert" ) )
         .symbol( vv.get_symbol_curses( 0_degrees, false ) )
         .symbol_color( vpi.color )
-        .on_select( [&part, variant_id = vvid]() {
-            part.variant = variant_id;
+        .on_select( [&part, client, variant_id = vvid]() {
+            if( !client ) {
+                part.variant = variant_id;
+            }
         } )
         .on_submit( [&chosen_variant, variant_id = vvid]() {
             chosen_variant = variant_id;
@@ -178,7 +190,19 @@ void veh_shape::change_part_shape( vpart_reference vpr ) const
     } );
     menu.query();
 
-    part.variant = chosen_variant;
+    if( client ) {
+        if( vehicle_ref && index >= 0 && index < veh.part_count() ) {
+            const vehicle_part &selected = veh.part( index );
+            if( !selected.removed && selected.get_base().uid().get_value() == uid &&
+                chosen_variant != selected.variant ) {
+                cata_mp::client_start_vehicle_work( here, VEHICLE_SHAPE, veh, selected.mount,
+                                                    selected.info(), &selected, item_location(),
+                                                    false, false, chosen_variant );
+            }
+        }
+    } else {
+        part.variant = chosen_variant;
+    }
 }
 
 tripoint_bub_ms veh_shape::get_cursor_pos() const

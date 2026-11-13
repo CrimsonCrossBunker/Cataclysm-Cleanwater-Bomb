@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "anatomy.h"
 #include "avatar.h"
 #include "bionics.h"
@@ -29,6 +30,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -45,6 +47,8 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "field.h"
+#include "field_type.h"
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
@@ -52,6 +56,7 @@
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_group.h"
 #include "item_location.h"
 #include "itype.h"
 #include "line.h"
@@ -73,6 +78,7 @@
 #include "options.h"
 #include "output.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "pocket_type.h"
 #include "point.h"
 #include "popup.h"
@@ -1203,6 +1209,216 @@ int Character::get_total_melee_stamina_cost( const item *weap ) const
     }
 
     return std::min<int>( -50, proficiency_multiplier * ( mod_sta + melee - stance_malus ) );
+}
+
+bool melee::has_revivable_corpse( map &here, const tripoint_bub_ms &target )
+{
+    const map_stack items = here.i_at( target );
+    return std::any_of( items.begin(), items.end(), []( const item &candidate ) {
+        return candidate.can_revive();
+    } );
+}
+
+Character::smash_result Character::smash( map &here, tripoint_bub_ms &smashp,
+        std::optional<bool> vehicle_theft )
+{
+    smash_result ret;
+    const character_action_guard actor( *this );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = pos_abs();
+    if( is_mounted() ) {
+        auto *mons = mounted_creature.get();
+        if( mons->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+            if( !mons->check_mech_powered() ) {
+                add_msg( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
+                         mons->get_name() );
+                return ret;
+            }
+        }
+    }
+    const int move_cost = !is_armed() ? 80 :
+                          get_wielded_item()->attack_time( *this ) * 0.8;
+    bool mech_smash = false;
+    if( is_mounted() ) {
+        mech_smash = true;
+    }
+
+    bool smash_floor = false;
+    if( smashp.z() != posz() ) {
+        if( smashp.z() > posz() ) {
+            // TODO: Knock on the ceiling
+            return ret;
+        }
+
+        smashp.z() = posz();
+        smash_floor = true;
+    }
+
+    get_event_bus().send<event_type::character_smashes_tile>(
+        getID(), here.ter( smashp ).id(), here.furn( smashp ).id() );
+    if( !actor || !context || pos_abs() != origin || is_dead_state() ) {
+        return ret;
+    }
+    if( is_mounted() ) {
+        monster *crit = mounted_creature.get();
+        if( crit->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+            crit->use_mech_power( 3_kJ );
+        }
+    }
+    std::map<damage_type_id, int> smash_damage = smash_ability();
+    for( const auto &field : here.field_at( smashp ) ) {
+        const field_type_id type = field.first;
+        const std::optional<map_fd_bash_info> &bash_info = type->bash_info;
+        if( !bash_info ) {
+            continue;
+        }
+        const int damage = bash_info->damage_to( smash_damage );
+        if( ( damage <= 0 && one_in( 10 ) ) || type->indestructible ) {
+            add_msg( m_neutral, _( "You don't seem to be damaging the %s." ), type->get_name() );
+            ret.did_smash = true;
+        } else if( damage > 0 && x_in_y( damage, bash_info->hp() ) ) {
+            sounds::sound( smashp, bash_info->sound_vol, sounds::sound_t::combat, bash_info->sound, true,
+                           "smash",
+                           "field" );
+            here.remove_field( smashp, type );
+            here.spawn_items( smashp, item_group::items_from( bash_info->drop_group, calendar::turn ) );
+            if( !bash_info->destroyed_field.first.is_null() ) {
+                here.add_field( smashp, bash_info->destroyed_field.first, bash_info->destroyed_field.second );
+            }
+            mod_moves( - bash_info->fd_bash_move_cost );
+            add_msg( m_info, bash_info->field_bash_msg_success.translated() );
+            ret.did_smash = true;
+            ret.success = true;
+        } else {
+            sounds::sound( smashp, bash_info->sound_fail_vol, sounds::sound_t::combat, bash_info->sound_fail,
+                           true, "smash",
+                           "field" );
+
+            ret.can_smash = damage > 0;
+            ret.did_smash = true;
+        }
+        if( ret.did_smash && !bash_info->hit_field.first.is_null() ) {
+            here.add_field( smashp, bash_info->hit_field.first, bash_info->hit_field.second );
+        }
+        return ret;
+    }
+
+    if( melee::has_revivable_corpse( here, smashp ) ) {
+        player_activity pulp{ pulp_activity_actor( here.get_abs( smashp ) ) };
+        if( vehicle_theft ) {
+            pulp.set_execution( activity_execution::authoritative );
+        }
+        assign_activity( pulp );
+        return ret;
+    }
+
+    if( vehicle *veh = veh_pointer_or_null( here.veh_at( smashp ) ) ) {
+        if( vehicle_theft && veh->has_owner() && !veh->is_owned_by( *this ) && !*vehicle_theft ) {
+            return ret;
+        }
+        if( !veh->handle_potential_theft( *this, false, !vehicle_theft.has_value() ) ||
+            !actor || !context || pos_abs() != origin ) {
+            return ret;
+        }
+    }
+
+    if( !has_weapon() ) {
+        std::pair<bodypart_id, int> best_part_to_smash = this->best_part_to_smash();
+        if( best_part_to_smash.first != bodypart_str_id::NULL_ID() && here.is_bashable( smashp ) ) {
+            std::string name_to_bash = _( "thing" );
+            if( here.is_bashable_furn( smashp ) ) {
+                name_to_bash = here.furnname( smashp );
+            } else if( here.is_bashable_ter( smashp ) ) {
+                name_to_bash = here.tername( smashp );
+            }
+            if( !best_part_to_smash.first->smash_message.empty() ) {
+                add_msg( best_part_to_smash.first->smash_message, name_to_bash );
+            } else {
+                //~ %1$s - bodypart name in accusative, %2$s - furniture/terrain name
+                add_msg( _( "You use your %1$s to smash the %2$s." ),
+                         body_part_name_accusative( best_part_to_smash.first ), name_to_bash );
+            }
+        }
+    }
+
+    const bash_params bash_result = here.bash( smashp, smash_damage, false, false, smash_floor );
+    if( !actor || !context || pos_abs() != origin ) {
+        return ret;
+    }
+    ret.can_smash = bash_result.can_bash;
+    // Weariness scaling
+    float weary_mult = 1.0f;
+    item_location weapon = used_weapon();
+    if( bash_result.did_bash ) {
+        ret.did_smash = true;
+        if( !mech_smash ) {
+            set_activity_level( MODERATE_EXERCISE );
+            handle_melee_wear( weapon );
+            if( !actor || !context || pos_abs() != origin ) {
+                return ret;
+            }
+            weary_mult = 1.0f / exertion_adjusted_move_multiplier( MODERATE_EXERCISE );
+
+            const int mod_sta = 2 * get_standard_stamina_cost();
+            burn_energy_arms( mod_sta );
+
+            if( static_cast<int>( get_skill_level( skill_melee ) ) == 0 ) {
+                practice( skill_melee, rng( 0, 1 ) * rng( 0, 1 ) );
+            }
+            if( weapon ) {
+                const int glass_portion = weapon->made_of( material_glass );
+                float glass_fraction = glass_portion / static_cast<float>( weapon->type->mat_portion_total );
+                if( std::isnan( glass_fraction ) || glass_fraction > 1.f ) {
+                    glass_fraction = 0.f;
+                }
+                const int vol = weapon->volume() * glass_fraction / 250_ml;
+                if( glass_portion && rng( 0, vol + 3 ) < vol ) {
+                    add_msg( m_bad, _( "Your %s shatters!" ), weapon->tname() );
+                    weapon->spill_contents( pos_bub() );
+                    sounds::sound( pos_bub(), 24, sounds::sound_t::combat, "CRACK!", true, "smash",
+                                   "glass" );
+                    deal_damage( nullptr, bodypart_id( "hand_r" ), damage_instance( damage_cut,
+                                 rng( 0,
+                                      vol ) ) );
+                    if( vol > 20 ) {
+                        // Hurt left arm too, if it was big
+                        deal_damage( nullptr, bodypart_id( "hand_l" ), damage_instance( damage_cut,
+                                     rng( 0, static_cast<int>( vol * .5 ) ) ) );
+                    }
+                    remove_weapon();
+                    check_dead_state( &here );
+                }
+            }
+        }
+        mod_moves( -move_cost * weary_mult );
+        recoil = MAX_RECOIL;
+
+        if( bash_result.success ) {
+            ret.success = true;
+            // Bash results in destruction of target
+            g->draw_async_anim( smashp, "bash_complete", "X", c_light_gray );
+        } else if( bash_result.did_bash ) {
+            // Bash effective but target not yet destroyed
+            g->draw_async_anim( smashp, "bash_effective", "/", c_light_gray );
+        } else {
+            // Bash not effective
+            g->draw_async_anim( smashp, "bash_ineffective" );
+            if( one_in( 10 ) ) {
+                if( here.has_furn( smashp ) && here.furn( smashp ).obj().bash ) {
+                    // %s is the smashed furniture
+                    add_msg( m_neutral, _( "You don't seem to be damaging the %s." ), here.furnname( smashp ) );
+                } else {
+                    // %s is the smashed terrain
+                    add_msg( m_neutral, _( "You don't seem to be damaging the %s." ), here.tername( smashp ) );
+                }
+            }
+        }
+
+    } else {
+        add_msg( _( "There's nothing there to smash!" ) );
+    }
+
+    return ret;
 }
 
 bool Character::can_reach_attack( const Creature &target ) const

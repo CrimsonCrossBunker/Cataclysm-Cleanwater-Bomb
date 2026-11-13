@@ -148,12 +148,23 @@ std::optional<prepared_tool> prepare_tool( Character &who, const repair_tool_sou
     return result;
 }
 
-item_location repair_target( Character &who, const repair_activity_choice &choice,
-                             const prepared_tool &tool )
+item_location resolve_repair_workpiece( Character &who, const item_source &source,
+                                       const std::optional<item_repair::repair_target> &preferred )
 {
-    item_location target = resolve_item_source( who, get_map(), choice.target );
-    if( !repeating( choice.repeat ) || !target || !target->is_owned_by( who, true ) ||
-        target.get_item() == tool.tool ||
+    map &here = get_map();
+    if( preferred && preferred->matches( source ) ) {
+        return item_repair::resolve_target( who, here, *preferred );
+    }
+    item_location target = resolve_item_source( who, here, source );
+    return target && target->is_owned_by( who, true ) ? target : item_location::nowhere;
+}
+
+item_location repair_target( Character &who, const repair_activity_choice &choice,
+                             const prepared_tool &tool,
+                             const std::optional<item_repair::repair_target> &preferred )
+{
+    item_location target = resolve_repair_workpiece( who, choice.target, preferred );
+    if( !repeating( choice.repeat ) || !target || target.get_item() == tool.tool ||
         !tool.action->can_repair_target( who, *target, false, true ) ||
         !tool.action->handle_components( who, *target, false, true, true, &choice.material ) ||
         ( refitting( choice.repeat ) &&
@@ -221,6 +232,9 @@ void repair_activity_choice::serialize( JsonOut &out ) const
     out.member( "target", target );
     out.member( "repeat", repeat );
     out.member( "material", material );
+    if( change_target ) {
+        out.member( "change_target", change_target );
+    }
     out.end_object();
 }
 
@@ -229,6 +243,7 @@ void repair_activity_choice::deserialize( const JsonObject &data )
     data.read( "target", target, true );
     data.read( "repeat", repeat, true );
     data.read( "material", material, true );
+    change_target = data.get_bool( "change_target", false );
 }
 
 const activity_id &repair_activity_actor::get_type() const
@@ -260,12 +275,26 @@ void repair_activity_actor::do_turn( player_activity &act, Character &who )
 
 bool repair_activity_actor::apply_choice( Character &who, const repair_activity_choice &selected )
 {
-    if( !waiting ) {
+    const bool changing = preferred_target && !preferred_target->matches( selected.target );
+    if( !waiting || ( changing && !selected.change_target ) ) {
         return false;
     }
-    const auto tool = prepare_tool( who, source );
-    if( !tool || !repair_target( who, selected, *tool ) ) {
+    auto tool = prepare_tool( who, source );
+    if( !tool || !repair_target( who, selected, *tool, preferred_target ) ) {
         return false;
+    }
+    if( changing ) {
+        preferred_target.reset();
+    } else if( preferred_target && preferred_target->source.kind == "vehicle_part" ) {
+        auto authorized = *preferred_target;
+        if( !item_repair::authorize_vehicle_work( who, get_map(), authorized ) ) {
+            return false;
+        }
+        tool = prepare_tool( who, source );
+        if( !tool || !repair_target( who, selected, *tool, authorized ) ) {
+            return false;
+        }
+        preferred_target = std::move( authorized );
     }
     choice = selected;
     waiting = false;
@@ -284,7 +313,7 @@ void repair_activity_actor::finish( player_activity &act, Character &who )
         act.set_to_null();
         return;
     }
-    item_location target = repair_target( who, *choice, *tool );
+    item_location target = repair_target( who, *choice, *tool, preferred_target );
     if( !target ) {
         choice.reset();
         waiting = true;
@@ -349,6 +378,7 @@ void repair_activity_actor::finish( player_activity &act, Character &who )
               ( mode == repair_repeat::REFIT_FULL && !can_refit );
     if( cannot_continue ) {
         choice.reset();
+        preferred_target.reset();
     }
     act.moves_left = waiting ? 1 : tool->action->move_cost;
     if( waiting && who.is_avatar() && !cata_mp::is_client_mode() ) {
@@ -363,11 +393,18 @@ std::optional<repair_activity_choice> repair_activity_actor::query_choice( Chara
     if( !tool ) {
         return std::nullopt;
     }
-    item_location target = choice ? resolve_item_source( who, get_map(), choice->target ) :
+    const item_source *initial = choice ? &choice->target :
+                                 preferred_target ? &preferred_target->source : nullptr;
+    item_location target = initial ? resolve_repair_workpiece( who, *initial, preferred_target ) :
                            item_location::nowhere;
-    if( target && !tool->action->can_repair_target( who, *target, false, true ) ) {
+    if( !target || !tool->action->can_repair_target( who, *target, false, true ) ) {
+        if( preferred_target ) {
+            return std::nullopt;
+        }
+        initial = nullptr;
         target = item_location::nowhere;
     }
+    bool change_target = false;
     repair_repeat previous = choice ? static_cast<repair_repeat>( choice->repeat ) :
                              repair_repeat::INIT;
     while( true ) {
@@ -384,6 +421,7 @@ std::optional<repair_activity_choice> repair_activity_actor::query_choice( Chara
         }
         if( repeat == repair_repeat::INIT ) {
             target = item_location::nowhere;
+            change_target = true;
             continue;
         }
         const int count = std::max<int>( 1, std::ceil( target->base_volume() *
@@ -402,7 +440,9 @@ std::optional<repair_activity_choice> repair_activity_actor::query_choice( Chara
         if( material.use_from == usage_from::cancel ) {
             return std::nullopt;
         }
-        return repair_activity_choice{ capture_item_source( who, target ), static_cast<int>( repeat ), material };
+        const item_source selected = !change_target && initial ? *initial :
+                                     capture_item_source( who, target );
+        return repair_activity_choice{ selected, static_cast<int>( repeat ), material, change_target };
     }
 }
 
@@ -430,6 +470,9 @@ void repair_activity_actor::serialize( JsonOut &out ) const
     out.member( "source", source );
     out.member( "choice", choice );
     out.member( "waiting", waiting );
+    if( preferred_target ) {
+        out.member( "preferred_target", *preferred_target );
+    }
     out.end_object();
 }
 
@@ -438,6 +481,7 @@ void repair_activity_actor::read( const JsonObject &data )
     data.read( "source", source, true );
     data.read( "choice", choice, true );
     data.read( "waiting", waiting, true );
+    data.read( "preferred_target", preferred_target );
 }
 
 std::unique_ptr<activity_actor> repair_activity_actor::deserialize( JsonValue &data )
@@ -447,7 +491,8 @@ std::unique_ptr<activity_actor> repair_activity_actor::deserialize( JsonValue &d
     return result;
 }
 
-bool start_owned_repair( Character &who, item_location tool, const std::string &method )
+bool start_owned_repair( Character &who, item_location tool, const std::string &method,
+                         std::optional<item_repair::repair_target> selected )
 {
     if( !tool ) {
         return false;
@@ -456,15 +501,25 @@ bool start_owned_repair( Character &who, item_location tool, const std::string &
     actor.source.portable = capture_item_source( who, tool );
     actor.source.tool = tool->typeId().str();
     actor.source.method = method;
-    if( !prepare_tool( who, actor.source ) ) {
+    const character_action_guard lifetime( who );
+    const auto prepared = prepare_tool( who, actor.source );
+    if( !lifetime || !prepared ) {
         return false;
     }
-    const character_action_guard lifetime( who );
-    who.assign_activity( actor );
-    if( lifetime ) {
-        who.activity.set_execution( activity_execution::authoritative );
+    if( selected ) {
+        map &here = get_map();
+        const item_location target = item_repair::resolve_target( who, here, *selected );
+        if( !target || target.get_item() == prepared->tool || target->damage() <= target->degradation() ||
+            !can_remove_from_item_pockets( who, tool ) ||
+            !prepared->action->can_repair_target( who, *target, false, true ) ) {
+            return false;
+        }
+        actor.preferred_target = std::move( selected );
     }
-    return true;
+    player_activity activity{ actor };
+    activity.set_execution( activity_execution::authoritative );
+    who.assign_activity( activity );
+    return lifetime && who.activity.id() == actor.get_type();
 }
 
 bool valid_vehicle_repair( Character &who, map &, vehicle &target,

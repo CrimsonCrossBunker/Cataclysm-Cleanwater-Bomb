@@ -6,7 +6,6 @@
 
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
-#include "activity_handlers.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -27,9 +26,11 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "npc.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
+#include "repair_activity.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "type_id.h"
@@ -47,6 +48,7 @@ static const fault_id fault_fail_to_feed( "fault_fail_to_feed" );
 static const fault_id fault_spearhead_bent_socket( "fault_spearhead_bent_socket" );
 static const fault_id fault_spearhead_chipping( "fault_spearhead_chipping" );
 static const fault_id fault_spearhead_warped( "fault_spearhead_warped" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_glock_19( "glock_19" );
 static const itype_id itype_integrated_welder( "integrated_welder" );
 static const itype_id itype_knife_combat( "knife_combat" );
@@ -106,11 +108,14 @@ TEST_CASE( "item_repair_menu_starts_ordinary_damage_repair", "[item][repair][rep
     REQUIRE( target->faults.empty() );
     you.mend_item( item_location( target ), false );
     REQUIRE( you.activity.id() == ACT_REPAIR_ITEM );
-    REQUIRE( you.activity.targets.size() == 2 );
-    CHECK( you.activity.targets[0] == tool );
-    CHECK( you.activity.targets[1] == target );
-    CHECK( you.activity.get_str_value( 0 ) == "repair_metal" );
-    CHECK( you.activity.get_value( 0, 0 ) == 0 ); // Keep the normal repeat choice.
+    const auto *repair = dynamic_cast<const repair_activity_actor *>( you.activity.actor.get() );
+    REQUIRE( repair );
+    REQUIRE( repair->preferred_target );
+    CHECK( resolve_item_source( you, get_map(), repair->source.portable ) == tool );
+    CHECK( item_repair::resolve_target( you, get_map(), *repair->preferred_target ) == target );
+    CHECK( repair->source.method == "repair_metal" );
+    CHECK( repair->waiting );
+    CHECK_FALSE( repair->choice );
 }
 
 TEST_CASE( "item_repair_tools_preserve_tool_and_material_requirements",
@@ -128,6 +133,12 @@ TEST_CASE( "item_repair_tools_preserve_tool_and_material_requirements",
     SECTION( "carried_tool" ) {
         supply_repair_materials( you );
         you.i_add( tool );
+    }
+    SECTION( "tool_inside_a_worn_pocket" ) {
+        supply_repair_materials( you );
+        REQUIRE( you.wear_item( item( itype_debug_backpack ), false ) );
+        const item_location stored = you.i_add( tool, true, nullptr, nullptr, false, false );
+        REQUIRE( stored.has_parent() );
     }
     SECTION( "ground_tool" ) {
         supply_repair_materials( you );
@@ -168,8 +179,11 @@ TEST_CASE( "item_repair_tools_preserve_tool_and_material_requirements",
         CHECK( options[0].available == available );
         if( available ) {
             REQUIRE( item_repair::start( you, target, options[0] ) );
-            CHECK( you.activity.targets[0] == options[0].tool );
-            CHECK( you.activity.targets[1] == target );
+            const auto *repair = dynamic_cast<const repair_activity_actor *>( you.activity.actor.get() );
+            REQUIRE( repair );
+            REQUIRE( repair->preferred_target );
+            CHECK( resolve_item_source( you, get_map(), repair->source.portable ) == options[0].tool );
+            CHECK( item_repair::resolve_target( you, get_map(), *repair->preferred_target ) == target );
         }
     }
     if( !discoverable || !available ) {
@@ -198,11 +212,21 @@ TEST_CASE( "item_repair_restores_faultless_combat_wear_to_full", "[item][repair]
 {
     clear_avatar();
     clear_map_without_vision();
+    clear_npcs();
+    const on_out_of_scope cleanup( []() {
+        clear_npcs();
+    } );
     set_time_to_day();
-    Character &you = get_player_character();
+    npc &you = spawn_npc( point_bub_ms( 60, 60 ), "test_talker" );
+    clear_character( you, true );
+    get_map().build_map_cache( you.posz() );
+    REQUIRE( you.fine_detail_vision_mod() <= 4 );
+    REQUIRE( you.wear_item( item( itype_debug_backpack ), false ) );
     item_location target = damaged_spear( you );
     supply_repair_materials( you );
-    item_location tool = you.i_add( welding_kit() );
+    item_location tool = you.i_add( welding_kit(), true, nullptr, nullptr, false, false );
+    REQUIRE( tool );
+    REQUIRE( target );
     const repair_item_actor *actor = dynamic_cast<const repair_item_actor *>(
                                          tool->get_use( "repair_metal" )->get_actor_ptr() );
     REQUIRE( actor );
@@ -217,6 +241,7 @@ TEST_CASE( "item_repair_restores_faultless_combat_wear_to_full", "[item][repair]
             // Accelerate wear attempts, without changing the actual fault selection rules.
             for( int attempt = 0; attempt < 30 && target->damage() == 0; ++attempt ) {
                 you.handle_melee_wear( target, 100000.0f );
+                REQUIRE( target );
                 if( !target->faults.empty() ) {
                     // Discard faulted samples to exercise ordinary damage specifically.
                     you.remove_weapon();
@@ -231,16 +256,27 @@ TEST_CASE( "item_repair_restores_faultless_combat_wear_to_full", "[item][repair]
         REQUIRE( target->faults.empty() );
         REQUIRE( actor->repair_chance( you, *target, repair_item_actor::RT_REPAIR ).second == 0.0f );
         const int charge_before = tool->ammo_remaining();
+        you.set_moves( 100 );
+        REQUIRE( actor->can_use_tool( you, *tool, false ) );
+        REQUIRE( actor->can_repair_target( you, *target, false, true ) );
         you.mend_item( item_location( target ), false );
         REQUIRE( you.activity.id() == ACT_REPAIR_ITEM );
-        you.activity.values = { 3 }; // Existing "repeat until fully repaired" activity choice.
-        for( int attempt = 0; attempt < 100 && !you.activity.is_null(); ++attempt ) {
-            repair_item_finish( &you.activity, &you, true );
-            if( !you.activity.is_null() ) {
+        auto *repair = dynamic_cast<repair_activity_actor *>( you.activity.actor.get() );
+        REQUIRE( repair );
+        REQUIRE( repair->preferred_target );
+        repair_activity_choice choice;
+        choice.target = repair->preferred_target->source;
+        choice.repeat = static_cast<int>( repair_repeat::FULL );
+        choice.material = { usage_from::map, item_comp( itype_mc_steel_chunk, 1 ) };
+        REQUIRE( repair->apply_choice( you, choice ) );
+        for( int attempt = 0; attempt < 100 && you.activity && !repair->waiting; ++attempt ) {
+            repair->finish( you.activity, you );
+            if( you.activity && !repair->waiting ) {
                 CHECK( you.activity.moves_left == actor->move_cost );
             }
         }
-        CHECK( you.activity.is_null() );
+        CHECK( ( !you.activity || repair->waiting ) );
+        you.cancel_activity();
         CHECK( target->damage() == 0 );
         CHECK( target->degradation() == 0 );
         CHECK( target->faults.empty() );

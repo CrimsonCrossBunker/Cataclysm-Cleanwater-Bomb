@@ -205,9 +205,10 @@ static distribution load_distribution( const JsonObject &jo, std::string_view na
     jo.throw_error_at( name, "Invalid distribution type" );
 }
 
-bool shopkeeper_item_group::can_sell( npc const &guy ) const
+bool shopkeeper_item_group::can_sell( npc const &guy, const Character *buyer ) const
 {
-    const_dialogue temp( get_const_talker_for( get_avatar() ), get_const_talker_for( guy ) );
+    const Character &customer = buyer ? *buyer : get_avatar();
+    const_dialogue temp( get_const_talker_for( customer ), get_const_talker_for( guy ) );
     faction *const fac = guy.get_faction();
 
     return ( fac == nullptr || trust <= guy.get_faction()->trusts_u ) &&
@@ -424,11 +425,12 @@ const shopkeeper_whitelist &npc_class::get_shopkeeper_whitelist() const
     return shop_whitelist_id.obj();
 }
 
-faction_price_rule const *npc_class::get_price_rules( item const &it, npc const &guy ) const
+faction_price_rule const *npc_class::get_price_rules( item const &it, npc const &guy,
+        const Character *customer ) const
 {
     auto const el = std::find_if(
-    shop_price_rules.crbegin(), shop_price_rules.crend(), [&it, &guy]( faction_price_rule const & fc ) {
-        return fc.matches( it, guy );
+    shop_price_rules.crbegin(), shop_price_rules.crend(), [&]( faction_price_rule const & fc ) {
+        return customer ? fc.matches( it, guy, *customer ) : fc.matches( it, guy );
     } );
     if( el != shop_price_rules.crend() ) {
         return &*el;

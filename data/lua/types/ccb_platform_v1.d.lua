@@ -6810,10 +6810,10 @@ function PlatformDialogueContext:has_reason() end
 ---@return string
 function PlatformDialogueContext:reason() end
 
----Open the native Avatar item-offer menu for the current interlocutor.
----Only available in a writable `on_action` callback. The interlocutor's native
----`give_item_to` result (including cancellation or refusal text) is stored in
----the dialogue reason and returned unchanged. Non-NPC talkers use their native
+---Offer a carried item to the current interlocutor from a writable `on_action` callback.
+---Local offers return the native result immediately. A remote NPC offer queues
+---selection and returns an empty string while pending. The final result is stored
+---in the dialogue reason before the next topic. Non-NPC talkers use their native
 ---override; the base talker returns "Nope.".
 ---@param use_item boolean True asks the interlocutor to use, consume, or equip the offered item; false asks it to carry the item.
 ---@return string native_reason
@@ -10541,14 +10541,14 @@ local CcbNpcMissionsApi = {}
 ---@return CcbResult result `value` is a CcbNpcMissionsState.
 function CcbNpcMissionsApi.state(provider) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact live avatar dialogue-partner handle.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant.
 ---@return CcbResult result `value` is the owner's assigned CcbNpcMissionPage, matching native dialogue mission ownership.
 function CcbNpcMissionsApi.assigned_for_owner(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@return CcbResult result `value` counts live, unassigned missions offered by this NPC, matching native dialogue filtering.
 function CcbNpcMissionsApi.available_count(provider) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact live avatar used by native mission goal completion checks.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant for native mission goal checks.
 ---@param predicate CcbNpcSelectedMissionPredicate Native selected-mission predicate to evaluate.
 ---@return CcbResult result `value` is boolean; missing or stale selections return false. Live selected pointers are evaluated even if they are not in this provider's mission collections.
 function CcbNpcMissionsApi.selected_condition(provider, owner, predicate) end
@@ -10573,28 +10573,28 @@ function CcbNpcMissionsApi.offer(provider, mission) end
 ---@return CcbResult result `value` is a CcbNpcMissionAssignmentResult.
 function CcbNpcMissionsApi.add_assigned(provider, owner, mission) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult.
 function CcbNpcMissionsApi.assign_selected(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant.
 ---@param force? boolean Explicit incomplete-goal success override.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult.
 function CcbNpcMissionsApi.succeed_selected(provider, owner, force) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult.
 function CcbNpcMissionsApi.fail_selected(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult.
 function CcbNpcMissionsApi.clear_selected(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle used as native dialogue beta.
----@param owner GameHandle Exact active avatar handle used as native dialogue alpha.
----@return CcbResult result `value` is true when the native mission reward effect was invoked; native behavior adds the selected mission value to NPC debt before opening the localized Reward barter UI. A missing selection follows the native debug-message/no-op path. The trade acceptance result is not returned.
+---@param owner GameHandle Exact active avatar or active remotely controlled dialogue participant.
+---@return CcbResult result `value` is true when the native reward trade opens or is queued for the current dialogue. The reward is credited once. A standalone local call with a missing selection retains the native diagnostic path.
 function CcbNpcMissionsApi.open_selected_reward_trade(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
----@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param owner GameHandle Exact live avatar or active remotely controlled dialogue participant.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult; `error.code` is `no_generic_reward`, `already_claimed`, `not_successful`, or `reward_overflow` when claim preflight rejects.
 function CcbNpcMissionsApi.claim_selected_reward(provider, owner) end
 
@@ -10654,9 +10654,9 @@ function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@return CcbResult
 function CcbNpcTrainingApi.start(teacher, students, subject) end
 ---@param provider GameHandle Exact NPC provider handle.
----@param student GameHandle Exact active avatar participant; becomes the teacher in npc mode. Seminar mode may additionally select nearby eligible followers through the native menu.
----@param mode 'player'|'seminar'|'npc' Uses the NPC's selected course. npc mode teaches that NPC from the avatar; other modes teach from the NPC. Seminar cancellation is a normal return; result flags describe NPC/avatar activity only.
----@return CcbResult
+---@param student GameHandle Exact active avatar or active remotely controlled dialogue participant. In npc mode this participant teaches the NPC.
+---@param mode 'player'|'seminar'|'npc' Uses the NPC's selected course. Seminar mode lets the initiating player choose eligible nearby followers and themselves.
+---@return CcbResult Activity flags describe current state. A remote seminar can queue participant selection and a paid course can queue payment before training starts.
 function CcbNpcTrainingApi.start_selected(provider, student, mode) end
 
 ---@class CcbNpcDialogueActionsApi

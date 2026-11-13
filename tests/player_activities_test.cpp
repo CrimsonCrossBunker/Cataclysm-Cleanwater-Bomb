@@ -39,9 +39,11 @@
 #include "point.h"
 #include "proficiency.h"
 #include "ret_val.h"
+#include "safecracking.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
+#include "vehicle.h"
 #include "weather_type.h"
 
 static const activity_id ACT_AIM( "ACT_AIM" );
@@ -226,7 +228,9 @@ TEST_CASE( "safecracking", "[activity][safecracking]" )
         tripoint_bub_ms safe;
         dummy.setpos( here, safe + tripoint::east );
 
-        dummy.activity = player_activity( safecracking_activity_actor( safe ) );
+        const safe_interaction target{ safe_action::crack, dummy.pos_abs(),
+                                       here.get_abs( safe ), furn_f_safe_l };
+        dummy.activity = player_activity( safecracking_activity_actor( target, dummy.getID() ) );
         dummy.activity.start_or_resume( dummy, false );
 
         GIVEN( "player without the required tools" ) {
@@ -333,7 +337,9 @@ TEST_CASE( "safecracking", "[activity][safecracking]" )
         tripoint_bub_ms safe;
         dummy.setpos( here, safe + tripoint::east );
 
-        dummy.activity = player_activity( safecracking_activity_actor( safe ) );
+        const safe_interaction target{ safe_action::crack, dummy.pos_abs(),
+                                       here.get_abs( safe ), furn_f_safe_l };
+        dummy.activity = player_activity( safecracking_activity_actor( target, dummy.getID() ) );
         dummy.activity.start_or_resume( dummy, false );
 
         GIVEN( "player cracks one safe" ) {
@@ -2037,7 +2043,20 @@ static const std::vector<std::function<player_activity()>> test_activities {
     //player_activity( hacksaw_activity_actor( p, loc ) ),
     [] { return player_activity( haircut_activity_actor() ); },
     //player_activity( harvest_activity_actor( p ) ),
-    [] { return player_activity( hotwire_car_activity_actor( 1, get_avatar().pos_abs() ) ); },
+    [] {
+        avatar &who = get_avatar();
+        map &here = get_map();
+        vehicle *target = here.add_vehicle( vproto_id( "none" ), who.pos_bub(),
+                                            units::from_degrees( 0 ), 0,
+                                            veh_spawn_status::UNDAMAGED );
+        REQUIRE( target );
+        REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_id( "controls" ) ) >= 0 );
+        here.add_vehicle_to_cache( target );
+        target->is_locked = true;
+        who.i_add( item( itype_id( "screwdriver" ) ) );
+        return player_activity( hotwire_car_activity_actor( 1, who.pos_abs() ) );
+    },
     //player_activity( insert_item_activity_actor() ),
     [] {
         Character *dummy = get_avatar().as_character();
@@ -2066,7 +2085,12 @@ static const std::vector<std::function<player_activity()>> test_activities {
         item::reload_option opt( dummy, target, ammo, item::reload_option::POCKET_FALLBACK );
         return player_activity( reload_activity_actor( std::move( opt ) ) );
     },
-    [] { return player_activity( safecracking_activity_actor( get_avatar().pos_bub() + tripoint_rel_ms::north ) ); },
+    [] {
+        const avatar &who = get_avatar();
+        const safe_interaction target{ safe_action::crack, who.pos_abs(),
+                                       who.pos_abs() + tripoint_rel_ms::north, furn_f_safe_l };
+        return player_activity( safecracking_activity_actor( target, who.getID() ) );
+    },
     [] { return player_activity( shave_activity_actor() ); },
     //player_activity( shearing_activity_actor( north ) ),
     [] { return player_activity( stash_activity_actor() ); },

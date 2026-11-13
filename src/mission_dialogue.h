@@ -65,7 +65,7 @@ void assign_selected_mission( dialogue &d );
 void succeed_selected_mission( dialogue &d );
 void fail_selected_mission( dialogue &d );
 void clear_selected_mission( dialogue &d );
-void reward_selected_mission( dialogue &d );
+bool reward_selected_mission( dialogue &d, bool require_trade = false );
 void start_selected_training( dialogue &conversation );
 void start_selected_training_npc( dialogue &conversation );
 void start_selected_training_seminar( dialogue &conversation );

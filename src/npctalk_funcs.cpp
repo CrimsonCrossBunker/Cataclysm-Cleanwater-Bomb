@@ -65,6 +65,7 @@
 #include "mission.h"
 #include "mission_dialogue.h"
 #include "monster.h"
+#include "mp_actor_binding.h"
 #include "mutation.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -198,6 +199,15 @@ std::string talk_function::vehicle_service_state_snapshot( const vehicle &veh )
                << part.degradation() << ':' << faults.size() << ':' << faults << ';';
     }
     return result.str();
+}
+
+namespace
+{
+bool start_training_request( Character &teacher, const std::vector<Character *> &students,
+                             const talk_function::teach_domain &domain, mission *reward_mission,
+                             dialogue *conversation = nullptr, Character *explicit_patron = nullptr );
+void request_remote_seminar( dialogue &conversation, npc &teacher, Character &payer,
+                             const talk_function::teach_domain &domain );
 }
 
 namespace mission_dialogue
@@ -553,13 +563,14 @@ bool clear_mission_for_character( npc &p, Character &u, mission *miss, dialogue 
     return true;
 }
 
-bool reward_mission_for_character( npc &p, Character &u, mission *miss )
+bool reward_mission_for_character( npc &p, Character &u, mission *miss,
+                                   dialogue *conversation = nullptr, bool require_trade = false )
 {
     const character_action_guard u_guard( u );
     const character_action_guard p_guard( p );
     if( !u_guard || !p_guard ||
         !is_assigned_chatbin_mission_for( p, u.getID(), miss ) ||
-        miss->has_failed() || miss->generic_reward_claimed() ) {
+        miss->has_failed() || ( miss->generic_reward_claimed() && !require_trade ) ) {
         return false;
     }
     const mission_selection_identity identity = identify_mission( miss );
@@ -567,9 +578,23 @@ bool reward_mission_for_character( npc &p, Character &u, mission *miss )
     if( !op_guard ) {
         return false;
     }
-    miss->commit_generic_reward_claim();
-    const int mission_value = miss->get_value();
-    p.opinion_of( u.getID() ).owed += mission_value;
+    const bool claimed = miss->generic_reward_claimed();
+    const int64_t balance = static_cast<int64_t>( std::as_const( p ).opinion_of( u.getID() ).owed ) +
+                            ( claimed ? 0 : miss->get_value() );
+    if( balance < std::numeric_limits<int>::min() || balance > std::numeric_limits<int>::max() ) {
+        return false;
+    }
+    if( &u != &get_avatar() ) {
+        const bool opening = conversation && u.has_native_player_control() &&
+                             conversation->request_remote_trade( { _( "Reward" ), false } );
+        if( require_trade && !opening ) {
+            return false;
+        }
+    }
+    if( !claimed ) {
+        miss->commit_generic_reward_claim();
+        p.opinion_of( u.getID() ).owed = static_cast<int>( balance );
+    }
     if( &u == &get_avatar() ) {
         npc_trading::trade( p, 0, _( "Reward" ) );
     }
@@ -636,14 +661,15 @@ void clear_selected_mission( dialogue &d )
     clear_mission_for_character( *p, *u, d.actor( true )->selected_mission(), &d );
 }
 
-void reward_selected_mission( dialogue &d )
+bool reward_selected_mission( dialogue &d, bool require_trade )
 {
     Character *u = resolve_dialogue_character( d, false );
     npc *p = resolve_dialogue_npc( d, true );
     if( u == nullptr || p == nullptr || !d.has_beta ) {
-        return;
+        return false;
     }
-    reward_mission_for_character( *p, *u, d.actor( true )->selected_mission() );
+    return reward_mission_for_character( *p, *u, d.actor( true )->selected_mission(), &d,
+                                         require_trade );
 }
 
 void add_mission_for_dialogue( dialogue &d, const mission_type_id &mission_id )
@@ -724,13 +750,14 @@ void start_selected_training( dialogue &conversation )
 {
     Character *student = resolve_dialogue_character( conversation, false );
     npc *teacher = resolve_dialogue_npc( conversation );
-    if( !student || !teacher || student == teacher ) {
+    if( !student || !teacher || student == teacher ||
+        ( student != &get_avatar() && !conversation.const_actor( true )->has_chosen_training() ) ) {
         return;
     }
     talk_function::teach_domain domain = selected_training_domain( conversation, *teacher );
     std::vector<Character *> students{ student };
-    talk_function::start_training_gen( *teacher, students, domain,
-                                       conversation.actor( true )->selected_mission() );
+    start_training_request( *teacher, students, domain,
+                            conversation.actor( true )->selected_mission(), &conversation );
     if( participants_live( conversation ) ) {
         talk_effect_t::update_missions( conversation );
     }
@@ -740,22 +767,30 @@ void start_selected_training_npc( dialogue &conversation )
 {
     Character *teacher = resolve_dialogue_character( conversation, false );
     npc *student = resolve_dialogue_npc( conversation );
-    if( !teacher || !student || teacher == student ) {
+    if( !teacher || !student || teacher == student ||
+        ( teacher != &get_avatar() && !conversation.const_actor( true )->has_chosen_training() ) ) {
         return;
     }
     talk_function::teach_domain domain = selected_training_domain( conversation, *student );
     std::vector<Character *> students{ student };
-    talk_function::start_training_gen( *teacher, students, domain, nullptr );
+    start_training_request( *teacher, students, domain, nullptr, &conversation, teacher );
 }
 
 void start_selected_training_seminar( dialogue &conversation )
 {
     Character *student = resolve_dialogue_character( conversation, false );
     npc *teacher = resolve_dialogue_npc( conversation );
-    if( !student || !teacher || student != &get_avatar() ) {
+    if( !student || !teacher || student == teacher ) {
         return;
     }
     talk_function::teach_domain domain = selected_training_domain( conversation, *teacher );
+    if( student != &get_avatar() ) {
+        if( student->has_native_player_control() &&
+            conversation.const_actor( true )->has_chosen_training() ) {
+            request_remote_seminar( conversation, *teacher, *student, domain );
+        }
+        return;
+    }
     teacher->chatbin.store_chosen_training( domain.skill, domain.style, domain.spell,
                                             domain.prof );
     talk_function::start_training_seminar( *teacher );
@@ -2800,104 +2835,321 @@ void talk_function::start_training_gen( Character &teacher, std::vector<Characte
     start_training_gen( teacher, students, d, provider ? provider->chatbin.mission_selected : nullptr );
 }
 
+namespace
+{
+struct training_terms {
+    int cost = 0;
+    time_duration duration = 0_turns;
+};
+
+std::optional<training_terms> price_training( const Character &teacher,
+        const std::vector<Character *> &students, const talk_function::teach_domain &domain )
+{
+    training_terms result;
+    int64_t cost = 0;
+    for( const Character *student : students ) {
+        time_duration duration;
+        if( domain.skill != skill_id() &&
+            student->get_knowledge_level( domain.skill ) < teacher.get_knowledge_level( domain.skill ) ) {
+            cost += calc_skill_training_cost_char( teacher, *student, domain.skill );
+            duration = calc_skill_training_time_char( teacher, *student, domain.skill );
+        } else if( domain.style != matype_id() &&
+                   !student->martial_arts_data->has_martialart( domain.style ) ) {
+            cost += calc_ma_style_training_cost( teacher, *student, domain.style );
+            duration = calc_ma_style_training_time( teacher, *student, domain.style );
+        } else if( domain.spell != spell_id() ) {
+            cost += calc_spell_training_cost( teacher, *student, domain.spell );
+            duration = calc_spell_training_time( teacher, *student, domain.spell );
+        } else if( domain.prof != proficiency_id() ) {
+            cost += calc_proficiency_training_cost( teacher, *student, domain.prof );
+            duration = calc_proficiency_training_time( teacher, *student, domain.prof );
+        } else {
+            return std::nullopt;
+        }
+        result.duration = std::max( result.duration, duration );
+    }
+    if( cost < 0 || cost > std::numeric_limits<int>::max() ) {
+        return std::nullopt;
+    }
+    result.cost = static_cast<int>( cost );
+    return result;
+}
+
+bool course_is_offered( const Character &teacher, const Character &student,
+                        const talk_function::teach_domain &domain )
+{
+    const auto contains = []( const auto & list, const auto & id ) {
+        return std::find( list.begin(), list.end(), id ) != list.end();
+    };
+    if( domain.skill != skill_id() ) {
+        return contains( teacher.skills_offered_to( &student ), domain.skill );
+    }
+    if( domain.style != matype_id() ) {
+        return contains( teacher.styles_offered_to( &student ), domain.style );
+    }
+    if( domain.spell != spell_id() ) {
+        return contains( teacher.spells_offered_to( &student ), domain.spell );
+    }
+    return domain.prof != proficiency_id() &&
+           contains( teacher.proficiencies_offered_to( &student ), domain.prof );
+}
+
+bool within_training_range( const Character &teacher, const Character &student, const map &here )
+{
+    return here.inbounds( student.pos_abs() ) && student.posz() == teacher.posz() &&
+           rl_dist( student.pos_abs(), teacher.pos_abs() ) <= SEEX * 2;
+}
+
+bool is_seminar_follower( const Character &teacher, const Character &student, const map &here,
+                          const std::set<character_id> &roster )
+{
+    const npc *follower = student.as_npc();
+    return follower && &student != &teacher && roster.count( follower->getID() ) != 0 &&
+           !cata_mp::is_player_proxy( *follower ) && !follower->has_native_player_control() &&
+           follower->is_player_ally() && follower->is_following() &&
+           follower->can_hear( teacher.pos_bub( here ), teacher.get_shout_volume() );
+}
+
+class training_group
+{
+    public:
+        training_group( Character &teacher, const std::vector<Character *> &students,
+                        const talk_function::teach_domain &domain )
+            : teacher_( teacher ), domain_( domain ) {
+            students_.reserve( students.size() );
+            for( Character *student : students ) {
+                students_.emplace_back( *student );
+            }
+        }
+
+        std::vector<Character *> live_students() const {
+            if( !teacher_ ) {
+                return {};
+            }
+            std::vector<Character *> result;
+            result.reserve( students_.size() );
+            for( const character_action_guard &student : students_ ) {
+                Character *live = student.get();
+                if( !live ) {
+                    return {};
+                }
+                result.push_back( live );
+            }
+            return result;
+        }
+
+        bool matches_offer( const character_action_guard &patron,
+                            const training_terms &confirmed ) const {
+            const Character *teacher = teacher_.get();
+            const Character *payer = patron.get();
+            if( !teacher || !payer || !payer->has_native_player_control() ||
+                teacher->activity || payer->activity ||
+                ( npc_trading::merchant( *teacher ) && teacher->has_effect( effect_asked_to_train ) ) ) {
+                return false;
+            }
+            const map &here = get_map();
+            const bool npc_teacher = npc_trading::merchant( *teacher ) != nullptr;
+            const auto students = live_students();
+            std::set<character_id> roster;
+            if( npc_teacher && std::any_of( students.begin(), students.end(),
+            [payer]( const Character * student ) {
+            return student != payer;
+        } ) ) {
+                roster = g->get_follower_list();
+            }
+            if( students.empty() || !here.inbounds( teacher->pos_abs() ) ||
+                !within_training_range( *teacher, *payer, here ) ||
+            std::any_of( students.begin(), students.end(), [&]( const Character * student ) {
+            return student->activity || !within_training_range( *teacher, *student, here ) ||
+                       ( npc_teacher && student != payer &&
+                         !is_seminar_follower( *teacher, *student, here, roster ) ) ||
+                       !course_is_offered( *teacher, *student, domain_ );
+            } ) ) {
+                return false;
+            }
+            const auto current = price_training( *teacher, students, domain_ );
+            return current && current->cost == confirmed.cost && current->duration == confirmed.duration;
+        }
+
+        bool begin( time_duration duration ) const {
+            Character *teacher = teacher_.get();
+            const auto students = live_students();
+            if( !teacher || students.empty() ) {
+                return false;
+            }
+            std::vector<character_id> ids;
+            ids.reserve( students.size() );
+            for( const Character *student : students ) {
+                ids.push_back( student->getID() );
+            }
+            const auto assign = []( Character & participant, const training_activity_actor & actor ) {
+                player_activity activity( actor );
+                if( !participant.is_avatar() && participant.has_native_player_control() ) {
+                    activity.set_execution( activity_execution::authoritative );
+                }
+                participant.assign_activity( activity );
+            };
+            const character_id teacher_id = teacher->getID();
+            assign( *teacher, training_activity_actor( duration, domain_, ids ) );
+            if( teacher_ ) {
+                teacher->add_effect( effect_asked_to_train, 6_hours );
+            }
+            for( const character_action_guard &student : students_ ) {
+                Character *live = student.get();
+                if( !teacher_ || !live ) {
+                    return false;
+                }
+                assign( *live, training_activity_actor( duration, domain_, teacher_id ) );
+            }
+            return true;
+        }
+
+    private:
+        character_action_guard teacher_;
+        talk_function::teach_domain domain_;
+        std::vector<character_action_guard> students_;
+};
+
+bool start_training_request( Character &teacher, const std::vector<Character *> &students,
+                             const talk_function::teach_domain &domain, mission *reward_mission,
+                             dialogue *conversation, Character *explicit_patron )
+{
+    if( students.empty() ||
+    std::any_of( students.begin(), students.end(), [&]( const Character * student ) {
+    return !student || student == &teacher;
+} ) ) {
+        return false;
+    }
+    const auto group = std::make_shared<training_group>( teacher, students, domain );
+    if( group->live_students().empty() ) {
+        return false;
+    }
+    const auto terms = price_training( teacher, students, domain );
+    if( !terms ) {
+        return false;
+    }
+    const auto avatar_student = std::find_if( students.begin(),
+    students.end(), []( const Character * student ) {
+        return student->is_avatar();
+    } );
+    Character &payer = explicit_patron ? *explicit_patron :
+                       avatar_student != students.end() ? **avatar_student : *students.front();
+    const character_action_guard patron( payer );
+    const bool remote = conversation && payer.has_native_player_control() && !payer.is_avatar();
+    if( remote && !group->matches_offer( patron, *terms ) ) {
+        return false;
+    }
+    if( npc *provider = teacher.has_native_player_control() ? nullptr : teacher.as_npc() ) {
+        const bool reward = mission_dialogue::is_assigned_chatbin_mission_for(
+                                *provider, payer.getID(), reward_mission ) &&
+                            !reward_mission->generic_reward_claimed() &&
+                            !reward_mission->has_failed() &&
+                            reward_mission->is_complete( provider->getID(), payer );
+        if( reward ) {
+            if( !mission_dialogue::clear_mission_for_character(
+                    *provider, payer, reward_mission, nullptr, false ) ) {
+                return false;
+            }
+        } else if( !npc_trading::pay_npc( *provider, payer, terms->cost ) ) {
+            if( remote && terms->cost > 0 ) {
+                dialogue_trade_request payment;
+                payment.title = _( "Pay for training" );
+                payment.service_cost = terms->cost;
+                payment.can_fulfill = [group, patron, confirmed = *terms]() {
+                    return group->matches_offer( patron, confirmed );
+                };
+                payment.fulfill = [group, duration = terms->duration]() {
+                    group->begin( duration );
+                };
+                return conversation->request_remote_trade( std::move( payment ) );
+            }
+            return false;
+        }
+        // The reward or debit is committed. Even if an activity callback
+        // invalidates a participant, do not present the same enrollment again.
+        group->begin( terms->duration );
+        return true;
+    }
+    return group->begin( terms->duration );
+}
+
+void request_remote_seminar( dialogue &conversation, npc &teacher, Character &payer,
+                             const talk_function::teach_domain &domain )
+{
+    const character_action_guard instructor( teacher );
+    const character_action_guard patron( payer );
+    const map &map_at_request = get_map();
+    const auto follower_ids = g->get_follower_list();
+    auto offered = std::make_shared<std::vector<character_action_guard>>();
+    offered->emplace_back( payer );
+    for( const character_id id : follower_ids ) {
+        if( npc *follower = g->critter_by_id<npc>( id );
+            follower && follower != &payer &&
+            is_seminar_follower( teacher, *follower, map_at_request, follower_ids ) ) {
+            offered->emplace_back( *follower );
+        }
+    }
+
+    const auto available = [offered, instructor, patron, domain]() {
+        std::vector<Character *> students;
+        const Character *current_teacher = instructor.get();
+        const Character *current_payer = patron.get();
+        const map &here = get_map();
+        if( !current_teacher || !current_payer || !current_payer->has_native_player_control() ||
+            !npc_trading::merchant( *current_teacher ) || current_teacher->activity ||
+            current_payer->activity || current_teacher->has_effect( effect_asked_to_train ) ||
+            !here.inbounds( current_teacher->pos_abs() ) ||
+            !within_training_range( *current_teacher, *current_payer, here ) ) {
+            return students;
+        }
+        const auto roster = g->get_follower_list();
+        for( const character_action_guard &entry : *offered ) {
+            Character *student = entry.get();
+            if( student && !student->activity &&
+                within_training_range( *current_teacher, *student, here ) &&
+                ( student == current_payer || is_seminar_follower( *current_teacher, *student, here, roster ) ) &&
+                course_is_offered( *current_teacher, *student, domain ) ) {
+                students.push_back( student );
+            }
+        }
+        return students;
+    };
+    dialogue_seminar_request request;
+    request.candidates = [available]() {
+        std::vector<std::pair<character_id, std::string>> result;
+        for( const Character *student : available() ) {
+            result.emplace_back( student->getID(), student->get_name() );
+        }
+        return result;
+    };
+    request.enroll = [available, instructor, patron, domain]( dialogue & d,
+    const std::vector<character_id> &chosen ) {
+        Character *current_teacher = instructor.get();
+        Character *current_payer = patron.get();
+        if( !current_teacher || !current_payer || chosen.empty() ) {
+            return false;
+        }
+        const std::set<character_id> chosen_ids( chosen.begin(), chosen.end() );
+        std::vector<Character *> students;
+        for( Character *candidate : available() ) {
+            if( chosen_ids.count( candidate->getID() ) != 0 ) {
+                students.push_back( candidate );
+            }
+        }
+        if( students.size() != chosen.size() ) {
+            return false;
+        }
+        return start_training_request( *current_teacher, students, domain,
+                                       d.actor( true )->selected_mission(), &d, current_payer );
+    };
+    conversation.request_remote_seminar( std::move( request ) );
+}
+} // namespace
+
 void talk_function::start_training_gen( Character &teacher, std::vector<Character *> &students,
                                         teach_domain &d, mission *reward_mission )
 {
-    const character_action_guard teacher_lifetime( teacher );
-    std::vector<character_action_guard> student_lifetimes;
-    for( Character *student : students ) {
-        if( !student ) {
-            return;
-        }
-        student_lifetimes.emplace_back( *student );
-    }
-    const auto participants_valid = [&]() {
-        return teacher_lifetime && std::all_of( student_lifetimes.begin(), student_lifetimes.end(),
-        []( const character_action_guard & lifetime ) {
-            return static_cast<bool>( lifetime );
-        } );
-    };
-    if( !participants_valid() ) {
-        return;
-    }
-    int cost = 0;
-    time_duration time = 0_turns;
-    std::string name;
-    const skill_id &skill = d.skill;
-    const matype_id &style = d.style;
-    const spell_id &sp_id = d.spell;
-    const proficiency_id &proficiency = d.prof;
-    Character *patron = nullptr;
-
-    for( Character *student : students ) {
-        if( student->is_avatar() ) {
-            patron = student;
-        }
-        int tmp_cost = 0;
-        time_duration tmp_time = 0_turns;
-        if( skill != skill_id() &&
-            student->get_knowledge_level( skill ) < teacher.get_knowledge_level( skill ) ) {
-            tmp_cost = calc_skill_training_cost_char( teacher, *student, skill );
-            tmp_time = calc_skill_training_time_char( teacher, *student, skill );
-        } else if( style != matype_id() &&
-                   !student->martial_arts_data->has_martialart( style ) ) {
-            tmp_cost = calc_ma_style_training_cost( teacher, *student, style );
-            tmp_time = calc_ma_style_training_time( teacher, *student, style );
-        } else if( sp_id != spell_id() ) {
-            // already checked if can learn this spell in npctalk.cpp
-            tmp_cost = calc_spell_training_cost( teacher, *student, sp_id );
-            tmp_time = calc_spell_training_time( teacher, *student, sp_id );
-        } else if( proficiency != proficiency_id() ) {
-            tmp_cost = calc_proficiency_training_cost( teacher, *student, proficiency );
-            tmp_time = calc_proficiency_training_time( teacher, *student, proficiency );
-        } else {
-            debugmsg( "start_training with no valid skill or style set" );
-            return;
-        }
-        // use the slowest common denominator and combine cost
-        cost += tmp_cost;
-        time = std::max( time, tmp_time );
-    }
-
-    if( patron == nullptr && !students.empty() ) {
-        patron = students.front();
-    }
-    if( npc *p = teacher.as_npc(); p != nullptr && patron != nullptr ) {
-        const bool reward = mission_dialogue::is_assigned_chatbin_mission_for(
-                                *p, patron->getID(), reward_mission ) &&
-                            !reward_mission->generic_reward_claimed() &&
-                            !reward_mission->has_failed() &&
-                            reward_mission->is_complete( p->getID(), *patron );
-        if( reward ) {
-            if( !mission_dialogue::clear_mission_for_character(
-                    *p, *patron, reward_mission, nullptr, false ) ) {
-                return;
-            }
-        } else if( !npc_trading::pay_npc( *p, *patron, cost ) ) {
-            return;
-        }
-    }
-    if( !participants_valid() ) {
-        return;
-    }
-    std::vector<character_id> student_ids;
-    student_ids.reserve( students.size() );
-    for( Character *student : students ) {
-        student_ids.emplace_back( student->getID() );
-    }
-
-    const character_id teacher_id = teacher.getID();
-    teacher.assign_activity( training_activity_actor( time, d, student_ids ) );
-    if( !participants_valid() ) {
-        return;
-    }
-    teacher.add_effect( effect_asked_to_train, 6_hours );
-    for( Character *student : students ) {
-        if( !participants_valid() ) {
-            return;
-        }
-        student->assign_activity( training_activity_actor( time, d, teacher_id ) );
-    }
+    start_training_request( teacher, students, d, reward_mission );
 }
 
 npc *pick_follower()

@@ -6,16 +6,22 @@
 #include <cstdlib>
 #include <string>
 #include <system_error>
+#include <utility>
 
 #include "character.h"
 #include "clzones.h"
 #include "faction.h"
 #include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
+#include "mp_gamestate.h"
 #include "debug.h"
 #include "activity_actor_definitions.h"
 #include "temp_crafting_inventory.h"
 #include "skill.h"
 #include "itype.h"
+#include "item_uid.h"
+#include "veh_utils.h"
+#include "vehicle_uid.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "uilist.h"
@@ -26,6 +32,7 @@
 #include "game_constants.h"
 #include "flag.h"
 #include "item.h"
+#include "item_consumption.h"
 #include "item_location.h"
 #include "json.h"
 #include "player_activity.h"
@@ -49,6 +56,153 @@ bool autopilot_action( const std::string &action )
 {
     return action == "autopilot_follow" || action == "autopilot_patrol" ||
            action == "autopilot_stop" || action == "precollision_on" || action == "precollision_off";
+}
+
+bool management_requires_owner( const vehicle &target, const std::string &operation )
+{
+    return operation == "relabel" || operation == "crew" ||
+           ( operation == "rename" && !target.is_appliance() );
+}
+
+bool valid_vehicle_text( const std::string &text )
+{
+    return text.size() <= 34 * 4 && std::none_of( text.begin(), text.end(), []( unsigned char c ) {
+        return c < ' ' || c == 127;
+    } );
+}
+
+std::optional<tripoint_abs_ms> vehicle_access_point( const Character &who, map &here,
+        const vehicle &target )
+{
+    if( !here.inbounds( who.pos_abs() ) ) {
+        return std::nullopt;
+    }
+    for( const tripoint_bub_ms &position : here.points_in_radius( who.pos_bub( here ), 1 ) ) {
+        const auto at = here.veh_at( position );
+        if( at && &at->vehicle() == &target ) {
+            return here.get_abs( position );
+        }
+    }
+    return std::nullopt;
+}
+
+int management_part( const vehicle &target, const tripoint_abs_ms &position, int64_t part_id )
+{
+    if( part_id <= 0 ) {
+        return -1;
+    }
+    for( const vpart_reference &entry : target.get_all_parts() ) {
+        const vehicle_part &part = entry.part();
+        if( !part.removed && !part.is_fake && part.get_base().uid().get_value() == part_id &&
+            entry.pos_abs() == position ) {
+            return entry.part_index();
+        }
+    }
+    return -1;
+}
+
+bool valid_vehicle_management( Character &who, map &here, vehicle &target,
+                               const tripoint_abs_ms &position,
+                               const vehicle_management_selection &choice, int part )
+{
+    if( who.pos_abs() != choice.origin || target.get_owner() != choice.owner ||
+        ( management_requires_owner( target, choice.operation ) &&
+          target.has_owner() && !target.is_owned_by( who ) ) ) {
+        return false;
+    }
+    if( choice.operation == "rename" ) {
+        return choice.part_id == 0 && !choice.text.empty() && valid_vehicle_text( choice.text );
+    }
+    if( choice.operation == "unload_fuel" ) {
+        static const itype_id battery( "battery" );
+        static const itype_id plutonium( "plut_cell" );
+        return choice.part_id == 0 && !who.controlling_vehicle && std::abs( target.velocity ) <= 100 &&
+               choice.fuel.is_valid() && choice.fuel != battery && choice.fuel->phase == phase_id::SOLID &&
+               target.fuel_left( here, choice.fuel ) >= ( choice.fuel == plutonium ? PLUTONIUM_CHARGES : 1 );
+    }
+    if( part < 0 ) {
+        return false;
+    }
+    const vehicle_part &selected = target.part( part );
+    if( choice.operation == "relabel" ) {
+        return valid_vehicle_text( choice.text );
+    }
+    if( choice.operation == "crew" ) {
+        if( !selected.is_seat() || selected.is_broken() ) {
+            return false;
+        }
+        if( choice.crew.get_value() == 0 ) {
+            return true;
+        }
+        const npc *member = g->critter_by_id<npc>( choice.crew );
+        return member && member != &who && !member->is_dead_state() && !member->is_hallucination() &&
+               !member->is_player_controlled() && member->is_ally( who ) &&
+               ( member->is_walking_with() || member->is_player_ally() );
+    }
+    if( !target.is_appliance() || rl_dist( who.pos_abs(), position ) > 1 ) {
+        return false;
+    }
+    if( choice.operation == "hide_wiring" ) {
+        return selected.info().has_flag( "WIRING" );
+    }
+    return choice.operation == "disconnect_grid" && target.is_powergrid() &&
+           target.part_count() > 1 && target.part_displayed_at( selected.mount, true ) == part &&
+           !selected.info().has_flag( VPFLAG_WALL_MOUNTED ) &&
+           target.can_separate_from_grid( selected.mount );
+}
+
+bool execute_vehicle_management( Character &who, map &here, vehicle &target,
+                                 const vehicle_control_selection &request )
+{
+    const vehicle_management_selection &choice = *request.management;
+    const int part = management_part( target, request.position, choice.part_id );
+    const bool check_theft = choice.operation != "hide_wiring";
+    if( !valid_vehicle_management( who, here, target, request.position, choice, part ) ||
+        ( check_theft && target.has_owner() && !target.is_owned_by( who ) && !request.allow_theft ) ) {
+        return false;
+    }
+    const character_action_guard actor( who );
+    const auto context = here.get_context_reference();
+    const auto vehicle_ref = target.get_safe_reference();
+    if( check_theft &&
+        ( !target.handle_potential_theft( who, false, false ) || !actor || !context ||
+          !vehicle_ref || who.pos_abs() != choice.origin || who.activity ) ) {
+        return false;
+    }
+
+    if( choice.operation == "rename" ) {
+        target.rename( choice.text );
+        return true;
+    }
+    if( choice.operation == "unload_fuel" ) {
+        return veh_utils::unload_solid_fuel( who, here, target, choice.fuel );
+    }
+
+    const int current_part = management_part( target, request.position, choice.part_id );
+    if( current_part < 0 ) {
+        return false;
+    }
+    vehicle_part &selected = target.part( current_part );
+    if( choice.operation == "relabel" ) {
+        vpart_position( target, current_part ).set_label( choice.text );
+    } else if( choice.operation == "crew" ) {
+        if( choice.crew.get_value() == 0 ) {
+            selected.unset_crew();
+        } else {
+            const npc *member = g->critter_by_id<npc>( choice.crew );
+            return member && target.assign_seat( selected, *member );
+        }
+    } else if( choice.operation == "hide_wiring" ) {
+        selected.hidden = choice.hidden;
+        here.invalidate_map_cache( request.position.z() );
+    } else if( choice.operation == "disconnect_grid" ) {
+        const point_rel_ms mount = selected.mount;
+        target.separate_from_grid( here, mount, who );
+        if( actor && context ) {
+            who.pause();
+        }
+    }
+    return true;
 }
 
 bool has_remote_controller( const Character &who )
@@ -304,6 +458,42 @@ void vehicle_engine_selection::deserialize( const JsonObject &data )
     data.read( "enabled", enabled, true );
 }
 
+void vehicle_management_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "operation", operation );
+    out.member( "origin", origin );
+    out.member( "part", part_id );
+    out.member( "owner", owner );
+    if( operation == "rename" || operation == "relabel" ) {
+        out.member( "text", text );
+    } else if( operation == "crew" ) {
+        out.member( "crew", crew );
+    } else if( operation == "unload_fuel" ) {
+        out.member( "fuel", fuel );
+    } else if( operation == "hide_wiring" ) {
+        out.member( "hidden", hidden );
+    }
+    out.end_object();
+}
+
+void vehicle_management_selection::deserialize( const JsonObject &data )
+{
+    data.read( "operation", operation, true );
+    data.read( "origin", origin, true );
+    data.read( "part", part_id, true );
+    data.read( "owner", owner, true );
+    if( operation == "rename" || operation == "relabel" ) {
+        data.read( "text", text, true );
+    } else if( operation == "crew" ) {
+        data.read( "crew", crew, true );
+    } else if( operation == "unload_fuel" ) {
+        data.read( "fuel", fuel, true );
+    } else if( operation == "hide_wiring" ) {
+        data.read( "hidden", hidden, true );
+    }
+}
+
 void vehicle_control_selection::serialize( JsonOut &out ) const
 {
     out.start_object();
@@ -339,6 +529,9 @@ void vehicle_control_selection::serialize( JsonOut &out ) const
     }
     if( harness ) {
         out.member( "harness", *harness );
+    }
+    if( management ) {
+        out.member( "management", *management );
     }
     if( unwield ) {
         out.member( "unwield" );
@@ -377,6 +570,8 @@ void vehicle_control_selection::deserialize( const JsonObject &data )
     data.read( "turret", turret );
     harness.reset();
     data.read( "harness", harness );
+    management.reset();
+    data.read( "management", management );
     unwield.reset();
     if( data.has_object( "unwield" ) ) {
         const JsonObject choice = data.get_object( "unwield" );
@@ -412,6 +607,20 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     const optional_vpart_position at = here.veh_at( position );
     if( !at || &at->vehicle() != &target ) {
         return false;
+    }
+    if( action == "siphon" ) {
+        return !remote_source && !target.magic && position.z() == who.pos_abs().z() &&
+               rl_dist( who.pos_abs(), position ) <= 1;
+    }
+    if( action == "management" ) {
+        return !remote_source && !target.magic && position.z() == who.pos_abs().z() &&
+               vehicle_access_point( who, here, target ).has_value();
+    }
+    if( action == "horn" ) {
+        return !remote_source && position.z() == who.pos_abs().z() &&
+               rl_dist( who.pos_abs(), position ) <= 1 &&
+               target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0 &&
+               target.has_part( "HORN" );
     }
     const bool releasing = action == "release";
     const bool stopping = action == "stop" || action == "stop_driving";
@@ -571,8 +780,9 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     selection.position = position;
     selection.action = action;
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
-                             action == "alarm" || action == "smash_alarm" || action == "electronics" || action == "appliance" ||
-                             action == "water" || action == "heating" || action == "repair" || action == "toolstation" ||
+                             action == "alarm" || action == "smash_alarm" || action == "horn" ||
+                             action == "electronics" || action == "appliance" ||
+                             action == "water" || action == "siphon" || action == "heating" || action == "repair" || action == "toolstation" ||
                              action == "tool_use" || action == "turret" || action == "harness" || action == "fold" ||
                              autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
@@ -670,6 +880,7 @@ std::optional<vehicle_control_selection> query_owned_vehicle_menu( Character &wh
             _( "Turn off the engine" ) : _( "Turn on the engine" )
         },
         { "engines", _( "Control individual engines" ) },
+        { "horn", _( "Honk horn" ) },
         { "hotwire", _( "Hotwire" ) },
         { "alarm", _( "Trigger the alarm" ) },
         { "smash_alarm", _( "Try to smash alarm" ) },
@@ -819,6 +1030,12 @@ bool execute_vehicle_control( Character &who, map &here,
                                      remote_source ) ) {
         return false;
     }
+    if( selection.action == "management" ) {
+        return selection.management && execute_vehicle_management( who, here, *target, selection );
+    }
+    if( selection.management ) {
+        return false;
+    }
     if( ( selection.action == "electronics" ) != selection.electronics.has_value() ||
         ( selection.electronics &&
           !valid_vehicle_electronics_selection( who, here, *target, *selection.electronics ) ) ) {
@@ -829,9 +1046,13 @@ bool execute_vehicle_control( Character &who, map &here,
                 selection.position, *selection.appliance ) ) ) {
         return false;
     }
-    if( ( selection.action == "water" ) != selection.water.has_value() ||
-        ( selection.water && !valid_vehicle_water_selection( who, here, *target,
-                selection.position, *selection.water ) ) ) {
+    const bool siphon = selection.action == "siphon";
+    if( ( selection.action == "water" || siphon ) != selection.water.has_value() ||
+        ( selection.water &&
+          ( siphon != ( selection.water->operation == "siphon" ||
+                         selection.water->operation == "siphon_drink" ) ||
+            !valid_vehicle_water_selection( who, here, *target,
+                                            selection.position, *selection.water ) ) ) ) {
         return false;
     }
     if( ( selection.action == "heating" ) != selection.heating.has_value() ||
@@ -869,8 +1090,9 @@ bool execute_vehicle_control( Character &who, map &here,
     const bool taking = selection.action == "take";
     const bool theft_check = taking || selection.action == "engines" || selection.action == "hotwire" ||
                              selection.action == "alarm" || selection.action == "smash_alarm" ||
+                             selection.action == "horn" ||
                              selection.action == "electronics" ||
-                             selection.action == "appliance" || selection.action == "water" ||
+                             selection.action == "appliance" || selection.action == "water" || siphon ||
                              selection.action == "heating" || selection.action == "repair" ||
                              selection.action == "toolstation" || selection.action == "tool_use" ||
                              selection.action == "turret" || selection.action == "harness" || selection.action == "fold" ||
@@ -952,6 +1174,10 @@ bool execute_vehicle_control( Character &who, map &here,
     if( selection.action == "fold" ) {
         who.assign_activity( vehicle_folding_activity_actor( *target ) );
         return lifetime && who.activity.id() == activity_id( "ACT_VEHICLE_FOLD" );
+    }
+    if( selection.action == "horn" ) {
+        target->honk_horn( here, who );
+        return true;
     }
     if( selection.action == "autopilot_patrol" ) {
         if( !zone_manager::get_manager().has_near( zone_type_id( "VEHICLE_PATROL" ), target->pos_abs(),
@@ -1092,6 +1318,93 @@ bool execute_vehicle_control( Character &who, map &here,
     }
     if( !target->engine_on ) {
         target->start_engines( here, &who, taking );
+    }
+    return true;
+}
+
+bool cata_mp::client_siphon_vehicle( Character &who, map &here, vehicle &target,
+                                    const vehicle_part &part )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    const auto anchor = vehicle_access_point( who, here, target );
+    if( !anchor || who.get_moves() <= 0 || is_client_waiting_for_ack() ||
+        !part.is_tank() || part.get_base().empty() ) {
+        return true;
+    }
+    const character_action_guard actor( who );
+    const auto context = here.get_context_reference();
+    const auto vehicle_ref = target.get_safe_reference();
+    const tripoint_abs_ms origin = who.pos_abs();
+    const auto current = [&]() {
+        return actor && context && vehicle_ref && who.pos_abs() == origin;
+    };
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const item contents = part.get_base().only_item();
+    vehicle_water_selection choice;
+    choice.operation = "siphon";
+    choice.tank = part.get_base().uid().get_value();
+    choice.liquid = contents.uid().get_value();
+    choice.destination = query_liquid_destination( contents, &part.get_base(), choice.liquid, true );
+    if( choice.destination->kind == LD_NULL || !current() ) {
+        return true;
+    }
+    bool drink_theft = false;
+    if( choice.destination->kind == LD_CONSUME ) {
+        if( !who.will_eat( contents, true ).success() || !current() ||
+            !query_consumption_ownership( contents, who ) || !current() ) {
+            return true;
+        }
+        drink_theft = !contents.is_owned_by( who, true );
+        choice.operation = "siphon_drink";
+        choice.allow_consequences = true;
+        choice.destination.reset();
+    }
+    auto request = query_vehicle_control( who, here, target, *anchor, "siphon" );
+    if( request && current() ) {
+        request->allow_theft = request->allow_theft || drink_theft;
+        request->water = std::move( choice );
+        client_vehicle_control( *request );
+    }
+    return true;
+}
+
+bool cata_mp::client_manage_vehicle( Character &who, map &here, vehicle &target,
+                                    vehicle_management_selection choice, const vehicle_part *part )
+{
+    if( !is_client_mode() ) {
+        return false;
+    }
+    const auto anchor = vehicle_access_point( who, here, target );
+    if( !anchor || who.get_moves() <= 0 || is_client_waiting_for_ack() ) {
+        return true;
+    }
+    vehicle_control_selection request;
+    request.action = "management";
+    request.vehicle_id = target.uid().get_value();
+    request.position = part ? target.abs_part_pos( *part ) : *anchor;
+    choice.origin = who.pos_abs();
+    choice.owner = target.get_owner();
+    choice.part_id = part ? part->get_base().uid().get_value() : 0;
+    if( management_requires_owner( target, choice.operation ) && target.has_owner() &&
+        !target.is_owned_by( who ) ) {
+        return true;
+    }
+    const character_action_guard actor( who );
+    const auto context = here.get_context_reference();
+    const auto vehicle_ref = target.get_safe_reference();
+    if( choice.operation != "hide_wiring" && target.has_owner() && !target.is_owned_by( who ) ) {
+        request.allow_theft = who.query_yn(
+                                  _( "This vehicle belongs to: %s, there may be consequences if you are observed interacting with it, continue?" ),
+                                  target.get_owner_name() );
+        if( !request.allow_theft ) {
+            return true;
+        }
+    }
+    if( actor && context && vehicle_ref && who.pos_abs() == choice.origin ) {
+        request.management = std::move( choice );
+        client_vehicle_control( request );
     }
     return true;
 }

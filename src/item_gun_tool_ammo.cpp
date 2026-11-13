@@ -4062,7 +4062,7 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
         }
     }
 
-    bool bio_link = link_has_states( link_state::no_link, link_state::bio_cable );
+    const bool bio_link = link_has_states( link_state::no_link, link_state::bio_cable );
     if( bio_link || has_no_links() ) {
 
         // No link exists, so start a new link to a vehicle/appliance.
@@ -4072,6 +4072,10 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
         link().t_veh = veh.get_safe_reference();
         link().t_abs_pos = link().t_veh->pos_abs();
         link().t_mount = mount;
+        const int port = link_type == link_state::vehicle_tow ?
+                         veh.part_at( veh.coord_translate( mount ) ) :
+                         veh.avail_linkable_part( mount, link_type == link_state::vehicle_port );
+        link().t_part_uid = port >= 0 ? veh.part( port ).get_base().uid().get_value() : 0;
         link().s_bub_pos = tripoint_bub_ms::min; // Forces the item to check the length during process_link.
 
         update_link_traits();
@@ -4241,24 +4245,30 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
 
     const bool is_cable_item = has_flag( flag_CABLE_SPOOL );
 
-    // Handle links to items in the inventory.
+    // Old cables without a device UID retain the original flag-based lookup.
+    const int64_t supply_uid = link().s_item_uid;
+    const auto is_linked_supply = [&]( const item &device ) {
+        return device.get_var( "cable" ) == "plugged_in" &&
+               ( supply_uid <= 0 || device.uid().get_value() == supply_uid );
+    };
     if( link().source == link_state::solarpack ) {
-        if( carrier == nullptr || !carrier->worn_with_flag( flag_SOLARPACK_ON ) ) {
+        const bool has_pack = carrier && ( supply_uid <= 0 ?
+                              carrier->worn_with_flag( flag_SOLARPACK_ON ) :
+                              carrier->cache_has_item_with( flag_SOLARPACK_ON, [&]( const item & device ) {
+            return is_linked_supply( device ) && carrier->is_worn( device );
+        } ) );
+        if( !has_pack ) {
             add_msg_if_player_sees( pos, m_bad, _( "The %s has come loose from the solar pack." ),
                                     link_name() );
             reset_link( true, carrier );
             return false;
         }
     }
-    const item_filter used_ups = [&]( const item & itm ) {
-        return itm.get_var( "cable" ) == "plugged_in";
-    };
-    if( link().source == link_state::ups ) {
-        if( carrier == nullptr || !carrier->cache_has_item_with( flag_IS_UPS, used_ups ) ) {
-            add_msg_if_player_sees( pos, m_bad, _( "The %s has come loose from the UPS." ), link_name() );
-            reset_link( true, carrier );
-            return false;
-        }
+    if( link().source == link_state::ups &&
+        ( !carrier || !carrier->cache_has_item_with( flag_IS_UPS, is_linked_supply ) ) ) {
+        add_msg_if_player_sees( pos, m_bad, _( "The %s has come loose from the UPS." ), link_name() );
+        reset_link( true, carrier );
+        return false;
     }
     // Certain cable states should skip processing and also become inactive if dropped.
     if( ( link().target == link_state::no_link && link().source != link_state::vehicle_tow ) ||
@@ -4370,17 +4380,23 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
     }
 
     // Find the vp_part index the cable is linked to.
+    const auto matches_port = [&]( int index ) {
+        const vehicle_part &part = t_veh->part( index );
+        return !part.removed && !part.is_fake && !part.is_broken() && part.mount == link().t_mount &&
+               ( link().t_part_uid <= 0 || is_eoc_relocation ||
+                 part.get_base().uid().get_value() == link().t_part_uid );
+    };
     int link_vp_index = -1;
     if( link().target == link_state::vehicle_port ) {
         for( int idx : t_veh->cable_ports ) {
-            if( t_veh->part( idx ).mount == link().t_mount ) {
+            if( matches_port( idx ) ) {
                 link_vp_index = idx;
                 break;
             }
         }
     } else if( link().target == link_state::vehicle_battery ) {
         for( int idx : t_veh->batteries ) {
-            if( t_veh->part( idx ).mount == link().t_mount ) {
+            if( matches_port( idx ) ) {
                 link_vp_index = idx;
                 break;
             }
@@ -4388,14 +4404,17 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
         if( link_vp_index == -1 ) {
             // Check cable_ports, since that includes appliances
             for( int idx : t_veh->cable_ports ) {
-                if( t_veh->part( idx ).mount == link().t_mount ) {
+                if( matches_port( idx ) ) {
                     link_vp_index = idx;
                     break;
                 }
             }
         }
-    } else if( link().target == link_state::vehicle_tow || link().source == link_state::vehicle_tow ) {
-        link_vp_index = t_veh->part_at( t_veh->coord_translate( link().t_mount ) );
+    } else if( link_has_state( link_state::vehicle_tow ) ) {
+        const int port = t_veh->part_at( t_veh->coord_translate( link().t_mount ) );
+        if( port >= 0 && matches_port( port ) ) {
+            link_vp_index = port;
+        }
     }
     if( link_vp_index == -1 ) {
         // The part with cable ports was lost, so disconnect the cable.
@@ -4407,7 +4426,11 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
                                 type_name() ) );
         return reset_link( true, carrier, -2 );
     }
-    t_veh->part( link_vp_index ).set_flag( vp_flag::linked_flag );
+    vehicle_part &linked_part = t_veh->part( link_vp_index );
+    if( link().t_part_uid <= 0 || is_eoc_relocation ) {
+        link().t_part_uid = linked_part.get_base().uid().get_value();
+    }
+    linked_part.set_flag( vp_flag::linked_flag );
 
     int turns_elapsed = to_turns<int>( calendar::turn - link().last_processed );
     link().last_processed = calendar::turn;
@@ -4596,23 +4619,38 @@ bool item::reset_link( bool unspool_if_too_long, Character *p, int vpart_index,
     if( vpart_index != -2 && link().t_veh ) {
         if( vpart_index == -1 ) {
             vehicle *t_veh = link().t_veh.get();
-            // Find the vp_part index the cable is linked to.
+            const auto matches_port = [&]( int index ) {
+                const vehicle_part &part = t_veh->part( index );
+                return part.mount == link().t_mount &&
+                       ( link().t_part_uid <= 0 || part.get_base().uid().get_value() == link().t_part_uid );
+            };
             if( link().target == link_state::vehicle_port ) {
                 for( int idx : t_veh->cable_ports ) {
-                    if( t_veh->part( idx ).mount == link().t_mount ) {
+                    if( matches_port( idx ) ) {
                         vpart_index = idx;
                         break;
                     }
                 }
             } else if( link().target == link_state::vehicle_battery ) {
                 for( int idx : t_veh->batteries ) {
-                    if( t_veh->part( idx ).mount == link().t_mount ) {
+                    if( matches_port( idx ) ) {
                         vpart_index = idx;
                         break;
                     }
                 }
-            } else if( link().target == link_state::vehicle_tow || link().source == link_state::vehicle_tow ) {
-                vpart_index = t_veh->part_at( t_veh->coord_translate( link().t_mount ) );
+                if( vpart_index == -1 ) {
+                    for( int idx : t_veh->cable_ports ) {
+                        if( matches_port( idx ) ) {
+                            vpart_index = idx;
+                            break;
+                        }
+                    }
+                }
+            } else if( link_has_state( link_state::vehicle_tow ) ) {
+                const int port = t_veh->part_at( t_veh->coord_translate( link().t_mount ) );
+                if( port >= 0 && matches_port( port ) ) {
+                    vpart_index = port;
+                }
             }
         }
         if( vpart_index != -1 ) {
@@ -4655,9 +4693,11 @@ bool item::process_linked_item( Character *carrier, const tripoint_bub_ms & /*po
         active = false;
         return false;
     }
-    bool has_connected_cable = carrier->cache_has_item_with( "can_link_up", &item::can_link_up,
-    [&required_state]( const item & it ) {
-        return it.link_has_state( required_state );
+    const int64_t supply_uid = uid().get_value();
+    const bool has_connected_cable = carrier->cache_has_item_with( "can_link_up", &item::can_link_up,
+    [&]( const item & cable ) {
+        return cable.has_link_data() && cable.link_has_state( required_state ) &&
+               ( cable.link().s_item_uid <= 0 || cable.link().s_item_uid == supply_uid );
     } );
     if( !has_connected_cable ) {
         erase_var( "cable" );

@@ -14,6 +14,7 @@
 #include "character.h"
 #include "clzones.h"
 #include "color.h"
+#include "craft_reservation.h"
 #include "enums.h"
 #include "game_constants.h"
 #include "inventory_ui.h"
@@ -56,15 +57,15 @@ point _pane_size()
 }
 
 // Check whether an NPC's shopkeeper whitelist/blacklist allows this item.
-bool _npc_passes_trade_filter( npc const &np, item const &it )
+bool _npc_passes_trade_filter( npc const &np, item const &it, const Character &seller )
 {
     if( np.will_exchange_items_freely() ) {
         return true;
     }
     if( np.myclass->has_whitelist() ) {
-        return np.myclass->get_shopkeeper_whitelist().matches( it, np ) != nullptr;
+        return np.myclass->get_shopkeeper_whitelist().matches( it, np, seller ) != nullptr;
     }
-    return np.myclass->get_shopkeeper_blacklist().matches( it, np ) == nullptr;
+    return np.myclass->get_shopkeeper_blacklist().matches( it, np, seller ) == nullptr;
 }
 
 void populate_trade_selectors( Character &you, npc &trader, trade_selector &you_pane,
@@ -119,9 +120,11 @@ bool trade_preset::is_shown( item_location const &loc ) const
 {
     if( !loc->has_var( VAR_TRADE_IGNORE ) && inventory_selector_preset::is_shown( loc ) &&
         loc->is_owned_by( _u ) && loc->made_of( phase_id::SOLID ) && !loc->is_frozen_liquid() &&
+        !craft_reservation::contains_reserved_or_live_craft( *loc ) &&
         ( !_u.is_wielding( *loc ) || !loc->has_flag( json_flag_NO_UNWIELD ) ) ) {
-        if( _trader.is_npc() && !_u.is_npc() ) {
-            return _npc_passes_trade_filter( *_trader.as_npc(), *loc );
+        const npc *buyer = npc_trading::merchant( _trader );
+        if( buyer && !npc_trading::merchant( _u ) ) {
+            return _npc_passes_trade_filter( *buyer, *loc, _u );
         }
         return true;
     }
@@ -132,25 +135,23 @@ std::string trade_preset::get_denial( const item_location &loc ) const
 {
     int const price = npc_trading::trading_price( _trader, _u, { loc, 1 } );
 
-    if( _u.is_npc() ) {
-        npc const &np = *_u.as_npc();
-        ret_val<void> const ret = np.wants_to_sell( loc, price );
+    if( const npc *seller = npc_trading::merchant( _u ) ) {
+        ret_val<void> const ret = seller->wants_to_sell( loc, price, _trader );
         if( !ret.success() ) {
             std::string refused_text = ret.str();
             if( refused_text.empty() ) {
-                return string_format( _( "%s does not want to sell this" ), np.get_name() );
+                return string_format( _( "%s does not want to sell this" ), seller->get_name() );
             }
             parse_tags( refused_text, _trader, _u );
             return refused_text;
         }
-    } else if( _trader.is_npc() ) {
-        npc const &np = *_trader.as_npc();
-        ret_val<void> const ret = np.wants_to_buy( *loc, price );
+    } else if( const npc *buyer = npc_trading::merchant( _trader ) ) {
+        ret_val<void> const ret = buyer->wants_to_buy( *loc, price, _u );
         if( !ret.success() ) {
             if( ret.str().empty() ) {
-                return string_format( _( "%s does not want to buy this" ), np.get_name() );
+                return string_format( _( "%s does not want to buy this" ), buyer->get_name() );
             }
-            return np.replace_with_npc_name( ret.str() );
+            return buyer->replace_with_npc_name( ret.str() );
         }
     }
 

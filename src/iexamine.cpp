@@ -1,4 +1,12 @@
 #include "character_action_guard.h"
+#include "arc_furnace.h"
+#include "stook.h"
+#include "autoclave.h"
+#include "mill.h"
+#include "charcoal_kiln.h"
+#include "smoking_rack.h"
+#include "fermentation_vessel.h"
+#include "safe_reference.h"
 #include "vertical_movement.h"
 #include "deployed_furniture.h"
 #include "iexamine.h"
@@ -33,6 +41,10 @@
 #include "item_consumption.h"
 #include "item_unload.h"
 #include "farming.h"
+#include "fireplace.h"
+#include "furniture_reload.h"
+#include "keg.h"
+#include "safecracking.h"
 #include "craft_reservation.h"
 #include "bodypart.h"
 #include "cached_options.h"
@@ -78,6 +90,8 @@
 #include "item_components.h"
 #include "item_location.h"
 #include "itype.h"
+#include "tool_activity_target.h"
+#include "terrain_examine.h"
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "lua_platform_hooks.h"
@@ -150,7 +164,6 @@ static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_disinfected( "disinfected" );
-static const efftype_id effect_earphones( "earphones" );
 static const efftype_id effect_gliding( "gliding" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
@@ -167,35 +180,11 @@ static const faction_id faction_robofac( "robofac" );
 
 static const furn_str_id furn_f_arcfurnace_empty( "f_arcfurnace_empty" );
 static const furn_str_id furn_f_arcfurnace_full( "f_arcfurnace_full" );
-static const furn_str_id furn_f_compost_empty( "f_compost_empty" );
-static const furn_str_id furn_f_compost_full( "f_compost_full" );
 static const furn_str_id furn_f_diesel_tank( "f_diesel_tank" );
 static const furn_str_id furn_f_flower_fungal( "f_flower_fungal" );
 static const furn_str_id furn_f_flower_marloss( "f_flower_marloss" );
-static const furn_str_id furn_f_fvat_empty( "f_fvat_empty" );
-static const furn_str_id furn_f_fvat_full( "f_fvat_full" );
-static const furn_str_id furn_f_fvat_wood_empty( "f_fvat_wood_empty" );
-static const furn_str_id furn_f_fvat_wood_full( "f_fvat_wood_full" );
 static const furn_str_id furn_f_gas_tank( "f_gas_tank" );
-static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
-static const furn_str_id furn_f_kiln_full( "f_kiln_full" );
-static const furn_str_id furn_f_kiln_metal_empty( "f_kiln_metal_empty" );
-static const furn_str_id furn_f_kiln_metal_full( "f_kiln_metal_full" );
-static const furn_str_id furn_f_kiln_portable_empty( "f_kiln_portable_empty" );
-static const furn_str_id furn_f_kiln_portable_full( "f_kiln_portable_full" );
-static const furn_str_id furn_f_metal_smoking_rack( "f_metal_smoking_rack" );
-static const furn_str_id furn_f_metal_smoking_rack_active( "f_metal_smoking_rack_active" );
-static const furn_str_id furn_f_safe_o( "f_safe_o" );
-static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
-static const furn_str_id furn_f_smoking_rack_active( "f_smoking_rack_active" );
-static const furn_str_id furn_f_stook_empty( "f_stook_empty" );
-static const furn_str_id furn_f_stook_full( "f_stook_full" );
-static const furn_str_id furn_f_water_mill( "f_water_mill" );
-static const furn_str_id furn_f_water_mill_active( "f_water_mill_active" );
-static const furn_str_id furn_f_wind_mill( "f_wind_mill" );
-static const furn_str_id furn_f_wind_mill_active( "f_wind_mill_active" );
 
-static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_arm_splint( "arm_splint" );
 static const itype_id itype_bot_broken_cyborg( "bot_broken_cyborg" );
 static const itype_id itype_bot_prototype_cyborg( "bot_prototype_cyborg" );
@@ -204,8 +193,6 @@ static const itype_id itype_charcoal( "charcoal" );
 static const itype_id itype_chem_carbide( "chem_carbide" );
 static const itype_id itype_corpse( "corpse" );
 static const itype_id itype_disassembly( "disassembly" );
-static const itype_id itype_fake_milling_item( "fake_milling_item" );
-static const itype_id itype_fake_smoke_plume( "fake_smoke_plume" );
 static const itype_id itype_fire( "fire" );
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
@@ -217,28 +204,21 @@ static const itype_id itype_iso_material_disc_quality( "iso_material_disc_qualit
 static const itype_id itype_leg_splint( "leg_splint" );
 static const itype_id itype_maple_sap( "maple_sap" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
-static const itype_id itype_nail( "nail" );
 static const itype_id itype_nanomaterial( "nanomaterial" );
 static const itype_id itype_nectar( "nectar" );
 static const itype_id itype_petrified_eye( "petrified_eye" );
-static const itype_id itype_sheet( "sheet" );
-static const itype_id itype_stick( "stick" );
-static const itype_id itype_string_36( "string_36" );
 static const itype_id itype_unfinished_cac2( "unfinished_cac2" );
-static const itype_id itype_unfinished_charcoal( "unfinished_charcoal" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const json_character_flag json_flag_GLIDE( "GLIDE" );
 static const json_character_flag json_flag_LEVITATION( "LEVITATION" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
-static const json_character_flag json_flag_SAFECRACK_NO_TOOL( "SAFECRACK_NO_TOOL" );
 static const json_character_flag
 json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
 static const json_character_flag json_flag_WING_ARMS( "WING_ARMS" );
 static const json_character_flag json_flag_WING_GLIDE( "WING_GLIDE" );
 
-static const material_id material_bone( "bone" );
 static const material_id material_cac2powder( "cac2powder" );
 static const material_id material_ch_steel( "ch_steel" );
 static const material_id material_hc_steel( "hc_steel" );
@@ -247,7 +227,6 @@ static const material_id material_lc_steel( "lc_steel" );
 static const material_id material_mc_steel( "mc_steel" );
 static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_steel( "steel" );
-static const material_id material_wood( "wood" );
 
 static const mtype_id mon_broken_cyborg( "mon_broken_cyborg" );
 static const mtype_id mon_dark_wyrm( "mon_dark_wyrm" );
@@ -261,7 +240,6 @@ static const npc_class_id NC_ROBOFAC_INTERCOM( "NC_ROBOFAC_INTERCOM" );
 
 static const proficiency_id proficiency_prof_disarming( "prof_disarming" );
 static const proficiency_id proficiency_prof_parkour( "prof_parkour" );
-static const proficiency_id proficiency_prof_safecracking( "prof_safecracking" );
 static const proficiency_id proficiency_prof_traps( "prof_traps" );
 static const proficiency_id proficiency_prof_trapsetting( "prof_trapsetting" );
 
@@ -276,7 +254,6 @@ static const quality_id qual_PRY( "PRY" );
 static const quality_id qual_TREE_TAP( "TREE_TAP" );
 
 static const requirement_id requirement_data_anesthetic( "anesthetic" );
-static const requirement_id requirement_data_autoclave( "autoclave" );
 static const requirement_id requirement_data_cvd_diamond( "cvd_diamond" );
 static const requirement_id requirement_data_superalloy_forge( "superalloy_forge" );
 
@@ -300,12 +277,6 @@ static const ter_str_id ter_t_gas_pump( "t_gas_pump" );
 static const ter_str_id ter_t_gas_pump_a( "t_gas_pump_a" );
 static const ter_str_id ter_t_marloss( "t_marloss" );
 static const ter_str_id ter_t_orifice( "t_orifice" );
-static const ter_str_id ter_t_pit( "t_pit" );
-static const ter_str_id ter_t_pit_covered( "t_pit_covered" );
-static const ter_str_id ter_t_pit_glass( "t_pit_glass" );
-static const ter_str_id ter_t_pit_glass_covered( "t_pit_glass_covered" );
-static const ter_str_id ter_t_pit_spiked( "t_pit_spiked" );
-static const ter_str_id ter_t_pit_spiked_covered( "t_pit_spiked_covered" );
 static const ter_str_id ter_t_rock_blue( "t_rock_blue" );
 static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 static const ter_str_id ter_t_rock_green( "t_rock_green" );
@@ -341,7 +312,6 @@ static const trait_id trait_THRESH_MYCUS( "THRESH_MYCUS" );
 static const trap_str_id tr_telepad( "tr_telepad" );
 
 // @TODO maybe make this a property of the item (depend on volume/type)
-static const time_duration milling_time = 6_hours;
 
 /**
  * Nothing player can interact with here.
@@ -1924,32 +1894,29 @@ void iexamine::portable_structure( Character &you, const tripoint_bub_ms &examp 
     you.assign_activity( actor );
 }
 
-/**
- * If there is a 2x4 around, prompt placing it across pit.
- */
+static void submit_terrain_examine( Character &who, map &here,
+                                    const terrain_examine_selection &choice )
+{
+    if( !who.is_avatar() || !cata_mp::client_terrain_examine( choice ) ) {
+        execute_terrain_examine( who, here, choice );
+    }
+}
+
 void iexamine::pit( Character &you, const tripoint_bub_ms &examp )
 {
-    const temp_crafting_inventory &crafting_inv = you.crafting_inventory();
-    if( !crafting_inv.has_amount( itype_2x4, 1 ) ) {
-        none( you, examp );
-        return;
-    }
-    std::vector<item_comp> planks;
-    planks.emplace_back( itype_2x4, 1 );
-
     map &here = get_map();
-    if( query_yn( _( "Place a plank over the pit?" ) ) ) {
-        you.consume_items( planks, 1, is_crafting_component );
-        const ter_id &ter_pit = here.ter( examp );
-        if( ter_pit == ter_t_pit ) {
-            here.ter_set( examp, ter_t_pit_covered );
-        } else if( ter_pit == ter_t_pit_spiked ) {
-            here.ter_set( examp, ter_t_pit_spiked_covered );
-        } else if( ter_pit == ter_t_pit_glass ) {
-            here.ter_set( examp, ter_t_pit_glass_covered );
-        }
-        add_msg( _( "You place a plank of wood over the pit." ) );
-        you.mod_moves( -to_moves<int>( 1_seconds ) );
+    terrain_examine_selection choice{ terrain_examine_action::cover_pit, you.pos_abs(),
+                                      here.get_abs( examp ), here.ter( examp ).id(), std::nullopt };
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const item_location plank = game_menus::inv::titled_filter_menu(
+    [&]( const item_location & loc ) {
+        return lifetime && context && can_use_pit_plank( you, here, loc );
+    }, you, _( "Use which plank to cover the pit?" ), pickup_range,
+    _( "You have no usable plank nearby." ) );
+    if( lifetime && context && plank && you.pos_abs() == choice.origin ) {
+        choice.plank = capture_item_source( you, plank );
+        submit_terrain_examine( you, here, choice );
     }
 }
 
@@ -1958,24 +1925,17 @@ void iexamine::pit( Character &you, const tripoint_bub_ms &examp )
  */
 void iexamine::pit_covered( Character &you, const tripoint_bub_ms &examp )
 {
+    map &here = get_map();
+    const terrain_examine_selection choice{ terrain_examine_action::uncover_pit, you.pos_abs(),
+                                            here.get_abs( examp ), here.ter( examp ).id(), std::nullopt };
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
     if( !query_yn( _( "Remove cover?" ) ) ) {
-        none( you, examp );
         return;
     }
-
-    map &here = get_map();
-    item plank( itype_2x4, calendar::turn );
-    add_msg( _( "You remove the plank." ) );
-    here.add_item_or_charges( you.pos_bub(), plank );
-    const ter_id &ter_pit = here.ter( examp );
-    if( ter_pit == ter_t_pit_covered ) {
-        here.ter_set( examp, ter_t_pit );
-    } else if( ter_pit == ter_t_pit_spiked_covered ) {
-        here.ter_set( examp, ter_t_pit_spiked );
-    } else if( ter_pit == ter_t_pit_glass_covered ) {
-        here.ter_set( examp, ter_t_pit_glass );
+    if( lifetime && context && you.pos_abs() == choice.origin ) {
+        submit_terrain_examine( you, here, choice );
     }
-    you.mod_moves( -to_moves<int>( 1_seconds ) );
 }
 
 void iexamine::thin_ice( Character &you, const tripoint_bub_ms &examp )
@@ -1992,62 +1952,37 @@ void iexamine::thin_ice( Character &you, const tripoint_bub_ms &examp )
 
 
 
-/**
- * Attempt to crack safe through audio-feedback manual lock manipulation.
- *
- * Try to unlock the safe by moving the dial and listening for the mechanism to "click into place."
- * Time per attempt affected by perception and mechanics. 30 minutes per attempt minimum.
- * Small chance of just guessing the combo without listening device.
- */
+static void submit_safe_interaction( Character &who, map &here, const safe_interaction &choice )
+{
+    if( !who.is_avatar() || !cata_mp::client_safe_interaction( choice ) ) {
+        execute_safe_interaction( who, here, choice, activity_execution::local );
+    }
+}
+
 void iexamine::safe( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-
-    bool has_cracking_tool = you.has_flag( json_flag_SAFECRACK_NO_TOOL );
-    // short-circuit to avoid the more expensive iteration over items
-    has_cracking_tool = has_cracking_tool || you.cache_has_item_with( flag_SAFECRACK );
-
-    if( !has_cracking_tool ) {
-        you.mod_moves( -to_moves<int>( 10_seconds ) );
-        // Assume a 3 digit 100-number code. Many safes allow adjacent + 1 dial locations to match,
-        // so 1/20^3, or 1/8,000 odds.
-        // Additionally, safes can be left-handed or right-handed, doubling the problem space.
-        // The dialing procedures for safes vary, I'm estimating 5 procedures.
-        // See https://hoogerhydesafe.com/resources/combination-lock-dialing-procedures/
-        // At the end of the day, that means a 1 / 80,000 chance per attempt.
-        // If the player has the safecracking proficiency, they know the procedure.
-
-        // With the proficiency, there's a 50% chance to open after 15.4 hours of attempts.
-        // Without the proficiency, there's a 50% chance to open after 154 hours of attempts.
-        if( you.has_proficiency( proficiency_prof_safecracking ) ) {
-            if( one_in( 8000 ) ) {
-                you.add_msg_if_player( m_good, _( "You carefully dial a combination… and it opens!" ) );
-                here.furn_set( examp, furn_f_safe_o );
-                return;
-            } else {
-                you.add_msg_if_player( m_info, _( "You carefully dial a combination." ) );
-                return;
-            }
-        } else {
-            if( one_in( 80000 ) ) {
-                you.add_msg_if_player( m_good, _( "You mess with the dial for a little bit… and it opens!" ) );
-                here.furn_set( examp, furn_f_safe_o );
-                return;
-            } else {
-                you.add_msg_if_player( m_info, _( "You mess with the dial for a little bit." ) );
-                return;
-            }
-        }
+    const bool has_tool = has_safecracking_tool( you );
+    const safe_interaction choice{ has_tool ? safe_action::crack : safe_action::guess,
+                                   you.pos_abs(), here.get_abs( examp ), here.furn( examp ).id() };
+    if( !has_tool ) {
+        submit_safe_interaction( you, here, choice );
+        return;
     }
 
     if( you.is_deaf() ) {
-        add_msg( m_info, _( "You can't crack a safe while deaf!" ) );
+        you.add_msg_if_player( m_info, _( "You can't crack a safe while deaf!" ) );
         return;
-    } else if( you.has_effect( effect_earphones ) ) {
-        add_msg( m_info, _( "You can't crack a safe while listening to music!" ) );
+    }
+    if( !can_hear_safe_lock( you ) ) {
+        you.add_msg_if_player( m_info, _( "You can't crack a safe while listening to music!" ) );
         return;
-    } else if( query_yn( _( "Attempt to crack the safe?" ) ) ) {
-        you.assign_activity( safecracking_activity_actor( examp ) );
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    if( query_yn( _( "Attempt to crack the safe?" ) ) && lifetime && context &&
+        you.pos_abs() == choice.origin ) {
+        submit_safe_interaction( you, here, choice );
     }
 }
 
@@ -3783,29 +3718,43 @@ void iexamine::run_plant_lifecycle_event(
         effective_growth_turns, water, strings, num_context );
 }
 
-static void add_firestarter( item *it, std::multimap<int, item *> &firestarters, Character &you,
-                             const tripoint_bub_ms &examp )
+static void add_firestarter( item *it, std::multimap<int, safe_reference<item>> &firestarters,
+                             Character &you, const tripoint_bub_ms &examp )
 {
     const use_function *usef = it->type->get_use( "firestarter" );
-    if( usef != nullptr && usef->get_actor_ptr() != nullptr ) {
-        const firestarter_actor *actor = dynamic_cast<const firestarter_actor *>( usef->get_actor_ptr() );
-        if( actor->can_use( you, *it, &get_map(), examp ).success() ) {
-            firestarters.insert( std::pair<int, item *>( actor->moves_cost_fast, it ) );
-        }
+    const auto *actor = usef ? dynamic_cast<const firestarter_actor *>( usef->get_actor_ptr() ) :
+                        nullptr;
+    if( actor && actor->can_use( you, *it, &get_map(), examp ).success() ) {
+        firestarters.emplace( actor->moves_cost_fast, it->get_safe_reference() );
     }
 }
 
+
+static void submit_smoking_rack_choice( Character &who, map &here,
+                                        const smoking_rack::command &command )
+{
+    if( !who.is_avatar() || !cata_mp::client_smoking_rack_command( command ) ) {
+        smoking_rack::execute( who, here, command );
+    }
+}
 
 static void pick_firestarter_and_fire( Character &you, const tripoint_bub_ms &examp,
                                        firestarter_actor::start_type st )
 {
     map &here = get_map();
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = you.pos_abs();
+    const auto observed = tool_activity_target::capture( here, here.get_abs( examp ) );
+    const auto still_at_station = [&]() {
+        return lifetime && context && you.pos_abs() == origin && observed.matches( here );
+    };
     std::string f_name = here.furnname( examp );
 
     if( !you.has_charges( itype_fire, 1 ) ) {
         add_msg( _( "This %s is ready to be fired, but you have no fire source." ), f_name );
         return;
-    } else if( !query_yn( _( "Fire the %s?" ), f_name ) ) {
+    } else if( !query_yn( _( "Fire the %s?" ), f_name ) || !still_at_station() ) {
         return;
     }
 
@@ -3814,7 +3763,7 @@ static void pick_firestarter_and_fire( Character &you, const tripoint_bub_ms &ex
         return it.has_flag( flag_FIRESTARTER ) || it.has_flag( flag_FIRE );
     };
 
-    std::multimap<int, item *> firestarters;
+    std::multimap<int, safe_reference<item>> firestarters;
 
     for( item *it : you.items_with( is_firestarter ) ) {
         add_firestarter( it, firestarters, you, examp );
@@ -3832,198 +3781,68 @@ static void pick_firestarter_and_fire( Character &you, const tripoint_bub_ms &ex
         use_cbm = true;
     }
 
+    if( !still_at_station() ) {
+        return;
+    }
     // Try to start the smoking rack/kiln.
     if( !use_cbm ) {
         for( auto &firestarter : firestarters ) {
-            item *it = firestarter.second;
+            item *it = firestarter.second.get();
+            if( !it || !you.has_item( *it ) ) {
+                continue;
+            }
             const use_function *usef = it->type->get_use( "firestarter" );
-            const firestarter_actor *actor = dynamic_cast<const firestarter_actor *>( usef->get_actor_ptr() );
+            const auto *actor = usef ? dynamic_cast<const firestarter_actor *>( usef->get_actor_ptr() ) :
+                                nullptr;
+            if( !actor ) {
+                continue;
+            }
             you.add_msg_if_player( _( "You attempt to start a fire with your %s…" ), it->tname() );
             const ret_val<void> can_use = actor->can_use( you, *it, &get_map(), examp );
             if( can_use.success() ) {
-                const int charges = actor->use( &you, *it, &get_map(), examp ).value_or( 0 );
-                you.use_charges( it->typeId(), charges );
+                std::string method = "firestarter";
+                if( you.is_avatar() && cata_mp::is_client_mode() ) {
+                    cata_mp::client_activate_item( locate_cutting_tool( you, *it ), method, observed.position );
+                    return;
+                }
+                you.invoke_item( it, method, examp, you.get_moves() );
                 return;
             } else {
                 you.add_msg_if_player( m_bad, can_use.str() );
             }
         }
+    } else if( st == firestarter_actor::start_type::KILN ) {
+        const auto command = charcoal_kiln::capture( you, here, examp,
+                             charcoal_kiln::operation::fire_bionic );
+        if( !you.is_avatar() || !cata_mp::client_kiln_command( command ) ) {
+            charcoal_kiln::execute( you, here, command );
+        }
     } else {
-        you.mod_power_level( -bio_lighter->power_activate );
-        you.mod_moves( -to_moves<int>( 1_seconds ) );
-        firestarter_actor::resolve_firestarter_use( &you, &here, examp,
-                st );
+        submit_smoking_rack_choice( you, here, smoking_rack::capture( you, here, examp,
+                                    smoking_rack::operation::fire_bionic ) );
     }
 }
 
 // Highly modified fermenting vat functions
 void iexamine::kiln_empty( Character &you, const tripoint_bub_ms &examp )
 {
-    if( !kiln_prep( you, examp ) ) {
+    if( !charcoal_kiln::prepare( you, get_map(), examp ) ) {
         return;
     }
 
     pick_firestarter_and_fire( you, examp, firestarter_actor::start_type::KILN );
 }
 
-bool iexamine::kiln_prep( Character &, const tripoint_bub_ms &examp )
+void iexamine::kiln_full( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    const furn_id &cur_kiln_type = here.furn( examp );
-    if( cur_kiln_type != furn_f_kiln_empty && cur_kiln_type != furn_f_kiln_metal_empty &&
-        cur_kiln_type != furn_f_kiln_portable_empty ) {
-        debugmsg( "Examined furniture has action kiln_empty, but is of type %s",
-                  cur_kiln_type.id().c_str() );
-        return false;
-    }
-
-    static const std::set<material_id> kilnable{ material_wood, material_bone };
-    bool fuel_present = false;
-    map_stack items = here.i_at( examp );
-    for( const item &i : items ) {
-        if( i.typeId() == itype_charcoal ) {
-            add_msg( _( "This kiln already contains charcoal." ) );
-            add_msg( _( "Remove it before firing the kiln again." ) );
-            return false;
-        } else if( i.made_of_any( kilnable ) ) {
-            fuel_present = true;
-        } else {
-            add_msg( m_bad, _( "This kiln contains %s, which can't be made into charcoal!" ), i.tname( 1,
-                     false ) );
-            return false;
-        }
-    }
-
-    if( !fuel_present ) {
-        add_msg( _( "This kiln is empty.  Fill it with wood or bone and try again." ) );
-        return false;
-    }
-
-    return true;
-}
-
-bool iexamine::kiln_fire( Character &you, const tripoint_bub_ms &examp )
-{
-    if( !kiln_prep( you, examp ) ) {
-        return false;
-    }
-
-    map &here = get_map();
-
-    const furn_id &cur_kiln_type = here.furn( examp );
-    furn_id next_kiln_type = furn_str_id::NULL_ID();
-    if( cur_kiln_type == furn_f_kiln_empty ) {
-        next_kiln_type = furn_f_kiln_full;
-    } else if( cur_kiln_type == furn_f_kiln_metal_empty ) {
-        next_kiln_type = furn_f_kiln_metal_full;
-    } else if( cur_kiln_type == furn_f_kiln_portable_empty ) {
-        next_kiln_type = furn_f_kiln_portable_full;
-    }
-
-    // https://energypedia.info/wiki/Charcoal_Production
-    // charcoal has about 25% of the density of wood, and wood pyrolysis produces about 10-15% charcoal by weight for a stone kiln.
-    // listed efficiency is for primitive or DIY production, industrial process in a metal kiln is more efficient at 20-25%
-    // 100% efficient conversion would be 1kg wood = 0.25kg charcoal, 1:1 volume conversion
-    // fabrication should help here as kiln design and how you stack the wood matter to a degree, though the impact is low overall
-    // For a cruddy kiln (a pit with a rock chimney) assume 10-15% efficiency, depending on fabrication (40-60% wastage)
-    // For a well made kiln (industrial-style metal kiln) assume 20-25% efficiency, depending on fabrication (0-20% wastage)
-    ///\EFFECT_FABRICATION decreases loss when firing a kiln
-    const float skill = you.get_skill_level( skill_fabrication );
-    int loss = 0;
-    // if the current kiln is a metal one, use a more efficient conversion rate otherwise default to assuming it is a rock pit kiln
-    if( cur_kiln_type == furn_f_kiln_metal_empty ) {
-        loss = 20 - 2 * skill;
-    } else if( cur_kiln_type == furn_f_kiln_portable_empty ) {
-        loss = 25 - 2 * skill;
-    } else {
-        loss = 60 - 2 * skill;
-    }
-
-    // Burn stuff that should get charred, leave out the rest
-    map_stack items = here.i_at( examp );
-    units::volume total_volume = 0_ml;
-    for( const item &i : items ) {
-        total_volume += i.volume();
-    }
-
-    const itype *char_type = item::find_type( itype_unfinished_charcoal );
-    int char_charges = char_type->charges_per_volume( ( 100 - loss ) * total_volume / 100 );
-    if( char_charges < 1 ) {
-        add_msg( _( "The batch in this kiln is too small to yield any charcoal." ) );
-        return false;
-    }
-
-    here.i_clear( examp );
-    here.furn_set( examp, next_kiln_type );
-    item result( itype_unfinished_charcoal, calendar::turn );
-    result.charges = char_charges;
-    here.add_item( examp, result );
-
-    return true;
-}
-
-void iexamine::kiln_full( Character &, const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-    furn_id cur_kiln_type = here.furn( examp );
-    furn_id next_kiln_type = furn_str_id::NULL_ID();
-    if( cur_kiln_type == furn_f_kiln_metal_full ) {
-        next_kiln_type = furn_f_kiln_metal_empty;
-    } else if( cur_kiln_type == furn_f_kiln_portable_full ) {
-        next_kiln_type = furn_f_kiln_portable_empty;
-    } else if( cur_kiln_type == furn_f_kiln_full ) {
-        next_kiln_type = furn_f_kiln_empty;
-    } else {
-        debugmsg( "Examined furniture has action kiln_full, but is of type %s",
-                  here.furn( examp ).id().c_str() );
+    if( you.is_avatar() && cata_mp::client_kiln_command(
+            charcoal_kiln::capture( you, here, examp, charcoal_kiln::operation::inspect ) ) ) {
         return;
     }
-    map_stack items = here.i_at( examp );
-    if( items.empty() ) {
-        add_msg( _( "This kiln is empty…" ) );
-        here.furn_set( examp, next_kiln_type );
-        return;
-    }
-    const itype *char_type = item::find_type( itype_charcoal );
-    add_msg( _( "There's a charcoal kiln there." ) );
-    const time_duration firing_time =
-        24_hours; // internet guides claim about one day for a fairly large pot
-    const time_duration time_left = firing_time - items.only_item().age();
-    if( time_left > 0_turns ) {
-        int hours = to_hours<int>( time_left );
-        int minutes = to_minutes<int>( time_left ) + 1;
-        if( minutes > 60 ) {
-            add_msg( n_gettext( "It will finish burning in about %d hour.",
-                                "It will finish burning in about %d hours.",
-                                hours ), hours );
-        } else if( minutes > 30 ) {
-            add_msg( _( "It will finish burning in less than an hour." ) );
-        } else {
-            add_msg( n_gettext( "It should take about %d minute to finish burning.",
-                                "It should take about %d minutes to finish burning.",
-                                minutes ), minutes );
-        }
-        return;
-    }
-
-    units::volume total_volume = 0_ml;
-    // Burn stuff that should get charred, leave out the rest
-    for( auto item_it = items.begin(); item_it != items.end(); ) {
-        if( item_it->typeId() == itype_unfinished_charcoal || item_it->typeId() == itype_charcoal ) {
-            total_volume += item_it->volume();
-            item_it = items.erase( item_it );
-        } else {
-            ++item_it;
-        }
-    }
-
-    item result( itype_charcoal, calendar::turn );
-    result.charges = char_type->charges_per_volume( total_volume );
-    here.add_item( examp, result );
-    here.furn_set( examp, next_kiln_type );
-    add_msg( _( "It has finished burning, yielding %d charcoal." ), result.charges );
-
+    charcoal_kiln::inspect( you, here, examp );
 }
+
 //arc furnance start
 void iexamine::arcfurnace_empty( Character &you, const tripoint_bub_ms &examp )
 {
@@ -4098,1156 +3917,516 @@ void iexamine::arcfurnace_empty( Character &you, const tripoint_bub_ms &examp )
     add_msg( _( "You turn on the furnace." ) );
 }
 
-void iexamine::arcfurnace_full( Character &, const tripoint_bub_ms &examp )
+void iexamine::arcfurnace_full( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    const furn_id &cur_arcfurnace_type = here.furn( examp );
-    furn_id next_arcfurnace_type = furn_str_id::NULL_ID();
-    if( cur_arcfurnace_type == furn_f_arcfurnace_full ) {
-        next_arcfurnace_type = furn_f_arcfurnace_empty;
-    } else {
-        debugmsg( "Examined furniture has action arcfurnace_full, but is of type %s",
-                  cur_arcfurnace_type.id().c_str() );
-        return;
+    arc_furnace::completion choice;
+    if( arc_furnace::inspect( you, here, examp, choice ) &&
+        ( !you.is_avatar() || !cata_mp::client_finish_arc_furnace( choice ) ) ) {
+        arc_furnace::finish( you, here, choice );
     }
-
-    map_stack items = here.i_at( examp );
-    if( items.empty() ) {
-        add_msg( _( "This furnace is empty…" ) );
-        here.furn_set( examp, next_arcfurnace_type );
-        return;
-    }
-    const itype *char_type = item::find_type( itype_chem_carbide );
-    add_msg( _( "There's an arc furnace there." ) );
-    const time_duration firing_time = 2_hours; // Arc furnaces work really fast in reality
-    const time_duration time_left = firing_time - items.only_item().age();
-    if( time_left > 0_turns ) {
-        int hours = to_hours<int>( time_left );
-        int minutes = to_minutes<int>( time_left ) + 1;
-        if( minutes > 60 ) {
-            add_msg( n_gettext( "It will finish burning in about %d hour.",
-                                "It will finish burning in about %d hours.",
-                                hours ), hours );
-        } else if( minutes > 30 ) {
-            add_msg( _( "It will finish burning in less than an hour." ) );
-        } else {
-            add_msg( n_gettext( "It should take about %d minute to finish burning.",
-                                "It should take about %d minutes to finish burning.",
-                                minutes ), minutes );
-        }
-        return;
-    }
-
-    units::volume total_volume = 0_ml;
-    // Burn stuff that should get charred, leave out the rest
-    for( auto item_it = items.begin(); item_it != items.end(); ) {
-        if( item_it->typeId() == itype_unfinished_cac2 || item_it->typeId() == itype_chem_carbide ) {
-            total_volume += item_it->volume();
-            item_it = items.erase( item_it );
-        } else {
-            ++item_it;
-        }
-    }
-
-    item result( itype_chem_carbide, calendar::turn );
-    result.charges = char_type->charges_per_volume( total_volume );
-    here.add_item( examp, result );
-    here.furn_set( examp, next_arcfurnace_type );
-    add_msg( _( "It has finished burning, yielding %d calcium carbide." ), result.charges );
-}
-//arc furnace end
-
-void iexamine::stook_empty( Character &, const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-    const furn_id &cur_stook_type = here.furn( examp );
-    furn_id next_stook_type = furn_str_id::NULL_ID();
-    if( cur_stook_type == furn_f_stook_empty ) {
-        next_stook_type = furn_f_stook_full;
-    } else {
-        debugmsg( "Examined furniture has action stook_empty, but is of type %s",
-                  cur_stook_type.id().c_str() );
-        return;
-    }
-
-    bool grain_present = false;
-    map_stack items = here.i_at( examp );
-    for( const item &i : items ) {
-        if( i.has_flag( flag_FRESH_GRAIN ) && !i.rotten() ) {
-            grain_present = true;
-        } else {
-            add_msg( m_bad, _( "This pile contains %s, which can't be dried here!" ), i.tname( 1,
-                     false ) );
-            return;
-        }
-    }
-
-    if( !grain_present ) {
-        add_msg( _( "Place some fresh grain here and try again." ) );
-        return;
-    } else if( !here.is_outside( examp ) ) {
-        add_msg( _( "The stook will need to be set up outside to dry." ) );
-        return;
-    } else {
-        add_msg( _( "This pile contains grain that is ready to be left out for drying." ) );
-        if( !query_yn( _( "Stand the grain up to dry?" ) ) ) {
-            return;
-        }
-    }
-
-    here.furn_set( examp, next_stook_type );
-    add_msg( _( "You set up the stook and leave it to dry." ) );
 }
 
-void iexamine::stook_full( Character &, const tripoint_bub_ms &examp )
+static void examine_stook( Character &who, const tripoint_bub_ms &tile, stook::operation action )
 {
     map &here = get_map();
-    const furn_id &cur_stook_type = here.furn( examp );
-    furn_id next_stook_type = furn_str_id::NULL_ID();
-    if( cur_stook_type == furn_f_stook_full ) {
-        next_stook_type = furn_str_id::NULL_ID();
-    } else {
-        debugmsg( "Examined furniture has action stook_full, but is of type %s",
-                  cur_stook_type.id().c_str() );
+    const auto choice = stook::inspect( who, here, tile, action );
+    if( !choice ) {
         return;
     }
-    map_stack items = here.i_at( examp );
-    if( items.empty() ) {
-        debugmsg( _( "Examined furniture is stook_full but doesn't contain any grain." ) );
-        here.furn_set( examp, next_stook_type );
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    if( action == stook::operation::stand && !who.query_yn( _( "Stand the grain up to dry?" ) ) ) {
         return;
     }
-    add_msg( _( "There's a grain stook there." ) );
-    const item &clock = *items.begin();
-    const time_duration drying_time = 336_hours;
-    const time_duration time_left = drying_time - clock.age();
+    if( lifetime && context && who.pos_abs() == choice->origin &&
+        ( !who.is_avatar() || !cata_mp::client_stook_command( *choice ) ) ) {
+        stook::execute( who, here, *choice );
+    }
+}
 
-    if( time_left > 0_turns ) {
-        add_msg( _( "The stook will finish drying in %s." ), to_string( time_left ) );
+void iexamine::stook_empty( Character &you, const tripoint_bub_ms &examp )
+{
+    examine_stook( you, examp, stook::operation::stand );
+}
+
+void iexamine::stook_full( Character &you, const tripoint_bub_ms &examp )
+{
+    examine_stook( you, examp, stook::operation::harvest );
+}
+
+static void examine_autoclave( Character &who, const tripoint_bub_ms &tile,
+                               autoclave::operation action )
+{
+    map &here = get_map();
+    auto choice = autoclave::inspect( who, here, tile, action );
+    if( !choice ) {
         return;
     }
-    for( item &it : items ) {
-        if( it.is_smokable() ) {
-            item result( it.get_comestible()->smoking_result, it.birthday() );
-            if( result.count_by_charges() ) {
-                result.charges = it.count();
-            }
-            recipe rec;
-            result.inherit_flags( it, rec );
-            if( !result.has_flag( flag_NUTRIENT_OVERRIDE ) ) {
-                // If the item has "cooks_like" it will be replaced by that item as a component.
-                if( !it.get_comestible()->cooks_like.is_empty() ) {
-                    // Set charges to 1 for stacking purposes.
-                    it = item( it.get_comestible()->cooks_like, it.birthday(), 1 );
-                }
-                result.components.add( it );
-                result.recipe_charges = it.count();
-            }
-            add_msg( _( "You take down the stook as the drying process is now finished." ) );
-            it = result;
-        }
+    if( action == autoclave::operation::start && !autoclave::confirm_start( who, *choice ) ) {
+        return;
     }
-    here.furn_set( examp, next_stook_type );
+    if( !who.is_avatar() || !cata_mp::client_autoclave_command( *choice ) ) {
+        autoclave::execute( who, here, *choice );
+    }
 }
 
 void iexamine::autoclave_empty( Character &you, const tripoint_bub_ms &examp )
 {
-    map &here = get_map();
-    const furn_id &cur_autoclave_type = here.furn( examp );
-    furn_id next_autoclave_type = furn_str_id::NULL_ID();
-    if( cur_autoclave_type == furn_id( "f_autoclave" ) ) {
-        next_autoclave_type = furn_id( "f_autoclave_full" );
-    } else {
-        debugmsg( "Examined furniture has action autoclave_empty, but is of type %s",
-                  cur_autoclave_type.id().c_str() );
-        return;
-    }
-
-    map_stack items = here.i_at( examp );
-    bool cbms = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.is_bionic();
-    } );
-
-    bool filthy_cbms = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.is_bionic() && i.has_flag( flag_FILTHY );
-    } );
-
-    if( items.empty() ) {
-        add_msg( _( "This autoclave is empty…" ) );
-        return;
-    }
-    if( !cbms ) {
-        add_msg( m_bad,
-                 _( "You need to remove all non-CBM items from the autoclave to start the program." ) );
-        return;
-    }
-    if( filthy_cbms ) {
-        add_msg( m_bad,
-                 _( "Some of those CBMs are filthy, you should wash them first for the sterilization process to work properly." ) );
-        return;
-    }
-    requirement_data reqs = *requirement_data_autoclave;
-
-    if( !reqs.can_make_with_inventory( &you, you.crafting_inventory(), is_crafting_component ) ) {
-        popup( "%s", reqs.list_missing() );
-        return;
-    }
-
-    if( query_yn( _( "Start the autoclave?" ) ) ) {
-
-        for( const auto &e : reqs.get_components() ) {
-            you.consume_items( e, 1, is_crafting_component );
-        }
-        for( const auto &e : reqs.get_tools() ) {
-            you.consume_tools( e );
-        }
-        you.invalidate_crafting_inventory();
-        for( item &it : items ) {
-            it.set_birthday( calendar::turn );
-        }
-        here.furn_set( examp, next_autoclave_type );
-        add_msg( _( "You start the autoclave." ) );
-    }
+    examine_autoclave( you, examp, autoclave::operation::start );
 }
 
-void iexamine::autoclave_full( Character &, const tripoint_bub_ms &examp )
+void iexamine::autoclave_full( Character &you, const tripoint_bub_ms &examp )
 {
-    map &here = get_map();
-    const furn_id &cur_autoclave_type = here.furn( examp );
-    furn_id next_autoclave_type = furn_str_id::NULL_ID();
-    if( cur_autoclave_type == furn_id( "f_autoclave_full" ) ) {
-        next_autoclave_type = furn_id( "f_autoclave" );
-    } else {
-        debugmsg( "Examined furniture has action autoclave_full, but is of type %s",
-                  cur_autoclave_type.id().c_str() );
-        return;
-    }
-
-    map_stack items = here.i_at( examp );
-    bool cbms = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.is_bionic();
-    } );
-
-    bool cbms_not_packed = std::all_of( items.begin(), items.end(), []( const item & i ) {
-        return i.is_bionic() && i.has_flag( flag_NO_PACKED );
-    } );
-
-    if( items.empty() ) {
-        add_msg( _( "This autoclave is empty…" ) );
-        here.furn_set( examp, next_autoclave_type );
-        return;
-    }
-    if( !cbms ) {
-        add_msg( m_bad,
-                 _( "ERROR Autoclave can't process non CBM items." ) );
-        return;
-    }
-    add_msg( _( "The autoclave is running." ) );
-
-    const item &clock = *items.begin();
-    const time_duration Cycle_time = 90_minutes;
-    const time_duration time_left = Cycle_time - clock.age();
-
-    if( time_left > 0_turns ) {
-        add_msg( _( "The cycle will be complete in %s." ), to_string( time_left ) );
-        return;
-    }
-
-    here.furn_set( examp, next_autoclave_type );
-    for( item &it : items ) {
-        if( !it.has_flag( flag_NO_PACKED ) ) {
-            it.unset_flag( flag_NO_STERILE );
-        }
-    }
-    add_msg( m_good, _( "The cycle is complete, the CBMs are now sterile." ) );
-
-    if( cbms_not_packed ) {
-        add_msg( m_info,
-                 _( "CBMs in direct contact with the environment will almost immediately become contaminated." ) );
-    }
-    here.furn_set( examp, next_autoclave_type );
+    examine_autoclave( you, examp, autoclave::operation::finish );
 }
 
 void iexamine::fireplace( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    const bool already_on_fire = here.has_nearby_fire( examp, 0 );
-    const bool furn_is_deployed = !here.furn( examp ).obj().deployed_item.is_empty();
-
-    auto is_firestarter = []( const item & it ) {
-        return it.has_flag( flag_FIRESTARTER ) || it.has_flag( flag_FIRE );
-    };
-    auto is_firequencher = []( const item & it ) {
-        return it.damage_melee( damage_bash );
-    };
-
-    std::multimap<int, item *> firestarters;
-    std::vector<item *> firequenchers = you.items_with( is_firequencher );
-
-    for( item *it : you.items_with( is_firestarter ) ) {
-        add_firestarter( it, firestarters, you, examp );
-    }
-
-    for( const tripoint_bub_ms &pos : closest_points_first( you.pos_bub(),
-            pickup_range ) ) {
-        if( pos == examp ) {
-            // stuff in the fireplace can't light or quench itself
-            continue;
-        }
-        for( item_location &it : here.items_with( pos, is_firestarter ) ) {
-            add_firestarter( &*it, firestarters, you, examp );
-        }
-        // anything is fine, so only check if we got nothing yet
-        if( firequenchers.empty() ) {
-            for( item_location &it : here.items_with( pos, is_firequencher ) ) {
-                firequenchers.push_back( &*it );
-            }
-        }
-    }
-
-    const bool has_firestarter = !firestarters.empty();
-    const bool has_bionic_firestarter = you.has_bionic( bio_lighter ) &&
-                                        you.enough_power_for( bio_lighter );
-
-    uilist selection_menu;
-    selection_menu.text = _( "Select an action" );
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    fireplace_selection choice{ fireplace_action::light_with_tool, you.pos_abs(),
+                                tool_activity_target::capture( here, here.get_abs( examp ) ),
+                                std::nullopt, std::nullopt };
+    const bool burning = here.get_field( examp, fd_fire ) != nullptr;
+    const bool hot = here.has_nearby_fire( examp, 0 );
+    const bool can_pack = item::type_is_defined( here.furn( examp )->deployed_item );
+    const item_location tool = hot ? item_location() : find_fireplace_firestarter( you, here, examp );
+    uilist menu;
+    menu.text = _( "Select an action" );
     if( here.has_items( examp ) ) {
-        // Note: This is displayed regardless of whether "examine with pickup" was used
-        selection_menu.addentry( 0, true, 'g', _( "Get items" ) );
+        menu.addentry( 0, true, 'g', _( "Get items" ) );
     }
-    if( !already_on_fire ) {
-        selection_menu.addentry( 1, has_firestarter, 'f',
-                                 has_firestarter ? _( "Start a fire" ) : _( "Start a fire… you'll need a fire source." ) );
-        if( has_bionic_firestarter ) {
-            selection_menu.addentry( 2, true, 'b', _( "Use a CBM to start a fire" ) );
+    if( !hot ) {
+        menu.addentry( 1, !!tool, 'f', tool ? _( "Start a fire" ) :
+                       _( "Start a fire… you'll need a fire source." ) );
+        if( can_light_fireplace_with_bionic( you ) ) {
+            menu.addentry( 2, true, 'b', _( "Use a CBM to start a fire" ) );
         }
-    } else if( !firequenchers.empty() ) {
-        selection_menu.addentry( 4, true, 'e', _( "Extinguish fire" ) );
-    } else {
-        selection_menu.addentry( 4, false, 'e', _( "Extinguish fire (bashing item required)" ) );
+    } else if( burning ) {
+        const bool can_quench = has_fireplace_quencher( you, here, examp );
+        menu.addentry( 4, can_quench, 'e', can_quench ? _( "Extinguish fire" ) :
+                       _( "Extinguish fire (bashing item required)" ) );
     }
-    if( furn_is_deployed ) {
-        selection_menu.addentry( 3, true, 't', _( "Take down the %s" ), here.furnname( examp ) );
+    if( can_pack ) {
+        menu.addentry( 3, true, 't', _( "Take down the %s" ), here.furnname( examp ) );
     }
-    selection_menu.query();
-
-    switch( selection_menu.ret ) {
+    menu.query();
+    if( !lifetime || !context || you.pos_abs() != choice.origin || !choice.target.matches( here ) ) {
+        return;
+    }
+    switch( menu.ret ) {
         case 0:
             none( you, examp );
             g->pickup( examp );
             return;
-        case 1: {
-            for( auto &firestarter : firestarters ) {
-                item *it = firestarter.second;
-                const use_function *usef = it->type->get_use( "firestarter" );
-                const firestarter_actor *actor = dynamic_cast<const firestarter_actor *>( usef->get_actor_ptr() );
-                you.add_msg_if_player( _( "You attempt to start a fire with your %s…" ), it->tname() );
-                const ret_val<void> can_use = actor->can_use( you, *it, &get_map(), examp );
-                if( can_use.success() ) {
-                    const int charges = actor->use( &you, *it, &get_map(), examp ).value_or( 0 );
-                    you.use_charges( it->typeId(), charges );
-                    return;
-                } else {
-                    you.add_msg_if_player( m_bad, can_use.str() );
-                }
+        case 1:
+            if( !query_fireplace_ignition( you, here, tool, choice ) ) {
+                return;
             }
-            you.add_msg_if_player( _( "You weren't able to start a fire." ) );
-            return;
-        }
-        case 2: {
-            if( !here.get_field( examp, fd_fire ) && here.add_field( examp, fd_fire, 1 ) ) {
-                you.mod_power_level( -bio_lighter->power_activate );
-                you.mod_moves( -to_moves<int>( 1_seconds ) );
-            } else {
-                you.add_msg_if_player( m_info, _( "You can't light a fire there." ) );
-            }
-            return;
-        }
+            break;
+        case 2:
+            choice.action = fireplace_action::light_with_bionic;
+            break;
         case 3: {
-            if( already_on_fire ) {
-                if( !query_yn( _( "Really take down the %s while it's on fire?" ), here.furnname( examp ) ) ) {
-                    return;
-                }
+            const bool burning_now = here.get_field( examp, fd_fire ) != nullptr;
+            if( burning_now && !query_yn( _( "Really take down the %s while it's on fire?" ),
+                                          here.furnname( examp ) ) ) {
+                return;
             }
-            you.add_msg_if_player( m_info, _( "You take down the %s." ),
-                                   here.furnname( examp ) );
-            const itype_id furn_item = here.furn( examp ).obj().deployed_item;
-            here.add_item_or_charges( examp, item( furn_item, calendar::turn ) );
-            here.furn_set( examp, furn_str_id::NULL_ID() );
+            const deployed_furniture_selection teardown{ choice.origin, choice.target.position,
+                                                          choice.target.furniture, burning_now };
+            if( lifetime && context && can_take_down_deployed_furniture( you, here, teardown ) &&
+                ( !you.is_avatar() || !cata_mp::client_take_down_furniture( teardown ) ) ) {
+                take_down_deployed_furniture( you, here, teardown );
+            }
             return;
         }
-        case 4: {
-            here.remove_field( examp, fd_fire );
-            you.mod_moves( -200 );
-            you.add_msg_if_player( m_info, _( "With a few determined moves you put out the fire in the %s." ),
-                                   here.furnname( examp ) );
-            return;
-        }
+        case 4:
+            choice.action = fireplace_action::extinguish;
+            break;
         default:
             none( you, examp );
             return;
     }
-}
-
-static void fvat_set_empty( const tripoint_bub_ms &pos )
-{
-    map &here = get_map();
-    const furn_id &furn = here.furn( pos );
-    if( furn == furn_f_fvat_wood_empty || furn == furn_f_fvat_wood_full ) {
-        here.furn_set( pos, furn_f_fvat_wood_empty );
-    } else {
-        here.furn_set( pos, furn_f_fvat_empty );
+    if( !you.is_avatar() || !cata_mp::client_fireplace_selection( choice ) ) {
+        execute_fireplace_selection( you, here, choice, activity_execution::local );
     }
 }
 
-static void fvat_set_full( const tripoint_bub_ms &pos )
+namespace
 {
-    map &here = get_map();
-    const furn_id &furn = here.furn( pos );
-    if( furn == furn_f_fvat_wood_empty || furn == furn_f_fvat_wood_full ) {
-        here.furn_set( pos, furn_f_fvat_wood_full );
-    } else {
-        here.furn_set( pos, furn_f_fvat_full );
+using fermentation_vessel::operation;
+
+void submit_vessel_command( Character &who, map &here, const fermentation_vessel::command &command )
+{
+    if( !who.is_avatar() || !cata_mp::client_fermentation_command( command ) ) {
+        fermentation_vessel::execute( who, here, command );
     }
 }
 
-void iexamine::fvat_empty( Character &you, const tripoint_bub_ms &examp )
-{
-    itype_id brew_type;
-    std::string brew_nname;
-    bool to_deposit = false;
-    static const auto vat_volume = units::from_liter( 50 );
-    bool vat_full = false;
-    bool ferment = false;
-    bool brew_present = false;
-    int charges_on_ground = 0;
-    map &here = get_map();
-    map_stack items = here.i_at( examp );
-    for( auto item_it = items.begin(); item_it != items.end(); ) {
-        if( !item_it->is_brewable() || brew_present ) {
-            // This isn't a brew or there was already another kind of brew inside,
-            // so this has to be moved.
-            items.insert( *item_it );
-            // This will add items to a space near the vat, because it's flagged as NOITEM.
-            item_it = items.erase( item_it );
-        } else {
-            ++item_it;
-            brew_present = true;
-        }
-    }
-    if( !brew_present ) {
-        add_msg( _( "This keg is empty." ) );
-        // TODO: Allow using brews from crafting inventory
-        const auto b_inv = you.cache_get_items_with( "is_brewable", &item::is_brewable );
-        if( b_inv.empty() ) {
-            add_msg( m_info, _( "You have no brew to ferment." ) );
-            return;
-        }
-        // Make lists of unique typeids and names for the menu
-        // Code shamelessly stolen from the crop planting function!
-        std::vector<itype_id> b_types;
-        std::vector<std::string> b_names;
-        for( const item_location &b : b_inv ) {
-            if( std::find( b_types.begin(), b_types.end(), b->typeId() ) == b_types.end() ) {
-                b_types.push_back( b->typeId() );
-                b_names.push_back( item::nname( b->typeId() ) );
-            }
-        }
-        // Choose brew from list
-        int b_index = 0;
-        if( b_types.size() > 1 ) {
-            b_index = uilist( _( "Use which brew?" ), b_names );
-        } else { //Only one brew type was in inventory, so it's automatically used
-            if( !query_yn( _( "Set %s in the vat?" ), b_names[0] ) ) {
-                b_index = -1;
-            }
-        }
-        if( b_index < 0 ) {
-            return;
-        }
-        to_deposit = true;
-        brew_type = b_types[b_index];
-        brew_nname = item::nname( brew_type );
-    } else {
-        item &brew = here.i_at( examp ).only_item();
-        brew_type = brew.typeId();
-        brew_nname = item::nname( brew_type );
-        charges_on_ground = brew.charges;
-        add_msg( _( "This keg contains %s (%d), %0.f%% full." ),
-                 brew.tname(), brew.charges, brew.volume() * 100.0 / vat_volume );
-        enum options { ADD_BREW, REMOVE_BREW, START_FERMENT };
-        uilist selectmenu;
-        selectmenu.text = _( "Select an action" );
-        selectmenu.addentry( ADD_BREW, ( you.charges_of( brew_type ) > 0 ), MENU_AUTOASSIGN,
-                             _( "Add more %s to the vat" ), brew_nname );
-        selectmenu.addentry( REMOVE_BREW, brew.made_of( phase_id::LIQUID ), MENU_AUTOASSIGN,
-                             _( "Remove %s from the vat" ), brew.tname() );
-        selectmenu.addentry( START_FERMENT, true, MENU_AUTOASSIGN, _( "Start fermenting cycle" ) );
-        selectmenu.query();
-        switch( selectmenu.ret ) {
-            case ADD_BREW: {
-                to_deposit = true;
-                break;
-            }
-            case REMOVE_BREW: {
-                item_location loc( map_cursor( examp ), &*here.i_at( examp ).begin() );
-                liquid_handler::handle_liquid( loc );
-                return;
-            }
-            case START_FERMENT: {
-                ferment = true;
-                break;
-            }
-            default:
-                add_msg( _( "Never mind." ) );
-                return;
-        }
-    }
-    if( to_deposit ) {
-        item brew( brew_type, calendar::turn_zero );
-        int charges_held = you.charges_of( brew_type );
-        brew.charges = charges_on_ground;
-        for( int i = 0; i < charges_held && !vat_full; i++ ) {
-            you.use_charges( brew_type, 1 );
-            brew.charges++;
-            if( brew.volume() >= vat_volume ) {
-                vat_full = true;
-            }
-        }
-        add_msg( _( "Set %s in the vat." ), brew_nname );
-        add_msg( _( "The keg now contains %s (%d), %0.f%% full." ),
-                 brew.tname(), brew.charges, brew.volume() * 100.0 / vat_volume );
-        here.i_clear( examp );
-        //This is needed to bypass NOITEM
-        here.add_item( examp, brew );
-        you.mod_moves( -to_moves<int>( 20_seconds ) );
-        if( !vat_full ) {
-            ferment = query_yn( _( "Start fermenting cycle?" ) );
-        }
-    }
-    if( vat_full || ferment ) {
-        here.i_at( examp ).only_item().set_age( 0_turns );
-        fvat_set_full( examp );
-        if( vat_full ) {
-            add_msg( _( "The vat is full, so you close the lid and start the fermenting cycle." ) );
-        } else {
-            add_msg( _( "You close the lid and start the fermenting cycle." ) );
-        }
-    }
-}
-
-void iexamine::fvat_full( Character &you, const tripoint_bub_ms &examp )
+void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bool closed,
+                                  bool compost )
 {
     map &here = get_map();
-    map_stack items_here = here.i_at( examp );
-    if( items_here.empty() ) {
-        debugmsg( "fvat_full was empty!" );
-        fvat_set_empty( examp );
+    const furn_id vessel = here.furn( pos );
+    const units::volume capacity = fermentation_vessel::capacity( vessel );
+    if( capacity <= 0_ml ) {
         return;
     }
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const auto observed = fermentation_vessel::capture( who, here, pos, operation::recover );
+    const auto still_there = [&]() {
+        return lifetime && context && who.pos_abs() == observed.origin &&
+               observed.target.matches( here );
+    };
 
-    for( item &it : items_here ) {
-        if( !it.made_of_from_type( phase_id::LIQUID ) ) {
-            add_msg( _( "You remove %s from the vat." ), it.tname() );
-            here.add_item_or_charges( you.pos_bub(), it );
-            here.i_rem( examp, &it );
+    const map_stack contents = here.i_at( pos );
+    item_location input;
+    std::vector<item_location> liquids;
+    for( item &it : here.i_at( pos ) ) {
+        item_location location( map_cursor( observed.target.position ), &it );
+        if( !input && fermentation_vessel::accepts( vessel, it ) ) {
+            input = location;
+        }
+        if( it.made_of( phase_id::LIQUID ) &&
+            ( !closed || !fermentation_vessel::accepts( vessel, it ) ) ) {
+            liquids.push_back( location );
+        } else if( !it.made_of_from_type( phase_id::LIQUID ) &&
+                   !fermentation_vessel::accepts( vessel, it ) ) {
+            // Recover a stray object without emptying unrelated contents.
+            submit_vessel_command( who, here, fermentation_vessel::capture( who, here, pos,
+                                   operation::recover, &it ) );
+            return;
         }
     }
-
-    if( items_here.empty() ) {
-        fvat_set_empty( examp );
+    if( closed && contents.empty() ) {
+        submit_vessel_command( who, here, observed );
         return;
     }
-
-    item &brew_i = *items_here.begin();
-    // Does the vat contain unfermented brew, or already fermented booze?
-    // TODO: Allow "recursive brewing" to continue without player having to check on it
-    if( brew_i.is_brewable() ) {
-        add_msg( _( "There's a vat of %s set to ferment there." ), brew_i.tname() );
-
-        // TODO: change brew_time to return time_duration
-        const time_duration brew_time = brew_i.brewing_time();
-        const time_duration progress = brew_i.age();
-        if( progress < brew_time ) {
-            int hours = to_hours<int>( brew_time - progress );
+    if( closed && input ) {
+        auto command = fermentation_vessel::capture( who, here, pos, operation::finish, &*input );
+        const time_duration remaining = fermentation_vessel::duration( vessel, *input ) - input->age();
+        who.add_msg_if_player( compost ? _( "There's a tank of %s set to ferment there." ) :
+                               _( "There's a vat of %s set to ferment there." ), input->tname() );
+        if( remaining <= 0_turns ) {
+            if( who.query_yn( compost ? _( "Finish fermenting?" ) : _( "Finish brewing?" ) ) && still_there() ) {
+                submit_vessel_command( who, here, command );
+            }
+        } else {
+            const int hours = to_hours<int>( remaining );
+            const int days = to_days<int>( remaining );
             if( hours < 1 ) {
-                add_msg( _( "It will finish brewing in less than an hour." ) );
+                who.add_msg_if_player( compost ? _( "It will finish fermenting in less than an hour." ) :
+                                       _( "It will finish brewing in less than an hour." ) );
+            } else if( compost && days > 0 ) {
+                who.add_msg_if_player( n_gettext( "It will finish fermenting in about %d day.",
+                                                  "It will finish fermenting in about %d days.", days ), days );
+            } else if( compost ) {
+                who.add_msg_if_player( n_gettext( "It will finish fermenting in about %d hour.",
+                                                  "It will finish fermenting in about %d hours.", hours ), hours );
             } else {
-                add_msg( n_gettext( "It will finish brewing in about %d hour.",
-                                    "It will finish brewing in about %d hours.",
-                                    hours ), hours );
+                who.add_msg_if_player( n_gettext( "It will finish brewing in about %d hour.",
+                                                  "It will finish brewing in about %d hours.", hours ), hours );
             }
-            return;
-        }
-
-        if( query_yn( _( "Finish brewing?" ) ) ) {
-            const std::map<std::pair<itype_id, std::string>, int> &results = brew_i.brewing_results();
-            const int count = brew_i.count();
-            const time_point birthday = brew_i.birthday();
-
-            here.i_clear( examp );
-            for( const std::pair<const std::pair<itype_id, std::string>, int> &result : results ) {
-                int amount = result.second * count;
-                const itype_id &item_type = result.first.first;
-                // TODO: Different age based on settings
-                item booze( item_type, birthday );
-                booze.set_itype_variant( result.first.second );
-                if( item_type->phase == phase_id::LIQUID ) {
-                    booze.charges = amount;
-                    here.add_item( examp, booze );
-                    add_msg( _( "The %s is now ready for bottling." ), item_type->nname( amount ) );
-                } else {
-                    you.i_add_or_drop( booze, amount );
-                    add_msg( _( "You remove the %s from the vat." ), item_type->nname( amount ) );
-                }
+            if( compost && fermentation_vessel::gas_days_available( *input ) > 0 &&
+                who.query_yn( _( "Gather biogas?  Can't stop once releasing started." ) ) && still_there() ) {
+                command.action = operation::gather_gas;
+                submit_vessel_command( who, here, command );
             }
-
-            you.mod_moves( -to_moves<int>( 5_seconds ) );
-            you.practice( skill_cooking, std::min( to_minutes<int>( brew_time ) / 10, 100 ) );
         }
-
-        if( here.i_at( examp ).empty() ) {
-            fvat_set_empty( examp );
-        }
-
         return;
-    } else {
-        add_msg( _( "There's a vat of fermented %s there." ), brew_i.tname() );
     }
 
-    const std::string booze_name = brew_i.tname();
-    item_location loc( map_cursor( examp ), &*items_here.begin() );
-    if( liquid_handler::handle_liquid( loc ) && loc->charges == 0 ) {
-        fvat_set_empty( examp );
-        add_msg( _( "You squeeze the last drops of %s from the vat." ), booze_name );
-    }
-}
-
-// Borrowed and modified fermenting vat functions
-static void compost_set_empty( const tripoint_bub_ms &pos )
-{
-    map &here = get_map();
-    const furn_id &furn = here.furn( pos );
-    if( furn == furn_f_compost_empty || furn == furn_f_compost_full ) {
-        here.furn_set( pos, furn_f_compost_empty );
-    }
-}
-
-static void compost_set_full( const tripoint_bub_ms &pos )
-{
-    map &here = get_map();
-    const furn_id &furn = here.furn( pos );
-    if( furn == furn_f_compost_empty || furn == furn_f_compost_full ) {
-        here.furn_set( pos, furn_f_compost_full );
-    }
-}
-
-void iexamine::compost_empty( Character &you, const tripoint_bub_ms &examp )
-{
-    itype_id compost_type;
-    std::string compost_nname;
-    bool to_deposit = false;
-    static const auto tank_volume = units::from_liter( 1000 );
-    bool tank_full = false;
-    bool ferment = false;
-    bool compost_present = false;
-    int charges_on_ground = 0;
-    map &here = get_map();
-    map_stack items = here.i_at( examp );
-    for( auto item_it = items.begin(); item_it != items.end(); ) {
-        if( !item_it->is_compostable() || compost_present ) {
-            // This isn't a biomass or there was already another kind of biomass inside,
-            // so this has to be moved.
-            items.insert( *item_it );
-            // This will add items to a space near the tank, because it's flagged as NOITEM.
-            item_it = items.erase( item_it );
-        } else {
-            ++item_it;
-            compost_present = true;
-        }
-    }
-    if( !compost_present ) {
-        add_msg( _( "This tank is empty." ) );
-        // TODO: Allow using biomass from crafting inventory
-        const auto b_inv = you.cache_get_items_with( "is_compostable", &item::is_compostable );
-        if( b_inv.empty() ) {
-            add_msg( m_info, _( "You have nothing that could be used as biomass to ferment." ) );
+    const auto drain = [&]() {
+        if( liquids.empty() ) {
             return;
         }
-        // Make lists of unique typeids and names for the menu
-        // Code shamelessly stolen from the crop planting function!
-        std::vector<itype_id> b_types;
-        std::vector<std::string> b_names;
-        for( const item_location &b : b_inv ) {
-            if( std::find( b_types.begin(), b_types.end(), b->typeId() ) == b_types.end() ) {
-                b_types.push_back( b->typeId() );
-                b_names.push_back( item::nname( b->typeId() ) );
+        item_location source = liquids.front();
+        if( liquids.size() > 1 ) {
+            std::vector<std::string> choices;
+            for( const item_location &liquid : liquids ) {
+                choices.push_back( liquid->display_name() );
             }
-        }
-        // Choose biomass from list
-        int b_index = 0;
-        if( b_types.size() > 1 ) {
-            b_index = uilist( _( "What do you want to use as biomass?" ), b_names );
-        } else { //Only one biomass type was in inventory, so it's automatically used
-            if( !query_yn( _( "Set %s in the tank?" ), b_names[0] ) ) {
-                b_index = -1;
-            }
-        }
-        if( b_index < 0 ) {
-            return;
-        }
-        to_deposit = true;
-        compost_type = b_types[b_index];
-        compost_nname = item::nname( compost_type );
-    } else {
-        item &compost = here.i_at( examp ).only_item();
-        compost_type = compost.typeId();
-        compost_nname = item::nname( compost_type );
-        charges_on_ground = compost.charges;
-        add_msg( _( "This tank contains %s (%d), %0.f%% full." ),
-                 compost.tname(), compost.charges, compost.volume() * 100.0 / tank_volume );
-        enum options { ADD_COMPOST, REMOVE_COMPOST, START_FERMENT };
-        uilist selectmenu;
-        selectmenu.text = _( "Select an action" );
-        selectmenu.addentry( ADD_COMPOST, ( you.charges_of( compost_type ) > 0 ), MENU_AUTOASSIGN,
-                             _( "Add more %s to the tank" ), compost_nname );
-        selectmenu.addentry( REMOVE_COMPOST, compost.made_of( phase_id::LIQUID ), MENU_AUTOASSIGN,
-                             _( "Remove %s from the tank" ), compost.tname() );
-        selectmenu.addentry( START_FERMENT, true, MENU_AUTOASSIGN, _( "Start anaerobic digestion" ) );
-        selectmenu.query();
-        switch( selectmenu.ret ) {
-            case ADD_COMPOST: {
-                to_deposit = true;
-                break;
-            }
-            case REMOVE_COMPOST: {
-                item_location loc( map_cursor( examp ), &*here.i_at( examp ).begin() );
-                liquid_handler::handle_liquid( loc );
+            const int index = uilist( _( "Which liquid do you want to remove?" ), choices );
+            if( index < 0 || static_cast<size_t>( index ) >= liquids.size() || !still_there() ) {
                 return;
             }
-            case START_FERMENT: {
-                ferment = true;
-                break;
-            }
-            default:
-                add_msg( _( "Never mind." ) );
-                return;
+            source = liquids[index];
         }
-    }
-    if( to_deposit ) {
-        item compost( compost_type, calendar::turn_zero );
-        int charges_held = you.charges_of( compost_type );
-        compost.charges = charges_on_ground;
-        for( int i = 0; i < charges_held && !tank_full; i++ ) {
-            you.use_charges( compost_type, 1 );
-            compost.charges++;
-            if( compost.volume() >= tank_volume ) {
-                tank_full = true;
-            }
-        }
-        add_msg( _( "Set %s in the tank." ), compost_nname );
-        add_msg( _( "The tank now contains %s (%d), %0.f%% full." ),
-                 compost.tname(), compost.charges, compost.volume() * 100.0 / tank_volume );
-        here.i_clear( examp );
-        //This is needed to bypass NOITEM
-        here.add_item( examp, compost );
-        you.mod_moves( -to_moves<int>( 20_seconds ) );
-        if( !tank_full ) {
-            ferment = query_yn( _( "Start anaerobic digestion?" ) );
-        }
-    }
-    if( tank_full || ferment ) {
-        here.i_at( examp ).only_item().set_age( 0_turns );
-        compost_set_full( examp );
-        if( tank_full ) {
-            add_msg( _( "The tank is full, so you close the lid and start anaerobic digestion." ) );
-        } else {
-            add_msg( _( "You close the lid and start anaerobic digestion." ) );
-        }
-        // The biomass age tracks fermentation; gas collection has its own timer.
-        here.i_at( examp ).only_item().erase_var( "compost_last_gas_collection" );
-    }
-}
-
-void iexamine::compost_full( Character &you, const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-    map_stack items_here = here.i_at( examp );
-    if( items_here.empty() ) {
-        // Liquid transfer activities can empty the tank after this examine function returns.
-        add_msg( _( "This tank is empty." ) );
-        compost_set_empty( examp );
-        return;
-    }
-
-    for( auto it = items_here.begin(); it != items_here.end(); ) {
-        if( !it->made_of_from_type( phase_id::LIQUID ) ) {
-            add_msg( _( "You remove %s from the tank." ), it->tname() );
-            here.add_item_or_charges( you.pos_bub(), *it );
-            it = items_here.erase( it );
-        } else {
-            ++it;
-        }
-    }
-
-    if( items_here.empty() ) {
-        compost_set_empty( examp );
-        return;
-    }
-
-    item &compost_i = *items_here.begin();
-    // Default to the first day of gas production for existing saves. Never reset
-    // the biomass birthday when collecting gas: that would restart fermentation.
-    const double production_start = to_turns<int>( 30_days );
-    const double last_collection_turns = compost_i.get_var( "compost_last_gas_collection",
-                                         production_start );
-    const time_duration last_collection = time_duration::from_turns(
-            static_cast<int>( last_collection_turns ) );
-    const int gas_gatherable = std::max( 0, to_days<int>( compost_i.age() - last_collection ) );
-    const int max_gas_gatherable = std::min( gas_gatherable, 5 );
-    // Does the tank contain unfermented biomass, or already fermented liquid?
-    if( compost_i.is_compostable() ) {
-        add_msg( _( "There's a tank of %s set to ferment there." ), compost_i.tname() );
-
-        // TODO: change compost_time to return time_duration
-        const time_duration compost_time = compost_i.composting_time();
-        const time_duration progress = compost_i.age();
-        if( progress < compost_time ) {
-            int hours = to_hours<int>( compost_time - progress );
-            int days = to_days<int>( compost_time - progress );
-            if( hours < 1 ) {
-                add_msg( _( "It will finish fermenting in less than an hour." ) );
-            } else if( days < 1 ) {
-                add_msg( n_gettext( "It will finish fermenting in about %d hour.",
-                                    "It will finish fermenting in about %d hours.",
-                                    hours ), hours );
-            } else {
-                add_msg( n_gettext( "It will finish fermenting in about %d day.",
-                                    "It will finish fermenting in about %d days.",
-                                    days ), days );
-            }
-            if( to_days<int>( progress ) >= 30 && gas_gatherable >= 1 ) {
-                if( query_yn( _( "Gather biogas?  Can't stop once releasing started." ) ) ) {
-                    const std::map<std::pair<itype_id, std::string>, int> &results = compost_i.composting_results();
-                    const int count = compost_i.count();
-                    const time_point gas_birthday = compost_i.birthday();
-                    if( !max_gas_gatherable ) {
-                        add_msg( _( "No biogas gathered." ) );
-                    } else {
-                        for( const std::pair<const std::pair<itype_id, std::string>, int> &result : results ) {
-
-                            item biogas( result.first.first, gas_birthday );
-                            biogas.set_itype_variant( result.first.second );
-                            // 40 L biogas for 1 KG of biomass over the whole anaerobic digestion process.
-                            // 1 unit of biomass(0.5 KG) for 80 units(0.25 L for each unit) of biogas.
-                            int gas_amount = count * max_gas_gatherable * 80 / 30;
-                            if( result.first.first->phase == phase_id::GAS ) {
-                                if( !you.can_pickVolume_partial( biogas ) ) {
-                                    add_msg( _( "You released some biogas from the tank." ) );
-                                } else {
-                                    biogas.charges = result.second;
-                                    you.i_add_or_drop( biogas, gas_amount );
-                                    add_msg( _( "Gathered %s units of biogas." ), gas_amount );
-                                }
-                            }
-                        }
-                    }
-                    add_msg( n_gettext( "Biogas generating process started for about %d day.",
-                                        "Biogas generating process started for about %d days.",
-                                        max_gas_gatherable ), max_gas_gatherable );
-                    compost_i.set_var( "compost_last_gas_collection",
-                                       to_turns<int>( compost_i.age() ) );
-                }
-            }
+        if( !source ) {
             return;
         }
-
-        if( query_yn( _( "Finish fermenting?" ) ) ) {
-            const std::map<std::pair<itype_id, std::string>, int> &results = compost_i.composting_results();
-            const int count = compost_i.count();
-            const time_point birthday = compost_i.birthday();
-
-            here.i_clear( examp );
-            for( const std::pair<const std::pair<itype_id, std::string>, int> &result : results ) {
-                int amount = result.second * count;
-                // TODO: Different age based on settings
-                const itype_id &item_type = result.first.first;
-                item compost( item_type, birthday );
-                compost.set_itype_variant( result.first.second );
-                if( item_type->phase == phase_id::LIQUID ) {
-                    compost.charges = amount;
-                    here.add_item( examp, compost );
-                    add_msg( _( "The %s is now ready for use." ), item_type->nname( amount ) );
-                } else if( item_type->phase == phase_id::GAS ) {
-                    int gas_amount = count * max_gas_gatherable * 80 / 30;
-                    if( !gas_amount || !you.can_pickVolume_partial( compost ) ) {
-                        add_msg( _( "You released some biogas from the tank." ) );
-                    } else {
-                        compost.charges = result.second;
-                        you.i_add_or_drop( compost, gas_amount );
-                        add_msg( _( "Gathered %s units of biogas." ), gas_amount );
-                    }
-                } else {
-                    you.i_add_or_drop( compost, amount );
-                    add_msg( _( "You removed the %s from the tank." ), item_type->nname( amount ) );
-                }
-            }
-
-            you.mod_moves( -to_moves<int>( 5_seconds ) );
-            you.practice( skill_chemistry, std::min( to_minutes<int>( compost_time ) / 10, 100 ) );
+        auto command = fermentation_vessel::capture( who, here, pos, operation::drain, &*source );
+        const auto choice = query_liquid_destination( *source, &*source, command.batch, true );
+        if( !still_there() || !source || choice.kind == LD_NULL ||
+            ( choice.kind == LD_CONSUME && !who.will_eat( *source, true ).success() ) ||
+            !still_there() ) {
+            return;
         }
-
-        if( here.i_at( examp ).empty() ) {
-            compost_set_empty( examp );
-        }
-
+        command.destination = choice;
+        submit_vessel_command( who, here, command );
+    };
+    if( closed || ( !contents.empty() && ( !input || contents.size() != 1 ) ) ) {
+        drain();
         return;
+    }
+
+    auto command = fermentation_vessel::capture( who, here, pos, operation::deposit,
+                   input ? &*input : nullptr );
+    std::map<itype_id, std::vector<item_source>> supplies;
+    const auto carried = compost ? who.cache_get_items_with( "is_compostable", &item::is_compostable ) :
+                         who.cache_get_items_with( "is_brewable", &item::is_brewable );
+    for( const item_location &candidate : carried ) {
+        if( candidate && candidate.held_by( who ) && ( !input || candidate->typeId() == input->typeId() ) ) {
+            supplies[candidate->typeId()].push_back( capture_item_source( who, candidate ) );
+        }
+    }
+    if( input ) {
+        enum { add_input, remove_input, start };
+        const std::string name = input->tname();
+        who.add_msg_if_player( compost ? _( "This tank contains %s (%d), %0.f%% full." ) :
+                               _( "This keg contains %s (%d), %0.f%% full." ),
+                               name, input->charges, input->volume() * 100.0 / capacity );
+        uilist choices;
+        choices.text = _( "Select an action" );
+        choices.addentry( add_input, !supplies.empty(), MENU_AUTOASSIGN,
+                          compost ? _( "Add more %s to the tank" ) : _( "Add more %s to the vat" ), name );
+        choices.addentry( remove_input, !liquids.empty(), MENU_AUTOASSIGN,
+                          compost ? _( "Remove %s from the tank" ) : _( "Remove %s from the vat" ), name );
+        choices.addentry( start, true, MENU_AUTOASSIGN,
+                          compost ? _( "Start anaerobic digestion" ) : _( "Start fermenting cycle" ) );
+        choices.query();
+        if( !still_there() || !input ) {
+            return;
+        }
+        if( choices.ret == remove_input ) {
+            drain();
+            return;
+        }
+        if( choices.ret == start ) {
+            command.action = operation::start;
+            submit_vessel_command( who, here, command );
+            return;
+        }
+        if( choices.ret != add_input || supplies.empty() ) {
+            return;
+        }
+        command.supplies = std::move( supplies.begin()->second );
     } else {
-        add_msg( _( "There's a tank of %s there." ), compost_i.tname() );
+        who.add_msg_if_player( compost ? _( "This tank is empty." ) : _( "This keg is empty." ) );
+        if( supplies.empty() ) {
+            who.add_msg_if_player( m_info, compost ? _( "You have nothing that could be used as biomass to ferment." ) :
+                                   _( "You have no brew to ferment." ) );
+            return;
+        }
+        std::vector<std::string> names;
+        std::vector<itype_id> types;
+        for( const auto &entry : supplies ) {
+            types.push_back( entry.first );
+            names.push_back( item::nname( entry.first ) );
+        }
+        int index = 0;
+        if( names.size() > 1 ) {
+            index = uilist( compost ? _( "What do you want to use as biomass?" ) : _( "Use which brew?" ),
+                            names );
+        } else if( !who.query_yn( compost ? _( "Set %s in the tank?" ) : _( "Set %s in the vat?" ),
+                                  names.front() ) ) {
+            return;
+        }
+        if( index < 0 || static_cast<size_t>( index ) >= types.size() || !still_there() ) {
+            return;
+        }
+        command.supplies = std::move( supplies.at( types[index] ) );
     }
-
-    const std::string compost_name = compost_i.tname();
-    item_location loc( map_cursor( examp ), &*items_here.begin() );
-    if( liquid_handler::handle_liquid( loc ) && ( !loc || loc->charges == 0 ) ) {
-        compost_set_empty( examp );
-        add_msg( _( "You squeeze the last drops of %s from the tank." ), compost_name );
+    command.start_after_deposit = who.query_yn( compost ? _( "Start anaerobic digestion?" ) :
+                                   _( "Start fermenting cycle?" ) );
+    if( still_there() ) {
+        submit_vessel_command( who, here, command );
     }
 }
+} // namespace
 
-static units::volume get_keg_capacity( const tripoint_bub_ms &pos )
+void iexamine::fvat_empty( Character &who, const tripoint_bub_ms &pos )
 {
-    const furn_t &furn = get_map().furn( pos ).obj();
-    return furn.keg_capacity;
+    examine_fermentation_vessel( who, pos, false, false );
 }
 
-/**
- * Check whether there is a keg on the map that can be filled via @ref pour_into_keg.
- */
+void iexamine::fvat_full( Character &who, const tripoint_bub_ms &pos )
+{
+    examine_fermentation_vessel( who, pos, true, false );
+}
+
+void iexamine::compost_empty( Character &who, const tripoint_bub_ms &pos )
+{
+    examine_fermentation_vessel( who, pos, false, true );
+}
+
+void iexamine::compost_full( Character &who, const tripoint_bub_ms &pos )
+{
+    examine_fermentation_vessel( who, pos, true, true );
+}
+
 bool iexamine::has_keg( const tripoint_bub_ms &pos )
 {
-    return get_keg_capacity( pos ) > 0_ml;
-}
-
-static void displace_items_except_one_liquid( const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-    // Temporarily replace the real furniture with a fake furniture with NOITEM
-    const furn_id &previous_furn = here.furn( examp );
-    here.furn_set( examp, furn_id( "f_no_item" ) );
-
-    bool liquid_present = false;
-    map_stack items = here.i_at( examp );
-    for( map_stack::iterator it = items.begin(); it != items.end(); ) {
-        if( !it->made_of_from_type( phase_id::LIQUID ) || liquid_present ) {
-            // This isn't a liquid or there was already another kind of liquid inside,
-            // so this has to be moved.
-            // This will add items to a space near the vat, because it's flagged as NOITEM.
-            items.insert( *it );
-            it = items.erase( it );
-        } else {
-            ++it;
-            liquid_present = true;
-        }
-    }
-
-    // Replace the real furniture
-    here.furn_set( examp, previous_furn );
+    return ::keg::capacity( get_map(), pos ) > 0_ml;
 }
 
 void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
 {
-    none( you, examp );
     map &here = get_map();
-    const std::string keg_name = here.name( examp );
-    const units::volume keg_cap = get_keg_capacity( examp );
-
-    const bool has_container_with_liquid = map_cursor( tripoint_bub_ms( examp ) ).has_item_with( [](
-    const item & it ) {
-        return !it.is_container_empty() && it.can_unload();
-    } );
-    const bool liquid_present = map_cursor( tripoint_bub_ms( examp ) ).has_item_with( [](
-    const item & it ) {
-        return it.made_of_from_type( phase_id::LIQUID );
-    } );
-
-    if( !liquid_present || has_container_with_liquid ) {
-        add_msg( m_info, _( "It is empty." ) );
-        // Get list of all drinks
-        auto drinks_inv = you.items_with( [&you]( const item & it ) {
-            item *parent_item = you.find_parent( it );
-            return it.made_of( phase_id::LIQUID ) && ( !parent_item || parent_item->can_unload() ) ;
-        } );
-        if( drinks_inv.empty() ) {
-            add_msg( m_info, _( "You don't have any drinks to fill the %s with." ), keg_name );
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    ::keg::command choice;
+    choice.origin = you.pos_abs();
+    choice.target = tool_activity_target::capture( here, here.get_abs( examp ) );
+    const std::string name = here.name( examp );
+    const auto still_there = [&]() {
+        return lifetime && context && you.pos_abs() == choice.origin && choice.target.matches( here );
+    };
+    const auto submit = [&]() {
+        if( still_there() && ( !you.is_avatar() || !cata_mp::client_keg_command( choice ) ) ) {
+            ::keg::execute( you, here, choice, false );
+        }
+    };
+    std::vector<item_location> batches;
+    item_location stray;
+    for( item &entry : here.i_at( examp ) ) {
+        if( entry.made_of_from_type( phase_id::LIQUID ) ) {
+            if( entry.charges > 0 ) {
+                batches.emplace_back( map_cursor( choice.target.position ), &entry );
+            }
+        } else if( !stray ) {
+            stray = item_location( map_cursor( choice.target.position ), &entry );
+        }
+    }
+    item_location batch;
+    if( !batches.empty() ) {
+        size_t index = 0;
+        if( batches.size() > 1 ) {
+            std::vector<std::string> names;
+            for( const item_location &liquid : batches ) {
+                names.push_back( liquid->tname() );
+            }
+            const int selected = uilist( _( "Which liquid?" ), names );
+            if( selected < 0 || static_cast<size_t>( selected ) >= batches.size() || !still_there() ) {
+                return;
+            }
+            index = selected;
+        }
+        batch = batches[index];
+        if( !batch ) {
             return;
         }
-        // Make lists of unique drinks... about third time we do this, maybe we ought to make a function next time
-        std::vector<itype_id> drink_types;
-        std::vector<std::string> drink_names;
-        std::vector<double> drink_rot;
-        std::vector<time_point> drink_bday;
-        for( item *&drink : drinks_inv ) {
-            auto found_drink = std::find( drink_types.begin(), drink_types.end(), drink->typeId() );
-            if( found_drink == drink_types.end() ) {
-                drink_types.push_back( drink->typeId() );
-                drink_names.push_back( item::nname( drink->typeId() ) );
-                drink_rot.push_back( drink->get_relative_rot() );
-                drink_bday.push_back( drink->birthday() );
-            } else {
-                auto rot_iter = std::next( drink_rot.begin(), std::distance( drink_types.begin(), found_drink ) );
-                // Yep, worst rot wins.
-                *rot_iter = std::max( *rot_iter, drink->get_relative_rot() );
+        choice.batch = batch->uid().get_value();
+    }
+
+    const auto fill = [&]() {
+        std::map<itype_id, std::vector<item_source>> supplies;
+        for( const item_location &source : you.all_items_loc() ) {
+            if( ::keg::available_supply( you, source ) && ( !batch || source->typeId() == batch->typeId() ) ) {
+                supplies[source->typeId()].push_back( capture_item_source( you, source ) );
             }
         }
-        // Choose drink to store in keg from list
-        int drink_index = 0;
-        if( drink_types.size() > 1 ) {
-            drink_index = uilist( _( "Store which drink?" ), drink_names );
-            if( drink_index < 0 || static_cast<size_t>( drink_index ) >= drink_types.size() ) {
-                drink_index = -1;
-            }
-        } else { //Only one drink type was in inventory, so it's automatically used
-            if( !query_yn( _( "Fill the %1$s with %2$s?" ),
-                           keg_name, drink_names[0].c_str() ) ) {
-                drink_index = -1;
-            }
-        }
-        if( drink_index < 0 ) {
+        if( supplies.empty() ) {
+            you.add_msg_if_player( m_info, _( "You have no compatible liquid to fill the %s with." ), name );
             return;
         }
-
-        // First empty the keg of foreign objects
-        displace_items_except_one_liquid( examp );
-
-        //Store liquid chosen in the keg
-        itype_id drink_type = drink_types[ drink_index ];
-        int charges_held = you.charges_of( drink_type );
-        item drink( drink_type, drink_bday[ drink_index ] );
-        drink.set_relative_rot( drink_rot[ drink_index ] );
-        drink.charges = 0;
-        bool keg_full = false;
-        Character &player_character = get_player_character();
-        for( int i = 0; i < charges_held && !keg_full; i++ ) {
-            player_character.use_charges( drink.typeId(), 1 );
-            drink.charges++;
-            keg_full = drink.volume() >= keg_cap;
+        auto selected = supplies.begin();
+        if( supplies.size() > 1 ) {
+            std::vector<std::string> names;
+            for( const auto &entry : supplies ) {
+                names.push_back( item::nname( entry.first ) );
+            }
+            const int index = uilist( _( "Store which liquid?" ), names );
+            if( index < 0 || static_cast<size_t>( index ) >= supplies.size() ) {
+                return;
+            }
+            std::advance( selected, index );
+        } else if( !batch && !you.query_yn( _( "Fill the %1$s with %2$s?" ), name,
+                                           item::nname( selected->first ) ) ) {
+            return;
         }
-        if( keg_full ) {
-            add_msg( _( "You completely fill the %1$s with %2$s." ),
-                     keg_name, item::nname( drink_type ) );
-        } else {
-            add_msg( _( "You fill the %1$s with %2$s." ),
-                     keg_name, item::nname( drink_type ) );
-        }
-        you.mod_moves( -to_moves<int>( 10_seconds ) );
-        here.i_clear( examp );
-        here.add_item( examp, drink );
+        choice.action = ::keg::operation::fill;
+        choice.supplies = std::move( selected->second );
+        submit();
+    };
+
+    if( !batch && !stray ) {
+        fill();
         return;
-    } else {
-        // First empty the keg of foreign objects
-        displace_items_except_one_liquid( examp );
-
-        map_stack items = here.i_at( examp );
-        item &drink = items.only_item();
-        const std::string drink_tname = drink.tname();
-        const std::string drink_nname = item::nname( drink.typeId() );
-        enum options {
-            DISPENSE,
-            HAVE_A_DRINK,
-            REFILL,
-        };
-        uilist selectmenu;
-        //~ $1 - furniture name, $2 - liquid name, $3 - liquid charges, $4 - liquid volume, $5 - liquid capacity
-        selectmenu.text = string_format( _( "%1$s with %2$s (%3$d)    %4$s / %5$s" ),
-                                         uppercase_first_letter( keg_name ), drink_tname, drink.charges,
-                                         vol_to_string( drink.volume(), true, true ), vol_to_string( keg_cap, true, true ) );
-        selectmenu.addentry( DISPENSE, drink.made_of( phase_id::LIQUID ), MENU_AUTOASSIGN,
-                             _( "Dispense or dump %s" ), drink_tname );
-        selectmenu.addentry( HAVE_A_DRINK, drink.is_food() && drink.made_of( phase_id::LIQUID ),
-                             MENU_AUTOASSIGN, _( "Have a drink" ) );
-        selectmenu.addentry( REFILL, true, MENU_AUTOASSIGN, _( "Refill" ) );
-        selectmenu.query();
-
-        switch( selectmenu.ret ) {
-            case DISPENSE: {
-                item_location loc( map_cursor( examp ), &*items.begin() );
-                liquid_handler::handle_liquid( loc );
-                return;
+    }
+    const units::volume capacity = ::keg::capacity( here, examp );
+    const bool liquid = batch && batch->made_of( phase_id::LIQUID );
+    uilist menu;
+    menu.text = batch ? string_format( _( "%1$s with %2$s (%3$d)    %4$s / %5$s" ),
+                                      uppercase_first_letter( name ), batch->tname(), batch->charges,
+                                      vol_to_string( batch->volume(), true, true ),
+                                      vol_to_string( capacity, true, true ) ) :
+                string_format( _( "The %s is empty." ), name );
+    if( batch ) {
+        menu.addentry( 0, liquid, MENU_AUTOASSIGN, _( "Dispense or dump %s" ), batch->tname() );
+        menu.addentry( 1, liquid && batch->is_food(), MENU_AUTOASSIGN, _( "Have a drink" ) );
+    }
+    menu.addentry( 2, !batch || ( liquid && batches.size() == 1 && batch->volume() < capacity ),
+                   MENU_AUTOASSIGN, batch ? _( "Refill" ) : _( "Fill" ) );
+    if( stray ) {
+        menu.addentry( 3, true, MENU_AUTOASSIGN, _( "Remove %s" ), stray->tname() );
+    }
+    menu.query();
+    if( !still_there() ) {
+        return;
+    }
+    switch( menu.ret ) {
+        case 0:
+            if( batch ) {
+                choice.action = ::keg::operation::dispense;
+                choice.destination = query_liquid_destination( *batch, batch.get_item(), choice.batch, false );
+                if( choice.destination->kind != LD_NULL ) {
+                    submit();
+                }
             }
-            case HAVE_A_DRINK:
-                if( !you.can_consume_as_is( drink ) ) {
-                    return; // They didn't actually drink
-                }
-                you.assign_activity( consume_activity_actor( drink ) );
-                drink.charges--;
-                if( drink.charges == 0 ) {
-                    add_msg( _( "You squeeze the last drops of %1$s from the %2$s." ),
-                             drink_tname, keg_name );
-                    here.i_clear( examp );
-                }
-                return;
-
-            case REFILL: {
-                if( drink.volume() >= keg_cap ) {
-                    add_msg( _( "The %s is completely full." ), keg_name );
-                    return;
-                }
-                int charges_held = you.charges_of( drink.typeId() );
-                if( charges_held < 1 ) {
-                    add_msg( m_info, _( "You don't have any %1$s to fill the %2$s with." ),
-                             drink_nname, keg_name );
-                    return;
-                }
-                item tmp( drink.typeId(), calendar::turn, charges_held );
-                pour_into_keg( examp, tmp, false );
-                you.use_charges( drink.typeId(), charges_held - tmp.charges );
-                add_msg( _( "You fill the %1$s with %2$s." ), keg_name, drink_nname );
-                you.mod_moves( -to_moves<int>( 10_seconds ) );
-                return;
+            break;
+        case 1:
+            if( !batch ) {
+                break;
             }
-
-            default:
-                return;
-        }
+            if( you.is_avatar() && cata_mp::is_client_mode() ) {
+                const restore_on_out_of_scope restore_rng( rng_get_engine() );
+                if( !you.will_eat( *batch, true ).success() ) {
+                    break;
+                }
+            }
+            choice.action = ::keg::operation::drink;
+            choice.allow_consequences = true;
+            submit();
+            break;
+        case 2:
+            fill();
+            break;
+        case 3:
+            if( stray ) {
+                choice.action = ::keg::operation::recover;
+                choice.batch = stray->uid().get_value();
+                submit();
+            }
+            break;
+        default:
+            break;
     }
 }
 
-/**
- * Pour liquid into a keg (furniture) on the map. The transferred charges (if any)
- * will be removed from the liquid item.
- * @return Whether any charges have been transferred at all.
- */
 bool iexamine::pour_into_keg( const tripoint_bub_ms &pos, item &liquid, bool silent )
 {
-    const units::volume keg_cap = get_keg_capacity( pos );
-    if( keg_cap <= 0_ml ) {
-        return false;
-    }
     map &here = get_map();
-    const std::string keg_name = here.name( pos );
-
-    map_stack stack = here.i_at( pos );
-    if( stack.empty() ) {
-        here.add_item( pos, liquid );
-        here.i_at( pos ).only_item().charges = 0; // Will be set later
-    } else if( stack.only_item().typeId() != liquid.typeId() ) {
-        add_msg( _( "The %s already contains some %s, you can't add a different liquid to it." ),
-                 keg_name, item::nname( stack.only_item().typeId() ) );
+    const std::string liquid_name = silent ? std::string() : liquid.tname();
+    if( !::keg::pour( here, pos, liquid ) ) {
         return false;
     }
-
-    item &drink = stack.only_item();
-    if( drink.volume() >= keg_cap ) {
-        add_msg( _( "The %s is full." ), keg_name );
-        return false;
-    }
-
     if( !silent ) {
-        add_msg( _( "You pour %1$s into the %2$s." ), liquid.tname(), keg_name );
-    }
-    while( liquid.charges > 0 && drink.volume() < keg_cap ) {
-        drink.charges++;
-        liquid.charges--;
+        add_msg( _( "You pour %1$s into the %2$s." ), liquid_name, here.name( pos ) );
     }
     return true;
 }
@@ -5660,131 +4839,79 @@ std::vector<const itype *> furn_t::crafting_ammo_item_types() const
     return output;
 }
 
-static void reload_furniture( Character &you, const tripoint_bub_ms &examp, bool allow_unload )
+void iexamine::reload_furniture( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    const furn_t &f = here.furn( examp ).obj();
-    const itype *pseudo_type = f.crafting_pseudo_item_type();
-    const std::vector<const itype *> ammo_list = f.crafting_ammo_item_types();
-    bool use_ammotype = f.has_flag( ter_furn_flag::TFLAG_AMMOTYPE_RELOAD );
-    auto can_be_reloaded = []( const std::vector<const itype *> &lst ) {
-        for( const itype *atype : lst ) {
-            if( atype != nullptr && atype->ammo ) {
-                return true;
-            }
-        }
-        return false;
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    furniture_reload::command choice;
+    choice.origin = you.pos_abs();
+    choice.target = tool_activity_target::capture( here, here.get_abs( examp ) );
+    const std::string name = here.furnname( examp );
+    const auto still_there = [&]() {
+        return lifetime && context && you.pos_abs() == choice.origin && choice.target.matches( here );
     };
-    if( pseudo_type == nullptr || !can_be_reloaded( ammo_list ) ) {
-        add_msg( m_info, _( "This %s can not be reloaded!" ), f.name() );
+    const auto submit = [&]() {
+        if( still_there() && ( !you.is_avatar() || !cata_mp::client_furniture_reload( choice ) ) ) {
+            furniture_reload::execute( you, here, choice );
+        }
+    };
+    item tool = furniture_reload::reload_tool( here, examp );
+    if( tool.is_null() ) {
+        you.add_msg_if_player( m_info, _( "This %s can not be reloaded!" ), name );
         return;
     }
-    const itype *ammo_loaded = nullptr;
-    int amount_in_furn = 0;
-    for( const itype *ammo : ammo_list ) {
-        itype_id ammo_itypeID( ammo->get_id() );
-        int amount_tmp = use_ammotype ?
-                         count_charges_in_list( &ammo->ammo->type, here.i_at( examp ), ammo_itypeID ) :
-                         count_charges_in_list( ammo, here.i_at( examp ) );
-        if( amount_tmp > 0 ) {
-            ammo_loaded = ammo;
-            amount_in_furn = amount_tmp;
+    const auto loaded = furniture_reload::loaded_ammo( here, examp );
+    if( !loaded.empty() ) {
+        uilist menu;
+        menu.text = name;
+        menu.addentry( 0, true, MENU_AUTOASSIGN, _( "Reload" ) );
+        for( size_t i = 0; i < loaded.size(); ++i ) {
+            menu.addentry( static_cast<int>( i ) + 1, true, MENU_AUTOASSIGN, _( "Unload %s" ),
+                           loaded[i]->tname() );
         }
-        if( allow_unload && amount_tmp > 0 ) {
-            if( you.query_yn( _( "The %1$s contains %2$d %3$s.  Unload?" ), f.name(), amount_in_furn,
-                              ammo_itypeID->nname( amount_in_furn ) ) ) {
-                map_stack items = here.i_at( examp );
-                for( map_stack::iterator itm = items.begin(); itm != items.end(); ) {
-                    if( itm->typeId() == ammo_itypeID ) {
-                        if( you.can_stash( *itm ) ) {
-                            std::vector<item_location> target_items{ item_location( map_cursor( tripoint_bub_ms( examp ) ), &*itm ) };
-                            you.assign_activity( pickup_activity_actor( target_items, { 0 }, you.pos_bub(), false ) );
-                            return;
-                        } else {
-                            // get handling cost before the item reference is invalidated
-                            const int handling_cost = -you.item_handling_cost( *itm );
-
-                            add_msg( _( "You remove %1$s from the %2$s." ), itm->tname(), f.name() );
-                            here.add_item_or_charges( you.pos_bub(), *itm );
-                            itm = items.erase( itm );
-                            you.mod_moves( handling_cost );
-                            return;
-                        }
-                    } else {
-                        itm++;
-                    }
+        menu.query();
+        if( menu.ret < 0 || static_cast<size_t>( menu.ret ) > loaded.size() || !still_there() ) {
+            return;
+        }
+        if( menu.ret > 0 ) {
+            const item_location &source = loaded[menu.ret - 1];
+            if( !source ) {
+                return;
+            }
+            choice.action = furniture_reload::operation::unload;
+            choice.type = source->typeId();
+            choice.source = capture_item_source( you, source );
+            if( source->made_of( phase_id::LIQUID ) ) {
+                choice.destination = query_liquid_destination( *source, source.get_item(),
+                                     source->uid().get_value(), false );
+                if( choice.destination->kind == LD_NULL ) {
+                    return;
                 }
             }
-        }
-    }
-    if( ammo_loaded ) {
-        const int max_amount_in_furn = item( pseudo_type ).ammo_capacity( ammo_loaded->ammo->type );
-        if( amount_in_furn >= max_amount_in_furn ) {
-            add_msg( m_info, _( "The %s is full, cannot reload." ), f.name() );
+            submit();
             return;
         }
     }
-    item pseudo( pseudo_type );
-    // maybe at some point we need a pseudo item_location or something
-    // but for now this should at least work as intended
-    item_location pseudo_loc( map_cursor( tripoint_bub_ms( examp ) ), &pseudo );
-
-    // used to only allow one type of ammo, changed with move to inventory_selector
-    // todo: use furniture name instead of pseudo item name
-    item::reload_option opt = game_menus::inv::select_ammo( you, pseudo_loc );
-
-    if( !opt ) {
+    const item_location pseudo( map_cursor( choice.target.position ), &tool );
+    const item::reload_option selected = game_menus::inv::select_ammo( you, pseudo );
+    if( !selected || !still_there() ) {
         return;
     }
-
-    if( ammo_loaded && opt.ammo->type != ammo_loaded ) {
-        add_msg( m_info, _( "This %s is already loaded with %s!" ), f.name(), ammo_loaded->nname( 0 ) );
+    const int limit = std::min( selected.qty(), furniture_reload::remaining_capacity( here, examp,
+                                *selected.ammo ) );
+    if( limit <= 0 ) {
+        you.add_msg_if_player( m_info, _( "The %s has no room for this ammunition." ), name );
         return;
     }
-    const int max_reload_amount = item( pseudo_type ).ammo_capacity(
-                                      opt.ammo->ammo_type() ) - amount_in_furn;
-    const itype *opt_type = opt.ammo->type;
-    const int max_amount = std::min( opt.qty(), max_reload_amount );
-    int amount = max_amount;
-    query_int( amount, true, _( "Put how many of the %s into the %s?" ), opt_type->nname( max_amount ),
-               f.name() );
-    if( amount <= 0 || amount > max_amount ) {
-        return;
+    choice.source = capture_item_source( you, selected.ammo );
+    choice.type = selected.ammo->typeId();
+    choice.quantity = limit;
+    if( query_int( choice.quantity, true, _( "Put how many of the %s into the %s?" ),
+                   item::nname( choice.type, limit ), name ) &&
+        choice.quantity > 0 && choice.quantity <= limit ) {
+        submit();
     }
-
-    auto place_item = [&here, &examp]( const item & it ) {
-        for( item &e : here.i_at( examp ) ) {
-            if( e.merge_charges( it ) ) {
-                return;
-            }
-        }
-
-        here.add_item( examp, it );
-    };
-
-    item moved( opt_type, opt.ammo.get_item()->birthday(), amount );
-    place_item( moved );
-    you.mod_moves( -you.item_handling_cost( moved ) );
-    std::list<item>used;
-    if( opt.ammo.get_item()->use_charges( opt_type->get_id(), amount, used,
-                                          opt.ammo.pos_bub( here ) ) ) {
-        opt.ammo.remove_item();
-    }
-
-    const int amount_in_furn_after_placing = count_charges_in_list( opt_type,
-            here.i_at( examp ) );
-    //~ %1$s - furniture, %2$d - number, %3$s items.
-    add_msg( _( "The %1$s contains %2$d %3$s." ), f.name(), amount_in_furn_after_placing,
-             opt_type->nname( amount_in_furn_after_placing ) );
-
-    add_msg( _( "You reload the %s." ), here.furnname( examp ) );
-
-    you.invalidate_crafting_inventory();
-}
-
-void iexamine::reload_furniture( Character &you, const tripoint_bub_ms &examp )
-{
-    reload_furniture( you, examp, true );
 }
 
 void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
@@ -5793,13 +4920,16 @@ void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
     const bool closed_window_with_curtains = here.has_flag(
                 ter_furn_flag::TFLAG_BARRICADABLE_WINDOW_CURTAINS,
                 examp );
-    if( here.is_outside( you.pos_bub() ) && ( here.has_flag( ter_furn_flag::TFLAG_WALL, examp ) ||
-            closed_window_with_curtains ) ) {
+    if( !can_access_curtains( you, here, examp ) ) {
         locked_object( you, examp );
         return;
     }
 
-    const ter_id &ter = here.ter( examp );
+    const ter_id ter = here.ter( examp );
+    const terrain_examine_selection teardown{ terrain_examine_action::remove_curtains, you.pos_abs(),
+                                               here.get_abs( examp ), ter.id(), std::nullopt };
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
 
     // Peek through the curtains, or tear them down.
     uilist window_menu;
@@ -5808,6 +4938,9 @@ void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
                                closed_window_with_curtains ), 'p', _( "Peek through the closed curtains." ) );
     window_menu.addentry( 1, true, 't', _( "Tear down the curtains." ) );
     window_menu.query();
+    if( !lifetime || !context || you.pos_abs() != teardown.origin ) {
+        return;
+    }
     const int choice = window_menu.ret;
 
     if( choice == 0 ) {
@@ -5815,18 +4948,7 @@ void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
         g->peek( examp );
         you.add_msg_if_player( _( "You carefully peek through the curtains." ) );
     } else if( choice == 1 ) {
-        // Mr. Gorbachev, tear down those curtains!
-        const ter_id &t = here.ter( examp );
-        if( t->has_curtains() ) {
-            here.ter_set( examp, t->curtain_transform );
-        }
-
-        here.spawn_item( you.pos_bub(), itype_nail, 1, 4, calendar::turn );
-        here.spawn_item( you.pos_bub(), itype_sheet, 2, 0, calendar::turn );
-        here.spawn_item( you.pos_bub(), itype_stick, 1, 0, calendar::turn );
-        here.spawn_item( you.pos_bub(), itype_string_36, 1, 0, calendar::turn );
-        you.mod_moves( -to_moves<int>( 10_seconds ) );
-        you.add_msg_if_player( _( "You tear the curtains and curtain rod off the windowframe." ) );
+        submit_terrain_examine( you, here, teardown );
     } else {
         you.add_msg_if_player( _( "Never mind." ) );
     }
@@ -6898,936 +6020,203 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
     }
 }
 
-//food avg. 1.1 kg/L, which would be 110u of smoking_heat or 686 charcoal. rounding down to 600 as there are likely some batch fuel savings involved. it's roughly 1:1-1:2 charcoal:food to smoke.
-namespace sm_rack
+static std::optional<comp_selection<item_comp>> choose_mill_input(
+        Character &who, map &here, units::volume remaining )
 {
-static const int MIN_CHARCOAL = 1200;
-static const int CHARCOAL_PER_LITER = 600;
-static const units::volume MAX_FOOD_VOLUME = units::from_liter( 20 );
-static const units::volume MAX_FOOD_VOLUME_PORTABLE = units::from_liter( 15 );
-} // namespace sm_rack
-
-static int get_charcoal_charges( units::volume food )
-{
-    const int charcoal = to_liter( food ) * sm_rack::CHARCOAL_PER_LITER;
-
-    return  std::max( charcoal, sm_rack::MIN_CHARCOAL );
-}
-
-static bool is_non_rotten_crafting_component( const item &it )
-{
-    return is_crafting_component( it ) && !it.rotten();
-}
-
-static std::vector<item> extract_mill_items( map_stack &items, const itype_id &type,
-        int quantity )
-{
-    std::vector<item> extracted;
-
-    for( map_stack::iterator iter = items.begin(); iter != items.end() && quantity > 0; ) {
-        if( iter->typeId() != type ) {
-            ++iter;
-            continue;
-        }
-
-        const int item_count = iter->count();
-        if( iter->count_by_charges() && item_count > quantity ) {
-            item split = iter->split( quantity );
-            if( split.is_null() ) {
-                debugmsg( "Failed to split %d %s from a stack of %d while milling.",
-                          quantity, type.str(), item_count );
-                break;
-            }
-            extracted.emplace_back( std::move( split ) );
-            quantity = 0;
-        } else {
-            quantity -= item_count;
-            extracted.emplace_back( *iter );
-            iter = items.erase( iter );
-        }
-    }
-
-    if( quantity > 0 ) {
-        debugmsg( "Failed to extract %d %s from a mill.", quantity, type.str() );
-    }
-
-    return extracted;
-}
-
-static void move_mill_items_to_player( Character &you, map &here, map_stack &items,
-                                       const itype_id &type, int quantity )
-{
-    for( const item &it : extract_mill_items( items, type, quantity ) ) {
-        here.add_item_or_charges( you.pos_bub(), it );
-        you.mod_moves( -you.item_handling_cost( it ) );
-    }
-}
-
-static void mill_activate( Character &you, const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-    const furn_id &cur_mill_type = here.furn( examp );
-    furn_id next_mill_type = furn_str_id::NULL_ID();
-    if( cur_mill_type == furn_f_wind_mill ) {
-        next_mill_type = furn_f_wind_mill_active;
-    } else if( cur_mill_type == furn_f_water_mill ) {
-        next_mill_type = furn_f_water_mill_active;
-    } else {
-        debugmsg( "Examined furniture has action mill_activate, but is of type %s",
-                  cur_mill_type.id().c_str() );
-        return;
-    }
-    bool food_present = false;
-    map_stack items = here.i_at( examp );
-    units::volume food_volume = 0_ml;
-
-    std::map<itype_id, int> millable_counts;
-
-    for( const item &iter : items ) {
-        if( iter.type->milling_data && !iter.type->milling_data->into_.is_null() ) {
-            millable_counts[iter.typeId()] += iter.count();
-        }
-    }
-
-    for( const std::pair<const string_id<itype>, int> &mill_type_count : millable_counts ) {
-        item source( mill_type_count.first );
-        const item product( source.type->milling_data->into_ );
-        const recipe rec = *source.type->milling_data->recipe_;
-
-        if( rec.is_null() ) {
-            debugmsg( _( "Failed to find milling recipe for %s." ),
-                      source.tname( 1, false ) );
-            add_msg( m_bad, _( "This mill contains %s, which can't be milled!" ), source.tname( 1, false ) );
-            add_msg( _( "You remove the %s from the mill." ), source.tname() );
-
-            move_mill_items_to_player( you, here, items, source.typeId(),
-                                       mill_type_count.second );
-
-        } else {
-            const requirement_data::alter_item_comp_vector &components =
-                rec.simple_requirements().get_components();
-            int lot_size = 0;
-
-            // Making the assumption that milling only uses a single type of input product. Support for mixed products would require additional logic.
-            // We also make the assumption that this is the only relevant input, so if lubricants etc. was to be added more logic would be needed.
-            for( const std::vector<item_comp> &component : components ) {
-                for( const item_comp &comp : component ) {
-                    if( comp.type == mill_type_count.first ) {
-                        lot_size = comp.count;
-                        break;
-                    }
-                }
-
-                if( lot_size > 0 ) {
-                    break;
-                }
-            }
-
-            if( lot_size == 0 ) {
-                debugmsg( _( "Failed to find milling recipe for %s. It can't be milled." ),
-                          source.display_name().c_str() );
-                add_msg( m_bad, _( "This mill contains %s, which can't be milled!" ), source.tname( 1, false ) );
-                add_msg( _( "You remove the %s from the mill." ), source.tname() );
-
-                move_mill_items_to_player( you, here, items, source.typeId(),
-                                           mill_type_count.second );
-            } else {
-                const int batches = mill_type_count.second / lot_size;
-                const int process_count = batches * lot_size;
-
-                if( batches == 0 ) {
-                    add_msg( m_bad, _( "This mill contains too little of %s, which requires a batch size of %d." ),
-                             source.tname( 1, false ), lot_size );
-                    add_msg( _( "You remove the %s from the mill." ), source.tname() );
-                    move_mill_items_to_player( you, here, items, source.typeId(),
-                                               mill_type_count.second );
-                } else if( process_count != mill_type_count.second ) {
-                    add_msg( m_bad,
-                             _( "This mill doesn't contain a full last batch of %s, which requires a batch size of %d." ),
-                             source.tname( 1, false ), lot_size );
-                    add_msg( _( "You remove the excess %s from the mill." ), source.tname() );
-                    move_mill_items_to_player( you, here, items, source.typeId(),
-                                               mill_type_count.second - process_count );
-                }
-            }
-        }
-    }
-
-    for( item &it : items ) {
-        if( it.type->milling_data && !it.type->milling_data->into_.is_null() ) {
-            food_present = true;
-            food_volume += it.volume();
-            continue;
-        } else {
-            add_msg( m_bad, _( "This mill contains %s, which can't be milled!" ), it.tname( 1, false ) );
-            add_msg( _( "You remove the %s from the mill." ), it.tname() );
-            here.add_item_or_charges( you.pos_bub(), it );
-            you.mod_moves( -you.item_handling_cost( it ) );
-            here.i_rem( examp, &it );
-            return;
-        }
-    }
-    if( !food_present ) {
-        add_msg( _( "This mill is empty.  Fill it with starchy products such as wheat, barley or oats and try again." ) );
-        return;
-    }
-    // TODO: currently mill just uses sm_rack defined max volume
-    if( food_volume > sm_rack::MAX_FOOD_VOLUME ) {
-        add_msg( _( "This mill is overloaded with products, and the millstone can't turn.  Remove some and try again." ) );
-        add_msg( pgettext( "volume units", "You think that you can load about %s %s in it." ),
-                 format_volume( sm_rack::MAX_FOOD_VOLUME ), volume_units_long() );
-        return;
-    }
-
-    for( item &it : here.i_at( examp ) ) {
-        if( it.type->milling_data && !it.type->milling_data->into_.is_null() ) {
-            // Do one final rot check before milling, then apply the PROCESSING flag to prevent further checks.
-            it.process_temperature_rot( 1, examp, here, nullptr );
-            it.set_flag( flag_PROCESSING );
-        }
-    }
-    here.furn_set( examp, next_mill_type );
-    item result( itype_fake_milling_item, calendar::turn );
-    result.item_counter = to_turns<int>( milling_time );
-    result.activate();
-    here.add_item( examp, result );
-    add_msg( _( "You remove the brake on the millstone and it slowly starts to turn." ) );
-}
-
-static void smoker_activate( Character &you, const tripoint_bub_ms &examp )
-{
-    if( !iexamine::smoker_prep( you, examp ) ) {
-        return;
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = who.pos_abs();
+    const auto filter = [&]( const item &entry ) {
+        return mill::accepts( entry ) && entry.is_owned_by( who, true ) &&
+               !craft_reservation::contains_reserved( entry );
     };
-
-    pick_firestarter_and_fire( you, examp, firestarter_actor::start_type::SMOKER );
-}
-
-static std::pair<item *, units::volume> smoker_prep_internal(
-    const tripoint_bub_ms &examp
-)
-{
-    map &here = get_map();
-
-    map_stack items = here.i_at( examp );
-
-    std::pair<item *, units::volume> data;
-
-    for( item &it : items ) {
-        if( it.is_smokable() ) {
-            data.second += it.volume();
-            continue;
-        }
-        if( it.typeId() == itype_charcoal ) {
-            data.first = &it;
-        }
-    }
-
-    return data;
-}
-
-bool iexamine::smoker_prep( Character &you, const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-
-    const furn_id &cur_smoker_type = here.furn( examp );
-
-    const bool portable = cur_smoker_type == furn_f_metal_smoking_rack ||
-                          cur_smoker_type == furn_f_metal_smoking_rack_active;
-
-    if( cur_smoker_type != furn_f_smoking_rack && cur_smoker_type != furn_f_metal_smoking_rack ) {
-        debugmsg( "Examined furniture has action smoker_activate, but is of type %s",
-                  cur_smoker_type.id().c_str() );
-        return false;
-    }
-
-    map_stack items = here.i_at( examp );
-
-    for( item &it : items ) {
-        if( it.has_flag( flag_SMOKED ) && !it.is_smokable() ) {
-            add_msg( _( "This rack already contains smoked food." ) );
-            add_msg( _( "Remove it before firing the smoking rack again." ) );
-            return false;
-        }
-        if( it.typeId() != itype_charcoal && !it.is_smokable() ) {
-            add_msg( m_bad, _( "This rack contains %s, which can't be smoked!" ), it.tname( 1,
-                     false ) );
-            const std::string name = it.tname();
-            const int cost = you.item_handling_cost( it );
-            const character_action_guard lifetime( you );
-            item_location source( map_cursor( examp ), &it );
-            if( here.transfer_item_or_charges( you.pos_bub(), source, item( it ), you ) > 0 && lifetime ) {
-                you.add_msg_if_player( _( "You remove %s from the rack." ), name );
-                you.mod_moves( -cost );
-            }
-            return false;
-        }
-        if( it.has_flag( flag_SMOKED ) && it.is_smokable() ) {
-            add_msg( _( "This rack has some smoked food that might be dehydrated by smoking it again." ) );
-        }
-    }
-
-    std::pair<item *, units::volume> prep_data = smoker_prep_internal( examp );
-    item *charcoal = prep_data.first;
-    units::volume food_volume = prep_data.second;
-
-    if( food_volume == 0_ml ) {
-        add_msg( _( "This rack is empty.  Fill it with raw meat, fish or sausages and try again." ) );
-        return false;
-    }
-    if( charcoal == nullptr ) {
-        add_msg( _( "There is no charcoal in the rack." ) );
-        return false;
-    }
-    if( portable && food_volume > sm_rack::MAX_FOOD_VOLUME_PORTABLE ) {
-        add_msg( _( "This rack is overloaded with food, and it blocks the flow of smoke.  Remove some and try again." ) );
-        add_msg( _( "You think that you can load about %s %s in it." ),
-                 format_volume( sm_rack::MAX_FOOD_VOLUME_PORTABLE ), volume_units_long() );
-        return false;
-    } else if( food_volume > sm_rack::MAX_FOOD_VOLUME ) {
-        add_msg( _( "This rack is overloaded with food, and it blocks the flow of smoke.  Remove some and try again." ) );
-        add_msg( _( "You think that you can load about %s %s in it." ),
-                 format_volume( sm_rack::MAX_FOOD_VOLUME ), volume_units_long() );
-        return false;
-    }
-
-    int char_charges = get_charcoal_charges( food_volume );
-
-    if( count_charges_in_list( charcoal->type, here.i_at( examp ) ) < char_charges ) {
-        add_msg( _( "There is not enough charcoal in the rack to smoke this much food." ) );
-        add_msg( _( "You need at least %1$s pieces of charcoal, and the smoking rack has %2$s inside." ),
-                 char_charges, count_charges_in_list( charcoal->type, here.i_at( examp ) ) );
-        return false;
-    }
-
-    return true;
-}
-
-bool iexamine::smoker_fire( Character &you, const tripoint_bub_ms &examp )
-{
-    map &here = get_map();
-
-    if( !smoker_prep( you, examp ) ) {
-        return false;
-    }
-
-    const furn_id &cur_smoker_type = here.furn( examp );
-    furn_id next_smoker_type = furn_str_id::NULL_ID();
-    if( cur_smoker_type == furn_f_smoking_rack ) {
-        next_smoker_type = furn_f_smoking_rack_active;
-    } else if( cur_smoker_type == furn_f_metal_smoking_rack ) {
-        next_smoker_type = furn_f_metal_smoking_rack_active;
-    }
-
-    for( item &it : here.i_at( examp ) ) {
-        if( it.is_smokable() ) {
-            it.process_temperature_rot( 1, examp, here, nullptr );
-            it.set_flag( flag_PROCESSING );
-        }
-    }
-
-    int char_charges = get_charcoal_charges( smoker_prep_internal( examp ).second );
-
-    here.furn_set( examp, next_smoker_type );
-    map_stack items = here.i_at( examp );
-    for( auto iter = items.begin(); iter != items.end() && char_charges > 0; ) {
-        if( iter->typeId() != itype_charcoal ) {
-            ++iter;
-            continue;
-        }
-        const int consumed = std::min( char_charges, std::max( iter->charges, 0 ) );
-        iter->charges -= consumed;
-        char_charges -= consumed;
-        if( iter->charges <= 0 ) {
-            iter = items.erase( iter );
-        } else {
-            ++iter;
-        }
-    }
-    item result( itype_fake_smoke_plume, calendar::turn );
-    result.item_counter = to_turns<int>( 6_hours );
-    result.activate();
-    here.add_item( examp, result );
-
-    return true;
-}
-
-void iexamine::mill_finalize( Character &, map &here, const tripoint_bub_ms &examp )
-{
-    const furn_id &cur_mill_type = here.furn( examp );
-    furn_id next_mill_type = furn_str_id::NULL_ID();
-    if( cur_mill_type == furn_f_wind_mill_active ) {
-        next_mill_type = furn_f_wind_mill;
-    } else if( cur_mill_type == furn_f_water_mill_active ) {
-        next_mill_type = furn_f_water_mill;
-    } else {
-        debugmsg( "Furniture executed action mill_finalize, but is of type %s",
-                  cur_mill_type.id().c_str() );
-        return;
-    }
-
-    map_stack items = here.i_at( examp );
-    if( items.empty() ) {
-        here.furn_set( examp, next_mill_type );
-        return;
-    }
-
-    std::map<itype_id, int> millable_counts;
-
-    for( const item &iter : items ) {
-        if( iter.type->milling_data && !iter.type->milling_data->into_.is_null() ) {
-            millable_counts[iter.typeId()] += iter.count();
-        }
-    }
-
-    for( std::pair<const string_id<itype>, int> mill_type_count : millable_counts ) {
-        const item source( mill_type_count.first );
-        const item product( source.type->milling_data->into_ );
-        const recipe rec = *source.type->milling_data->recipe_;
-
-        if( rec.is_null() ) {
-            debugmsg( _( "Failed to find milling recipe for %s. It wasn't milled." ),
-                      source.display_name().c_str() );
-
-        } else {
-            const requirement_data::alter_item_comp_vector &components =
-                rec.simple_requirements().get_components();
-            int lot_size = 0;
-
-            // Making the assumption that milling only uses a single type of input product. Support for mixed products would require additional logic.
-            // We also make the assumption that this is the only relevant input, so if lubricants etc. was to be added more logic would be needed.
-            for( const std::vector<item_comp> &component : components ) {
-                for( const item_comp &comp : component ) {
-                    if( comp.type == mill_type_count.first ) {
-                        lot_size = comp.count;
-                        break;
-                    }
-                }
-
-                if( lot_size > 0 ) {
-                    break;
-                }
-            }
-
-            if( lot_size == 0 ) {
-                debugmsg( _( "Failed to find milling recipe for %s. Milling of it failed." ),
-                          source.display_name().c_str() );
-                mill_type_count.second = 0;
-            } else {
-                const int batches = mill_type_count.second / lot_size;
-                const int process_count = batches * lot_size;
-
-                if( batches == 0 ) {
-                    add_msg( m_info, _( "%s is milled in batches of %d, so none was processed." ),
-                             source.tname(), lot_size );
-                } else if( process_count != mill_type_count.second ) {
-                    add_msg( m_info, _( "%s is milled in batches of %d, so %d remained unprocessed." ),
-                             source.tname(), lot_size, mill_type_count.second - batches * lot_size );
-                }
-
-                item_components item_component_lot;
-                std::vector<item> used_items = extract_mill_items(
-                                                   items, mill_type_count.first, process_count );
-                for( item &used_item : used_items ) {
-                    item_component_lot.add( used_item );
-                }
-
-                std::vector<item> results = rec.create_results( batches, &item_component_lot );
-
-                for( const item &result : results ) {
-                    here.add_item( examp, result );
-                }
-            }
-        }
-    }
-
-    here.furn_set( examp, next_mill_type );
-}
-
-static void smoker_finalize( map &here, Character &, const tripoint_bub_ms &examp,
-                             const time_point &start_time )
-{
-    const furn_id &cur_smoker_type = here.furn( examp );
-    furn_id next_smoker_type = furn_str_id::NULL_ID();
-    if( cur_smoker_type == furn_f_smoking_rack_active ) {
-        next_smoker_type = furn_f_smoking_rack;
-    } else if( cur_smoker_type == furn_f_metal_smoking_rack_active ) {
-        next_smoker_type = furn_f_metal_smoking_rack;
-    } else {
-        debugmsg( "Furniture executed action smoker_finalize, but is of type %s",
-                  cur_smoker_type.id().c_str() );
-        return;
-    }
-
-    map_stack items = here.i_at( examp );
-    if( items.empty() ) {
-        here.furn_set( examp, next_smoker_type );
-        return;
-    }
-
-    for( item &it : items ) {
-        if( it.is_smokable() ) {
-            if( it.get_comestible()->smoking_result == itype_id::NULL_ID() ) {
-                it.unset_flag( flag_PROCESSING );
-            } else {
-                it.calc_rot_while_processing( 6_hours );
-
-                item result( it.get_comestible()->smoking_result, start_time + 6_hours );
-                if( it.count_by_charges() ) {
-                    result.charges = it.charges;
-                }
-
-                // Set flag to tell set_relative_rot() to calc from bday not now
-                result.set_flag( flag_PROCESSING_RESULT );
-                result.set_relative_rot( it.get_relative_rot() );
-                result.unset_flag( flag_PROCESSING_RESULT );
-
-                recipe rec;
-                result.inherit_flags( it, rec );
-                if( !result.has_flag( flag_NUTRIENT_OVERRIDE ) ) {
-                    // If the item has "cooks_like" it will be replaced by that item as a component.
-                    if( !it.get_comestible()->cooks_like.is_empty() ) {
-                        // Set charges to 1 for stacking purposes.
-                        it = item( it.get_comestible()->cooks_like, it.birthday(), 1 );
-                    }
-                    result.components.add( it );
-                    // Smoking is always 1:1, so these must be equal for correct kcal/vitamin calculation.
-                    result.recipe_charges = it.count();
-                    result.set_flag_recursive( flag_COOKED );
-                }
-
-                it = result;
-            }
-        }
-    }
-    here.furn_set( examp, next_smoker_type );
-}
-
-static void smoker_load_food( Character &you, const tripoint_bub_ms &examp,
-                              const units::volume &remaining_capacity )
-{
-    map &here = get_map();
-    const furn_id &rack = here.furn( examp );
-    if( rack == furn_f_smoking_rack_active ||
-        rack == furn_f_metal_smoking_rack_active ) {
-        you.add_msg_if_player( _( "You can't place more food while it's smoking." ) );
-        return;
-    }
-
-    units::volume total_capacity = rack == furn_f_metal_smoking_rack ?
-                                   sm_rack::MAX_FOOD_VOLUME_PORTABLE :
-                                   sm_rack::MAX_FOOD_VOLUME;
-    units::volume used_capacity = total_capacity - remaining_capacity;
-
-    drop_locations locs = game_menus::inv::smoke_food( you, total_capacity, used_capacity );
-
-    units::volume vol = remaining_capacity;
-    for( const drop_location &dloc : locs ) {
-        item_location original = dloc.first;
-        original.overflow( here );
-        item copy( *original );
-        if( copy.count_by_charges() ) {
-            copy.charges = clamp( copy.charges_per_volume( vol ), 1, dloc.second );
-        }
-
-        if( vol < copy.volume() ) {
-            add_msg( m_info, _( "The %s doesn't fit in the rack." ), copy.tname( copy.count() ) );
-            continue;
-        }
-
-        here.add_item( examp, copy );
-        you.mod_moves( -you.item_handling_cost( copy ) );
-        add_msg( m_info, _( "You carefully place %1$d %2$s in the rack." ), copy.count(),
-                 copy.tname( copy.count() ) );
-
-        vol -= copy.volume();
-        if( !copy.count_by_charges() || original->charges == copy.charges ) {
-            original.remove_item();
-        } else {
-            original->charges -= copy.charges;
-        }
-    }
-}
-
-static void mill_load_food( Character &you, const tripoint_bub_ms &examp,
-                            const units::volume &remaining_capacity )
-{
-    std::vector<item_comp> comps;
-    map &here = get_map();
-    const furn_id &f = here.furn( examp );
-    if( f == furn_f_wind_mill_active ||
-        f == furn_f_water_mill_active ) {
-        you.add_msg_if_player( _( "You can't place more food while it's milling." ) );
-        return;
-    }
-    // filter millable food
-    temp_crafting_inventory inv = you.crafting_inventory();
-    inv.remove_items_with( []( const item & it ) {
-        return it.rotten();
-    } );
-    std::vector<const item *> filtered = you.crafting_inventory().items_with( []( const item & it ) {
-        if( !it.type->milling_data || it.type->milling_data->into_.is_null() ) {
-            return false;
-        }
-
-        const item product( it.type->milling_data->into_ );
-        const recipe rec = *it.type->milling_data->recipe_;
-
-        if( rec.is_null() ) {
-            debugmsg( _( "Failed to find milling recipe for %s. It can't be inserted into the mill." ),
-                      it.display_name().c_str() );
-            return false;
-        }
-
-        const requirement_data::alter_item_comp_vector &components =
-            rec.simple_requirements().get_components();
-
-        // Making the assumption that milling only uses a single type of input product. Support for mixed products would require additional logic.
-        // We also make the assumption that this is the only relevant input, so if lubricants etc. was to be added more logic would be needed.
-        for( const std::vector<item_comp> &component : components ) {
-            for( const item_comp &comp : component ) {
-                if( comp.type == it.typeId() ) {
-                    return true;
-                }
-            }
-        }
-
-        debugmsg( _( "Failed to find milling recipe for %s. Cannot be placed into the mill." ),
-                  it.display_name().c_str() );
-
-        return false;
+    temp_crafting_inventory combined = who.crafting_inventory();
+    combined.remove_items_with( [&]( const item &entry ) {
+        return !filter( entry );
     } );
 
-    uilist smenu;
-    smenu.text = _( "Load mill with what kind of product?" );
-    // count and ask for item to be placed ...
-    std::list<std::string> names;
-    std::vector<const item *> entries;
-    for( const item *millable_item : filtered ) {
-        int count;
-        if( millable_item->count_by_charges() ) {
-            count = inv.charges_of( millable_item->typeId() );
-        } else {
-            count = inv.amount_of( millable_item->typeId() );
+    uilist menu;
+    menu.text = _( "Load mill with what kind of product?" );
+    std::vector<item_comp> choices;
+    std::set<itype_id> listed;
+    for( const item *entry : combined.items_with( []( const item & ) { return true; } ) ) {
+        const itype_id &type = entry->typeId();
+        if( !listed.insert( type ).second ) {
+            continue;
         }
-        if( count != 0 ) {
-            auto on_list = std::find( names.begin(), names.end(), item::nname( millable_item->typeId(), 1 ) );
-            if( on_list == names.end() ) {
-                smenu.addentry( item::nname( millable_item->typeId(), 1 ) );
-                entries.push_back( millable_item );
-            }
-            names.push_back( item::nname( millable_item->typeId(), 1 ) );
-            comps.emplace_back( millable_item->typeId(), count );
-        }
+        const int available = entry->count_by_charges() ? combined.charges_of( type ) :
+                              combined.amount_of( type );
+        const units::volume unit_volume = entry->base_volume();
+        const int fitting = unit_volume > 0_ml ? std::min<int>( available, remaining / unit_volume ) :
+                            available;
+        menu.addentry( static_cast<int>( choices.size() ), fitting > 0, MENU_AUTOASSIGN,
+                       "%d %s", available, item::nname( type, available ) );
+        choices.emplace_back( type, fitting );
     }
-
-    if( comps.empty() ) {
-        you.add_msg_if_player( _( "You don't have any products that can be milled." ) );
-        return;
+    if( choices.empty() ) {
+        who.add_msg_if_player( _( "You don't have any products that can be milled." ) );
+        return std::nullopt;
     }
-
-    smenu.query();
-
-    if( smenu.ret < 0 || static_cast<size_t>( smenu.ret ) >= entries.size() ) {
-        add_msg( m_info, _( "Never mind." ) );
-        return;
+    menu.query();
+    if( !lifetime || !context || who.pos_abs() != origin ||
+        menu.ret < 0 || static_cast<size_t>( menu.ret ) >= choices.size() ) {
+        return std::nullopt;
     }
-    int count = 0;
-    const item *what = entries[smenu.ret];
-    for( const item_comp &c : comps ) {
-        if( c.type == what->typeId() ) {
-            count = c.count;
-        }
-    }
-
-    const int max_count_for_capacity = remaining_capacity / what->base_volume();
-    const int max_count = std::min( count, max_count_for_capacity );
-
-    // ... then ask how many to put it
-    int amount = max_count;
+    item_comp choice = choices[menu.ret];
+    int amount = choice.count;
     if( !query_int( amount, true, _( "Insert how many %s into the mill?" ),
-                    item::nname( what->typeId(), count ) ) || amount <= 0 ) {
-        add_msg( m_info, _( "Never mind." ) );
-        return;
-    } else if( amount > count ) {
-        add_msg( m_info, _( "You don't have that many." ) );
-        return;
-    } else if( amount > max_count_for_capacity ) {
-        add_msg( m_info, _( "You can't place that many." ) );
-        return;
+                    item::nname( choice.type, choice.count ) ) || !lifetime || !context ||
+        who.pos_abs() != origin || amount <= 0 ) {
+        return std::nullopt;
     }
-
-    // reload comps with chosen items and quantity
-    comps.clear();
-    comps.emplace_back( what->typeId(), amount );
-
-    Character &player_character = get_player_character();
-    // select from where to get the items from and place them
-    inv.form_from_map( player_character.pos_bub(), pickup_range,
-                       &player_character );
-    inv.remove_items_with( []( const item & it ) {
-        return it.rotten();
-    } );
-
-    comp_selection<item_comp> selected = you.select_item_component( comps, 1, inv, true,
-                                         is_non_rotten_crafting_component );
-    std::list<item> moved = you.consume_items( selected, 1, is_non_rotten_crafting_component );
-    for( const item &m : moved ) {
-        here.add_item( examp, m );
-        you.mod_moves( -you.item_handling_cost( m ) );
-        add_msg( m_info, _( "You carefully place %1$d %2$s in the mill." ), m.count(),
-                 m.tname( m.count() ) );
+    if( amount > choice.count ) {
+        who.add_msg_if_player( m_info, _( "You can't place that many." ) );
+        return std::nullopt;
     }
-    you.invalidate_crafting_inventory();
+    choice.count = amount;
+    temp_crafting_inventory nearby;
+    nearby.form_from_map( who.pos_bub( here ), pickup_range, &who );
+    const auto selected = who.select_item_component( { choice }, 1, nearby, true, filter );
+    if( selected.use_from == usage_from::cancel || !lifetime || !context || who.pos_abs() != origin ) {
+        return std::nullopt;
+    }
+    return selected;
 }
 
-void iexamine::on_smoke_out( map &here, const tripoint_bub_ms &examp, const time_point &start_time )
-{
-    const furn_id &f = here.furn( examp );
-    if( f == furn_f_smoking_rack_active ||
-        f == furn_f_metal_smoking_rack_active ) {
-        smoker_finalize( here, get_avatar(), examp, start_time );
-    }
-}
-
-void iexamine::quern_examine( Character &you, const tripoint_bub_ms &examp )
+void iexamine::quern_examine( Character &who, const tripoint_bub_ms &tile )
 {
     map &here = get_map();
-    const furn_id &f = here.furn( examp );
-    if( f == furn_f_water_mill ) {
-        if( !here.is_water_shallow_current( examp ) ) {
-            add_msg( _( "The water mill needs to be over shallow flowing water to work." ) );
-            return;
-        }
+    if( !mill::can_operate( who, here, tile ) ) {
+        return;
     }
-    if( f == furn_f_wind_mill ) {
-        if( g->is_sheltered( examp ) ) {
-            add_msg( _( "The wind mill needs to be outside in the wind to work." ) );
-            return;
+    mill::command choice = mill::inspect( who, here, tile );
+    const auto dispatch = [&]() {
+        if( !who.is_avatar() || !cata_mp::client_mill_command( choice ) ) {
+            mill::execute( who, here, choice );
         }
-    }
-
-    const bool active = f == furn_f_water_mill_active ||
-                        f == furn_f_wind_mill_active;
-    map_stack items_here = here.i_at( examp );
-
-    if( items_here.empty() && active ) {
-        debugmsg( "active mill was empty!" );
-        if( f == furn_f_water_mill_active ) {
-            here.furn_set( examp, furn_f_water_mill );
-        } else if( f == furn_f_wind_mill_active ) {
-            here.furn_set( examp, furn_f_wind_mill );
-        }
+    };
+    if( mill::needs_recovery( here, tile ) ) {
+        choice.action = mill::operation::recover;
+        dispatch();
         return;
     }
 
-    if( items_here.size() == 1 && items_here.begin()->typeId() == itype_fake_milling_item ) {
-        debugmsg( "f_mill_active was empty, and had fake_milling_item!" );
-        if( f == furn_f_water_mill_active ) {
-            here.furn_set( examp, furn_f_water_mill );
-        } else if( f == furn_f_wind_mill_active ) {
-            here.furn_set( examp, furn_f_wind_mill );
-        }
-        items_here.erase( items_here.begin() );
-        return;
-    }
-
+    const bool active = mill::is_active( here, tile );
     time_duration time_left = 0_turns;
-    units::volume f_volume = 0_ml;
-    bool f_check = false;
-
-    for( const item &it : items_here ) {
-        if( it.typeId() != itype_fake_milling_item ) {
-            f_check = true;
-            f_volume += it.volume();
-        }
-        if( active && it.typeId() == itype_fake_milling_item ) {
-            time_left = time_duration::from_turns( it.item_counter );
+    units::volume occupied = 0_ml;
+    for( const item &entry : here.i_at( tile ) ) {
+        if( entry.typeId() == mill::clock_type ) {
+            time_left = time_duration::from_turns( entry.item_counter );
+        } else {
+            occupied += entry.volume();
         }
     }
+    const bool empty = choice.contents.empty();
+    const units::volume remaining = mill::capacity - occupied;
 
-    const bool empty = f_volume == 0_ml;
-    const bool full = f_volume >= sm_rack::MAX_FOOD_VOLUME;
-    const auto remaining_capacity = sm_rack::MAX_FOOD_VOLUME - f_volume;
-
-    uilist smenu;
-    smenu.text = _( "What to do with the mill?" );
-    smenu.desc_enabled = true;
-
-    smenu.addentry( 0, true, 'i', _( "Inspect mill" ) );
-
-    if( !active ) {
-        smenu.addentry_desc( 1, !empty, 'r',
-                             empty ?  _( "Remove brake and start milling… insert some products for milling first" ) :
-                             _( "Remove brake and start milling" ),
-                             string_format( _( "Remove brake and start milling, milling will take about %s." ),
-                                            to_string( milling_time ) ) );
-
-        smenu.addentry_desc( 2, !full, 'p',
-                             full ? _( "Insert products for milling… mill is full" ) :
-                             string_format( _( "Insert products for milling… remaining capacity is %s %s" ),
-                                            format_volume( remaining_capacity ), volume_units_abbr() ),
-                             _( "Fill the mill with starchy products such as wheat, barley or oats." ) );
-
-        if( f_check ) {
-            smenu.addentry( 3, f_check, 'e', _( "Remove products from mill" ) );
-        }
-
+    uilist menu;
+    menu.text = _( "What to do with the mill?" );
+    menu.desc_enabled = true;
+    menu.addentry( 0, true, 'i', _( "Inspect mill" ) );
+    if( active ) {
+        menu.addentry_desc( 4, true, 'x', _( "Apply brake to mill" ),
+                            _( "Applying the brake will stop milling process." ) );
     } else {
-        smenu.addentry_desc( 4, true, 'x',
-                             _( "Apply brake to mill" ),
-                             _( "Applying the brake will stop milling process." ) );
+        menu.addentry_desc( 1, !empty, 'r', _( "Remove brake and start milling" ),
+                            string_format( _( "Remove brake and start milling, milling will take about %s." ),
+                                           to_string( mill::duration ) ) );
+        menu.addentry_desc( 2, remaining > 0_ml, 'p',
+                            remaining <= 0_ml ? _( "Insert products for milling… mill is full" ) :
+                            string_format( _( "Insert products for milling… remaining capacity is %s %s" ),
+                                           format_volume( remaining ), volume_units_abbr() ),
+                            _( "Fill the mill with starchy products such as wheat, barley or oats." ) );
+        menu.addentry( 3, !empty, 'e', _( "Remove products from mill" ) );
     }
-
-    smenu.query();
-
-    switch( smenu.ret ) {
-        case 0: { //inspect mill
-            std::string pop;
-            if( active ) {
-                pop = colorize( _( "There's a mill here.  It is turning and milling." ), c_green ) + "\n";
-                if( time_left > 0_turns ) {
-                    pop += string_format( _( "It should take about %s to finish milling." ),
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    menu.query();
+    if( !lifetime || !context || who.pos_abs() != choice.origin ) {
+        return;
+    }
+    switch( menu.ret ) {
+        case 0: {
+            const restore_on_out_of_scope restore_rng( rng_get_engine() );
+            std::string details = colorize( active ? _( "There's a mill here.  It is turning and milling." ) :
+                                             _( "There's a mill here." ), c_green ) + "\n";
+            if( active && time_left > 0_turns ) {
+                details += string_format( _( "It should take about %s to finish milling." ),
                                           to_string_clipped( time_left ) ) + "\n";
-                }
-            } else {
-                pop += colorize( _( "There's a mill here." ), c_green ) + "\n";
             }
-            pop += colorize( _( "You inspect its contents and find: " ), c_green ) + "\n\n";
-            if( items_here.empty() ) {
-                pop += _( "…that it is empty." );
-            } else {
-                for( const item &it : items_here ) {
-                    if( it.typeId() == itype_fake_milling_item ) {
-                        pop += "\n" + colorize( _( "You see some grains that are not yet milled to fine flour." ),
-                                                c_red ) + "\n";
-                        continue;
-                    }
-                    pop += "-> " + it.display_name() + "\n";
+            details += colorize( _( "You inspect its contents and find: " ), c_green ) + "\n\n";
+            const map_stack contents = here.i_at( tile );
+            if( contents.empty() ) {
+                details += _( "…that it is empty." );
+            }
+            for( const item &entry : contents ) {
+                if( entry.typeId() != mill::clock_type ) {
+                    details += "-> " + entry.display_name() + "\n";
                 }
             }
-            popup( pop, PF_NONE );
-            break;
+            popup( details, PF_NONE );
+            return;
         }
         case 1:
-            //activate
-            if( active ) {
-                add_msg( _( "It is already milling." ) );
-            } else {
-                mill_activate( you, examp );
-            }
+            choice.action = mill::operation::start;
             break;
         case 2:
-            // load food
-            mill_load_food( you, examp, remaining_capacity );
+            choice.action = mill::operation::load;
+            choice.input = choose_mill_input( who, here, remaining );
+            if( !choice.input ) {
+                return;
+            }
             break;
         case 3:
-            // remove food
-            for( map_stack::iterator it = items_here.begin(); it != items_here.end(); ) {
-                if( it->typeId() != itype_fake_milling_item ) {
-                    // get handling cost before the item reference is invalidated
-                    const int handling_cost = -you.item_handling_cost( *it );
-
-                    add_msg( _( "You remove %s from the mill." ), it->tname() );
-                    here.add_item_or_charges( you.pos_bub(), *it );
-                    it = items_here.erase( it );
-                    you.mod_moves( handling_cost );
-                } else {
-                    ++it;
-                }
-            }
-            if( active ) {
-                const furn_id &f = here.furn( examp );
-                if( f == furn_f_water_mill_active ) {
-                    here.furn_set( examp, furn_f_water_mill );
-                } else if( f == furn_f_wind_mill_active ) {
-                    here.furn_set( examp, furn_f_wind_mill );
-                }
-                add_msg( m_info, _( "You stop the milling process." ) );
-            }
-            break;
-        default:
-            add_msg( m_info, _( "Never mind." ) );
+            choice.action = mill::operation::unload;
             break;
         case 4:
-            const furn_id &f = here.furn( examp );
-            if( f == furn_f_water_mill_active ) {
-                here.furn_set( examp, furn_f_water_mill );
-            } else if( f == furn_f_wind_mill_active ) {
-                here.furn_set( examp, furn_f_wind_mill );
-            }
-            for( map_stack::iterator it = items_here.begin(); it != items_here.end(); ) {
-                if( it->typeId() == itype_fake_milling_item ) {
-                    it = items_here.erase( it );
-                } else {
-                    ++it;
-                }
-            }
-            add_msg( m_info, _( "You stop the milling process." ) );
+            choice.action = mill::operation::stop;
             break;
+        default:
+            return;
     }
-}
-
-void iexamine::smoker_reconcile( map &here, const tripoint_bub_ms &examp )
-{
-    const furn_id rack = here.furn( examp );
-    if( rack != furn_f_smoking_rack_active && rack != furn_f_metal_smoking_rack_active ) {
-        return;
-    }
-    map_stack items = here.i_at( examp );
-    if( std::any_of( items.begin(), items.end(), []( const item & it ) {
-    return it.typeId() == itype_fake_smoke_plume && it.active;
-    } ) ) {
-        return;
-    }
-    // No live embers means there is no timer capable of completing this batch.
-    // Preserve the food, but let the player relight the rack. Never invent a
-    // completion time for a save that has lost its timer.
-    for( auto it = items.begin(); it != items.end(); ) {
-        if( it->typeId() == itype_fake_smoke_plume ) {
-            it = items.erase( it );
-        } else {
-            it->unset_flag( flag_PROCESSING );
-            ++it;
-        }
-    }
-    here.furn_set( examp, rack == furn_f_metal_smoking_rack_active ?
-                   furn_f_metal_smoking_rack : furn_f_smoking_rack );
+    dispatch();
 }
 
 void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    smoker_reconcile( here, examp );
-    const furn_id &f = here.furn( examp );
-    const bool active = f == furn_f_smoking_rack_active ||
-                        f == furn_f_metal_smoking_rack_active;
-    const bool portable = f == furn_f_metal_smoking_rack ||
-                          f == furn_f_metal_smoking_rack_active;
-    map_stack items_here = here.i_at( examp );
-
-    if( portable && items_here.empty() && active ) {
-        debugmsg( "f_metal_smoking_rack_active was empty!" );
-        here.furn_set( examp, furn_f_metal_smoking_rack );
-        return;
-    } else if( items_here.empty() && active ) {
-        debugmsg( "f_smoking_rack_active was empty!" );
-        here.furn_set( examp, furn_f_smoking_rack );
+    using smoking_rack::operation;
+    const bool remote = you.is_avatar() && cata_mp::is_client_mode();
+    if( smoking_rack::needs_recovery( here, examp ) ) {
+        if( remote ) {
+            submit_smoking_rack_choice( you, here, smoking_rack::capture( you, here, examp,
+                                        operation::recover ) );
+            return;
+        }
+        smoking_rack::reconcile( here, examp );
+    }
+    const furn_id f = here.furn( examp );
+    const bool active = smoking_rack::is_active( f );
+    const bool portable = smoking_rack::is_portable( f );
+    if( !active && !smoking_rack::is_idle( f ) ) {
         return;
     }
-    if( portable && items_here.size() == 1 && items_here.begin()->typeId() == itype_fake_smoke_plume ) {
-        debugmsg( "f_metal_smoking_rack_active was empty, and had fake_smoke_plume!" );
-        here.furn_set( examp, furn_f_metal_smoking_rack );
-        items_here.erase( items_here.begin() );
-        return;
-    } else if( items_here.size() == 1 && items_here.begin()->typeId() == itype_fake_smoke_plume ) {
-        debugmsg( "f_smoking_rack_active was empty, and had fake_smoke_plume!" );
-        here.furn_set( examp, furn_f_smoking_rack );
-        items_here.erase( items_here.begin() );
-        return;
-    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const auto observed = smoking_rack::capture( you, here, examp, operation::recover );
+    const auto still_at_rack = [&]() {
+        return lifetime && context && you.pos_abs() == observed.origin &&
+               observed.target.matches( here ) &&
+               smoking_rack::capture( you, here, examp, operation::recover ).batch == observed.batch;
+    };
+    const auto submit = [&]( operation action ) {
+        if( still_at_rack() ) {
+            submit_smoking_rack_choice( you, here, smoking_rack::capture( you, here, examp, action ) );
+        }
+    };
+    const map_stack items_here = here.i_at( examp );
 
-    bool rem_f_opt = false;
     time_duration time_left = 0_turns;
     int hours_left = 0;
     int minutes_left = 0;
@@ -7839,26 +6228,21 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
             f_check = true;
             f_volume += it.volume();
         }
-        if( active && it.typeId() == itype_fake_smoke_plume ) {
+        if( active && smoking_rack::is_embers( it ) ) {
             time_left = time_duration::from_turns( it.item_counter );
             hours_left = to_hours<int>( time_left );
             minutes_left = to_minutes<int>( time_left ) + 1;
         }
     }
 
-    const furn_t &fo = f.obj();
-    const itype *type = fo.crafting_pseudo_item_type();
-    std::vector<const itype *> ammo_list = fo.crafting_ammo_item_types();
+    const units::volume capacity = smoking_rack::food_capacity( f );
+    const auto remaining_capacity = capacity - f_volume;
     const bool empty = f_volume == 0_ml;
-    const bool full = f_volume >= sm_rack::MAX_FOOD_VOLUME;
-    const bool full_portable = f_volume >= sm_rack::MAX_FOOD_VOLUME_PORTABLE;
-    const auto remaining_capacity = sm_rack::MAX_FOOD_VOLUME - f_volume;
-    const auto remaining_capacity_portable = sm_rack::MAX_FOOD_VOLUME_PORTABLE - f_volume;
+    const bool full = remaining_capacity <= 0_ml;
     const bool has_coal_in_inventory = you.crafting_inventory().charges_of( itype_charcoal ) > 0;
     const int coal_charges = count_charges_in_list( item::find_type( itype_charcoal ), items_here );
-    const int need_charges = get_charcoal_charges( f_volume );
-    const int max_charges = type == nullptr || ammo_list.empty() ||
-                            !ammo_list[0]->ammo ? 0 : item( type ).ammo_capacity( ammo_list[0]->ammo->type );
+    const int need_charges = smoking_rack::fuel_required( f_volume );
+    const int max_charges = smoking_rack::fuel_capacity( f );
     const bool has_coal = coal_charges > 0;
     const bool has_enough_coal = coal_charges >= need_charges;
 
@@ -7876,23 +6260,13 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
                                  need_charges - coal_charges ) :
                              _( "Light up and smoke food" ),
                              _( "Light up the smoking rack and start smoking.  Smoking will take about 6 hours." ) );
+        smenu.addentry_desc( 2, !full, 'f',
+                             full ? _( "Insert food for smoking… smoking rack is full" ) :
+                             string_format( _( "Insert food for smoking… remaining capacity is %s %s" ),
+                                            format_volume( remaining_capacity ), volume_units_abbr() ),
+                             _( "Fill the smoking rack with raw meat, fish or sausages for smoking or fruit or vegetable or smoked meat for drying." ) );
         if( portable ) {
-            smenu.addentry_desc( 2, !full_portable, 'f',
-                                 full_portable ? _( "Insert food for smoking… smoking rack is full" ) :
-                                 string_format( _( "Insert food for smoking… remaining capacity is %s %s" ),
-                                                format_volume( remaining_capacity_portable ), volume_units_abbr() ),
-                                 _( "Fill the smoking rack with raw meat, fish or sausages for smoking or fruit or vegetable or smoked meat for drying." ) );
-
-            smenu.addentry_desc( 8, !active, 'z',
-                                 active ? _( "You cannot disassemble this smoking rack while it is active!" ) :
-                                 _( "Disassemble the smoking rack" ), "" );
-
-        } else {
-            smenu.addentry_desc( 2, !full, 'f',
-                                 full ? _( "Insert food for smoking… smoking rack is full" ) :
-                                 string_format( _( "Insert food for smoking… remaining capacity is %s %s" ),
-                                                format_volume( remaining_capacity ), volume_units_abbr() ),
-                                 _( "Fill the smoking rack with raw meat, fish or sausages for smoking or fruit or vegetable or smoked meat for drying." ) );
+            smenu.addentry_desc( 8, true, 'z', _( "Disassemble the smoking rack" ), "" );
         }
 
         if( f_check ) {
@@ -7905,8 +6279,8 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
                                _( "Reload with charcoal" ) ),
                              string_format(
                                  _( "You need %d charges of charcoal for %s %s of food.  Minimal amount of charcoal is %d charges." ),
-                                 sm_rack::CHARCOAL_PER_LITER, format_volume( 1_liter ), volume_units_long(),
-                                 sm_rack::MIN_CHARCOAL ) );
+                                 smoking_rack::fuel_per_liter, format_volume( 1_liter ), volume_units_long(),
+                                 smoking_rack::minimum_fuel ) );
 
     } else {
         smenu.addentry_desc( 7, true, 'x',
@@ -7922,6 +6296,9 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
     }
 
     smenu.query();
+    if( !still_at_rack() ) {
+        return;
+    }
 
     switch( smenu.ret ) {
         case 0: { //inspect smoking rack
@@ -7949,7 +6326,7 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
                 pop += _( "…that it is empty." );
             } else {
                 for( const item &it : items_here ) {
-                    if( it.typeId() == itype_fake_smoke_plume ) {
+                    if( smoking_rack::is_embers( it ) ) {
                         pop += "\n" + colorize( _( "You see some smoldering embers there." ), c_red ) + "\n";
                         continue;
                     }
@@ -7960,76 +6337,76 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
             break;
         }
         case 1:
-            //activate
-            if( active ) {
-                add_msg( _( "It is already lit and smoking." ) );
-            } else {
-                smoker_activate( you, examp );
+            if( !active && ( remote || smoking_rack::prepare( you, here, examp, true ) ==
+                             smoking_rack::preparation::ready ) ) {
+                pick_firestarter_and_fire( you, examp, firestarter_actor::start_type::SMOKER );
             }
             break;
-        case 2:
-            // load food
-            if( portable ) {
-                smoker_load_food( you, examp, remaining_capacity_portable );
-            } else {
-                smoker_load_food( you, examp, remaining_capacity );
+        case 2: {
+            const drop_locations selected = game_menus::inv::smoke_food( you, capacity, f_volume );
+            if( !still_at_rack() ) {
+                return;
             }
-            break;
-        case 3:
-            // load charcoal
-            reload_furniture( you, examp, false );
-            break;
-        case 4:
-            // remove food
-            rem_f_opt = true;
-            [[fallthrough]];
-        case 5: {
-            //remove charcoal
-            for( map_stack::iterator it = items_here.begin(); it != items_here.end(); ) {
-                if( ( rem_f_opt && it->is_food() ) || ( !rem_f_opt && ( it->typeId() == itype_charcoal ) ) ) {
-                    // get handling cost before the item reference is invalidated
-                    const int handling_cost = -you.item_handling_cost( *it );
-
-                    add_msg( _( "You remove %s from the rack." ), it->tname() );
-                    here.add_item_or_charges( you.pos_bub(), *it );
-                    it = items_here.erase( it );
-                    you.mod_moves( handling_cost );
-                } else {
-                    ++it;
+            auto command = observed;
+            command.action = operation::load_food;
+            for( const auto &selection : selected ) {
+                if( selection.first ) {
+                    command.items.push_back( { capture_item_source( you, selection.first ), selection.second } );
                 }
             }
-            if( portable && active && rem_f_opt ) {
-                here.furn_set( examp, furn_f_metal_smoking_rack );
-                add_msg( m_info, _( "You stop the smoking process." ) );
-            } else if( active && rem_f_opt ) {
-                here.furn_set( examp, furn_f_smoking_rack );
-                add_msg( m_info, _( "You stop the smoking process." ) );
+            if( !command.items.empty() ) {
+                submit_smoking_rack_choice( you, here, command );
             }
+            break;
         }
-        break;
+        case 3: {
+            const itype *type = f->crafting_pseudo_item_type();
+            if( !type ) {
+                return;
+            }
+            item pseudo( type );
+            item_location target( map_cursor( observed.target.position ), &pseudo );
+            const item::reload_option selected = game_menus::inv::select_ammo( you, target );
+            if( !still_at_rack() || !selected || selected.ammo->typeId() != itype_charcoal ) {
+                return;
+            }
+            const int maximum = std::min( selected.qty(), max_charges - coal_charges );
+            int quantity = maximum;
+            const item_source source = capture_item_source( you, selected.ammo );
+            if( maximum > 0 &&
+                query_int( quantity, true, _( "Put how many of the %s into the %s?" ),
+                           itype_charcoal->nname( maximum ), f->name() ) &&
+                still_at_rack() && quantity > 0 && quantity <= maximum ) {
+                auto command = observed;
+                command.action = operation::load_fuel;
+                command.items.push_back( { source, quantity } );
+                submit_smoking_rack_choice( you, here, command );
+            }
+            break;
+        }
+        case 4:
+            submit( operation::remove_food );
+            break;
+        case 5:
+            submit( operation::remove_fuel );
+            break;
         default:
             add_msg( m_info, _( "Never mind." ) );
             break;
         case 7:
-            if( portable ) {
-                here.furn_set( examp, furn_f_metal_smoking_rack );
-                add_msg( m_info, _( "You stop the smoking process." ) );
-            } else {
-                here.furn_set( examp, furn_f_smoking_rack );
-                add_msg( m_info, _( "You stop the smoking process." ) );
-            }
+            submit( operation::quench );
             break;
         case 8:
-            here.furn_set( examp, furn_f_metal_smoking_rack );
             deployed_furniture( you, examp );
             break;
     }
 }
 
-void iexamine::open_safe( Character &, const tripoint_bub_ms &examp )
+void iexamine::open_safe( Character &you, const tripoint_bub_ms &examp )
 {
-    add_msg( m_info, _( "You open the unlocked safe." ) );
-    get_map().furn_set( examp, furn_f_safe_o );
+    map &here = get_map();
+    submit_safe_interaction( you, here, { safe_action::open, you.pos_abs(),
+                                        here.get_abs( examp ), here.furn( examp ).id() } );
 }
 
 void iexamine::workbench( Character &you, const tripoint_bub_ms &examp )

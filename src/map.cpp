@@ -58,6 +58,7 @@
 #include "game_constants.h"
 #include "harvest.h"
 #include "iexamine.h"
+#include "smoking_rack.h"
 #include "input.h"
 #include "item.h"
 #include "item_category.h"
@@ -846,6 +847,35 @@ bool map::place_vehicle( std::unique_ptr<vehicle> &&new_vehicle )
         place_on_submap->vehicles.push_back( std::move( new_vehicle ) );
     }
     return collision;
+}
+
+vehicle *map::restore_vehicle_snapshot( std::unique_ptr<vehicle> replica,
+                                       const tripoint_abs_ms &position, vehicle *previous )
+{
+    if( !replica || !inbounds( position ) ) {
+        return nullptr;
+    }
+    const tripoint_bub_ms pos = get_bub( position );
+    point_sm_ms offset;
+    submap *const destination = unsafe_get_submap_at( pos, offset );
+    if( !destination ) {
+        return nullptr;
+    }
+    replica->sm_pos = project_to<coords::sm>( position );
+    replica->pos = offset;
+    replica->precalc_mounts( 0, replica->pivot_rotation[0], replica->pivot_anchor[0] );
+    if( previous ) {
+        destroy_vehicle( previous );
+    }
+    vehicle *const restored = replica.get();
+    restored->refresh_active_item_cache();
+    destination->ensure_nonuniform();
+    destination->vehicles.push_back( std::move( replica ) );
+    invalidate_max_populated_zlev( pos.z() );
+    get_cache( pos.z() ).vehicle_list.insert( restored );
+    add_vehicle_to_cache( restored );
+    on_vehicle_moved( pos.z() );
+    return restored;
 }
 
 void map::rebuild_vehicle_level_caches()
@@ -6844,6 +6874,29 @@ int map::transfer_item_or_charges( const tripoint_bub_ms &pos, item_location sou
                                           source_range, overflow, placed, false );
 }
 
+int map::unload_furniture_item( item_location source, Character &who, item_location *placed )
+{
+    return source ? unload_furniture_item( who.pos_bub( *this ), source, item( *source ), who, placed ) : 0;
+}
+
+int map::unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+                                item portion, Character &who, item_location *placed )
+{
+    if( !source || source.where() != item_location::type::map || source.has_parent() ||
+        !has_loaded_submap( destination ) || !inbounds( source.pos_abs() ) ) {
+        return 0;
+    }
+    const tripoint_bub_ms origin = who.pos_bub( *this );
+    const tripoint_bub_ms pos = get_bub( source.pos_abs() );
+    if( origin.z() != pos.z() || rl_dist( origin, pos ) > 1 ||
+        origin.z() != destination.z() || rl_dist( origin, destination ) > 1 || !has_loaded_submap( pos ) ||
+        !furn( pos )->has_flag( ter_furn_flag::TFLAG_SEALED ) ) {
+        return 0;
+    }
+    return transfer_item_or_charges_impl( destination, source, std::move( portion ), &who,
+                                          1, true, placed, true );
+}
+
 int map::settle_item_on_ground( const tripoint_bub_ms &pos, item_location source,
                                 Character *dropper, item_location *placed )
 {
@@ -6866,13 +6919,14 @@ int map::settle_item_on_ground( const tripoint_bub_ms &pos, item_location source
 
 int map::transfer_item_or_charges_impl( const tripoint_bub_ms &pos, item_location source,
                                         item prepared, Character *dropper, int source_range, bool overflow,
-                                        item_location *placed, bool at_target )
+                                        item_location *placed, bool direct_map_source )
 {
     if( placed ) {
         *placed = item_location::nowhere;
     }
     if( !source || prepared.count() <= 0 || prepared.typeId() != source->typeId() ||
-        prepared.count() != source->count() ) {
+        prepared.count() > source->count() ||
+        ( !source->count_by_charges() && prepared.count() != source->count() ) ) {
         return 0;
     }
     const auto context = get_context_reference();
@@ -6880,7 +6934,10 @@ int map::transfer_item_or_charges_impl( const tripoint_bub_ms &pos, item_locatio
     if( dropper ) {
         lifetime.emplace( *dropper );
     }
-    const item_source origin = !at_target ? capture_item_source( *dropper, source ) : item_source{};
+    const item_source origin = direct_map_source ? item_source{} :
+                               capture_item_source( *dropper, source );
+    const tripoint_abs_ms direct_position = direct_map_source ? source.pos_abs() :
+                                            tripoint_abs_ms::invalid;
     const tripoint_abs_ms target = get_abs( pos );
     const itype_id type = source->typeId();
     const int original_count = source->count();
@@ -6894,10 +6951,15 @@ int map::transfer_item_or_charges_impl( const tripoint_bub_ms &pos, item_locatio
             return false;
         }
         item_location current;
-        if( at_target ) {
-            if( source && source.where() == item_location::type::map &&
-                !source.has_parent() && source.pos_abs() == target ) {
-                current = source;
+        if( direct_map_source ) {
+            if( source && source.where() == item_location::type::map && !source.has_parent() &&
+                source.pos_abs() == direct_position && inbounds( direct_position ) ) {
+                const map_stack items = i_at( get_bub( direct_position ) );
+                if( direct_position == target || std::any_of( items.begin(), items.end(), [&]( const item & it ) {
+                return &it == source.get_item();
+                } ) ) {
+                    current = source;
+                }
             }
         } else {
             current = resolve_item_source( *dropper, *this, origin, source_range );
@@ -7197,15 +7259,19 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
         const int max_path_length = 4 * max_dist;
         const pathfinding_settings setting( {}, max_dist, max_path_length, 0, false, false, true, false,
                                             false, false );
+        const auto overflow_capacity = [&]( const tripoint_bub_ms &tile ) {
+            if( !valid_tile( tile ) || has_flag( ter_furn_flag::TFLAG_NOITEM, tile ) ||
+                has_flag( ter_furn_flag::TFLAG_SEALED, tile ) ) {
+                return 0;
+            }
+            return how_many_copies_fit( tile );
+        };
         for( const tripoint_bub_ms &e : tiles ) {
             if( copies_remaining <= 0 ) {
                 break;
             }
-            if( !inbounds( e ) ) {
-                continue;
-            }
-            //must be a path to the target tile
-            if( route( pos, pathfinding_target::point( e ), setting ).empty() ) {
+            if( overflow_capacity( e ) <= 0 ||
+                route( pos, pathfinding_target::point( e ), setting ).empty() ) {
                 continue;
             }
             if( obj.made_of( phase_id::LIQUID ) || !obj.has_flag( flag_DROP_ACTION_ONLY_IF_LIQUID ) ) {
@@ -7215,9 +7281,12 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
                 }
             }
 
-            copies_to_add_here = how_many_copies_fit( e );
-            if( !valid_tile( e ) || copies_to_add_here <= 0 ||
-                has_flag( ter_furn_flag::TFLAG_NOITEM, e ) || has_flag( ter_furn_flag::TFLAG_SEALED, e ) ) {
+            copies_to_add_here = overflow_capacity( e );
+            if( take_source && ( copies_to_add_here <= 0 || !take_source( copies_to_add_here ) ) ) {
+                return first_added ? first_added.value() : std::make_pair( &null_item_reference(),
+                        tripoint_bub_ms::invalid );
+            }
+            if( copies_to_add_here <= 0 ) {
                 continue;
             }
             copies_remaining -= copies_to_add_here;
@@ -7884,15 +7953,14 @@ std::vector<item_reference> map::item_network_connections( vehicle *power_grid )
         if( current_submap == nullptr ) {
             continue;
         }
-        std::vector<item_reference> active_items = current_submap->active_items.get_for_processing();
+        std::vector<item_reference> active_items = current_submap->active_items.get();
         for( item_reference &active_item_ref : active_items ) {
             if( !active_item_ref.item_ref ) {
                 continue;
             }
 
             if( active_item_ref.item_ref->has_link_data() &&
-                active_item_ref.item_ref->link().t_veh &&
-                active_item_ref.item_ref->link().t_veh->pos_abs() == power_grid->pos_abs() ) {
+                active_item_ref.item_ref->link().t_veh.get() == power_grid ) {
                 result.emplace_back( active_item_ref );
             }
         }
@@ -11469,7 +11537,7 @@ void map::actualize( const tripoint_rel_sm &grid )
         for( int y = 0; y < SEEY; y++ ) {
             const tripoint_bub_ms pnt =  rebase_bub( coords::project_to<coords::ms>( grid ) + point( x, y ) );
             const point_sm_ms p( x, y );
-            iexamine::smoker_reconcile( *this, pnt );
+            smoking_rack::reconcile( *this, pnt );
             const furn_t &furn = *this->furn( pnt );
             const ter_t &terr = *this->ter( pnt );
             if( !furn.emissions.empty() ) {
@@ -11957,6 +12025,11 @@ bool map::inbounds( const tripoint_abs_omt &p ) const
             p.y() >= map_origin.y() &&
             p.x() <= map_origin.x() + my_HALF_MAPSIZE &&
             p.y() <= map_origin.y() + my_HALF_MAPSIZE;
+}
+
+bool map::has_loaded_submap( const tripoint_bub_ms &p ) const
+{
+    return inbounds( p ) && ( zlevels || p.z() == abs_sub.z() ) && unsafe_get_submap_at( p );
 }
 
 tripoint_range<tripoint_omt_ms> tinymap::points_on_zlevel() const

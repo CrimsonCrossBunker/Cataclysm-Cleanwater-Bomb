@@ -831,6 +831,8 @@ class map
         // Vehicles: Common to 2D and 3D
         VehicleList get_vehicles();
         bool place_vehicle( std::unique_ptr<vehicle> &&new_vehicle );
+        vehicle *restore_vehicle_snapshot( std::unique_ptr<vehicle> replica,
+                                          const tripoint_abs_ms &position, vehicle *previous );
         void add_vehicle_to_cache( vehicle * );
         void clear_vehicle_point_from_cache( vehicle *veh, const tripoint_bub_ms &pt );
         // clears all vehicle level caches
@@ -1437,11 +1439,17 @@ class map
          */
         item_location add_item_or_charges_ret_loc( const tripoint_bub_ms &pos, item obj,
                 bool overflow = true, Character *dropper = nullptr );
-        // Move one existing stack without overflow. Returns the quantity placed
-        // or consumed by its drop action, leaving any unplaced quantity at source.
+        // Move an existing stack or a selected part of its charges. Returns the
+        // quantity placed or consumed by the drop action, retaining anything unplaced.
         int transfer_item_or_charges( const tripoint_bub_ms &pos, item_location source,
                                       item prepared, Character &dropper, int source_range = 1, bool overflow = false,
                                       item_location *placed = nullptr );
+        // An authorized furniture operation may unload an exact root item
+        // from a sealed adjacent rack to the operator's tile.
+        int unload_furniture_item( item_location source, Character &who, item_location *placed = nullptr );
+        // The same operation can place a selected portion at another reachable tile.
+        int unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+                                   item portion, Character &who, item_location *placed = nullptr );
         // Machinery already owns the operation at this tile. Only a root item
         // at pos may be settled; the operator need not be within walking reach.
         // Without an operator, character drop actions leave the source in place.
@@ -1759,7 +1767,7 @@ class map
                 const std::function<bool( int )> &take_source = {} );
         int transfer_item_or_charges_impl( const tripoint_bub_ms &pos, item_location source,
                                            item prepared, Character *dropper, int source_range, bool overflow,
-                                           item_location *placed, bool at_target );
+                                           item_location *placed, bool direct_map_source );
     public:
 
         // Splatters of various kind
@@ -1945,6 +1953,7 @@ class map
             return get_bub( tripoint_abs_ms( p, abs_sub.z() ) ).xy();
         }
         bool inbounds( const tripoint_bub_ms &p ) const;
+        bool has_loaded_submap( const tripoint_bub_ms &p ) const;
         bool inbounds( const tripoint_abs_ms &p ) const;
         bool inbounds( const tripoint_abs_sm &p ) const {
             return inbounds( project_to<coords::omt>( p ) );

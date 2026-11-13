@@ -47,6 +47,7 @@
 #include "item_category.h"
 #include "item_contents.h"
 #include "item_insert.h"
+#include "item_move.h"
 #include "item_location.h"
 #include "item_tname.h"
 #include "itype.h"
@@ -54,6 +55,9 @@
 #include "map.h"
 #include "messages.h"
 #include "mp_client_conn.h"
+#include "mp_equipment.h"
+#include "mp_gamestate.h"
+#include "pickup.h"
 #include "options.h"
 #include "output.h"
 #include "panels.h"
@@ -1041,6 +1045,37 @@ bool advanced_inventory::fill_lists_with_pane_items( Character &player_character
     return true;
 }
 
+namespace
+{
+bool submit_advanced_move( Character &who, const std::vector<item_location> &items,
+                           const std::vector<int> &quantities, const tripoint_rel_ms &offset, bool cargo )
+{
+    if( !cata_mp::is_client_mode() ) {
+        return false;
+    }
+    drop_locations selected;
+    for( size_t i = 0; i < items.size(); ++i ) {
+        selected.emplace_back( items[i], quantities[i] );
+    }
+    return submit_client_item_move( who, selected, who.pos_bub() + offset,
+                                    cargo ? item_move_destination::cargo : item_move_destination::ground, false );
+}
+
+bool submit_advanced_drop( Character &who, const std::vector<drop_or_stash_item_info> &items,
+                           const tripoint_rel_ms &offset, bool force_ground )
+{
+    if( !cata_mp::is_client_mode() ) {
+        return false;
+    }
+    drop_locations selected;
+    for( const drop_or_stash_item_info &item : items ) {
+        selected.emplace_back( item.loc(), item.count() );
+    }
+    return submit_client_item_move( who, selected, who.pos_bub() + offset,
+                                    force_ground ? item_move_destination::ground : item_move_destination::cargo, true );
+}
+} // namespace
+
 bool advanced_inventory::move_all_items()
 {
     advanced_inventory_pane &spane = panes[src];
@@ -1222,8 +1257,10 @@ bool advanced_inventory::move_all_items()
 
         do_return_entry();
 
-        const drop_activity_actor act( pane_items, placement, force_ground );
-        player_character.assign_activity( act );
+        if( !submit_advanced_drop( player_character, pane_items, placement, force_ground ) ) {
+            const drop_activity_actor act( pane_items, placement, force_ground );
+            player_character.assign_activity( act );
+        }
     } else if( dpane.get_area() == AIM_INVENTORY ) {
         std::vector<item_location> target_items;
         std::vector<int> quantities;
@@ -1237,8 +1274,12 @@ bool advanced_inventory::move_all_items()
 
         do_return_entry();
 
-        const pickup_activity_actor act( target_items, quantities, player_character.pos_bub(), false );
-        player_character.assign_activity( act );
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_request_pickup( { std::move( target_items ), std::move( quantities ), false } );
+        } else {
+            const pickup_activity_actor act( target_items, quantities, player_character.pos_bub(), false );
+            player_character.assign_activity( act );
+        }
     } else {
         // Vehicle and map destinations are handled the same.
 
@@ -1257,9 +1298,12 @@ bool advanced_inventory::move_all_items()
 
         do_return_entry();
 
-        const move_items_activity_actor act( target_items, quantities, dpane.in_vehicle(),
-                                             relative_destination );
-        player_character.assign_activity( act );
+        if( !submit_advanced_move( player_character, target_items, quantities, relative_destination,
+                                    dpane.in_vehicle() ) ) {
+            const move_items_activity_actor act( target_items, quantities, dpane.in_vehicle(),
+                                                 relative_destination );
+            player_character.assign_activity( act );
+        }
     }
 
     return true;
@@ -1511,6 +1555,10 @@ void advanced_inventory::start_activity(
                 --amount_to_move;
             }
             if( to_vehicle && sitem->items.front()->is_bucket_nonempty() ) {
+                if( cata_mp::is_client_mode() ) {
+                    popup( _( "Empty spillable containers before storing them in multiplayer." ) );
+                    return;
+                }
                 // Copy the pointers so they won't break if the list gets reordered as buckets are partly emptied.
                 std::vector<item_location> target_buckets = sitem->items;
                 if( target_buckets.front()->contains_no_solids() ) {
@@ -1532,23 +1580,38 @@ void advanced_inventory::start_activity(
         }
 
         if( destarea == AIM_WORN ) {
-            const wear_activity_actor act( target_items, quantities );
-            player_character.assign_activity( act );
+            if( cata_mp::is_client_mode() ) {
+                cata_mp::client_select_wear( target_items, quantities );
+            } else {
+                const wear_activity_actor act( target_items, quantities );
+                player_character.assign_activity( act );
+            }
         } else if( destarea == AIM_WIELD ) {
-            player_character.assign_activity(
-                wield_activity_actor( target_items.front(), quantities.front() ) );
+            if( cata_mp::is_client_mode() ) {
+                cata_mp::client_select_equipment( "wield", target_items.front(), true, quantities.front() );
+            } else {
+                player_character.assign_activity(
+                    wield_activity_actor( target_items.front(), quantities.front() ) );
+            }
         } else if( destarea == AIM_INVENTORY ) {
             const std::optional<tripoint_bub_ms> starting_pos = from_vehicle
                     ? std::nullopt
                     : std::optional<tripoint_bub_ms>( player_character.pos_bub() );
-            const pickup_activity_actor act( target_items, quantities, starting_pos, false );
-            player_character.assign_activity( act );
+            if( cata_mp::is_client_mode() ) {
+                cata_mp::client_request_pickup( { std::move( target_items ), std::move( quantities ), false } );
+            } else {
+                const pickup_activity_actor act( target_items, quantities, starting_pos, false );
+                player_character.assign_activity( act );
+            }
         } else {
             // Stash the destination
             const tripoint_rel_ms relative_destination = squares[destarea].off;
 
-            const move_items_activity_actor act( target_items, quantities, to_vehicle, relative_destination );
-            player_character.assign_activity( act );
+            if( !submit_advanced_move( player_character, target_items, quantities, relative_destination,
+                                        to_vehicle ) ) {
+                const move_items_activity_actor act( target_items, quantities, to_vehicle, relative_destination );
+                player_character.assign_activity( act );
+            }
         }
     } else {
         if( !panes[dest].container.get_item() ) {
@@ -1709,20 +1772,16 @@ bool advanced_inventory::action_move_item( advanced_inv_listitem *sitem,
         popup_getkey( _( "The %s is already in your inventory.  You may want to (U)nload" ),
                       sitem->items.front()->tname() );
 
-    } else if( srcarea == AIM_INVENTORY && destarea == AIM_WORN ) {
-
-        // make sure advanced inventory is reopened after activity completion.
+    } else if( srcarea == AIM_INVENTORY && ( destarea == AIM_WORN || destarea == AIM_WIELD ) ) {
         do_return_entry();
-
-        const wear_activity_actor act( { sitem->items.front() }, { amount_to_move } );
-        player_character.assign_activity( act );
-        // exit so that the activity can be carried out
-        exit = true;
-
-    } else if( srcarea == AIM_INVENTORY && destarea == AIM_WIELD ) {
-        do_return_entry();
-        const wield_activity_actor act( sitem->items.front(), amount_to_move );
-        player_character.assign_activity( act );
+        if( cata_mp::is_client_mode() ) {
+            start_activity( destarea, srcarea, sitem, amount_to_move, from_vehicle, to_vehicle );
+        } else if( destarea == AIM_WORN ) {
+            player_character.assign_activity( wear_activity_actor( { sitem->items.front() },
+                                              { amount_to_move } ) );
+        } else {
+            player_character.assign_activity( wield_activity_actor( sitem->items.front(), amount_to_move ) );
+        }
         exit = true;
     } else if( srcarea == AIM_INVENTORY ||
                ( srcarea == AIM_WORN && sitem->items.front() != player_character.get_wielded_item() ) ) {
@@ -1733,7 +1792,11 @@ bool advanced_inventory::action_move_item( advanced_inv_listitem *sitem,
         if( srcarea == AIM_WORN && destarea == AIM_INVENTORY ) {
             // if worn, we need to fix with the worn index number (starts at -2, as -1 is weapon)
             // this is ok because worn items are never stacked (can't move more than 1)
-            player_character.takeoff( Character::worn_position_to_index( sitem->idx ) + 1 );
+            if( cata_mp::is_client_mode() ) {
+                cata_mp::client_select_equipment( "takeoff", sitem->items.front() );
+            } else {
+                player_character.takeoff( Character::worn_position_to_index( sitem->idx ) + 1 );
+            }
         } else {
             // important if item is worn
             if( player_character.can_drop( it_copy ).success() ) {
@@ -1757,8 +1820,10 @@ bool advanced_inventory::action_move_item( advanced_inv_listitem *sitem,
                         remaining_amount -= move_amount;
                     }
 
-                    const drop_activity_actor act( to_drop, placement, force_ground );
-                    player_character.assign_activity( act );
+                    if( !submit_advanced_drop( player_character, to_drop, placement, force_ground ) ) {
+                        const drop_activity_actor act( to_drop, placement, force_ground );
+                        player_character.assign_activity( act );
+                    }
                 }
             }
         }

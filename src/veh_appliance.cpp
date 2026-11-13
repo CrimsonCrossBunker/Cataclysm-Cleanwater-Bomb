@@ -28,7 +28,6 @@
 #include "map_iterator.h"
 #include "messages.h"
 #include "output.h"
-#include "overmapbuffer.h"
 #include "player_activity.h"
 #include "requirements.h"
 #include "ret_val.h"
@@ -38,10 +37,15 @@
 #include "uilist.h"
 #include "units.h"
 #include "veh_appliance.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
+#include "mp_gamestate.h"
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle.h"
+#include "vehicle_power_connection.h"
+#include "vehicle_control.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -85,7 +89,8 @@ vpart_id vpart_appliance_from_item( const itype_id &item_id )
 }
 
 bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
-                      const Character &owner, const std::optional<item> &base )
+                      const Character &owner, const std::optional<item> &base,
+                      std::optional<units::angle> direction )
 {
 
     const vpart_info &vpinfo = vpart.obj();
@@ -151,7 +156,11 @@ bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart
 
     // Make some lighting appliances directed
     if( vpinfo.has_flag( flag_HALF_CIRCLE_LIGHT ) && partnum != -1 ) {
-        orient_part( here, veh, vpinfo, partnum );
+        if( direction ) {
+            veh->part( partnum ).direction = *direction;
+        } else {
+            orient_part( here, veh, vpinfo, partnum );
+        }
     }
     veh->set_owner( owner );
     return true;
@@ -463,27 +472,19 @@ void veh_app_interact::refill( )
         return;
     }
 
-    auto validate = [&pt]( const item & obj ) {
-        if( pt->is_tank() ) {
-            if( obj.is_watertight_container() && obj.num_item_stacks() == 1 ) {
-                // we are assuming only one pocket here, and it's a liquid so only one item
-                return pt->can_reload( obj.only_item() );
-            }
-        } else if( pt->is_fuel_store() ) {
-            bool can_reload = pt->can_reload( obj );
-            //check base item for fuel_stores that can take multiple types of ammunition (like the fuel_bunker)
-            if( pt->get_base().can_reload_with( obj, true ) ) {
-                return true;
-            }
-            return can_reload;
-        }
-        return false;
+    const auto validate = [&]( const item &source ) {
+        return can_refill_vehicle_part( *pt, source );
     };
 
     // Setup the refill activity
     item_location target = g->inv_map_splice( validate, string_format( _( "Refill %s" ), pt->name() ),
         1 );
     if( target ) {
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_start_vehicle_work( get_map(), VEHICLE_REFILL, *veh, pt->mount, pt->info(), pt,
+                                                target );
+            return;
+        }
         const point_rel_ms q = veh->coord_translate( pt->mount );
         tripoint_abs_ms mount_adjusted = veh->pos_abs() + q;
         Character &you = get_player_character();
@@ -509,6 +510,10 @@ void veh_app_interact::siphon( map &here )
         return;
     }
 
+    if( cata_mp::client_siphon_vehicle( get_player_character(), here, *veh, *pt ) ) {
+        return;
+    }
+
     // Setup liquid handling activity
     const item &base = pt->get_base();
     const int idx = veh->index_of_part( pt );
@@ -523,15 +528,17 @@ void veh_app_interact::siphon( map &here )
 
 void veh_app_interact::rename()
 {
+    const auto target = veh->get_safe_reference();
     string_input_popup_imgui popup( 34, "", _( "Enter new appliance name:" ) );
-    std::string name = popup.query();
-    if( !name.empty() ) {
-        veh->name = name;
-        if( veh->tracking_on ) {
-            overmap_buffer.remove_vehicle( veh );
-            // Add the vehicle again, this time with the new name
-            overmap_buffer.add_vehicle( veh );
-        }
+    const std::string name = popup.query();
+    if( !target || name.empty() || popup.cancelled() ) {
+        return;
+    }
+    vehicle_management_selection choice;
+    choice.operation = "rename";
+    choice.text = name;
+    if( !cata_mp::client_manage_vehicle( get_player_character(), get_map(), *target, choice ) ) {
+        target->rename( name );
     }
 }
 
@@ -567,6 +574,11 @@ void veh_app_interact::remove( map &here )
         popup( msg );
         //~ Prompt the player if they want to remove the appliance. %s = appliance name.
     } else if( query_yn( _( "Are you sure you want to take down the %s?" ), veh->name ) ) {
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::client_start_vehicle_work( here, VEHICLE_REMOVE_APPLIANCE, *veh, vp->mount, vpinfo,
+                                                vp, item_location() );
+            return;
+        }
         you.set_moves( 0 );
         you.assign_activity( vehicle_activity_actor( VEHICLE_REMOVE_APPLIANCE, time, veh,
                 a_point_abs, tripoint_rel_ms( a_point, 0 ), veh->index_of_part( vp ), vpinfo.id ) );
@@ -575,27 +587,44 @@ void veh_app_interact::remove( map &here )
 
 bool veh_app_interact::can_disconnect()
 {
-    for( int &i : veh->parts_at_relative( a_point, true ) ) {
-        if( veh->part( i ).has_flag( vp_flag::linked_flag ) ||
-            veh->part( i ).info().has_flag( "TOW_CABLE" ) ) {
-            return false;
-        }
-    }
-    return true;
+    return veh->can_separate_from_grid( a_point );
 }
 
 void veh_app_interact::disconnect( map &here )
 {
-    veh->separate_from_grid( &here, a_point );
-    get_player_character().pause();
+    Character &who = get_player_character();
+    const int index = veh->part_displayed_at( a_point, true );
+    if( index < 0 ) {
+        return;
+    }
+    vehicle_management_selection choice;
+    choice.operation = "disconnect_grid";
+    if( !cata_mp::client_manage_vehicle( who, here, *veh, choice, &veh->part( index ) ) ) {
+        veh->separate_from_grid( here, a_point, who );
+        who.pause();
+    }
 }
 
 void veh_app_interact::plug( map &here )
 {
+    if( cata_mp::is_client_mode() ) {
+        Character &who = get_player_character();
+        if( !cata_mp::is_client_waiting_for_ack() ) {
+            if( const auto selection = query_appliance_connection( who, here, *veh, a_point ) ) {
+                cata_mp::client_plug_appliance( *selection );
+            }
+        }
+        return;
+    }
     const int part = veh->part_at( veh->coord_translate( a_point ) );
+    if( part < 0 ) {
+        return;
+    }
     const tripoint_bub_ms pos = veh->bub_part_pos( here, part );
     item cord( itype_power_cord );
-    cord.link_to( *veh, a_point, link_state::automatic );
+    if( !cord.link_to( *veh, a_point, link_state::automatic ).success() ) {
+        return;
+    }
     if( cord.get_use( "link_up" ) ) {
         cord.type->get_use( "link_up" )->call( &get_player_character(), cord, pos );
     }
@@ -603,9 +632,19 @@ void veh_app_interact::plug( map &here )
 
 void veh_app_interact::hide()
 {
-    const int part_idx = veh->part_at( veh->coord_translate( a_point ) );
-    vehicle_part &vp = veh->part( part_idx );
-    vp.hidden = !vp.hidden;
+    for( const int index : veh->parts_at_relative( a_point, true ) ) {
+        vehicle_part &part = veh->part( index );
+        if( part.removed || part.is_fake || !part.info().has_flag( flag_WIRING ) ) {
+            continue;
+        }
+        vehicle_management_selection choice;
+        choice.operation = "hide_wiring";
+        choice.hidden = !part.hidden;
+        if( !cata_mp::client_manage_vehicle( get_player_character(), get_map(), *veh, choice, &part ) ) {
+            part.hidden = choice.hidden;
+        }
+        return;
+    }
 }
 
 #if defined(TILES)

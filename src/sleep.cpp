@@ -4,21 +4,290 @@
 #include <optional>
 #include <string>
 
+#include "activity_actor_definitions.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "debug.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
+#include "game.h"
 #include "generic_factory.h"
 #include "item.h"
 #include "item_stack.h"
+#include "json.h"
 #include "map.h"
 #include "mapdata.h"
+#include "player_activity.h"
+#include "ret_val.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
 #include "vpart_position.h"
+
+namespace
+{
+const bionic_id bio_soporific( "bio_soporific" );
+const efftype_id effect_alarm_clock( "alarm_clock" );
+const efftype_id effect_sleep( "sleep" );
+
+bool valid_fixed_wait( time_duration duration, bool alarm, bool watch )
+{
+    if( alarm ) {
+        return duration == 30_minutes ||
+               ( duration >= 1_hours && duration <= 9_hours &&
+                 duration == 1_hours * to_hours<int>( duration ) );
+    }
+    return duration == 20_seconds || duration == 1_minutes || duration == 5_minutes ||
+           duration == 30_minutes ||
+           ( watch && ( duration == 1_hours || duration == 2_hours || duration == 3_hours ||
+                        duration == 6_hours ) );
+}
+} // namespace
+
+void wait_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "origin", origin );
+    out.member( "target", target );
+    out.member( "duration", duration );
+    out.member( "alarm", alarm );
+    out.end_object();
+}
+
+void wait_selection::deserialize( const JsonObject &data )
+{
+    data.read( "origin", origin, true );
+    data.read( "target", target, true );
+    data.read( "duration", duration, true );
+    data.read( "alarm", alarm, true );
+}
+
+bool is_wait_activity( std::string_view id )
+{
+    return id == "ACT_WAIT" || id == "ACT_WAIT_STAMINA" || id == "ACT_WAIT_WEATHER" ||
+           id == "ACT_WAIT_FOLLOWERS" || id == "ACT_WAIT_NPC";
+}
+
+bool is_rest_activity( std::string_view id )
+{
+    return id == "ACT_TRY_SLEEP" || is_wait_activity( id );
+}
+
+bool can_wait_here( const Character &who, map &here )
+{
+    const vehicle *veh = controlled_vehicle( who, here );
+    return !veh || veh->can_use_rails( here ) ||
+           ( !veh->is_flying_in_air() && !veh->is_falling && !veh->velocity &&
+             !( veh->cruise_velocity &&
+                ( ( veh->is_watercraft() && veh->can_float( here ) ) ||
+                  veh->sufficient_wheel_config() ) ) &&
+             !( veh->is_in_water( true ) && !veh->can_float( here ) ) );
+}
+
+time_duration wait_time_until( std::string_view target, time_point now )
+{
+    const time_point midnight = now - time_past_midnight( now );
+    time_point when = midnight;
+    if( target == "daylight" ) {
+        when = daylight_time( now );
+    } else if( target == "noon" ) {
+        when += 12_hours;
+    } else if( target == "night" ) {
+        when = night_time( now );
+    } else if( target != "midnight" ) {
+        return 0_turns;
+    }
+    return ( when > now ? when : when + 1_days ) - now;
+}
+
+bool start_wait( Character &who, map &here, const wait_selection &choice,
+                 activity_execution execution )
+{
+    const character_action_guard lifetime( who );
+    if( !lifetime || who.is_dead_state() || who.in_sleep_state() || who.activity ||
+        who.get_moves() <= 0 || who.pos_abs() != choice.origin || !here.inbounds( choice.origin ) ||
+        !can_wait_here( who, here ) || ( choice.alarm && !who.has_alarm_clock() ) ) {
+        return false;
+    }
+    const bool watch = who.has_watch() || choice.alarm;
+    const bool time_of_day_available = who.posz() >= 0 || watch;
+    player_activity activity;
+    if( !choice.alarm && choice.target == "stamina" && who.get_stamina() < who.get_stamina_max() ) {
+        activity = player_activity( wait_stamina_activity_actor() );
+    } else if( !choice.alarm && choice.target == "weather" && time_of_day_available ) {
+        activity = player_activity( wait_weather_activity_actor() );
+    } else if( !choice.alarm && choice.target == "followers" &&
+               !wait_followers_activity_actor::get_absent_followers( who ).empty() ) {
+        activity = player_activity( wait_followers_activity_actor() );
+    } else {
+        const bool cancel_alarm = choice.alarm && choice.target == "cancel" &&
+                                  who.has_effect( effect_alarm_clock );
+        const time_duration duration = choice.target == "duration" &&
+                                       valid_fixed_wait( choice.duration, choice.alarm, watch ) ?
+                                       choice.duration : time_of_day_available ?
+                                       wait_time_until( choice.target, calendar::turn ) : 0_turns;
+        if( !cancel_alarm && duration <= 0_turns ) {
+            return false;
+        }
+        if( choice.alarm ) {
+            who.remove_effect( effect_alarm_clock );
+            if( !lifetime ) {
+                return false;
+            }
+            if( cancel_alarm ) {
+                who.add_msg_if_player( _( "You cancel your alarm." ) );
+            } else {
+                who.add_effect( effect_alarm_clock, duration );
+                if( lifetime ) {
+                    who.add_msg_if_player( _( "You set your alarm." ) );
+                }
+            }
+            return static_cast<bool>( lifetime );
+        }
+        activity = player_activity( wait_activity_actor( duration ) );
+    }
+    activity.set_execution( execution );
+    who.assign_activity( activity );
+    return lifetime && who.activity.id() == activity.id();
+}
+
+void sleep_selection::serialize( JsonOut &out ) const
+{
+    out.start_object();
+    out.member( "origin", origin );
+    out.member( "alarm_hours", alarm_hours );
+    out.member( "save_before_sleep", save_before_sleep );
+    out.member( "allow_faction_offense", allow_faction_offense );
+    out.end_object();
+}
+
+void sleep_selection::deserialize( const JsonObject &data )
+{
+    data.read( "origin", origin, true );
+    data.read( "alarm_hours", alarm_hours, true );
+    data.read( "save_before_sleep", save_before_sleep, true );
+    data.read( "allow_faction_offense", allow_faction_offense, true );
+}
+
+ret_val<void> can_start_sleep( Character &who, map &here )
+{
+    if( who.is_dead_state() || who.has_effect( effect_sleep ) || who.activity || who.get_moves() <= 0 ) {
+        return ret_val<void>::make_failure();
+    }
+    if( controlled_vehicle( who, here ) ) {
+        return ret_val<void>::make_failure( _( "You can't sleep while controlling a vehicle." ) );
+    }
+    if( who.is_mounted() ) {
+        return ret_val<void>::make_failure( _( "You cannot sleep while mounted." ) );
+    }
+    const tripoint_bub_ms p = who.pos_bub( here );
+    if( !here.inbounds( p ) ) {
+        return ret_val<void>::make_failure();
+    }
+    if( !here.veh_at( p ) && who.get_comfort_data_for( p ).human_or_impossible() ) {
+        if( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, p ) ) {
+            return ret_val<void>::make_failure( _( "You cannot sleep while swimming." ) );
+        }
+        if( here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, p ) ) {
+            return ret_val<void>::make_failure( _( "You cannot sleep while airborne." ) );
+        }
+    }
+    return ret_val<void>::make_success();
+}
+
+bool sleep_uses_private_property( const Character &who, const map &here )
+{
+    const tripoint_bub_ms p = who.pos_bub( here );
+    const auto vehicle = here.veh_at( p );
+    return ( vehicle && !vehicle->vehicle().is_owned_by( who ) ) ||
+           ( here.has_furn( p ) && !here.has_flag( "FREE_TO_EXAMINE", p ) );
+}
+
+bool start_sleep( Character &who, map &here, const sleep_selection &choice,
+                  activity_execution execution )
+{
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const auto valid = [&]() {
+        if( !lifetime || !context || who.pos_abs() != choice.origin ) {
+            return false;
+        }
+        const auto allowed = can_start_sleep( who, here );
+        if( !allowed.success() ) {
+            if( !allowed.str().empty() ) {
+                who.add_msg_if_player( m_info, allowed.str() );
+            }
+            return false;
+        }
+        if( choice.alarm_hours != 0 &&
+            ( choice.alarm_hours < 3 || choice.alarm_hours > 9 || !who.has_alarm_clock() ) ) {
+            who.add_msg_if_player( m_info, _( "You can't set that alarm." ) );
+            return false;
+        }
+        if( sleep_uses_private_property( who, here ) && !choice.allow_faction_offense ) {
+            const std::string warning = g->local_faction_action_warning( who, true );
+            if( !warning.empty() ) {
+                who.add_msg_if_player( m_info, warning );
+                return false;
+            }
+        }
+        return true;
+    };
+    if( !valid() ) {
+        return false;
+    }
+    if( choice.save_before_sleep ) {
+        if( who.is_avatar() ) {
+            g->quicksave( true );
+        } else if( !g->save() ) {
+            if( lifetime ) {
+                who.add_msg_if_player( m_bad, _( "Saving failed.  You haven't started trying to sleep." ) );
+            }
+            return false;
+        }
+        if( !valid() ) {
+            return false;
+        }
+    }
+    if( sleep_uses_private_property( who, here ) &&
+        !g->warn_character_maybe_anger_local_faction( who, false, true, choice.allow_faction_offense ) ) {
+        return false;
+    }
+    time_duration duration = 24_hours;
+    if( choice.alarm_hours > 0 ) {
+        const time_duration alarm = 1_hours * choice.alarm_hours;
+        who.add_effect( effect_alarm_clock, alarm );
+        if( !lifetime || !context || who.activity || who.pos_abs() != choice.origin ) {
+            return false;
+        }
+        duration = alarm + 1_turns;
+    }
+    for( item *entry : who.inv_dump() ) {
+        if( entry->active && entry->get_use( "musical_instrument" ) != nullptr ) {
+            who.add_msg_if_player( _( "You stop playing your %s before trying to sleep." ),
+                                   entry->tname() );
+            entry->active = false;
+        }
+    }
+    who.get_comfort_at( who.pos_bub( here ) ).add_try_msgs( who );
+    who.add_msg_if_player( _( "You start trying to fall asleep." ) );
+    if( who.has_active_bionic( bio_soporific ) ) {
+        who.bio_soporific_powered_at_last_sleep_check = who.has_power();
+        if( who.bio_soporific_powered_at_last_sleep_check ) {
+            who.add_msg_if_player( m_good, _( "Your soporific inducer starts working its magic." ) );
+        } else {
+            who.add_msg_if_player( m_bad, _( "Your soporific inducer doesn't have enough power to operate." ) );
+        }
+    }
+    who.set_moves( 0 );
+    player_activity activity{ try_sleep_activity_actor( duration ) };
+    activity.set_execution( execution );
+    who.assign_activity( activity );
+    return lifetime && who.activity.id() == activity.id();
+}
 
 namespace io
 {

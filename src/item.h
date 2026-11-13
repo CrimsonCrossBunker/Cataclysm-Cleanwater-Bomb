@@ -1657,6 +1657,10 @@ class item : public visitable
             tripoint_abs_ms t_abs_pos = tripoint_abs_ms::invalid;
             /// The linked part's mount offset on the target vehicle.
             point_rel_ms t_mount = point_rel_ms::zero;
+            /// Identity of the attached vehicle part, if known.
+            int64_t t_part_uid = 0;
+            /// Identity of the attached UPS or solar pack. Zero for old links.
+            int64_t s_item_uid = 0;
             /// Reality bubble position of the link's source cable item.
             tripoint_bub_ms s_bub_pos = tripoint_bub_ms::invalid; // NOLINT(cata-serialize)
             /// The last turn process_link was called on this cable. Used to find how much time the cable spends outside the reality bubble.

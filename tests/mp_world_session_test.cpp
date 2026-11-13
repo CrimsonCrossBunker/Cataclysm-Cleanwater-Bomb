@@ -9,6 +9,7 @@
 #include "json.h"
 #include "item.h"
 #include "item_location.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "monster.h"
 #include "mp_client_conn.h"
@@ -241,8 +242,6 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action,
                                                "same display name", packet, admission } ) );
     };
-    send( admissions[0], R"({"action":"worn_sync","char_stats":{"name":"first owner"}})" );
-    send( admissions[1], R"({"action":"worn_sync","char_stats":{"name":"second owner"}})" );
     send( admissions[0], R"({"action":"wait"})" );
     send( admissions[1], R"({"action":"wait"})" );
     cata_mp::process_mp_events();
@@ -329,10 +328,11 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
     CHECK( first->actor.id() == retained_id );
     CHECK( first->turn.grant_seq > previous_sequence );
     CHECK( first->replication.server_mon_last_sent.empty() );
-    send( admissions[0], R"({"action":"worn_sync","char_stats":{"name":"stale owner"}})" );
+    send( admissions[0], R"({"action":"activity_start","activity_id":"ACT_CRAFT"})" );
     cata_mp::process_mp_events();
     CHECK( first->actor.retained( g->npc_lifetimes() )->name == "first owner" );
     CHECK( second_actor->name == "second owner" );
+    CHECK( first->observation.partner_activity.empty() );
 }
 
 TEST_CASE( "mp_player_view_rebuild_preserves_rng_and_does_not_create_a_controller",
@@ -345,6 +345,8 @@ TEST_CASE( "mp_player_view_rebuild_preserves_rng_and_does_not_create_a_controlle
     source.name = "other player";
     source.spawn_at_precise( get_map().get_abs( tripoint_bub_ms( 62, 62, 0 ) ) );
     source.set_wielded_item( item( itype_id( "rock" ) ) );
+    source.add_effect( efftype_id( "glowing" ), 10_turns );
+    REQUIRE( source.active_light() > 0.0f );
     cata_mp::peer_observation observation;
     observation.partner_activity = "ACT_CRAFT";
     observation.partner_activity_pct = 35;
@@ -370,6 +372,7 @@ TEST_CASE( "mp_player_view_rebuild_preserves_rng_and_does_not_create_a_controlle
     REQUIRE( replica->get_wielded_item() );
     CHECK( replica->get_wielded_item()->uid() == source.get_wielded_item()->uid() );
     CHECK( view.observation.partner_activity_pct == 35 );
+    CHECK( view.observation.mp_remote_player_luminance == source.active_light() );
     const character_id id = replica->getID();
     source.spawn_at_precise( get_map().get_abs( tripoint_bub_ms( 63, 62, 0 ) ) );
     const auto moved = json_loader::from_string( encode() );
@@ -389,19 +392,19 @@ TEST_CASE( "mp_bookkeeping_classification_uses_only_the_message_envelope",
            "[multiplayer][world_session][action_budget]" )
 {
     for( const char *message : {
-             R"({"action":"worn_sync"})",
              R"({"action":"activity_start","activity_id":"ACT_WAIT"})",
              R"({"action":"activity_end","activity_id":"ACT_WAIT"})",
              R"({"action":"save_request"})",
-             R"({ "type" : "action", "action" : "worn_sync", "char_stats":{} })",
+             R"({ "type" : "action", "action" : "activity_end", "activity_id":"ACT_WAIT" })",
              R"({"type":"note_sync"})", R"({"type":"chat"})",
-             R"({"type":"templates_list"})", R"({"type":"resync_request"})"
+             R"({"type":"templates_list"})"
          } ) {
         CAPTURE( message );
         CHECK( cata_mp::is_state_sync_message( message ) );
     }
     for( const char *message : {
              R"({"type":"trade_delta","give":[]})",
+             R"({"action":"worn_sync"})", R"({"type":"resync_request"})",
              R"({"action":"wait","client_tile_changes":[]})",
              R"({"type":"action","action":"move","item":{"action":"worn_sync"}})",
              R"({"action":"wait","item":{"type":"trade_delta"}})",
@@ -428,7 +431,7 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
         clear_npcs();
         cata_mp::get_mp_queue().clear();
     } );
-    npc &remote = bind_test_player( session );
+    bind_test_player( session );
     only_test_remote( session ).connected = true;
     set_test_admission( session, cata_mp::peer_admission::create( 701 ) );
     const std::string attached_delta = GENERATE( false, true ) ?
@@ -439,27 +442,27 @@ TEST_CASE( "mp_action_budget_preserves_queued_actions_and_bookkeeping_order",
         REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname",
                                test_granted_action( data, sequence ), admission } ) );
     };
-    push( R"({"action":"wait","client_stamina":100)" + attached_delta + "}",
+    push( R"({"action":"wait","client_calendar_turn":100)" + attached_delta + "}",
           only_test_remote( session ).admission );
-    push( R"({"action":"worn_sync","char_stats":{"name":"after first"}})",
+    push( R"({"action":"activity_start","activity_id":"ACT_WAIT"})",
           only_test_remote( session ).admission );
     // Stale events do not consume the current peer's budget or block its queue.
-    push( R"({"action":"wait","client_stamina":300})",
+    push( R"({"action":"wait","client_calendar_turn":300})",
           cata_mp::peer_admission::create( 702 ) );
-    push( R"({"action":"wait","client_stamina":200)" + attached_delta + "}",
+    push( R"({"action":"wait","client_calendar_turn":200)" + attached_delta + "}",
           only_test_remote( session ).admission, 2 );
-    push( R"({"action":"worn_sync","char_stats":{"name":"after second"}})",
+    push( R"({"action":"activity_start","activity_id":"ACT_WAIT_STAMINA"})",
           only_test_remote( session ).admission );
 
     cata_mp::process_mp_events();
-    CHECK( remote.get_stamina() == 100 );
-    CHECK( remote.name == "after first" );
+    CHECK( only_test_remote( session ).observation.partner_calendar_turn == 100 );
+    CHECK( only_test_remote( session ).observation.partner_activity == "ACT_WAIT" );
     REQUIRE_FALSE( queue.empty() );
 
     next_test_remote_turn( only_test_remote( session ) );
     cata_mp::process_mp_events();
-    CHECK( remote.get_stamina() == 200 );
-    CHECK( remote.name == "after second" );
+    CHECK( only_test_remote( session ).observation.partner_calendar_turn == 200 );
+    CHECK( only_test_remote( session ).observation.partner_activity == "ACT_WAIT_STAMINA" );
     CHECK( queue.empty() );
 }
 
@@ -475,13 +478,14 @@ TEST_CASE( "mp_bookkeeping_backlog_yields_without_losing_order_or_large_messages
         clear_npcs();
         cata_mp::get_mp_queue().clear();
     } );
-    npc &remote = bind_test_player( session );
+    bind_test_player( session );
+    auto &activity = only_test_remote( session ).observation.partner_activity;
     only_test_remote( session ).connected = true;
     set_test_admission( session, cata_mp::peer_admission::create( 701 ) );
     auto &queue = cata_mp::get_mp_queue();
     const auto push_sync = [&]( int index, size_t padding ) {
-        const std::string data = R"({"action":"worn_sync","char_stats":{"name":"sync-)" +
-                                 std::to_string( index ) + R"("},"padding":")" +
+        const std::string data = R"({"action":"activity_start","activity_id":"ACT_WAIT_)" +
+                                 std::to_string( index ) + R"(","padding":")" +
                                  std::string( padding, 'x' ) + R"("})";
         REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname", data,
                                only_test_remote( session ).admission } ) );
@@ -492,44 +496,43 @@ TEST_CASE( "mp_bookkeeping_backlog_yields_without_losing_order_or_large_messages
             push_sync( i, 0 );
         }
         cata_mp::process_mp_events();
-        CHECK( remote.name == "sync-63" );
+        CHECK( activity == "ACT_WAIT_63" );
         CHECK( queue.current_usage().queued == 1 );
         cata_mp::process_mp_events();
-        CHECK( remote.name == "sync-64" );
+        CHECK( activity == "ACT_WAIT_64" );
         CHECK( queue.empty() );
     }
     SECTION( "large syncs share a byte budget" ) {
         push_sync( 0, 600 * 1024 );
         push_sync( 1, 600 * 1024 );
         cata_mp::process_mp_events();
-        CHECK( remote.name == "sync-0" );
+        CHECK( activity == "ACT_WAIT_0" );
         CHECK( queue.current_usage().queued == 1 );
         cata_mp::process_mp_events();
-        CHECK( remote.name == "sync-1" );
+        CHECK( activity == "ACT_WAIT_1" );
         CHECK( queue.empty() );
     }
     SECTION( "one oversized sync progresses without starving the queue" ) {
         push_sync( 0, 1024 * 1024 + 64 );
         push_sync( 1, 0 );
         cata_mp::process_mp_events();
-        CHECK( remote.name == "sync-0" );
+        CHECK( activity == "ACT_WAIT_0" );
         CHECK( queue.current_usage().queued == 1 );
         cata_mp::process_mp_events();
-        CHECK( remote.name == "sync-1" );
+        CHECK( activity == "ACT_WAIT_1" );
         CHECK( queue.empty() );
     }
     SECTION( "discarding stale events also yields" ) {
         const auto stale = cata_mp::peer_admission::create( 702 );
-        const std::string original_name = remote.name;
         for( int i = 0; i < 65; ++i ) {
             REQUIRE( queue.push( { cata_mp::mp_event::type::action, "nickname",
-                                   R"({"action":"worn_sync","char_stats":{"name":"stale"}})", stale } ) );
+                                   R"({"action":"activity_start","activity_id":"ACT_WAIT"})", stale } ) );
         }
         cata_mp::process_mp_events();
-        CHECK( remote.name == original_name );
+        CHECK( activity.empty() );
         CHECK( queue.current_usage().queued == 1 );
         cata_mp::process_mp_events();
-        CHECK( remote.name == original_name );
+        CHECK( activity.empty() );
         CHECK( queue.empty() );
     }
 }
@@ -549,32 +552,49 @@ TEST_CASE( "mp_turn_grants_reject_repeats_future_actions_and_stale_payloads",
     auto &peer = only_test_remote( session );
     peer.connected = true;
     peer.turn.grant_seq = 41;
-    const auto send = [&]( uint32_t grant, int stamina ) {
-        const auto packet = test_granted_action( R"({"action":"wait","client_stamina":)" +
-                            std::to_string( stamina ) + "}", grant );
+    const auto send = [&]( uint32_t grant, const std::string &message ) {
+        const auto packet = test_granted_action( message, grant );
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action,
                                                "player", packet, peer.admission } ) );
         cata_mp::process_mp_events();
     };
+    const auto wait = [&]( uint32_t grant, int client_turn ) {
+        send( grant, R"({"action":"wait","client_calendar_turn":)" + std::to_string( client_turn ) +
+              R"(,"move_mode":"run","char_stats":{"name":"forged","str":99},"client_stamina":1,"client_bleed":[]})" );
+    };
+    const auto initial_turn = peer.observation.partner_calendar_turn;
+    const auto original_mode = actor.current_movement_mode();
+    REQUIRE( original_mode != move_mode_id( "run" ) );
+    const std::string original_name = actor.name;
+    const int original_strength = actor.get_str_base();
+    const efftype_id bleed( "bleed" );
+    const bodypart_id arm = bodypart_str_id( "arm_l" ).id();
+    actor.add_effect( bleed, 3_turns, arm );
     actor.set_stamina( 500 );
-    send( 40, 100 );
-    send( 42, 200 );
-    CHECK( actor.get_stamina() == 500 );
+    wait( 40, 100 );
+    wait( 42, 200 );
+    CHECK( peer.observation.partner_calendar_turn == initial_turn );
+    send( 41, R"({"action":"unknown","nested":{"action":"wait"}})" );
     CHECK_FALSE( peer.turn.client_acted_this_turn );
-    send( 41, 300 );
-    CHECK( actor.get_stamina() == 300 );
+    wait( 41, 300 );
+    CHECK( peer.observation.partner_calendar_turn == 300 );
     REQUIRE( peer.turn.client_acted_this_turn );
-    send( 41, 400 );
-    CHECK( actor.get_stamina() == 300 );
+    wait( 41, 400 );
+    CHECK( peer.observation.partner_calendar_turn == 300 );
     next_test_remote_turn( peer );
-    send( 41, 100 );
+    wait( 41, 100 );
     CHECK_FALSE( peer.turn.client_acted_this_turn );
-    send( 42, 450 );
+    wait( 42, 450 );
     CHECK( peer.turn.client_acted_this_turn );
-    CHECK( actor.get_stamina() == 450 );
+    CHECK( peer.observation.partner_calendar_turn == 450 );
+    CHECK( actor.current_movement_mode() == original_mode );
+    CHECK( actor.name == original_name );
+    CHECK( actor.get_str_base() == original_strength );
+    CHECK( actor.get_stamina() == 500 );
+    CHECK( actor.get_effect( bleed, arm ).get_duration() == 3_turns );
 }
 
-TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
+TEST_CASE( "mp_host_ignores_raw_monster_hp_for_stale_and_current_ids",
            "[multiplayer][world_session][entity_identity][regression]" )
 {
     clear_avatar();
@@ -618,7 +638,52 @@ TEST_CASE( "mp_native_hit_dispatch_ignores_copied_or_stale_monster_wire_ids",
     const auto copied_id = session.replication.entity_ids.known_id( *copied );
     REQUIRE( copied_id != old_id );
     hit( copied_id );
-    CHECK( copied->get_hp() == 1 );
+    CHECK( copied->get_hp() == initial_hp );
+    CHECK( get_creature_tracker().is_present( copied.get() ) );
+}
+
+TEST_CASE( "mp_rejects_legacy_direct_world_action_uploads",
+           "[multiplayer][world_session][regression]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    session.reset();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+        cata_mp::get_mp_queue().clear();
+    } );
+    npc &actor = bind_test_player( session );
+    auto &peer = only_test_remote( session );
+    peer.connected = true;
+    set_test_admission( session, cata_mp::peer_admission::create( 701 ) );
+    next_test_remote_turn( peer );
+
+    map &here = get_map();
+    const tripoint_abs_ms origin = actor.pos_abs();
+    const tripoint_abs_ms target = origin + tripoint_rel_ms( 2, 0, 0 );
+    const tripoint_bub_ms tile = here.get_bub( target );
+    REQUIRE( here.inbounds( tile ) );
+    const size_t item_count = here.i_at( tile ).size();
+    const std::string action = GENERATE( "drop", "position_sync", "smash", "eat", "vehicle_construct" );
+    std::ostringstream encoded;
+    JsonOut out( encoded );
+    out.start_object();
+    out.member( "type", "action" );
+    out.member( "action", action );
+    out.member( "grant_seq", peer.turn.grant_seq );
+    out.member( "x", target.x() );
+    out.member( "y", target.y() );
+    out.member( "z", target.z() );
+    out.member( "items", std::vector<item>{ item( itype_id( "bat" ) ) } );
+    out.end_object();
+    REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
+                                           encoded.str(), peer.admission } ) );
+    cata_mp::process_mp_events();
+    CHECK( actor.pos_abs() == origin );
+    CHECK( here.i_at( tile ).size() == item_count );
+    CHECK_FALSE( peer.turn.client_acted_this_turn );
 }
 
 TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
@@ -755,7 +820,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     only_test_remote( session ).replication.host_veh_cargo_baseline[tripoint_abs_ms( 1, 2,
                              0 )] = "old cargo";
     only_test_remote( session ).replication.last_vehicle_step_payload = "old stationary vehicles";
-    only_test_remote( session ).turn.pending_wake_client = true;
+    only_test_remote( session ).turn.pending_partner_push = true;
     only_test_remote( session ).turn.action_msgs_pending.push_back( "former peer's action" );
     admissions.at( 202 ).retire();
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "nickname", "", admissions.at( 202 ) } ) );
@@ -775,7 +840,7 @@ TEST_CASE( "mp_native_dispatch_rejoins_the_same_persistent_actor",
     CHECK( only_test_remote( session ).turn.grant_seq == 89 );
     CHECK( only_test_remote( session ).replication.host_veh_cargo_baseline.empty() );
     CHECK( only_test_remote( session ).replication.last_vehicle_step_payload.empty() );
-    CHECK_FALSE( only_test_remote( session ).turn.pending_wake_client );
+    CHECK_FALSE( only_test_remote( session ).turn.pending_partner_push );
     CHECK( only_test_remote( session ).turn.action_msgs_pending.empty() );
 }
 
@@ -797,14 +862,15 @@ TEST_CASE( "mp_dispatch_never_controls_an_unloaded_or_replaced_actor",
     REQUIRE( retained );
     only_test_remote( session ).connected = true;
     set_test_admission( session, cata_mp::peer_admission::create( 701 ) );
-    const auto rename = [&]() {
+    auto &activity = only_test_remote( session ).observation.partner_activity;
+    const auto start_wait = [&]() {
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
-                                               R"({"action":"worn_sync","char_stats":{"name":"accepted owner"}})", only_test_remote( session ).admission } ) );
+                                               R"({"action":"activity_start","activity_id":"ACT_WAIT"})", only_test_remote( session ).admission } ) );
         cata_mp::process_mp_events();
     };
-    rename();
-    REQUIRE( actor.name == "accepted owner" );
-    actor.name = "unchanged";
+    start_wait();
+    REQUIRE( activity == "ACT_WAIT" );
+    activity.clear();
 
     SECTION( "ordinary unload rejects actions and native reload restores the same role" ) {
         const auto before = g->npc_lifetimes().acquire( actor );
@@ -816,23 +882,23 @@ TEST_CASE( "mp_dispatch_never_controls_an_unloaded_or_replaced_actor",
         CHECK( only_test_remote( session ).connected );
         CHECK( only_test_remote( session ).turn.proxy_was_alive );
         CHECK_FALSE( only_test_remote( session ).turn.granted_this_turn );
-        rename();
-        CHECK( actor.name == "unchanged" );
+        start_wait();
+        CHECK( activity.empty() );
         CHECK_FALSE( before.resolve( g->npc_lifetimes() ) );
         g->load_npcs();
-        rename();
-        CHECK( actor.name == "accepted owner" );
+        start_wait();
+        CHECK( activity == "ACT_WAIT" );
         CHECK_FALSE( before.resolve( g->npc_lifetimes() ) );
     }
     SECTION( "removal from the active tracker is sufficient to reject control" ) {
         // remove_npc does not invoke on_unload: an active lifetime alone is
         // insufficient without exact membership in the current native tracker.
         g->remove_npc( actor.getID() );
-        rename();
-        CHECK( actor.name == "unchanged" );
+        start_wait();
+        CHECK( activity.empty() );
         g->load_npcs();
-        rename();
-        CHECK( actor.name == "accepted owner" );
+        start_wait();
+        CHECK( activity == "ACT_WAIT" );
     }
     SECTION( "copied ID and tags cannot transfer control to a replacement" ) {
         g->remove_npc( actor.getID() );
@@ -846,9 +912,9 @@ TEST_CASE( "mp_dispatch_never_controls_an_unloaded_or_replaced_actor",
         overmap_buffer.insert_npc( replacement );
         g->load_npcs();
         REQUIRE( g->critter_by_id<npc>( actor.getID() ) == replacement.get() );
-        rename();
+        start_wait();
         CHECK( replacement->name == "replacement" );
-        CHECK( actor.name == "unchanged" );
+        CHECK( activity.empty() );
         CHECK_FALSE( cata_mp::is_remote_player( replacement->getID() ) );
     }
 }
@@ -957,12 +1023,11 @@ TEST_CASE( "mp_late_disconnect_cannot_remove_another_peers_actor",
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::disconnect, "player", "", previous } ) );
     npc *actor = g->critter_by_id<npc>( actor_id );
     REQUIRE( actor );
-    actor->name = "current owner";
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                           R"({"action":"worn_sync","char_stats":{"name":"foreign live admission"}})",
+                                           R"({"action":"activity_start","activity_id":"ACT_WAIT"})",
                                            cata_mp::peer_admission::create( 202 ) } ) );
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "player",
-                                           R"({"action":"worn_sync","char_stats":{"name":"stale action"}})", previous } ) );
+                                           R"({"action":"activity_start","activity_id":"ACT_WAIT_STAMINA"})", previous } ) );
     // Same display name, different transport peer. Exercise the real dispatch
     // path, not just the predicate: the disconnect must never reach despawn.
     REQUIRE( cata_mp::get_mp_queue().push( {cata_mp::mp_event::type::disconnect, "player", "", cata_mp::peer_admission::create( 101 )} ) );
@@ -971,7 +1036,7 @@ TEST_CASE( "mp_late_disconnect_cannot_remove_another_peers_actor",
     CHECK( cata_mp::get_mp_queue().empty() );
     CHECK( only_test_remote( session ).connected );
     CHECK( only_test_remote( session ).admission.peer_id() == 202 );
-    CHECK( actor->name == "current owner" );
+    CHECK( only_test_remote( session ).observation.partner_activity.empty() );
     CHECK( cata_mp::is_remote_player( actor_id ) );
 
     cata_mp::mp_on_world_exit();
@@ -1235,6 +1300,8 @@ TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
     auto &queue = cata_mp::get_mp_queue();
     avatar &local = get_avatar();
     local.assign_activity( wait_activity_actor( 100_seconds ) );
+    player_activity waiting{ wait_activity_actor( 100_seconds ) };
+    waiting.set_execution( activity_execution::authoritative );
     for( int i = 0; i < 3; ++i ) {
         auto &peer = make_test_remote( session, 801 + i );
         const cata_mp::player_id owner( std::string( 32, '1' + i ) );
@@ -1244,18 +1311,27 @@ TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
         peer.actor.bind_player( actor, owner, g->npc_lifetimes(),
                                 g->player_controls().claim( owner, actor ) );
         peer.connected = true;
-        peer.observation.partner_activity = "ACT_WAIT";
+        actor.assign_activity( waiting );
     }
     REQUIRE( cata_mp::should_fast_forward() );
     auto &last = *session.remote_players.at( 803 );
-    last.observation.partner_activity.clear();
+    npc *sleeper = last.actor.retained( g->npc_lifetimes() );
+    REQUIRE( sleeper );
+    sleeper->activity.set_to_null();
     CHECK_FALSE( cata_mp::should_fast_forward() );
-    last.observation.partner_sleeping = true;
+    REQUIRE( queue.push( { cata_mp::mp_event::type::action, "player",
+                           R"({"action":"activity_start","activity_id":"ACT_TRY_SLEEP","client_sleeping":true})",
+                           last.admission } ) );
+    cata_mp::process_mp_events();
+    CHECK_FALSE( cata_mp::should_fast_forward() );
+    const efftype_id sleep( "sleep" );
+    sleeper->add_effect( sleep, 10_hours );
     CHECK( cata_mp::should_fast_forward() );
     local.activity.set_to_null();
-    const efftype_id sleep( "sleep" );
     local.add_effect( sleep, 10_hours );
     CHECK( cata_mp::should_fast_forward() );
+    sleeper->remove_effect( sleep );
+    sleeper->assign_activity( waiting );
 
     // Another session poll must not replenish an outstanding budget.
     cata_mp::grant_client_turn();
@@ -1264,14 +1340,22 @@ TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
         CHECK( peer.turn.grant_seq == 1 );
         CHECK( peer.turn.remote_moves == 100 );
     }
-    const auto packet = test_granted_action( R"({"action":"wait","client_activity":"ACT_WAIT"})", 1 );
+    const auto step = []( const npc &actor ) {
+        return test_granted_action(
+                   R"({"action":"inventory_activity","operation":"step","request":1,"inventory_revision":0,"activity":")" +
+                   std::to_string( actor.activity.identity_generation() ) + "\"}", 1 );
+    };
     for( int i = 0; i < 2; ++i ) {
-        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "player", packet,
-                               session.remote_players.at( 801 + i )->admission } ) );
+        const auto &peer = *session.remote_players.at( 801 + i );
+        const npc *actor = peer.actor.retained( g->npc_lifetimes() );
+        REQUIRE( actor );
+        REQUIRE( queue.push( { cata_mp::mp_event::type::action, "player", step( *actor ),
+                               peer.admission } ) );
     }
     cata_mp::process_mp_events();
     REQUIRE_FALSE( cata_mp::client_acted_this_turn() );
     const auto admission = last.admission;
+    const auto packet = step( *sleeper );
     // The queue is the only shared object; all world/actor access stays here.
     std::thread reply( [&queue, packet, admission]() {
         std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
@@ -1285,6 +1369,12 @@ TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
     CHECK( last.turn.client_acted_this_turn );
     CHECK( cata_mp::client_acted_this_turn() );
     CHECK_FALSE( session.host_waiting_for_clients );
+    sleeper->add_effect( sleep, 10_hours );
+    last.turn.remote_moves = 100;
+    cata_mp::grant_client_turn();
+    CHECK_FALSE( last.turn.granted_this_turn );
+    CHECK( last.turn.remote_moves == 0 );
+    CHECK( cata_mp::client_acted_this_turn() );
 }
 
 TEST_CASE( "authoritative_melee_uses_native_rng_damage_and_action_cost", "[multiplayer][melee]" )

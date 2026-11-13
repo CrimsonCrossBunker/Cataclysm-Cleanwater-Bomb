@@ -729,7 +729,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_runtime_dialogue.cpp",
-          "line": 780
+          "line": 788
         },
         "direct_roots": [
           "PlatformCanvasContext",
@@ -17546,7 +17546,7 @@
       "registration_name": "PlatformCanvasContext",
       "registration": {
         "path": "src/lua_platform_runtime_dialogue.cpp",
-        "line": 784,
+        "line": 792,
         "installer": "platform_v1.install_runtime_dialogue_presentation_api",
         "namespace": "ccb"
       },
@@ -17582,7 +17582,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 795
+                "line": 803
               }
             ]
           },
@@ -17599,7 +17599,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 791
+                "line": 799
               }
             ]
           },
@@ -17616,7 +17616,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 789
+                "line": 797
               }
             ]
           },
@@ -17633,7 +17633,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 788
+                "line": 796
               }
             ]
           },
@@ -17650,7 +17650,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 787
+                "line": 795
               }
             ]
           },
@@ -17667,7 +17667,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 790
+                "line": 798
               }
             ]
           },
@@ -17684,7 +17684,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 792
+                "line": 800
               }
             ]
           },
@@ -17701,7 +17701,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 794
+                "line": 802
               }
             ]
           },
@@ -17718,7 +17718,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 793
+                "line": 801
               }
             ]
           },
@@ -17735,7 +17735,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 786
+                "line": 794
               }
             ]
           }
@@ -17749,7 +17749,7 @@
       "registration_name": "PlatformDialogueContext",
       "registration": {
         "path": "src/lua_platform_runtime_dialogue.cpp",
-        "line": 801,
+        "line": 809,
         "installer": "platform_v1.install_runtime_dialogue_presentation_api",
         "namespace": "ccb"
       },
@@ -17787,7 +17787,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 812
+                "line": 820
               }
             ]
           },
@@ -17804,7 +17804,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 827
+                "line": 835
               }
             ]
           },
@@ -17821,7 +17821,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 814
+                "line": 822
               }
             ]
           },
@@ -17838,7 +17838,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 820
+                "line": 828
               }
             ]
           },
@@ -17853,7 +17853,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 848
+                "line": 856
               }
             ]
           },
@@ -17870,7 +17870,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 818
+                "line": 826
               }
             ]
           },
@@ -17887,7 +17887,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 804
+                "line": 812
               }
             ]
           },
@@ -17904,7 +17904,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 857
+                "line": 865
               }
             ]
           },
@@ -17921,7 +17921,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 858
+                "line": 866
               }
             ]
           },
@@ -17938,7 +17938,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 822
+                "line": 830
               }
             ]
           },
@@ -17955,7 +17955,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 809
+                "line": 817
               }
             ]
           },
@@ -17972,7 +17972,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 825
+                "line": 833
               }
             ]
           },
@@ -17989,7 +17989,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 828
+                "line": 836
               }
             ]
           },
@@ -18006,7 +18006,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 808
+                "line": 816
               }
             ]
           },
@@ -18023,7 +18023,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 856
+                "line": 864
               }
             ]
           },
@@ -18040,7 +18040,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 810
+                "line": 818
               }
             ]
           },
@@ -18057,7 +18057,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 860
+                "line": 868
               }
             ]
           },
@@ -18074,7 +18074,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 830
+                "line": 838
               }
             ]
           },
@@ -18091,7 +18091,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 824
+                "line": 832
               }
             ]
           },
@@ -18108,7 +18108,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 829
+                "line": 837
               }
             ]
           },
@@ -18125,7 +18125,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 862
+                "line": 870
               }
             ]
           },
@@ -18140,7 +18140,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 840
+                "line": 848
               }
             ]
           },
@@ -18157,7 +18157,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 807
+                "line": 815
               }
             ]
           },
@@ -18174,7 +18174,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 861
+                "line": 869
               }
             ]
           },
@@ -18191,7 +18191,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 855
+                "line": 863
               }
             ]
           },
@@ -18208,7 +18208,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 859
+                "line": 867
               }
             ]
           },
@@ -18225,7 +18225,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 816
+                "line": 824
               }
             ]
           },
@@ -18242,7 +18242,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 805
+                "line": 813
               }
             ]
           },
@@ -18259,7 +18259,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 806
+                "line": 814
               }
             ]
           },
@@ -18274,7 +18274,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 832
+                "line": 840
               }
             ]
           },
@@ -18291,7 +18291,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 803
+                "line": 811
               }
             ]
           }

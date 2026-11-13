@@ -4637,6 +4637,12 @@ std::string Character::activity_level_str() const
 
 void Character::mend_item( item_location &&obj, bool interactive )
 {
+    if( !obj ) {
+        return;
+    }
+#ifdef MP_ENABLED
+    const bool remote = is_avatar() && cata_mp::is_client_mode();
+#endif
     if( has_trait( trait_DEBUG_HS ) ) {
         uilist menu;
         menu.text = _( "Toggle which fault?" );
@@ -4652,7 +4658,17 @@ void Character::mend_item( item_location &&obj, bool interactive )
             return;
         }
         menu.query();
-        if( menu.ret >= 0 ) {
+        if( menu.ret >= 0 && obj ) {
+#ifdef MP_ENABLED
+            if( remote ) {
+                item_repair::mending_selection selection{ item_repair::capture_target( *this, obj ),
+                        opts[menu.ret].first, fault_fix_id() };
+                selection.debug_toggle = true;
+                selection.expected_fault = opts[menu.ret].second;
+                cata_mp::client_start_mending( obj, std::move( selection ) );
+                return;
+            }
+#endif
             if( opts[menu.ret].second ) {
                 obj->remove_fault( opts[menu.ret].first );
             } else {
@@ -4675,15 +4691,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
     for( const fault_id &f : obj->faults ) {
         for( const fault_fix_id &fix_id : f->get_fixes() ) {
             const fault_fix &fix = *fix_id;
-            mending_option opt{ f, fix, true };
-            for( const auto &[skill_id, level] : fix.skills ) {
-                if( get_greater_skill_or_knowledge_level( skill_id ) < level ) {
-                    opt.doable = false;
-                    break;
-                }
-            }
-            opt.doable &= fix.get_requirements().can_make_with_inventory( this, inv, is_crafting_component );
-            mending_options.emplace_back( opt );
+            mending_options.push_back( { f, fix, item_repair::can_mend_fault( *this, fix ) } );
         }
     }
 
@@ -4747,19 +4755,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
                                         fix.mod_damage / itype::damage_scale );
             }
 
-            opt.time_to_fix = fix.time;
-            // if an item has a time saver flag multiply total time by that flag's time factor
-            for( const auto &[flag_id, mult] : fix.time_save_flags ) {
-                if( obj->has_flag( flag_id ) ) {
-                    opt.time_to_fix *= mult;
-                }
-            }
-            // if you have a time saver prof multiply total time by that prof's time factor
-            for( const auto &[proficiency_id, mult] : fix.time_save_profs ) {
-                if( has_proficiency( proficiency_id ) ) {
-                    opt.time_to_fix *= mult;
-                }
-            }
+            opt.time_to_fix = item_repair::fault_repair_time( *this, *obj, fix );
             descr += string_format( _( "Time required: <color_cyan>%s</color>\n" ),
                                     to_string_approx( opt.time_to_fix ) );
             if( fix.skills.empty() ) {
@@ -4829,6 +4825,9 @@ void Character::mend_item( item_location &&obj, bool interactive )
         sel = static_cast < int >( std::distance( repair_options.begin(), available ) );
     }
 
+    if( !obj ) {
+        return;
+    }
     if( sel >= static_cast < int >( mending_options.size() ) ) {
         item_repair::start( *this, obj, repair_options[sel - mending_options.size()] );
         return;
@@ -4844,6 +4843,13 @@ void Character::mend_item( item_location &&obj, bool interactive )
         }
 
         const fault_fix &fix = opt.fix;
+#ifdef MP_ENABLED
+        if( remote ) {
+            cata_mp::client_start_mending( obj, { item_repair::capture_target( *this, obj ),
+                                                opt.fault, fix.id } );
+            return;
+        }
+#endif
         assign_activity( mend_item_activity_actor( opt.time_to_fix, obj, opt.fault, fix.id ) );
     }
 }

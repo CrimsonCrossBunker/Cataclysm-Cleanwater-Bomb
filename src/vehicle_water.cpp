@@ -2,14 +2,19 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstdlib>
+#include <utility>
 
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
+#include "cached_options.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "enums.h"
 #include "game.h"
 #include "item.h"
 #include "item_consumption.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "json.h"
 #include "liquid_transfer.h"
@@ -17,6 +22,7 @@
 #include "mp_inventory_activity.h"
 #include "player_activity.h"
 #include "string_formatter.h"
+#include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "uilist.h"
 #include "veh_interact.h"
@@ -34,6 +40,7 @@ const itype_id water( "water" );
 const itype_id clean_water( "water_clean" );
 const itype_id faucet( "water_faucet" );
 const itype_id purifier( "water_purifier" );
+const quality_id hose( "HOSE" );
 
 bool supplies_tool( const vehicle &target, const vehicle_part &part, const itype_id &type )
 {
@@ -61,22 +68,44 @@ int tool_at( const vehicle &target, const tripoint_abs_ms &position, const itype
     return -1;
 }
 
-int water_tank( const vehicle &target, int64_t tank, int64_t liquid, bool for_purification = false )
+int liquid_tank( const vehicle &target, int64_t tank, int64_t liquid, bool allow_frozen = false )
 {
-    for( const vpart_reference &part : target.get_all_parts() ) {
-        const vehicle_part &p = part.part();
-        if( p.removed || !p.is_available() || !p.is_tank() ||
-            p.get_base().uid().get_value() != tank || p.ammo_remaining() <= 0 ||
-            ( p.ammo_current() != water && ( for_purification || p.ammo_current() != clean_water ) ) ) {
+    for( const vpart_reference &entry : target.get_all_parts() ) {
+        const vehicle_part &part = entry.part();
+        if( !part.is_available() || !part.is_tank() || part.has_flag( vp_flag::carried_flag ) ||
+            part.get_base().uid().get_value() != tank || part.ammo_remaining() <= 0 ) {
             continue;
         }
-        const item &contents = p.get_base().only_item();
+        const item &contents = part.get_base().only_item();
         if( contents.uid().get_value() == liquid &&
-            ( for_purification || contents.made_of( phase_id::LIQUID ) ) ) {
-            return part.part_index();
+            ( allow_frozen || contents.made_of( phase_id::LIQUID ) ) ) {
+            return entry.part_index();
         }
     }
     return -1;
+}
+
+int water_tank( const vehicle &target, int64_t tank, int64_t liquid, bool for_purification = false )
+{
+    const int index = liquid_tank( target, tank, liquid, for_purification );
+    if( index < 0 ) {
+        return -1;
+    }
+    const itype_id type = target.part( index ).ammo_current();
+    return type == water || ( !for_purification && type == clean_water ) ? index : -1;
+}
+
+bool can_siphon( Character &who, map &here, const vehicle &target )
+{
+    if( who.controlling_vehicle || std::abs( target.velocity ) > 100 ) {
+        return false;
+    }
+    if( target.is_appliance() ) {
+        return who.has_quality( hose );
+    }
+    // Nearby tools may have been moved by another player this turn.
+    who.invalidate_crafting_inventory();
+    return who.crafting_inventory( &here, who.pos_bub( here ), pickup_range, false ).has_quality( hose );
 }
 
 int preferred_water_tank( const vehicle &target )
@@ -114,79 +143,134 @@ item_source faucet_source( const vehicle &target, const tripoint_abs_ms &positio
         { target.uid().get_value(), choice.tool, choice.tank, choice.liquid } };
 }
 
-class vehicle_water_activity_actor : public activity_actor
+item_source siphon_source( const vehicle &target, const tripoint_abs_ms &position,
+                           const vehicle_water_selection &choice )
 {
-    public:
-        item_source source;
-        unload_liquid_choice destination;
-        const activity_id &get_type() const override {
-            static const activity_id id( "ACT_FILL_LIQUID" );
-            return id;
+    return item_source{ "vehicle_siphon", position,
+        { target.uid().get_value(), choice.tank, choice.liquid } };
+}
+
+item_location resolve_vehicle_siphon_source( Character &who, map &here, const item_source &source,
+        const std::optional<faction_id> &owner )
+{
+    if( source.path.size() != 3 || !here.inbounds( source.position ) ||
+        source.position.z() != who.pos_abs().z() || rl_dist( source.position, who.pos_abs() ) > 1 ) {
+        return item_location::nowhere;
+    }
+    const auto at = here.veh_at( source.position );
+    if( !at || at->vehicle().uid().get_value() != source.path[0] || at->vehicle().magic ||
+        ( owner && at->vehicle().get_owner() != *owner ) || !can_siphon( who, here, at->vehicle() ) ) {
+        return item_location::nowhere;
+    }
+    vehicle &target = at->vehicle();
+    const int tank = liquid_tank( target, source.path[1], source.path[2] );
+    return tank >= 0 ? tank_liquid( target, tank ) : item_location::nowhere;
+}
+
+// Reserve only the portion passed to native gameplay. A consumption or
+// placement callback can move or destroy the tank while it runs.
+template<typename Use>
+int settle_tank_portion( Character &who, map &here, item_location liquid, item &portion, Use use )
+{
+    const item_location tank = liquid.parent_item();
+    const vehicle_cursor *cursor = tank.veh_cursor();
+    if( !cursor ) {
+        return 0;
+    }
+    const auto vehicle_ref = cursor->veh.get_safe_reference();
+    const auto context = here.get_context_reference();
+    const character_action_guard lifetime( who );
+    const tripoint_abs_ms position = liquid.pos_abs();
+    const int reserved = portion.charges;
+    liquid->charges -= reserved;
+    use( portion );
+    portion.charges = std::clamp( portion.charges, 0, reserved );
+    const int used = reserved - portion.charges;
+    if( !context ) {
+        return used;
+    }
+    if( liquid ) {
+        liquid->charges += portion.charges;
+        if( liquid->charges == 0 ) {
+            liquid.remove_item();
+        } else {
+            liquid.on_contents_changed();
         }
-        void start( player_activity &act, Character & ) override {
-            act.moves_total = act.moves_left = 1;
-        }
-        void do_turn( player_activity &act, Character &who ) override {
-            map &here = get_map();
-            item_location liquid = resolve_vehicle_water_source( who, here, source );
-            liquid_dest_opt to;
-            std::optional<int> destination_tank;
-            if( !liquid || !resolve_liquid_destination( who, destination,
-                    *liquid.parent_item(), to, destination_tank ) ) {
-                act.set_to_null();
-                return;
-            }
-            // Same 250 ml per world turn as native vehicle liquid transfer.
-            item portion = *liquid;
-            portion.charges = std::min( liquid->charges,
-                                        std::max( 1, liquid->charges_per_volume( 250_ml ) ) );
-            if( portion.has_temperature() && units::to_joule_per_gram( portion.specific_energy ) < 0 ) {
-                portion.set_item_temperature( std::max( get_weather().get_temperature( who.pos_bub() ),
-                                                        temperatures::cold ) );
-            }
-            const int available = portion.charges;
-            const character_action_guard lifetime( who );
-            const item_source identity = source;
-            liquid_handler::transfer_liquid( who, portion, to, destination_tank, true, false );
-            if( !lifetime ) {
-                return;
-            }
-            const int moved = available - portion.charges;
-            liquid = resolve_vehicle_water_source( who, here, identity );
-            if( !liquid || moved <= 0 ) {
-                act.set_to_null();
-                return;
-            }
-            vehicle *target = vehicle::find_vehicle_by_uid( here, identity.path[0] );
-            const int tank = water_tank( *target, identity.path[2], identity.path[3] );
-            target->drain( here, tank, moved );
-            who.set_moves( 0 );
-            if( moved < available || !resolve_vehicle_water_source( who, here, identity ) ) {
-                act.set_to_null();
-            }
-        }
-        void finish( player_activity &act, Character & ) override {
-            act.set_to_null();
-        }
-        std::unique_ptr<activity_actor> clone() const override {
-            return std::make_unique<vehicle_water_activity_actor>( *this );
-        }
-        void serialize( JsonOut &out ) const override {
-            out.start_object();
-            out.member( "source", source );
-            out.member( "destination", destination );
-            out.end_object();
-        }
-};
+    } else if( portion.charges > 0 && here.inbounds( position ) ) {
+        here.add_item_or_charges( here.get_bub( position ), portion, true,
+                                  lifetime ? &who : nullptr );
+    }
+    if( vehicle_ref ) {
+        vehicle_ref->invalidate_mass();
+    }
+    return used;
+}
 } // namespace
 
-std::unique_ptr<activity_actor> deserialize_vehicle_water_activity( JsonValue &data )
+void drink_vehicle_liquid( Character &who, map &here, item_location liquid )
 {
-    vehicle_water_activity_actor actor;
-    const JsonObject object = data.get_object();
-    object.read( "source", actor.source, true );
-    object.read( "destination", actor.destination, true );
-    return actor.clone();
+    if( !liquid || liquid->charges <= 0 ) {
+        return;
+    }
+    item portion = *liquid;
+    // Food uses one serving. Immediate medication can use multiple charges
+    // through its native iuse and returns any unused charges to the tank.
+    if( !portion.is_medication() ) {
+        portion.charges = 1;
+    }
+    const int reserved = portion.charges;
+    settle_tank_portion( who, here, liquid, portion, [&]( item & drink ) {
+        switch( who.consume( drink, true, true ) ) {
+            case trinary::NONE:
+                drink.charges = reserved;
+                break;
+            case trinary::ALL:
+                drink.charges = 0;
+                break;
+            case trinary::SOME:
+                drink.charges = std::min( drink.charges, reserved - 1 );
+                break;
+        }
+    } );
+}
+
+void vehicle_liquid_transfer_turn( player_activity &act, Character &who, const item_source &source,
+                                    const unload_liquid_choice &destination )
+{
+    map &here = get_map();
+    item_location liquid = resolve_vehicle_water_source( who, here, source );
+    liquid_dest_opt to;
+    std::optional<int> destination_tank;
+    if( !liquid || destination.source != liquid->uid().get_value() ||
+        !resolve_liquid_destination( who, destination, *liquid.parent_item(), to, destination_tank ) ) {
+        act.set_to_null();
+        return;
+    }
+    item portion = *liquid;
+    portion.charges = std::min( liquid->charges,
+                                std::max( 1, liquid->charges_per_volume( 250_ml ) ) );
+    if( portion.has_temperature() && units::to_joule_per_gram( portion.specific_energy ) < 0 ) {
+        portion.set_item_temperature( std::max( get_weather().get_temperature( who.pos_bub() ),
+                                                temperatures::cold ) );
+    }
+
+    const int available = portion.charges;
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const auto generation = act.identity_generation();
+    const item_source identity = source;
+    const int moved = settle_tank_portion( who, here, liquid, portion, [&]( item & load ) {
+        liquid_handler::transfer_liquid( who, load, to, destination_tank, true, false );
+    } );
+    if( !lifetime || !context || who.activity.identity_generation() != generation ) {
+        return;
+    }
+    if( moved > 0 ) {
+        who.set_moves( 0 );
+    }
+    if( moved < available || !resolve_vehicle_water_source( who, here, identity ) ) {
+        act.set_to_null();
+    }
 }
 
 void vehicle_water_selection::serialize( JsonOut &out ) const
@@ -222,6 +306,25 @@ bool has_vehicle_water_tool( const vehicle &target, const tripoint_abs_ms &posit
 bool valid_vehicle_water_selection( Character &who, map &here, vehicle &target,
                                     const tripoint_abs_ms &position, const vehicle_water_selection &choice )
 {
+    if( choice.operation == "siphon" || choice.operation == "siphon_drink" ) {
+        if( choice.tool != 0 ) {
+            return false;
+        }
+        const item_location liquid = resolve_vehicle_water_source( who, here,
+                                     siphon_source( target, position, choice ) );
+        if( !liquid ) {
+            return false;
+        }
+        if( choice.operation == "siphon_drink" ) {
+            return !choice.destination &&
+                   owned_consumption_allowed( who, liquid, choice.allow_consequences, true );
+        }
+        liquid_dest_opt to;
+        std::optional<int> part;
+        return !choice.allow_consequences && choice.destination &&
+               choice.destination->source == choice.liquid &&
+               resolve_liquid_destination( who, *choice.destination, *liquid.parent_item(), to, part );
+    }
     const bool purify = choice.operation == "purify";
     if( choice.tool <= 0 || ( !purify && choice.operation != "drink" && choice.operation != "fill" ) ||
         ( choice.operation == "fill" ) != choice.destination.has_value() ||
@@ -241,7 +344,8 @@ bool valid_vehicle_water_selection( Character &who, map &here, vehicle &target,
                resolve_liquid_destination( who, *choice.destination, target.part( index ).get_base(), to, part );
     }
     if( choice.operation == "drink" ) {
-        return who.can_eat( *tank_liquid( target, index ) ).success();
+        return owned_consumption_allowed( who, tank_liquid( target, index ),
+                                          choice.allow_consequences, true );
     }
     const int64_t cost = static_cast<int64_t>( target.part( index ).ammo_remaining() ) *
                          purifier->charges_to_use();
@@ -261,6 +365,22 @@ bool execute_vehicle_water( Character &who, map &here, vehicle &target,
     if( !valid_vehicle_water_selection( who, here, target, position, choice ) ) {
         return false;
     }
+    if( choice.operation == "drink" || choice.operation == "siphon_drink" ) {
+        item_source source = choice.operation == "drink" ? faucet_source( target, position, choice ) :
+                             siphon_source( target, position, choice );
+        const item_location liquid = resolve_vehicle_water_source( who, here, source );
+        if( !owned_consumption_allowed( who, liquid, choice.allow_consequences, allow_theft ) ) {
+            return false;
+        }
+        who.assign_activity( consume_activity_actor( std::move( source ), target.get_owner(),
+                             choice.allow_consequences, allow_theft ) );
+        return static_cast<bool>( who.activity );
+    }
+    if( choice.operation == "siphon" ) {
+        start_owned_liquid_transfer( who, siphon_source( target, position, choice ),
+                                     *choice.destination );
+        return static_cast<bool>( who.activity );
+    }
     const int tank = water_tank( target, choice.tank, choice.liquid, choice.operation == "purify" );
     if( choice.operation == "purify" ) {
         const int amount = target.part( tank ).ammo_remaining();
@@ -271,65 +391,38 @@ bool execute_vehicle_water( Character &who, map &here, vehicle &target,
                                target.name, target.part( tank ).name() );
         return true;
     }
-    const item_location liquid = tank_liquid( target, tank );
-    if( choice.operation == "drink" ) {
-        if( !owned_consumption_allowed( who, liquid, choice.allow_consequences, allow_theft ) ) {
-            return false;
-        }
-        who.assign_activity( consume_activity_actor( liquid, false, true,
-                             choice.allow_consequences, allow_theft ) );
-    } else {
-        vehicle_water_activity_actor actor;
-        actor.source = faucet_source( target, position, choice );
-        actor.destination = *choice.destination;
-        who.assign_activity( actor );
-        who.activity.set_execution( activity_execution::authoritative );
-    }
+    start_owned_liquid_transfer( who, faucet_source( target, position, choice ),
+                                 *choice.destination );
     return static_cast<bool>( who.activity );
 }
 
-std::optional<item_source> capture_vehicle_water_source( const Character &who,
-        const item_location &source )
+bool is_vehicle_liquid_source( const item_source &source )
 {
-    if( !source || !source.has_parent() ||
-        ( source->typeId() != water && source->typeId() != clean_water ) ) {
-        return std::nullopt;
-    }
-    const item_location root = source.parent_item();
-    if( root.where() != item_location::type::vehicle ) {
-        return std::nullopt;
-    }
-    const vehicle_cursor *cursor = root.veh_cursor();
-    if( !cursor || root.has_parent() ||
-        &*root != &cursor->veh.part( cursor->part ).get_base() ||
-        water_tank( cursor->veh, root->uid().get_value(), source->uid().get_value() ) < 0 ) {
-        return std::nullopt;
-    }
-    for( const vpart_reference &part : cursor->veh.get_all_parts() ) {
-        if( supplies_tool( cursor->veh, part.part(), faucet ) && part.pos_abs().z() == who.pos_abs().z() &&
-            rl_dist( part.pos_abs(), who.pos_abs() ) <= 1 ) {
-            return item_source{ "vehicle_faucet", part.pos_abs(),
-                {
-                    cursor->veh.uid().get_value(), part.part().get_base().uid().get_value(),
-                    root->uid().get_value(), source->uid().get_value()
-                } };
-        }
-    }
-    return std::nullopt;
+    return source.kind == "vehicle_faucet" || source.kind == "vehicle_siphon";
 }
 
-item_location resolve_vehicle_water_source( Character &who, map &here, const item_source &source )
+item_location resolve_vehicle_water_source( Character &who, map &here, const item_source &source,
+        const std::optional<faction_id> &owner )
 {
+    if( source.kind == "vehicle_siphon" ) {
+        return resolve_vehicle_siphon_source( who, here, source, owner );
+    }
     if( source.kind != "vehicle_faucet" || source.path.size() != 4 ||
+        !here.inbounds( source.position ) ||
         source.position.z() != who.pos_abs().z() || rl_dist( source.position, who.pos_abs() ) > 1 ) {
         return item_location::nowhere;
     }
-    vehicle *target = vehicle::find_vehicle_by_uid( here, source.path[0] );
-    if( !target || tool_at( *target, source.position, faucet, source.path[1] ) < 0 ) {
+    const auto at = here.veh_at( source.position );
+    if( !at || at->vehicle().uid().get_value() != source.path[0] ||
+        ( owner && at->vehicle().get_owner() != *owner ) ) {
         return item_location::nowhere;
     }
-    const int tank = water_tank( *target, source.path[2], source.path[3] );
-    return tank >= 0 ? tank_liquid( *target, tank ) : item_location::nowhere;
+    vehicle &target = at->vehicle();
+    if( tool_at( target, source.position, faucet, source.path[1] ) < 0 ) {
+        return item_location::nowhere;
+    }
+    const int tank = water_tank( target, source.path[2], source.path[3] );
+    return tank >= 0 ? tank_liquid( target, tank ) : item_location::nowhere;
 }
 
 std::optional<vehicle_control_selection> query_vehicle_water( Character &who, map &here,

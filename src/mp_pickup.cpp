@@ -1,5 +1,6 @@
 #include "mp_pickup.h"
 
+#include <iterator>
 #include <limits>
 #include <map>
 #include <set>
@@ -8,12 +9,15 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "coordinates.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_source.h"
 #include "item_uid.h"
 #include "json.h"
 #include "map.h"
@@ -70,7 +74,8 @@ std::optional<std::string> make_pickup_request( const Pickup::selection &selecti
     }
     for( size_t i = 0; i < selection.targets.size(); ++i ) {
         const item_location &target = selection.targets[i];
-        if( !target || target.where() != item_location::type::map || target.has_parent() ||
+        if( !target || ( target.where_recursive() != item_location::type::map &&
+                         target.where_recursive() != item_location::type::vehicle ) ||
             !target->uid().is_valid() || selection.quantities[i] < 0 ) {
             return std::nullopt;
         }
@@ -90,7 +95,16 @@ std::optional<std::string> make_pickup_request( const Pickup::selection &selecti
         out.start_object();
         out.member( "uid", target->uid().get_value() );
         out.member( "pos", here.get_abs( target.pos_bub( here ) ) );
-        out.member( "quantity", selection.quantities[i] );
+        const bool exact = target.has_parent() || target.where() == item_location::type::vehicle;
+        const int selected_quantity = selection.quantities[i];
+        out.member( "quantity", exact && selected_quantity == 0 ? target->count() : selected_quantity );
+        if( exact ) {
+            const item_source source = capture_item_source( get_avatar(), target );
+            if( source.kind != "map" && ( source.kind != "vehicle" || source.vehicle <= 0 || source.cargo <= 0 ) ) {
+                return std::nullopt;
+            }
+            out.member( "source", source );
+        }
         out.end_object();
     }
     out.end_array();
@@ -126,7 +140,8 @@ std::string execute_pickup_request( Character &who, map &here, const JsonObject 
 
     std::vector<item_location> targets;
     std::vector<int> quantities;
-    std::set<std::pair<tripoint_abs_ms, int64_t>> selected;
+    std::set<int64_t> selected;
+    std::set<int64_t> selected_ancestors;
     std::map<tripoint_abs_ms, std::unordered_map<int64_t, item *>> sources;
     bool accepted = pickup_inventory_revision_matches( request, state );
     bool all_targets_present = true;
@@ -137,8 +152,26 @@ std::string execute_pickup_request( Character &who, map &here, const JsonObject 
         tripoint_abs_ms pos;
         const int quantity = entry.get_int( "quantity" );
         if( uid == 0 || quantity < 0 || !entry.read( "pos", pos ) ||
-            !selected.emplace( pos, uid ).second ) {
+            !selected.insert( uid ).second || selected_ancestors.count( uid ) ) {
             entry.throw_error( "Invalid or duplicate pickup target" );
+        }
+        item_source identity;
+        const bool exact = entry.has_member( "source" );
+        if( exact ) {
+            entry.read( "source", identity, true );
+            if( identity.position != pos || identity.path.empty() || identity.path.size() > 64 ||
+                identity.path.back() != uid ||
+                ( identity.kind == "map" && ( identity.vehicle != 0 || identity.cargo != 0 ) ) ||
+                ( identity.kind != "map" &&
+                  ( identity.kind != "vehicle" || identity.vehicle <= 0 || identity.cargo <= 0 ) ) ) {
+                entry.throw_error_at( "source", "Invalid pickup source identity" );
+            }
+            for( auto it = identity.path.begin(); it != std::prev( identity.path.end() ); ++it ) {
+                if( *it <= 0 || selected.count( *it ) ) {
+                    entry.throw_error_at( "source", "Cannot pick up a container and its contents together" );
+                }
+                selected_ancestors.insert( *it );
+            }
         }
         const int64_t dx = static_cast<int64_t>( pos.x() ) - actor_pos.x();
         const int64_t dy = static_cast<int64_t>( pos.y() ) - actor_pos.y();
@@ -152,6 +185,16 @@ std::string execute_pickup_request( Character &who, map &here, const JsonObject 
         if( !here.inbounds( bub ) || !here.accessible_items( bub ) ||
             ( bub != who.pos_bub( here ) && !who.sees( here, bub ) ) ) {
             accepted = false;
+            continue;
+        }
+        if( exact ) {
+            item_location target = resolve_item_source( who, here, identity );
+            if( target && !can_remove_from_item_pockets( who, target ) ) {
+                target = item_location();
+            }
+            all_targets_present = all_targets_present && static_cast<bool>( target );
+            targets.emplace_back( std::move( target ) );
+            quantities.push_back( quantity );
             continue;
         }
         auto source = sources.try_emplace( pos );
@@ -175,15 +218,19 @@ std::string execute_pickup_request( Character &who, map &here, const JsonObject 
             who.last_item = targets.back()->typeId();
         }
         const int saved_moves = who.get_moves();
+        const character_action_guard lifetime( who );
+        const auto context = here.get_context_reference();
         const on_out_of_scope restore_moves( [&]() {
-            who.set_moves( saved_moves );
+            if( lifetime ) {
+                who.set_moves( saved_moves );
+            }
         } );
         Pickup::pick_info info;
         bool stashed = true;
         // Keep the existing one-grant pickup timing in the network adapter;
         // the shared operation still charges its real actor normally. Reset
         // the local budget between chunks instead of spinning with no moves.
-        while( !targets.empty() ) {
+        while( lifetime && context && !targets.empty() ) {
             who.set_moves( 0 );
             if( !Pickup::do_pickup( who, targets, quantities, autopickup, stashed, info,
                                     Pickup::interaction::unattended ) ) {
@@ -191,7 +238,10 @@ std::string execute_pickup_request( Character &who, map &here, const JsonObject 
                 break;
             }
         }
-        accepted = accepted && stashed && all_targets_present;
+        if( !lifetime ) {
+            return {};
+        }
+        accepted = accepted && context && stashed && all_targets_present;
     }
 
     return record_inventory_result( who, sequence, accepted, state );

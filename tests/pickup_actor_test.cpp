@@ -9,6 +9,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_utility.h"
 #include "game.h"
 #include "inventory.h"
 #include "item.h"
@@ -30,6 +31,10 @@
 #include "player_helpers.h"
 #include "rng.h"
 #include "type_id.h"
+#include "vehicle.h"
+#include "vehicle_selector.h"
+#include "vpart_position.h"
+#include "vpart_range.h"
 
 namespace
 {
@@ -164,6 +169,91 @@ TEST_CASE( "mp_pickup_resolves_identity_after_authoritative_ground_replication",
     CHECK( remote.charges_of( itype_id( "nail" ) ) == 7 );
     CHECK( replica.charges == 13 );
     CHECK( replica.uid().get_value() == original_uid );
+}
+
+TEST_CASE( "replicated_vehicle_cargo_keeps_item_ancestry_for_authoritative_pickup",
+           "[pickup][multiplayer][item_identity][vehicle]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    auto &session = g->multiplayer_session();
+    const on_out_of_scope cleanup( [&]() {
+        session.reset();
+        clear_npcs();
+    } );
+    npc &remote = spawn_npc( { 60, 60 }, "test_talker" );
+    prepare_pickup_actor( remote );
+    map &here = get_map();
+    const auto origin = remote.pos_bub( here );
+    const auto pos = origin + tripoint::east;
+    here.ter_set( origin, ter_str_id( "t_floor" ) );
+    here.ter_set( pos, ter_str_id( "t_floor" ) );
+    vehicle *original = here.add_vehicle( vproto_id( "none" ), pos, 0_degrees, 0,
+                                          veh_spawn_status::UNDAMAGED );
+    REQUIRE( original );
+    REQUIRE( original->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int part = original->install_part( here, point_rel_ms::zero, vpart_id( "trunk" ) );
+    REQUIRE( part >= 0 );
+    original->refresh();
+    here.add_vehicle_to_cache( original );
+    original->ensure_uid();
+    item backpack( itype_id( "backpack" ), calendar::turn );
+    const itype_id nail( "nail" );
+    REQUIRE( backpack.put_in( item( nail, calendar::turn, 20 ), pocket_type::CONTAINER ).success() );
+    const auto inserted = original->add_item( here, original->part( part ), backpack );
+    REQUIRE( inserted );
+    const auto root_id = ( **inserted ).uid().get_value();
+    const auto child_id = ( **inserted ).only_item().uid().get_value();
+    const auto vehicle_id = original->uid().get_value();
+    const auto part_id = original->part( part ).get_base().uid().get_value();
+    const auto absolute = here.get_abs( pos );
+    const auto row = [&]( const std::string &payload ) {
+        return R"({"type":"vehicle_step","vehicles":[{"nid":1,"uid":)" + std::to_string( vehicle_id ) +
+               R"(,"x":)" + std::to_string( absolute.x() ) +
+               R"(,"y":)" + std::to_string( absolute.y() ) +
+               R"(,"z":)" + std::to_string( absolute.z() ) + payload + "}]}";
+    };
+    const auto first = row( R"(,"snapshot":)" + serialize( *original ) );
+    here.destroy_vehicle( original );
+    cata_mp::set_client_mode( true );
+    const auto rng_before = rng_get_engine();
+    REQUIRE( cata_mp::client_apply_message( first ) );
+    CHECK( rng_get_engine() == rng_before );
+    const auto restored = here.veh_at( pos ).cargo();
+    REQUIRE( restored );
+    REQUIRE( restored->vehicle().uid().get_value() == vehicle_id );
+    REQUIRE( restored->part().get_base().uid().get_value() == part_id );
+    REQUIRE( restored->items().only_item().uid().get_value() == root_id );
+    REQUIRE( restored->items().only_item().only_item().uid().get_value() == child_id );
+
+    const auto update = row( R"(,"cargo":[{"x":)" + std::to_string( absolute.x() ) +
+                             R"(,"y":)" + std::to_string( absolute.y() ) +
+                             R"(,"z":)" + std::to_string( absolute.z() ) +
+                             R"(,"part":)" + std::to_string( part_id ) +
+                             R"(,"items":[)" + serialize( restored->items().only_item() ) + "]}]" );
+    REQUIRE( cata_mp::client_apply_message( update ) );
+    CHECK( rng_get_engine() == rng_before );
+    item &root = restored->items().only_item();
+    REQUIRE( root.uid().get_value() == root_id );
+    REQUIRE( root.only_item().uid().get_value() == child_id );
+    const item_location carrier( vehicle_cursor( restored->vehicle(), restored->part_index() ), &root );
+    const item_location source( carrier, &root.only_item() );
+    Pickup::selection choice{ { source }, { 7 }, false };
+    cata_mp::pickup_client_state client;
+    cata_mp::pickup_host_state host;
+    const auto request = cata_mp::make_pickup_request( choice, here, client );
+    REQUIRE( request );
+    cata_mp::set_client_mode( false );
+    const bool replace_cargo = GENERATE( false, true );
+    if( replace_cargo ) {
+        restored->part().set_base( item( restored->part().get_base() ) );
+        REQUIRE( restored->part().get_base().uid().get_value() != part_id );
+    }
+    const auto result = run_pickup_request( remote, *request, host );
+    CHECK( remote.charges_of( nail ) == ( replace_cargo ? 0 : 7 ) );
+    CHECK( root.only_item().charges == ( replace_cargo ? 20 : 13 ) );
+    CHECK( run_pickup_request( remote, *request, host ) == result );
+    CHECK( remote.charges_of( nail ) == ( replace_cargo ? 0 : 7 ) );
 }
 
 TEST_CASE( "pickup_changes_only_the_selected_actor_and_source_stack",
@@ -653,6 +743,38 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     // Matching revisions without the full carried snapshot are invalid too.
     dispatch( R"({"action":"worn_sync","inventory_revision":1,"worn":[],"client_inv":[]})" );
     CHECK( carried_snapshot( remote ) == after );
+    dispatch( R"({"action":"worn_sync","inventory_revision":1,"carried":)" +
+              carried_snapshot( get_avatar() ) + "}" );
+    CHECK( carried_snapshot( remote ) == after );
+
+    const auto cargo_position = pos + tripoint::east;
+    const auto cargo_abs = here.get_abs( cargo_position );
+    vehicle *target = here.add_vehicle( vproto_id( "none" ), cargo_position, 0_degrees, 0,
+                                        veh_spawn_status::UNDAMAGED );
+    REQUIRE( target );
+    REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int trunk = target->install_part( here, point_rel_ms::zero, vpart_id( "trunk" ) );
+    REQUIRE( trunk >= 0 );
+    here.add_vehicle_to_cache( target );
+    const auto rock = target->add_item( here, target->part( trunk ), item( itype_id( "rock" ) ) );
+    REQUIRE( rock );
+    const int64_t cargo_uid = ( **rock ).uid().get_value();
+    auto &turn = only_test_remote( session ).turn;
+    ++turn.grant_seq;
+    turn.remote_moves = 100;
+    const auto coordinates = []( const tripoint_abs_ms &p ) {
+        return R"("x":)" + std::to_string( p.x() ) + R"(,"y":)" + std::to_string( p.y() ) +
+               R"(,"z":)" + std::to_string( p.z() );
+    };
+    dispatch( R"({"type":"action","action":"wait","client_tile_changes":[{)" + coordinates( abs ) +
+              R"(,"ter":"t_wall","items":[]}],"client_veh_cargo_changes":[{)" + coordinates( cargo_abs ) +
+              R"(,"items":[]}]})" );
+    CHECK( turn.client_acted_this_turn );
+    CHECK( here.ter( pos ) == terrain );
+    REQUIRE( here.i_at( pos ).size() == 1 );
+    CHECK( here.i_at( pos ).only_item().charges == 13 );
+    REQUIRE( target->get_items( target->part( trunk ) ).size() == 1 );
+    CHECK( target->get_items( target->part( trunk ) ).only_item().uid().get_value() == cargo_uid );
     session.client_pickup = client;
     session.remote_players.clear();
     make_test_remote( session );

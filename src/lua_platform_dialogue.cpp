@@ -888,8 +888,7 @@ std::string context::offer_item_to_interlocutor( const bool use_item ) const
         throw std::runtime_error(
             "dialogue item offer requires a live native interlocutor" );
     }
-    d.reason = interlocutor->give_item_to( use_item );
-    return d.reason;
+    return d.offer_item_to_interlocutor( use_item );
 }
 
 int context::trial_chance( const std::string &kind, const int difficulty,

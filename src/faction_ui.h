@@ -25,15 +25,6 @@ enum class tab_mode : int {
     NUM_TABS
 };
 
-enum class radio_contact_result : int {
-    ALPHA_NO_RADIO,
-    BETA_NO_RADIO,
-    BOTH_NO_RADIO,
-    TOO_FAR,
-    YES,
-    last
-};
-
 class faction_ui : public cataimgui::window
 {
     public:
