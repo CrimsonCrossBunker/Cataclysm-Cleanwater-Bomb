@@ -26,7 +26,7 @@
       "throw_range_multiplier": 2.5,
       "throw_stamina_multiplier": 2,
       "throw_dispersion_multiplier": 0.9,
-      "throw_speed_multiplier": 3,
+      "throw_speed_multiplier": 3.5,
       "throw_weight_multiplier": 1.5
     }
   },
@@ -82,13 +82,13 @@
       "allow_ammotype": [ "pebble" ],
       "min_weight": "1 g",
       "max_weight": "1200 g",
-      "max_volume": "1 L",
+      "max_volume": "500 ml",
       "max_length": "30 cm",
       "throw_damage_multiplier": 1.5,
       "throw_range_multiplier": 2,
       "throw_stamina_multiplier": 1.5,
       "throw_dispersion_multiplier": 0.9,
-      "throw_speed_multiplier": 3.5,
+      "throw_speed_multiplier": 3.0,
       "throw_weight_multiplier": 1.2
     },
     "melee_damage": { "bash": 14 }
