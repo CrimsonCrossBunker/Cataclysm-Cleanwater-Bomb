@@ -24,25 +24,29 @@
 #include "type_id.h"
 #include "units.h"
 
-static const flag_id json_flag_SLING_PROJECTILE( "SLING_PROJECTILE" );
+static const damage_type_id damage_bash( "bash" );
 
-static const itype_id itype_test_throwing_flagged( "test_throwing_flagged" );
+static const flag_id json_flag_SLING_PROJECTILE( "SLING_PROJECTILE" );
 static const itype_id itype_test_sling_payload( "test_sling_payload" );
 static const itype_id itype_test_throw_correction( "test_throw_correction" );
 static const itype_id itype_test_throwing_aid( "test_throwing_aid" );
 static const itype_id itype_test_throwing_ammo( "test_throwing_ammo" );
+static const itype_id itype_test_throwing_flagged( "test_throwing_flagged" );
 static const itype_id itype_test_throwing_plain( "test_throwing_plain" );
 static const itype_id itype_test_throwing_stack( "test_throwing_stack" );
 static const itype_id itype_test_throwing_unrecoverable( "test_throwing_unrecoverable" );
 
 static const skill_id skill_throw( "throw" );
 
+namespace
+{
 struct throw_test_pstats {
     int skill_lvl;
     int str;
     int dex;
     int per;
 };
+} // namespace
 
 static void reset_player( Character &you, const throw_test_pstats &pstats,
                           const tripoint_bub_ms &pos )
