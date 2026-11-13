@@ -61,7 +61,7 @@ static avatar &prepare_grappler( const std::string &style = "style_judo" )
 {
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     static bool platform_world_ready = false;
-    if(!platform_world_ready ) {
+    if( !platform_world_ready ) {
         cata::lua_platform::on_world_ready( true );
         platform_world_ready = true;
     }
@@ -105,7 +105,7 @@ TEST_CASE( "active_grappling_is_bound_to_appropriate_styles",
             CHECK_FALSE( technique->lua_platform_grapple_handler.empty() );
 #endif
         }
-        if(!entry.second.empty() ) {
+        if( !entry.second.empty() ) {
             CHECK( std::find( available.begin(), available.end(),
                               matec_id( entry.second ) ) != available.end() );
         }
