@@ -48,9 +48,8 @@ void note_mouse_wheel( float ticks );
 bool mouse_captured();
 
 // Converts a logical pixel (same space as the dest rect of draw_terrain_window)
-// to the map tile under the cursor by unprojecting a camera ray onto the view
-// level's ground plane. Also remembers the pixel as the hover position for the
-// next frame's preselection box. Nullopt before the first frame / ray misses.
+// to the nearest selectable terrain surface in the presented frame.
+// Also remembers the pixel as the hover position for the next preselection box.
 std::optional<tripoint_bub_ms> screen_to_tile( const point &logical_pixel );
 
 // Game-driven cursors (targeting, construction, zones): cata_tiles forwards

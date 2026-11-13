@@ -2940,7 +2940,7 @@ bool game::try_get_left_click_action( action_id &act, const tripoint_bub_ms &mou
     bool new_destination = true;
     if( !destination_preview.empty() ) {
         auto &final_destination = destination_preview.back();
-        if( final_destination.xy() == mouse_target.xy() ) {
+        if( final_destination == mouse_target ) {
             // Second click
             new_destination = false;
             u.set_destination( destination_preview );
@@ -2995,7 +2995,7 @@ bool game::queue_contextual_actions( const tripoint_bub_ms &target,
 
     const player_activity queued_action( contextual_action_activity_actor( here.get_abs( target ),
                                          actions ) );
-    if( square_dist( target.xy(), u.pos_bub().xy() ) <= 1 ) {
+    if( target.z() == u.posz() && square_dist( target.xy(), u.pos_bub().xy() ) <= 1 ) {
         u.assign_activity( queued_action );
         return true;
     }
@@ -3117,8 +3117,10 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
     }
 #endif
 
-    const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;
-    const bool is_self = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 0;
+    const tripoint_bub_ms player_pos = u.pos_bub( here );
+    const bool is_adjacent = mouse_target.z() == player_pos.z() &&
+                             square_dist( mouse_target.xy(), player_pos.xy() ) <= 1;
+    const bool is_self = mouse_target == player_pos;
     if( const monster *const mon = get_creature_tracker().creature_at<monster>( mouse_target ) ) {
         if( !u.sees( here, *mon ) ) {
             add_msg( _( "Nothing relevant here." ) );
@@ -3134,8 +3136,7 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
 
         act = ACTION_FIRE;
     } else if( is_adjacent &&
-               here.close_door( tripoint_bub_ms( mouse_target.xy(), u.posz() ),
-                                !here.is_outside( u.pos_bub() ), true ) ) {
+               here.close_door( mouse_target, !here.is_outside( player_pos ), true ) ) {
         act = ACTION_CLOSE;
     } else if( is_self ) {
         act = ACTION_PICKUP;
@@ -6980,6 +6981,14 @@ look_around_result game::look_around(
 
             if( show_window && ui ) {
                 ui->mark_resize();
+            }
+        } else if( action == "SELECT" && ctxt.has_map_click() ) {
+            const auto picked = ctxt.get_map_click();
+            if( !picked || picked->z() < min_levz || picked->z() > max_levz ||
+                ( !change_lv && picked->z() != lp.z() ) ) {
+                action.clear();
+            } else {
+                lp = *picked;
             }
         } else if( action == "LEVEL_UP" || action == "LEVEL_DOWN" ) {
             const int dz = action == "LEVEL_UP" ? 1 : -1;

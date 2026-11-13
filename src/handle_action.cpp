@@ -858,8 +858,10 @@ void game::execute_contextual_action( const action_id action, const tripoint_bub
     }
 
     const bool vertical_action = action == ACTION_MOVE_UP || action == ACTION_MOVE_DOWN;
-    if( ( vertical_action && target != player_character.pos_bub() ) ||
-        ( !vertical_action && square_dist( target.xy(), player_character.pos_bub().xy() ) > 1 ) ) {
+    const tripoint_bub_ms origin = player_character.pos_bub( here );
+    if( ( vertical_action && target != origin ) ||
+        ( !vertical_action && ( target.z() != origin.z() ||
+                                square_dist( target.xy(), origin.xy() ) > 1 ) ) ) {
         add_msg( m_info, _( "You are no longer close enough to perform that action." ) );
         return;
     }

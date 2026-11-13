@@ -404,6 +404,9 @@ class input_context
          */
         std::optional<tripoint_bub_ms> get_coordinates( const catacurses::window &capture_win_,
                 const point &offset = point::zero, bool center_cursor = false ) const;
+        bool has_map_click() const {
+            return next_action.map_click.has_value();
+        }
         std::optional<tripoint_bub_ms> get_map_click() const;
         std::optional<tripoint_rel_omt> get_coordinates_rel_omt( const catacurses::window &capture_win_,
                 const point &offset = point::zero, bool center_cursor = false ) const;
