@@ -149,6 +149,7 @@ These fields can be read by any ITEM regardless of subtypes:
 "solar_efficiency": 0.3,                     // Efficiency of solar energy conversion for solarpacks; require SOLARPACK_ON to generate electricity; default 0
 "source_monster": "mon_zombie",               // This item is corpse of this monster (so it has weight and volume of this monster), and revive into this monster; require COPRSE flag
 "thrown_damage": [ { "damage_type": "bash", "amount": 15 } ], // Damage dealt when throwing this item; if omitted, melee damage is used, including the character's strength bonus.
+"thrown_recovery_chance": 100,              // (Optional, default = 100) Percent chance (0-100) that a thrown item survives to be dropped or embedded. Failure destroys the item and spills its contents; this is independent of AMMO recovery_chance. Existing glass shattering and bursting still apply.
 "throw_correction_data": {                   // (Optional) Corrections applied while this item is wielded. Match either required_flag or allow_ammotype, then pass all physical limits; see Throw corrections below.
   "required_flag": [ [ "SLING_PROJECTILE", "NPC_THROWN" ], [ "SLING_AMMO" ] ], // String, array, or null. Outer entries are alternatives; flags grouped in an inner array are all required. null clears the flag requirement; empty arrays are errors.
   "allow_ammotype": [ "pebble" ],            // (Optional) Ammunition types accepted as an alternative to required_flag. Also accepts a single string.
