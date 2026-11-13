@@ -1283,10 +1283,15 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     // Make the normal shared save fail after the guest record was written.
     const auto master = PATH_INFO::world_base_save_path() / SAVE_MASTER;
     REQUIRE( std::filesystem::create_directory( master.get_unrelative_path() ) );
+    const bool had_logged_error = debug_has_error_been_observed();
     bool closed = true;
     const std::string error = capture_debugmsg_during( [&]() {
         closed = cata_mp::mp_close_host_session();
     } );
+    if( !had_logged_error && !closed && error.find( "game not saved" ) != std::string::npos ) {
+        // The injected I/O failure is expected and separately asserted below.
+        debug_reset_error_observed();
+    }
     CHECK_FALSE( closed );
     CHECK( error.find( "game not saved" ) != std::string::npos );
     CHECK( cata_mp::is_hosting() );
