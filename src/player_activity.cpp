@@ -5,12 +5,13 @@
 #include <coordinates.h>
 #include <enums.h>
 #include <item_location.h>
+#include <mp_firearm.h>
 #include <point.h>
-#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <atomic>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <memory>
 
@@ -20,9 +21,9 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
-#include "cata_scope_helpers.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
