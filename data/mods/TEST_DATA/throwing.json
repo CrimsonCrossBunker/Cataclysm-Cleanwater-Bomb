@@ -61,6 +61,13 @@
   },
   {
     "type": "ITEM",
+    "copy-from": "test_throwing_plain",
+    "id": "test_throwing_flagged",
+    "name": "TEST flag-only throwing item",
+    "flags": [ "SLING_PROJECTILE" ]
+  },
+  {
+    "type": "ITEM",
     "copy-from": "test_throw_correction",
     "id": "test_throwing_aid",
     "name": "TEST throwing launcher",
