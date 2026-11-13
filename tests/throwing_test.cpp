@@ -666,6 +666,7 @@ TEST_CASE( "slings_correct_only_compatible_projectiles", "[throwing][sling]" )
 {
     clear_avatar();
     avatar &you = get_avatar();
+    you.set_skill_level( skill_throw, 4 );
     item medium_bullet( itype_sling_bullet_stone_500 );
     item heavy_bullet( itype_sling_bullet_stone_750 );
     item rock( itype_rock );
