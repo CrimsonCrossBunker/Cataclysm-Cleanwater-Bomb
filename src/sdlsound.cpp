@@ -29,13 +29,13 @@
 #include "init.h"
 #include "messages.h"
 #include "music.h"
-#include "melee_sound_queue.h"
 #include "profiling.h"
 #include "options.h"
 #include "path_info.h"
 #include "rng.h"
 #include "sdl_wrappers.h"
 #include "sound_backend.h"
+#include "sound_effect_queue.h"
 #include "sounds.h"
 #include "units.h"
 #include "avatar.h"
@@ -340,7 +340,7 @@ static cata_path current_soundpack_path;
 static std::unordered_map<std::string, int> unique_paths;
 static std::unordered_map<std::string, int> direct_sfx_paths;
 static sfx_resources_t sfx_resources;
-static sfx::melee_sound_queue melee_sounds;
+static sfx::sound_effect_queue sound_queue;
 static std::vector<sfx_args> sfx_preload;
 
 bool sounds::sound_enabled = false;
@@ -395,7 +395,7 @@ bool init_sound()
 }
 void shutdown_sound()
 {
-    sfx::clear_melee_sounds();
+    sfx::clear_queued_sounds();
     sfx_resources.resource.clear();
     sfx_resources.sound_effects.clear();
     direct_sfx_paths.clear();
@@ -953,27 +953,43 @@ void sfx::queue_melee_sound( melee_sound_sequence sequence )
 {
     if( !test_mode && sound_init_success && sounds::sound_enabled ) {
         CATA_PROFILE_SCOPE_NAMED( "enqueue_melee_sound" );
-        melee_sounds.enqueue( std::move( sequence ), melee_sound_queue::clock::now() );
+        sound_queue.enqueue( std::move( sequence ), sound_effect_queue::clock::now() );
     }
 }
 
-void sfx::process_melee_sounds()
+void sfx::queue_gunshot( queued_sound sound, sound_effect_queue::clock::time_point burst_start,
+                         int rpm, int shot_index )
 {
-    if( melee_sounds.empty() || test_mode ) {
+    if( !test_mode && check_sound( sound.volume ) ) {
+        sound_queue.enqueue_gunshot( std::move( sound ), burst_start, rpm, shot_index );
+        if( shot_index == 0 ) {
+            process_queued_sounds();
+        }
+    }
+}
+
+void sfx::process_queued_sounds()
+{
+    if( sound_queue.empty() || test_mode ) {
         return;
     }
-    CATA_PROFILE_SCOPE_NAMED( "process_melee_sounds" );
-    const melee_sound_queue::clock::time_point now = melee_sound_queue::clock::now();
-    while( std::optional<queued_sound> sound = melee_sounds.pop_due( now ) ) {
+    CATA_PROFILE_SCOPE_NAMED( "process_queued_sounds" );
+    const sound_effect_queue::clock::time_point now = sound_effect_queue::clock::now();
+    while( std::optional<queued_sound> sound = sound_queue.pop_due( now ) ) {
         std::minstd_rand0 presentation_rng( sound->random_seed );
         play_positional_variant_sound( sound->id, sound->variant, sound->season, sound->indoors,
                                        sound->night, sound->volume, sound->angle, 0.8, 1.2, &presentation_rng );
     }
 }
 
-void sfx::clear_melee_sounds()
+std::optional<uint32_t> sfx::queued_sound_wait_ms()
 {
-    melee_sounds.clear();
+    return sound_queue.wait_ms( sound_effect_queue::clock::now() );
+}
+
+void sfx::clear_queued_sounds()
+{
+    sound_queue.clear();
 }
 
 void sfx::play_ambient_variant_sound( std::string_view id, std::string_view variant,

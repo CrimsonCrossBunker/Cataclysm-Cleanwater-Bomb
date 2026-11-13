@@ -50,8 +50,8 @@
 
 #if defined(SDL_SOUND)
     #include "sound_backend.h"
-    #include "melee_sound_queue.h"
     #include "sdlsound.h"
+    #include "sound_effect_queue.h"
 
     static int prev_hostiles = 0;
     static int previous_speed = 0;
@@ -790,7 +790,7 @@ void sounds::reset_sounds()
     sounds_since_last_turn.clear();
     sound_markers.clear();
 #if defined(SDL_SOUND)
-    sfx::clear_melee_sounds();
+    sfx::clear_queued_sounds();
 #endif
 }
 
@@ -1320,16 +1320,19 @@ void sfx::do_ambient()
 // firing is the item that is fired. It may be the wielded gun, but it can also be an attached
 // gunmod. p is the character that is firing, this may be a pseudo-character (used by monattack/
 // vehicle turrets) or an NPC.
-void sfx::generate_gun_sound( const Character &source_arg, const item &firing )
+void sfx::generate_gun_sound( const Character &source_arg, const item &firing, int rpm,
+                              int shot_index, std::chrono::steady_clock::time_point burst_start )
 {
     if( test_mode ) {
         return;
     }
 
-    end_sfx_timestamp = std::chrono::high_resolution_clock::now();
-    sfx_time = end_sfx_timestamp - start_sfx_timestamp;
-    if( std::chrono::duration_cast<std::chrono::milliseconds> ( sfx_time ).count() < 80 ) {
-        return;
+    if( rpm <= 0 ) {
+        end_sfx_timestamp = std::chrono::high_resolution_clock::now();
+        sfx_time = end_sfx_timestamp - start_sfx_timestamp;
+        if( sfx_time < std::chrono::milliseconds( 80 ) ) {
+            return;
+        }
     }
     const tripoint_bub_ms source = source_arg.pos_bub();
     int heard_volume = get_heard_volume( source );
@@ -1368,26 +1371,26 @@ void sfx::generate_gun_sound( const Character &source_arg, const item &firing )
         }
     }
 
-    if( has_exact_variant_sound( "fire_gun" + selected_sound, weapon_id.str(), seas_str, indoors,
-                                 night ) ) {
-        play_variant_sound( "fire_gun" + selected_sound, weapon_id.str(), seas_str, indoors, night,
-                            heard_volume, angle, 0.8, 1.2 );
-
+    std::string id = "fire_gun" + selected_sound;
+    std::string variant = "default";
+    if( has_exact_variant_sound( id, weapon_id.str(), seas_str, indoors, night ) ) {
+        variant = weapon_id.str();
     } else if( !ammo_type.is_null() &&
                has_exact_variant_sound( "fire_ammo" + selected_sound, ammo_type.str(), seas_str, indoors,
                                         night ) ) {
-        play_variant_sound( "fire_ammo" + selected_sound, ammo_type.str(), seas_str, indoors, night,
-                            heard_volume, angle, 0.8, 1.2 );
-
-    } else if( has_exact_variant_sound( "fire_gun" + selected_sound, "default", seas_str, indoors,
-                                        night ) ) {
-        play_variant_sound( "fire_gun" + selected_sound, "default", seas_str, indoors, night,
-                            heard_volume, angle, 0.8, 1.2 );
-    } else {
-        play_variant_sound( "fire_gun", "default", seas_str, indoors, night,
-                            heard_volume, angle, 0.8, 1.2 );
+        id = "fire_ammo" + selected_sound;
+        variant = ammo_type.str();
+    } else if( !has_exact_variant_sound( id, variant, seas_str, indoors, night ) ) {
+        id = "fire_gun";
     }
-    start_sfx_timestamp = std::chrono::high_resolution_clock::now();
+
+    if( rpm > 0 ) {
+        queue_gunshot( { std::move( id ), std::move( variant ), seas_str, indoors, night, heard_volume,
+                         angle }, burst_start, rpm, shot_index );
+    } else {
+        play_variant_sound( id, variant, seas_str, indoors, night, heard_volume, angle, 0.8, 1.2 );
+        start_sfx_timestamp = std::chrono::high_resolution_clock::now();
+    }
 }
 
 void sfx::generate_melee_sound( const item &weapon, const tripoint_bub_ms &source,
@@ -1397,7 +1400,7 @@ void sfx::generate_melee_sound( const item &weapon, const tripoint_bub_ms &sourc
     if( test_mode ) {
         return;
     }
-    process_melee_sounds();
+    process_queued_sounds();
     const int heard_volume = get_heard_volume( source );
     const npc *np = get_creature_tracker().creature_at<npc>( source );
     const bool from_npc = np != nullptr;
@@ -1990,7 +1993,8 @@ void sfx::play_ambient_variant_sound( std::string_view, std::string_view, int, c
                                       double, int ) { }
 void sfx::play_activity_sound( std::string_view, std::string_view, int ) { }
 void sfx::end_activity_sounds() { }
-void sfx::generate_gun_sound( const Character &, const item & ) { }
+void sfx::generate_gun_sound( const Character &, const item &, int, int,
+                              std::chrono::steady_clock::time_point ) { }
 void sfx::generate_melee_sound( const item &, const tripoint_bub_ms &, const tripoint_bub_ms &,
                                 bool, bool,
                                 std::string_view ) { }
