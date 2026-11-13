@@ -288,7 +288,7 @@ void aim_sling( avatar &who )
         return;
     }
     item round = single_round( *ammo );
-    auto intent = cata_mp::make_throw_intent( who, ammo );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, ammo );
     intent.method = cata_mp::throw_method::sling;
     g->temp_exit_fullscreen();
     const target_handler::trajectory trajectory = target_handler::mode_sling( who, round,
