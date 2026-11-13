@@ -234,7 +234,7 @@ void player_activity::start_or_resume( Character &who, bool resuming )
         return;
     }
     const character_action_guard lifetime( who );
-    const auto identity = identity_generation();
+    const std::uint64_t identity = identity_generation();
     if( !lifetime ) {
         return;
     }
@@ -551,7 +551,7 @@ void player_activity::canceled( Character &who )
         return;
     }
     const character_action_guard lifetime( who, true );
-    const auto identity = identity_generation();
+    const std::uint64_t identity = identity_generation();
     const bool view_only = client_firearm_view( who, type );
     if( *this && actor ) {
         actor->canceled( *this, who );
