@@ -3586,7 +3586,33 @@ TEST_CASE( "craft_relocation_rekeys_its_schedule_and_site_lock",
         }
     }
 
+    GIVEN( "the craft is thrown to a clear tile" ) {
+        const tripoint_bub_ms target( 60, 63, 0 );
+        item_location carried = loc.obtain( u );
+        REQUIRE( carried );
+        const item thrown = *carried;
+        carried.remove_item();
+        u.set_str_bonus( 10 );
+        u.throw_item( target, thrown );
 
+        item *landed = nullptr;
+        tripoint_bub_ms landing_tile;
+        for( const tripoint_bub_ms &p : here.points_in_radius( target, 3 ) ) {
+            for( item &ground : here.i_at( p ) ) {
+                if( ground.is_craft() ) {
+                    landed = &ground;
+                    landing_tile = p;
+                }
+            }
+        }
+        REQUIRE( landed != nullptr );
+
+        THEN( "the landing re-keys the schedule and the site lock" ) {
+            CHECK( get_item_wakeups().is_scheduled( landed->uid().get_value(),
+                                                    item_wakeup_kind::env_check ) );
+            CHECK( landed->get_reserved_tile() == here.get_abs( landing_tile ) );
+        }
+    }
 
     GIVEN( "the craft rides in vehicle cargo" ) {
         const tripoint_bub_ms cart_pos( 65, 60, 0 );
@@ -3816,48 +3842,6 @@ TEST_CASE( "craft_relocation_rekeys_its_schedule_and_site_lock",
             }
         }
     }
-}
-
-TEST_CASE( "thrown_craft_rekeys_its_schedule_and_site_lock",
-           "[craft][attention][reservation][lifecycle][throwing]" )
-{
-    clear_avatar();
-    clear_map();
-    avatar &u = get_avatar();
-    map &here = get_map();
-    const tripoint_bub_ms origin( 60, 60, 0 );
-    const tripoint_bub_ms target( 60, 63, 0 );
-    u.setpos( here, origin );
-    const recipe_id passive_recipe( "test_throwing_plain_test_unattended" );
-    item ingredient( itype_id( "test_2x4" ), calendar::turn );
-    item placed( &passive_recipe.obj(), 1, ingredient );
-    item &on_map = here.add_item( origin, placed );
-    REQUIRE( on_map.is_craft() );
-    on_map.set_current_step( 0 );
-    on_map.set_crafter_id( u.getID() );
-    on_map.set_step_plans( std::vector<attention_plan>( 1 ) );
-    item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
-    REQUIRE( u.wear_item( item( itype_id( "test_backpack" ) ) ) );
-    craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
-    REQUIRE( get_craft_reservations().craft_site_reserved( here.get_abs( origin ) ) );
-    item_location carried = loc.obtain( u );
-    REQUIRE( carried );
-    const item thrown = *carried;
-    carried.remove_item();
-    u.set_str_bonus( 10 );
-    const auto attack = u.throw_item( target, thrown );
-    item *landed = nullptr;
-    for( item &ground : here.i_at( attack.end_point ) ) {
-        if( ground.is_craft() ) {
-            landed = &ground;
-            break;
-        }
-    }
-    REQUIRE( landed != nullptr );
-    CHECK( get_item_wakeups().is_scheduled( landed->uid().get_value(),
-                                         item_wakeup_kind::env_check ) );
-    CHECK( landed->get_reserved_tile() == here.get_abs( attack.end_point ) );
-    CHECK( get_craft_reservations().craft_site_reserved( here.get_abs( attack.end_point ) ) );
 }
 
 TEST_CASE( "reservation_keeps_polling_a_site_only_step",
