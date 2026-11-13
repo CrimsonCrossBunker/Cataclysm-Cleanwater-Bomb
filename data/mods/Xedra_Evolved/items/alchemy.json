@@ -223,7 +223,7 @@
       "description": "Consuming one will increase your proficiency at lucid dreaming.  Consuming further dream bezoards will result in a horrendous mess.",
       "effect_on_conditions": [ "EOC_DREAM_BEZOAR" ]
     },
-    "flags": [ "SINGLE_USE" ]
+    "flags": [ "SINGLE_USE", "SLING_PROJECTILE" ]
   },
   {
     "type": "effect_on_condition",

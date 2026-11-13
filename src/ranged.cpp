@@ -1301,6 +1301,33 @@ int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second )
                              std::numeric_limits<int>::max() ) );
 }
 
+firearm_burst_recoil::firearm_burst_recoil( int arm_strength, float skill, int rpm )
+{
+    const double level = std::clamp<double>( skill, 0.0, MAX_SKILL );
+    // An 8-strength shooter at weapon skill 7 is the reference for an intermediate rifle.
+    const double control = ( 8.0 + std::max( 1, arm_strength ) ) / 16.0 * ( 0.5 + level / 14.0 );
+    const double old_kick_scale = 5.0 * ( 1.0 - level / ( 2 * MAX_SKILL ) );
+    // Faster follow-up rounds leave less time for the opening kick to displace the aim.
+    const double interval_scale = std::clamp( 750.0 / std::max( 1, rpm ), 0.65, 1.20 );
+    opening_scale = old_kick_scale * std::min( 0.8, 0.7 / control ) * interval_scale;
+    steady_scale = 0.65 / ( control * std::sqrt( control ) );
+    settling_rounds = std::clamp( 5.0 / control, 2.5, 10.0 );
+}
+
+double firearm_burst_recoil::after_shot( int gun_recoil )
+{
+    const double kick = std::max( 0, gun_recoil );
+    const double progress = std::min( ++shots_fired / settling_rounds, 1.0 );
+    const double steady_recoil = kick * steady_scale;
+    if( progress >= 1.0 ) {
+        return steady_recoil;
+    }
+    opening_recoil += kick * opening_scale;
+    // Blend out the accumulated climb as the shooter settles into the burst.
+    const double settled = progress * progress * ( 3.0 - 2.0 * progress );
+    return opening_recoil * ( 1.0 - settled ) + steady_recoil * settled;
+}
+
 int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 {
     map &here = get_map();
@@ -1314,7 +1341,7 @@ int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
-                         item_location ammo, int burst_rounds )
+                         const item_location &ammo, int burst_rounds )
 {
     if( !mode || mode.melee() ) {
         return 0;
@@ -1325,7 +1352,8 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
     if( mode.fixed_burst() || burst_rounds != 0 ) {
         const int planned = mode.fixed_burst() ? mode.qty : roll_firearm_burst_rounds( *this, *mode,
                             burst_rounds );
-        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm );
+        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm,
+                                         true );
         if( fired > 0 ) {
             add_msg_if_player( n_gettext( "You fire %d round.", "You fire %d rounds.", fired ), fired );
         }
@@ -1343,17 +1371,18 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
         }
         return 0;
     }
-    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second );
+    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second, mode.rpm );
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                          item_location ammo )
 {
-    return fire_gun_impl( here, target, shots, gun, ammo, true );
+    return fire_gun_impl( here, target, shots, gun, std::move( ammo ), true );
 }
 
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
-                              item_location ammo, bool spend_attack_moves, int burst_rpm )
+                              item_location ammo, bool spend_attack_moves, int firing_rpm,
+                              bool spend_burst_moves )
 {
     if( !gun.is_gun() ) {
         debugmsg( "%s tried to fire non-gun (%s).", get_name(), gun.tname() );
@@ -1415,21 +1444,27 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         }
     }
 
-    // Up to 50% of recoil can be delayed until end of burst dependent upon relevant skill
-    /** @EFFECT_PISTOL delays effects of recoil during automatic fire */
-    /** @EFFECT_SMG delays effects of recoil during automatic fire */
-    /** @EFFECT_RIFLE delays effects of recoil during automatic fire */
-    /** @EFFECT_SHOTGUN delays effects of recoil during automatic fire */
-    double absorb = std::min( get_skill_level( gun.gun_skill() ),
-                              static_cast<float>( MAX_SKILL ) ) / static_cast<double>( MAX_SKILL * 2 );
+    /** @EFFECT_PISTOL improves recoil control during automatic fire */
+    /** @EFFECT_SMG improves recoil control during automatic fire */
+    /** @EFFECT_RIFLE improves recoil control during automatic fire */
+    /** @EFFECT_SHOTGUN improves recoil control during automatic fire */
+    const skill_id gun_skill = gun.gun_skill();
+    const float gun_skill_level = get_skill_level( gun_skill );
+    const double absorb = std::min( gun_skill_level, static_cast<float>( MAX_SKILL ) ) /
+                          static_cast<double>( MAX_SKILL * 2 );
+    std::optional<firearm_burst_recoil> recoil_control;
+    if( firing_rpm > 0 && shots > 1 && !gun.has_flag( flag_VEHICLE ) &&
+        !is_fake() && !is_mech_weapon ) {
+        recoil_control.emplace( get_arm_str(), gun_skill_level, firing_rpm );
+    }
+    double burst_recoil = 0.0;
 
     itype_id gun_id = gun.typeId();
     const int attack_moves = spend_attack_moves
                              ? time_to_attack( *this, *gun_id ) + action_time( *this, *gun_id )
                              : 0;
     const int reload_moves = reload_and_shoot_time( *this, ammo );
-    const int burst_speed = burst_rpm > 0 ? get_speed() : 0;
-    skill_id gun_skill = gun.gun_skill();
+    const int burst_speed = spend_burst_moves ? get_speed() : 0;
     add_msg_debug( debugmode::DF_RANGED, "Gun skill (%s) %g", gun_skill.c_str(),
                    get_skill_level( gun_skill ) ) ;
     tripoint_bub_ms aim = target;
@@ -1482,7 +1517,8 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
                            elem.res_pen );
         }
 
-        dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total(), proj.shot_spread );
+        dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total() + burst_recoil,
+                                        proj.shot_spread );
         dispersion.add_range( dispersion_variance() );
 
         dealt_projectile_attack shot;
@@ -1524,23 +1560,24 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             break;
         }
 
-        int qty = gun.gun_recoil( *this, bipod );
-
-        add_msg_debug( debugmode::DF_RANGED, "total recoil: %d; absorbed: %.0f%%",
-                       qty, absorb * 100 );
-
-        delay += qty * absorb;
-        // Temporarily scale by 5x as we adjust MAX_RECOIL, factoring in the recoil enchantment also.
-        const int added_recoil = enchantment_cache->modify_value(
-                                     enchant_vals::mod::RECOIL_MODIFIER, 5.0 ) * ( qty * ( 1.0 - absorb ) );
-
-        add_msg_debug( debugmode::DF_RANGED, "final recoil of this shot: %d", added_recoil );
-
-        // if shoots multiple barrels simultaneously, do not apply the recoil while shooting, only in the end
-        if( gun.gun_current_mode().flags.count( "VOLLEY" ) ) {
-            delay += added_recoil;
+        const int qty = gun.gun_recoil( *this, bipod );
+        const double recoil_scale = enchantment_cache->modify_value(
+                                        enchant_vals::mod::RECOIL_MODIFIER, 5.0 );
+        if( recoil_control ) {
+            burst_recoil = recoil_control->after_shot( qty ) * std::max( 0.0, recoil_scale / 5.0 );
+            add_msg_debug( debugmode::DF_RANGED, "recoil after shot %d: %.1f", curshot, burst_recoil );
         } else {
-            recoil += added_recoil;
+            add_msg_debug( debugmode::DF_RANGED, "total recoil: %d; absorbed: %.0f%%",
+                           qty, absorb * 100 );
+            delay += qty * absorb;
+            const int added_recoil = recoil_scale * ( qty * ( 1.0 - absorb ) );
+            add_msg_debug( debugmode::DF_RANGED, "final recoil of this shot: %d", added_recoil );
+            // Simultaneous barrels impart their recoil only after all projectiles leave.
+            if( gun.gun_current_mode().flags.count( "VOLLEY" ) ) {
+                delay += added_recoil;
+            } else {
+                recoil += added_recoil;
+            }
         }
 
         const itype_id current_ammo = gun.ammo_current();
@@ -1593,8 +1630,13 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             continue; // skip retargeting for launchers
         }
     }
+    // Carry the last shot's aim displacement into the next trigger pull.
+    recoil += burst_recoil;
+
     // Interrupted bursts only occupy the time spent firing, with one interval for a failed trigger.
-    const int burst_moves = firearm_burst_move_cost( std::max( 1, curshot ), burst_rpm, burst_speed );
+    const int burst_moves = spend_burst_moves
+                            ? firearm_burst_move_cost( std::max( 1, curshot ), firing_rpm, burst_speed )
+                            : 0;
     const int64_t total_moves = static_cast<int64_t>( attack_moves ) + reload_moves + burst_moves;
     mod_moves( -static_cast<int>( std::min<int64_t>( total_moves, std::numeric_limits<int>::max() ) ) );
 
@@ -1651,8 +1693,9 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         // Reset aim for bows and other reload-and-shoot weapons.
         recoil = MAX_RECOIL;
     } else {
-        // apply delayed recoil, factor in recoil enchantments
-        recoil += enchantment_cache->modify_value( enchant_vals::mod::RECOIL_MODIFIER, delay );
+        if( !recoil_control ) {
+            recoil += enchantment_cache->modify_value( enchant_vals::mod::RECOIL_MODIFIER, delay );
+        }
         if( is_mech_weapon ) {
             // mechs can handle recoil far better. they are built around their main gun.
             // TODO: shouldn't this affect only recoil accumulated during this function?
@@ -1673,28 +1716,29 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 }
 
 static float railgun_throw_multiplier( const Character &character, float base,
-                                       float itype::*item_mult,
-                                       float islot_gunmod::*gunmod_mult )
+                                       float throw_correction_data::*multiplier )
 {
-    float multiplier = base;
+    float result = base;
     const item_location wielded = character.get_wielded_item();
     if( !wielded ) {
-        return multiplier;
+        return result;
     }
     const bool has_railgun_throw_multiplier = flag_RAILGUN_THROW_MULTIPLIER.is_valid();
     if( has_railgun_throw_multiplier &&
-        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-        multiplier *= wielded->type->*item_mult;
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+        wielded->type->throw_correction ) {
+        result *= wielded->type->throw_correction.value().*multiplier;
     }
     if( wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
             if( has_railgun_throw_multiplier &&
-                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-                multiplier *= ( *mod->type->gunmod ).*gunmod_mult;
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+                mod->type->gunmod->throw_correction ) {
+                result *= mod->type->gunmod->throw_correction.value().*multiplier;
             }
         }
     }
-    return multiplier;
+    return result;
 }
 
 int throw_cost( const Character &c, const item &to_throw )
@@ -1704,10 +1748,10 @@ int throw_cost( const Character &c, const item &to_throw )
     // Differences:
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
-    const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
+    const int base_move_cost = to_throw.attack_time( c ) / 2;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
-    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier( to_throw );
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
                               60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
@@ -1724,12 +1768,10 @@ int throw_cost( const Character &c, const item &to_throw )
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
-    if( do_railgun ) {
-        move_cost -= c.get_dex();
-    }
+    move_cost -= c.get_dex();
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
-                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
+                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier( to_throw ) ) ) );
 
     return std::max( 25, move_cost );
 }
@@ -1804,7 +1846,7 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
 {
     const bool do_railgun = is_fcl_railgun_throw( to_throw );
     units::mass weight = to_throw.weight() *
-                         ( do_railgun ? 1.0f : throw_weight_multiplier() );
+                         ( do_railgun ? 1.0f : throw_weight_multiplier( to_throw ) );
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1844,10 +1886,10 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
         dispersion *= 4;
     }
 
-    const float dispersion_multiplier = do_railgun ? railgun_throw_multiplier( *this, 0.5f,
-                                        &itype::throw_dispersion_multiplier,
-                                        &islot_gunmod::throw_dispersion_multiplier ) :
-                                        throw_dispersion_multiplier();
+    const float dispersion_multiplier = do_railgun ?
+                                        railgun_throw_multiplier( *this, 0.5f,
+                                                &throw_correction_data::dispersion_multiplier ) :
+                                        throw_dispersion_multiplier( to_throw );
     dispersion = static_cast<int>( std::round( dispersion * dispersion_multiplier ) );
 
     return std::max( 0, dispersion );
@@ -1881,12 +1923,10 @@ static float throwing_skill_adjusted( const Character &guy )
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
-    const float weight_dmg = thrown.weight() *
-                             ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
-                                     &itype::throw_weight_multiplier,
-                                     &islot_gunmod::throw_weight_multiplier ) :
-                               thrower.throw_weight_multiplier() ) /
-                             100.0_gram;
+    const float weight_mult = do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
+                              &throw_correction_data::weight_multiplier ) :
+                              thrower.throw_weight_multiplier( thrown, true );
+    const float weight_dmg = thrown.weight() * weight_mult / 100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1902,7 +1942,9 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     }
 
     const double scaled_weight_dmg = weight_dmg * velocity_factor;
-    const double cap = thrower.thrown_item_adjusted_damage( thrown );
+    // Half of the effective-weight bonus raises the strength-based damage cap.
+    const double cap = thrower.thrown_item_adjusted_damage( thrown ) *
+                       ( 1.0f + 0.5f * std::max( 0.0f, weight_mult - 1.0f ) );
     double thrown_dmg = std::min( scaled_weight_dmg, cap );
 
     // RANGED_DAMAGE enchantment can used at railgun throwing
@@ -1967,15 +2009,14 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
         du.res_pen += skill_level / 2.0f;
     }
 
-    int total_damage = 0;
+    float total_damage = 0.0f;
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }
     const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ?
                                     railgun_throw_multiplier( *this, 3.5f,
-                                            &itype::throw_damage_multiplier,
-                                            &islot_gunmod::throw_damage_multiplier ) :
-                                    throw_damage_multiplier();
+                                            &throw_correction_data::damage_multiplier ) :
+                                    throw_damage_multiplier( thrown );
     return std::round( total_damage * throw_damage_mult );
 }
 
@@ -1999,7 +2040,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         const int stamina_cost = get_standard_stamina_cost( &thrown );
         mod_stamina( static_cast<int>( std::round(
                                            ( stamina_cost + throwing_skill ) *
-                                           ( fcl_railgun_throw ? 1.0f : throw_stamina_multiplier() ) ) ) );
+                                           ( fcl_railgun_throw ? 1.0f :
+                                             throw_stamina_multiplier( thrown ) ) ) ) );
     }
 
     const float skill_level = throwing_skill_adjusted( *this );
@@ -2093,8 +2135,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
 
     // Apply wielded-item throwing damage multiplier.
     impact.mult_damage( do_railgun ? railgun_throw_multiplier( *this, 3.5f,
-                        &itype::throw_damage_multiplier,
-                        &islot_gunmod::throw_damage_multiplier ) : throw_damage_multiplier() );
+                        &throw_correction_data::damage_multiplier ) :
+                        throw_damage_multiplier( thrown ) );
 
     Creature *critter = get_creature_tracker().creature_at( target, true );
     const dispersion_sources dispersion( throwing_dispersion( thrown, critter,
@@ -2929,7 +2971,7 @@ int reload_and_shoot_time( const Character &p, const item_location &loc )
     return time;
 }
 
-bool ready_ranged_ammo( Character &who, item &gun, item_location ammo )
+bool ready_ranged_ammo( Character &who, item &gun, const item_location &ammo )
 {
     const int moves = reload_and_shoot_time( who, ammo );
     if( !ammo || !gun.reload( who, ammo, 1 ) ) {

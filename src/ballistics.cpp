@@ -85,7 +85,7 @@ static const itype_id itype_glass_shard( "glass_shard" );
 
 static const json_character_flag json_flag_HARDTOHIT( "HARDTOHIT" );
 static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &attack,
-                                      projectile &proj_arg )
+                                      projectile &proj_arg, bool is_thrown )
 {
     const projectile &proj = attack.proj;
     const item &drop_item = proj.get_drop();
@@ -136,6 +136,13 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
         return;
     }
 
+    const int recovery_chance = is_thrown ? drop_item.type->thrown_recovery_chance : 100;
+    const bool recovered = recovery_chance == 100 ||
+                           ( recovery_chance > 0 && x_in_y( recovery_chance, 100 ) );
+    if( !recovered ) {
+        item( drop_item ).spill_contents( here, pt );
+    }
+
     // Copy the item
     item dropped_item = drop_item;
 
@@ -144,7 +151,7 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
     // We can only embed in monsters
     bool mon_there = mon != nullptr && !mon->is_dead_state();
     // And if we actually want to embed
-    bool embed = mon_there && effects.count( ammo_effect_NO_EMBED ) == 0 &&
+    bool embed = recovered && mon_there && effects.count( ammo_effect_NO_EMBED ) == 0 &&
                  effects.count( ammo_effect_TANGLE ) == 0;
     // Don't embed in small creatures
     if( embed ) {
@@ -170,7 +177,7 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
         add_msg_if_player_sees( pt, _( "The %1$s embeds in %2$s!" ),
                                 dropped_item.tname(), mon->disp_name() );
     } else {
-        bool do_drop = true;
+        bool do_drop = recovered;
         // monsters that are able to be tied up will store the item another way
         // see monexamine.cpp tie_or_untie()
         // if they aren't friendly they will try and break out of the net/bolas/lasso
@@ -179,7 +186,7 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
         if( effects.count( ammo_effect_TANGLE ) && mon_there ) {
             do_drop = false;
         }
-        if( effects.count( ammo_effect_ACT_ON_RANGED_HIT ) ) {
+        if( recovered && effects.count( ammo_effect_ACT_ON_RANGED_HIT ) ) {
             // Don't drop if it exploded
             do_drop = !dropped_item.activate_thrown( attack.end_point );
         }
@@ -875,7 +882,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
             play_impact_spark_vfx( tp );
         }
 
-        drop_or_embed_projectile( here, attack, proj );
+        drop_or_embed_projectile( here, attack, proj, wp_attack.is_thrown );
 
         int dealt_damage = attack.dealt_dam.total_damage();
         apply_ammo_effects( null_source ? nullptr : origin, tp, proj.proj_effects, dealt_damage );
