@@ -69,6 +69,12 @@ TEST_CASE( "render3d_picks_the_first_visible_terrain_surface", "[render3d][picki
         CHECK_FALSE( surfaces.trace( scene_point{ -1.5f, 0.75f, 1.5f }, ray, right ) );
     }
 
+    SECTION( "a translated vehicle still selects its authoritative map cell" ) {
+        surfaces.add_vehicle_box( tripoint( 0, 0, 0 ), { 0.375f, 0.0f, 0.25f }, { 1.375f, 1.0f, 1.5f } );
+        CHECK( surfaces.trace( scene_point{ 1.25f, 0.5f, 2.0f }, down ) == tripoint( 0, 0, 0 ) );
+        CHECK( surfaces.trace( scene_point{ 0.25f, 0.5f, 2.0f }, down ) == tripoint( 0, 0, -1 ) );
+    }
+
     SECTION( "recycled frame storage contains only the new scene" ) {
         surfaces.reset( -1 );
         CHECK_FALSE( surfaces.trace( eye, down ) );

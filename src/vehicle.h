@@ -1577,6 +1577,10 @@ class vehicle
         tripoint_abs_ms pos_abs() const;
         // Returns the location of the vehicle in global overmap terrain coordinates.
         tripoint_abs_omt pos_abs_omt() const;
+        // Settled displacement from the center of the native map cell, in
+        // world_position units. Cell ownership changes at the native move.
+        point fractional_offset() const;
+        void set_fractional_offset( const point &offset );
         // Returns the coordinates (in map squares) of the vehicle relative to the local map.
         // Warning: Don't assume this position contains a vehicle part
         tripoint_bub_ms pos_bub( const map &here ) const;
@@ -2391,6 +2395,8 @@ class vehicle
         mutable double coefficient_water_resistance = 1; // NOLINT(cata-serialize)
         mutable double draft_m = 1; // NOLINT(cata-serialize)
         mutable double hull_height = 0.3; // NOLINT(cata-serialize)
+
+        point motion_offset = point::zero; // NOLINT(cata-serialize)
 
         // Absolute location when cache was last refreshed.
         mutable tripoint_abs_ms occupied_cache_pos = tripoint_abs_ms::invalid; // NOLINT(cata-serialize)

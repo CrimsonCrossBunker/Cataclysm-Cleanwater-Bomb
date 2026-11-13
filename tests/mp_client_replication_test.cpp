@@ -420,7 +420,8 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
         }
     }
     const tripoint_abs_ms absolute = here.get_abs( destination );
-    const auto packet = [&]( const std::vector<int> &part_levels ) {
+    const point settled_offset( 48, -8 );
+    const auto packet = [&]( const std::vector<int> &part_levels, bool include_offset = true ) {
         std::ostringstream stream;
         JsonOut out( stream );
         out.start_object();
@@ -440,6 +441,9 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
         out.write( heading );
         out.write( part_levels );
         out.end_array();
+        if( include_offset ) {
+            out.member( "motion_offset", settled_offset );
+        }
         out.end_object();
         out.end_array();
         out.end_object();
@@ -452,6 +456,7 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
     CHECK( car->pos_abs() == here.get_abs( start ) );
     REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
     CHECK( car->pos_abs() == absolute );
+    CHECK( car->fractional_offset() == settled_offset );
     CHECK( car->face.dir() == units::from_degrees( heading ) );
     CHECK( car->pivot_anchor[0] == pivot );
     CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
@@ -461,5 +466,8 @@ TEST_CASE( "mp_vehicle_replica_applies_the_authoritative_levels_without_running_
     CHECK( &low->vehicle() == car );
     REQUIRE( cata_mp::client_apply_message( packet( levels ) ) );
     CHECK( car->abs_part_pos( low_part ) == absolute + tripoint::below );
+    CHECK( car->fractional_offset() == settled_offset );
+    REQUIRE( cata_mp::client_apply_message( packet( levels, false ) ) );
+    CHECK( car->fractional_offset() == point::zero );
     CHECK( rng_get_engine() == rng );
 }

@@ -48,6 +48,8 @@ class pick_surfaces
         void reset( int view_level );
         void set( const tripoint &cell, pick_surface surface );
         void set_vehicle_body( const tripoint &cell, float bottom, float top );
+        void add_vehicle_box( const tripoint &cell, const scene_point &minimum,
+                              const scene_point &maximum );
         void add_actor( const tripoint &cell, const scene_point &bottom, const point &pixel_size,
                         float width, float height, std::shared_ptr<const sprite_alpha_profile> alpha );
         std::optional<tripoint> trace( const scene_point &origin, const scene_point &ray,
@@ -57,6 +59,12 @@ class pick_surfaces
         struct height_range {
             float bottom;
             float top;
+        };
+
+        struct vehicle_box {
+            tripoint cell;
+            scene_point minimum;
+            scene_point maximum;
         };
 
         struct actor_surface {
@@ -76,6 +84,7 @@ class pick_surfaces
         std::vector<pick_surface> cells_;
         std::unordered_map<std::size_t, height_range> vehicle_bodies_;
         std::array<float, OVERMAP_LAYERS> vehicle_top_{};
+        std::vector<vehicle_box> translated_bodies_;
         std::vector<actor_surface> actors_;
 };
 

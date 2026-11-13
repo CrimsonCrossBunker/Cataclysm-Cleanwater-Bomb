@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,8 @@
 #include "enums.h"
 #include "game.h"
 #include "input_replay.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -390,4 +393,54 @@ TEST_CASE( "vehicle_level_test", "[vehicle][ramp]" )
     for( const std::string &veh : level_vehs_to_test ) {
         test_leveling( veh );
     }
+}
+
+TEST_CASE( "vehicle_subtile_travel_stops_before_an_unsettled_obstacle",
+           "[vehicle][render3d]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    const on_out_of_scope cleanup( [] {
+        clear_vehicles();
+        clear_avatar();
+    } );
+    map &here = get_map();
+    const tripoint_bub_ms start( 60, 60, 0 );
+    build_test_map( ter_id( "t_pavement" ) );
+    vehicle *const car = here.add_vehicle( vproto_id( "bicycle" ), start, 0_degrees, 0,
+                                           veh_spawn_status::UNDAMAGED );
+    REQUIRE( car );
+    car->tags.insert( "IN_CONTROL_OVERRIDE" );
+    const tripoint_abs_ms origin = car->pos_abs();
+    car->velocity = 100;
+    car->of_turn = 1.0f;
+    REQUIRE( car->act_on_map( here ) == car );
+    CHECK( car->pos_abs() == origin );
+    CHECK( car->fractional_offset() == point( 64, 0 ) );
+    CHECK( car->of_turn_carry == 1.0f );
+
+    std::ostringstream stream;
+    JsonOut out( stream );
+    car->serialize( out );
+    const JsonValue encoded = json_loader::from_string( stream.str() );
+    vehicle restored( vproto_id( "bicycle" ) );
+    restored.deserialize( encoded.get_object() );
+    CHECK( restored.fractional_offset() == car->fractional_offset() );
+    CHECK( restored.of_turn_carry == car->of_turn_carry );
+
+    bool blocked_edge = false;
+    for( const vpart_reference &part : car->get_all_parts() ) {
+        const tripoint_bub_ms ahead = part.pos_bub( here ) + point::east;
+        if( part.info().location == vpart_location_structure && !here.veh_at( ahead ) ) {
+            here.ter_set( ahead, ter_id( "t_wall" ) );
+            blocked_edge = true;
+        }
+    }
+    REQUIRE( blocked_edge );
+    car->of_turn = 2.0f;
+    REQUIRE( car->act_on_map( here ) == car );
+    CHECK( car->pos_abs() == origin );
+    CHECK( car->fractional_offset() == point::zero );
+    CHECK( car->of_turn_carry == 2.0f );
 }

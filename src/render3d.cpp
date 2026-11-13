@@ -79,6 +79,16 @@ float position_fraction( int offset )
     return static_cast<float>( offset ) / world_position::units_per_tile;
 }
 
+point seated_vehicle_offset( const map &here, const Creature &actor )
+{
+    const Character *who = actor.as_character();
+    if( !who || !who->in_vehicle ) {
+        return point::zero;
+    }
+    const auto seat = here.veh_at( actor.pos_abs() ).part_with_feature( VPFLAG_BOARDABLE, false );
+    return seat && seat->get_passenger() == who ? seat->vehicle().fractional_offset() : point::zero;
+}
+
 // cross-level rendering: all z-levels stacked LEVEL_HEIGHT apart
 // (the near ±24 region renders every level; the far ring draws the view level only)
 // a tile can yield up to 6 instances (floor + object + furniture + creature + item + item highlight)
@@ -3866,6 +3876,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     const optional_vpart_position ovp = here.veh_at( p );
                     if( ovp ) {
                         const vehicle &veh = ovp->vehicle();
+                        const point offset = veh.fractional_offset();
+                        const float shift_x = position_fraction( offset.x );
+                        const float shift_y = position_fraction( offset.y );
                         const point_rel_ms mount = ovp->mount_pos();
                         // the identical call 2D makes: part stacking, hidden
                         // parts, fake parts and the passenger roof rule all
@@ -4005,7 +4018,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             const float db, const int drot4 ) {
                                 decal_instance di;
                                 di.atlas = datlas;
-                                push_instance( di.f, ddx, ddy, dz, sx, sy, 1.0f, dspr, dr, dg, db,
+                                push_instance( di.f, ddx + shift_x, ddy + shift_y, dz, sx, sy, 1.0f, dspr, dr, dg, db,
                                                false, drot4, false, -1.0f, ghost, tone.sat );
                                 decals.push_back( di );
                                 ++count;
@@ -4110,8 +4123,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                                 // stand proud of the voxel body box face
                                 // sharing this plane (see above)
-                                pcx += d.x * 0.005f * proud;
-                                pcy += d.y * 0.005f * proud;
+                                pcx += d.x * 0.005f * proud + shift_x;
+                                pcy += d.y * 0.005f * proud + shift_y;
                                 decal_instance di;
                                 di.mode = MODE_LINEQUAD_DECAL;
                                 di.atlas = uspr.atlas;
@@ -4173,6 +4186,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                         vdrew = true;
                                     }
                                 }
+                            }
+                            if( near_hide && vdrew && offset != point::zero ) {
+                                surfaces.add_vehicle_box( tripoint( dx, dy, zlev ),
+                                { dx + shift_x, dy + shift_y, wz + VEH_DECAL_Z - 0.002f },
+                                { dx + shift_x + 1.0f, dy + shift_y + 1.0f, wz + VEH_DECAL_Z + 0.002f } );
                             }
                             // side panels on both exterior flanks (mount left
                             // (0,-1) and right (0,+1)), each resolved with its
@@ -4542,11 +4560,18 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             if( !near_hide && !flank_tightened && !is_mirror &&
                                 count < MAX_DRAW_INSTANCES ) {
                                 constexpr float body_bottom = VEH_PANEL_BASE_Z + 0.30f;
-                                surfaces.set_vehicle_body( tripoint( dx, dy, zlev ), body_bottom, box_top );
+                                const tripoint cell( dx, dy, zlev );
+                                const float left = dx + shift_x;
+                                const float top = dy + shift_y;
+                                if( offset == point::zero ) {
+                                    surfaces.set_vehicle_body( cell, body_bottom, box_top );
+                                } else {
+                                    surfaces.add_vehicle_box( cell, { left, top, wz + body_bottom },
+                                    { left + 1.0f, top + 1.0f, wz + box_top } );
+                                }
                                 sprite_info rspr; // untextured -> white fallback x color
                                 std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
-                                push_instance( v, static_cast<float>( dx ),
-                                               static_cast<float>( dy ), wz + body_bottom,
+                                push_instance( v, left, top, wz + body_bottom,
                                                1.0f, 1.0f, box_top - body_bottom, rspr,
                                                0.6f * tone.shade, 0.6f * tone.shade,
                                                0.6f * tone.shade,
@@ -4830,7 +4855,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                cll == lit_level::BRIGHT;
         const tile_tone tone = cll_clear ? tone_for( cache, p, cll )
                                : tile_tone{ 1.0f, nv_tint ? 0.0f : 1.0f };
-        const tripoint offset = critter->pos_world().offset();
+        const tripoint offset = critter->pos_world().offset() + seated_vehicle_offset( here, *critter );
         push_entity( *critter, p, p.x() - center.x() + position_fraction( offset.x ) - 0.5f,
                      p.y() - center.y() + position_fraction( offset.y ) - 0.5f,
                      wz + position_fraction( offset.z ) * LEVEL_HEIGHT, tone );
@@ -5107,7 +5132,8 @@ bool draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // lets invisible/offscreen tiles avoid map and sprite work entirely.
     const avatar &observer = get_avatar();
     const tripoint_bub_ms observer_tile = observer.pos_bub( here );
-    const tripoint observer_offset = observer.pos_world().offset();
+    const tripoint observer_offset = observer.pos_world().offset() + seated_vehicle_offset( here,
+        observer );
     const vec3 player_position{ observer_tile.x() - center.x() + position_fraction( observer_offset.x ),
                                 observer_tile.y() - center.y() + position_fraction( observer_offset.y ),
                                 ( observer_tile.z() - center.z() + position_fraction( observer_offset.z ) ) *

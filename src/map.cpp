@@ -1939,6 +1939,8 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
         debugmsg( "invalid c.target_part %d", c.target_part );
         return 0.0f;
     }
+    veh.set_fractional_offset( point::zero );
+    veh2.set_fractional_offset( point::zero );
     vehicle_part &vp1 = veh.part( c.part );
     vehicle_part &vp2 = veh2.part( c.target_part );
 
@@ -2478,6 +2480,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         return true;
     }
 
+    veh.set_fractional_offset( point::zero );
     memory_clear_vehicle_points( veh );
 
     Character &player_character = get_player_character();

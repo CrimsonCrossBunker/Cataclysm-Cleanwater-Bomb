@@ -51,6 +51,7 @@
 #include "veh_type.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "world_position.h"
 
 #define dbg(x) DebugLog((x),D_MAP) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -774,6 +775,7 @@ void vehicle::stop( map &here )
     move = face;
     last_turn = 0_degrees;
     of_turn_carry = 0;
+    set_fractional_offset( point::zero );
     for( const tripoint_abs_ms &p : get_points() ) {
         if( here.inbounds( p ) ) {
             here.memory_cache_dec_set_dirty( here.get_bub( p ), true );
@@ -2073,6 +2075,69 @@ bool vehicle::is_wheel_state_correct_to_turn_on_rails( int wheels_on_rail, int w
     // allow turn for vehicles with wheel distance < 4 when moving backwards
 }
 
+point vehicle::fractional_offset() const
+{
+    return motion_offset;
+}
+
+void vehicle::set_fractional_offset( const point &offset )
+{
+    constexpr int limit = world_position::tile_center - 1;
+    motion_offset = point( std::clamp( offset.x, -limit, limit ),
+                           std::clamp( offset.y, -limit, limit ) );
+}
+
+static bool vehicle_sweep_is_clear( map &here, const vehicle &veh, const point &offset )
+{
+    // A structural part occupies its full tile. A translation of less than
+    // half a tile can touch at most three new cells from that tile. Check the
+    // whole swept bounds so a thin diagonal gap cannot admit the chassis.
+    const int sx = sgn( offset.x );
+    const int sy = sgn( offset.y );
+    const auto flat_ground = [&here]( const tripoint_bub_ms & tile ) {
+        return here.has_loaded_submap( tile ) && here.move_cost_ter_furn( tile ) == 2 &&
+               !here.get_impassable_field_at( tile ) &&
+               !here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, tile ) &&
+               !here.has_flag( ter_furn_flag::TFLAG_RAMP, tile ) &&
+               !here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tile ) &&
+               !here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, tile );
+    };
+    const int base_level = veh.pos_abs().z();
+    creature_tracker &creatures = get_creature_tracker();
+    bool has_hull = false;
+    for( const vpart_reference &part : veh.get_all_parts_with_fakes() ) {
+        if( part.part().removed ||
+            ( !part.part().is_fake && part.info().location != vpart_location_structure ) ) {
+            continue;
+        }
+        const tripoint_bub_ms from = part.pos_bub( here );
+        if( from.z() != base_level || !flat_ground( from ) ) {
+            return false;
+        }
+        has_hull = true;
+        for( int y = std::min( 0, sy ); y <= std::max( 0, sy ); ++y ) {
+            for( int x = std::min( 0, sx ); x <= std::max( 0, sx ); ++x ) {
+                if( x == 0 && y == 0 ) {
+                    continue;
+                }
+                const tripoint_bub_ms tile = from + point( x, y );
+                if( !here.has_loaded_submap( tile ) ) {
+                    return false;
+                }
+                const optional_vpart_position existing = here.veh_at( tile );
+                if( existing && &existing->vehicle() == &veh ) {
+                    continue;
+                }
+                if( existing || creatures.creature_at( here.get_abs( tile ), true ) ||
+                    !flat_ground( tile ) ) {
+                    return false;
+                }
+            }
+        }
+    }
+    return has_hull;
+}
+
 vehicle *vehicle::act_on_map( map &here )
 {
     const tripoint_bub_ms pt = pos_bub( here );
@@ -2158,6 +2223,24 @@ vehicle *vehicle::act_on_map( map &here )
     if( turn_cost >= of_turn && ( ( !is_flying && requested_z_change == 0 ) ||
                                   !is_aircraft( here ) ) ) {
         if( !should_fall ) {
+            // Integrate the unspent part of the native stride for a grounded,
+            // straight-driving vehicle. Carry still determines when the
+            // collision/trap/boarding code settles the next map cell.
+            point offset = point::zero;
+            if( controlled && !skidding && !is_on_ramp && !is_in_water() &&
+                !wheelcache.empty() && rail_wheelcache.empty() && !is_flying &&
+                !is_towing() && !is_towed() && requested_z_change == 0 &&
+                turn_dir == face.dir() && !turning_arc ) {
+                const int distance = static_cast<int>( std::clamp( of_turn / turn_cost, 0.0f, 0.5f ) *
+                                                       world_position::units_per_tile );
+                tileray step = face;
+                step.advance( velocity < 0 ? -1 : 1 );
+                offset = point( distance * step.dx(), distance * step.dy() );
+                if( distance > 0 && !vehicle_sweep_is_clear( here, *this, offset ) ) {
+                    offset = point::zero;
+                }
+            }
+            set_fractional_offset( offset );
             of_turn_carry = of_turn;
             of_turn = 0;
             return this;
@@ -2262,6 +2345,7 @@ vehicle *vehicle::act_on_map( map &here )
         }
     }
 
+    set_fractional_offset( point::zero );
     return here.move_vehicle( *this, dp, mdir );
 }
 

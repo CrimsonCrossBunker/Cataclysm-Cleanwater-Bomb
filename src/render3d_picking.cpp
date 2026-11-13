@@ -62,6 +62,7 @@ void pick_surfaces::reset( int view_level )
     view_level_ = view_level;
     vehicle_bodies_.clear();
     vehicle_top_.fill( 0.0f );
+    translated_bodies_.clear();
     actors_.clear();
     cells_.assign( VIEW_SIZE * VIEW_SIZE + ( OVERMAP_LAYERS - 1 ) * REGION_SIZE * REGION_SIZE,
                    pick_surface::open );
@@ -89,6 +90,12 @@ void pick_surfaces::set_vehicle_body( const tripoint &cell, float bottom, float 
         float &level_top = vehicle_top_[cell.z + OVERMAP_DEPTH];
         level_top = std::max( level_top, top );
     }
+}
+
+void pick_surfaces::add_vehicle_box( const tripoint &cell, const scene_point &minimum,
+                                     const scene_point &maximum )
+{
+    translated_bodies_.push_back( vehicle_box{ cell, minimum, maximum } );
 }
 
 void pick_surfaces::add_actor( const tripoint &cell, const scene_point &bottom,
@@ -185,6 +192,17 @@ std::optional<tripoint> pick_surfaces::trace( const scene_point &origin,
             cell_entry = crossing;
         }
     }
+    for( const vehicle_box &body : translated_bodies_ ) {
+        float hit = entry;
+        float leave = nearest;
+        if( clip_axis( origin.x, ray.x, body.minimum.x, body.maximum.x, hit, leave ) &&
+            clip_axis( origin.y, ray.y, body.minimum.y, body.maximum.y, hit, leave ) &&
+            clip_axis( origin.z, ray.z, body.minimum.z, body.maximum.z, hit, leave ) && hit < leave ) {
+            nearest = hit;
+            selected = body.cell;
+        }
+    }
+
     // The base billboard is the selectable creature body. Its cached alpha
     // outline excludes transparent margins without reading back GPU textures.
     const float perpendicular = ray.x * view_right.y - ray.y * view_right.x;
