@@ -26,7 +26,7 @@
 
 static const flag_id json_flag_SLING_PROJECTILE( "SLING_PROJECTILE" );
 
-static const itype_id itype_test_rock( "test_rock" );
+static const itype_id itype_test_throwing_flagged( "test_throwing_flagged" );
 static const itype_id itype_test_sling_payload( "test_sling_payload" );
 static const itype_id itype_test_throw_correction( "test_throw_correction" );
 static const itype_id itype_test_throwing_aid( "test_throwing_aid" );
@@ -169,10 +169,12 @@ TEST_CASE( "throw_correction_rejects_empty_flag_arrays", "[throwing]" )
 TEST_CASE( "throw_correction_ammo_and_flag_selectors", "[throwing]" )
 {
     const item ammo( itype_test_throwing_ammo, calendar::turn, 1 );
-    const item rock( itype_test_throwing_stack );
+    const item rock( itype_test_throwing_flagged );
     const item knife( itype_test_throwing_plain );
     REQUIRE( ammo.is_ammo() );
     REQUIRE_FALSE( ammo.has_flag( json_flag_SLING_PROJECTILE ) );
+    REQUIRE( rock.has_flag( json_flag_SLING_PROJECTILE ) );
+    REQUIRE_FALSE( rock.is_ammo() );
 
     throw_correction_data correction;
     correction.deserialize( json_loader::from_string( R"({
@@ -332,7 +334,7 @@ TEST_CASE( "throw_correction_flag_requirements", "[throwing]" )
         item matching( itype_test_throwing_stack );
         check_throw_correction( you, matching, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f );
 
-        item missing_one_flag( itype_test_rock );
+        item missing_one_flag( itype_test_throwing_flagged );
         check_throw_correction( you, missing_one_flag, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f );
     }
 
