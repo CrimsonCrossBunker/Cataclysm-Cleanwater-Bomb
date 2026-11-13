@@ -85,7 +85,7 @@ static const itype_id itype_glass_shard( "glass_shard" );
 
 static const json_character_flag json_flag_HARDTOHIT( "HARDTOHIT" );
 static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &attack,
-                                      projectile &proj_arg )
+                                      projectile &proj_arg, bool is_thrown )
 {
     const projectile &proj = attack.proj;
     const item &drop_item = proj.get_drop();
@@ -133,6 +133,11 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
         item( drop_item ).spill_contents( here, pt );
 
         // TODO: Sound
+        return;
+    }
+
+    if( is_thrown && !x_in_y( drop_item.type->thrown_recovery_chance, 100 ) ) {
+        item( drop_item ).spill_contents( here, pt );
         return;
     }
 
@@ -875,7 +880,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
             play_impact_spark_vfx( tp );
         }
 
-        drop_or_embed_projectile( here, attack, proj );
+        drop_or_embed_projectile( here, attack, proj, wp_attack.is_thrown );
 
         int dealt_damage = attack.dealt_dam.total_damage();
         apply_ammo_effects( null_source ? nullptr : origin, tp, proj.proj_effects, dealt_damage );
