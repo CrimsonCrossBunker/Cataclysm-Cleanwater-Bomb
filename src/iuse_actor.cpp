@@ -3707,7 +3707,7 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
     std::vector<item_comp> comps;
     for( const itype_id &component_id : valid_entries ) {
         if( item::count_by_charges( component_id ) ) {
-            if( crafting_inv.has_charges( component_id, items_needed ) ) {
+            if( crafting_inv.has_charges( component_id, items_needed, filter ) ) {
                 comps.emplace_back( component_id, items_needed );
             }
         } else if( crafting_inv.has_amount( component_id, items_needed, false, filter ) ) {
@@ -3723,8 +3723,8 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
                                       _( "You don't have enough clean \"%1$s\" to do that.  Have: %2$d, need: %3$d" ),
                                       item::nname( mat_comp, 2 ),
                                       item::find_type( mat_comp )->count_by_charges() ?
-                                      crafting_inv.charges_of( mat_comp, items_needed ) :
-                                      crafting_inv.amount_of( mat_comp, false ),
+                                      crafting_inv.charges_of( mat_comp, items_needed, filter ) :
+                                      crafting_inv.amount_of( mat_comp, false, std::numeric_limits<int>::max(), filter ),
                                       items_needed );
             }
         }

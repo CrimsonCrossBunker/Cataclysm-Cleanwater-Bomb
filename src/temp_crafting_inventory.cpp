@@ -116,6 +116,7 @@ temp_crafting_inventory::temp_crafting_inventory( const temp_crafting_inventory 
         add_item_copy( *it );
     }
     items_loc = v.items_loc;
+    map_crafter = v.map_crafter;
     max_empty_liq_cont = v.max_empty_liq_cont;
 }
 
@@ -130,6 +131,7 @@ temp_crafting_inventory &temp_crafting_inventory::operator=( const temp_crafting
         add_item_copy( *it );
     }
     items_loc = v.items_loc;
+    map_crafter = v.map_crafter;
     max_empty_liq_cont = v.max_empty_liq_cont;
     return *this;
 }
@@ -144,6 +146,7 @@ void temp_crafting_inventory::clear()
     invalidate_query_cache();
     items.clear();
     items_loc.clear();
+    map_crafter = nullptr;
     item_copies.clear();
     temp_owned_items.clear();
     max_empty_liq_cont.clear();
@@ -314,6 +317,7 @@ void temp_crafting_inventory::form_from_map( map &m, std::vector<tripoint_bub_ms
         const Character *pl )
 {
     clear();
+    map_crafter = pl;
 
     std::set<vehicle *> vehicles_found;
     std::set<tripoint_abs_ms> finite_liquid_tiles_seen;

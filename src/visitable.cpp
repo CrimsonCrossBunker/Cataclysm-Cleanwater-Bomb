@@ -581,7 +581,15 @@ VisitResponse temp_crafting_inventory::visit_items(
         if( it == nullptr ) {
             continue;
         }
-        if( visit_internal( func, it ) == VisitResponse::ABORT ) {
+        const bool check_ownership = map_crafter &&
+                                     loc.where_recursive() != item_location::type::character;
+        const auto available = [&]( item * node, item * parent ) {
+            if( check_ownership && !node->is_owned_by( *map_crafter, true ) ) {
+                return VisitResponse::NEXT;
+            }
+            return func( node, parent );
+        };
+        if( visit_internal( available, it ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
