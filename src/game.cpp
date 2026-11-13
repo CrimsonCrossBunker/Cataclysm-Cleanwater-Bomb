@@ -6672,7 +6672,7 @@ std::optional<std::vector<tripoint_bub_ms>> game::safe_route_to( Character &who,
         report( _( "You can't see the destination." ) );
         return std::nullopt;
     }
-    if( rl_dist( who.pos_bub(), target ) <= threshold ) {
+    if( who.posz() == target.z() && rl_dist( who.pos_bub(), target ) <= threshold ) {
         return {}; // no need to move anywhere, already near destination
     }
     using route_t = std::vector<tripoint_bub_ms>;
@@ -8787,7 +8787,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     }
     if( !still_at_origin() ||
         ( step && ( !avatar_action::can_move_fractional( who, here ) ||
-                    !step->clears_corner( here, pos ) ) ) ) {
+                    !step->clears_obstacles( here, who, dest_loc ) ) ) ) {
         return false;
     }
     if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {

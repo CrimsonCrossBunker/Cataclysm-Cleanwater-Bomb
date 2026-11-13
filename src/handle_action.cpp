@@ -2044,7 +2044,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                                               tripoint_rel_ms( get_delta_from_movement_action( act, iso_rotate::yes, camera ), 0 );
             const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
             if( !here.inbounds( target_pos ) ||
-                ( step && !step->clears_corner( here, player_character.pos_bub( here ) ) ) ) {
+                ( step && !step->clears_obstacles( here, player_character, target_pos ) ) ) {
                 return false;
             }
             if( direction != tripoint_rel_ms::zero &&

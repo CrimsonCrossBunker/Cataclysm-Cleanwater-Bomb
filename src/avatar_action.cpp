@@ -447,7 +447,7 @@ static bool move_character( Character &you, map &m, const tripoint_rel_ms &d,
     }
 
     if( !m.inbounds( dest_loc ) || ( step && choices && !choices->confirms( m.get_abs( dest_loc ) ) ) ||
-        ( step && !step->clears_corner( m, you_pos ) ) ) {
+        ( step && !step->clears_obstacles( m, you, dest_loc ) ) ) {
         return false;
     }
 

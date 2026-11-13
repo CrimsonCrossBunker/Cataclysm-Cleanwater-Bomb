@@ -6,6 +6,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "flexbuffer_json.h"
 #include "int_id.h"
 #include "item.h"
@@ -87,12 +88,75 @@ std::optional<fractional_walk> fractional_walk::resolve( const world_position &f
     return fractional_walk{ *target, displacement, low };
 }
 
-bool fractional_walk::clears_corner( const map &here, const tripoint_bub_ms &origin ) const
+namespace
 {
-    const tripoint_rel_ms direction = target.tile() - here.get_abs( origin );
-    return direction.x() == 0 || direction.y() == 0 ||
-           ( here.passable( origin + point( direction.x(), 0 ) ) &&
-             here.passable( origin + point( 0, direction.y() ) ) );
+
+int half_body_width( const Character &who )
+{
+    // Keep every unmounted body narrower than a gameplay cell. Small passages
+    // and fitting checks for its destination remain with native walking.
+    return 32 + 16 * ( static_cast<int>( who.get_size() ) -
+                       static_cast<int>( creature_size::tiny ) );
+}
+
+bool swept_body_clear( const map &here, const tripoint_bub_ms &origin,
+                       const tripoint_bub_ms &destination, const point &start,
+                       const point &delta, int half_width )
+{
+    constexpr int tile = world_position::units_per_tile;
+    const point end = start + delta;
+    const point low( std::min( start.x, end.x ), std::min( start.y, end.y ) );
+    const point high( std::max( start.x, end.x ), std::max( start.y, end.y ) );
+    for( int y = -1; y <= 1; ++y ) {
+        const int bottom = y * tile - half_width;
+        const int top = bottom + tile + 2 * half_width;
+        if( high.y <= bottom || low.y >= top ) {
+            continue;
+        }
+        for( int x = -1; x <= 1; ++x ) {
+            const int left = x * tile - half_width;
+            const int right = left + tile + 2 * half_width;
+            if( high.x <= left || low.x >= right ) {
+                continue;
+            }
+            const tripoint_bub_ms cell = origin + point( x, y );
+            if( cell == origin || cell == destination ) {
+                continue;
+            }
+            // A wall can appear while a body overlaps its edge. Let the body
+            // retreat toward its own cell instead of trapping it there.
+            const int toward_x = x * delta.x;
+            const int toward_y = y * delta.y;
+            if( start.x > left && start.x < right && start.y > bottom && start.y < top &&
+                toward_x <= 0 && toward_y <= 0 && ( toward_x < 0 || toward_y < 0 ) ) {
+                continue;
+            }
+            // The two axis projections overlap. The segment's normal is the
+            // third separating axis against the expanded tile rectangle.
+            const point center( x * tile + tile / 2, y * tile + tile / 2 );
+            const int normal_distance = std::abs( ( center.x - start.x ) * delta.y -
+                                                  ( center.y - start.y ) * delta.x );
+            const int extent = ( tile / 2 + half_width ) * ( std::abs( delta.x ) + std::abs( delta.y ) );
+            if( ( delta == point::zero || normal_distance < extent ) && here.impassable( cell ) ) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+} // namespace
+
+bool fractional_walk::clears_obstacles( const map &here, const Character &who,
+                                        const tripoint_bub_ms &landing ) const
+{
+    const tripoint_bub_ms origin = who.pos_bub( here );
+    const tripoint_bub_ms destination = here.get_bub( target.tile() );
+    const int half_width = half_body_width( who );
+    return swept_body_clear( here, origin, destination, who.pos_world().offset().xy(),
+                             displacement, half_width ) &&
+           ( landing.z() == origin.z() ||
+             swept_body_clear( here, landing, landing, target.offset().xy(), point::zero, half_width ) );
 }
 
 int fractional_walk::scale_cost( int full_tile_cost ) const

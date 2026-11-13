@@ -13920,6 +13920,63 @@ TEST_CASE( "fractional_walk_settles_native_collision_and_rejects_stale_same_tile
     CHECK( who.get_moves() < settled_moves );
 }
 
+TEST_CASE( "fractional_body_cannot_slide_into_a_wall_before_the_center_crosses",
+           "[mp_inventory_activity][walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    npc &guest = fixture.remote();
+    bind_feedback_player( guest, 'a', 701 );
+    avatar &host = get_avatar();
+    map &here = get_map();
+    const restore_on_out_of_scope restore_safemode( g->safe_mode );
+    g->set_safe_mode( SAFE_MODE_OFF );
+    const tripoint_bub_ms tile( 60, 60, 0 );
+    const tripoint_bub_ms wall = tile + point::north;
+    const ter_id floor( "t_floor" );
+    here.ter_set( tile, floor );
+    here.ter_set( wall, ter_id( "t_wall" ) );
+    const auto initial = world_position::from_tile( here.get_abs( tile ), tripoint( 128, 96, 0 ) );
+    REQUIRE( initial );
+    const point into_wall( 0, -72 );
+    const auto unblocked = initial->translated( tripoint( into_wall, 0 ) );
+    REQUIRE( unblocked );
+    REQUIRE( unblocked->tile() == initial->tile() );
+
+    host.setpos( here, tile + tripoint( -4, -4, 0 ) );
+    guest.setpos( here, *initial, false );
+    guest.set_moves( 1000 );
+    const auto request = [&]() {
+        walk_move_choices choices;
+        choices.destination = initial->tile();
+        return fixture.request( guest, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", initial->tile() );
+            out.member( "origin_offset", initial->offset() );
+            out.member( "fractional_delta", into_wall );
+            out.member( "direction", tripoint_rel_ms::zero );
+            out.member( "mode", guest.current_movement_mode().str() );
+            out.member( "choices", choices );
+        } );
+    };
+    fixture.run( guest, request() );
+    CHECK( guest.pos_world() == *initial );
+    CHECK( guest.get_moves() == 1000 );
+    here.ter_set( wall, floor );
+    fixture.run( guest, request() );
+    CHECK( guest.pos_world() == *unblocked );
+
+    guest.setpos( here, tile + tripoint( 4, 4, 0 ), false );
+    host.setpos( here, *initial, false );
+    host.set_moves( 1000 );
+    here.ter_set( wall, ter_id( "t_wall" ) );
+    CHECK_FALSE( avatar_action::move_fractional( host, here, into_wall ) );
+    CHECK( host.pos_world() == *initial );
+    CHECK( host.get_moves() == 1000 );
+    here.ter_set( wall, floor );
+    CHECK( avatar_action::move_fractional( host, here, into_wall ) );
+    CHECK( host.pos_world() == *unblocked );
+}
+
 TEST_CASE( "solo_fractional_walk_keeps_exact_position_when_the_map_scrolls",
            "[walking_owned][fractional_walk]" )
 {
