@@ -11106,10 +11106,13 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
                                 const std::optional<tripoint_bub_ms> item_travellers_location,
                                 vehicle *veh )
 {
+    if( cata_mp::is_client_mode() ) {
+        return false;
+    }
     // Keep the last complete save before this trip writes source maps.  The
     // later safety checkpoint must not replace the player's quickload target.
     ensure_dimension_rollback_snapshot();
-    if( !cata_mp::is_client_mode() && world_generator && world_generator->active_world &&
+    if( world_generator && world_generator->active_world &&
         !world_generator->active_world->world_saves.empty() &&
         !save_snapshot::begin_dimension_transition( world_generator->active_world->folder_path() ) ) {
         return false;
