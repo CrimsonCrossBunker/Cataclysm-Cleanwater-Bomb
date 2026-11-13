@@ -47,15 +47,13 @@ static const faction_id faction_your_followers( "your_followers" );
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 
-static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_combat_exoskeleton_medium( "combat_exoskeleton_medium" );
 static const itype_id itype_combat_exoskeleton_medium_on( "combat_exoskeleton_medium_on" );
-static const itype_id itype_grenade_act( "grenade_act" );
+static const itype_id itype_test_sling_payload_active( "test_sling_payload_active" );
 static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_knife_large( "knife_large" );
 static const itype_id itype_modular_m16_auto_rifle( "modular_m16_auto_rifle" );
 static const itype_id itype_modular_m16a4( "modular_m16a4" );
-static const itype_id itype_rock( "rock" );
 static const itype_id itype_wearable_light( "wearable_light" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
@@ -64,7 +62,7 @@ static const skill_id skill_throw( "throw" );
 
 static const string_id<npc_template> npc_template_test_talker( "test_talker" );
 
-static const ter_str_id ter_t_wall( "t_wall" );
+static const ter_str_id ter_test_t_throwing_wall( "test_t_throwing_wall" );
 
 static const weather_type_id weather_sunny( "sunny" );
 
@@ -120,7 +118,7 @@ static npc &spawn_armed_grenade_npc()
     model.set_knowledge_level( skill_throw, 10 );
     model.rules.set_flag( ally_rule::avoid_friendly_fire );
     model.rules.engagement = combat_engagement::NO_MOVE;
-    item grenade( itype_grenade_act );
+    item grenade( itype_test_sling_payload_active );
     grenade.active = true;
     model.set_wielded_item( grenade );
     REQUIRE( model.get_wielded_item()->has_flag( flag_NPC_THROW_NOW ) );
@@ -142,7 +140,7 @@ TEST_CASE( "armed_grenade_chooses_a_throwable_tile_past_an_obstructed_corner",
     REQUIRE( range > 2 );
     for( const tripoint_bub_ms &point : here.points_in_radius( model.pos_bub(), range ) ) {
         if( point.x() == model.pos_bub().x() - 1 ) {
-            here.ter_set( point, ter_t_wall.id() );
+            here.ter_set( point, ter_test_t_throwing_wall.id() );
         }
     }
     npc_attack_throw attack( grenade, best_weapon ? &grenade : nullptr, model.speed_rating() );
@@ -198,14 +196,14 @@ TEST_CASE( "npc_drops_armed_grenade_when_surrounded_by_walls",
     map &here = get_map();
     for( const tripoint_bub_ms &point : here.points_in_radius( model.pos_bub(), 1 ) ) {
         if( point != model.pos_bub() ) {
-            here.ter_set( point, ter_t_wall.id() );
+            here.ter_set( point, ter_test_t_throwing_wall.id() );
         }
     }
     model.move();
     CHECK_FALSE( model.get_wielded_item() );
     map_stack at_feet = here.i_at( model.pos_bub() );
     REQUIRE( at_feet.size() == 1 );
-    CHECK( at_feet.only_item().typeId() == itype_grenade_act );
+    CHECK( at_feet.only_item().typeId() == itype_test_sling_payload_active );
     CHECK( at_feet.only_item().active );
 }
 
@@ -220,7 +218,7 @@ TEST_CASE( "npc_leaves_armed_grenade_at_its_feet_if_retired_during_disposal",
     if( surrounded ) {
         for( const tripoint_bub_ms &point : here.points_in_radius( origin, 1 ) ) {
             if( point != origin ) {
-                here.ter_set( point, ter_t_wall.id() );
+                here.ter_set( point, ter_test_t_throwing_wall.id() );
             }
         }
     }
@@ -250,8 +248,37 @@ TEST_CASE( "npc_leaves_armed_grenade_at_its_feet_if_retired_during_disposal",
     CHECK( get_creature_tracker().creature_at<npc>( origin ) == nullptr );
     map_stack at_origin = here.i_at( origin );
     REQUIRE( at_origin.size() == 1 );
-    CHECK( at_origin.only_item().typeId() == itype_grenade_act );
+    CHECK( at_origin.only_item().typeId() == itype_test_sling_payload_active );
     CHECK( at_origin.only_item().active );
+}
+
+TEST_CASE( "npc_throw_attack_consumes_one_test_projectile", "[npc_attack][throwing]" )
+{
+    get_player_character().setpos( get_map(), main_npc_start_tripoint );
+    clear_map_and_put_player_underground();
+    clear_vehicles();
+    scoped_weather_override sunny_weather( weather_sunny );
+    npc &model = npc_attack_setup::respawn_main_npc();
+    model.set_fac( faction_your_followers );
+    model.set_skill_level( skill_throw, 10 );
+    model.set_moves( 1000 );
+    item projectile( itype_id( "test_throwing_stack" ), calendar::turn, 3 );
+    model.set_wielded_item( projectile );
+    monster *target = g->place_critter_at( mtype_id( "mon_test_zombie" ),
+                                         model.pos_bub() + tripoint( 4, 0, 0 ) );
+    REQUIRE( target != nullptr );
+    model.regen_ai_cache();
+    item &held = *model.get_wielded_item();
+    const int count = held.count();
+    const int moves = model.get_moves();
+    npc_attack_throw attack( held, nullptr, model.speed_rating() );
+    const npc_attack_rating rating = attack.evaluate( model, target );
+    REQUIRE( rating.value() );
+    REQUIRE( *rating.value() > 0 );
+    attack.use( model, rating.target() );
+    REQUIRE( model.get_wielded_item() );
+    CHECK( model.get_wielded_item()->count() == count - 1 );
+    CHECK( model.get_moves() < moves );
 }
 
 TEST_CASE( "NPC_automatic_fire_respects_distance_and_burst_orders", "[npc_attack][gun_rpm]" )
@@ -488,18 +515,6 @@ TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
                 }
             }
         }
-        WHEN( "NPC only has a bunch of rocks" ) {
-            item weapon( itype_rock );
-            main_npc.set_wielded_item( weapon );
-            REQUIRE( main_npc.get_wielded_item()->typeId() == itype_rock );
-
-            THEN( "NPC doesn't bother throwing the rocks so close" ) {
-                main_npc.evaluate_best_attack( zombie );
-                const std::shared_ptr<npc_attack> &attack = main_npc.get_current_attack();
-                npc_attack_throw *throw_attack = dynamic_cast<npc_attack_throw *>( attack.get() );
-                CHECK( !throw_attack );
-            }
-        }
         WHEN( "NPC has an exoskeleton" ) {
             main_npc.clear_worn();
             item armor( itype_combat_exoskeleton_medium );
@@ -576,28 +591,6 @@ TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
             }
         }
 
-        WHEN( "NPC only has a bunch of rocks" ) {
-            // Make the intended ranged attack useful and explicitly allowed.
-            main_npc.set_skill_level( skill_throw, 10 );
-            main_npc.rules.set_flag( ally_rule::use_guns );
-            REQUIRE( main_npc.wear_item( item( itype_backpack ) ) );
-            for( int n = 0; n < 4; ++n ) {
-                REQUIRE( main_npc.i_add( item( itype_rock ) ) );
-            }
-            item weapon( itype_rock );
-            main_npc.set_wielded_item( weapon );
-            REQUIRE( main_npc.get_wielded_item()->typeId() == itype_rock );
-
-            THEN( "NPC throws rocks at the zombie" ) {
-                main_npc.regen_ai_cache();
-                REQUIRE( ( main_npc.amount_of( itype_rock ) > 1 ||
-                           main_npc.charges_of( itype_rock ) > 1 ) );
-                main_npc.evaluate_best_attack( zombie );
-                const std::shared_ptr<npc_attack> &attack = main_npc.get_current_attack();
-                npc_attack_throw *throw_attack = dynamic_cast<npc_attack_throw *>( attack.get() );
-                CHECK( throw_attack );
-            }
-        }
     }
     GIVEN( "There is a zombie 1 tile away and another 8 tiles away" ) {
         monster *zombie = npc_attack_setup::spawn_zombie_at_range( 1 );
