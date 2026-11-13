@@ -16,6 +16,7 @@
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
+#include "item_stack.h"
 #include "itype.h"
 #include "json_loader.h"
 #include "map.h"
@@ -38,6 +39,7 @@ static const itype_id itype_javelin_iron( "javelin_iron" );
 static const itype_id itype_pebble( "pebble" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_sling( "sling" );
+static const itype_id itype_sling_bullet_clay_750( "sling_bullet_clay_750" );
 static const itype_id itype_sling_bullet_stone_500( "sling_bullet_stone_500" );
 static const itype_id itype_sling_bullet_stone_750( "sling_bullet_stone_750" );
 static const itype_id itype_sling_long( "sling_long" );
@@ -360,6 +362,24 @@ TEST_CASE( "time_to_throw_independent_of_number_of_projectiles", "[throwing] [ba
         }
         thrown.charges--;
     }
+}
+
+TEST_CASE( "thrown_items_follow_recovery_chance", "[throwing]" )
+{
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    reset_player( you, { 10, 8, 8, 8 }, { 30, 30, 0 } );
+    const bool recover = GENERATE( false, true );
+    const itype_id thrown_id = recover ? itype_rock : itype_sling_bullet_clay_750;
+    const item thrown( thrown_id, calendar::turn, 1 );
+    REQUIRE( thrown.type->thrown_recovery_chance == ( recover ? 100 : 0 ) );
+
+    const dealt_projectile_attack attack = you.throw_item( { 31, 30, 0 }, thrown );
+    bool found = false;
+    for( const item &dropped : get_map().i_at( attack.end_point ) ) {
+        found = found || dropped.typeId() == thrown_id;
+    }
+    CHECK( found == recover );
 }
 
 TEST_CASE( "throw_correction_warns_without_rejecting_inverted_weight_bounds", "[throwing]" )
