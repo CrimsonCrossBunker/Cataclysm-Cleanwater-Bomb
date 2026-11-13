@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Finalize the frozen legacy inventory and maintain permanent moved banners."""
+"""Finalize the frozen legacy inventory and maintain bilingual migration banners."""
 
 from __future__ import annotations
 
@@ -78,8 +78,20 @@ def banner(entry: dict | list[dict]) -> str:
     entries = entry if isinstance(entry, list) else [entry]
     primary = entries[0]
     archived = all(item["action"] == ARCHIVE_ACTION for item in entries)
-    state_en = "Archived" if archived else "Moved"
-    state_zh = "已归档" if archived else "已迁移"
+    state_en = "Archived" if archived else "Migration in progress"
+    state_zh = "已归档" if archived else "迁移中"
+    date_label = (
+        "Moved date / 迁移日期" if archived else "Migration start date / 开始迁移日期"
+    )
+    commit_label = (
+        "Last in-repository commit / 仓库内最后适用 commit" if archived else
+        "Source commit referenced by the last migration record / 上次迁移记录参考 commit"
+    )
+    commits_label = (
+        "Stable document IDs and last commits / 稳定文档 ID 与最后 commit" if archived else
+        "Stable document IDs and source commits referenced by the last migration record / "
+        "稳定文档 ID 与上次迁移记录参考 commit"
+    )
     default_reason = "The maintained documentation now lives in CCB-Docs."
     reasons = sorted({item.get("archive_reason") or default_reason for item in entries})
     lines = [
@@ -93,13 +105,12 @@ def banner(entry: dict | list[dict]) -> str:
                 f"> Stable document ID / 稳定文档 ID: `{primary['stable_document_id']}`",
                 f"> 中文: {primary['zh_url']}",
                 f"> English: {primary['en_url']}",
-                f"> Moved date / 迁移日期: `{primary['moved_at']}`",
-                "> Last in-repository commit / 仓库内最后适用 commit: "
-                f"`{primary['source_commit']}`",
+                f"> {date_label}: `{primary['moved_at']}`",
+                f"> {commit_label}: `{primary['source_commit']}`",
             ]
         )
     else:
-        lines.append("> Stable document IDs and last commits / 稳定文档 ID 与最后 commit:")
+        lines.append(f"> {commits_label}:")
         lines.extend(
             f"> - `{item['stable_document_id']}`: `{item['source_commit']}`"
             for item in sorted(entries, key=lambda value: value["stable_document_id"])
@@ -108,18 +119,37 @@ def banner(entry: dict | list[dict]) -> str:
             lines.append(f"> 中文: {chinese}")
         for english in sorted({item["en_url"] for item in entries}):
             lines.append(f"> English: {english}")
-        lines.append(f"> Moved date / 迁移日期: `{primary['moved_at']}`")
-    lines.extend(
-        [
-            *(f"> {reason}" for reason in reasons),
-            "> This in-repository body is no longer maintained. The historical body "
-            f"is retained through `{primary['retained_body_until']}` and may then be "
-            "removed; this bilingual entry banner remains permanently.",
-            "> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。",
-            END,
-            "",
-        ]
-    )
+        lines.append(f"> {date_label}: `{primary['moved_at']}`")
+    if archived:
+        lines.extend(
+            [
+                *(f"> {reason}" for reason in reasons),
+                "> This in-repository body is no longer maintained. The historical body "
+                f"is retained through `{primary['retained_body_until']}` and may then be "
+                "removed; this bilingual entry banner remains permanently.",
+                "> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "> CCB-Docs is still a work in progress; the links above are migration targets.",
+                "> CCB-Docs 仍在整理中；上方链接为迁移目标。",
+                "> Updates to this in-repository body are optional for now, and no "
+                "comprehensive revision is currently planned. Developers may update "
+                "it as needed. Some content has not been checked against the current "
+                "CCB implementation; consult the relevant source code when using or "
+                "updating it. Documentation may be updated alongside new or changed "
+                "features. The retained body will serve as a reference for later "
+                "documentation migration and reorganization, which may rewrite or "
+                "omit the original text.",
+                "> 本仓库正文暂不列入必须更新项，暂不安排全面整理，是否更新由开发者按实际需要决定。"
+                "部分内容尚未按当前 CCB 实现核实，使用和更新时应检查相关源码。"
+                "新增或改动功能时，可同步更新相关文档。保留正文将作为后续文档迁移与整理的参考来源，"
+                "后续整理不保证原文保留。",
+            ]
+        )
+    lines.extend([END, ""])
     return "\n".join(lines)
 
 
@@ -247,7 +277,7 @@ def main() -> int:
         print(error, file=sys.stderr)
         return 2
     print(
-        "legacy migration entries: 111 paths with permanent banners, "
+        "legacy migration entries: 111 paths with bilingual banners, "
         f"{len(expected_inventory['documents'])} terminal records"
     )
     return 0

@@ -45,9 +45,71 @@ class FinalizeLegacyMigrationTests(unittest.TestCase):
         self.assertEqual(result["blockers"], [])
 
     def test_archive_uses_archived_terminal_state(self) -> None:
-        result = final_entry(self.entry("archive_public"), date(2026, 8, 2))
+        entry = self.entry("archive_public")
+        entry["archive_reason"] = "Superseded upstream policy."
+        result = final_entry(entry, date(2026, 8, 2))
         self.assertEqual(result["migration_status"], "archived")
-        self.assertIn("Archived / 已归档", banner(result))
+        content = banner(result)
+        self.assertIn("Archived / 已归档", content)
+        self.assertIn("Moved date / 迁移日期: `2026-08-02`", content)
+        self.assertIn("Superseded upstream policy.", content)
+        self.assertIn("no longer maintained", content)
+        self.assertIn("retained through `2027-02-02`", content)
+        self.assertNotIn("Migration in progress", content)
+        self.assertNotIn("Updates to this in-repository body are optional", content)
+
+    def test_migration_banner_allows_optional_updates_without_deletion_deadline(self) -> None:
+        result = final_entry(self.entry(), date(2026, 8, 2))
+        content = banner(result)
+        self.assertIn("Migration in progress / 迁移中", content)
+        self.assertIn("Migration start date / 开始迁移日期: `2026-08-02`", content)
+        self.assertIn(
+            "Source commit referenced by the last migration record / 上次迁移记录参考 commit: "
+            "`" + "2" * 40 + "`",
+            content,
+        )
+        self.assertIn(result["zh_url"], content)
+        self.assertIn(result["en_url"], content)
+        for statement in (
+            "CCB-Docs is still a work in progress",
+            "Updates to this in-repository body are optional for now",
+            "no comprehensive revision is currently planned",
+            "Developers may update it as needed",
+            "consult the relevant source code when using or updating it",
+            "Documentation may be updated alongside new or changed features",
+            "which may rewrite or omit the original text",
+            "本仓库正文暂不列入必须更新项",
+            "后续整理不保证原文保留",
+        ):
+            with self.subTest(statement=statement):
+                self.assertIn(statement, content)
+        for obsolete_statement in (
+            "The maintained documentation now lives in CCB-Docs.",
+            "no longer maintained",
+            "本仓库正文不再维护",
+            "2027-02-02",
+            "remains permanently",
+        ):
+            with self.subTest(obsolete_statement=obsolete_statement):
+                self.assertNotIn(obsolete_statement, content)
+
+    def test_shared_banner_preserves_document_ids_and_commit_references(self) -> None:
+        first = final_entry(self.entry(), date(2026, 8, 2))
+        second = dict(first, stable_document_id="example.alias", source_commit="3" * 40)
+        second["action"] = "archive_public"
+        content = banner([first, second])
+        self.assertIn("Migration in progress / 迁移中", content)
+        self.assertIn(
+            "Stable document IDs and source commits referenced by the last migration record / "
+            "稳定文档 ID 与上次迁移记录参考 commit:",
+            content,
+        )
+        self.assertIn("`example.reference`: `" + "2" * 40 + "`", content)
+        self.assertIn("`example.alias`: `" + "3" * 40 + "`", content)
+        self.assertEqual(content.count(first["zh_url"]), 1)
+        self.assertEqual(content.count(first["en_url"]), 1)
+        self.assertIn("Migration start date / 开始迁移日期: `2026-08-02`", content)
+        self.assertNotIn("no longer maintained", content)
 
     def test_banner_replacement_is_idempotent(self) -> None:
         result = final_entry(self.entry(), date(2026, 8, 2))
