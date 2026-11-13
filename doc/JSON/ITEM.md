@@ -241,14 +241,35 @@ flag arrays are errors.  `allow_ammotype: []` clears the ammo list.  A bound set
 `null` clears that bound; setting the entire `throw_correction_data` to `null`
 removes the correction.
 
+`full_bonus_skill` is an optional non-negative integer: the throwing skill level
+needed for full bonuses.  Below a positive requirement, favorable changes from
+the neutral multiplier 1.0 (or additive offset 0.0 on a gunmod) are scaled by
+`max(0, throwing_skill) / full_bonus_skill`.  At or above the requirement, they
+apply in full.  A new definition without this field, or a value of 0, applies
+all corrections at any skill level.  Omission preserves an inherited requirement;
+`full_bonus_skill: null` clears it.  This does not prevent using the aid.
+
+Higher damage and range, and lower stamina cost, dispersion, and move cost, are
+bonuses.  Penalties and neutral values are unchanged.  Weight is handled by use:
+a higher effective weight is a damage bonus but a handling penalty; a lower
+weight is a handling bonus but a damage penalty.  Only the favorable side is
+skill-scaled, including the weight-damage cap.  Each aid or gunmod uses its own
+requirement before multipliers are combined and additive offsets are added.
+Railgun virtual multipliers do not use this requirement.
+
+For example, with `full_bonus_skill: 3`, damage multiplier 1.6, and move-cost
+multiplier 1.3, throwing skill 0 gives multipliers 1.0 and 1.3, skill 1 gives
+1.2 and 1.3, skill 2 gives 1.4 and 1.3, and skill 3 or higher gives 1.6 and 1.3.
+
 Weight bounds are inclusive and independent: omitting one does not limit that
 side of the interval.  When `min_weight` exceeds `max_weight`, loading emits a
 JSON warning but continues.  The bounds are not changed, so no projectile can
 satisfy that interval.
 
 `throw_weight_multiplier` scales effective weight for range, move cost,
-throwing difficulty, and weight-based bash damage.  Its positive bonus raises the
-weight-damage cap by half: `1 + max(0, multiplier - 1) / 2`.
+throwing difficulty, and weight-based bash damage.  Its damage-side positive bonus,
+after any skill scaling, raises the weight-damage cap by half:
+`1 + max(0, damage_weight_multiplier - 1) / 2`.
 Railgun throwing uses the same cap rule with its virtual weight multiplier.
 `throw_damage_multiplier` scales the complete damage after the weight-damage cap,
 so the final cap receives that damage multiplier once.
