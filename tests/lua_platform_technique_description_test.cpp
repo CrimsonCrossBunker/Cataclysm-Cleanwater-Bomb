@@ -45,6 +45,8 @@
 #include "translation.h"
 #include "type_id.h"
 
+static const damage_type_id damage_bash( "bash" );
+
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_martial_grapple( "martial_grapple" );
 
@@ -76,6 +78,14 @@ static const matype_id style_judo( "style_judo" );
 static const matype_id test_style_ma1( "test_style_ma1" );
 
 static const skill_id skill_unarmed( "unarmed" );
+
+static const ter_str_id ter_t_pavement( "t_pavement" );
+static const ter_str_id ter_t_reinforced_glass( "t_reinforced_glass" );
+static const ter_str_id ter_t_window_domestic( "t_window_domestic" );
+
+static const vproto_id vehicle_prototype_bicycle( "bicycle" );
+
+static const weapon_category_id weapon_category_QUARTERSTAVES( "QUARTERSTAVES" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
            "[lua][platform][martial_arts][semantic]" )
@@ -619,7 +629,7 @@ ccb.content.add(technique)
         REQUIRE( lua_position_authoring.is_valid() );
         CHECK( lua_position_authoring->targets_position() );
         CHECK( lua_position_authoring->move_cost_multiplier( get_avatar() ) == Approx( 1.3 ) );
-        CHECK( lua_position_authoring->damage_multiplier( get_avatar(), damage_type_id( "bash" ) ) == Approx( 1.4 ) );
+        CHECK( lua_position_authoring->damage_multiplier( get_avatar(), damage_bash ) == Approx( 1.4 ) );
         CHECK( lua_position_authoring->bonuses.get_flat( get_avatar(), affected_stat::HIT ) == Approx( -1 ) );
         platform::rollback_runtime_content( runtime );
         CHECK_FALSE( lua_position_authoring.is_valid() );
@@ -692,17 +702,17 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
     REQUIRE( tec_weapon_breach.is_valid() );
     REQUIRE( tec_rapid_window_break->targets_position() );
     SECTION( "ordinary_window_uses_native_bashing" ) {
-        here.ter_set( position, ter_str_id( "t_window_domestic" ) );
+        here.ter_set( position, ter_t_window_domestic );
         REQUIRE( attacker.can_use_active_technique_at( position, tec_rapid_window_break ) );
         const int stamina = attacker.get_stamina();
         REQUIRE( attacker.use_active_technique( position, tec_rapid_window_break ) );
-        CHECK( here.ter( position ) != ter_str_id( "t_window_domestic" ) );
+        CHECK( here.ter( position ) != ter_t_window_domestic );
         CHECK( attacker.get_stamina() == stamina - 110 );
         CHECK( attacker.get_moves() == 930 );
         CHECK( attacker.technique_cooldown_remaining( tec_rapid_window_break ) == 3_turns );
     }
     SECTION( "reinforced_glass_is_not_force_destroyed" ) {
-        here.ter_set( position, ter_str_id( "t_reinforced_glass" ) );
+        here.ter_set( position, ter_t_reinforced_glass );
         const ter_id before = here.ter( position );
         if( attacker.can_use_active_technique_at( position, tec_rapid_window_break ) ) {
             REQUIRE( attacker.use_active_technique( position, tec_rapid_window_break ) );
@@ -713,7 +723,7 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
         CHECK( here.ter( position ) == before );
     }
     SECTION( "empty_space_consumes_resources_but_not_terrain_or_experience" ) {
-        here.ter_set( position, ter_str_id( "t_pavement" ) );
+        here.ter_set( position, ter_t_pavement );
         const ter_id before = here.ter( position );
         const int experience = attacker.get_skill_level_object( skill_unarmed ).exercise();
         const int stamina = attacker.get_stamina();
@@ -727,26 +737,26 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
         CHECK( attacker.get_skill_level_object( skill_unarmed ).exercise() == experience );
     }
     SECTION( "wrong_terrain_and_weapon_fail_without_cost" ) {
-        here.ter_set( position, ter_str_id( "t_pavement" ) );
+        here.ter_set( position, ter_t_pavement );
         CHECK_FALSE( attacker.use_active_technique( position, tec_rapid_window_break ) );
         CHECK_FALSE( attacker.use_active_technique( position, tec_weapon_breach ) );
         CHECK( attacker.get_moves() == 1000 );
     }
     SECTION( "weapon_breach_requires_the_correct_weapon_and_charges_once" ) {
         attacker.set_wielded_item( item( itype_i_staff ) );
-        here.ter_set( position, ter_str_id( "t_window_domestic" ) );
+        here.ter_set( position, ter_t_window_domestic );
         const int stamina = attacker.get_stamina();
         REQUIRE( attacker.can_use_active_technique_at( position, tec_weapon_breach ) );
         CHECK( attacker.get_stamina() == stamina );
         REQUIRE( attacker.use_active_technique( position, tec_weapon_breach ) );
         CHECK( attacker.get_stamina() == stamina - 220 );
         CHECK( attacker.get_moves() == 850 );
-        CHECK( here.ter( position ) != ter_str_id( "t_window_domestic" ) );
+        CHECK( here.ter( position ) != ter_t_window_domestic );
         CHECK_FALSE( attacker.use_active_technique( position, tec_weapon_breach ) );
         CHECK( attacker.get_moves() == 850 );
     }
     SECTION( "vehicle_positions_are_excluded" ) {
-        REQUIRE( here.add_vehicle( vproto_id( "bicycle" ), position, 0_degrees ) );
+        REQUIRE( here.add_vehicle( vehicle_prototype_bicycle, position, 0_degrees ) );
         REQUIRE( here.veh_at( position ) );
         CHECK_FALSE( attacker.can_use_active_technique_at( position, tec_shadow_combination ) );
         CHECK_FALSE( attacker.use_active_technique( position, tec_shadow_combination ) );
@@ -796,12 +806,12 @@ TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
     CHECK( library_count == 26 );
     CHECK( tec_lua_boxing_double_jab->repeat_min == 2 );
     CHECK( tec_lua_boxing_double_jab->repeat_max == 2 );
-    CHECK( tec_lua_boxing_double_jab->damage_multiplier( attacker, damage_type_id( "bash" ) ) == Approx( 0.65 ) );
-    CHECK( tec_lua_boxing_cross->damage_multiplier( attacker, damage_type_id( "bash" ) ) == Approx( 1.3 ) );
+    CHECK( tec_lua_boxing_double_jab->damage_multiplier( attacker, damage_bash ) == Approx( 0.65 ) );
+    CHECK( tec_lua_boxing_cross->damage_multiplier( attacker, damage_bash ) == Approx( 1.3 ) );
     CHECK( tec_lua_boxing_double_jab->move_cost_multiplier( attacker ) < tec_lua_boxing_cross->move_cost_multiplier( attacker ) );
     CHECK( tec_lua_boxing_double_jab->bonuses.get_flat( attacker, affected_stat::HIT ) == Approx( 1 ) );
     CHECK( tec_lua_staff_long_thrust->reqs.weapon_categories_allowed == std::vector<weapon_category_id> {
-               weapon_category_id( "QUARTERSTAVES" )
+               weapon_category_QUARTERSTAVES
            } );
     CHECK( tec_lua_boxing_opening_cross->crit_tec );
     CHECK_FALSE( tec_lua_boxing_opening_cross->can_activate() );
