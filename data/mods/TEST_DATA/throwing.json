@@ -1,0 +1,163 @@
+[
+  {
+    "type": "ammunition_type",
+    "id": "test_throwing",
+    "name": "test throwing ammunition",
+    "default": "test_throwing_ammo"
+  },
+  {
+    "type": "ammo_effect",
+    "id": "test_sling_payload_explosion",
+    "explosion": { "power": 5 }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "id": "test_throwing_ammo",
+    "name": "TEST unflagged throwing ammunition",
+    "description": "Unflagged ammunition for selector tests and a test firestarter.",
+    "weight": "1 g",
+    "volume": "1 ml",
+    "longest_side": "5 mm",
+    "material": [ "steel" ],
+    "symbol": "*",
+    "color": "white",
+    "ammo_type": "test_throwing",
+    "count": 1,
+    "damage": { "damage_type": "bash", "amount": 1 }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "copy-from": "test_throwing_ammo",
+    "id": "test_throwing_stack",
+    "name": "TEST stacked throwing projectile",
+    "description": "A charge-counted projectile for throwing mechanics tests.",
+    "weight": "600 g",
+    "volume": "100 ml",
+    "longest_side": "10 cm",
+    "flags": [ "SLING_PROJECTILE", "NPC_THROWN" ],
+    "thrown_damage": { "damage_type": "bash", "amount": 7.5 }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "copy-from": "test_throwing_stack",
+    "id": "test_throwing_unrecoverable",
+    "name": "TEST unrecoverable throwing projectile",
+    "thrown_recovery_chance": 0
+  },
+  {
+    "type": "ITEM",
+    "id": "test_throwing_plain",
+    "name": "TEST plain throwing item",
+    "description": "An unflagged, non-ammunition item for throwing and disposal tests.",
+    "weight": "100 g",
+    "volume": "100 ml",
+    "longest_side": "10 cm",
+    "material": [ "steel" ],
+    "symbol": "*",
+    "color": "white"
+  },
+  {
+    "type": "ITEM",
+    "copy-from": "test_throw_correction",
+    "id": "test_throwing_aid",
+    "name": "TEST throwing launcher",
+    "description": "A throwing aid that also launches test sling payloads.",
+    "flags": [ "THROW_KEEP_WIELDED", "SLING_LAUNCHER" ],
+    "throw_correction_data": {
+      "throw_damage_multiplier": 1.5,
+      "throw_range_multiplier": 2.0,
+      "throw_weight_multiplier": 1.8
+    }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "copy-from": "test_throwing_stack",
+    "id": "test_sling_payload",
+    "name": "TEST sling payload",
+    "description": "A sling payload with a fixed fuse and an independent live item.",
+    "weight": "400 g",
+    "volume": "300 ml",
+    "longest_side": "15 cm",
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "BOMB" ],
+    "effects": [ "test_sling_payload_explosion" ],
+    "use_action": {
+      "type": "transform",
+      "target": "test_sling_payload_active",
+      "target_timer": "5 seconds",
+      "need_wielding": true,
+      "moves": 50,
+      "msg": "You activate the test payload."
+    }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "copy-from": "test_sling_payload",
+    "id": "test_sling_payload_fire",
+    "name": "TEST sling payload requiring fire",
+    "use_action": {
+      "type": "transform",
+      "target": "test_sling_payload_active",
+      "target_timer": "5 seconds",
+      "need_wielding": true,
+      "need_fire": 1,
+      "moves": 50,
+      "msg": "You light the test payload."
+    }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "id": "test_sling_payload_active",
+    "name": "TEST live sling payload",
+    "description": "A live payload for testing delayed sling activation.",
+    "weight": "400 g",
+    "volume": "300 ml",
+    "longest_side": "15 cm",
+    "material": [ "steel" ],
+    "symbol": "*",
+    "color": "white",
+    "countdown_interval": "5 seconds",
+    "countdown_action": { "type": "explosion", "explosion": { "power": 5 } },
+    "flags": [ "DANGEROUS", "SPAWN_ACTIVE" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "id": "test_throwing_firestarter",
+    "name": "TEST throwing firestarter",
+    "description": "A charged ignition source for sling activation tests.",
+    "weight": "10 g",
+    "volume": "10 ml",
+    "material": [ "steel" ],
+    "symbol": ",",
+    "color": "white",
+    "tool_ammo": [ "test_throwing" ],
+    "charges_per_use": 1,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "test_throwing": 100 } } ],
+    "use_action": { "type": "firestarter", "moves": 100, "moves_slow": 100 },
+    "flags": [ "FIRESTARTER" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "id": "test_throwing_holster",
+    "name": "TEST throwing holster",
+    "description": "A holster for testing disposal of an item before throwing.",
+    "weight": "100 g",
+    "volume": "100 ml",
+    "material": [ "cotton" ],
+    "symbol": "[",
+    "color": "white",
+    "pocket_data": [
+      { "pocket_type": "CONTAINER", "holster": true, "max_contains_volume": "1 L", "max_contains_weight": "1 kg", "moves": 50 }
+    ],
+    "use_action": { "type": "holster", "holster_prompt": "Store test item", "holster_msg": "You store the test item." },
+    "flags": [ "BELTED" ],
+    "armor": [ { "coverage": 100, "encumbrance": 0, "covers": [ "torso" ] } ]
+  }
+]
