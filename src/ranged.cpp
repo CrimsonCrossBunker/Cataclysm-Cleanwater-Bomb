@@ -4075,6 +4075,17 @@ tripoint_bub_ms target_ui::choose_initial_target()
 {
     map &here = get_map();
 
+    if( mode == TargetMode::Fire ) {
+        const auto initial_target = activity->take_initial_target();
+        if( initial_target && here.has_loaded_submap( project_to<coords::sm>( *initial_target ) ) ) {
+            const tripoint_bub_ms selected = here.get_bub( *initial_target );
+            const Creature *picked = get_creature_tracker().creature_at( selected );
+            if( picked && picked != you && pl_sees( *picked ) && dist_fn( selected ) <= range ) {
+                return selected;
+            }
+        }
+    }
+
     // Try previously targeted creature
     shared_ptr_fast < Creature > cr = you->last_target.lock();
     if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {

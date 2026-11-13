@@ -498,9 +498,17 @@ aim_activity_actor::aim_activity_actor()
     initial_view_offset = get_avatar().view_offset;
 }
 
-aim_activity_actor aim_activity_actor::use_wielded()
+aim_activity_actor aim_activity_actor::use_wielded(
+    const std::optional<tripoint_abs_ms> &initial_target )
 {
-    return aim_activity_actor();
+    aim_activity_actor actor;
+    actor.initial_target = initial_target;
+    return actor;
+}
+
+std::optional<tripoint_abs_ms> aim_activity_actor::take_initial_target()
+{
+    return std::exchange( initial_target, std::nullopt );
 }
 
 aim_activity_actor aim_activity_actor::use_bionic( const item &fake_gun, unsigned int uid )
@@ -715,6 +723,9 @@ void aim_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "bionic_uid", bionic_uid );
     jsout.member( "bionic_weapon_source", bionic_weapon_source );
     jsout.member( "fin_trajectory", fin_trajectory );
+    if( initial_target ) {
+        jsout.member( "initial_target", *initial_target );
+    }
     if( burst_rounds != 0 ) {
         jsout.member( "burst_rounds", burst_rounds );
     }
@@ -745,6 +756,7 @@ std::unique_ptr<activity_actor> aim_activity_actor::deserialize( JsonValue &jsin
                                  data.get_int64( "bionic_weapon_source" ) :
                                  actor.fake_weapon ? actor.fake_weapon->uid().get_value() : 0;
     data.read( "fin_trajectory", actor.fin_trajectory );
+    data.read( "initial_target", actor.initial_target );
     actor.burst_rounds = data.get_int( "burst_rounds", 0 );
     data.read( "action", actor.action );
     data.read( "aif_duration", actor.aif_duration );

@@ -1255,7 +1255,7 @@ static void reach_attack( avatar &you )
     g->reenter_fullscreen();
 }
 
-static void fire()
+static void fire( const std::optional<tripoint_bub_ms> &selected )
 {
     avatar &you = get_avatar();
     map &here = get_map();
@@ -1310,7 +1310,9 @@ static void fire()
     }
     // try firing gun
     if( weapon && weapon->is_gun() && !weapon->gun_current_mode().melee() ) {
-        avatar_action::fire_wielded_weapon( you );
+        const auto target = selected ? std::optional<tripoint_abs_ms>( here.get_abs( *selected ) ) :
+                            std::nullopt;
+        avatar_action::fire_wielded_weapon( you, target );
         return;
     }
     // try firing turrets
@@ -2773,7 +2775,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 #ifdef MP_ENABLED
                 const int pre_fire_moves = player_character.get_moves();
 #endif
-                fire();
+            fire( mouse_target );
 #ifdef MP_ENABLED
                 cata_mp::mp_client_post_action( pre_fire_moves );
 #endif
