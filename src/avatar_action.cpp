@@ -619,8 +619,23 @@ static bool move_character( Character &you, map &m, const tripoint_rel_ms &d,
         return false;
     }
     if( within_cell ) {
-        return !you.has_flag( json_flag_CANNOT_MOVE ) &&
-               g->walk_move( you, dest_loc, false, false, choices, step );
+        if( !you.has_flag( json_flag_CANNOT_MOVE ) && is_riding &&
+            !you.check_mount_will_move( dest_loc ) ) {
+            if( at_origin() ) {
+                you.mod_moves( -you.get_speed() * 0.2 );
+            }
+            return false;
+        }
+        if( !at_origin() || you.has_flag( json_flag_CANNOT_MOVE ) ) {
+            return false;
+        }
+        if( !m.veh_at( dest_loc ) && m.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, dest_loc ) &&
+            m.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest_loc ) &&
+            !m.has_flag_furn( "BRIDGE", dest_loc ) && !you.has_flag( json_flag_WATERWALKING ) ) {
+            swim( m, you, dest_loc, choices, step );
+            return lifetime && you.pos_world() == step->target;
+        }
+        return g->walk_move( you, dest_loc, false, false, choices, step );
     }
     if( monster *const mon_ptr = creatures.creature_at<monster>( dest_loc, true ) ) {
         monster &critter = *mon_ptr;
@@ -774,7 +789,7 @@ static bool move_character( Character &you, map &m, const tripoint_rel_ms &d,
                 you.add_msg_if_player( m_info, _( "%s to dive underwater." ),
                                        press_x( ACTION_MOVE_DOWN ) );
             }
-            avatar_action::swim( here, you, dest_loc, choices );
+            avatar_action::swim( here, you, dest_loc, choices, step );
         }
 
         if( lifetime && you.pos_abs() != origin ) {
@@ -947,11 +962,10 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
 
 bool avatar_action::can_move_fractional( const Character &you, const map &here )
 {
-    const tripoint_bub_ms tile = you.pos_bub( here );
-    const bool swimming = here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, tile ) &&
-                          !here.has_flag_furn( "BRIDGE", tile ) && !you.has_flag( json_flag_WATERWALKING );
-    return !you.in_vehicle && !you.is_mounted() && !you.is_hauling() &&
-           you.get_grab_type() == object_type::NONE && !swimming &&
+    const bool powered_mount = you.is_mounted() &&
+                               you.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH );
+    return here.has_loaded_submap( you.pos_bub( here ) ) && !you.in_vehicle && !powered_mount &&
+           you.get_grab_type() == object_type::NONE &&
            !you.has_effect( effect_stunned ) && !you.has_effect( effect_psi_stunned );
 }
 
@@ -971,18 +985,22 @@ void avatar_action::swim( map &m, avatar &you, const tripoint_bub_ms &p )
 }
 
 void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
-                          const walk_move_choices *choices )
+                          const walk_move_choices *choices, const fractional_walk *step )
 {
     const character_action_guard lifetime( you );
     if( !lifetime || !m.inbounds( p ) ) {
         return;
     }
-    const tripoint_abs_ms origin = you.pos_abs();
+    const world_position origin = you.pos_world();
+    const auto mount = you.is_mounted() ? you.mounted_creature : shared_ptr_fast<monster>();
     const auto at_origin = [&]() {
-        return lifetime && you.pos_abs() == origin;
+        return lifetime && you.pos_world() == origin && ( !mount || you.mounted_creature == mount );
     };
-    if( const Creature *occupant = get_creature_tracker().creature_at( p ) ) {
-        if( occupant != &you ) {
+    const tripoint_abs_ms destination = m.get_abs( p );
+    const bool within_cell = step && origin.tile() == destination;
+    if( !within_cell ) {
+        if( const Creature *occupant = get_creature_tracker().creature_at( p ); occupant &&
+            occupant != &you ) {
             return;
         }
     }
@@ -991,6 +1009,20 @@ void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
         dbg( D_ERROR ) << "game:plswim: Tried to swim in "
                        << m.tername( p ) << "!";
         debugmsg( "Tried to swim in %s!", m.tername( p ) );
+        return;
+    }
+    if( within_cell ) {
+        const int swim_cost = you.swim_speed();
+        you.mod_moves( -step->scale_cost( std::min( swim_cost, 200 ) ) );
+        if( !mount ) {
+            you.burn_move_stamina( step->scale_cost( swim_cost ) );
+        }
+        if( at_origin() ) {
+            you.setpos( m, step->target, false );
+            if( lifetime && mount && you.mounted_creature == mount && you.pos_world() == step->target ) {
+                mount->setpos( m, step->target, false );
+            }
+        }
         return;
     }
     if( you.has_effect( effect_onfire ) ) {
@@ -1066,9 +1098,15 @@ void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
         return;
     }
     tripoint_abs_ms old_abs_pos = you.pos_abs();
-    you.setpos( m, p );
+    const world_position landing = step ?
+                                   *world_position::from_tile( destination, step->target.offset() ) :
+                                   world_position( destination );
+    you.setpos( m, landing );
     if( !lifetime ) {
         return;
+    }
+    if( step && mount && you.is_mounted() && you.mounted_creature == mount ) {
+        mount->setpos( m, you.pos_world(), false );
     }
     if( you.is_avatar() ) {
         g->update_map( *you.as_avatar() );
@@ -1081,11 +1119,13 @@ void avatar_action::swim( map &m, Character &you, const tripoint_bub_ms &p,
     if( m.veh_at( you.pos_bub() ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
         m.board_vehicle( you.pos_bub(), &you );
     }
-    you.mod_moves( -( ( movecost > 200 ? 200 : movecost ) * ( trigdist && diagonal ? M_SQRT2 : 1 ) ) );
+    const int move_charge = std::min( movecost, 200 );
+    you.mod_moves( -( step ? step->scale_cost( move_charge ) :
+                      static_cast<int>( move_charge * ( trigdist && diagonal ? M_SQRT2 : 1 ) ) ) );
     you.inv->rust_iron_items();
 
     if( !you.is_mounted() ) {
-        you.burn_move_stamina( movecost );
+        you.burn_move_stamina( step ? step->scale_cost( movecost ) : movecost );
     }
 
     body_part_set flags;

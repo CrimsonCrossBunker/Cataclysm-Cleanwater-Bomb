@@ -13291,15 +13291,32 @@ TEST_CASE( "remote_swimming_requires_consent_and_changes_only_the_swimmer",
     const int host_stamina = host.get_stamina();
     walk_move_choices choices;
     choices.destination = here.get_abs( destination );
-    avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
+    const bool fractional = GENERATE( false, true );
+    const auto enter_water = [&] {
+        if( fractional )
+    {
+        return avatar_action::move_fractional( who, here, point( 128, 0 ), &choices );
+        }
+        return avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
+    };
+    enter_water();
     CHECK( who.pos_bub() == origin );
     CHECK( who.has_effect( efftype_id( "onfire" ) ) );
     CHECK( who.get_moves() == 1000 );
     choices.allow_swimming = true;
-    avatar_action::move( who, here, tripoint_rel_ms::east, &choices );
-    CHECK( who.pos_bub() == destination );
+    enter_water();
+    REQUIRE( who.pos_bub() == destination );
     CHECK_FALSE( who.has_effect( efftype_id( "onfire" ) ) );
     CHECK( who.get_moves() < 1000 );
+    if( fractional ) {
+        CHECK( who.pos_world().offset().x == 0 );
+        const int moves_after_entry = who.get_moves();
+        choices.destination = who.pos_abs();
+        REQUIRE( avatar_action::move_fractional( who, here, point( 64, 0 ), &choices ) );
+        CHECK( who.pos_bub() == destination );
+        CHECK( who.pos_world().offset().x == 64 );
+        CHECK( who.get_moves() < moves_after_entry );
+    }
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
     CHECK( host.get_moves() == host_moves );
     CHECK( host.get_stamina() == host_stamina );
@@ -13999,6 +14016,42 @@ TEST_CASE( "solo_fractional_walk_keeps_exact_position_when_the_map_scrolls",
     CHECK( who.pos_abs() == destination );
     CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
     CHECK( here.get_abs_sub() == old_window + point_rel_sm::east );
+}
+
+TEST_CASE( "fractional_movement_keeps_the_rider_and_mount_together",
+           "[walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    const restore_on_out_of_scope restore_safemode( g->safe_mode );
+    g->set_safe_mode( SAFE_MODE_OFF );
+    const tripoint_bub_ms start( 60, 60, 0 );
+    here.ter_set( start, ter_id( "t_floor" ) );
+    here.ter_set( start + point::east, ter_id( "t_floor" ) );
+    who.setpos( here, start + point::west, false );
+    monster &mount = spawn_test_monster( "mon_horse_police", start );
+    mount.friendly = -1;
+    who.mount_creature( mount );
+    const on_out_of_scope dismount( [&who] {
+        if( who.is_mounted() )
+    {
+        who.forced_dismount();
+        }
+    } );
+    REQUIRE( who.is_mounted() );
+    const world_position origin = who.pos_world();
+    who.set_moves( 1000 );
+    REQUIRE( avatar_action::move_fractional( who, here, point( 64, 0 ) ) );
+    CHECK( who.pos_abs() == origin.tile() );
+    CHECK( who.pos_world().offset().x == 192 );
+    CHECK( mount.pos_world() == who.pos_world() );
+    REQUIRE( avatar_action::move_fractional( who, here, point( 64, 0 ) ) );
+    CHECK( who.pos_abs() == origin.tile() + point::east );
+    CHECK( who.pos_world().offset().x == 0 );
+    CHECK( mount.pos_world() == who.pos_world() );
+    CHECK( who.is_mounted() );
+    CHECK( who.get_moves() < 1000 );
 }
 
 TEST_CASE( "ordinary_walking_cannot_replace_a_ledge_choice_with_danger_consent",

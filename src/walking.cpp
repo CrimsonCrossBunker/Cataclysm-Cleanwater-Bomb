@@ -13,6 +13,7 @@
 #include "item_uid.h"
 #include "json.h"
 #include "map.h"
+#include "monster.h"
 #include "player_activity.h"
 #include "safe_reference.h"
 #include "vpart_position.h"
@@ -91,9 +92,9 @@ std::optional<fractional_walk> fractional_walk::resolve( const world_position &f
 namespace
 {
 
-int half_body_width( const Character &who )
+int half_body_width( const Creature &who )
 {
-    // Keep every unmounted body narrower than a gameplay cell. Small passages
+    // Keep every body narrower than a gameplay cell. Small passages
     // and fitting checks for its destination remain with native walking.
     return 32 + 16 * ( static_cast<int>( who.get_size() ) -
                        static_cast<int>( creature_size::tiny ) );
@@ -152,7 +153,9 @@ bool fractional_walk::clears_obstacles( const map &here, const Character &who,
 {
     const tripoint_bub_ms origin = who.pos_bub( here );
     const tripoint_bub_ms destination = here.get_bub( target.tile() );
-    const int half_width = half_body_width( who );
+    const int half_width = who.is_mounted() ?
+                           std::max( half_body_width( who ), half_body_width( *who.mounted_creature ) ) :
+                           half_body_width( who );
     return swept_body_clear( here, origin, destination, who.pos_world().offset().xy(),
                              displacement, half_width ) &&
            ( landing.z() == origin.z() ||

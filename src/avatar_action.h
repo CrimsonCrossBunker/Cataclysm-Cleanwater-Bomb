@@ -42,7 +42,7 @@ std::optional<walk_move_choices> query_walk( avatar &you, map &m, const tripoint
 /** Handles swimming by the player. Called by avatar_action::move(). */
 void swim( map &m, avatar &you, const tripoint_bub_ms &p );
 void swim( map &m, Character &you, const tripoint_bub_ms &p,
-           const walk_move_choices *choices );
+           const walk_move_choices *choices, const fractional_walk *step = nullptr );
 
 bool confirm_non_hostile_melee_attack( avatar &you, const monster &critter );
 void autoattack( avatar &you, map &m );

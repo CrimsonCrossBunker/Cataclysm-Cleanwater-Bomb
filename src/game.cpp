@@ -8841,9 +8841,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return false;
         }
         const double crit_speed = who.mount_speed();
-        const double base_moves = who.run_cost( mcost, diag ) * 100.0 / crit_speed;
+        const double base_moves = who.run_cost( mcost, diag && !step ) * 100.0 / crit_speed;
         const double encumb_moves = who.get_weight() / 4800.0_gram;
-        who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
+        const int move_cost = static_cast<int>( std::ceil( base_moves + encumb_moves ) );
+        who.mod_moves( -( step ? step->scale_cost( move_cost ) : move_cost ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
         int move_cost = who.run_cost( mcost, diag && !step );
@@ -8872,7 +8873,12 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     who.recoil = MAX_RECOIL;
     who.last_target_pos = std::nullopt;
     if( within_cell ) {
+        const auto mount = who.is_mounted() ? who.mounted_creature : shared_ptr_fast<monster>();
         who.setpos( here, step->target, false );
+        if( lifetime && mount && who.is_mounted() && who.mounted_creature == mount &&
+            who.pos_world() == step->target ) {
+            mount->setpos( here, step->target, false );
+        }
         return true;
     }
 
@@ -9445,7 +9451,7 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     }
     if( who.is_mounted() ) {
         monster *mon = who.mounted_creature.get();
-        mon->setpos( here, who.pos_bub() );
+        mon->setpos( here, who.pos_world() );
         mon->process_triggers();
         here.creature_in_field( *mon );
     }
