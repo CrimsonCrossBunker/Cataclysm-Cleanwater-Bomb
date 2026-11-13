@@ -104,6 +104,7 @@
 #include "vertical_movement.h"
 #include "walking.h"
 #if defined(TILES)
+    #include "render3d.h"
     #include "sdl_gamepad.h"
 #endif
 #include "sleep.h"
@@ -1874,6 +1875,24 @@ static void manage_android_buttons()
 }
 #endif
 
+static std::optional<point> fractional_walk_input( const avatar &who, const map &here,
+        action_id action, bool auto_travel )
+{
+#if defined(TILES)
+    if( use_tiles && !who.is_auto_moving() && !auto_travel &&
+        avatar_action::can_move_fractional( who, here ) ) {
+        return render3d::camera_walk_delta( get_delta_from_movement_action( action,
+                iso_rotate::no ).raw() );
+    }
+#else
+    static_cast<void>( who );
+    static_cast<void>( here );
+    static_cast<void>( action );
+    static_cast<void>( auto_travel );
+#endif
+    return std::nullopt;
+}
+
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
@@ -2019,15 +2038,25 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( mp_locked || cata_mp::is_client_waiting_for_ack() || player_character.activity ) {
                 return false;
             }
-            const tripoint_rel_ms direction( get_delta_from_movement_action( act, iso_rotate::yes ), 0 );
-            const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
-            if( !here.inbounds( target_pos ) ) {
+            const auto fractional = fractional_walk_input( player_character, here, act, auto_travel_mode );
+            const auto step = fractional ? fractional_walk::resolve( player_character.pos_world(),
+                *fractional ) : std::nullopt;
+            if( fractional && !step ) {
                 return false;
             }
-            if( cata_mp::client_auto_mine( here.get_abs( target_pos ) ) ) {
+            const tripoint_rel_ms direction = step ? step->target.tile() - player_character.pos_abs() :
+                                              tripoint_rel_ms( get_delta_from_movement_action( act, iso_rotate::yes ), 0 );
+            const tripoint_bub_ms target_pos = player_character.pos_bub( here ) + direction;
+            if( !here.inbounds( target_pos ) ||
+                ( step && !step->clears_corner( here, player_character.pos_bub( here ) ) ) ) {
+                return false;
+            }
+            if( direction != tripoint_rel_ms::zero &&
+                cata_mp::client_auto_mine( here.get_abs( target_pos ) ) ) {
                 return true;
             }
-            if( Creature *target = get_creature_tracker().creature_at( target_pos, true ) ) {
+            if( Creature *target = direction == tripoint_rel_ms::zero ? nullptr :
+                                   get_creature_tracker().creature_at( target_pos, true ) ) {
                 if( target->as_npc() && player_character.is_auto_moving() ) {
                     player_character.add_msg_if_player( _( "NPC in the way, Auto move canceled." ) );
                     player_character.abort_automove();
@@ -2052,14 +2081,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     return true;
                 }
             }
-            const auto hazards = get_dangerous_tile( player_character, target_pos );
+            const auto hazards = direction == tripoint_rel_ms::zero ? std::vector<std::string>() :
+                                 get_dangerous_tile( player_character, target_pos );
             if( hazards.size() == 1 && hazards.front() == "ledge" ) {
                 cata_mp::client_query_ledge_move( here.get_abs( target_pos ) );
                 return true;
             }
-            const auto choices = avatar_action::query_walk( player_character, here, direction );
+            const auto choices = avatar_action::query_walk( player_character, here, direction,
+                step ? &*step : nullptr );
             if( choices ) {
-                cata_mp::client_walk( direction, *choices );
+                cata_mp::client_walk( direction, *choices, fractional );
             } else if( player_character.is_auto_moving() ) {
                 player_character.abort_automove();
             }
@@ -2347,8 +2378,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                                           player_character.pos_abs() + tripoint_rel_ms( dest_delta, 0 ) );
                 const character_action_guard mover( player_character );
                 const auto move_context = here.get_context_reference();
-                const bool moved = avatar_action::move( player_character, here,
-                                                        tripoint_rel_ms( dest_delta, 0 ) );
+                const auto fractional = fractional_walk_input( player_character, here, act,
+                    auto_travel_mode || pending_move.has_value() );
+                const bool moved = fractional ?
+                                   avatar_action::move_fractional( player_character, here, *fractional ) :
+                                   avatar_action::move( player_character, here, tripoint_rel_ms( dest_delta, 0 ) );
                 if( !mover ) {
                     return true;
                 }

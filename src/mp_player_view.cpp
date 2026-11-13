@@ -56,6 +56,7 @@ void write_player_view( JsonOut &out, const player_id &id, const npc &actor,
     out.member( "player", id.str() );
     out.member( "name", actor.name );
     out.member( "position", actor.pos_abs() );
+    out.member( "position_offset", actor.pos_world().offset() );
     out.member( "in_vehicle", actor.in_vehicle );
     out.member( "controlling_vehicle", actor.controlling_vehicle );
     out.member( "facing_left", actor.facing == FacingDirection::LEFT );
@@ -109,6 +110,10 @@ void apply_player_view( const JsonObject &message, player_view &view )
     if( !message.read( "position", position ) ) {
         message.throw_error_at( "position", "Missing player position" );
     }
+    tripoint offset;
+    const world_position precise = message.read( "position_offset", offset ) ?
+                                   world_position::from_tile( position, offset ).value_or( world_position( position ) ) :
+                                   world_position( position );
     bool created = false;
     bool applied = false;
     const on_out_of_scope rollback( [&]() {
@@ -140,13 +145,13 @@ void apply_player_view( const JsonObject &message, player_view &view )
         if( actor->in_vehicle && here.veh_at( actor->pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
             here.unboard_vehicle( actor->pos_bub() );
         }
-        actor->setpos( here, here.get_bub( position ) );
+        actor->setpos( here, precise, false );
         if( message.get_bool( "in_vehicle" ) &&
             here.veh_at( actor->pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
             here.board_vehicle( actor->pos_bub(), actor );
         }
     } else {
-        actor->spawn_at_precise( position );
+        actor->set_pos_world_only( precise );
     }
     actor->controlling_vehicle = message.get_bool( "controlling_vehicle" );
     actor->facing = message.get_bool( "facing_left" ) ? FacingDirection::LEFT : FacingDirection::RIGHT;

@@ -1583,6 +1583,8 @@ static void start_movement( Character &who, map &here, const JsonObject &request
     }
     tripoint_abs_ms origin;
     tripoint_rel_ms direction;
+    std::optional<point> fractional_delta;
+    const world_position starting_position = who.pos_world();
     walk_move_choices choices;
     vertical_move_selection vertical_choice;
     if( vertical ) {
@@ -1598,8 +1600,25 @@ static void start_movement( Character &who, map &here, const JsonObject &request
         request.read( "origin", origin, true );
         request.read( "direction", direction, true );
         request.read( "choices", choices, true );
-        if( direction.z() != 0 || std::abs( direction.x() ) > 1 || std::abs( direction.y() ) > 1 ||
-            direction == tripoint_rel_ms::zero || !choices.destination ) {
+        if( origin != starting_position.tile() || direction.z() != 0 ||
+            direction.x() < -1 || direction.x() > 1 || direction.y() < -1 || direction.y() > 1 ||
+            !choices.destination ) {
+            return;
+        }
+        if( request.has_member( "fractional_delta" ) ) {
+            point delta;
+            tripoint offset;
+            if( !request.read( "fractional_delta", delta, true ) ||
+                !request.read( "origin_offset", offset, true ) || offset != starting_position.offset() ||
+                !avatar_action::can_move_fractional( who, here ) ) {
+                return;
+            }
+            const auto step = fractional_walk::resolve( starting_position, delta );
+            if( !step || step->target.tile() - origin != direction ) {
+                return;
+            }
+            fractional_delta = delta;
+        } else if( direction == tripoint_rel_ms::zero ) {
             return;
         }
     }
@@ -1615,7 +1634,7 @@ static void start_movement( Character &who, map &here, const JsonObject &request
             who.mod_moves( -cost );
         }
     }
-    if( !lifetime || who.pos_abs() != origin ) {
+    if( !lifetime || who.pos_world() != starting_position ) {
         return;
     }
     const activity_execution previous = who.activity.execution();
@@ -1627,6 +1646,8 @@ static void start_movement( Character &who, map &here, const JsonObject &request
     } );
     if( vertical ) {
         execute_vertical_move( who, here, vertical_choice );
+    } else if( fractional_delta ) {
+        avatar_action::move_fractional( who, here, *fractional_delta, &choices );
     } else {
         avatar_action::move( who, here, direction, &choices );
     }
@@ -2969,7 +2990,8 @@ void client_sync_rest_activity( const JsonObject &state )
     view.item_use_progress = who.activity.get_verb().translated();
 }
 
-bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &choices )
+bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &choices,
+                  const std::optional<point> &fractional_delta )
 {
     if( !is_client_mode() ) {
         return false;
@@ -2983,6 +3005,10 @@ bool client_walk( const tripoint_rel_ms &direction, const walk_move_choices &cho
             out.member( "kind", "walk" );
             out.member( "origin", get_avatar().pos_abs() );
             out.member( "direction", direction );
+            if( fractional_delta ) {
+                out.member( "fractional_delta", *fractional_delta );
+                out.member( "origin_offset", get_avatar().pos_world().offset() );
+            }
             out.member( "mode", get_avatar().get_desired_move_mode().str() );
             out.member( "choices", choices );
         } );

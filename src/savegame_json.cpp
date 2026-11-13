@@ -5372,7 +5372,10 @@ void faction::serialize( JsonOut &json ) const
 
 void Creature::store( JsonOut &jsout ) const
 {
-    jsout.member( "location", location );
+    jsout.member( "location", pos_abs() );
+    if( location != world_position( pos_abs() ) ) {
+        jsout.member( "location_offset", location.offset() );
+    }
 
     jsout.member( "moves", moves );
     jsout.member( "pain", pain );
@@ -5419,7 +5422,14 @@ void Creature::store( JsonOut &jsout ) const
 void Creature::load( const JsonObject &jsin )
 {
     jsin.allow_omitted_members();
-    jsin.read( "location", location );
+    tripoint_abs_ms tile = pos_abs();
+    jsin.read( "location", tile );
+    location = world_position( tile );
+    if( tripoint offset; jsin.read( "location_offset", offset ) ) {
+        if( const auto precise = world_position::from_tile( tile, offset ) ) {
+            location = *precise;
+        }
+    }
     jsin.read( "moves", moves );
     jsin.read( "pain", pain );
 

@@ -659,7 +659,7 @@ class map
         int combined_movecost( const tripoint_bub_ms &from, const tripoint_bub_ms &to,
                                const vehicle *ignored_vehicle = nullptr,
                                int modifier = 0, bool flying = false, bool via_ramp = false,
-                               bool ignore_fields = false ) const;
+                               bool ignore_fields = false, bool scale_grid_distance = true ) const;
 
         /**
          * Returns true if a creature could walk from `from` to `to` in one step.

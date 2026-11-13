@@ -1774,7 +1774,9 @@ static void spawn_remote_player( const std::string &name, const peer_admission &
     }
     remote->in_vehicle = false;
     remote->controlling_vehicle = false;
-    remote->spawn_at_precise( *spawn_pos );
+    if( remote->pos_abs() != *spawn_pos || !saved_in_current_dimension ) {
+        remote->spawn_at_precise( *spawn_pos );
+    }
 
     // Commit the identity/actor binding before inserting the live proxy. An I/O
     // failure rejects the join instead of creating an unpersisted character.
@@ -5261,8 +5263,9 @@ static void apply_pending_terrain()
 
 // Replica position comes from the authenticated server. Load the window,
 // install its terrain, and only then put the avatar on the destination tile.
-static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
+static void client_teleport_avatar( const world_position &position )
 {
+    const tripoint_abs_ms &abs_pos = position.tile();
     avatar &u = get_avatar();
     map &terrain = get_map();
     if( !terrain.inbounds_z( abs_pos.z() ) ) {
@@ -5288,8 +5291,8 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
         remaining -= step;
     }
     apply_pending_terrain();
-    if( u.pos_abs() != abs_pos ) {
-        u.setpos( terrain, terrain.get_bub( abs_pos ), false );
+    if( u.pos_world() != position ) {
+        u.setpos( terrain, position, false );
     }
     auto &pending = mp_session().replication.client.pending_terrain;
     for( auto it = pending.begin(); it != pending.end(); ) {
@@ -5300,9 +5303,23 @@ static void client_teleport_avatar( const tripoint_abs_ms &abs_pos )
     mp_session().replication.client.position_received = true;
 }
 
-static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::string &name,
+static world_position read_wire_position( const JsonObject &message )
+{
+    message.allow_omitted_members();
+    const tripoint_abs_ms tile( message.get_int( "x" ), message.get_int( "y" ),
+                                message.get_int( "z" ) );
+    if( tripoint offset; message.read( "offset", offset ) ) {
+        if( const auto position = world_position::from_tile( tile, offset ) ) {
+            return *position;
+        }
+    }
+    return world_position( tile );
+}
+
+static void update_client_host_npc( const world_position &position, const std::string &name,
                                     bool host_in_vehicle, bool host_ctrl_veh )
 {
+    const tripoint_abs_ms &abs_pos = position.tile();
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     map &m = get_map();
 
@@ -5392,11 +5409,14 @@ static void update_client_host_npc( const tripoint_abs_ms &abs_pos, const std::s
                     host_npc->controlling_vehicle = false;
                 }
             }
-            host_npc->setpos( m, bub );
+            host_npc->setpos( m, position, false );
             if( host_in_vehicle &&
                 m.veh_at( host_npc->pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
                 m.board_vehicle( host_npc->pos_bub(), host_npc );
             }
+        }
+        if( !host_in_vehicle && host_npc->pos_world() != position ) {
+            host_npc->setpos( m, position, false );
         }
     }
     // Apply driving state every tick so the proxy's flags track the host even when
@@ -5988,12 +6008,9 @@ bool client_apply_message( const std::string &msg )
 
         if( jo.has_object( "pos" ) ) {
             mp_apply_step _s( "teleport" );
-            JsonObject pos = jo.get_object( "pos" );
-            pos.allow_omitted_members();
-            mp_session().host_observation.mp_remote_pos = tripoint_abs_ms{
-                pos.get_int( "x" ), pos.get_int( "y" ), pos.get_int( "z" )
-            };
-            client_teleport_avatar( mp_session().host_observation.mp_remote_pos );
+            const world_position position = read_wire_position( jo.get_object( "pos" ) );
+            mp_session().host_observation.mp_remote_pos = position.tile();
+            client_teleport_avatar( position );
         }
 
         std::string host_name;
@@ -6003,11 +6020,7 @@ bool client_apply_message( const std::string &msg )
         }
 
         if( jo.has_object( "host_pos" ) ) {
-            JsonObject hpos = jo.get_object( "host_pos" );
-            hpos.allow_omitted_members();
-            const tripoint_abs_ms host_pos{
-                hpos.get_int( "x" ), hpos.get_int( "y" ), hpos.get_int( "z" )
-            };
+            const world_position host_pos = read_wire_position( jo.get_object( "host_pos" ) );
             const bool host_in_veh  = jo.has_bool( "host_in_vehicle" )
                                       ? jo.get_bool( "host_in_vehicle" ) : false;
             const bool host_ctrl_v  = jo.has_bool( "host_ctrl_veh" )
@@ -9363,10 +9376,12 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
            "\"host_name\":\"" + host.name + "\","
            "\"pos\":{\"x\":" + std::to_string( pos.x() ) +
            ",\"y\":" + std::to_string( pos.y() ) +
-           ",\"z\":" + std::to_string( pos.z() ) + "},"
+           ",\"z\":" + std::to_string( pos.z() ) +
+           ",\"offset\":" + serialize( remote->pos_world().offset() ) + "},"
            "\"host_pos\":{\"x\":" + std::to_string( host_pos.x() ) +
            ",\"y\":" + std::to_string( host_pos.y() ) +
-           ",\"z\":" + std::to_string( host_pos.z() ) + "},"
+           ",\"z\":" + std::to_string( host_pos.z() ) +
+           ",\"offset\":" + serialize( host.pos_world().offset() ) + "},"
            "\"host_worn\":" + host_worn_json + ","
            "\"host_wielded\":\"" + host_wielded_type + "\","
            "\"host_wielded_obj\":" + host_wielded_obj_json + ","

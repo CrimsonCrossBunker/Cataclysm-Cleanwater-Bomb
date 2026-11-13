@@ -1,6 +1,7 @@
 #include "walking.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include "character.h"
 #include "character_id.h"
@@ -16,6 +17,78 @@
 #include "vpart_position.h"
 #include "vehicle.h"
 #include "vehicle_uid.h"
+
+bool fractional_walk::is_valid( const point &delta )
+{
+    if( delta == point::zero ||
+        delta.x < -max_distance || delta.x > max_distance ||
+        delta.y < -max_distance || delta.y > max_distance ) {
+        return false;
+    }
+    return delta.x * delta.x + delta.y * delta.y <= max_distance * max_distance;
+}
+
+std::optional<fractional_walk> fractional_walk::resolve( const world_position &from,
+        const point &delta )
+{
+    if( !is_valid( delta ) ) {
+        return std::nullopt;
+    }
+    point displacement = delta;
+    const point offset = from.offset().xy();
+    const auto travel_to_edge = []( int offset, int amount ) {
+        return amount < 0 ? offset + 1 : world_position::units_per_tile - offset;
+    };
+    const int x_edge = travel_to_edge( offset.x, delta.x );
+    const int y_edge = travel_to_edge( offset.y, delta.y );
+    const int x_distance = std::abs( delta.x );
+    const int y_distance = std::abs( delta.y );
+    if( x_edge <= x_distance && y_edge <= y_distance ) {
+        const int x_first = x_edge * y_distance;
+        const int y_first = y_edge * x_distance;
+        // Leave the second cell entry for the next action. A simultaneous
+        // crossing is a single diagonal entry with two side cells to check.
+        if( x_first < y_first ) {
+            displacement.x = delta.x * y_edge / y_distance;
+            displacement.y = delta.y < 0 ? 1 - y_edge : y_edge - 1;
+        } else if( y_first < x_first ) {
+            displacement.y = delta.y * x_edge / x_distance;
+            displacement.x = delta.x < 0 ? 1 - x_edge : x_edge - 1;
+        }
+    }
+    const auto target = from.translated( tripoint( displacement, 0 ) );
+    if( !target ) {
+        return std::nullopt;
+    }
+    // Integer square root rounded up, for deterministic move-point charges.
+    const int squared_distance = displacement.x * displacement.x + displacement.y * displacement.y;
+    int low = 1;
+    int high = max_distance;
+    while( low < high ) {
+        const int mid = ( low + high ) / 2;
+        if( mid * mid < squared_distance ) {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+    return fractional_walk{ *target, displacement, low };
+}
+
+bool fractional_walk::clears_corner( const map &here, const tripoint_bub_ms &origin ) const
+{
+    const tripoint_rel_ms direction = target.tile() - here.get_abs( origin );
+    return direction.x() == 0 || direction.y() == 0 ||
+           ( here.passable( origin + point( direction.x(), 0 ) ) &&
+             here.passable( origin + point( 0, direction.y() ) ) );
+}
+
+int fractional_walk::scale_cost( int full_tile_cost ) const
+{
+    const int64_t scaled = static_cast<int64_t>( full_tile_cost ) * distance;
+    return std::max( 1, static_cast<int>( ( scaled + world_position::units_per_tile - 1 ) /
+                                          world_position::units_per_tile ) );
+}
 
 static std::pair<int64_t, int64_t> openable_vehicle_door( map &here,
         const tripoint_bub_ms &target )

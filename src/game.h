@@ -43,7 +43,9 @@ class game;
 
 class render_backend;
 struct walk_move_choices;
+struct fractional_walk;
 struct vertical_move_choices;
+class world_position;
 
 namespace cata_mp
 {
@@ -1042,7 +1044,8 @@ class game
         // Regular movement. Returns false if it failed for any reason
         bool walk_move( const tripoint_bub_ms &dest, bool via_ramp = false, bool furniture_move = false );
         bool walk_move( Character &who, const tripoint_bub_ms &dest, bool via_ramp = false,
-                        bool furniture_move = false, const walk_move_choices *choices = nullptr );
+                        bool furniture_move = false, const walk_move_choices *choices = nullptr,
+                        const fractional_walk *step = nullptr );
         void on_move_effects();
         void on_move_effects( Character &who );
     private:
@@ -1134,7 +1137,8 @@ class game
         void insert_item( drop_locations &targets );
         // Places the player at the specified point; hurts feet, lists items etc.
         point_rel_sm place_player( const tripoint_bub_ms &dest, bool quick = false );
-        point_rel_sm place_character( Character &who, const tripoint_bub_ms &dest, bool quick = false );
+        point_rel_sm place_character( Character &who, const tripoint_bub_ms &dest, bool quick = false,
+                                      const world_position *precise = nullptr );
         void place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player = true );
         void perhaps_add_random_npc( bool ignore_spawn_timers_and_rates );
         static void display_om_pathfinding_progress( size_t open_set, size_t known_size );

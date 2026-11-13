@@ -26,6 +26,7 @@
 #include <imgui/imgui.h>
 
 #include "avatar.h"
+#include "avatar_action.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_tiles.h"
@@ -52,14 +53,17 @@
 #include "npc.h"
 #include "path_info.h"
 #include "point.h"
+#include "safe_reference.h"
 #include "shadowcasting.h"
 #include "smooth_lighting.h"
 #include "submap.h"
 #include "units_utility.h"
 #include "vehicle.h"
 #include "veh_type.h"
+#include "walking.h"
 #include "weather.h"
 #include "weather_type.h"
+#include "world_position.h"
 
 static const vpart_location_id vpart_location_on_roof( "on_roof" );
 
@@ -68,6 +72,11 @@ namespace render3d
 
 namespace
 {
+
+float position_fraction( int offset )
+{
+    return static_cast<float>( offset ) / world_position::units_per_tile;
+}
 
 // P0: a square region around the view center, single z-level.
 constexpr int REGION_RADIUS = 24;
@@ -197,6 +206,17 @@ mat4 mat4_perspective( const float fov_y, const float aspect, const float zn, co
 
 struct vec3 {
     float x, y, z;
+};
+
+struct pick_camera {
+    SDL_FRect viewport{};
+    vec3 eye{};
+    vec3 right{};
+    vec3 up{};
+    vec3 forward{};
+    float aspect = 1.0f;
+    tripoint_abs_ms center;
+    safe_reference<map> terrain;
 };
 
 vec3 vec3_sub( const vec3 &a, const vec3 &b )
@@ -507,6 +527,7 @@ struct frame_slot {
     SDL_GPUFence *fence = nullptr;
     frame_slot_state state = frame_slot_state::empty;
     uint64_t serial = 0;
+    pick_camera camera;
 };
 
 struct context {
@@ -550,16 +571,8 @@ float g_pitch = -0.96f;      // radians, negative = looking down
 float g_cam_dist = 14.0f;    // orbit distance in meters
 bool g_mouse_captured = false;
 
-// cached frame state for screen_to_tile + the hover preselection box
-SDL_FRect g_dest = { 0.0f, 0.0f, 0.0f, 0.0f };
-vec3 g_eye{ 0.0f, 0.0f, 0.0f };
-vec3 g_basis_r{ 1.0f, 0.0f, 0.0f };
-vec3 g_basis_u{ 0.0f, 1.0f, 0.0f };
-vec3 g_basis_f{ 0.0f, 0.0f, 1.0f };
-float g_fov_y = 40.0f * 3.14159265f / 180.0f;
-float g_aspect = 1.0f;
-tripoint_bub_ms g_center;
-bool g_cam_valid = false;
+constexpr float camera_fov = 40.0f * 3.14159265f / 180.0f;
+pick_camera presented_camera;
 point g_last_mouse = point::north_west;
 // game-driven cursors forwarded from cata_tiles (targeting, construction...);
 // cleared after each frame's gather
@@ -808,7 +821,12 @@ bool composite_latest_frame( SDL_Renderer *renderer, const SDL_FRect &dest )
     if( slot.state != frame_slot_state::ready || !slot.color_tex_sdl ) {
         return false;
     }
-    return SDL_RenderTexture( renderer, slot.color_tex_sdl, nullptr, &dest );
+    if( !SDL_RenderTexture( renderer, slot.color_tex_sdl, nullptr, &dest ) ) {
+        return false;
+    }
+    presented_camera = slot.camera;
+    presented_camera.viewport = dest;
+    return true;
 }
 
 void context::teardown()
@@ -2126,27 +2144,34 @@ float creature_size_scale( const creature_size size )
 
 // unproject a logical pixel through the cached camera onto the view level's
 // ground plane (z = 0 in scene space)
-std::optional<tripoint_bub_ms> tile_at_pixel( const point &logical_pixel )
+std::optional<tripoint_bub_ms> tile_at_pixel( const point &logical_pixel,
+        const pick_camera &camera )
 {
-    if( !g_cam_valid || g_dest.w <= 0.0f || g_dest.h <= 0.0f ) {
+    map *const terrain = camera.terrain.get();
+    if( !terrain || terrain != &get_map() || camera.viewport.w <= 0.0f || camera.viewport.h <= 0.0f ) {
         return std::nullopt;
     }
-    const float nx = ( ( logical_pixel.x - g_dest.x ) / g_dest.w ) * 2.0f - 1.0f;
-    const float ny = 1.0f - ( ( logical_pixel.y - g_dest.y ) / g_dest.h ) * 2.0f;
-    const float tan_half = std::tan( g_fov_y * 0.5f );
+    const float nx = ( ( logical_pixel.x - camera.viewport.x ) / camera.viewport.w ) * 2.0f - 1.0f;
+    const float ny = 1.0f - ( ( logical_pixel.y - camera.viewport.y ) / camera.viewport.h ) * 2.0f;
+    const float tan_half = std::tan( camera_fov * 0.5f );
     const vec3 ray{
-        g_basis_r.x *nx *tan_half *g_aspect + g_basis_u.x *ny *tan_half + g_basis_f.x,
-        g_basis_r.y *nx *tan_half *g_aspect + g_basis_u.y *ny *tan_half + g_basis_f.y,
-        g_basis_r.z *nx *tan_half *g_aspect + g_basis_u.z *ny *tan_half + g_basis_f.z
+        camera.right.x *nx *tan_half *camera.aspect + camera.up.x *ny *tan_half + camera.forward.x,
+        camera.right.y *nx *tan_half *camera.aspect + camera.up.y *ny *tan_half + camera.forward.y,
+        camera.right.z *nx *tan_half *camera.aspect + camera.up.z *ny *tan_half + camera.forward.z
     };
     if( ray.z >= -1e-5f ) {
         return std::nullopt;
     }
-    const float t = -g_eye.z / ray.z;
-    const float wx = g_eye.x + ray.x * t;
-    const float wy = g_eye.y + ray.y * t;
-    return g_center + tripoint( static_cast<int>( std::floor( wx ) ),
-                                static_cast<int>( std::floor( wy ) ), 0 );
+    const float t = -camera.eye.z / ray.z;
+    const float wx = camera.eye.x + ray.x * t;
+    const float wy = camera.eye.y + ray.y * t;
+    if( t < 0.0f || t > 300.0f ) {
+        return std::nullopt;
+    }
+    const tripoint_abs_ms tile = camera.center + point( static_cast<int>( std::floor( wx ) ),
+        static_cast<int>( std::floor( wy ) ) );
+    const tripoint_bub_ms local = terrain->get_bub( tile );
+    return terrain->has_loaded_submap( local ) ? std::optional<tripoint_bub_ms>( local ) : std::nullopt;
 }
 
 // 2D's nv_color_active: night vision devices worn and the green overlay not
@@ -2371,7 +2396,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                       std::vector<instance_bucket> &buckets, size_t &bucket_count,
                       std::vector<decal_instance> &decals,
                       std::vector<decal_instance> &panels,
-                      const view_frustum &frustum )
+                      const view_frustum &frustum, const pick_camera &camera )
 {
     map &here = get_map();
     bucket_count = 0;
@@ -4789,8 +4814,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                cll == lit_level::BRIGHT;
         const tile_tone tone = cll_clear ? tone_for( cache, p, cll )
                                : tile_tone{ 1.0f, nv_tint ? 0.0f : 1.0f };
-        push_entity( *critter, p, static_cast<float>( p.x() - center.x() ),
-                     static_cast<float>( p.y() - center.y() ), wz, tone );
+        const tripoint offset = critter->pos_world().offset();
+        push_entity( *critter, p, p.x() - center.x() + position_fraction( offset.x ) - 0.5f,
+                     p.y() - center.y() + position_fraction( offset.y ) - 0.5f,
+                     wz + position_fraction( offset.z ) * LEVEL_HEIGHT, tone );
     }
 
     // hover preselection box + game-driven cursors (targeting, construction...):
@@ -4807,12 +4834,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                        0.002f, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
         ++count;
     };
-    // forward movement marker: the tile the "up" key steps to, i.e. screen
-    // forward. the tileset's line_target brackets (yellow in UC) mark it as a
-    // destination, visibly distinct from the white mouse hover below; its
-    // position next to the player shows whether the step is orthogonal or
-    // diagonal. while controlling a vehicle the direction keys steer, so the
-    // marker would lie.
+    // Mark the gameplay cell that the next forward input would enter.
     const auto has_game_cursor = [&]( const tripoint_bub_ms & tp ) {
         for( const auto &c : g_game_cursors ) {
             if( c.first == tp ) {
@@ -4822,10 +4844,16 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         return false;
     };
     std::optional<tripoint_bub_ms> move_marker;
-    if( !get_avatar().controlling_vehicle && upos.z() == center.z() ) {
-        const point_rel_ms w = compass8[camera_forward_octant()];
-        const tripoint_bub_ms tp = upos + tripoint( w.x(), w.y(), 0 );
-        if( here.inbounds( tp ) && !has_game_cursor( tp ) ) {
+    if( !you.controlling_vehicle && upos.z() == center.z() ) {
+        tripoint_bub_ms tp = upos + compass8[camera_forward_octant()];
+        if( avatar_action::can_move_fractional( you, here ) ) {
+            if( const auto delta = camera_walk_delta( point::north ) ) {
+                if( const auto step = fractional_walk::resolve( you.pos_world(), *delta ) ) {
+                    tp = here.get_bub( step->target.tile() );
+                }
+            }
+        }
+        if( tp != upos && here.inbounds( tp ) && !has_game_cursor( tp ) ) {
             push_cursor_slab( tp, "line_target" );
             move_marker = tp;
         }
@@ -4837,7 +4865,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // also skipped where the movement marker already sits: two slabs at the same
     // spot would z-fight, and the movement meaning wins there.
     if( !g_mouse_captured && g_game_cursors.empty() ) {
-        if( const std::optional<tripoint_bub_ms> hov = tile_at_pixel( g_last_mouse ) ) {
+        if( const std::optional<tripoint_bub_ms> hov = tile_at_pixel( g_last_mouse, camera ) ) {
             if( !move_marker || *move_marker != *hov ) {
                 push_cursor_slab( *hov, "highlight" );
             }
@@ -4874,7 +4902,7 @@ bool mouse_captured()
 std::optional<tripoint_bub_ms> screen_to_tile( const point &logical_pixel )
 {
     g_last_mouse = logical_pixel;
-    return tile_at_pixel( logical_pixel );
+    return tile_at_pixel( logical_pixel, presented_camera );
 }
 
 void push_cursor( const tripoint_bub_ms &p, const bool highlight )
@@ -4922,6 +4950,21 @@ bool camera_map_to_screen_delta( int &dx, int &dy )
     return camera_rotate_step( dx, dy, -camera_forward_octant() );
 }
 
+std::optional<point> camera_walk_delta( const point &screen )
+{
+    if( !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ||
+        compass_index( point_rel_ms( screen ) ) < 0 ) {
+        return std::nullopt;
+    }
+    const float forward_x = std::cos( g_yaw );
+    const float forward_y = std::sin( g_yaw );
+    const float scale = static_cast<float>( fractional_walk::max_distance ) /
+                        ( screen.x && screen.y ? std::sqrt( 2.0f ) : 1.0f );
+    // Truncate toward zero so quantization stays within the allowed radius.
+    return point( static_cast<int>( scale * ( -screen.y * forward_x - screen.x * forward_y ) ),
+                  static_cast<int>( scale * ( -screen.y * forward_y + screen.x * forward_x ) ) );
+}
+
 void sync_mouse_capture( SDL_Renderer *renderer, const bool want )
 {
     if( !renderer ) {
@@ -4941,6 +4984,7 @@ void sync_mouse_capture( SDL_Renderer *renderer, const bool want )
 
 void on_renderer_created( SDL_Renderer *renderer )
 {
+    presented_camera = {};
     g_ctx.teardown();
     clear_sprite_lookup_cache();
     clear_orientation_cache();
@@ -4952,6 +4996,7 @@ void on_renderer_created( SDL_Renderer *renderer )
 
 void on_renderer_destroyed()
 {
+    presented_camera = {};
     g_ctx.teardown();
     clear_sprite_lookup_cache();
     clear_orientation_cache();
@@ -5043,7 +5088,17 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
 
     // The camera is needed by the gather as well as the draw. Building it here
     // lets invisible/offscreen tiles avoid map and sprite work entirely.
-    const vec3 target{ 0.5f, 0.5f, 1.0f };
+    const avatar &observer = get_avatar();
+    const tripoint_bub_ms observer_tile = observer.pos_bub( here );
+    const tripoint observer_offset = observer.pos_world().offset();
+    const vec3 player_position{ observer_tile.x() - center.x() + position_fraction( observer_offset.x ),
+                                observer_tile.y() - center.y() + position_fraction( observer_offset.y ),
+                                ( observer_tile.z() - center.z() + position_fraction( observer_offset.z ) ) *
+                                LEVEL_HEIGHT
+                              };
+    const vec3 target = observer_tile == center ?
+                        vec3{ player_position.x, player_position.y, player_position.z + 1.0f } :
+                        vec3{ 0.5f, 0.5f, 1.0f };
     const vec3 dir{
         std::cos( g_pitch ) *std::cos( g_yaw ),
         std::cos( g_pitch ) *std::sin( g_yaw ),
@@ -5053,25 +5108,17 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                     target.y - dir.y * g_cam_dist,
                     target.z - dir.z * g_cam_dist };
     const mat4 view = mat4_lookat( eye, target, { 0.0f, 0.0f, 1.0f } );
-    const mat4 proj = mat4_perspective( 40.0f * 3.14159265f / 180.0f,
-                                        static_cast<float>( w ) / static_cast<float>( h ),
-                                        0.05f, 300.0f );
+    const float aspect = static_cast<float>( w ) / static_cast<float>( h );
+    const mat4 proj = mat4_perspective( camera_fov, aspect, 0.05f, 300.0f );
     const mat4 mvp = mat4_mul( proj, view );
     const view_frustum frustum = make_view_frustum( mvp );
 
-    // cache the camera for screen_to_tile + the hover preselection box
-    {
-        g_dest = dest;
-        g_eye = eye;
-        // physical screen-right in the left-handed map frame: up x forward
-        const vec3 rgt = vec3_normalize( vec3_cross( { 0.0f, 0.0f, 1.0f }, dir ) );
-        g_basis_r = rgt;
-        g_basis_u = vec3_cross( dir, rgt );
-        g_basis_f = dir;
-        g_aspect = static_cast<float>( w ) / static_cast<float>( h );
-        g_center = center;
-        g_cam_valid = true;
-    }
+    // The picking transform travels with the image that used it, including
+    // when an asynchronous submission is one frame behind current input.
+    const vec3 right = vec3_normalize( vec3_cross( { 0.0f, 0.0f, 1.0f }, dir ) );
+    const vec3 up = vec3_cross( dir, right );
+    const pick_camera camera{ dest, eye, right, up, dir, aspect, here.get_abs( center ),
+                              here.get_context_reference() };
 
     // top-down: anchor the scene to the view center (ter_view_p follows the
     // player; look-around mode pans it for free)
@@ -5122,7 +5169,7 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     size_t bucket_count = 0;
     const Uint64 gather_begin = profile_ticks( profile );
     const int count = gather_instances( tiles, center, buckets, bucket_count, decals, panels,
-                                        frustum );
+                                        frustum, camera );
     if( profile ) {
         g_profile.gather_ms = profile_ms( gather_begin, profile_ticks( true ) );
     }
@@ -5263,11 +5310,11 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     };
     const bool nv_tint = nv_tint_active();
     sky_uniforms sky_ub{};
-    sky_ub.cam_right = { g_basis_r.x, g_basis_r.y, g_basis_r.z, 0.0f };
-    sky_ub.cam_up = { g_basis_u.x, g_basis_u.y, g_basis_u.z, 0.0f };
-    sky_ub.cam_forward = { g_basis_f.x, g_basis_f.y, g_basis_f.z, 0.0f };
+    sky_ub.cam_right = { right.x, right.y, right.z, 0.0f };
+    sky_ub.cam_up = { up.x, up.y, up.z, 0.0f };
+    sky_ub.cam_forward = { dir.x, dir.y, dir.z, 0.0f };
     sky_ub.sun_dir = { sun_dir.x, sun_dir.y, sun_dir.z, daylight };
-    sky_ub.params = { std::tan( g_fov_y * 0.5f ), g_aspect, cloudiness,
+    sky_ub.params = { std::tan( camera_fov * 0.5f ), aspect, cloudiness,
                       nv_tint ? 1.0f : 0.0f
                     };
     sky_ub.wind = { wind_dir.x * drift_scale, wind_dir.y * drift_scale, 0.0f, 0.0f };
@@ -5291,15 +5338,14 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         std::array<float, 4> nv_params;
     };
     frag_uniforms frag_ub{};
-    const tripoint_bub_ms upos = get_avatar().pos_bub();
-    const float player_gz = ( upos.z() - center.z() ) * LEVEL_HEIGHT;
+    const float player_gz = player_position.z;
     frag_ub.eye_pos = { eye.x, eye.y, eye.z, 0.0f };
-    frag_ub.player_pos = { ( upos.x() - center.x() ) + 0.5f,
-                           ( upos.y() - center.y() ) + 0.5f,
+    frag_ub.player_pos = { player_position.x,
+                           player_position.y,
                            player_gz + 1.0f, 0.0f
                          };
-    frag_ub.cam_right = { g_basis_r.x, g_basis_r.y, g_basis_r.z, 0.0f };
-    frag_ub.cam_up = { g_basis_u.x, g_basis_u.y, g_basis_u.z, 0.0f };
+    frag_ub.cam_right = { right.x, right.y, right.z, 0.0f };
+    frag_ub.cam_up = { up.x, up.y, up.z, 0.0f };
     frag_ub.mask_params = { 3.2f, 2.2f, player_gz, 1.0f };
     // same memory look 2D's lit shader uses: a named preset, else the custom
     // MEMORY_RGB_* / MEMORY_GAMMA mixer
@@ -5522,6 +5568,7 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         publish_profile( g_profile );
         return;
     }
+    slot.camera = camera;
     slot.fence = fence;
     slot.state = frame_slot_state::in_flight;
     g_recording_slot = nullptr;

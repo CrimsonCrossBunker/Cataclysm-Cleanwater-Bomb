@@ -34,7 +34,11 @@ bool move( avatar &you, map &m, const tripoint_rel_ms &d );
 // Shared native simulation. Explicit choices never open the host player's UI.
 bool move( Character &you, map &m, const tripoint_rel_ms &d,
            const walk_move_choices *choices );
-std::optional<walk_move_choices> query_walk( avatar &you, map &m, const tripoint_rel_ms &d );
+bool move_fractional( Character &you, map &m, const point &delta,
+                      const walk_move_choices *choices = nullptr );
+bool can_move_fractional( const Character &you, const map &here );
+std::optional<walk_move_choices> query_walk( avatar &you, map &m, const tripoint_rel_ms &d,
+        const fractional_walk *step = nullptr );
 /** Handles swimming by the player. Called by avatar_action::move(). */
 void swim( map &m, avatar &you, const tripoint_bub_ms &p );
 void swim( map &m, Character &you, const tripoint_bub_ms &p,

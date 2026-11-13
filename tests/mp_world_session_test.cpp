@@ -341,6 +341,32 @@ TEST_CASE( "mp_three_remote_players_keep_actions_baselines_and_reconnects_separa
     CHECK( first->observation.partner_activity.empty() );
 }
 
+TEST_CASE( "creature_world_position_round_trips_with_legacy_tile_saves",
+           "[world_session][save][fractional_walk]" )
+{
+    const tripoint_abs_ms tile( -1, -2, 0 );
+    const world_position centered( tile );
+    const auto moved = centered.translated( tripoint( -129, 128, 0 ) );
+    REQUIRE( moved );
+    CHECK( moved->tile() == tripoint_abs_ms( -2, -1, 0 ) );
+    CHECK( moved->offset() == tripoint( 255, 0, 0 ) );
+
+    npc source;
+    source.normalize();
+    source.set_pos_world_only( *moved );
+    const std::string precise_save = serialize( source );
+    npc restored;
+    deserialize_from_string( restored, precise_save );
+    CHECK( restored.pos_world() == *moved );
+
+    source.set_pos_abs_only( tile );
+    const std::string legacy_save = serialize( source );
+    const JsonValue legacy = json_loader::from_string( legacy_save );
+    CHECK_FALSE( legacy.get_object().has_member( "location_offset" ) );
+    restored.deserialize( legacy.get_object() );
+    CHECK( restored.pos_world() == centered );
+}
+
 TEST_CASE( "mp_player_view_rebuild_preserves_rng_and_does_not_create_a_controller",
            "[multiplayer][world_session][peer_session][regression]" )
 {
@@ -380,7 +406,10 @@ TEST_CASE( "mp_player_view_rebuild_preserves_rng_and_does_not_create_a_controlle
     CHECK( view.observation.partner_activity_pct == 35 );
     CHECK( view.observation.mp_remote_player_luminance == source.active_light() );
     const character_id id = replica->getID();
-    source.spawn_at_precise( get_map().get_abs( tripoint_bub_ms( 63, 62, 0 ) ) );
+    const auto exact_position = world_position::from_tile(
+                                    get_map().get_abs( tripoint_bub_ms( 63, 62, 0 ) ), tripoint( 71, 143, 0 ) );
+    REQUIRE( exact_position );
+    source.setpos( get_map(), *exact_position, false );
     const auto moved = json_loader::from_string( encode() );
     JsonObject delta = moved.get_object();
     delta.allow_omitted_members();
@@ -388,6 +417,7 @@ TEST_CASE( "mp_player_view_rebuild_preserves_rng_and_does_not_create_a_controlle
     cata_mp::apply_player_view( delta, view );
     CHECK( view.actor.id() == id );
     CHECK( replica->pos_abs() == source.pos_abs() );
+    CHECK( replica->pos_world() == source.pos_world() );
     CHECK( rng_get_engine() == before );
     cata_mp::remove_player_view( view );
     CHECK_FALSE( g->critter_by_id<npc>( id ) );
@@ -1344,7 +1374,9 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     distant.furn_set( distant_tile, furn_str_id::NULL_ID() );
     distant.ter_set( distant_tile, ter_str_id( "t_floor" ).id() );
     distant.ter_set( distant.get_bub( marker ), ter_str_id( "t_wall" ).id() );
-    restored->setpos( distant, distant_tile, false );
+    const auto distant_exact = world_position::from_tile( distant_position, tripoint( 65, 183, 0 ) );
+    REQUIRE( distant_exact );
+    restored->setpos( distant, *distant_exact, false );
     REQUIRE( cata_mp::mp_close_host_session() );
     CHECK_FALSE( session.has_regions() );
     CHECK( host.pos_abs() == position );
@@ -1355,6 +1387,7 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
     REQUIRE( distant_guest );
     CHECK( distant_guest->getID() == guest_id );
     CHECK( distant_guest->pos_abs() == distant_position );
+    CHECK( distant_guest->pos_world() == *distant_exact );
     map *const restored_map = session.loaded_map_at( here, distant_guest->pos_abs_sm() );
     REQUIRE( restored_map != nullptr );
     REQUIRE( restored_map != &here );

@@ -3907,15 +3907,17 @@ bool map::passable_ter_furn( const tripoint_bub_ms &p ) const
 
 int map::combined_movecost( const tripoint_bub_ms &from, const tripoint_bub_ms &to,
                             const vehicle *ignored_vehicle,
-                            const int modifier, const bool flying, const bool via_ramp, const bool ignore_fields ) const
+                            const int modifier, const bool flying, const bool via_ramp, const bool ignore_fields,
+                            const bool scale_grid_distance ) const
 {
     static constexpr std::array<int, 4> mults = { 0, 50, 71, 100 };
     const int cost1 = move_cost( from, ignored_vehicle, ignore_fields );
     const int cost2 = move_cost( to, ignored_vehicle, ignore_fields );
     // Multiply cost depending on the number of differing axes
     // 0 if all axes are equal, 100% if only 1 differs, 141% for 2, 200% for 3
-    size_t match = trigdist ? ( from.x() != to.x() ) + ( from.y() != to.y() ) +
-                   ( from.z() != to.z() ) : 1;
+    const size_t match = trigdist &&
+                         scale_grid_distance ? ( from.x() != to.x() ) + ( from.y() != to.y() ) +
+                         ( from.z() != to.z() ) : 1;
     if( flying || from.z() == to.z() ) {
         return ( cost1 + cost2 + modifier ) * mults[match] / 2;
     }

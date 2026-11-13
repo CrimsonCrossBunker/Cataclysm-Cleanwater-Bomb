@@ -13216,6 +13216,7 @@ TEST_CASE( "walking_authority_derives_ramp_height_from_terrain",
     walk_move_choices choices;
     choices.destination = here.get_abs( upper );
     who.set_moves( 1000 );
+    const bool fractional = GENERATE( false, true );
     fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
         out.member( "kind", "walk" );
         out.member( "origin", who.pos_abs() );
@@ -13223,8 +13224,13 @@ TEST_CASE( "walking_authority_derives_ramp_height_from_terrain",
         out.member( "mode", "walk" );
         out.member( "choices", choices );
         out.member( "dz", -7 );
+        if( fractional ) {
+            out.member( "origin_offset", who.pos_world().offset() );
+            out.member( "fractional_delta", point( 128, 0 ) );
+        }
     } ) );
     CHECK( who.pos_bub() == upper );
+    CHECK( who.pos_world().offset() == tripoint( fractional ? 0 : 128, 128, 0 ) );
     CHECK( get_avatar().posz() == 0 );
 }
 
@@ -13852,6 +13858,87 @@ TEST_CASE( "ledge_jump_intents_recheck_the_gap_and_use_only_the_requesting_playe
     CHECK( host.pos_bub() == tripoint_bub_ms( 30, 30, 0 ) );
     CHECK( host.get_moves() == host_moves );
     CHECK( here.get_abs_sub() == map_origin );
+}
+
+TEST_CASE( "fractional_walk_settles_native_collision_and_rejects_stale_same_tile_intents",
+           "[mp_inventory_activity][walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    npc &who = fixture.remote();
+    bind_feedback_player( who, 'a', 701 );
+    map &here = get_map();
+    const tripoint_bub_ms tile( 60, 60, 0 );
+    const tripoint_abs_ms origin = here.get_abs( tile );
+    get_avatar().setpos( here, tile + tripoint( -4, -4, 0 ) );
+    const ter_id floor = ter_str_id( "t_floor" ).id();
+    here.ter_set( tile, floor );
+    here.ter_set( tile + point::east, floor );
+    here.ter_set( tile + point::south, floor );
+    here.ter_set( tile + point::south_east, floor );
+    who.setpos( here, tile, false );
+    who.set_moves( 1000 );
+
+    const auto start = [&]( const world_position & from, const point & delta,
+    const tripoint_rel_ms & direction ) {
+        walk_move_choices choices;
+        choices.destination = from.tile() + direction;
+        const auto wire = fixture.request( who, "start", [&]( JsonOut & out ) {
+            out.member( "kind", "walk" );
+            out.member( "origin", from.tile() );
+            out.member( "origin_offset", from.offset() );
+            out.member( "fractional_delta", delta );
+            out.member( "direction", direction );
+            out.member( "mode", who.current_movement_mode().str() );
+            out.member( "choices", choices );
+        } );
+        fixture.run( who, wire );
+    };
+
+    const world_position center( origin );
+    start( center, point( 64, 0 ), tripoint_rel_ms::zero );
+    REQUIRE( who.pos_abs() == origin );
+    REQUIRE( who.pos_world().offset() == tripoint( 192, 128, 0 ) );
+    const world_position settled = who.pos_world();
+    const int settled_moves = who.get_moves();
+    CHECK( settled_moves < 1000 );
+    start( center, point( 64, 0 ), tripoint_rel_ms::zero );
+    start( settled, point( 129, 0 ), tripoint_rel_ms::east );
+    CHECK( who.pos_world() == settled );
+    CHECK( who.get_moves() == settled_moves );
+
+    const auto corner = world_position::from_tile( origin, tripoint( 240, 240, 0 ) );
+    REQUIRE( corner );
+    who.setpos( here, *corner, false );
+    here.ter_set( tile + point::south, ter_str_id( "t_wall" ).id() );
+    start( *corner, point( 80, 80 ), tripoint_rel_ms( 1, 1, 0 ) );
+    CHECK( who.pos_world() == *corner );
+    CHECK( who.get_moves() == settled_moves );
+    here.ter_set( tile + point::south, floor );
+    start( *corner, point( 80, 80 ), tripoint_rel_ms( 1, 1, 0 ) );
+    REQUIRE( who.pos_bub( here ) == tile + point::south_east );
+    CHECK( who.pos_world().offset() == tripoint( 64, 64, 0 ) );
+    CHECK( who.get_moves() < settled_moves );
+}
+
+TEST_CASE( "solo_fractional_walk_keeps_exact_position_when_the_map_scrolls",
+           "[walking_owned][fractional_walk]" )
+{
+    reload_fixture fixture;
+    avatar &who = get_avatar();
+    map &here = get_map();
+    const restore_on_out_of_scope restore_safemode( g->safe_mode );
+    g->set_safe_mode( SAFE_MODE_OFF );
+    const tripoint_bub_ms start( HALF_MAPSIZE_X + SEEX - 1, HALF_MAPSIZE_Y, 0 );
+    const tripoint_abs_ms destination = here.get_abs( start + point::east );
+    const tripoint_abs_sm old_window = here.get_abs_sub();
+    here.ter_set( start, ter_str_id( "t_floor" ).id() );
+    here.ter_set( start + point::east, ter_str_id( "t_floor" ).id() );
+    who.setpos( here, start, false );
+    who.set_moves( 1000 );
+    REQUIRE( avatar_action::move_fractional( who, here, point( 128, 0 ) ) );
+    CHECK( who.pos_abs() == destination );
+    CHECK( who.pos_world().offset() == tripoint( 0, 128, 0 ) );
+    CHECK( here.get_abs_sub() == old_window + point_rel_sm::east );
 }
 
 TEST_CASE( "ordinary_walking_cannot_replace_a_ledge_choice_with_danger_consent",

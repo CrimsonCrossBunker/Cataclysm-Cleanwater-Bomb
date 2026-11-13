@@ -139,10 +139,10 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     const tripoint_bub_ms local( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
     get_avatar().setpos( here, local, false );
     const tripoint_abs_sm start = get_avatar().pos_abs_sm();
-    const auto state = []( const tripoint_abs_ms &position ) {
+    const auto state = []( const tripoint_abs_ms & position, const std::string &offset = "" ) {
         return R"({"type":"state","connected":true,"pos":{"x":)" + std::to_string( position.x() ) +
                ",\"y\":" + std::to_string( position.y() ) + ",\"z\":" +
-               std::to_string( position.z() ) + "}}";
+               std::to_string( position.z() ) + offset + "}}";
     };
     REQUIRE( cata_mp::client_apply_message( state( get_avatar().pos_abs() ) ) );
     const tripoint_abs_sm destination = start + point_rel_sm( MAPSIZE + 2, 0 );
@@ -160,11 +160,16 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     CHECK( session.replication.client.pending_terrain.empty() );
     REQUIRE( cata_mp::client_apply_message( prefix + R"(,"t":[[144,0]],"f":[[144,1]]}]})" ) );
     REQUIRE( session.replication.client.pending_terrain.count( destination ) == 1 );
-    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east ) ) );
+    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east,
+            R"(,"offset":[23,164,0])" ) ) );
     CHECK( get_avatar().pos_abs() == absolute + point::east );
+    CHECK( get_avatar().pos_world().offset() == tripoint( 23, 164, 0 ) );
     CHECK( here.ter( here.get_bub( absolute ) ) == ter_str_id( "t_wall" ).id() );
     CHECK( MAPBUFFER.lookup_submap( destination )->last_touched == last_touched );
     CHECK( session.replication.client.pending_terrain.empty() );
+    REQUIRE( cata_mp::client_apply_message( state( absolute + point::east,
+            R"(,"offset":[79,163,0])" ) ) );
+    CHECK( get_avatar().pos_world().offset() == tripoint( 79, 163, 0 ) );
 }
 
 TEST_CASE( "mp_client_new_admission_does_not_import_retained_monster_ids",

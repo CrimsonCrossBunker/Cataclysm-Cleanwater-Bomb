@@ -8470,7 +8470,8 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
 }
 
 bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const bool via_ramp,
-                      const bool furniture_move, const walk_move_choices *choices )
+                      const bool furniture_move, const walk_move_choices *choices,
+                      const fractional_walk *step )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
@@ -8486,9 +8487,12 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return false;
         }
     }
-    const tripoint_abs_ms original_position = who.pos_abs();
+    const world_position original_position = who.pos_world();
+    const auto movement_context = here.get_context_reference();
+    const tripoint_abs_sm map_origin = here.get_abs_sub();
     const auto still_at_origin = [&]() {
-        return lifetime && who.pos_abs() == original_position;
+        return lifetime && movement_context && &get_map() == &here &&
+               here.get_abs_sub() == map_origin && who.pos_world() == original_position;
     };
     const auto permitted_vehicle = [&]( vehicle & target ) {
         if( choices || !who.is_avatar() ) {
@@ -8505,6 +8509,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         return true; // debug trait immunity to gravity, walls etc
     }
     const tripoint_bub_ms pos = who.pos_bub( here );
+    const bool within_cell = step && pos == dest_loc;
 
     const tripoint_abs_ms dest_loc_abs = here.get_abs( dest_loc );
 
@@ -8732,7 +8737,8 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         return false;
     }
 
-    std::vector<std::string> harmful_stuff = get_dangerous_tile( who, dest_loc );
+    std::vector<std::string> harmful_stuff = within_cell ? std::vector<std::string>() :
+        get_dangerous_tile( who, dest_loc );
     if( !shifting_furniture && !pushing && !harmful_stuff.empty() ) {
         // A stale walking confirmation cannot silently become a fall. The owner
         // must choose climb/jump/fall/glide through the ledge command instead.
@@ -8770,7 +8776,9 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return true;
         }
     }
-    if( !still_at_origin() ) {
+    if( !still_at_origin() ||
+        ( step && ( !avatar_action::can_move_fractional( who, here ) ||
+                    !step->clears_corner( here, pos ) ) ) ) {
         return false;
     }
     if( const Character *occupant = get_creature_tracker().creature_at<Character>( dest_loc ) ) {
@@ -8795,9 +8803,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     const int64_t grabbed_vehicle_id = grabbed_vehicle ? grabbed_vehicle->uid().get_value() : 0;
     const int64_t grabbed_part_id = vp_grab ?
                                     vp_grab->vehicle().part( vp_grab->part_index() ).get_base().uid().get_value() : 0;
+    const bool ignore_fields = !impassable_field_ids.empty() &&
+                               who.is_immune_fields( impassable_field_ids );
     const int mcost = here.combined_movecost( pos, dest_loc, grabbed ? grabbed_vehicle : nullptr,
-                      modifier,
-                      via_ramp, false, !impassable_field_ids.empty() && who.is_immune_fields( impassable_field_ids ) );
+        modifier, via_ramp, false, ignore_fields, !step );
 
     if( !furniture_move && grabbed_move( who, dest_loc - pos, via_ramp, false, choices ) ) {
         return true;
@@ -8828,7 +8837,11 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        who.mod_moves( -who.run_cost( mcost, diag ) );
+        int move_cost = who.run_cost( mcost, diag && !step );
+        if( step ) {
+            move_cost = step->scale_cost( move_cost );
+        }
+        who.mod_moves( -move_cost );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.
@@ -8849,6 +8862,10 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
     // Max out recoil & reset aim point
     who.recoil = MAX_RECOIL;
     who.last_target_pos = std::nullopt;
+    if( within_cell ) {
+        who.setpos( here, step->target, false );
+        return true;
+    }
 
     // Print a message if movement is slow
     const int mcost_to = here.move_cost( dest_loc ); //calculate this _after_ calling grabbed_move
@@ -8935,7 +8952,15 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
 
     bool moving = dest_loc != oldpos;
 
-    point_rel_sm submap_shift = place_character( who, dest_loc );
+    std::optional<world_position> precise;
+    if( step ) {
+        tripoint offset = step->target.offset();
+        if( via_ramp ) {
+            offset.z = 0;
+        }
+        precise = world_position::from_tile( dest_loc_abs, offset );
+    }
+    point_rel_sm submap_shift = place_character( who, dest_loc, false, precise ? &*precise : nullptr );
     point_rel_ms ms_shift = coords::project_to<coords::ms>( submap_shift );
     oldpos = oldpos - ms_shift.raw();
 
@@ -9184,7 +9209,8 @@ point_rel_sm game::place_player( const tripoint_bub_ms &dest_loc, bool quick )
     return place_character( get_avatar(), dest_loc, quick );
 }
 
-point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_loc, bool quick )
+point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_loc, bool quick,
+                                    const world_position *precise )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
@@ -9196,9 +9222,9 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             return point_rel_sm::zero;
         }
     }
-    const tripoint_abs_ms original_position = who.pos_abs();
+    const world_position original_position = who.pos_world();
     const auto still_at_origin = [&]() {
-        return lifetime && who.pos_abs() == original_position;
+        return lifetime && who.pos_world() == original_position;
     };
     const optional_vpart_position vp1 = here.veh_at( dest_loc );
     if( const std::optional<std::string> label = vp1.get_label() ) {
@@ -9400,7 +9426,11 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             who.stop_hauling();
         }
     }
-    who.setpos( here, dest_loc );
+    if( precise ) {
+        who.setpos( here, *precise );
+    } else {
+        who.setpos( here, dest_loc );
+    }
     if( !lifetime ) {
         return point_rel_sm::zero;
     }
@@ -11580,7 +11610,13 @@ bool game::vertical_shift( const int z_after )
     scent.reset();
 
     const int z_before = u.posz();
-    u.move_to( tripoint_abs_ms( u.pos_abs().xy(), z_after ) );
+    tripoint offset = u.pos_world().offset();
+    if( z_before != z_after ) {
+        offset.z = 0;
+    }
+    const tripoint_abs_ms destination( u.pos_abs().xy(), z_after );
+    u.setpos( here, world_position::from_tile( destination, offset ).value_or(
+                  world_position( destination ) ), false );
 
     // Shift the map itself
     here.vertical_shift( z_after );
@@ -11756,9 +11792,17 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
         shift.y()++;
     }
 
+    const auto place_at_window_position = [&]() {
+        const tripoint_bub_ms local( x, y, here.get_abs_sub().z() );
+        if( u.pos_abs() == here.get_abs( local ) ) {
+            u.setpos( here, u.pos_world() );
+        } else {
+            u.setpos( here, local );
+        }
+    };
     if( shift == point_rel_sm::zero ) {
         // adjust player position
-        u.setpos( here, tripoint_bub_ms( x, y, here.get_abs_sub().z() ) );
+        place_at_window_position();
         if( z_level_changed ) {
             // Update what parts of the world map we can see
             // We may be able to see farther now that the z-level has changed.
@@ -11824,7 +11868,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     // Also ensure the player is on current z-level
     // m.get_abs_sub().z should later be removed, when there is no longer such a thing
     // as "current z-level"
-    u.setpos( here, tripoint_bub_ms( x, y, here.get_abs_sub().z() ) );
+    place_at_window_position();
 
     // Only do the loading after all coordinates have been shifted.
 
