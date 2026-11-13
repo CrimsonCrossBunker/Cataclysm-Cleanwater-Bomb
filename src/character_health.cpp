@@ -1625,11 +1625,11 @@ void Character::update_needs( int rate_multiplier )
                     }
                 }
                 const float comfort_bonus = comfort <= 10 ? comfort * 0.025f
-                                : 0.25f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 10.0f ) / 5.0f );
+                                            : 0.25f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 10.0f ) / 5.0f );
                 sleepiness_multiplier += std::min( 1.0f, comfort_bonus );
                 if( comfort >= 5 ) {
                     const float deprivation_bonus = comfort <= 35 ? ( comfort - 5 ) * 0.025f
-                                    : 0.75f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 35.0f ) / 5.0f );
+                                                    : 0.75f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 35.0f ) / 5.0f );
                     rest_modifier += std::min( 1.5f, deprivation_bonus );
                 }
                 int current_sleepiness = get_sleepiness();
