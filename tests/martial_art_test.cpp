@@ -51,6 +51,8 @@ static const efftype_id effect_grabbing( "grabbing" );
 static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_stunned( "stunned" );
 
+static const faction_id faction_your_followers( "your_followers" );
+
 static const enchantment_id enchantment_ENCH_TEST_BIRD_PARTS( "ENCH_TEST_BIRD_PARTS" );
 
 static const itype_id itype_club_wooden( "club_wooden" );
@@ -480,6 +482,46 @@ TEST_CASE( "active_technique_rechecks_target_and_spends_one_melee_attack",
     CHECK( dude.get_stamina() < stamina_before );
 }
 
+TEST_CASE( "martial_arts_requirements_preserve_inherited_flags",
+           "[martial_arts][json][inheritance]" )
+{
+    ma_requirements parent;
+    parent.load( json_loader::from_string( R"({
+        "unarmed_allowed": true, "melee_allowed": true,
+        "strictly_unarmed": true, "wall_adjacent": true
+    })" ).get_object(), "test" );
+
+    SECTION( "omitted flags retain their inherited values" ) {
+        ma_requirements inherited = parent;
+        inherited.load( json_loader::from_string( "{}" ).get_object(), "test" );
+        CHECK( inherited.unarmed_allowed );
+        CHECK( inherited.melee_allowed );
+        CHECK( inherited.strictly_unarmed );
+        CHECK( inherited.wall_adjacent );
+    }
+
+    SECTION( "explicit false flags override inherited values" ) {
+        ma_requirements inherited = parent;
+        inherited.load( json_loader::from_string( R"({
+            "unarmed_allowed": false, "melee_allowed": false,
+            "strictly_unarmed": false, "wall_adjacent": false
+        })" ).get_object(), "test" );
+        CHECK_FALSE( inherited.unarmed_allowed );
+        CHECK_FALSE( inherited.melee_allowed );
+        CHECK_FALSE( inherited.strictly_unarmed );
+        CHECK_FALSE( inherited.wall_adjacent );
+    }
+
+    SECTION( "fresh requirements retain their default values" ) {
+        ma_requirements fresh;
+        fresh.load( json_loader::from_string( "{}" ).get_object(), "test" );
+        CHECK_FALSE( fresh.unarmed_allowed );
+        CHECK_FALSE( fresh.melee_allowed );
+        CHECK_FALSE( fresh.strictly_unarmed );
+        CHECK_FALSE( fresh.wall_adjacent );
+    }
+}
+
 TEST_CASE( "active_technique_accuracy_bonus_modifies_the_attack_roll",
            "[martial_arts][active_technique]" )
 {
@@ -517,6 +559,7 @@ TEST_CASE( "active_technique_notifies_allied_npc_once_on_hit_or_miss",
     clear_character( target, true );
     target.setpos( get_map(), dude_pos + tripoint::east );
     target.set_attitude( NPCATT_FOLLOW );
+    target.set_fac( faction_your_followers );
     target.op_of_u.trust = 20;
     target.op_of_u.anger = 0;
     REQUIRE( target.is_player_ally() );

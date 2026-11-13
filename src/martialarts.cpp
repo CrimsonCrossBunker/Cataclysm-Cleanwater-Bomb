@@ -327,6 +327,7 @@ void ma_requirements::load( const JsonObject &jo, std::string_view )
 
     optional( jo, was_loaded, "skill_requirements", min_skill, ma_skill_reader {} );
     optional( jo, was_loaded, "weapon_damage_requirements", min_damage, ma_weapon_damage_reader {} );
+    was_loaded = true;
 }
 
 void ma_technique::load( const JsonObject &jo, std::string_view src )
