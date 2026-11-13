@@ -354,6 +354,8 @@ bool mp_menu_start_host_session();
 // CLI and menu share the same deferred start, after the world is loaded.
 bool mp_request_host_session( uint16_t port, const std::string &password,
                               const std::string &version );
+bool mp_request_host_session( uint16_t port, const std::string &password,
+                              const std::string &version, int room_players );
 
 // Main-menu integration: prompts for a host address (with optional :port),
 // probes, connects, sets client mode.  Silent on success; pops an error

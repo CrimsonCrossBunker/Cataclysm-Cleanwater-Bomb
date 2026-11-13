@@ -369,6 +369,7 @@ struct host_request {
     uint16_t port;
     std::string password;
     std::string version;
+    int room_players;
 };
 static std::optional<host_request> g_pending_host_start;
 
@@ -4627,7 +4628,7 @@ static void mp_start_pending_host()
         return;
     }
     if( !mp_session().hosting.start( request.port, request.password, request.version,
-                                     mp_session().host_info ) ) {
+                                     mp_session().host_info, request.room_players ) ) {
         mp_log( "[ccb-mp] HOST-START failed: " + mp_session().hosting.error() );
         add_msg( m_bad, _( "Unable to start multiplayer host: %s" ), mp_session().hosting.error() );
         set_host_mode( false );
@@ -4637,14 +4638,20 @@ static void mp_start_pending_host()
 bool mp_request_host_session( uint16_t port, const std::string &password,
                               const std::string &version )
 {
-    if( is_client_mode() ) {
+    return mp_request_host_session( port, password, version, default_room_players );
+}
+
+bool mp_request_host_session( uint16_t port, const std::string &password,
+                              const std::string &version, int room_players )
+{
+    if( is_client_mode() || !valid_room_size( room_players ) ) {
         return false;
     }
     if( mp_session().hosting.running() ) {
         return true;
     }
     set_host_mode( true );
-    g_pending_host_start = host_request{ port, password, version };
+    g_pending_host_start = host_request{ port, password, version, room_players };
     return true;
 }
 
