@@ -19,6 +19,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "mapdata.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "ret_val.h"
@@ -387,4 +388,41 @@ TEST_CASE( "unload_liquid_destination_uses_vehicle_and_tank_identity",
     CHECK( veh->part( second ).ammo_remaining() == ( valid ? 2 : 0 ) );
     CHECK( who.get_moves() == ( valid ? 500 : 1500 ) );
     CHECK( get_avatar().get_moves() == 517 );
+}
+
+TEST_CASE( "bulk_keg_pouring_matches_incremental_item_volume", "[liquid][keg][transfer_owner]" )
+{
+    liquid_owner_fixture fixture;
+    map &here = get_map();
+    const tripoint_bub_ms pos = get_avatar().pos_bub() + tripoint::east;
+    here.furn_set( pos, furn_id( "f_wood_keg" ) );
+    const units::volume capacity = here.furn( pos ).obj().keg_capacity;
+    REQUIRE( capacity > 0_ml );
+    for( const char *id : { "jp8", "water_clean" } ) {
+        for( int existing : { 0, 7 } ) {
+            for( int available : { 1, 200000 } ) {
+                CAPTURE( id, existing, available );
+                here.i_clear( pos );
+                item stored( itype_id( id ), calendar::turn, existing );
+                if( existing > 0 ) {
+                    here.add_item( pos, stored );
+                }
+                item expected( stored );
+                int transferred = 0;
+                while( transferred < available && expected.volume() < capacity ) {
+                    ++expected.charges;
+                    ++transferred;
+                }
+                item source( itype_id( id ), calendar::turn, available );
+                REQUIRE( iexamine::pour_into_keg( pos, source, true ) );
+                REQUIRE( here.i_at( pos ).size() == 1 );
+                CHECK( here.i_at( pos ).only_item().charges == existing + transferred );
+                CHECK( source.charges == available - transferred );
+                if( expected.volume() >= capacity ) {
+                    CHECK_FALSE( iexamine::pour_into_keg( pos, source, true ) );
+                    CHECK( source.charges == available - transferred );
+                }
+            }
+        }
+    }
 }

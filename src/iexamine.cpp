@@ -5125,13 +5125,19 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         item drink( drink_type, drink_bday[ drink_index ] );
         drink.set_relative_rot( drink_rot[ drink_index ] );
         drink.charges = 0;
-        bool keg_full = false;
+        item probe( drink );
+        const int amount = liquid_handler::charges_until_full( charges_held, [&]( int added ) {
+            probe.charges = added;
+            return probe.volume() >= keg_cap;
+        } );
         Character &player_character = get_player_character();
-        for( int i = 0; i < charges_held && !keg_full; i++ ) {
-            player_character.use_charges( drink.typeId(), 1 );
-            drink.charges++;
-            keg_full = drink.volume() >= keg_cap;
+        if( amount > 0 ) {
+            const std::list<item> used = player_character.use_charges( drink.typeId(), amount );
+            for( const item &portion : used ) {
+                drink.charges += portion.charges;
+            }
         }
+        const bool keg_full = drink.volume() >= keg_cap;
         if( keg_full ) {
             add_msg( _( "You completely fill the %1$s with %2$s." ),
                      keg_name, item::nname( drink_type ) );
@@ -5245,10 +5251,14 @@ bool iexamine::pour_into_keg( const tripoint_bub_ms &pos, item &liquid, bool sil
     if( !silent ) {
         add_msg( _( "You pour %1$s into the %2$s." ), liquid.tname(), keg_name );
     }
-    while( liquid.charges > 0 && drink.volume() < keg_cap ) {
-        drink.charges++;
-        liquid.charges--;
-    }
+    item probe( drink );
+    const int available = std::min( liquid.charges, INT_MAX - drink.charges );
+    const int amount = liquid_handler::charges_until_full( available, [&]( int added ) {
+        probe.charges = drink.charges + added;
+        return probe.volume() >= keg_cap;
+    } );
+    drink.charges += amount;
+    liquid.charges -= amount;
     return true;
 }
 
