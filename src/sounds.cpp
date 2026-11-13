@@ -4,7 +4,9 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -17,6 +19,7 @@
 #include "character.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
+#include "current_map.h"
 #include "debug.h"
 #include "effect.h"
 #include "enums.h"
@@ -26,9 +29,11 @@
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_simulation_regions.h"
 #include "messages.h"
 #include "monster.h"
 #include "mp_client_conn.h"
+#include "mp_world_session.h"
 #include "music.h"
 #include "npc.h"
 #include "output.h"
@@ -241,9 +246,9 @@ std::string enum_to_string<sounds::sound_t>( sounds::sound_t data )
 
 // Static globals tracking sounds events of various kinds.
 // The sound events since the last monster turn.
-static std::vector<std::pair<tripoint_bub_ms, monster_sound_event>> recent_sounds;
+static std::vector<std::pair<tripoint_abs_ms, monster_sound_event>> recent_sounds;
 // The sound events since the last interactive player turn. (doesn't count sleep etc)
-static std::vector<std::pair<tripoint_bub_ms, sound_event>> sounds_since_last_turn;
+static std::vector<std::pair<tripoint_abs_ms, sound_event>> sounds_since_last_turn;
 // The sound events currently displayed to the player.
 static std::unordered_map<tripoint_bub_ms, sound_event> sound_markers;
 
@@ -332,11 +337,12 @@ void sounds::sound( const tripoint_bub_ms &p, int vol, sound_t category,
     }
     const season_type seas = season_of_year( calendar::turn );
     const std::string seas_str = season_str( seas );
+    const tripoint_abs_ms absolute = get_map().get_abs( p );
     // Silent sounds are inaudible to monsters and would divide by zero in cluster_sounds.
     if( vol > 0 ) {
-        recent_sounds.emplace_back( p, monster_sound_event{ vol, is_provocative( category ) } );
+        recent_sounds.emplace_back( absolute, monster_sound_event{ vol, is_provocative( category ) } );
     }
-    sounds_since_last_turn.emplace_back( p,
+    sounds_since_last_turn.emplace_back( absolute,
                                          sound_event{ vol, category, description, ambient,
                                                  false, id, variant, seas_str } );
 }
@@ -353,8 +359,8 @@ void sounds::add_footstep( const tripoint_bub_ms &p, int volume, int, monster *,
 {
     const season_type seas = season_of_year( calendar::turn );
     const std::string seas_str = season_str( seas );
-    sounds_since_last_turn.emplace_back( p, sound_event { volume,
-                                         sound_t::movement, footstep, false, true, "", "", seas_str} );
+    sounds_since_last_turn.emplace_back( get_map().get_abs( p ), sound_event { volume,
+            sound_t::movement, footstep, false, true, "", "", seas_str} );
 }
 
 template <typename C>
@@ -370,7 +376,7 @@ static void vector_quick_remove( std::vector<C> &source, int index )
 
 static std::vector<centroid> cluster_sounds(
     std::vector<std::pair<tripoint_bub_ms, monster_sound_event>>
-    input_sounds )
+    input_sounds, bool preview = false )
 {
     // If there are too many monsters and too many noise sources (which can be monsters, go figure),
     // applying sound events to monsters can dominate processing time for the whole game,
@@ -388,7 +394,7 @@ static std::vector<centroid> cluster_sounds(
     { MAPSIZE_X, MAPSIZE_Y, OVERMAP_HEIGHT } );
     // Randomly choose cluster seeds.
     for( size_t i = input_sounds.size(); i > stopping_point; i-- ) {
-        size_t index = rng( 0, i - 1 );
+        size_t index = preview ? rng_visual( 0, i - 1 ) : rng( 0, i - 1 );
         // The volume and cluster weight are the same for the first element.
         sound_clusters.push_back(
             // Assure the compiler that these int->float conversions are safe.
@@ -409,9 +415,10 @@ static std::vector<centroid> cluster_sounds(
             // Scale the distance between the two by the max possible distance.
             tripoint_bub_ms centroid_pos { static_cast<int>( centroid_iter->x ), static_cast<int>( centroid_iter->y ), static_cast<int>( centroid_iter->z ) };
             const int dist = sound_distance( tripoint_bub_ms( sound_event_pair.first ), centroid_pos );
-            if( dist * dist < dist_factor ) {
+            const float dist_squared = static_cast<float>( dist ) * dist;
+            if( dist_squared < dist_factor ) {
                 found_centroid = centroid_iter;
-                dist_factor = dist * dist;
+                dist_factor = dist_squared;
             }
         }
         const float volume_sum = static_cast<float>( sound_event_pair.second.volume ) +
@@ -468,49 +475,80 @@ static int get_signal_for_hordes( const centroid &centr )
     return 0;
 }
 
-void sounds::process_sounds()
+static void deliver_sound( const centroid &cluster, const tripoint_abs_ms &source, map &primary,
+                           const std::vector<std::reference_wrapper<map>> &views,
+                           const map_simulation_regions *regions )
 {
-    map &here = get_map();
-
-    std::vector<centroid> sound_clusters = cluster_sounds( recent_sounds );
-    const int weather_vol = get_weather().weather_id->sound_attn;
-    for( const centroid &this_centroid : sound_clusters ) {
-        // Since monsters don't go deaf ATM we can just use the weather modified volume
-        // If they later get physical effects from loud noises we'll have to change this
-        // to use the unmodified volume for those effects.
-        const int vol = this_centroid.volume - weather_vol;
-        const tripoint_bub_ms source = tripoint_bub_ms( this_centroid.x, this_centroid.y, this_centroid.z );
-        // --- Monster sound handling here ---
-        // Alert all hordes
-        int sig_power = get_signal_for_hordes( this_centroid );
-        if( sig_power > 0 ) {
-
-            const point_abs_ms abs_ms = here.get_abs( source ).xy();
-            const point_abs_sm abs_sm( coords::project_to<coords::sm>( abs_ms ) );
-            const tripoint_abs_sm target( abs_sm, source.z() );
-            overmap_buffer.signal_hordes( target, sig_power );
+    const int vol = cluster.volume - get_weather().weather_id->sound_attn;
+    if( const int signal = get_signal_for_hordes( cluster ); signal > 0 ) {
+        overmap_buffer.signal_hordes( project_to<coords::sm>( source ), signal );
+    }
+    const tripoint_bub_ms primary_source = primary.get_bub( source );
+    const auto &session = g->multiplayer_session();
+    for( monster &critter : g->all_monsters() ) {
+        const int dist = sound_distance( primary_source, critter.pos_bub( primary ) );
+        if( vol * 2 <= dist ) {
+            continue;
         }
-        // Alert all monsters (that can hear) to the sound.
-        for( monster &critter : g->all_monsters() ) {
-            // TODO: Generalize this to Creature::hear_sound
-            const int dist = sound_distance( source, critter.pos_bub() );
-            if( vol * 2 > dist ) {
-                // Exclude monsters that certainly won't hear the sound
-                critter.hear_sound( source, vol, dist, this_centroid.provocative );
-            }
+        map &terrain = regions ? session.map_for( primary, critter.pos_abs_sm() ) : primary;
+        std::optional<swap_map> context;
+        if( &terrain != &primary ) {
+            context.emplace( terrain );
         }
-        // Trigger sound-triggered traps and ensure they are still valid
+        critter.hear_sound( terrain.get_bub( source ), vol, dist, cluster.provocative );
+    }
+    for( const auto &entry : views ) {
+        map &terrain = entry.get();
+        const tripoint_bub_ms local_source = terrain.get_bub( source );
+        std::optional<swap_map> context;
+        if( &terrain != &primary ) {
+            context.emplace( terrain );
+        }
         for( const trap *trapType : trap::get_sound_triggered_traps() ) {
-            for( const tripoint_bub_ms &tp : here.trap_locations( trapType->id ) ) {
-                const int dist = sound_distance( source, tp );
-                const trap &tr = here.tr_at( tp );
-                // Exclude traps that certainly won't hear the sound
-                if( vol * 2 > dist ) {
-                    if( tr.triggered_by_sound( vol, dist ) ) {
-                        tr.trigger( tp );
-                    }
+            for( const tripoint_bub_ms &tp : terrain.trap_locations( trapType->id ) ) {
+                const int dist = sound_distance( local_source, tp );
+                if( vol * 2 <= dist || ( regions && !regions->owns( terrain,
+                        project_to<coords::sm>( terrain.get_abs( tp ) ) ) ) ) {
+                    continue;
+                }
+                const trap &tr = terrain.tr_at( tp );
+                if( tr.triggered_by_sound( vol, dist ) ) {
+                    tr.trigger( tp );
                 }
             }
+        }
+    }
+}
+
+void sounds::process_sounds()
+{
+    if( recent_sounds.empty() ) {
+        return;
+    }
+    map &primary = get_map();
+    const auto &session = g->multiplayer_session();
+    const auto views = session.active_maps( primary );
+    std::optional<map_simulation_regions> regions;
+    if( session.has_regions() ) {
+        regions.emplace( session.simulation_regions( primary ) );
+    }
+    for( const auto &entry : views ) {
+        const map &terrain = entry.get();
+        std::vector<std::pair<tripoint_bub_ms, monster_sound_event>> local;
+        if( !regions ) {
+            local.reserve( recent_sounds.size() );
+        }
+        for( const auto &[position, sound] : recent_sounds ) {
+            if( !regions || &session.map_for( primary, project_to<coords::sm>( position ) ) == &terrain ) {
+                local.emplace_back( terrain.get_bub( position ), sound );
+            }
+        }
+        // Clustering is local to one coordinate frame. A distant event cannot
+        // pull a cluster centroid away from its own region.
+        for( const centroid &cluster : cluster_sounds( std::move( local ) ) ) {
+            const tripoint_bub_ms pos( cluster.x, cluster.y, cluster.z );
+            deliver_sound( cluster, terrain.get_abs( pos ), primary, views,
+                           regions ? &*regions : nullptr );
         }
     }
     recent_sounds.clear();
@@ -585,7 +623,7 @@ void sounds::process_sound_markers( Character *you )
         // copy values instead of making references here to fix use-after-free error
         // sounds_since_last_turn may be inserted with new elements inside the loop
         // so the references may become invalid after the vector enlarged its internal buffer
-        const tripoint_bub_ms pos = tripoint_bub_ms( sounds_since_last_turn[i].first );
+        const tripoint_bub_ms pos = here.get_bub( sounds_since_last_turn[i].first );
         const sound_event sound = sounds_since_last_turn[i].second;
         const int distance_to_sound = sound_distance( you->pos_bub(), pos );
         const int raw_volume = sound.volume;
@@ -820,12 +858,17 @@ std::vector<tripoint_bub_ms> sounds::get_footstep_markers()
 
 std::pair<std::vector<tripoint_bub_ms>, std::vector<tripoint_bub_ms>> sounds::get_monster_sounds()
 {
-    auto sound_clusters = cluster_sounds( recent_sounds );
+    const map &here = get_map();
+    std::vector<std::pair<tripoint_bub_ms, monster_sound_event>> local;
+    local.reserve( recent_sounds.size() );
     std::vector<tripoint_bub_ms> sound_locations;
     sound_locations.reserve( recent_sounds.size() );
     for( const auto &sound : recent_sounds ) {
-        sound_locations.push_back( sound.first );
+        const tripoint_bub_ms pos = here.get_bub( sound.first );
+        sound_locations.push_back( pos );
+        local.emplace_back( pos, sound.second );
     }
+    const auto sound_clusters = cluster_sounds( std::move( local ), true );
     std::vector<tripoint_bub_ms> cluster_centroids;
     cluster_centroids.reserve( sound_clusters.size() );
     for( const centroid &sound : sound_clusters ) {

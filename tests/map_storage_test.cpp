@@ -15,6 +15,7 @@
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "current_map.h"
 #include "game.h"
 #include "item.h"
 #include "map.h"
@@ -28,6 +29,7 @@
 #include "point.h"
 #include "rng.h"
 #include "scent_map.h"
+#include "sounds.h"
 #include "submap.h"
 #include "type_id.h"
 #include "world_identity.h"
@@ -256,6 +258,31 @@ TEST_CASE( "overlapping_map_views_tick_shared_fields_and_items_once",
     other.process_items( &after_shift );
     CHECK( other.get_field_age( other_tile, field_fd_marker1 ) == 2_turns );
     CHECK( shared_item.wetness == 8 );
+}
+
+TEST_CASE( "queued_sound_keeps_its_world_position_across_map_views",
+           "[map_storage][region_simulation][sound][regression]" )
+{
+    sounds::reset_sounds();
+    const on_out_of_scope cleanup( []() {
+        sounds::reset_sounds();
+    } );
+    simulation_test_map first( tripoint_abs_sm( -2, -1, 0 ) );
+    simulation_test_map second( tripoint_abs_sm( -1, -1, 0 ) );
+    const tripoint_bub_ms source( SEEX + 1, 1, 0 );
+    {
+        const swap_map context( first );
+        sounds::sound( source, 10, sounds::sound_t::combat, std::string( "test sound" ) );
+    }
+    const swap_map context( second );
+    const auto rng_before = rng_get_engine();
+    const auto [locations, centroids] = sounds::get_monster_sounds();
+    const tripoint_bub_ms expected( 1, 1, 0 );
+    REQUIRE( locations.size() == 1 );
+    CHECK( locations.front() == expected );
+    REQUIRE( centroids.size() == 1 );
+    CHECK( centroids.front() == expected );
+    CHECK( rng_get_engine() == rng_before );
 }
 
 TEST_CASE( "loading_an_already_active_submap_indexes_without_advancing_it",

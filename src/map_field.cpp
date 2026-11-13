@@ -435,7 +435,6 @@ void map::create_hot_air( const tripoint_bub_ms &p, int intensity )
  */
 struct field_proc_data {
     scent_block &sblk;
-    Character &player_character;
     const oter_id &om_ter;
     map &here;
     maptile &map_tile;
@@ -454,7 +453,6 @@ void map::process_fields_in_submap( submap *const current_submap,
 {
     const oter_id &om_ter = overmap_buffer.ter( coords::project_to<coords::omt>(
             abs_sub + rebase_rel( submap ) ) );
-    Character &player_character = get_player_character();
     scent_block sblk( submap, scents );
 
     // Initialize the map tile wrapper
@@ -465,7 +463,6 @@ void map::process_fields_in_submap( submap *const current_submap,
 
     field_proc_data pd{
         sblk,
-        player_character,
         om_ter,
         *this,
         map_tile,
@@ -839,20 +836,18 @@ static void field_processor_fd_push_items( const tripoint_bub_ms &p, field_entry
                 pushee = items.erase( pushee );
                 tripoint_bub_ms newp = random_entry( valid );
                 pd.here.add_item_or_charges( newp, tmp );
-                if( pd.player_character.pos_bub() == newp ) {
-                    add_msg( m_bad, _( "A %s hits you!" ), tmp.tname() );
-                    const bodypart_id hit = pd.player_character.get_random_body_part();
-                    pd.player_character.deal_damage( nullptr, hit, damage_instance( damage_bash, 6 ) );
-                    pd.player_character.check_dead_state( &pd.here );
-                }
-
-                if( npc *const n = creatures.creature_at<npc>( newp ) ) {
-                    // TODO: combine with player character code above
-                    const bodypart_id hit = pd.player_character.get_random_body_part();
-                    n->deal_damage( nullptr, hit, damage_instance( damage_bash, 6 ) );
-                    add_msg_if_player_sees( newp, _( "A %1$s hits %2$s!" ), tmp.tname(), n->get_name() );
-                    n->check_dead_state( &pd.here );
-                } else if( monster *const mon = creatures.creature_at<monster>( newp ) ) {
+                const tripoint_abs_ms impact = pd.here.get_abs( newp );
+                if( Character *const target = creatures.creature_at<Character>( impact ) ) {
+                    if( target->is_avatar() ) {
+                        add_msg( m_bad, _( "A %s hits you!" ), tmp.tname() );
+                    } else {
+                        add_msg_if_player_sees( newp, _( "A %1$s hits %2$s!" ), tmp.tname(),
+                                                target->get_name() );
+                    }
+                    target->deal_damage( nullptr, target->get_random_body_part(),
+                                         damage_instance( damage_bash, 6 ) );
+                    target->check_dead_state( &pd.here );
+                } else if( monster *const mon = creatures.creature_at<monster>( impact ) ) {
                     mon->apply_damage( nullptr, bodypart_id( "torso" ),
                                        6 - mon->get_armor_type( damage_bash, bodypart_id( "torso" ) ) );
                     add_msg_if_player_sees( newp, _( "A %1$s hits the %2$s!" ), tmp.tname(), mon->name() );
