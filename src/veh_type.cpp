@@ -1469,6 +1469,7 @@ void vehicle_prototype::zone_def::deserialize( const JsonObject &jo )
     mandatory( jo, false, "type", zone_type );
     mandatory( jo, false, "x", pt.x() );
     mandatory( jo, false, "y", pt.y() );
+    optional( jo, false, "z", mount_level, 0 );
     optional( jo, false, "name", name );
     optional( jo, false, "filter", filter );
 }
@@ -1655,6 +1656,9 @@ void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
         json.start_object();
         json.member( "x", z.first.x() );
         json.member( "y", z.first.y() );
+        if( z.first.z() != 0 ) {
+            json.member( "z", z.first.z() );
+        }
         json.member( "type", z.second.get_type().str() );
         json.end_object();
     }

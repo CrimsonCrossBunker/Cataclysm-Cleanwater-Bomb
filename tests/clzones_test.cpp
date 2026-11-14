@@ -224,7 +224,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
     zone_data first_data( "First", zone_type_LOOT_FOOD, faction_your_followers,
                           false, true, zone_abs, zone_abs );
     cart->zones_dirty = true;
-    zone_data *first = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), first_data,
+    zone_data *first = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos3(), first_data,
                        &here );
     REQUIRE( first != nullptr );
 
@@ -238,7 +238,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
 
     zone_data second_data( "Second", zone_type_LOOT_FOOD, faction_your_followers,
                            false, true, zone_abs, zone_abs );
-    zone_data *second = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), second_data,
+    zone_data *second = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos3(), second_data,
                         &here );
     REQUIRE( second != nullptr );
 
@@ -272,13 +272,13 @@ TEST_CASE( "vehicle_zone_identity_survives_shift_and_refresh", "[zones][vehicle]
     const std::optional<vpart_reference> cargo = here.veh_at( vehicle_pos ).cargo();
     REQUIRE( cargo.has_value() );
 
-    const point_rel_ms old_mount = cargo->mount_pos();
+    const tripoint_rel_ms old_mount = cargo->mount_pos3();
     const tripoint_abs_ms zone_abs = here.get_abs( vehicle_pos );
     zone_data stable_zone( "Stable", zone_type_LOOT_FOOD, faction_your_followers,
                            false, true, zone_abs, zone_abs );
     stable_zone.set_is_vehicle( true );
     cart->loot_zones.emplace( old_mount, stable_zone );
-    here.register_vehicle_zone( cart, here.get_abs_sub().z() );
+    here.register_vehicle_zone( cart );
     cart->zones_dirty = true;
     zm.cache_vzones( &here );
 
@@ -343,7 +343,7 @@ TEST_CASE( "vehicle_zone_remove_uses_non_global_map_context", "[zones][vehicle]"
     const tripoint_abs_ms zone_abs = other_map.get_abs( vehicle_pos );
     zone_data new_zone( "Outside reality bubble", zone_type_LOOT_FOOD,
                         faction_your_followers, false, true, zone_abs, zone_abs );
-    zone_data *created = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), new_zone,
+    zone_data *created = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos3(), new_zone,
                          other_map.cast_to_map() );
     REQUIRE( created != nullptr );
     created->set_enabled( false );

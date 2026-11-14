@@ -1801,11 +1801,17 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
     return dmg_veh1;
 }
 
-bool map::check_vehicle_zones( const int zlev )
+bool map::check_vehicle_zones( const int )
 {
-    for( vehicle *veh : get_cache( zlev ).zone_vehicles ) {
-        if( veh->zones_dirty ) {
-            return true;
+    // A moved or removed zone can leave the queried level.
+    for( const auto &cache : caches ) {
+        if( !cache ) {
+            continue;
+        }
+        for( vehicle *veh : cache->zone_vehicles ) {
+            if( veh->zones_dirty ) {
+                return true;
+            }
         }
     }
     return false;
@@ -1815,13 +1821,21 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
 {
     std::vector<zone_data *> veh_zones;
     bool rebuild = false;
-    for( vehicle *veh : get_cache( zlev ).zone_vehicles ) {
+    std::set<vehicle *> vehicles;
+    for( const auto &cache : caches ) {
+        if( cache ) {
+            vehicles.insert( cache->zone_vehicles.begin(), cache->zone_vehicles.end() );
+        }
+    }
+    for( vehicle *veh : vehicles ) {
         if( veh->refresh_zones() ) {
             rebuild = true;
         }
         for( auto &zone : veh->loot_zones ) {
-            zone.second.set_vehicle_owner( *veh );
-            veh_zones.emplace_back( &zone.second );
+            if( zone.second.get_start_point().z() == zlev ) {
+                zone.second.set_vehicle_owner( *veh );
+                veh_zones.emplace_back( &zone.second );
+            }
         }
     }
     if( rebuild ) {
@@ -1830,9 +1844,9 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
     return veh_zones;
 }
 
-void map::register_vehicle_zone( vehicle *veh, const int zlev )
+void map::register_vehicle_zone( vehicle *veh )
 {
-    level_cache &ch = get_cache( zlev );
+    level_cache &ch = get_cache( veh->sm_pos.z() );
     ch.zone_vehicles.insert( veh );
 }
 
@@ -1857,7 +1871,7 @@ bool map::deregister_vehicle_zone( zone_data &zone ) const
     const tripoint_bub_ms pos = get_bub( zone.get_start_point() );
     if( const std::optional<vpart_reference> vp = veh_at( pos ).cargo() ) {
         vehicle &veh = vp->vehicle();
-        auto bounds = veh.loot_zones.equal_range( vp->mount_pos() );
+        auto bounds = veh.loot_zones.equal_range( vp->mount_pos3() );
         for( auto it = bounds.first; it != bounds.second; it++ ) {
             if( &zone == &( it->second ) ) {
                 veh.loot_zones.erase( it );

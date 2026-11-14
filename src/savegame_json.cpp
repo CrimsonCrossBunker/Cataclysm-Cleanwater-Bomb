@@ -5045,14 +5045,15 @@ void vehicle::deserialize( const JsonObject &data )
 
     refresh( );
 
-    point p;
-    zone_data zd;
     for( JsonObject sdata : data.get_array( "zones" ) ) {
         sdata.allow_omitted_members();
+        point_rel_ms p;
+        zone_data zd;
         sdata.read( "point", p );
+        const int mount_level = sdata.get_int( "mount_level", 0 );
         sdata.read( "zone", zd );
         zd.set_vehicle_owner( *this );
-        loot_zones.emplace( p, zd );
+        loot_zones.emplace( tripoint_rel_ms( p, mount_level ), zd );
     }
     data.read( "other_tow_point", tow_data.other_towing_point );
     // Note that it's possible for a vehicle to be loaded midway
@@ -5128,7 +5129,8 @@ void vehicle::serialize( JsonOut &json ) const
     json.start_array();
     for( auto const &z : loot_zones ) {
         json.start_object();
-        json.member( "point", z.first );
+        json.member( "point", z.first.xy() );
+        json.member( "mount_level", z.first.z() );
         json.member( "zone", z.second );
         json.end_object();
     }

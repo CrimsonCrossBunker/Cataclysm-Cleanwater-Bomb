@@ -2108,13 +2108,12 @@ bool vehicle::merge_rackable_vehicle( map *here, vehicle *carry_veh,
                 parts[ carry_map.rack_part ].set_flag( vp_flag::carrying_flag );
             }
 
-            const std::pair<std::unordered_multimap<point_rel_ms, zone_data>::iterator, std::unordered_multimap<point_rel_ms, zone_data>::iterator>
-            zones_on_point = carry_veh->loot_zones.equal_range( carry_map.old_mount );
-            for( std::unordered_multimap<point_rel_ms, zone_data>::const_iterator it = zones_on_point.first;
-                 it != zones_on_point.second; ++it ) {
+            const auto zones_on_point = carry_veh->loot_zones.equal_range(
+                                            tripoint_rel_ms( carry_map.old_mount, 0 ) );
+            for( auto it = zones_on_point.first; it != zones_on_point.second; ++it ) {
                 zone_data zone = it->second;
                 zone.set_vehicle_owner( *carry_veh );
-                new_zones.emplace( carry_map.carry_mount, zone );
+                new_zones.emplace( tripoint_rel_ms( carry_map.carry_mount, 0 ), zone );
             }
         }
 
@@ -2412,13 +2411,13 @@ bool vehicle::remove_part( vehicle_part &vp, RemovePartHandler &handler )
     }
 
     //Remove loot zone if Cargo was removed.
-    const auto lz_iter = loot_zones.find( vp.mount );
+    const auto lz_iter = loot_zones.find( vp.mount_pos3() );
     const bool no_zone = lz_iter != loot_zones.end();
 
-    if( no_zone && vp.mount_level == 0 && vpi.has_flag( VPFLAG_CARGO ) ) {
+    if( no_zone && vpi.has_flag( VPFLAG_CARGO ) ) {
         // Using the key here (instead of the iterator) will remove all zones on
         // this mount points regardless of how many there are
-        loot_zones.erase( vp.mount );
+        loot_zones.erase( vp.mount_pos3() );
         zones_dirty = true;
     }
     vp.removed = true;
@@ -2851,18 +2850,15 @@ bool vehicle::split_vehicles( map &here,
                 new_labels.insert( label( transferred.mount_pos3(), label_str ) );
             }
             // Prepare the zones to be moved to the new vehicle
-            const std::pair<std::unordered_multimap<point_rel_ms, zone_data>::iterator, std::unordered_multimap<point_rel_ms, zone_data>::iterator>
-            zones_on_point = loot_zones.equal_range( cur_mount );
-            for( std::unordered_multimap<point_rel_ms, zone_data>::const_iterator lz_iter =
-                     zones_on_point.first;
-                 lz_iter != zones_on_point.second; ++lz_iter ) {
+            const auto zones_on_point = loot_zones.equal_range( vp_mov.mount_pos3() );
+            for( auto lz_iter = zones_on_point.first; lz_iter != zones_on_point.second; ++lz_iter ) {
                 zone_data zone = lz_iter->second;
                 zone.set_vehicle_owner( *this );
-                new_zones.emplace( new_mount.raw(), zone );
+                new_zones.emplace( transferred.mount_pos3(), zone );
             }
 
             // Erasing on the key removes all the zones from the point at once
-            loot_zones.erase( cur_mount );
+            loot_zones.erase( vp_mov.mount_pos3() );
 
             // The zone manager will be updated when we next interact with it through get_vehicle_zones
             zones_dirty = true;
@@ -2879,7 +2875,7 @@ bool vehicle::split_vehicles( map &here,
         // We want to create the vehicle zones after we've setup the parts
         // because we need only to move the zone once per mount, not per part. If we move per
         // part, we will end up with duplicates of the zone per part on the same mount
-        for( std::pair<point_rel_ms, zone_data> zone : new_zones ) {
+        for( auto &zone : new_zones ) {
             zone_manager::get_manager().create_vehicle_loot_zone( *new_vehicle, zone.first, zone.second,
                     &here );
         }
@@ -7066,8 +7062,7 @@ void vehicle::place_zones( map &pmap ) const
         return;
     }
     for( vehicle_prototype::zone_def const &d : type->zone_defs ) {
-        tripoint_abs_ms const pt = pmap.get_abs( tripoint_bub_ms( rebase_bub( pos.raw() + d.pt ),
-                                   pmap.get_abs_sub().z() ) );
+        const tripoint_abs_ms pt = mount_to_tripoint_abs( tripoint_rel_ms( d.pt, d.mount_level ) );
         mapgen_place_zone( pt, pt, d.zone_type, get_owner(), d.name, d.filter, &pmap );
     }
 }
@@ -9697,8 +9692,8 @@ bool vehicle::refresh_zones()
 
             const int part_idx = part_with_feature( z.first, "CARGO", false );
             if( part_idx == -1 ) {
-                debugmsg( "Could not find cargo part at %d,%d on vehicle %s for loot zone.  Removing loot zone.",
-                          z.first.x(), z.first.y(), this->name );
+                debugmsg( "Could not find cargo part at %d,%d,%d on vehicle %s for loot zone.  Removing loot zone.",
+                          z.first.x(), z.first.y(), z.first.z(), this->name );
 
                 // If this loot zone refers to a part that no longer exists at this location, then its unattached somehow.
                 // By continuing here and not adding to new_zones, we effectively remove it

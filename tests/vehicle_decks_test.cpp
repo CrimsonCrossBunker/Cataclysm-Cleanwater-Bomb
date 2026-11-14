@@ -7,6 +7,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "clzones.h"
 #include "coordinates.h"
 #include "input.h"
 #include "input_context.h"
@@ -172,6 +173,61 @@ TEST_CASE( "vehicle_decks_preserve_height_when_turning_moving_and_loading",
     CHECK( loaded.part( 1 ).mount_level == 1 );
     CHECK( loaded.abs_part_pos( 1 ) == veh.abs_part_pos( 1 ) );
     CHECK_FALSE( veh.can_unmount( veh.part( 0 ) ).success() );
+}
+
+TEST_CASE( "vehicle_deck_zones_follow_their_cargo", "[vehicle][decks][zones][save]" )
+{
+    clear_avatar();
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    zone_manager &zones = zone_manager::get_manager();
+    zones.clear();
+    veh.set_owner( get_avatar() );
+    const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "trunk" ) );
+    REQUIRE( upper >= 0 );
+    bool lower_cargo = false;
+    SECTION( "cargo_only_upstairs" ) {}
+    SECTION( "stacked_cargo" ) {
+        REQUIRE( veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "trunk" ) ) >= 0 );
+        lower_cargo = true;
+    }
+    here.add_vehicle_to_cache( &veh );
+    const auto add_zone = [&]( const tripoint_rel_ms &mount ) {
+        const tripoint_abs_ms pos = veh.mount_to_tripoint_abs( mount );
+        REQUIRE( zones.add( "Cargo", zone_type_id( "LOOT_FOOD" ), veh.get_owner(), false, true,
+                            pos, pos, nullptr, true, &here ) != nullptr );
+    };
+    add_zone( tripoint_rel_ms::above );
+    if( lower_cargo ) {
+        add_zone( tripoint_rel_ms::zero );
+    }
+    REQUIRE( veh.loot_zones.count( tripoint_rel_ms::above ) == 1 );
+    CHECK( here.get_vehicle_zones( 0 ).size() == ( lower_cargo ? 1 : 0 ) );
+    REQUIRE( here.get_vehicle_zones( 1 ).size() == 1 );
+
+    REQUIRE( here.displace_vehicle( veh, tripoint_rel_ms::east ) );
+    REQUIRE( here.check_vehicle_zones( 1 ) );
+    const auto upstairs = here.get_vehicle_zones( 1 );
+    REQUIRE( upstairs.size() == 1 );
+    CHECK( upstairs.front()->get_start_point() == veh.abs_part_pos( upper ) );
+    CHECK( here.get_vehicle_zones( 0 ).size() == ( lower_cargo ? 1 : 0 ) );
+
+    std::ostringstream buffer;
+    JsonOut out( buffer );
+    veh.serialize( out );
+    vehicle loaded{ vproto_id() };
+    loaded.deserialize( json_loader::from_string( buffer.str() ).get_object() );
+    loaded.set_submap_moved( &here, project_to<coords::sm>( veh.pos_bub( here ) ) );
+    loaded.zones_dirty = true;
+    REQUIRE( loaded.refresh_zones() );
+    REQUIRE( loaded.loot_zones.count( tripoint_rel_ms::above ) == 1 );
+    CHECK( loaded.loot_zones.find( tripoint_rel_ms::above )->second.get_start_point() ==
+           veh.abs_part_pos( upper ) );
+
+    veh.remove_part( veh.part( upper ) );
+    CHECK( veh.loot_zones.count( tripoint_rel_ms::above ) == 0 );
+    CHECK( veh.loot_zones.count( tripoint_rel_ms::zero ) == ( lower_cargo ? 1 : 0 ) );
+    zones.clear();
 }
 
 TEST_CASE( "vehicle_deck_active_items_retain_their_level", "[vehicle][decks][item]" )

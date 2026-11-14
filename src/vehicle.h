@@ -2541,7 +2541,7 @@ class vehicle
         // The value is negative.
         std::map < itype_id, units::energy > fuel_remainder;
         std::map < itype_id, units::energy > fuel_used_last_turn;
-        std::unordered_multimap < point_rel_ms, zone_data > loot_zones;
+        std::unordered_multimap < tripoint_rel_ms, zone_data > loot_zones;
         active_item_cache active_items; // NOLINT(cata-serialize)
         // a magic vehicle, powered by magic.gif
         bool magic = false;

@@ -609,10 +609,12 @@ struct vehicle_prototype {
             std::string name;
             std::string filter;
             point_rel_ms pt;
+            int mount_level = 0;
 
             void deserialize( const JsonObject &jo );
             bool operator==( const zone_def &other ) const {
-                return zone_type == other.zone_type && name == other.name && filter == other.name && pt == other.pt;
+                return zone_type == other.zone_type && name == other.name && filter == other.name &&
+                       pt == other.pt && mount_level == other.mount_level;
             }
         };
 
