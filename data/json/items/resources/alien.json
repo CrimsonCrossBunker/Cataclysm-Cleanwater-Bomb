@@ -12,7 +12,8 @@
     "material": [ "alien_resin" ],
     "symbol": ",",
     "color": "light_gray",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "alien_pod_resin",
@@ -43,7 +44,8 @@
     "volume": "5 L",
     "longest_side": "260 cm",
     "looks_like": "stick",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -56,7 +58,8 @@
     "volume": "700 L",
     "price": "10 kUSD",
     "material": [ "qt_steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -69,7 +72,8 @@
     "volume": "150 L",
     "price": "1 kUSD",
     "material": [ "qt_steel", "aluminum" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -82,7 +86,8 @@
     "volume": "10 L",
     "price": "100 USD",
     "material": [ "plastic", "aluminum", "qt_steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -95,7 +100,8 @@
     "volume": "10 L",
     "price": "100 USD",
     "material": [ "plastic", "qt_steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -108,7 +114,8 @@
     "volume": "1 L",
     "price": "10 USD",
     "material": [ "copper", "qt_steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -121,7 +128,8 @@
     "volume": "250 ml",
     "price": "100 USD",
     "material": [ "plastic", "qt_steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -134,7 +142,8 @@
     "volume": "100 ml",
     "price": "10 USD",
     "material": [ "copper", "qt_steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -147,7 +156,8 @@
     "volume": "3 L",
     "price": "200 USD",
     "material": [ "qt_steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -160,7 +170,8 @@
     "volume": "500 ml",
     "price": "20 USD",
     "material": [ "qt_steel", "copper" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -173,7 +184,8 @@
     "volume": "1000 ml",
     "price": "20 USD",
     "material": [ "qt_steel", "lead" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -186,7 +198,8 @@
     "volume": "1500 ml",
     "price": "20 USD",
     "material": [ "copper", "ceramic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_aluminum",
@@ -200,7 +213,8 @@
     "price_postapoc": "1 USD",
     "material": [ "aluminum" ],
     "symbol": "#",
-    "color": "light_gray"
+    "color": "light_gray",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_plastic",
@@ -214,7 +228,8 @@
     "price_postapoc": "50 cent",
     "material": [ "plastic" ],
     "symbol": "#",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_lc_steel",
@@ -228,7 +243,8 @@
     "price_postapoc": "5 USD",
     "material": [ "lc_steel" ],
     "symbol": "#",
-    "color": "light_gray"
+    "color": "light_gray",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_tin",
@@ -242,7 +258,8 @@
     "price_postapoc": "80 cent",
     "material": [ "tin" ],
     "symbol": "#",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_copper",
@@ -256,7 +273,8 @@
     "price_postapoc": "3 USD",
     "material": [ "copper" ],
     "symbol": "#",
-    "color": "light_green"
+    "color": "light_green",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_zinc",
@@ -270,7 +288,8 @@
     "price_postapoc": "20 cent",
     "material": [ "zinc" ],
     "symbol": "#",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "exodii_ingot_lead",
@@ -284,7 +303,8 @@
     "price_postapoc": "4 USD",
     "material": [ "lead" ],
     "symbol": "#",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -298,7 +318,8 @@
     "price_postapoc": "20 USD",
     "material": [ "aluminum", "plastic", "copper" ],
     "weight": "250 g",
-    "volume": "1 L"
+    "volume": "1 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -312,7 +333,8 @@
     "price_postapoc": "20 USD",
     "material": [ "aluminum", "plastic", "copper" ],
     "weight": "500 g",
-    "volume": "1 L"
+    "volume": "1 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -325,7 +347,8 @@
     "volume": "1 L",
     "price": "10 USD",
     "material": [ "copper", "steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -338,7 +361,8 @@
     "volume": "1 L",
     "price": "10 USD",
     "material": [ "silver", "steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -351,7 +375,8 @@
     "volume": "100 ml",
     "price": "10 USD",
     "material": [ "silver", "gold" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -364,7 +389,8 @@
     "volume": "1 L",
     "price": "10 USD",
     "material": [ "copper", "gold" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -377,7 +403,8 @@
     "volume": "2 L",
     "price": "10 USD",
     "material": [ "steel", "gold" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -390,7 +417,8 @@
     "volume": "2 L",
     "price": "10 USD",
     "material": [ "steel", "glass" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -405,7 +433,8 @@
     "price": "0 cent",
     "material": [ "bone" ],
     "category": "spare_parts",
-    "flags": [ "NO_SALVAGE", "NO_REPAIR" ]
+    "flags": [ "NO_SALVAGE", "NO_REPAIR" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -419,7 +448,8 @@
     "price": "0 cent",
     "material": [ "bone" ],
     "category": "spare_parts",
-    "flags": [ "NO_SALVAGE", "NO_REPAIR" ]
+    "flags": [ "NO_SALVAGE", "NO_REPAIR" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -433,7 +463,8 @@
     "price": "0 cent",
     "material": [ "bone" ],
     "category": "spare_parts",
-    "flags": [ "NO_SALVAGE", "NO_REPAIR" ]
+    "flags": [ "NO_SALVAGE", "NO_REPAIR" ],
+    "stackable": true
   },
   {
     "id": "nether_huntsman_statuette",
@@ -487,6 +518,7 @@
     "volume": "10 L",
     "price": "100 USD",
     "material": [ "plastic", "unobtanium" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   }
 ]

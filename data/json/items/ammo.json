@@ -710,7 +710,8 @@
     "material": [ "cotton" ],
     "flags": [ "NO_SALVAGE" ],
     "volume": "50 ml",
-    "weight": "500 mg"
+    "weight": "500 mg",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -725,7 +726,8 @@
     "material": [ "down_feathers" ],
     "flags": [ "NO_SALVAGE" ],
     "volume": "102 ml",
-    "weight": "102 mg"
+    "weight": "102 mg",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -973,7 +975,8 @@
     "description": "A primer from a shotgun shell.  It has been fired, and must be cleaned and reloaded to use again.",
     "material": [ "steel" ],
     "volume": "1 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -987,7 +990,8 @@
     "description": "A primer from a small-caliber pistol round.  It has been fired, and must be cleaned and reloaded to use again.",
     "material": [ "steel" ],
     "volume": "1 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1001,7 +1005,8 @@
     "description": "A primer from a large-caliber pistol round.  It has been fired, and must be cleaned and reloaded to use again.",
     "material": [ "steel", "powder" ],
     "volume": "1 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1015,7 +1020,8 @@
     "description": "A primer from a small-caliber rifle round.  It has been fired, and must be cleaned and reloaded to use again.",
     "material": [ "steel" ],
     "volume": "1 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1029,7 +1035,8 @@
     "description": "A primer from a large-caliber rifle round.  It has been fired, and must be cleaned and reloaded to use again.",
     "material": [ "steel" ],
     "volume": "1 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1043,7 +1050,8 @@
     "description": "A rubber slug from a shotgun beanbag round.  You could use it to make a new beanbag round.",
     "material": [ "plastic", "rubber" ],
     "volume": "250 ml",
-    "weight": "2 g"
+    "weight": "2 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1058,7 +1066,8 @@
     "material": [ "rubber" ],
     "volume": "250 ml",
     "weight": "38 g",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1421,7 +1430,8 @@
     "material": [ "lc_steel" ],
     "symbol": ",",
     "color": "light_gray",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1437,7 +1447,8 @@
     "material": [ "ch_steel" ],
     "symbol": ",",
     "color": "light_gray",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1469,35 +1480,40 @@
     "description": "A small metal ring, suitable for constructing chainmail.",
     "material": [ "lc_steel" ],
     "volume": "1 ml",
-    "weight": "320 mg"
+    "weight": "320 mg",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "mc_chain_link",
     "copy-from": "lc_chain_link",
     "name": { "str": "medium steel chain link" },
-    "material": [ "mc_steel" ]
+    "material": [ "mc_steel" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "hc_chain_link",
     "copy-from": "lc_chain_link",
     "name": { "str": "high steel chain link" },
-    "material": [ "hc_steel" ]
+    "material": [ "hc_steel" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "ch_chain_link",
     "copy-from": "lc_chain_link",
     "name": { "str": "hardened steel chain link" },
-    "material": [ "ch_steel" ]
+    "material": [ "ch_steel" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "qt_chain_link",
     "copy-from": "lc_chain_link",
     "name": { "str": "tempered steel chain link" },
-    "material": [ "qt_steel" ]
+    "material": [ "qt_steel" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1634,7 +1650,8 @@
     "material": [ "bronze" ],
     "symbol": ",",
     "color": "yellow",
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1783,7 +1800,8 @@
     "price_postapoc": "5 cent",
     "material": [ "steel" ],
     "symbol": ";",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "3006_steel_core",
@@ -1800,7 +1818,8 @@
     "price_postapoc": "10 cent",
     "material": [ "steel" ],
     "symbol": ";",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "123_steel_core",
@@ -1819,7 +1838,8 @@
     "price_postapoc": "1 cent",
     "material": [ "steel" ],
     "symbol": ";",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "545_steel_core",
@@ -1836,7 +1856,8 @@
     "price_postapoc": "10 cent",
     "material": [ "steel" ],
     "symbol": ";",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "50_steel_core",
@@ -1853,6 +1874,7 @@
     "price_postapoc": "1 cent",
     "material": [ "steel" ],
     "symbol": ";",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   }
 ]

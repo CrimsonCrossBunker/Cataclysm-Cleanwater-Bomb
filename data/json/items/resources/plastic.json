@@ -60,7 +60,8 @@
     "price_postapoc": "2 USD 30 cent",
     "material": [ "plastic" ],
     "symbol": "=",
-    "color": "light_blue"
+    "color": "light_blue",
+    "stackable": true
   },
   {
     "id": "5l_plastic",
@@ -74,7 +75,8 @@
     "price_postapoc": "1 USD 16 cent",
     "material": [ "plastic" ],
     "symbol": "=",
-    "color": "light_blue"
+    "color": "light_blue",
+    "stackable": true
   },
   {
     "id": "plastic_chunk",
@@ -197,7 +199,8 @@
     "price_postapoc": "25 cent",
     "material": [ "hard_plastic_transp" ],
     "symbol": ")",
-    "color": "light_blue"
+    "color": "light_blue",
+    "stackable": true
   },
   {
     "id": "panoramic_eyepiece",

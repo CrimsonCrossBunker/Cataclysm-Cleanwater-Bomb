@@ -260,7 +260,8 @@
     "price": "50 USD",
     "price_postapoc": "1 USD",
     "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 6 }
+    "melee_damage": { "bash": 6 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -277,7 +278,8 @@
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "uneven" },
     "price": "50 cent",
     "price_postapoc": "1 cent",
-    "flags": [ "FIREWOOD" ]
+    "flags": [ "FIREWOOD" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -331,7 +333,8 @@
     "price": "400 USD",
     "price_postapoc": "50 cent",
     "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -463,7 +466,8 @@
     "price": "300 USD",
     "price_postapoc": "20 cent",
     "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 12 }
+    "melee_damage": { "bash": 12 },
+    "stackable": true
   },
   {
     "type": "ITEM",

@@ -1554,7 +1554,8 @@
     "price": "10 USD",
     "price_postapoc": "5 cent",
     "melee_damage": { "bash": 20 },
-    "//": "Based on https://www.constructionknowledge.net/metal/images_metal/hss%20rect%20Steel%20section%20tables%20080307.pdf HSS4X4X1/2"
+    "//": "Based on https://www.constructionknowledge.net/metal/images_metal/hss%20rect%20Steel%20section%20tables%20080307.pdf HSS4X4X1/2",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1572,6 +1573,7 @@
     "price": "5 USD",
     "price_postapoc": "2 cent",
     "melee_damage": { "bash": 10 },
-    "//": "Based on https://www.constructionknowledge.net/metal/images_metal/hss%20rect%20Steel%20section%20tables%20080307.pdf HSS4X4X1/2"
+    "//": "Based on https://www.constructionknowledge.net/metal/images_metal/hss%20rect%20Steel%20section%20tables%20080307.pdf HSS4X4X1/2",
+    "stackable": true
   }
 ]

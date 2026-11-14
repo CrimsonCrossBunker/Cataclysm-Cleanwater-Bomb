@@ -22,7 +22,8 @@
     "name": { "str": "alpha sample" },
     "description": "A slurry of superiority.",
     "looks_like": "medical_sample",
-    "material": [ "hflesh", "hblood", "bone" ]
+    "material": [ "hflesh", "hblood", "bone" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -32,7 +33,8 @@
     "name": { "str": "frog sample" },
     "description": "A slurry of simplicity.",
     "looks_like": "medical_sample",
-    "material": [ "slime", "blood" ]
+    "material": [ "slime", "blood" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -42,7 +44,8 @@
     "name": { "str": "beast sample" },
     "description": "A slurry of might.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "blood", "bone", "fur" ]
+    "material": [ "flesh", "blood", "bone", "fur" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -52,7 +55,8 @@
     "name": { "str": "bird sample" },
     "description": "A slurry of freedom.",
     "looks_like": "medical_sample",
-    "material": [ "bone" ]
+    "material": [ "bone" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -62,7 +66,8 @@
     "name": { "str": "cattle sample" },
     "description": "A slurry of tranquility.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "gutskin" ]
+    "material": [ "flesh", "gutskin" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -72,7 +77,8 @@
     "name": { "str": "cephalopod sample" },
     "description": "A slurry of curiosity.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "slime" ]
+    "material": [ "flesh", "slime" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -82,7 +88,8 @@
     "name": { "str": "chimera sample" },
     "description": "A slurry of adaptation.",
     "looks_like": "medical_sample",
-    "material": [ "gutskin", "bone", "fur" ]
+    "material": [ "gutskin", "bone", "fur" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -92,7 +99,8 @@
     "name": { "str": "Elf-A sample" },
     "description": "A slurry of responsibility.",
     "looks_like": "medical_sample",
-    "material": [ "veggy", "hblood" ]
+    "material": [ "veggy", "hblood" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -102,7 +110,8 @@
     "name": { "str": "feline sample" },
     "description": "A slurry of flexibility.",
     "looks_like": "medical_sample",
-    "material": [ "fur", "blood" ]
+    "material": [ "fur", "blood" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -112,7 +121,8 @@
     "name": { "str": "fish sample" },
     "description": "A slurry of transformation.",
     "looks_like": "medical_sample",
-    "material": [ "blood", "water" ]
+    "material": [ "blood", "water" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -122,7 +132,8 @@
     "name": { "str": "snail sample" },
     "description": "A slurry of steadfastness.",
     "looks_like": "medical_sample",
-    "material": [ "chitin", "slime" ]
+    "material": [ "chitin", "slime" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -142,7 +153,8 @@
     "name": { "str": "insect sample" },
     "description": "A slurry of stability.",
     "looks_like": "medical_sample",
-    "material": [ "iflesh", "chitin" ]
+    "material": [ "iflesh", "chitin" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -152,7 +164,8 @@
     "name": { "str": "lizard sample" },
     "description": "A slurry of healing.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "blood" ]
+    "material": [ "flesh", "blood" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -162,7 +175,8 @@
     "name": { "str": "lupine sample" },
     "description": "A slurry of community.",
     "looks_like": "medical_sample",
-    "material": [ "fur", "flesh", "blood" ]
+    "material": [ "fur", "flesh", "blood" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -171,7 +185,8 @@
     "color": "magenta",
     "name": { "str": "medical sample" },
     "description": "A slurry of satisfaction.",
-    "material": [ "hflesh", "iron" ]
+    "material": [ "hflesh", "iron" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -181,7 +196,8 @@
     "name": { "str": "mouse sample" },
     "description": "A slurry of experimentation.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "bone" ]
+    "material": [ "flesh", "bone" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -191,7 +207,8 @@
     "name": { "str": "plant sample" },
     "description": "A slurry of peace.",
     "looks_like": "medical_sample",
-    "material": [ "veggy", "wood" ]
+    "material": [ "veggy", "wood" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -201,7 +218,8 @@
     "name": { "str": "raptor sample" },
     "description": "A slurry of evolution.",
     "looks_like": "medical_sample",
-    "material": [ "bone" ]
+    "material": [ "bone" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -211,7 +229,8 @@
     "name": { "str": "rabbit sample" },
     "description": "A slurry of luck.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "fur" ]
+    "material": [ "flesh", "fur" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -221,7 +240,8 @@
     "name": { "str": "rat sample" },
     "description": "A slurry of survival.",
     "looks_like": "medical_sample",
-    "material": [ "fur", "bone" ]
+    "material": [ "fur", "bone" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -231,7 +251,8 @@
     "name": { "str": "slime sample" },
     "description": "A slurry of sharing.",
     "looks_like": "medical_sample",
-    "material": [ "slime" ]
+    "material": [ "slime" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -241,7 +262,8 @@
     "name": { "str": "spider sample" },
     "description": "A slurry of sustainability.",
     "looks_like": "medical_sample",
-    "material": [ "chitin", "fur" ]
+    "material": [ "chitin", "fur" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -251,7 +273,8 @@
     "name": { "str": "troglobite sample" },
     "description": "A slurry of reliability.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "soil" ]
+    "material": [ "flesh", "soil" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -261,7 +284,8 @@
     "name": { "str": "ursine sample" },
     "description": "A slurry of toughness.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "fur", "gutskin" ]
+    "material": [ "flesh", "fur", "gutskin" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -271,7 +295,8 @@
     "name": { "str": "crustacean sample" },
     "description": "A slurry of toughness.",
     "looks_like": "medical_sample",
-    "material": [ "flesh", "chitin" ]
+    "material": [ "flesh", "chitin" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -281,6 +306,7 @@
     "name": { "str": "chiropteran sample" },
     "description": "A slurry of silence.",
     "looks_like": "medical_sample",
-    "material": [ "bone", "blood" ]
+    "material": [ "bone", "blood" ],
+    "stackable": true
   }
 ]

@@ -30,7 +30,8 @@
     "looks_like": "motor_small",
     "material": [ "steel" ],
     "symbol": ":",
-    "color": "light_gray"
+    "color": "light_gray",
+    "stackable": true
   },
   {
     "id": "flux_comp_gen",
@@ -48,7 +49,8 @@
     "looks_like": "cu_pipe",
     "material": [ "copper" ],
     "symbol": "|",
-    "color": "brown"
+    "color": "brown",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -61,6 +63,7 @@
     "volume": "1000 ml",
     "price": "20 USD",
     "material": [ "steel", "gold" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   }
 ]
