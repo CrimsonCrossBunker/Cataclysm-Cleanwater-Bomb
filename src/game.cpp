@@ -804,6 +804,8 @@ void game::reset_game_state()
     calendar::set_location( ::get_option<float>( "LATITUDE" ), ::get_option<float>( "LONGITUDE" ) );
 
     weather.weather_id = WEATHER_CLEAR;
+    weather.climate_origin.reset();
+    weather.climate_precipitation_mm_per_hour.reset();
     // Weather shift in 30
     weather.nextweather = calendar::start_of_game + 30_minutes;
 
@@ -1019,6 +1021,9 @@ bool game::start_game()
     load_map( lev, /*pump_events=*/true );
 
     start_loc.place_player( u, omtstart );
+    if( !weather.climate_origin && world_generator->active_world->world_saves.empty() ) {
+        weather.climate_origin = u.pos_abs().xy();
+    }
     // Set spawn location for starting items (maps need it to be readable)
     const tripoint_abs_ms player_pos = u.pos_abs();
     u.visit_items( [&player_pos]( item * it, item * ) {

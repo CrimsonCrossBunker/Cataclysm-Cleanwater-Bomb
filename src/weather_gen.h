@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_WEATHER_GEN_H
 #define CATA_SRC_WEATHER_GEN_H
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "calendar.h"
 #include "coordinates.h"
 #include "point.h"
+#include "regional_climate.h"
 #include "type_id.h"
 #include "units.h"
 
@@ -23,6 +25,7 @@ struct w_point {
     int winddirection = 0;
     season_effective_time time;
     tripoint_abs_ms location;
+    std::optional<double> climate_precipitation_mm_per_hour;
 };
 
 class weather_generator
@@ -32,6 +35,8 @@ class weather_generator
 
         // Average temperature
         double base_temperature = 0;
+        // Optional station used as the starting climate and geographic origin.
+        std::string climate_station;
         // Average humidity
         double base_humidity = 0;
         // Average atmospheric pressure
@@ -75,6 +80,7 @@ class weather_generator
         void sort_weather();
         units::temperature get_weather_temperature( const tripoint_abs_ms &, const time_point &,
                 unsigned ) const;
+        std::optional<regional_climate::normals> climate_at( const tripoint_abs_ms & ) const;
 
         bool was_loaded = false;
         void load( const JsonObject &jo, std::string_view );
