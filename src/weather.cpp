@@ -42,6 +42,7 @@
 #include "options.h"
 #include "overmap.h"
 #include "overmap_ui.h"
+#include "north_america.h"
 #include "overmapbuffer.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -1063,10 +1064,21 @@ void weather_manager::on_game_start()
     }
 }
 
+void weather_manager::update_solar_location()
+{
+    if( north_america::active() ) {
+        const auto solar_location = north_america::location( get_player_character().pos_abs().xy() );
+        calendar::set_location( solar_location.latitude, solar_location.longitude );
+    } else if( g && g->north_america_world ) {
+        calendar::set_location( get_option<float>( "LATITUDE" ), get_option<float>( "LONGITUDE" ) );
+    }
+}
+
 void weather_manager::update_weather()
 {
     CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
+    update_solar_location();
     weather_changed = false;
     if( weather_id == WEATHER_NULL || calendar::turn >= nextweather ) {
         w_point &w = *weather_precise;

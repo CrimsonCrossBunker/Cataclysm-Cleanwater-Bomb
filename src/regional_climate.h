@@ -34,7 +34,7 @@ struct normals {
 };
 
 // WGS84 latitude/longitude in degrees. East and north are positive.
-// This coarse lookup is intended for the United States, including Alaska and Hawaii.
+// This coarse lookup is intended for Canada, Mexico, and the United States.
 std::optional<normals> at( coordinates location );
 std::optional<coordinates> station_location( const std::string &id );
 // Local geodetic offsets from the starting station. One map square is one metre.

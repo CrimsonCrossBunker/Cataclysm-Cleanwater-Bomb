@@ -1704,6 +1704,7 @@ void game::unserialize_master( const JsonValue &jv )
     // Reset state that has no clear-on-load hook of its own; otherwise a
     // save without the field inherits the previous game's queue.
     get_item_wakeups().clear();
+    north_america_world = false;
     JsonObject game_json = jv;
     for( JsonMember jsin : game_json ) {
         std::string name = jsin.name();
@@ -1725,6 +1726,8 @@ void game::unserialize_master( const JsonValue &jv )
             jsin.read( *faction_manager_ptr );
         } else if( name == "seed" ) {
             jsin.read( seed );
+        } else if( name == "north_america_world" ) {
+            north_america_world = jsin.get_bool();
         } else if( name == "climate_origin" ) {
             jsin.read( weather.climate_origin );
         } else if( name == "weather" ) {
@@ -1957,6 +1960,9 @@ void game::serialize_master( std::ostream &fout )
 
         json.member( "factions", *faction_manager_ptr );
         json.member( "seed", seed );
+        if( north_america_world ) {
+            json.member( "north_america_world", north_america_world );
+        }
         if( weather.climate_origin ) {
             json.member( "climate_origin", *weather.climate_origin );
         }

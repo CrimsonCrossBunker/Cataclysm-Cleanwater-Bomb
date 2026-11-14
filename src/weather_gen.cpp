@@ -25,6 +25,7 @@
 #include "lua_platform_content.h"
 #include "lua_platform_runtime.h"
 #include "math_defines.h"
+#include "north_america.h"
 #include "pimpl.h"
 #include "point.h"
 #include "rng.h"
@@ -174,6 +175,9 @@ std::optional<regional_climate::normals> weather_generator::climate_at(
     static const dimension_id earth_dimension( "default" );
     if( climate_station.empty() || !g || g->get_dimension_prefix() != earth_dimension ) {
         return std::nullopt;
+    }
+    if( north_america::active() ) {
+        return regional_climate::at( north_america::location( location.xy() ) );
     }
     const auto origin = regional_climate::station_location( climate_station );
     if( !origin ) {

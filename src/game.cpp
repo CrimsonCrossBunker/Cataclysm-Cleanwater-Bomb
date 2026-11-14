@@ -203,6 +203,7 @@
 #include "output.h"
 #include "overmap.h"
 #include "overmap_ui.h"
+#include "north_america.h"
 #include "overmapbuffer.h"
 #include "panels.h"
 #include "past_achievements_info.h"
@@ -787,6 +788,7 @@ void game::reset_game_state()
     local_player_control_ptr->reset();
     npc_lifetimes_ptr->reset();
     new_game = true;
+    north_america_world = false;
     dimension_checkpoint_pending = false;
 
     next_npc_id = character_id( 1 );
@@ -926,12 +928,6 @@ bool game::start_game()
         gamemode = std::make_unique<special_game>();
     }
 
-    // The world seed is rolled by the new-game flow before character
-    // creation (see main_menu::new_character_tab); loading restores it
-    // from the master save.
-#ifdef MP_ENABLED
-    cata_mp::mp_client_prepare_spawn();
-#endif
     new_game = true;
     start_calendar();
     weather.nextweather = calendar::turn;
@@ -951,6 +947,12 @@ bool game::start_game()
     refresh_display();
 
     load_master();
+    if( north_america::offer_starting_city() ) {
+        north_america_world = true;
+    }
+#ifdef MP_ENABLED
+    cata_mp::mp_client_prepare_spawn();
+#endif
     u.setID( assign_npc_id() ); // should be as soon as possible, but *after* load_master
     // A template can carry a previous world's profile. Starting a new game
     // creates a new local player even when its character was imported.
@@ -978,7 +980,7 @@ bool game::start_game()
             break;
         }
 #endif
-        if( select_starting_city ) {
+        if( select_starting_city && !north_america::active() && !city::get_all().empty() ) {
             if( !u.starting_city.has_value() ) {
                 u.starting_city = random_entry( city::get_all() );
                 u.world_origin = u.starting_city->pos_om;
@@ -1024,6 +1026,7 @@ bool game::start_game()
     if( !weather.climate_origin && world_generator->active_world->world_saves.empty() ) {
         weather.climate_origin = u.pos_abs().xy();
     }
+    weather.update_solar_location();
     // Set spawn location for starting items (maps need it to be readable)
     const tripoint_abs_ms player_pos = u.pos_abs();
     u.visit_items( [&player_pos]( item * it, item * ) {
