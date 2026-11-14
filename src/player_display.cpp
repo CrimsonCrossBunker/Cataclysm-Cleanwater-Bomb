@@ -227,11 +227,14 @@ static std::string get_score_text( const std::string &sc_name, float cur_score, 
     return string_format( _( "%1$s score: %2$s" ), sc_name, sc_txt );
 }
 
-static std::vector<std::string> get_encumbrance_description( const Character &you,
+std::vector<std::string> display::get_encumbrance_description( const Character &you,
         const bodypart_id &bp )
 {
     std::vector<std::string> s;
     const bodypart *part = you.get_part( bp );
+    if( !part ) {
+        return s;
+    }
     if( !bp->encumb_text.empty() ) {
         s.emplace_back( colorize( string_format( _( "Encumbrance effects: %s" ), bp->encumb_text ),
                                   c_magenta ) );
@@ -597,7 +600,7 @@ static void draw_encumbrance_info( const catacurses::window &w_info, const Chara
 
     werase( w_info );
     if( line < bps.size() ) {
-        const std::vector<std::string> s = get_encumbrance_description( you, bps[line].first );
+        const std::vector<std::string> s = display::get_encumbrance_description( you, bps[line].first );
         const std::string desc = string_join( s, "\n" );
         draw_x_info( w_info, desc, info_line );
     }

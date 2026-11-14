@@ -6,6 +6,8 @@
 #include "cata_catch.h"
 #include "character.h"
 #include "character_attire.h"
+#include "debug.h"
+#include "display.h"
 #include "item.h"
 #include "item_contents.h"
 #include "npc.h"
@@ -24,6 +26,26 @@ static const itype_id itype_test_longshirt( "test_longshirt" );
 static const itype_id itype_test_plate( "test_plate" );
 static const itype_id itype_test_plate_skirt( "test_plate_skirt" );
 static const itype_id itype_test_postman_shirt( "test_postman_shirt" );
+
+TEST_CASE( "encumbrance_description_requires_a_bodypart", "[encumbrance][display]" )
+{
+    npc example_npc;
+    REQUIRE( example_npc.get_body().empty() );
+
+    std::vector<std::string> description;
+    const std::string diagnostics = capture_debugmsg_during( [&]() {
+        description = display::get_encumbrance_description( example_npc, bodypart_id( "torso" ) );
+    } );
+    CHECK( description.empty() );
+    CHECK( diagnostics.find( "Could not find bodypart torso" ) != std::string::npos );
+
+    example_npc.set_body();
+    REQUIRE_FALSE( example_npc.get_body().empty() );
+    for( const bodypart_id &part_id : example_npc.get_all_body_parts() ) {
+        CAPTURE( part_id );
+        CHECK_FALSE( display::get_encumbrance_description( example_npc, part_id ).empty() );
+    }
+}
 
 static void test_encumbrance_on(
     Character &p,
