@@ -2159,7 +2159,7 @@ bool vehicle::merge_appliance_into_grid( map *here, vehicle &veh_target )
         return false;
     }
     // Release grips on either grid before changing part mounts and vehicle identities.
-    const auto release_grab = [&]( Character &who ) {
+    const auto release_grab = [&]( Character & who ) {
         if( who.get_grab_type() != object_type::VEHICLE ) {
             return;
         }

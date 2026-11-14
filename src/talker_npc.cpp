@@ -634,16 +634,16 @@ npc_item_offer_result talker_npc::offer_item( item_location loc, const bool to_u
     std::string reason = me_npc->chat_snippets().snip_give_nope.translated();
     const auto take = [&]( const std::string & reply ) -> npc_item_offer_result {
         if( giver )
-    {
-        donor->mod_moves( -to_moves<int>( 1_seconds ) );
+        {
+            donor->mod_moves( -to_moves<int>( 1_seconds ) );
         }
         if( recipient )
-    {
-        me_npc->has_new_items = true;
-    }
-    return { reply };
-};
-if( !to_use ) {
+        {
+            me_npc->has_new_items = true;
+        }
+        return { reply };
+    };
+    if( !to_use ) {
         const bool volume = me_npc->can_pickVolume( *loc );
         const bool weight = me_npc->can_pickWeight( *loc );
         if( volume && weight ) {

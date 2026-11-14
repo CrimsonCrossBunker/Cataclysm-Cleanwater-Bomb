@@ -160,8 +160,8 @@ int eject( Character &who, map &here, const tripoint_bub_ms &tile, item &entry, 
     const std::string name = portion.tname();
     item_location placed;
     const int moved = here.unload_furniture_item( who.pos_bub( here ),
-        item_location( map_cursor( here.get_abs( tile ) ), &entry ),
-        std::move( portion ), who, &placed );
+                      item_location( map_cursor( here.get_abs( tile ) ), &entry ),
+                      std::move( portion ), who, &placed );
     if( moved > 0 && context && placed ) {
         record_tile( changed, placed.pos_abs() );
     }

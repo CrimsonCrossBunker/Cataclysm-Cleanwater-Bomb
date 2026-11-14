@@ -99,7 +99,7 @@ void dispense_furniture_liquid( player_activity &activity, Character &who,
     const tripoint_abs_ms position = source.position;
     const itype_id type = batch->typeId();
     const int amount = std::min( batch->charges, std::max( 1,
-        batch->charges_per_volume( units::from_liter( 4.0F / 6.0F ) ) ) );
+                                 batch->charges_per_volume( units::from_liter( 4.0F / 6.0F ) ) ) );
     item portion( *batch );
     portion.charges = amount;
     int unpoured;

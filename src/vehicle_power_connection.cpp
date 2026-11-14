@@ -22,7 +22,8 @@
 
 namespace
 {
-std::optional<vpart_reference> vehicle_cable_endpoint_at( map &here, const tripoint_abs_ms &position,
+std::optional<vpart_reference> vehicle_cable_endpoint_at( map &here,
+        const tripoint_abs_ms &position,
         link_state kind = link_state::vehicle_port )
 {
     if( !here.inbounds( position ) ) {
@@ -56,9 +57,11 @@ bool reachable_vehicle_cable_endpoint( const Character &who, const tripoint_abs_
     return position.z() == origin.z() && dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1;
 }
 
-bool matches_vehicle_cable_endpoint( const vpart_reference &port, const vehicle_cable_endpoint &endpoint )
+bool matches_vehicle_cable_endpoint( const vpart_reference &port,
+                                     const vehicle_cable_endpoint &endpoint )
 {
-    return port.pos_abs() == endpoint.position && port.vehicle().uid().get_value() == endpoint.vehicle_id &&
+    return port.pos_abs() == endpoint.position &&
+           port.vehicle().uid().get_value() == endpoint.vehicle_id &&
            port.part().get_base().uid().get_value() == endpoint.part_id &&
            port.vehicle().get_owner() == endpoint.owner;
 }
@@ -82,7 +85,7 @@ std::optional<vpart_reference> resolve_vehicle_cable_endpoint( const Character &
 }
 
 bool authorize_vehicle_cable_endpoint( Character &who, map &here, vehicle_cable_endpoint &endpoint,
-                           link_state kind )
+                                       link_state kind )
 {
     const auto port = resolve_vehicle_cable_endpoint( who, here, endpoint, kind );
     if( !port ) {
@@ -105,7 +108,8 @@ bool authorize_vehicle_cable_endpoint( Character &who, map &here, vehicle_cable_
     return true;
 }
 
-bool confirm_vehicle_cable_endpoint( Character &who, map &here, vehicle_cable_endpoint &endpoint, link_state kind )
+bool confirm_vehicle_cable_endpoint( Character &who, map &here, vehicle_cable_endpoint &endpoint,
+                                     link_state kind )
 {
     const auto at = vehicle_cable_endpoint_at( here, endpoint.position, kind );
     if( !at || !matches_vehicle_cable_endpoint( *at, endpoint ) ) {
@@ -174,7 +178,7 @@ std::optional<vpart_reference> current_vehicle_cable_endpoint( map &here, const 
         return std::nullopt;
     }
     const auto port = vehicle_cable_endpoint_at( here, target->mount_to_tripoint_abs( state.t_mount ),
-                                    kind );
+                      kind );
     if( !port || &port->vehicle() != target ||
         ( state.t_part_uid > 0 && port->part().get_base().uid().get_value() != state.t_part_uid ) ||
         state.last_processed <= port->part().last_disconnected ) {
@@ -246,7 +250,7 @@ std::optional<appliance_connection_selection> query_appliance_connection( Charac
         return actor && context && source_ref && who.pos_abs() == origin;
     };
     const auto position = choose_adjacent_highlight( here, who.pos_bub( here ),
-                          _( "Attach the cable where?" ), "", [&]( const tripoint_bub_ms & candidate ) {
+    _( "Attach the cable where?" ), "", [&]( const tripoint_bub_ms & candidate ) {
         if( !current() ) {
             return false;
         }
@@ -262,8 +266,10 @@ std::optional<appliance_connection_selection> query_appliance_connection( Charac
     }
     selection.destination = describe_vehicle_cable_endpoint( *port_at_destination );
 
-    if( !confirm_vehicle_cable_endpoint( who, here, selection.source, link_state::vehicle_port ) || !current() ||
-        !confirm_vehicle_cable_endpoint( who, here, selection.destination, link_state::vehicle_port ) || !current() ) {
+    if( !confirm_vehicle_cable_endpoint( who, here, selection.source, link_state::vehicle_port ) ||
+        !current() ||
+        !confirm_vehicle_cable_endpoint( who, here, selection.destination, link_state::vehicle_port ) ||
+        !current() ) {
         return std::nullopt;
     }
     return selection;
@@ -383,7 +389,7 @@ std::optional<cable_link_selection> query_cable_link( Character &who, map &here,
     }
 
     const link_state first_kind = attached_vehicle_kind( selection.expected_source,
-                                 selection.expected_target );
+                                  selection.expected_target );
     if( first_kind != link_state::no_link && !selection.first ) {
         who.add_msg_if_player( m_bad, _( "The first end of the cable is no longer connected." ) );
         return std::nullopt;
@@ -433,7 +439,7 @@ std::optional<cable_link_selection> query_cable_link( Character &who, map &here,
                                selection.to_towing ? _( "Attach cable to the vehicle that will do the towing." ) :
                                _( "Attach cable to the vehicle that will be towed." );
     const auto chosen = choose_adjacent_highlight( here, who.pos_bub( here ),
-                        prompt, "", [&]( const tripoint_bub_ms & candidate ) {
+    prompt, "", [&]( const tripoint_bub_ms & candidate ) {
         if( !current() ) {
             return false;
         }
@@ -460,7 +466,7 @@ std::optional<cable_link_selection> query_cable_link( Character &who, map &here,
 }
 
 bool valid_cable_link( Character &who, map &here, const item &cable, const link_up_actor &link,
-                      const cable_link_selection &selection )
+                       const cable_link_selection &selection )
 {
     if( who.is_dead_state() || who.activity || who.pos_abs() != selection.origin ) {
         return false;
@@ -539,13 +545,13 @@ bool valid_cable_link( Character &who, map &here, const item &cable, const link_
 }
 
 std::optional<int> execute_cable_link( Character &who, map &here, item_location cable,
-                                      const link_up_actor &link, const cable_link_selection &selection )
+                                       const link_up_actor &link, const cable_link_selection &selection )
 {
     if( !cable || !valid_cable_link( who, here, *cable, link, selection ) ) {
         return std::nullopt;
     }
     const link_state first_kind = attached_vehicle_kind( selection.expected_source,
-                                 selection.expected_target );
+                                  selection.expected_target );
     if( selection.action == "detach" ) {
         if( first_kind != link_state::no_link ) {
             const auto port = current_vehicle_cable_endpoint( here, *cable );

@@ -4289,14 +4289,14 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
 
     // Old cables without a device UID retain the original flag-based lookup.
     const int64_t supply_uid = link().s_item_uid;
-    const auto is_linked_supply = [&]( const item &device ) {
+    const auto is_linked_supply = [&]( const item & device ) {
         return device.get_var( "cable" ) == "plugged_in" &&
                ( supply_uid <= 0 || device.uid().get_value() == supply_uid );
     };
     if( link().source == link_state::solarpack ) {
         const bool has_pack = carrier && ( supply_uid <= 0 ?
-                              carrier->worn_with_flag( flag_SOLARPACK_ON ) :
-                              carrier->cache_has_item_with( flag_SOLARPACK_ON, [&]( const item & device ) {
+                                           carrier->worn_with_flag( flag_SOLARPACK_ON ) :
+        carrier->cache_has_item_with( flag_SOLARPACK_ON, [&]( const item & device ) {
             return is_linked_supply( device ) && carrier->is_worn( device );
         } ) );
         if( !has_pack ) {

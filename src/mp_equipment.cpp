@@ -265,7 +265,8 @@ bool start_owned_wear( Character &who, map &here, std::vector<equipment_intent> 
     return static_cast<bool>( who.activity );
 }
 
-void do_owned_wear( player_activity &activity, Character &who, std::vector<equipment_intent> &pending )
+void do_owned_wear( player_activity &activity, Character &who,
+                    std::vector<equipment_intent> &pending )
 {
     map &here = get_map();
     const character_action_guard actor( who );
@@ -315,7 +316,8 @@ void client_select_equipment( const std::string &operation, item_location source
     }
 }
 
-void client_select_wear( const std::vector<item_location> &sources, const std::vector<int> &quantities )
+void client_select_wear( const std::vector<item_location> &sources,
+                         const std::vector<int> &quantities )
 {
     avatar &who = get_avatar();
     if( !is_client_mode() || who.get_moves() <= 0 || is_client_waiting_for_ack() ||
@@ -335,7 +337,8 @@ void client_select_wear( const std::vector<item_location> &sources, const std::v
             selected.push_back( std::move( *intent ) );
         }
     }
-    if( !selected.empty() && actor && context && who.pos_abs() == origin && wielded_uid( who ) == weapon ) {
+    if( !selected.empty() && actor && context && who.pos_abs() == origin &&
+        wielded_uid( who ) == weapon ) {
         client_start_owned_wear( selected );
     }
 }

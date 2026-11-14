@@ -943,7 +943,7 @@ void npc::set_fac( const faction_id &id )
 
 void npc::apply_ownership_to_inv()
 {
-    for( item*&e : inv_dump() ) {
+    for( item *&e : inv_dump() ) {
         e->set_owner( *this );
     }
 }
@@ -1580,7 +1580,7 @@ bool npc::wear_if_wanted( const item &it, std::string &reason, item_location *of
     const character_action_guard wearer( *this );
     Character *donor = offered && *offered ? offered->carrier() : nullptr;
     const std::optional<character_action_guard> giver = donor ?
-        std::optional<character_action_guard>( std::in_place, *donor ) : std::nullopt;
+            std::optional<character_action_guard>( std::in_place, *donor ) : std::nullopt;
     std::set<int64_t> replaceable;
     if( offered ) {
         std::vector<item *> garments;
@@ -1824,7 +1824,7 @@ bool npc::wield_offered_item( item_location &source, Character &donor )
                     mod_moves( -wear_cost );
                 }
             } else {
-                const item_disposition disposition{ can_stash( *old ) && !old->will_spill() ?
+                const item_disposition disposition{ can_stash( *old )&& !old->will_spill() ?
                                                     "inventory" : "drop", 0, 0 };
                 if( !execute_item_disposition( *this, old, disposition ) ) {
                     return false;

@@ -5741,17 +5741,17 @@ item_location link_up_actor::query_supply_device( Character &who, link_state sup
         return {};
     }
     if( supply == link_state::ups ) {
-        return game_menus::inv::titled_filter_menu( []( const item &device ) {
+        return game_menus::inv::titled_filter_menu( []( const item & device ) {
             return device.has_flag( flag_IS_UPS );
         }, *you, _( "Choose UPS:" ), -1, _( "You need an active UPS." ) );
     }
-    return game_menus::inv::titled_filter_menu( [&who]( const item &device ) {
+    return game_menus::inv::titled_filter_menu( [&who]( const item & device ) {
         return device.has_flag( flag_SOLARPACK_ON ) && who.is_worn( device );
     }, *you, _( "Choose solar pack:" ), -1, _( "You need an unfolded solar pack." ) );
 }
 
 bool link_up_actor::can_attach_supply( Character &who, const item &cable, link_state supply,
-                                      const item_location &device ) const
+                                       const item_location &device ) const
 {
     if( !targets.count( supply ) || cable.link_length() == -1 ||
         cable.link_has_state( link_state::vehicle_tow ) ||
@@ -5765,7 +5765,8 @@ bool link_up_actor::can_attach_supply( Character &who, const item &cable, link_s
     }
     if( !device || device.get_item() == &cable || !device.held_by( who ) ||
         !device->is_owned_by( who, true ) ||
-        ( !cable.has_no_links() && !cable.link_has_states( link_state::no_link, link_state::bio_cable ) ) ) {
+        ( !cable.has_no_links() &&
+          !cable.link_has_states( link_state::no_link, link_state::bio_cable ) ) ) {
         return false;
     }
     if( supply == link_state::ups ) {
@@ -6016,7 +6017,8 @@ std::optional<int> link_up_actor::attach_tow_cable( Character &who, item &it, ma
         return std::nullopt;
     }
     vehicle &destination = endpoint.vehicle();
-    const ret_val<void> result = it.link_to( destination, endpoint.mount_pos(), link_state::vehicle_tow );
+    const ret_val<void> result = it.link_to( destination, endpoint.mount_pos(),
+                                 link_state::vehicle_tow );
     if( !result.success() ) {
         who.add_msg_if_player( m_bad, result.str() );
         return std::nullopt;
@@ -6065,7 +6067,7 @@ item_location link_up_actor::query_cable_extension( Character &who,
         return {};
     }
     const bool spool = cable->has_flag( flag_CABLE_SPOOL );
-    return game_menus::inv::titled_filter_menu( [&]( const item &candidate ) {
+    return game_menus::inv::titled_filter_menu( [&]( const item & candidate ) {
         return cable && compatible_extension( *cable, candidate );
     }, *you, spool ? _( "Extend which cable?" ) : _( "Extend with which cable?" ), -1,
     _( "You don't have a compatible cable." ) );

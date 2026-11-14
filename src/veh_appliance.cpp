@@ -290,20 +290,20 @@ static void draw_appliance_connections( vehicle *veh )
                                  tilecontext->get_tile_height() / 2 );
     // BAD HACK(?): Gets 0 index of vehicle parts
     point start = tilecontext->player_to_screen( veh->bub_part_pos( here,
-        veh->part( 0 ) ).xy() ) + mid_tile_offset;
+                  veh->part( 0 ) ).xy() ) + mid_tile_offset;
 
     // draw connections to other vehicles (jumper cable)
     for( const auto &other_vehicle : veh->search_connected_vehicles( here ) ) {
         vehicle *that_veh = other_vehicle.first;
         point end = tilecontext->player_to_screen( that_veh->bub_part_pos( here,
-            that_veh->part( 0 ) ).xy() ) + mid_tile_offset;
+                    that_veh->part( 0 ) ).xy() ) + mid_tile_offset;
         draw_connection_lines( start, end );
     }
 
     // draw intra-vehicle connections (merged appliances)
     for( vpart_reference some_part : veh->get_all_parts() ) {
         point end = tilecontext->player_to_screen( veh->bub_part_pos( here,
-            some_part.part() ).xy() ) + mid_tile_offset;
+                    some_part.part() ).xy() ) + mid_tile_offset;
         draw_connection_lines( start, end );
     }
 }
@@ -472,13 +472,13 @@ void veh_app_interact::refill( )
         return;
     }
 
-    const auto validate = [&]( const item &source ) {
+    const auto validate = [&]( const item & source ) {
         return can_refill_vehicle_part( *pt, source );
     };
 
     // Setup the refill activity
     item_location target = g->inv_map_splice( validate, string_format( _( "Refill %s" ), pt->name() ),
-        1 );
+                           1 );
     if( target ) {
         if( cata_mp::is_client_mode() ) {
             cata_mp::client_start_vehicle_work( get_map(), VEHICLE_REFILL, *veh, pt->mount, pt->info(), pt,
@@ -581,7 +581,7 @@ void veh_app_interact::remove( map &here )
         }
         you.set_moves( 0 );
         you.assign_activity( vehicle_activity_actor( VEHICLE_REMOVE_APPLIANCE, time, veh,
-                a_point_abs, tripoint_rel_ms( a_point, 0 ), veh->index_of_part( vp ), vpinfo.id ) );
+                             a_point_abs, tripoint_rel_ms( a_point, 0 ), veh->index_of_part( vp ), vpinfo.id ) );
     }
 }
 

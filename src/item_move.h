@@ -32,7 +32,8 @@ struct item_move_selection {
 bool submit_client_item_move( Character &who, const drop_locations &items,
                               const tripoint_bub_ms &target, item_move_destination mode, bool dropping );
 bool start_owned_item_move( Character &who, map &here, item_move_selection selection );
-void do_owned_item_move( Character &who, player_activity &activity, item_move_selection &selection );
+void do_owned_item_move( Character &who, player_activity &activity,
+                         item_move_selection &selection );
 void append_item_move_tiles( const item_move_selection &selection,
                              std::vector<tripoint_abs_ms> &changed_tiles );
 

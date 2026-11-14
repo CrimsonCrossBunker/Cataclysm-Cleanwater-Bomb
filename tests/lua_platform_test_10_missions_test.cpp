@@ -698,9 +698,9 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
     REQUIRE( control.get() == &remote );
     REQUIRE( remote.has_native_player_control() );
     mission *remote_mission = mission::reserve_new( mission_TEST_MISSION_GENERIC_REWARD,
-        provider.getID() );
+                              provider.getID() );
     mission *host_selection = mission::reserve_new( mission_TEST_MISSION_GOAL_CONDITION1,
-        provider.getID() );
+                              provider.getID() );
     REQUIRE( remote_mission );
     REQUIRE( host_selection );
     provider.chatbin.missions = { remote_mission, host_selection };

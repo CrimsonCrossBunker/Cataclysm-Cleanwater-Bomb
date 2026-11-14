@@ -174,7 +174,8 @@ void sleep_selection::deserialize( const JsonObject &data )
 
 ret_val<void> can_start_sleep( Character &who, map &here )
 {
-    if( who.is_dead_state() || who.has_effect( effect_sleep ) || who.activity || who.get_moves() <= 0 ) {
+    if( who.is_dead_state() || who.has_effect( effect_sleep ) || who.activity ||
+        who.get_moves() <= 0 ) {
         return ret_val<void>::make_failure();
     }
     if( controlled_vehicle( who, here ) ) {

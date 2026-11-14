@@ -2087,8 +2087,9 @@ static const std::vector<std::function<player_activity()>> test_activities {
     },
     [] {
         const avatar &who = get_avatar();
-        const safe_interaction target{ safe_action::crack, who.pos_abs(),
-                                       who.pos_abs() + tripoint_rel_ms::north, furn_f_safe_l };
+        const safe_interaction target{
+            safe_action::crack, who.pos_abs(),
+            who.pos_abs() + tripoint_rel_ms::north, furn_f_safe_l };
         return player_activity( safecracking_activity_actor( target, who.getID() ) );
     },
     [] { return player_activity( shave_activity_actor() ); },

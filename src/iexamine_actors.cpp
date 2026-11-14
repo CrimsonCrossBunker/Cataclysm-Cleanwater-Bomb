@@ -100,8 +100,8 @@ void appliance_convert_examine_actor::call( Character &you, const tripoint_bub_m
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
     appliance_conversion_selection choice{ you.pos_abs(),
-        tool_activity_target::capture( here, here.get_abs( examp ) ), appliance_item, std::nullopt
-    };
+                                           tool_activity_target::capture( here, here.get_abs( examp ) ), appliance_item, std::nullopt
+                                         };
     const auto still_there = [&]() {
         return lifetime && context && you.pos_abs() == choice.origin && choice.target.matches( here );
     };
@@ -137,8 +137,8 @@ bool appliance_convert_examine_actor::execute( Character &who, map &here,
         return false;
     }
     const iexamine_actor *examined = here.has_furn( tile ) ?
-                                    here.furn( tile )->find_examine_actor( "appliance_convert" ) :
-                                    here.ter( tile )->find_examine_actor( "appliance_convert" );
+                                     here.furn( tile )->find_examine_actor( "appliance_convert" ) :
+                                     here.ter( tile )->find_examine_actor( "appliance_convert" );
     const auto *actor = dynamic_cast<const appliance_convert_examine_actor *>(
                             examined );
     if( !actor || actor->appliance_item != choice.appliance || !choice.appliance.is_valid() ||
@@ -159,7 +159,8 @@ bool appliance_convert_examine_actor::execute( Character &who, map &here,
         return false;
     }
 
-    const auto direction = choice.direction ? std::make_optional( units::from_degrees( *choice.direction ) ) :
+    const auto direction = choice.direction ? std::make_optional( units::from_degrees(
+                               *choice.direction ) ) :
                            std::nullopt;
     if( !place_appliance( here, tile, part, who, std::nullopt, direction ) ) {
         return false;

@@ -1106,7 +1106,8 @@ static void parse_welcome_fields( const std::string &msg, bool apply_seed_now )
         JsonValue jv = json_loader::from_string( msg );
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
-        mp_session().admission.client_host_north_america_world = jo.get_bool( "north_america_world", false );
+        mp_session().admission.client_host_north_america_world = jo.get_bool( "north_america_world",
+                false );
         const std::string wn = jo.get_string( "world", "" );
         if( !wn.empty() && wn != "default" ) {
             mp_session().admission.client_host_world_name = wn;
@@ -2056,7 +2057,7 @@ void host_broadcast_vehicle_step()
         }
         vfirst = false;
         vehicles_json += "{\"nid\":" + std::to_string( nid )
-                             + ",\"uid\":" + std::to_string( v->uid().get_value() )
+                         + ",\"uid\":" + std::to_string( v->uid().get_value() )
                          + ",\"x\":" + std::to_string( vabs.x() )
                          + ",\"y\":" + std::to_string( vabs.y() )
                          + ",\"z\":" + std::to_string( vabs.z() )
@@ -4088,7 +4089,8 @@ bool tap_waiting_partner( const Character &who, Character &target )
     const character_id id = target.getID();
     target.cancel_activity();
     if( lifetime ) {
-        target.add_msg_if_player( _( "%s taps you on the shoulder, snapping you out of your wait." ), name );
+        target.add_msg_if_player( _( "%s taps you on the shoulder, snapping you out of your wait." ),
+                                  name );
         if( auto *peer = mp_session().find_remote( id ) ) {
             peer->observation.partner_activity = target.activity ? target.activity.id().str() : "";
             if( const auto server = get_active_server() ) {
@@ -9099,7 +9101,7 @@ std::string serialize_remote_player_state( remote_player_session &recipient,
                 const item *contents = vp.is_tank() && !base.empty() ? &base.legacy_front() : nullptr;
                 const int64_t liquid_uid = contents ? contents->uid().get_value() : 0;
                 part_identities.push_back( { base.uid().get_value(), liquid_uid,
-                                             contents && contents->made_of( phase_id::LIQUID ) } );
+                                             contents &&contents->made_of( phase_id::LIQUID ) } );
                 if( !psfirst ) {
                     parts_json += ',';
                 }

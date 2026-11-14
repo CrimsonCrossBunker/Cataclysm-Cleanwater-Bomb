@@ -330,7 +330,8 @@ void command::serialize( JsonOut &out ) const
 void command::deserialize( const JsonObject &data )
 {
     const int value = data.get_int( "action" );
-    if( value < static_cast<int>( operation::deposit ) || value > static_cast<int>( operation::recover ) ) {
+    if( value < static_cast<int>( operation::deposit ) ||
+        value > static_cast<int>( operation::recover ) ) {
         data.throw_error_at( "action", "Invalid fermentation vessel operation" );
     }
     action = static_cast<operation>( value );
@@ -408,7 +409,7 @@ bool execute( Character &who, map &here, const command &request )
                 return false;
             }
             start_owned_liquid_transfer( who,
-                                         { "fermentation_vessel", position, { request.batch } }, *request.destination );
+            { "fermentation_vessel", position, { request.batch } }, *request.destination );
             return static_cast<bool>( who.activity );
         }
     }

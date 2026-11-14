@@ -7532,7 +7532,8 @@ bool safecracking_activity_actor::can_resume_with_internal( const activity_actor
         return legacy_safe_ && get_map().get_abs( *legacy_safe_ ) == proposed.target_->position;
     }
     return operator_id_ == proposed.operator_id_ && target_->origin == proposed.target_->origin &&
-           target_->position == proposed.target_->position && target_->furniture == proposed.target_->furniture;
+           target_->position == proposed.target_->position &&
+           target_->furniture == proposed.target_->furniture;
 }
 
 void safecracking_activity_actor::set_resume_values_internal( const activity_actor &other,
@@ -14660,7 +14661,8 @@ bool vehicle_activity_actor::start_owned_work( Character &who, map &here,
     actor.vp_location = selection.position;
     actor.owned_work = std::move( selection );
     vehicle *target = actor.resolve_target( here );
-    if( !target || ( target->has_owner() && !target->is_owned_by( who ) && !actor.owned_work->allow_theft ) ) {
+    if( !target || ( target->has_owner() && !target->is_owned_by( who ) &&
+                     !actor.owned_work->allow_theft ) ) {
         return false;
     }
     const auto duration = actor.validate_owned_work( who, here, *target );
@@ -14686,7 +14688,8 @@ bool vehicle_activity_actor::start_owned_work( Character &who, map &here,
         return false;
     }
     actor.owned_work->owner = target->get_owner();
-    const vehicle_part *part = actor.sub_activity == VEHICLE_INSTALL ? nullptr : &target->part( actor.vp_index );
+    const vehicle_part *part = actor.sub_activity == VEHICLE_INSTALL ? nullptr : &target->part(
+                                   actor.vp_index );
     if( actor.sub_activity == VEHICLE_REPAIR ) {
         actor.initial_repair_damage = part->get_base().damage();
     }
@@ -17641,8 +17644,8 @@ std::vector<npc *> wait_followers_activity_actor::get_absent_followers( Characte
     return g->get_npcs_if( [&you]( const npc & n ) -> bool {
         const npc_attitude att = n.get_attitude();
         return &n != &you && !cata_mp::is_player_proxy( n ) &&
-               ( att == NPCATT_FOLLOW || att == NPCATT_ACTIVITY ) &&
-               rl_dist( n.pos_bub(), you.pos_bub() ) > n.follow_distance();
+        ( att == NPCATT_FOLLOW || att == NPCATT_ACTIVITY ) &&
+        rl_dist( n.pos_bub(), you.pos_bub() ) > n.follow_distance();
     } );
 }
 

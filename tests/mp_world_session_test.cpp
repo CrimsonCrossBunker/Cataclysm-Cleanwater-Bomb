@@ -552,7 +552,7 @@ TEST_CASE( "mp_turn_grants_reject_repeats_future_actions_and_stale_payloads",
     auto &peer = only_test_remote( session );
     peer.connected = true;
     peer.turn.grant_seq = 41;
-    const auto send = [&]( uint32_t grant, const std::string &message ) {
+    const auto send = [&]( uint32_t grant, const std::string & message ) {
         const auto packet = test_granted_action( message, grant );
         REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action,
                                                "player", packet, peer.admission } ) );
@@ -676,7 +676,7 @@ TEST_CASE( "mp_rejects_legacy_direct_world_action_uploads",
     out.member( "x", target.x() );
     out.member( "y", target.y() );
     out.member( "z", target.z() );
-    out.member( "items", std::vector<item>{ item( itype_id( "bat" ) ) } );
+    out.member( "items", std::vector<item> { item( itype_id( "bat" ) ) } );
     out.end_object();
     REQUIRE( cata_mp::get_mp_queue().push( { cata_mp::mp_event::type::action, "nickname",
                                            encoded.str(), peer.admission } ) );
@@ -1340,9 +1340,10 @@ TEST_CASE( "group_wait_requires_every_grant_even_when_every_player_is_passive",
         CHECK( peer.turn.grant_seq == 1 );
         CHECK( peer.turn.remote_moves == 100 );
     }
-    const auto step = []( const npc &actor ) {
+    const auto step = []( const npc & actor ) {
         return test_granted_action(
-                   R"({"action":"inventory_activity","operation":"step","request":1,"inventory_revision":0,"activity":")" +
+                   R"({"action":"inventory_activity","operation":"step","request":1,"inventory_revision":0,"activity":")"
+                   +
                    std::to_string( actor.activity.identity_generation() ) + "\"}", 1 );
     };
     for( int i = 0; i < 2; ++i ) {

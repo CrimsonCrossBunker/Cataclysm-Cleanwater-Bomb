@@ -196,7 +196,7 @@ bool start_ground_food( Character &who, map &here, const ground_food_target *sel
 
     player_activity activity{ selection ?
                               consume_activity_actor( food, ground_food_target::capture( here, position ),
-                                                      allow_consequences ) :
+                                      allow_consequences ) :
                               consume_activity_actor( food ) };
     if( selection ) {
         activity.set_execution( activity_execution::authoritative );
@@ -221,7 +221,8 @@ bool select_client_ground_food( Character &who, map &here )
     const itype_id food_type = ground_food_item( kind );
     const bool preview = !food_type.is_null() && !who.has_effect( effect_hunger_engorged );
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    const bool accepted = !preview || who.will_eat( item( food_type, calendar::turn, 1 ), true ).success();
+    const bool accepted = !preview ||
+                          who.will_eat( item( food_type, calendar::turn, 1 ), true ).success();
     if( accepted && actor && context ) {
         cata_mp::client_start_consume_ground( target, preview );
     }

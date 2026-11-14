@@ -250,7 +250,7 @@ int npc_trading::adjusted_price( item const *it, int amount, Character const &bu
     const npc *faction_party = buyer_npc ? buyer_npc : seller_npc;
     const Character &customer = buyer_npc ? seller : buyer;
     const faction_price_rule *fpr = faction_party ? faction_party->get_price_rules( *it,
-        &customer ) : nullptr;
+                                    &customer ) : nullptr;
 
     double price = it->price_no_contents( true, fpr != nullptr ? fpr->price : std::nullopt );
     if( fpr != nullptr ) {
@@ -309,7 +309,7 @@ int _trading_price( Character const &buyer, Character const &seller, item_locati
         }
     }
     return static_cast<int>( std::clamp<int64_t>( ret, std::numeric_limits<int>::min(),
-            std::numeric_limits<int>::max() ) );
+                             std::numeric_limits<int>::max() ) );
 }
 } // namespace
 
@@ -456,7 +456,7 @@ std::optional<npc_trading::trade_terms> npc_trading::quote_trade(
     int64_t balance = static_cast<int64_t>( account.owed ) - service_cost + *sale - *purchase;
     if( use_bank && get_option<bool>( "CAPITALISM" ) ) {
         const int64_t bank_change = std::min( -balance, static_cast<int64_t>( std::max( 0,
-            player.cash ) ) );
+                                              player.cash ) ) );
         if( !fits_trade_account( bank_change ) ||
             !fits_trade_account( static_cast<int64_t>( player.cash ) - bank_change ) ) {
             return std::nullopt;
@@ -481,7 +481,7 @@ bool npc_trading::commit_trade( Character &player, npc &trader,
                                 const std::function<void()> &after_settlement )
 {
     const std::optional<trade_terms> current = quote_trade(
-            player, trader, sales, purchases, service_cost, use_bank );
+                player, trader, sales, purchases, service_cost, use_bank );
     if( !current || !( *current == confirmed ) ) {
         return false;
     }

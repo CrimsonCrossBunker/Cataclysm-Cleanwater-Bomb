@@ -105,7 +105,8 @@ bool can_siphon( Character &who, map &here, const vehicle &target )
     }
     // Nearby tools may have been moved by another player this turn.
     who.invalidate_crafting_inventory();
-    return who.crafting_inventory( &here, who.pos_bub( here ), pickup_range, false ).has_quality( hose );
+    return who.crafting_inventory( &here, who.pos_bub( here ), pickup_range,
+                                   false ).has_quality( hose );
 }
 
 int preferred_water_tank( const vehicle &target )
@@ -235,7 +236,7 @@ void drink_vehicle_liquid( Character &who, map &here, item_location liquid )
 }
 
 void vehicle_liquid_transfer_turn( player_activity &act, Character &who, const item_source &source,
-                                    const unload_liquid_choice &destination )
+                                   const unload_liquid_choice &destination )
 {
     map &here = get_map();
     item_location liquid = resolve_vehicle_water_source( who, here, source );
