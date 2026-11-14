@@ -209,6 +209,7 @@ class weather_manager
         void on_game_start();
         const weather_generator &get_cur_weather_gen() const;
         // Updates the temperature and weather patten
+        void update_solar_location();
         void update_weather();
         // Incrementally update snow depth at the player's current OMT
         void update_snow_depth();

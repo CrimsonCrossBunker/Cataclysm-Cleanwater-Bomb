@@ -1112,6 +1112,7 @@ static void parse_welcome_fields( const std::string &msg, bool apply_seed_now )
         JsonValue jv = json_loader::from_string( msg );
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
+        mp_session().admission.client_host_north_america_world = jo.get_bool( "north_america_world", false );
         const std::string wn = jo.get_string( "world", "" );
         if( !wn.empty() && wn != "default" ) {
             mp_session().admission.client_host_world_name = wn;
@@ -1181,6 +1182,7 @@ void mp_client_prepare_spawn()
         return;
     }
     mp_client_apply_host_seed();
+    g->north_america_world = mp_session().admission.client_host_north_america_world;
 }
 
 // Server: per-tile baseline (ter + furn + item fingerprint) for dirty-tile tracking.
@@ -4407,6 +4409,7 @@ void grant_client_turn()
     // game state. Runs before the connected-check so it's current the moment a
     // client joins. Seed is constant for a session; the store is idempotent.
     mp_session().host_info.seed = g->get_seed();
+    mp_session().host_info.north_america_world = g->north_america_world;
     // Capture the host avatar's OMT for the join 'welcome' so a client spawns into
     // the host's area, not its own scenario start_location.
     mp_capture_host_omt( get_avatar().pos_abs_omt() );
@@ -5160,6 +5163,7 @@ static void mp_start_pending_host()
             throw std::runtime_error( "No active world" );
         }
         mp_session().host_info.world = world_generator->active_world->identity();
+        mp_session().host_info.north_america_world = g->north_america_world;
     } catch( const std::exception &error ) {
         add_msg( m_bad, _( "Unable to start multiplayer host: %s" ), error.what() );
         set_host_mode( false );

@@ -268,7 +268,8 @@ void server::on_message( uint64_t id, const std::string &msg )
             ",\"world\":" + wire_quote( welcome.world_name ) +
             ",\"world_id\":" + wire_quote( welcome.world.str() ) +
             ",\"host_name\":" + wire_quote( welcome.player_name ) +
-            R"(,"current_turn":0,"seed":)" + std::to_string( welcome.seed ) + position + "}";
+            R"(,"current_turn":0,"seed":)" + std::to_string( welcome.seed ) + position +
+            ( welcome.north_america_world ? ",\"north_america_world\":true" : "" ) + "}";
         if( type == "join" ) {
             peer.name = name;
             peer.admission = peer_admission::create( id );

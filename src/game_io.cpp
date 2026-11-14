@@ -468,6 +468,7 @@ bool game::load( const save_t &name )
 
                     // Now that the player's worn items are updated, their sight limits need to be
                     // recalculated. (This would be cleaner if u.worn were private.)
+                    weather.update_solar_location();
                     u.recalc_sight_limits();
 
                     if( !gamemode ) {

@@ -20,6 +20,7 @@
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_connection.h"
+#include "north_america.h"
 #include "overmapbuffer.h"
 #include "point.h"
 #include "regional_settings.h"
@@ -105,6 +106,35 @@ void overmap::place_cities()
     const double omts_per_city = ( op_city_size * 2 + 1 ) * ( max_city_size * 2 + 1 ) * 3 / 4.0;
 
 
+    if( north_america::active() ) {
+        for( const north_america::place &place : north_america::cities() ) {
+            point_abs_om country_overmap;
+            point_om_omt center;
+            std::tie( country_overmap, center ) = project_remain<coords::om>( place.position );
+            if( country_overmap != pos() ) {
+                continue;
+            }
+            for( const point_om_omt &candidate : closest_points_first( center, 12 ) ) {
+                const tripoint_om_omt p( candidate, 0 );
+                if( !inbounds( p ) || ter( p )->is_water() || city_tiles.count( candidate ) ) {
+                    continue;
+                }
+                city seed( place.name );
+                seed.pos_om = pos();
+                seed.pos = candidate;
+                seed.population = place.population;
+                seed.size = std::clamp( op_city_size + static_cast<int>(
+                                            std::sqrt( std::max( 0, place.population ) / 1000.0 ) ), 2, 55 );
+                ter_set( p, oter_road_nesw );
+                city_tiles.insert( candidate );
+                cities.push_back( seed );
+                break;
+            }
+        }
+        if( !cities.empty() ) {
+            return;
+        }
+    }
     const bool use_random_cities = city::get_all().empty();
 
     int num_cities_on_this_overmap = 0;
