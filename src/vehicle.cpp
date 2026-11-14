@@ -7861,8 +7861,8 @@ void vehicle::invalidate_towing( map &here, bool first_vehicle, Character *remov
         vehicle *other_veh = first_veh_is_towing ? tow_data.get_towed() :
                              is_towed() ? tow_data.get_towed_by() : nullptr;
         const int other_tow_cable_idx = other_veh ? other_veh->get_tow_part() : -1;
-        const point_rel_ms other_tow_cable_mount = other_veh && other_tow_cable_idx > -1 ?
-                other_veh->part( other_tow_cable_idx ).mount : point_rel_ms::zero;
+        const tripoint_rel_ms other_tow_cable_mount = other_veh && other_tow_cable_idx > -1 ?
+                other_veh->part( other_tow_cable_idx ).mount_pos3() : tripoint_rel_ms::zero;
         if( other_veh ) {
             other_veh->invalidate_towing( here );
         }
@@ -9655,7 +9655,7 @@ item vehicle::part_to_item( map &here, const vehicle_part &vp ) const
         tmp.reset_link( false );
         const std::optional < vpart_reference > remote = get_remote_part( here, vp );
         if( remote &&
-            tmp.link_to( remote->vehicle(), remote->part().mount, link_state::automatic ).success() ) {
+            tmp.link_to( remote->vehicle(), remote->mount_pos3(), link_state::automatic ).success() ) {
             tmp.link().t_abs_pos = vp.target.second;
         } else {
             // The linked vehicle can't be found, so this part shouldn't exist.

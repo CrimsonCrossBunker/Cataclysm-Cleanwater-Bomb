@@ -230,6 +230,85 @@ TEST_CASE( "vehicle_deck_zones_follow_their_cargo", "[vehicle][decks][zones][sav
     zones.clear();
 }
 
+TEST_CASE( "vehicle_deck_cables_reconnect_and_disconnect_at_the_selected_port",
+           "[vehicle][decks][power][save]" )
+{
+    clear_avatar();
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    const int lower = veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "dashboard" ) );
+    const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "dashboard" ) );
+    REQUIRE( lower >= 0 );
+    REQUIRE( upper >= 0 );
+    here.add_vehicle_to_cache( &veh );
+    item lower_cord( itype_id( "test_power_cord" ) );
+    item upper_cord( itype_id( "test_power_cord" ) );
+    REQUIRE( lower_cord.link_to( here.veh_at( veh.bub_part_pos( here, lower ) ),
+                                link_state::vehicle_port ).success() );
+    REQUIRE( upper_cord.link_to( here.veh_at( veh.bub_part_pos( here, upper ) ),
+                                link_state::vehicle_port ).success() );
+    CHECK( upper_cord.link().t_mount == tripoint_rel_ms::above );
+
+    std::ostringstream buffer;
+    JsonOut out( buffer );
+    upper_cord.link().serialize( out );
+    item loaded_cord( itype_id( "test_power_cord" ) );
+    loaded_cord.link().deserialize( json_loader::from_string( buffer.str() ).get_object() );
+    CHECK( loaded_cord.link().t_mount == tripoint_rel_ms::above );
+    CHECK_FALSE( loaded_cord.link().t_veh );
+    lower_cord.process( here, nullptr, veh.bub_part_pos( here, lower ) );
+    loaded_cord.process( here, nullptr, veh.bub_part_pos( here, upper ) );
+    CHECK( loaded_cord.link().t_veh.get() == &veh );
+    CHECK( veh.part( upper ).has_flag( vp_flag::linked_flag ) );
+    CHECK( veh.part( lower ).has_flag( vp_flag::linked_flag ) );
+
+    veh.unlink_cables( here, tripoint_rel_ms::above, get_avatar(), true, false, false );
+    CHECK_FALSE( veh.part( upper ).has_flag( vp_flag::linked_flag ) );
+    CHECK( veh.part( lower ).has_flag( vp_flag::linked_flag ) );
+    loaded_cord.process( here, nullptr, veh.bub_part_pos( here, upper ) );
+    CHECK( loaded_cord.has_no_links() );
+    CHECK_FALSE( lower_cord.has_no_links() );
+}
+
+TEST_CASE( "vehicle_deck_power_connections_install_on_the_selected_deck",
+           "[vehicle][decks][power]" )
+{
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    REQUIRE( veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "dashboard" ) ) >= 0 );
+    const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "dashboard" ) );
+    REQUIRE( upper >= 0 );
+    vehicle *other = here.add_vehicle( vproto_id( "none" ), tripoint_bub_ms( 62, 60, 0 ),
+                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( other != nullptr );
+    REQUIRE( other->install_part( here, tripoint_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int port = other->install_part( here, tripoint_rel_ms::zero, vpart_id( "dashboard" ) );
+    REQUIRE( port >= 0 );
+    here.add_vehicle_to_cache( &veh );
+    here.add_vehicle_to_cache( other );
+    item cord( itype_id( "test_power_cord" ) );
+    REQUIRE( cord.link_to( here.veh_at( veh.bub_part_pos( here, upper ) ),
+                           here.veh_at( other->bub_part_pos( here, port ) ),
+                           link_state::vehicle_port ).success() );
+    const int cable = veh.part_with_feature( tripoint_rel_ms::above, "POWER_TRANSFER", false );
+    REQUIRE( cable >= 0 );
+    CHECK( veh.part_with_feature( tripoint_rel_ms::zero, "POWER_TRANSFER", false ) == -1 );
+    const auto remote = veh.get_remote_part( here, veh.part( cable ) );
+    REQUIRE( remote.has_value() );
+    CHECK( &remote->vehicle() == other );
+    CHECK( remote->part().target.first == veh.abs_part_pos( upper ) );
+    const item detached = other->part_to_item( here, remote->part() );
+    CHECK( detached.link().t_mount == tripoint_rel_ms::above );
+    CHECK( detached.link().t_veh.get() == &veh );
+}
+
+TEST_CASE( "vehicle_deck_cable_loads_legacy_mount_as_deck_zero", "[vehicle][decks][save]" )
+{
+    item::link_data link;
+    link.deserialize( json_loader::from_string( R"({"link_t_mount":[2,3]})" ).get_object() );
+    CHECK( link.t_mount == tripoint_rel_ms( 2, 3, 0 ) );
+}
+
 TEST_CASE( "vehicle_deck_active_items_retain_their_level", "[vehicle][decks][item]" )
 {
     item lower( itype_id( "firecracker_act" ), calendar::turn_zero,

@@ -1656,7 +1656,7 @@ class item : public visitable
             /// Absolute position of the linked target vehicle/appliance.
             tripoint_abs_ms t_abs_pos = tripoint_abs_ms::invalid;
             /// The linked part's mount offset on the target vehicle.
-            point_rel_ms t_mount = point_rel_ms::zero;
+            tripoint_rel_ms t_mount = tripoint_rel_ms::zero;
             /// Reality bubble position of the link's source cable item.
             tripoint_bub_ms s_bub_pos = tripoint_bub_ms::invalid; // NOLINT(cata-serialize)
             /// The last turn process_link was called on this cable. Used to find how much time the cable spends outside the reality bubble.
@@ -1723,6 +1723,8 @@ class item : public visitable
          * @param link_type What type of connection to make. If set to link_state::automatic, will automatically determine which type to use. Defaults to link_state::no_link.
          * @return true if the item was successfully connected.
          */
+        ret_val<void> link_to( vehicle &veh, const tripoint_rel_ms &mount,
+                               link_state link_type = link_state::no_link );
         ret_val<void> link_to( vehicle &veh, const point_rel_ms &mount,
                                link_state link_type = link_state::no_link );
 

@@ -2303,7 +2303,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .skip_locked_check()
         .hotkey( "DISCONNECT_CABLES" )
         .on_submit( [here, this, vp] {
-            unlink_cables( *here, vp.mount_pos(), get_player_character(), true, true, true );
+            unlink_cables( *here, vp.mount_pos3(), get_player_character(), true, true, true );
             get_player_character().pause();
         } );
     }
@@ -2314,7 +2314,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .skip_locked_check()
         .hotkey( "DISCONNECT_CABLES" )
         .on_submit( [here, this, vp] {
-            unlink_cables( *here, vp.mount_pos(), get_player_character(), true, true, false );
+            unlink_cables( *here, vp.mount_pos3(), get_player_character(), true, true, false );
             get_player_character().pause();
         } );
     }

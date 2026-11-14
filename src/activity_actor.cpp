@@ -17710,7 +17710,7 @@ void vehicle_part_remove_service_activity_actor::finish( player_activity &act, C
 
     const std::string part_name = part.name();
     const std::string vehicle_name = target->name;
-    const point_rel_ms part_mount = part.mount;
+    const tripoint_rel_ms part_mount = part.mount_pos3();
     bool removes_entire_vehicle = true;
     for( int index = 0; index < target->part_count(); ++index ) {
         const vehicle_part &candidate = target->part( index );

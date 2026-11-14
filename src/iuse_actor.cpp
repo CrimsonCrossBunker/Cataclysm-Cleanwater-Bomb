@@ -5892,9 +5892,8 @@ std::optional<int> link_up_actor::link_to_veh_app( Character *p, item &it,
         const bool using_power_cord = it.typeId() == itype_power_cord;
         if( using_power_cord && it.link().t_veh->is_powergrid() && sel_vp->vehicle().is_powergrid() ) {
             // If both vehicles are adjacent power grids, try to merge them together first.
-            const point_bub_ms prev_pos = here.get_bub( it.link().t_veh->coord_translate(
-                                              it.link().t_mount ) +
-                                          it.link().t_abs_pos ).xy();
+            const point_bub_ms prev_pos = it.link().t_veh->mount_to_tripoint(
+                                              &here, it.link().t_mount ).xy();
             if( selection.xy().raw().distance( prev_pos.raw() ) <= 1.5f &&
                 it.link().t_veh->merge_appliance_into_grid( &here,  sel_vp->vehicle() ) ) {
                 it.link().t_veh->part_removal_cleanup( here );

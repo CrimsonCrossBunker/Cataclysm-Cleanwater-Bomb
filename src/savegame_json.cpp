@@ -4112,7 +4112,8 @@ void item::link_data::serialize( JsonOut &jsout ) const
     jsout.member( "link_i_state", source );
     jsout.member( "link_t_state", target );
     jsout.member( "link_t_abs_pos", t_abs_pos );
-    jsout.member( "link_t_mount", t_mount );
+    jsout.member( "link_t_mount", t_mount.xy() );
+    jsout.member( "link_t_mount_level", t_mount.z() );
     jsout.member( "link_length", length );
     jsout.member( "link_max_length", max_length );
     jsout.member( "link_last_processed", last_processed );
@@ -4129,7 +4130,9 @@ void item::link_data::deserialize( const JsonObject &data )
     data.read( "link_i_state", source );
     data.read( "link_t_state", target );
     data.read( "link_t_abs_pos", t_abs_pos );
-    data.read( "link_t_mount", t_mount );
+    point_rel_ms mount;
+    data.read( "link_t_mount", mount );
+    t_mount = tripoint_rel_ms( mount, data.get_int( "link_t_mount_level", 0 ) );
     data.read( "link_length", length );
     data.read( "link_max_length", max_length );
     data.read( "link_last_processed", last_processed );
