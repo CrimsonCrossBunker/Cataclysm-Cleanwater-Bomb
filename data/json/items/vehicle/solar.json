@@ -154,7 +154,8 @@
     "category": "spare_parts",
     "price": "50 USD",
     "price_postapoc": "1 USD",
-    "copy-from": "solar_panel"
+    "copy-from": "solar_panel",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -163,6 +164,7 @@
     "description": "A small electronic device that can convert solar radiation into electric power.  This one is a high-performance type made of monocrystalline silicon.",
     "price": "150 USD",
     "price_postapoc": "3 USD",
-    "copy-from": "solar_cell"
+    "copy-from": "solar_cell",
+    "stackable": true
   }
 ]

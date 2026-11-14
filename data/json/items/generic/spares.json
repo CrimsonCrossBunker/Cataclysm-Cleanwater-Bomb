@@ -174,7 +174,8 @@
     "price_postapoc": "10 cent",
     "material": [ "iron" ],
     "symbol": ",",
-    "color": "light_gray"
+    "color": "light_gray",
+    "stackable": true
   },
   {
     "id": "hd_pipe",

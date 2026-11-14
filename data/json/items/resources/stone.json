@@ -43,7 +43,8 @@
     "weight": "2628 g",
     "volume": "1 L",
     "longest_side": "35 cm",
-    "melee_damage": { "bash": 7 }
+    "melee_damage": { "bash": 7 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -71,7 +72,8 @@
     "category": "spare_parts",
     "material": [ "epoxy" ],
     "weight": "150 g",
-    "volume": "3 L"
+    "volume": "3 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -88,7 +90,8 @@
     "volume": "250 ml",
     "longest_side": "40 cm",
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "uneven" },
-    "melee_damage": { "bash": 7 }
+    "melee_damage": { "bash": 7 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -105,7 +108,8 @@
     "volume": "36 L",
     "longest_side": "200 cm",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 28 }
+    "melee_damage": { "bash": 28 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -122,7 +126,8 @@
     "volume": "250 ml",
     "longest_side": "40 cm",
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "uneven" },
-    "melee_damage": { "bash": 5 }
+    "melee_damage": { "bash": 5 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -139,6 +144,7 @@
     "volume": "36 L",
     "longest_side": "200 cm",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 28 }
+    "melee_damage": { "bash": 28 },
+    "stackable": true
   }
 ]

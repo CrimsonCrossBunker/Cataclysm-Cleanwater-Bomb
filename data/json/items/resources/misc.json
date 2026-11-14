@@ -151,7 +151,8 @@
     "container": "bag_plastic",
     "material": [ "cotton" ],
     "symbol": ",",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -182,7 +183,8 @@
     "price_postapoc": "10 cent",
     "material": [ "rubber" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "rubber_tire_chunk",
@@ -197,7 +199,8 @@
     "price_postapoc": "10 cent",
     "material": [ "rubber" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "rubber_tire_strip",
@@ -212,7 +215,8 @@
     "price_postapoc": "50 cent",
     "material": [ "rubber" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "ugl_buttstock",
@@ -226,7 +230,8 @@
     "price_postapoc": "2 USD 50 cent",
     "material": [ "plastic", "steel" ],
     "weight": "600 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -271,7 +276,8 @@
     "price_postapoc": "10 cent",
     "material": [ "rubber", "steel" ],
     "symbol": "o",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "armor_star_samurai_helmet_destroyed",
@@ -285,7 +291,8 @@
     "price_postapoc": "0 cent",
     "material": [ { "type": "monolith_heavy", "portion": 19 }, { "type": "superalloy", "portion": 1 } ],
     "symbol": ",",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -300,7 +307,8 @@
     "price": "5 USD",
     "price_postapoc": "10 cent",
     "volume": "250 ml",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
