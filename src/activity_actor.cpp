@@ -503,6 +503,14 @@ aim_activity_actor aim_activity_actor::use_wielded( bool sweeping )
     return actor;
 }
 
+aim_activity_actor aim_activity_actor::reaim_turret( int64_t vehicle_id, int64_t gun_id )
+{
+    aim_activity_actor actor;
+    actor.turret_vehicle_id = vehicle_id;
+    actor.turret_gun_id = gun_id;
+    return actor;
+}
+
 aim_activity_actor aim_activity_actor::use_bionic( const item &fake_gun, unsigned int uid )
 {
     aim_activity_actor act = aim_activity_actor();
@@ -521,6 +529,12 @@ aim_activity_actor aim_activity_actor::use_mutation( const item &fake_gun )
 
 void aim_activity_actor::start( player_activity &act, Character &who )
 {
+    // Time spent on aiming is determined on the go by the player.
+    act.moves_total = 1;
+    act.moves_left = 1;
+    if( turret_vehicle_id != 0 ) {
+        return;
+    }
     item_location weapon = get_weapon( who );
     if( !weapon ) {
         aborted = true;
@@ -541,10 +555,6 @@ void aim_activity_actor::start( player_activity &act, Character &who )
         aborted = true;
         finish( act, who );
     }
-
-    // Time spent on aiming is determined on the go by the player
-    act.moves_total = 1;
-    act.moves_left = 1;
 }
 
 bool aim_activity_actor::check_gun_ability_to_shoot( Character &who, item &it )
@@ -568,6 +578,22 @@ void aim_activity_actor::do_turn( player_activity &act, Character &who )
         return;
     }
     avatar &you = get_avatar();
+
+    if( turret_vehicle_id != 0 ) {
+        // Direct fire uses the verified vehicle-control command, which requires no active activity.
+        act.set_to_null();
+        const tripoint_abs_ms position = who.pos_abs();
+        const optional_vpart_position at = here.veh_at( position );
+        if( at && at->vehicle().uid().get_value() == turret_vehicle_id &&
+            get_option<bool>( "AIM_AFTER_FIRING" ) && !cata_mp::is_client_mode() ) {
+            vehicle &veh = at->vehicle();
+            const turret_data turret = veh.turret_query( position );
+            if( turret && turret.base()->uid().get_value() == turret_gun_id ) {
+                use_vehicle_turrets( who, here, veh, position, "fire_direct", false, false, true );
+            }
+        }
+        return;
+    }
 
     const cata_mp::firearm_view_phase remote_phase = cata_mp::client_firearm_phase();
     if( cata_mp::is_client_mode() && remote_phase != cata_mp::firearm_view_phase::inactive ) {
@@ -710,6 +736,9 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
 void aim_activity_actor::canceled( player_activity &/*act*/, Character &/*who*/ )
 {
+    if( turret_vehicle_id != 0 ) {
+        return;
+    }
     if( cata_mp::is_client_mode() ) {
         if( cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive ) {
             cata_mp::client_cancel_firearm_activity( should_unload_RAS );
@@ -727,6 +756,10 @@ void aim_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
 
     jsout.member( "fake_weapon", fake_weapon );
+    if( turret_vehicle_id != 0 ) {
+        jsout.member( "turret_vehicle_id", turret_vehicle_id );
+        jsout.member( "turret_gun_id", turret_gun_id );
+    }
     jsout.member( "bionic_uid", bionic_uid );
     jsout.member( "bionic_weapon_source", bionic_weapon_source );
     jsout.member( "fin_trajectory", fin_trajectory );
@@ -760,6 +793,8 @@ std::unique_ptr<activity_actor> aim_activity_actor::deserialize( JsonValue &jsin
     JsonObject data = jsin.get_object();
 
     data.read( "fake_weapon", actor.fake_weapon );
+    data.read( "turret_vehicle_id", actor.turret_vehicle_id );
+    data.read( "turret_gun_id", actor.turret_gun_id );
     data.read( "bionic_uid", actor.bionic_uid );
     actor.bionic_weapon_source = data.has_member( "bionic_weapon_source" ) ?
                                  data.get_int64( "bionic_weapon_source" ) :

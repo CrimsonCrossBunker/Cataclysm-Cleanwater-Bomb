@@ -98,7 +98,7 @@ trajectory mode_unarmed_reach( avatar &you );
 
 /** Select a manual turret shot using an owned preview gun and resource view. */
 trajectory mode_turret_manual( avatar &you, turret_data &turret, item &preview,
-                               std::optional<firearm_sweep> *sweep = nullptr );
+                               std::optional<firearm_sweep> *sweep = nullptr, bool reaiming = false );
 
 /** Selecting target for turrets (when using vehicle controls) */
 trajectory mode_turrets( avatar &you, vehicle &veh, const std::vector<vehicle_part *> &turrets );
